@@ -37,7 +37,7 @@ Same verbs, same argument names, same artifacts. Stubs MUST raise a clear "not i
 ## 3. Determinism rules (apply everywhere)
 
 - **Iteration order = file order.** Never sort collections unless told to. Constructs, propositions, predictions, provenance are processed in the order they appear in the YAML.
-- **Rounding:** item scores rounded to **3 decimals**; aggregate score to **1 decimal**. Use round-half-to-even is NOT required — use the language default `round()`; values are chosen so this never matters at 3 dp.
+- **Rounding:** all emitted numeric values use a deterministic **half-away-from-zero** rounding `rnd(x, n) = sign(x) * floor(abs(x)*10^n + 0.5 + 1e-6) / 10^n` (item scores `n=3`, aggregate `n=1`, simulate trajectories `n=6`). Do **NOT** use the language default `round()`: it is banker's rounding, whose result diverges across platforms at exact half-boundaries (e.g. 0.6125 → 0.612 on one OS, 0.613 on another). The `+1e-6` bias is far larger than cross-platform ULP jitter (~1e-13 at these magnitudes) yet far smaller than the rounding grid, so `rnd` is identical on every platform and across R/Python. R: `tf_rnd <- function(x, n) { s <- 10^n; sign(x) * floor(abs(x) * s + 0.5 + 1e-6) / s }`.
 - **Line endings:** all generated IR strings use `\n` (LF) only, and end with a single trailing `\n`.
 - **String escaping in DOT labels:** replace `\` → `\\` then `"` → `\"`.
 

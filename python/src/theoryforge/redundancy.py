@@ -7,6 +7,7 @@ from __future__ import annotations
 import re
 
 from . import _resources
+from ._num import rnd
 
 STOPWORDS = {
     "the", "and", "for", "that", "with", "from", "are", "was", "its", "our", "their",
@@ -28,7 +29,7 @@ def jaccard(a: set[str], b: set[str]) -> float:
         return 0.0
     inter = len(a & b)
     union = len(a | b)
-    return round(inter / union, 3)
+    return rnd(inter / union, 3)
 
 
 def _list(d: dict, key: str) -> list:

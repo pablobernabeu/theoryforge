@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 
 from . import _resources
+from ._num import rnd
 from .redundancy import jaccard, tokens
 
 _CAUSAL = {"causes", "increases", "decreases"}
@@ -48,7 +49,7 @@ def _check_items(T: dict, thr: dict) -> dict:
         out["precision"] = ("warn", 0.0)
     else:
         share = sum(1 for p in preds if p.get("type") in _PRECISE) / len(preds)
-        out["precision"] = ("pass" if share >= thr["min_precision_share"] else "warn", round(share, 3))
+        out["precision"] = ("pass" if share >= thr["min_precision_share"] else "warn", rnd(share, 3))
 
     # 3 risk_severity
     sevs = [p["severity"] for p in preds if p.get("severity") is not None]
@@ -56,7 +57,7 @@ def _check_items(T: dict, thr: dict) -> dict:
         out["risk_severity"] = ("warn", 0.0)
     else:
         m = _mean(sevs)
-        out["risk_severity"] = ("pass" if m >= thr["min_severity"] else "warn", round(m, 3))
+        out["risk_severity"] = ("pass" if m >= thr["min_severity"] else "warn", rnd(m, 3))
 
     # 4 parsimony
     ratio = len(aux) / max(1, len(props))
@@ -67,7 +68,7 @@ def _check_items(T: dict, thr: dict) -> dict:
             ok = any(t.get("prediction_id") in protects and t.get("passed") is True for t in tos)
             if not ok:
                 ad_hoc += 1
-    score = round(max(0.0, 1.0 - ratio / thr["parsimony_ratio_max"]), 3)
+    score = rnd(max(0.0, 1.0 - ratio / thr["parsimony_ratio_max"]), 3)
     if ad_hoc > 0:
         out["parsimony"] = ("fail", 0.0)
     else:
@@ -84,7 +85,7 @@ def _check_items(T: dict, thr: dict) -> dict:
                 max_sim = max(max_sim, jaccard(toks[i], toks[j]))
     out["non_redundancy"] = (
         "pass" if max_sim < thr["redundancy_similarity_max"] else "warn",
-        round(1.0 - max_sim, 3),
+        rnd(1.0 - max_sim, 3),
     )
 
     # 6 construct_clarity
@@ -98,7 +99,7 @@ def _check_items(T: dict, thr: dict) -> dict:
             and _ne_list(c.get("boundary_conditions"))
         )
         frac = complete / len(cons)
-        out["construct_clarity"] = ("pass" if frac == 1.0 else "warn", round(frac, 3))
+        out["construct_clarity"] = ("pass" if frac == 1.0 else "warn", rnd(frac, 3))
 
     # 7 scope
     present = _ne_list(T.get("boundary_conditions")) or (
@@ -111,7 +112,7 @@ def _check_items(T: dict, thr: dict) -> dict:
         out["logical_why"] = ("warn", 0.0)
     else:
         frac = sum(1 for p in props if _ne_str(p.get("mechanism"))) / len(props)
-        out["logical_why"] = ("pass" if frac == 1.0 else "warn", round(frac, 3))
+        out["logical_why"] = ("pass" if frac == 1.0 else "warn", rnd(frac, 3))
 
     # 9 causal_testability
     causal = [p for p in props if p.get("relation") in _CAUSAL]
@@ -125,7 +126,7 @@ def _check_items(T: dict, thr: dict) -> dict:
             p for p in preds
             if _ne_list(p.get("diagnostic_vs")) and any(d in alt_ids for d in p.get("diagnostic_vs"))
         ]
-        out["diagnosticity"] = ("pass" if len(diag) >= 1 else "warn", round(len(diag) / len(preds), 3))
+        out["diagnosticity"] = ("pass" if len(diag) >= 1 else "warn", rnd(len(diag) / len(preds), 3))
 
     # 11 formalization
     fm = T.get("formal_model")
@@ -141,7 +142,7 @@ def _check_items(T: dict, thr: dict) -> dict:
             if _ne_list(p.get("derives_from")) and all(d in prop_ids for d in p.get("derives_from"))
         ]
         frac = len(valid) / len(preds)
-        out["derivation_chain"] = ("pass" if frac == 1.0 else "fail", round(frac, 3))
+        out["derivation_chain"] = ("pass" if frac == 1.0 else "fail", rnd(frac, 3))
 
     return out
 
@@ -181,7 +182,7 @@ def check(T) -> dict:
         "theory_id": T.get("id", ""),
         "schema_version": T.get("schema_version", ""),
         "maturity": maturity,
-        "aggregate_score": round(weighted * 100, 1),
+        "aggregate_score": rnd(weighted * 100, 1),
         "gate": gate,
         "n_blockers_failed": n_blockers_failed,
         "items": items,

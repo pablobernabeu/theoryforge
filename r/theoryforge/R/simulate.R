@@ -64,7 +64,7 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
 
   X <- rep(as.numeric(init), n)
   traj <- vector("list", steps + 1L)
-  traj[[1L]] <- if (n == 0L) numeric(0) else round(X, 6)
+  traj[[1L]] <- if (n == 0L) numeric(0) else .tf_rnd(X, 6)
   for (s in seq_len(steps)) {
     dX <- numeric(n)
     if (n > 0L) {
@@ -79,7 +79,7 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
         X[i] <- X[i] + dt * dX[i]
       }
     }
-    traj[[s + 1L]] <- if (n == 0L) numeric(0) else round(X, 6)
+    traj[[s + 1L]] <- if (n == 0L) numeric(0) else .tf_rnd(X, 6)
   }
 
   list(states = as.list(states), dt = dt, steps = steps, trajectory = traj)

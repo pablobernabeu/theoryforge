@@ -67,7 +67,7 @@ tf_embedding_redundancy <- function(theory, embedder, threshold = NULL) {
       for (j in (i + 1L):n) {
         a <- c(a, ids[[i]])
         b <- c(b, ids[[j]])
-        cosine <- c(cosine, round(.tf_cosine(vecs[[i]], vecs[[j]]), 6))
+        cosine <- c(cosine, .tf_rnd(.tf_cosine(vecs[[i]], vecs[[j]]), 6))
       }
     }
   }

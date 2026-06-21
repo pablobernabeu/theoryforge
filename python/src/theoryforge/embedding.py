@@ -10,6 +10,7 @@ import math
 from collections.abc import Callable, Sequence
 
 from . import _resources
+from ._num import rnd
 
 
 def _list(d: dict, key: str) -> list:
@@ -41,7 +42,7 @@ def embedding_redundancy(T, embedder: Callable[[str], Sequence[float]],
     rows = []
     for i in range(len(vecs)):
         for j in range(i + 1, len(vecs)):
-            sim = round(_cosine(vecs[i][1], vecs[j][1]), 6)
+            sim = rnd(_cosine(vecs[i][1], vecs[j][1]), 6)
             rows.append({
                 "a": vecs[i][0], "b": vecs[j][0],
                 "cosine": sim, "flag": "review" if sim >= threshold else "ok",

@@ -6,6 +6,8 @@ updates, so the trajectory is fully deterministic and parity-testable across lan
 """
 from __future__ import annotations
 
+from ._num import rnd
+
 _POS = {"increases", "causes", "mediates"}
 _NEG = {"decreases"}
 
@@ -35,10 +37,10 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
             A[idx[t]][idx[f]] += sign * k
 
     X = [float(init)] * n
-    traj = [[round(x, 6) for x in X]]
+    traj = [[rnd(x, 6) for x in X]]
     for _ in range(steps):
         dX = [sum(A[i][j] * X[j] for j in range(n)) - damping * X[i] for i in range(n)]
         X = [X[i] + dt * dX[i] for i in range(n)]
-        traj.append([round(x, 6) for x in X])
+        traj.append([rnd(x, 6) for x in X])
 
     return {"states": states, "dt": dt, "steps": steps, "trajectory": traj}

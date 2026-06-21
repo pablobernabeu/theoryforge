@@ -53,7 +53,7 @@ tf_jaccard <- function(a, b) {
   }
   inter <- length(intersect(a, b))
   union <- length(union(a, b))
-  round(inter / union, 3)
+  .tf_rnd(inter / union, 3)
 }
 
 #' Pairwise lexical similarity of construct definitions

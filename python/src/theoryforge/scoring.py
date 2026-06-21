@@ -1,6 +1,8 @@
 """Severity rubric: a documented, deterministic operationalization (API_SPEC.md section 9)."""
 from __future__ import annotations
 
+from ._num import rnd
+
 BASE = {"existence": 0.1, "directional": 0.4, "interval": 0.7, "point": 0.9}
 CRUD = 0.25  # Meehl (1990) ambient-correlation discount for directional predictions
 
@@ -25,7 +27,7 @@ def severity(T) -> list[dict]:
         out.append({
             "prediction_id": p.get("id"),
             "type": typ,
-            "risk_score": round(base, 3),
-            "computed_severity": round(min(1.0, discounted + diag_bonus), 3),
+            "risk_score": rnd(base, 3),
+            "computed_severity": rnd(min(1.0, discounted + diag_bonus), 3),
         })
     return out

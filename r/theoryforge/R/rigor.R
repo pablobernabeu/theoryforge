@@ -41,7 +41,7 @@ NULL
     }, logical(1)))
     share <- n_precise / length(preds)
     out$precision <- item(if (share >= thr$min_precision_share) "pass" else "warn",
-                          round(share, 3))
+                          .tf_rnd(share, 3))
   }
 
   # 3 risk_severity
@@ -57,7 +57,7 @@ NULL
   } else {
     m <- sum(sevs) / length(sevs)
     out$risk_severity <- item(if (m >= thr$min_severity) "pass" else "warn",
-                              round(m, 3))
+                              .tf_rnd(m, 3))
   }
 
   # 4 parsimony
@@ -82,7 +82,7 @@ NULL
       if (!ok) ad_hoc <- ad_hoc + 1L
     }
   }
-  score <- round(max(0.0, 1.0 - ratio / thr$parsimony_ratio_max), 3)
+  score <- .tf_rnd(max(0.0, 1.0 - ratio / thr$parsimony_ratio_max), 3)
   if (ad_hoc > 0L) {
     out$parsimony <- item("fail", 0.0)
   } else {
@@ -105,7 +105,7 @@ NULL
   }
   out$non_redundancy <- item(
     if (max_sim < thr$redundancy_similarity_max) "pass" else "warn",
-    round(1.0 - max_sim, 3)
+    .tf_rnd(1.0 - max_sim, 3)
   )
 
   # 6 construct_clarity
@@ -118,7 +118,7 @@ NULL
         .tf_ne_list(.tf_get(c, "boundary_conditions"))
     }, logical(1)))
     frac <- complete / length(cons)
-    out$construct_clarity <- item(if (frac == 1.0) "pass" else "warn", round(frac, 3))
+    out$construct_clarity <- item(if (frac == 1.0) "pass" else "warn", .tf_rnd(frac, 3))
   }
 
   # 7 scope
@@ -134,7 +134,7 @@ NULL
   } else {
     frac <- sum(vapply(props, function(p) .tf_ne_str(.tf_get(p, "mechanism")),
                        logical(1))) / length(props)
-    out$logical_why <- item(if (frac == 1.0) "pass" else "warn", round(frac, 3))
+    out$logical_why <- item(if (frac == 1.0) "pass" else "warn", .tf_rnd(frac, 3))
   }
 
   # 9 causal_testability
@@ -155,7 +155,7 @@ NULL
       any(dv %in% alt_ids)
     }, logical(1)))
     out$diagnosticity <- item(if (n_diag >= 1L) "pass" else "warn",
-                              round(n_diag / length(preds), 3))
+                              .tf_rnd(n_diag / length(preds), 3))
   }
 
   # 11 formalization
@@ -176,7 +176,7 @@ NULL
       all(df %in% prop_ids)
     }, logical(1)))
     frac <- n_valid / length(preds)
-    out$derivation_chain <- item(if (frac == 1.0) "pass" else "fail", round(frac, 3))
+    out$derivation_chain <- item(if (frac == 1.0) "pass" else "fail", .tf_rnd(frac, 3))
   }
 
   out
@@ -243,7 +243,7 @@ tf_check <- function(theory) {
     theory_id = .tf_str(T, "id"),
     schema_version = .tf_str(T, "schema_version"),
     maturity = maturity,
-    aggregate_score = round(weighted * 100, 1),
+    aggregate_score = .tf_rnd(weighted * 100, 1),
     gate = gate,
     n_blockers_failed = n_blockers_failed,
     items = items

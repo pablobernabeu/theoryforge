@@ -52,8 +52,8 @@ tf_severity <- function(theory) {
     }
     prediction_id[i] <- .tf_str(p, "id")
     type[i] <- typ
-    risk_score[i] <- round(base, 3)
-    computed_severity[i] <- round(min(1.0, discounted + diag_bonus), 3)
+    risk_score[i] <- .tf_rnd(base, 3)
+    computed_severity[i] <- .tf_rnd(min(1.0, discounted + diag_bonus), 3)
   }
 
   data.frame(
