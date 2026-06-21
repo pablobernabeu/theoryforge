@@ -1,0 +1,30 @@
+site_name: theoryforge (Python)
+site_description: A rigorous, reproducible workflow for theory building, development, and testing.
+repo_url: https://github.com/pablobernabeu/theoryforge
+
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - API reference: api.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_root_heading: true
+            docstring_style: google
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+
+# Build with:  pip install mkdocs-material "mkdocstrings[python]" && mkdocs build

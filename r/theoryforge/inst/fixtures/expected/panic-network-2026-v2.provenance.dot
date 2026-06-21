@@ -1,0 +1,5 @@
+digraph provenance {
+  rankdir=TB;
+  node [shape=box];
+  "n1" [label="tf_amend: Added pred4 and its corroborating outcome."];
+}

@@ -1,0 +1,81 @@
+{
+  "n_records": 8,
+  "keywords": [
+    "appraisal",
+    "arousal",
+    "avoidance",
+    "catastrophic misinterpretation",
+    "exposure",
+    "genetics",
+    "heritability",
+    "interoception"
+  ],
+  "keyword_cooccurrence": [
+    {
+      "a": "appraisal",
+      "b": "catastrophic misinterpretation",
+      "count": 2
+    },
+    {
+      "a": "arousal",
+      "b": "interoception",
+      "count": 2
+    },
+    {
+      "a": "avoidance",
+      "b": "exposure",
+      "count": 2
+    },
+    {
+      "a": "genetics",
+      "b": "heritability",
+      "count": 2
+    }
+  ],
+  "themes": [
+    {
+      "id": "theme_1",
+      "keywords": [
+        "appraisal",
+        "catastrophic misinterpretation"
+      ],
+      "size": 2
+    },
+    {
+      "id": "theme_2",
+      "keywords": [
+        "arousal",
+        "interoception"
+      ],
+      "size": 2
+    },
+    {
+      "id": "theme_3",
+      "keywords": [
+        "avoidance",
+        "exposure"
+      ],
+      "size": 2
+    },
+    {
+      "id": "theme_4",
+      "keywords": [
+        "genetics",
+        "heritability"
+      ],
+      "size": 2
+    }
+  ],
+  "co_citation": [
+    {
+      "a": "barlow2002",
+      "b": "clark1986",
+      "count": 3
+    },
+    {
+      "a": "bouton2001",
+      "b": "craske2008",
+      "count": 2
+    }
+  ]
+}

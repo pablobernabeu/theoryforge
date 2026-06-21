@@ -1,0 +1,58 @@
+url: https://github.com/pablobernabeu/theoryforge
+
+template:
+  bootstrap: 5
+
+reference:
+- title: Core IO
+  desc: Read, validate, and write theory objects.
+  contents:
+  - tf_read
+  - tf_validate
+  - tf_write
+- title: Builder (BUILDING mode)
+  desc: Construct a theory incrementally with provenance tracking.
+  contents:
+  - tf_theory
+  - tf_add_construct
+  - tf_add_proposition
+  - tf_add_prediction
+  - tf_add_alternative
+  - tf_add_assumption
+  - tf_set_formal_model
+- title: Rigor
+  desc: Score a theory against the versioned rigor checklist.
+  contents:
+  - tf_check
+  - tf_report
+  - tf_severity
+- title: Redundancy
+  desc: Deterministic lexical redundancy screen.
+  contents:
+  - tf_tokens
+  - tf_jaccard
+  - tf_redundancy_check
+- title: Diagram
+  desc: Byte-identical diagram intermediate representations.
+  contents:
+  - tf_diagram
+  - tf_lit_diagram
+- title: Develop
+  desc: Lakatosian amendment appraisal.
+  contents:
+  - tf_appraise_amendment
+- title: Test / preregistration
+  desc: Preregistration document export.
+  contents:
+  - tf_preregister
+- title: Literature layer
+  desc: Bibliometric mapping of a literature corpus.
+  contents:
+  - tf_read_corpus
+  - tf_litmap
+  - tf_landscape
+  - tf_fetch_corpus
+- title: Not yet implemented
+  desc: Scaffolded for API parity.
+  contents:
+  - tf_compile_sem

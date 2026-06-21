@@ -1,0 +1,106 @@
+{
+  "theory_id": "weak-demo",
+  "schema_version": "1.0",
+  "maturity": "building",
+  "aggregate_score": 12.0,
+  "gate": "blocked",
+  "n_blockers_failed": 2,
+  "items": [
+    {
+      "id": "falsifiability",
+      "status": "fail",
+      "score": 0.0,
+      "weight": 0.15,
+      "severity_if_fail": "blocker",
+      "citation": "Popper (1959); Bacharach (1989)"
+    },
+    {
+      "id": "precision",
+      "status": "warn",
+      "score": 0.0,
+      "weight": 0.1,
+      "severity_if_fail": "warning",
+      "citation": "Meehl (1967, 1990)"
+    },
+    {
+      "id": "risk_severity",
+      "status": "warn",
+      "score": 0.2,
+      "weight": 0.1,
+      "severity_if_fail": "warning",
+      "citation": "Mayo (2018); Meehl (1990); Cohen (1992)"
+    },
+    {
+      "id": "parsimony",
+      "status": "pass",
+      "score": 1.0,
+      "weight": 0.08,
+      "severity_if_fail": "warning",
+      "citation": "Forster & Sober (1994); Lakatos (1970)"
+    },
+    {
+      "id": "non_redundancy",
+      "status": "pass",
+      "score": 0.2,
+      "weight": 0.1,
+      "severity_if_fail": "warning",
+      "citation": "Kelley (1927); Le et al. (2010); Lawson & Robins (2021)"
+    },
+    {
+      "id": "construct_clarity",
+      "status": "warn",
+      "score": 0.0,
+      "weight": 0.08,
+      "severity_if_fail": "warning",
+      "citation": "Suddaby (2010); Cronbach & Meehl (1955); Flake & Fried (2020)"
+    },
+    {
+      "id": "scope",
+      "status": "warn",
+      "score": 0.0,
+      "weight": 0.06,
+      "severity_if_fail": "warning",
+      "citation": "Whetten (1989); Bacharach (1989)"
+    },
+    {
+      "id": "logical_why",
+      "status": "warn",
+      "score": 0.0,
+      "weight": 0.08,
+      "severity_if_fail": "warning",
+      "citation": "Sutton & Staw (1995); Whetten (1989)"
+    },
+    {
+      "id": "causal_testability",
+      "status": "warn",
+      "score": 0.0,
+      "weight": 0.06,
+      "severity_if_fail": "warning",
+      "citation": "Textor et al. (2017); Eronen & Bringmann (2021)"
+    },
+    {
+      "id": "diagnosticity",
+      "status": "warn",
+      "score": 0.0,
+      "weight": 0.06,
+      "severity_if_fail": "warning",
+      "citation": "Platt (1964); Fiedler (2017)"
+    },
+    {
+      "id": "formalization",
+      "status": "warn",
+      "score": 0.0,
+      "weight": 0.05,
+      "severity_if_fail": "warning",
+      "citation": "Robinaugh et al. (2021); Guest & Martin (2021)"
+    },
+    {
+      "id": "derivation_chain",
+      "status": "fail",
+      "score": 0.0,
+      "weight": 0.08,
+      "severity_if_fail": "blocker",
+      "citation": "Scheel et al. (2021); Szollosi et al. (2020)"
+    }
+  ]
+}

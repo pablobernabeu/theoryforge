@@ -1,0 +1,30 @@
+Package: theoryforge
+Title: Rigorous, Reproducible Theory Building, Development, and Testing
+Version: 0.1.0
+Authors@R:
+    person(given = "theoryforge developers", role = c("aut", "cre"), email = "pcbernabeu@gmail.com")
+Description: Provides a rigorous, reproducible workflow for building,
+    developing, and testing scientific theories represented as versioned,
+    machine-checkable objects. Functions read and validate theory objects,
+    score them against a versioned rigor checklist, screen constructs for
+    lexical redundancy, and emit byte-identical diagram intermediate
+    representations. The package is the feature-parity twin of a 'Python'
+    package of the same name, with behaviour pinned by a shared
+    specification so the two implementations produce identical verdicts.
+License: MIT + file LICENSE
+URL: https://github.com/pablobernabeu/theoryforge
+BugReports: https://github.com/pablobernabeu/theoryforge/issues
+Encoding: UTF-8
+Imports:
+    yaml,
+    jsonlite
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    httr,
+    curl
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0

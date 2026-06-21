@@ -1,0 +1,15 @@
+graph keyword_cooccurrence {
+  node [shape=ellipse];
+  "appraisal";
+  "arousal";
+  "avoidance";
+  "catastrophic misinterpretation";
+  "exposure";
+  "genetics";
+  "heritability";
+  "interoception";
+  "appraisal" -- "catastrophic misinterpretation" [label="2"];
+  "arousal" -- "interoception" [label="2"];
+  "avoidance" -- "exposure" [label="2"];
+  "genetics" -- "heritability" [label="2"];
+}

@@ -1,0 +1,9 @@
+digraph pipeline {
+  rankdir=LR;
+  node [shape=box];
+  "pred1" [label="point"];
+  "pred2" [label="interval"];
+  "pred3" [label="directional"];
+  "result_pred1" [label="passed=true"];
+  "pred1" -> "result_pred1";
+}

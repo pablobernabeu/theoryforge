@@ -1,0 +1,5 @@
+dag {
+  c_arousal -> c_perceived_threat
+  c_perceived_threat -> c_avoidance
+  c_perceived_threat -> c_arousal
+}

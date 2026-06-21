@@ -1,0 +1,7 @@
+digraph nomological_net {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  "k_motivation" [label="Motivation"];
+  "k_drive" [label="Drive"];
+  "k_motivation" -> "k_drive" [label="associates"];
+}

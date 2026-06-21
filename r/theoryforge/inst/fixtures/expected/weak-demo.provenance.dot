@@ -1,0 +1,4 @@
+digraph provenance {
+  rankdir=TB;
+  node [shape=box];
+}

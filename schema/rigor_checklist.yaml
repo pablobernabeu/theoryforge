@@ -1,0 +1,72 @@
+# theoryforge rigor checklist — shared, versioned specification.
+# Both the R and Python packages read THIS file; the scoring algorithm is pinned
+# in API_SPEC.md so the two implementations produce identical verdicts.
+schema_version: "1.0"
+
+thresholds:
+  redundancy_similarity_max: 0.85   # lexical-screen default (calibrated, not hard truth); embeddings opt-in
+  min_precision_share: 0.5          # share of point/interval predictions for item 'precision' to pass
+  min_severity: 0.5                 # mean severity for item 'risk_severity' to pass
+  parsimony_ratio_max: 1.0          # auxiliary_assumptions per explained phenomenon
+
+items:
+  - id: falsifiability
+    criterion: "At least one prediction forbids an observation"
+    weight: 0.15
+    severity_if_fail: blocker
+    citation: "Popper (1959); Bacharach (1989)"
+  - id: precision
+    criterion: "Predictions are point/interval, not merely directional"
+    weight: 0.10
+    severity_if_fail: warning
+    citation: "Meehl (1967, 1990)"
+  - id: risk_severity
+    criterion: "Mean prediction severity above threshold"
+    weight: 0.10
+    severity_if_fail: warning
+    citation: "Mayo (2018); Meehl (1990); Cohen (1992)"
+  - id: parsimony
+    criterion: "Few auxiliary assumptions; none added purely defensively"
+    weight: 0.08
+    severity_if_fail: warning
+    citation: "Forster & Sober (1994); Lakatos (1970)"
+  - id: non_redundancy
+    criterion: "No construct pair exceeds the calibrated similarity screen"
+    weight: 0.10
+    severity_if_fail: warning
+    citation: "Kelley (1927); Le et al. (2010); Lawson & Robins (2021)"
+  - id: construct_clarity
+    criterion: "Every construct has definition + measurement + boundary conditions"
+    weight: 0.08
+    severity_if_fail: warning
+    citation: "Suddaby (2010); Cronbach & Meehl (1955); Flake & Fried (2020)"
+  - id: scope
+    criterion: "Boundary conditions explicitly stated"
+    weight: 0.06
+    severity_if_fail: warning
+    citation: "Whetten (1989); Bacharach (1989)"
+  - id: logical_why
+    criterion: "Each proposition states a mechanism, not just a correlation"
+    weight: 0.08
+    severity_if_fail: warning
+    citation: "Sutton & Staw (1995); Whetten (1989)"
+  - id: causal_testability
+    criterion: "Causal relations export to a DAG with derivable implications"
+    weight: 0.06
+    severity_if_fail: warning
+    citation: "Textor et al. (2017); Eronen & Bringmann (2021)"
+  - id: diagnosticity
+    criterion: "At least one prediction discriminates from a registered alternative"
+    weight: 0.06
+    severity_if_fail: warning
+    citation: "Platt (1964); Fiedler (2017)"
+  - id: formalization
+    criterion: "A formal-model stub exists (warn-only at building stage)"
+    weight: 0.05
+    severity_if_fail: warning
+    citation: "Robinaugh et al. (2021); Guest & Martin (2021)"
+  - id: derivation_chain
+    criterion: "Each prediction is graph-reachable from propositions (reachability only)"
+    weight: 0.08
+    severity_if_fail: blocker
+    citation: "Scheel et al. (2021); Szollosi et al. (2020)"

@@ -1,0 +1,34 @@
+# R
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rcheck/
+*.tar.gz
+r/theoryforge/man/*.Rd.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Quarto / docs build
+/_site/
+*.html.bak
+.quarto/
+/python/site/
+/r/theoryforge/docs/
+# Manuscript kept out of the public repo pending journal submission
+/manuscript/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,10 @@
+digraph nomological_net {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  "c_arousal" [label="Physiological arousal"];
+  "c_perceived_threat" [label="Perceived threat"];
+  "c_avoidance" [label="Avoidance behaviour"];
+  "c_arousal" -> "c_perceived_threat" [label="increases"];
+  "c_perceived_threat" -> "c_avoidance" [label="increases"];
+  "c_perceived_threat" -> "c_arousal" [label="causes"];
+}

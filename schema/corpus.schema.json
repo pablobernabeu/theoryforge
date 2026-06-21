@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pablobernabeu/theoryforge/schema/corpus.schema.json",
+  "title": "theoryforge literature corpus",
+  "description": "A language-agnostic literature corpus consumed by the (deterministic) bibliometric layer. Produced either by hand, from a fixture, or by the parity-exempt OpenAlex adapter (fetch_corpus).",
+  "type": "object",
+  "required": ["schema_version", "id", "records"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "id": { "type": "string", "minLength": 1 },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "year": { "type": ["integer", "string", "null"] },
+          "keywords": { "type": "array", "items": { "type": "string" } },
+          "references": { "type": "array", "items": { "type": "string" }, "description": "ids of works this record cites" }
+        }
+      }
+    }
+  }
+}

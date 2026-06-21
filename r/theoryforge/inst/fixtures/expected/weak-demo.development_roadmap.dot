@@ -1,0 +1,14 @@
+digraph development_roadmap {
+  rankdir=TB;
+  node [shape=box];
+  "falsifiability" [label="falsifiability (fail)"];
+  "precision" [label="precision (warn)"];
+  "risk_severity" [label="risk_severity (warn)"];
+  "construct_clarity" [label="construct_clarity (warn)"];
+  "scope" [label="scope (warn)"];
+  "logical_why" [label="logical_why (warn)"];
+  "causal_testability" [label="causal_testability (warn)"];
+  "diagnosticity" [label="diagnosticity (warn)"];
+  "formalization" [label="formalization (warn)"];
+  "derivation_chain" [label="derivation_chain (fail)"];
+}

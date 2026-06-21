@@ -1,0 +1,55 @@
+{
+  "theory_id": "panic-network-2026",
+  "themes": [
+    {
+      "id": "theme_1",
+      "keywords": [
+        "appraisal",
+        "catastrophic misinterpretation"
+      ],
+      "alternatives": [
+        "alt_cognitive"
+      ],
+      "focal": false,
+      "status": "covered"
+    },
+    {
+      "id": "theme_2",
+      "keywords": [
+        "arousal",
+        "interoception"
+      ],
+      "alternatives": [
+        "alt_biological"
+      ],
+      "focal": true,
+      "status": "crowded"
+    },
+    {
+      "id": "theme_3",
+      "keywords": [
+        "avoidance",
+        "exposure"
+      ],
+      "alternatives": [],
+      "focal": true,
+      "status": "covered"
+    },
+    {
+      "id": "theme_4",
+      "keywords": [
+        "genetics",
+        "heritability"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorized"
+    }
+  ],
+  "under_theorized_fronts": [
+    "theme_4"
+  ],
+  "redundancy_risk": [
+    "theme_2"
+  ]
+}

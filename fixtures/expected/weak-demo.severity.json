@@ -1,0 +1,8 @@
+[
+  {
+    "prediction_id": "w1",
+    "type": "existence",
+    "risk_score": 0.1,
+    "computed_severity": 0.1
+  }
+]

@@ -1,0 +1,9 @@
+graph co_citation {
+  node [shape=ellipse];
+  "barlow2002";
+  "bouton2001";
+  "clark1986";
+  "craske2008";
+  "barlow2002" -- "clark1986" [label="3"];
+  "bouton2001" -- "craske2008" [label="2"];
+}

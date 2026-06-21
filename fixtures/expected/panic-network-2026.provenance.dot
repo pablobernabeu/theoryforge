@@ -1,0 +1,9 @@
+digraph provenance {
+  rankdir=TB;
+  node [shape=box];
+  "n1" [label="tf_construct: Registered three constructs."];
+  "n2" [label="tf_proposition: Linked constructs into a feedback network."];
+  "n3" [label="tf_predict: Derived three predictions from the propositions."];
+  "n1" -> "n2";
+  "n2" -> "n3";
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "prediction_id": "pred1",
+    "type": "point",
+    "risk_score": 0.9,
+    "computed_severity": 1.0
+  },
+  {
+    "prediction_id": "pred2",
+    "type": "interval",
+    "risk_score": 0.7,
+    "computed_severity": 0.7
+  },
+  {
+    "prediction_id": "pred3",
+    "type": "directional",
+    "risk_score": 0.4,
+    "computed_severity": 0.3
+  },
+  {
+    "prediction_id": "pred4",
+    "type": "point",
+    "risk_score": 0.9,
+    "computed_severity": 1.0
+  }
+]

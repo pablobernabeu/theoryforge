@@ -1,0 +1,53 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "theoryforge"
+version = "0.1.0"
+description = "A rigorous, reproducible workflow for theory building, development, and testing."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "theoryforge authors" }]
+keywords = ["theory", "metascience", "falsifiability", "psychology", "reproducibility"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+full = ["jsonschema>=4.0"]      # full JSON-Schema validation (built-in structural check works without it)
+dev = ["pytest>=7.0", "ruff", "mypy"]
+
+[project.urls]
+Homepage = "https://github.com/pablobernabeu/theoryforge"
+Repository = "https://github.com/pablobernabeu/theoryforge"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/theoryforge"]
+# Non-Python files inside the package dir (schema/*.json, *.yaml, py.typed) are
+# included automatically by hatchling.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E741"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src/theoryforge"]
+ignore_missing_imports = true
+warn_unused_ignores = true
+no_implicit_optional = true
