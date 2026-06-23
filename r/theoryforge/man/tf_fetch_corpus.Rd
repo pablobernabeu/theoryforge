@@ -18,10 +18,10 @@ A corpus object (named list) with \code{schema_version}, \code{id},
 and \code{records}.
 }
 \description{
-ASSISTIVE / PARITY-EXEMPT helper that builds a corpus by querying the
+Assistive, parity-exempt helper that builds a corpus by querying the
 OpenAlex works API (\code{https://api.openalex.org/works?search=...}). This
-is a network call: it is non-deterministic, depends on a live external
-service, and is therefore NOT part of the deterministic core and NOT covered
+is a network call. It is non-deterministic, depends on a live external
+service, and is therefore not part of the deterministic core and not covered
 by parity tests or CI. Each work is mapped to
 \code{{id, title, year, keywords, references}} (keywords falls back to the top
 concepts when no keywords are present).

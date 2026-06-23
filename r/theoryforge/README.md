@@ -1,9 +1,9 @@
 # theoryforge (R)
 
 A rigorous, reproducible workflow for theory building, development, and testing.
-This is the feature-parity twin of the Python package of the same name;
-behaviour is pinned by [`API_SPEC.md`](../../API_SPEC.md) so the two
-implementations produce identical verdicts and **byte-identical** diagram
+This is the feature-parity twin of the Python package of the same name.
+Behaviour is pinned by [`API_SPEC.md`](../../API_SPEC.md) so the two
+implementations produce identical verdicts and byte-identical diagram
 intermediate representations.
 
 ## Installation

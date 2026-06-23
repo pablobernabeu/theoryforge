@@ -29,7 +29,7 @@ Builds (and optionally sends) a request to upload \code{tf_dossier(theory)} to
 OSF storage. With \code{dry_run = TRUE} (the default) the planned request is
 returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 both \code{token} and \code{node} (the OSF project id) and performs an
-authenticated \code{PUT}; the live path is network- and credential-dependent
+authenticated \code{PUT}. The live path is network- and credential-dependent
 and is excluded from parity and CI. Mirrors the Python \code{theory.osf_push()}.
 See API_SPEC.md section 24.
 }

@@ -4,7 +4,7 @@
 \alias{lit}
 \title{Bibliometric / literature layer (API_SPEC.md Part C).}
 \description{
-The analysis (litmap, landscape, diagrams) is fully DETERMINISTIC given a
+The analysis (litmap, landscape, diagrams) is fully deterministic given a
 corpus, so it is parity-tested against the Python reference implementation.
 The OpenAlex fetch adapter (\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}) is the parity-exempt,
 network/non-deterministic assistive layer.

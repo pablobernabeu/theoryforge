@@ -6,7 +6,7 @@
 #' @keywords internal
 NULL
 
-# BASE riskiness of each claim form; CRUD = Meehl (1990) ambient-correlation
+# BASE riskiness of each claim form. CRUD = Meehl (1990) ambient-correlation
 # discount applied to directional predictions only.
 .tf_SEV_BASE <- c(existence = 0.1, directional = 0.4, interval = 0.7, point = 0.9)
 .tf_SEV_CRUD <- 0.25

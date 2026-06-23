@@ -1,6 +1,6 @@
-"""Deterministic lexical redundancy screen (the parity-tested default).
+"""Deterministic lexical redundancy screen, the parity-tested default.
 
-Embedding-based similarity is an opt-in enhancement (parity-exempt; see API_SPEC.md).
+Embedding-based similarity is an opt-in enhancement that is parity-exempt (see API_SPEC.md).
 """
 from __future__ import annotations
 

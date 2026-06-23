@@ -42,10 +42,10 @@ NULL
 }
 
 # Deterministic, cross-platform half-away-from-zero rounding (API_SPEC.md
-# section 3). Mirrors the Python `rnd` byte-for-byte; the `+1e-6` bias is far
+# section 3). Mirrors the Python `rnd` byte-for-byte. The `+1e-6` bias is far
 # larger than cross-platform ULP jitter yet far smaller than the rounding grid,
 # so results are identical on every platform. Vectorized in x (sign/floor/abs).
-# Do NOT replace with base round(): that is banker's rounding, which diverges
+# Do not replace with base round(), which is banker's rounding and diverges
 # across platforms at exact decimal half-boundaries.
 .tf_rnd <- function(x, n) {
   s <- 10^n

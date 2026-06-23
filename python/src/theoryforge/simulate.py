@@ -1,6 +1,6 @@
 """Deterministic dynamical-system runner derived from a theory's network (API_SPEC.md Part E).
 
-Each construct is a state variable; each directed proposition contributes a signed linear
+Each construct is a state variable, and each directed proposition contributes a signed linear
 coupling term. The system dX/dt = (A - damping*I) X is integrated with fixed-step (Euler)
 updates, so the trajectory is fully deterministic and parity-testable across languages.
 """

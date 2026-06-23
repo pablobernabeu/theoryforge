@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-"""Cross-language parity check: R outputs vs the Python-generated goldens.
+"""Cross-language parity check comparing R outputs against the Python-generated goldens.
 
 For every file in fixtures/expected/:
-  - *.json  -> compared SEMANTICALLY (recursive, float tolerance 1e-9); JSON number
+  - *.json  -> compared SEMANTICALLY (recursive, float tolerance 1e-9). JSON number
                formatting and length-1-array unboxing may differ between languages.
   - others  -> compared BYTE-IDENTICAL (diagrams, preregistration markdown).
 
-Run from the repo root:  python scripts/parity_check.py
-Exit 0 = parity holds; 1 = mismatch (details printed).
+Run from the repo root with: python scripts/parity_check.py
+Exit 0 indicates that parity holds. Exit 1 indicates a mismatch, with details printed.
 """
 from __future__ import annotations
 

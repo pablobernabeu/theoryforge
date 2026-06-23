@@ -80,7 +80,7 @@ def _components(edges: list[dict]) -> list[dict]:
 
 
 def litmap(corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
-    """Keyword co-occurrence, thematic components, and co-citation — all deterministic."""
+    """Keyword co-occurrence, thematic components, and co-citation, all deterministic."""
     records = _records(corpus)
     all_keywords = sorted({k for r in records for k in (r.get("keywords") or []) if k})
     kw_edges = _edges(_pair_counts(records, "keywords"), min_link)
@@ -179,9 +179,10 @@ def lit_diagram(obj: dict, type: str = "keyword_cooccurrence") -> str:
 
 
 def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None) -> dict:
-    """ASSISTIVE / PARITY-EXEMPT: build a corpus from the OpenAlex API (network call).
+    """Build a corpus from the OpenAlex API (network call).
 
-    Not part of the deterministic core and not covered by parity tests.
+    This adapter is assistive and parity-exempt. It is not part of the deterministic
+    core and is not covered by parity tests.
     """
     import urllib.parse
     import urllib.request

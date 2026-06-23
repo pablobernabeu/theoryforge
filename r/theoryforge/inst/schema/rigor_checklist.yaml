@@ -1,6 +1,6 @@
-# theoryforge rigor checklist — shared, versioned specification.
-# Both the R and Python packages read THIS file; the scoring algorithm is pinned
-# in API_SPEC.md so the two implementations produce identical verdicts.
+# theoryforge rigor checklist. Shared, versioned specification.
+# Both the R and Python packages read this file. The scoring algorithm is pinned
+# in API_SPEC.md so that the two implementations produce identical verdicts.
 schema_version: "1.0"
 
 thresholds:

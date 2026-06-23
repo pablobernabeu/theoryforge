@@ -1,7 +1,7 @@
 # theoryforge (Python)
 
-A rigorous, reproducible workflow for theory **building**, **development**, and **testing** —
-the Python twin of the R package of the same name. Behaviour is pinned by
+A rigorous, reproducible workflow for theory building, development, and testing. This is the
+Python twin of the R package of the same name. Behaviour is pinned by
 [`../API_SPEC.md`](../API_SPEC.md) so the two stay in lockstep.
 
 ```python
@@ -48,15 +48,16 @@ pip install -e ".[dev]"        # add ",full" for complete JSON-Schema validation
 pytest
 ```
 
-P0 implemented the deterministic core (I/O + validation, rigor checklist, three diagram
-exporters, lexical redundancy screen). P1 added the three workflow modes: a BUILDING builder
-API with provenance, the operationalized severity rubric, the Lakatosian amendment appraisal
-(DEVELOPMENT), preregistration export (TESTING), and two more diagram types
-(`development_roadmap`, `pipeline`). P2 adds the bibliometric/literature layer: `read_corpus`,
-`litmap` (keyword co-occurrence, deterministic connected-component themes, co-citation),
-`landscape` (maps a theory + alternatives onto the themes, flagging under-theorized fronts and
-redundancy risk), `lit_diagram`, and the parity-exempt `fetch_corpus` OpenAlex adapter. P3 added
-`compile_sem` (lavaan model syntax) and `dossier` (a reviewer-facing audit bundle). P4 added
-`simulate` (a deterministic dynamical-system runner over the construct network), `render_report`
-(a Quarto report wrapping the dossier), `embedding_redundancy` (an opt-in, parity-exempt embedding
-screen), and `osf_push` (an OSF deposit adapter, dry-run by default). No `NotImplemented` stubs remain.
+P0 implemented the deterministic core (I/O and validation, rigor checklist, three diagram
+exporters, lexical redundancy screen). P1 added the three workflow modes. These are a BUILDING
+builder API with provenance, the operationalized severity rubric, the Lakatosian amendment
+appraisal (DEVELOPMENT), preregistration export (TESTING), and two more diagram types
+(`development_roadmap`, `pipeline`). P2 adds the bibliometric and literature layer. This comprises
+`read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component themes, and
+co-citation), `landscape` (which maps a theory and its alternatives onto the themes, flagging
+under-theorized fronts and redundancy risk), `lit_diagram`, and the parity-exempt `fetch_corpus`
+OpenAlex adapter. P3 added `compile_sem` (lavaan model syntax) and `dossier` (a reviewer-facing
+audit bundle). P4 added `simulate` (a deterministic dynamical-system runner over the construct
+network), `render_report` (a Quarto report wrapping the dossier), `embedding_redundancy` (an
+opt-in, parity-exempt embedding screen), and `osf_push` (an OSF deposit adapter, dry-run by
+default). No `NotImplemented` stubs remain.

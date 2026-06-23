@@ -9,7 +9,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "description": "Semantic version of this schema; the major version gates loading.",
+      "description": "Semantic version of this schema. The major version gates loading.",
       "pattern": "^[0-9]+\\.[0-9]+$"
     },
     "id": { "type": "string", "minLength": 1 },
@@ -17,7 +17,7 @@
     "maturity": {
       "type": "string",
       "enum": ["draft", "building", "developing", "testing"],
-      "description": "draft = interim/advisory: blocker checks are downgraded to warnings so partial theories are scaffolded, not penalized."
+      "description": "When set to draft, the theory is treated as interim and advisory, so blocker checks are downgraded to warnings and partial theories are scaffolded rather than penalized."
     },
     "theory_form": {
       "type": "string",
@@ -92,7 +92,7 @@
     },
     "auxiliary_assumptions": {
       "type": "array",
-      "description": "Lakatosian protective belt as first-class, versioned entities.",
+      "description": "The Lakatosian protective belt, represented as first-class versioned entities.",
       "items": {
         "type": "object",
         "required": ["id", "statement"],
@@ -102,7 +102,7 @@
           "statement": { "type": "string" },
           "added_for": {
             "type": ["string", "null"],
-            "description": "null = core assumption; a prediction/anomaly id = added in response (candidate ad-hoc move)."
+            "description": "A null value indicates a core assumption. A prediction or anomaly id indicates an assumption added in response, which is a candidate ad-hoc move."
           },
           "protects": { "type": "array", "items": { "type": "string" } }
         }
@@ -123,7 +123,7 @@
     },
     "test_outcomes": {
       "type": "array",
-      "description": "Closes the loop: links a registered prediction to its realized result.",
+      "description": "Links a registered prediction to its realized result.",
       "items": {
         "type": "object",
         "required": ["prediction_id", "passed"],

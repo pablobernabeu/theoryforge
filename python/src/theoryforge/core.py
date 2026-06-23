@@ -1,4 +1,4 @@
-"""The Theory object: read, validate, write, and the mirrored public methods."""
+"""The Theory object, with read, validate, write, and the mirrored public methods."""
 from __future__ import annotations
 
 import json
@@ -173,7 +173,7 @@ class Theory:
         self._provenance("tf_set_formal_model", type)
         return self
 
-    # -- mirrored public API ---------------------------------------------------
+    # -- mirrored public API --------------------------------------------------
     def check(self) -> dict:
         return _check(self.data)
 
@@ -187,7 +187,7 @@ class Theory:
         return _diagram(self.data, type=type, engine=engine)
 
     def severity(self) -> list[dict]:
-        """Per-prediction risk and computed severity (the operationalized rubric)."""
+        """Per-prediction risk and computed severity from the operationalized rubric."""
         return _severity(self.data)
 
     def appraise_amendment(self, prior) -> dict:
@@ -203,11 +203,11 @@ class Theory:
         return _landscape(self.data, corpus, min_link=min_link)
 
     def compile_sem(self) -> str:
-        """Compile constructs + propositions to lavaan model syntax."""
+        """Compile constructs and propositions to lavaan model syntax."""
         return _compile_sem(self.data)
 
     def dossier(self) -> str:
-        """A reviewer-facing audit bundle: rigor report + severity + provenance + preregistration."""
+        """A reviewer-facing audit bundle of rigor report, severity, provenance, and preregistration."""
         return _dossier(self.data)
 
     def simulate(self, steps: int = 10, dt: float = 0.1, k: float = 1.0,
@@ -216,7 +216,7 @@ class Theory:
         return _simulate(self.data, steps=steps, dt=dt, k=k, damping=damping, init=init)
 
     def embedding_redundancy(self, embedder, threshold=None) -> list[dict]:
-        """Opt-in, parity-exempt embedding-based redundancy screen."""
+        """An opt-in, parity-exempt embedding-based redundancy screen."""
         return _embedding_redundancy(self.data, embedder, threshold=threshold)
 
     def render_report(self, path, title=None, render: bool = False, to: str = "html") -> str:
@@ -224,7 +224,7 @@ class Theory:
         return _render_report(self.data, path, title=title, render=render, to=to)
 
     def osf_push(self, token=None, node=None, filename=None, dry_run: bool = True) -> dict:
-        """Deposit the dossier on OSF (dry-run by default; a live push needs a token and node)."""
+        """Deposit the dossier on OSF (dry-run by default). A live push needs a token and node."""
         return _osf_push(self.data, token=token, node=node, filename=filename, dry_run=dry_run)
 
     def __repr__(self) -> str:

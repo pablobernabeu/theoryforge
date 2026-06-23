@@ -1,6 +1,6 @@
-# theoryforge — API & parity specification (v0.1.0, P0)
+# theoryforge: API and parity specification (v0.1.0, P0)
 
-This document is the **contract** that keeps the R and Python packages behaviourally identical.
+This document is the contract that keeps the R and Python packages behaviourally identical.
 Both implementations MUST follow the algorithms below exactly. CI diffs their outputs against it.
 
 ## 1. Repository layout
@@ -17,7 +17,7 @@ theory_development/
   .github/workflows/ci.yml          # R CMD check + pytest + parity job
 ```
 
-Each package **vendors a copy** of `schema/` at build time (R: `inst/schema/`; Python: `theoryforge/schema/`).
+Each package vendors a copy of `schema/` at build time (R uses `inst/schema/`, Python uses `theoryforge/schema/`).
 
 ## 2. Mirrored public API
 
@@ -32,14 +32,14 @@ Each package **vendors a copy** of `schema/` at build time (R: `inst/schema/`; P
 | Diagram IR | `tf_diagram(theory, type, engine="graphviz")` → string | `theory.diagram(type, engine="graphviz")` → str |
 | **P0 stubs** (signal "not implemented") | `tf_litmap`, `tf_landscape`, `tf_preregister`, `tf_appraise_amendment` | `theory.litmap`, `theory.landscape`, `theory.preregister`, `theory.appraise_amendment` |
 
-Same verbs, same argument names, same artifacts. Stubs MUST raise a clear "not implemented in P0" error, not return wrong data.
+The two implementations use the same verbs, the same argument names, and the same artifacts. Stubs MUST raise a clear "not implemented in P0" error rather than returning incorrect data.
 
 ## 3. Determinism rules (apply everywhere)
 
-- **Iteration order = file order.** Never sort collections unless told to. Constructs, propositions, predictions, provenance are processed in the order they appear in the YAML.
-- **Rounding:** all emitted numeric values use a deterministic **half-away-from-zero** rounding `rnd(x, n) = sign(x) * floor(abs(x)*10^n + 0.5 + 1e-6) / 10^n` (item scores `n=3`, aggregate `n=1`, simulate trajectories `n=6`). Do **NOT** use the language default `round()`: it is banker's rounding, whose result diverges across platforms at exact half-boundaries (e.g. 0.6125 → 0.612 on one OS, 0.613 on another). The `+1e-6` bias is far larger than cross-platform ULP jitter (~1e-13 at these magnitudes) yet far smaller than the rounding grid, so `rnd` is identical on every platform and across R/Python. R: `tf_rnd <- function(x, n) { s <- 10^n; sign(x) * floor(abs(x) * s + 0.5 + 1e-6) / s }`.
-- **Line endings:** all generated IR strings use `\n` (LF) only, and end with a single trailing `\n`.
-- **String escaping in DOT labels:** replace `\` → `\\` then `"` → `\"`.
+- **Iteration order = file order.** Never sort collections unless told to. Constructs, propositions, predictions, and provenance are processed in the order they appear in the YAML.
+- **Rounding.** All emitted numeric values use a deterministic half-away-from-zero rounding `rnd(x, n) = sign(x) * floor(abs(x)*10^n + 0.5 + 1e-6) / 10^n` (item scores `n=3`, aggregate `n=1`, simulate trajectories `n=6`). Do NOT use the language default `round()`. It is banker's rounding, whose result diverges across platforms at exact half-boundaries (e.g. 0.6125 → 0.612 on one OS, 0.613 on another). The `+1e-6` bias is far larger than cross-platform ULP jitter (~1e-13 at these magnitudes) yet far smaller than the rounding grid, so `rnd` is identical on every platform and across R and Python. R: `tf_rnd <- function(x, n) { s <- 10^n; sign(x) * floor(abs(x) * s + 0.5 + 1e-6) / s }`.
+- **Line endings.** All generated IR strings use `\n` (LF) only, and end with a single trailing `\n`.
+- **String escaping in DOT labels.** Replace `\` → `\\` then `"` → `\"`.
 
 ## 4. Rigor checklist algorithm
 
@@ -51,18 +51,18 @@ A field is "nonempty" if present and (for arrays) length ≥ 1 and (for strings)
 
 Each item returns `{id, status ∈ {pass,warn,fail}, score ∈ [0,1], weight, severity_if_fail, citation}`.
 
-1. **falsifiability** — `forbidding = [p for p in preds if p.type in {point,interval,directional}]`. `pass` if `len(forbidding) ≥ 1` else `fail`; score = 1.0/0.0.
-2. **precision** — if `len(preds)==0`: score 0.0, warn. Else `share = count(p.type in {point,interval}) / len(preds)`; score = round(share,3); `pass` if `share ≥ thr.min_precision_share` else `warn`.
-3. **risk_severity** — `sevs = [p.severity for p in preds if p.severity is not None]`. If empty: score 0.0, warn. Else `m = mean(sevs)`; score round(m,3); `pass` if `m ≥ thr.min_severity` else `warn`.
-4. **parsimony** — `ratio = len(aux) / max(1, len(props))`. `ad_hoc = count(x in aux where x.added_for is not null AND NOT any(to in tos with to.prediction_id in (x.protects or []) and to.passed == true))`. score = round(max(0.0, 1.0 - ratio / thr.parsimony_ratio_max), 3). If `ad_hoc > 0`: status `fail`, score 0.0. Else `pass` if `ratio ≤ thr.parsimony_ratio_max` else `warn`.
-5. **non_redundancy** — if `len(cons) < 2`: `max_sim = 0.0`. Else `max_sim = max` over all unordered construct pairs of `jaccard(tokens(c_i.definition), tokens(c_j.definition))` (see §6). score = round(1.0 - max_sim, 3); `pass` if `max_sim < thr.redundancy_similarity_max` else `warn`.
-6. **construct_clarity** — if no cons: score 0.0, warn. Else `complete = count(c where c.definition nonempty AND c.measurement nonempty AND c.boundary_conditions nonempty)`; `frac = complete/len(cons)`; score round(frac,3); `pass` if `frac == 1.0` else `warn`.
-7. **scope** — `present = T.boundary_conditions nonempty OR (cons nonempty AND every c has boundary_conditions nonempty)`. score 1.0/0.0; `pass`/`warn`.
-8. **logical_why** — if no props: score 0.0, warn. Else `frac = count(p.mechanism nonempty)/len(props)`; score round(frac,3); `pass` if `frac == 1.0` else `warn`.
-9. **causal_testability** — `causal = [p for p in props if p.relation in {causes,increases,decreases}]`. `pass` if `len(causal) ≥ 1` else `warn`; score 1.0/0.0.
-10. **diagnosticity** — `diag = [p for p in preds if p.diagnostic_vs nonempty AND any(d in alt_ids for d in p.diagnostic_vs)]`. If no preds: score 0.0, warn. Else score = round(len(diag)/len(preds),3); `pass` if `len(diag) ≥ 1` else `warn`.
-11. **formalization** — `present = T.formal_model exists AND T.formal_model.type not in {none, null/None}`. score 1.0/0.0; `pass`/`warn`.
-12. **derivation_chain** — if no preds: score 1.0, `pass` (vacuous). Else `valid = [p for p in preds if p.derives_from nonempty AND every d in p.derives_from is in prop_ids]`; `frac = len(valid)/len(preds)`; score round(frac,3); `pass` if `frac == 1.0` else `fail`.
+1. **falsifiability.** `forbidding = [p for p in preds if p.type in {point,interval,directional}]`. `pass` if `len(forbidding) ≥ 1` else `fail`; score = 1.0/0.0.
+2. **precision.** if `len(preds)==0`: score 0.0, warn. Else `share = count(p.type in {point,interval}) / len(preds)`; score = round(share,3); `pass` if `share ≥ thr.min_precision_share` else `warn`.
+3. **risk_severity.** `sevs = [p.severity for p in preds if p.severity is not None]`. If empty: score 0.0, warn. Else `m = mean(sevs)`; score round(m,3); `pass` if `m ≥ thr.min_severity` else `warn`.
+4. **parsimony.** `ratio = len(aux) / max(1, len(props))`. `ad_hoc = count(x in aux where x.added_for is not null AND NOT any(to in tos with to.prediction_id in (x.protects or []) and to.passed == true))`. score = round(max(0.0, 1.0 - ratio / thr.parsimony_ratio_max), 3). If `ad_hoc > 0`: status `fail`, score 0.0. Else `pass` if `ratio ≤ thr.parsimony_ratio_max` else `warn`.
+5. **non_redundancy.** if `len(cons) < 2`: `max_sim = 0.0`. Else `max_sim = max` over all unordered construct pairs of `jaccard(tokens(c_i.definition), tokens(c_j.definition))` (see §6). score = round(1.0 - max_sim, 3); `pass` if `max_sim < thr.redundancy_similarity_max` else `warn`.
+6. **construct_clarity.** if no cons: score 0.0, warn. Else `complete = count(c where c.definition nonempty AND c.measurement nonempty AND c.boundary_conditions nonempty)`; `frac = complete/len(cons)`; score round(frac,3); `pass` if `frac == 1.0` else `warn`.
+7. **scope.** `present = T.boundary_conditions nonempty OR (cons nonempty AND every c has boundary_conditions nonempty)`. score 1.0/0.0; `pass`/`warn`.
+8. **logical_why.** if no props: score 0.0, warn. Else `frac = count(p.mechanism nonempty)/len(props)`; score round(frac,3); `pass` if `frac == 1.0` else `warn`.
+9. **causal_testability.** `causal = [p for p in props if p.relation in {causes,increases,decreases}]`. `pass` if `len(causal) ≥ 1` else `warn`; score 1.0/0.0.
+10. **diagnosticity.** `diag = [p for p in preds if p.diagnostic_vs nonempty AND any(d in alt_ids for d in p.diagnostic_vs)]`. If no preds: score 0.0, warn. Else score = round(len(diag)/len(preds),3); `pass` if `len(diag) ≥ 1` else `warn`.
+11. **formalization.** `present = T.formal_model exists AND T.formal_model.type not in {none, null/None}`. score 1.0/0.0; `pass`/`warn`.
+12. **derivation_chain.** if no preds: score 1.0, `pass` (vacuous). Else `valid = [p for p in preds if p.derives_from nonempty AND every d in p.derives_from is in prop_ids]`; `frac = len(valid)/len(preds)`; score round(frac,3); `pass` if `frac == 1.0` else `fail`.
 
 **Aggregate:** `aggregate_score = round( sum(weight_i * score_i) * 100, 1 )`.
 
@@ -95,7 +95,7 @@ digraph nomological_net {
 ```
 (Each content line indented 2 spaces; trailing newline after `}`.)
 
-**provenance** (DOT) — node `n{i}` for the i-th step (1-based), `label = action` or `action + ": " + detail` when detail nonempty; then chain edges `n{i} -> n{i+1}`:
+**provenance** (DOT). Node `n{i}` for the i-th step (1-based), `label = action` or `action + ": " + detail` when detail nonempty; then chain edges `n{i} -> n{i+1}`:
 ```
 digraph provenance {
   rankdir=TB;
@@ -107,7 +107,7 @@ digraph provenance {
 }
 ```
 
-**causal_dag** (dagitty syntax) — one edge line per proposition whose `relation ∈ {causes,increases,decreases}`, file order:
+**causal_dag** (dagitty syntax). One edge line per proposition whose `relation ∈ {causes,increases,decreases}`, file order:
 ```
 dag {
   <from> -> <to>
@@ -137,14 +137,14 @@ jaccard(A, B): if A and B both empty -> 0.0; else round(|A∩B| / |A∪B|, 3)
 ## 7. Parity contract (what CI checks)
 
 - **Byte-identical:** the three diagram IR strings for every fixture.
-- **Semantic (parsed) with float tolerance 1e-9:** the rigor report (compare `aggregate_score`, `gate`, `n_blockers_failed`, and each item's `status`/`score`). JSON number *formatting* may differ between languages; values must not.
-- Golden files in `fixtures/expected/` are generated by the Python reference implementation (`scripts/gen_golden.py`); R is checked against them and against Python at run time.
+- **Semantic (parsed) with float tolerance 1e-9:** the rigor report (compare `aggregate_score`, `gate`, `n_blockers_failed`, and each item's `status`/`score`). JSON number *formatting* may differ between languages, but values must not.
+- Golden files in `fixtures/expected/` are generated by the Python reference implementation (`scripts/gen_golden.py`). R is checked against them and against Python at run time.
 
 ---
 
-# Part B — workflow modes (P1)
+# Part B: workflow modes (P1)
 
-P1 turns the three modes into real features. New public API (mirrored):
+P1 implements the three modes as full features. New public API (mirrored):
 
 | Concept | R | Python |
 |---|---|---|
@@ -163,9 +163,9 @@ P1 turns the three modes into real features. New public API (mirrored):
 
 ## 8. Builder & provenance
 
-Each builder/mutator appends one provenance entry `{step, action, detail}` where `step = str(new length of provenance)` (1-based), `action = the function name` (Python uses the R `tf_*` name for parity, e.g. `"tf_add_construct"`), `detail = the primary id` added (construct/proposition/prediction/alternative/assumption id; for `tf_theory` detail = theory id; for `tf_set_formal_model` detail = the type). Builders return the (mutated) theory. `new_theory` starts with `schema_version="1.0"`, empty collections created lazily, and a first provenance entry `{step:"1", action:"tf_theory", detail:<id>}`.
+Each builder/mutator appends one provenance entry `{step, action, detail}` where `step = str(new length of provenance)` (1-based), `action = the function name` (Python uses the R `tf_*` name for parity, e.g. `"tf_add_construct"`), and `detail = the primary id` added (construct/proposition/prediction/alternative/assumption id; for `tf_theory` detail = theory id, and for `tf_set_formal_model` detail = the type). Builders return the (mutated) theory. `new_theory` starts with `schema_version="1.0"`, empty collections created lazily, and a first provenance entry `{step:"1", action:"tf_theory", detail:<id>}`.
 
-## 9. Severity rubric (deterministic; API_SPEC §B central feature)
+## 9. Severity rubric (deterministic; central feature of Part B)
 
 `BASE = {existence:0.1, directional:0.4, interval:0.7, point:0.9}`. `CRUD = 0.25` (Meehl 1990 ambient-correlation discount). For each prediction (file order):
 - `risk_score = round(BASE[type], 3)` (the riskiness of the claim *form*).
@@ -182,7 +182,7 @@ Each builder/mutator appends one provenance entry `{step, action, detail}` where
 - `corroborated_new = [pid in new_predictions if any test_outcome t in new with t.prediction_id == pid and t.passed == true]`
 - `ad_hoc_assumptions = [a.id for a in new.auxiliary_assumptions if a.id not in prior_aux_ids and a.added_for is not null and not any(t in new.test_outcomes with t.prediction_id in (a.protects or []) and t.passed == true)]`
 - `verdict`: `"progressive"` if `len(corroborated_new) ≥ 1 and len(ad_hoc_assumptions) == 0`; `"degenerating"` if `len(ad_hoc_assumptions) ≥ 1 and len(corroborated_new) == 0`; else `"neutral"`.
-- Returns `{verdict, new_predictions, corroborated_new, ad_hoc_assumptions}` with each list **sorted ascending**.
+- Returns `{verdict, new_predictions, corroborated_new, ad_hoc_assumptions}` with each list sorted ascending.
 
 ## 11. Preregistration document (markdown; byte-identical golden)
 
@@ -205,11 +205,11 @@ Each builder/mutator appends one provenance entry `{step, action, detail}` where
 ```
 (Hypotheses numbered in file order starting at 1; Severity lines in file order using §9 values. If there are no predictions, write `_No predictions specified._` under each section heading instead of a list.)
 
-Format severity/risk with `fmt(x)`: render to 3 decimals, strip trailing zeros, keep at least one decimal — `1.0 -> "1.0"`, `0.9 -> "0.9"`, `0.667 -> "0.667"`. (R: `sub("\\.$", ".0", sub("0+$", "", sprintf("%.3f", x)))`.)
+Format severity/risk with `fmt(x)`: render to 3 decimals, strip trailing zeros, and keep at least one decimal, so `1.0 -> "1.0"`, `0.9 -> "0.9"`, `0.667 -> "0.667"`. (R: `sub("\\.$", ".0", sub("0+$", "", sprintf("%.3f", x)))`.)
 
 ## 12. New diagram types (byte-identical)
 
-**development_roadmap** (DOT) — one node per checklist item whose status ≠ pass (checklist order); if none, a single `all_checks_pass` node:
+**development_roadmap** (DOT). One node per checklist item whose status ≠ pass (checklist order). If none, a single `all_checks_pass` node:
 ```
 digraph development_roadmap {
   rankdir=TB;
@@ -219,7 +219,7 @@ digraph development_roadmap {
 ```
 (When all items pass: a single line `  "all_checks_pass" [label="all checks pass"];`.)
 
-**pipeline** (DOT) — prediction nodes (file order), then for each test_outcome (file order) a result node line followed by its edge:
+**pipeline** (DOT). Prediction nodes (file order), then for each test_outcome (file order) a result node line followed by its edge:
 ```
 digraph pipeline {
   rankdir=LR;
@@ -232,14 +232,14 @@ digraph pipeline {
 
 ## 13. Additional golden artifacts (per fixture unless noted)
 
-`<id>.development_roadmap.dot`, `<id>.pipeline.dot` (byte), `<id>.severity.json`, `<id>.prereg.md` (byte), and — for the amended pair only — `panic-network-2026-v2.appraisal.json` = `appraise_amendment(v2, v1)`. Parity checker: byte-identical for `*.dot/.dag/.md`, semantic (recursive, float tol 1e-9) for `*.json`.
+`<id>.development_roadmap.dot`, `<id>.pipeline.dot` (byte), `<id>.severity.json`, `<id>.prereg.md` (byte), and, for the amended pair only, `panic-network-2026-v2.appraisal.json` = `appraise_amendment(v2, v1)`. Parity checker: byte-identical for `*.dot/.dag/.md`, semantic (recursive, float tol 1e-9) for `*.json`.
 
 ---
 
-# Part C — bibliometric / literature layer (P2)
+# Part C: bibliometric / literature layer (P2)
 
-The analysis is **fully deterministic** given a corpus, so it is parity-tested. The OpenAlex
-fetch is the **assistive, parity-exempt** layer. Corpus schema: `schema/corpus.schema.json`
+The analysis is fully deterministic given a corpus, so it is parity-tested. The OpenAlex
+fetch is the assistive, parity-exempt layer. The corpus schema is `schema/corpus.schema.json`
 (`{schema_version, id, records:[{id, title, year, keywords:[], references:[ids]}]}`).
 
 New API (mirrored):
@@ -254,16 +254,16 @@ New API (mirrored):
 
 **Remaining stub (raises "not implemented"):** `compile_sem` / `tf_compile_sem` (P3 SEM/lavaan compilation). `litmap`/`landscape` are now real.
 
-## 14. litmap(corpus, min_link=2) — deterministic
+## 14. litmap(corpus, min_link=2): deterministic
 
 Records iterate in file order. `min_link` default 2.
 - `keywords` = sorted unique keyword strings across all records.
-- **co-occurrence counts**: for each record, take the sorted unique set of its `keywords`; for every unordered pair (a<b) increment a counter. `keyword_cooccurrence` = `[{a, b, count}]` for pairs with `count >= min_link`, sorted by `(a, b)` ascending.
-- **themes** = connected components of the graph whose nodes are the keywords appearing in `keyword_cooccurrence` and whose edges are those pairs (union-find). Each component's keywords are sorted ascending; components are ordered by their smallest keyword; assign ids `theme_1, theme_2, …` in that order. Output `[{id, keywords, size}]`. (Keywords not in any kept edge are not themes.)
-- **co_citation** = identical pair-counting over each record's `references`, `[{a, b, count}]` with `count >= min_link`, sorted by `(a, b)`.
+- co-occurrence counts: for each record, take the sorted unique set of its `keywords`, and for every unordered pair (a<b) increment a counter. `keyword_cooccurrence` = `[{a, b, count}]` for pairs with `count >= min_link`, sorted by `(a, b)` ascending.
+- themes = connected components of the graph whose nodes are the keywords appearing in `keyword_cooccurrence` and whose edges are those pairs (union-find). Each component's keywords are sorted ascending, components are ordered by their smallest keyword, and ids `theme_1, theme_2, …` are assigned in that order. Output `[{id, keywords, size}]`. (Keywords not in any kept edge are not themes.)
+- co_citation = identical pair-counting over each record's `references`, `[{a, b, count}]` with `count >= min_link`, sorted by `(a, b)`.
 - Returns `{n_records, keywords, keyword_cooccurrence, themes, co_citation}`.
 
-## 15. landscape(theory, corpus, min_link=2) — deterministic
+## 15. landscape(theory, corpus, min_link=2): deterministic
 
 Compute `lm = litmap(corpus, min_link)`. Using the §6 tokenizer:
 - `focal_tokens = tokens(theory.title + " " + join(construct.label for construct in constructs))`.
@@ -275,7 +275,7 @@ Compute `lm = litmap(corpus, min_link)`. Using the §6 tokenizer:
 
 ## 16. Lit diagrams (byte-identical)
 
-**keyword_cooccurrence** / **co_citation** — undirected, nodes = endpoints appearing in the edge list (sorted), edges in list order:
+**keyword_cooccurrence** / **co_citation**. Undirected, nodes = endpoints appearing in the edge list (sorted), edges in list order:
 ```
 graph <type> {
   node [shape=ellipse];
@@ -284,7 +284,7 @@ graph <type> {
 }
 ```
 
-**theme_landscape** (from a `landscape` result) — theme nodes (litmap order), then alternative nodes in first-seen order across themes, then the focal node, then edges (alt→theme in alt-first-seen × theme order, then focal→theme in theme order):
+**theme_landscape** (from a `landscape` result). Theme nodes (litmap order), then alternative nodes in first-seen order across themes, then the focal node, then edges (alt→theme in alt-first-seen × theme order, then focal→theme in theme order):
 ```
 digraph theme_landscape {
   rankdir=LR;
@@ -301,11 +301,11 @@ digraph theme_landscape {
 
 `<cid>.litmap.json`, `<cid>.landscape.json` (semantic); `<cid>.keyword_cooccurrence.dot`, `<cid>.co_citation.dot`, `<cid>.theme_landscape.dot` (byte). `landscape` uses the `panic-network.theory.yaml` theory.
 
-`fetch_corpus`/`tf_fetch_corpus` (OpenAlex `https://api.openalex.org/works?search=…`) maps each work to `{id, title, year:publication_year, keywords (keywords[] else top concepts), references:referenced_works}`. Network, non-deterministic, **excluded from parity and CI**.
+`fetch_corpus`/`tf_fetch_corpus` (OpenAlex `https://api.openalex.org/works?search=…`) maps each work to `{id, title, year:publication_year, keywords (keywords[] else top concepts), references:referenced_works}`. It is network-bound and non-deterministic, and is excluded from parity and CI.
 
 ---
 
-# Part D — SEM compilation and the audit dossier (P3)
+# Part D: SEM compilation and the audit dossier (P3)
 
 New API (mirrored): `tf_compile_sem(theory)` / `theory.compile_sem()`; `tf_dossier(theory)` / `theory.dossier()`. **Remaining stub:** `osf_push` / `tf_osf_push` (OSF deposit; network/credentials; future).
 
@@ -355,22 +355,22 @@ Numbers use `fmt()` (§11). Build these lines (joined with `\n`), then append `"
 
 ---
 
-# Part E — simulation, reporting, and assistive adapters (P4)
+# Part E: simulation, reporting, and assistive adapters (P4)
 
-New API (mirrored): `tf_simulate` / `theory.simulate()`; `tf_render_report` / `theory.render_report()`; `tf_embedding_redundancy` / `theory.embedding_redundancy()`; `tf_osf_push` / `theory.osf_push()`. **No NotImplemented stubs remain** — `osf_push` is a real (dry-run-default) adapter, so the stub module and its tests are removed.
+New API (mirrored): `tf_simulate` / `theory.simulate()`; `tf_render_report` / `theory.render_report()`; `tf_embedding_redundancy` / `theory.embedding_redundancy()`; `tf_osf_push` / `theory.osf_push()`. No NotImplemented stubs remain. `osf_push` is a working adapter that defaults to a dry run, so the stub module and its tests are removed.
 
 ## 21. simulate(theory, steps=10, dt=0.1, k=1.0, damping=0.5, init=1.0) → trajectory (deterministic, parity-tested)
 
-Each construct (file order) is a state variable. Build an `n×n` coupling matrix `A` (zeros): for each proposition with `from`/`to` both constructs, `sign = +1` if relation ∈ {increases, causes, mediates}, `-1` if `decreases`, else `0`; `A[idx(to)][idx(from)] += sign*k`. Initialize `X = [init]*n`. Fixed-step (Euler) update for `steps` steps: `dX = A·X − damping·X`; `X = X + dt·dX`. Return `{states, dt, steps, trajectory}`, where `trajectory` has `steps+1` rows (row 0 = initial state) and **every value is rounded to 6 decimals**. Golden artifact `<id>.simulate.json` (compared semantically, tolerance 1e-9).
+Each construct (file order) is a state variable. Build an `n×n` coupling matrix `A` (zeros): for each proposition with `from`/`to` both constructs, `sign = +1` if relation ∈ {increases, causes, mediates}, `-1` if `decreases`, else `0`; `A[idx(to)][idx(from)] += sign*k`. Initialize `X = [init]*n`. Fixed-step (Euler) update for `steps` steps: `dX = A·X − damping·X`; `X = X + dt·dX`. Return `{states, dt, steps, trajectory}`, where `trajectory` has `steps+1` rows (row 0 = initial state) and every value is rounded to 6 decimals. Golden artifact `<id>.simulate.json` (compared semantically, tolerance 1e-9).
 
 ## 22. render_report(theory, path, title=None, render=False, to="html")
 
-Writes a standalone Quarto report to `path` (forced to a `.qmd` suffix): a YAML header (`title`, `format: <to>`) followed by the deterministic `dossier(theory)` body; returns the written path. When `render=True`, invokes `quarto render`. The report *content* is the parity-tested dossier; only the optional render step is environment-dependent (not in parity/CI).
+Writes a standalone Quarto report to `path` (forced to a `.qmd` suffix): a YAML header (`title`, `format: <to>`) followed by the deterministic `dossier(theory)` body, and returns the written path. When `render=True`, invokes `quarto render`. The report content is the parity-tested dossier. Only the optional render step is environment-dependent (not in parity/CI).
 
-## 23. embedding_redundancy(theory, embedder, threshold=redundancy_similarity_max) — ASSISTIVE, parity-exempt
+## 23. embedding_redundancy(theory, embedder, threshold=redundancy_similarity_max): assistive, parity-exempt
 
-`embedder` maps a definition string to a numeric vector. For each unordered construct pair, compute cosine similarity (round 6); return `[{a, b, cosine, flag}]` sorted by descending cosine then `(a, b)`, `flag = "review"` if `cosine ≥ threshold` else `"ok"`. Non-deterministic across embedders/model versions → **excluded from parity and CI** (the deterministic lexical screen in §6 remains the default).
+`embedder` maps a definition string to a numeric vector. For each unordered construct pair, compute cosine similarity (round 6); return `[{a, b, cosine, flag}]` sorted by descending cosine then `(a, b)`, `flag = "review"` if `cosine ≥ threshold` else `"ok"`. It is non-deterministic across embedders and model versions, and is therefore excluded from parity and CI. The deterministic lexical screen in §6 remains the default.
 
-## 24. osf_push(theory, token=None, node=None, filename=None, dry_run=True) — ASSISTIVE, parity-exempt
+## 24. osf_push(theory, token=None, node=None, filename=None, dry_run=True): assistive, parity-exempt
 
-Builds the request to upload `dossier(theory)` to OSF storage. With `dry_run=True` (default) returns `{dry_run: true, request: {method:"PUT", url, filename, content_bytes}, note}` and sends nothing (`filename` defaults to `<id>.dossier.md`; `url` is `https://files.osf.io/v1/resources/<node>/providers/osfstorage/?kind=file&name=<filename>` or null when `node` is absent). With `dry_run=False` a live upload requires both `token` and `node` (else error) and performs an authenticated PUT. Network/credentials → **excluded from parity and CI**; the live path is never exercised automatically.
+Builds the request to upload `dossier(theory)` to OSF storage. With `dry_run=True` (default) returns `{dry_run: true, request: {method:"PUT", url, filename, content_bytes}, note}` and sends nothing (`filename` defaults to `<id>.dossier.md`; `url` is `https://files.osf.io/v1/resources/<node>/providers/osfstorage/?kind=file&name=<filename>` or null when `node` is absent). With `dry_run=False` a live upload requires both `token` and `node` (else error) and performs an authenticated PUT. It depends on the network and credentials, and is excluded from parity and CI. The live path is never exercised automatically.

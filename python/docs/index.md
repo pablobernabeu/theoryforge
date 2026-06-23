@@ -1,8 +1,8 @@
 # theoryforge (Python)
 
-A rigorous, reproducible workflow for theory **building**, **development**, and **testing** —
-the Python twin of the R package of the same name. A theory is a versioned, machine-checkable
-object; the package scaffolds the three workflow modes, enforces a rigor checklist, generates
+A rigorous, reproducible workflow for theory building, development, and testing. This is the
+Python twin of the R package of the same name. A theory is a versioned, machine-checkable
+object. The package scaffolds the three workflow modes, enforces a rigor checklist, generates
 diagrams, and maps a theory against the literature.
 
 See the repository [README](https://github.com/pablobernabeu/theoryforge) and

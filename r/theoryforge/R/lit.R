@@ -1,6 +1,6 @@
 #' Bibliometric / literature layer (API_SPEC.md Part C).
 #'
-#' The analysis (litmap, landscape, diagrams) is fully DETERMINISTIC given a
+#' The analysis (litmap, landscape, diagrams) is fully deterministic given a
 #' corpus, so it is parity-tested against the Python reference implementation.
 #' The OpenAlex fetch adapter ([tf_fetch_corpus()]) is the parity-exempt,
 #' network/non-deterministic assistive layer.
@@ -383,10 +383,10 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence") {
 
 #' Build a corpus from the OpenAlex API (assistive, parity-exempt)
 #'
-#' ASSISTIVE / PARITY-EXEMPT helper that builds a corpus by querying the
+#' Assistive, parity-exempt helper that builds a corpus by querying the
 #' OpenAlex works API (\code{https://api.openalex.org/works?search=...}). This
-#' is a network call: it is non-deterministic, depends on a live external
-#' service, and is therefore NOT part of the deterministic core and NOT covered
+#' is a network call. It is non-deterministic, depends on a live external
+#' service, and is therefore not part of the deterministic core and not covered
 #' by parity tests or CI. Each work is mapped to
 #' \code{{id, title, year, keywords, references}} (keywords falls back to the top
 #' concepts when no keywords are present).

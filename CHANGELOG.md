@@ -1,12 +1,12 @@
 # Changelog
 
-All notable changes to **theoryforge** (the R and Python twin packages) are documented here.
-The format follows [Keep a Changelog](https://keepachangelog.com/); the two packages share a
+All notable changes to theoryforge (the R and Python twin packages) are documented here.
+The format follows [Keep a Changelog](https://keepachangelog.com/). The two packages share a
 version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
 
-## [0.1.0] — unreleased
+## [0.1.0] unreleased
 
-First public release: a rigorous, reproducible workflow for theory building, development, and
+This is the first public release, a rigorous, reproducible workflow for theory building, development, and
 testing, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
 
 ### Core (P0)
@@ -36,15 +36,15 @@ testing, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
 - `simulate`: a deterministic dynamical-system runner derived from the construct network (parity-tested trajectories).
 - `render_report`: a Quarto report wrapping the deterministic audit dossier.
 - `embedding_redundancy`: an opt-in, parity-exempt embedding screen (pluggable embedder), complementing the default lexical screen.
-- `osf_push`: an OSF deposit adapter (dry-run by default; a live upload requires the user's token).
+- `osf_push`: an OSF deposit adapter (dry-run by default, with a live upload requiring the user's token).
 
 ### Quality & reproducibility
-- Cross-language parity enforced over 39 golden artifacts (byte-identical diagrams/markdown/lavaan; semantically-equal JSON) in CI.
-- R passes `R CMD check --as-cran` (0 errors / 0 warnings); Python builds wheel + sdist passing `twine check`, ruff- and mypy-clean, ships `py.typed`.
+- Cross-language parity enforced over 39 golden artifacts in CI, with byte-identical diagrams, markdown, and lavaan outputs and semantically-equal JSON.
+- R passes `R CMD check --as-cran` (0 errors and 0 warnings). Python builds a wheel and sdist passing `twine check`, is ruff- and mypy-clean, and ships `py.typed`.
 - Test suites: Python (pytest) and R (testthat), plus a dedicated parity job.
 
 ### Not yet implemented
-- A live OSF upload requires the user's own token; `osf_push` ships with a dry-run default.
+- A live OSF upload requires the user's own token. `osf_push` ships with a dry-run default.
 - Richer (nonlinear / agent-based) computational-model runners, and first-class embedding-model integrations beyond the pluggable `embedding_redundancy` interface.
 
 [0.1.0]: https://github.com/pablobernabeu/theoryforge/releases/tag/v0.1.0

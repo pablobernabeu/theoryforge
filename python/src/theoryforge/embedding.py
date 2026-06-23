@@ -1,8 +1,9 @@
 """Opt-in embedding-based construct-redundancy screen (API_SPEC.md Part E).
 
-PARITY-EXEMPT: results depend on a user-supplied embedding function whose outputs are not
-deterministic across model versions or SDKs. This is the assistive counterpart to the
-deterministic lexical screen in `redundancy.py`; it is excluded from the parity contract and CI.
+This screen is parity-exempt, because results depend on a user-supplied embedding function
+whose outputs are not deterministic across model versions or SDKs. It is the assistive
+counterpart to the deterministic lexical screen in `redundancy.py`. It is excluded from the
+parity contract and from CI.
 """
 from __future__ import annotations
 
