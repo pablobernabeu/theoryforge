@@ -7,15 +7,20 @@ name = "theoryforge"
 version = "0.1.0"
 description = "A rigorous, reproducible workflow for theory building, development, and testing."
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
-authors = [{ name = "theoryforge authors" }]
+authors = [{ name = "Pablo Bernabeu", email = "pcbernabeu@gmail.com" }]
 keywords = ["theory", "metascience", "falsifiability", "psychology", "reproducibility"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering",
 ]
 dependencies = ["PyYAML>=6.0"]
@@ -27,6 +32,7 @@ dev = ["pytest>=7.0", "ruff", "mypy"]
 [project.urls]
 Homepage = "https://github.com/pablobernabeu/theoryforge"
 Repository = "https://github.com/pablobernabeu/theoryforge"
+Issues = "https://github.com/pablobernabeu/theoryforge/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/theoryforge"]

@@ -2,7 +2,7 @@
 
 A rigorous, reproducible workflow for theory building, development, and testing. This is the
 Python twin of the R package of the same name. Behaviour is pinned by
-[`../API_SPEC.md`](../API_SPEC.md) so the two stay in lockstep.
+[`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md) so the two stay in lockstep.
 
 ```python
 import theoryforge as tf
@@ -35,6 +35,10 @@ tf.litmap(corpus)                  # keyword co-occurrence, themes, co-citation
 t.landscape(corpus)                # -> themes flagged 'under_theorized' / 'crowded' (redundancy risk)
 # tf.fetch_corpus("panic disorder theory")  # optional OpenAlex fetch (network, parity-exempt)
 ```
+
+The `../fixtures/*.yaml` files referenced above are sample theories that live in the
+[project repository](https://github.com/pablobernabeu/theoryforge); adjust the paths to
+your own theory files when running the examples.
 
 ## Install
 

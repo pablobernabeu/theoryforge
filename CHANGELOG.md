@@ -4,7 +4,7 @@ All notable changes to theoryforge (the R and Python twin packages) are document
 The format follows [Keep a Changelog](https://keepachangelog.com/). The two packages share a
 version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
 
-## [0.1.0] unreleased
+## [0.1.0] - 2026-06-24
 
 This is the first public release, a rigorous, reproducible workflow for theory building, development, and
 testing, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
@@ -40,7 +40,7 @@ testing, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
 
 ### Quality & reproducibility
 - Cross-language parity enforced over 39 golden artifacts in CI, with byte-identical diagrams, markdown, and lavaan outputs and semantically-equal JSON.
-- R passes `R CMD check --as-cran` (0 errors and 0 warnings). Python builds a wheel and sdist passing `twine check`, is ruff- and mypy-clean, and ships `py.typed`.
+- R passes `R CMD check --as-cran` with 0 errors and 0 warnings (1 note, the standard new-submission note). Python builds a wheel and sdist passing `twine check`, is ruff- and mypy-clean, and ships `py.typed`.
 - Test suites: Python (pytest) and R (testthat), plus a dedicated parity job.
 
 ### Not yet implemented

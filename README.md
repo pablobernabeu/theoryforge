@@ -19,7 +19,7 @@ P0 to P4 cover the full theory lifecycle, bibliometric mapping, SEM compilation,
 - P3 (testing and review): `compile_sem` (compile constructs and propositions to lavaan model syntax) and `dossier` (a one-command reviewer-facing audit bundle containing the rigor report, severity, provenance, and preregistration).
 - P4 (simulation, reporting and adapters): `simulate` (deterministic dynamical-system runner over the construct network), `render_report` (Quarto report wrapping the dossier), `embedding_redundancy` (opt-in, parity-exempt embedding screen), and `osf_push` (OSF deposit adapter, dry-run by default). No `NotImplemented` stubs remain.
 
-Cross-language parity is enforced over 39 golden artifacts. The diagrams, preregistration, lavaan, and dossier outputs are byte-identical, and the rigor, severity, appraisal, litmap, landscape, and simulate JSON outputs are semantically equal. Running `python scripts/parity_check.py` reports `PARITY OK`. The test suites comprise 33 pytest and 409 testthat tests, both green. Reproduce the whole verification with `scripts/reproduce_all.ps1` (or `scripts/reproduce_all.sh`). See [CHANGELOG.md](CHANGELOG.md).
+Cross-language parity is enforced over 39 golden artifacts. The diagrams, preregistration, lavaan, and dossier outputs are byte-identical, and the rigor, severity, appraisal, litmap, landscape, and simulate JSON outputs are semantically equal. Running `python scripts/parity_check.py` reports `PARITY OK`, and the pytest and testthat suites are green. Reproduce the whole verification with `scripts/reproduce_all.ps1` (or `scripts/reproduce_all.sh`). See [CHANGELOG.md](CHANGELOG.md).
 
 ### Release readiness
 

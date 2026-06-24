@@ -23,11 +23,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: theoryforge developers \email{pcbernabeu@gmail.com}
+\strong{Maintainer}: Pablo Bernabeu \email{pcbernabeu@gmail.com} (\href{https://orcid.org/0000-0003-1083-2460}{ORCID})
 
 Authors:
 \itemize{
-  \item theoryforge developers \email{pcbernabeu@gmail.com}
+  \item Pablo Bernabeu \email{pcbernabeu@gmail.com} (\href{https://orcid.org/0000-0003-1083-2460}{ORCID})
 }
 
 }
