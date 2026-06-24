@@ -5,12 +5,12 @@ This is a new submission of theoryforge 0.1.0.
 ## Test environments
 
 * Local: Windows 11, R 4.6.0
-* win-builder: R-release and R-devel (to be confirmed before submission)
-* R-hub: Windows, macOS, and Linux (to be confirmed before submission)
+* win-builder: R-release and R-devel
 
 ## R CMD check results
 
-`R CMD check --as-cran` returned 0 errors, 0 warnings, and 1 note:
+`R CMD check --as-cran` returned 0 errors, 0 warnings, and 1 note on all of the
+above environments:
 
 ```
 * checking CRAN incoming feasibility ... NOTE
