@@ -12,6 +12,7 @@ def _list(d: dict, key: str) -> list:
 
 
 def appraise_amendment(new, prior) -> dict:
+    """Appraise an amendment as progressive, degenerating, or neutral relative to a prior version."""
     new = new.data if hasattr(new, "data") else new
     prior = prior.data if hasattr(prior, "data") else prior
 

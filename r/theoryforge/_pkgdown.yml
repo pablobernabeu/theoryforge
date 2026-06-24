@@ -32,6 +32,7 @@ reference:
   - tf_tokens
   - tf_jaccard
   - tf_redundancy_check
+  - tf_embedding_redundancy
 - title: Diagram
   desc: Byte-identical diagram intermediate representations.
   contents:
@@ -41,10 +42,21 @@ reference:
   desc: Lakatosian amendment appraisal.
   contents:
   - tf_appraise_amendment
-- title: Test / preregistration
-  desc: Preregistration document export.
+- title: Testing and review
+  desc: Preregistration, SEM compilation, and the audit dossier.
   contents:
   - tf_preregister
+  - tf_compile_sem
+  - tf_dossier
+- title: Simulation
+  desc: Integrate the construct network as a dynamical system.
+  contents:
+  - tf_simulate
+- title: Reporting and deposit
+  desc: Render a report and deposit it.
+  contents:
+  - tf_render_report
+  - tf_osf_push
 - title: Literature layer
   desc: Bibliometric mapping of a literature corpus.
   contents:
@@ -52,7 +64,3 @@ reference:
   - tf_litmap
   - tf_landscape
   - tf_fetch_corpus
-- title: Not yet implemented
-  desc: Scaffolded for API parity.
-  contents:
-  - tf_compile_sem

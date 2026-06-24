@@ -20,6 +20,7 @@ def _fmt(x) -> str:
 
 
 def preregister(T, path=None) -> str:
+    """Render a preregistration document, writing it to ``path`` when one is given."""
     data = T.data if hasattr(T, "data") else T
     rep = _check(data)
     deriv = next((it for it in rep["items"] if it["id"] == "derivation_chain"), None)

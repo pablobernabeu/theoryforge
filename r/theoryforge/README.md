@@ -20,47 +20,53 @@ The package depends on `yaml` and `jsonlite`.
 ```r
 library(theoryforge)
 
-# 1. Build (read) a theory object from YAML
+# Read an existing theory (or build one incrementally with tf_theory + tf_add_*)
 theory <- tf_read("fixtures/panic-network.theory.yaml")
-
-# 2. Validate its structure (required fields + enums)
 tf_validate(theory)
 
-# 3. Check rigor: returns a report list mirroring the Python dict
+# Score it against the 12-item rigor checklist
 report <- tf_check(theory)
 report$aggregate_score   # 84.8
 report$gate              # "pass"
 
-# Render the report as JSON
-cat(tf_report(theory, format = "json"))
+# Operationalized severity, and a preregistration document
+tf_severity(theory)
+cat(tf_preregister(theory))
 
-# 4. Screen constructs for lexical redundancy
-tf_redundancy_check(theory)
-
-# 5. Diagram the nomological net / provenance / causal DAG
+# Diagram the structure (byte-identical to the Python output)
 cat(tf_diagram(theory, type = "nomological_net"))
-cat(tf_diagram(theory, type = "provenance"))
-cat(tf_diagram(theory, type = "causal_dag"))
+
+# DEVELOP: appraise an amendment as progressive or degenerating
+v2 <- tf_read("fixtures/panic-network-2026-v2.theory.yaml")
+tf_appraise_amendment(v2, theory)$verdict   # "progressive"
+
+# LITERATURE: map a corpus and position the theory against it
+corpus <- tf_read_corpus("fixtures/panic-corpus.yaml")
+landscape <- tf_landscape(theory, corpus)
+landscape$under_theorized_fronts   # themes no theory addresses
+landscape$redundancy_risk          # crowded themes
 ```
 
 ## Public API
 
 | Function | Purpose |
 |---|---|
-| `tf_read(path)` | Read a theory from YAML/JSON into a list |
-| `tf_validate(theory)` | Structural validation (required fields, enums) |
-| `tf_write(theory, path)` | Write a theory to YAML/JSON (LF endings) |
-| `tf_check(theory)` | Rigor checklist report (named list) |
-| `tf_report(theory, format)` | Render report as `"json"` or `"html"` |
-| `tf_redundancy_check(theory)` | Pairwise construct-definition similarity |
-| `tf_diagram(theory, type, engine)` | Diagram IR string |
-| `tf_simulate(theory, ...)` | Deterministic linear-network trajectory |
-| `tf_render_report(theory, path, ...)` | Write a Quarto report of the dossier |
-| `tf_embedding_redundancy(theory, embedder, ...)` | Embedding-based redundancy screen (assistive) |
-| `tf_osf_push(theory, ..., dry_run)` | Build/send an OSF dossier upload (dry-run by default) |
+| `tf_read`, `tf_write`, `tf_validate` | Read, write, and structurally validate a theory object |
+| `tf_theory`, `tf_add_*`, `tf_set_formal_model` | Build a theory incrementally, with provenance (BUILDING) |
+| `tf_check`, `tf_report` | Rigor checklist report and rendering |
+| `tf_severity` | Per-prediction risk and computed severity |
+| `tf_redundancy_check`, `tf_embedding_redundancy` | Lexical and opt-in embedding redundancy screens |
+| `tf_appraise_amendment` | Progressive vs degenerating amendment appraisal (DEVELOPMENT) |
+| `tf_preregister`, `tf_dossier` | Preregistration document and reviewer-facing audit bundle (TESTING) |
+| `tf_compile_sem` | Compile constructs and propositions to lavaan model syntax |
+| `tf_simulate` | Deterministic linear-network trajectory |
+| `tf_diagram`, `tf_lit_diagram` | Diagram intermediate representations |
+| `tf_read_corpus`, `tf_litmap`, `tf_landscape` | Bibliometric mapping and the theory landscape |
+| `tf_render_report`, `tf_osf_push` | Render a Quarto report and deposit it on OSF (dry-run by default) |
 
-The shared schema and rigor checklist are vendored under `inst/schema/` and
-read at runtime via `system.file()`.
+See the package reference index for the complete, grouped function list. The
+shared schema and rigor checklist are vendored under `inst/schema/` and read at
+runtime via `system.file()`.
 
 ## License
 
