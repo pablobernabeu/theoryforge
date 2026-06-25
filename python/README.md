@@ -4,6 +4,9 @@ A rigorous, reproducible workflow for theory building, development, and testing.
 Python twin of the R package of the same name. Behaviour is pinned by
 [`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md) so the two stay in lockstep.
 
+The rendered documentation site, with the API reference and worked guides, is at
+<https://pablobernabeu.github.io/theoryforge/python/>.
+
 ```python
 import theoryforge as tf
 

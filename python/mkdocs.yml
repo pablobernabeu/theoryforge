@@ -1,5 +1,6 @@
 site_name: theoryforge (Python)
 site_description: A rigorous, reproducible workflow for theory building, development, and testing.
+site_url: https://pablobernabeu.github.io/theoryforge/python/
 repo_url: https://github.com/pablobernabeu/theoryforge
 
 theme:
@@ -10,6 +11,9 @@ theme:
 
 nav:
   - Home: index.md
+  - Getting started: getting-started.md
+  - Workflow modes: workflow-modes.md
+  - Literature layer: literature.md
   - API reference: api.md
 
 plugins:

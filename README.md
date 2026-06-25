@@ -6,6 +6,17 @@ versioned, machine-checkable object. The packages scaffold the three modes, enfo
 theory-rigor checklist, auto-generate diagrams, and connect to the bibliometric literature so
 that construct non-redundancy is checked against the actual field.
 
+## Documentation
+
+Full documentation is published at
+[pablobernabeu.github.io/theoryforge](https://pablobernabeu.github.io/theoryforge/):
+
+- R package (pkgdown): <https://pablobernabeu.github.io/theoryforge/r/>
+- Python package (mkdocs): <https://pablobernabeu.github.io/theoryforge/python/>
+
+Each site carries the complete function reference together with guides for
+building, developing, and testing a theory and for mapping the literature.
+
 ## Status
 
 P0 to P4 cover the full theory lifecycle, bibliometric mapping, SEM compilation, the audit dossier, a dynamical-system runner, and reporting and deposit adapters. Both packages are parity-verified.

@@ -1,0 +1,121 @@
+---
+title: "Developing and testing a theory"
+output: rmarkdown::html_vignette
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(theoryforge)
+```
+
+The companion vignette covers building a theory and checking its rigor. This
+article continues the workflow into development and testing. It shows how to
+operationalise severity, export a preregistration, appraise an amendment in
+Lakatosian terms, compile a measurement model for `lavaan`, and assemble a
+reviewer-facing audit bundle. The worked example reads the panic-network
+fixture shipped with the package, so every chunk runs with only `theoryforge`
+loaded.
+
+```{r read}
+theory <- tf_read(
+  system.file("fixtures/panic-network.theory.yaml", package = "theoryforge")
+)
+theory$id
+```
+
+## Operationalised severity
+
+A prediction earns evidential weight in proportion to the risk it takes. A
+point prediction stakes more on the data than a directional one, and that
+asymmetry should be made explicit before any test is run. `tf_severity()`
+reports, for each prediction in file order, the riskiness of its claim form and
+the resulting computed severity.
+
+```{r severity}
+tf_severity(theory)
+```
+
+The `risk_score` reflects the prediction type, while `computed_severity`
+applies the discounts and bonuses defined in the specification. Reading these
+values before data collection guards against the temptation to read a weak,
+hard-to-fail prediction as though it were a stringent test.
+
+## Preregistration
+
+`tf_preregister()` renders a preregistration document as a single markdown
+string. It records the constructs, propositions, and predictions in a fixed
+order, so the output is stable across runs and suitable for deposit.
+
+```{r prereg}
+prereg <- tf_preregister(theory)
+cat(prereg)
+```
+
+Passing a `path` writes the same markdown to disk with LF line endings, which
+is convenient when the document is committed to a repository or uploaded to a
+registry.
+
+```{r prereg-write}
+prereg_path <- tempfile(fileext = ".md")
+invisible(tf_preregister(theory, path = prereg_path))
+file.exists(prereg_path)
+```
+
+## Appraising an amendment
+
+Theories change. The question is whether a change is progressive, in that it
+predicts and then corroborates something new, or degenerating, in that it only
+adds assumptions to absorb anomalies. `tf_appraise_amendment()` compares an
+amended theory against its prior version and returns a verdict in those terms.
+
+Here the prior is the panic-network fixture and the amended version is its 2026
+revision, which adds one new prediction that is later corroborated and
+introduces no new ad-hoc assumptions.
+
+```{r appraise}
+v2 <- tf_read(
+  system.file("fixtures/panic-network-2026-v2.theory.yaml", package = "theoryforge")
+)
+
+appraisal <- tf_appraise_amendment(v2, theory)
+appraisal$verdict
+appraisal$new_predictions
+appraisal$corroborated_new
+appraisal$ad_hoc_assumptions
+```
+
+A `progressive` verdict reflects new content that survived a test. Had the
+amendment instead added assumptions tied to specific anomalies without
+generating corroborated predictions, the verdict would record that as
+degenerating.
+
+## Compiling a measurement model
+
+When constructs carry measurement indicators, `tf_compile_sem()` compiles them
+into `lavaan` model syntax. Constructs with indicators become latent
+measurement models with `=~`, and propositions become structural paths with
+`~`, covariances with `~~`, or annotated moderation lines.
+
+```{r sem}
+cat(tf_compile_sem(theory))
+```
+
+The function returns a plain string and does not require `lavaan` to be
+installed. The output can be passed directly to `lavaan::sem()` once the data
+are available.
+
+## The reviewer audit bundle
+
+`tf_dossier()` assembles a single markdown document for a reviewer or editor.
+It collects the header, the rigor-checklist table, the severity list, the
+provenance trail, and the preregistration into one bundle, so a reader can
+follow the theory from its claims through to its planned tests in one place.
+
+```{r dossier}
+dossier <- tf_dossier(theory)
+cat(substr(dossier, 1, 600))
+```
+
+The full document is deterministic and byte-identical to the Python
+implementation, so the same theory produces the same dossier regardless of
+which package generated it.

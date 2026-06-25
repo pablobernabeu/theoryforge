@@ -1,0 +1,166 @@
+---
+title: "Mapping the literature"
+output: rmarkdown::html_vignette
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+A theory is rarely built in isolation. It sits within a field that already has
+crowded areas, sparse areas, and recurring sets of references. The literature
+layer of `theoryforge` gives a deterministic, machine-checkable account of that
+field, so the placement of a theory within it can be argued from evidence
+rather than from impression. This article reads a small corpus, computes a
+bibliometric map, positions a theory against the map, and emits a diagram. The
+analysis functions are parity-tested against the Python twin and require no
+optional dependency.
+
+```{r setup}
+library(theoryforge)
+```
+
+## Reading a corpus
+
+A corpus is a simple object of the form `{schema_version, id, records}`, where
+each record carries an `id` and may carry `title`, `year`, `keywords`, and
+`references`. The package ships a small fixture corpus around panic and anxiety
+research. The format is chosen by file extension, so the same reader handles
+YAML and JSON.
+
+```{r read-corpus}
+corpus_path <- system.file("fixtures/panic-corpus.yaml", package = "theoryforge")
+corpus <- tf_read_corpus(corpus_path)
+
+corpus$id
+length(corpus$records)   # number of works in the corpus
+corpus$records[[1]]       # first record
+```
+
+## Building a literature map
+
+`tf_litmap()` computes three things from the records. It counts keyword
+co-occurrence within records, groups co-occurring keywords into thematic
+components, and counts reference co-citation. An edge is kept only when its
+co-occurrence count reaches `min_link` (default `2`), which suppresses incidental
+pairings. Records are read in file order and every result is sorted, so the map
+is fully deterministic.
+
+```{r litmap}
+lm <- tf_litmap(corpus, min_link = 2)
+
+lm$n_records
+unlist(lm$keywords)                 # the vocabulary of the corpus
+lm$keyword_cooccurrence[[1]]        # first kept co-occurrence edge
+```
+
+The thematic components are the connected groups of co-occurring keywords. The
+fixture is constructed so that the threshold-two graph separates cleanly into
+four themes.
+
+```{r themes}
+for (theme in lm$themes) {
+  cat(theme$id, ":", paste(unlist(theme$keywords), collapse = ", "), "\n")
+}
+```
+
+Co-citation is computed the same way over the `references` field. Two works are
+linked when they cite the same pair of sources at least `min_link` times.
+
+```{r cocitation}
+lm$co_citation
+```
+
+## Positioning a theory against the field
+
+`tf_landscape()` maps a theory's focal constructs and its registered
+alternatives onto the themes from `tf_litmap()`. A theme is tagged
+`"under_theorized"` when neither the focal theory nor any alternative touches it,
+`"covered"` when exactly one does, and `"crowded"` when two or more do. Matching
+is by shared tokens between the theme keywords and the text of the construct
+labels, the theory title, and the alternatives.
+
+We build a small theory whose constructs speak to arousal and to appraisal, and
+register one alternative that also speaks to appraisal. This leaves the arousal
+theme covered, the appraisal theme crowded, and the remaining themes untouched.
+
+```{r theory}
+theory <- tf_theory("panic-appraisal", "Arousal and appraisal in panic") |>
+  tf_add_construct("c_arousal", "Physiological arousal",
+                   "Bodily activation in response to a stressor.") |>
+  tf_add_construct("c_appraisal", "Threat appraisal",
+                   "Catastrophic appraisal of bodily sensations.") |>
+  tf_add_alternative("alt_cog", "Cognitive appraisal account",
+                     key_constructs = c("appraisal"))
+
+landscape <- tf_landscape(theory, corpus, min_link = 2)
+landscape$theory_id
+```
+
+Each theme in the result records which alternatives land on it, whether the
+focal theory lands on it, and the resulting status.
+
+```{r landscape-themes}
+for (theme in landscape$themes) {
+  cat(theme$id,
+      "| status:", theme$status,
+      "| focal:", theme$focal,
+      "| alternatives:", paste(unlist(theme$alternatives), collapse = ", "),
+      "\n")
+}
+```
+
+Two summaries draw out the practical reading. The under-theorised fronts are
+themes that the field around this theory has not yet engaged, and so are
+candidates for new work. The redundancy risk lists crowded themes, where a new
+contribution would have to distinguish itself from existing accounts.
+
+```{r landscape-summary}
+unlist(landscape$under_theorized_fronts)
+unlist(landscape$redundancy_risk)
+```
+
+## Emitting a literature diagram
+
+`tf_lit_diagram()` renders a byte-identical Graphviz DOT string for the
+literature layer. The keyword co-occurrence and co-citation maps render as
+undirected graphs, and a landscape result renders as a directed theme map. The
+output is a plain string, so it can be written to a `.dot` file or passed to a
+Graphviz renderer.
+
+```{r diagram-keywords}
+cat(tf_lit_diagram(lm, type = "keyword_cooccurrence"))
+```
+
+The theme landscape diagram is produced from the `tf_landscape()` result rather
+than from the map, since it carries the focal theory and the alternatives.
+
+```{r diagram-landscape}
+cat(tf_lit_diagram(landscape, type = "theme_landscape"))
+```
+
+These strings are compared byte-for-byte against the Python reference outputs in
+the package tests, which guarantees that an R analysis and a Python analysis of
+the same corpus agree exactly.
+
+## Building a corpus from OpenAlex
+
+The corpus above was read from a file. A corpus can also be assembled from the
+OpenAlex works API with `tf_fetch_corpus()`. This adapter is assistive and
+parity-exempt. It makes a live network call, its result depends on an external
+service that changes over time, and it is therefore excluded from the
+deterministic core, the parity tests, and continuous integration. The call is
+shown here but not run, and the supplied email enters the OpenAlex polite pool.
+
+```{r fetch, eval = FALSE}
+fetched <- tf_fetch_corpus("panic disorder interoception",
+                           per_page = 25,
+                           mailto = "me@example.org")
+fetched_map <- tf_litmap(fetched)
+```
+
+Once fetched, the corpus object has the same shape as a file-read corpus, so it
+flows into `tf_litmap()`, `tf_landscape()`, and `tf_lit_diagram()` without any
+further change. The recommended pattern is to fetch once, write the result to
+disk, and then work from the saved file so that later analyses remain
+reproducible.

@@ -6,6 +6,9 @@ Behaviour is pinned by [`API_SPEC.md`](../../API_SPEC.md) so the two
 implementations produce identical verdicts and byte-identical diagram
 intermediate representations.
 
+The rendered documentation site, with the function reference and worked guides,
+is at <https://pablobernabeu.github.io/theoryforge/r/>.
+
 ## Installation
 
 ```r
