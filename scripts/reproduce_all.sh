@@ -24,7 +24,4 @@ python "$ROOT/scripts/parity_check.py"
 echo "== R CMD check --as-cran =="
 Rscript -e "r<-rcmdcheck::rcmdcheck('$ROOT/r/theoryforge', args=c('--no-manual','--as-cran'), quiet=TRUE); cat('E',length(r\$errors),'W',length(r\$warnings),'N',length(r\$notes),'\n')"
 
-echo "== render manuscript (requires quarto) =="
-quarto render "$ROOT/manuscript/theoryforge-brm.qmd" || echo "manuscript render skipped (quarto/figures unavailable)"
-
 echo "ALL DONE."

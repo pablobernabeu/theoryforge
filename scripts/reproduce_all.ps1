@@ -23,8 +23,4 @@ python "$root/scripts/parity_check.py"
 Write-Output "== R CMD check --as-cran =="
 Rscript -e "r<-rcmdcheck::rcmdcheck('$($root -replace '\\','/')/r/theoryforge', args=c('--no-manual','--as-cran'), quiet=TRUE); cat('E',length(r`$errors),'W',length(r`$warnings),'N',length(r`$notes),'\n')"
 
-Write-Output "== render figures + manuscript =="
-Rscript "$root/scripts/render_figures.R" "$($root -replace '\\','/')"
-quarto render "$root/manuscript/theoryforge-brm.qmd"
-
 Write-Output "ALL DONE."

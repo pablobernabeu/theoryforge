@@ -6,9 +6,6 @@ versioned, machine-checkable object. The packages scaffold the three modes, enfo
 theory-rigor checklist, auto-generate diagrams, and connect to the bibliometric literature so
 that construct non-redundancy is checked against the actual field.
 
-This repository also holds the verified research foundation and the methodological-paper plan
-(target journal: *Behavior Research Methods*).
-
 ## Status
 
 P0 to P4 cover the full theory lifecycle, bibliometric mapping, SEM compilation, the audit dossier, a dynamical-system runner, and reporting and deposit adapters. Both packages are parity-verified.
@@ -25,8 +22,6 @@ Cross-language parity is enforced over 39 golden artifacts. The diagrams, prereg
 
 The R package passes `R CMD check --as-cran` with 0 errors and 0 warnings (only the standard new-submission note), and ships a pkgdown site config and a self-contained vignette. The Python package builds a wheel and sdist that pass `twine check` (shipping `py.typed` and the schema), is ruff- and mypy-clean, and has an mkdocs site config. CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) enforces all of this together with the 39-artifact cross-language parity on every push.
 
-A complete first-draft manuscript for *Behavior Research Methods* accompanies the packages. It cites only the 103 verified references, embeds the package-generated figures, and renders to HTML and Word via Quarto. It is maintained privately pending journal submission and is not part of this public repository.
-
 Future enhancements (not blocking) include a live OSF upload, which needs your own token (`osf_push` is dry-run by default), richer nonlinear and agent-based model runners, and first-class embedding-model integrations beyond the pluggable `embedding_redundancy` interface.
 
 ## Layout
@@ -39,8 +34,6 @@ Future enhancements (not blocking) include a live OSF upload, which needs your o
 | [`python/`](python/) | Python package |
 | [`r/theoryforge/`](r/theoryforge/) | R package |
 | [`scripts/`](scripts/) | golden-file generator + parity checker |
-| [`docs/`](docs/) | literature review, project plan, verified references, audit |
-| _manuscript_ | the *Behavior Research Methods* paper, maintained privately pending journal submission (available on request) |
 
 ## Quick start
 
