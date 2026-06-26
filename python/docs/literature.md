@@ -13,14 +13,14 @@ from disk. `tf.litmap` summarises the corpus through keyword
 co-occurrence, themes, and co-citation. `Theory.landscape` positions a
 theory and its registered alternatives against those themes. `tf.lit_diagram`
 exports any of these structures as Graphviz DOT. A fifth function,
-`tf.fetch_corpus`, builds a corpus from the OpenAlex API; it is optional and
+`tf.fetch_corpus`, builds a corpus from the OpenAlex API. It is optional and
 network-dependent, and is described at the end.
 
 ## A corpus
 
 A corpus is a mapping with a `records` list. Each record may carry an `id`,
 a `title`, a `year`, a list of `keywords`, and a list of `references`. The
-keyword and reference lists drive the analysis; other fields are carried
+keyword and reference lists drive the analysis. Other fields are carried
 through but not required. A small corpus stored as YAML looks like this.
 
 ```yaml

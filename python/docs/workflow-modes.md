@@ -157,7 +157,7 @@ its `diagnostic_vs` field, earns a small severity bonus.
 
 `preregister()` renders a Markdown preregistration document. It lists the
 hypotheses with their derivations and a severity line for each prediction.
-Called without an argument it returns the text; passing a path also writes
+Called without an argument it returns the text. Passing a path also writes
 the file.
 
 ```python
