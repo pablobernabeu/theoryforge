@@ -21,7 +21,7 @@ reference:
   - tf_add_assumption
   - tf_set_formal_model
 - title: Rigor
-  desc: Score a theory against the versioned rigor checklist.
+  desc: Score a theory against the versioned rigour checklist.
   contents:
   - tf_check
   - tf_report

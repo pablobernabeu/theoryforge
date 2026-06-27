@@ -2,7 +2,7 @@
 
 A rigorous, reproducible workflow for theory building, development, and testing. This is the
 Python twin of the R package of the same name. A theory is a versioned, machine-checkable
-object. The package scaffolds the three workflow modes, enforces a rigor checklist, generates
+object. The package scaffolds the three workflow modes, enforces a rigour checklist, generates
 diagrams, and maps a theory against the literature.
 
 See the repository [README](https://github.com/pablobernabeu/theoryforge) and
@@ -21,8 +21,8 @@ pip install theoryforge          # add [full] for complete JSON-Schema validatio
 import theoryforge as tf
 
 t = tf.read("panic-network.theory.yaml")
-t.check()                       # 12-item rigor checklist + gate
-t.severity()                    # operationalized severity rubric
+t.check()                       # 12-item rigour checklist + gate
+t.severity()                    # operationalised severity rubric
 t.preregister()                 # preregistration document
 corpus = tf.read_corpus("panic-corpus.yaml")
 t.landscape(corpus)             # under-theorized fronts + redundancy risk

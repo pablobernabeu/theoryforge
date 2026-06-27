@@ -13,7 +13,7 @@ import theoryforge as tf
 # read + check an existing theory
 t = tf.read("../fixtures/panic-network.theory.yaml")
 t.validate()                       # structural validation against the shared schema
-print(t.report("json"))            # 12-item rigor checklist + gate
+print(t.report("json"))            # 12-item rigour checklist + gate
 print(t.diagram("nomological_net"))# Graphviz DOT (byte-identical to the R output)
 t.redundancy_check()               # lexical jingle-jangle screen
 
@@ -28,7 +28,7 @@ v1 = tf.read("../fixtures/panic-network.theory.yaml")
 v2 = tf.read("../fixtures/panic-network-2026-v2.theory.yaml")
 print(v2.appraise_amendment(v1))   # -> {'verdict': 'progressive', ...}
 
-# TEST: operationalized severity + a preregistration document
+# TEST: operationalised severity + a preregistration document
 t.severity()                       # per-prediction risk + computed severity
 print(t.preregister())             # markdown prereg (byte-identical to R)
 
@@ -55,9 +55,9 @@ pip install -e ".[dev]"        # add ",full" for complete JSON-Schema validation
 pytest
 ```
 
-P0 implemented the deterministic core (I/O and validation, rigor checklist, three diagram
+P0 implemented the deterministic core (I/O and validation, rigour checklist, three diagram
 exporters, lexical redundancy screen). P1 added the three workflow modes. These are a BUILDING
-builder API with provenance, the operationalized severity rubric, the Lakatosian amendment
+builder API with provenance, the operationalised severity rubric, the Lakatosian amendment
 appraisal (DEVELOPMENT), preregistration export (TESTING), and two more diagram types
 (`development_roadmap`, `pipeline`). P2 adds the bibliometric and literature layer. This comprises
 `read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component themes, and

@@ -6,7 +6,7 @@ Authors@R:
 Description: Provides a rigorous, reproducible workflow for building,
     developing, and testing scientific theories represented as versioned,
     machine-checkable objects. Functions read and validate theory objects,
-    score them against a versioned rigor checklist, screen constructs for
+    score them against a versioned rigour checklist, screen constructs for
     lexical redundancy, and emit byte-identical diagram intermediate
     representations. The package is the feature-parity twin of a 'Python'
     package of the same name, with behaviour pinned by a shared

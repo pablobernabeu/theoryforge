@@ -51,7 +51,7 @@ def test_venn(panic_path):
 def test_rigor(panic_path):
     svg = tf.read(panic_path).diagram("rigor")
     assert svg.startswith("<svg ") and svg.endswith("</svg>\n")
-    assert "Rigor checklist" in svg and "gate pass" in svg
+    assert "Rigour checklist" in svg and "gate pass" in svg
     assert svg.count("<rect ") == 12          # one swatch per checklist item
     assert 'fill="#4caf50"' in svg            # at least one pass (green)
 

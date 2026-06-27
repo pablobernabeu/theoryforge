@@ -1,4 +1,4 @@
-"""Access to the vendored shared schema and rigor checklist."""
+"""Access to the vendored shared schema and rigour checklist."""
 from __future__ import annotations
 
 import json
@@ -17,6 +17,6 @@ def schema() -> dict:
 
 @lru_cache(maxsize=1)
 def checklist() -> dict:
-    """The rigor checklist specification (items, weights, thresholds, citations)."""
+    """The rigour checklist specification (items, weights, thresholds, citations)."""
     text = (files("theoryforge") / "schema" / "rigor_checklist.yaml").read_text(encoding="utf-8")
     return yaml.safe_load(text)

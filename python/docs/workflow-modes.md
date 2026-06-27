@@ -68,7 +68,7 @@ for step in t.data["provenance"]:
 ```
 
 Once the object is assembled, `t.validate()` confirms it satisfies the
-schema's required fields, and `t.report()` returns the rigor checklist.
+schema's required fields, and `t.report()` returns the rigour checklist.
 
 ```python
 t.validate()
@@ -170,7 +170,7 @@ t.preregister("panic-prereg.md")    # also writes the document to disk
 ### Audit bundle
 
 `dossier()` assembles a single Markdown document for reviewers. It composes
-the rigor checklist, the severity table, the provenance log, and the
+the rigour checklist, the severity table, the provenance log, and the
 preregistration into one artefact. The output is deterministic, so it can be
 committed or attached to a submission.
 

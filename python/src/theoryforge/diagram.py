@@ -187,14 +187,14 @@ _STATUS_COLOR = {"pass": "#4caf50", "warn": "#ff9800", "fail": "#f44336"}
 
 
 def _rigor(T: dict) -> str:
-    """The rigor checklist as a colour-coded status grid (SVG)."""
+    """The rigour checklist as a colour-coded status grid (SVG)."""
     from .rigor import check as _check
     rep = _check(T)
     items = rep["items"]
     h = 60 + len(items) * 24 + 12
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 {h}" '
            'font-family="sans-serif" font-size="13">',
-           '  <text x="20" y="28" font-size="15">Rigor checklist</text>',
+           '  <text x="20" y="28" font-size="15">Rigour checklist</text>',
            f'  <text x="20" y="46">aggregate score {rep["aggregate_score"]:.1f}, gate {rep["gate"]}</text>']
     for i, it in enumerate(items):
         y = 60 + i * 24

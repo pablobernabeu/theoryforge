@@ -6,7 +6,7 @@ specification (`API_SPEC.md`) so the R and Python twins return identical
 verdicts and byte-identical diagram intermediate representations.
 
 * Core: theory-object input, output, and structural validation; a 12-item
-  rigor checklist with a weighted aggregate score and a blocker gate; diagram
+  rigour checklist with a weighted aggregate score and a blocker gate; diagram
   intermediate representations (nomological net, provenance, causal DAG); and a
   deterministic lexical construct-redundancy screen.
 * Workflow modes: a builder API with auto-logged provenance (BUILDING); an

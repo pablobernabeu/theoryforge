@@ -14,7 +14,7 @@ The dossier Markdown as a single string (LF line endings, single
 trailing newline).
 }
 \description{
-Assembles a reviewer-facing audit bundle: the header, the rigor-checklist
+Assembles a reviewer-facing audit bundle: the header, the rigour-checklist
 table, the severity list, the provenance list, and the appended
 preregistration document. Deterministic and byte-identical to the Python
 \code{theory.dossier()}. See API_SPEC.md section 19.

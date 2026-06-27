@@ -2,7 +2,7 @@
 % Please edit documentation in R/rigor.R
 \name{tf_report}
 \alias{tf_report}
-\title{Render the rigor report as a string}
+\title{Render the rigour report as a string}
 \usage{
 tf_report(theory, format = "json")
 }

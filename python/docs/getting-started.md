@@ -39,7 +39,7 @@ t.validate()
 t.validate(full=True)   # requires the [full] extra
 ```
 
-Produce the rigor report. The `"json"` format returns the 12-item rigor checklist together with the overall gate.
+Produce the rigour report. The `"json"` format returns the 12-item rigour checklist together with the overall gate.
 
 ```python
 print(t.report("json"))

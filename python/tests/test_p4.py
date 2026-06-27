@@ -40,5 +40,5 @@ def test_render_report_writes_qmd(panic_path, tmp_path):
     assert p.endswith(".qmd")
     text = open(p, encoding="utf-8").read()
     assert text.startswith("---\ntitle:")
-    assert "## Rigor checklist" in text
+    assert "## Rigour checklist" in text
     assert "# Preregistration:" in text

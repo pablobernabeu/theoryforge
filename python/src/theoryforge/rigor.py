@@ -1,4 +1,4 @@
-"""The theory-rigor checklist engine. See API_SPEC.md section 4 for the contract."""
+"""The theory-rigour checklist engine. See API_SPEC.md section 4 for the contract."""
 from __future__ import annotations
 
 import json
@@ -148,7 +148,7 @@ def _check_items(T: dict, thr: dict) -> dict:
 
 
 def check(T) -> dict:
-    """Compute the full rigor report (dict) for a Theory or theory mapping."""
+    """Compute the full rigour report (dict) for a Theory or theory mapping."""
     T = T.data if hasattr(T, "data") else T
     spec = _resources.checklist()
     thr = spec["thresholds"]
@@ -190,7 +190,7 @@ def check(T) -> dict:
 
 
 def report(T, format: str = "json") -> str:
-    """Render the rigor report. format in {'json', 'html'}."""
+    """Render the rigour report. format in {'json', 'html'}."""
     rep = check(T)  # check() unwraps Theory -> mapping
     if format == "json":
         return json.dumps(rep, indent=2, ensure_ascii=False)

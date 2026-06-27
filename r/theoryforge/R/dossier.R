@@ -1,6 +1,6 @@
 #' Assemble a reviewer-facing audit bundle as a single Markdown document.
 #'
-#' Composes the deterministic rigor report, severity table, provenance, and
+#' Composes the deterministic rigour report, severity table, provenance, and
 #' preregistration document into one byte-identical bundle. See API_SPEC.md
 #' section 19.
 #' @name dossier
@@ -9,7 +9,7 @@ NULL
 
 #' Render a theory audit dossier (Markdown)
 #'
-#' Assembles a reviewer-facing audit bundle: the header, the rigor-checklist
+#' Assembles a reviewer-facing audit bundle: the header, the rigour-checklist
 #' table, the severity list, the provenance list, and the appended
 #' preregistration document. Deterministic and byte-identical to the Python
 #' \code{theory.dossier()}. See API_SPEC.md section 19.
@@ -33,11 +33,11 @@ tf_dossier <- function(theory) {
     "",
     sprintf("- Theory ID: %s", .tf_str(T, "id")),
     sprintf("- Maturity: %s", .tf_str(T, "maturity")),
-    sprintf("- Aggregate rigor score: %s/100", .tf_fmt(rep$aggregate_score)),
+    sprintf("- Aggregate rigour score: %s/100", .tf_fmt(rep$aggregate_score)),
     sprintf("- Gate: %s", rep$gate),
     sprintf("- Blockers failed: %d", rep$n_blockers_failed),
     "",
-    "## Rigor checklist",
+    "## Rigour checklist",
     "",
     "| item | status | score | weight |",
     "| --- | --- | --- | --- |"

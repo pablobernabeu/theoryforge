@@ -22,7 +22,7 @@ def test_compile_sem_associative(weak_path):
 def test_dossier(panic_path):
     d = tf.read(panic_path).dossier()
     assert d.startswith("# theoryforge dossier: Network theory of panic disorder")
-    assert "- Aggregate rigor score: 84.8/100" in d
+    assert "- Aggregate rigour score: 84.8/100" in d
     assert "| item | status | score | weight |" in d
     assert "| falsifiability | pass | 1.0 | 0.15 |" in d
     assert "## Preregistration" in d

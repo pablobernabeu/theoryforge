@@ -2,7 +2,7 @@
 % Please edit documentation in R/rigor.R
 \name{rigor}
 \alias{rigor}
-\title{The theory-rigor checklist engine.}
+\title{The theory-rigour checklist engine.}
 \description{
 See API_SPEC.md section 4 for the binding contract.
 }

@@ -1,4 +1,4 @@
-#' Access to the vendored shared schema and rigor checklist.
+#' Access to the vendored shared schema and rigour checklist.
 #'
 #' These read the files vendored under \code{inst/schema/} at runtime via
 #' \code{system.file()}. Results are cached in a package-private environment so
@@ -24,7 +24,7 @@ tf_schema <- function() {
   .tf_cache$schema
 }
 
-#' The rigor checklist specification (items, weights, thresholds, citations).
+#' The rigour checklist specification (items, weights, thresholds, citations).
 #' @keywords internal
 #' @noRd
 tf_checklist <- function() {

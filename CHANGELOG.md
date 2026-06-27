@@ -12,13 +12,13 @@ testing, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
 ### Core (P0)
 - `theory.schema.json` + `rigor_checklist.yaml` as the shared, versioned source of truth.
 - Theory-object I/O and structural validation (`read`/`write`/`validate`).
-- The 12-item machine-checkable rigor checklist with weighted aggregate score and a blocker gate (`check`/`report`).
+- The 12-item machine-checkable rigour checklist with weighted aggregate score and a blocker gate (`check`/`report`).
 - Diagram intermediate representations: nomological net, provenance, causal DAG (`diagram`).
 - Deterministic lexical construct-redundancy screen (`redundancy_check`).
 
 ### Workflow modes (P1)
 - BUILDING: a fluent builder API with auto-logged provenance (`new_theory`/`tf_theory` + `add_*`/`tf_add_*`).
-- TESTING: an operationalized severity rubric (`severity`) and preregistration export (`preregister`).
+- TESTING: an operationalised severity rubric (`severity`) and preregistration export (`preregister`).
 - DEVELOPMENT: Lakatosian progressive/degenerating amendment appraisal (`appraise_amendment`).
 - Two further diagrams: development roadmap and hypothesis→tested-theory pipeline.
 - A `draft` maturity state that runs the checklist in advisory (non-blocking) mode.
@@ -30,7 +30,7 @@ testing, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
 
 ### SEM compilation and audit bundle (P3)
 - `compile_sem`: compile constructs + propositions to lavaan model syntax.
-- `dossier`: a reviewer-facing Markdown audit bundle (rigor report + severity + provenance + preregistration).
+- `dossier`: a reviewer-facing Markdown audit bundle (rigour report + severity + provenance + preregistration).
 
 ### Simulation, reporting & adapters (P4)
 - `simulate`: a deterministic dynamical-system runner derived from the construct network (parity-tested trajectories).
@@ -40,7 +40,7 @@ testing, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
 
 ### Visualization and references
 - Ten diagram views via `diagram`/`tf_diagram`: nomological net, provenance, causal DAG, development roadmap, pipeline, and the new `context` (the theory, its scope, and its rivals), `workflow` (the building-to-testing pipeline), `venn` (construct scope overlap), `rigor` (the checklist as a colour-coded status grid), and `severity` (per-prediction severity bars). The last three are returned as SVG.
-- A "Methodological foundations" documentation page that cites the verified literature behind each rigor item, with DOIs. The machine-readable BibTeX ships with the R package at `inst/REFERENCES.bib`. The risk-severity item's citation was corrected after a Crossref re-audit (Cohen, 1992 removed as not supporting prediction severity).
+- A "Methodological foundations" documentation page that cites the verified literature behind each rigour item, with DOIs. The machine-readable BibTeX ships with the R package at `inst/REFERENCES.bib`. The risk-severity item's citation was corrected after a Crossref re-audit (Cohen, 1992 removed as not supporting prediction severity).
 
 ### Quality & reproducibility
 - Cross-language parity enforced over 54 golden artifacts in CI, with byte-identical diagrams (DOT and SVG), markdown, and lavaan outputs and semantically-equal JSON.

@@ -2,11 +2,11 @@
 
 - Theory ID: panic-network-2026
 - Maturity: developing
-- Aggregate rigor score: 84.8/100
+- Aggregate rigour score: 84.8/100
 - Gate: pass
 - Blockers failed: 0
 
-## Rigor checklist
+## Rigour checklist
 
 | item | status | score | weight |
 | --- | --- | --- | --- |

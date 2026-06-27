@@ -2,11 +2,11 @@
 
 - Theory ID: weak-demo
 - Maturity: building
-- Aggregate rigor score: 12.0/100
+- Aggregate rigour score: 12.0/100
 - Gate: blocked
 - Blockers failed: 2
 
-## Rigor checklist
+## Rigour checklist
 
 | item | status | score | weight |
 | --- | --- | --- | --- |

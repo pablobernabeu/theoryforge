@@ -190,7 +190,7 @@ class Theory:
         return _diagram(self.data, type=type, engine=engine)
 
     def severity(self) -> list[dict]:
-        """Per-prediction risk and computed severity from the operationalized rubric."""
+        """Per-prediction risk and computed severity from the operationalised rubric."""
         return _severity(self.data)
 
     def appraise_amendment(self, prior) -> dict:
@@ -210,7 +210,7 @@ class Theory:
         return _compile_sem(self.data)
 
     def dossier(self) -> str:
-        """A reviewer-facing audit bundle of rigor report, severity, provenance, and preregistration."""
+        """A reviewer-facing audit bundle of rigour report, severity, provenance, and preregistration."""
         return _dossier(self.data)
 
     def simulate(self, steps: int = 10, dt: float = 0.1, k: float = 1.0,

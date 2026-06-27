@@ -2,7 +2,7 @@
 % Please edit documentation in R/rigor.R
 \name{tf_check}
 \alias{tf_check}
-\title{Compute the rigor checklist report}
+\title{Compute the rigour checklist report}
 \usage{
 tf_check(theory)
 }
@@ -15,7 +15,7 @@ A named list with elements \code{theory_id}, \code{schema_version},
 \code{n_blockers_failed}, and \code{items} (a list of per-item lists).
 }
 \description{
-Runs the full rigor checklist (12 items) over a theory object and returns a
+Runs the full rigour checklist (12 items) over a theory object and returns a
 report. Mirrors the Python \code{theory.check()} dict, including key order
 and item order. See API_SPEC.md section 4.
 }

@@ -8,7 +8,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 library(theoryforge)
 ```
 
-The companion vignette covers building a theory and checking its rigor. This
+The companion vignette covers building a theory and checking its rigour. This
 article continues the workflow into development and testing. It shows how to
 operationalise severity, export a preregistration, appraise an amendment in
 Lakatosian terms, compile a measurement model for `lavaan`, and assemble a
@@ -107,7 +107,7 @@ are available.
 ## The reviewer audit bundle
 
 `tf_dossier()` assembles a single markdown document for a reviewer or editor.
-It collects the header, the rigor-checklist table, the severity list, the
+It collects the header, the rigour-checklist table, the severity list, the
 provenance trail, and the preregistration into one bundle, so a reader can
 follow the theory from its claims through to its planned tests in one place.
 

@@ -61,7 +61,7 @@ test_that("weak-demo rigor matches exact targets", {
   }
 })
 
-test_that("rigor report matches the golden report JSON semantically", {
+test_that("rigour report matches the golden report JSON semantically", {
   cases <- list(
     c("panic-network.theory.yaml", "panic-network-2026.report.json"),
     c("weak-theory.theory.yaml", "weak-demo.report.json")

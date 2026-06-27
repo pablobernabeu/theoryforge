@@ -30,7 +30,7 @@ test_that("tf_preregister writes the file when a path is given", {
   expect_identical(rawToChar(raw), txt)
 })
 
-test_that("derivation chain verified reflects the rigor item status", {
+test_that("derivation chain verified reflects the rigour item status", {
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   weak <- tf_read(tf_fixture_path("weak-theory.theory.yaml"))
   expect_true(grepl("Derivation chain verified: yes", tf_preregister(panic), fixed = TRUE))

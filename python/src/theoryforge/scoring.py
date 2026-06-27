@@ -1,4 +1,4 @@
-"""The severity rubric, a documented and deterministic operationalization (API_SPEC.md section 9)."""
+"""The severity rubric, a documented and deterministic operationalisation (API_SPEC.md section 9)."""
 from __future__ import annotations
 
 from ._num import rnd

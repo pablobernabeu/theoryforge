@@ -1,6 +1,6 @@
 """Assemble a reviewer-facing audit bundle as a single Markdown document (API_SPEC.md Part D).
 
-Composes the deterministic outputs (rigor report, severity table, provenance, and the
+Composes the deterministic outputs (rigour report, severity table, provenance, and the
 preregistration document) so the bundle is itself byte-identical across languages.
 """
 from __future__ import annotations
@@ -24,11 +24,11 @@ def dossier(T) -> str:
         "",
         f"- Theory ID: {data.get('id', '')}",
         f"- Maturity: {data.get('maturity', '')}",
-        f"- Aggregate rigor score: {_fmt(rep['aggregate_score'])}/100",
+        f"- Aggregate rigour score: {_fmt(rep['aggregate_score'])}/100",
         f"- Gate: {rep['gate']}",
         f"- Blockers failed: {rep['n_blockers_failed']}",
         "",
-        "## Rigor checklist",
+        "## Rigour checklist",
         "",
         "| item | status | score | weight |",
         "| --- | --- | --- | --- |",

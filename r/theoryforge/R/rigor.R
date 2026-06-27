@@ -1,4 +1,4 @@
-#' The theory-rigor checklist engine.
+#' The theory-rigour checklist engine.
 #'
 #' See API_SPEC.md section 4 for the binding contract.
 #' @name rigor
@@ -182,9 +182,9 @@ NULL
   out
 }
 
-#' Compute the rigor checklist report
+#' Compute the rigour checklist report
 #'
-#' Runs the full rigor checklist (12 items) over a theory object and returns a
+#' Runs the full rigour checklist (12 items) over a theory object and returns a
 #' report. Mirrors the Python \code{theory.check()} dict, including key order
 #' and item order. See API_SPEC.md section 4.
 #'
@@ -250,7 +250,7 @@ tf_check <- function(theory) {
   )
 }
 
-#' Render the rigor report as a string
+#' Render the rigour report as a string
 #'
 #' Renders the result of [tf_check()] as a string. \code{format = "json"}
 #' returns valid, pretty-printed JSON; \code{format = "html"} returns an HTML

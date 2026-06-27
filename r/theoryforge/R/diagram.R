@@ -241,7 +241,7 @@ NULL
   items <- rep$items
   h <- 60L + length(items) * 24L + 12L
   out <- c(sprintf('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 %d" font-family="sans-serif" font-size="13">', h),
-           '  <text x="20" y="28" font-size="15">Rigor checklist</text>',
+           '  <text x="20" y="28" font-size="15">Rigour checklist</text>',
            sprintf('  <text x="20" y="46">aggregate score %.1f, gate %s</text>',
                    rep$aggregate_score, .tf_xml(rep$gate)))
   for (i in seq_along(items)) {
