@@ -2,11 +2,17 @@
 from __future__ import annotations
 
 _CAUSAL = {"causes", "increases", "decreases"}
-_TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap", "pipeline")
+_TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap",
+          "pipeline", "context", "workflow", "venn")
 
 
 def _esc(s) -> str:
     return str(s if s is not None else "").replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _xml(s) -> str:
+    return (str(s if s is not None else "")
+            .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
 def _list(d: dict, key: str) -> list:
@@ -75,11 +81,113 @@ def _pipeline(T: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _context(T: dict) -> str:
+    lines = ["digraph context {", "  rankdir=LR;", "  node [shape=box, style=rounded];"]
+    lines.append(f'  "theory" [shape=ellipse, label="{_esc(T.get("title"))}"];')
+    for c in _list(T, "constructs"):
+        cid = _esc(c.get("id"))
+        lines.append(f'  "{cid}" [label="{_esc(c.get("label"))}"];')
+        lines.append(f'  "theory" -> "{cid}";')
+    for i, bc in enumerate(_list(T, "boundary_conditions"), start=1):
+        lines.append(f'  "scope{i}" [shape=note, label="{_esc(bc)}"];')
+        lines.append(f'  "scope{i}" -> "theory" [style=dotted, label="holds within"];')
+    for a in _list(T, "alternatives"):
+        aid = _esc(a.get("id"))
+        lines.append(f'  "{aid}" [shape=box, style=dashed, label="{_esc(a.get("label"))}"];')
+        lines.append(f'  "theory" -> "{aid}" [style=dashed, label="contrasts with"];')
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
+def _workflow(T: dict) -> str:
+    lines = ["digraph workflow {", "  rankdir=LR;", "  node [shape=box];"]
+    lines.append("  subgraph cluster_build {")
+    lines.append('    label="building";')
+    for c in _list(T, "constructs"):
+        lines.append(f'    "{_esc(c.get("id"))}" [label="{_esc(c.get("label"))}"];')
+    lines.append("  }")
+    lines.append("  subgraph cluster_relate {")
+    lines.append('    label="propositions";')
+    for p in _list(T, "propositions"):
+        lines.append(f'    "prop_{_esc(p.get("id"))}" [label="{_esc(p.get("relation"))}"];')
+    lines.append("  }")
+    lines.append("  subgraph cluster_predict {")
+    lines.append('    label="predictions";')
+    for p in _list(T, "predictions"):
+        lines.append(f'    "pred_{_esc(p.get("id"))}" [label="{_esc(p.get("type"))}"];')
+    lines.append("  }")
+    lines.append("  subgraph cluster_test {")
+    lines.append('    label="testing";')
+    for t in _list(T, "test_outcomes"):
+        passed = "true" if t.get("passed") is True else "false"
+        lines.append(f'    "outcome_{_esc(t.get("prediction_id"))}" [label="passed={passed}"];')
+    lines.append("  }")
+    for p in _list(T, "propositions"):
+        lines.append(f'  "{_esc(p.get("from"))}" -> "prop_{_esc(p.get("id"))}";')
+    for pred in _list(T, "predictions"):
+        for src in (pred.get("derives_from") or []):
+            lines.append(f'  "prop_{_esc(src)}" -> "pred_{_esc(pred.get("id"))}";')
+    for t in _list(T, "test_outcomes"):
+        pid = _esc(t.get("prediction_id"))
+        lines.append(f'  "pred_{pid}" -> "outcome_{pid}";')
+    lines.append("}")
+    return "\n".join(lines) + "\n"
+
+
+def _circle(cx: int, cy: int, r: int) -> str:
+    return (f'  <circle cx="{cx}" cy="{cy}" r="{r}" '
+            'fill="#4e79a7" fill-opacity="0.35" stroke="#33567a"/>')
+
+
+def _vlabel(x: int, y: int, s) -> str:
+    return f'  <text x="{x}" y="{y}" text-anchor="middle">{_xml(s)}</text>'
+
+
+def _vcount(x: int, y: int, k: int) -> str:
+    return f'  <text x="{x}" y="{y}" text-anchor="middle" font-weight="bold">{k}</text>'
+
+
+def _venn(T: dict) -> str:
+    """Construct scope overlap: the first up to three constructs as sets of their
+    boundary conditions, drawn as a fixed-layout (integer-coordinate) Venn diagram."""
+    constructs = _list(T, "constructs")[:3]
+    names, sets = [], []
+    for c in constructs:
+        bc = c.get("boundary_conditions")
+        names.append(str(c.get("label") or c.get("id") or ""))
+        sets.append(set(bc) if isinstance(bc, list) else set())
+    n = len(constructs)
+    out = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 300" '
+           'font-family="sans-serif" font-size="13">',
+           '  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap</text>']
+    if n == 0:
+        out.append(_vlabel(190, 150, "(no constructs)"))
+    elif n == 1:
+        a = sets[0]
+        out += [_circle(190, 150, 90), _vlabel(190, 55, names[0]), _vcount(190, 155, len(a))]
+    elif n == 2:
+        a, b = sets[0], sets[1]
+        out += [_circle(150, 150, 90), _circle(230, 150, 90),
+                _vlabel(110, 50, names[0]), _vlabel(270, 50, names[1]),
+                _vcount(110, 155, len(a - b)), _vcount(190, 155, len(a & b)),
+                _vcount(270, 155, len(b - a))]
+    else:
+        a, b, c = sets[0], sets[1], sets[2]
+        out += [_circle(150, 135, 85), _circle(230, 135, 85), _circle(190, 195, 85),
+                _vlabel(110, 45, names[0]), _vlabel(270, 45, names[1]), _vlabel(190, 290, names[2]),
+                _vcount(120, 115, len(a - b - c)), _vcount(260, 115, len(b - a - c)),
+                _vcount(190, 230, len(c - a - b)), _vcount(190, 105, len((a & b) - c)),
+                _vcount(145, 180, len((a & c) - b)), _vcount(235, 180, len((b & c) - a)),
+                _vcount(190, 160, len(a & b & c))]
+    out.append("</svg>")
+    return "\n".join(out) + "\n"
+
+
 def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") -> str:
     """Return the diagram IR string for the requested type.
 
-    ``engine`` is accepted for API parity; the IR is engine-independent
-    (DOT for the two digraphs, dagitty syntax for the causal DAG).
+    ``engine`` is accepted for API parity; the IR is engine-independent (DOT for
+    the digraphs, dagitty syntax for the causal DAG, and SVG for the Venn).
     """
     T = T.data if hasattr(T, "data") else T
     if type == "nomological_net":
@@ -92,4 +200,10 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
         return _development_roadmap(T)
     if type == "pipeline":
         return _pipeline(T)
+    if type == "context":
+        return _context(T)
+    if type == "workflow":
+        return _workflow(T)
+    if type == "venn":
+        return _venn(T)
     raise ValueError(f"unknown diagram type {type!r}; expected one of {_TYPES}")

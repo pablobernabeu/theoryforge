@@ -38,8 +38,12 @@ testing, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
 - `embedding_redundancy`: an opt-in, parity-exempt embedding screen (pluggable embedder), complementing the default lexical screen.
 - `osf_push`: an OSF deposit adapter (dry-run by default, with a live upload requiring the user's token).
 
+### Visualization and references
+- Eight diagram views via `diagram`/`tf_diagram`: nomological net, provenance, causal DAG, development roadmap, pipeline, and the new `context` (the theory, its scope, and its rivals), `workflow` (the building-to-testing pipeline), and `venn` (construct scope overlap, returned as an SVG).
+- A "Methodological foundations" documentation page that cites the verified literature behind each rigor item, with DOIs. The machine-readable BibTeX ships with the R package at `inst/REFERENCES.bib`. The risk-severity item's citation was corrected after a Crossref re-audit (Cohen, 1992 removed as not supporting prediction severity).
+
 ### Quality & reproducibility
-- Cross-language parity enforced over 39 golden artifacts in CI, with byte-identical diagrams, markdown, and lavaan outputs and semantically-equal JSON.
+- Cross-language parity enforced over 48 golden artifacts in CI, with byte-identical diagrams (DOT and SVG), markdown, and lavaan outputs and semantically-equal JSON.
 - R passes `R CMD check --as-cran` with 0 errors and 0 warnings (1 note, the standard new-submission note). Python builds a wheel and sdist passing `twine check`, is ruff- and mypy-clean, and ships `py.typed`.
 - Test suites: Python (pytest) and R (testthat), plus a dedicated parity job.
 

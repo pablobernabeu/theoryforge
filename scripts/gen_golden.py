@@ -28,6 +28,9 @@ DIAGRAMS = {
     "causal_dag": "dag",
     "development_roadmap": "dot",
     "pipeline": "dot",
+    "context": "dot",
+    "workflow": "dot",
+    "venn": "svg",
 }
 
 

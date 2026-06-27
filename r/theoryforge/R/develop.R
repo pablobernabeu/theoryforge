@@ -19,6 +19,13 @@ NULL
 #'   \code{"degenerating"}, \code{"neutral"}) and the ascending-sorted
 #'   character vectors \code{new_predictions}, \code{corroborated_new},
 #'   \code{ad_hoc_assumptions}.
+#' @references
+#' Lakatos, I. (1970). Falsification and the methodology of scientific research
+#'   programmes. In \emph{Criticism and the Growth of Knowledge} (pp. 91-196).
+#'   Cambridge University Press. \doi{10.1017/cbo9781139171434.009}
+#'
+#' Meehl, P. E. (1990). Appraising and amending theories. \emph{Psychological
+#'   Inquiry}, 1(2), 108-141. \doi{10.1207/s15327965pli0102_1}
 #' @examples
 #' prior <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_prediction("h1", "Effect is positive.", "directional")

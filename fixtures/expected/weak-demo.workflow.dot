@@ -1,0 +1,21 @@
+digraph workflow {
+  rankdir=LR;
+  node [shape=box];
+  subgraph cluster_build {
+    label="building";
+    "k_motivation" [label="Motivation"];
+    "k_drive" [label="Drive"];
+  }
+  subgraph cluster_relate {
+    label="propositions";
+    "prop_q1" [label="associates"];
+  }
+  subgraph cluster_predict {
+    label="predictions";
+    "pred_w1" [label="existence"];
+  }
+  subgraph cluster_test {
+    label="testing";
+  }
+  "k_motivation" -> "prop_q1";
+}

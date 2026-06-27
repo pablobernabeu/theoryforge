@@ -1,7 +1,9 @@
 site_name: theoryforge (Python)
 site_description: A rigorous, reproducible workflow for theory building, development, and testing.
+site_author: Pablo Bernabeu
 site_url: https://pablobernabeu.github.io/theoryforge/python/
 repo_url: https://github.com/pablobernabeu/theoryforge
+copyright: Author and maintainer, Pablo Bernabeu (ORCID 0000-0003-1083-2460)
 
 theme:
   name: material
@@ -14,6 +16,7 @@ nav:
   - Getting started: getting-started.md
   - Workflow modes: workflow-modes.md
   - Literature layer: literature.md
+  - Methodological foundations: methodology.md
   - API reference: api.md
 
 plugins:

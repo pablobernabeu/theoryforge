@@ -10,13 +10,17 @@ tf_diagram(theory, type = "nomological_net", engine = "graphviz")
 \item{theory}{A theory object (named list).}
 
 \item{type}{One of \code{"nomological_net"} (default), \code{"provenance"},
-\code{"causal_dag"}, \code{"development_roadmap"}, or \code{"pipeline"}.}
+\code{"causal_dag"}, \code{"development_roadmap"}, \code{"pipeline"},
+\code{"context"} (the theory, its scope, and its rivals),
+\code{"workflow"} (the building-to-testing pipeline), or \code{"venn"}
+(construct scope overlap, as an SVG).}
 
 \item{engine}{Rendering engine label, accepted for parity (default
 \code{"graphviz"}).}
 }
 \value{
-A single string ending in a newline.
+A single string ending in a newline. Graphviz DOT for the digraphs,
+dagitty syntax for the causal DAG, and SVG for the Venn.
 }
 \description{
 Produces a byte-identical diagram IR string for the requested type. The

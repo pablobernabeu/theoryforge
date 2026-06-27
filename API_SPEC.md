@@ -230,6 +230,25 @@ digraph pipeline {
 }
 ```
 
+**context** (DOT). A `theory` hub (ellipse, labelled by title); each construct (file order) as a node with a `theory -> <c.id>` edge; each top-level `boundary_conditions` entry (file order) as a `scope<i>` note node with a dotted `scope<i> -> theory` edge labelled `holds within`; each alternative (file order) as a dashed node with a dashed `theory -> <alt.id>` edge labelled `contrasts with`:
+```
+digraph context {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  "theory" [shape=ellipse, label="<title>"];
+  "<c.id>" [label="<c.label>"];
+  "theory" -> "<c.id>";
+  "scope<i>" [shape=note, label="<boundary condition>"];
+  "scope<i>" -> "theory" [style=dotted, label="holds within"];
+  "<alt.id>" [shape=box, style=dashed, label="<alt.label>"];
+  "theory" -> "<alt.id>" [style=dashed, label="contrasts with"];
+}
+```
+
+**workflow** (DOT). Four ordered subgraph clusters then the edges. Clusters: `cluster_build` (constructs, `"<c.id>"` labelled by `<c.label>`), `cluster_relate` (`"prop_<p.id>"` labelled by `<relation>`), `cluster_predict` (`"pred_<pred.id>"` labelled by `<type>`), `cluster_test` (`"outcome_<prediction_id>"` labelled `passed=<true|false>`). Edges, in order: for each proposition `"<from>" -> "prop_<p.id>"`; for each prediction and each of its `derives_from` entries `"prop_<src>" -> "pred_<pred.id>"`; for each test_outcome `"pred_<pid>" -> "outcome_<pid>"`.
+
+**venn** (SVG). The first up to three constructs (file order) as sets of their `boundary_conditions`, drawn at fixed integer coordinates (`viewBox="0 0 380 300"`). Region labels are set cardinalities. Layout: n=1 one circle at cx=190; n=2 two circles at cx=150,230 (counts A−B, A∩B, B−A); n=3 three circles at (150,135),(230,135),(190,195) with the seven region counts. Byte-identical because every coordinate and count is an integer.
+
 ## 13. Additional golden artifacts (per fixture unless noted)
 
 `<id>.development_roadmap.dot`, `<id>.pipeline.dot` (byte), `<id>.severity.json`, `<id>.prereg.md` (byte), and, for the amended pair only, `panic-network-2026-v2.appraisal.json` = `appraise_amendment(v2, v1)`. Parity checker: byte-identical for `*.dot/.dag/.md`, semantic (recursive, float tol 1e-9) for `*.json`.

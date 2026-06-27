@@ -27,3 +27,9 @@ t.preregister()                 # preregistration document
 corpus = tf.read_corpus("panic-corpus.yaml")
 t.landscape(corpus)             # under-theorized fronts + redundancy risk
 ```
+
+## Author
+
+theoryforge is written and maintained by Pablo Bernabeu
+([ORCID 0000-0003-1083-2460](https://orcid.org/0000-0003-1083-2460)). The R and
+Python packages share one specification and are released under the MIT licence.

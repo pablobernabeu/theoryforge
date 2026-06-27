@@ -1,0 +1,9 @@
+digraph context {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  "theory" [shape=ellipse, label="An underspecified motivation theory"];
+  "k_motivation" [label="Motivation"];
+  "theory" -> "k_motivation";
+  "k_drive" [label="Drive"];
+  "theory" -> "k_drive";
+}

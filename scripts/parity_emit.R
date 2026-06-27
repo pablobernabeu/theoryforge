@@ -20,7 +20,8 @@ suppressWarnings(suppressMessages({
 
   diagram_ext <- c(
     nomological_net = "dot", provenance = "dot", causal_dag = "dag",
-    development_roadmap = "dot", pipeline = "dot"
+    development_roadmap = "dot", pipeline = "dot",
+    context = "dot", workflow = "dot", venn = "svg"
   )
 
   fixtures <- sort(list.files(fixtures_dir, pattern = "\\.theory\\.yaml$", full.names = TRUE))

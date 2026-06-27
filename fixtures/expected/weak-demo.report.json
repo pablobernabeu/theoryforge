@@ -28,7 +28,7 @@
       "score": 0.2,
       "weight": 0.1,
       "severity_if_fail": "warning",
-      "citation": "Mayo (2018); Meehl (1990); Cohen (1992)"
+      "citation": "Mayo (2018); Meehl (1990)"
     },
     {
       "id": "parsimony",

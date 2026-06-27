@@ -28,3 +28,11 @@ theory <- tf_theory("demo-1", "A demonstration theory") |>
                    "Appraised danger in response to a stressor.")
 tf_redundancy_check(theory)
 }
+\references{
+Le, H., Schmidt, F. L., Harter, J. K., & Lauver, K. J. (2010). The problem of
+empirical redundancy of constructs. \emph{Organizational Behavior and Human
+Decision Processes}, 112(2), 112-125. \doi{10.1016/j.obhdp.2010.02.003}
+
+Lawson, K. M., & Robins, R. W. (2021). Sibling constructs. \emph{Personality
+and Social Psychology Review}, 25(4), 344-366. \doi{10.1177/10888683211047101}
+}

@@ -42,6 +42,15 @@ def redundancy_check(T: dict) -> list[dict]:
 
     Returns one record per unordered construct pair, sorted by descending
     similarity then ``(a, b)`` ascending.
+
+    References:
+        Le, H., Schmidt, F. L., Harter, J. K., & Lauver, K. J. (2010). The
+        problem of empirical redundancy of constructs. Organizational Behavior
+        and Human Decision Processes, 112(2), 112-125.
+        https://doi.org/10.1016/j.obhdp.2010.02.003
+        Lawson, K. M., & Robins, R. W. (2021). Sibling constructs. Personality
+        and Social Psychology Review, 25(4), 344-366.
+        https://doi.org/10.1177/10888683211047101
     """
     T = T.data if hasattr(T, "data") else T
     cons = _list(T, "constructs")

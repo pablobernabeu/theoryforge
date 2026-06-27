@@ -24,7 +24,7 @@ items:
     criterion: "Mean prediction severity above threshold"
     weight: 0.10
     severity_if_fail: warning
-    citation: "Mayo (2018); Meehl (1990); Cohen (1992)"
+    citation: "Mayo (2018); Meehl (1990)"
   - id: parsimony
     criterion: "Few auxiliary assumptions; none added purely defensively"
     weight: 0.08

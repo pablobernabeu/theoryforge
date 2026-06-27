@@ -13,7 +13,15 @@ def _list(d: dict, key: str) -> list:
 
 
 def severity(T) -> list[dict]:
-    """Per-prediction risk and computed severity, in file order."""
+    """Per-prediction risk and computed severity, in file order.
+
+    References:
+        Mayo, D. G. (2018). Statistical Inference as Severe Testing. Cambridge
+        University Press. https://doi.org/10.1017/9781107286184
+        Meehl, P. E. (1990). Why summaries of research on psychological theories
+        are often uninterpretable. Psychological Reports, 66, 195-244.
+        https://doi.org/10.2466/pr0.1990.66.1.195
+    """
     T = T.data if hasattr(T, "data") else T
     preds = _list(T, "predictions")
     alt_ids = {a.get("id") for a in _list(T, "alternatives")}

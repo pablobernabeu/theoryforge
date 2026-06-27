@@ -21,6 +21,13 @@ NULL
 #' @return A \code{data.frame} with columns \code{prediction_id}, \code{type},
 #'   \code{risk_score}, \code{computed_severity}, one row per prediction in
 #'   file order.
+#' @references
+#' Mayo, D. G. (2018). \emph{Statistical Inference as Severe Testing}. Cambridge
+#'   University Press. \doi{10.1017/9781107286184}
+#'
+#' Meehl, P. E. (1990). Why summaries of research on psychological theories are
+#'   often uninterpretable. \emph{Psychological Reports}, 66, 195-244.
+#'   \doi{10.2466/pr0.1990.66.1.195}
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_prediction("h1", "Effect is exactly 0.30.", "point") |>

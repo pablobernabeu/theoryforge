@@ -18,6 +18,7 @@ Key entry points: \code{\link[=tf_read]{tf_read()}}, \code{\link[=tf_validate]{t
 Useful links:
 \itemize{
   \item \url{https://github.com/pablobernabeu/theoryforge}
+  \item \url{https://pablobernabeu.github.io/theoryforge/r/}
   \item Report bugs at \url{https://github.com/pablobernabeu/theoryforge/issues}
 }
 

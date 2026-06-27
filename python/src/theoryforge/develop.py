@@ -12,7 +12,16 @@ def _list(d: dict, key: str) -> list:
 
 
 def appraise_amendment(new, prior) -> dict:
-    """Appraise an amendment as progressive, degenerating, or neutral relative to a prior version."""
+    """Appraise an amendment as progressive, degenerating, or neutral relative to a prior version.
+
+    References:
+        Lakatos, I. (1970). Falsification and the methodology of scientific
+        research programmes. In Criticism and the Growth of Knowledge
+        (pp. 91-196). Cambridge University Press.
+        https://doi.org/10.1017/cbo9781139171434.009
+        Meehl, P. E. (1990). Appraising and amending theories. Psychological
+        Inquiry, 1(2), 108-141. https://doi.org/10.1207/s15327965pli0102_1
+    """
     new = new.data if hasattr(new, "data") else new
     prior = prior.data if hasattr(prior, "data") else prior
 

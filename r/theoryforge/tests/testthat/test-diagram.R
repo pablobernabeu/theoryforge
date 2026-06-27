@@ -30,7 +30,10 @@ test_that("new diagram types are byte-identical to the golden files", {
   )
   types <- list(
     development_roadmap = "development_roadmap.dot",
-    pipeline            = "pipeline.dot"
+    pipeline            = "pipeline.dot",
+    context             = "context.dot",
+    workflow            = "workflow.dot",
+    venn                = "venn.svg"
   )
   for (cs in cases) {
     theory <- tf_read(tf_fixture_path(cs$fixture))

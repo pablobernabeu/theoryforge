@@ -23,6 +23,31 @@ def test_provenance(panic_path):
     assert '"n1" -> "n2";' in dot
 
 
+def test_context(panic_path):
+    dot = tf.read(panic_path).diagram("context")
+    assert dot.startswith("digraph context {\n") and dot.endswith("}\n")
+    assert '"theory" [shape=ellipse, label="Network theory of panic disorder"];' in dot
+    assert '"theory" -> "c_arousal";' in dot
+    assert '"scope1" -> "theory" [style=dotted, label="holds within"];' in dot
+    assert '"theory" -> "alt_cognitive" [style=dashed, label="contrasts with"];' in dot
+
+
+def test_workflow(panic_path):
+    dot = tf.read(panic_path).diagram("workflow")
+    assert dot.startswith("digraph workflow {\n") and dot.endswith("}\n")
+    assert '"prop_p1" [label="increases"];' in dot
+    assert '"prop_p1" -> "pred_pred1";' in dot   # pred1 derives_from p1
+    assert '"pred_pred1" -> "outcome_pred1";' in dot
+
+
+def test_venn(panic_path):
+    svg = tf.read(panic_path).diagram("venn")
+    assert svg.startswith("<svg ") and svg.endswith("</svg>\n")
+    assert svg.count("<circle ") == 3   # three constructs
+    # "adults" is the only boundary condition shared by all three constructs
+    assert '<text x="190" y="160" text-anchor="middle" font-weight="bold">1</text>' in svg
+
+
 def test_unknown_diagram_raises(panic_path):
     with pytest.raises(ValueError):
         tf.read(panic_path).diagram("nope")

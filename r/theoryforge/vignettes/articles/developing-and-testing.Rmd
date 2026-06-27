@@ -119,3 +119,32 @@ cat(substr(dossier, 1, 600))
 The full document is deterministic and byte-identical to the Python
 implementation, so the same theory produces the same dossier regardless of
 which package generated it.
+
+## Visualising the theory
+
+`tf_diagram()` exports several views of the same object. The `workflow` view
+traces the lifecycle from constructs, through propositions and predictions, to
+the recorded test outcomes, so the path from a claim to its planned test is
+visible in one figure.
+
+```{r workflow}
+cat(tf_diagram(theory, "workflow"))
+```
+
+The `context` view places the theory among the scope conditions under which it
+is claimed to hold and the registered rivals it is meant to outpredict.
+
+```{r context}
+cat(tf_diagram(theory, "context"))
+```
+
+The `venn` view returns an SVG that shows where the constructs share boundary
+conditions. It renders inline because the output is a self-contained image.
+
+```{r venn, results = "asis"}
+cat(tf_diagram(theory, "venn"))
+```
+
+All three views are deterministic and byte-identical across the R and Python
+packages. The DOT strings render with any Graphviz engine, and the Venn SVG
+opens in any browser.

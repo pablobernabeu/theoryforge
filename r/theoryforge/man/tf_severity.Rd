@@ -25,3 +25,11 @@ theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_prediction("h2", "Effect is positive.", "directional")
 tf_severity(theory)
 }
+\references{
+Mayo, D. G. (2018). \emph{Statistical Inference as Severe Testing}. Cambridge
+University Press. \doi{10.1017/9781107286184}
+
+Meehl, P. E. (1990). Why summaries of research on psychological theories are
+often uninterpretable. \emph{Psychological Reports}, 66, 195-244.
+\doi{10.2466/pr0.1990.66.1.195}
+}

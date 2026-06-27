@@ -1,0 +1,21 @@
+digraph context {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  "theory" [shape=ellipse, label="Network theory of panic disorder"];
+  "c_arousal" [label="Physiological arousal"];
+  "theory" -> "c_arousal";
+  "c_perceived_threat" [label="Perceived threat"];
+  "theory" -> "c_perceived_threat";
+  "c_avoidance" [label="Avoidance behaviour"];
+  "theory" -> "c_avoidance";
+  "scope1" [shape=note, label="adults"];
+  "scope1" -> "theory" [style=dotted, label="holds within"];
+  "scope2" [shape=note, label="non-clinical baseline"];
+  "scope2" -> "theory" [style=dotted, label="holds within"];
+  "scope3" [shape=note, label="no beta-blocker medication"];
+  "scope3" -> "theory" [style=dotted, label="holds within"];
+  "alt_cognitive" [shape=box, style=dashed, label="Cognitive model of panic"];
+  "theory" -> "alt_cognitive" [style=dashed, label="contrasts with"];
+  "alt_biological" [shape=box, style=dashed, label="Biological model of panic"];
+  "theory" -> "alt_biological" [style=dashed, label="contrasts with"];
+}
