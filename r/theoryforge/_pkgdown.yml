@@ -2,6 +2,7 @@ url: https://pablobernabeu.github.io/theoryforge/r
 
 template:
   bootstrap: 5
+  light-switch: true
 
 reference:
 - title: Core IO
