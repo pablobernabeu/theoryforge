@@ -1,53 +1,77 @@
 # Methodological foundations
 
-theoryforge does not grade a theory by opinion. Every item in the rigor
-checklist rests on a result from the methodology literature, and the package
-records the supporting work next to each check (the `citation` field of the
-report). The references below were verified field by field against Crossref,
-and each was checked to confirm that it supports the criterion it is attached
-to.
+Each item in the rigor checklist follows from a result in the methodology
+literature, and the package records the supporting work next to the check (the
+`citation` field of the report). The references were verified field by field
+against Crossref, and each was checked to confirm that it supports the criterion
+it is attached to. They are listed in APA style below.
 
-## Grounding for each rigor item
+## Grounding for each rigor check
 
-- **Falsifiability.** At least one prediction forbids an observation. Popper (1959), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374).
-- **Predictive precision.** Predictions are point/interval, not merely directional. [Meehl (1967)](https://doi.org/10.1086/288135), [Meehl (1990)](https://doi.org/10.1207/s15327965pli0102_1).
-- **Test severity.** Mean prediction severity above a threshold. [Mayo (2018)](https://doi.org/10.1017/9781107286184), [Meehl (1990)](https://doi.org/10.2466/pr0.1990.66.1.195).
-- **Parsimony.** Few auxiliary assumptions; none added purely defensively. [Forster & Sober (1994)](https://doi.org/10.1093/bjps/45.1.1), [Lakatos (1970)](https://doi.org/10.1017/cbo9781139171434.009).
-- **Construct non-redundancy.** No construct pair exceeds a calibrated similarity screen (jingle-jangle). Kelley (1927), [Le et al. (2010)](https://doi.org/10.1016/j.obhdp.2010.02.003), [Lawson & Robins (2021)](https://doi.org/10.1177/10888683211047101).
-- **Construct clarity.** Every construct has definition + measurement + boundary conditions. [Suddaby (2010)](https://doi.org/10.5465/amr.2010.51141319), [Cronbach & Meehl (1955)](https://doi.org/10.1037/h0040957), [Flake & Fried (2020)](https://doi.org/10.1177/2515245920952393).
-- **Scope and boundary conditions.** Boundary conditions explicitly stated. [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374).
-- **Mechanism (the logical why).** Each proposition states a mechanism, not just a correlation. [Sutton & Staw (1995)](https://doi.org/10.2307/2393788), [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371).
-- **Causal testability.** Causal relations export to a DAG with derivable implications. [Textor et al. (2017)](https://doi.org/10.1093/ije/dyw341), [Eronen & Bringmann (2021)](https://doi.org/10.1177/1745691620970586).
-- **Diagnosticity.** At least one prediction discriminates from a registered alternative. [Platt (1964)](https://doi.org/10.1126/science.146.3642.347), [Fiedler (2017)](https://doi.org/10.1177/1745691616654458).
-- **Formalization.** A formal-model stub exists. [Robinaugh et al. (2021)](https://doi.org/10.1177/1745691620974697), [Guest & Martin (2021)](https://doi.org/10.1177/1745691620970585).
-- **Derivation chain.** Each prediction is graph-reachable from propositions (reachability only). [Scheel et al. (2021)](https://doi.org/10.1177/1745691620966795), [Szollosi et al. (2020)](https://doi.org/10.1016/j.tics.2019.11.009).
+| Rigor check | Criterion | Supporting work |
+|---|---|---|
+| Falsifiability | At least one prediction forbids an observation | Popper (1959), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
+| Predictive precision | Predictions are point/interval, not merely directional | [Meehl (1967)](https://doi.org/10.1086/288135), [Meehl (1990a)](https://doi.org/10.1207/s15327965pli0102_1) |
+| Test severity | Mean prediction severity above a threshold | [Mayo (2018)](https://doi.org/10.1017/9781107286184), [Meehl (1990b)](https://doi.org/10.2466/pr0.1990.66.1.195) |
+| Parsimony | Few auxiliary assumptions; none added purely defensively | [Forster & Sober (1994)](https://doi.org/10.1093/bjps/45.1.1), [Lakatos (1970)](https://doi.org/10.1017/cbo9781139171434.009) |
+| Construct non-redundancy | No construct pair exceeds a calibrated similarity screen (jingle-jangle) | Kelley (1927), [Le et al. (2010)](https://doi.org/10.1016/j.obhdp.2010.02.003), [Lawson & Robins (2021)](https://doi.org/10.1177/10888683211047101) |
+| Construct clarity | Every construct has definition + measurement + boundary conditions | [Suddaby (2010)](https://doi.org/10.5465/amr.2010.51141319), [Cronbach & Meehl (1955)](https://doi.org/10.1037/h0040957), [Flake & Fried (2020)](https://doi.org/10.1177/2515245920952393) |
+| Scope and boundary conditions | Boundary conditions explicitly stated | [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
+| Mechanism | Each proposition states a mechanism, not just a correlation | [Sutton & Staw (1995)](https://doi.org/10.2307/2393788), [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371) |
+| Causal testability | Causal relations export to a DAG with derivable implications | [Textor et al. (2016)](https://doi.org/10.1093/ije/dyw341), [Eronen & Bringmann (2021)](https://doi.org/10.1177/1745691620970586) |
+| Diagnosticity | At least one prediction discriminates from a registered alternative | [Platt (1964)](https://doi.org/10.1126/science.146.3642.347), [Fiedler (2017)](https://doi.org/10.1177/1745691616654458) |
+| Formalization | A formal-model stub exists | [Robinaugh et al. (2021)](https://doi.org/10.1177/1745691620974697), [Guest & Martin (2021)](https://doi.org/10.1177/1745691620970585) |
+| Derivation chain | Each prediction is graph-reachable from propositions (reachability only) | [Scheel et al. (2021)](https://doi.org/10.1177/1745691620966795), [Szollosi et al. (2020)](https://doi.org/10.1016/j.tics.2019.11.009) |
 
 ## References
 
-- Samuel B. Bacharach (1989). *Organizational Theories: Some Criteria for Evaluation.* Academy of Management Review, 14(4), 496-515. <https://doi.org/10.5465/amr.1989.4308374>
-- Lee J. Cronbach & Paul E. Meehl (1955). *Construct validity in psychological tests.* Psychological Bulletin, vol. 52, no. 4, pp. 281-302. <https://doi.org/10.1037/h0040957>
-- Markus I. Eronen & Laura F. Bringmann (2021). *The Theory Crisis in Psychology: How to Move Forward.* Perspectives on Psychological Science, vol. 16, pp. 779-788. <https://doi.org/10.1177/1745691620970586>
-- Klaus Fiedler (2017). *What Constitutes Strong Psychological Science? The (Neglected) Role of Diagnosticity and A Priori Theorizing.* Perspectives on Psychological Science, vol. 12, no. 1, pp. 46-61. <https://doi.org/10.1177/1745691616654458>
-- Jessica Kay Flake & Eiko I. Fried (2020). *Measurement Schmeasurement: Questionable Measurement Practices and How to Avoid Them.* Advances in Methods and Practices in Psychological Science, vol. 3, no. 4, pp. 456-465. <https://doi.org/10.1177/2515245920952393>
-- Malcolm Forster & Elliott Sober (1994). *How to Tell When Simpler, More Unified, or Less Ad Hoc Theories will Provide More Accurate Predictions.* The British Journal for the Philosophy of Science, vol. 45, no. 1, pp. 1-35. <https://doi.org/10.1093/bjps/45.1.1>
-- Olivia Guest & Andrea E. Martin (2021). *How Computational Modeling Can Force Theory Building in Psychological Science.* Perspectives on Psychological Science, vol. 16, pp. 789-802. <https://doi.org/10.1177/1745691620970585>
-- Truman Lee Kelley (1927). *Interpretation of Educational Measurements.* World Book Company, Yonkers-on-Hudson, NY. (book, no DOI)
-- Imre Lakatos (1970). *Falsification and the Methodology of Scientific Research Programmes.* In I. Lakatos & A. Musgrave (Eds.), Criticism and the Growth of Knowledge, Cambridge University Press, pp. 91-196. <https://doi.org/10.1017/cbo9781139171434.009>
-- Katherine M. Lawson & Richard W. Robins (2021). *Sibling Constructs: What Are They, Why Do They Matter, and How Should You Handle Them?.* Personality and Social Psychology Review, 25(4), 344-366. <https://doi.org/10.1177/10888683211047101>
-- Huy Le, Frank L. Schmidt, James K. Harter, & Kristy J. Lauver (2010). *The problem of empirical redundancy of constructs in organizational research: An empirical investigation.* Organizational Behavior and Human Decision Processes, vol. 112, no. 2, pp. 112-125. <https://doi.org/10.1016/j.obhdp.2010.02.003>
-- Deborah G. Mayo (2018). *Statistical Inference as Severe Testing: How to Get Beyond the Statistics Wars.* Cambridge University Press (monograph). <https://doi.org/10.1017/9781107286184>
-- Paul E. Meehl (1967). *Theory-Testing in Psychology and Physics: A Methodological Paradox.* Philosophy of Science, 34(2), 103-115. <https://doi.org/10.1086/288135>
-- Paul E. Meehl (1990). *Appraising and Amending Theories: The Strategy of Lakatosian Defense and Two Principles That Warrant It.* Psychological Inquiry, 1(2), 108-141. <https://doi.org/10.1207/s15327965pli0102_1>
-- Paul E. Meehl (1990). *Why Summaries of Research on Psychological Theories are Often Uninterpretable.* Psychological Reports, 66, 195-244. <https://doi.org/10.2466/pr0.1990.66.1.195>
-- John R. Platt (1964). *Strong Inference.* Science, vol. 146, no. 3642, pp. 347-353. <https://doi.org/10.1126/science.146.3642.347>
-- Karl R. Popper (1959). *The Logic of Scientific Discovery.* Hutchinson, London (English translation of Logik der Forschung, 1935). (book, no DOI)
-- Donald J. Robinaugh, Jonas M. B. Haslbeck, Oisín Ryan, Eiko I. Fried, & Lourens J. Waldorp (2021). *Invisible Hands and Fine Calipers: A Call to Use Formal Theory as a Toolkit for Theory Construction.* Perspectives on Psychological Science, vol. 16, pp. 725-743. <https://doi.org/10.1177/1745691620974697>
-- Anne M. Scheel, Leonid Tiokhin, Peder M. Isager, & Daniël Lakens (2021). *Why Hypothesis Testers Should Spend Less Time Testing Hypotheses.* Perspectives on Psychological Science, vol. 16, no. 4, pp. 744-755. <https://doi.org/10.1177/1745691620966795>
-- Roy Suddaby (2010). *Editor's Comments: Construct Clarity in Theories of Management and Organization.* Academy of Management Review, vol. 35, no. 3, pp. 346-357. <https://doi.org/10.5465/amr.2010.51141319>
-- Robert I. Sutton & Barry M. Staw (1995). *What Theory is Not.* Administrative Science Quarterly, vol. 40, no. 3, pp. 371-384. <https://doi.org/10.2307/2393788>
-- Aba Szollosi, David Kellen, Danielle J. Navarro, Richard Shiffrin, Iris van Rooij, Trisha Van Zandt, & Chris Donkin (2020). *Is Preregistration Worthwhile?.* Trends in Cognitive Sciences, vol. 24, no. 2, pp. 94-95. <https://doi.org/10.1016/j.tics.2019.11.009>
-- Johannes Textor, Benito van der Zander, Mark S. Gilthorpe, Maciej Liśkiewicz, & George T. H. Ellison (2017). *Robust causal inference using directed acyclic graphs: the R package 'dagitty'.* International Journal of Epidemiology (Crossref records the print volume 45, issue 6, pp. 1887-1894). <https://doi.org/10.1093/ije/dyw341>
-- David A. Whetten (1989). *What Constitutes a Theoretical Contribution?.* Academy of Management Review, 14(4), 490-495. <https://doi.org/10.5465/amr.1989.4308371>
+Bacharach, S. B. (1989). Organizational theories: Some criteria for evaluation. *The Academy of Management Review*, *14*(4), 496–515. https://doi.org/10.5465/amr.1989.4308374
 
-The machine-readable BibTeX ships with the R package at `inst/REFERENCES.bib`
-(`system.file("REFERENCES.bib", package = "theoryforge")`).
+Cronbach, L. J., & Meehl, P. E. (1955). Construct validity in psychological tests. *Psychological Bulletin*, *52*(4), 281–302. https://doi.org/10.1037/h0040957
+
+Eronen, M. I., & Bringmann, L. F. (2021). The theory crisis in psychology: How to move forward. *Perspectives on Psychological Science*, *16*(4), 779–788. https://doi.org/10.1177/1745691620970586
+
+Fiedler, K. (2017). What constitutes strong psychological science? The (neglected) role of diagnosticity and a priori theorizing. *Perspectives on Psychological Science*, *12*(1), 46–61. https://doi.org/10.1177/1745691616654458
+
+Flake, J. K., & Fried, E. I. (2020). Measurement schmeasurement: Questionable measurement practices and how to avoid them. *Advances in Methods and Practices in Psychological Science*, *3*(4), 456–465. https://doi.org/10.1177/2515245920952393
+
+Forster, M., & Sober, E. (1994). How to tell when simpler, more unified, or less ad hoc theories will provide more accurate predictions. *The British Journal for the Philosophy of Science*, *45*(1), 1–35. https://doi.org/10.1093/bjps/45.1.1
+
+Guest, O., & Martin, A. E. (2021). How computational modeling can force theory building in psychological science. *Perspectives on Psychological Science*, *16*(4), 789–802. https://doi.org/10.1177/1745691620970585
+
+Kelley, T. L. (1927). *Interpretation of educational measurements*. World Book Company.
+
+Lakatos, I. (1970). Falsification and the methodology of scientific research programmes. In I. Lakatos & A. Musgrave (Eds.), *Criticism and the growth of knowledge* (pp. 91–196). Cambridge University Press. https://doi.org/10.1017/cbo9781139171434.009
+
+Lawson, K. M., & Robins, R. W. (2021). Sibling constructs: What are they, why do they matter, and how should you handle them? *Personality and Social Psychology Review*, *25*(4), 344–366. https://doi.org/10.1177/10888683211047101
+
+Le, H., Schmidt, F. L., Harter, J. K., & Lauver, K. J. (2010). The problem of empirical redundancy of constructs in organizational research: An empirical investigation. *Organizational Behavior and Human Decision Processes*, *112*(2), 112–125. https://doi.org/10.1016/j.obhdp.2010.02.003
+
+Mayo, D. G. (2018). *Statistical inference as severe testing: How to get beyond the statistics wars*. Cambridge University Press. https://doi.org/10.1017/9781107286184
+
+Meehl, P. E. (1967). Theory-testing in psychology and physics: A methodological paradox. *Philosophy of Science*, *34*(2), 103–115. https://doi.org/10.1086/288135
+
+Meehl, P. E. (1990a). Appraising and amending theories: The strategy of Lakatosian defense and two principles that warrant it. *Psychological Inquiry*, *1*(2), 108–141. https://doi.org/10.1207/s15327965pli0102_1
+
+Meehl, P. E. (1990b). Why summaries of research on psychological theories are often uninterpretable. *Psychological Reports*, *66*(1), 195–244. https://doi.org/10.2466/pr0.1990.66.1.195
+
+Platt, J. R. (1964). Strong inference. *Science*, *146*(3642), 347–353. https://doi.org/10.1126/science.146.3642.347
+
+Popper, K. R. (1959). *The logic of scientific discovery*. Hutchinson.
+
+Robinaugh, D. J., Haslbeck, J. M. B., Ryan, O., Fried, E. I., & Waldorp, L. J. (2021). Invisible hands and fine calipers: A call to use formal theory as a toolkit for theory construction. *Perspectives on Psychological Science*, *16*(4), 725–743. https://doi.org/10.1177/1745691620974697
+
+Scheel, A. M., Tiokhin, L., Isager, P. M., & Lakens, D. (2021). Why hypothesis testers should spend less time testing hypotheses. *Perspectives on Psychological Science*, *16*(4), 744–755. https://doi.org/10.1177/1745691620966795
+
+Suddaby, R. (2010). Editor's comments: Construct clarity in theories of management and organization. *Academy of Management Review*, *35*(3), 346–357. https://doi.org/10.5465/amr.2010.51141319
+
+Sutton, R. I., & Staw, B. M. (1995). What theory is not. *Administrative Science Quarterly*, *40*(3), 371–384. https://doi.org/10.2307/2393788
+
+Szollosi, A., Kellen, D., Navarro, D. J., Shiffrin, R., van Rooij, I., Van Zandt, T., & Donkin, C. (2020). Is preregistration worthwhile? *Trends in Cognitive Sciences*, *24*(2), 94–95. https://doi.org/10.1016/j.tics.2019.11.009
+
+Textor, J., van der Zander, B., Gilthorpe, M. S., Liśkiewicz, M., & Ellison, G. T. H. (2016). Robust causal inference using directed acyclic graphs: The R package ‘dagitty’. *International Journal of Epidemiology*, *45*(6), 1887–1894. https://doi.org/10.1093/ije/dyw341
+
+Whetten, D. A. (1989). What constitutes a theoretical contribution? *The Academy of Management Review*, *14*(4), 490–495. https://doi.org/10.5465/amr.1989.4308371
+
+The machine-readable BibTeX ships with the R package at `inst/REFERENCES.bib`,
+reachable with `system.file("REFERENCES.bib", package = "theoryforge")`.

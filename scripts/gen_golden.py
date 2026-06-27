@@ -31,6 +31,8 @@ DIAGRAMS = {
     "context": "dot",
     "workflow": "dot",
     "venn": "svg",
+    "rigor": "svg",
+    "severity": "svg",
 }
 
 

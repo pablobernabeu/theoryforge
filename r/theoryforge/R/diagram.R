@@ -6,7 +6,8 @@
 NULL
 
 .tf_DIAGRAM_TYPES <- c("nomological_net", "provenance", "causal_dag",
-                       "development_roadmap", "pipeline", "context", "workflow", "venn")
+                       "development_roadmap", "pipeline", "context", "workflow", "venn",
+                       "rigor", "severity")
 
 # Escape a DOT label: replace backslash then double-quote (order matters).
 .tf_esc <- function(s) {
@@ -233,6 +234,52 @@ NULL
   paste0(paste(out, collapse = "\n"), "\n")
 }
 
+.tf_STATUS_COLOR <- c(pass = "#4caf50", warn = "#ff9800", fail = "#f44336")
+
+.tf_rigor <- function(T) {
+  rep <- tf_check(T)
+  items <- rep$items
+  h <- 60L + length(items) * 24L + 12L
+  out <- c(sprintf('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 %d" font-family="sans-serif" font-size="13">', h),
+           '  <text x="20" y="28" font-size="15">Rigor checklist</text>',
+           sprintf('  <text x="20" y="46">aggregate score %.1f, gate %s</text>',
+                   rep$aggregate_score, .tf_xml(rep$gate)))
+  for (i in seq_along(items)) {
+    it <- items[[i]]
+    y <- 60L + (i - 1L) * 24L
+    color <- if (it$status %in% names(.tf_STATUS_COLOR)) .tf_STATUS_COLOR[[it$status]] else "#9e9e9e"
+    out <- c(out,
+      sprintf('  <rect x="20" y="%d" width="16" height="16" rx="3" fill="%s"/>', y, color),
+      sprintf('  <text x="44" y="%d">%s</text>', y + 12L, .tf_xml(it$id)),
+      sprintf('  <text x="320" y="%d">%s</text>', y + 12L, .tf_xml(it$status)))
+  }
+  out <- c(out, "</svg>")
+  paste0(paste(out, collapse = "\n"), "\n")
+}
+
+.tf_severity_chart <- function(T) {
+  rows <- tf_severity(T)
+  n <- nrow(rows)
+  h <- 40L + max(n, 1L) * 28L + 8L
+  out <- c(sprintf('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 %d" font-family="sans-serif" font-size="13">', h),
+           '  <text x="20" y="26" font-size="15">Prediction severity</text>')
+  if (n == 0L) {
+    out <- c(out, '  <text x="20" y="54">(no predictions)</text>')
+  } else {
+    for (i in seq_len(n)) {
+      y <- 40L + (i - 1L) * 28L
+      sev <- rows$computed_severity[i]
+      w <- as.integer(sev * 200 + 0.5 + 1e-6)
+      out <- c(out,
+        sprintf('  <text x="20" y="%d">%s</text>', y + 12L, .tf_xml(as.character(rows$prediction_id[i]))),
+        sprintf('  <rect x="130" y="%d" width="%d" height="16" rx="2" fill="#4e79a7"/>', y, w),
+        sprintf('  <text x="%d" y="%d">%.3f</text>', 135L + w, y + 12L, sev))
+    }
+  }
+  out <- c(out, "</svg>")
+  paste0(paste(out, collapse = "\n"), "\n")
+}
+
 #' Render a diagram intermediate representation
 #'
 #' Produces a byte-identical diagram IR string for the requested type. The
@@ -244,8 +291,10 @@ NULL
 #' @param type One of \code{"nomological_net"} (default), \code{"provenance"},
 #'   \code{"causal_dag"}, \code{"development_roadmap"}, \code{"pipeline"},
 #'   \code{"context"} (the theory, its scope, and its rivals),
-#'   \code{"workflow"} (the building-to-testing pipeline), or \code{"venn"}
-#'   (construct scope overlap, as an SVG).
+#'   \code{"workflow"} (the building-to-testing pipeline), \code{"venn"}
+#'   (construct scope overlap, as an SVG), \code{"rigor"} (the checklist as a
+#'   status grid, as an SVG), or \code{"severity"} (per-prediction severity
+#'   bars, as an SVG).
 #' @param engine Rendering engine label, accepted for parity (default
 #'   \code{"graphviz"}).
 #' @return A single string ending in a newline. Graphviz DOT for the digraphs,
@@ -283,6 +332,12 @@ tf_diagram <- function(theory, type = "nomological_net", engine = "graphviz") {
   }
   if (identical(type, "venn")) {
     return(.tf_venn(T))
+  }
+  if (identical(type, "rigor")) {
+    return(.tf_rigor(T))
+  }
+  if (identical(type, "severity")) {
+    return(.tf_severity_chart(T))
   }
   stop(sprintf("unknown diagram type '%s'; expected one of %s",
                type, paste(.tf_DIAGRAM_TYPES, collapse = ", ")), call. = FALSE)

@@ -145,6 +145,21 @@ conditions. It renders inline because the output is a self-contained image.
 cat(tf_diagram(theory, "venn"))
 ```
 
-All three views are deterministic and byte-identical across the R and Python
-packages. The DOT strings render with any Graphviz engine, and the Venn SVG
-opens in any browser.
+Two further views summarise the scoring. The `rigor` view draws the checklist
+as a status grid, colouring each item by its result and reporting the aggregate
+score and the gate.
+
+```{r rigor-view, results = "asis"}
+cat(tf_diagram(theory, "rigor"))
+```
+
+The `severity` view draws one bar per prediction, scaled by its computed
+severity, so the riskier tests stand out at a glance.
+
+```{r severity-view, results = "asis"}
+cat(tf_diagram(theory, "severity"))
+```
+
+All of these views are deterministic and byte-identical across the R and Python
+packages. The DOT strings render with any Graphviz engine, and the SVG views
+open in any browser.

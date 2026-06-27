@@ -12,8 +12,10 @@ tf_diagram(theory, type = "nomological_net", engine = "graphviz")
 \item{type}{One of \code{"nomological_net"} (default), \code{"provenance"},
 \code{"causal_dag"}, \code{"development_roadmap"}, \code{"pipeline"},
 \code{"context"} (the theory, its scope, and its rivals),
-\code{"workflow"} (the building-to-testing pipeline), or \code{"venn"}
-(construct scope overlap, as an SVG).}
+\code{"workflow"} (the building-to-testing pipeline), \code{"venn"}
+(construct scope overlap, as an SVG), \code{"rigor"} (the checklist as a
+status grid, as an SVG), or \code{"severity"} (per-prediction severity
+bars, as an SVG).}
 
 \item{engine}{Rendering engine label, accepted for parity (default
 \code{"graphviz"}).}

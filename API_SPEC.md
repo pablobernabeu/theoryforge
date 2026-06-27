@@ -249,6 +249,10 @@ digraph context {
 
 **venn** (SVG). The first up to three constructs (file order) as sets of their `boundary_conditions`, drawn at fixed integer coordinates (`viewBox="0 0 380 300"`). Region labels are set cardinalities. Layout: n=1 one circle at cx=190; n=2 two circles at cx=150,230 (counts A−B, A∩B, B−A); n=3 three circles at (150,135),(230,135),(190,195) with the seven region counts. Byte-identical because every coordinate and count is an integer.
 
+**rigor** (SVG). The `check` report as a status grid (`viewBox="0 0 460 H"`, `H = 60 + 24·n + 12`). A title, then `aggregate score %.1f, gate <gate>`, then one row per checklist item (checklist order) at `y = 60 + 24·i`: a 16×16 swatch coloured by status (pass `#4caf50`, warn `#ff9800`, fail `#f44336`, otherwise `#9e9e9e`), the item id, and the status text. Integer coordinates; `aggregate_score` is already rounded to 1 dp, so `%.1f` is byte-stable.
+
+**severity** (SVG). The `severity` rows as horizontal bars (`viewBox="0 0 380 H"`, `H = 40 + 28·max(n,1) + 8`). A title, then for each prediction (file order) at `y = 40 + 28·i`: the `prediction_id`, a bar of width `floor(computed_severity·200 + 0.5 + 1e-6)` at x=130, and the value `%.3f`. The 1e-6 bias matches `rnd` so the integer width is identical across platforms.
+
 ## 13. Additional golden artifacts (per fixture unless noted)
 
 `<id>.development_roadmap.dot`, `<id>.pipeline.dot` (byte), `<id>.severity.json`, `<id>.prereg.md` (byte), and, for the amended pair only, `panic-network-2026-v2.appraisal.json` = `appraise_amendment(v2, v1)`. Parity checker: byte-identical for `*.dot/.dag/.md`, semantic (recursive, float tol 1e-9) for `*.json`.

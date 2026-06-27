@@ -76,7 +76,7 @@
       "score": 1.0,
       "weight": 0.06,
       "severity_if_fail": "warning",
-      "citation": "Textor et al. (2017); Eronen & Bringmann (2021)"
+      "citation": "Textor et al. (2016); Eronen & Bringmann (2021)"
     },
     {
       "id": "diagnosticity",

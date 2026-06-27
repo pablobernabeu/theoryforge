@@ -3,7 +3,7 @@ from __future__ import annotations
 
 _CAUSAL = {"causes", "increases", "decreases"}
 _TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap",
-          "pipeline", "context", "workflow", "venn")
+          "pipeline", "context", "workflow", "venn", "rigor", "severity")
 
 
 def _esc(s) -> str:
@@ -183,11 +183,56 @@ def _venn(T: dict) -> str:
     return "\n".join(out) + "\n"
 
 
+_STATUS_COLOR = {"pass": "#4caf50", "warn": "#ff9800", "fail": "#f44336"}
+
+
+def _rigor(T: dict) -> str:
+    """The rigor checklist as a colour-coded status grid (SVG)."""
+    from .rigor import check as _check
+    rep = _check(T)
+    items = rep["items"]
+    h = 60 + len(items) * 24 + 12
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 {h}" '
+           'font-family="sans-serif" font-size="13">',
+           '  <text x="20" y="28" font-size="15">Rigor checklist</text>',
+           f'  <text x="20" y="46">aggregate score {rep["aggregate_score"]:.1f}, gate {rep["gate"]}</text>']
+    for i, it in enumerate(items):
+        y = 60 + i * 24
+        color = _STATUS_COLOR.get(it["status"], "#9e9e9e")
+        out.append(f'  <rect x="20" y="{y}" width="16" height="16" rx="3" fill="{color}"/>')
+        out.append(f'  <text x="44" y="{y + 12}">{_xml(it["id"])}</text>')
+        out.append(f'  <text x="320" y="{y + 12}">{_xml(it["status"])}</text>')
+    out.append("</svg>")
+    return "\n".join(out) + "\n"
+
+
+def _severity_chart(T: dict) -> str:
+    """Per-prediction computed severity as horizontal bars (SVG)."""
+    from .scoring import severity as _sev
+    rows = _sev(T)
+    h = 40 + max(len(rows), 1) * 28 + 8
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 {h}" '
+           'font-family="sans-serif" font-size="13">',
+           '  <text x="20" y="26" font-size="15">Prediction severity</text>']
+    if not rows:
+        out.append('  <text x="20" y="54">(no predictions)</text>')
+    for i, r in enumerate(rows):
+        y = 40 + i * 28
+        sev = r["computed_severity"]
+        w = int(sev * 200 + 0.5 + 1e-6)
+        out.append(f'  <text x="20" y="{y + 12}">{_xml(r["prediction_id"])}</text>')
+        out.append(f'  <rect x="130" y="{y}" width="{w}" height="16" rx="2" fill="#4e79a7"/>')
+        out.append(f'  <text x="{135 + w}" y="{y + 12}">{sev:.3f}</text>')
+    out.append("</svg>")
+    return "\n".join(out) + "\n"
+
+
 def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") -> str:
     """Return the diagram IR string for the requested type.
 
     ``engine`` is accepted for API parity; the IR is engine-independent (DOT for
-    the digraphs, dagitty syntax for the causal DAG, and SVG for the Venn).
+    the digraphs, dagitty syntax for the causal DAG, and SVG for the Venn, the
+    rigor grid, and the severity chart).
     """
     T = T.data if hasattr(T, "data") else T
     if type == "nomological_net":
@@ -206,4 +251,8 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
         return _workflow(T)
     if type == "venn":
         return _venn(T)
+    if type == "rigor":
+        return _rigor(T)
+    if type == "severity":
+        return _severity_chart(T)
     raise ValueError(f"unknown diagram type {type!r}; expected one of {_TYPES}")

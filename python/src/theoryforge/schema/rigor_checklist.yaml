@@ -54,7 +54,7 @@ items:
     criterion: "Causal relations export to a DAG with derivable implications"
     weight: 0.06
     severity_if_fail: warning
-    citation: "Textor et al. (2017); Eronen & Bringmann (2021)"
+    citation: "Textor et al. (2016); Eronen & Bringmann (2021)"
   - id: diagnosticity
     criterion: "At least one prediction discriminates from a registered alternative"
     weight: 0.06

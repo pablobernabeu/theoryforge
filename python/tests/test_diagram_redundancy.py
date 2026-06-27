@@ -48,6 +48,22 @@ def test_venn(panic_path):
     assert '<text x="190" y="160" text-anchor="middle" font-weight="bold">1</text>' in svg
 
 
+def test_rigor(panic_path):
+    svg = tf.read(panic_path).diagram("rigor")
+    assert svg.startswith("<svg ") and svg.endswith("</svg>\n")
+    assert "Rigor checklist" in svg and "gate pass" in svg
+    assert svg.count("<rect ") == 12          # one swatch per checklist item
+    assert 'fill="#4caf50"' in svg            # at least one pass (green)
+
+
+def test_severity_chart(panic_path):
+    svg = tf.read(panic_path).diagram("severity")
+    assert svg.startswith("<svg ") and svg.endswith("</svg>\n")
+    assert "Prediction severity" in svg
+    assert svg.count("<rect ") == 3           # one bar per prediction
+    assert ">pred1<" in svg
+
+
 def test_unknown_diagram_raises(panic_path):
     with pytest.raises(ValueError):
         tf.read(panic_path).diagram("nope")
