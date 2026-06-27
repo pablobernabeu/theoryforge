@@ -1,0 +1,106 @@
+#!/usr/bin/env node
+// Assemble the two browser apps by vendoring the current package sources.
+//
+// Each app runs the *real* package entirely client-side (R via webR, Python via
+// Pyodide), so the source it executes must be the live package source. This
+// script copies that source — plus the shared schema and the example fixtures —
+// into apps/r/vendor and apps/py/vendor, and writes a manifest.json telling the
+// app which files to fetch at start-up.
+//
+// Run locally before serving the apps, and in CI before deploying. The vendor
+// directories are build artefacts (git-ignored); CI rebuilds them on every deploy
+// so they can never go stale.
+
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const repo = path.resolve(here, "..");
+
+const R_SRC = path.join(repo, "r", "theoryforge", "R");
+const PY_SRC = path.join(repo, "python", "src", "theoryforge");
+const SCHEMA = path.join(repo, "schema");
+const FIXTURES = path.join(repo, "fixtures");
+
+const EXAMPLES = [
+  { name: "Panic disorder network (developing)", file: "panic-network.theory.yaml", kind: "theory" },
+  { name: "Panic network, amended v2 (testing)", file: "panic-network-2026-v2.theory.yaml", kind: "theory" },
+  { name: "Deliberately weak theory (draft)", file: "weak-theory.theory.yaml", kind: "theory" },
+];
+const CORPUS = [{ name: "Panic literature corpus (demo)", file: "panic-corpus.yaml" }];
+
+async function rmrf(p) {
+  await fs.rm(p, { recursive: true, force: true });
+}
+async function copyInto(srcDir, destDir, filterExt) {
+  await fs.mkdir(destDir, { recursive: true });
+  const entries = await fs.readdir(srcDir, { withFileTypes: true });
+  const copied = [];
+  for (const e of entries) {
+    const s = path.join(srcDir, e.name);
+    const d = path.join(destDir, e.name);
+    if (e.isDirectory()) {
+      copied.push(...(await copyInto(s, d, filterExt)).map((f) => path.join(e.name, f)));
+    } else if (!filterExt || filterExt.includes(path.extname(e.name).toLowerCase())) {
+      await fs.copyFile(s, d);
+      copied.push(e.name);
+    }
+  }
+  return copied;
+}
+async function copyFiles(srcDir, destDir, names) {
+  await fs.mkdir(destDir, { recursive: true });
+  for (const n of names) await fs.copyFile(path.join(srcDir, n), path.join(destDir, n));
+}
+async function writeJson(p, obj) {
+  await fs.writeFile(p, JSON.stringify(obj, null, 2) + "\n", "utf8");
+}
+
+async function buildR() {
+  const vendor = path.join(here, "r", "vendor");
+  await rmrf(vendor);
+  // Package R source. Order is irrelevant (all definitions are lazy), but a
+  // stable, deterministic order keeps the manifest diff-friendly.
+  const rFiles = (await copyInto(R_SRC, path.join(vendor, "R"), [".r"])).sort();
+  await copyFiles(SCHEMA, path.join(vendor, "schema"), ["theory.schema.json", "rigor_checklist.yaml"]);
+  await copyFiles(FIXTURES, path.join(vendor, "fixtures"), [
+    ...EXAMPLES.map((e) => e.file),
+    ...CORPUS.map((c) => c.file),
+  ]);
+  await writeJson(path.join(vendor, "manifest.json"), {
+    rFiles: rFiles.map((f) => `R/${f}`),
+    schema: { theory: "schema/theory.schema.json", checklist: "schema/rigor_checklist.yaml" },
+    examples: EXAMPLES.map((e) => ({ name: e.name, path: `fixtures/${e.file}`, kind: e.kind })),
+    corpora: CORPUS.map((c) => ({ name: c.name, path: `fixtures/${c.file}` })),
+  });
+  return rFiles.length;
+}
+
+async function buildPy() {
+  const vendor = path.join(here, "py", "vendor");
+  await rmrf(vendor);
+  // The Python package vendors its own schema/ inside the package dir, so a
+  // wholesale copy of the package tree is import-ready and importlib-resources
+  // resolves correctly.
+  const pkgFiles = await copyInto(PY_SRC, path.join(vendor, "theoryforge"), null);
+  await copyFiles(FIXTURES, path.join(vendor, "fixtures"), [
+    ...EXAMPLES.map((e) => e.file),
+    ...CORPUS.map((c) => c.file),
+  ]);
+  const wanted = pkgFiles
+    .filter((f) => f.endsWith(".py") || f.endsWith(".json") || f.endsWith(".yaml") || f.endsWith(".typed"))
+    .map((f) => `theoryforge/${f.split(path.sep).join("/")}`)
+    .sort();
+  await writeJson(path.join(vendor, "manifest.json"), {
+    pyFiles: wanted,
+    examples: EXAMPLES.map((e) => ({ name: e.name, path: `fixtures/${e.file}`, kind: e.kind })),
+    corpora: CORPUS.map((c) => ({ name: c.name, path: `fixtures/${c.file}` })),
+  });
+  return wanted.length;
+}
+
+const nR = await buildR();
+const nPy = await buildPy();
+console.log(`vendored R: ${nR} source files -> apps/r/vendor`);
+console.log(`vendored Python: ${nPy} package files -> apps/py/vendor`);

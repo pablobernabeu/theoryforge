@@ -6,6 +6,7 @@ on:
     paths:
       - 'r/theoryforge/**'
       - 'python/**'
+      - 'apps/**'
       - '.github/workflows/docs.yml'
       - '.github/landing.html'
   workflow_dispatch:
@@ -53,6 +54,16 @@ jobs:
         run: |
           cp r/theoryforge/man/figures/logo.svg site/logo.svg
           cp .github/landing.html site/index.html
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build and stage the interactive apps under site/apps
+        run: |
+          node apps/build.mjs
+          mkdir -p site/apps
+          cp -r apps/r apps/py apps/shared site/apps/
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
