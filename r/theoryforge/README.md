@@ -9,6 +9,13 @@ intermediate representations.
 The rendered documentation site, with the function reference and worked guides,
 is at <https://pablobernabeu.github.io/theoryforge/r/>.
 
+## Interactive web app
+
+Run the package in your browser, with no installation, using the
+[interactive web app](https://pablobernabeu.github.io/theoryforge/apps/r/). It executes the real
+package client-side via [webR](https://docs.r-wasm.org/webr/latest/): load a theory, run any
+operation, and export both the visualisation (SVG/PNG) and the R code to reproduce it.
+
 ## Installation
 
 ```r

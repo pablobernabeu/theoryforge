@@ -7,6 +7,11 @@ Python twin of the R package of the same name. Behaviour is pinned by
 The rendered documentation site, with the API reference and worked guides, is at
 <https://pablobernabeu.github.io/theoryforge/python/>.
 
+Prefer to click rather than install? The
+[interactive web app](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this package in
+your browser via [Pyodide](https://pyodide.org/): load a theory, run any operation, and export the
+visualisation (SVG/PNG) and the Python code to reproduce it.
+
 ```python
 import theoryforge as tf
 

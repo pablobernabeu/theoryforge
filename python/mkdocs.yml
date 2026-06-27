@@ -36,6 +36,7 @@ nav:
   - Methodological foundations: methodology.md
   - API reference: api.md
   - About: about.md
+  - Interactive app ↗: https://pablobernabeu.github.io/theoryforge/apps/py/
 
 plugins:
   - search

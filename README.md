@@ -17,6 +17,20 @@ Full documentation is published at
 Each site carries the complete function reference together with guides for
 building, developing, and testing a theory and for mapping the literature.
 
+### Interactive web apps (no install)
+
+Two browser apps put a graphical interface on the packages and run the **real**
+package code entirely client-side, so the results match running it locally:
+
+- R app (webR): <https://pablobernabeu.github.io/theoryforge/apps/r/>
+- Python app (Pyodide): <https://pablobernabeu.github.io/theoryforge/apps/py/>
+
+Load a theory (bundled examples or your own YAML/JSON), run any operation (rigour
+checklist, diagrams, severity, redundancy, SEM, preregistration, dossier,
+simulation, and the literature map and landscape), and export both the
+visualisation (SVG/PNG) and the R/Python code needed to reproduce it. The app
+sources live under [`apps/`](apps/).
+
 ## Status
 
 P0 to P4 cover the full theory lifecycle, bibliometric mapping, SEM compilation, the audit dossier, a dynamical-system runner, and reporting and deposit adapters. Both packages are parity-verified.

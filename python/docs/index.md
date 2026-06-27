@@ -9,6 +9,11 @@ See the repository [README](https://github.com/pablobernabeu/theoryforge) and
 [`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md) for the
 cross-language contract, and the [API reference](api.md) for the full function list.
 
+!!! tip "Try it in your browser — no install"
+    The [**interactive web app**](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this
+    package entirely client-side via [Pyodide](https://pyodide.org/). Load a theory, run any
+    operation, and export both the visualisation (SVG/PNG) and the Python code to reproduce it.
+
 ## Install
 
 ```bash

@@ -4,6 +4,17 @@ template:
   bootstrap: 5
   light-switch: true
 
+navbar:
+  structure:
+    left:  [intro, reference, articles]
+    right: [app, search, github, lightswitch]
+  components:
+    app:
+      text: Interactive app
+      href: https://pablobernabeu.github.io/theoryforge/apps/r/
+      icon: fa-play
+      aria-label: Interactive web app
+
 reference:
 - title: Core IO
   desc: Read, validate, and write theory objects.
