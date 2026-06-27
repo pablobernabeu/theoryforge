@@ -18,16 +18,18 @@
   <path d="M87,15.4 L159.8,57.7 L159.8,142.3 L87,184.6 L14.2,142.3 L14.2,57.7 Z"
         fill="none" stroke="#ffffff" stroke-opacity="0.06" stroke-width="1.4" stroke-linejoin="round"/>
 
+  <!-- construct network (shifted down to centre the content) -->
   <g stroke="#7ad0c1" stroke-width="2.2" fill="none">
-    <line x1="70" y1="50" x2="104" y2="50" marker-end="url(#ah)"/>
-    <line x1="67" y1="59" x2="80"  y2="73" marker-end="url(#ah)"/>
-    <line x1="107" y1="59" x2="94" y2="73" marker-end="url(#ah)"/>
+    <line x1="70" y1="65" x2="104" y2="65" marker-end="url(#ah)"/>
+    <line x1="67" y1="74" x2="80"  y2="88" marker-end="url(#ah)"/>
+    <line x1="107" y1="74" x2="94" y2="88" marker-end="url(#ah)"/>
   </g>
-  <circle cx="61"  cy="50" r="9"  fill="#4cc2b0" stroke="#101b27" stroke-width="2.2"/>
-  <circle cx="113" cy="50" r="9"  fill="#4cc2b0" stroke="#101b27" stroke-width="2.2"/>
-  <circle cx="87"  cy="82" r="10" fill="url(#ember)" stroke="#101b27" stroke-width="2.2"/>
+  <circle cx="61"  cy="65" r="9"  fill="#4cc2b0" stroke="#101b27" stroke-width="2.2"/>
+  <circle cx="113" cy="65" r="9"  fill="#4cc2b0" stroke="#101b27" stroke-width="2.2"/>
+  <circle cx="87"  cy="97" r="10" fill="url(#ember)" stroke="#101b27" stroke-width="2.2"/>
 
-  <text x="87" y="124" text-anchor="middle"
+  <!-- wordmark -->
+  <text x="87" y="139" text-anchor="middle"
         font-family="Segoe UI, Helvetica, Arial, sans-serif"
         font-size="24" font-weight="700" letter-spacing="-0.4"><tspan fill="#f3f6f7">theory</tspan><tspan fill="#f6b24a">forge</tspan></text>
 </svg>
