@@ -1,4 +1,4 @@
-# theoryforge (Python)
+# theoryforge (Python) <img src="docs/assets/logo.png" align="right" height="138" alt="theoryforge hex logo" />
 
 A rigorous, reproducible workflow for theory building, development, and testing. This is the
 Python twin of the R package of the same name. Behaviour is pinned by

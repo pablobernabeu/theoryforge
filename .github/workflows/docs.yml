@@ -50,6 +50,7 @@ jobs:
 
       - name: Write landing page
         run: |
+          cp r/theoryforge/man/figures/logo.svg site/logo.svg
           cat > site/index.html <<'HTML'
           <!doctype html>
           <html lang="en">
@@ -73,6 +74,7 @@ jobs:
             </style>
           </head>
           <body>
+            <img src="logo.svg" alt="theoryforge hex logo" width="132" style="float: right; margin: 0 0 1rem 1.5rem;">
             <h1>theoryforge</h1>
             <p class="lead">Twin, feature-parity packages for a reproducible workflow of theory
             building, development, and testing. The R and Python implementations share one

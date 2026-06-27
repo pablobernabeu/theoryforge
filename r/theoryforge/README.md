@@ -1,4 +1,4 @@
-# theoryforge (R)
+# theoryforge (R) <a href="https://pablobernabeu.github.io/theoryforge/r/"><img src="man/figures/logo.png" align="right" height="138" alt="theoryforge hex logo" /></a>
 
 A rigorous, reproducible workflow for theory building, development, and testing.
 This is the feature-parity twin of the Python package of the same name.
