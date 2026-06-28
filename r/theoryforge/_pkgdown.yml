@@ -6,7 +6,7 @@ template:
 
 navbar:
   structure:
-    left:  [intro, reference, articles]
+    left:  [intro, reference, articles, about]
     right: [app, search, github, lightswitch]
   components:
     app:
@@ -14,6 +14,9 @@ navbar:
       href: https://pablobernabeu.github.io/theoryforge/apps/r/
       icon: fa-play
       aria-label: Interactive web app
+    about:
+      text: About
+      href: https://pablobernabeu.github.io/theoryforge/r/articles/about.html
 
 reference:
 - title: Core IO

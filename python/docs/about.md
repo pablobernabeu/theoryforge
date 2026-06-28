@@ -1,5 +1,24 @@
 # About
 
+## Citing theoryforge
+
+If you use the Python package in your work, please cite it:
+
+> Bernabeu, P. (2026). *theoryforge: Rigorous, reproducible theory building, development, and
+> testing* (Python package version 0.1.0). https://github.com/pablobernabeu/theoryforge
+
+```bibtex
+@Manual{theoryforge,
+  title  = {theoryforge: Rigorous, Reproducible Theory Building, Development, and Testing},
+  author = {Pablo Bernabeu},
+  year   = {2026},
+  note   = {Python package version 0.1.0},
+  url    = {https://github.com/pablobernabeu/theoryforge},
+}
+```
+
+Install the package with `pip install theoryforge`.
+
 ## The developer
 
 theoryforge is developed and maintained by
@@ -13,22 +32,3 @@ and Python and is a certified Carpentries Instructor.
 
 - Website: <https://pablobernabeu.github.io>
 - ORCID: <https://orcid.org/0000-0003-1083-2460>
-
-## Citing theoryforge
-
-If you use theoryforge in your work, please cite it:
-
-> Bernabeu, P. (2026). *theoryforge: Rigorous, reproducible theory building, development, and
-> testing* (R package version 0.1.0). https://github.com/pablobernabeu/theoryforge
-
-```bibtex
-@Manual{theoryforge,
-  title  = {theoryforge: Rigorous, Reproducible Theory Building, Development, and Testing},
-  author = {Pablo Bernabeu},
-  year   = {2026},
-  note   = {R package version 0.1.0},
-  url    = {https://github.com/pablobernabeu/theoryforge},
-}
-```
-
-In R, the same entry is available with `citation("theoryforge")`.
