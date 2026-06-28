@@ -25,8 +25,8 @@
   const OPS = [
     { id: "check", label: "Rigour checklist", desc: "12-item score, gate, per-item status",
       help: "Scores the theory against the 12-item rigour checklist (falsifiability, precision, parsimony, and so on) and returns an aggregate 0–100 score, a pass/blocked/advisory gate, and the colour-coded status grid." },
-    { id: "validate", label: "Validate", desc: "Structural schema validation",
-      help: "Runs the package's structural validation: required fields and enum membership for the theory, its constructs, propositions and predictions. Lists every problem found, or confirms the theory is valid." },
+    { id: "validate", label: "Validate", desc: "Structural + referential checks",
+      help: "Runs the package's full validation: required fields and enum membership, plus referential integrity (unique ids, and every proposition, prediction, assumption, evidence and test-outcome reference points to a declared id). Lists every problem found, or confirms the theory is valid." },
     {
       id: "diagram", label: "Diagram", desc: "Nomological net, DAG, workflow…",
       help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams. The venn, rigor and severity types are emitted directly as SVG.",

@@ -37,19 +37,27 @@ tf_read <- function(path) {
   data
 }
 
-#' Validate a theory object structurally
+#' Validate a theory object
 #'
-#' Built-in structural validation mirroring the Python \code{Theory.validate}:
-#' it checks required fields and enum membership.
+#' Built-in validation mirroring the Python \code{Theory.validate}. The default
+#' (\code{full = FALSE}) checks required fields and enum membership. With
+#' \code{full = TRUE} it additionally checks referential integrity: that every id
+#' is unique within its collection and that every cross-reference (proposition
+#' endpoints, prediction derivations and diagnostics, and assumption, evidence and
+#' test-outcome targets) points to a declared id. The \code{full} checks are
+#' deterministic and identical to the Python \code{theory.validate(full=True)}.
+#' See API_SPEC.md section 2.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @param full When \code{TRUE}, also run the referential-integrity checks.
 #' @return \code{TRUE} (invisibly) on success; otherwise stops with a message
 #'   listing every problem found.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory")
 #' tf_validate(theory)
+#' tf_validate(theory, full = TRUE)
 #' @export
-tf_validate <- function(theory) {
+tf_validate <- function(theory, full = FALSE) {
   d <- theory
   errors <- character(0)
 
@@ -106,6 +114,78 @@ tf_validate <- function(theory) {
     ty <- .tf_get(p_i, "type")
     if (!(length(ty) == 1L && ty %in% .tf_PRED_TYPE) && .tf_ne_str(ty)) {
       errors <- c(errors, sprintf("prediction[%d] type '%s' not allowed", i - 1L, ty))
+    }
+  }
+
+  # Referential-integrity checks (opt-in). Deterministic and mirrored byte-for-byte
+  # by the Python Theory._referential_errors: same checks, order and message text.
+  if (isTRUE(full)) {
+    alts <- .tf_list(d, "alternatives")
+    auxs <- .tf_list(d, "auxiliary_assumptions")
+    ids_of <- function(items) {
+      out <- character(0)
+      for (it in items) if (.tf_ne_str(.tf_get(it, "id"))) out <- c(out, .tf_str(it, "id"))
+      out
+    }
+    construct_ids <- ids_of(cons)
+    proposition_ids <- ids_of(props)
+    prediction_ids <- ids_of(preds)
+    alternative_ids <- ids_of(alts)
+    dups <- function(items, kind) {
+      seen <- character(0)
+      for (it in items) {
+        if (.tf_ne_str(.tf_get(it, "id"))) {
+          i <- .tf_str(it, "id")
+          if (i %in% seen) errors <<- c(errors, sprintf("duplicate %s id: %s", kind, i))
+          seen <- c(seen, i)
+        }
+      }
+    }
+    dups(cons, "construct"); dups(props, "proposition"); dups(preds, "prediction")
+    dups(alts, "alternative"); dups(auxs, "assumption")
+    for (i in seq_along(props)) {
+      if (.tf_ne_str(.tf_get(props[[i]], "from"))) {
+        frm <- .tf_str(props[[i]], "from")
+        if (!(frm %in% construct_ids))
+          errors <- c(errors, sprintf("proposition[%d] from '%s' is not a known construct", i - 1L, frm))
+      }
+      if (.tf_ne_str(.tf_get(props[[i]], "to"))) {
+        to <- .tf_str(props[[i]], "to")
+        if (!(to %in% construct_ids))
+          errors <- c(errors, sprintf("proposition[%d] to '%s' is not a known construct", i - 1L, to))
+      }
+    }
+    for (i in seq_along(preds)) {
+      for (dref in .tf_list(preds[[i]], "derives_from")) {
+        if (.tf_ne_str(dref) && !(dref %in% proposition_ids))
+          errors <- c(errors, sprintf("prediction[%d] derives_from '%s' is not a known proposition", i - 1L, dref))
+      }
+      for (dv in .tf_list(preds[[i]], "diagnostic_vs")) {
+        if (.tf_ne_str(dv) && !(dv %in% alternative_ids))
+          errors <- c(errors, sprintf("prediction[%d] diagnostic_vs '%s' is not a known alternative", i - 1L, dv))
+      }
+    }
+    for (i in seq_along(auxs)) {
+      for (pr in .tf_list(auxs[[i]], "protects")) {
+        if (.tf_ne_str(pr) && !(pr %in% prediction_ids))
+          errors <- c(errors, sprintf("assumption[%d] protects '%s' is not a known prediction", i - 1L, pr))
+      }
+    }
+    tos <- .tf_list(d, "test_outcomes")
+    for (i in seq_along(tos)) {
+      if (.tf_ne_str(.tf_get(tos[[i]], "prediction_id"))) {
+        pid <- .tf_str(tos[[i]], "prediction_id")
+        if (!(pid %in% prediction_ids))
+          errors <- c(errors, sprintf("test_outcome[%d] prediction_id '%s' is not a known prediction", i - 1L, pid))
+      }
+    }
+    ev <- .tf_list(d, "evidence")
+    for (i in seq_along(ev)) {
+      if (.tf_ne_str(.tf_get(ev[[i]], "supports"))) {
+        s <- .tf_str(ev[[i]], "supports")
+        if (!(s %in% prediction_ids))
+          errors <- c(errors, sprintf("evidence[%d] supports '%s' is not a known prediction", i - 1L, s))
+      }
     }
   }
 

@@ -57,11 +57,16 @@ class Theory:
         return v if isinstance(v, list) else []
 
     # -- validation ------------------------------------------------------------
-    def validate(self) -> bool:
+    def validate(self, *, full: bool = False) -> bool:
         """Structural validation against the schema's required fields and enums.
 
         Returns True on success, raises ValueError listing every problem found.
-        Mirrors the R ``tf_validate(theory)``.
+        With ``full=True`` additionally checks referential integrity: that every
+        id is unique within its collection and that every cross-reference
+        (proposition endpoints, prediction derivations and diagnostics,
+        assumption/evidence/test-outcome targets) points to a declared id. The
+        ``full`` checks are deterministic and identical to the R
+        ``tf_validate(theory, full = TRUE)``. See API_SPEC.md section 2.
         """
         errors: list[str] = []
         d = self.data
@@ -89,9 +94,68 @@ class Theory:
             if p.get("type") not in _PRED_TYPE and _nonempty_str(p.get("type")):
                 errors.append(f"prediction[{i}] type '{p.get('type')}' not allowed")
 
+        if full:
+            self._referential_errors(errors)
+
         if errors:
             raise ValueError("invalid theory object: " + "; ".join(errors))
         return True
+
+    def _referential_errors(self, errors: list[str]) -> None:
+        """Append referential-integrity problems (used by ``validate(full=True)``).
+
+        Deterministic and mirrored byte-for-byte by the R implementation: the
+        same checks in the same order with the same message text.
+        """
+        cons = self._list("constructs")
+        props = self._list("propositions")
+        preds = self._list("predictions")
+        alts = self._list("alternatives")
+        auxs = self._list("auxiliary_assumptions")
+        construct_ids = {c.get("id") for c in cons if _nonempty_str(c.get("id"))}
+        proposition_ids = {p.get("id") for p in props if _nonempty_str(p.get("id"))}
+        prediction_ids = {p.get("id") for p in preds if _nonempty_str(p.get("id"))}
+        alternative_ids = {a.get("id") for a in alts if _nonempty_str(a.get("id"))}
+
+        def dups(items: list, kind: str) -> None:
+            seen: set = set()
+            for it in items:
+                i = it.get("id")
+                if _nonempty_str(i):
+                    if i in seen:
+                        errors.append(f"duplicate {kind} id: {i}")
+                    seen.add(i)
+
+        dups(cons, "construct")
+        dups(props, "proposition")
+        dups(preds, "prediction")
+        dups(alts, "alternative")
+        dups(auxs, "assumption")
+        for i, p in enumerate(props):
+            frm, to = p.get("from"), p.get("to")
+            if _nonempty_str(frm) and frm not in construct_ids:
+                errors.append(f"proposition[{i}] from '{frm}' is not a known construct")
+            if _nonempty_str(to) and to not in construct_ids:
+                errors.append(f"proposition[{i}] to '{to}' is not a known construct")
+        for i, p in enumerate(preds):
+            for dref in (p.get("derives_from") or []):
+                if _nonempty_str(dref) and dref not in proposition_ids:
+                    errors.append(f"prediction[{i}] derives_from '{dref}' is not a known proposition")
+            for dv in (p.get("diagnostic_vs") or []):
+                if _nonempty_str(dv) and dv not in alternative_ids:
+                    errors.append(f"prediction[{i}] diagnostic_vs '{dv}' is not a known alternative")
+        for i, a in enumerate(auxs):
+            for pr in (a.get("protects") or []):
+                if _nonempty_str(pr) and pr not in prediction_ids:
+                    errors.append(f"assumption[{i}] protects '{pr}' is not a known prediction")
+        for i, t in enumerate(self._list("test_outcomes")):
+            pid = t.get("prediction_id")
+            if _nonempty_str(pid) and pid not in prediction_ids:
+                errors.append(f"test_outcome[{i}] prediction_id '{pid}' is not a known prediction")
+        for i, e in enumerate(self._list("evidence")):
+            s = e.get("supports")
+            if _nonempty_str(s) and s not in prediction_ids:
+                errors.append(f"evidence[{i}] supports '{s}' is not a known prediction")
 
     # -- serialization ---------------------------------------------------------
     def write(self, path) -> None:
@@ -214,9 +278,11 @@ class Theory:
         """Write (and optionally render) a Quarto report of the audit dossier."""
         return _render_report(self.data, path, title=title, render=render, to=to)
 
-    def osf_push(self, token=None, node=None, filename=None, dry_run: bool = True) -> dict:
+    def osf_push(self, token=None, node=None, filename=None, dry_run: bool = True,
+                 base_url: str | None = None) -> dict:
         """Deposit the dossier on OSF (dry-run by default). A live push needs a token and node."""
-        return _osf_push(self.data, token=token, node=node, filename=filename, dry_run=dry_run)
+        kw = {} if base_url is None else {"base_url": base_url}
+        return _osf_push(self.data, token=token, node=node, filename=filename, dry_run=dry_run, **kw)
 
     def __repr__(self) -> str:
         return f"Theory(id={self.id!r}, maturity={self.maturity!r})"

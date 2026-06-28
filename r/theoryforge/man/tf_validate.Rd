@@ -2,22 +2,31 @@
 % Please edit documentation in R/core.R
 \name{tf_validate}
 \alias{tf_validate}
-\title{Validate a theory object structurally}
+\title{Validate a theory object}
 \usage{
-tf_validate(theory)
+tf_validate(theory, full = FALSE)
 }
 \arguments{
 \item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+
+\item{full}{When \code{TRUE}, also run the referential-integrity checks.}
 }
 \value{
 \code{TRUE} (invisibly) on success; otherwise stops with a message
 listing every problem found.
 }
 \description{
-Built-in structural validation mirroring the Python \code{Theory.validate}:
-it checks required fields and enum membership.
+Built-in validation mirroring the Python \code{Theory.validate}. The default
+(\code{full = FALSE}) checks required fields and enum membership. With
+\code{full = TRUE} it additionally checks referential integrity: that every id
+is unique within its collection and that every cross-reference (proposition
+endpoints, prediction derivations and diagnostics, and assumption, evidence and
+test-outcome targets) points to a declared id. The \code{full} checks are
+deterministic and identical to the Python \code{theory.validate(full=True)}.
+See API_SPEC.md section 2.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory")
 tf_validate(theory)
+tf_validate(theory, full = TRUE)
 }

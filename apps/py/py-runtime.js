@@ -49,7 +49,7 @@ def run(op, params_json):
         return json.dumps({"report": t.check(), "svg": t.diagram("rigor")})
     if op == "validate":
         try:
-            t.validate()
+            t.validate(full=True)
             return json.dumps({"ok": True})
         except ValueError as e:
             return json.dumps({"ok": False, "message": str(e)})
@@ -181,7 +181,7 @@ const RT = {
       case "check":
         return `${head}\n\nreport = theory.check()\nreport["aggregate_score"]   # overall 0-100\nreport["gate"]              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nopen("rigor.svg", "w").write(theory.diagram("rigor"))`;
       case "validate":
-        return `${head}\n\ntheory.validate()                 # True if valid; raises ValueError listing every problem`;
+        return `${head}\n\ntheory.validate(full=True)        # structural + referential integrity; raises listing every problem`;
       case "appraise": {
         const pf = (p.prior || "prior.theory.yaml").split("/").pop();
         return `${head}\nprior = tf.read("${pf}")\n\nappr = theory.appraise_amendment(prior)\nappr["verdict"]                   # progressive / degenerating / neutral`;

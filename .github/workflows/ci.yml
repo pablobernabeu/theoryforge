@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install
-        run: pip install -e "python[dev,full]" build twine
+        run: pip install -e "python[dev]" build twine
       - name: Lint (ruff)
         run: ruff check python/src
       - name: Types (mypy)
@@ -48,6 +48,26 @@ jobs:
           working-directory: r/theoryforge
           args: 'c("--no-manual", "--as-cran")'
           error-on: '"warning"'
+
+  apps:
+    name: Apps (syntax + vendor build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntax-check the app sources
+        run: |
+          node --check apps/shared/app-core.js
+          node --check apps/r/r-runtime.js
+          node --check apps/py/py-runtime.js
+          node --check apps/build.mjs
+      - name: The vendor build assembles cleanly
+        run: |
+          node apps/build.mjs
+          node -e "const m=require('./apps/r/vendor/manifest.json'); if(!m.rFiles.length||!m.examples.length) throw new Error('empty R manifest')"
+          node -e "const m=require('./apps/py/vendor/manifest.json'); if(!m.pyFiles.length||!m.examples.length) throw new Error('empty Python manifest')"
 
   parity:
     name: Cross-language parity
