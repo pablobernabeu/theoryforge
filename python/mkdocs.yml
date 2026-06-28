@@ -1,5 +1,5 @@
 site_name: theoryforge (Python)
-site_description: A rigorous, reproducible workflow for theory building, development, and testing.
+site_description: Systematic theory development. A reproducible workflow for building, developing and testing scientific theories.
 site_author: Pablo Bernabeu
 site_url: https://pablobernabeu.github.io/theoryforge/python/
 repo_url: https://github.com/pablobernabeu/theoryforge

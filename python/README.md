@@ -1,7 +1,8 @@
 # theoryforge (Python) <img src="docs/assets/logo.png" align="right" height="138" alt="theoryforge hex logo" />
 
-A rigorous, reproducible workflow for theory building, development, and testing. This is the
-Python twin of the R package of the same name. Behaviour is pinned by
+Systematic theory development: a rigorous, reproducible workflow for building, developing and
+testing scientific theories. This is the Python twin of the R package of the same name.
+Behaviour is pinned by
 [`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md) so the two stay in lockstep.
 
 The rendered documentation site, with the API reference and worked guides, is at
@@ -51,7 +52,7 @@ your own theory files when running the examples.
 ## Install
 
 ```bash
-pip install -e ".[dev]"        # add ",full" for complete JSON-Schema validation
+pip install -e ".[dev]"
 ```
 
 ## Test

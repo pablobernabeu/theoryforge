@@ -13,8 +13,9 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 `theoryforge` treats a scientific theory as a versioned, machine-checkable
 object. This vignette walks through the core loop of building a theory,
-checking its rigour, and diagramming it. It is the R twin of the Python
-package, and both follow the same pinned contract (`API_SPEC.md`).
+checking its rigour and diagramming it. It is the R twin of the Python
+package, and both follow the same pinned contract
+([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)).
 
 ```{r setup}
 library(theoryforge)
@@ -61,7 +62,8 @@ identical(roundtrip$id, theory$id)
 ## Checking rigour
 
 `tf_check()` runs the 12-item rigour checklist defined in the vendored
-`rigor_checklist.yaml` and scored per `API_SPEC.md` section 4.
+`rigor_checklist.yaml` and scored per
+[`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md) section 4.
 
 ```{r check}
 report <- tf_check(theory)

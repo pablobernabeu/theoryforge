@@ -1,13 +1,11 @@
 # theoryforge (R) <a href="https://pablobernabeu.github.io/theoryforge/r/"><img src="man/figures/logo.png" align="right" height="138" alt="theoryforge hex logo" /></a>
 
-A rigorous, reproducible workflow for theory building, development, and testing.
-This is the feature-parity twin of the Python package of the same name.
-Behaviour is pinned by [`API_SPEC.md`](../../API_SPEC.md) so the two
-implementations produce identical verdicts and byte-identical diagram
-intermediate representations.
-
-The rendered documentation site, with the function reference and worked guides,
-is at <https://pablobernabeu.github.io/theoryforge/r/>.
+Systematic theory development: a rigorous, reproducible workflow for building, developing and
+testing scientific theories. This is the feature-parity twin of the Python package of the same
+name. Behaviour is pinned by the shared specification
+([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)) so the two
+implementations produce identical verdicts and byte-identical diagram intermediate
+representations.
 
 ## Interactive web app
 
@@ -39,7 +37,7 @@ report <- tf_check(theory)
 report$aggregate_score   # 84.8
 report$gate              # "pass"
 
-# Operationalized severity, and a preregistration document
+# Operationalised severity and a preregistration document
 tf_severity(theory)
 cat(tf_preregister(theory))
 
@@ -61,7 +59,7 @@ landscape$redundancy_risk          # crowded themes
 
 | Function | Purpose |
 |---|---|
-| `tf_read`, `tf_write`, `tf_validate` | Read, write, and structurally validate a theory object |
+| `tf_read`, `tf_write`, `tf_validate` | Read, write and validate a theory object |
 | `tf_theory`, `tf_add_*`, `tf_set_formal_model` | Build a theory incrementally, with provenance (BUILDING) |
 | `tf_check`, `tf_report` | Rigour checklist report and rendering |
 | `tf_severity` | Per-prediction risk and computed severity |
@@ -74,10 +72,8 @@ landscape$redundancy_risk          # crowded themes
 | `tf_read_corpus`, `tf_litmap`, `tf_landscape` | Bibliometric mapping and the theory landscape |
 | `tf_render_report`, `tf_osf_push` | Render a Quarto report and deposit it on OSF (dry-run by default) |
 
-See the package reference index for the complete, grouped function list. The
-shared schema and rigour checklist are vendored under `inst/schema/` and read at
-runtime via `system.file()`.
+See the package reference index for the complete, grouped function list.
 
-## License
+## Licence
 
 MIT. See [`LICENSE`](LICENSE).

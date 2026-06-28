@@ -4,12 +4,12 @@
 
 If you use the Python package in your work, please cite it:
 
-> Bernabeu, P. (2026). *theoryforge: Rigorous, reproducible theory building, development, and
-> testing* (Python package version 0.1.0). https://github.com/pablobernabeu/theoryforge
+> Bernabeu, P. (2026). *theoryforge: Systematic theory development* (Python package version
+> 0.1.0). https://github.com/pablobernabeu/theoryforge
 
 ```bibtex
 @Manual{theoryforge,
-  title  = {theoryforge: Rigorous, Reproducible Theory Building, Development, and Testing},
+  title  = {theoryforge: Systematic Theory Development},
   author = {Pablo Bernabeu},
   year   = {2026},
   note   = {Python package version 0.1.0},
@@ -27,8 +27,5 @@ theoryforge is developed and maintained by
 Department of Education at the University of Oxford. His work spans cognitive psychology and
 neuroscience, linguistics, education and digital technologies, and research methods and open
 science, with hands-on experience in behavioural and EEG experiments, corpus analysis,
-computational modelling, and statistics. He develops open, reproducible research software in R
+computational modelling and statistics. He develops open, reproducible research software in R
 and Python and is a certified Carpentries Instructor.
-
-- Website: <https://pablobernabeu.github.io>
-- ORCID: <https://orcid.org/0000-0003-1083-2460>

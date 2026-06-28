@@ -172,12 +172,16 @@ button.btn.sm { padding: 5px 11px; font-size: .82rem; }
 .outhead { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 .outhead h2 { margin: 0; font-size: 1.05rem; }
 .outhead .grow { flex: 1; }
-.section { margin-top: 16px; }
+/* Each result section is delimited by a separator and generous spacing, so its
+   header (title + export buttons) reads as belonging to the box beneath it. */
+.section { margin-top: 26px; padding-top: 18px; border-top: 1px solid var(--line); }
+.section:first-child { margin-top: 4px; padding-top: 0; border-top: none; }
 .section .sh {
   display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
   font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-soft);
 }
 .section .sh .grow { flex: 1; }
+.section .sh .btn.ghost.sm { text-transform: none; letter-spacing: 0; }
 
 /* Figures sit on a light "paper" canvas in both themes so the package's
    black-text SVGs stay legible. In dark mode a brighter frame and a drop

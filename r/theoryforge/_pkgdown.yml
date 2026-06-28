@@ -18,6 +18,19 @@ navbar:
       text: About
       href: https://pablobernabeu.github.io/theoryforge/r/articles/about.html
 
+# The Articles dropdown lists the guides only; About is reached via its own
+# navbar item, so it is built here but kept out of the dropdown.
+articles:
+- title: Guides
+  navbar: ~
+  contents:
+  - developing-and-testing
+  - literature
+  - methodology
+- title: Other
+  contents:
+  - about
+
 reference:
 - title: Core IO
   desc: Read, validate, and write theory objects.

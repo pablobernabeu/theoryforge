@@ -2,7 +2,7 @@ citHeader("To cite theoryforge in publications, please use:")
 
 bibentry(
   bibtype = "Manual",
-  title   = "{theoryforge}: Rigorous, Reproducible Theory Building, Development, and Testing",
+  title   = "{theoryforge}: Systematic Theory Development",
   author  = person("Pablo", "Bernabeu", comment = c(ORCID = "0000-0003-1083-2460")),
   year    = "2026",
   note    = "R package version 0.1.0",

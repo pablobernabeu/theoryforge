@@ -10,14 +10,6 @@ Install from PyPI with pip:
 pip install theoryforge
 ```
 
-Several functions can run complete JSON-Schema validation when the optional `jsonschema` dependency is present. Install the `full` extra to enable it:
-
-```bash
-pip install "theoryforge[full]"
-```
-
-Without the extra, `validate()` still checks the schema's required fields. The extra adds full JSON-Schema validation, which `validate(full=True)` then runs.
-
 ## Sample theories
 
 The examples below read a sample theory bundled with the project repository. The fixture files live under `fixtures/` in the repository at [github.com/pablobernabeu/theoryforge](https://github.com/pablobernabeu/theoryforge), for example [`fixtures/panic-network.theory.yaml`](https://github.com/pablobernabeu/theoryforge/blob/main/fixtures/panic-network.theory.yaml). Download a fixture, or point the path at one of your own theory files.
@@ -32,11 +24,11 @@ import theoryforge as tf
 t = tf.read("panic-network.theory.yaml")
 ```
 
-Validate the theory against the shared schema. With no arguments this checks the required fields and returns `True` on success, raising `ValueError` with a list of problems otherwise. Pass `full=True` to additionally run complete JSON-Schema validation, which needs the `[full]` extra.
+Validate the theory. With no arguments this checks the required fields and enum membership, returning `True` on success and raising `ValueError` with a list of problems otherwise. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection and that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id.
 
 ```python
 t.validate()
-t.validate(full=True)   # requires the [full] extra
+t.validate(full=True)   # also checks referential integrity
 ```
 
 Produce the rigour report. The `"json"` format returns the 12-item rigour checklist together with the overall gate.
@@ -59,4 +51,4 @@ t.redundancy_check()
 
 ## Next steps
 
-The same `Theory` object supports the building, development, and testing modes (`severity()`, `appraise_amendment()`, `preregister()`) and the literature layer (`read_corpus`, `litmap`, `landscape`). See the [API reference](api.md) for the full function list.
+The same `Theory` object supports the building, development and testing modes (`severity()`, `appraise_amendment()`, `preregister()`) and the literature layer (`read_corpus`, `litmap`, `landscape`). See the [API reference](api.md) for the full function list.

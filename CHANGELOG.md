@@ -6,8 +6,8 @@ version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
 
 ## [0.1.0] - 2026-06-24
 
-This is the first public release, a rigorous, reproducible workflow for theory building, development, and
-testing, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
+This is the first public release: a rigorous, reproducible workflow for building, developing and
+testing scientific theories, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
 
 ### Core (P0)
 - `theory.schema.json` + `rigor_checklist.yaml` as the shared, versioned source of truth.

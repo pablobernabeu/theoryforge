@@ -1,11 +1,13 @@
 # theoryforge 0.1.0
 
-First public release. The package provides a reproducible workflow for theory
-building, development, and testing, with behaviour pinned by a shared
-specification (`API_SPEC.md`) so the R and Python twins return identical
-verdicts and byte-identical diagram intermediate representations.
+First public release. The package provides a reproducible workflow for building,
+developing and testing scientific theories, with behaviour pinned by a shared
+specification
+([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)) so the R
+and Python twins return identical verdicts and byte-identical diagram intermediate
+representations.
 
-* Core: theory-object input, output, and structural validation; a 12-item
+* Core: theory-object input, output and structural validation; a 12-item
   rigour checklist with a weighted aggregate score and a blocker gate; diagram
   intermediate representations (nomological net, provenance, causal DAG); and a
   deterministic lexical construct-redundancy screen.

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "theoryforge"
 version = "0.1.0"
-description = "A rigorous, reproducible workflow for theory building, development, and testing."
+description = "Systematic theory development."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

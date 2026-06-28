@@ -1,10 +1,10 @@
 Package: theoryforge
-Title: Rigorous, Reproducible Theory Building, Development, and Testing
+Title: Systematic Theory Development
 Version: 0.1.0
 Authors@R:
     person(given = "Pablo", family = "Bernabeu", role = c("aut", "cre"), email = "pcbernabeu@gmail.com", comment = c(ORCID = "0000-0003-1083-2460"))
 Description: Provides a rigorous, reproducible workflow for building,
-    developing, and testing scientific theories represented as versioned,
+    developing and testing scientific theories represented as versioned,
     machine-checkable objects. Functions read and validate theory objects,
     score them against a versioned rigour checklist, screen constructs for
     lexical redundancy, and emit byte-identical diagram intermediate

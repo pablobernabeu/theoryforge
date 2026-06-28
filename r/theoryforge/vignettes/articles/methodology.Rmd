@@ -5,9 +5,8 @@ output: rmarkdown::html_vignette
 
 Each item in the rigour checklist follows from a result in the methodology
 literature, and the package records the supporting work next to the check (the
-`citation` field of the report). The references were verified field by field
-against Crossref, and each was checked to confirm that it supports the criterion
-it is attached to. They are listed in APA style below.
+`citation` field of the report). The supporting works are listed in APA style
+below.
 
 ## Grounding for each rigour check
 
@@ -23,7 +22,7 @@ it is attached to. They are listed in APA style below.
 | Mechanism | Each proposition states a mechanism, not just a correlation | [Sutton & Staw (1995)](https://doi.org/10.2307/2393788), [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371) |
 | Causal testability | Causal relations export to a DAG with derivable implications | [Textor et al. (2016)](https://doi.org/10.1093/ije/dyw341), [Eronen & Bringmann (2021)](https://doi.org/10.1177/1745691620970586) |
 | Diagnosticity | At least one prediction discriminates from a registered alternative | [Platt (1964)](https://doi.org/10.1126/science.146.3642.347), [Fiedler (2017)](https://doi.org/10.1177/1745691616654458) |
-| Formalization | A formal-model stub exists | [Robinaugh et al. (2021)](https://doi.org/10.1177/1745691620974697), [Guest & Martin (2021)](https://doi.org/10.1177/1745691620970585) |
+| Formalisation | A formal-model stub exists | [Robinaugh et al. (2021)](https://doi.org/10.1177/1745691620974697), [Guest & Martin (2021)](https://doi.org/10.1177/1745691620970585) |
 | Derivation chain | Each prediction is graph-reachable from propositions (reachability only) | [Scheel et al. (2021)](https://doi.org/10.1177/1745691620966795), [Szollosi et al. (2020)](https://doi.org/10.1016/j.tics.2019.11.009) |
 
 ## References

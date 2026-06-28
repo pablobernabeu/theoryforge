@@ -1,15 +1,22 @@
 # theoryforge (Python)
 
-A rigorous, reproducible workflow for theory building, development, and testing. This is the
-Python twin of the R package of the same name. A theory is a versioned, machine-checkable
-object. The package scaffolds the three workflow modes, enforces a rigour checklist, generates
-diagrams, and maps a theory against the literature.
+theoryforge treats a scientific theory as a versioned, machine-checkable object, so that
+building, developing and testing it becomes systematic and reproducible. It targets the
+familiar weaknesses of soft-science theorising: vague constructs, unfalsifiable claims,
+redundant "jingle-jangle" constructs and amendments that quietly weaken a theory rather than
+strengthen it. Each weakness becomes something the package can surface and check.
 
-See the repository [README](https://github.com/pablobernabeu/theoryforge) and
-[`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md) for the
-cross-language contract, and the [API reference](api.md) for the full function list.
+The package scaffolds the three workflow modes (building, development and testing), scores a
+theory against a 12-item rigour checklist drawn from the methodology literature, generates
+diagrams and positions the theory within the bibliometric literature. This is the Python twin
+of the R package of the same name; both follow one shared specification
+([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)) and
+return identical results.
 
-!!! tip "Try it in your browser — no install"
+See the repository [README](https://github.com/pablobernabeu/theoryforge) and the
+[API reference](api.md) for the full function list.
+
+!!! tip "Try it in your browser (no install)"
     The [**interactive web app**](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this
     package entirely client-side via [Pyodide](https://pyodide.org/). Load a theory, run any
     operation, and export both the visualisation (SVG/PNG) and the Python code to reproduce it.
@@ -17,7 +24,7 @@ cross-language contract, and the [API reference](api.md) for the full function l
 ## Install
 
 ```bash
-pip install theoryforge          # add [full] for complete JSON-Schema validation
+pip install theoryforge
 ```
 
 ## At a glance

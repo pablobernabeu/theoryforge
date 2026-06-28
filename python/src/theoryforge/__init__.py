@@ -1,6 +1,8 @@
-"""theoryforge, a rigorous and reproducible workflow for theory building, development, and testing.
+"""theoryforge: systematic theory development.
 
-This is the twin of the R package of the same name. Its behaviour is pinned by API_SPEC.md.
+A rigorous, reproducible workflow for building, developing and testing scientific
+theories. This is the twin of the R package of the same name; its behaviour is
+pinned by the shared specification (API_SPEC.md).
 """
 from __future__ import annotations
 

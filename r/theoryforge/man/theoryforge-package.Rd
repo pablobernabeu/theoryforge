@@ -4,11 +4,13 @@
 \name{theoryforge-package}
 \alias{theoryforge}
 \alias{theoryforge-package}
-\title{theoryforge: rigorous, reproducible theory building, development, and testing}
+\title{theoryforge: systematic theory development}
 \description{
 The feature-parity twin of the Python package of the same name. Behaviour is
-pinned by API_SPEC.md so the two implementations produce identical verdicts
-and byte-identical diagram intermediate representations.
+pinned by the shared specification
+(\href{https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md}{API_SPEC.md})
+so the two implementations produce identical verdicts and byte-identical
+diagram intermediate representations.
 }
 \details{
 Key entry points: \code{\link[=tf_read]{tf_read()}}, \code{\link[=tf_validate]{tf_validate()}}, \code{\link[=tf_write]{tf_write()}}, \code{\link[=tf_check]{tf_check()}},
