@@ -1,4 +1,4 @@
-/* theoryforge interactive apps — shared core (language-agnostic).
+/* theoryforge interactive apps: shared core (language-agnostic).
  *
  * Responsibilities: the operation registry, the UI, shaping a runtime's raw
  * package output into display sections, rendering, export (SVG/PNG/text), the
@@ -29,7 +29,7 @@
       help: "Runs the package's structural validation: required fields and enum membership for the theory, its constructs, propositions and predictions. Lists every problem found, or confirms the theory is valid." },
     {
       id: "diagram", label: "Diagram", desc: "Nomological net, DAG, workflow…",
-      help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams; venn, rigor and severity are emitted directly as SVG.",
+      help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams. The venn, rigor and severity types are emitted directly as SVG.",
       params: [{
         id: "type", label: "Diagram type", type: "select", default: "nomological_net",
         options: ["nomological_net", "context", "workflow", "causal_dag", "provenance",
@@ -478,9 +478,9 @@
       el("ul", { class: "help-ops" }, OPS.map((op) =>
         el("li", null, [el("b", null, op.label), document.createTextNode(" — " + (op.help || op.desc))]))),
       el("p", { class: "note" }, "The literature operations use a bundled demonstration corpus."),
-      el("p", { class: "note" }, "The package's network and credentialed adapters — the OpenAlex corpus fetch, the embedding-based " +
-        "redundancy screen and the OSF deposit — are intentionally not offered here; they need a live connection, an embedding model or " +
-        "credentials, so they belong in the desktop package."),
+      el("p", { class: "note" }, "The package's network and credentialed adapters are intentionally not offered here. " +
+        "The OpenAlex corpus fetch, the embedding-based redundancy screen and the OSF deposit each need a live connection, " +
+        "an embedding model or credentials, so they belong in the desktop package."),
     ]);
     openModal("How to use this app", body, { wide: true });
   }

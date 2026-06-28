@@ -19,17 +19,18 @@ building, developing, and testing a theory and for mapping the literature.
 
 ### Interactive web apps (no install)
 
-Two browser apps put a graphical interface on the packages and run the **real**
+Two browser apps put a graphical interface on the packages and run the real
 package code entirely client-side, so the results match running it locally:
 
 - R app (webR): <https://pablobernabeu.github.io/theoryforge/apps/r/>
 - Python app (Pyodide): <https://pablobernabeu.github.io/theoryforge/apps/py/>
 
-Load a theory (bundled examples or your own YAML/JSON), run any operation (rigour
-checklist, diagrams, severity, redundancy, SEM, preregistration, dossier,
-simulation, and the literature map and landscape), and export both the
-visualisation (SVG/PNG) and the R/Python code needed to reproduce it. The app
-sources live under [`apps/`](apps/).
+Load a theory (bundled examples or your own YAML/JSON), run any operation
+(validation, the rigour checklist, diagrams, severity, redundancy, SEM,
+preregistration, the audit dossier, simulation, amendment appraisal, and the
+literature map and landscape), and export both the visualisation (SVG/PNG) and
+the R/Python code needed to reproduce it. The app sources live under
+[`apps/`](apps/).
 
 ## Status
 

@@ -1,4 +1,4 @@
-/* theoryforge interactive app — R runtime (webR).
+/* theoryforge interactive app: R runtime (webR).
  *
  * Boots webR, installs jsonlite + yaml, vendors the live R package source into
  * the in-browser filesystem, sources it, and pre-seeds the schema/checklist

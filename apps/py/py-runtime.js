@@ -1,4 +1,4 @@
-/* theoryforge interactive app — Python runtime (Pyodide).
+/* theoryforge interactive app: Python runtime (Pyodide).
  *
  * Boots Pyodide, loads PyYAML, vendors the live theoryforge package source into
  * the in-browser filesystem, imports it, and runs the real package functions —

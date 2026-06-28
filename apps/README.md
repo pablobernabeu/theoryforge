@@ -1,11 +1,11 @@
 # theoryforge interactive apps
 
-Two browser apps that put a graphical interface on the twin packages. They run
-the **real** package code entirely client-side — the R app via
+Two browser apps that put a graphical interface on the twin packages. They run the
+real package code entirely client-side: the R app via
 [webR](https://docs.r-wasm.org/webr/latest/) and the Python app via
-[Pyodide](https://pyodide.org/) — so nothing is sent to a server and the results
-are identical to running the package locally. Every operation can export its
-visualisation (SVG and PNG) and the R/Python code needed to reproduce it.
+[Pyodide](https://pyodide.org/). Nothing is sent to a server, and the results are
+identical to running the package locally. Every operation can export its
+visualisation (SVG and PNG) and the R or Python code needed to reproduce it.
 
 | App | Engine | Lives at (deployed) |
 |---|---|---|
@@ -32,5 +32,5 @@ python -m http.server 8765     # serve over HTTP (file:// will not work)
 
 The `docs` GitHub Actions workflow runs `node build.mjs` and copies `apps/` into
 `site/apps/`, so the apps are published alongside the documentation on GitHub
-Pages. The first load of each app downloads its WebAssembly engine (~20 s); after
+Pages. The first load of each app downloads its WebAssembly engine (~20 s). After
 that it is cached by the browser.
