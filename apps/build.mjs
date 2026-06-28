@@ -23,6 +23,8 @@ const PY_SRC = path.join(repo, "python", "src", "theoryforge");
 const SCHEMA = path.join(repo, "schema");
 const FIXTURES = path.join(repo, "fixtures");
 const APP_EXAMPLES = path.join(here, "examples");
+// Single source of truth for the brand logo, so the apps cannot drift from it.
+const LOGO = path.join(repo, "r", "theoryforge", "man", "figures", "logo.svg");
 
 // Examples can be drawn from the shared fixtures (kept in lockstep with the
 // golden/parity tests) or from apps/examples (app-only, isolated from CI). Each
@@ -80,6 +82,7 @@ async function buildR() {
   const rFiles = (await copyInto(R_SRC, path.join(vendor, "R"), [".r"])).sort();
   await copyFiles(SCHEMA, path.join(vendor, "schema"), ["theory.schema.json", "rigor_checklist.yaml"]);
   await copyExamples(path.join(vendor, "fixtures"));
+  await fs.copyFile(LOGO, path.join(vendor, "logo.svg"));
   await writeJson(path.join(vendor, "manifest.json"), {
     rFiles: rFiles.map((f) => `R/${f}`),
     schema: { theory: "schema/theory.schema.json", checklist: "schema/rigor_checklist.yaml" },
@@ -97,6 +100,7 @@ async function buildPy() {
   // resolves correctly.
   const pkgFiles = await copyInto(PY_SRC, path.join(vendor, "theoryforge"), null);
   await copyExamples(path.join(vendor, "fixtures"));
+  await fs.copyFile(LOGO, path.join(vendor, "logo.svg"));
   const wanted = pkgFiles
     .filter((f) => f.endsWith(".py") || f.endsWith(".json") || f.endsWith(".yaml") || f.endsWith(".typed"))
     .map((f) => `theoryforge/${f.split(path.sep).join("/")}`)

@@ -9,18 +9,9 @@
 (function () {
   "use strict";
 
-  const HEX_LOGO =
-    '<svg class="logo" viewBox="0 0 174 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
-    '<defs><linearGradient id="lg" x1="0" y1="0" x2="0" y2="1">' +
-    '<stop offset="0" stop-color="#22384f"/><stop offset="1" stop-color="#101b27"/></linearGradient></defs>' +
-    '<path d="M87 3 L168 50 L168 150 L87 197 L6 150 L6 50 Z" fill="url(#lg)" stroke="#4cc2b0" stroke-width="7"/>' +
-    '<line x1="61" y1="78" x2="113" y2="78" stroke="#7fd8cb" stroke-width="3"/>' +
-    '<line x1="61" y1="78" x2="87" y2="110" stroke="#7fd8cb" stroke-width="3"/>' +
-    '<line x1="113" y1="78" x2="87" y2="110" stroke="#7fd8cb" stroke-width="3"/>' +
-    '<circle cx="61" cy="78" r="9" fill="#4cc2b0"/><circle cx="113" cy="78" r="9" fill="#4cc2b0"/>' +
-    '<circle cx="87" cy="110" r="10" fill="#f6b24a"/>' +
-    '<text x="87" y="150" text-anchor="middle" font-family="system-ui,sans-serif" font-size="24" font-weight="700" letter-spacing="-0.4">' +
-    '<tspan fill="#f3f6f7">theory</tspan><tspan fill="#f6b24a">forge</tspan></text></svg>';
+  // The brand logo has one source of truth (r/theoryforge/man/figures/logo.svg),
+  // vendored to vendor/logo.svg by build.mjs so the apps can never drift from it.
+  const logoImg = () => el("img", { class: "logo", src: "vendor/logo.svg", alt: "theoryforge logo" });
 
   const OPS = [
     { id: "check", label: "Rigour checklist", desc: "12-item score, gate, per-item status",
@@ -504,7 +495,7 @@
     const toggle = el("button", { class: "icon-btn", id: "themeToggle", onclick: cycleTheme, title: "Theme", "aria-label": "Toggle colour theme" });
     const help = el("button", { class: "icon-btn", id: "helpBtn", onclick: openHelp, title: "How to use this app", "aria-label": "How to use this app", html: "?" });
     return el("header", { class: "app" }, [
-      el("span", { html: HEX_LOGO }),
+      logoImg(),
       el("div", { class: "titles" }, [
         el("h1", { class: "t", text: "theoryforge" }),
         el("span", { class: "s", text: "Interactive app · runs the " + RT.langLabel + " package in your browser" }),
@@ -715,7 +706,7 @@
   // ---- boot ---------------------------------------------------------------
   function bootOverlay() {
     return el("div", { id: "boot" }, [
-      el("span", { html: HEX_LOGO.replace('class="logo"', 'class="logo"') }),
+      logoImg(),
       el("div", { class: "bt", text: "Starting " + RT.langLabel + " in your browser" }),
       el("div", { class: "spinner" }),
       el("div", { class: "blog", id: "blog", text: "Loading runtime…" }),

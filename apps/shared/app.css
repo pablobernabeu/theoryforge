@@ -58,7 +58,7 @@ header.app {
   background: var(--panel); border-bottom: 1px solid var(--line);
   position: sticky; top: 0; z-index: 20;
 }
-header.app .logo { width: 34px; height: 39px; flex: 0 0 auto; }
+header.app .logo { width: 36px; height: auto; flex: 0 0 auto; }
 header.app .titles { display: flex; flex-direction: column; line-height: 1.15; }
 header.app .titles .t { margin: 0; font-weight: 700; font-size: 1.02rem; }
 header.app .titles .s { font-size: .82rem; color: var(--ink-soft); }
@@ -249,7 +249,7 @@ table.grid tbody tr:hover td { background: color-mix(in srgb, var(--accent) 9%, 
   position: fixed; inset: 0; z-index: 100; background: var(--bg);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
 }
-#boot .logo { width: 76px; height: 88px; }
+#boot .logo { width: 84px; height: auto; }
 #boot .bt { font-weight: 700; font-size: 1.1rem; }
 #boot .spinner {
   width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--line);
