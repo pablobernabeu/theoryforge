@@ -23,22 +23,30 @@
     '<tspan fill="#f3f6f7">theory</tspan><tspan fill="#f6b24a">forge</tspan></text></svg>';
 
   const OPS = [
-    { id: "check", label: "Rigour checklist", desc: "12-item score, gate, per-item status" },
+    { id: "check", label: "Rigour checklist", desc: "12-item score, gate, per-item status",
+      help: "Scores the theory against the 12-item rigour checklist (falsifiability, precision, parsimony, and so on) and returns an aggregate 0–100 score, a pass/blocked/advisory gate, and the colour-coded status grid." },
     {
       id: "diagram", label: "Diagram", desc: "Nomological net, DAG, workflow…",
+      help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams; venn, rigor and severity are emitted directly as SVG.",
       params: [{
         id: "type", label: "Diagram type", type: "select", default: "nomological_net",
         options: ["nomological_net", "context", "workflow", "causal_dag", "provenance",
           "development_roadmap", "pipeline", "venn", "rigor", "severity"],
       }],
     },
-    { id: "severity", label: "Severity rubric", desc: "Per-prediction risk & severity" },
-    { id: "redundancy", label: "Redundancy screen", desc: "Lexical overlap of constructs" },
-    { id: "sem", label: "SEM (lavaan)", desc: "Compile to lavaan model syntax" },
-    { id: "preregister", label: "Preregistration", desc: "Preregistration document" },
-    { id: "dossier", label: "Audit dossier", desc: "Reviewer-facing bundle" },
+    { id: "severity", label: "Severity rubric", desc: "Per-prediction risk & severity",
+      help: "Applies the operationalised severity rubric to every prediction, returning its risk score (the riskiness of the claim form) and computed severity (with the directional discount and the diagnostic bonus)." },
+    { id: "redundancy", label: "Redundancy screen", desc: "Lexical overlap of constructs",
+      help: "Compares every pair of construct definitions by token-set Jaccard overlap and flags pairs above the redundancy threshold for review." },
+    { id: "sem", label: "SEM (lavaan)", desc: "Compile to lavaan model syntax",
+      help: "Compiles the constructs (measurement model) and propositions (structural model) to lavaan model syntax you can paste straight into an SEM fit." },
+    { id: "preregister", label: "Preregistration", desc: "Preregistration document",
+      help: "Generates a preregistration document in Markdown: hypotheses numbered in file order with their derivation, and the per-prediction severity." },
+    { id: "dossier", label: "Audit dossier", desc: "Reviewer-facing bundle",
+      help: "Assembles a reviewer-facing audit bundle in Markdown: the rigour report, severity, provenance and the preregistration in one document." },
     {
       id: "simulate", label: "Simulation", desc: "Dynamical-system trajectory",
+      help: "Treats each construct as a state variable and each directed proposition as a signed coupling, then integrates the network with fixed-step (Euler) updates and plots the trajectory.",
       params: [
         { id: "steps", label: "steps", type: "number", default: 30, min: 1, max: 500, step: 1 },
         { id: "dt", label: "dt", type: "number", default: 0.1, min: 0.001, max: 2, step: 0.01 },
@@ -49,10 +57,12 @@
     },
     {
       id: "litmap", label: "Literature map", desc: "Co-occurrence, themes, co-citation", corpus: true,
+      help: "Maps the bundled literature corpus: keyword co-occurrence, connected-component themes, and co-citation. min_link is the minimum number of records a pair must share to count as a link.",
       params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
     },
     {
       id: "landscape", label: "Theory landscape", desc: "Map theory onto lit themes", corpus: true,
+      help: "Positions the theory and its alternatives against the corpus themes, flagging under-theorized fronts (no theory addresses them) and redundancy risk (crowded themes).",
       params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
     },
   ];
@@ -89,6 +99,21 @@
     let t = $(".toast"); if (!t) { t = el("div", { class: "toast" }); document.body.append(t); }
     t.textContent = msg; t.classList.add("show");
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+  }
+
+  // ---- modal --------------------------------------------------------------
+  function escClose(e) { if (e.key === "Escape") closeModal(); }
+  function closeModal() { const m = $("#tfModal"); if (m) m.remove(); document.removeEventListener("keydown", escClose); }
+  function openModal(title, bodyNode, opts) {
+    closeModal();
+    const backdrop = el("div", { class: "modal-backdrop", id: "tfModal", onclick: (e) => { if (e.target === backdrop) closeModal(); } });
+    const header = el("header", null, [
+      el("h3", { text: title }),
+      el("button", { class: "icon-btn close", onclick: closeModal, title: "Close (Esc)", html: "&times;" }),
+    ]);
+    backdrop.append(el("div", { class: "modal" + (opts && opts.wide ? " wide" : "") }, [header, el("div", { class: "body" }, bodyNode)]));
+    document.body.append(backdrop);
+    document.addEventListener("keydown", escClose);
   }
 
   // ---- theme (shared 'tf-theme' key with the docs landing page) -----------
@@ -143,21 +168,28 @@
   const num = (x) => (typeof x === "number" ? (Number.isInteger(x) ? String(x) : x.toFixed(3).replace(/\.?0+$/, "")) : String(x));
   function pill(s) { return el("span", { class: "pill " + String(s).replace(/[^a-z_]/gi, "_"), text: s }); }
 
+  function colClass(c) {
+    return ["cell", c.num ? "num" : "", c.grow ? "grow" : ""].filter(Boolean).join(" ");
+  }
   function tableSection(title, columns, rows, opts) {
-    const thead = el("thead", null, el("tr", null, columns.map((c) => el("th", { text: c.label || c }))));
+    const thead = el("thead", null, el("tr", null,
+      columns.map((c) => el("th", { class: colClass(c), text: c.label || c }))));
     const tbody = el("tbody", null, rows.map((r) =>
       el("tr", null, columns.map((c) => {
         const key = c.key || c;
         const v = r[key];
-        if (c.pill) return el("td", null, pill(v));
-        return el("td", { class: c.num ? "num" : "" }, c.num ? num(v) : (Array.isArray(v) ? v.join(", ") : (v === "" || v == null ? "—" : String(v))));
+        if (c.pill) return el("td", { class: colClass(c) }, pill(v));
+        return el("td", { class: colClass(c) }, c.num ? num(v) : (Array.isArray(v) ? v.join(", ") : (v === "" || v == null ? "—" : String(v))));
       }))));
     return { kind: "node", node: wrapSection(title, opts && opts.extra, el("table", { class: "grid" }, [thead, tbody])) };
   }
   function kvSection(title, items) {
     const tbody = el("tbody", null, items.map(([k, v]) =>
-      el("tr", null, [el("td", { text: k }), el("td", null, v && v.nodeType ? v : document.createTextNode(String(v)))])));
-    return { kind: "node", node: wrapSection(title, null, el("table", { class: "grid" }, tbody)) };
+      el("tr", null, [
+        el("td", { class: "cell kvk", text: k }),
+        el("td", { class: "cell grow" }, v && v.nodeType ? v : document.createTextNode(String(v))),
+      ])));
+    return { kind: "node", node: wrapSection(title, null, el("table", { class: "grid kv" }, tbody)) };
   }
   function wrapSection(title, extraControls, body) {
     const head = el("div", { class: "sh" }, [el("span", { text: title || "" }), el("span", { class: "grow" })]);
@@ -253,7 +285,7 @@
       sections.push(tableSection("Checklist items",
         [{ key: "id", label: "item" }, { key: "status", label: "status", pill: true },
          { key: "score", label: "score", num: true }, { key: "weight", label: "weight", num: true },
-         { key: "severity_if_fail", label: "severity if fail" }],
+         { key: "severity_if_fail", label: "severity if fail", grow: true }],
         asArr(rep.items)));
     } else if (opId === "severity") {
       const rows = asArr(raw.rows);
@@ -322,10 +354,69 @@
   }
 
   // ---- UI ------------------------------------------------------------------
-  let RT, STATE = { opId: "check", params: {}, summary: null };
+  let RT, STATE = { opId: "check", params: {}, summary: null, input: null, source: null, ran: false };
+
+  // ---- persistence (restore the session on refresh) -----------------------
+  function stateKey() { return "tf-app-" + (RT ? RT.lang : "x"); }
+  function saveState() {
+    try {
+      localStorage.setItem(stateKey(), JSON.stringify({
+        opId: STATE.opId, params: STATE.params, input: STATE.input, ran: !!STATE.ran,
+      }));
+    } catch (e) { /* quota or private mode — non-fatal */ }
+  }
+  function loadSaved() { try { return JSON.parse(localStorage.getItem(stateKey()) || "null"); } catch (e) { return null; } }
+  async function fetchSource(path) { try { return await (await fetch("vendor/" + path)).text(); } catch (e) { return null; } }
+
+  function openSource() {
+    if (!STATE.source || STATE.source.text == null) { toast("Source is not available for this input"); return; }
+    const { name, text } = STATE.source;
+    const actions = el("div", { class: "modal-actions" }, [
+      el("button", { class: "btn ghost sm", onclick: () => copyText(text) }, "Copy"),
+      el("button", { class: "btn ghost sm", onclick: () => download(name, text, "text/plain") }, "Download"),
+    ]);
+    openModal("Source · " + name, el("div", null, [actions, el("pre", { class: "text", text })]), { wide: true });
+  }
+
+  function openHelp() {
+    const li = (t) => el("li", null, t);
+    const body = el("div", { class: "help" }, [
+      el("p", null, "This app runs the real theoryforge " + RT.langLabel + " package entirely in your browser, via " +
+        RT.engineLabel + ". Nothing is uploaded to a server, and the results match running the package locally."),
+      el("h4", null, "How to use"),
+      el("ol", { class: "steps" }, [
+        li("Pick an example theory, or upload your own YAML / JSON. Use “View source” to inspect the input."),
+        li("Choose an operation, then adjust any parameters."),
+        li("Press Run. Results appear on the right; every figure sits on a white panel."),
+        li("Export the visualisation (SVG / PNG) and the " + RT.langLabel + " code that reproduces it."),
+      ]),
+      el("p", { class: "note" }, "Your theory, operation and last result are remembered, so a page refresh restores the session."),
+      el("h4", null, "Operations"),
+      el("ul", { class: "help-ops" }, OPS.map((op) =>
+        el("li", null, [el("b", null, op.label), document.createTextNode(" — " + (op.help || op.desc))]))),
+      el("p", { class: "note" }, "The literature operations use a bundled demonstration corpus."),
+    ]);
+    openModal("How to use this app", body, { wide: true });
+  }
+
+  function updateExampleDesc() {
+    const e2 = $("#exDesc"); if (!e2) return;
+    let txt = "";
+    if (STATE.input && STATE.input.mode === "upload") txt = "Your uploaded theory.";
+    else if (STATE.input && STATE.input.mode === "example") {
+      const ex = RT.examples[STATE.input.index]; txt = (ex && ex.desc) || "";
+    }
+    e2.textContent = txt; e2.style.display = txt ? "" : "none";
+  }
+  function updateOpHelp() {
+    const e2 = $("#opHelp"); if (!e2) return;
+    const op = OPS.find((o) => o.id === STATE.opId);
+    e2.textContent = op ? (op.help || op.desc) : "";
+  }
 
   function buildHeader() {
     const toggle = el("button", { class: "icon-btn", id: "themeToggle", onclick: cycleTheme, title: "Theme" });
+    const help = el("button", { class: "icon-btn", id: "helpBtn", onclick: openHelp, title: "How to use this app", html: "?" });
     return el("header", { class: "app" }, [
       el("span", { html: HEX_LOGO }),
       el("div", { class: "titles" }, [
@@ -336,7 +427,7 @@
       el("span", { class: "grow" }),
       el("a", { class: "doclink", href: RT.docsUrl, target: "_blank", rel: "noopener" }, "Docs ↗"),
       el("a", { class: "doclink", href: "https://github.com/pablobernabeu/theoryforge", target: "_blank", rel: "noopener" }, "GitHub ↗"),
-      toggle,
+      help, toggle,
     ]);
   }
 
@@ -372,16 +463,22 @@
     const paramsWrap = el("div", { class: "params", id: "paramsWrap" });
     const runBtn = el("button", { class: "btn", id: "runBtn", onclick: runOp }, "Run ▸");
 
+    const viewSrc = el("button", { class: "btn ghost sm", id: "viewSrc", onclick: openSource }, "View source ⤢");
+
     return el("div", { class: "sidebar" }, [
       el("div", { class: "panel" }, [
         el("h2", null, "Theory"),
         el("label", { class: "field" }, [el("span", null, "Example theory"), exSelect]),
+        el("p", { class: "exdesc", id: "exDesc" }, ""),
         el("label", { class: "field" }, [el("span", null, "…or upload your own (YAML / JSON)"), el("div", { class: "filewrap" }, fileInput)]),
         summaryWrap,
+        el("div", { class: "srcrow" }, viewSrc),
       ]),
       el("div", { class: "panel" }, [
         el("h2", null, "Operation"),
-        opGrid, paramsWrap,
+        opGrid,
+        el("p", { class: "ophelp", id: "opHelp" }, ""),
+        paramsWrap,
         el("div", { style: "margin-top:14px" }, runBtn),
       ]),
     ]);
@@ -391,7 +488,9 @@
     return el("div", null, [
       el("div", { class: "panel" }, [
         el("div", { class: "outhead" }, [el("h2", { id: "outTitle" }, "Result"), el("span", { class: "grow" })]),
-        el("div", { id: "output" }, el("p", { class: "note", text: "Choose an operation and press Run." })),
+        el("div", { id: "output" }, el("p", { class: "note", html:
+          "Pick a theory and an operation on the left, then press <b>Run</b>. Each result can be exported as a figure (SVG / PNG) and as " +
+          RT.langLabel + " code. New here? Open <b>?</b> in the top bar for a quick tour." })),
       ]),
       el("div", { class: "panel", id: "codePanel", style: "display:none" }, [
         el("div", { class: "outhead" }, [
@@ -416,12 +515,12 @@
       if (STATE.params[p.id] === undefined) STATE.params[p.id] = p.default;
       let input;
       if (p.type === "select") {
-        input = el("select", { onchange: (e) => { STATE.params[p.id] = e.target.value; } },
+        input = el("select", { onchange: (e) => { STATE.params[p.id] = e.target.value; saveState(); } },
           p.options.map((o) => el("option", { value: o, selected: o === STATE.params[p.id] ? "" : null }, o)));
       } else {
         input = el("input", {
           type: "number", value: STATE.params[p.id], min: p.min, max: p.max, step: p.step,
-          oninput: (e) => { STATE.params[p.id] = e.target.value === "" ? p.default : Number(e.target.value); },
+          oninput: (e) => { STATE.params[p.id] = e.target.value === "" ? p.default : Number(e.target.value); saveState(); },
         });
       }
       const field = el("label", { class: "field", style: "margin:0" }, [el("span", null, p.label), input]);
@@ -434,15 +533,19 @@
   function selectOp(id) {
     STATE.opId = id;
     for (const b of document.querySelectorAll(".op")) b.classList.toggle("active", b.getAttribute("data-op") === id);
-    renderParams();
+    updateOpHelp(); renderParams(); saveState();
   }
 
   async function onExampleChange(e) {
-    const ex = RT.examples[Number(e.target.value)];
+    const idx = Number(e.target.value);
+    const ex = RT.examples[idx];
     await withBusy("Loading " + ex.name + "…", async () => {
       STATE.summary = await RT.loadExample(ex.path);
+      STATE.input = { mode: "example", index: idx };
+      STATE.source = { name: ex.path.split("/").pop(), text: await fetchSource(ex.path) };
       $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
       $("#fileInput").value = "";
+      updateExampleDesc(); saveState();
     });
   }
   async function onFileChange(e) {
@@ -451,7 +554,10 @@
     await withBusy("Loading " + f.name + "…", async () => {
       try {
         STATE.summary = await RT.loadTheoryText(text, f.name);
+        STATE.input = { mode: "upload", name: f.name, text };
+        STATE.source = { name: f.name, text };
         $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
+        updateExampleDesc(); saveState();
       } catch (err) {
         $("#summaryWrap").replaceChildren(errorBox("Could not load this file", err));
       }
@@ -486,6 +592,7 @@
         out.replaceChildren(...sections.map((s) => s.node));
         const cp = $("#codePanel"); cp.style.display = "";
         $("#codeBlock").textContent = code;
+        STATE.ran = true; saveState();
       } catch (err) {
         out.replaceChildren(errorBox("Operation failed", err));
         console.error(err);
@@ -501,6 +608,47 @@
       el("div", { class: "spinner" }),
       el("div", { class: "blog", id: "blog", text: "Loading runtime…" }),
     ]);
+  }
+
+  // Restore theory + operation + params from a previous session, then optionally
+  // re-run the last operation so a refresh lands back where the user left off.
+  async function applyRestore(blog) {
+    const saved = loadSaved();
+    STATE.input = STATE.input || { mode: "example", index: 0 };
+    if (saved) {
+      if (saved.input && saved.input.mode === "upload" && saved.input.text) {
+        try {
+          if (blog) blog("Restoring your uploaded theory…");
+          STATE.summary = await RT.loadTheoryText(saved.input.text, saved.input.name);
+          STATE.input = saved.input;
+          STATE.source = { name: saved.input.name, text: saved.input.text };
+        } catch (e) { STATE.input = { mode: "example", index: 0 }; }
+      } else if (saved.input && saved.input.mode === "example") {
+        const idx = Math.min(Math.max(0, saved.input.index | 0), RT.examples.length - 1);
+        if (idx !== 0) {
+          try {
+            if (blog) blog("Restoring " + RT.examples[idx].name + "…");
+            STATE.summary = await RT.loadExample(RT.examples[idx].path);
+          } catch (e) { /* keep default example 0 already loaded */ }
+        }
+        STATE.input = { mode: "example", index: idx };
+      }
+      if (saved.opId && OPS.some((o) => o.id === saved.opId)) STATE.opId = saved.opId;
+      if (saved.params) STATE.params = Object.assign({}, STATE.params, saved.params);
+    }
+    // Ensure the example source is available for the source viewer.
+    if (STATE.input.mode === "example" && !STATE.source) {
+      const ex = RT.examples[STATE.input.index];
+      STATE.source = { name: ex.path.split("/").pop(), text: await fetchSource(ex.path) };
+    }
+    // Reflect the restored selection in the UI.
+    const sel = $("#exampleSel");
+    if (sel && STATE.input.mode === "example") sel.value = String(STATE.input.index);
+    $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
+    for (const b of document.querySelectorAll(".op")) b.classList.toggle("active", b.getAttribute("data-op") === STATE.opId);
+    updateExampleDesc(); updateOpHelp(); renderParams();
+    const op = OPS.find((o) => o.id === STATE.opId);
+    if (saved && saved.ran && op && !(op.corpus && !RT.hasCorpus())) await runOp();
   }
 
   async function start(runtime) {
@@ -523,7 +671,7 @@
         "theoryforge " + esc(RT.version || "") + " · running entirely client-side via " + esc(RT.engineLabel) +
         " · <a href='https://github.com/pablobernabeu/theoryforge'>source</a>" }));
       updateThemeBtn();
-      renderParams();
+      await applyRestore(onProgress);
       $("#boot").classList.add("hidden");
     } catch (err) {
       onProgress("Startup failed: " + (err && err.message || err));

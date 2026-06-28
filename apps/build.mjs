@@ -22,13 +22,22 @@ const R_SRC = path.join(repo, "r", "theoryforge", "R");
 const PY_SRC = path.join(repo, "python", "src", "theoryforge");
 const SCHEMA = path.join(repo, "schema");
 const FIXTURES = path.join(repo, "fixtures");
+const APP_EXAMPLES = path.join(here, "examples");
 
+// Examples can be drawn from the shared fixtures (kept in lockstep with the
+// golden/parity tests) or from apps/examples (app-only, isolated from CI). Each
+// carries a one-line description shown in the app.
 const EXAMPLES = [
-  { name: "Panic disorder network (developing)", file: "panic-network.theory.yaml", kind: "theory" },
-  { name: "Panic network, amended v2 (testing)", file: "panic-network-2026-v2.theory.yaml", kind: "theory" },
-  { name: "Deliberately weak theory (draft)", file: "weak-theory.theory.yaml", kind: "theory" },
+  { name: "Panic disorder network (developing)", file: "panic-network.theory.yaml", src: FIXTURES,
+    desc: "A well-developed network theory of panic — three constructs in a feedback loop. Passes the full rigour checklist." },
+  { name: "Panic network, amended v2 (testing)", file: "panic-network-2026-v2.theory.yaml", src: FIXTURES,
+    desc: "An amended version of the panic theory at the testing stage, with a fourth prediction and test outcomes." },
+  { name: "Self-determination theory (developing)", file: "self-determination.theory.yaml", src: APP_EXAMPLES,
+    desc: "Three basic needs driving intrinsic motivation. A solid theory with one precision warning." },
+  { name: "Deliberately weak theory (draft)", file: "weak-theory.theory.yaml", src: FIXTURES,
+    desc: "An underspecified draft kept as a worked example of what the checklist catches — it is blocked." },
 ];
-const CORPUS = [{ name: "Panic literature corpus (demo)", file: "panic-corpus.yaml" }];
+const CORPUS = [{ name: "Panic literature corpus (demo)", file: "panic-corpus.yaml", src: FIXTURES }];
 
 async function rmrf(p) {
   await fs.rm(p, { recursive: true, force: true });
@@ -53,6 +62,12 @@ async function copyFiles(srcDir, destDir, names) {
   await fs.mkdir(destDir, { recursive: true });
   for (const n of names) await fs.copyFile(path.join(srcDir, n), path.join(destDir, n));
 }
+async function copyExamples(destDir) {
+  await fs.mkdir(destDir, { recursive: true });
+  for (const e of [...EXAMPLES, ...CORPUS]) await fs.copyFile(path.join(e.src, e.file), path.join(destDir, e.file));
+}
+const manifestExamples = () => EXAMPLES.map((e) => ({ name: e.name, path: `fixtures/${e.file}`, kind: e.kind || "theory", desc: e.desc || "" }));
+const manifestCorpora = () => CORPUS.map((c) => ({ name: c.name, path: `fixtures/${c.file}`, desc: c.desc || "" }));
 async function writeJson(p, obj) {
   await fs.writeFile(p, JSON.stringify(obj, null, 2) + "\n", "utf8");
 }
@@ -64,15 +79,12 @@ async function buildR() {
   // stable, deterministic order keeps the manifest diff-friendly.
   const rFiles = (await copyInto(R_SRC, path.join(vendor, "R"), [".r"])).sort();
   await copyFiles(SCHEMA, path.join(vendor, "schema"), ["theory.schema.json", "rigor_checklist.yaml"]);
-  await copyFiles(FIXTURES, path.join(vendor, "fixtures"), [
-    ...EXAMPLES.map((e) => e.file),
-    ...CORPUS.map((c) => c.file),
-  ]);
+  await copyExamples(path.join(vendor, "fixtures"));
   await writeJson(path.join(vendor, "manifest.json"), {
     rFiles: rFiles.map((f) => `R/${f}`),
     schema: { theory: "schema/theory.schema.json", checklist: "schema/rigor_checklist.yaml" },
-    examples: EXAMPLES.map((e) => ({ name: e.name, path: `fixtures/${e.file}`, kind: e.kind })),
-    corpora: CORPUS.map((c) => ({ name: c.name, path: `fixtures/${c.file}` })),
+    examples: manifestExamples(),
+    corpora: manifestCorpora(),
   });
   return rFiles.length;
 }
@@ -84,18 +96,15 @@ async function buildPy() {
   // wholesale copy of the package tree is import-ready and importlib-resources
   // resolves correctly.
   const pkgFiles = await copyInto(PY_SRC, path.join(vendor, "theoryforge"), null);
-  await copyFiles(FIXTURES, path.join(vendor, "fixtures"), [
-    ...EXAMPLES.map((e) => e.file),
-    ...CORPUS.map((c) => c.file),
-  ]);
+  await copyExamples(path.join(vendor, "fixtures"));
   const wanted = pkgFiles
     .filter((f) => f.endsWith(".py") || f.endsWith(".json") || f.endsWith(".yaml") || f.endsWith(".typed"))
     .map((f) => `theoryforge/${f.split(path.sep).join("/")}`)
     .sort();
   await writeJson(path.join(vendor, "manifest.json"), {
     pyFiles: wanted,
-    examples: EXAMPLES.map((e) => ({ name: e.name, path: `fixtures/${e.file}`, kind: e.kind })),
-    corpora: CORPUS.map((c) => ({ name: c.name, path: `fixtures/${c.file}` })),
+    examples: manifestExamples(),
+    corpora: manifestCorpora(),
   });
   return wanted.length;
 }
