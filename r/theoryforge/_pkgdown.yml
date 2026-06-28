@@ -14,22 +14,21 @@ navbar:
       href: https://pablobernabeu.github.io/theoryforge/apps/r/
       icon: fa-play
       aria-label: Interactive web app
+    # Curate the Articles dropdown with explicit links (href strings, so no
+    # tidyselect evaluation of hyphenated slugs) and keep About out of it; About
+    # is still built and reached via its own top-level navbar item.
+    articles:
+      text: Articles
+      menu:
+      - text: Developing and testing
+        href: https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html
+      - text: Literature layer
+        href: https://pablobernabeu.github.io/theoryforge/r/articles/literature.html
+      - text: Methodological foundations
+        href: https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html
     about:
       text: About
       href: https://pablobernabeu.github.io/theoryforge/r/articles/about.html
-
-# The Articles dropdown lists the guides only; About is reached via its own
-# navbar item, so it is built here but kept out of the dropdown.
-articles:
-- title: Guides
-  navbar: ~
-  contents:
-  - developing-and-testing
-  - literature
-  - methodology
-- title: Other
-  contents:
-  - about
 
 reference:
 - title: Core IO
