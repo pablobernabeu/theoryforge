@@ -26,7 +26,6 @@ classifiers = [
 dependencies = ["PyYAML>=6.0"]
 
 [project.optional-dependencies]
-full = ["jsonschema>=4.0"]      # full JSON-Schema validation (built-in structural check works without it)
 dev = ["pytest>=7.0", "ruff", "mypy"]
 
 [project.urls]

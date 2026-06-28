@@ -4,7 +4,14 @@
 \alias{tf_osf_push}
 \title{Deposit a theory's audit dossier to OSF storage}
 \usage{
-tf_osf_push(theory, token = NULL, node = NULL, filename = NULL, dry_run = TRUE)
+tf_osf_push(
+  theory,
+  token = NULL,
+  node = NULL,
+  filename = NULL,
+  dry_run = TRUE,
+  base_url = .tf_OSF_BASE
+)
 }
 \arguments{
 \item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
@@ -18,6 +25,9 @@ when \code{dry_run = FALSE}.}
 
 \item{dry_run}{When \code{TRUE} (default), return the planned request without
 sending it.}
+
+\item{base_url}{OSF storage base URL; override to target a non-default host.
+Mirrors the Python \code{base_url} argument.}
 }
 \value{
 When \code{dry_run = TRUE}, a list \code{list(dry_run = TRUE,

@@ -27,6 +27,8 @@ NULL
 #' @param filename Destination filename; defaults to \code{<id>.dossier.md}.
 #' @param dry_run When \code{TRUE} (default), return the planned request without
 #'   sending it.
+#' @param base_url OSF storage base URL; override to target a non-default host.
+#'   Mirrors the Python \code{base_url} argument.
 #' @return When \code{dry_run = TRUE}, a list \code{list(dry_run = TRUE,
 #'   request = list(method, url, filename, content_bytes), note)}. When
 #'   \code{dry_run = FALSE}, a list describing the completed upload.
@@ -36,7 +38,8 @@ NULL
 #' tf_osf_push(theory, node = "abc12")$request$url
 #' @export
 tf_osf_push <- function(theory, token = NULL, node = NULL,
-                        filename = NULL, dry_run = TRUE) {
+                        filename = NULL, dry_run = TRUE,
+                        base_url = .tf_OSF_BASE) {
   T <- theory
   tid <- .tf_str(T, "id")
   if (!nzchar(tid)) tid <- "theory"
@@ -44,7 +47,7 @@ tf_osf_push <- function(theory, token = NULL, node = NULL,
   content <- tf_dossier(T)
   content_bytes <- length(charToRaw(enc2utf8(content)))
   url <- if (!is.null(node)) {
-    paste0(.tf_OSF_BASE, node, "/providers/osfstorage/?kind=file&name=", fname)
+    paste0(base_url, node, "/providers/osfstorage/?kind=file&name=", fname)
   } else {
     NULL
   }

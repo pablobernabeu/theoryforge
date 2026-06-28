@@ -6,7 +6,7 @@
  */
 import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
 
-const DIAG_SVG = new Set(["venn", "rigor", "severity"]);
+const DIAG_SVG = new Set(window.TF.DIAG_SVG);
 
 // R bootstrap, sourced once into the global environment so all definitions and
 // persistent state (.tf_app) survive across calls.
@@ -38,36 +38,48 @@ invisible(lapply(.tf_app_files, source))
 
 .tf_load <- function(path) {
   .tf_app$theory <- tf_read(path)
-  jsonlite::toJSON(.tf_summary(.tf_app$theory), auto_unbox = TRUE, null = "null")
+  as.character(jsonlite::toJSON(.tf_summary(.tf_app$theory), auto_unbox = TRUE, digits = NA, null = "null"))
 }
 .tf_load_corpus <- function(path) {
   .tf_app$corpus <- tf_read_corpus(path)
   "ok"
 }
 
-.tf_run <- function(op, params_json) {
-  p <- if (nzchar(params_json)) jsonlite::fromJSON(params_json) else list()
+.tf_run <- function(op, p) {
   t <- .tf_app$theory
   env <- function(x) as.character(jsonlite::toJSON(x, auto_unbox = TRUE, digits = NA, null = "null"))
   if (op == "check")      return(env(list(report = tf_check(t), svg = tf_diagram(t, "rigor"))))
+  if (op == "validate")   return(env(tryCatch({ tf_validate(t); list(ok = TRUE) },
+                                              error = function(e) list(ok = FALSE, message = conditionMessage(e)))))
   if (op == "severity")   return(env(list(rows = tf_severity(t), svg = tf_diagram(t, "severity"))))
   if (op == "redundancy") return(env(list(rows = tf_redundancy_check(t))))
+  if (op == "appraise")   return(env(tf_appraise_amendment(t, tf_read(p$prior))))
   if (op == "diagram")    return(env(list(ir = tf_diagram(t, p$type))))
   if (op == "sem")        return(env(list(text = tf_compile_sem(t))))
   if (op == "preregister")return(env(list(text = tf_preregister(t))))
   if (op == "dossier")    return(env(list(text = tf_dossier(t))))
-  if (op == "simulate")   return(env(list(result = tf_simulate(t, steps = p$steps, dt = p$dt, k = p$k, damping = p$damping, init = p$init))))
+  if (op == "simulate")   return(env(list(result = tf_simulate(t,
+                              steps = as.integer(p$steps), dt = as.numeric(p$dt), k = as.numeric(p$k),
+                              damping = as.numeric(p$damping), init = as.numeric(p$init)))))
   if (op == "litmap") {
-    lm <- tf_litmap(.tf_app$corpus, min_link = p$min_link)
+    lm <- tf_litmap(.tf_app$corpus, min_link = as.integer(p$min_link))
     return(env(list(result = lm, dots = list(
       keyword_cooccurrence = tf_lit_diagram(lm, "keyword_cooccurrence"),
       co_citation = tf_lit_diagram(lm, "co_citation")))))
   }
   if (op == "landscape") {
-    ls <- tf_landscape(t, .tf_app$corpus, min_link = p$min_link)
+    ls <- tf_landscape(t, .tf_app$corpus, min_link = as.integer(p$min_link))
     return(env(list(result = ls, dot = tf_lit_diagram(ls, "theme_landscape"))))
   }
   stop(paste("unknown operation:", op))
+}
+
+# Dispatch from a JSON call file, avoiding any interpolation of data into R source.
+.tf_run_call <- function() {
+  call <- jsonlite::fromJSON(
+    readChar("/tf/call.json", file.info("/tf/call.json")$size, useBytes = TRUE),
+    simplifyVector = TRUE)
+  .tf_run(call$op, call$params)
 }
 `;
 
@@ -150,10 +162,19 @@ const RT = {
   },
 
   async run(opId, params) {
-    const pj = JSON.stringify(params || {}).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-    const json = await this._webR.evalRString(`.tf_run("${opId}", "${pj}")`);
-    const raw = JSON.parse(json);
-    return { raw, code: this.code(opId, params) };
+    // Pass the call as a JSON file rather than interpolating data into R source.
+    const call = JSON.stringify({ op: opId, params: this._mapParams(opId, params) || {} });
+    await this._webR.FS.writeFile("/tf/call.json", new TextEncoder().encode(call));
+    const json = await this._webR.evalRString(".tf_run_call()");
+    return { raw: JSON.parse(json), code: this.code(opId, params) };
+  },
+
+  // The 'prior' param arrives as a manifest path; map it to its in-FS path.
+  _mapParams(opId, params) {
+    if (opId === "appraise" && params && params.prior) {
+      return Object.assign({}, params, { prior: this._fixtures[params.prior] || params.prior });
+    }
+    return params;
   },
 
   // ---- reproducible R code ------------------------------------------------
@@ -164,6 +185,12 @@ const RT = {
     switch (opId) {
       case "check":
         return `${head}\n\nreport <- tf_check(theory)\nreport$aggregate_score   # overall 0-100\nreport$gate              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nwriteLines(tf_diagram(theory, "rigor"), "rigor.svg")`;
+      case "validate":
+        return `${head}\n\ntf_validate(theory)               # TRUE if valid; otherwise stops, listing every problem`;
+      case "appraise": {
+        const pf = (p.prior || "prior.theory.yaml").split("/").pop();
+        return `${head}\nprior <- tf_read("${pf}")\n\nappr <- tf_appraise_amendment(theory, prior)\nappr$verdict                      # progressive / degenerating / neutral`;
+      }
       case "diagram": {
         const t = p.type;
         const isSvg = DIAG_SVG.has(t);

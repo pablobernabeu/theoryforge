@@ -18,7 +18,8 @@ def render_report(T, path, title: str | None = None, render: bool = False, to: s
     Returns the path of the written `.qmd`.
     """
     data = T.data if hasattr(T, "data") else T
-    title = title or f"theoryforge report: {data.get('title', data.get('id', ''))}"
+    # Fall back to the id when the title is empty as well as absent (matches R's nzchar fallback).
+    title = title or f"theoryforge report: {data.get('title') or data.get('id') or ''}"
     title = title.replace('"', "'")
     path = Path(path)
     if path.suffix.lower() != ".qmd":

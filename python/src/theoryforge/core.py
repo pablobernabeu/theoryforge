@@ -6,7 +6,6 @@ from pathlib import Path
 
 import yaml
 
-from . import _resources
 from .develop import appraise_amendment as _appraise_amendment
 from .diagram import diagram as _diagram
 from .dossier import dossier as _dossier
@@ -58,12 +57,11 @@ class Theory:
         return v if isinstance(v, list) else []
 
     # -- validation ------------------------------------------------------------
-    def validate(self, *, full: bool = False) -> bool:
-        """Structural validation against the schema's required fields.
+    def validate(self) -> bool:
+        """Structural validation against the schema's required fields and enums.
 
-        Returns True on success, raises ValueError listing all problems.
-        With ``full=True`` and the optional ``jsonschema`` package installed,
-        additionally runs complete JSON-Schema validation.
+        Returns True on success, raises ValueError listing every problem found.
+        Mirrors the R ``tf_validate(theory)``.
         """
         errors: list[str] = []
         d = self.data
@@ -71,9 +69,9 @@ class Theory:
             if not _nonempty_str(d.get(req)):
                 errors.append(f"missing/empty required field: {req}")
         if d.get("maturity") not in _MATURITY:
-            errors.append(f"maturity must be one of {sorted(_MATURITY)}")
+            errors.append(f"maturity must be one of {', '.join(sorted(_MATURITY))}")
         if "theory_form" in d and d["theory_form"] not in _FORM:
-            errors.append(f"theory_form must be one of {sorted(_FORM)}")
+            errors.append(f"theory_form must be one of {', '.join(sorted(_FORM))}")
         for i, c in enumerate(self._list("constructs")):
             for req in ("id", "label", "definition"):
                 if not _nonempty_str(c.get(req)):
@@ -90,16 +88,6 @@ class Theory:
                     errors.append(f"prediction[{i}] missing/empty {req}")
             if p.get("type") not in _PRED_TYPE and _nonempty_str(p.get("type")):
                 errors.append(f"prediction[{i}] type '{p.get('type')}' not allowed")
-
-        if full:
-            try:
-                import jsonschema  # type: ignore
-            except ImportError as exc:  # pragma: no cover - optional dep
-                raise RuntimeError(
-                    "full=True requires the optional 'jsonschema' package (pip install theoryforge[full])"
-                ) from exc
-            v = jsonschema.Draft202012Validator(_resources.schema())
-            errors.extend(f"schema: {e.message}" for e in v.iter_errors(self.data))
 
         if errors:
             raise ValueError("invalid theory object: " + "; ".join(errors))
@@ -239,6 +227,8 @@ def read(path) -> Theory:
     path = Path(path)
     text = path.read_text(encoding="utf-8")
     data = json.loads(text) if path.suffix.lower() == ".json" else yaml.safe_load(text)
+    if not isinstance(data, dict):
+        raise ValueError("Theory data must be a mapping")
     return Theory(data)
 
 

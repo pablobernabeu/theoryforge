@@ -24,7 +24,10 @@ def read_corpus(path) -> dict:
     """Read a literature corpus from YAML or JSON."""
     path = Path(path)
     text = path.read_text(encoding="utf-8")
-    return json.loads(text) if path.suffix.lower() == ".json" else yaml.safe_load(text)
+    data = json.loads(text) if path.suffix.lower() == ".json" else yaml.safe_load(text)
+    if not isinstance(data, dict):
+        raise ValueError("Corpus data must be a mapping")
+    return data
 
 
 def _records(corpus) -> list:

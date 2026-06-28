@@ -7,7 +7,7 @@
 import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.mjs";
 
 const PYODIDE_INDEX = "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";
-const DIAG_SVG = new Set(["venn", "rigor", "severity"]);
+const DIAG_SVG = new Set(window.TF.DIAG_SVG);
 
 const APP_PY = String.raw`
 import json
@@ -42,13 +42,24 @@ def load_corpus(path):
 
 def run(op, params_json):
     p = json.loads(params_json) if params_json else {}
-    t = _state["theory"]
+    t = _state.get("theory")
+    if t is None:
+        raise RuntimeError("No theory loaded")
     if op == "check":
         return json.dumps({"report": t.check(), "svg": t.diagram("rigor")})
+    if op == "validate":
+        try:
+            t.validate()
+            return json.dumps({"ok": True})
+        except ValueError as e:
+            return json.dumps({"ok": False, "message": str(e)})
     if op == "severity":
         return json.dumps({"rows": t.severity(), "svg": t.diagram("severity")})
     if op == "redundancy":
         return json.dumps({"rows": t.redundancy_check()})
+    if op == "appraise":
+        prior = tf.read(p["prior"])
+        return json.dumps(t.appraise_amendment(prior))
     if op == "diagram":
         return json.dumps({"ir": t.diagram(p["type"])})
     if op == "sem":
@@ -133,7 +144,7 @@ const RT = {
 
   async loadExample(path) {
     this._theoryFile = path.split("/").pop();
-    return JSON.parse(this._app.load(this._fixtures[path]));
+    return JSON.parse(this._str(this._app.load(this._fixtures[path])));
   },
 
   async loadTheoryText(text, filename) {
@@ -141,12 +152,24 @@ const RT = {
     const dest = "/pkg/input." + ext;
     this._py.FS.writeFile(dest, new TextEncoder().encode(text));
     this._theoryFile = filename || "your-theory." + ext;
-    return JSON.parse(this._app.load(dest));
+    return JSON.parse(this._str(this._app.load(dest)));
   },
 
   async run(opId, params) {
-    const out = this._app.run(opId, JSON.stringify(params || {}));
-    return { raw: JSON.parse(out), code: this.code(opId, params) };
+    const out = this._app.run(opId, JSON.stringify(this._mapParams(opId, params) || {}));
+    return { raw: JSON.parse(this._str(out)), code: this.code(opId, params) };
+  },
+
+  // _app functions return JSON strings (Pyodide auto-converts Python str -> JS string).
+  // Assert that contract so a future dict/list return fails loudly, not as "[object Object]".
+  _str(out) { if (typeof out !== "string") throw new Error("Python runtime returned a non-string result"); return out; },
+
+  // The 'prior' param arrives as a manifest path; map it to its in-FS path.
+  _mapParams(opId, params) {
+    if (opId === "appraise" && params && params.prior) {
+      return Object.assign({}, params, { prior: this._fixtures[params.prior] || params.prior });
+    }
+    return params;
   },
 
   // ---- reproducible Python code -------------------------------------------
@@ -157,6 +180,12 @@ const RT = {
     switch (opId) {
       case "check":
         return `${head}\n\nreport = theory.check()\nreport["aggregate_score"]   # overall 0-100\nreport["gate"]              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nopen("rigor.svg", "w").write(theory.diagram("rigor"))`;
+      case "validate":
+        return `${head}\n\ntheory.validate()                 # True if valid; raises ValueError listing every problem`;
+      case "appraise": {
+        const pf = (p.prior || "prior.theory.yaml").split("/").pop();
+        return `${head}\nprior = tf.read("${pf}")\n\nappr = theory.appraise_amendment(prior)\nappr["verdict"]                   # progressive / degenerating / neutral`;
+      }
       case "diagram": {
         const t = p.type;
         const isSvg = DIAG_SVG.has(t);

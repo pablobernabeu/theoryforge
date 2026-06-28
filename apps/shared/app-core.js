@@ -25,6 +25,8 @@
   const OPS = [
     { id: "check", label: "Rigour checklist", desc: "12-item score, gate, per-item status",
       help: "Scores the theory against the 12-item rigour checklist (falsifiability, precision, parsimony, and so on) and returns an aggregate 0–100 score, a pass/blocked/advisory gate, and the colour-coded status grid." },
+    { id: "validate", label: "Validate", desc: "Structural schema validation",
+      help: "Runs the package's structural validation: required fields and enum membership for the theory, its constructs, propositions and predictions. Lists every problem found, or confirms the theory is valid." },
     {
       id: "diagram", label: "Diagram", desc: "Nomological net, DAG, workflow…",
       help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams; venn, rigor and severity are emitted directly as SVG.",
@@ -38,6 +40,11 @@
       help: "Applies the operationalised severity rubric to every prediction, returning its risk score (the riskiness of the claim form) and computed severity (with the directional discount and the diagnostic bonus)." },
     { id: "redundancy", label: "Redundancy screen", desc: "Lexical overlap of constructs",
       help: "Compares every pair of construct definitions by token-set Jaccard overlap and flags pairs above the redundancy threshold for review." },
+    {
+      id: "appraise", label: "Appraise amendment", desc: "Progressive vs degenerating", needsPrior: true,
+      help: "Compares the current theory, treated as the amendment, against a prior version and classifies the change as progressive, degenerating or neutral (Lakatos, 1970). Choose the prior version below.",
+      params: [{ id: "prior", label: "Prior theory", type: "theory" }],
+    },
     { id: "sem", label: "SEM (lavaan)", desc: "Compile to lavaan model syntax",
       help: "Compiles the constructs (measurement model) and propositions (structural model) to lavaan model syntax you can paste straight into an SEM fit." },
     { id: "preregister", label: "Preregistration", desc: "Preregistration document",
@@ -66,6 +73,15 @@
       params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
     },
   ];
+
+  // Diagram types the package emits directly as SVG (vs Graphviz DOT / dagitty).
+  // Shared so the two runtimes' code-snippet generators cannot drift.
+  const DIAG_SVG = ["venn", "rigor", "severity"];
+
+  // Figures render on a light "paper" canvas in both themes so the package's
+  // black-text SVGs and the trajectory chart stay legible. Single source for
+  // the paper/ink/axis colours used by the chart and the PNG exporter.
+  const FIG = { paper: "#ffffff", ink: "#333333", muted: "#666666", axis: "#bbbbbb" };
 
   // ---- small DOM / utility helpers ----------------------------------------
   const $ = (sel, root) => (root || document).querySelector(sel);
@@ -96,24 +112,47 @@
   }
   let toastTimer;
   function toast(msg) {
-    let t = $(".toast"); if (!t) { t = el("div", { class: "toast" }); document.body.append(t); }
+    let t = $(".toast"); if (!t) { t = el("div", { class: "toast", role: "status", "aria-live": "polite" }); document.body.append(t); }
     t.textContent = msg; t.classList.add("show");
     clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
   }
 
-  // ---- modal --------------------------------------------------------------
-  function escClose(e) { if (e.key === "Escape") closeModal(); }
-  function closeModal() { const m = $("#tfModal"); if (m) m.remove(); document.removeEventListener("keydown", escClose); }
+  // ---- modal (WAI-ARIA dialog: labelled, focus-trapped, restores focus) ----
+  let _modalReturnFocus = null;
+  function focusables(root) {
+    return [...root.querySelectorAll('button,a[href],select,input,textarea,[tabindex]:not([tabindex="-1"])')]
+      .filter((x) => !x.disabled && x.offsetParent !== null);
+  }
+  function onModalKey(e) {
+    if (e.key === "Escape") { closeModal(); return; }
+    if (e.key !== "Tab") return;
+    const m = $("#tfModal .modal"); if (!m) return;
+    const f = focusables(m); if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  function closeModal() {
+    const m = $("#tfModal"); if (m) m.remove();
+    document.removeEventListener("keydown", onModalKey);
+    const main = $("main"); if (main) main.removeAttribute("aria-hidden");
+    if (_modalReturnFocus && _modalReturnFocus.focus) { try { _modalReturnFocus.focus(); } catch (e) { /* gone */ } }
+    _modalReturnFocus = null;
+  }
   function openModal(title, bodyNode, opts) {
     closeModal();
+    _modalReturnFocus = document.activeElement;
+    const titleId = "tfModalTitle";
     const backdrop = el("div", { class: "modal-backdrop", id: "tfModal", onclick: (e) => { if (e.target === backdrop) closeModal(); } });
-    const header = el("header", null, [
-      el("h3", { text: title }),
-      el("button", { class: "icon-btn close", onclick: closeModal, title: "Close (Esc)", html: "&times;" }),
-    ]);
-    backdrop.append(el("div", { class: "modal" + (opts && opts.wide ? " wide" : "") }, [header, el("div", { class: "body" }, bodyNode)]));
+    const closeBtn = el("button", { class: "icon-btn close", onclick: closeModal, title: "Close (Esc)", "aria-label": "Close dialog", html: "&times;" });
+    const header = el("header", null, [el("h3", { id: titleId, text: title }), closeBtn]);
+    const modal = el("div", { class: "modal" + (opts && opts.wide ? " wide" : ""), role: "dialog", "aria-modal": "true", "aria-labelledby": titleId },
+      [header, el("div", { class: "body" }, bodyNode)]);
+    backdrop.append(modal);
     document.body.append(backdrop);
-    document.addEventListener("keydown", escClose);
+    const main = $("main"); if (main) main.setAttribute("aria-hidden", "true");
+    document.addEventListener("keydown", onModalKey);
+    closeBtn.focus();
   }
 
   // ---- theme (shared 'tf-theme' key with the docs landing page) -----------
@@ -134,6 +173,7 @@
     const m = currentTheme();
     b.innerHTML = m === "light" ? "&#9728;" : m === "dark" ? "&#9789;" : "&#9681;";
     b.title = "Theme: " + m + " (click to change)";
+    b.setAttribute("aria-label", "Colour theme: " + m + ", click to change");
   }
 
   // ---- Graphviz (DOT -> SVG), lazily loaded -------------------------------
@@ -173,7 +213,7 @@
   }
   function tableSection(title, columns, rows, opts) {
     const thead = el("thead", null, el("tr", null,
-      columns.map((c) => el("th", { class: colClass(c), text: c.label || c }))));
+      columns.map((c) => el("th", { class: colClass(c), scope: "col", text: c.label || c }))));
     const tbody = el("tbody", null, rows.map((r) =>
       el("tr", null, columns.map((c) => {
         const key = c.key || c;
@@ -181,7 +221,8 @@
         if (c.pill) return el("td", { class: colClass(c) }, pill(v));
         return el("td", { class: colClass(c) }, c.num ? num(v) : (Array.isArray(v) ? v.join(", ") : (v === "" || v == null ? "—" : String(v))));
       }))));
-    return { kind: "node", node: wrapSection(title, opts && opts.extra, el("table", { class: "grid" }, [thead, tbody])) };
+    const table = el("div", { class: "tablewrap" }, el("table", { class: "grid" }, [thead, tbody]));
+    return { kind: "node", node: wrapSection(title, opts && opts.extra, table) };
   }
   function kvSection(title, items) {
     const tbody = el("tbody", null, items.map(([k, v]) =>
@@ -189,7 +230,7 @@
         el("td", { class: "cell kvk", text: k }),
         el("td", { class: "cell grow" }, v && v.nodeType ? v : document.createTextNode(String(v))),
       ])));
-    return { kind: "node", node: wrapSection(title, null, el("table", { class: "grid kv" }, tbody)) };
+    return { kind: "node", node: wrapSection(title, null, el("div", { class: "tablewrap" }, el("table", { class: "grid kv" }, tbody))) };
   }
   function wrapSection(title, extraControls, body) {
     const head = el("div", { class: "sh" }, [el("span", { text: title || "" }), el("span", { class: "grow" })]);
@@ -198,11 +239,14 @@
   }
 
   function figureSection(title, svgString, baseName) {
-    const fig = el("div", { class: "figure", html: svgString });
+    const fig = el("div", { class: "figure", role: "img", "aria-label": title, html: svgString });
     const svgEl = fig.querySelector("svg");
     const btnSvg = el("button", { class: "btn ghost sm", onclick: () => download(baseName + ".svg", svgString, "image/svg+xml") }, "SVG");
     const btnPng = el("button", { class: "btn ghost sm", onclick: () => exportPng(svgEl, baseName) }, "PNG");
     return { kind: "node", node: wrapSection(title, [btnSvg, btnPng], fig) };
+  }
+  function jsonBtn(filename, obj) {
+    return el("button", { class: "btn ghost sm", onclick: () => download(filename, JSON.stringify(obj, null, 2), "application/json") }, "JSON");
   }
   function textSection(title, content, downloadName, mime) {
     const pre = el("pre", { class: "text", text: content });
@@ -219,8 +263,10 @@
       let w = 0, h = 0;
       const vb = (clone.getAttribute("viewBox") || "").split(/[ ,]+/).map(Number);
       if (vb.length === 4) { w = vb[2]; h = vb[3]; }
-      w = (parseFloat(clone.getAttribute("width")) || w || svgEl.clientWidth || 600);
-      h = (parseFloat(clone.getAttribute("height")) || h || svgEl.clientHeight || 400);
+      w = parseFloat(clone.getAttribute("width")) || w || svgEl.clientWidth || 0;
+      h = parseFloat(clone.getAttribute("height")) || h || svgEl.clientHeight || 0;
+      if (!w || !h) { try { const bb = svgEl.getBBox(); w = w || Math.ceil(bb.width); h = h || Math.ceil(bb.height); } catch (e) { /* not laid out */ } }
+      if (!w || !h) { w = w || 600; h = h || 400; toast("PNG size could not be determined; used " + w + "×" + h); }
       clone.setAttribute("width", w); clone.setAttribute("height", h);
       const data = new XMLSerializer().serializeToString(clone);
       const img = new Image();
@@ -229,7 +275,7 @@
       const scale = 2;
       const canvas = el("canvas"); canvas.width = Math.ceil(w * scale); canvas.height = Math.ceil(h * scale);
       const ctx = canvas.getContext("2d");
-      ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = FIG.paper; ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.setTransform(scale, 0, 0, scale, 0, 0);
       ctx.drawImage(img, 0, 0, w, h);
       URL.revokeObjectURL(svgUrl);
@@ -249,14 +295,14 @@
     const y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * (H - pad.t - pad.b);
     const colors = ["#2fa392", "#d98a14", "#4e79a7", "#b5446e", "#6a8f3a", "#8a5fc0", "#c0563a"];
     const parts = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="system-ui,sans-serif" font-size="12">`];
-    parts.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`);
+    parts.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="${FIG.paper}"/>`);
     // axes
-    parts.push(`<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${H - pad.b}" stroke="#bbb"/>`);
-    parts.push(`<line x1="${pad.l}" y1="${H - pad.b}" x2="${W - pad.r}" y2="${H - pad.b}" stroke="#bbb"/>`);
-    parts.push(`<text x="${pad.l - 6}" y="${y(hi)}" text-anchor="end" fill="#666">${hi.toFixed(2)}</text>`);
-    parts.push(`<text x="${pad.l - 6}" y="${y(lo)}" text-anchor="end" fill="#666">${lo.toFixed(2)}</text>`);
-    parts.push(`<text x="${pad.l}" y="${H - 8}" fill="#666">step 0</text>`);
-    parts.push(`<text x="${W - pad.r}" y="${H - 8}" text-anchor="end" fill="#666">step ${n - 1}</text>`);
+    parts.push(`<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${H - pad.b}" stroke="${FIG.axis}"/>`);
+    parts.push(`<line x1="${pad.l}" y1="${H - pad.b}" x2="${W - pad.r}" y2="${H - pad.b}" stroke="${FIG.axis}"/>`);
+    parts.push(`<text x="${pad.l - 6}" y="${y(hi)}" text-anchor="end" fill="${FIG.muted}">${hi.toFixed(2)}</text>`);
+    parts.push(`<text x="${pad.l - 6}" y="${y(lo)}" text-anchor="end" fill="${FIG.muted}">${lo.toFixed(2)}</text>`);
+    parts.push(`<text x="${pad.l}" y="${H - 8}" fill="${FIG.muted}">step 0</text>`);
+    parts.push(`<text x="${W - pad.r}" y="${H - 8}" text-anchor="end" fill="${FIG.muted}">step ${n - 1}</text>`);
     for (let s = 0; s < m; s++) {
       const col = colors[s % colors.length];
       let d = "";
@@ -264,7 +310,7 @@
       parts.push(`<path d="${d.trim()}" fill="none" stroke="${col}" stroke-width="2"/>`);
       const ly = pad.t + 6 + s * 18;
       parts.push(`<rect x="${W - pad.r + 8}" y="${ly - 9}" width="11" height="11" rx="2" fill="${col}"/>`);
-      parts.push(`<text x="${W - pad.r + 24}" y="${ly}" fill="#333">${esc(states[s])}</text>`);
+      parts.push(`<text x="${W - pad.r + 24}" y="${ly}" fill="${FIG.ink}">${esc(states[s])}</text>`);
     }
     parts.push("</svg>");
     return parts.join("\n");
@@ -286,21 +332,45 @@
         [{ key: "id", label: "item" }, { key: "status", label: "status", pill: true },
          { key: "score", label: "score", num: true }, { key: "weight", label: "weight", num: true },
          { key: "severity_if_fail", label: "severity if fail", grow: true }],
-        asArr(rep.items)));
+        asArr(rep.items), { extra: [jsonBtn(theoryId + ".report.json", rep)] }));
+    } else if (opId === "validate") {
+      const v = raw;
+      if (v.ok) {
+        sections.push({ kind: "node", node: wrapSection("Validation", null,
+          el("div", { class: "valid-ok", role: "status" }, "✓ Valid — the theory passes structural validation.")) });
+      } else {
+        const errs = String(v.message || "invalid theory object").replace(/^invalid theory object:\s*/i, "").split(/;\s*/).filter(Boolean);
+        sections.push({ kind: "node", node: wrapSection("Validation", null,
+          el("div", { class: "error", role: "alert" }, [
+            el("div", { class: "et", text: "Invalid theory — " + errs.length + " problem" + (errs.length === 1 ? "" : "s") }),
+            el("ul", { class: "err-list" }, errs.map((e) => el("li", null, e))),
+          ])) });
+      }
+    } else if (opId === "appraise") {
+      const r = raw;
+      const priorName = (RT.examples.find((e) => e.path === params.prior) || {}).name || params.prior || "—";
+      sections.push(kvSection("Appraisal", [["Verdict", pill(r.verdict)], ["Prior version", priorName]]));
+      sections.push(tableSection("Detail",
+        [{ key: "k", label: "category" }, { key: "v", label: "ids", grow: true }],
+        [
+          { k: "New predictions", v: asArr(r.new_predictions).join(", ") || "—" },
+          { k: "Corroborated new", v: asArr(r.corroborated_new).join(", ") || "—" },
+          { k: "Ad-hoc assumptions", v: asArr(r.ad_hoc_assumptions).join(", ") || "—" },
+        ], { extra: [jsonBtn(theoryId + ".appraisal.json", r)] }));
     } else if (opId === "severity") {
       const rows = asArr(raw.rows);
       sections.push(figureSection("Severity chart", raw.svg, theoryId + ".severity"));
       if (rows.length) sections.push(tableSection("Per-prediction severity",
         [{ key: "prediction_id", label: "prediction" }, { key: "type", label: "type" },
          { key: "risk_score", label: "risk", num: true }, { key: "computed_severity", label: "computed severity", num: true }],
-        rows));
+        rows, { extra: [jsonBtn(theoryId + ".severity.json", rows)] }));
       else sections.push({ kind: "node", node: wrapSection("Per-prediction severity", null, el("p", { class: "note", text: "This theory has no predictions." })) });
     } else if (opId === "redundancy") {
       const rows = asArr(raw.rows);
       if (rows.length) sections.push(tableSection("Construct pairs (descending similarity)",
         [{ key: "a", label: "construct a" }, { key: "b", label: "construct b" },
          { key: "similarity", label: "Jaccard", num: true }, { key: "flag", label: "flag", pill: true }],
-        rows));
+        rows, { extra: [jsonBtn(theoryId + ".redundancy.json", rows)] }));
       else sections.push({ kind: "node", node: wrapSection("Redundancy screen", null, el("p", { class: "note", text: "Fewer than two constructs — no pairs to compare." })) });
     } else if (opId === "diagram") {
       const ir = raw.ir, type = params.type;
@@ -366,10 +436,23 @@
     } catch (e) { /* quota or private mode — non-fatal */ }
   }
   function loadSaved() { try { return JSON.parse(localStorage.getItem(stateKey()) || "null"); } catch (e) { return null; } }
-  async function fetchSource(path) { try { return await (await fetch("vendor/" + path)).text(); } catch (e) { return null; } }
+  async function fetchSource(path) {
+    const r = await fetch("vendor/" + path);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.text();
+  }
+  // Fetch an example's source, recording a fetch error distinctly from "no source".
+  async function exampleSource(name, path) {
+    try { return { name, text: await fetchSource(path) }; }
+    catch (e) { return { name, text: null, error: (e && e.message) || String(e) }; }
+  }
 
   function openSource() {
-    if (!STATE.source || STATE.source.text == null) { toast("Source is not available for this input"); return; }
+    if (!STATE.source) { toast("No theory loaded"); return; }
+    if (STATE.source.text == null) {
+      toast(STATE.source.error ? "Could not fetch source (" + STATE.source.error + ")" : "No source available for this input");
+      return;
+    }
     const { name, text } = STATE.source;
     const actions = el("div", { class: "modal-actions" }, [
       el("button", { class: "btn ghost sm", onclick: () => copyText(text) }, "Copy"),
@@ -395,6 +478,9 @@
       el("ul", { class: "help-ops" }, OPS.map((op) =>
         el("li", null, [el("b", null, op.label), document.createTextNode(" — " + (op.help || op.desc))]))),
       el("p", { class: "note" }, "The literature operations use a bundled demonstration corpus."),
+      el("p", { class: "note" }, "The package's network and credentialed adapters — the OpenAlex corpus fetch, the embedding-based " +
+        "redundancy screen and the OSF deposit — are intentionally not offered here; they need a live connection, an embedding model or " +
+        "credentials, so they belong in the desktop package."),
     ]);
     openModal("How to use this app", body, { wide: true });
   }
@@ -415,18 +501,20 @@
   }
 
   function buildHeader() {
-    const toggle = el("button", { class: "icon-btn", id: "themeToggle", onclick: cycleTheme, title: "Theme" });
-    const help = el("button", { class: "icon-btn", id: "helpBtn", onclick: openHelp, title: "How to use this app", html: "?" });
+    const toggle = el("button", { class: "icon-btn", id: "themeToggle", onclick: cycleTheme, title: "Theme", "aria-label": "Toggle colour theme" });
+    const help = el("button", { class: "icon-btn", id: "helpBtn", onclick: openHelp, title: "How to use this app", "aria-label": "How to use this app", html: "?" });
     return el("header", { class: "app" }, [
       el("span", { html: HEX_LOGO }),
       el("div", { class: "titles" }, [
-        el("span", { class: "t", text: "theoryforge" }),
+        el("h1", { class: "t", text: "theoryforge" }),
         el("span", { class: "s", text: "Interactive app · runs the " + RT.langLabel + " package in your browser" }),
       ]),
       el("span", { class: "badge", text: RT.langLabel }),
       el("span", { class: "grow" }),
-      el("a", { class: "doclink", href: RT.docsUrl, target: "_blank", rel: "noopener" }, "Docs ↗"),
-      el("a", { class: "doclink", href: "https://github.com/pablobernabeu/theoryforge", target: "_blank", rel: "noopener" }, "GitHub ↗"),
+      el("nav", { class: "navlinks", "aria-label": "External links" }, [
+        el("a", { class: "doclink", href: RT.docsUrl, target: "_blank", rel: "noopener" }, "Docs ↗"),
+        el("a", { class: "doclink", href: "https://github.com/pablobernabeu/theoryforge", target: "_blank", rel: "noopener" }, "GitHub ↗"),
+      ]),
       help, toggle,
     ]);
   }
@@ -452,10 +540,10 @@
     const fileInput = el("input", { type: "file", id: "fileInput", accept: ".yaml,.yml,.json", onchange: onFileChange });
     const summaryWrap = el("div", { id: "summaryWrap" }, summaryCard(STATE.summary));
 
-    const opGrid = el("div", { class: "ops", id: "opGrid" }, OPS.map((op) =>
+    const opGrid = el("div", { class: "ops", id: "opGrid", role: "group", "aria-label": "Operation" }, OPS.map((op) =>
       el("button", {
         class: "op" + (op.id === STATE.opId ? " active" : ""), "data-op": op.id,
-        onclick: () => selectOp(op.id),
+        onclick: () => selectOp(op.id), "aria-pressed": op.id === STATE.opId ? "true" : "false",
         disabled: op.corpus && !RT.hasCorpus() ? "" : null,
         title: op.corpus && !RT.hasCorpus() ? "Needs a corpus" : op.desc,
       }, [el("span", { class: "on", text: op.label }), el("span", { class: "od", text: op.desc })])));
@@ -488,7 +576,7 @@
     return el("div", null, [
       el("div", { class: "panel" }, [
         el("div", { class: "outhead" }, [el("h2", { id: "outTitle" }, "Result"), el("span", { class: "grow" })]),
-        el("div", { id: "output" }, el("p", { class: "note", html:
+        el("div", { id: "output", "aria-live": "polite", "aria-atomic": "false" }, el("p", { class: "note", html:
           "Pick a theory and an operation on the left, then press <b>Run</b>. Each result can be exported as a figure (SVG / PNG) and as " +
           RT.langLabel + " code. New here? Open <b>?</b> in the top bar for a quick tour." })),
       ]),
@@ -512,15 +600,21 @@
     const rows = el("div", { class: "row" });
     let inRow = false;
     for (const p of op.params) {
-      if (STATE.params[p.id] === undefined) STATE.params[p.id] = p.default;
       let input;
       if (p.type === "select") {
+        if (!p.options.includes(STATE.params[p.id])) STATE.params[p.id] = p.default;  // drop stale persisted value
         input = el("select", { onchange: (e) => { STATE.params[p.id] = e.target.value; saveState(); } },
           p.options.map((o) => el("option", { value: o, selected: o === STATE.params[p.id] ? "" : null }, o)));
+      } else if (p.type === "theory") {
+        const opts = RT.examples.map((e) => ({ value: e.path, label: e.name }));
+        if (!opts.some((o) => o.value === STATE.params[p.id])) STATE.params[p.id] = opts.length ? opts[0].value : null;
+        input = el("select", { onchange: (e) => { STATE.params[p.id] = e.target.value; saveState(); } },
+          opts.map((o) => el("option", { value: o.value, selected: o.value === STATE.params[p.id] ? "" : null }, o.label)));
       } else {
+        STATE.params[p.id] = clampNum(STATE.params[p.id] === undefined ? "" : STATE.params[p.id], p);  // clamp persisted value
         input = el("input", {
           type: "number", value: STATE.params[p.id], min: p.min, max: p.max, step: p.step,
-          oninput: (e) => { STATE.params[p.id] = e.target.value === "" ? p.default : Number(e.target.value); saveState(); },
+          oninput: (e) => { STATE.params[p.id] = clampNum(e.target.value, p); saveState(); },
         });
       }
       const field = el("label", { class: "field", style: "margin:0" }, [el("span", null, p.label), input]);
@@ -529,10 +623,21 @@
     }
     if (inRow) wrap.append(rows);
   }
+  function clampNum(raw, p) {
+    let n = raw === "" ? p.default : Number(raw);
+    if (!Number.isFinite(n)) n = p.default;
+    if (typeof p.min === "number") n = Math.max(p.min, n);
+    if (typeof p.max === "number") n = Math.min(p.max, n);
+    return n;
+  }
 
   function selectOp(id) {
     STATE.opId = id;
-    for (const b of document.querySelectorAll(".op")) b.classList.toggle("active", b.getAttribute("data-op") === id);
+    for (const b of document.querySelectorAll(".op")) {
+      const on = b.getAttribute("data-op") === id;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    }
     updateOpHelp(); renderParams(); saveState();
   }
 
@@ -542,7 +647,7 @@
     await withBusy("Loading " + ex.name + "…", async () => {
       STATE.summary = await RT.loadExample(ex.path);
       STATE.input = { mode: "example", index: idx };
-      STATE.source = { name: ex.path.split("/").pop(), text: await fetchSource(ex.path) };
+      STATE.source = await exampleSource(ex.path.split("/").pop(), ex.path);
       $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
       $("#fileInput").value = "";
       updateExampleDesc(); saveState();
@@ -566,15 +671,22 @@
 
   function errorBox(title, err) {
     const msg = (err && (err.message || err.toString())) || String(err);
-    return el("div", { class: "error" }, [el("div", { class: "et", text: title }), el("div", { text: msg })]);
+    return el("div", { class: "error", role: "alert" }, [el("div", { class: "et", text: title }), el("div", { text: msg })]);
   }
 
   let busy = false;
   async function withBusy(label, fn) {
     if (busy) return; busy = true;
     const btn = $("#runBtn"); const prev = btn ? btn.textContent : "";
-    if (btn) { btn.disabled = true; }
-    try { await fn(); } finally { busy = false; if (btn) { btn.disabled = false; btn.textContent = prev; } }
+    // Lock all theory/operation controls so the UI cannot desync mid-flight.
+    const controls = [...document.querySelectorAll("#exampleSel, #fileInput, #viewSrc, #runBtn, .op")];
+    for (const c of controls) { c.setAttribute("data-busywas", c.disabled ? "1" : "0"); c.disabled = true; }
+    if (btn && label) btn.textContent = label;
+    try { await fn(); } finally {
+      busy = false;
+      for (const c of controls) { if (c.getAttribute("data-busywas") === "0") c.disabled = false; c.removeAttribute("data-busywas"); }
+      if (btn) btn.textContent = prev;
+    }
   }
 
   async function runOp() {
@@ -639,7 +751,7 @@
     // Ensure the example source is available for the source viewer.
     if (STATE.input.mode === "example" && !STATE.source) {
       const ex = RT.examples[STATE.input.index];
-      STATE.source = { name: ex.path.split("/").pop(), text: await fetchSource(ex.path) };
+      STATE.source = await exampleSource(ex.path.split("/").pop(), ex.path);
     }
     // Reflect the restored selection in the UI.
     const sel = $("#exampleSel");
@@ -664,8 +776,9 @@
       const info = await RT.init(onProgress);
       RT.examples = info.examples; RT.version = info.version;
       STATE.summary = info.summary || null;
+      document.body.append(el("a", { class: "skip-link", href: "#main" }, "Skip to content"));
       document.body.append(buildHeader());
-      const main = el("main", null, [buildSidebar(), buildMain()]);
+      const main = el("main", { id: "main", tabindex: "-1" }, [buildSidebar(), buildMain()]);
       document.body.append(main);
       document.body.append(el("footer", { class: "app", html:
         "theoryforge " + esc(RT.version || "") + " · running entirely client-side via " + esc(RT.engineLabel) +
@@ -674,11 +787,15 @@
       await applyRestore(onProgress);
       $("#boot").classList.add("hidden");
     } catch (err) {
-      onProgress("Startup failed: " + (err && err.message || err));
-      const b = $("#boot"); if (b) { b.querySelector(".spinner").style.display = "none"; }
       console.error(err);
+      const b = $("#boot");
+      if (b) b.replaceChildren(el("div", { class: "boot-error", role: "alert" }, [
+        el("div", { class: "bt", text: "The app could not start" }),
+        el("p", { class: "note", text: "Loading the " + RT.langLabel + " runtime failed: " + (err && err.message || err) }),
+        el("button", { class: "btn", onclick: () => location.reload() }, "Reload"),
+      ]));
     }
   }
 
-  window.TF = { start, OPS, util: { el, esc, download, copyText, toast, renderDot } };
+  window.TF = { start, OPS, DIAG_SVG, util: { el, esc, download, copyText, toast, renderDot } };
 })();
