@@ -36,6 +36,8 @@ const EXAMPLES = [
     desc: "An amended version of the panic theory at the testing stage, with a fourth prediction and test outcomes." },
   { name: "Self-determination theory (developing)", file: "self-determination.theory.yaml", src: APP_EXAMPLES,
     desc: "Three basic needs driving intrinsic motivation. A solid theory with one precision warning." },
+  { name: "Effort-recovery regulation (developing)", file: "effort-recovery.theory.yaml", src: APP_EXAMPLES,
+    desc: "A negative feedback loop. Its constructs follow distinct, oscillating trajectories under simulation, so the curves do not coincide." },
   { name: "Deliberately weak theory (draft)", file: "weak-theory.theory.yaml", src: FIXTURES,
     desc: "An underspecified draft kept as a worked example of what the checklist catches — it is blocked." },
 ];

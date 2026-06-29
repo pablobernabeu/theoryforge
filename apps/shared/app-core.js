@@ -274,37 +274,199 @@
     } catch (e) { toast("PNG export failed"); console.error(e); }
   }
 
-  // trajectory line chart (SVG) for simulate
+  // Group state indices whose trajectories are numerically identical across every
+  // step. Symmetric networks collapse several constructs onto one curve, so the
+  // chart and the interpretation both need to know which series coincide.
+  function coincidenceGroups(states, trajectory) {
+    const sig = (s) => trajectory.map((row) => row[s]).join(",");
+    const seen = new Map();
+    for (let s = 0; s < states.length; s++) {
+      const k = sig(s);
+      if (!seen.has(k)) seen.set(k, []);
+      seen.get(k).push(s);
+    }
+    return [...seen.values()];
+  }
+
+  // trajectory line chart (SVG) for simulate. Each construct has its own colour
+  // and dash pattern; coincident constructs are nudged apart by a couple of
+  // pixels (disclosed in the interpretation) so every series stays visible while
+  // the table below keeps the exact values.
+  const TRAJ_COLORS = ["#2fa392", "#d98a14", "#4e79a7", "#b5446e", "#6a8f3a", "#8a5fc0", "#c0563a"];
+  const TRAJ_DASHES = ["", "5 3", "1 3", "7 3 1 3", "3 3", "9 4", "2 2"];
   function trajectoryChart(states, trajectory) {
-    const W = 540, H = 300, pad = { l: 44, r: 110, t: 16, b: 28 };
     const n = trajectory.length, m = states.length;
+    const shown = states.map((s) => { s = String(s); return s.length > 30 ? s.slice(0, 29) + "…" : s; });
+    const maxLabel = shown.reduce((a, s) => Math.max(a, s.length), 0);
+    const padR = Math.min(244, Math.max(96, 36 + Math.ceil(maxLabel * 6.6)));
+    const pad = { l: 48, r: padR, t: 16, b: 30 };
+    const W = pad.l + 380 + pad.r, H = Math.max(300, pad.t + pad.b + m * 18 + 8);
+    // Scale to the finite extremes only. A positive-feedback theory can overflow
+    // the Euler integrator to Infinity/NaN under the parameters the UI allows;
+    // those samples must not poison the range or the path.
     let lo = Infinity, hi = -Infinity;
-    for (const row of trajectory) for (const v of row) { if (v < lo) lo = v; if (v > hi) hi = v; }
-    if (!isFinite(lo)) { lo = 0; hi = 1; }
+    for (const row of trajectory) for (const v of row) { if (Number.isFinite(v)) { if (v < lo) lo = v; if (v > hi) hi = v; } }
+    if (!isFinite(lo) || !isFinite(hi)) { lo = 0; hi = 1; }
     if (hi - lo < 1e-9) { hi += 1; lo -= 1; }
     const x = (i) => pad.l + (i / Math.max(1, n - 1)) * (W - pad.l - pad.r);
     const y = (v) => pad.t + (1 - (v - lo) / (hi - lo)) * (H - pad.t - pad.b);
-    const colors = ["#2fa392", "#d98a14", "#4e79a7", "#b5446e", "#6a8f3a", "#8a5fc0", "#c0563a"];
+    // small symmetric offset within each coincident group so the lines separate
+    const offset = new Array(m).fill(0);
+    for (const g of coincidenceGroups(states, trajectory)) {
+      if (g.length > 1) g.forEach((s, k) => (offset[s] = (k - (g.length - 1) / 2) * 2.4));
+    }
     const parts = [`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" font-family="system-ui,sans-serif" font-size="12">`];
     parts.push(`<rect x="0" y="0" width="${W}" height="${H}" fill="${FIG.paper}"/>`);
+    // horizontal gridlines with value labels (five levels)
+    for (let t = 0; t <= 4; t++) {
+      const val = lo + (hi - lo) * (t / 4), yy = y(val);
+      parts.push(`<line x1="${pad.l}" y1="${yy.toFixed(1)}" x2="${(W - pad.r).toFixed(1)}" y2="${yy.toFixed(1)}" stroke="${FIG.axis}" stroke-opacity="0.5"/>`);
+      parts.push(`<text x="${pad.l - 6}" y="${(yy + 3.5).toFixed(1)}" text-anchor="end" fill="${FIG.muted}">${val.toFixed(2)}</text>`);
+    }
     // axes
     parts.push(`<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${H - pad.b}" stroke="${FIG.axis}"/>`);
     parts.push(`<line x1="${pad.l}" y1="${H - pad.b}" x2="${W - pad.r}" y2="${H - pad.b}" stroke="${FIG.axis}"/>`);
-    parts.push(`<text x="${pad.l - 6}" y="${y(hi)}" text-anchor="end" fill="${FIG.muted}">${hi.toFixed(2)}</text>`);
-    parts.push(`<text x="${pad.l - 6}" y="${y(lo)}" text-anchor="end" fill="${FIG.muted}">${lo.toFixed(2)}</text>`);
-    parts.push(`<text x="${pad.l}" y="${H - 8}" fill="${FIG.muted}">step 0</text>`);
-    parts.push(`<text x="${W - pad.r}" y="${H - 8}" text-anchor="end" fill="${FIG.muted}">step ${n - 1}</text>`);
+    // x labels: first, middle, last step
+    const xt = n > 1 ? [[0, "start"], [Math.round((n - 1) / 2), "middle"], [n - 1, "end"]] : [[0, "start"]];
+    for (const [i, anchor] of xt) parts.push(`<text x="${x(i).toFixed(1)}" y="${H - 10}" text-anchor="${anchor}" fill="${FIG.muted}">step ${i}</text>`);
     for (let s = 0; s < m; s++) {
-      const col = colors[s % colors.length];
-      let d = "";
-      for (let i = 0; i < n; i++) d += (i ? "L" : "M") + x(i).toFixed(1) + " " + y(trajectory[i][s]).toFixed(1) + " ";
-      parts.push(`<path d="${d.trim()}" fill="none" stroke="${col}" stroke-width="2"/>`);
-      const ly = pad.t + 6 + s * 18;
-      parts.push(`<rect x="${W - pad.r + 8}" y="${ly - 9}" width="11" height="11" rx="2" fill="${col}"/>`);
-      parts.push(`<text x="${W - pad.r + 24}" y="${ly}" fill="${FIG.ink}">${esc(states[s])}</text>`);
+      const col = TRAJ_COLORS[s % TRAJ_COLORS.length], dash = TRAJ_DASHES[s % TRAJ_DASHES.length], off = offset[s];
+      const da = dash ? ` stroke-dasharray="${dash}"` : "";
+      let d = "", pen = false;
+      for (let i = 0; i < n; i++) {
+        const v = trajectory[i][s];
+        if (!Number.isFinite(v)) { pen = false; continue; }   // break the line across non-finite samples
+        d += (pen ? "L" : "M") + x(i).toFixed(1) + " " + (y(v) + off).toFixed(1) + " ";
+        pen = true;
+      }
+      parts.push(`<path d="${d.trim()}" fill="none" stroke="${col}" stroke-width="2"${da} stroke-linejoin="round"/>`);
+      const ly = pad.t + 10 + s * 18, lx = W - pad.r + 8;
+      parts.push(`<line x1="${lx}" y1="${ly - 4}" x2="${lx + 22}" y2="${ly - 4}" stroke="${col}" stroke-width="2.5"${da}/>`);
+      parts.push(`<text x="${lx + 28}" y="${ly}" fill="${FIG.ink}">${esc(shown[s])}</text>`);
     }
     parts.push("</svg>");
     return parts.join("\n");
+  }
+
+  // General "how to read" guidance shown at the top of each operation's result.
+  // It complements the sidebar help (what the operation does) by explaining how
+  // to read the output that follows.
+  const RESULT_GUIDE = {
+    check: "The checklist scores twelve facets of rigour and combines them into an overall score and a gate. Read the gate first. Pass means the theory is ready to test, advisory means it is usable with the noted gaps, and blocked means a must-fix criterion is unmet. The grid below shows each item's status.",
+    validate: "Validation reports structural and referential problems: missing required fields, values outside the allowed set, duplicate identifiers and cross-references that point to nothing. A valid theory is the precondition for every other operation.",
+    diagram: "The diagram is rendered from the package's intermediate representation, shown below the figure. Export the figure as SVG or PNG, or copy the representation to render it elsewhere.",
+    severity: "Severity grades each prediction by how much a passing test would corroborate the theory. The risk score reflects how committal the claim is. The computed severity adjusts it down for merely directional claims and up for claims that discriminate between rival theories. Longer bars are stronger tests.",
+    redundancy: "Each pair of constructs is compared by the word overlap of their definitions, the Jaccard index, which runs from 0 to 1. Pairs above the threshold are flagged for review, because near-duplicate constructs blur a theory and inflate its apparent scope.",
+    appraise: "Following Lakatos, an amendment is progressive when it adds independently testable content that survives testing, and degenerating when it mainly adds assumptions that shield the theory from refutation. The verdict and its components appear below.",
+    sem: "The constructs become a measurement model and the propositions a structural model, expressed in lavaan syntax. Paste it into an SEM fit in R or other lavaan-compatible software.",
+    preregister: "The preregistration lists each hypothesis with its derivation and severity, in file order, ready to timestamp before data collection.",
+    dossier: "The dossier gathers the rigour report, severity, provenance and preregistration into one reviewer-facing document.",
+    simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, causes, mediates) or down (decreases) in proportion to another, and every construct decays towards zero at the damping rate. The chart traces the values from the initial state. The table below holds the exact numbers.",
+    litmap: "The bundled corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked.",
+    landscape: "The theory and its rivals are placed against the corpus themes. Under-theorised fronts are themes no theory addresses. Redundancy risk marks crowded themes where a new theory would add little.",
+  };
+  const fmtNum = (x) => (typeof x === "number" ? (Number.isInteger(x) ? String(x) : x.toFixed(2)) : String(x));
+  const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+
+  // A result-specific sentence that reads the actual output, to help interpret it.
+  function interpret(opId, raw, params) {
+    const S = STATE.summary || {}, c = S.counts || {};
+    if (opId === "check") {
+      const r = raw.report, items = asArr(r.items);
+      const by = (st) => items.filter((i) => i.status === st).length;
+      const gate = { pass: "passes the gate", advisory: "clears the gate with advisories", blocked: "is blocked" }[r.gate] || ("gate " + r.gate);
+      const blockers = r.n_blockers_failed > 0 ? ", with " + plural(r.n_blockers_failed, "blocking item") + " unmet." : ", and no blocking item is unmet.";
+      return "This theory scores " + fmtNum(r.aggregate_score) + " out of 100 and " + gate + ". Of " + items.length + " items, " + by("pass") + " pass, " + by("warn") + " warn and " + by("fail") + " fail" + blockers;
+    }
+    if (opId === "validate") {
+      if (raw.ok) return "The theory is structurally valid and every internal reference resolves.";
+      const errs = String(raw.message || "").replace(/^invalid theory object:\s*/i, "").split(/;\s*/).filter(Boolean);
+      return "Validation found " + plural(errs.length, "problem") + ". Each one is listed below.";
+    }
+    if (opId === "severity") {
+      const rows = asArr(raw.rows);
+      if (!rows.length) return "This theory has no predictions to grade.";
+      const sev = rows.map((r) => Number(r.computed_severity));
+      const top = rows[sev.indexOf(Math.max(...sev))];
+      const mean = sev.reduce((a, b) => a + b, 0) / sev.length;
+      return "Across " + plural(rows.length, "prediction") + ", computed severity runs from " + Math.min(...sev).toFixed(2) + " to " + Math.max(...sev).toFixed(2) + " (mean " + mean.toFixed(2) + "). The strongest test is " + top.prediction_id + ".";
+    }
+    if (opId === "redundancy") {
+      const rows = asArr(raw.rows);
+      if (!rows.length) return "There are fewer than two constructs, so there are no pairs to compare.";
+      const flagged = rows.filter((r) => String(r.flag) === "review").length;
+      const top = rows[0];
+      const lead = flagged ? plural(flagged, "pair") + " of " + rows.length + " exceed the threshold and are flagged for review." : "No pair exceeds the threshold.";
+      return lead + " The most similar pair is " + top.a + " and " + top.b + " (Jaccard " + fmtNum(top.similarity) + ").";
+    }
+    if (opId === "appraise") {
+      const r = raw, np = asArr(r.new_predictions).length, cn = asArr(r.corroborated_new).length, ah = asArr(r.ad_hoc_assumptions).length;
+      return "The amendment is " + r.verdict + ". It introduces " + plural(np, "new prediction") + ", of which " + cn + (cn === 1 ? " is" : " are") + " corroborated, and " + plural(ah, "ad-hoc assumption") + ".";
+    }
+    if (opId === "sem") return "The measurement model covers " + plural(c.constructs || 0, "construct") + " and the structural model " + plural(c.propositions || 0, "proposition") + ".";
+    if (opId === "preregister") { const k = c.predictions || 0; return "The document preregisters " + k + (k === 1 ? " hypothesis." : " hypotheses."); }
+    if (opId === "dossier") return "The dossier bundles the rigour report, severity, provenance and preregistration for " + (S.title || S.id || "this theory") + ".";
+    if (opId === "diagram") {
+      const t = String(params.type || "");
+      const name = t.replace(/_/g, " ");
+      const byType = {
+        rigor: "A status grid of the twelve rigour checklist items and the overall gate.",
+        severity: "Severity bars for the theory's " + plural(c.predictions || 0, "prediction") + ".",
+        venn: "Overlap of the boundary conditions declared on the theory's constructs (up to three).",
+        provenance: "The recorded build steps in order.",
+        pipeline: "Each prediction linked to its recorded test outcome.",
+        development_roadmap: "The checklist items not yet passing.",
+      };
+      return byType[t] || ("A " + name + " diagram built from " + plural(c.constructs || 0, "construct") + " and " + plural(c.propositions || 0, "proposition") + ".");
+    }
+    if (opId === "simulate") {
+      const r = raw.result, states = asArr(r.states), traj = asArr(r.trajectory).map(asArr);
+      let lo = Infinity, hi = -Infinity, diverged = false;
+      for (const row of traj) for (const v of row) { if (Number.isFinite(v)) { if (v < lo) lo = v; if (v > hi) hi = v; } else diverged = true; }
+      if (!isFinite(lo) || !isFinite(hi)) { lo = 0; hi = 0; }
+      if (diverged) return "The simulation diverged. Some values grew beyond what can be plotted. Lower dt, k or the number of steps to keep it bounded.";
+      const coincide = coincidenceGroups(states, traj).filter((g) => g.length > 1);
+      let txt = "The " + plural(states.length, "construct") + " evolve over " + plural(r.steps, "step") + ", with values from " + lo.toFixed(2) + " to " + hi.toFixed(2) + ".";
+      if (coincide.length) {
+        const lists = coincide.map((g) => g.map((i) => states[i]).join(", ")).join("; ");
+        txt += " Some constructs follow an identical path (" + lists + "), so their lines are drawn with a small offset to keep each visible. Give them different couplings, for example a “decreases” relation, to separate the trajectories.";
+      } else {
+        txt += " The trajectories are distinct.";
+      }
+      return txt;
+    }
+    if (opId === "litmap") {
+      const r = raw.result;
+      return "The corpus holds " + plural(r.n_records, "record") + ", " + plural(asArr(r.keywords).length, "distinct keyword") + " and " + plural(asArr(r.themes).length, "theme") + ", with " + plural(asArr(r.co_citation).length, "co-citation pair") + ".";
+    }
+    if (opId === "landscape") {
+      const r = raw.result;
+      return plural(asArr(r.themes).length, "theme") + " mapped. " + plural(asArr(r.under_theorized_fronts).length, "front") + " under-theorised, " + plural(asArr(r.redundancy_risk).length, "theme") + " at redundancy risk.";
+    }
+    return "";
+  }
+
+  // The diagram guide depends on the chosen type: the venn, rigor and severity
+  // types are emitted directly as SVG, so there is no intermediate representation
+  // shown beneath the figure to copy.
+  function aboutText(opId, params) {
+    if (opId === "diagram") {
+      return DIAG_SVG.includes(params.type)
+        ? "This diagram type is emitted directly as an SVG figure. Export it as SVG or PNG."
+        : RESULT_GUIDE.diagram;
+    }
+    return RESULT_GUIDE[opId] || "";
+  }
+
+  function buildIntro(opId, raw, params) {
+    const about = aboutText(opId, params);
+    let interp = "";
+    try { interp = interpret(opId, raw, params) || ""; } catch (e) { interp = ""; }
+    const kids = [];
+    if (about) kids.push(el("p", { class: "ri-about", text: about }));
+    if (interp) kids.push(el("p", { class: "ri-interp", text: interp }));
+    if (!kids.length) return null;
+    return { kind: "node", node: el("div", { class: "result-intro" }, kids) };
   }
 
   async function shapeResult(opId, raw, params, theoryId) {
@@ -411,6 +573,8 @@
       if (raw.dot) sections.push(figureSection("Theme landscape", await renderDot(raw.dot), theoryId + ".theme_landscape"));
       sections.push(textSection("landscape JSON", JSON.stringify(r, null, 2), theoryId + ".landscape.json", "application/json"));
     }
+    const intro = buildIntro(opId, raw, params);
+    if (intro) sections.unshift(intro);
     return sections;
   }
 
@@ -493,7 +657,8 @@
 
   function buildHeader() {
     const toggle = el("button", { class: "icon-btn", id: "themeToggle", onclick: cycleTheme, title: "Theme", "aria-label": "Toggle colour theme" });
-    const help = el("button", { class: "icon-btn", id: "helpBtn", onclick: openHelp, title: "How to use this app", "aria-label": "How to use this app", html: "?" });
+    const help = el("button", { class: "help-cta", id: "helpBtn", onclick: openHelp, title: "How to use this app", "aria-label": "How to use this app" },
+      [el("span", { class: "hq", "aria-hidden": "true" }, "?"), el("span", { class: "ht" }, "How to use")]);
     return el("header", { class: "app" }, [
       logoImg(),
       el("div", { class: "titles" }, [
@@ -563,13 +728,28 @@
     ]);
   }
 
+  // First-run welcome: the rationale for the package and a short set of steps,
+  // shown until the first operation is run.
+  function welcomeBlock() {
+    const li = (t) => el("li", null, t);
+    return el("div", { class: "welcome" }, [
+      el("h3", null, "Develop a theory you can test"),
+      el("p", null, "Theories often drift into vague constructs, claims that cannot be falsified, near-duplicate ideas and amendments that quietly weaken them. theoryforge takes a theory written as structured data and helps you keep it honest. It scores the theory against a rigour checklist, screens its constructs for redundancy, draws its structure, compiles it to a statistical model, simulates its dynamics and appraises whether an amendment strengthens or weakens it."),
+      el("ol", { class: "welcome-steps" }, [
+        li("Pick an example theory on the left, or upload your own YAML or JSON. Use “View source” to inspect the input."),
+        li("Choose an operation and adjust any parameters."),
+        li(["Press ", el("b", null, "Run"), ". Each result is explained here and can be exported as a figure and as " + RT.langLabel + " code."]),
+      ]),
+      el("p", { class: "note" }, ["For what each operation does, open ",
+        el("button", { class: "linklike", onclick: openHelp }, "the guide"), "."]),
+    ]);
+  }
+
   function buildMain() {
     return el("div", null, [
       el("div", { class: "panel" }, [
         el("div", { class: "outhead" }, [el("h2", { id: "outTitle" }, "Result"), el("span", { class: "grow" })]),
-        el("div", { id: "output", "aria-live": "polite", "aria-atomic": "false" }, el("p", { class: "note", html:
-          "Pick a theory and an operation on the left, then press <b>Run</b>. Each result can be exported as a figure (SVG / PNG) and as " +
-          RT.langLabel + " code. New here? Open <b>?</b> in the top bar for a quick tour." })),
+        el("div", { id: "output", "aria-live": "polite", "aria-atomic": "false" }, welcomeBlock()),
       ]),
       el("div", { class: "panel", id: "codePanel", style: "display:none" }, [
         el("div", { class: "outhead" }, [

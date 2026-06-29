@@ -15,6 +15,13 @@ def _xml(s) -> str:
             .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
+def _trunc(s, n: int) -> str:
+    """Truncate an over-long label with an ellipsis. Identical to the R reference
+    so SVG output stays byte-identical; a no-op for the short identifiers used."""
+    s = str(s)
+    return s if len(s) <= n else s[:n - 1] + "…"
+
+
 def _list(d: dict, key: str) -> list:
     v = d.get(key)
     return v if isinstance(v, list) else []
@@ -220,7 +227,7 @@ def _severity_chart(T: dict) -> str:
         y = 40 + i * 28
         sev = r["computed_severity"]
         w = int(sev * 200 + 0.5 + 1e-6)
-        out.append(f'  <text x="20" y="{y + 12}">{_xml(r["prediction_id"])}</text>')
+        out.append(f'  <text x="20" y="{y + 12}">{_xml(_trunc(r["prediction_id"], 15))}</text>')
         out.append(f'  <rect x="130" y="{y}" width="{w}" height="16" rx="2" fill="#4e79a7"/>')
         out.append(f'  <text x="{135 + w}" y="{y + 12}">{sev:.3f}</text>')
     out.append("</svg>")

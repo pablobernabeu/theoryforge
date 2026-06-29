@@ -23,6 +23,14 @@ NULL
   s
 }
 
+# Truncate an over-long label with an ellipsis so it does not overrun adjacent
+# chart elements. Identical to the Python reference so SVG output stays
+# byte-identical; a no-op for the short identifiers used throughout.
+.tf_trunc <- function(s, n) {
+  s <- as.character(s)
+  if (nchar(s) > n) paste0(substr(s, 1L, n - 1L), "\u2026") else s
+}
+
 # Escape XML text content: ampersand first, then the angle brackets.
 .tf_xml <- function(s) {
   if (is.null(s) || length(s) == 0L) {
@@ -271,7 +279,7 @@ NULL
       sev <- rows$computed_severity[i]
       w <- as.integer(sev * 200 + 0.5 + 1e-6)
       out <- c(out,
-        sprintf('  <text x="20" y="%d">%s</text>', y + 12L, .tf_xml(as.character(rows$prediction_id[i]))),
+        sprintf('  <text x="20" y="%d">%s</text>', y + 12L, .tf_xml(.tf_trunc(as.character(rows$prediction_id[i]), 15L))),
         sprintf('  <rect x="130" y="%d" width="%d" height="16" rx="2" fill="#4e79a7"/>', y, w),
         sprintf('  <text x="%d" y="%d">%.3f</text>', 135L + w, y + 12L, sev))
     }

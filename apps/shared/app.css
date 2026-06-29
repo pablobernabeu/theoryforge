@@ -80,6 +80,24 @@ header.app .doclink {
 }
 header.app .doclink:hover { border-color: var(--accent); color: var(--ink); text-decoration: none; }
 
+/* The guide is the main onboarding affordance, so it reads as an accent-ringed
+   call to action rather than another grey icon button. */
+.help-cta {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font: inherit;
+  font-weight: 600; font-size: .85rem; padding: 7px 13px; border-radius: 9px;
+  border: 1.5px solid var(--accent); color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 13%, var(--panel));
+}
+.help-cta:hover { background: color-mix(in srgb, var(--accent) 22%, var(--panel)); }
+/* The accent fill stays on the border and the ? badge (accent-ink on accent,
+   the same high-contrast pairing as the primary button), while the label uses
+   --ink so it meets WCAG AA on the tinted fill in both themes. */
+.help-cta .hq {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%; font-weight: 800; font-size: .72rem;
+  color: var(--accent-ink); background: var(--accent);
+}
+
 /* ---- layout ---- */
 main {
   display: grid; grid-template-columns: 360px 1fr; gap: 18px;
@@ -95,6 +113,8 @@ main > * { min-width: 0; }   /* let grid children shrink instead of overflowing 
   .ops { grid-template-columns: 1fr; }
   header.app { gap: 8px; padding: 10px 14px; }
   header.app .titles .s { display: none; }   /* drop the decorative subtitle to keep the toolbar reachable */
+  .help-cta .ht { display: none; }           /* keep only the ? badge so the toolbar stays compact */
+  .help-cta { padding: 7px 9px; }
 }
 
 .panel {
@@ -118,7 +138,8 @@ select:focus, input:focus { outline: 2px solid var(--accent); outline-offset: -1
 
 /* visible focus for every custom control (WCAG 2.4.7); --ink reads against the
    accent-filled primary button and the panel surfaces in both themes */
-.btn:focus-visible, .icon-btn:focus-visible, .op:focus-visible, .doclink:focus-visible {
+.btn:focus-visible, .icon-btn:focus-visible, .op:focus-visible, .doclink:focus-visible,
+.help-cta:focus-visible, .linklike:focus-visible {
   outline: 2px solid var(--ink); outline-offset: 2px;
 }
 .skip-link {
@@ -182,6 +203,32 @@ button.btn.sm { padding: 5px 11px; font-size: .82rem; }
 }
 .section .sh .grow { flex: 1; }
 .section .sh .btn.ghost.sm { text-transform: none; letter-spacing: 0; }
+
+/* First-run welcome: rationale and steps shown before any operation is run. */
+.welcome h3 { margin: 2px 0 8px; font-size: 1.06rem; }
+.welcome p { margin: 0 0 10px; }
+.welcome .welcome-steps { margin: 0 0 10px; padding-left: 1.2rem; }
+.welcome .welcome-steps li { margin-bottom: 5px; }
+.linklike {
+  background: none; border: none; padding: 0; font: inherit; color: var(--accent);
+  cursor: pointer; text-decoration: underline;
+}
+.linklike:hover { filter: brightness(1.1); }
+
+/* Per-result guidance: a general "how to read" line and a result-specific
+   interpretation, set off by an accent rule so they read as orientation rather
+   than as another data section. */
+.result-intro {
+  border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0;
+  background: color-mix(in srgb, var(--accent) 7%, var(--panel));
+  padding: 11px 14px; margin: 2px 0 4px; font-size: .88rem;
+}
+.result-intro p { margin: 0; }
+.result-intro .ri-about { color: var(--ink-soft); }
+.result-intro .ri-interp { margin-top: 7px; color: var(--ink); font-weight: 500; }
+/* The intro is not itself a .section, so the first real section that follows it
+   should be spaced like a first section, not carry a mid-list divider. */
+.result-intro + .section { margin-top: 14px; padding-top: 0; border-top: none; }
 
 /* Figures sit on a light "paper" canvas in both themes so the package's
    black-text SVGs stay legible. In dark mode a brighter frame and a drop
