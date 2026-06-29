@@ -142,7 +142,7 @@ The `venn` view returns an SVG that shows where the constructs share boundary
 conditions. It renders inline because the output is a self-contained image.
 
 ```{r venn, results = "asis"}
-cat(tf_diagram(theory, "venn"))
+cat('<div class="tf-figure">', tf_diagram(theory, "venn"), '</div>', sep = "")
 ```
 
 Two further views summarise the scoring. The `rigor` view draws the checklist
@@ -150,14 +150,14 @@ as a status grid, colouring each item by its result and reporting the aggregate
 score and the gate.
 
 ```{r rigor-view, results = "asis"}
-cat(tf_diagram(theory, "rigor"))
+cat('<div class="tf-figure">', tf_diagram(theory, "rigor"), '</div>', sep = "")
 ```
 
 The `severity` view draws one bar per prediction, scaled by its computed
 severity, so the riskier tests stand out at a glance.
 
 ```{r severity-view, results = "asis"}
-cat(tf_diagram(theory, "severity"))
+cat('<div class="tf-figure">', tf_diagram(theory, "severity"), '</div>', sep = "")
 ```
 
 All of these views are deterministic and byte-identical across the R and Python
