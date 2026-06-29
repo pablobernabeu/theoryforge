@@ -20,7 +20,7 @@
 | logical_why | warn | 0.0 | 0.08 |
 | causal_testability | warn | 0.0 | 0.06 |
 | diagnosticity | warn | 0.0 | 0.06 |
-| formalization | warn | 0.0 | 0.05 |
+| formalisation | warn | 0.0 | 0.05 |
 | derivation_chain | fail | 0.0 | 0.08 |
 
 ## Severity

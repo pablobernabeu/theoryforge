@@ -1,0 +1,15 @@
+/* Package diagram SVGs inlined in the docs (the Venn of construct scope, the
+   rigour status grid and the severity bars). They are emitted with a viewBox but
+   no width or height, so left to themselves they stretch to the full column and
+   their 13px labels balloon above body size. Cap the width to bring the type
+   back close to body size, and colour the text with the current (theme) colour
+   so it stays legible on the dark theme. Mirrors the pkgdown site. */
+.tf-figure { margin: 1.25rem 0; }
+.tf-figure svg {
+  display: block;
+  width: 100%;
+  max-width: 440px;
+  height: auto;
+  margin: 0 auto;
+}
+.tf-figure svg text { fill: currentColor; }

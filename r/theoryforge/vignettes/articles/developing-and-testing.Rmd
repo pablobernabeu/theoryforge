@@ -145,12 +145,12 @@ conditions. It renders inline because the output is a self-contained image.
 cat('<div class="tf-figure">', tf_diagram(theory, "venn"), '</div>', sep = "")
 ```
 
-Two further views summarise the scoring. The `rigor` view draws the checklist
+Two further views summarise the scoring. The `rigour` view draws the checklist
 as a status grid, colouring each item by its result and reporting the aggregate
 score and the gate.
 
-```{r rigor-view, results = "asis"}
-cat('<div class="tf-figure">', tf_diagram(theory, "rigor"), '</div>', sep = "")
+```{r rigour-view, results = "asis"}
+cat('<div class="tf-figure">', tf_diagram(theory, "rigour"), '</div>', sep = "")
 ```
 
 The `severity` view draws one bar per prediction, scaled by its computed

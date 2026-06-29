@@ -60,7 +60,7 @@ items:
     weight: 0.06
     severity_if_fail: warning
     citation: "Platt (1964); Fiedler (2017)"
-  - id: formalization
+  - id: formalisation
     criterion: "A formal-model stub exists (warn-only at building stage)"
     weight: 0.05
     severity_if_fail: warning

@@ -237,7 +237,7 @@ class Theory:
 
     def diagram(self, type: str = "nomological_net", engine: str = "graphviz") -> str:
         """Return the diagram IR for ``type`` (one of nomological_net, provenance,
-        causal_dag, development_roadmap, pipeline, context, workflow, venn, rigor,
+        causal_dag, development_roadmap, pipeline, context, workflow, venn, rigour,
         severity)."""
         return _diagram(self.data, type=type, engine=engine)
 

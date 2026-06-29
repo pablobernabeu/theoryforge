@@ -200,3 +200,190 @@ catastrophic_interpretation ~ arousal
 These three modes share one object, so a theory built with the BUILDING
 methods can be appraised under DEVELOPMENT and then carried into TESTING
 without conversion.
+
+## Visualising the theory
+
+`diagram()` exports several views of the same object. The graph views return
+Graphviz DOT or dagitty text; three further views are returned directly as SVG
+and render inline. These examples use the bundled panic-network fixture.
+
+The `workflow` view traces the lifecycle from constructs, through propositions and
+predictions, to the recorded test outcomes.
+
+```python
+print(t.diagram("workflow"))
+```
+
+```
+digraph workflow {
+  rankdir=LR;
+  node [shape=box];
+  subgraph cluster_build {
+    label="building";
+    "c_arousal" [label="Physiological arousal"];
+    "c_perceived_threat" [label="Perceived threat"];
+    "c_avoidance" [label="Avoidance behaviour"];
+  }
+  subgraph cluster_relate {
+    label="propositions";
+    "prop_p1" [label="increases"];
+    "prop_p2" [label="increases"];
+    "prop_p3" [label="causes"];
+  }
+  subgraph cluster_predict {
+    label="predictions";
+    "pred_pred1" [label="point"];
+    "pred_pred2" [label="interval"];
+    "pred_pred3" [label="directional"];
+  }
+  subgraph cluster_test {
+    label="testing";
+    "outcome_pred1" [label="passed=true"];
+  }
+  "c_arousal" -> "prop_p1";
+  "c_perceived_threat" -> "prop_p2";
+  "c_perceived_threat" -> "prop_p3";
+  "prop_p1" -> "pred_pred1";
+  "prop_p3" -> "pred_pred1";
+  "prop_p2" -> "pred_pred2";
+  "prop_p2" -> "pred_pred3";
+  "pred_pred1" -> "outcome_pred1";
+}
+```
+
+The `context` view places the theory among the scope conditions under which it is
+claimed to hold and the registered rivals it is meant to outpredict.
+
+```python
+print(t.diagram("context"))
+```
+
+```
+digraph context {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  "theory" [shape=ellipse, label="Network theory of panic disorder"];
+  "c_arousal" [label="Physiological arousal"];
+  "theory" -> "c_arousal";
+  "c_perceived_threat" [label="Perceived threat"];
+  "theory" -> "c_perceived_threat";
+  "c_avoidance" [label="Avoidance behaviour"];
+  "theory" -> "c_avoidance";
+  "scope1" [shape=note, label="adults"];
+  "scope1" -> "theory" [style=dotted, label="holds within"];
+  "scope2" [shape=note, label="non-clinical baseline"];
+  "scope2" -> "theory" [style=dotted, label="holds within"];
+  "scope3" [shape=note, label="no beta-blocker medication"];
+  "scope3" -> "theory" [style=dotted, label="holds within"];
+  "alt_cognitive" [shape=box, style=dashed, label="Cognitive model of panic"];
+  "theory" -> "alt_cognitive" [style=dashed, label="contrasts with"];
+  "alt_biological" [shape=box, style=dashed, label="Biological model of panic"];
+  "theory" -> "alt_biological" [style=dashed, label="contrasts with"];
+}
+```
+
+The `venn` view shows where the first three constructs share boundary conditions.
+
+```python
+print(t.diagram("venn"))      # construct scope overlap
+print(t.diagram("rigour"))    # the rigour checklist as a status grid
+print(t.diagram("severity"))  # per-prediction severity bars
+```
+
+<div class="tf-figure"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 300" font-family="sans-serif" font-size="13">
+  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap</text>
+  <circle cx="150" cy="135" r="78" fill="#4e79a7" fill-opacity="0.35" stroke="#33567a"/>
+  <circle cx="230" cy="135" r="78" fill="#4e79a7" fill-opacity="0.35" stroke="#33567a"/>
+  <circle cx="190" cy="195" r="78" fill="#4e79a7" fill-opacity="0.35" stroke="#33567a"/>
+  <text x="110" y="45" text-anchor="middle">Physiological arousal</text>
+  <text x="270" y="45" text-anchor="middle">Perceived threat</text>
+  <text x="190" y="290" text-anchor="middle">Avoidance behaviour</text>
+  <text x="120" y="115" text-anchor="middle" font-weight="bold">1</text>
+  <text x="260" y="115" text-anchor="middle" font-weight="bold">0</text>
+  <text x="190" y="230" text-anchor="middle" font-weight="bold">0</text>
+  <text x="190" y="105" text-anchor="middle" font-weight="bold">0</text>
+  <text x="145" y="180" text-anchor="middle" font-weight="bold">0</text>
+  <text x="235" y="180" text-anchor="middle" font-weight="bold">0</text>
+  <text x="190" y="160" text-anchor="middle" font-weight="bold">1</text>
+</svg></div>
+
+The `rigour` view draws the checklist as a status grid, colouring each item by its
+result and reporting the aggregate score and the gate.
+
+<div class="tf-figure"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 360" font-family="sans-serif" font-size="13">
+  <text x="20" y="28" font-size="15">Rigour checklist</text>
+  <text x="20" y="46">aggregate score 84.8, gate pass</text>
+  <rect x="20" y="60" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="72">falsifiability</text>
+  <text x="320" y="72">pass</text>
+  <rect x="20" y="84" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="96">precision</text>
+  <text x="320" y="96">pass</text>
+  <rect x="20" y="108" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="120">risk_severity</text>
+  <text x="320" y="120">pass</text>
+  <rect x="20" y="132" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="144">parsimony</text>
+  <text x="320" y="144">pass</text>
+  <rect x="20" y="156" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="168">non_redundancy</text>
+  <text x="320" y="168">pass</text>
+  <rect x="20" y="180" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="192">construct_clarity</text>
+  <text x="320" y="192">pass</text>
+  <rect x="20" y="204" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="216">scope</text>
+  <text x="320" y="216">pass</text>
+  <rect x="20" y="228" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="240">logical_why</text>
+  <text x="320" y="240">pass</text>
+  <rect x="20" y="252" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="264">causal_testability</text>
+  <text x="320" y="264">pass</text>
+  <rect x="20" y="276" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="288">diagnosticity</text>
+  <text x="320" y="288">pass</text>
+  <rect x="20" y="300" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="312">formalisation</text>
+  <text x="320" y="312">pass</text>
+  <rect x="20" y="324" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="336">derivation_chain</text>
+  <text x="320" y="336">pass</text>
+</svg></div>
+
+The `severity` view draws one bar per prediction, scaled by its computed severity,
+so the riskier tests stand out at a glance.
+
+<div class="tf-figure"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 132" font-family="sans-serif" font-size="13">
+  <text x="20" y="26" font-size="15">Prediction severity</text>
+  <text x="20" y="52">pred1</text>
+  <rect x="130" y="40" width="200" height="16" rx="2" fill="#4e79a7"/>
+  <text x="335" y="52">1.000</text>
+  <text x="20" y="80">pred2</text>
+  <rect x="130" y="68" width="140" height="16" rx="2" fill="#4e79a7"/>
+  <text x="275" y="80">0.700</text>
+  <text x="20" y="108">pred3</text>
+  <rect x="130" y="96" width="60" height="16" rx="2" fill="#4e79a7"/>
+  <text x="195" y="108">0.300</text>
+</svg></div>
+
+## Simulation
+
+`simulate()` treats each construct as a state variable and integrates the signed
+proposition network as a linear dynamical system with fixed-step (Euler) updates.
+The trajectory is fully deterministic and parity-tested against the R twin.
+
+```python
+sim = t.simulate(steps=5)
+sim["states"]          # construct ids, in file order
+sim["trajectory"][0]   # the initial state
+```
+
+```
+>>> sim["states"]
+['c_arousal', 'c_perceived_threat', 'c_avoidance']
+>>> sim["trajectory"][0]
+[1.0, 1.0, 1.0]
+>>> sim["trajectory"][1]
+[1.05, 1.05, 1.05]
+```

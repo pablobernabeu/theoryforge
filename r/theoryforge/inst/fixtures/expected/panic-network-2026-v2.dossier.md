@@ -20,7 +20,7 @@
 | logical_why | pass | 1.0 | 0.08 |
 | causal_testability | pass | 1.0 | 0.06 |
 | diagnosticity | pass | 0.5 | 0.06 |
-| formalization | pass | 1.0 | 0.05 |
+| formalisation | pass | 1.0 | 0.05 |
 | derivation_chain | pass | 1.0 | 0.08 |
 
 ## Severity

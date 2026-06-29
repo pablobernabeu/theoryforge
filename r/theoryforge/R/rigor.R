@@ -158,12 +158,12 @@ NULL
                               .tf_rnd(n_diag / length(preds), 3))
   }
 
-  # 11 formalization
+  # 11 formalisation
   fm <- .tf_get(T, "formal_model")
   fm_type <- if (is.list(fm)) .tf_get(fm, "type") else NULL
   present <- is.list(fm) && !is.null(fm_type) && length(fm_type) == 1L &&
     !is.na(fm_type) && !(fm_type %in% "none")
-  out$formalization <- if (present) item("pass", 1.0) else item("warn", 0.0)
+  out$formalisation <- if (present) item("pass", 1.0) else item("warn", 0.0)
 
   # 12 derivation_chain
   if (length(preds) == 0L) {

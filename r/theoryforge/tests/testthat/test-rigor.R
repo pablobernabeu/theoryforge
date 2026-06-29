@@ -26,7 +26,7 @@ test_that("panic-network rigor matches exact targets", {
     logical_why        = c("pass", 1.0),
     causal_testability = c("pass", 1.0),
     diagnosticity      = c("pass", 0.333),
-    formalization      = c("pass", 1.0),
+    formalisation      = c("pass", 1.0),
     derivation_chain   = c("pass", 1.0)
   )
   for (id in names(expected)) {
@@ -52,7 +52,7 @@ test_that("weak-demo rigor matches exact targets", {
     logical_why        = c("warn", 0.0),
     causal_testability = c("warn", 0.0),
     diagnosticity      = c("warn", 0.0),
-    formalization      = c("warn", 0.0),
+    formalisation      = c("warn", 0.0),
     derivation_chain   = c("fail", 0.0)
   )
   for (id in names(expected)) {

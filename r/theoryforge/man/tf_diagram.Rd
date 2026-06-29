@@ -13,7 +13,7 @@ tf_diagram(theory, type = "nomological_net", engine = "graphviz")
 \code{"causal_dag"}, \code{"development_roadmap"}, \code{"pipeline"},
 \code{"context"} (the theory, its scope, and its rivals),
 \code{"workflow"} (the building-to-testing pipeline), \code{"venn"}
-(construct scope overlap, as an SVG), \code{"rigor"} (the checklist as a
+(construct scope overlap, as an SVG), \code{"rigour"} (the checklist as a
 status grid, as an SVG), or \code{"severity"} (per-prediction severity
 bars, as an SVG).}
 

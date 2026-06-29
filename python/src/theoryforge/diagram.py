@@ -3,7 +3,7 @@ from __future__ import annotations
 
 _CAUSAL = {"causes", "increases", "decreases"}
 _TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap",
-          "pipeline", "context", "workflow", "venn", "rigor", "severity")
+          "pipeline", "context", "workflow", "venn", "rigour", "severity")
 
 
 def _esc(s) -> str:
@@ -171,16 +171,16 @@ def _venn(T: dict) -> str:
         out.append(_vlabel(190, 150, "(no constructs)"))
     elif n == 1:
         a = sets[0]
-        out += [_circle(190, 150, 90), _vlabel(190, 55, names[0]), _vcount(190, 155, len(a))]
+        out += [_circle(190, 150, 82), _vlabel(190, 55, names[0]), _vcount(190, 155, len(a))]
     elif n == 2:
         a, b = sets[0], sets[1]
-        out += [_circle(150, 150, 90), _circle(230, 150, 90),
+        out += [_circle(150, 150, 82), _circle(230, 150, 82),
                 _vlabel(110, 50, names[0]), _vlabel(270, 50, names[1]),
                 _vcount(110, 155, len(a - b)), _vcount(190, 155, len(a & b)),
                 _vcount(270, 155, len(b - a))]
     else:
         a, b, c = sets[0], sets[1], sets[2]
-        out += [_circle(150, 135, 85), _circle(230, 135, 85), _circle(190, 195, 85),
+        out += [_circle(150, 135, 78), _circle(230, 135, 78), _circle(190, 195, 78),
                 _vlabel(110, 45, names[0]), _vlabel(270, 45, names[1]), _vlabel(190, 290, names[2]),
                 _vcount(120, 115, len(a - b - c)), _vcount(260, 115, len(b - a - c)),
                 _vcount(190, 230, len(c - a - b)), _vcount(190, 105, len((a & b) - c)),
@@ -239,7 +239,7 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
 
     ``engine`` is accepted for API parity; the IR is engine-independent (DOT for
     the digraphs, dagitty syntax for the causal DAG, and SVG for the Venn, the
-    rigor grid, and the severity chart).
+    rigour grid and the severity chart).
     """
     T = T.data if hasattr(T, "data") else T
     if type == "nomological_net":
@@ -258,7 +258,7 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
         return _workflow(T)
     if type == "venn":
         return _venn(T)
-    if type == "rigor":
+    if type == "rigour":
         return _rigor(T)
     if type == "severity":
         return _severity_chart(T)

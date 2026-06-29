@@ -128,10 +128,10 @@ def _check_items(T: dict, thr: dict) -> dict:
         ]
         out["diagnosticity"] = ("pass" if len(diag) >= 1 else "warn", rnd(len(diag) / len(preds), 3))
 
-    # 11 formalization
+    # 11 formalisation
     fm = T.get("formal_model")
     present = isinstance(fm, dict) and fm.get("type") not in (None, "none")
-    out["formalization"] = ("pass", 1.0) if present else ("warn", 0.0)
+    out["formalisation"] = ("pass", 1.0) if present else ("warn", 0.0)
 
     # 12 derivation_chain
     if not preds:

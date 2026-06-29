@@ -34,7 +34,7 @@ test_that("new diagram types are byte-identical to the golden files", {
     context             = "context.dot",
     workflow            = "workflow.dot",
     venn                = "venn.svg",
-    rigor               = "rigor.svg",
+    rigour              = "rigour.svg",
     severity            = "severity.svg"
   )
   for (cs in cases) {

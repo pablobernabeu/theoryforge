@@ -46,7 +46,7 @@ def run(op, params_json):
     if t is None:
         raise RuntimeError("No theory loaded")
     if op == "check":
-        return json.dumps({"report": t.check(), "svg": t.diagram("rigor")})
+        return json.dumps({"report": t.check(), "svg": t.diagram("rigour")})
     if op == "validate":
         try:
             t.validate(full=True)
@@ -179,7 +179,7 @@ const RT = {
     const corpus = `corpus = tf.read_corpus("${(this._corpusFile || "corpus.yaml").split("/").pop()}")`;
     switch (opId) {
       case "check":
-        return `${head}\n\nreport = theory.check()\nreport["aggregate_score"]   # overall 0-100\nreport["gate"]              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nopen("rigor.svg", "w").write(theory.diagram("rigor"))`;
+        return `${head}\n\nreport = theory.check()\nreport["aggregate_score"]   # overall 0-100\nreport["gate"]              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nopen("rigour.svg", "w").write(theory.diagram("rigour"))`;
       case "validate":
         return `${head}\n\ntheory.validate(full=True)        # structural + referential integrity; raises listing every problem`;
       case "appraise": {

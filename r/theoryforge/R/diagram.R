@@ -7,7 +7,7 @@ NULL
 
 .tf_DIAGRAM_TYPES <- c("nomological_net", "provenance", "causal_dag",
                        "development_roadmap", "pipeline", "context", "workflow", "venn",
-                       "rigor", "severity")
+                       "rigour", "severity")
 
 # Escape a DOT label: replace backslash then double-quote (order matters).
 .tf_esc <- function(s) {
@@ -217,18 +217,18 @@ NULL
     out <- c(out, .tf_vlabel(190L, 150L, "(no constructs)"))
   } else if (n == 1L) {
     a <- setlist[[1L]]
-    out <- c(out, .tf_vcircle(190L, 150L, 90L), .tf_vlabel(190L, 55L, nms[1]),
+    out <- c(out, .tf_vcircle(190L, 150L, 82L), .tf_vlabel(190L, 55L, nms[1]),
              .tf_vcount(190L, 155L, length(a)))
   } else if (n == 2L) {
     a <- setlist[[1L]]; b <- setlist[[2L]]
-    out <- c(out, .tf_vcircle(150L, 150L, 90L), .tf_vcircle(230L, 150L, 90L),
+    out <- c(out, .tf_vcircle(150L, 150L, 82L), .tf_vcircle(230L, 150L, 82L),
              .tf_vlabel(110L, 50L, nms[1]), .tf_vlabel(270L, 50L, nms[2]),
              .tf_vcount(110L, 155L, length(setdiff(a, b))),
              .tf_vcount(190L, 155L, length(intersect(a, b))),
              .tf_vcount(270L, 155L, length(setdiff(b, a))))
   } else {
     a <- setlist[[1L]]; b <- setlist[[2L]]; cc <- setlist[[3L]]
-    out <- c(out, .tf_vcircle(150L, 135L, 85L), .tf_vcircle(230L, 135L, 85L), .tf_vcircle(190L, 195L, 85L),
+    out <- c(out, .tf_vcircle(150L, 135L, 78L), .tf_vcircle(230L, 135L, 78L), .tf_vcircle(190L, 195L, 78L),
              .tf_vlabel(110L, 45L, nms[1]), .tf_vlabel(270L, 45L, nms[2]), .tf_vlabel(190L, 290L, nms[3]),
              .tf_vcount(120L, 115L, length(setdiff(setdiff(a, b), cc))),
              .tf_vcount(260L, 115L, length(setdiff(setdiff(b, a), cc))),
@@ -300,7 +300,7 @@ NULL
 #'   \code{"causal_dag"}, \code{"development_roadmap"}, \code{"pipeline"},
 #'   \code{"context"} (the theory, its scope, and its rivals),
 #'   \code{"workflow"} (the building-to-testing pipeline), \code{"venn"}
-#'   (construct scope overlap, as an SVG), \code{"rigor"} (the checklist as a
+#'   (construct scope overlap, as an SVG), \code{"rigour"} (the checklist as a
 #'   status grid, as an SVG), or \code{"severity"} (per-prediction severity
 #'   bars, as an SVG).
 #' @param engine Rendering engine label, accepted for parity (default
@@ -341,7 +341,7 @@ tf_diagram <- function(theory, type = "nomological_net", engine = "graphviz") {
   if (identical(type, "venn")) {
     return(.tf_venn(T))
   }
-  if (identical(type, "rigor")) {
+  if (identical(type, "rigour")) {
     return(.tf_rigor(T))
   }
   if (identical(type, "severity")) {

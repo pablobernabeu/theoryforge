@@ -32,7 +32,7 @@
   <text x="44" y="288">diagnosticity</text>
   <text x="320" y="288">warn</text>
   <rect x="20" y="300" width="16" height="16" rx="3" fill="#ff9800"/>
-  <text x="44" y="312">formalization</text>
+  <text x="44" y="312">formalisation</text>
   <text x="320" y="312">warn</text>
   <rect x="20" y="324" width="16" height="16" rx="3" fill="#f44336"/>
   <text x="44" y="336">derivation_chain</text>

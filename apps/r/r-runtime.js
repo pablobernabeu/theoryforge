@@ -45,7 +45,7 @@ invisible(lapply(.tf_app_files, source))
 .tf_run <- function(op, p) {
   t <- .tf_app$theory
   env <- function(x) as.character(jsonlite::toJSON(x, auto_unbox = TRUE, digits = NA, null = "null"))
-  if (op == "check")      return(env(list(report = tf_check(t), svg = tf_diagram(t, "rigor"))))
+  if (op == "check")      return(env(list(report = tf_check(t), svg = tf_diagram(t, "rigour"))))
   if (op == "validate")   return(env(tryCatch({ tf_validate(t, full = TRUE); list(ok = TRUE) },
                                               error = function(e) list(ok = FALSE, message = conditionMessage(e)))))
   if (op == "severity")   return(env(list(rows = tf_severity(t), svg = tf_diagram(t, "severity"))))
@@ -181,7 +181,7 @@ const RT = {
     const corpus = `corpus <- tf_read_corpus("${(this._corpusFile || "corpus.yaml").split("/").pop()}")`;
     switch (opId) {
       case "check":
-        return `${head}\n\nreport <- tf_check(theory)\nreport$aggregate_score   # overall 0-100\nreport$gate              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nwriteLines(tf_diagram(theory, "rigor"), "rigor.svg")`;
+        return `${head}\n\nreport <- tf_check(theory)\nreport$aggregate_score   # overall 0-100\nreport$gate              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nwriteLines(tf_diagram(theory, "rigour"), "rigour.svg")`;
       case "validate":
         return `${head}\n\ntf_validate(theory, full = TRUE)   # structural + referential integrity; stops, listing every problem`;
       case "appraise": {

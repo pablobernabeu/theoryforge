@@ -72,7 +72,7 @@ Each item returns `{id, status ∈ {pass,warn,fail}, score ∈ [0,1], weight, se
 8. **logical_why.** if no props: score 0.0, warn. Else `frac = count(p.mechanism nonempty)/len(props)`; score round(frac,3); `pass` if `frac == 1.0` else `warn`.
 9. **causal_testability.** `causal = [p for p in props if p.relation in {causes,increases,decreases}]`. `pass` if `len(causal) ≥ 1` else `warn`; score 1.0/0.0.
 10. **diagnosticity.** `diag = [p for p in preds if p.diagnostic_vs nonempty AND any(d in alt_ids for d in p.diagnostic_vs)]`. If no preds: score 0.0, warn. Else score = round(len(diag)/len(preds),3); `pass` if `len(diag) ≥ 1` else `warn`.
-11. **formalization.** `present = T.formal_model exists AND T.formal_model.type not in {none, null/None}`. score 1.0/0.0; `pass`/`warn`.
+11. **formalisation.** `present = T.formal_model exists AND T.formal_model.type not in {none, null/None}`. score 1.0/0.0; `pass`/`warn`.
 12. **derivation_chain.** if no preds: score 1.0, `pass` (vacuous). Else `valid = [p for p in preds if p.derives_from nonempty AND every d in p.derives_from is in prop_ids]`; `frac = len(valid)/len(preds)`; score round(frac,3); `pass` if `frac == 1.0` else `fail`.
 
 **Aggregate:** `aggregate_score = round( sum(weight_i * score_i) * 100, 1 )`.
@@ -260,7 +260,7 @@ digraph context {
 
 **venn** (SVG). The first up to three constructs (file order) as sets of their `boundary_conditions`, drawn at fixed integer coordinates (`viewBox="0 0 380 300"`). Region labels are set cardinalities. Layout: n=1 one circle at cx=190; n=2 two circles at cx=150,230 (counts A−B, A∩B, B−A); n=3 three circles at (150,135),(230,135),(190,195) with the seven region counts. Byte-identical because every coordinate and count is an integer.
 
-**rigor** (SVG). The `check` report as a status grid (`viewBox="0 0 460 H"`, `H = 60 + 24·n + 12`). A title, then `aggregate score %.1f, gate <gate>`, then one row per checklist item (checklist order) at `y = 60 + 24·i`: a 16×16 swatch coloured by status (pass `#4caf50`, warn `#ff9800`, fail `#f44336`, otherwise `#9e9e9e`), the item id, and the status text. Integer coordinates; `aggregate_score` is already rounded to 1 dp, so `%.1f` is byte-stable.
+**rigour** (SVG). The `check` report as a status grid (`viewBox="0 0 460 H"`, `H = 60 + 24·n + 12`). A title, then `aggregate score %.1f, gate <gate>`, then one row per checklist item (checklist order) at `y = 60 + 24·i`: a 16×16 swatch coloured by status (pass `#4caf50`, warn `#ff9800`, fail `#f44336`, otherwise `#9e9e9e`), the item id, and the status text. Integer coordinates; `aggregate_score` is already rounded to 1 dp, so `%.1f` is byte-stable.
 
 **severity** (SVG). The `severity` rows as horizontal bars (`viewBox="0 0 380 H"`, `H = 40 + 28·max(n,1) + 8`). A title, then for each prediction (file order) at `y = 40 + 28·i`: the `prediction_id`, a bar of width `floor(computed_severity·200 + 0.5 + 1e-6)` at x=130, and the value `%.3f`. The 1e-6 bias matches `rnd` so the integer width is identical across platforms.
 

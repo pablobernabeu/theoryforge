@@ -20,11 +20,11 @@
       help: "Runs the package's full validation: required fields and enum membership, plus referential integrity (unique ids, and every proposition, prediction, assumption, evidence and test-outcome reference points to a declared id). Lists every problem found, or confirms the theory is valid." },
     {
       id: "diagram", label: "Diagram", desc: "Nomological net, DAG, workflow…",
-      help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams. The venn, rigor and severity types are emitted directly as SVG.",
+      help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams. The venn, rigour and severity types are emitted directly as SVG.",
       params: [{
         id: "type", label: "Diagram type", type: "select", default: "nomological_net",
         options: ["nomological_net", "context", "workflow", "causal_dag", "provenance",
-          "development_roadmap", "pipeline", "venn", "rigor", "severity"],
+          "development_roadmap", "pipeline", "venn", "rigour", "severity"],
       }],
     },
     { id: "severity", label: "Severity rubric", desc: "Per-prediction risk & severity",
@@ -67,7 +67,7 @@
 
   // Diagram types the package emits directly as SVG (vs Graphviz DOT / dagitty).
   // Shared so the two runtimes' code-snippet generators cannot drift.
-  const DIAG_SVG = ["venn", "rigor", "severity"];
+  const DIAG_SVG = ["venn", "rigour", "severity"];
 
   // Figures render on a light "paper" canvas in both themes so the package's
   // black-text SVGs and the trajectory chart stay legible. Single source for
@@ -410,7 +410,7 @@
       const t = String(params.type || "");
       const name = t.replace(/_/g, " ");
       const byType = {
-        rigor: "A status grid of the twelve rigour checklist items and the overall gate.",
+        rigour: "A status grid of the twelve rigour checklist items and the overall gate.",
         severity: "Severity bars for the theory's " + plural(c.predictions || 0, "prediction") + ".",
         venn: "Overlap of the boundary conditions declared on the theory's constructs (up to three).",
         provenance: "The recorded build steps in order.",
@@ -446,7 +446,7 @@
     return "";
   }
 
-  // The diagram guide depends on the chosen type: the venn, rigor and severity
+  // The diagram guide depends on the chosen type: the venn, rigour and severity
   // types are emitted directly as SVG, so there is no intermediate representation
   // shown beneath the figure to copy.
   function aboutText(opId, params) {
@@ -474,7 +474,7 @@
     const base = (theoryId || "theory") + "." + opId;
     if (opId === "check") {
       const rep = raw.report;
-      sections.push(figureSection("Rigour grid", raw.svg, theoryId + ".rigor"));
+      sections.push(figureSection("Rigour grid", raw.svg, theoryId + ".rigour"));
       sections.push(kvSection("Summary", [
         ["Aggregate score", rep.aggregate_score + " / 100"],
         ["Gate", pill(rep.gate)],
