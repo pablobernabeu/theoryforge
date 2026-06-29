@@ -17,7 +17,8 @@ If you use the Python package in your work, please cite it:
 }
 ```
 
-Install the package with `pip install theoryforge`.
+You can <a href="../theoryforge.bib" download>download the BibTeX entry</a>. The package
+installs with `pip install theoryforge`.
 
 ## The developer
 

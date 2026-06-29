@@ -20,8 +20,9 @@ If you use the R package in your work, please cite it:
 }
 ```
 
-Install the package with `install.packages("theoryforge")`. In R, the same entry is
-available with `citation("theoryforge")`.
+You can <a href="../theoryforge.bib" download>download the BibTeX entry</a>. In R, the
+same entry is available with `citation("theoryforge")`, and the package installs with
+`install.packages("theoryforge")`.
 
 ## The developer
 

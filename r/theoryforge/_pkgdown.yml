@@ -4,6 +4,22 @@ template:
   bootstrap: 5
   light-switch: true
 
+# Replace the auto-generated "Citation" sidebar section (which links to
+# authors.html) with one that points at the About page, where the tailored
+# citation lives, plus a direct BibTeX download. pkgdown copies
+# pkgdown/assets/theoryforge.bib to the site root. Dropping the built-in
+# "citation" from the structure and supplying a custom "cite" component is more
+# reliable than trying to override the built-in in place.
+home:
+  sidebar:
+    structure: [links, license, cite, authors, dev]
+    components:
+      cite:
+        title: Citation
+        text: >
+          [How to cite theoryforge](articles/about.html) ·
+          [Download BibTeX](theoryforge.bib)
+
 navbar:
   structure:
     left:  [intro, reference, articles, about]
