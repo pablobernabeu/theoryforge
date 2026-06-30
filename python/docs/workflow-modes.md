@@ -371,7 +371,7 @@ so the riskier tests stand out at a glance.
 
 `simulate()` treats each construct as a state variable and integrates the signed
 proposition network as a linear dynamical system with fixed-step (Euler) updates.
-The trajectory is fully deterministic and parity-tested against the R twin.
+The trajectory is fully deterministic and parity-tested against [the R twin](https://pablobernabeu.github.io/theoryforge/r/).
 
 ```python
 sim = t.simulate(steps=5)

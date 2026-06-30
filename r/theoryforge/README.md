@@ -1,7 +1,7 @@
 # theoryforge (R) <a href="https://pablobernabeu.github.io/theoryforge/r/"><img src="man/figures/logo.png" align="right" height="138" alt="theoryforge hex logo" /></a>
 
 Systematic theory development: a rigorous, reproducible workflow for building, developing and
-testing scientific theories. This is the feature-parity twin of the Python package of the same
+testing scientific theories. This is the feature-parity twin of [the Python package](https://pablobernabeu.github.io/theoryforge/python/) of the same
 name. Behaviour is pinned by the shared specification
 ([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)) so the two
 implementations produce identical verdicts and byte-identical diagram intermediate

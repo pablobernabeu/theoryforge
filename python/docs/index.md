@@ -9,7 +9,7 @@ strengthen it. Each weakness becomes something the package can surface and check
 The package scaffolds the three workflow modes (building, development and testing), scores a
 theory against a 12-item rigour checklist drawn from the methodology literature, generates
 diagrams and positions the theory within the bibliometric literature. This is the Python twin
-of the R package of the same name; both follow one shared specification
+of [the R package](https://pablobernabeu.github.io/theoryforge/r/) of the same name; both follow one shared specification
 ([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)) and
 return identical results.
 

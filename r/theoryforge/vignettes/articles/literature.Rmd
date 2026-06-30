@@ -13,7 +13,7 @@ layer of `theoryforge` gives a deterministic, machine-checkable account of that
 field, so the placement of a theory within it can be argued from evidence
 rather than from impression. This article reads a small corpus, computes a
 bibliometric map, positions a theory against the map, and emits a diagram. The
-analysis functions are parity-tested against the Python twin and require no
+analysis functions are parity-tested against [the Python twin](https://pablobernabeu.github.io/theoryforge/python/) and require no
 optional dependency.
 
 ```{r setup}

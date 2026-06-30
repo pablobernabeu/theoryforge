@@ -13,8 +13,8 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 
 `theoryforge` treats a scientific theory as a versioned, machine-checkable
 object. This vignette walks through the core loop of building a theory,
-checking its rigour and diagramming it. It is the R twin of the Python
-package, and both follow the same pinned contract
+checking its rigour and diagramming it. It is the R twin of
+[the Python package](https://pablobernabeu.github.io/theoryforge/python/), and both follow the same pinned contract
 ([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)).
 
 ```{r setup}
