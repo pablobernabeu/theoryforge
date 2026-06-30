@@ -23,10 +23,9 @@ installs with `pip install theoryforge`.
 ## The developer
 
 theoryforge is developed and maintained by
-[Pablo Bernabeu](https://pablobernabeu.github.io)
-([ORCID 0000-0003-1083-2460](https://orcid.org/0000-0003-1083-2460)), a researcher in the
+[Pablo Bernabeu](https://pablobernabeu.github.io), a researcher in the
 Department of Education at the University of Oxford. His work spans cognitive psychology and
 neuroscience, linguistics, education and digital technologies, and research methods and open
 science, with hands-on experience in behavioural and EEG experiments, corpus analysis,
 computational modelling and statistics. He develops open, reproducible research software in R
-and Python and is a certified Carpentries Instructor.
+and Python and is a Fellow of the Software Sustainability Institute.
