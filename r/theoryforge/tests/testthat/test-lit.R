@@ -63,14 +63,14 @@ test_that("tf_landscape assigns the expected theme statuses", {
   names(status) <- vapply(ls$themes, function(th) th$id, character(1))
 
   expect_equal(unname(status["theme_2"]), "crowded")
-  expect_equal(unname(status["theme_4"]), "under_theorized")
+  expect_equal(unname(status["theme_4"]), "under_theorised")
 
   theme2 <- Filter(function(th) th$id == "theme_2", ls$themes)[[1]]
   expect_equal(unlist(theme2$alternatives, use.names = FALSE), "alt_biological")
   expect_true(theme2$focal)
 
   expect_equal(unlist(ls$redundancy_risk, use.names = FALSE), "theme_2")
-  expect_equal(unlist(ls$under_theorized_fronts, use.names = FALSE), "theme_4")
+  expect_equal(unlist(ls$under_theorised_fronts, use.names = FALSE), "theme_4")
 })
 
 test_that("literature diagrams are byte-identical to the golden files", {

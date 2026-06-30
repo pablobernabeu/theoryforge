@@ -25,7 +25,7 @@ testing scientific theories, delivered as feature-parity R (CRAN) and Python (Py
 
 ### Bibliometric layer (P2)
 - `read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component themes, co-citation).
-- `landscape`: maps a theory and its alternatives onto themes, flagging under-theorized fronts and redundancy risk.
+- `landscape`: maps a theory and its alternatives onto themes, flagging under-theorised fronts and redundancy risk.
 - `lit_diagram` (keyword co-occurrence, co-citation, theme landscape) and a parity-exempt OpenAlex `fetch_corpus` adapter.
 
 ### SEM compilation and audit bundle (P3)

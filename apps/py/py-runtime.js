@@ -208,7 +208,7 @@ const RT = {
       case "litmap":
         return `${head}\n${corpus}\n\nlm = tf.litmap(corpus, min_link=${p.min_link})\nlm["themes"]\nprint(tf.lit_diagram(lm, "keyword_cooccurrence"))`;
       case "landscape":
-        return `${head}\n${corpus}\n\nland = theory.landscape(corpus, min_link=${p.min_link})\nland["under_theorized_fronts"]\nprint(tf.lit_diagram(land, "theme_landscape"))`;
+        return `${head}\n${corpus}\n\nland = theory.landscape(corpus, min_link=${p.min_link})\nland["under_theorised_fronts"]\nprint(tf.lit_diagram(land, "theme_landscape"))`;
       default:
         return head;
     }

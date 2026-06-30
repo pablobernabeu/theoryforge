@@ -15,7 +15,7 @@ tf_write(theory, path)
 The \code{path} (invisibly).
 }
 \description{
-Serializes a theory object to disk. The format is chosen by the file
+Serialises a theory object to disk. The format is chosen by the file
 extension (\code{.json} -> JSON, otherwise YAML). Files are written with LF
 line endings.
 }

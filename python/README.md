@@ -41,7 +41,7 @@ print(t.preregister())             # markdown prereg (byte-identical to R)
 # LITERATURE: map the field, then position the theory against it
 corpus = tf.read_corpus("../fixtures/panic-corpus.yaml")
 tf.litmap(corpus)                  # keyword co-occurrence, themes, co-citation
-t.landscape(corpus)                # -> themes flagged 'under_theorized' / 'crowded' (redundancy risk)
+t.landscape(corpus)                # -> themes flagged 'under_theorised' / 'crowded' (redundancy risk)
 # tf.fetch_corpus("panic disorder theory")  # optional OpenAlex fetch (network, parity-exempt)
 ```
 
@@ -68,7 +68,7 @@ appraisal (DEVELOPMENT), preregistration export (TESTING), and two more diagram 
 (`development_roadmap`, `pipeline`). P2 adds the bibliometric and literature layer. This comprises
 `read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component themes, and
 co-citation), `landscape` (which maps a theory and its alternatives onto the themes, flagging
-under-theorized fronts and redundancy risk), `lit_diagram`, and the parity-exempt `fetch_corpus`
+under-theorised fronts and redundancy risk), `lit_diagram`, and the parity-exempt `fetch_corpus`
 OpenAlex adapter. P3 added `compile_sem` (lavaan model syntax) and `dossier` (a reviewer-facing
 audit bundle). P4 added `simulate` (a deterministic dynamical-system runner over the construct
 network), `render_report` (a Quarto report wrapping the dossier), `embedding_redundancy` (an

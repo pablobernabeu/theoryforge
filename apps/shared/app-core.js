@@ -60,7 +60,7 @@
     },
     {
       id: "landscape", label: "Theory landscape", desc: "Map theory onto lit themes", corpus: true,
-      help: "Positions the theory and its alternatives against the corpus themes, flagging under-theorized fronts (no theory addresses them) and redundancy risk (crowded themes).",
+      help: "Positions the theory and its alternatives against the corpus themes, flagging under-theorised fronts (no theory addresses them) and redundancy risk (crowded themes).",
       params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
     },
   ];
@@ -292,7 +292,7 @@
   // and dash pattern; coincident constructs are nudged apart by a couple of
   // pixels (disclosed in the interpretation) so every series stays visible while
   // the table below keeps the exact values.
-  const TRAJ_COLORS = ["#2fa392", "#d98a14", "#4e79a7", "#b5446e", "#6a8f3a", "#8a5fc0", "#c0563a"];
+  const TRAJ_COLOURS = ["#2fa392", "#d98a14", "#4e79a7", "#b5446e", "#6a8f3a", "#8a5fc0", "#c0563a"];
   const TRAJ_DASHES = ["", "5 3", "1 3", "7 3 1 3", "3 3", "9 4", "2 2"];
   function trajectoryChart(states, trajectory) {
     const n = trajectory.length, m = states.length;
@@ -330,7 +330,7 @@
     const xt = n > 1 ? [[0, "start"], [Math.round((n - 1) / 2), "middle"], [n - 1, "end"]] : [[0, "start"]];
     for (const [i, anchor] of xt) parts.push(`<text x="${x(i).toFixed(1)}" y="${H - 10}" text-anchor="${anchor}" fill="${FIG.muted}">step ${i}</text>`);
     for (let s = 0; s < m; s++) {
-      const col = TRAJ_COLORS[s % TRAJ_COLORS.length], dash = TRAJ_DASHES[s % TRAJ_DASHES.length], off = offset[s];
+      const col = TRAJ_COLOURS[s % TRAJ_COLOURS.length], dash = TRAJ_DASHES[s % TRAJ_DASHES.length], off = offset[s];
       const da = dash ? ` stroke-dasharray="${dash}"` : "";
       let d = "", pen = false;
       for (let i = 0; i < n; i++) {
@@ -441,7 +441,7 @@
     }
     if (opId === "landscape") {
       const r = raw.result;
-      return plural(asArr(r.themes).length, "theme") + " mapped. " + plural(asArr(r.under_theorized_fronts).length, "front") + " under-theorised, " + plural(asArr(r.redundancy_risk).length, "theme") + " at redundancy risk.";
+      return plural(asArr(r.themes).length, "theme") + " mapped. " + plural(asArr(r.under_theorised_fronts).length, "front") + " under-theorised, " + plural(asArr(r.redundancy_risk).length, "theme") + " at redundancy risk.";
     }
     return "";
   }
@@ -567,7 +567,7 @@
          { key: "focal", label: "focal" }, { key: "keywords", label: "keywords" }, { key: "alternatives", label: "alternatives" }],
         themes.map((t) => Object.assign({}, t, { focal: t.focal ? "yes" : "—", keywords: asArr(t.keywords), alternatives: asArr(t.alternatives) }))));
       sections.push(kvSection("Flags", [
-        ["Under-theorized fronts", asArr(r.under_theorized_fronts).join(", ") || "—"],
+        ["Under-theorised fronts", asArr(r.under_theorised_fronts).join(", ") || "—"],
         ["Redundancy risk", asArr(r.redundancy_risk).join(", ") || "—"],
       ]));
       if (raw.dot) sections.push(figureSection("Theme landscape", await renderDot(raw.dot), theoryId + ".theme_landscape"));

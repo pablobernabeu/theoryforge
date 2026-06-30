@@ -12,7 +12,7 @@ _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 
 def _san(s) -> str:
-    """Sanitize a measurement label into a syntactic lavaan variable name."""
+    """Sanitise a measurement label into a syntactic lavaan variable name."""
     s = _NON_ALNUM.sub("_", str(s if s is not None else "").lower()).strip("_")
     return s or "x"
 

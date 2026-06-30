@@ -157,7 +157,7 @@ class Theory:
             if _nonempty_str(s) and s not in prediction_ids:
                 errors.append(f"evidence[{i}] supports '{s}' is not a known prediction")
 
-    # -- serialization ---------------------------------------------------------
+    # -- serialisation ---------------------------------------------------------
     def write(self, path) -> None:
         path = Path(path)
         if path.suffix.lower() == ".json":

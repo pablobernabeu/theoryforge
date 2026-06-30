@@ -27,9 +27,9 @@ def test_landscape_statuses(fixtures_dir, panic_path):
     ls = tf.read(panic_path).landscape(_corpus(fixtures_dir))
     status = {t["id"]: t["status"] for t in ls["themes"]}
     assert status["theme_2"] == "crowded"          # focal (arousal) + alt_biological
-    assert status["theme_4"] == "under_theorized"  # genetics: no theory addresses it
+    assert status["theme_4"] == "under_theorised"  # genetics: no theory addresses it
     assert ls["redundancy_risk"] == ["theme_2"]
-    assert ls["under_theorized_fronts"] == ["theme_4"]
+    assert ls["under_theorised_fronts"] == ["theme_4"]
     th2 = next(t for t in ls["themes"] if t["id"] == "theme_2")
     assert th2["alternatives"] == ["alt_biological"]
     assert th2["focal"] is True

@@ -75,7 +75,7 @@ lm$co_citation
 
 `tf_landscape()` maps a theory's focal constructs and its registered
 alternatives onto the themes from `tf_litmap()`. A theme is tagged
-`"under_theorized"` when neither the focal theory nor any alternative touches it,
+`"under_theorised"` when neither the focal theory nor any alternative touches it,
 `"covered"` when exactly one does, and `"crowded"` when two or more do. Matching
 is by shared tokens between the theme keywords and the text of the construct
 labels, the theory title, and the alternatives.
@@ -116,7 +116,7 @@ candidates for new work. The redundancy risk lists crowded themes, where a new
 contribution would have to distinguish itself from existing accounts.
 
 ```{r landscape-summary}
-unlist(landscape$under_theorized_fronts)
+unlist(landscape$under_theorised_fronts)
 unlist(landscape$redundancy_risk)
 ```
 

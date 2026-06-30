@@ -4,7 +4,7 @@ digraph theme_landscape {
   "theme_1" [label="theme_1: appraisal, catastrophic misinterpretation (covered)"];
   "theme_2" [label="theme_2: arousal, interoception (crowded)"];
   "theme_3" [label="theme_3: avoidance, exposure (covered)"];
-  "theme_4" [label="theme_4: genetics, heritability (under_theorized)"];
+  "theme_4" [label="theme_4: genetics, heritability (under_theorised)"];
   "alt_cognitive" [label="alt_cognitive", shape=ellipse];
   "alt_biological" [label="alt_biological", shape=ellipse];
   "focal" [label="focal", shape=ellipse, style=bold];

@@ -108,7 +108,7 @@ tf_read_corpus <- function(path) {
 
 # Build the row-set [{a, b, count}] for pairs with count >= min_link, sorted by
 # (a, b) ascending. Returns an unnamed list of length-3 named lists so that
-# jsonlite serializes it as a JSON array of objects (each count an integer).
+# jsonlite serialises it as a JSON array of objects (each count an integer).
 .tf_edges <- function(pc, min_link) {
   keep <- which(pc$count >= as.integer(min_link))
   if (length(keep) == 0L) return(list())
@@ -215,7 +215,7 @@ tf_litmap <- function(corpus, min_link = 2) {
 #'
 #' Maps a theory's focal constructs and its registered alternatives onto the
 #' thematic structure of a corpus (computed by [tf_litmap()]). Each theme is
-#' tagged \code{"under_theorized"}, \code{"covered"}, or \code{"crowded"}. See
+#' tagged \code{"under_theorised"}, \code{"covered"}, or \code{"crowded"}. See
 #' API_SPEC.md section 15. Mirrors the Python \code{theory.landscape(corpus)} /
 #' \code{theoryforge.landscape(theory, corpus)}.
 #'
@@ -225,7 +225,7 @@ tf_litmap <- function(corpus, min_link = 2) {
 #'   (default \code{2}).
 #' @return A named list with elements \code{theory_id}, \code{themes} (each
 #'   \code{{id, keywords, alternatives, focal, status}}),
-#'   \code{under_theorized_fronts}, and \code{redundancy_risk}.
+#'   \code{under_theorised_fronts}, and \code{redundancy_risk}.
 #' @examples
 #' theory <- tf_theory("demo-1", "Arousal and threat") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.")
@@ -267,7 +267,7 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
     on <- sort(on)
     focal_on <- length(intersect(focal_tokens, th_tokens)) > 0L
     n <- length(on) + (if (focal_on) 1L else 0L)
-    status <- if (n == 0L) "under_theorized" else if (n >= 2L) "crowded" else "covered"
+    status <- if (n == 0L) "under_theorised" else if (n >= 2L) "crowded" else "covered"
     themes_out[[length(themes_out) + 1L]] <- list(
       id = th$id,
       keywords = as.list(kws),
@@ -275,7 +275,7 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
       focal = focal_on,
       status = status
     )
-    if (identical(status, "under_theorized")) {
+    if (identical(status, "under_theorised")) {
       under <- c(under, th$id)
     } else if (identical(status, "crowded")) {
       crowded <- c(crowded, th$id)
@@ -285,7 +285,7 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
   list(
     theory_id = .tf_str(T, "id"),
     themes = themes_out,
-    under_theorized_fronts = as.list(under),
+    under_theorised_fronts = as.list(under),
     redundancy_risk = as.list(crowded)
   )
 }

@@ -17,12 +17,12 @@ tf_landscape(theory, corpus, min_link = 2)
 \value{
 A named list with elements \code{theory_id}, \code{themes} (each
 \code{{id, keywords, alternatives, focal, status}}),
-\code{under_theorized_fronts}, and \code{redundancy_risk}.
+\code{under_theorised_fronts}, and \code{redundancy_risk}.
 }
 \description{
 Maps a theory's focal constructs and its registered alternatives onto the
 thematic structure of a corpus (computed by \code{\link[=tf_litmap]{tf_litmap()}}). Each theme is
-tagged \code{"under_theorized"}, \code{"covered"}, or \code{"crowded"}. See
+tagged \code{"under_theorised"}, \code{"covered"}, or \code{"crowded"}. See
 API_SPEC.md section 15. Mirrors the Python \code{theory.landscape(corpus)} /
 \code{theoryforge.landscape(theory, corpus)}.
 }

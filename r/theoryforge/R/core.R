@@ -197,7 +197,7 @@ tf_validate <- function(theory, full = FALSE) {
 
 #' Write a theory object to YAML or JSON
 #'
-#' Serializes a theory object to disk. The format is chosen by the file
+#' Serialises a theory object to disk. The format is chosen by the file
 #' extension (\code{.json} -> JSON, otherwise YAML). Files are written with LF
 #' line endings.
 #'
@@ -218,7 +218,7 @@ tf_write <- function(theory, path) {
   }
   con <- file(path, open = "wb")
   on.exit(close(con))
-  # Normalize to LF only.
+  # Normalise to LF only.
   text <- gsub("\r\n", "\n", text, fixed = TRUE)
   writeBin(charToRaw(text), con)
   invisible(path)

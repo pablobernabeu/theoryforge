@@ -242,7 +242,7 @@ NULL
   paste0(paste(out, collapse = "\n"), "\n")
 }
 
-.tf_STATUS_COLOR <- c(pass = "#4caf50", warn = "#ff9800", fail = "#f44336")
+.tf_STATUS_COLOUR <- c(pass = "#4caf50", warn = "#ff9800", fail = "#f44336")
 
 .tf_rigor <- function(T) {
   rep <- tf_check(T)
@@ -255,9 +255,9 @@ NULL
   for (i in seq_along(items)) {
     it <- items[[i]]
     y <- 60L + (i - 1L) * 24L
-    color <- if (it$status %in% names(.tf_STATUS_COLOR)) .tf_STATUS_COLOR[[it$status]] else "#9e9e9e"
+    colour <- if (it$status %in% names(.tf_STATUS_COLOUR)) .tf_STATUS_COLOUR[[it$status]] else "#9e9e9e"
     out <- c(out,
-      sprintf('  <rect x="20" y="%d" width="16" height="16" rx="3" fill="%s"/>', y, color),
+      sprintf('  <rect x="20" y="%d" width="16" height="16" rx="3" fill="%s"/>', y, colour),
       sprintf('  <text x="44" y="%d">%s</text>', y + 12L, .tf_xml(it$id)),
       sprintf('  <text x="320" y="%d">%s</text>', y + 12L, .tf_xml(it$status)))
   }

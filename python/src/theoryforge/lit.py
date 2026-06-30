@@ -118,12 +118,12 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
         )
         focal_on = bool(focal_tokens & th_tokens)
         n = len(on) + (1 if focal_on else 0)
-        status = "under_theorized" if n == 0 else ("crowded" if n >= 2 else "covered")
+        status = "under_theorised" if n == 0 else ("crowded" if n >= 2 else "covered")
         themes_out.append({
             "id": th["id"], "keywords": th["keywords"],
             "alternatives": on, "focal": focal_on, "status": status,
         })
-        if status == "under_theorized":
+        if status == "under_theorised":
             under.append(th["id"])
         elif status == "crowded":
             crowded.append(th["id"])
@@ -131,7 +131,7 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
     return {
         "theory_id": T.get("id", ""),
         "themes": themes_out,
-        "under_theorized_fronts": under,
+        "under_theorised_fronts": under,
         "redundancy_risk": crowded,
     }
 

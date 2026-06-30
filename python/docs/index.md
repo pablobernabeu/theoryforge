@@ -37,7 +37,7 @@ t.check()                       # 12-item rigour checklist + gate
 t.severity()                    # operationalised severity rubric
 t.preregister()                 # preregistration document
 corpus = tf.read_corpus("panic-corpus.yaml")
-t.landscape(corpus)             # under-theorized fronts + redundancy risk
+t.landscape(corpus)             # under-theorised fronts + redundancy risk
 ```
 
 ## Author

@@ -271,7 +271,7 @@ table.grid tbody tr:hover td { background: color-mix(in srgb, var(--accent) 9%, 
 .pill { padding: 2px 9px; border-radius: 999px; font-size: .74rem; font-weight: 700; white-space: nowrap; }
 .pill.pass, .pill.ok, .pill.covered, .pill.progressive { background: #2e7d46; color: #ffffff; }
 .pill.warn, .pill.advisory, .pill.review, .pill.neutral, .pill.crowded { background: #e8a33d; color: #3a2600; }
-.pill.fail, .pill.blocked, .pill.degenerating, .pill.under_theorized { background: #b5392f; color: #ffffff; }
+.pill.fail, .pill.blocked, .pill.degenerating, .pill.under_theorised { background: #b5392f; color: #ffffff; }
 
 .note { font-size: .85rem; color: var(--ink-soft); }
 .error {

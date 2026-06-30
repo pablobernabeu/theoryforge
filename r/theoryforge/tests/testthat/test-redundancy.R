@@ -1,4 +1,4 @@
-test_that("tf_tokens follows the spec tokenization", {
+test_that("tf_tokens follows the spec tokenisation", {
   expect_setequal(tf_tokens("The quick brown FOX!"), c("quick", "brown", "fox"))
   # drop <3 chars, lowercase, stopwords removed, set semantics (unique)
   expect_setequal(tf_tokens("drive drive towards goals"), c("drive", "goals"))

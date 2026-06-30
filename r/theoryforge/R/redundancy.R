@@ -1,6 +1,6 @@
 #' Deterministic lexical redundancy screen.
 #'
-#' Tokenization and Jaccard similarity per API_SPEC.md section 6.
+#' Tokenisation and Jaccard similarity per API_SPEC.md section 6.
 #' @name redundancy
 #' @keywords internal
 NULL
@@ -10,7 +10,7 @@ NULL
   "this", "these", "those", "towards", "toward", "into", "onto", "per", "via"
 )
 
-#' Tokenize a string into a set of content tokens
+#' Tokenise a string into a set of content tokens
 #'
 #' Lowercases, replaces every run of non-\code{[a-z0-9]} characters with a
 #' single space, splits, drops tokens shorter than 3 characters and the

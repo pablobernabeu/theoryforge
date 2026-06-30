@@ -8,7 +8,7 @@ NULL
 # Relations that compile to a directed structural path (`<to> ~ <from>`).
 .tf_SEM_PATH <- c("causes", "increases", "decreases", "mediates")
 
-# Sanitize a measurement label into a syntactic lavaan variable name:
+# Sanitise a measurement label into a syntactic lavaan variable name:
 # lowercase, replace runs of non-[a-z0-9] with "_", strip leading/trailing "_",
 # and fall back to "x" when the result is empty.
 .tf_san <- function(s) {

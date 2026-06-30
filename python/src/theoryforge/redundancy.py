@@ -18,7 +18,7 @@ _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 
 def tokens(s: str) -> set[str]:
-    """Tokenize a string into a SET of content tokens (see API_SPEC.md section 6)."""
+    """Tokenise a string into a SET of content tokens (see API_SPEC.md section 6)."""
     s = (s or "").lower()
     parts = _NON_ALNUM.sub(" ", s).split()
     return {t for t in parts if len(t) >= 3 and t not in STOPWORDS}

@@ -22,8 +22,8 @@ test_that("tf_compile_sem maps an associative proposition to a covariance", {
   expect_true(grepl("k_motivation ~~ k_drive", out, fixed = TRUE))
 })
 
-test_that("tf_compile_sem sanitizes labels and handles every relation kind", {
-  theory <- tf_theory("san-demo", "Sanitize demo") |>
+test_that("tf_compile_sem sanitises labels and handles every relation kind", {
+  theory <- tf_theory("san-demo", "Sanitise demo") |>
     tf_add_construct("c1", "C1", "def",
                      measurement = c("Heart-Rate Variability!!", "  spaces  ")) |>
     tf_add_proposition("p_mod", "c1", "c2", "moderates") |>

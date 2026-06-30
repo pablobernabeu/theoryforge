@@ -93,14 +93,14 @@ risk.
 t = tf.read("panic-network.theory.yaml")
 ls = t.landscape(corpus)
 
-ls["under_theorized_fronts"]  # theme ids no account addresses
+ls["under_theorised_fronts"]  # theme ids no account addresses
 ls["redundancy_risk"]         # theme ids two or more accounts crowd
 ls["themes"]                  # per-theme detail
 ```
 
 Each entry in `ls["themes"]` reports the theme `id`, its `keywords`, the
 `alternatives` that map onto it, whether the focal theory is `focal` on it,
-and a `status` of `under_theorized`, `covered`, or `crowded`. The
+and a `status` of `under_theorised`, `covered`, or `crowded`. The
 under-theorised fronts point to questions a new theory could claim, and the
 redundancy risks point to ground where it would need to justify a further
 account.

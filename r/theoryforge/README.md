@@ -51,7 +51,7 @@ tf_appraise_amendment(v2, theory)$verdict   # "progressive"
 # LITERATURE: map a corpus and position the theory against it
 corpus <- tf_read_corpus("fixtures/panic-corpus.yaml")
 landscape <- tf_landscape(theory, corpus)
-landscape$under_theorized_fronts   # themes no theory addresses
+landscape$under_theorised_fronts   # themes no theory addresses
 landscape$redundancy_risk          # crowded themes
 ```
 

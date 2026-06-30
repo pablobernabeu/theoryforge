@@ -2,7 +2,7 @@
 % Please edit documentation in R/redundancy.R
 \name{tf_tokens}
 \alias{tf_tokens}
-\title{Tokenize a string into a set of content tokens}
+\title{Tokenise a string into a set of content tokens}
 \usage{
 tf_tokens(s)
 }

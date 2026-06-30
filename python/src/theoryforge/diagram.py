@@ -190,7 +190,7 @@ def _venn(T: dict) -> str:
     return "\n".join(out) + "\n"
 
 
-_STATUS_COLOR = {"pass": "#4caf50", "warn": "#ff9800", "fail": "#f44336"}
+_STATUS_COLOUR = {"pass": "#4caf50", "warn": "#ff9800", "fail": "#f44336"}
 
 
 def _rigor(T: dict) -> str:
@@ -205,8 +205,8 @@ def _rigor(T: dict) -> str:
            f'  <text x="20" y="46">aggregate score {rep["aggregate_score"]:.1f}, gate {rep["gate"]}</text>']
     for i, it in enumerate(items):
         y = 60 + i * 24
-        color = _STATUS_COLOR.get(it["status"], "#9e9e9e")
-        out.append(f'  <rect x="20" y="{y}" width="16" height="16" rx="3" fill="{color}"/>')
+        colour = _STATUS_COLOUR.get(it["status"], "#9e9e9e")
+        out.append(f'  <rect x="20" y="{y}" width="16" height="16" rx="3" fill="{colour}"/>')
         out.append(f'  <text x="44" y="{y + 12}">{_xml(it["id"])}</text>')
         out.append(f'  <text x="320" y="{y + 12}">{_xml(it["status"])}</text>')
     out.append("</svg>")
