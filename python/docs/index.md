@@ -13,8 +13,10 @@ of the R package of the same name; both follow one shared specification
 ([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)) and
 return identical results.
 
-See the repository [README](https://github.com/pablobernabeu/theoryforge) and the
-[API reference](api.md) for the full function list.
+For the rationale behind each rigour check and exactly how every reported value is
+computed, see [Methodological foundations](methodology.md). The repository
+[README](https://github.com/pablobernabeu/theoryforge) gives an overview and the
+[API reference](api.md) lists every function.
 
 !!! tip "Try it in your browser (no install)"
     The [**interactive web app**](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this

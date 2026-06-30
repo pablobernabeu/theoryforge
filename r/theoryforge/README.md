@@ -72,7 +72,7 @@ landscape$redundancy_risk          # crowded themes
 | `tf_read_corpus`, `tf_litmap`, `tf_landscape` | Bibliometric mapping and the theory landscape |
 | `tf_render_report`, `tf_osf_push` | Render a Quarto report and deposit it on OSF (dry-run by default) |
 
-See the package reference index for the complete, grouped function list.
+For the rationale behind each rigour check and exactly how every reported value is computed, see [Methodological foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html). The package reference index gives the complete, grouped function list.
 
 ## Licence
 

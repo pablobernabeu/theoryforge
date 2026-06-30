@@ -1,5 +1,11 @@
 # Methodological foundations
 
+## Why theoryforge
+
+Psychology and the social sciences accumulate findings far faster than they build theories that explain them. Constructs proliferate and blur into one another (the jingle-jangle problem), predictions stay vague and directional rather than committal, auxiliary assumptions accrete to protect a theory rather than to expose it, and a revision is rarely judged by whether it adds testable content or merely shields the theory from refutation. Eronen and Bringmann (2021) call this the theory crisis.
+
+theoryforge treats a theory as a structured, versioned object and makes these properties checkable rather than rhetorical. It scores the theory against twelve criteria drawn from the methodology literature, screens its constructs for redundancy, grades how severely each prediction is tested, distinguishes progressive from degenerating amendments in Lakatos's sense, and renders the structure so it can be read and tested. Every value it reports is produced by a fixed, documented rule, with no model and no randomness, and the R and Python implementations compute byte-identical results, so a verdict is reproducible and can be audited against the specification.
+
 Each item in the rigour checklist follows from a result in the methodology
 literature, and the package records the supporting work next to the check (the
 `citation` field of the report). The supporting works are listed in APA style
@@ -21,6 +27,41 @@ below.
 | Diagnosticity | At least one prediction discriminates from a registered alternative | [Platt (1964)](https://doi.org/10.1126/science.146.3642.347), [Fiedler (2017)](https://doi.org/10.1177/1745691616654458) |
 | Formalisation | A formal-model stub exists | [Robinaugh et al. (2021)](https://doi.org/10.1177/1745691620974697), [Guest & Martin (2021)](https://doi.org/10.1177/1745691620970585) |
 | Derivation chain | Each prediction is graph-reachable from propositions (reachability only) | [Scheel et al. (2021)](https://doi.org/10.1177/1745691620966795), [Szollosi et al. (2020)](https://doi.org/10.1016/j.tics.2019.11.009) |
+
+## How the rigour score is computed
+
+Each of the twelve items returns a status (`pass`, `warn` or `fail`) and a score between 0 and 1. Present-or-absent items score 1 or 0; items that measure a proportion (for example, the share of constructs that carry a definition, a measurement and boundary conditions) score that proportion. Two items read a calibrated threshold from the checklist file: predictive precision passes when at least half of the predictions are point or interval, and test severity passes when the mean computed severity reaches 0.5.
+
+The headline number, the aggregate score, is the weighted sum of the twelve item scores scaled to a 0 to 100 range. The weights are fixed in the checklist file and sum to one, so a theory that passes every item scores 100. Falsifiability carries the most weight (0.15) and formalisation the least (0.05).
+
+The gate is the one-word verdict. Two items are blockers: falsifiability and the derivation chain. If either blocker fails, the gate is `blocked`. A theory at the `draft` maturity stage is always `advisory`, so the blockers inform without gating early work. Otherwise the gate is `pass`.
+
+Each item is scored as follows.
+
+- **Falsifiability** passes if at least one prediction is point, interval or directional, that is, a claim that forbids some observation.
+- **Predictive precision** is the share of predictions that are point or interval, and passes at 0.5 or above.
+- **Test severity** is the mean computed severity across the predictions, and passes at 0.5 or above.
+- **Parsimony** falls as the ratio of auxiliary assumptions to propositions rises, and fails outright if any assumption is ad hoc (added for a prediction that no passing test supports).
+- **Construct non-redundancy** scores one minus the largest lexical similarity between any pair of construct definitions, and warns once that similarity reaches 0.85.
+- **Construct clarity** is the share of constructs that carry a definition, a measurement and boundary conditions, and passes only at 1.
+- **Scope** passes when boundary conditions are stated, either for the theory or on every construct.
+- **Mechanism** is the share of propositions that state a mechanism rather than a bare correlation, and passes only at 1.
+- **Causal testability** passes if at least one proposition is a causal relation (causes, increases or decreases) that exports to a directed acyclic graph.
+- **Diagnosticity** is the share of predictions that name a registered alternative they would discriminate against, and passes once at least one does.
+- **Formalisation** passes if the theory carries a formal-model stub.
+- **Derivation chain** is the share of predictions that derive from declared propositions, and passes only at 1; otherwise it fails.
+
+## How the other outputs are computed
+
+**Severity.** Each prediction earns a base risk from its form: existence 0.1, directional 0.4, interval 0.7 and point 0.9. The reported risk score is this base. The computed severity then adjusts it. A merely directional prediction is discounted by 25 per cent, following Meehl's argument that a bare sign is cheap because almost everything in psychology correlates a little. A prediction that names a registered alternative in its `diagnostic_vs` field, and so would discriminate between theories, earns a bonus of 0.1. The computed severity is the discounted base plus the bonus, capped at 1.
+
+**Construct redundancy.** Each construct definition is reduced to a set of content tokens: the text is lowercased and split on anything that is not a letter or digit, and tokens shorter than three characters or in a small stop-word list are dropped. The similarity of two constructs is the Jaccard index of their token sets, the size of the intersection divided by the size of the union. The screen reports every construct pair with its similarity and flags any pair at or above 0.85 for review. This is a deliberately simple lexical screen, calibrated rather than a hard truth; an optional embedding-based screen is available for a semantic comparison.
+
+**Amendment appraisal.** Comparing an amended theory with a prior version, a prediction is new if its identifier did not appear in the prior, and corroborated if a passing test outcome references it. An assumption is ad hoc if it was added for a prediction (its `added_for` field is set) and no passing test supports the prediction it protects. The verdict follows Lakatos: progressive if the amendment adds at least one corroborated new prediction and no ad-hoc assumptions, degenerating if it adds at least one ad-hoc assumption and no corroborated new prediction, and neutral otherwise.
+
+**Theory landscape.** Against a literature corpus, each theme is labelled by how many of the theory's accounts address it, counting the focal theory and its registered alternatives. A theme that no account touches is under-theorised, one that a single account touches is covered, and one that two or more touch is crowded, which flags a redundancy risk.
+
+**Simulation.** Each construct becomes a state variable, and each directed proposition contributes a signed coupling between two states, positive for increases, causes and mediates and negative for decreases, scaled by the coupling gain. Every state also decays towards zero at the damping rate. The network is integrated with fixed-step (Euler) updates from a common initial value, and the trajectory is the sequence of state vectors. It is a deliberately transparent linear system, meant to expose the qualitative dynamics a network of propositions implies rather than to fit data.
 
 ## References
 
