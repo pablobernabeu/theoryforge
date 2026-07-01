@@ -44,6 +44,6 @@ t.landscape(corpus)             # under-theorised fronts + redundancy risk
 
 ## Author
 
-theoryforge is written and maintained by Pablo Bernabeu
-([ORCID 0000-0003-1083-2460](https://orcid.org/0000-0003-1083-2460)). The R and
+theoryforge is written and maintained by
+[Pablo Bernabeu](https://pablobernabeu.github.io). The R and
 Python packages share one specification and are released under the MIT licence.
