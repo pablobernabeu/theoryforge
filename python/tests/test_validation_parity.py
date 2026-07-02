@@ -1,6 +1,6 @@
 """Validation and cross-language parity behaviour.
 
-These lock the contracts that the byte-identical golden artifacts do not exercise:
+These lock the contracts that the byte-identical golden artefacts do not exercise:
 the opt-in referential-integrity validation, the structural error message text,
 the non-mapping read guards, the OSF base_url override and the report title
 fallback. The R suite asserts the same behaviour so the two stay aligned.

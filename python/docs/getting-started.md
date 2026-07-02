@@ -31,7 +31,7 @@ t.validate()
 t.validate(full=True)   # also checks referential integrity
 ```
 
-Produce the rigour report. The `"json"` format returns the 12-item rigour checklist together with the overall gate.
+Produce the rigour report. The `"json"` format returns the 12-item rigour checklist together with the overall gate. `t.check()` returns the same information as a plain Python dictionary; `t.report(format=...)` renders it as a string, in `"json"` or `"html"`.
 
 ```python
 print(t.report("json"))

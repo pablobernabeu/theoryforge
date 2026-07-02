@@ -89,7 +89,7 @@ def main() -> int:
         for f in failures:
             print("  - " + f)
         return 1
-    print(f"PARITY OK: {checks} artifacts match across R and Python.")
+    print(f"PARITY OK: {checks} artefacts match across R and Python.")
     return 0
 
 

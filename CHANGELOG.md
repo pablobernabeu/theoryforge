@@ -43,7 +43,7 @@ testing scientific theories, delivered as feature-parity R (CRAN) and Python (Py
 - A "Methodological foundations" documentation page that cites the verified literature behind each rigour item, with DOIs. The machine-readable BibTeX ships with the R package at `inst/REFERENCES.bib`. The risk-severity item's citation was corrected after a Crossref re-audit (Cohen, 1992 removed as not supporting prediction severity).
 
 ### Quality & reproducibility
-- Cross-language parity enforced over 54 golden artifacts in CI, with byte-identical diagrams (DOT and SVG), markdown, and lavaan outputs and semantically-equal JSON.
+- Cross-language parity enforced over 54 golden artefacts in CI, with byte-identical diagrams (DOT and SVG), markdown, and lavaan outputs and semantically-equal JSON.
 - R passes `R CMD check --as-cran` with 0 errors and 0 warnings (1 note, the standard new-submission note). Python builds a wheel and sdist passing `twine check`, is ruff- and mypy-clean, and ships `py.typed`.
 - Test suites: Python (pytest) and R (testthat), plus a dedicated parity job.
 

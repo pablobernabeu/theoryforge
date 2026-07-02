@@ -280,7 +280,7 @@ tf_report <- function(theory, format = "json") {
     rows <- paste(rows, collapse = "\n")
     return(paste0(
       '<section class="theoryforge-report">\n',
-      sprintf('  <h2>Rigor report: %s</h2>\n', rep$theory_id),
+      sprintf('  <h2>Rigour report: %s</h2>\n', rep$theory_id),
       sprintf('  <p>Aggregate score: <strong>%s</strong> &middot; gate: <strong>%s</strong></p>\n',
               format_score_html(rep$aggregate_score), rep$gate),
       '  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n',

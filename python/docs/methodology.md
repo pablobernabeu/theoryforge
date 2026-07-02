@@ -4,7 +4,7 @@
 
 Psychology and the social sciences accumulate findings far faster than they build theories that explain them. Constructs proliferate and blur into one another (the jingle-jangle problem), predictions stay vague and directional rather than committal, auxiliary assumptions accrete to protect a theory rather than to expose it, and a revision is rarely judged by whether it adds testable content or merely shields the theory from refutation. Eronen and Bringmann (2021) call this the theory crisis.
 
-theoryforge treats a theory as a structured, versioned object and makes these properties checkable rather than rhetorical. It scores the theory against twelve criteria drawn from the methodology literature, screens its constructs for redundancy, grades how severely each prediction is tested, distinguishes progressive from degenerating amendments in Lakatos's sense, and renders the structure so it can be read and tested. Every value it reports is produced by a fixed, documented rule, with no model and no randomness, and the R and Python implementations compute byte-identical results, so a verdict is reproducible and can be audited against the specification.
+theoryforge treats a theory as a structured, versioned object and makes the specification of these properties checkable rather than left to prose. It scores the theory against twelve structural criteria drawn from the methodology literature, screens its constructs for redundancy, grades how severely each prediction is tested, distinguishes progressive from degenerating amendments in Lakatos's sense, and renders the structure so it can be read and tested. Every value it reports is produced by a fixed, documented rule, with no model and no randomness, and the R and Python implementations compute byte-identical results, so a verdict is reproducible and can be audited against the specification. See [Scope and limits](#scope-and-limits) below for what this checking does and does not establish.
 
 Each item in the rigour checklist follows from a result in the methodology
 literature, and the package records the supporting work next to the check (the
@@ -13,20 +13,20 @@ below.
 
 ## Grounding for each rigour check
 
-| Rigour check | Criterion | Supporting work |
-|---|---|---|
-| Falsifiability | At least one prediction forbids an observation | Popper (1959), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
-| Predictive precision | Predictions are point/interval, not merely directional | [Meehl (1967)](https://doi.org/10.1086/288135), [Meehl (1990a)](https://doi.org/10.1207/s15327965pli0102_1) |
-| Test severity | Mean prediction severity above a threshold | [Mayo (2018)](https://doi.org/10.1017/9781107286184), [Meehl (1990b)](https://doi.org/10.2466/pr0.1990.66.1.195) |
-| Parsimony | Few auxiliary assumptions; none added purely defensively | [Forster & Sober (1994)](https://doi.org/10.1093/bjps/45.1.1), [Lakatos (1970)](https://doi.org/10.1017/cbo9781139171434.009) |
-| Construct non-redundancy | No construct pair exceeds a calibrated similarity screen (jingle-jangle) | Kelley (1927), [Le et al. (2010)](https://doi.org/10.1016/j.obhdp.2010.02.003), [Lawson & Robins (2021)](https://doi.org/10.1177/10888683211047101) |
-| Construct clarity | Every construct has definition + measurement + boundary conditions | [Suddaby (2010)](https://doi.org/10.5465/amr.35.3.zok346), [Cronbach & Meehl (1955)](https://doi.org/10.1037/h0040957), [Flake & Fried (2020)](https://doi.org/10.1177/2515245920952393) |
-| Scope and boundary conditions | Boundary conditions explicitly stated | [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
-| Mechanism | Each proposition states a mechanism, not just a correlation | [Sutton & Staw (1995)](https://doi.org/10.2307/2393788), [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371) |
-| Causal testability | Causal relations export to a DAG with derivable implications | [Textor et al. (2016)](https://doi.org/10.1093/ije/dyw341), [Eronen & Bringmann (2021)](https://doi.org/10.1177/1745691620970586) |
-| Diagnosticity | At least one prediction discriminates from a registered alternative | [Platt (1964)](https://doi.org/10.1126/science.146.3642.347), [Fiedler (2017)](https://doi.org/10.1177/1745691616654458) |
-| Formalisation | A formal-model stub exists | [Robinaugh et al. (2021)](https://doi.org/10.1177/1745691620974697), [Guest & Martin (2021)](https://doi.org/10.1177/1745691620970585) |
-| Derivation chain | Each prediction is graph-reachable from propositions (reachability only) | [Scheel et al. (2021)](https://doi.org/10.1177/1745691620966795), [Szollosi et al. (2020)](https://doi.org/10.1016/j.tics.2019.11.009) |
+| Rigour check | Item id | Criterion | Supporting work |
+|---|---|---|---|
+| Falsifiability | `falsifiability` | At least one prediction forbids an observation | Popper (1959), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
+| Predictive precision | `precision` | Predictions are point/interval, not merely directional | [Meehl (1967)](https://doi.org/10.1086/288135), [Meehl (1990a)](https://doi.org/10.1207/s15327965pli0102_1) |
+| Test severity | `risk_severity` | Mean prediction severity above a threshold | [Mayo (2018)](https://doi.org/10.1017/9781107286184), [Meehl (1990b)](https://doi.org/10.2466/pr0.1990.66.1.195) |
+| Parsimony | `parsimony` | Few auxiliary assumptions; none added purely defensively | [Forster & Sober (1994)](https://doi.org/10.1093/bjps/45.1.1), [Lakatos (1970)](https://doi.org/10.1017/cbo9781139171434.009) |
+| Construct non-redundancy | `non_redundancy` | No construct pair exceeds a calibrated similarity screen (jingle-jangle) | Kelley (1927), [Le et al. (2010)](https://doi.org/10.1016/j.obhdp.2010.02.003), [Lawson & Robins (2021)](https://doi.org/10.1177/10888683211047101) |
+| Construct clarity | `construct_clarity` | Every construct has definition + measurement + boundary conditions | [Suddaby (2010)](https://doi.org/10.5465/amr.35.3.zok346), [Cronbach & Meehl (1955)](https://doi.org/10.1037/h0040957), [Flake & Fried (2020)](https://doi.org/10.1177/2515245920952393) |
+| Scope and boundary conditions | `scope` | Boundary conditions explicitly stated | [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
+| Mechanism | `logical_why` | Each proposition states a mechanism, not just a correlation | [Sutton & Staw (1995)](https://doi.org/10.2307/2393788), [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371) |
+| Causal testability | `causal_testability` | Causal relations export to a DAG with derivable implications | [Textor et al. (2016)](https://doi.org/10.1093/ije/dyw341), [Eronen & Bringmann (2021)](https://doi.org/10.1177/1745691620970586) |
+| Diagnosticity | `diagnosticity` | At least one prediction discriminates from a registered alternative | [Platt (1964)](https://doi.org/10.1126/science.146.3642.347), [Fiedler (2017)](https://doi.org/10.1177/1745691616654458) |
+| Formalisation | `formalisation` | A formal-model stub exists | [Robinaugh et al. (2021)](https://doi.org/10.1177/1745691620974697), [Guest & Martin (2021)](https://doi.org/10.1177/1745691620970585) |
+| Derivation chain | `derivation_chain` | Each prediction is graph-reachable from propositions (reachability only) | [Scheel et al. (2021)](https://doi.org/10.1177/1745691620966795), [Szollosi et al. (2020)](https://doi.org/10.1016/j.tics.2019.11.009) |
 
 ## How the rigour score is computed
 
@@ -50,6 +50,12 @@ Each item is scored as follows.
 - **Diagnosticity** is the share of predictions that name a registered alternative they would discriminate against, and passes once at least one does.
 - **Formalisation** passes if the theory carries a formal-model stub.
 - **Derivation chain** is the share of predictions that derive from declared propositions, and passes only at 1; otherwise it fails.
+
+## Scope and limits
+
+The checklist is a structural and lexical screen, not a substantive review. Each item asks whether a required property is present in the theory object, such as a boundary-conditions field or a mechanism string, or what share of a collection exhibits it; the non-redundancy screen additionally measures the lexical overlap between construct definitions. No item reads or judges the content of a definition, a mechanism or a boundary condition: a theory can score highly by being completely and precisely specified while resting on a false premise, and can score poorly for being under-specified while resting on a sound one. The aggregate score indexes how completely a theory is specified against the checklist, not whether it is true or well-reasoned.
+
+The weights that combine the twelve items into the aggregate score, and the three numeric thresholds (the redundancy ceiling, the minimum precision share, the minimum mean severity), are the package's own calibrated defaults, fixed in the checklist file for reproducibility. They are not derived from an external validation study, and a field with different norms can override them in its own copy of the file. The gate reflects only two of the twelve items, falsifiability and the derivation chain: a theory can show `gate: pass` while several other items are `warn` or `fail`, so the gate is a minimal precondition for testing rather than an overall verdict. Read the item table alongside the aggregate score, not the score alone.
 
 ## How the other outputs are computed
 

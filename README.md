@@ -3,7 +3,7 @@
 Systematic theory development: twin, feature-parity packages, R (CRAN) and Python (PyPI), for a
 rigorous, reproducible workflow of building, developing and testing scientific theories. A
 theory is treated as a versioned, machine-checkable object. The packages scaffold the three
-modes, enforce a theory-rigour checklist, auto-generate diagrams and connect to the bibliometric
+modes, apply a theory-rigour checklist, auto-generate diagrams and connect to the bibliometric
 literature so that construct non-redundancy is checked against the actual field.
 
 ## Documentation
@@ -42,11 +42,11 @@ P0 to P4 cover the full theory lifecycle, bibliometric mapping, SEM compilation,
 - P3 (testing and review): `compile_sem` (compile constructs and propositions to lavaan model syntax) and `dossier` (a one-command reviewer-facing audit bundle containing the rigour report, severity, provenance and preregistration).
 - P4 (simulation, reporting and adapters): `simulate` (deterministic dynamical-system runner over the construct network), `render_report` (Quarto report wrapping the dossier), `embedding_redundancy` (opt-in, parity-exempt embedding screen) and `osf_push` (OSF deposit adapter, dry-run by default). No `NotImplemented` stubs remain.
 
-Cross-language parity is enforced over 54 golden artifacts. The diagrams, preregistration, lavaan and dossier outputs are byte-identical, and the rigour, severity, appraisal, litmap, landscape and simulate JSON outputs are semantically equal. Running `python scripts/parity_check.py` reports `PARITY OK`, and the pytest and testthat suites are green. Reproduce the whole verification with `scripts/reproduce_all.ps1` (or `scripts/reproduce_all.sh`). See [CHANGELOG.md](CHANGELOG.md).
+Cross-language parity is enforced over 54 golden artefacts. The diagrams, preregistration, lavaan and dossier outputs are byte-identical, and the rigour, severity, appraisal, litmap, landscape and simulate JSON outputs are semantically equal. Running `python scripts/parity_check.py` reports `PARITY OK`, and the pytest and testthat suites are green. Reproduce the whole verification with `scripts/reproduce_all.ps1` (or `scripts/reproduce_all.sh`). See [CHANGELOG.md](CHANGELOG.md).
 
 ### Release readiness
 
-The R package passes `R CMD check --as-cran` with 0 errors and 0 warnings (only the standard new-submission note), and ships a pkgdown site config and a self-contained vignette. The Python package builds a wheel and sdist that pass `twine check` (shipping `py.typed` and the schema), is ruff- and mypy-clean, and has an mkdocs site config. CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) enforces all of this together with the 54-artifact cross-language parity on every push.
+The R package passes `R CMD check --as-cran` with 0 errors and 0 warnings (only the standard new-submission note), and ships a pkgdown site config and a self-contained vignette. The Python package builds a wheel and sdist that pass `twine check` (shipping `py.typed` and the schema), is ruff- and mypy-clean, and has an mkdocs site config. CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) enforces all of this together with the 54-artefact cross-language parity on every push.
 
 Future enhancements (not blocking) include a live OSF upload, which needs your own token (`osf_push` is dry-run by default), richer nonlinear and agent-based model runners, and first-class embedding-model integrations beyond the pluggable `embedding_redundancy` interface.
 

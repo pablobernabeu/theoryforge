@@ -1,5 +1,5 @@
 # Validation and cross-language parity behaviour. These lock the contracts the
-# byte-identical golden artifacts do not exercise, and mirror the Python
+# byte-identical golden artefacts do not exercise, and mirror the Python
 # tests/test_validation_parity.py so the two implementations stay aligned.
 
 consistent_theory <- function() {

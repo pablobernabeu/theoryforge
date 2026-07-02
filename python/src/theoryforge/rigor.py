@@ -202,7 +202,7 @@ def report(T, format: str = "json") -> str:
         )
         return (
             f'<section class="theoryforge-report">\n'
-            f'  <h2>Rigor report: {rep["theory_id"]}</h2>\n'
+            f'  <h2>Rigour report: {rep["theory_id"]}</h2>\n'
             f'  <p>Aggregate score: <strong>{rep["aggregate_score"]}</strong> &middot; '
             f'gate: <strong>{rep["gate"]}</strong></p>\n'
             f'  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n'

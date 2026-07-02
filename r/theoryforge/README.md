@@ -25,6 +25,9 @@ The package depends on `yaml` and `jsonlite`.
 
 ## Quick start
 
+See [Get started](https://pablobernabeu.github.io/theoryforge/r/articles/theoryforge.html) for a
+fuller walk-through of building, checking, and diagramming a theory.
+
 ```r
 library(theoryforge)
 

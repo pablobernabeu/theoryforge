@@ -163,3 +163,8 @@ cat('<div class="tf-figure">', tf_diagram(theory, "severity"), '</div>', sep = "
 All of these views are deterministic and byte-identical across the R and Python
 packages. The DOT strings render with any Graphviz engine, and the SVG views
 open in any browser.
+
+Three further views are not shown here: `provenance` (the build log as a
+digraph), `development_roadmap` (the checklist items still failing or
+warning), and `pipeline` (each prediction linked to its test outcome). See
+`?tf_diagram` for the complete list of diagram types.

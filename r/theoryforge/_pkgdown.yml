@@ -70,7 +70,7 @@ reference:
   - tf_add_alternative
   - tf_add_assumption
   - tf_set_formal_model
-- title: Rigor
+- title: Rigour
   desc: Score a theory against the versioned rigour checklist.
   contents:
   - tf_check

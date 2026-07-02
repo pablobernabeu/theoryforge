@@ -47,4 +47,4 @@ def test_report_json_roundtrips(panic_path):
 
 def test_report_html(panic_path):
     html = tf.read(panic_path).report(format="html")
-    assert "<table>" in html and "Rigor report" in html
+    assert "<table>" in html and "Rigour report" in html

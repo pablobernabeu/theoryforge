@@ -32,7 +32,7 @@ Each package vendors a copy of `schema/` at build time (R uses `inst/schema/`, P
 | Diagram IR | `tf_diagram(theory, type, engine="graphviz")` → string | `theory.diagram(type, engine="graphviz")` → str |
 | **P0 stubs** (signal "not implemented") | `tf_litmap`, `tf_landscape`, `tf_preregister`, `tf_appraise_amendment` | `theory.litmap`, `theory.landscape`, `theory.preregister`, `theory.appraise_amendment` |
 
-The two implementations use the same verbs, the same argument names, and the same artifacts. Stubs MUST raise a clear "not implemented in P0" error rather than returning incorrect data.
+The two implementations use the same verbs, the same argument names, and the same artefacts. Stubs MUST raise a clear "not implemented in P0" error rather than returning incorrect data.
 
 **Validation (`validate`).** The default checks structure: the required top-level fields (`schema_version`, `id`, `title`, `maturity`), the `maturity`/`theory_form`/`relation`/`type` enums, and the required fields of each construct, proposition and prediction. Both languages collect every problem and raise once with the prefix `invalid theory object: ` followed by the messages joined by `; `. With `full=TRUE`/`full=True`, a deterministic referential-integrity pass is appended (same checks, order and message text in both languages):
 
@@ -264,7 +264,7 @@ digraph context {
 
 **severity** (SVG). The `severity` rows as horizontal bars (`viewBox="0 0 380 H"`, `H = 40 + 28·max(n,1) + 8`). A title, then for each prediction (file order) at `y = 40 + 28·i`: the `prediction_id`, a bar of width `floor(computed_severity·200 + 0.5 + 1e-6)` at x=130, and the value `%.3f`. The 1e-6 bias matches `rnd` so the integer width is identical across platforms.
 
-## 13. Additional golden artifacts (per fixture unless noted)
+## 13. Additional golden artefacts (per fixture unless noted)
 
 `<id>.development_roadmap.dot`, `<id>.pipeline.dot` (byte), `<id>.severity.json`, `<id>.prereg.md` (byte), and, for the amended pair only, `panic-network-2026-v2.appraisal.json` = `appraise_amendment(v2, v1)`. Parity checker: byte-identical for `*.dot/.dag/.md`, semantic (recursive, float tol 1e-9) for `*.json`.
 
@@ -331,7 +331,7 @@ digraph theme_landscape {
 }
 ```
 
-## 17. Additional golden artifacts (corpus id = `panic-corpus-demo`)
+## 17. Additional golden artefacts (corpus id = `panic-corpus-demo`)
 
 `<cid>.litmap.json`, `<cid>.landscape.json` (semantic); `<cid>.keyword_cooccurrence.dot`, `<cid>.co_citation.dot`, `<cid>.theme_landscape.dot` (byte). `landscape` uses the `panic-network.theory.yaml` theory.
 
@@ -383,7 +383,7 @@ Numbers use `fmt()` (§11). Build these lines (joined with `\n`), then append `"
 ```
 (The final `## Preregistration` heading and blank line are the last two list entries; the joined block ends with `\n`, then `preregister(theory)` is appended verbatim.)
 
-## 20. Additional golden artifacts (per theory)
+## 20. Additional golden artefacts (per theory)
 
 `<id>.sem.lavaan`, `<id>.dossier.md` (both byte-identical). `expected/` holds 36 files after P3.
 
@@ -395,7 +395,7 @@ New API (mirrored): `tf_simulate` / `theory.simulate()`; `tf_render_report` / `t
 
 ## 21. simulate(theory, steps=10, dt=0.1, k=1.0, damping=0.5, init=1.0) → trajectory (deterministic, parity-tested)
 
-Each construct (file order) is a state variable. Build an `n×n` coupling matrix `A` (zeros): for each proposition with `from`/`to` both constructs, `sign = +1` if relation ∈ {increases, causes, mediates}, `-1` if `decreases`, else `0`; `A[idx(to)][idx(from)] += sign*k`. Initialise `X = [init]*n`. Fixed-step (Euler) update for `steps` steps: `dX = A·X − damping·X`; `X = X + dt·dX`. Return `{states, dt, steps, trajectory}`, where `trajectory` has `steps+1` rows (row 0 = initial state) and every value is rounded to 6 decimals. Golden artifact `<id>.simulate.json` (compared semantically, tolerance 1e-9).
+Each construct (file order) is a state variable. Build an `n×n` coupling matrix `A` (zeros): for each proposition with `from`/`to` both constructs, `sign = +1` if relation ∈ {increases, causes, mediates}, `-1` if `decreases`, else `0`; `A[idx(to)][idx(from)] += sign*k`. Initialise `X = [init]*n`. Fixed-step (Euler) update for `steps` steps: `dX = A·X − damping·X`; `X = X + dt·dX`. Return `{states, dt, steps, trajectory}`, where `trajectory` has `steps+1` rows (row 0 = initial state) and every value is rounded to 6 decimals. Golden artefact `<id>.simulate.json` (compared semantically, tolerance 1e-9).
 
 ## 22. render_report(theory, path, title=None, render=False, to="html")
 

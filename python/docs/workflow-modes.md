@@ -5,6 +5,12 @@ TESTING. A theory is a single versioned object that moves through these
 modes as it matures. Each mode is a set of methods on the `Theory` object,
 so the same artefact carries from a first draft to a preregistered test.
 
+This page assumes you have already read a theory as in
+[Getting started](getting-started.md); see
+[Methodological foundations](methodology.md) for the rationale and the exact
+computation behind the rigour checklist, severity and amendment-appraisal rules
+demonstrated below.
+
 Throughout, the package is imported as `tf`.
 
 ```python
@@ -366,6 +372,12 @@ so the riskier tests stand out at a glance.
   <rect x="130" y="96" width="60" height="16" rx="2" fill="#4e79a7"/>
   <text x="195" y="108">0.300</text>
 </svg></div>
+
+Three further graph views are not shown here: `provenance` (the build log as a
+digraph), `development_roadmap` (the checklist items still failing or warning),
+and `pipeline` (each prediction linked to its test outcome). See the
+[API reference](api.md#theoryforge.diagram.diagram) for the complete list of
+diagram types.
 
 ## Simulation
 

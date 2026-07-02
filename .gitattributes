@@ -1,4 +1,4 @@
-# Force LF for all text files so the byte-identical golden artifacts (and the
+# Force LF for all text files so the byte-identical golden artefacts (and the
 # cross-language parity contract) hold identically on every platform.
 * text=auto eol=lf
 
