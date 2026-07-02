@@ -1,0 +1,177 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pablobernabeu/theoryforge/schema/theory.schema.json",
+  "title": "theoryforge theory object",
+  "description": "Language-agnostic source of truth for a theory as a versioned, machine-checkable object. Authored as YAML, validated against this JSON Schema, read/written identically by the R and Python packages.",
+  "type": "object",
+  "required": ["schema_version", "id", "title", "maturity"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Semantic version of this schema. The major version gates loading.",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "maturity": {
+      "type": "string",
+      "enum": ["draft", "building", "developing", "testing"],
+      "description": "When set to draft, the theory is treated as interim and advisory, so blocker checks are downgraded to warnings and partial theories are scaffolded rather than penalized."
+    },
+    "theory_form": {
+      "type": "string",
+      "enum": ["variance", "network", "typology", "process"],
+      "default": "network",
+      "description": "Selects the schema/checklist profile. v1.0 fully supports variance/network; typology/process are partial."
+    },
+    "version": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "parent_id": { "type": ["string", "null"] },
+        "content_hash": { "type": ["string", "null"] }
+      }
+    },
+    "constructs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "definition"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "definition": { "type": "string" },
+          "measurement": { "type": "array", "items": { "type": "string" } },
+          "boundary_conditions": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "propositions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "from", "to", "relation"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "relation": {
+            "type": "string",
+            "enum": ["increases", "decreases", "moderates", "mediates", "causes", "associates"]
+          },
+          "mechanism": { "type": "string", "description": "the logical 'why' (Sutton & Staw, 1995)" },
+          "functional_form": { "type": "string" }
+        }
+      }
+    },
+    "boundary_conditions": { "type": "array", "items": { "type": "string" } },
+    "predictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "type"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "derives_from": { "type": "array", "items": { "type": "string" } },
+          "statement": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["point", "interval", "directional", "existence"],
+            "description": "Riskiness ordering: existence < directional < interval < point."
+          },
+          "risk_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "severity": { "type": "number", "minimum": 0, "maximum": 1 },
+          "diagnostic_vs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "auxiliary_assumptions": {
+      "type": "array",
+      "description": "The Lakatosian protective belt, represented as first-class versioned entities.",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "statement": { "type": "string" },
+          "added_for": {
+            "type": ["string", "null"],
+            "description": "A null value indicates a core assumption. A prediction or anomaly id indicates an assumption added in response, which is a candidate ad-hoc move."
+          },
+          "protects": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["supports", "direction"],
+        "additionalProperties": true,
+        "properties": {
+          "supports": { "type": "string" },
+          "source_doi": { "type": ["string", "null"] },
+          "direction": { "type": "string", "enum": ["corroborates", "refutes", "mixed"] }
+        }
+      }
+    },
+    "test_outcomes": {
+      "type": "array",
+      "description": "Links a registered prediction to its realized result.",
+      "items": {
+        "type": "object",
+        "required": ["prediction_id", "passed"],
+        "additionalProperties": true,
+        "properties": {
+          "prediction_id": { "type": "string" },
+          "observed": { "type": "string" },
+          "passed": { "type": "boolean" },
+          "severity_at_test": { "type": "number", "minimum": 0, "maximum": 1 },
+          "registered": { "type": ["string", "null"] },
+          "date": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "key_constructs": { "type": "array", "items": { "type": "string" } },
+          "source_doi": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "formal_model": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type": { "type": "string", "enum": ["ode", "abm", "network", "sem", "none"] },
+        "spec_ref": { "type": ["string", "null"] }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "description": "Auto-logged build steps.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "step": { "type": "string" },
+          "action": { "type": "string" },
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  }
+}

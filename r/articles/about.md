@@ -1,0 +1,35 @@
+# About
+
+## Citing theoryforge
+
+If you use the R package in your work, please cite it:
+
+Bernabeu, P. (2026). *theoryforge: Systematic Theory Development* (R
+package version 0.1.0). <https://github.com/pablobernabeu/theoryforge>
+
+``` bibtex
+@Manual{theoryforge,
+  title  = {theoryforge: Systematic Theory Development},
+  author = {Pablo Bernabeu},
+  year   = {2026},
+  note   = {R package version 0.1.0},
+  url    = {https://github.com/pablobernabeu/theoryforge},
+}
+```
+
+You can [download the BibTeX
+entry](https://pablobernabeu.github.io/theoryforge/r/theoryforge.bib).
+In R, the same entry is available with `citation("theoryforge")`, and
+the package installs with `install.packages("theoryforge")`.
+
+## The developer
+
+theoryforge is developed and maintained by [Pablo
+Bernabeu](https://pablobernabeu.github.io), a researcher in the
+Department of Education at the University of Oxford. His work spans
+cognitive psychology and neuroscience, linguistics, education and
+digital technologies, and research methods and open science, with
+hands-on experience in behavioural and EEG experiments, corpus analysis,
+computational modelling and statistics. He develops open, reproducible
+research software in R and Python, and is a Fellow of the Software
+Sustainability Institute.

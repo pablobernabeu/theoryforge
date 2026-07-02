@@ -1,0 +1,88 @@
+{
+  "rFiles": [
+    "R/core.R",
+    "R/develop.R",
+    "R/diagram.R",
+    "R/dossier.R",
+    "R/embedding.R",
+    "R/lit.R",
+    "R/osf.R",
+    "R/prereg.R",
+    "R/redundancy.R",
+    "R/report_render.R",
+    "R/resources.R",
+    "R/rigor.R",
+    "R/scoring.R",
+    "R/sem.R",
+    "R/simulate.R",
+    "R/theoryforge-package.R",
+    "R/utils.R"
+  ],
+  "schema": {
+    "theory": "schema/theory.schema.json",
+    "checklist": "schema/rigor_checklist.yaml"
+  },
+  "examples": [
+    {
+      "name": "Panic disorder network (developing)",
+      "path": "fixtures/panic-network.theory.yaml",
+      "kind": "theory",
+      "desc": "A well-developed network theory of panic — three constructs in a feedback loop. Passes the full rigour checklist."
+    },
+    {
+      "name": "Panic network, amended v2 (testing)",
+      "path": "fixtures/panic-network-2026-v2.theory.yaml",
+      "kind": "theory",
+      "desc": "An amended version of the panic theory at the testing stage, with a fourth prediction and test outcomes."
+    },
+    {
+      "name": "Self-determination theory (developing)",
+      "path": "fixtures/self-determination.theory.yaml",
+      "kind": "theory",
+      "desc": "Three basic needs driving intrinsic motivation. A solid theory with one precision warning."
+    },
+    {
+      "name": "Effort-recovery regulation (developing)",
+      "path": "fixtures/effort-recovery.theory.yaml",
+      "kind": "theory",
+      "desc": "A negative feedback loop. Its constructs follow distinct, oscillating trajectories under simulation, so the curves do not coincide."
+    },
+    {
+      "name": "Happy vowel, Manchester English (testing)",
+      "path": "fixtures/happy-vowel-manchester.theory.yaml",
+      "kind": "theory",
+      "desc": "Turton & Baranowski (2026), a real sociolinguistic study: a stable vocalic variable, socially stratified yet with linguistic constraints that hold independently of social class and ethnicity."
+    },
+    {
+      "name": "Cognitive dissonance (testing)",
+      "path": "fixtures/cognitive-dissonance.theory.yaml",
+      "kind": "theory",
+      "desc": "Festinger & Carlsmith (1959): a smaller incentive for a counter-attitudinal act produces more attitude change, the reverse of what reinforcement theory predicts."
+    },
+    {
+      "name": "Stereotype threat (testing)",
+      "path": "fixtures/stereotype-threat.theory.yaml",
+      "kind": "theory",
+      "desc": "Steele & Aronson (1995): framing a test as diagnostic of ability depresses performance for a negatively stereotyped group, but not under a non-diagnostic frame."
+    },
+    {
+      "name": "Theory of planned behaviour (developing)",
+      "path": "fixtures/planned-behaviour.theory.yaml",
+      "kind": "theory",
+      "desc": "Ajzen (1991): attitude, subjective norm and perceived behavioural control predict intention, which predicts behaviour, extending the theory of reasoned action."
+    },
+    {
+      "name": "Deliberately weak theory (draft)",
+      "path": "fixtures/weak-theory.theory.yaml",
+      "kind": "theory",
+      "desc": "An underspecified draft kept as a worked example of what the checklist catches — it is blocked."
+    }
+  ],
+  "corpora": [
+    {
+      "name": "Panic literature corpus (demo)",
+      "path": "fixtures/panic-corpus.yaml",
+      "desc": ""
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+# Amended version of panic-network-2026: adds one new prediction (pred4) that is
+# subsequently corroborated, with no new ad-hoc assumptions -> a PROGRESSIVE shift.
+schema_version: "1.0"
+id: "panic-network-2026-v2"
+title: "Network theory of panic disorder"
+maturity: "testing"
+theory_form: "network"
+version:
+  id: "v2"
+  parent_id: "v1"
+  content_hash: null
+
+constructs:
+  - id: c_arousal
+    label: "Physiological arousal"
+    definition: "Bodily activation indexed by heart rate, respiration and electrodermal response."
+    measurement: ["heart-rate variability", "self-reported arousal"]
+    boundary_conditions: ["adults", "non-clinical baseline"]
+  - id: c_perceived_threat
+    label: "Perceived threat"
+    definition: "The appraised dangerousness of internal sensations and external context."
+    measurement: ["threat appraisal questionnaire"]
+    boundary_conditions: ["adults"]
+  - id: c_avoidance
+    label: "Avoidance behaviour"
+    definition: "Acts that reduce exposure to feared situations or sensations."
+    measurement: ["behavioural avoidance task", "diary counts"]
+    boundary_conditions: ["adults"]
+
+propositions:
+  - id: p1
+    from: c_arousal
+    to: c_perceived_threat
+    relation: "increases"
+    mechanism: "Interoceptive feedback: rising arousal is detected and appraised as danger."
+  - id: p2
+    from: c_perceived_threat
+    to: c_avoidance
+    relation: "increases"
+    mechanism: "Threat appraisal motivates protective withdrawal."
+  - id: p3
+    from: c_perceived_threat
+    to: c_arousal
+    relation: "causes"
+    mechanism: "Catastrophic appraisal triggers sympathetic activation, closing a positive loop."
+
+boundary_conditions: ["adults", "non-clinical baseline", "no beta-blocker medication"]
+
+predictions:
+  - id: pred1
+    derives_from: [p1, p3]
+    statement: "An interoceptive challenge raises arousal to a specified level within 90 seconds."
+    type: "point"
+    severity: 0.7
+    diagnostic_vs: [alt_cognitive]
+  - id: pred2
+    derives_from: [p2]
+    statement: "Avoidance frequency falls within a 20-35% band after exposure therapy."
+    type: "interval"
+    severity: 0.6
+    diagnostic_vs: []
+  - id: pred3
+    derives_from: [p2]
+    statement: "Higher perceived threat is associated with more avoidance."
+    type: "directional"
+    severity: 0.4
+    diagnostic_vs: []
+  - id: pred4
+    derives_from: [p1, p2]
+    statement: "Blocking interoceptive feedback lowers avoidance to a specified level within two weeks."
+    type: "point"
+    severity: 0.75
+    diagnostic_vs: [alt_cognitive]
+
+auxiliary_assumptions:
+  - id: aux1
+    statement: "Self-report indexes the latent appraisal construct."
+    added_for: null
+    protects: [pred1]
+
+evidence:
+  - supports: pred4
+    source_doi: "10.1000/example.v2"
+    direction: "corroborates"
+
+test_outcomes:
+  - prediction_id: pred1
+    observed: "Arousal reached the predicted band in 78% of trials."
+    passed: true
+    severity_at_test: 0.7
+    registered: "osf.io/abcde"
+    date: "2026-05-01"
+  - prediction_id: pred4
+    observed: "Avoidance dropped into the predicted band in 71% of cases."
+    passed: true
+    severity_at_test: 0.75
+    registered: "osf.io/fghij"
+    date: "2026-06-10"
+
+alternatives:
+  - id: alt_cognitive
+    label: "Cognitive model of panic"
+    key_constructs: ["catastrophic misinterpretation"]
+    source_doi: "10.1016/0005-7967(86)90011-2"
+  - id: alt_biological
+    label: "Biological model of panic"
+    key_constructs: ["noradrenergic arousal dysregulation"]
+    source_doi: "10.1176/ajp.146.2.148"
+
+formal_model:
+  type: "ode"
+  spec_ref: "models/panic_ode.py"
+
+provenance:
+  - step: "1"
+    action: "tf_amend"
+    detail: "Added pred4 and its corroborating outcome."
