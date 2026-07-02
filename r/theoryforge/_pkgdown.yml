@@ -10,6 +10,13 @@ template:
 # pkgdown/assets/theoryforge.bib to the site root. Dropping the built-in
 # "citation" from the structure and supplying a custom "cite" component is more
 # reliable than trying to override the built-in in place.
+footer:
+  structure:
+    left: developed_by
+    right: built_with
+  components:
+    developed_by: "Developed by [Pablo Bernabeu](https://pablobernabeu.github.io)."
+
 home:
   sidebar:
     structure: [links, license, cite, authors, dev]

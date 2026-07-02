@@ -3,7 +3,7 @@ site_description: Systematic theory development. A reproducible workflow for bui
 site_author: Pablo Bernabeu
 site_url: https://pablobernabeu.github.io/theoryforge/python/
 repo_url: https://github.com/pablobernabeu/theoryforge
-copyright: Author and maintainer, Pablo Bernabeu
+copyright: Author and maintainer, <a href="https://pablobernabeu.github.io">Pablo Bernabeu</a>
 
 theme:
   name: material

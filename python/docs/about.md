@@ -4,8 +4,7 @@
 
 If you use the Python package in your work, please cite it:
 
-> Bernabeu, P. (2026). *theoryforge: Systematic theory development* (Python package version
-> 0.1.0). https://github.com/pablobernabeu/theoryforge
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic Theory Development</em> (Python package version 0.1.0). <a href="https://github.com/pablobernabeu/theoryforge">https://github.com/pablobernabeu/theoryforge</a></p>
 
 ```bibtex
 @Manual{theoryforge,
@@ -28,4 +27,4 @@ Department of Education at the University of Oxford. His work spans cognitive ps
 neuroscience, linguistics, education and digital technologies, and research methods and open
 science, with hands-on experience in behavioural and EEG experiments, corpus analysis,
 computational modelling and statistics. He develops open, reproducible research software in R
-and Python and is a Fellow of the Software Sustainability Institute.
+and Python, and is a Fellow of the Software Sustainability Institute.
