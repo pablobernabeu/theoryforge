@@ -66,7 +66,7 @@ exporters, lexical redundancy screen). P1 added the three workflow modes. These 
 builder API with provenance, the operationalised severity rubric, the Lakatosian amendment
 appraisal (DEVELOPMENT), preregistration export (TESTING), and two more diagram types
 (`development_roadmap`, `pipeline`). P2 adds the bibliometric and literature layer. This comprises
-`read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component themes, and
+`read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component themes and
 co-citation), `landscape` (which maps a theory and its alternatives onto the themes, flagging
 under-theorised fronts and redundancy risk), `lit_diagram`, and the parity-exempt `fetch_corpus`
 OpenAlex adapter. P3 added `compile_sem` (lavaan model syntax) and `dossier` (a reviewer-facing

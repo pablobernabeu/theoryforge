@@ -8,7 +8,7 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
 ```
 
 A theory is rarely built in isolation. It sits within a field that already has
-crowded areas, sparse areas, and recurring sets of references. The literature
+crowded areas, sparse areas and recurring sets of references. The literature
 layer of `theoryforge` gives a deterministic, machine-checkable account of that
 field, so the placement of a theory within it can be argued from evidence
 rather than from impression. This article reads a small corpus, computes a
@@ -23,7 +23,7 @@ library(theoryforge)
 ## Reading a corpus
 
 A corpus is a simple object of the form `{schema_version, id, records}`, where
-each record carries an `id` and may carry `title`, `year`, `keywords`, and
+each record carries an `id` and may carry `title`, `year`, `keywords` and
 `references`. The package ships a small fixture corpus around panic and anxiety
 research. The format is chosen by file extension, so the same reader handles
 YAML and JSON.
@@ -78,11 +78,11 @@ alternatives onto the themes from `tf_litmap()`. A theme is tagged
 `"under_theorised"` when neither the focal theory nor any alternative touches it,
 `"covered"` when exactly one does, and `"crowded"` when two or more do. Matching
 is by shared tokens between the theme keywords and the text of the construct
-labels, the theory title, and the alternatives.
+labels, the theory title and the alternatives.
 
 We build a small theory whose constructs speak to arousal and to appraisal, and
 register one alternative that also speaks to appraisal. This leaves the arousal
-theme covered, the appraisal theme crowded, and the remaining themes untouched.
+theme covered, the appraisal theme crowded and the remaining themes untouched.
 
 ```{r theory}
 theory <- tf_theory("panic-appraisal", "Arousal and appraisal in panic") |>
@@ -149,7 +149,7 @@ The corpus above was read from a file. A corpus can also be assembled from the
 OpenAlex works API with `tf_fetch_corpus()`. This adapter is assistive and
 parity-exempt. It makes a live network call, its result depends on an external
 service that changes over time, and it is therefore excluded from the
-deterministic core, the parity tests, and continuous integration. The call is
+deterministic core, the parity tests and continuous integration. The call is
 shown here but not run, and the supplied email enters the OpenAlex polite pool.
 
 ```{r fetch, eval = FALSE}
@@ -160,7 +160,7 @@ fetched_map <- tf_litmap(fetched)
 ```
 
 Once fetched, the corpus object has the same shape as a file-read corpus, so it
-flows into `tf_litmap()`, `tf_landscape()`, and `tf_lit_diagram()` without any
+flows into `tf_litmap()`, `tf_landscape()` and `tf_lit_diagram()` without any
 further change. The recommended pattern is to fetch once, write the result to
 disk, and then work from the saved file so that later analyses remain
 reproducible.

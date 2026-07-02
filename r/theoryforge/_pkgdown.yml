@@ -55,7 +55,7 @@ navbar:
 
 reference:
 - title: Core IO
-  desc: Read, validate, and write theory objects.
+  desc: Read, validate and write theory objects.
   contents:
   - tf_read
   - tf_validate
@@ -93,7 +93,7 @@ reference:
   contents:
   - tf_appraise_amendment
 - title: Testing and review
-  desc: Preregistration, SEM compilation, and the audit dossier.
+  desc: Preregistration, SEM compilation and the audit dossier.
   contents:
   - tf_preregister
   - tf_compile_sem

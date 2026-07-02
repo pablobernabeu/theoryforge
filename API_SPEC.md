@@ -32,7 +32,7 @@ Each package vendors a copy of `schema/` at build time (R uses `inst/schema/`, P
 | Diagram IR | `tf_diagram(theory, type, engine="graphviz")` → string | `theory.diagram(type, engine="graphviz")` → str |
 | **P0 stubs** (signal "not implemented") | `tf_litmap`, `tf_landscape`, `tf_preregister`, `tf_appraise_amendment` | `theory.litmap`, `theory.landscape`, `theory.preregister`, `theory.appraise_amendment` |
 
-The two implementations use the same verbs, the same argument names, and the same artefacts. Stubs MUST raise a clear "not implemented in P0" error rather than returning incorrect data.
+The two implementations use the same verbs, the same argument names and the same artefacts. Stubs MUST raise a clear "not implemented in P0" error rather than returning incorrect data.
 
 **Validation (`validate`).** The default checks structure: the required top-level fields (`schema_version`, `id`, `title`, `maturity`), the `maturity`/`theory_form`/`relation`/`type` enums, and the required fields of each construct, proposition and prediction. Both languages collect every problem and raise once with the prefix `invalid theory object: ` followed by the messages joined by `; `. With `full=TRUE`/`full=True`, a deterministic referential-integrity pass is appended (same checks, order and message text in both languages):
 
@@ -47,7 +47,7 @@ Indices are 0-based. Only nonempty references are checked (a missing/empty id is
 
 ## 3. Determinism rules (apply everywhere)
 
-- **Iteration order = file order.** Never sort collections unless told to. Constructs, propositions, predictions, and provenance are processed in the order they appear in the YAML.
+- **Iteration order = file order.** Never sort collections unless told to. Constructs, propositions, predictions and provenance are processed in the order they appear in the YAML.
 - **Rounding.** All emitted numeric values use a deterministic half-away-from-zero rounding `rnd(x, n) = sign(x) * floor(abs(x)*10^n + 0.5 + 1e-6) / 10^n` (item scores `n=3`, aggregate `n=1`, simulate trajectories `n=6`). Do NOT use the language default `round()`. It is banker's rounding, whose result diverges across platforms at exact half-boundaries (e.g. 0.6125 → 0.612 on one OS, 0.613 on another). The `+1e-6` bias is far larger than cross-platform ULP jitter (~1e-13 at these magnitudes) yet far smaller than the rounding grid, so `rnd` is identical on every platform and across R and Python. R: `tf_rnd <- function(x, n) { s <- 10^n; sign(x) * floor(abs(x) * s + 0.5 + 1e-6) / s }`.
 - **Line endings.** All generated IR strings use `\n` (LF) only, and end with a single trailing `\n`.
 - **String escaping in DOT labels.** Replace `\` → `\\` then `"` → `\"`.

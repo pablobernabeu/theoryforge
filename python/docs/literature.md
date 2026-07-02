@@ -10,7 +10,7 @@ map.
 
 This layer comprises four entry points. `tf.read_corpus` loads a corpus
 from disk. `tf.litmap` summarises the corpus through keyword
-co-occurrence, themes, and co-citation. `Theory.landscape` positions a
+co-occurrence, themes and co-citation. `Theory.landscape` positions a
 theory and its registered alternatives against those themes. `tf.lit_diagram`
 exports any of these structures as Graphviz DOT. A fifth function,
 `tf.fetch_corpus`, builds a corpus from the OpenAlex API. It is optional and
@@ -19,7 +19,7 @@ network-dependent, and is described at the end.
 ## A corpus
 
 A corpus is a mapping with a `records` list. Each record may carry an `id`,
-a `title`, a `year`, a list of `keywords`, and a list of `references`. The
+a `title`, a `year`, a list of `keywords` and a list of `references`. The
 keyword and reference lists drive the analysis. Other fields are carried
 through but not required. A small corpus stored as YAML looks like this.
 
@@ -100,7 +100,7 @@ ls["themes"]                  # per-theme detail
 
 Each entry in `ls["themes"]` reports the theme `id`, its `keywords`, the
 `alternatives` that map onto it, whether the focal theory is `focal` on it,
-and a `status` of `under_theorised`, `covered`, or `crowded`. The
+and a `status` of `under_theorised`, `covered` or `crowded`. The
 under-theorised fronts point to questions a new theory could claim, and the
 redundancy risks point to ground where it would need to justify a further
 account.

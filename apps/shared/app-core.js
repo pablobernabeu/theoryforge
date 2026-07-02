@@ -15,7 +15,7 @@
 
   const OPS = [
     { id: "check", label: "Rigour checklist", desc: "12-item score, gate, per-item status",
-      help: "Scores the theory against the 12-item rigour checklist (falsifiability, precision, parsimony, and so on) and returns an aggregate 0–100 score, a pass/blocked/advisory gate, and the colour-coded status grid." },
+      help: "Scores the theory against the 12-item rigour checklist (falsifiability, precision, parsimony, and so on) and returns an aggregate 0–100 score, a pass/blocked/advisory gate and the colour-coded status grid." },
     { id: "validate", label: "Validate", desc: "Structural + referential checks",
       help: "Runs the package's full validation: required fields and enum membership, plus referential integrity (unique ids, and every proposition, prediction, assumption, evidence and test-outcome reference points to a declared id). Lists every problem found, or confirms the theory is valid." },
     {
@@ -55,7 +55,7 @@
     },
     {
       id: "litmap", label: "Literature map", desc: "Co-occurrence, themes, co-citation", corpus: true,
-      help: "Maps the bundled literature corpus: keyword co-occurrence, connected-component themes, and co-citation. min_link is the minimum number of records a pair must share to count as a link.",
+      help: "Maps the bundled literature corpus: keyword co-occurrence, connected-component themes and co-citation. min_link is the minimum number of records a pair must share to count as a link.",
       params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
     },
     {

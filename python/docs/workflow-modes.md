@@ -61,9 +61,9 @@ The positional arguments follow the schema. `add_construct(id, label,
 definition)` takes optional `measurement` and `boundary_conditions` lists.
 `add_proposition(id, from, to, relation)` takes an optional `mechanism`,
 where `relation` is one of `increases`, `decreases`, `moderates`,
-`mediates`, `causes`, or `associates`. `add_prediction(id, statement,
+`mediates`, `causes` or `associates`. `add_prediction(id, statement,
 type)` takes optional `derives_from` and `diagnostic_vs` lists, where `type`
-is one of `point`, `interval`, `directional`, or `existence`.
+is one of `point`, `interval`, `directional` or `existence`.
 
 The provenance log is held under `t.data["provenance"]`. Each entry records
 the action and the identifier it affected.
@@ -176,7 +176,7 @@ t.preregister("panic-prereg.md")    # also writes the document to disk
 ### Audit bundle
 
 `dossier()` assembles a single Markdown document for reviewers. It composes
-the rigour checklist, the severity table, the provenance log, and the
+the rigour checklist, the severity table, the provenance log and the
 preregistration into one artefact. The output is deterministic, so it can be
 committed or attached to a submission.
 

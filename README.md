@@ -15,7 +15,7 @@ Full documentation is published at
 - Python package (mkdocs): <https://pablobernabeu.github.io/theoryforge/python/>
 
 Each site carries the complete function reference together with guides for
-building, developing, and testing a theory and for mapping the literature.
+building, developing and testing a theory and for mapping the literature.
 
 ### Interactive web apps (no install)
 

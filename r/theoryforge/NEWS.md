@@ -18,7 +18,7 @@ representations.
   `tf_landscape`, `tf_lit_diagram`) and a parity-exempt OpenAlex corpus adapter.
 * Testing and review: lavaan model-syntax compilation (`tf_compile_sem`) and a
   reviewer-facing audit dossier (`tf_dossier`).
-* Simulation, reporting, and deposit: a deterministic dynamical-system runner
+* Simulation, reporting and deposit: a deterministic dynamical-system runner
   (`tf_simulate`), a Quarto report wrapper (`tf_render_report`), an opt-in
   embedding redundancy screen (`tf_embedding_redundancy`), and an OSF deposit
   adapter (`tf_osf_push`, dry-run by default).

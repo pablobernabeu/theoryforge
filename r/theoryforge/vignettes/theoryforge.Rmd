@@ -1,8 +1,8 @@
 ---
-title: "Building, checking, and diagramming a theory"
+title: "Building, checking and diagramming a theory"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Building, checking, and diagramming a theory}
+  %\VignetteIndexEntry{Building, checking and diagramming a theory}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---

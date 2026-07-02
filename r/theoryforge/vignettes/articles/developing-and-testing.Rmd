@@ -43,7 +43,7 @@ hard-to-fail prediction as though it were a stringent test.
 ## Preregistration
 
 `tf_preregister()` renders a preregistration document as a single markdown
-string. It records the constructs, propositions, and predictions in a fixed
+string. It records the constructs, propositions and predictions in a fixed
 order, so the output is stable across runs and suitable for deposit.
 
 ```{r prereg}
@@ -94,7 +94,7 @@ degenerating.
 When constructs carry measurement indicators, `tf_compile_sem()` compiles them
 into `lavaan` model syntax. Constructs with indicators become latent
 measurement models with `=~`, and propositions become structural paths with
-`~`, covariances with `~~`, or annotated moderation lines.
+`~`, covariances with `~~` or annotated moderation lines.
 
 ```{r sem}
 cat(tf_compile_sem(theory))
@@ -108,7 +108,7 @@ are available.
 
 `tf_dossier()` assembles a single markdown document for a reviewer or editor.
 It collects the header, the rigour-checklist table, the severity list, the
-provenance trail, and the preregistration into one bundle, so a reader can
+provenance trail and the preregistration into one bundle, so a reader can
 follow the theory from its claims through to its planned tests in one place.
 
 ```{r dossier}
