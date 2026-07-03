@@ -68,9 +68,10 @@ appraisal (DEVELOPMENT), preregistration export (TESTING), and two more diagram 
 (`development_roadmap`, `pipeline`). P2 adds the bibliometric and literature layer. This comprises
 `read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component themes and
 co-citation), `landscape` (which maps a theory and its alternatives onto the themes, flagging
-under-theorised fronts and redundancy risk), `lit_diagram`, and the parity-exempt `fetch_corpus`
-OpenAlex adapter. P3 added `compile_sem` (lavaan model syntax) and `dossier` (a reviewer-facing
-audit bundle). P4 added `simulate` (a deterministic dynamical-system runner over the construct
-network), `render_report` (a Quarto report wrapping the dossier), `embedding_redundancy` (an
-opt-in, parity-exempt embedding screen), and `osf_push` (an OSF deposit adapter, dry-run by
-default). No `NotImplemented` stubs remain.
+under-theorised fronts and redundancy risk), `lit_diagram`, the parity-exempt `fetch_corpus`
+OpenAlex adapter, and `new_evidence_dois` (a deterministic check for candidate DOIs, from any
+search tool, not yet cited by a theory). P3 added `compile_sem` (lavaan model syntax) and
+`dossier` (a reviewer-facing audit bundle). P4 added `simulate` (a deterministic dynamical-system
+runner over the construct network), `render_report` (a Quarto report wrapping the dossier),
+`embedding_redundancy` (an opt-in, parity-exempt embedding screen), and `osf_push` (an OSF
+deposit adapter, dry-run by default). No `NotImplemented` stubs remain.

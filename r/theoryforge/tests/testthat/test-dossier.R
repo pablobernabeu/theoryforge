@@ -1,4 +1,4 @@
-# Audit dossier (API_SPEC.md section 19): byte-identical to goldens.
+# Audit dossier (API_SPEC.md section 20): byte-identical to goldens.
 
 test_that("tf_dossier includes the expected header, table row, and prereg", {
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))

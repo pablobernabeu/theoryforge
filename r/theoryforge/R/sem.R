@@ -1,6 +1,6 @@
 #' Compile a theory to lavaan model syntax.
 #'
-#' Deterministic and byte-identical across languages. See API_SPEC.md section 18.
+#' Deterministic and byte-identical across languages. See API_SPEC.md section 19.
 #' @name sem
 #' @keywords internal
 NULL
@@ -26,7 +26,7 @@ NULL
 #' model (\code{=~}), and propositions become structural paths (\code{~}),
 #' covariances (\code{~~}), or moderation comment lines. Deterministic and
 #' byte-identical to the Python \code{theory.compile_sem()}. See API_SPEC.md
-#' section 18.
+#' section 19.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @return The lavaan model syntax as a single string (LF line endings, single

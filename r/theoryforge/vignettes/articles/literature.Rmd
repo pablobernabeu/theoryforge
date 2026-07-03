@@ -164,3 +164,98 @@ flows into `tf_litmap()`, `tf_landscape()` and `tf_lit_diagram()` without any
 further change. The recommended pattern is to fetch once, write the result to
 disk, and then work from the saved file so that later analyses remain
 reproducible.
+
+## Tracking new evidence with an external search
+
+Locating a corpus is only one use of a literature search. A second, recurring
+need is narrower: checking whether a search has turned up any source the
+theory does not already cite. `tf_new_evidence_dois()` answers that question
+deterministically, from a theory object and a plain vector of candidate DOIs,
+regardless of where the DOIs came from.
+
+```{r new-evidence-basic}
+theory <- tf_theory("demo", "A demonstration theory") |>
+  tf_add_construct("c_arousal", "Arousal", "Bodily activation.")
+theory$evidence <- list(list(supports = "p1",
+                              source_doi = "10.1016/j.brat.2015.10.002"))
+
+candidates <- c("10.1016/j.brat.2015.10.002",       # already cited
+                "https://doi.org/10.1037/0033-2909.99.1.20")  # not yet cited
+
+tf_new_evidence_dois(theory, candidates)
+```
+
+The comparison is on a normalised form of each DOI (lowercased, with a
+`doi.org`/`dx.doi.org` URL prefix stripped), so a plain DOI and a resolvable
+URL for the same work are recognised as the same source. The function takes no
+network dependency itself: the search is left entirely to whichever tool
+supplies the candidate list.
+
+### Combining it with scopusflow
+
+[`scopusflow`](https://pablobernabeu.github.io/scopusflow/) is a companion R
+package, by the same author, for querying the Elsevier Scopus Search API. It
+is a natural source of candidate DOIs: `scopus_fetch()` retrieves records for
+a query, and `scopus_extract_dois()` reduces them to a plain DOI vector, which
+is exactly the input `tf_new_evidence_dois()` expects.
+
+`scopusflow` is not a dependency of `theoryforge`, so the snippet below is
+illustrative rather than executed by this vignette. Install `scopusflow` and
+supply a Scopus API key (see its `scopus_has_key()`) to run it.
+
+```r
+library(scopusflow)
+
+query <- scopus_query("panic disorder", "interoception", .op = "AND")
+records <- scopus_fetch(query, years = 2015:2026)
+candidates <- scopus_extract_dois(records)
+
+tf_new_evidence_dois(theory, candidates)
+```
+
+`scopus_diff_dois()` extends this to tracking a search over time: it compares
+an earlier and a later retrieval (either `scopus_records` objects or DOI
+vectors) and reports which DOIs were added, removed or unchanged. Re-running a
+saved query and passing the `"added"` DOIs into `tf_new_evidence_dois()` gives
+a routine for revisiting a theory's evidence base as the literature grows.
+
+```r
+records_2025 <- scopus_fetch(query, years = 2015:2025)
+records_2026 <- scopus_fetch(query, years = 2015:2026)
+diff <- scopus_diff_dois(records_2025, records_2026)
+added <- diff$doi[diff$status == "added"]
+
+tf_new_evidence_dois(theory, added)
+```
+
+`scopusflow` also offers `scopus_compare_topics()`, which tracks the relative
+publication share of several comparison terms against a reference term across
+a range of years. This suits comparing a theory against its registered
+alternatives on their standing in the literature, using the alternatives'
+labels as the comparison terms.
+
+```r
+scopus_compare_topics(
+  reference_query = "panic disorder",
+  comparison_terms = c("cognitive appraisal account", "biological account"),
+  years = 2015:2026
+)
+```
+
+### Why scopusflow is not a corpus adapter
+
+`tf_litmap()` and `tf_landscape()` depend on the `keywords` and `references`
+fields of a corpus record. As of the version linked above, neither
+`scopusflow` nor its Python twin exposes author keywords or a work's reference
+list anywhere in their output. `scopus_fetch()`'s records carry only
+identifying and citation-count fields, and `scopus_abstract()` adds an
+abstract but not references. A `fetch_corpus()`-style adapter built on
+`scopusflow` today would therefore produce a corpus with empty `keywords` and
+`references` that degrades silently under `tf_litmap()`. For that reason
+`tf_fetch_corpus()` (OpenAlex) remains the built-in corpus adapter, and
+`scopusflow` is used directly, as shown above, for DOI-based evidence tracking
+and topic comparison. Scopus access also requires an institutional
+subscription and API key, unlike OpenAlex's free, keyless access. That is a
+further reason to keep OpenAlex as the default. Should a future `scopusflow`
+release expose keywords or references, a corpus adapter would become
+straightforward to add.

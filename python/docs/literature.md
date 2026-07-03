@@ -160,3 +160,101 @@ that service requests. The returned mapping has the same shape as a corpus
 read from disk, so it flows straight into `litmap` and `landscape`. Supplying
 a corpus file remains the recommended path for any analysis that needs to be
 repeated exactly.
+
+## Tracking new evidence with an external search
+
+Locating a corpus is only one use of a literature search. A second, recurring
+need is narrower: checking whether a search has turned up any source the
+theory does not already cite. `new_evidence_dois` answers that question
+deterministically, from a theory and a plain list of candidate DOIs,
+regardless of where the DOIs came from.
+
+```python
+t = tf.new_theory("demo", "A demonstration theory")
+t.data["evidence"] = [{"supports": "p1", "source_doi": "10.1016/j.brat.2015.10.002"}]
+
+candidates = [
+    "10.1016/j.brat.2015.10.002",                  # already cited
+    "https://doi.org/10.1037/0033-2909.99.1.20",   # not yet cited
+]
+
+t.new_evidence_dois(candidates)
+```
+
+The comparison is on a normalised form of each DOI (lowercased, with a
+`doi.org`/`dx.doi.org` URL prefix stripped), so a plain DOI and a resolvable
+URL for the same work are recognised as the same source. The function takes no
+network dependency itself: the search is left entirely to whichever tool
+supplies the candidate list.
+
+### Combining it with scopusflow-py
+
+[`scopusflow-py`](https://pablobernabeu.github.io/scopusflow-py/) is a
+companion package, by the same author, for querying the Elsevier Scopus
+Search API. It is a natural source of candidate DOIs: `fetch_plan` retrieves
+records for a search plan, and `extract_dois` reduces them to a plain list of
+DOIs, which is exactly the input `new_evidence_dois` expects.
+`scopusflow-py` is not a dependency of `theoryforge`, so the snippet below is
+illustrative rather than a tested example. Install `scopusflow-py`, and
+configure `pybliometrics` with a Scopus API key, to run it.
+
+```python
+from scopusflow import scopus_query, SearchPlan, fetch_plan, extract_dois
+
+query = scopus_query("panic disorder", "interoception", op="AND")
+plan = SearchPlan(query, years=range(2015, 2027))
+records = fetch_plan(plan)
+candidates = extract_dois(records)
+
+t.new_evidence_dois(candidates)
+```
+
+`diff_dois` extends this to tracking a search over time: it compares an
+earlier and a later retrieval and returns a frame of DOIs marked `added`,
+`removed` or `unchanged`. Re-running a saved plan and passing the `added` DOIs
+into `new_evidence_dois` gives a routine for revisiting a theory's evidence
+base as the literature grows.
+
+```python
+from scopusflow import diff_dois
+
+records_2025 = fetch_plan(SearchPlan(query, years=range(2015, 2026)))
+records_2026 = fetch_plan(SearchPlan(query, years=range(2015, 2027)))
+diff = diff_dois(records_2025, records_2026)
+added = diff.loc[diff["status"] == "added", "doi"].tolist()
+
+t.new_evidence_dois(added)
+```
+
+`scopusflow-py` also offers `compare_topics`, which tracks the relative
+publication share of several comparison terms against a reference term across
+a range of years. This suits comparing a theory against its registered
+alternatives on their standing in the literature, using the alternatives'
+labels as the comparison terms.
+
+```python
+from scopusflow import compare_topics
+
+compare_topics(
+    reference_query="panic disorder",
+    comparison_terms=["cognitive appraisal account", "biological account"],
+    years=range(2015, 2027),
+)
+```
+
+### Why scopusflow is not a corpus adapter
+
+`litmap` and `landscape` depend on the `keywords` and `references` fields of a
+corpus record. As of the version linked above, neither `scopusflow-py` nor its
+R twin exposes author keywords or a work's reference list anywhere in their
+output: `fetch_plan`'s records carry only identifying and citation-count
+fields, and `scopus_abstract` adds an abstract but not references. A
+`fetch_corpus`-style adapter built on `scopusflow-py` today would therefore
+produce a corpus with empty `keywords` and `references` that degrades
+silently under `litmap`. For that reason `fetch_corpus` (OpenAlex) remains the
+built-in corpus adapter, and `scopusflow-py` is used directly, as shown above,
+for DOI-based evidence tracking and topic comparison. Scopus access also
+requires an institutional subscription and API key, unlike OpenAlex's free,
+keyless access. That is a further reason to keep OpenAlex as the default.
+Should a future `scopusflow-py` release expose keywords or references, a
+corpus adapter would become straightforward to add.

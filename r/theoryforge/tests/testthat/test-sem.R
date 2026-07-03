@@ -1,4 +1,4 @@
-# SEM/lavaan compilation (API_SPEC.md section 18): byte-identical to goldens.
+# SEM/lavaan compilation (API_SPEC.md section 19): byte-identical to goldens.
 
 test_that("tf_compile_sem produces the exact panic lavaan lines", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))

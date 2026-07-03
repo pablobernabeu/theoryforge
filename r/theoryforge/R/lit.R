@@ -381,6 +381,72 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence") {
   stop(sprintf("unknown lit diagram type '%s'", type), call. = FALSE)
 }
 
+.tf_DOI_PREFIXES <- c("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/", "doi:")
+
+# Mirror Python lit._normalize_doi: lowercase, strip a doi.org/dx.doi.org URL
+# prefix if present.
+.tf_normalize_doi <- function(doi) {
+  if (is.null(doi) || length(doi) == 0L || is.na(doi)) doi <- ""
+  d <- tolower(trimws(as.character(doi)))
+  for (prefix in .tf_DOI_PREFIXES) {
+    if (startsWith(d, prefix)) {
+      return(substr(d, nchar(prefix) + 1L, nchar(d)))
+    }
+  }
+  d
+}
+
+#' DOIs not already cited by a theory (deterministic)
+#'
+#' Compares each DOI in \code{candidate_dois} against the theory's
+#' \code{evidence[].source_doi} and \code{alternatives[].source_doi} fields, by
+#' normalised form (lowercased, with any doi.org/dx.doi.org URL prefix
+#' stripped), so a fresh literature search, for example via OpenAlex, Scopus, or
+#' any other source, can be checked against what the theory already engages
+#' with. Returns the qualifying DOIs in their original form, deduplicated and
+#' sorted by normalised form. Deterministic and takes no network dependency:
+#' the search itself is left to whichever literature tool the caller prefers.
+#' Mirrors the Python \code{theoryforge.new_evidence_dois}.
+#'
+#' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @param candidate_dois Character vector of DOIs to check.
+#' @return A character vector of the candidate DOIs not already cited,
+#'   deduplicated and sorted.
+#' @examples
+#' theory <- tf_theory("demo-1", "A demonstration theory") |>
+#'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.")
+#' theory$evidence <- list(list(supports = "p1", source_doi = "10.1000/known"))
+#' tf_new_evidence_dois(theory, c("10.1000/known", "10.1000/new"))
+#' @export
+tf_new_evidence_dois <- function(theory, candidate_dois) {
+  known <- character(0)
+  for (e in .tf_list(theory, "evidence")) {
+    doi <- .tf_get(e, "source_doi")
+    if (!is.null(doi) && nzchar(as.character(doi))) {
+      known <- c(known, .tf_normalize_doi(doi))
+    }
+  }
+  for (a in .tf_list(theory, "alternatives")) {
+    doi <- .tf_get(a, "source_doi")
+    if (!is.null(doi) && nzchar(as.character(doi))) {
+      known <- c(known, .tf_normalize_doi(doi))
+    }
+  }
+  known <- unique(known)
+
+  seen <- character(0)
+  out <- character(0)
+  for (doi in candidate_dois) {
+    if (is.null(doi) || is.na(doi) || !nzchar(as.character(doi))) next
+    norm <- .tf_normalize_doi(doi)
+    if (norm %in% known || norm %in% seen) next
+    seen <- c(seen, norm)
+    out <- c(out, as.character(doi))
+  }
+  if (length(out) == 0L) return(character(0))
+  out[order(vapply(out, .tf_normalize_doi, character(1)), method = "radix")]
+}
+
 #' Build a corpus from the OpenAlex API (assistive, parity-exempt)
 #'
 #' Assistive, parity-exempt helper that builds a corpus by querying the

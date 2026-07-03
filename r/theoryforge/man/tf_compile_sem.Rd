@@ -19,7 +19,7 @@ string: constructs with measurement indicators become a latent measurement
 model (\code{=~}), and propositions become structural paths (\code{~}),
 covariances (\code{~~}), or moderation comment lines. Deterministic and
 byte-identical to the Python \code{theory.compile_sem()}. See API_SPEC.md
-section 18.
+section 19.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

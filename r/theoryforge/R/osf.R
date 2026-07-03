@@ -3,7 +3,7 @@
 #' Builds the request to upload a theory's audit dossier to OSF. Defaults to
 #' \code{dry_run = TRUE}, which constructs the request without sending it. A live
 #' push requires the user's OSF token and network access and is never performed
-#' automatically. See API_SPEC.md section 24.
+#' automatically. See API_SPEC.md section 25.
 #' @name osf
 #' @keywords internal
 NULL
@@ -18,7 +18,7 @@ NULL
 #' both \code{token} and \code{node} (the OSF project id) and performs an
 #' authenticated \code{PUT}. The live path is network- and credential-dependent
 #' and is excluded from parity and CI. Mirrors the Python \code{theory.osf_push()}.
-#' See API_SPEC.md section 24.
+#' See API_SPEC.md section 25.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param token OSF personal access token (required when \code{dry_run = FALSE}).

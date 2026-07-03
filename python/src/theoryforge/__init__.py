@@ -11,7 +11,7 @@ from .develop import appraise_amendment
 from .diagram import diagram
 from .dossier import dossier
 from .embedding import embedding_redundancy
-from .lit import fetch_corpus, landscape, lit_diagram, litmap, read_corpus
+from .lit import fetch_corpus, landscape, lit_diagram, litmap, new_evidence_dois, read_corpus
 from .osf import osf_push
 from .prereg import preregister
 from .redundancy import jaccard, redundancy_check, tokens
@@ -42,6 +42,7 @@ __all__ = [
     "landscape",
     "lit_diagram",
     "fetch_corpus",
+    "new_evidence_dois",
     "compile_sem",
     "dossier",
     "simulate",

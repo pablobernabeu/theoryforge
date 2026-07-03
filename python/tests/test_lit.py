@@ -35,6 +35,28 @@ def test_landscape_statuses(fixtures_dir, panic_path):
     assert th2["focal"] is True
 
 
+def test_new_evidence_dois(panic_path):
+    # The fixture already cites 10.1016/j.brat.2015.10.002 (evidence) and
+    # 10.1016/0005-7967(86)90011-2 / 10.1176/ajp.146.2.148 (alternatives).
+    candidates = [
+        "10.1016/j.brat.2015.10.002",              # already cited (evidence), exact
+        "https://doi.org/10.1016/0005-7967(86)90011-2",  # already cited (alternative), URL form
+        "10.1176/AJP.146.2.148",                   # already cited (alternative), different case
+        "10.1037/0033-2909.99.1.20",               # new
+        "10.1037/0033-2909.99.1.20",               # new, duplicated in the candidate list itself
+        "10.1016/j.cpr.2011.09.005",                # new
+    ]
+    new = tf.read(panic_path).new_evidence_dois(candidates)
+    assert new == ["10.1016/j.cpr.2011.09.005", "10.1037/0033-2909.99.1.20"]
+
+
+def test_new_evidence_dois_empty_theory():
+    t = tf.new_theory("demo", "Demo")
+    assert tf.new_evidence_dois(t.data, ["10.1000/xyz"]) == ["10.1000/xyz"]
+    assert t.new_evidence_dois([]) == []
+    assert t.new_evidence_dois([None, ""]) == []
+
+
 def test_lit_diagrams(fixtures_dir, panic_path):
     corpus = _corpus(fixtures_dir)
     lm = tf.litmap(corpus)

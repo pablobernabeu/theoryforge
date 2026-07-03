@@ -73,6 +73,29 @@ test_that("tf_landscape assigns the expected theme statuses", {
   expect_equal(unlist(ls$under_theorised_fronts, use.names = FALSE), "theme_4")
 })
 
+test_that("tf_new_evidence_dois excludes DOIs already cited by the theory", {
+  # The fixture already cites 10.1016/j.brat.2015.10.002 (evidence) and
+  # 10.1016/0005-7967(86)90011-2 / 10.1176/ajp.146.2.148 (alternatives).
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  candidates <- c(
+    "10.1016/j.brat.2015.10.002",                     # already cited (evidence), exact
+    "https://doi.org/10.1016/0005-7967(86)90011-2",   # already cited (alternative), URL form
+    "10.1176/AJP.146.2.148",                          # already cited (alternative), different case
+    "10.1037/0033-2909.99.1.20",                      # new
+    "10.1037/0033-2909.99.1.20",                      # new, duplicated in the candidate list itself
+    "10.1016/j.cpr.2011.09.005"                       # new
+  )
+  new <- tf_new_evidence_dois(theory, candidates)
+  expect_equal(new, c("10.1016/j.cpr.2011.09.005", "10.1037/0033-2909.99.1.20"))
+})
+
+test_that("tf_new_evidence_dois handles a theory with no evidence or alternatives", {
+  theory <- tf_theory("demo", "Demo")
+  expect_equal(tf_new_evidence_dois(theory, "10.1000/xyz"), "10.1000/xyz")
+  expect_equal(tf_new_evidence_dois(theory, character(0)), character(0))
+  expect_equal(tf_new_evidence_dois(theory, c(NA, "")), character(0))
+})
+
 test_that("literature diagrams are byte-identical to the golden files", {
   corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
   lm <- tf_litmap(corpus)

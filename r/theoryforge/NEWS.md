@@ -15,7 +15,10 @@ representations.
   operationalised severity rubric and preregistration export (TESTING); and a
   Lakatosian progressive-versus-degenerating amendment appraisal (DEVELOPMENT).
 * Literature layer: a deterministic bibliometric mapping (`tf_litmap`,
-  `tf_landscape`, `tf_lit_diagram`) and a parity-exempt OpenAlex corpus adapter.
+  `tf_landscape`, `tf_lit_diagram`), a parity-exempt OpenAlex corpus adapter, and
+  a deterministic, dependency-free check for DOIs not yet cited by a theory
+  (`tf_new_evidence_dois`), for use with a search from any source, including the
+  companion `scopusflow` package.
 * Testing and review: lavaan model-syntax compilation (`tf_compile_sem`) and a
   reviewer-facing audit dossier (`tf_dossier`).
 * Simulation, reporting and deposit: a deterministic dynamical-system runner

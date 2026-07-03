@@ -11,6 +11,7 @@ from .diagram import diagram as _diagram
 from .dossier import dossier as _dossier
 from .embedding import embedding_redundancy as _embedding_redundancy
 from .lit import landscape as _landscape
+from .lit import new_evidence_dois as _new_evidence_dois
 from .osf import osf_push as _osf_push
 from .prereg import preregister as _preregister
 from .redundancy import redundancy_check as _redundancy_check
@@ -256,6 +257,10 @@ class Theory:
     def landscape(self, corpus, min_link: int = 2) -> dict:
         """Map this theory and its alternatives onto a literature corpus's themes."""
         return _landscape(self.data, corpus, min_link=min_link)
+
+    def new_evidence_dois(self, candidate_dois: list) -> list:
+        """DOIs in `candidate_dois` not already cited by this theory's evidence or alternatives."""
+        return _new_evidence_dois(self.data, candidate_dois)
 
     def compile_sem(self) -> str:
         """Compile constructs and propositions to lavaan model syntax."""

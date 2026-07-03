@@ -27,6 +27,7 @@ testing scientific theories, delivered as feature-parity R (CRAN) and Python (Py
 - `read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component themes, co-citation).
 - `landscape`: maps a theory and its alternatives onto themes, flagging under-theorised fronts and redundancy risk.
 - `lit_diagram` (keyword co-occurrence, co-citation, theme landscape) and a parity-exempt OpenAlex `fetch_corpus` adapter.
+- `new_evidence_dois`: a deterministic, dependency-free check for candidate DOIs not yet cited by a theory's evidence or alternatives, so a search from any external tool, including the companion `scopusflow`/`scopusflow-py` packages, can be checked against what the theory already engages with.
 
 ### SEM compilation and audit bundle (P3)
 - `compile_sem`: compile constructs + propositions to lavaan model syntax.
@@ -43,7 +44,7 @@ testing scientific theories, delivered as feature-parity R (CRAN) and Python (Py
 - A "Methodological foundations" documentation page that cites the verified literature behind each rigour item, with DOIs. The machine-readable BibTeX ships with the R package at `inst/REFERENCES.bib`. The risk-severity item's citation was corrected after a Crossref re-audit (Cohen, 1992 removed as not supporting prediction severity).
 
 ### Quality & reproducibility
-- Cross-language parity enforced over 54 golden artefacts in CI, with byte-identical diagrams (DOT and SVG), markdown, and lavaan outputs and semantically-equal JSON.
+- Cross-language parity enforced over 55 golden artefacts in CI, with byte-identical diagrams (DOT and SVG), markdown, and lavaan outputs and semantically-equal JSON.
 - R passes `R CMD check --as-cran` with 0 errors and 0 warnings (1 note, the standard new-submission note). Python builds a wheel and sdist passing `twine check`, is ruff- and mypy-clean, and ships `py.typed`.
 - Test suites: Python (pytest) and R (testthat), plus a dedicated parity job.
 

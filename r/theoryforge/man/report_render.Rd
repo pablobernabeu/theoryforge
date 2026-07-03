@@ -7,6 +7,6 @@
 Writes a \code{.qmd} (a YAML header plus the deterministic dossier body) and
 can optionally invoke Quarto to render it. The report content is the
 parity-tested \code{tf_dossier}; only the rendering step is
-environment-dependent. See API_SPEC.md section 22.
+environment-dependent. See API_SPEC.md section 23.
 }
 \keyword{internal}

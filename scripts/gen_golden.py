@@ -69,6 +69,22 @@ def main() -> int:
     )
     written.append("panic-network-2026-v2.appraisal.json")
 
+    # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
+    # existing evidence and alternatives (two already cited, two new, one duplicate)
+    new_evidence_candidates = [
+        "10.1016/j.brat.2015.10.002",
+        "https://doi.org/10.1016/0005-7967(86)90011-2",
+        "10.1176/AJP.146.2.148",
+        "10.1037/0033-2909.99.1.20",
+        "10.1037/0033-2909.99.1.20",
+        "10.1016/j.cpr.2011.09.005",
+    ]
+    new_dois = v1.new_evidence_dois(new_evidence_candidates)
+    (EXPECTED / "panic-network-2026.new_evidence_dois.json").write_bytes(
+        (json.dumps(new_dois, indent=2) + "\n").encode("utf-8")
+    )
+    written.append("panic-network-2026.new_evidence_dois.json")
+
     # bibliometric layer (P2): litmap + landscape + lit diagrams
     corpus = tf.read_corpus(FIXTURES / "panic-corpus.yaml")
     cid = corpus["id"]

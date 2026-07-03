@@ -52,6 +52,20 @@ suppressWarnings(suppressMessages({
   write_raw(paste0(jsonlite::toJSON(ap, auto_unbox = TRUE, pretty = TRUE), "\n"),
             file.path(out_dir, "panic-network-2026-v2.appraisal.json"))
 
+  # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
+  # existing evidence and alternatives (two already cited, two new, one duplicate)
+  new_evidence_candidates <- c(
+    "10.1016/j.brat.2015.10.002",
+    "https://doi.org/10.1016/0005-7967(86)90011-2",
+    "10.1176/AJP.146.2.148",
+    "10.1037/0033-2909.99.1.20",
+    "10.1037/0033-2909.99.1.20",
+    "10.1016/j.cpr.2011.09.005"
+  )
+  new_dois <- tf_new_evidence_dois(v1, new_evidence_candidates)
+  write_raw(paste0(jsonlite::toJSON(new_dois, auto_unbox = FALSE, pretty = TRUE), "\n"),
+            file.path(out_dir, "panic-network-2026.new_evidence_dois.json"))
+
   # bibliometric layer (P2)
   corpus <- tf_read_corpus(file.path(fixtures_dir, "panic-corpus.yaml"))
   cid <- corpus$id

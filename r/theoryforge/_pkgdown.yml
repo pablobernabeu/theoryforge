@@ -130,3 +130,4 @@ reference:
   - tf_litmap
   - tf_landscape
   - tf_fetch_corpus
+  - tf_new_evidence_dois

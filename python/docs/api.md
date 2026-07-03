@@ -24,6 +24,7 @@ canonical path so the function, rather than the module, is shown.
         - landscape
         - lit_diagram
         - fetch_corpus
+        - new_evidence_dois
         - compile_sem
         - embedding_redundancy
         - render_report

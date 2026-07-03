@@ -41,7 +41,7 @@ returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 both \code{token} and \code{node} (the OSF project id) and performs an
 authenticated \code{PUT}. The live path is network- and credential-dependent
 and is excluded from parity and CI. Mirrors the Python \code{theory.osf_push()}.
-See API_SPEC.md section 24.
+See API_SPEC.md section 25.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory")

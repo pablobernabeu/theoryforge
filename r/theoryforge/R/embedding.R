@@ -5,7 +5,7 @@
 #' or SDKs. It is the assistive counterpart to the deterministic lexical screen
 #' in \code{tf_redundancy_check}, and it is excluded from the parity contract
 #' and CI.
-#' See API_SPEC.md section 23.
+#' See API_SPEC.md section 24.
 #' @name embedding
 #' @keywords internal
 NULL
@@ -30,7 +30,7 @@ NULL
 #' decimals). Returns a data frame sorted by descending cosine then
 #' \code{(a, b)}, flagging pairs at or above \code{threshold} for review. This
 #' assistive screen complements the deterministic lexical
-#' [tf_redundancy_check()] and is parity-exempt. See API_SPEC.md section 23.
+#' [tf_redundancy_check()] and is parity-exempt. See API_SPEC.md section 24.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param embedder A function mapping a definition string to a numeric vector.

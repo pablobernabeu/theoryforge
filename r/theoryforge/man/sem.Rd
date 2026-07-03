@@ -4,6 +4,6 @@
 \alias{sem}
 \title{Compile a theory to lavaan model syntax.}
 \description{
-Deterministic and byte-identical across languages. See API_SPEC.md section 18.
+Deterministic and byte-identical across languages. See API_SPEC.md section 19.
 }
 \keyword{internal}

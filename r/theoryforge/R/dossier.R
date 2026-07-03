@@ -2,7 +2,7 @@
 #'
 #' Composes the deterministic rigour report, severity table, provenance, and
 #' preregistration document into one byte-identical bundle. See API_SPEC.md
-#' section 19.
+#' section 20.
 #' @name dossier
 #' @keywords internal
 NULL
@@ -12,7 +12,7 @@ NULL
 #' Assembles a reviewer-facing audit bundle: the header, the rigour-checklist
 #' table, the severity list, the provenance list, and the appended
 #' preregistration document. Deterministic and byte-identical to the Python
-#' \code{theory.dossier()}. See API_SPEC.md section 19.
+#' \code{theory.dossier()}. See API_SPEC.md section 20.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @return The dossier Markdown as a single string (LF line endings, single

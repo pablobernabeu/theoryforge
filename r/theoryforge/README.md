@@ -72,7 +72,7 @@ landscape$redundancy_risk          # crowded themes
 | `tf_compile_sem` | Compile constructs and propositions to lavaan model syntax |
 | `tf_simulate` | Deterministic linear-network trajectory |
 | `tf_diagram`, `tf_lit_diagram` | Diagram intermediate representations |
-| `tf_read_corpus`, `tf_litmap`, `tf_landscape` | Bibliometric mapping and the theory landscape |
+| `tf_read_corpus`, `tf_litmap`, `tf_landscape`, `tf_new_evidence_dois` | Bibliometric mapping, the theory landscape, and a new-DOI check |
 | `tf_render_report`, `tf_osf_push` | Render a Quarto report and deposit it on OSF (dry-run by default) |
 
 For the rationale behind each rigour check and exactly how every reported value is computed, see [Methodological foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html). The package reference index gives the complete, grouped function list.

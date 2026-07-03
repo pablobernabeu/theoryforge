@@ -6,6 +6,6 @@
 \description{
 Composes the deterministic rigour report, severity table, provenance, and
 preregistration document into one byte-identical bundle. See API_SPEC.md
-section 19.
+section 20.
 }
 \keyword{internal}
