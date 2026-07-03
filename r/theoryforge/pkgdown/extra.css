@@ -15,3 +15,8 @@
   margin: 0 auto;
 }
 .tf-figure svg text { fill: currentColor; }
+
+/* An inline code span (an item id, a field name) has no internal whitespace,
+   so a narrow table column forces the browser to fragment it mid-word. Keep
+   it intact; a table that genuinely cannot fit scrolls instead. */
+table td code, table th code { white-space: nowrap; }
