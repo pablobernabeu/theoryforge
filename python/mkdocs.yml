@@ -35,8 +35,9 @@ nav:
   - Home: index.md
   - Getting started: getting-started.md
   - Workflow modes: workflow-modes.md
-  - Literature layer: literature.md
   - Methodological foundations: methodology.md
+  - Literature layer: literature.md
+  - Changelog: changelog.md
   - API reference: api.md
   - About: about.md
   - Interactive app ↗: https://pablobernabeu.github.io/theoryforge/apps/py/
