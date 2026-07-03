@@ -1,5 +1,18 @@
 url: https://pablobernabeu.github.io/theoryforge/r
 
+# The R package lives in a subdirectory of the monorepo (r/theoryforge/), not
+# at the repository root. Left to auto-detect from DESCRIPTION's URL field,
+# pkgdown's per-file "Source: <path>" links (function reference pages,
+# NEWS.md) resolve one level too high and 404. Point the source template at
+# the package's actual subdirectory; the repo/issue links stay at the root,
+# which is correct for those.
+repo:
+  url:
+    home: https://github.com/pablobernabeu/theoryforge/
+    source: https://github.com/pablobernabeu/theoryforge/blob/main/r/theoryforge/
+    issue: https://github.com/pablobernabeu/theoryforge/issues/
+    user: https://github.com/
+
 template:
   bootstrap: 5
   light-switch: true
