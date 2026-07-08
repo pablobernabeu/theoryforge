@@ -1,5 +1,7 @@
 # theoryforge
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
+
 Systematic theory development: twin, feature-parity packages, R (CRAN) and Python (PyPI), for a
 rigorous, reproducible workflow of building, developing and testing scientific theories. A
 theory is treated as a versioned, machine-checkable object. The packages scaffold the three

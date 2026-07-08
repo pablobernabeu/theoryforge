@@ -4,7 +4,7 @@
 
 If you use the Python package in your work, please cite it:
 
-<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic Theory Development</em> (Python package version 0.1.0). <a href="https://github.com/pablobernabeu/theoryforge">https://github.com/pablobernabeu/theoryforge</a></p>
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic Theory Development</em> (Python package version 0.1.0). <a href="https://doi.org/10.5281/zenodo.21229964">https://doi.org/10.5281/zenodo.21229964</a></p>
 
 ```bibtex
 @Manual{theoryforge,
@@ -12,7 +12,8 @@ If you use the Python package in your work, please cite it:
   author = {Pablo Bernabeu},
   year   = {2026},
   note   = {Python package version 0.1.0},
-  url    = {https://github.com/pablobernabeu/theoryforge},
+  doi    = {10.5281/zenodo.21229964},
+  url    = {https://doi.org/10.5281/zenodo.21229964},
 }
 ```
 
