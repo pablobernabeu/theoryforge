@@ -51,7 +51,7 @@ footer:
 
 home:
   sidebar:
-    structure: [links, license, cite, authors, dev]
+    structure: [links, license, community, cite, authors, dev]
     components:
       # One British-spelled licence link. pkgdown's default licence section
       # renders the raw "MIT + file LICENSE" field and links a stub page, which
@@ -60,6 +60,12 @@ home:
         title: Licence
         text: >
           [MIT licence](LICENSE.html)
+      # Contributing only (no Code of Conduct row); pkgdown builds
+      # CONTRIBUTING.html from .github/CONTRIBUTING.md.
+      community:
+        title: Community
+        text: >
+          [Contributing guide](CONTRIBUTING.html)
       cite:
         title: Citation
         text: >
