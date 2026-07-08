@@ -2,14 +2,14 @@ citHeader("To cite theoryforge in publications, please use:")
 
 bibentry(
   bibtype = "Manual",
-  title   = "{theoryforge}: Systematic Theory Development",
+  title   = "{theoryforge}: Systematic theory development",
   author  = person("Pablo", "Bernabeu", comment = c(ORCID = "0000-0003-1083-2460")),
   year    = "2026",
   note    = "R package version 0.1.0",
   doi     = "10.5281/zenodo.21229964",
   url     = "https://doi.org/10.5281/zenodo.21229964",
   textVersion = paste0(
-    "Bernabeu, P. (2026). theoryforge: Systematic Theory Development. ",
+    "Bernabeu, P. (2026). theoryforge: Systematic theory development. ",
     "R package version 0.1.0. ",
     "https://doi.org/10.5281/zenodo.21229964"
   )

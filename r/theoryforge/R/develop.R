@@ -21,7 +21,7 @@ NULL
 #'   \code{ad_hoc_assumptions}.
 #' @references
 #' Lakatos, I. (1970). Falsification and the methodology of scientific research
-#'   programmes. In \emph{Criticism and the Growth of Knowledge} (pp. 91-196).
+#'   programmes. In \emph{Criticism and the growth of knowledge} (pp. 91-196).
 #'   Cambridge University Press. \doi{10.1017/cbo9781139171434.009}
 #'
 #' Meehl, P. E. (1990). Appraising and amending theories. \emph{Psychological

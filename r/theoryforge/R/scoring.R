@@ -22,7 +22,7 @@ NULL
 #'   \code{risk_score}, \code{computed_severity}, one row per prediction in
 #'   file order.
 #' @references
-#' Mayo, D. G. (2018). \emph{Statistical Inference as Severe Testing}. Cambridge
+#' Mayo, D. G. (2018). \emph{Statistical inference as severe testing}. Cambridge
 #'   University Press. \doi{10.1017/9781107286184}
 #'
 #' Meehl, P. E. (1990). Why summaries of research on psychological theories are

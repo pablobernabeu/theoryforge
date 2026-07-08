@@ -1,6 +1,6 @@
 # Workflow modes
 
-theoryforge organises work into three modes: BUILDING, DEVELOPMENT, and
+theoryforge organises work into three modes: BUILDING, DEVELOPMENT and
 TESTING. A theory is a single versioned object that moves through these
 modes as it matures. Each mode is a set of methods on the `Theory` object,
 so the same artefact carries from a first draft to a preregistered test.

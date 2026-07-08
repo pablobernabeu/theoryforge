@@ -16,7 +16,7 @@ def severity(T) -> list[dict]:
     """Per-prediction risk and computed severity, in file order.
 
     References:
-        Mayo, D. G. (2018). Statistical Inference as Severe Testing. Cambridge
+        Mayo, D. G. (2018). Statistical inference as severe testing. Cambridge
         University Press. https://doi.org/10.1017/9781107286184
         Meehl, P. E. (1990). Why summaries of research on psychological theories
         are often uninterpretable. Psychological Reports, 66, 195-244.

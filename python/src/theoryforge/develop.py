@@ -16,7 +16,7 @@ def appraise_amendment(new, prior) -> dict:
 
     References:
         Lakatos, I. (1970). Falsification and the methodology of scientific
-        research programmes. In Criticism and the Growth of Knowledge
+        research programmes. In Criticism and the growth of knowledge
         (pp. 91-196). Cambridge University Press.
         https://doi.org/10.1017/cbo9781139171434.009
         Meehl, P. E. (1990). Appraising and amending theories. Psychological

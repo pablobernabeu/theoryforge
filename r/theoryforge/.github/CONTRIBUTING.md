@@ -55,4 +55,4 @@ suites and the parity check on every push.
 
 By contributing you agree that your contribution is licensed under the same MIT
 licence as the package, and that you will follow the
-[Code of Conduct](CODE_OF_CONDUCT.md).
+[Code of Conduct](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CODE_OF_CONDUCT.md).
