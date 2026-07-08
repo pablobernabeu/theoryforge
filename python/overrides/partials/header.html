@@ -42,6 +42,9 @@
         </div>
       </div>
     </div>
+    {# Palette (theme) toggle is moved to the right end of the header, below. #}
+    <!-- App link (added: not part of upstream header.html) -->
+    <a data-md-component="app-link" href="https://pablobernabeu.github.io/theoryforge/apps/py/" title="Open the interactive app" class="md-header__button">App</a>
     {% if "material/search" in config.plugins %}
       {% set search = config.plugins["material/search"] | attr("config") %}
       {% if search.enabled %}
