@@ -3,9 +3,12 @@ site_description: Systematic theory development. A reproducible workflow for bui
 site_author: Pablo Bernabeu
 site_url: https://pablobernabeu.github.io/theoryforge/python/
 repo_url: https://github.com/pablobernabeu/theoryforge
+# The licence link is absolute: the copyright line renders on every page, and a
+# relative link would resolve against nested pages and break.
 copyright: >-
   Developed by <a href="https://pablobernabeu.github.io">Pablo Bernabeu</a>.
-  Open, reproducible research software in R and Python.
+  Open, reproducible research software in R and Python. Released under the
+  <a href="https://pablobernabeu.github.io/theoryforge/python/licence/">MIT licence</a>.
 
 theme:
   name: material
@@ -72,5 +75,9 @@ markdown_extensions:
   - admonition
   - pymdownx.highlight
   - pymdownx.superfences
+  # Snippets embeds the repository LICENSE into the licence page, so the page
+  # can never drift from the file. pymdown-extensions ships with mkdocs-material.
+  - pymdownx.snippets:
+      check_paths: true
 
 # Build with:  pip install mkdocs-material "mkdocstrings[python]" && mkdocs build
