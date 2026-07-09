@@ -242,20 +242,32 @@ scopus_compare_topics(
 )
 ```
 
-### Why scopusflow is not a corpus adapter
+### Using scopusflow for a Scopus-based corpus
 
-`tf_litmap()` and `tf_landscape()` depend on the `keywords` and `references`
-fields of a corpus record. As of the version linked above, neither
-`scopusflow` nor its Python twin exposes author keywords or a work's reference
-list anywhere in their output. `scopus_fetch()`'s records carry only
-identifying and citation-count fields, and `scopus_abstract()` adds an
-abstract but not references. A `fetch_corpus()`-style adapter built on
-`scopusflow` today would therefore produce a corpus with empty `keywords` and
-`references` that degrades silently under `tf_litmap()`. For that reason
-`tf_fetch_corpus()` (OpenAlex) remains the built-in corpus adapter, and
-`scopusflow` is used directly, as shown above, for DOI-based evidence tracking
-and topic comparison. Scopus access also requires an institutional
-subscription and API key, unlike OpenAlex's free, keyless access. That is a
-further reason to keep OpenAlex as the default. Should a future `scopusflow`
-release expose keywords or references, a corpus adapter would become
-straightforward to add.
+`tf_litmap()` and `tf_landscape()` read the `keywords` and `references` fields
+of each corpus record, and `scopusflow` now supplies both. `scopus_corpus()`
+takes the records from `scopus_fetch()` and enriches them, through Abstract
+Retrieval, into a tibble of `id`, `title`, `year`, `keywords` (the author
+keywords) and `references` (the cited works), the same minimal shape
+`tf_fetch_corpus()` returns from OpenAlex. A Scopus-based literature map is
+therefore available today rather than a future possibility.
+
+`tf_fetch_corpus()` (OpenAlex) stays the built-in default because OpenAlex is
+free and keyless, so the literature layer works with no setup. Scopus needs an
+institutional subscription and an API key, so `scopusflow` is an opt-in source
+rather than a dependency. The two packages exchange plain data, a DOI vector or
+a corpus written to a file, with no coupling in either direction; that keeps
+theoryforge dependency-light and usable out of the box, and lets a reader reach
+for whichever index they have access to. Build the corpus with `scopusflow`,
+serialise its rows to the corpus format, and read it back with
+`tf_read_corpus()`:
+
+```r
+# illustrative: needs scopusflow and a configured Scopus API key
+recs   <- scopusflow::scopus_fetch(query, years = 2015:2026)
+corpus <- scopusflow::scopus_corpus(recs)   # id, title, year, keywords, references
+jsonlite::write_json(corpus, "corpus.json", auto_unbox = TRUE)
+
+lit <- tf_read_corpus("corpus.json")
+tf_litmap(lit)
+```

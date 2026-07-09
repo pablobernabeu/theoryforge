@@ -242,19 +242,34 @@ compare_topics(
 )
 ```
 
-### Why scopusflow is not a corpus adapter
+### Using scopusflow for a Scopus-based corpus
 
-`litmap` and `landscape` depend on the `keywords` and `references` fields of a
-corpus record. As of the version linked above, neither `scopusflow-py` nor its
-R twin exposes author keywords or a work's reference list anywhere in their
-output: `fetch_plan`'s records carry only identifying and citation-count
-fields, and `scopus_abstract` adds an abstract but not references. A
-`fetch_corpus`-style adapter built on `scopusflow-py` today would therefore
-produce a corpus with empty `keywords` and `references` that degrades
-silently under `litmap`. For that reason `fetch_corpus` (OpenAlex) remains the
-built-in corpus adapter, and `scopusflow-py` is used directly, as shown above,
-for DOI-based evidence tracking and topic comparison. Scopus access also
-requires an institutional subscription and API key, unlike OpenAlex's free,
-keyless access. That is a further reason to keep OpenAlex as the default.
-Should a future `scopusflow-py` release expose keywords or references, a
-corpus adapter would become straightforward to add.
+`litmap` and `landscape` read the `keywords` and `references` fields of each
+corpus record, and `scopusflow-py` now supplies both. Its `corpus` builder
+takes the records from `fetch_plan` and enriches them, through Abstract
+Retrieval, into a frame of `id`, `title`, `year`, `keywords` (the author
+keywords) and `references` (the cited works), the same minimal shape
+`fetch_corpus` returns from OpenAlex. A Scopus-based literature map is
+therefore available today rather than a future possibility.
+
+`fetch_corpus` (OpenAlex) stays the built-in default because OpenAlex is free
+and keyless, so the literature layer works with no setup. Scopus needs an
+institutional subscription and an API key, so `scopusflow-py` is an opt-in
+source rather than a dependency. The two packages exchange plain data, a DOI
+list or a corpus written to a file, with no coupling in either direction; that
+keeps theoryforge dependency-light and usable out of the box, and lets a reader
+reach for whichever index they have access to. Build the corpus with
+`scopusflow-py`, write it to a file, and read it back with `read_corpus`:
+
+```python
+# illustrative: needs scopusflow-py and a configured Scopus API key
+from scopusflow import scopus_query, SearchPlan, fetch_plan, corpus
+import json
+
+records = fetch_plan(SearchPlan(scopus_query("panic disorder"), years=range(2015, 2027)))
+frame = corpus(records)                       # id, title, year, keywords, references
+frame.to_json("corpus.json", orient="records")
+
+lit = theoryforge.read_corpus("corpus.json")
+theoryforge.litmap(lit)
+```
