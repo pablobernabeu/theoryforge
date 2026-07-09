@@ -1,4 +1,6 @@
-# theoryforge (Python)
+# theoryforge <span class="mrd-lang">(Python)</span>
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
 
 theoryforge treats a scientific theory as a versioned, machine-checkable object, so that
 building, developing and testing it becomes systematic and reproducible. It targets the

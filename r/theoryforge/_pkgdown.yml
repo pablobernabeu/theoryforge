@@ -78,10 +78,10 @@ navbar:
     right: [app, search, github, lightswitch]
   components:
     app:
-      text: Interactive app
+      text: App
       href: https://pablobernabeu.github.io/theoryforge/apps/r/
       icon: fa-play
-      aria-label: Interactive web app
+      aria-label: The interactive app
     # Curate the Articles dropdown with explicit links (href strings, so no
     # tidyselect evaluation of hyphenated slugs) and keep About out of it; About
     # is still built and reached via its own top-level navbar item. Ordered to

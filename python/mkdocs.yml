@@ -50,6 +50,8 @@ extra_css:
   - stylesheets/brand.css
   - stylesheets/extra.css
 
+# The app is reached through the header App pill (overrides/partials/header.html),
+# matching the family convention, so it does not repeat in the nav.
 nav:
   - Home: index.md
   - Getting started: getting-started.md
@@ -59,7 +61,6 @@ nav:
   - Changelog: changelog.md
   - API reference: api.md
   - About: about.md
-  - Interactive app ↗: https://pablobernabeu.github.io/theoryforge/apps/py/
 
 plugins:
   - search

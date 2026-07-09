@@ -4,7 +4,7 @@ This is a new submission of theoryforge 0.1.0.
 
 ## Test environments
 
-* Local: Windows 11, R 4.6.0
+* Local: Windows 11, R 4.6.1 (2026-07-08)
 * win-builder: R-release and R-devel
 
 ## R CMD check results

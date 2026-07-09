@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Question or usage help
-    url: https://github.com/pablobernabeu/theoryforge/discussions
-    about: For questions about using theoryforge, please start a discussion.
+    url: https://github.com/pablobernabeu/theoryforge/issues
+    about: For questions about using theoryforge, please open an issue.
