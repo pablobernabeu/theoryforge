@@ -60,11 +60,12 @@ extra_css:
 nav:
   - Home: index.md
   - Getting started: getting-started.md
-  - Workflow modes: workflow-modes.md
-  - Methodological foundations: methodology.md
-  - Literature layer: literature.md
-  - Changelog: changelog.md
+  - Guides:
+      - Workflow modes: workflow-modes.md
+      - Methodological foundations: methodology.md
+      - Literature layer: literature.md
   - API reference: api.md
+  - Changelog: changelog.md
   - About: about.md
 
 plugins:
