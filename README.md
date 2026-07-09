@@ -1,6 +1,6 @@
 # theoryforge
 
-Systematic theory development: twin, feature-parity packages, R (CRAN) and Python (PyPI), for a
+Systematic theory development: twin, feature-parity R and Python packages for a
 rigorous, reproducible workflow of building, developing and testing scientific theories. A
 theory is treated as a versioned, machine-checkable object. The packages scaffold the three
 modes, apply a theory-rigour checklist, auto-generate diagrams and connect to the bibliometric

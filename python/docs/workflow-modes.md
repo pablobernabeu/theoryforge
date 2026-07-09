@@ -59,9 +59,10 @@ t = (
 
 The positional arguments follow the schema. `add_construct(id, label,
 definition)` takes optional `measurement` and `boundary_conditions` lists.
-`add_proposition(id, from, to, relation)` takes an optional `mechanism`,
+`add_proposition(id, frm, to, relation)` takes an optional `mechanism`,
 where `relation` is one of `increases`, `decreases`, `moderates`,
-`mediates`, `causes` or `associates`. `add_prediction(id, statement,
+`mediates`, `causes` or `associates` (`frm` stands in for the schema's
+`from` field, since `from` is a reserved word in Python). `add_prediction(id, statement,
 type)` takes optional `derives_from` and `diagnostic_vs` lists, where `type`
 is one of `point`, `interval`, `directional` or `existence`.
 
@@ -211,7 +212,13 @@ without conversion.
 
 `diagram()` exports several views of the same object. The graph views return
 Graphviz DOT or dagitty text; three further views are returned directly as SVG
-and render inline. These examples use the bundled panic-network fixture.
+and render inline. These examples use the repository's panic-network fixture
+(see [Getting started](getting-started.md) for where the fixture files live),
+which carries the test outcomes and scope conditions the richer views draw on.
+
+```python
+t = tf.read("panic-network.theory.yaml")
+```
 
 The `workflow` view traces the lifecycle from constructs, through propositions and
 predictions, to the recorded test outcomes.

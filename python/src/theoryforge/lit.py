@@ -12,6 +12,7 @@ from pathlib import Path
 import yaml
 
 from .redundancy import tokens
+from .rigor import _as_list
 
 DEFAULT_MIN_LINK = 2
 
@@ -39,7 +40,7 @@ def _records(corpus) -> list:
 def _pair_counts(records: list, field: str) -> dict:
     counts: dict[tuple, int] = {}
     for r in records:
-        items = sorted({x for x in (r.get(field) or []) if x})
+        items = sorted({x for x in _as_list(r.get(field)) if x})
         for a, b in itertools.combinations(items, 2):
             counts[(a, b)] = counts.get((a, b), 0) + 1
     return counts
@@ -85,7 +86,7 @@ def _components(edges: list[dict]) -> list[dict]:
 def litmap(corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
     """Keyword co-occurrence, thematic components, and co-citation, all deterministic."""
     records = _records(corpus)
-    all_keywords = sorted({k for r in records for k in (r.get("keywords") or []) if k})
+    all_keywords = sorted({k for r in records for k in _as_list(r.get("keywords")) if k})
     kw_edges = _edges(_pair_counts(records, "keywords"), min_link)
     cocit = _edges(_pair_counts(records, "references"), min_link)
     return {
@@ -114,7 +115,7 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
         th_tokens = tokens(" ".join(th["keywords"]))
         on = sorted(
             a.get("id") for a in alts
-            if tokens(a.get("label", "") + " " + " ".join(a.get("key_constructs") or [])) & th_tokens
+            if tokens(a.get("label", "") + " " + " ".join(_as_list(a.get("key_constructs")))) & th_tokens
         )
         focal_on = bool(focal_tokens & th_tokens)
         n = len(on) + (1 if focal_on else 0)
@@ -178,7 +179,10 @@ def lit_diagram(obj: dict, type: str = "keyword_cooccurrence") -> str:
         return _undirected(type, obj.get(type, []))
     if type == "theme_landscape":
         return _theme_landscape(obj)
-    raise ValueError(f"unknown lit diagram type {type!r}")
+    raise ValueError(
+        f"unknown lit diagram type {type!r}; expected one of "
+        "('keyword_cooccurrence', 'co_citation', 'theme_landscape')"
+    )
 
 
 _DOI_PREFIXES = ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/", "doi:")

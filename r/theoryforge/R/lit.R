@@ -83,7 +83,7 @@ tf_read_corpus <- function(path) {
         vals <- c(vals, as.character(x))
       }
     }
-    vals <- sort(unique(vals))
+    vals <- sort(unique(vals), method = "radix")
     n <- length(vals)
     if (n < 2L) next
     for (i in seq_len(n - 1L)) {
@@ -158,7 +158,7 @@ tf_read_corpus <- function(path) {
       groups[[idx]] <- c(groups[[idx]], node)
     }
   }
-  comps <- lapply(groups, function(members) sort(unique(members)))
+  comps <- lapply(groups, function(members) sort(unique(members), method = "radix"))
   if (length(comps) == 0L) return(list())
   smallest <- vapply(comps, function(kws) kws[[1L]], character(1))
   comps <- comps[order(smallest, method = "radix")]
@@ -199,7 +199,7 @@ tf_litmap <- function(corpus, min_link = 2) {
       }
     }
   }
-  all_kw <- sort(unique(all_kw))
+  all_kw <- sort(unique(all_kw), method = "radix")
   kw_edges <- .tf_edges(.tf_pair_counts(records, "keywords"), min_link)
   cocit <- .tf_edges(.tf_pair_counts(records, "references"), min_link)
   list(
@@ -264,7 +264,7 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
         on <- c(on, .tf_str(a, "id"))
       }
     }
-    on <- sort(on)
+    on <- sort(on, method = "radix")
     focal_on <- length(intersect(focal_tokens, th_tokens)) > 0L
     n <- length(on) + (if (focal_on) 1L else 0L)
     status <- if (n == 0L) "under_theorised" else if (n >= 2L) "crowded" else "covered"
@@ -296,7 +296,7 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
 .tf_lit_undirected <- function(name, edges) {
   nodes <- character(0)
   for (e in edges) nodes <- c(nodes, e$a, e$b)
-  nodes <- sort(unique(nodes))
+  nodes <- sort(unique(nodes), method = "radix")
   lines <- c(sprintf("graph %s {", name), "  node [shape=ellipse];")
   for (n in nodes) {
     lines <- c(lines, sprintf('  "%s";', .tf_lit_esc(n)))
@@ -378,7 +378,10 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence") {
   if (identical(type, "theme_landscape")) {
     return(.tf_lit_theme_landscape(obj))
   }
-  stop(sprintf("unknown lit diagram type '%s'", type), call. = FALSE)
+  stop(sprintf("unknown lit diagram type '%s'; expected one of %s",
+               type,
+               "keyword_cooccurrence, co_citation, theme_landscape"),
+       call. = FALSE)
 }
 
 .tf_DOI_PREFIXES <- c("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/", "doi:")

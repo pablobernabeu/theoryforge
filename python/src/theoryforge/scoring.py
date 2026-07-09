@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ._num import rnd
+from .rigor import _as_list
 
 BASE = {"existence": 0.1, "directional": 0.4, "interval": 0.7, "point": 0.9}
 CRUD = 0.25  # Meehl (1990) ambient-correlation discount for directional predictions
@@ -30,7 +31,7 @@ def severity(T) -> list[dict]:
         typ = p.get("type")
         base = BASE.get(typ, 0.0)
         discounted = base * (1 - CRUD) if typ == "directional" else base
-        dv = p.get("diagnostic_vs") or []
+        dv = _as_list(p.get("diagnostic_vs"))
         diag_bonus = 0.1 if dv and any(d in alt_ids for d in dv) else 0.0
         out.append({
             "prediction_id": p.get("id"),

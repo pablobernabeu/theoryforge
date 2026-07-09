@@ -7,22 +7,29 @@ output: rmarkdown::html_vignette
 
 If you use the R package in your work, please cite it:
 
-<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic theory development</em> (R package version 0.1.0). <a href="https://doi.org/10.5281/zenodo.21229964">https://doi.org/10.5281/zenodo.21229964</a></p>
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic theory development</em> (R package version `r utils::packageVersion("theoryforge")`). <a href="https://doi.org/10.5281/zenodo.21229964">https://doi.org/10.5281/zenodo.21229964</a></p>
 
-```bibtex
+```{r bibtex-entry, echo = FALSE, results = "asis"}
+# The code fence is assembled at run time; a literal fence line inside the
+# chunk would terminate it early.
+fence <- strrep("`", 3)
+cat(sprintf('%sbibtex
 @Manual{theoryforge,
   title  = {theoryforge: Systematic theory development},
   author = {Pablo Bernabeu},
   year   = {2026},
-  note   = {R package version 0.1.0},
+  note   = {R package version %s},
   doi    = {10.5281/zenodo.21229964},
   url    = {https://doi.org/10.5281/zenodo.21229964},
 }
+%s
+', fence, utils::packageVersion("theoryforge"), fence))
 ```
 
 You can <a href="../theoryforge.bib" download>download the BibTeX entry</a>. In R, the
-same entry is available with `citation("theoryforge")`, and the package installs with
-`install.packages("theoryforge")`.
+same entry is available with `citation("theoryforge")`. Once on CRAN, the package will
+install with `install.packages("theoryforge")`; until then, use
+`remotes::install_github("pablobernabeu/theoryforge", subdir = "r/theoryforge")`.
 
 ## The developer
 

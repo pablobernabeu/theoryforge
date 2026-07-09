@@ -6,6 +6,11 @@ network access, and is never performed automatically.
 """
 from __future__ import annotations
 
+# Import the name directly: the live-push branch does a function-level
+# `import urllib.request`, which would otherwise shadow a module-level
+# `urllib` for the whole function body.
+from urllib.parse import quote as _quote
+
 from .dossier import dossier as _dossier
 
 _DEFAULT_BASE = "https://files.osf.io/v1/resources/"
@@ -23,7 +28,13 @@ def osf_push(T, token: str | None = None, node: str | None = None,
     tid = data.get("id", "theory")
     fname = filename or f"{tid}.dossier.md"
     content = _dossier(data)
-    url = f"{base_url}{node}/providers/osfstorage/?kind=file&name={fname}" if node else None
+    # Percent-encode the filename (theory ids are user-supplied, so fname may
+    # carry spaces, '&' or '#'); mirrors the R utils::URLencode(reserved = TRUE)
+    # call so the dry-run request dicts stay parity-identical.
+    url = (
+        f"{base_url}{node}/providers/osfstorage/?kind=file&name={_quote(fname, safe='')}"
+        if node else None
+    )
     request = {"method": "PUT", "url": url, "filename": fname,
                "content_bytes": len(content.encode("utf-8"))}
 

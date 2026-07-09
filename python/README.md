@@ -52,6 +52,12 @@ your own theory files when running the examples.
 ## Install
 
 ```bash
+pip install theoryforge
+```
+
+To work on the package itself, install an editable checkout with the development extras:
+
+```bash
 pip install -e ".[dev]"
 ```
 
@@ -61,17 +67,20 @@ pip install -e ".[dev]"
 pytest
 ```
 
-P0 implemented the deterministic core (I/O and validation, rigour checklist, three diagram
-exporters, lexical redundancy screen). P1 added the three workflow modes. These are a BUILDING
-builder API with provenance, the operationalised severity rubric, the Lakatosian amendment
-appraisal (DEVELOPMENT), preregistration export (TESTING), and two more diagram types
-(`development_roadmap`, `pipeline`). P2 adds the bibliometric and literature layer. This comprises
-`read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component themes and
-co-citation), `landscape` (which maps a theory and its alternatives onto the themes, flagging
-under-theorised fronts and redundancy risk), `lit_diagram`, the parity-exempt `fetch_corpus`
-OpenAlex adapter, and `new_evidence_dois` (a deterministic check for candidate DOIs, from any
-search tool, not yet cited by a theory). P3 added `compile_sem` (lavaan model syntax) and
-`dossier` (a reviewer-facing audit bundle). P4 added `simulate` (a deterministic dynamical-system
+## What the package provides
+
+The deterministic core covers theory-object I/O and validation, the 12-item rigour checklist
+with its weighted aggregate score and blocker gate, ten diagram exporters and a lexical
+redundancy screen. The three workflow modes sit on the same object: a BUILDING builder API with
+auto-logged provenance, the Lakatosian amendment appraisal (DEVELOPMENT), and the
+operationalised severity rubric with preregistration export (TESTING). The literature layer
+comprises `read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component
+themes and co-citation), `landscape` (which maps a theory and its alternatives onto the themes,
+flagging under-theorised fronts and redundancy risk), `lit_diagram`, the parity-exempt
+`fetch_corpus` OpenAlex adapter, and `new_evidence_dois` (a deterministic check for candidate
+DOIs, from any search tool, not yet cited by a theory). `compile_sem` translates constructs and
+propositions to lavaan model syntax, and `dossier` assembles a reviewer-facing audit bundle.
+Simulation and adapters round the package out: `simulate` (a deterministic dynamical-system
 runner over the construct network), `render_report` (a Quarto report wrapping the dossier),
-`embedding_redundancy` (an opt-in, parity-exempt embedding screen), and `osf_push` (an OSF
-deposit adapter, dry-run by default). No `NotImplemented` stubs remain.
+`embedding_redundancy` (an opt-in, parity-exempt embedding screen) and `osf_push` (an OSF
+deposit adapter, dry-run by default).

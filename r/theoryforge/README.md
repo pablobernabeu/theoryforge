@@ -23,6 +23,12 @@ operation, and export both the visualisation (SVG/PNG) and the R code to reprodu
 ## Installation
 
 ```r
+remotes::install_github("pablobernabeu/theoryforge", subdir = "r/theoryforge")
+```
+
+From a local checkout, the package also installs as source:
+
+```r
 # from the repository root
 install.packages("r/theoryforge", repos = NULL, type = "source")
 ```
@@ -38,7 +44,8 @@ fuller walk-through of building, checking and diagramming a theory.
 library(theoryforge)
 
 # Read an existing theory (or build one incrementally with tf_theory + tf_add_*)
-theory <- tf_read("fixtures/panic-network.theory.yaml")
+theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
+                              package = "theoryforge"))
 tf_validate(theory)
 
 # Score it against the 12-item rigour checklist
@@ -54,11 +61,13 @@ cat(tf_preregister(theory))
 cat(tf_diagram(theory, type = "nomological_net"))
 
 # DEVELOP: appraise an amendment as progressive or degenerating
-v2 <- tf_read("fixtures/panic-network-2026-v2.theory.yaml")
+v2 <- tf_read(system.file("fixtures", "panic-network-2026-v2.theory.yaml",
+                          package = "theoryforge"))
 tf_appraise_amendment(v2, theory)$verdict   # "progressive"
 
 # LITERATURE: map a corpus and position the theory against it
-corpus <- tf_read_corpus("fixtures/panic-corpus.yaml")
+corpus <- tf_read_corpus(system.file("fixtures", "panic-corpus.yaml",
+                                     package = "theoryforge"))
 landscape <- tf_landscape(theory, corpus)
 landscape$under_theorised_fronts   # themes no theory addresses
 landscape$redundancy_risk          # crowded themes

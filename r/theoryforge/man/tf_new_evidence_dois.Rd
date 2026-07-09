@@ -13,7 +13,7 @@ tf_new_evidence_dois(theory, candidate_dois)
 }
 \value{
 A character vector of the candidate DOIs not already cited,
-  deduplicated and sorted.
+deduplicated and sorted.
 }
 \description{
 Compares each DOI in \code{candidate_dois} against the theory's

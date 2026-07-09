@@ -4,7 +4,7 @@
 
 Psychology and the social sciences accumulate findings far faster than they build theories that explain them. Constructs proliferate and blur into one another (the jingle-jangle problem), predictions stay vague and directional rather than committal, auxiliary assumptions accrete to protect a theory rather than to expose it, and a revision is rarely judged by whether it adds testable content or merely shields the theory from refutation. Eronen and Bringmann (2021) call this the theory crisis.
 
-theoryforge treats a theory as a structured, versioned object and makes the specification of these properties checkable rather than left to prose. It scores the theory against twelve structural criteria drawn from the methodology literature, screens its constructs for redundancy, grades how severely each prediction is tested, distinguishes progressive from degenerating amendments in Lakatos's sense, and renders the structure so it can be read and tested. Every value it reports is produced by a fixed, documented rule, with no model and no randomness, and the R and Python implementations compute byte-identical results, so a verdict is reproducible and can be audited against the specification. See [Scope and limits](#scope-and-limits) below for what this checking does and does not establish.
+theoryforge treats a theory as a structured, versioned object and makes the specification of these properties checkable rather than left to prose. It scores the theory against twelve structural criteria drawn from the methodology literature, screens its constructs for redundancy, grades how severely each prediction is tested, distinguishes progressive from degenerating amendments in Lakatos's sense, and renders the structure so it can be read and tested. Every value it reports is produced by a fixed, documented rule, with no model and no randomness, and the R and Python implementations return identical verdicts and byte-identical diagram intermediate representations, so a verdict is reproducible and can be audited against the specification. See [Scope and limits](#scope-and-limits) below for what this checking does and does not establish.
 
 Each item in the rigour checklist follows from a result in the methodology
 literature, and the package records the supporting work next to the check (the
@@ -30,7 +30,7 @@ below.
 
 ## How the rigour score is computed
 
-Each of the twelve items returns a status (`pass`, `warn` or `fail`) and a score between 0 and 1. Present-or-absent items score 1 or 0; items that measure a proportion (for example, the share of constructs that carry a definition, a measurement and boundary conditions) score that proportion. Two items read a calibrated threshold from the checklist file: predictive precision passes when at least half of the predictions are point or interval, and test severity passes when the mean computed severity reaches 0.5.
+Each of the twelve items returns a status (`pass`, `warn` or `fail`) and a score between 0 and 1. Present-or-absent items score 1 or 0; items that measure a proportion (for example, the share of constructs that carry a definition, a measurement and boundary conditions) score that proportion. Two items read a calibrated threshold from the checklist file: predictive precision passes when at least half of the predictions are point or interval, and test severity passes when the mean of the declared per-prediction `severity` values reaches 0.5.
 
 The headline number, the aggregate score, is the weighted sum of the twelve item scores scaled to a 0 to 100 range. The weights are fixed in the checklist file and sum to one, so a theory that passes every item scores 100. Falsifiability carries the most weight (0.15) and formalisation the least (0.05).
 
@@ -40,7 +40,7 @@ Each item is scored as follows.
 
 - **Falsifiability** passes if at least one prediction is point, interval or directional, that is, a claim that forbids some observation.
 - **Predictive precision** is the share of predictions that are point or interval, and passes at 0.5 or above.
-- **Test severity** is the mean computed severity across the predictions, and passes at 0.5 or above.
+- **Test severity** averages the declared `severity` field of each prediction (warning with a score of 0 when no prediction declares one), and passes at 0.5 or above. It is distinct from the computed severity of the `severity()` rubric, which offers a principled way of choosing the declared values.
 - **Parsimony** falls as the ratio of auxiliary assumptions to propositions rises, and fails outright if any assumption is ad hoc (added for a prediction that no passing test supports).
 - **Construct non-redundancy** scores one minus the largest lexical similarity between any pair of construct definitions, and warns once that similarity reaches 0.85.
 - **Construct clarity** is the share of constructs that carry a definition, a measurement and boundary conditions, and passes only at 1.

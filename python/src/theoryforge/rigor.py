@@ -16,8 +16,24 @@ def _ne_str(v) -> bool:
     return isinstance(v, str) and v.strip() != ""
 
 
+def _as_list(v) -> list:
+    """Read a value where the schema expects an array (API_SPEC.md section 4).
+
+    A list is returned as is. A nonempty scalar string is read as a singleton
+    list, so natural YAML such as ``derives_from: p1`` means ``["p1"]`` (the R
+    YAML reader cannot distinguish the two forms, so both languages adopt the
+    singleton reading). Anything else, including an empty or whitespace-only
+    scalar, reads as empty.
+    """
+    if isinstance(v, list):
+        return v
+    if _ne_str(v):
+        return [v]
+    return []
+
+
 def _ne_list(v) -> bool:
-    return isinstance(v, list) and len(v) > 0
+    return len(_as_list(v)) > 0
 
 
 def _list(d: dict, key: str) -> list:
@@ -64,7 +80,7 @@ def _check_items(T: dict, thr: dict) -> dict:
     ad_hoc = 0
     for x in aux:
         if x.get("added_for") is not None:
-            protects = x.get("protects") or []
+            protects = _as_list(x.get("protects"))
             ok = any(t.get("prediction_id") in protects and t.get("passed") is True for t in tos)
             if not ok:
                 ad_hoc += 1
@@ -124,7 +140,8 @@ def _check_items(T: dict, thr: dict) -> dict:
     else:
         diag = [
             p for p in preds
-            if _ne_list(p.get("diagnostic_vs")) and any(d in alt_ids for d in p.get("diagnostic_vs"))
+            if _ne_list(p.get("diagnostic_vs"))
+            and any(d in alt_ids for d in _as_list(p.get("diagnostic_vs")))
         ]
         out["diagnosticity"] = ("pass" if len(diag) >= 1 else "warn", rnd(len(diag) / len(preds), 3))
 
@@ -139,7 +156,7 @@ def _check_items(T: dict, thr: dict) -> dict:
     else:
         valid = [
             p for p in preds
-            if _ne_list(p.get("derives_from")) and all(d in prop_ids for d in p.get("derives_from"))
+            if _ne_list(p.get("derives_from")) and all(d in prop_ids for d in _as_list(p.get("derives_from")))
         ]
         frac = len(valid) / len(preds)
         out["derivation_chain"] = ("pass" if frac == 1.0 else "fail", rnd(frac, 3))

@@ -16,6 +16,7 @@ from .osf import osf_push as _osf_push
 from .prereg import preregister as _preregister
 from .redundancy import redundancy_check as _redundancy_check
 from .report_render import render_report as _render_report
+from .rigor import _as_list
 from .rigor import check as _check
 from .rigor import report as _report
 from .scoring import severity as _severity
@@ -139,14 +140,14 @@ class Theory:
             if _nonempty_str(to) and to not in construct_ids:
                 errors.append(f"proposition[{i}] to '{to}' is not a known construct")
         for i, p in enumerate(preds):
-            for dref in (p.get("derives_from") or []):
+            for dref in _as_list(p.get("derives_from")):
                 if _nonempty_str(dref) and dref not in proposition_ids:
                     errors.append(f"prediction[{i}] derives_from '{dref}' is not a known proposition")
-            for dv in (p.get("diagnostic_vs") or []):
+            for dv in _as_list(p.get("diagnostic_vs")):
                 if _nonempty_str(dv) and dv not in alternative_ids:
                     errors.append(f"prediction[{i}] diagnostic_vs '{dv}' is not a known alternative")
         for i, a in enumerate(auxs):
-            for pr in (a.get("protects") or []):
+            for pr in _as_list(a.get("protects")):
                 if _nonempty_str(pr) and pr not in prediction_ids:
                     errors.append(f"assumption[{i}] protects '{pr}' is not a known prediction")
         for i, t in enumerate(self._list("test_outcomes")):

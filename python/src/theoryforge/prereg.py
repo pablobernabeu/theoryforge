@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .rigor import _as_list
 from .rigor import check as _check
 from .scoring import severity as _severity
 
@@ -41,7 +42,7 @@ def preregister(T, path=None) -> str:
         lines.append("_No predictions specified._")
     else:
         for i, p in enumerate(preds, start=1):
-            df = p.get("derives_from") or []
+            df = _as_list(p.get("derives_from"))
             df_txt = ", ".join(df) if df else "—"
             lines.append(f"{i}. [{p.get('type')}] {p.get('statement')} (derives from: {df_txt})")
 

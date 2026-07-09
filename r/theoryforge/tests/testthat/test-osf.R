@@ -29,6 +29,15 @@ test_that("tf_osf_push honours a custom filename", {
   expect_match(res$request$url, "name=custom.md", fixed = TRUE)
 })
 
+test_that("tf_osf_push percent-encodes the filename in the upload URL", {
+  # Mirrors the Python osf_push test so the dry-run request dicts stay
+  # parity-identical for filenames with reserved characters.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  res <- tf_osf_push(theory, node = "abc12", filename = "my theory&notes.md")
+  expect_match(res$request$url, "name=my%20theory%26notes.md", fixed = TRUE)
+  expect_identical(res$request$filename, "my theory&notes.md")
+})
+
 test_that("tf_osf_push live mode requires both token and node", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   expect_error(tf_osf_push(theory, dry_run = FALSE), "token.+node")

@@ -64,8 +64,9 @@ for (theme in lm$themes) {
 }
 ```
 
-Co-citation is computed the same way over the `references` field. Two works are
-linked when they cite the same pair of sources at least `min_link` times.
+Co-citation is computed the same way over the `references` field. Two cited
+sources are linked when at least `min_link` records in the corpus cite them
+together.
 
 ```{r cocitation}
 lm$co_citation
@@ -245,12 +246,11 @@ scopus_compare_topics(
 ### Using scopusflow for a Scopus-based corpus
 
 `tf_litmap()` and `tf_landscape()` read the `keywords` and `references` fields
-of each corpus record, and `scopusflow` now supplies both. `scopus_corpus()`
-takes the records from `scopus_fetch()` and enriches them, through Abstract
-Retrieval, into a tibble of `id`, `title`, `year`, `keywords` (the author
-keywords) and `references` (the cited works), the same minimal shape
-`tf_fetch_corpus()` returns from OpenAlex. A Scopus-based literature map is
-therefore available today rather than a future possibility.
+of each corpus record, and `scopusflow` supplies both. `scopus_corpus()` takes
+the records from `scopus_fetch()` and enriches them, through Abstract
+Retrieval, into a tibble of `id`, `title`, `year`, `keywords` (one character
+vector of author keywords per record) and `references` (one data frame of
+cited works per record, with `id`, `doi`, `title` and other fields).
 
 `tf_fetch_corpus()` (OpenAlex) stays the built-in default because OpenAlex is
 free and keyless, so the literature layer works with no setup. Scopus needs an
@@ -258,14 +258,32 @@ institutional subscription and an API key, so `scopusflow` is an opt-in source
 rather than a dependency. The two packages exchange plain data, a DOI vector or
 a corpus written to a file, with no coupling in either direction; that keeps
 theoryforge dependency-light and usable out of the box, and lets a reader reach
-for whichever index they have access to. Build the corpus with `scopusflow`,
-serialise its rows to the corpus format, and read it back with
-`tf_read_corpus()`:
+for whichever index they have access to.
+
+The corpus format expects a top-level `{schema_version, id, records}` envelope
+and, within each record, `references` as a flat list of id strings, whereas
+`scopus_corpus()` returns a tibble whose `references` entries are data frames.
+So build the envelope explicitly, reducing each references data frame to one
+id string per cited work (the DOI where present, the Scopus id otherwise),
+write the result to disk and read it back with `tf_read_corpus()`:
 
 ```r
 # illustrative: needs scopusflow and a configured Scopus API key
-recs   <- scopusflow::scopus_fetch(query, years = 2015:2026)
-corpus <- scopusflow::scopus_corpus(recs)   # id, title, year, keywords, references
+recs <- scopusflow::scopus_fetch(query, years = 2015:2026)
+sc   <- scopusflow::scopus_corpus(recs)   # id, title, year, keywords, references
+
+records <- lapply(seq_len(nrow(sc)), function(i) {
+  refs <- sc$references[[i]]              # one data frame of cited works
+  ref_ids <- ifelse(is.na(refs$doi), refs$id, refs$doi)
+  list(id         = sc$id[[i]],
+       title      = sc$title[[i]],
+       year       = sc$year[[i]],
+       keywords   = as.list(sc$keywords[[i]]),
+       references = as.list(ref_ids[!is.na(ref_ids)]))
+})
+corpus <- list(schema_version = "1.0",
+               id = "scopus:panic disorder",
+               records = records)
 jsonlite::write_json(corpus, "corpus.json", auto_unbox = TRUE)
 
 lit <- tf_read_corpus("corpus.json")

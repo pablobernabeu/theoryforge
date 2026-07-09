@@ -11,8 +11,16 @@ NULL
 
 # A list/array field is "nonempty" if it is a list/vector of length >= 1.
 # yaml: `[]` parses to list() (length 0); a missing key is NULL (length 0).
+# Where the schema expects an array, a nonempty scalar string counts as a
+# singleton list (natural YAML such as `derives_from: p1`); an empty or
+# whitespace-only scalar counts as absent. Mirrors the Python `_as_list`
+# reading (API_SPEC.md section 4).
 .tf_ne_list <- function(v) {
-  (is.list(v) || (is.atomic(v) && !is.null(v))) && length(v) >= 1L
+  if (is.list(v)) return(length(v) >= 1L)
+  if (is.character(v) && length(v) == 1L) {
+    return(!is.na(v) && nzchar(trimws(v)))
+  }
+  (is.atomic(v) && !is.null(v)) && length(v) >= 1L
 }
 
 # Mirror Python `T.get(key)` returning a list when present, else [].

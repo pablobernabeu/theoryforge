@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use theoryforge, please cite it as below."
+title: "theoryforge: Systematic theory development"
+abstract: "A rigorous, reproducible workflow for building, developing and testing scientific theories, delivered as twin, feature-parity R and Python packages. A theory is treated as a versioned, machine-checkable object, scored against a twelve-item rigour checklist and connected to the bibliometric literature."
+type: software
+authors:
+  - family-names: Bernabeu
+    given-names: Pablo
+    orcid: "https://orcid.org/0000-0003-1083-2460"
+    email: pcbernabeu@gmail.com
+version: "0.1.0"
+date-released: "2026-06-24"
+doi: "10.5281/zenodo.21229964"
+license: MIT
+repository-code: "https://github.com/pablobernabeu/theoryforge"
+url: "https://pablobernabeu.github.io/theoryforge/"
+keywords:
+  - theory development
+  - metascience
+  - falsifiability
+  - preregistration
+  - reproducible research

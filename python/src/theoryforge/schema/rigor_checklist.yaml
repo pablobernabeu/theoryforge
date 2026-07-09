@@ -7,7 +7,7 @@ thresholds:
   redundancy_similarity_max: 0.85   # lexical-screen default (calibrated, not hard truth); embeddings opt-in
   min_precision_share: 0.5          # share of point/interval predictions for item 'precision' to pass
   min_severity: 0.5                 # mean severity for item 'risk_severity' to pass
-  parsimony_ratio_max: 1.0          # auxiliary_assumptions per explained phenomenon
+  parsimony_ratio_max: 1.0          # auxiliary assumptions per proposition
 
 items:
   - id: falsifiability

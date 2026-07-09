@@ -35,6 +35,14 @@ def test_osf_push_dry_run(panic_path):
     assert out["request"]["method"] == "PUT"
 
 
+def test_osf_push_percent_encodes_filename(panic_path):
+    # Mirrors the R tf_osf_push test so the dry-run request dicts stay
+    # parity-identical for filenames with reserved characters.
+    out = tf.read(panic_path).osf_push(node="abc12", filename="my theory&notes.md")
+    assert "name=my%20theory%26notes.md" in out["request"]["url"]
+    assert out["request"]["filename"] == "my theory&notes.md"
+
+
 def test_render_report_writes_qmd(panic_path, tmp_path):
     p = tf.read(panic_path).render_report(tmp_path / "report")
     assert p.endswith(".qmd")

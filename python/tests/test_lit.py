@@ -57,6 +57,24 @@ def test_new_evidence_dois_empty_theory():
     assert t.new_evidence_dois([None, ""]) == []
 
 
+def test_litmap_mixed_case_keywords_sort_by_codepoint():
+    # Uppercase sorts before lowercase (Z < a). The R suite runs the same
+    # corpus and asserts the same order, locking the locale-independent sort.
+    corpus = {"schema_version": "1.0", "id": "mixed-case", "records": [
+        {"id": "w1", "keywords": ["alpha", "Zeta"]},
+        {"id": "w2", "keywords": ["Zeta", "alpha"]},
+    ]}
+    lm = tf.litmap(corpus)
+    assert lm["keywords"] == ["Zeta", "alpha"]
+    assert lm["keyword_cooccurrence"] == [{"a": "Zeta", "b": "alpha", "count": 2}]
+    assert lm["themes"][0]["keywords"] == ["Zeta", "alpha"]
+    assert tf.lit_diagram(lm, "keyword_cooccurrence") == (
+        'graph keyword_cooccurrence {\n  node [shape=ellipse];\n'
+        '  "Zeta";\n  "alpha";\n'
+        '  "Zeta" -- "alpha" [label="2"];\n}\n'
+    )
+
+
 def test_lit_diagrams(fixtures_dir, panic_path):
     corpus = _corpus(fixtures_dir)
     lm = tf.litmap(corpus)

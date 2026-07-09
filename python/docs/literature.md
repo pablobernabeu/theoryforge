@@ -245,12 +245,11 @@ compare_topics(
 ### Using scopusflow for a Scopus-based corpus
 
 `litmap` and `landscape` read the `keywords` and `references` fields of each
-corpus record, and `scopusflow-py` now supplies both. Its `corpus` builder
-takes the records from `fetch_plan` and enriches them, through Abstract
-Retrieval, into a frame of `id`, `title`, `year`, `keywords` (the author
-keywords) and `references` (the cited works), the same minimal shape
-`fetch_corpus` returns from OpenAlex. A Scopus-based literature map is
-therefore available today rather than a future possibility.
+corpus record, and `scopusflow-py` supplies both. Its `corpus` builder takes
+the records from `fetch_plan` and enriches them, through Abstract Retrieval,
+into a frame of `id`, `title`, `year`, `keywords` (one list of author keywords
+per row) and `references` (one DataFrame of cited works per row, with `id`,
+`doi`, `title` and other fields).
 
 `fetch_corpus` (OpenAlex) stays the built-in default because OpenAlex is free
 and keyless, so the literature layer works with no setup. Scopus needs an
@@ -258,18 +257,43 @@ institutional subscription and an API key, so `scopusflow-py` is an opt-in
 source rather than a dependency. The two packages exchange plain data, a DOI
 list or a corpus written to a file, with no coupling in either direction; that
 keeps theoryforge dependency-light and usable out of the box, and lets a reader
-reach for whichever index they have access to. Build the corpus with
-`scopusflow-py`, write it to a file, and read it back with `read_corpus`:
+reach for whichever index they have access to.
+
+The corpus format expects a top-level `{schema_version, id, records}` mapping
+and, within each record, `references` as a flat list of id strings, whereas
+the `corpus` builder returns a frame whose `references` entries are
+DataFrames. So build the mapping explicitly, reducing each references frame to
+one id string per cited work (the DOI where present, the Scopus id otherwise),
+write the result to disk and read it back with `read_corpus`:
 
 ```python
 # illustrative: needs scopusflow-py and a configured Scopus API key
-from scopusflow import scopus_query, SearchPlan, fetch_plan, corpus
 import json
 
-records = fetch_plan(SearchPlan(scopus_query("panic disorder"), years=range(2015, 2027)))
-frame = corpus(records)                       # id, title, year, keywords, references
-frame.to_json("corpus.json", orient="records")
+from scopusflow import SearchPlan, corpus, fetch_plan, scopus_query
 
-lit = theoryforge.read_corpus("corpus.json")
-theoryforge.litmap(lit)
+import theoryforge as tf
+
+records = fetch_plan(SearchPlan(scopus_query("panic disorder"), years=range(2015, 2027)))
+frame = corpus(records)                   # id, title, year, keywords, references
+
+corpus_records = []
+for row in frame.itertuples(index=False):
+    refs = row.references                 # one DataFrame of cited works
+    ref_ids = refs["doi"].fillna(refs["id"]).dropna().tolist()
+    corpus_records.append({
+        "id": row.id,
+        "title": row.title,
+        "year": row.year,
+        "keywords": list(row.keywords),
+        "references": ref_ids,
+    })
+
+with open("corpus.json", "w", encoding="utf-8") as fh:
+    json.dump({"schema_version": "1.0",
+               "id": "scopus:panic disorder",
+               "records": corpus_records}, fh)
+
+lit = tf.read_corpus("corpus.json")
+tf.litmap(lit)
 ```

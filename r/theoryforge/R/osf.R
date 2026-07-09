@@ -46,8 +46,12 @@ tf_osf_push <- function(theory, token = NULL, node = NULL,
   fname <- if (is.null(filename)) paste0(tid, ".dossier.md") else filename
   content <- tf_dossier(T)
   content_bytes <- length(charToRaw(enc2utf8(content)))
+  # Percent-encode the filename (theory ids are user-supplied, so fname may
+  # carry spaces, '&' or '#'); mirrors the Python urllib.parse.quote(fname,
+  # safe="") call so the dry-run request dicts stay parity-identical.
   url <- if (!is.null(node)) {
-    paste0(base_url, node, "/providers/osfstorage/?kind=file&name=", fname)
+    paste0(base_url, node, "/providers/osfstorage/?kind=file&name=",
+           utils::URLencode(fname, reserved = TRUE))
   } else {
     NULL
   }

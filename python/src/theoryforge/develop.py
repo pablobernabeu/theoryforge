@@ -1,9 +1,11 @@
 """Development mode. Progressive-versus-degenerating amendment appraisal (API_SPEC.md section 10).
 
 This operationalises the Lakatosian distinction (Lakatos, 1970; Meehl, 1990). An amendment is
-progressive if it yields newly corroborated predictions without ad-hoc immunizing assumptions.
+progressive if it yields newly corroborated predictions without ad-hoc immunising assumptions.
 """
 from __future__ import annotations
+
+from .rigor import _as_list
 
 
 def _list(d: dict, key: str) -> list:
@@ -41,7 +43,7 @@ def appraise_amendment(new, prior) -> dict:
             continue
         if a.get("added_for") is None:
             continue
-        protects = a.get("protects") or []
+        protects = _as_list(a.get("protects"))
         if not any(t.get("prediction_id") in protects and t.get("passed") is True for t in tos):
             ad_hoc.append(a.get("id"))
 

@@ -4,6 +4,20 @@ All notable changes to theoryforge (the R and Python twin packages) are document
 The format follows [Keep a Changelog](https://keepachangelog.com/). The two packages share a
 version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
 
+## [Unreleased]
+
+### Fixed
+- A nonempty scalar string where the schema expects an array of strings is read as a singleton list in both packages (API_SPEC.md section 4), so natural YAML such as `derives_from: p1` yields the same rigour verdict, gate and validation outcome in R and Python. An empty or whitespace-only scalar counts as absent. Cross-language regression tests cover the rule.
+- The R literature layer and amendment appraisal sort with radix (codepoint) ordering regardless of locale, matching Python for mixed-case keywords and ids; a mixed-case parity test runs in both suites.
+- `osf_push`/`tf_osf_push` percent-encode the filename component of the OSF upload URL, keeping the dry-run request dicts identical across languages.
+- `lit_diagram`/`tf_lit_diagram` list the valid types in the unknown-type error, matching `diagram`/`tf_diagram`.
+- The `panic-network-2026.new_evidence_dois.json` golden is vendored with the R package and exercised by its tests.
+
+### Changed
+- Python `__version__` is read from the installed distribution's metadata rather than duplicated in source.
+- The R citation (`inst/CITATION` and the About article) reads the package version from the package metadata.
+- API_SPEC.md records the severity chart's 15-character id truncation rule, the scalar-singleton array reading and the OSF filename encoding.
+
 ## [0.1.0] - 2026-06-24
 
 This is the first public release: a rigorous, reproducible workflow for building, developing and
@@ -52,4 +66,5 @@ testing scientific theories, delivered as feature-parity R (CRAN) and Python (Py
 - A live OSF upload requires the user's own token. `osf_push` ships with a dry-run default.
 - Richer (nonlinear / agent-based) computational-model runners, and first-class embedding-model integrations beyond the pluggable `embedding_redundancy` interface.
 
+[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/pablobernabeu/theoryforge/releases/tag/v0.1.0

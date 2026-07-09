@@ -1,6 +1,8 @@
 """Diagram intermediate representations. Byte-identical to the R output (API_SPEC.md section 5)."""
 from __future__ import annotations
 
+from .rigor import _as_list
+
 _CAUSAL = {"causes", "increases", "decreases"}
 _TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap",
           "pipeline", "context", "workflow", "venn", "rigour", "severity")
@@ -95,7 +97,7 @@ def _context(T: dict) -> str:
         cid = _esc(c.get("id"))
         lines.append(f'  "{cid}" [label="{_esc(c.get("label"))}"];')
         lines.append(f'  "theory" -> "{cid}";')
-    for i, bc in enumerate(_list(T, "boundary_conditions"), start=1):
+    for i, bc in enumerate(_as_list(T.get("boundary_conditions")), start=1):
         lines.append(f'  "scope{i}" [shape=note, label="{_esc(bc)}"];')
         lines.append(f'  "scope{i}" -> "theory" [style=dotted, label="holds within"];')
     for a in _list(T, "alternatives"):
@@ -132,7 +134,7 @@ def _workflow(T: dict) -> str:
     for p in _list(T, "propositions"):
         lines.append(f'  "{_esc(p.get("from"))}" -> "prop_{_esc(p.get("id"))}";')
     for pred in _list(T, "predictions"):
-        for src in (pred.get("derives_from") or []):
+        for src in _as_list(pred.get("derives_from")):
             lines.append(f'  "prop_{_esc(src)}" -> "pred_{_esc(pred.get("id"))}";')
     for t in _list(T, "test_outcomes"):
         pid = _esc(t.get("prediction_id"))
@@ -162,7 +164,7 @@ def _venn(T: dict) -> str:
     for c in constructs:
         bc = c.get("boundary_conditions")
         names.append(str(c.get("label") or c.get("id") or ""))
-        sets.append(set(bc) if isinstance(bc, list) else set())
+        sets.append(set(_as_list(bc)))
     n = len(constructs)
     out = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 300" '
            'font-family="sans-serif" font-size="13">',

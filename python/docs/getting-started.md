@@ -24,7 +24,7 @@ import theoryforge as tf
 t = tf.read("panic-network.theory.yaml")
 ```
 
-Validate the theory. With no arguments this checks the required fields and enum membership, returning `True` on success and raising `ValueError` with a list of problems otherwise. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection and that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id.
+Validate the theory. With no arguments this checks the required fields and enum membership, returning `True` on success and raising `ValueError` with a list of problems otherwise. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection, that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id, and that assumption, test-outcome and evidence entries reference declared predictions.
 
 ```python
 t.validate()
@@ -43,7 +43,7 @@ Export a diagram. The `nomological_net` type returns Graphviz DOT, which you can
 print(t.diagram("nomological_net"))
 ```
 
-Run the lexical redundancy screen. This returns a list of flagged jingle-jangle pairs, where similarly named constructs may refer to the same thing or identically named constructs may differ.
+Run the lexical redundancy screen. This returns every construct pair with a lexical similarity of their definitions and an `ok`/`review` flag, marking `review` the pairs whose definitions overlap enough to suggest jingle-jangle redundancy.
 
 ```python
 t.redundancy_check()

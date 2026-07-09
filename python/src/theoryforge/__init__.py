@@ -6,6 +6,8 @@ pinned by the shared specification (API_SPEC.md).
 """
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError, version
+
 from .core import Theory, new_theory, read, write
 from .develop import appraise_amendment
 from .diagram import diagram
@@ -21,7 +23,12 @@ from .scoring import severity
 from .sem import compile_sem
 from .simulate import simulate
 
-__version__ = "0.1.0"
+# The installed distribution's version (declared once, in pyproject.toml).
+# The fallback covers running from an uninstalled source tree.
+try:
+    __version__ = version("theoryforge")
+except PackageNotFoundError:  # pragma: no cover - uninstalled source tree
+    __version__ = "0+unknown"
 
 __all__ = [
     "Theory",

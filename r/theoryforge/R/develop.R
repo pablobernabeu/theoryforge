@@ -88,10 +88,11 @@ tf_appraise_amendment <- function(new, prior) {
     verdict <- "neutral"
   }
 
+  # Radix sorts match Python's codepoint ordering regardless of locale.
   list(
     verdict = verdict,
-    new_predictions = sort(new_predictions),
-    corroborated_new = sort(corroborated_new),
-    ad_hoc_assumptions = sort(ad_hoc)
+    new_predictions = sort(new_predictions, method = "radix"),
+    corroborated_new = sort(corroborated_new, method = "radix"),
+    ad_hoc_assumptions = sort(ad_hoc, method = "radix")
   )
 }

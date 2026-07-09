@@ -43,8 +43,9 @@ hard-to-fail prediction as though it were a stringent test.
 ## Preregistration
 
 `tf_preregister()` renders a preregistration document as a single markdown
-string. It records the constructs, propositions and predictions in a fixed
-order, so the output is stable across runs and suitable for deposit.
+string. It records the predictions, each with its claim type and derivation,
+plus the severity values, in a fixed order, so the output is stable across
+runs and suitable for deposit.
 
 ```{r prereg}
 prereg <- tf_preregister(theory)

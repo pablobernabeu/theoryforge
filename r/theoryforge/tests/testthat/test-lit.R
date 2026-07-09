@@ -96,6 +96,48 @@ test_that("tf_new_evidence_dois handles a theory with no evidence or alternative
   expect_equal(tf_new_evidence_dois(theory, c(NA, "")), character(0))
 })
 
+test_that("tf_new_evidence_dois matches the golden JSON semantically", {
+  # Same theory and candidate list as scripts/gen_golden.py.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  candidates <- c(
+    "10.1016/j.brat.2015.10.002",
+    "https://doi.org/10.1016/0005-7967(86)90011-2",
+    "10.1176/AJP.146.2.148",
+    "10.1037/0033-2909.99.1.20",
+    "10.1037/0033-2909.99.1.20",
+    "10.1016/j.cpr.2011.09.005"
+  )
+  got <- tf_new_evidence_dois(theory, candidates)
+  golden <- jsonlite::fromJSON(
+    tf_expected_path("panic-network-2026.new_evidence_dois.json"),
+    simplifyVector = FALSE
+  )
+  expect_equal(got, vapply(golden, as.character, character(1)))
+})
+
+test_that("keyword sorting is codepoint-ordered regardless of locale", {
+  # Radix sorts mirror Python's ordering: uppercase (Z) before lowercase (a).
+  # The Python suite runs the same corpus and asserts the same order.
+  corpus <- list(
+    schema_version = "1.0", id = "mixed-case",
+    records = list(
+      list(id = "w1", keywords = list("alpha", "Zeta")),
+      list(id = "w2", keywords = list("Zeta", "alpha"))
+    )
+  )
+  lm <- tf_litmap(corpus)
+  expect_equal(unlist(lm$keywords), c("Zeta", "alpha"))
+  expect_equal(lm$keyword_cooccurrence[[1]]$a, "Zeta")
+  expect_equal(lm$keyword_cooccurrence[[1]]$b, "alpha")
+  expect_equal(unlist(lm$themes[[1]]$keywords), c("Zeta", "alpha"))
+  expect_identical(
+    tf_lit_diagram(lm, "keyword_cooccurrence"),
+    paste0('graph keyword_cooccurrence {\n  node [shape=ellipse];\n',
+           '  "Zeta";\n  "alpha";\n',
+           '  "Zeta" -- "alpha" [label="2"];\n}\n')
+  )
+})
+
 test_that("literature diagrams are byte-identical to the golden files", {
   corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
   lm <- tf_litmap(corpus)

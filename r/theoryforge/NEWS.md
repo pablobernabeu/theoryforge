@@ -1,3 +1,19 @@
+# theoryforge (development version)
+
+* A nonempty scalar string where the schema expects an array of strings is
+  read as a singleton list (API_SPEC.md section 4), so natural YAML such as
+  `derives_from: p1` yields the same rigour verdict and gate as the Python
+  twin. An empty or whitespace-only scalar counts as absent.
+* The literature layer and the amendment appraisal sort with radix (codepoint)
+  ordering regardless of locale, matching the Python twin for mixed-case
+  keywords and ids.
+* `tf_osf_push()` percent-encodes the filename component of the upload URL,
+  keeping the dry-run request identical to the Python twin's.
+* `tf_lit_diagram()` lists the valid types in its unknown-type error, matching
+  `tf_diagram()`.
+* `citation("theoryforge")` and the About article read the package version
+  from the package metadata.
+
 # theoryforge 0.1.0
 
 First public release. The package provides a reproducible workflow for building,
