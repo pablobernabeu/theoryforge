@@ -82,3 +82,7 @@ markdown_extensions:
       check_paths: true
 
 # Build with:  pip install mkdocs-material "mkdocstrings[python]" && mkdocs build
+
+# The released version shown beside the title in the header (updated on release).
+extra:
+  version: "0.1.0"
