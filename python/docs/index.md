@@ -1,11 +1,9 @@
 # theoryforge <span class="mrd-lang">(Python)</span>
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
-
 theoryforge treats a scientific theory as a versioned, machine-checkable object, so that
 building, developing and testing it becomes systematic and reproducible. It targets the
 familiar weaknesses of soft-science theorising: vague constructs, unfalsifiable claims,
-redundant "jingle-jangle" constructs and amendments that quietly weaken a theory rather than
+redundant 'jingle-jangle' constructs and amendments that quietly weaken a theory rather than
 strengthen it. Each weakness becomes something the package can surface and check.
 
 The package scaffolds the three workflow modes (building, development and testing), scores a
@@ -50,3 +48,5 @@ t.landscape(corpus)             # under-theorised fronts + redundancy risk
 theoryforge is written and maintained by
 [Pablo Bernabeu](https://pablobernabeu.github.io). The R and
 Python packages share one specification and are released under the MIT licence.
+
+Archived on Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)

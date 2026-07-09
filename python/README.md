@@ -1,7 +1,5 @@
 # theoryforge (Python) <img src="docs/assets/logo.png" align="right" height="138" alt="theoryforge hex logo" />
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
-
 Systematic theory development: a rigorous, reproducible workflow for building, developing and
 testing scientific theories. This is the Python twin of [the R package](https://pablobernabeu.github.io/theoryforge/r/) of the same name.
 Behaviour is pinned by
