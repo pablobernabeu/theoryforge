@@ -87,18 +87,18 @@ navbar:
     # Curate the Articles dropdown with explicit links (href strings, so no
     # tidyselect evaluation of hyphenated slugs) and keep About out of it; About
     # is still built and reached via its own top-level navbar item. Ordered to
-    # follow the reading path: continue the Get Started workflow, then the
-    # rationale behind the checklist it just used, then the separate,
-    # additive literature-mapping feature.
+    # follow the workflow arc: continue the Get Started (BUILD) walkthrough
+    # into development and testing, then the additive literature layer, then
+    # the methodological rationale behind all the checks.
     articles:
       text: Articles
       menu:
       - text: Developing and testing
         href: https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html
-      - text: Methodological foundations
-        href: https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html
       - text: Literature layer
         href: https://pablobernabeu.github.io/theoryforge/r/articles/literature.html
+      - text: Methodological foundations
+        href: https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html
     about:
       text: About
       href: https://pablobernabeu.github.io/theoryforge/r/articles/about.html

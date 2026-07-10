@@ -62,8 +62,8 @@ nav:
   - Getting started: getting-started.md
   - Guides:
       - Workflow modes: workflow-modes.md
-      - Methodological foundations: methodology.md
       - Literature layer: literature.md
+      - Methodological foundations: methodology.md
   - API reference: api.md
   - Changelog: changelog.md
   - About: about.md

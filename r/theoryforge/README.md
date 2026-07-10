@@ -37,13 +37,10 @@ The package depends on `yaml` and `jsonlite`.
 
 ## Quick start
 
-See [Get started](https://pablobernabeu.github.io/theoryforge/r/articles/theoryforge.html) for a
-fuller walk-through of building, checking and diagramming a theory.
-
 ```r
 library(theoryforge)
 
-# Read an existing theory (or build one incrementally with tf_theory + tf_add_*)
+# Read a bundled example theory (or build one incrementally with tf_theory + tf_add_*)
 theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
                               package = "theoryforge"))
 tf_validate(theory)
@@ -52,45 +49,21 @@ tf_validate(theory)
 report <- tf_check(theory)
 report$aggregate_score   # 84.8
 report$gate              # "pass"
-
-# Operationalised severity and a preregistration document
-tf_severity(theory)
-cat(tf_preregister(theory))
-
-# Diagram the structure (byte-identical to the Python output)
-cat(tf_diagram(theory, type = "nomological_net"))
-
-# DEVELOP: appraise an amendment as progressive or degenerating
-v2 <- tf_read(system.file("fixtures", "panic-network-2026-v2.theory.yaml",
-                          package = "theoryforge"))
-tf_appraise_amendment(v2, theory)$verdict   # "progressive"
-
-# LITERATURE: map a corpus and position the theory against it
-corpus <- tf_read_corpus(system.file("fixtures", "panic-corpus.yaml",
-                                     package = "theoryforge"))
-landscape <- tf_landscape(theory, corpus)
-landscape$under_theorised_fronts   # themes no theory addresses
-landscape$redundancy_risk          # crowded themes
 ```
+
+[Get started](https://pablobernabeu.github.io/theoryforge/r/articles/theoryforge.html) walks
+through building, checking and diagramming a theory.
+[Developing and testing](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
+continues into severity, preregistration, amendment appraisal and the audit dossier, and
+[Mapping the literature](https://pablobernabeu.github.io/theoryforge/r/articles/literature.html)
+positions a theory within a bibliometric corpus.
 
 ## Public API
 
-| Function | Purpose |
-|---|---|
-| `tf_read`, `tf_write`, `tf_validate` | Read, write and validate a theory object |
-| `tf_theory`, `tf_add_*`, `tf_set_formal_model` | Build a theory incrementally, with provenance (BUILDING) |
-| `tf_check`, `tf_report` | Rigour checklist report and rendering |
-| `tf_severity` | Per-prediction risk and computed severity |
-| `tf_redundancy_check`, `tf_embedding_redundancy` | Lexical and opt-in embedding redundancy screens |
-| `tf_appraise_amendment` | Progressive vs degenerating amendment appraisal (DEVELOPMENT) |
-| `tf_preregister`, `tf_dossier` | Preregistration document and reviewer-facing audit bundle (TESTING) |
-| `tf_compile_sem` | Compile constructs and propositions to lavaan model syntax |
-| `tf_simulate` | Deterministic linear-network trajectory |
-| `tf_diagram`, `tf_lit_diagram` | Diagram intermediate representations |
-| `tf_read_corpus`, `tf_litmap`, `tf_landscape`, `tf_new_evidence_dois` | Bibliometric mapping, the theory landscape, and a new-DOI check |
-| `tf_render_report`, `tf_osf_push` | Render a Quarto report and deposit it on OSF (dry-run by default) |
-
-For the rationale behind each rigour check and exactly how every reported value is computed, see [Methodological foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html). The package reference index gives the complete, grouped function list.
+The [reference index](https://pablobernabeu.github.io/theoryforge/r/reference/) lists every
+exported function, grouped by workflow stage. For the rationale behind each rigour check and
+exactly how every reported value is computed, see
+[Methodological foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html).
 
 ## Licence
 
