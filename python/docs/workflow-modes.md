@@ -392,17 +392,38 @@ diagram types.
 proposition network as a linear dynamical system with fixed-step (Euler) updates.
 The trajectory is fully deterministic and parity-tested against [the R twin](https://pablobernabeu.github.io/theoryforge/r/).
 
+The example below adds a regulating edge to the panic structure: arousal raises
+threat, threat raises avoidance, and avoidance in turn *decreases* arousal. The
+negative coupling breaks the symmetry between the states, so the qualitative
+dynamics the network implies are visible in the trajectory.
+
 ```python
-sim = t.simulate(steps=5)
+s = (
+    tf.new_theory("regulation_demo", "Arousal regulated by avoidance")
+      .add_construct("arousal", "Physiological arousal", "bodily activation")
+      .add_construct("threat", "Perceived threat", "appraised danger")
+      .add_construct("avoidance", "Avoidance behaviour", "protective withdrawal")
+      .add_proposition("p1", "arousal", "threat", "increases")
+      .add_proposition("p2", "threat", "avoidance", "increases")
+      .add_proposition("p3", "avoidance", "arousal", "decreases")
+)
+
+sim = s.simulate(steps=5)
 sim["states"]          # construct ids, in file order
-sim["trajectory"][0]   # the initial state
+sim["trajectory"][0]   # the common initial state
 ```
 
 ```
 >>> sim["states"]
-['c_arousal', 'c_perceived_threat', 'c_avoidance']
+['arousal', 'threat', 'avoidance']
 >>> sim["trajectory"][0]
 [1.0, 1.0, 1.0]
 >>> sim["trajectory"][1]
-[1.05, 1.05, 1.05]
+[0.85, 1.05, 1.05]
+>>> sim["trajectory"][5]
+[0.27225, 1.085807, 1.257262]
 ```
+
+Arousal falls from the first step, pushed down by the negative coupling from
+avoidance on top of the damping, while threat and avoidance are driven up by
+their positive inputs before the decay takes over.

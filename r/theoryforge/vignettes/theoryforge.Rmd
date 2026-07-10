@@ -78,10 +78,17 @@ report$items[[1]]$status  # "pass" / "warn" / "fail"
 report$items[[1]]$score   # numeric in [0, 1]
 ```
 
-Render it as JSON (valid, pretty-printed) or as an HTML fragment:
+Render it as JSON (valid, pretty-printed) or as an HTML fragment. The JSON
+string is an artefact in its own right, shown here verbatim:
 
-```{r report}
+```{r report-json, collapse = FALSE, comment = ""}
 cat(tf_report(theory, format = "json"))
+```
+
+The HTML fragment drops straight into a page and renders as a real table:
+
+```{r report-html, results = "asis"}
+cat(tf_report(theory, format = "html"))
 ```
 
 ### Screening for redundant constructs
@@ -99,7 +106,7 @@ tf_redundancy_check(theory)
 diagram types. The digraphs are Graphviz DOT, and the causal DAG uses dagitty
 syntax.
 
-```{r diagram}
+```{r diagram, collapse = FALSE, comment = ""}
 cat(tf_diagram(theory, type = "nomological_net"))
 cat(tf_diagram(theory, type = "causal_dag"))
 ```
@@ -115,6 +122,11 @@ deterministic and parity-tested against the Python reference:
 
 ```{r simulate}
 sim <- tf_simulate(theory, steps = 5)
-sim$states
-sim$trajectory[[1]]
+unlist(sim$states)
+unlist(sim$trajectory[[1]]) # the common initial state
+unlist(sim$trajectory[[6]]) # after five Euler steps
 ```
+
+The two states separate immediately: arousal, which receives no incoming
+coupling, decays under the damping term, while perceived threat is pushed up
+by the positive coupling from arousal before the decay eventually takes over.

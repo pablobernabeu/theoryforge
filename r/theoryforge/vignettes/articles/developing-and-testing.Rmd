@@ -45,9 +45,10 @@ hard-to-fail prediction as though it were a stringent test.
 `tf_preregister()` renders a preregistration document as a single markdown
 string. It records the predictions, each with its claim type and derivation,
 plus the severity values, in a fixed order, so the output is stable across
-runs and suitable for deposit.
+runs and suitable for deposit. Because the string is markdown, it renders
+below as the document a registry would receive.
 
-```{r prereg}
+```{r prereg, results = "asis"}
 prereg <- tf_preregister(theory)
 cat(prereg)
 ```
@@ -97,7 +98,7 @@ into `lavaan` model syntax. Constructs with indicators become latent
 measurement models with `=~`, and propositions become structural paths with
 `~`, covariances with `~~` or annotated moderation lines.
 
-```{r sem}
+```{r sem, collapse = FALSE, comment = ""}
 cat(tf_compile_sem(theory))
 ```
 
@@ -111,13 +112,15 @@ are available.
 It collects the header, the rigour-checklist table, the severity list, the
 provenance trail and the preregistration into one bundle, so a reader can
 follow the theory from its claims through to its planned tests in one place.
+The opening of the bundle, through the rigour-checklist table, renders below.
 
-```{r dossier}
+```{r dossier, results = "asis"}
 dossier <- tf_dossier(theory)
-cat(substr(dossier, 1, 600))
+cat(strsplit(dossier, "\n## Severity", fixed = TRUE)[[1]][1])
 ```
 
-The full document is deterministic and byte-identical to the Python
+The severity list, the provenance trail and the preregistration follow in the
+full document, which is deterministic and byte-identical to the Python
 implementation, so the same theory produces the same dossier regardless of
 which package generated it.
 
@@ -128,14 +131,14 @@ traces the lifecycle from constructs, through propositions and predictions, to
 the recorded test outcomes, so the path from a claim to its planned test is
 visible in one figure.
 
-```{r workflow}
+```{r workflow, collapse = FALSE, comment = ""}
 cat(tf_diagram(theory, "workflow"))
 ```
 
 The `context` view places the theory among the scope conditions under which it
 is claimed to hold and the registered rivals it is meant to outpredict.
 
-```{r context}
+```{r context, collapse = FALSE, comment = ""}
 cat(tf_diagram(theory, "context"))
 ```
 

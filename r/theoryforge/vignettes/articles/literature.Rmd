@@ -129,14 +129,14 @@ undirected graphs, and a landscape result renders as a directed theme map. The
 output is a plain string, so it can be written to a `.dot` file or passed to a
 Graphviz renderer.
 
-```{r diagram-keywords}
+```{r diagram-keywords, collapse = FALSE, comment = ""}
 cat(tf_lit_diagram(lm, type = "keyword_cooccurrence"))
 ```
 
 The theme landscape diagram is produced from the `tf_landscape()` result rather
 than from the map, since it carries the focal theory and the alternatives.
 
-```{r diagram-landscape}
+```{r diagram-landscape, collapse = FALSE, comment = ""}
 cat(tf_lit_diagram(landscape, type = "theme_landscape"))
 ```
 
