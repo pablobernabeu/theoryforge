@@ -1,0 +1,53 @@
+{
+  "prior_id": "panic-network-2026",
+  "new_id": "panic-network-2026-v2",
+  "changed_fields": [
+    "maturity"
+  ],
+  "constructs": {
+    "added": [],
+    "removed": [],
+    "modified": []
+  },
+  "propositions": {
+    "added": [],
+    "removed": [],
+    "modified": [
+      "p1"
+    ]
+  },
+  "predictions": {
+    "added": [
+      "pred4"
+    ],
+    "removed": [],
+    "modified": [
+      "pred1",
+      "pred2",
+      "pred3"
+    ]
+  },
+  "auxiliary_assumptions": {
+    "added": [],
+    "removed": [],
+    "modified": []
+  },
+  "alternatives": {
+    "added": [],
+    "removed": [],
+    "modified": []
+  },
+  "evidence": {
+    "n_prior": 1,
+    "n_new": 1
+  },
+  "test_outcomes": {
+    "n_prior": 1,
+    "n_new": 2
+  },
+  "summary": {
+    "n_added": 1,
+    "n_removed": 0,
+    "n_modified": 4
+  }
+}

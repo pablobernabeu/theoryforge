@@ -1,0 +1,7 @@
+digraph provenance {
+  rankdir=TB;
+  node [shape=box];
+  "n1" [label="tf_construct: Registered the stressor, appraisal and anxiety constructs."];
+  "n2" [label="tf_proposition: Linked them into a mediation chain."];
+  "n1" -> "n2";
+}

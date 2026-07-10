@@ -1,0 +1,28 @@
+digraph workflow {
+  rankdir=LR;
+  node [shape=box];
+  subgraph cluster_build {
+    label="building";
+    "m_stressor" [label="Evaluative stressor"];
+    "m_appraisal" [label="Threat appraisal"];
+    "m_anxiety" [label="Test anxiety"];
+  }
+  subgraph cluster_relate {
+    label="propositions";
+    "prop_m1" [label="increases"];
+    "prop_m2" [label="increases"];
+  }
+  subgraph cluster_predict {
+    label="predictions";
+    "pred_mp1" [label="directional"];
+    "pred_mp2" [label="interval"];
+  }
+  subgraph cluster_test {
+    label="testing";
+  }
+  "m_stressor" -> "prop_m1";
+  "m_appraisal" -> "prop_m2";
+  "prop_m1" -> "pred_mp1";
+  "prop_m2" -> "pred_mp1";
+  "prop_m2" -> "pred_mp2";
+}

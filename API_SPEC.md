@@ -418,3 +418,56 @@ Writes a standalone Quarto report to `path` (forced to a `.qmd` suffix): a YAML 
 ## 25. osf_push(theory, token=None, node=None, filename=None, dry_run=True, base_url="https://files.osf.io/v1/resources/"): assistive, parity-exempt
 
 Builds the request to upload `dossier(theory)` to OSF storage. With `dry_run=True` (default) returns `{dry_run: true, request: {method:"PUT", url, filename, content_bytes}, note}` and sends nothing (`filename` defaults to `<id>.dossier.md`; `url` is `<base_url><node>/providers/osfstorage/?kind=file&name=<percent-encoded filename>` or null when `node` is absent; the filename component is percent-encoded, R `utils::URLencode(fname, reserved = TRUE)` / Python `urllib.parse.quote(fname, safe="")`, so the dry-run request dicts stay identical). `base_url` defaults to `https://files.osf.io/v1/resources/` and may be overridden to target a non-default host (both languages expose it). With `dry_run=False` a live upload requires both `token` and `node` (else error) and performs an authenticated PUT. It depends on the network and credentials, and is excluded from parity and CI. The live path is never exercised automatically.
+
+---
+
+# Part F: causal structure, version diff, and the archive bundle (P5)
+
+New API (mirrored): `tf_implications` / `theory.implications()`; `tf_diff` / `theory.diff(prior)`; `tf_fair_export` / `theory.fair_export()`. All three are deterministic and parity-tested; only `fair_export`'s optional write-to-disk step performs I/O.
+
+## 26. implications(theory) → causal-structure analysis (deterministic, parity-tested)
+
+The **causal subgraph**: nodes = all construct ids (file order); edges = the `(from, to)` pairs of propositions whose `relation ∈ {causes, increases, decreases}` and whose endpoints are both declared construct ids, in proposition file order, with duplicate `(from, to)` pairs kept once (first occurrence). Out-neighbour lists follow edge order.
+
+- `exogenous` = constructs (file order) with no incoming causal edge; `endogenous` = the rest (file order).
+- `order` (topological): Kahn's algorithm, always selecting the **first construct in file order** among remaining nodes with in-degree 0. If the algorithm exhausts all nodes, the graph is acyclic and `order` is that sequence; otherwise `acyclic = false` and `order = []`.
+- `feedback_loops`: every simple cycle, reported exactly once, written starting at its lowest-construct-index node. Enumeration: for each start node `s` in ascending construct index, depth-first search extending a simple path (initially `[s]`); from the current node, consider out-neighbours in edge order; a neighbour equal to `s` records a copy of the path as a loop; a neighbour with construct index > index(s) not already on the path is pushed and explored. Loops are listed in discovery order. A self-loop yields `[s]`.
+- `implications` (only when acyclic; otherwise `[]`): the local-Markov basis set (Pearl, 1988): every construct is independent of its non-descendants given its direct causes. `parents(v)` = the unique `from` ids of causal edges into `v`, sorted ascending (codepoint). `descendants(v)` = nodes reachable from `v` via one or more causal edges. For each `v` in construct file order and each `u` in construct file order: skip when `u == v`, `u ∈ descendants(v)`, `u ∈ parents(v)`, or the unordered pair `{v, u}` was already emitted; otherwise emit `{a: v, b: u, given: parents(v)}`.
+- Returns `{constructs, exogenous, endogenous, acyclic, order, feedback_loops, implications, n_implications}`. No nulls: cyclic graphs use empty lists for `order` and `implications`.
+
+Rationale: each independence claim is a data-testable consequence of the theory's structure, and each feedback loop is a testable dynamic claim, so the object operationalises how exposed the structure is to refutation. The computation is dependency-free (no graph library), so it runs unchanged in webR and Pyodide.
+
+## 27. diff(new, prior) → structured version diff (deterministic, parity-tested)
+
+**Canonical serialisation `canon(x)`** (element equality; makes R and Python agree despite YAML parsing differences):
+- mapping → `"{" + join(";", key + "=" + canon(value) for keys sorted ascending (codepoint), skipping null-valued keys) + "}"`
+- sequence → if length 1, `canon(single item)` (the scalar-singleton array reading, section 4, in reverse); else `"[" + join(",", canon(items)) + "]"`
+- boolean → `"true"`/`"false"` (checked before number)
+- number → integer-valued and |x| < 1e15 → integer rendering (`str(int(x))` / `sprintf("%.0f", x)`); else `%.6g`
+- string → as-is; null (only reachable inside sequences) → `"null"`
+
+**Identified collections**, in this order: `constructs`, `propositions`, `predictions`, `auxiliary_assumptions`, `alternatives`. Elements are indexed by the first occurrence of each nonempty `id`. Per collection: `added` = ids in new but not prior (new file order); `removed` = ids in prior but not new (prior file order); `modified` = ids in both with different `canon` (new file order).
+
+**Top-level fields**: `changed_fields` = the fields among `boundary_conditions, formal_model, maturity, theory_form, title` (that alphabetical order) whose `canon` differs between the versions.
+
+Returns `{prior_id, new_id, changed_fields, constructs: {added, removed, modified}, propositions: {…}, predictions: {…}, auxiliary_assumptions: {…}, alternatives: {…}, evidence: {n_prior, n_new}, test_outcomes: {n_prior, n_new}, summary: {n_added, n_removed, n_modified}}` (summary totals over the five identified collections).
+
+Where `appraise_amendment` (section 10) delivers the Lakatosian verdict, `diff` delivers the exact editorial record behind it.
+
+## 28. fair_export(theory, path=None, authors=None, license="CC-BY-4.0", keywords=None) → archive bundle (deterministic core, parity-tested)
+
+Renders `{"README.md", "CITATION.cff", "metadata.json", "dossier.md"}` as a mapping from filename to content. All four contents are byte-identical across languages (LF, single trailing newline). `authors` is a list of name strings ("Family, Given" or entity names); `keywords` defaults to `["scientific-theory", "theoryforge", <id>]`; `version` = `theory.version.id` when nonempty else `"unversioned"`.
+
+**README.md**: `# <title>`, blank, then `- Theory ID: <id>`, `- Version: <version>`, `- Maturity: <maturity>`, `- Aggregate rigour score: <fmt(aggregate_score)>/100 (gate: <gate>)` (section 11 `fmt`; section 4 report), `- Licence: <license>`, blank, `## Constructs`, blank, one `- <id>: <label>` per construct in file order (or `_No constructs declared._`), blank, `## Contents` (four fixed lines naming the bundle files, em-dash separated), blank, `## Reuse` (two fixed lines pointing at the R/Python packages).
+
+**CITATION.cff**: `cff-version: 1.2.0`, `message: If you use this theory, please cite it.`, `type: dataset`, `title: <title>`, `version: <version>`, `license: <license>`, `keywords:` with one `  - <k>` per keyword, then `authors:` with one `  - name: <a>` per author, or the single line `authors: []` when there are none.
+
+**metadata.json** (hand-rendered with fixed key order and 2-space indent; `js(s)` escapes `\` then `"`): keys `title`, `upload_type` (always `"dataset"`), `description` (`"<title> — a machine-checkable scientific theory object (id: <id>, maturity: <maturity>)."`), `version`, `license`, `keywords` (inline array), `creators` (one `{"name": "<a>"}` per line, 4-space indent, or inline `[]`), `related_identifiers` (one `{"relation": "cites", "identifier": "<doi>"}` per line, or inline `[]`). The identifiers are the section-18-normalised DOIs from every `evidence[]` and `alternatives[]` entry with a nonempty `source_doi`, deduplicated and sorted ascending.
+
+**dossier.md** = `dossier(theory)` (section 20).
+
+With `path` given, the four files are written there (UTF-8, LF) together with `theory.yaml`, a language-native serialisation of the theory whose formatting may differ between languages and is therefore excluded from parity, like the write step itself.
+
+## 29. Additional golden artefacts
+
+`<id>.implications.json` for every fixture (semantic); `panic-network-2026-v2.diff.json` = `diff(v2, v1)` for the amended pair (semantic); `panic-network-2026.fair.json` = the `fair_export` mapping for the panic-network theory with `authors=["Doe, Jane"]` and defaults otherwise (semantic compare of the mapping; each value must match byte-for-byte as a string). The `mediation-demo` fixture (an acyclic chain) exercises the topological order and the mediation conditional independence.

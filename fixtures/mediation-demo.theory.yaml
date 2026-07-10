@@ -1,0 +1,80 @@
+# Acyclic causal chain: exercises the implication engine (topological order,
+# exogenous/endogenous roles, and the classic mediation conditional independence).
+schema_version: "1.0"
+id: "mediation-demo"
+title: "Appraisal mediation theory of test anxiety"
+maturity: "building"
+theory_form: "variance"
+version:
+  id: "v1"
+  parent_id: null
+  content_hash: null
+
+constructs:
+  - id: m_stressor
+    label: "Evaluative stressor"
+    definition: "Exposure to a performance situation in which one's competence is judged."
+    measurement: ["exam proximity in days", "stakes rating"]
+    boundary_conditions: ["students", "graded assessment"]
+  - id: m_appraisal
+    label: "Threat appraisal"
+    definition: "The judged likelihood and cost of failing the evaluative situation."
+    measurement: ["appraisal questionnaire"]
+    boundary_conditions: ["students"]
+  - id: m_anxiety
+    label: "Test anxiety"
+    definition: "Worry and emotionality experienced before and during an assessment."
+    measurement: ["state anxiety inventory", "heart rate before the exam"]
+    boundary_conditions: ["students"]
+
+propositions:
+  - id: m1
+    from: m_stressor
+    to: m_appraisal
+    relation: "increases"
+    mechanism: "Judged stakes rise with the salience and imminence of evaluation."
+  - id: m2
+    from: m_appraisal
+    to: m_anxiety
+    relation: "increases"
+    mechanism: "Appraised threat mobilises worry and autonomic arousal."
+
+boundary_conditions: ["students", "graded assessment"]
+
+predictions:
+  - id: mp1
+    derives_from: [m1, m2]
+    statement: "Anxiety is conditionally independent of the stressor given appraisal."
+    type: "directional"
+    severity: 0.5
+    diagnostic_vs: [alt_direct]
+  - id: mp2
+    derives_from: [m2]
+    statement: "A reappraisal intervention lowers anxiety by 15-30% at matched stressor levels."
+    type: "interval"
+    severity: 0.6
+    diagnostic_vs: []
+
+auxiliary_assumptions:
+  - id: maux1
+    statement: "Questionnaire appraisal indexes the latent appraisal construct."
+    added_for: null
+    protects: [mp1]
+
+alternatives:
+  - id: alt_direct
+    label: "Direct conditioning model of test anxiety"
+    key_constructs: ["conditioned arousal"]
+    source_doi: null
+
+formal_model:
+  type: "sem"
+  spec_ref: null
+
+provenance:
+  - step: "1"
+    action: "tf_construct"
+    detail: "Registered the stressor, appraisal and anxiety constructs."
+  - step: "2"
+    action: "tf_proposition"
+    detail: "Linked them into a mediation chain."

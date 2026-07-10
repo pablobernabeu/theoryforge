@@ -8,8 +8,11 @@ import yaml
 
 from .develop import appraise_amendment as _appraise_amendment
 from .diagram import diagram as _diagram
+from .diff import diff as _diff
 from .dossier import dossier as _dossier
 from .embedding import embedding_redundancy as _embedding_redundancy
+from .fair import fair_export as _fair_export
+from .implications import implications as _implications
 from .lit import landscape as _landscape
 from .lit import new_evidence_dois as _new_evidence_dois
 from .osf import osf_push as _osf_push
@@ -250,6 +253,23 @@ class Theory:
     def appraise_amendment(self, prior) -> dict:
         """Progressive vs degenerating verdict for this theory relative to a prior version."""
         return _appraise_amendment(self.data, prior)
+
+    def diff(self, prior) -> dict:
+        """Structured record of what changed relative to a prior version (added, removed
+        and modified elements per collection, plus changed top-level fields)."""
+        return _diff(self.data, prior)
+
+    def implications(self) -> dict:
+        """Causal-structure analysis: construct roles, feedback loops and, when the
+        causal graph is acyclic, the implied conditional independencies."""
+        return _implications(self.data)
+
+    def fair_export(self, path=None, authors=None, license: str = "CC-BY-4.0",
+                    keywords=None) -> dict:
+        """Render the archive-ready bundle (README, citation and deposition metadata,
+        dossier), writing it to ``path`` when one is given."""
+        return _fair_export(self.data, path=path, authors=authors, license=license,
+                            keywords=keywords)
 
     def preregister(self, path=None) -> str:
         """Render a preregistration document (and write it if a path is given)."""

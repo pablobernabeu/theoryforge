@@ -1,0 +1,23 @@
+{
+  "constructs": [
+    "c_arousal",
+    "c_perceived_threat",
+    "c_avoidance"
+  ],
+  "exogenous": [],
+  "endogenous": [
+    "c_arousal",
+    "c_perceived_threat",
+    "c_avoidance"
+  ],
+  "acyclic": false,
+  "order": [],
+  "feedback_loops": [
+    [
+      "c_arousal",
+      "c_perceived_threat"
+    ]
+  ],
+  "implications": [],
+  "n_implications": 0
+}

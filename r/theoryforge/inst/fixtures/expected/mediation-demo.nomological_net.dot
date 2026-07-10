@@ -1,0 +1,9 @@
+digraph nomological_net {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  "m_stressor" [label="Evaluative stressor"];
+  "m_appraisal" [label="Threat appraisal"];
+  "m_anxiety" [label="Test anxiety"];
+  "m_stressor" -> "m_appraisal" [label="increases"];
+  "m_appraisal" -> "m_anxiety" [label="increases"];
+}

@@ -1,0 +1,4 @@
+dag {
+  m_stressor -> m_appraisal
+  m_appraisal -> m_anxiety
+}

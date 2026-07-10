@@ -50,7 +50,10 @@ invisible(lapply(.tf_app_files, source))
                                               error = function(e) list(ok = FALSE, message = conditionMessage(e)))))
   if (op == "severity")   return(env(list(rows = tf_severity(t), svg = tf_diagram(t, "severity"))))
   if (op == "redundancy") return(env(list(rows = tf_redundancy_check(t))))
+  if (op == "implications") return(env(list(result = tf_implications(t))))
   if (op == "appraise")   return(env(tf_appraise_amendment(t, tf_read(p$prior))))
+  if (op == "diff")       return(env(list(result = tf_diff(t, tf_read(p$prior)))))
+  if (op == "fair")       return(env(list(files = tf_fair_export(t))))
   if (op == "diagram")    return(env(list(ir = tf_diagram(t, p$type))))
   if (op == "sem")        return(env(list(text = tf_compile_sem(t))))
   if (op == "preregister")return(env(list(text = tf_preregister(t))))
@@ -168,7 +171,7 @@ const RT = {
 
   // The 'prior' param arrives as a manifest path; map it to its in-FS path.
   _mapParams(opId, params) {
-    if (opId === "appraise" && params && params.prior) {
+    if ((opId === "appraise" || opId === "diff") && params && params.prior) {
       return Object.assign({}, params, { prior: this._fixtures[params.prior] || params.prior });
     }
     return params;
@@ -199,6 +202,14 @@ const RT = {
         return `${head}\n\nsev <- tf_severity(theory)        # per-prediction risk & computed severity\nsev\nwriteLines(tf_diagram(theory, "severity"), "severity.svg")`;
       case "redundancy":
         return `${head}\n\ntf_redundancy_check(theory)       # pairwise Jaccard overlap of construct definitions`;
+      case "implications":
+        return `${head}\n\nimp <- tf_implications(theory)\nimp$acyclic                       # causal graph acyclic?\nimp$feedback_loops                # every simple cycle\nimp$implications                  # implied conditional independencies (acyclic graphs)`;
+      case "diff": {
+        const pf = (p.prior || "prior.theory.yaml").split("/").pop();
+        return `${head}\nprior <- tf_read("${pf}")\n\nd <- tf_diff(theory, prior)\nd$changed_fields                  # changed top-level fields\nd$summary                         # totals across the collections`;
+      }
+      case "fair":
+        return `${head}\n\nbundle <- tf_fair_export(theory, authors = "Family, Given")\ncat(bundle[["CITATION.cff"]])\n# write everything (plus theory.yaml) to a directory:\n# tf_fair_export(theory, path = "archive/", authors = "Family, Given")`;
       case "sem":
         return `${head}\n\ncat(tf_compile_sem(theory))       # lavaan model syntax`;
       case "preregister":

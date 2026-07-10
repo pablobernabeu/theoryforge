@@ -31,9 +31,16 @@
       help: "Applies the operationalised severity rubric to every prediction, returning its risk score (the riskiness of the claim form) and computed severity (with the directional discount and the diagnostic bonus)." },
     { id: "redundancy", label: "Redundancy screen", desc: "Lexical overlap of constructs",
       help: "Compares every pair of construct definitions by token-set Jaccard overlap and flags pairs above the redundancy threshold for review." },
+    { id: "implications", label: "Causal structure", desc: "Roles, loops, implications",
+      help: "Analyses the causal subgraph (causes, increases, decreases): which constructs are exogenous or endogenous, whether the graph is acyclic (with the causal ordering when it is), every feedback loop, and the conditional independencies an acyclic structure implies — each one directly testable against data." },
     {
       id: "appraise", label: "Appraise amendment", desc: "Progressive vs degenerating", needsPrior: true,
       help: "Compares the current theory, treated as the amendment, against a prior version and classifies the change as progressive, degenerating or neutral (Lakatos, 1970). Choose the prior version below.",
+      params: [{ id: "prior", label: "Prior theory", type: "theory" }],
+    },
+    {
+      id: "diff", label: "Version diff", desc: "Added, removed, modified", needsPrior: true,
+      help: "Compares the current theory against a prior version element by element and reports what was added, removed or modified in each collection, plus any changed top-level fields. The appraisal delivers the verdict; the diff delivers the editorial record behind it.",
       params: [{ id: "prior", label: "Prior theory", type: "theory" }],
     },
     { id: "sem", label: "SEM (lavaan)", desc: "Compile to lavaan model syntax",
@@ -42,6 +49,8 @@
       help: "Generates a preregistration document in Markdown: hypotheses numbered in file order with their derivation, and the per-prediction severity." },
     { id: "dossier", label: "Audit dossier", desc: "Reviewer-facing bundle",
       help: "Assembles a reviewer-facing audit bundle in Markdown: the rigour report, severity, provenance and the preregistration in one document." },
+    { id: "fair", label: "Archive bundle", desc: "README, citation, metadata",
+      help: "Renders the archive-ready bundle for depositing the theory as a citable digital object: a README summarising the theory and its rigour standing, CITATION.cff citation metadata, deposition metadata for general-purpose archives (with every DOI the theory cites as a related identifier) and the audit dossier." },
     {
       id: "simulate", label: "Simulation", desc: "Dynamical-system trajectory",
       help: "Treats each construct as a state variable and each directed proposition as a signed coupling, then integrates the network with fixed-step (Euler) updates and plots the trajectory.",
@@ -358,6 +367,9 @@
     severity: "Severity grades each prediction by how much a passing test would corroborate the theory. The risk score reflects how committal the claim is. The computed severity adjusts it down for merely directional claims and up for claims that discriminate between rival theories. Longer bars are stronger tests.",
     redundancy: "Each pair of constructs is compared by the word overlap of their definitions, the Jaccard index, which runs from 0 to 1. Pairs above the threshold are flagged for review, because near-duplicate constructs blur a theory and inflate its apparent scope.",
     appraise: "Following Lakatos, an amendment is progressive when it adds independently testable content that survives testing, and degenerating when it mainly adds assumptions that shield the theory from refutation. The verdict and its components appear below.",
+    implications: "The causal relations are read as a directed graph over the constructs. An acyclic graph yields a causal ordering and a set of implied conditional independencies — claims the data can contradict, so more implications mean a more exposed, more testable structure. A cyclic graph yields feedback loops, each a testable dynamic claim.",
+    diff: "Every element is matched by id across the two versions. Added and removed elements change the theory's content; modified elements change its commitments in place. Together with the changed top-level fields, this is the complete editorial record of the amendment.",
+    fair: "The four files below make the theory a citable, reusable digital object: deposit them in a general-purpose archive (for example Zenodo or OSF) to mint a DOI. The metadata records every source the theory cites as a related identifier.",
     sem: "The constructs become a measurement model and the propositions a structural model, expressed in lavaan syntax. Paste it into an SEM fit in R or other lavaan-compatible software.",
     preregister: "The preregistration lists each hypothesis with its derivation and severity, in file order, ready to timestamp before data collection.",
     dossier: "The dossier gathers the rigour report, severity, provenance and preregistration into one reviewer-facing document.",
@@ -402,6 +414,26 @@
     if (opId === "appraise") {
       const r = raw, np = asArr(r.new_predictions).length, cn = asArr(r.corroborated_new).length, ah = asArr(r.ad_hoc_assumptions).length;
       return "The amendment is " + r.verdict + ". It introduces " + plural(np, "new prediction") + ", of which " + cn + (cn === 1 ? " is" : " are") + " corroborated, and " + plural(ah, "ad-hoc assumption") + ".";
+    }
+    if (opId === "implications") {
+      const r = raw.result, loops = asArr(r.feedback_loops), imps = asArr(r.implications);
+      const exo = asArr(r.exogenous);
+      if (r.acyclic) {
+        const lead = "The causal graph over " + plural(asArr(r.constructs).length, "construct") + " is acyclic, with " + plural(exo.length, "exogenous construct") + ".";
+        return lead + (imps.length
+          ? " It implies " + plural(imps.length, "conditional independence") + " that data can directly contradict."
+          : " It implies no conditional independencies, so its structure alone does not expose it to refutation.");
+      }
+      return "The causal graph contains " + plural(loops.length, "feedback loop") + ", so it has no causal ordering. Each loop is a testable dynamic claim; the simulation operation traces its behaviour.";
+    }
+    if (opId === "diff") {
+      const r = raw.result, s = r.summary || {};
+      const fields = asArr(r.changed_fields);
+      return "Compared with the prior version, " + plural(s.n_added || 0, "element") + " were added, " + (s.n_removed || 0) + " removed and " + (s.n_modified || 0) + " modified" +
+        (fields.length ? ", and " + plural(fields.length, "top-level field") + " changed (" + fields.join(", ") + ")." : ", with no top-level field changes.");
+    }
+    if (opId === "fair") {
+      return "The bundle is ready to deposit: four files covering the theory's summary, citation metadata, archive metadata and audit dossier.";
     }
     if (opId === "sem") return "The measurement model covers " + plural(c.constructs || 0, "construct") + " and the structural model " + plural(c.propositions || 0, "proposition") + ".";
     if (opId === "preregister") { const k = c.predictions || 0; return "The document preregisters " + k + (k === 1 ? " hypothesis." : " hypotheses."); }
@@ -510,6 +542,55 @@
           { k: "Corroborated new", v: asArr(r.corroborated_new).join(", ") || "—" },
           { k: "Ad-hoc assumptions", v: asArr(r.ad_hoc_assumptions).join(", ") || "—" },
         ], { extra: [jsonBtn(theoryId + ".appraisal.json", r)] }));
+    } else if (opId === "implications") {
+      const r = raw.result;
+      const loops = asArr(r.feedback_loops), imps = asArr(r.implications);
+      sections.push(kvSection("Causal structure", [
+        ["Acyclic", r.acyclic ? "yes" : "no"],
+        ["Causal ordering", asArr(r.order).join(" → ") || "—"],
+        ["Exogenous", asArr(r.exogenous).join(", ") || "—"],
+        ["Endogenous", asArr(r.endogenous).join(", ") || "—"],
+      ]));
+      if (loops.length) sections.push(tableSection("Feedback loops",
+        [{ key: "n", label: "#", num: true }, { key: "loop", label: "loop", grow: true }],
+        loops.map((l, i) => ({ n: i + 1, loop: asArr(l).concat(asArr(l)[0]).join(" → ") })),
+        { extra: [jsonBtn(theoryId + ".implications.json", r)] }));
+      if (imps.length) sections.push(tableSection("Implied conditional independencies",
+        [{ key: "a", label: "a" }, { key: "b", label: "independent of" },
+         { key: "given", label: "given", grow: true }],
+        imps.map((x) => ({ a: x.a, b: x.b, given: asArr(x.given).join(", ") || "(nothing)" })),
+        { extra: loops.length ? [] : [jsonBtn(theoryId + ".implications.json", r)] }));
+      if (!loops.length && !imps.length) sections.push({ kind: "node", node: wrapSection("Implications", [jsonBtn(theoryId + ".implications.json", r)],
+        el("p", { class: "note", text: "No feedback loops and no implied conditional independencies." })) });
+    } else if (opId === "diff") {
+      const r = raw.result;
+      const priorName = (RT.examples.find((e) => e.path === params.prior) || {}).name || params.prior || "—";
+      sections.push(kvSection("Versions", [
+        ["Prior", priorName + " (" + r.prior_id + ")"],
+        ["Current", r.new_id],
+        ["Changed fields", asArr(r.changed_fields).join(", ") || "—"],
+      ]));
+      const colls = ["constructs", "propositions", "predictions", "auxiliary_assumptions", "alternatives"];
+      sections.push(tableSection("Elements by collection",
+        [{ key: "coll", label: "collection" }, { key: "added", label: "added", grow: true },
+         { key: "removed", label: "removed", grow: true }, { key: "modified", label: "modified", grow: true }],
+        colls.map((k) => ({
+          coll: k.replace(/_/g, " "),
+          added: asArr((r[k] || {}).added).join(", "),
+          removed: asArr((r[k] || {}).removed).join(", "),
+          modified: asArr((r[k] || {}).modified).join(", "),
+        })), { extra: [jsonBtn(theoryId + ".diff.json", r)] }));
+      sections.push(kvSection("Counts", [
+        ["Evidence", (r.evidence || {}).n_prior + " → " + (r.evidence || {}).n_new],
+        ["Test outcomes", (r.test_outcomes || {}).n_prior + " → " + (r.test_outcomes || {}).n_new],
+        ["Totals", plural((r.summary || {}).n_added || 0, "addition") + ", " + ((r.summary || {}).n_removed || 0) + " removed, " + ((r.summary || {}).n_modified || 0) + " modified"],
+      ]));
+    } else if (opId === "fair") {
+      const f = raw.files || {};
+      sections.push(textSection("README.md", f["README.md"] || "", "README.md", "text/markdown"));
+      sections.push(textSection("CITATION.cff", f["CITATION.cff"] || "", "CITATION.cff", "text/plain"));
+      sections.push(textSection("metadata.json", f["metadata.json"] || "", "metadata.json", "application/json"));
+      sections.push(textSection("dossier.md", f["dossier.md"] || "", theoryId + ".dossier.md", "text/markdown"));
     } else if (opId === "severity") {
       const rows = asArr(raw.rows);
       sections.push(figureSection("Severity chart", raw.svg, theoryId + ".severity"));

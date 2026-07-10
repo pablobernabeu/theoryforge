@@ -1,0 +1,25 @@
+{
+  "constructs": [
+    "k_motivation",
+    "k_drive"
+  ],
+  "exogenous": [
+    "k_motivation",
+    "k_drive"
+  ],
+  "endogenous": [],
+  "acyclic": true,
+  "order": [
+    "k_motivation",
+    "k_drive"
+  ],
+  "feedback_loops": [],
+  "implications": [
+    {
+      "a": "k_motivation",
+      "b": "k_drive",
+      "given": []
+    }
+  ],
+  "n_implications": 1
+}

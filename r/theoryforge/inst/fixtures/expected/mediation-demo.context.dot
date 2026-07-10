@@ -1,0 +1,17 @@
+digraph context {
+  rankdir=LR;
+  node [shape=box, style=rounded];
+  "theory" [shape=ellipse, label="Appraisal mediation theory of test anxiety"];
+  "m_stressor" [label="Evaluative stressor"];
+  "theory" -> "m_stressor";
+  "m_appraisal" [label="Threat appraisal"];
+  "theory" -> "m_appraisal";
+  "m_anxiety" [label="Test anxiety"];
+  "theory" -> "m_anxiety";
+  "scope1" [shape=note, label="students"];
+  "scope1" -> "theory" [style=dotted, label="holds within"];
+  "scope2" [shape=note, label="graded assessment"];
+  "scope2" -> "theory" [style=dotted, label="holds within"];
+  "alt_direct" [shape=box, style=dashed, label="Direct conditioning model of test anxiety"];
+  "theory" -> "alt_direct" [style=dashed, label="contrasts with"];
+}

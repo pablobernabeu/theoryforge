@@ -11,8 +11,11 @@ from importlib.metadata import PackageNotFoundError, version
 from .core import Theory, new_theory, read, write
 from .develop import appraise_amendment
 from .diagram import diagram
+from .diff import diff
 from .dossier import dossier
 from .embedding import embedding_redundancy
+from .fair import fair_export
+from .implications import implications
 from .lit import fetch_corpus, landscape, lit_diagram, litmap, new_evidence_dois, read_corpus
 from .osf import osf_push
 from .prereg import preregister
@@ -43,6 +46,9 @@ __all__ = [
     "jaccard",
     "severity",
     "appraise_amendment",
+    "diff",
+    "implications",
+    "fair_export",
     "preregister",
     "read_corpus",
     "litmap",

@@ -139,9 +139,14 @@ reference:
   - tf_diagram
   - tf_lit_diagram
 - title: Develop
-  desc: Lakatosian amendment appraisal.
+  desc: Lakatosian amendment appraisal and the structured version diff.
   contents:
   - tf_appraise_amendment
+  - tf_diff
+- title: Causal structure
+  desc: Construct roles, feedback loops and implied conditional independencies.
+  contents:
+  - tf_implications
 - title: Testing and review
   desc: Preregistration, SEM compilation and the audit dossier.
   contents:
@@ -153,9 +158,10 @@ reference:
   contents:
   - tf_simulate
 - title: Reporting and deposit
-  desc: Render a report and deposit it.
+  desc: Render a report, export the archive bundle, and deposit it.
   contents:
   - tf_render_report
+  - tf_fair_export
   - tf_osf_push
 - title: Literature layer
   desc: Bibliometric mapping of a literature corpus.

@@ -1,8 +1,9 @@
 # API reference
 
-Every public function and the `Theory` class. The three functions whose name
-matches their module (`diagram`, `dossier`, `simulate`) are documented by their
-canonical path so the function, rather than the module, is shown.
+Every public function and the `Theory` class. The functions whose name
+matches their module (`diagram`, `diff`, `dossier`, `implications`, `simulate`)
+are documented by their canonical path so the function, rather than the module,
+is shown.
 
 ::: theoryforge
     options:
@@ -18,6 +19,7 @@ canonical path so the function, rather than the module, is shown.
         - jaccard
         - severity
         - appraise_amendment
+        - fair_export
         - preregister
         - read_corpus
         - litmap
@@ -32,6 +34,10 @@ canonical path so the function, rather than the module, is shown.
 
 ::: theoryforge.diagram.diagram
 
+::: theoryforge.diff.diff
+
 ::: theoryforge.dossier.dossier
+
+::: theoryforge.implications.implications
 
 ::: theoryforge.simulate.simulate

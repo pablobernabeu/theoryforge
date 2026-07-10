@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 360" font-family="sans-serif" font-size="13">
+  <text x="20" y="28" font-size="15">Rigour checklist</text>
+  <text x="20" y="46">aggregate score 81.7, gate pass</text>
+  <rect x="20" y="60" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="72">falsifiability</text>
+  <text x="320" y="72">pass</text>
+  <rect x="20" y="84" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="96">precision</text>
+  <text x="320" y="96">pass</text>
+  <rect x="20" y="108" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="120">risk_severity</text>
+  <text x="320" y="120">pass</text>
+  <rect x="20" y="132" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="144">parsimony</text>
+  <text x="320" y="144">pass</text>
+  <rect x="20" y="156" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="168">non_redundancy</text>
+  <text x="320" y="168">pass</text>
+  <rect x="20" y="180" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="192">construct_clarity</text>
+  <text x="320" y="192">pass</text>
+  <rect x="20" y="204" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="216">scope</text>
+  <text x="320" y="216">pass</text>
+  <rect x="20" y="228" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="240">logical_why</text>
+  <text x="320" y="240">pass</text>
+  <rect x="20" y="252" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="264">causal_testability</text>
+  <text x="320" y="264">pass</text>
+  <rect x="20" y="276" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="288">diagnosticity</text>
+  <text x="320" y="288">pass</text>
+  <rect x="20" y="300" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="312">formalisation</text>
+  <text x="320" y="312">pass</text>
+  <rect x="20" y="324" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="44" y="336">derivation_chain</text>
+  <text x="320" y="336">pass</text>
+</svg>

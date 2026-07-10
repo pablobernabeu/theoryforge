@@ -57,9 +57,15 @@ def run(op, params_json):
         return json.dumps({"rows": t.severity(), "svg": t.diagram("severity")})
     if op == "redundancy":
         return json.dumps({"rows": t.redundancy_check()})
+    if op == "implications":
+        return json.dumps({"result": t.implications()})
     if op == "appraise":
         prior = tf.read(p["prior"])
         return json.dumps(t.appraise_amendment(prior))
+    if op == "diff":
+        return json.dumps({"result": t.diff(tf.read(p["prior"]))})
+    if op == "fair":
+        return json.dumps({"files": t.fair_export()})
     if op == "diagram":
         return json.dumps({"ir": t.diagram(p["type"])})
     if op == "sem":
@@ -166,7 +172,7 @@ const RT = {
 
   // The 'prior' param arrives as a manifest path; map it to its in-FS path.
   _mapParams(opId, params) {
-    if (opId === "appraise" && params && params.prior) {
+    if ((opId === "appraise" || opId === "diff") && params && params.prior) {
       return Object.assign({}, params, { prior: this._fixtures[params.prior] || params.prior });
     }
     return params;
@@ -197,6 +203,14 @@ const RT = {
         return `${head}\n\nsev = theory.severity()           # per-prediction risk & computed severity\nopen("severity.svg", "w").write(theory.diagram("severity"))`;
       case "redundancy":
         return `${head}\n\ntheory.redundancy_check()         # pairwise Jaccard overlap of construct definitions`;
+      case "implications":
+        return `${head}\n\nimp = theory.implications()\nimp["acyclic"]                    # causal graph acyclic?\nimp["feedback_loops"]             # every simple cycle\nimp["implications"]               # implied conditional independencies (acyclic graphs)`;
+      case "diff": {
+        const pf = (p.prior || "prior.theory.yaml").split("/").pop();
+        return `${head}\nprior = tf.read("${pf}")\n\nd = theory.diff(prior)\nd["changed_fields"]               # changed top-level fields\nd["summary"]                      # totals across the collections`;
+      }
+      case "fair":
+        return `${head}\n\nbundle = theory.fair_export(authors=["Family, Given"])\nprint(bundle["CITATION.cff"])\n# write everything (plus theory.yaml) to a directory:\n# theory.fair_export(path="archive/", authors=["Family, Given"])`;
       case "sem":
         return `${head}\n\nprint(theory.compile_sem())       # lavaan model syntax`;
       case "preregister":

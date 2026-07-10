@@ -6,6 +6,13 @@ version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
 
 ## [Unreleased]
 
+### Added (P5: causal structure, version diff, archive bundle)
+- `implications`/`tf_implications`: deterministic analysis of the theory's causal subgraph — exogenous/endogenous construct roles, acyclicity with a topological order, an exhaustive enumeration of feedback loops, and, when the graph is acyclic, the local-Markov basis set of implied conditional independencies (Pearl, 1988), each a directly data-testable consequence of the theory's structure (API_SPEC.md section 26). Dependency-free (no graph library), so it runs unchanged in webR and Pyodide. Cycle-aware by design: feedback theories get their loops enumerated as testable dynamic claims rather than an error.
+- `diff`/`tf_diff`: structured version diff between two theory versions — per-collection added/removed/modified ids, changed top-level fields, evidence and test-outcome counts and summary totals, via a canonical serialisation that makes R and Python agree despite YAML parsing differences (API_SPEC.md section 27). Complements `appraise_amendment`: the appraisal delivers the Lakatosian verdict, the diff delivers the exact editorial record behind it.
+- `fair_export`/`tf_fair_export`: archive-ready export of a theory as a citable digital object — a README summarising the theory and its rigour standing, `CITATION.cff` citation metadata, Zenodo-compatible `metadata.json` (with `related_identifiers` for every DOI the theory's evidence and alternatives cite) and the audit dossier, rendered byte-identically in both languages; writing to disk is optional and adds a language-native `theory.yaml` (API_SPEC.md section 28).
+- A new acyclic `mediation-demo` fixture exercising the topological order and the classic mediation conditional independence. Golden artefacts for all three features: 77 parity-checked artefacts in total, up from 55.
+- The web apps expose the three new operations (causal structure, version diff, archive bundle), running the same package code client-side.
+
 ### Fixed
 - A nonempty scalar string where the schema expects an array of strings is read as a singleton list in both packages (API_SPEC.md section 4), so natural YAML such as `derives_from: p1` yields the same rigour verdict, gate and validation outcome in R and Python. An empty or whitespace-only scalar counts as absent. Cross-language regression tests cover the rule.
 - The R literature layer and amendment appraisal sort with radix (codepoint) ordering regardless of locale, matching Python for mixed-case keywords and ids; a mixed-case parity test runs in both suites.

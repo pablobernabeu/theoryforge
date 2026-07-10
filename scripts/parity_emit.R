@@ -43,6 +43,8 @@ suppressWarnings(suppressMessages({
     write_raw(tf_dossier(t), file.path(out_dir, paste0(id, ".dossier.md")))
     write_raw(paste0(jsonlite::toJSON(tf_simulate(t), auto_unbox = TRUE, digits = 10, pretty = TRUE), "\n"),
               file.path(out_dir, paste0(id, ".simulate.json")))
+    write_raw(paste0(jsonlite::toJSON(tf_implications(t), auto_unbox = TRUE, pretty = TRUE), "\n"),
+              file.path(out_dir, paste0(id, ".implications.json")))
   }
 
   # amendment appraisal for the v2-vs-v1 pair
@@ -51,6 +53,15 @@ suppressWarnings(suppressMessages({
   ap <- tf_appraise_amendment(v2, v1)
   write_raw(paste0(jsonlite::toJSON(ap, auto_unbox = TRUE, pretty = TRUE), "\n"),
             file.path(out_dir, "panic-network-2026-v2.appraisal.json"))
+
+  # structured version diff for the same amended pair (P5)
+  write_raw(paste0(jsonlite::toJSON(tf_diff(v2, v1), auto_unbox = TRUE, pretty = TRUE), "\n"),
+            file.path(out_dir, "panic-network-2026-v2.diff.json"))
+
+  # archive bundle (P5): deterministic contents with a fixed author list
+  fair <- tf_fair_export(v1, authors = "Doe, Jane")
+  write_raw(paste0(jsonlite::toJSON(fair, auto_unbox = TRUE, pretty = TRUE), "\n"),
+            file.path(out_dir, "panic-network-2026.fair.json"))
 
   # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
   # existing evidence and alternatives (two already cited, two new, one duplicate)

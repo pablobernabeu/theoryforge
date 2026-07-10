@@ -1,0 +1,6 @@
+digraph pipeline {
+  rankdir=LR;
+  node [shape=box];
+  "mp1" [label="directional"];
+  "mp2" [label="interval"];
+}

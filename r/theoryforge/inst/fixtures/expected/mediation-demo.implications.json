@@ -1,0 +1,31 @@
+{
+  "constructs": [
+    "m_stressor",
+    "m_appraisal",
+    "m_anxiety"
+  ],
+  "exogenous": [
+    "m_stressor"
+  ],
+  "endogenous": [
+    "m_appraisal",
+    "m_anxiety"
+  ],
+  "acyclic": true,
+  "order": [
+    "m_stressor",
+    "m_appraisal",
+    "m_anxiety"
+  ],
+  "feedback_loops": [],
+  "implications": [
+    {
+      "a": "m_anxiety",
+      "b": "m_stressor",
+      "given": [
+        "m_appraisal"
+      ]
+    }
+  ],
+  "n_implications": 1
+}

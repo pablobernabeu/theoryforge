@@ -1,5 +1,21 @@
 # theoryforge (development version)
 
+* New `tf_implications()`: deterministic analysis of the theory's causal
+  subgraph — exogenous/endogenous construct roles, acyclicity with a
+  topological order, an exhaustive enumeration of feedback loops, and, when the
+  graph is acyclic, the local-Markov basis set of implied conditional
+  independencies (Pearl, 1988), each a directly testable consequence of the
+  theory's structure. Dependency-free and parity-tested against the Python
+  twin (API_SPEC.md section 26).
+* New `tf_diff()`: structured version diff between two theory versions
+  (per-collection added/removed/modified ids, changed top-level fields, and
+  summary totals), complementing `tf_appraise_amendment()` with the exact
+  editorial record behind the Lakatosian verdict (API_SPEC.md section 27).
+* New `tf_fair_export()`: archive-ready export of a theory as a citable
+  digital object — README, `CITATION.cff`, Zenodo-compatible `metadata.json`
+  with `related_identifiers` for every cited DOI, and the audit dossier —
+  rendered byte-identically to the Python twin, with an optional write-to-disk
+  step (API_SPEC.md section 28).
 * A nonempty scalar string where the schema expects an array of strings is
   read as a singleton list (API_SPEC.md section 4), so natural YAML such as
   `derives_from: p1` yields the same rigour verdict and gate as the Python

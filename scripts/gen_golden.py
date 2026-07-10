@@ -60,6 +60,10 @@ def main() -> int:
         written.append(f"{tid}.dossier.md")
         (EXPECTED / f"{tid}.simulate.json").write_bytes((json.dumps(t.simulate(), indent=2) + "\n").encode("utf-8"))
         written.append(f"{tid}.simulate.json")
+        (EXPECTED / f"{tid}.implications.json").write_bytes(
+            (json.dumps(t.implications(), indent=2) + "\n").encode("utf-8")
+        )
+        written.append(f"{tid}.implications.json")
 
     # amendment appraisal for the v2-vs-v1 pair (Lakatosian progressive/degenerating)
     v1 = tf.read(FIXTURES / "panic-network.theory.yaml")
@@ -68,6 +72,19 @@ def main() -> int:
         (json.dumps(v2.appraise_amendment(v1), indent=2) + "\n").encode("utf-8")
     )
     written.append("panic-network-2026-v2.appraisal.json")
+
+    # structured version diff for the same amended pair (P5)
+    (EXPECTED / "panic-network-2026-v2.diff.json").write_bytes(
+        (json.dumps(v2.diff(v1), indent=2) + "\n").encode("utf-8")
+    )
+    written.append("panic-network-2026-v2.diff.json")
+
+    # archive bundle (P5): deterministic contents with a fixed author list
+    fair = v1.fair_export(authors=["Doe, Jane"])
+    (EXPECTED / "panic-network-2026.fair.json").write_bytes(
+        (json.dumps(fair, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+    )
+    written.append("panic-network-2026.fair.json")
 
     # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
     # existing evidence and alternatives (two already cited, two new, one duplicate)
