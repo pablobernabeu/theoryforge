@@ -1,8 +1,8 @@
-"""Render a theory's audit dossier as a standalone Quarto report (API_SPEC.md Part E).
+"""Render a theory's audit dossier as a standalone Quarto report.
 
 Writes a `.qmd` (a YAML header plus the deterministic dossier body) and can optionally invoke
-Quarto to render it. The report content is the parity-tested `dossier`; only the rendering step
-is environment-dependent.
+Quarto to render it. The report content is the deterministic `dossier` output, and only the
+rendering step is environment-dependent.
 """
 from __future__ import annotations
 

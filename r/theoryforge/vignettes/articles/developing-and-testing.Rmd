@@ -120,9 +120,8 @@ cat(strsplit(dossier, "\n## Severity", fixed = TRUE)[[1]][1])
 ```
 
 The severity list, the provenance trail and the preregistration follow in the
-full document, which is deterministic and byte-identical to the Python
-implementation, so the same theory produces the same dossier regardless of
-which package generated it.
+full document, which is deterministic, so the same theory always produces the
+same dossier.
 
 ## Visualising the theory
 
@@ -164,9 +163,8 @@ severity, so the riskier tests stand out at a glance.
 cat('<div class="tf-figure">', tf_diagram(theory, "severity"), '</div>', sep = "")
 ```
 
-All of these views are deterministic and byte-identical across the R and Python
-packages. The DOT strings render with any Graphviz engine, and the SVG views
-open in any browser.
+All of these views are deterministic. The DOT strings render with any Graphviz
+engine, and the SVG views open in any browser.
 
 Three further views are not shown here: `provenance` (the build log as a
 digraph), `development_roadmap` (the checklist items still failing or

@@ -1,4 +1,4 @@
-"""Diagram intermediate representations. Byte-identical to the R output (API_SPEC.md section 5)."""
+"""Diagram intermediate representations. Deterministic string renderers for every diagram type."""
 from __future__ import annotations
 
 from .rigor import _as_list
@@ -239,9 +239,9 @@ def _severity_chart(T: dict) -> str:
 def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") -> str:
     """Return the diagram IR string for the requested type.
 
-    ``engine`` is accepted for API parity; the IR is engine-independent (DOT for
-    the digraphs, dagitty syntax for the causal DAG, and SVG for the Venn, the
-    rigour grid and the severity chart).
+    ``engine`` is accepted but has no effect, because the IR is engine-independent
+    (DOT for the digraphs, dagitty syntax for the causal DAG, and SVG for the Venn,
+    the rigour grid and the severity chart).
     """
     T = T.data if hasattr(T, "data") else T
     if type == "nomological_net":

@@ -18,8 +18,7 @@ A named list with elements \code{n_records}, \code{keywords},
 }
 \description{
 Computes keyword co-occurrence, thematic components, and reference
-co-citation for a corpus. Records iterate in file order. See API_SPEC.md
-section 14. Mirrors the Python \code{theoryforge.litmap}.
+co-citation for a corpus. Records iterate in file order.
 }
 \examples{
 corpus <- list(

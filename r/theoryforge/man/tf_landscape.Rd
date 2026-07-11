@@ -22,9 +22,7 @@ A named list with elements \code{theory_id}, \code{themes} (each
 \description{
 Maps a theory's focal constructs and its registered alternatives onto the
 thematic structure of a corpus (computed by \code{\link[=tf_litmap]{tf_litmap()}}). Each theme is
-tagged \code{"under_theorised"}, \code{"covered"}, or \code{"crowded"}. See
-API_SPEC.md section 15. Mirrors the Python \code{theory.landscape(corpus)} /
-\code{theoryforge.landscape(theory, corpus)}.
+tagged \code{"under_theorised"}, \code{"covered"}, or \code{"crowded"}.
 }
 \examples{
 theory <- tf_theory("demo-1", "Arousal and threat") |>

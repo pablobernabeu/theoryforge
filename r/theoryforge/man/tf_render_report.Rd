@@ -25,9 +25,8 @@ The path of the written \code{.qmd} file.
 Writes a standalone Quarto report to \code{path} (forced to a \code{.qmd}
 suffix): a YAML header (\code{title}, \code{format}) followed by the
 deterministic \code{tf_dossier(theory)} body. Returns the written path. When
-\code{render = TRUE}, invokes \code{quarto render} (environment-dependent, not
-parity-tested). Mirrors the Python \code{theory.render_report()}. See
-API_SPEC.md section 23.
+\code{render = TRUE}, invokes \code{quarto render}, which requires a Quarto
+installation.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

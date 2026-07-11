@@ -1,8 +1,8 @@
-"""Deterministic dynamical-system runner derived from a theory's network (API_SPEC.md Part E).
+"""Deterministic dynamical-system runner derived from a theory's network.
 
 Each construct is a state variable, and each directed proposition contributes a signed linear
 coupling term. The system dX/dt = (A - damping*I) X is integrated with fixed-step (Euler)
-updates, so the trajectory is fully deterministic and parity-testable across languages.
+updates, so the trajectory is fully deterministic.
 """
 from __future__ import annotations
 

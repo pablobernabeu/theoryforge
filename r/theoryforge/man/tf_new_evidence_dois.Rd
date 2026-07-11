@@ -24,7 +24,6 @@ any other source, can be checked against what the theory already engages
 with. Returns the qualifying DOIs in their original form, deduplicated and
 sorted by normalised form. Deterministic and takes no network dependency:
 the search itself is left to whichever literature tool the caller prefers.
-Mirrors the Python \code{theoryforge.new_evidence_dois}.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

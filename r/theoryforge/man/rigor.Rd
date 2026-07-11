@@ -4,6 +4,6 @@
 \alias{rigor}
 \title{The theory-rigour checklist engine.}
 \description{
-See API_SPEC.md section 4 for the binding contract.
+Scores a theory against the vendored 12-item checklist.
 }
 \keyword{internal}

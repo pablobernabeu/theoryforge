@@ -1,7 +1,7 @@
-"""Assemble a reviewer-facing audit bundle as a single Markdown document (API_SPEC.md Part D).
+"""Assemble a reviewer-facing audit bundle as a single Markdown document.
 
-Composes the deterministic outputs (rigour report, severity table, provenance, and the
-preregistration document) so the bundle is itself byte-identical across languages.
+Composes the deterministic outputs (rigour report, severity table, provenance and the
+preregistration document), so the bundle is itself deterministic.
 """
 from __future__ import annotations
 

@@ -1,7 +1,8 @@
-"""Bibliometric / literature layer (API_SPEC.md Part C).
+"""Bibliometric / literature layer.
 
-The analysis (litmap, landscape, diagrams) is fully DETERMINISTIC given a corpus, so it is
-parity-tested. The OpenAlex fetch adapter (fetch_corpus) is the parity-exempt assistive layer.
+The analysis (litmap, landscape, diagrams) is fully deterministic given a corpus. The
+OpenAlex fetch adapter (fetch_corpus) is the assistive layer, whose results depend on a
+live network service.
 """
 from __future__ import annotations
 
@@ -232,8 +233,8 @@ def new_evidence_dois(theory, candidate_dois: list) -> list:
 def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None) -> dict:
     """Build a corpus from the OpenAlex API (network call).
 
-    This adapter is assistive and parity-exempt. It is not part of the deterministic
-    core and is not covered by parity tests.
+    This adapter is assistive. It depends on a live external service whose results
+    change over time, so it sits outside the package's deterministic core.
     """
     import urllib.parse
     import urllib.request

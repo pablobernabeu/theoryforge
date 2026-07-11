@@ -1,6 +1,6 @@
 #' Diagram intermediate representations.
 #'
-#' Byte-identical to the Python output (API_SPEC.md section 5).
+#' Deterministic string renderers for every diagram type.
 #' @name diagram
 #' @keywords internal
 NULL
@@ -290,10 +290,10 @@ NULL
 
 #' Render a diagram intermediate representation
 #'
-#' Produces a byte-identical diagram IR string for the requested type. The
-#' \code{engine} argument is accepted for API parity; the IR is engine
-#' independent (Graphviz DOT for the two digraphs, dagitty syntax for the
-#' causal DAG). See API_SPEC.md section 5.
+#' Produces a deterministic diagram IR string for the requested type. The
+#' \code{engine} argument is accepted but has no effect, because the IR is
+#' engine independent (Graphviz DOT for the two digraphs, dagitty syntax for
+#' the causal DAG).
 #'
 #' @param theory A theory object (named list).
 #' @param type One of \code{"nomological_net"} (default), \code{"provenance"},
@@ -303,7 +303,7 @@ NULL
 #'   (construct scope overlap, as an SVG), \code{"rigour"} (the checklist as a
 #'   status grid, as an SVG), or \code{"severity"} (per-prediction severity
 #'   bars, as an SVG).
-#' @param engine Rendering engine label, accepted for parity (default
+#' @param engine Rendering engine label, accepted but unused (default
 #'   \code{"graphviz"}).
 #' @return A single string ending in a newline. Graphviz DOT for the digraphs,
 #'   dagitty syntax for the causal DAG, and SVG for the Venn.

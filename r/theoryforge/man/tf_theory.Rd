@@ -19,10 +19,8 @@ tf_theory(id, title, maturity = "building", theory_form = "network")
 A theory object (named list).
 }
 \description{
-Mirrors the Python \code{theoryforge.new_theory}. Seeds
-\code{schema_version = "1.0"} and a first provenance entry
-\code{{step:"1", action:"tf_theory", detail:<id>}}. See API_SPEC.md
-section 8.
+Seeds \code{schema_version = "1.0"} and a first provenance entry
+\code{{step:"1", action:"tf_theory", detail:<id>}}.
 }
 \examples{
 tf_theory("demo-1", "A demonstration theory")

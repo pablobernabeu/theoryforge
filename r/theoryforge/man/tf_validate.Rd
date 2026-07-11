@@ -16,14 +16,13 @@ tf_validate(theory, full = FALSE)
 listing every problem found.
 }
 \description{
-Built-in validation mirroring the Python \code{Theory.validate}. The default
+Built-in validation. The default
 (\code{full = FALSE}) checks required fields and enum membership. With
 \code{full = TRUE} it additionally checks referential integrity: that every id
 is unique within its collection and that every cross-reference (proposition
 endpoints, prediction derivations and diagnostics, and assumption, evidence and
 test-outcome targets) points to a declared id. The \code{full} checks are
-deterministic and identical to the Python \code{theory.validate(full=True)}.
-See API_SPEC.md section 2.
+deterministic.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory")

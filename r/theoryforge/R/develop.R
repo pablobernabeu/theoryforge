@@ -1,8 +1,7 @@
 #' Development mode: amendment appraisal.
 #'
 #' Operationalises the Lakatosian progressive-vs-degenerating distinction
-#' (Lakatos, 1970; Meehl, 1990). See API_SPEC.md section 10. Value-identical
-#' to the Python reference.
+#' (Lakatos, 1970; Meehl, 1990).
 #' @name develop
 #' @keywords internal
 NULL
@@ -10,8 +9,7 @@ NULL
 #' Appraise an amendment as progressive, degenerating, or neutral
 #'
 #' Compares an amended theory \code{new} against its \code{prior} version and
-#' returns a Lakatosian verdict. Mirrors the Python
-#' \code{theory.appraise_amendment(prior)}. See API_SPEC.md section 10.
+#' returns a Lakatosian verdict.
 #'
 #' @param new The amended theory object (named list).
 #' @param prior The prior theory object (named list).

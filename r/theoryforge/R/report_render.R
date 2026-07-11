@@ -2,8 +2,8 @@
 #'
 #' Writes a \code{.qmd} (a YAML header plus the deterministic dossier body) and
 #' can optionally invoke Quarto to render it. The report content is the
-#' parity-tested \code{tf_dossier}; only the rendering step is
-#' environment-dependent. See API_SPEC.md section 23.
+#' deterministic \code{tf_dossier} output, and only the rendering step is
+#' environment-dependent.
 #' @name report_render
 #' @keywords internal
 NULL
@@ -13,9 +13,8 @@ NULL
 #' Writes a standalone Quarto report to \code{path} (forced to a \code{.qmd}
 #' suffix): a YAML header (\code{title}, \code{format}) followed by the
 #' deterministic \code{tf_dossier(theory)} body. Returns the written path. When
-#' \code{render = TRUE}, invokes \code{quarto render} (environment-dependent, not
-#' parity-tested). Mirrors the Python \code{theory.render_report()}. See
-#' API_SPEC.md section 23.
+#' \code{render = TRUE}, invokes \code{quarto render}, which requires a Quarto
+#' installation.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param path Destination path; any extension is replaced with \code{.qmd}.

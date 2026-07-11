@@ -2,7 +2,7 @@
 % Please edit documentation in R/lit.R
 \name{tf_fetch_corpus}
 \alias{tf_fetch_corpus}
-\title{Build a corpus from the OpenAlex API (assistive, parity-exempt)}
+\title{Build a corpus from the OpenAlex API (network call)}
 \usage{
 tf_fetch_corpus(query, per_page = 25, mailto = NULL)
 }
@@ -18,11 +18,10 @@ A corpus object (named list) with \code{schema_version}, \code{id},
 and \code{records}.
 }
 \description{
-Assistive, parity-exempt helper that builds a corpus by querying the
-OpenAlex works API (\code{https://api.openalex.org/works?search=...}). This
-is a network call. It is non-deterministic, depends on a live external
-service, and is therefore not part of the deterministic core and not covered
-by parity tests or CI. Each work is mapped to
+Assistive helper that builds a corpus by querying the OpenAlex works API
+(\code{https://api.openalex.org/works?search=...}). This is a network call:
+it depends on a live external service whose results change over time, so it
+sits outside the package's deterministic core. Each work is mapped to
 \code{{id, title, year, keywords, references}} (keywords falls back to the top
 concepts when no keywords are present).
 }

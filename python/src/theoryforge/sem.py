@@ -1,7 +1,7 @@
-"""Compile a theory's constructs and propositions to lavaan model syntax (API_SPEC.md Part D).
+"""Compile a theory's constructs and propositions to lavaan model syntax.
 
-Deterministic and byte-identical across languages: constructs with measurement indicators
-become a latent measurement model (=~), and directed propositions become structural paths (~).
+The output is deterministic. Constructs with measurement indicators become a latent
+measurement model (=~), and directed propositions become structural paths (~).
 """
 from __future__ import annotations
 

@@ -14,7 +14,7 @@ A named list holding the parsed theory object.
 }
 \description{
 Reads a theory object authored as YAML (or JSON, chosen by file extension)
-into a named list. Mirrors the Python \code{theoryforge.read(path)}.
+into a named list.
 }
 \examples{
 # Round-trip a theory through a temporary file.

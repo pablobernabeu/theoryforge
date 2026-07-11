@@ -6,7 +6,6 @@
 \description{
 Each construct is a state variable; each directed proposition contributes a
 signed linear coupling term. The system is integrated with fixed-step (Euler)
-updates, so the trajectory is fully deterministic and parity-tested across
-languages. See API_SPEC.md section 22.
+updates, so the trajectory is fully deterministic.
 }
 \keyword{internal}

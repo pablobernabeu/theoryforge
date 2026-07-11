@@ -2,8 +2,7 @@
 #'
 #' Each construct is a state variable; each directed proposition contributes a
 #' signed linear coupling term. The system is integrated with fixed-step (Euler)
-#' updates, so the trajectory is fully deterministic and parity-tested across
-#' languages. See API_SPEC.md section 22.
+#' updates, so the trajectory is fully deterministic.
 #' @name simulate
 #' @keywords internal
 NULL
@@ -16,8 +15,7 @@ NULL
 #' Treats each construct (in file order) as a state variable and each directed
 #' proposition as a signed linear coupling term, then integrates
 #' \code{dX/dt = A X - damping * X} with fixed-step (Euler) updates. The result
-#' is fully deterministic and byte/semantically parity-tested against the Python
-#' \code{theory.simulate()}. See API_SPEC.md section 22.
+#' is fully deterministic.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param steps Number of Euler steps (default \code{10}).

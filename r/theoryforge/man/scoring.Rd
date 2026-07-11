@@ -4,7 +4,6 @@
 \alias{scoring}
 \title{Severity rubric (deterministic).}
 \description{
-A documented, deterministic operationalisation of predictive risk. See
-API_SPEC.md section 9. Byte-/value-identical to the Python reference.
+A documented, deterministic operationalisation of predictive risk.
 }
 \keyword{internal}

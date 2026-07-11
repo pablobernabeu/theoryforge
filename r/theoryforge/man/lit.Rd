@@ -2,11 +2,10 @@
 % Please edit documentation in R/lit.R
 \name{lit}
 \alias{lit}
-\title{Bibliometric / literature layer (API_SPEC.md Part C).}
+\title{Bibliometric / literature layer.}
 \description{
 The analysis (litmap, landscape, diagrams) is fully deterministic given a
-corpus, so it is parity-tested against the Python reference implementation.
-The OpenAlex fetch adapter (\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}) is the parity-exempt,
-network/non-deterministic assistive layer.
+corpus. The OpenAlex fetch adapter (\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}) is the assistive
+layer, whose results depend on a live network service.
 }
 \keyword{internal}

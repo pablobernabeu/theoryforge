@@ -4,6 +4,6 @@
 \alias{prereg}
 \title{Preregistration document export.}
 \description{
-Deterministic, byte-identical markdown. See API_SPEC.md section 11.
+Deterministic markdown output.
 }
 \keyword{internal}

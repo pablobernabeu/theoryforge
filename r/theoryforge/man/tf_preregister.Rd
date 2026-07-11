@@ -16,9 +16,8 @@ with LF line endings.}
 The preregistration markdown as a single string.
 }
 \description{
-Produces a byte-identical preregistration markdown string for a theory and,
-if \code{path} is given, writes it (LF, single trailing newline). Mirrors
-the Python \code{theory.preregister(path)}. See API_SPEC.md section 11.
+Produces a deterministic preregistration markdown string for a theory and,
+if \code{path} is given, writes it (LF, single trailing newline).
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

@@ -4,6 +4,6 @@
 \alias{redundancy}
 \title{Deterministic lexical redundancy screen.}
 \description{
-Tokenisation and Jaccard similarity per API_SPEC.md section 6.
+Tokenisation and Jaccard similarity over construct definitions.
 }
 \keyword{internal}

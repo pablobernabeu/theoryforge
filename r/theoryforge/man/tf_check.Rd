@@ -16,8 +16,7 @@ A named list with elements \code{theory_id}, \code{schema_version},
 }
 \description{
 Runs the full rigour checklist (12 items) over a theory object and returns a
-report. Mirrors the Python \code{theory.check()} dict, including key order
-and item order. See API_SPEC.md section 4.
+report, with the items in checklist order.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

@@ -1,4 +1,4 @@
-"""Open Science Framework deposit adapter (assistive, parity-exempt; API_SPEC.md Part E).
+"""Open Science Framework deposit adapter (assistive).
 
 Builds the request to upload a theory's audit dossier to OSF. The default ``dry_run=True``
 constructs the request without sending it. A live push requires the user's OSF token and

@@ -1,4 +1,4 @@
-"""Development mode. Progressive-versus-degenerating amendment appraisal (API_SPEC.md section 10).
+"""Development mode. Progressive-versus-degenerating amendment appraisal.
 
 This operationalises the Lakatosian distinction (Lakatos, 1970; Meehl, 1990). An amendment is
 progressive if it yields newly corroborated predictions without ad-hoc immunising assumptions.

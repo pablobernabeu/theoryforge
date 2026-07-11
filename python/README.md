@@ -1,9 +1,8 @@
 # theoryforge (Python) <img src="docs/assets/logo.png" align="right" height="138" alt="theoryforge hex logo" />
 
 Systematic theory development: a rigorous, reproducible workflow for building, developing and
-testing scientific theories. This is the Python twin of [the R package](https://pablobernabeu.github.io/theoryforge/r/) of the same name.
-Behaviour is pinned by
-[`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md) so the two stay in lockstep.
+testing scientific theories. This is the Python twin of [the R package](https://pablobernabeu.github.io/theoryforge/r/) of the same name,
+and the two return identical results.
 
 The rendered documentation site, with the API reference and worked guides, is at
 <https://pablobernabeu.github.io/theoryforge/python/>.
@@ -20,7 +19,7 @@ import theoryforge as tf
 t = tf.read("../fixtures/panic-network.theory.yaml")
 t.validate()                       # structural validation against the shared schema
 print(t.report("json"))            # 12-item rigour checklist + gate
-print(t.diagram("nomological_net"))# Graphviz DOT (byte-identical to the R output)
+print(t.diagram("nomological_net"))# Graphviz DOT
 t.redundancy_check()               # lexical jingle-jangle screen
 
 # BUILD a theory programmatically (provenance auto-logged)
@@ -36,13 +35,13 @@ print(v2.appraise_amendment(v1))   # -> {'verdict': 'progressive', ...}
 
 # TEST: operationalised severity + a preregistration document
 t.severity()                       # per-prediction risk + computed severity
-print(t.preregister())             # markdown prereg (byte-identical to R)
+print(t.preregister())             # markdown prereg
 
 # LITERATURE: map the field, then position the theory against it
 corpus = tf.read_corpus("../fixtures/panic-corpus.yaml")
 tf.litmap(corpus)                  # keyword co-occurrence, themes, co-citation
 t.landscape(corpus)                # -> themes flagged 'under_theorised' / 'crowded' (redundancy risk)
-# tf.fetch_corpus("panic disorder theory")  # optional OpenAlex fetch (network, parity-exempt)
+# tf.fetch_corpus("panic disorder theory")  # optional OpenAlex fetch (network call)
 ```
 
 The `../fixtures/*.yaml` files referenced above are sample theories that live in the
@@ -76,11 +75,11 @@ auto-logged provenance, the Lakatosian amendment appraisal (DEVELOPMENT), and th
 operationalised severity rubric with preregistration export (TESTING). The literature layer
 comprises `read_corpus`, `litmap` (keyword co-occurrence, deterministic connected-component
 themes and co-citation), `landscape` (which maps a theory and its alternatives onto the themes,
-flagging under-theorised fronts and redundancy risk), `lit_diagram`, the parity-exempt
+flagging under-theorised fronts and redundancy risk), `lit_diagram`, the network-dependent
 `fetch_corpus` OpenAlex adapter, and `new_evidence_dois` (a deterministic check for candidate
 DOIs, from any search tool, not yet cited by a theory). `compile_sem` translates constructs and
 propositions to lavaan model syntax, and `dossier` assembles a reviewer-facing audit bundle.
 Simulation and adapters round the package out: `simulate` (a deterministic dynamical-system
 runner over the construct network), `render_report` (a Quarto report wrapping the dossier),
-`embedding_redundancy` (an opt-in, parity-exempt embedding screen) and `osf_push` (an OSF
+`embedding_redundancy` (an opt-in, embedder-dependent screen) and `osf_push` (an OSF
 deposit adapter, dry-run by default).

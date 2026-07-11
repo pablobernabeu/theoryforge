@@ -1,8 +1,14 @@
 """theoryforge: systematic theory development.
 
 A rigorous, reproducible workflow for building, developing and testing scientific
-theories. This is the twin of the R package of the same name; its behaviour is
-pinned by the shared specification (API_SPEC.md).
+theories. This is the feature-parity twin of the R package of the same name
+(https://pablobernabeu.github.io/theoryforge/r/). Every public function has an
+identically behaving counterpart there, pinned by the shared public specification
+(https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md), so the two
+implementations produce identical verdicts and byte-identical diagram intermediate
+representations. The only exceptions are the assistive helpers that depend on a
+network service or a user-supplied embedder (``fetch_corpus``, ``osf_push`` and
+``embedding_redundancy``), which are documented as such.
 """
 from __future__ import annotations
 

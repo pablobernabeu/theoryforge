@@ -1,6 +1,7 @@
-"""Deterministic lexical redundancy screen, the parity-tested default.
+"""Deterministic lexical redundancy screen, the default.
 
-Embedding-based similarity is an opt-in enhancement that is parity-exempt (see API_SPEC.md).
+Embedding-based similarity (embedding_redundancy) is an opt-in, embedder-dependent
+enhancement.
 """
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 
 def tokens(s: str) -> set[str]:
-    """Tokenise a string into a SET of content tokens (see API_SPEC.md section 6)."""
+    """Tokenise a string into a set of content tokens."""
     s = (s or "").lower()
     parts = _NON_ALNUM.sub(" ", s).split()
     return {t for t in parts if len(t) >= 3 and t not in STOPWORDS}

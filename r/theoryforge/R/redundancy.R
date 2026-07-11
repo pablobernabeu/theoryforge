@@ -1,6 +1,6 @@
 #' Deterministic lexical redundancy screen.
 #'
-#' Tokenisation and Jaccard similarity per API_SPEC.md section 6.
+#' Tokenisation and Jaccard similarity over construct definitions.
 #' @name redundancy
 #' @keywords internal
 NULL
@@ -14,7 +14,7 @@ NULL
 #'
 #' Lowercases, replaces every run of non-\code{[a-z0-9]} characters with a
 #' single space, splits, drops tokens shorter than 3 characters and the
-#' canonical stopwords, then returns the unique set. See API_SPEC.md section 6.
+#' canonical stopwords, then returns the unique set.
 #'
 #' @param s A single string (or \code{NULL}, treated as "").
 #' @return A character vector of unique tokens (possibly empty).

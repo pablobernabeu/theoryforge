@@ -1,6 +1,6 @@
 #' Preregistration document export.
 #'
-#' Deterministic, byte-identical markdown. See API_SPEC.md section 11.
+#' Deterministic markdown output.
 #' @name prereg
 #' @keywords internal
 NULL
@@ -13,9 +13,8 @@ NULL
 
 #' Render a preregistration document
 #'
-#' Produces a byte-identical preregistration markdown string for a theory and,
-#' if \code{path} is given, writes it (LF, single trailing newline). Mirrors
-#' the Python \code{theory.preregister(path)}. See API_SPEC.md section 11.
+#' Produces a deterministic preregistration markdown string for a theory and,
+#' if \code{path} is given, writes it (LF, single trailing newline).
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param path Optional destination path; when given, the markdown is written

@@ -1,7 +1,6 @@
 #' Severity rubric (deterministic).
 #'
-#' A documented, deterministic operationalisation of predictive risk. See
-#' API_SPEC.md section 9. Byte-/value-identical to the Python reference.
+#' A documented, deterministic operationalisation of predictive risk.
 #' @name scoring
 #' @keywords internal
 NULL
@@ -14,8 +13,7 @@ NULL
 #' Per-prediction risk and computed severity
 #'
 #' Computes, for each prediction (in file order), the riskiness of the claim
-#' form and the discounted/bonus-adjusted severity. Mirrors the Python
-#' \code{theory.severity()}. See API_SPEC.md section 9.
+#' form and the discounted/bonus-adjusted severity.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @return A \code{data.frame} with columns \code{prediction_id}, \code{type},

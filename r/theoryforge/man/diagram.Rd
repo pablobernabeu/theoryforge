@@ -4,6 +4,6 @@
 \alias{diagram}
 \title{Diagram intermediate representations.}
 \description{
-Byte-identical to the Python output (API_SPEC.md section 5).
+Deterministic string renderers for every diagram type.
 }
 \keyword{internal}

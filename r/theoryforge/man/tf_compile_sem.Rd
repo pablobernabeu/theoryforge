@@ -17,9 +17,8 @@ trailing newline).
 Compiles a theory's constructs and propositions into a \pkg{lavaan} model
 string: constructs with measurement indicators become a latent measurement
 model (\code{=~}), and propositions become structural paths (\code{~}),
-covariances (\code{~~}), or moderation comment lines. Deterministic and
-byte-identical to the Python \code{theory.compile_sem()}. See API_SPEC.md
-section 19.
+covariances (\code{~~}), or moderation comment lines. The output is
+deterministic.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

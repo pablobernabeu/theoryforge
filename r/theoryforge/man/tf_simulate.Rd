@@ -29,8 +29,7 @@ value rounded to 6 decimals.
 Treats each construct (in file order) as a state variable and each directed
 proposition as a signed linear coupling term, then integrates
 \code{dX/dt = A X - damping * X} with fixed-step (Euler) updates. The result
-is fully deterministic and byte/semantically parity-tested against the Python
-\code{theory.simulate()}. See API_SPEC.md section 22.
+is fully deterministic.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

@@ -10,7 +10,7 @@ tf_add_proposition(theory, id, from, to, relation, mechanism = NULL)
 \item{theory}{A theory object (named list).}
 
 \item{id, from, to, relation}{Proposition fields. \code{from} is the source
-construct id (named \code{from} for parity with the schema).}
+construct id (named \code{from} to match the schema field).}
 
 \item{mechanism}{Optional mechanism string.}
 }

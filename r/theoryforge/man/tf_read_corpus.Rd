@@ -13,10 +13,9 @@ tf_read_corpus(path)
 A named list holding the parsed corpus object.
 }
 \description{
-Reads a corpus object (\code{{schema_version, id, records}}; see
-\code{schema/corpus.schema.json}) into a named list. The format is chosen by
-the file extension (\code{.json} -> JSON, otherwise YAML). Mirrors the Python
-\code{theoryforge.read_corpus(path)}.
+Reads a corpus object (\code{{schema_version, id, records}}) into a named
+list. The format is chosen by the file extension (\code{.json} -> JSON,
+otherwise YAML).
 }
 \examples{
 corpus <- list(

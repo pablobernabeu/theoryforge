@@ -16,8 +16,7 @@ file order.
 }
 \description{
 Computes, for each prediction (in file order), the riskiness of the claim
-form and the discounted/bonus-adjusted severity. Mirrors the Python
-\code{theory.severity()}. See API_SPEC.md section 9.
+form and the discounted/bonus-adjusted severity.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

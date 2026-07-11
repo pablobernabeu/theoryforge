@@ -19,8 +19,7 @@ character vectors \code{new_predictions}, \code{corroborated_new},
 }
 \description{
 Compares an amended theory \code{new} against its \code{prior} version and
-returns a Lakatosian verdict. Mirrors the Python
-\code{theory.appraise_amendment(prior)}. See API_SPEC.md section 10.
+returns a Lakatosian verdict.
 }
 \examples{
 prior <- tf_theory("demo-1", "A demonstration theory") |>

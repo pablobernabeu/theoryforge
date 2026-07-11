@@ -1,4 +1,4 @@
-"""The theory-rigour checklist engine. See API_SPEC.md section 4 for the contract."""
+"""The theory-rigour checklist engine. Scores a theory against the vendored 12-item checklist."""
 from __future__ import annotations
 
 import json

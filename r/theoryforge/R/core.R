@@ -12,7 +12,7 @@ NULL
 #' Read a theory object from a YAML or JSON file
 #'
 #' Reads a theory object authored as YAML (or JSON, chosen by file extension)
-#' into a named list. Mirrors the Python \code{theoryforge.read(path)}.
+#' into a named list.
 #'
 #' @param path Path to a \code{.yaml}/\code{.yml} or \code{.json} file.
 #' @return A named list holding the parsed theory object.
@@ -39,14 +39,13 @@ tf_read <- function(path) {
 
 #' Validate a theory object
 #'
-#' Built-in validation mirroring the Python \code{Theory.validate}. The default
+#' Built-in validation. The default
 #' (\code{full = FALSE}) checks required fields and enum membership. With
 #' \code{full = TRUE} it additionally checks referential integrity: that every id
 #' is unique within its collection and that every cross-reference (proposition
 #' endpoints, prediction derivations and diagnostics, and assumption, evidence and
 #' test-outcome targets) points to a declared id. The \code{full} checks are
-#' deterministic and identical to the Python \code{theory.validate(full=True)}.
-#' See API_SPEC.md section 2.
+#' deterministic.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param full When \code{TRUE}, also run the referential-integrity checks.
@@ -246,10 +245,8 @@ tf_write <- function(theory, path) {
 
 #' Start a new, empty theory object (BUILDING mode entry point)
 #'
-#' Mirrors the Python \code{theoryforge.new_theory}. Seeds
-#' \code{schema_version = "1.0"} and a first provenance entry
-#' \code{{step:"1", action:"tf_theory", detail:<id>}}. See API_SPEC.md
-#' section 8.
+#' Seeds \code{schema_version = "1.0"} and a first provenance entry
+#' \code{{step:"1", action:"tf_theory", detail:<id>}}.
 #'
 #' @param id Theory id.
 #' @param title Human-readable title.
@@ -296,7 +293,7 @@ tf_add_construct <- function(theory, id, label, definition,
 #'
 #' @param theory A theory object (named list).
 #' @param id,from,to,relation Proposition fields. \code{from} is the source
-#'   construct id (named \code{from} for parity with the schema).
+#'   construct id (named \code{from} to match the schema field).
 #' @param mechanism Optional mechanism string.
 #' @return The (mutated) theory object.
 #' @examples

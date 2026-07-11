@@ -16,8 +16,8 @@ trailing newline).
 \description{
 Assembles a reviewer-facing audit bundle: the header, the rigour-checklist
 table, the severity list, the provenance list, and the appended
-preregistration document. Deterministic and byte-identical to the Python
-\code{theory.dossier()}. See API_SPEC.md section 20.
+preregistration document. The output is deterministic, so the same theory
+always yields the same dossier.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

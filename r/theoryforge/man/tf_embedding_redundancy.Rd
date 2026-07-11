@@ -24,7 +24,8 @@ supplied \code{embedder} and computes the cosine similarity (rounded to 6
 decimals). Returns a data frame sorted by descending cosine then
 \code{(a, b)}, flagging pairs at or above \code{threshold} for review. This
 assistive screen complements the deterministic lexical
-\code{\link[=tf_redundancy_check]{tf_redundancy_check()}} and is parity-exempt. See API_SPEC.md section 24.
+\code{\link[=tf_redundancy_check]{tf_redundancy_check()}}, and its results are only as reproducible as the
+supplied \code{embedder}.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

@@ -146,8 +146,7 @@ Path("keywords.dot").write_text(tf.lit_diagram(m), encoding="utf-8")
 
 `tf.fetch_corpus` builds a corpus by querying the OpenAlex API. It is an
 optional convenience adapter. Because it depends on a network service whose
-results change over time, it sits outside the deterministic core and is
-exempt from the cross-language parity tests that govern the rest of the
+results change over time, it sits outside the deterministic core of the
 package. Use it to assemble a starting corpus, then save the result and work
 from the saved file so that later analysis stays reproducible.
 

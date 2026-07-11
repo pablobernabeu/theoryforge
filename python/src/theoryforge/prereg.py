@@ -1,4 +1,4 @@
-"""Preregistration document export (API_SPEC.md section 11). Deterministic, byte-identical."""
+"""Preregistration document export. Deterministic markdown output."""
 from __future__ import annotations
 
 from pathlib import Path

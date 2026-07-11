@@ -1,9 +1,9 @@
-#' Open Science Framework deposit adapter (assistive, parity-exempt).
+#' Open Science Framework deposit adapter (assistive).
 #'
 #' Builds the request to upload a theory's audit dossier to OSF. Defaults to
 #' \code{dry_run = TRUE}, which constructs the request without sending it. A live
 #' push requires the user's OSF token and network access and is never performed
-#' automatically. See API_SPEC.md section 25.
+#' automatically.
 #' @name osf
 #' @keywords internal
 NULL
@@ -16,9 +16,7 @@ NULL
 #' OSF storage. With \code{dry_run = TRUE} (the default) the planned request is
 #' returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 #' both \code{token} and \code{node} (the OSF project id) and performs an
-#' authenticated \code{PUT}. The live path is network- and credential-dependent
-#' and is excluded from parity and CI. Mirrors the Python \code{theory.osf_push()}.
-#' See API_SPEC.md section 25.
+#' authenticated \code{PUT}. The live path is network- and credential-dependent.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param token OSF personal access token (required when \code{dry_run = FALSE}).
@@ -28,7 +26,6 @@ NULL
 #' @param dry_run When \code{TRUE} (default), return the planned request without
 #'   sending it.
 #' @param base_url OSF storage base URL; override to target a non-default host.
-#'   Mirrors the Python \code{base_url} argument.
 #' @return When \code{dry_run = TRUE}, a list \code{list(dry_run = TRUE,
 #'   request = list(method, url, filename, content_bytes), note)}. When
 #'   \code{dry_run = FALSE}, a list describing the completed upload.

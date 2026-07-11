@@ -1,4 +1,4 @@
-"""The Theory object, with read, validate, write, and the mirrored public methods."""
+"""The Theory object, with read, validate, write, and the public methods."""
 from __future__ import annotations
 
 import json
@@ -67,8 +67,7 @@ class Theory:
         id is unique within its collection and that every cross-reference
         (proposition endpoints, prediction derivations and diagnostics,
         assumption/evidence/test-outcome targets) points to a declared id. The
-        ``full`` checks are deterministic and identical to the R
-        ``tf_validate(theory, full = TRUE)``. See API_SPEC.md section 2.
+        ``full`` checks are deterministic.
         """
         errors: list[str] = []
         d = self.data
@@ -277,7 +276,7 @@ class Theory:
         return _simulate(self.data, steps=steps, dt=dt, k=k, damping=damping, init=init)
 
     def embedding_redundancy(self, embedder, threshold=None) -> list[dict]:
-        """An opt-in, parity-exempt embedding-based redundancy screen."""
+        """An opt-in embedding-based redundancy screen; results depend on the supplied embedder."""
         return _embedding_redundancy(self.data, embedder, threshold=threshold)
 
     def render_report(self, path, title=None, render: bool = False, to: str = "html") -> str:

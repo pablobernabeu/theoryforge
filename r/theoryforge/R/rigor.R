@@ -1,6 +1,6 @@
 #' The theory-rigour checklist engine.
 #'
-#' See API_SPEC.md section 4 for the binding contract.
+#' Scores a theory against the vendored 12-item checklist.
 #' @name rigor
 #' @keywords internal
 NULL
@@ -185,8 +185,7 @@ NULL
 #' Compute the rigour checklist report
 #'
 #' Runs the full rigour checklist (12 items) over a theory object and returns a
-#' report. Mirrors the Python \code{theory.check()} dict, including key order
-#' and item order. See API_SPEC.md section 4.
+#' report, with the items in checklist order.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @return A named list with elements \code{theory_id}, \code{schema_version},

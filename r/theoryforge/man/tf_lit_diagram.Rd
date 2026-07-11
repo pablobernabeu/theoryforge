@@ -18,8 +18,7 @@ tf_lit_diagram(obj, type = "keyword_cooccurrence")
 A single string ending in a newline.
 }
 \description{
-Produces a byte-identical DOT string for the literature layer. See
-API_SPEC.md section 16. Mirrors the Python \code{theoryforge.lit_diagram}.
+Produces a deterministic DOT string for the literature layer.
 }
 \examples{
 corpus <- list(

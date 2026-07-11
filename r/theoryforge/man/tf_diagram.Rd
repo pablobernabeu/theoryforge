@@ -17,7 +17,7 @@ tf_diagram(theory, type = "nomological_net", engine = "graphviz")
 status grid, as an SVG), or \code{"severity"} (per-prediction severity
 bars, as an SVG).}
 
-\item{engine}{Rendering engine label, accepted for parity (default
+\item{engine}{Rendering engine label, accepted but unused (default
 \code{"graphviz"}).}
 }
 \value{
@@ -25,10 +25,10 @@ A single string ending in a newline. Graphviz DOT for the digraphs,
 dagitty syntax for the causal DAG, and SVG for the Venn.
 }
 \description{
-Produces a byte-identical diagram IR string for the requested type. The
-\code{engine} argument is accepted for API parity; the IR is engine
-independent (Graphviz DOT for the two digraphs, dagitty syntax for the
-causal DAG). See API_SPEC.md section 5.
+Produces a deterministic diagram IR string for the requested type. The
+\code{engine} argument is accepted but has no effect, because the IR is
+engine independent (Graphviz DOT for the two digraphs, dagitty syntax for
+the causal DAG).
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

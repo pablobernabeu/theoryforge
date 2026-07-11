@@ -1,11 +1,9 @@
 #' Opt-in embedding-based construct-redundancy screen.
 #'
-#' This screen is parity-exempt because its results depend on a user-supplied
-#' embedding function whose outputs are not deterministic across model versions
-#' or SDKs. It is the assistive counterpart to the deterministic lexical screen
-#' in \code{tf_redundancy_check}, and it is excluded from the parity contract
-#' and CI.
-#' See API_SPEC.md section 24.
+#' Results depend on a user-supplied embedding function whose outputs are not
+#' deterministic across model versions or SDKs. This screen is the assistive
+#' counterpart to the deterministic lexical screen in
+#' \code{tf_redundancy_check}.
 #' @name embedding
 #' @keywords internal
 NULL
@@ -30,7 +28,8 @@ NULL
 #' decimals). Returns a data frame sorted by descending cosine then
 #' \code{(a, b)}, flagging pairs at or above \code{threshold} for review. This
 #' assistive screen complements the deterministic lexical
-#' [tf_redundancy_check()] and is parity-exempt. See API_SPEC.md section 24.
+#' [tf_redundancy_check()], and its results are only as reproducible as the
+#' supplied \code{embedder}.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param embedder A function mapping a definition string to a numeric vector.

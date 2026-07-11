@@ -13,8 +13,7 @@ layer of `theoryforge` gives a deterministic, machine-checkable account of that
 field, so the placement of a theory within it can be argued from evidence
 rather than from impression. This article reads a small corpus, computes a
 bibliometric map, positions a theory against the map, and emits a diagram. The
-analysis functions are parity-tested against [the Python twin](https://pablobernabeu.github.io/theoryforge/python/) and require no
-optional dependency.
+analysis functions are deterministic and require no optional dependency.
 
 ```{r setup}
 library(theoryforge)
@@ -123,7 +122,7 @@ unlist(landscape$redundancy_risk)
 
 ## Emitting a literature diagram
 
-`tf_lit_diagram()` renders a byte-identical Graphviz DOT string for the
+`tf_lit_diagram()` renders a deterministic Graphviz DOT string for the
 literature layer. The keyword co-occurrence and co-citation maps render as
 undirected graphs, and a landscape result renders as a directed theme map. The
 output is a plain string, so it can be written to a `.dot` file or passed to a
@@ -140,18 +139,14 @@ than from the map, since it carries the focal theory and the alternatives.
 cat(tf_lit_diagram(landscape, type = "theme_landscape"))
 ```
 
-These strings are compared byte-for-byte against the Python reference outputs in
-the package tests, which guarantees that an R analysis and a Python analysis of
-the same corpus agree exactly.
-
 ## Building a corpus from OpenAlex
 
 The corpus above was read from a file. A corpus can also be assembled from the
-OpenAlex works API with `tf_fetch_corpus()`. This adapter is assistive and
-parity-exempt. It makes a live network call, its result depends on an external
-service that changes over time, and it is therefore excluded from the
-deterministic core, the parity tests and continuous integration. The call is
-shown here but not run, and the supplied email enters the OpenAlex polite pool.
+OpenAlex works API with `tf_fetch_corpus()`. This adapter is assistive. It
+makes a live network call and its result depends on an external service that
+changes over time, so it sits outside the deterministic core of the package.
+The call is shown here but not run, and the supplied email enters the OpenAlex
+polite pool.
 
 ```{r fetch, eval = FALSE}
 fetched <- tf_fetch_corpus("panic disorder interoception",

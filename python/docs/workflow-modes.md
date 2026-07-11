@@ -390,7 +390,7 @@ diagram types.
 
 `simulate()` treats each construct as a state variable and integrates the signed
 proposition network as a linear dynamical system with fixed-step (Euler) updates.
-The trajectory is fully deterministic and parity-tested against [the R twin](https://pablobernabeu.github.io/theoryforge/r/).
+The trajectory is fully deterministic.
 
 The example below adds a regulating edge to the panic structure: arousal raises
 threat, threat raises avoidance, and avoidance in turn *decreases* arousal. The

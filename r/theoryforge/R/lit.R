@@ -1,9 +1,8 @@
-#' Bibliometric / literature layer (API_SPEC.md Part C).
+#' Bibliometric / literature layer.
 #'
 #' The analysis (litmap, landscape, diagrams) is fully deterministic given a
-#' corpus, so it is parity-tested against the Python reference implementation.
-#' The OpenAlex fetch adapter ([tf_fetch_corpus()]) is the parity-exempt,
-#' network/non-deterministic assistive layer.
+#' corpus. The OpenAlex fetch adapter ([tf_fetch_corpus()]) is the assistive
+#' layer, whose results depend on a live network service.
 #' @name lit
 #' @keywords internal
 NULL
@@ -27,10 +26,9 @@ NULL
 
 #' Read a literature corpus from a YAML or JSON file
 #'
-#' Reads a corpus object (\code{{schema_version, id, records}}; see
-#' \code{schema/corpus.schema.json}) into a named list. The format is chosen by
-#' the file extension (\code{.json} -> JSON, otherwise YAML). Mirrors the Python
-#' \code{theoryforge.read_corpus(path)}.
+#' Reads a corpus object (\code{{schema_version, id, records}}) into a named
+#' list. The format is chosen by the file extension (\code{.json} -> JSON,
+#' otherwise YAML).
 #'
 #' @param path Path to a \code{.yaml}/\code{.yml} or \code{.json} corpus file.
 #' @return A named list holding the parsed corpus object.
@@ -171,8 +169,7 @@ tf_read_corpus <- function(path) {
 #' Bibliometric map of a literature corpus (deterministic)
 #'
 #' Computes keyword co-occurrence, thematic components, and reference
-#' co-citation for a corpus. Records iterate in file order. See API_SPEC.md
-#' section 14. Mirrors the Python \code{theoryforge.litmap}.
+#' co-citation for a corpus. Records iterate in file order.
 #'
 #' @param corpus A corpus object (named list), e.g. from [tf_read_corpus()].
 #' @param min_link Minimum co-occurrence count for an edge to be kept
@@ -215,9 +212,7 @@ tf_litmap <- function(corpus, min_link = 2) {
 #'
 #' Maps a theory's focal constructs and its registered alternatives onto the
 #' thematic structure of a corpus (computed by [tf_litmap()]). Each theme is
-#' tagged \code{"under_theorised"}, \code{"covered"}, or \code{"crowded"}. See
-#' API_SPEC.md section 15. Mirrors the Python \code{theory.landscape(corpus)} /
-#' \code{theoryforge.landscape(theory, corpus)}.
+#' tagged \code{"under_theorised"}, \code{"covered"}, or \code{"crowded"}.
 #'
 #' @param theory A theory object (named list), e.g. from \code{tf_read()}.
 #' @param corpus A corpus object (named list), e.g. from [tf_read_corpus()].
@@ -350,8 +345,7 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
 
 #' Render a literature-layer diagram intermediate representation
 #'
-#' Produces a byte-identical DOT string for the literature layer. See
-#' API_SPEC.md section 16. Mirrors the Python \code{theoryforge.lit_diagram}.
+#' Produces a deterministic DOT string for the literature layer.
 #'
 #' @param obj A [tf_litmap()] result (for \code{"keyword_cooccurrence"} /
 #'   \code{"co_citation"}) or a [tf_landscape()] result (for
@@ -409,7 +403,6 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence") {
 #' with. Returns the qualifying DOIs in their original form, deduplicated and
 #' sorted by normalised form. Deterministic and takes no network dependency:
 #' the search itself is left to whichever literature tool the caller prefers.
-#' Mirrors the Python \code{theoryforge.new_evidence_dois}.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param candidate_dois Character vector of DOIs to check.
@@ -450,13 +443,12 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
   out[order(vapply(out, .tf_normalize_doi, character(1)), method = "radix")]
 }
 
-#' Build a corpus from the OpenAlex API (assistive, parity-exempt)
+#' Build a corpus from the OpenAlex API (network call)
 #'
-#' Assistive, parity-exempt helper that builds a corpus by querying the
-#' OpenAlex works API (\code{https://api.openalex.org/works?search=...}). This
-#' is a network call. It is non-deterministic, depends on a live external
-#' service, and is therefore not part of the deterministic core and not covered
-#' by parity tests or CI. Each work is mapped to
+#' Assistive helper that builds a corpus by querying the OpenAlex works API
+#' (\code{https://api.openalex.org/works?search=...}). This is a network call:
+#' it depends on a live external service whose results change over time, so it
+#' sits outside the package's deterministic core. Each work is mapped to
 #' \code{{id, title, year, keywords, references}} (keywords falls back to the top
 #' concepts when no keywords are present).
 #'
