@@ -1,6 +1,6 @@
 ## Submission
 
-This is a new submission of theoryforge 0.1.0.
+This is a new submission of theoryforge 0.2.0.
 
 ## Test environments
 

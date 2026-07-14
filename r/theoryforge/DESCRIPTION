@@ -1,6 +1,6 @@
 Package: theoryforge
 Title: Systematic Theory Development
-Version: 0.1.0
+Version: 0.2.0
 Authors@R:
     person(given = "Pablo", family = "Bernabeu", role = c("aut", "cre"), email = "pcbernabeu@gmail.com", comment = c(ORCID = "0000-0003-1083-2460"))
 Description: Provides a rigorous, reproducible workflow for building,

@@ -4,6 +4,20 @@ All notable changes to theoryforge (the R and Python twin packages) are document
 The format follows [Keep a Changelog](https://keepachangelog.com/). The two packages share a
 version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
 
+## [Unreleased]
+
+## [0.2.0] - 2026-07-15
+
+### Changed
+- The severity chart is re-laid out: bars now start just past the longest row label, and each
+  value trails its own bar. This changes the diagram intermediate representation for
+  `type = "severity"`; R and Python remain byte-identical.
+
+### Documentation
+- The documentation now shows the `provenance`, `development_roadmap`, `pipeline` and
+  `co_citation` views, the embedding-redundancy screen, `validate(full = TRUE)` and the
+  remaining build verbs, and it gains a section on rendering and depositing.
+
 ## [0.1.0] - 2026-07-10
 
 This is the first public release: a rigorous, reproducible workflow for building, developing and
@@ -60,5 +74,6 @@ testing scientific theories, delivered as feature-parity R (CRAN) and Python (Py
 - A live OSF upload requires the user's own token. `osf_push` ships with a dry-run default.
 - Richer (nonlinear / agent-based) computational-model runners, and first-class embedding-model integrations beyond the pluggable `embedding_redundancy` interface.
 
-[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pablobernabeu/theoryforge/releases/tag/v0.1.0

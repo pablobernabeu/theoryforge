@@ -1,3 +1,14 @@
+# theoryforge 0.2.0
+
+* The severity chart is re-laid out: bars start just past the longest row label
+  and each value trails its own bar. The diagram intermediate representation for
+  `tf_diagram(type = "severity")` changes accordingly; it stays byte-identical to
+  the Python twin's.
+* Documentation: the articles now show the `provenance`, `development_roadmap`,
+  `pipeline` and `co_citation` views, the embedding-redundancy screen,
+  `tf_validate(full = TRUE)` and the remaining build verbs, and a new section
+  covers rendering and depositing.
+
 # theoryforge 0.1.0
 
 First public release. The package provides a reproducible workflow for building,
