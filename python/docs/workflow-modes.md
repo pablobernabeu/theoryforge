@@ -106,8 +106,8 @@ The return value is a dictionary with four keys.
 ```python
 {
     "verdict": "progressive",          # 'progressive', 'degenerating', or 'neutral'
-    "new_predictions": ["pred5"],      # prediction ids present in v2 but not v1
-    "corroborated_new": ["pred5"],     # of those, the ones with a passed test outcome
+    "new_predictions": ["pred4"],      # prediction ids present in v2 but not v1
+    "corroborated_new": ["pred4"],     # of those, the ones with a passed test outcome
     "ad_hoc_assumptions": [],          # new assumptions that protect untested predictions
 }
 ```
@@ -295,6 +295,44 @@ digraph context {
 }
 ```
 
+The `pipeline` view links each prediction to its recorded test outcome, so
+predictions still awaiting a test are visible as loose ends.
+
+```python
+print(t.diagram("pipeline"))
+```
+
+```
+digraph pipeline {
+  rankdir=LR;
+  node [shape=box];
+  "pred1" [label="point"];
+  "pred2" [label="interval"];
+  "pred3" [label="directional"];
+  "result_pred1" [label="passed=true"];
+  "pred1" -> "result_pred1";
+}
+```
+
+The `provenance` view draws the build log as a digraph, so the record of how
+the theory reached its current state travels with the object itself.
+
+```python
+print(t.diagram("provenance"))
+```
+
+```
+digraph provenance {
+  rankdir=TB;
+  node [shape=box];
+  "n1" [label="tf_construct: Registered three constructs."];
+  "n2" [label="tf_proposition: Linked constructs into a feedback network."];
+  "n3" [label="tf_predict: Derived three predictions from the propositions."];
+  "n1" -> "n2";
+  "n2" -> "n3";
+}
+```
+
 The `venn` view shows where the first three constructs share boundary conditions.
 
 ```python
@@ -367,24 +405,49 @@ result and reporting the aggregate score and the gate.
 The `severity` view draws one bar per prediction, scaled by its computed severity,
 so the riskier tests stand out at a glance.
 
-<div class="tf-figure"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 132" font-family="sans-serif" font-size="13">
+<div class="tf-figure"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 132" font-family="sans-serif" font-size="13">
   <text x="20" y="26" font-size="15">Prediction severity</text>
   <text x="20" y="52">pred1</text>
-  <rect x="130" y="40" width="200" height="16" rx="2" fill="#4e79a7"/>
-  <text x="335" y="52">1.000</text>
+  <rect x="70" y="40" width="200" height="16" rx="2" fill="#4e79a7"/>
+  <text x="275" y="52">1.000</text>
   <text x="20" y="80">pred2</text>
-  <rect x="130" y="68" width="140" height="16" rx="2" fill="#4e79a7"/>
-  <text x="275" y="80">0.700</text>
+  <rect x="70" y="68" width="140" height="16" rx="2" fill="#4e79a7"/>
+  <text x="215" y="80">0.700</text>
   <text x="20" y="108">pred3</text>
-  <rect x="130" y="96" width="60" height="16" rx="2" fill="#4e79a7"/>
-  <text x="195" y="108">0.300</text>
+  <rect x="70" y="96" width="60" height="16" rx="2" fill="#4e79a7"/>
+  <text x="135" y="108">0.300</text>
 </svg></div>
 
-Three further graph views are not shown here: `provenance` (the build log as a
-digraph), `development_roadmap` (the checklist items still failing or warning),
-and `pipeline` (each prediction linked to its test outcome). See the
-[API reference](api.md#theoryforge.diagram.diagram) for the complete list of
-diagram types.
+The `development_roadmap` view turns the same checklist into a worklist by
+keeping only the items that still fail or warn. The panic network passes every
+check, so its roadmap collapses to a single `all checks pass` node, and the
+deliberately weak fixture shipped alongside it shows the worklist in full.
+
+```python
+print(tf.read("weak-theory.theory.yaml").diagram("development_roadmap"))
+```
+
+```
+digraph development_roadmap {
+  rankdir=TB;
+  node [shape=box];
+  "falsifiability" [label="falsifiability (fail)"];
+  "precision" [label="precision (warn)"];
+  "risk_severity" [label="risk_severity (warn)"];
+  "construct_clarity" [label="construct_clarity (warn)"];
+  "scope" [label="scope (warn)"];
+  "logical_why" [label="logical_why (warn)"];
+  "causal_testability" [label="causal_testability (warn)"];
+  "diagnosticity" [label="diagnosticity (warn)"];
+  "formalisation" [label="formalisation (warn)"];
+  "derivation_chain" [label="derivation_chain (fail)"];
+}
+```
+
+Together with the `nomological_net` and `causal_dag` views shown in
+[Getting started](getting-started.md), these complete the set of diagram types
+that `diagram()` exports, each documented in the
+[API reference](api.md#theoryforge.diagram.diagram).
 
 ## Simulation
 

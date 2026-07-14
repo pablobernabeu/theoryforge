@@ -123,6 +123,25 @@ The severity list, the provenance trail and the preregistration follow in the
 full document, which is deterministic, so the same theory always produces the
 same dossier.
 
+## Rendering and depositing
+
+`tf_render_report()` writes the dossier as a Quarto source document, ready to
+render to HTML or PDF. With `render = FALSE` it writes the `.qmd` without calling
+Quarto, so the step runs anywhere.
+
+```{r render-report}
+report_path <- tf_render_report(theory, tempfile(fileext = ".qmd"))
+basename(report_path)
+```
+
+`tf_osf_push()` deposits the rendered report to an Open Science Framework node.
+It makes an authenticated network call, so it sits outside the deterministic
+core and is shown here without being run.
+
+```{r osf, eval = FALSE}
+tf_osf_push(theory, node = "ab12c", token = Sys.getenv("OSF_PAT"))
+```
+
 ## Visualising the theory
 
 `tf_diagram()` exports several views of the same object. The `workflow` view
@@ -139,6 +158,20 @@ is claimed to hold and the registered rivals it is meant to outpredict.
 
 ```{r context, collapse = FALSE, comment = ""}
 cat(tf_diagram(theory, "context"))
+```
+
+The `pipeline` view links each prediction to its recorded test outcome, so
+predictions still awaiting a test are visible as loose ends.
+
+```{r pipeline, collapse = FALSE, comment = ""}
+cat(tf_diagram(theory, "pipeline"))
+```
+
+The `provenance` view draws the build log as a digraph, so the record of how
+the theory reached its current state travels with the object itself.
+
+```{r provenance, collapse = FALSE, comment = ""}
+cat(tf_diagram(theory, "provenance"))
 ```
 
 The `venn` view returns an SVG that shows where the constructs share boundary
@@ -163,10 +196,21 @@ severity, so the riskier tests stand out at a glance.
 cat('<div class="tf-figure">', tf_diagram(theory, "severity"), '</div>', sep = "")
 ```
 
-All of these views are deterministic. The DOT strings render with any Graphviz
-engine, and the SVG views open in any browser.
+The `development_roadmap` view turns the same checklist into a worklist by
+keeping only the items that still fail or warn. The panic network passes every
+check, so its roadmap collapses to a single node, and the deliberately weak
+theory shipped alongside it shows the worklist in full.
 
-Three further views are not shown here: `provenance` (the build log as a
-digraph), `development_roadmap` (the checklist items still failing or
-warning), and `pipeline` (each prediction linked to its test outcome). See
-`?tf_diagram` for the complete list of diagram types.
+```{r roadmap, collapse = FALSE, comment = ""}
+weak <- tf_read(
+  system.file("fixtures/weak-theory.theory.yaml", package = "theoryforge")
+)
+cat(tf_diagram(theory, "development_roadmap"))
+cat(tf_diagram(weak, "development_roadmap"))
+```
+
+All of these views are deterministic. The DOT strings render with any Graphviz
+engine, and the SVG views open in any browser. Together with the
+`nomological_net` and `causal_dag` views introduced in the Get started
+vignette, they complete the set of diagram types that `tf_diagram()` exports,
+each documented in `?tf_diagram`.

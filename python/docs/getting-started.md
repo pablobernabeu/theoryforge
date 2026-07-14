@@ -37,16 +37,36 @@ Produce the rigour report. The `"json"` format returns the 12-item rigour checkl
 print(t.report("json"))
 ```
 
-Export a diagram. The `nomological_net` type returns Graphviz DOT, which you can render with Graphviz or inspect directly.
+Working from the dictionary that `t.check()` returns, individual results are easy to read off, including each checklist item in order.
+
+```python
+report = t.check()
+report["aggregate_score"]    # 84.8
+report["gate"]               # 'pass'
+report["n_blockers_failed"]  # 0
+report["items"][0]["id"]     # 'falsifiability'
+report["items"][0]["status"] # 'pass'
+```
+
+Export a diagram. The digraph types, such as `nomological_net`, return Graphviz DOT, which you can render with Graphviz or inspect directly, and the `causal_dag` type returns dagitty syntax for causal-inference tooling.
 
 ```python
 print(t.diagram("nomological_net"))
+print(t.diagram("causal_dag"))
 ```
 
 Run the lexical redundancy screen. This returns every construct pair with a lexical similarity of their definitions and an `ok`/`review` flag, marking `review` the pairs whose definitions overlap enough to suggest jingle-jangle redundancy.
 
 ```python
 t.redundancy_check()
+```
+
+A theory can be written back to disk with `t.write()`. The format follows the file extension, `.json` for JSON and otherwise YAML.
+
+```python
+t.write("panic-network.theory.yaml")   # YAML; use a .json path for JSON
+reloaded = tf.read("panic-network.theory.yaml")
+reloaded.id == t.id                    # True
 ```
 
 ## Next steps

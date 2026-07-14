@@ -269,7 +269,15 @@ NULL
   rows <- tf_severity(T)
   n <- nrow(rows)
   h <- 40L + max(n, 1L) * 28L + 8L
-  out <- c(sprintf('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 %d" font-family="sans-serif" font-size="13">', h),
+  labels <- if (n) vapply(as.character(rows$prediction_id),
+                          .tf_trunc, character(1), n = 15L, USE.NAMES = FALSE)
+            else character(0)
+  # Bars start just past the longest row label (estimated at 8 px per character
+  # at this font size), so short labels leave no dead gap before the bars, and
+  # each value label trails its own bar.
+  bar_x <- 20L + (if (n) max(nchar(labels)) else 0L) * 8L + 10L
+  width <- bar_x + 250L  # 200 for a full bar, then the gap and the value label
+  out <- c(sprintf('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" font-family="sans-serif" font-size="13">', width, h),
            '  <text x="20" y="26" font-size="15">Prediction severity</text>')
   if (n == 0L) {
     out <- c(out, '  <text x="20" y="54">(no predictions)</text>')
@@ -279,9 +287,9 @@ NULL
       sev <- rows$computed_severity[i]
       w <- as.integer(sev * 200 + 0.5 + 1e-6)
       out <- c(out,
-        sprintf('  <text x="20" y="%d">%s</text>', y + 12L, .tf_xml(.tf_trunc(as.character(rows$prediction_id[i]), 15L))),
-        sprintf('  <rect x="130" y="%d" width="%d" height="16" rx="2" fill="#4e79a7"/>', y, w),
-        sprintf('  <text x="%d" y="%d">%.3f</text>', 135L + w, y + 12L, sev))
+        sprintf('  <text x="20" y="%d">%s</text>', y + 12L, .tf_xml(labels[i])),
+        sprintf('  <rect x="%d" y="%d" width="%d" height="16" rx="2" fill="#4e79a7"/>', bar_x, y, w),
+        sprintf('  <text x="%d" y="%d">%.3f</text>', bar_x + w + 5L, y + 12L, sev))
     }
   }
   out <- c(out, "</svg>")

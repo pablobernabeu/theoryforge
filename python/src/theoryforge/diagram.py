@@ -220,7 +220,13 @@ def _severity_chart(T: dict) -> str:
     from .scoring import severity as _sev
     rows = _sev(T)
     h = 40 + max(len(rows), 1) * 28 + 8
-    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 {h}" '
+    labels = [_trunc(r["prediction_id"], 15) for r in rows]
+    # Bars start just past the longest row label (estimated at 8 px per character
+    # at this font size), so short labels leave no dead gap before the bars, and
+    # each value label trails its own bar.
+    bar_x = 20 + max((len(lab) for lab in labels), default=0) * 8 + 10
+    width = bar_x + 250  # 200 for a full bar, then the gap and the value label
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {h}" '
            'font-family="sans-serif" font-size="13">',
            '  <text x="20" y="26" font-size="15">Prediction severity</text>']
     if not rows:
@@ -229,9 +235,9 @@ def _severity_chart(T: dict) -> str:
         y = 40 + i * 28
         sev = r["computed_severity"]
         w = int(sev * 200 + 0.5 + 1e-6)
-        out.append(f'  <text x="20" y="{y + 12}">{_xml(_trunc(r["prediction_id"], 15))}</text>')
-        out.append(f'  <rect x="130" y="{y}" width="{w}" height="16" rx="2" fill="#4e79a7"/>')
-        out.append(f'  <text x="{135 + w}" y="{y + 12}">{sev:.3f}</text>')
+        out.append(f'  <text x="20" y="{y + 12}">{_xml(labels[i])}</text>')
+        out.append(f'  <rect x="{bar_x}" y="{y}" width="{w}" height="16" rx="2" fill="#4e79a7"/>')
+        out.append(f'  <text x="{bar_x + w + 5}" y="{y + 12}">{sev:.3f}</text>')
     out.append("</svg>")
     return "\n".join(out) + "\n"
 

@@ -132,6 +132,13 @@ Graphviz renderer.
 cat(tf_lit_diagram(lm, type = "keyword_cooccurrence"))
 ```
 
+The co-citation map links the references that the corpus cites together, so
+tightly co-cited work stands out as the intellectual base the field shares.
+
+```{r diagram-cocitation, collapse = FALSE, comment = ""}
+cat(tf_lit_diagram(lm, type = "co_citation"))
+```
+
 The theme landscape diagram is produced from the `tf_landscape()` result rather
 than from the map, since it carries the focal theory and the alternatives.
 

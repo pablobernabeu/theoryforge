@@ -43,10 +43,30 @@ theory <- tf_theory("panic-network", "A network theory of panic") |>
                     "point", derives_from = "p1")
 
 tf_validate(theory) # structural checks: required fields and enums
+tf_validate(theory, full = TRUE) # also checks referential integrity of ids and cross-references
 ```
 
 `tf_validate()` returns `TRUE` invisibly on success and stops with a message
-listing every problem otherwise. It does not require any optional dependency.
+listing every problem otherwise. With `full = TRUE` it additionally checks
+referential integrity, that ids are unique and every cross-reference points to a
+declared id. It does not require any optional dependency.
+
+The building vocabulary has two further verbs. `tf_add_assumption()` records an
+auxiliary assumption, and `tf_set_formal_model()` attaches a formal-model
+reference. Applied to a copy of the theory, they leave the original untouched.
+
+```{r build-more}
+extended <- theory |>
+  tf_add_assumption("a1", "Arousal is measured at rest.", added_for = "h1") |>
+  tf_set_formal_model("sem", spec_ref = "panic-sem.lavaan")
+```
+
+Every verb appends a provenance entry, recording the step, the action and its
+detail, so the record of how a theory was built travels with the object.
+
+```{r provenance-entries}
+do.call(rbind, lapply(extended$provenance, as.data.frame))
+```
 
 A theory can be written to and read back from disk. The format follows the file
 extension (`.json` for JSON, otherwise YAML).
@@ -96,6 +116,21 @@ construct definitions, sorted by descending similarity.
 
 ```{r redundancy}
 tf_redundancy_check(theory)
+```
+
+The lexical screen is deterministic but shallow. When a semantic comparison is
+wanted, `tf_embedding_redundancy()` takes any embedder that maps a definition to
+a numeric vector and reports the cosine similarity of each construct pair. It
+needs no optional dependency, since the embedder is supplied by the caller. A
+toy bag-of-words embedder stands in for a real language model here.
+
+```{r embedding-redundancy}
+vocab <- c("bodily", "activation", "appraised", "danger", "salience")
+embedder <- function(def) {
+  words <- strsplit(tolower(def), "[^a-z]+")[[1]]
+  vapply(vocab, function(w) sum(words == w), numeric(1))
+}
+tf_embedding_redundancy(theory, embedder)
 ```
 
 ## Diagramming
