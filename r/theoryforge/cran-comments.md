@@ -4,7 +4,7 @@ This is a new submission of theoryforge 0.2.0.
 
 ## Test environments
 
-* Local: Windows 11, R 4.6.1 (R CMD check --as-cran, 2026-07-10)
+* Local: Windows 11, R 4.6.1 (R CMD check --as-cran, 2026-07-15)
 * GitHub Actions: ubuntu-latest and windows-latest, each on R release and
   R devel (R CMD check --as-cran)
 
