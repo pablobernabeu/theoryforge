@@ -5,7 +5,8 @@ This is a new submission of theoryforge 0.2.0.
 ## Test environments
 
 * Local: Windows 11, R 4.6.1 (R CMD check --as-cran, 2026-07-10)
-* GitHub Actions: Ubuntu (latest), R release (R CMD check --as-cran)
+* GitHub Actions: ubuntu-latest and windows-latest, each on R release and
+  R devel (R CMD check --as-cran)
 
 ## R CMD check results
 
