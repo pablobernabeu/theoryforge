@@ -74,12 +74,38 @@ for step in t.data["provenance"]:
     print(step["step"], step["action"], step["detail"])
 ```
 
+```
+1 tf_theory panic_demo
+2 tf_add_construct arousal
+3 tf_add_construct catastrophic_interpretation
+4 tf_add_proposition p1
+5 tf_add_prediction pred1
+```
+
 Once the object is assembled, `t.validate()` confirms it satisfies the
 schema's required fields, and `t.report()` returns the rigour checklist.
 
 ```python
 t.validate()
 print(t.report("json"))
+```
+
+`validate()` returns `True` silently; the report opens with the aggregate score
+and the gate, then one entry per checklist item.
+
+```
+{
+  "theory_id": "panic_demo",
+  "schema_version": "1.0",
+  "maturity": "building",
+  "aggregate_score": 57.6,
+  "gate": "pass",
+  "n_blockers_failed": 0,
+  "items": [
+    {
+      "id": "falsifiability",
+      "status": "pass",
+      ...
 ```
 
 ## DEVELOPMENT
@@ -174,6 +200,23 @@ print(text)
 t.preregister("panic-prereg.md")    # also writes the document to disk
 ```
 
+The document opens as follows.
+
+```
+# Preregistration: A demonstration theory of panic
+
+- Theory ID: panic_demo
+- Schema version: 1.0
+- Maturity: building
+- Derivation chain verified: yes
+
+## Hypotheses
+1. [directional] higher arousal predicts more catastrophic interpretation (derives from: p1)
+
+## Severity
+- pred1: severity 0.3, risk 0.4
+```
+
 ### Audit bundle
 
 `dossier()` assembles a single Markdown document for reviewers. It composes
@@ -183,6 +226,25 @@ committed or attached to a submission.
 
 ```python
 print(t.dossier())
+```
+
+The bundle opens with the header and the rigour checklist, and the severity
+table, provenance log and preregistration follow.
+
+```
+# theoryforge dossier: A demonstration theory of panic
+
+- Theory ID: panic_demo
+- Maturity: building
+- Aggregate rigour score: 57.6/100
+- Gate: pass
+- Blockers failed: 0
+
+## Rigour checklist
+
+| item | status | score | weight |
+| --- | --- | --- | --- |
+...
 ```
 
 `compile_sem()` translates the structural content into lavaan model syntax.

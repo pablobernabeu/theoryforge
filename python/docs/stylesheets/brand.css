@@ -292,10 +292,15 @@
 /* Rendered Graphviz diagrams (render_diagram output) carry their own white
    canvas and ink-on-white text fills, so they must NOT inherit the
    currentColor text rule above: in dark mode that would paint light text on
-   the white canvas. Present them as a rounded white card instead, sized by
-   their own aspect ratio up to a wider cap than the chart views. */
+   the white canvas. Present them as a rounded white card at the diagram's own
+   natural size, so a four-node graph stays small and its type stays at
+   Graphviz's legible default; a diagram wider than the column scrolls inside
+   the figure (the same convention wide code blocks follow) rather than being
+   squashed to fit. */
+.tf-figure.tf-diagram { overflow-x: auto; }
 .tf-figure.tf-diagram svg {
-  max-width: 640px;
+  width: auto;
+  max-width: none;
   background: #fff;
   border-radius: 10px;
   padding: 10px;

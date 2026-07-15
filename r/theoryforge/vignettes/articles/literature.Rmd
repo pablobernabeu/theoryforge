@@ -179,9 +179,15 @@ fetched_map <- tf_litmap(fetched)
 
 Once fetched, the corpus object has the same shape as a file-read corpus, so it
 flows into `tf_litmap()`, `tf_landscape()` and `tf_lit_diagram()` without any
-further change. The recommended pattern is to fetch once, write the result to
-disk, and then work from the saved file so that later analyses remain
-reproducible.
+further change. The file-read `corpus` used throughout this article shows that
+shape.
+
+```{r fetch-shape}
+str(corpus, max.level = 2, list.len = 4)
+```
+
+The recommended pattern is to fetch once, write the result to disk, and then
+work from the saved file so that later analyses remain reproducible.
 
 ## Tracking new evidence with an external search
 
@@ -246,6 +252,20 @@ added <- diff$doi[diff$status == "added"]
 tf_new_evidence_dois(theory, added)
 ```
 
+The hand-off itself needs nothing from `scopusflow`: `scopus_diff_dois()`
+returns one row per DOI with its status, which we reproduce here so the last
+step runs. Only the newly added DOI comes back as new evidence.
+
+```{r diff-standin}
+diff <- data.frame(
+  doi = c("10.1016/j.brat.2015.10.002", "10.1037/0033-2909.99.1.20"),
+  status = c("unchanged", "added")
+)
+added <- diff$doi[diff$status == "added"]
+
+tf_new_evidence_dois(theory, added)
+```
+
 `scopusflow` also offers `scopus_compare_topics()`, which tracks the relative
 publication share of several comparison terms against a reference term across
 a range of years. This suits comparing a theory against its registered
@@ -259,6 +279,10 @@ scopus_compare_topics(
   years = 2015:2026
 )
 ```
+
+The comparison and its plot, with per-year stability bands, are shown in
+scopusflow's [Comparing topics](https://pablobernabeu.github.io/scopusflow/articles/comparing-topics.html)
+article.
 
 ### Using scopusflow for a Scopus-based corpus
 
