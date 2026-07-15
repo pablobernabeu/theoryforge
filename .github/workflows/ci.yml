@@ -32,17 +32,28 @@ jobs:
           twine check python/dist/*
 
   r:
-    name: R (CMD check --as-cran, ${{ matrix.r }})
-    runs-on: ubuntu-latest
+    name: R (CMD check --as-cran, ${{ matrix.config.os }} ${{ matrix.config.r }})
+    runs-on: ${{ matrix.config.os }}
     strategy:
       fail-fast: false
       matrix:
-        r: ["release", "devel"]
+        # This job was Linux-only, so nothing caught a Windows-specific problem
+        # before a CRAN submission. Windows on R-devel is the combination
+        # win-builder checks, so running it here gives that signal on every push
+        # rather than by email after an upload.
+        config:
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: ubuntu-latest,  r: 'devel'}
+          - {os: windows-latest, r: 'release'}
+          - {os: windows-latest, r: 'devel'}
     steps:
       - uses: actions/checkout@v7
+      # The vignettes are built during the check, so pandoc must be present on
+      # every runner rather than assumed from the image.
+      - uses: r-lib/actions/setup-pandoc@v2
       - uses: r-lib/actions/setup-r@v2
         with:
-          r-version: ${{ matrix.r }}
+          r-version: ${{ matrix.config.r }}
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
