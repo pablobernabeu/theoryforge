@@ -55,7 +55,7 @@ jobs:
           cp r/theoryforge/man/figures/logo.svg site/logo.svg
           cp .github/landing.html site/index.html
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: '20'
 
