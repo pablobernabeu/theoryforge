@@ -1,12 +1,13 @@
 digraph pipeline {
-  rankdir=LR;
-  node [shape=box];
-  "pred1" [label="point"];
-  "pred2" [label="interval"];
-  "pred3" [label="directional"];
-  "pred4" [label="point"];
-  "result_pred1" [label="passed=true"];
+  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+  "pred1" [label="pred1\npoint", fillcolor="#E7EDF5", color="#33567A"];
+  "pred2" [label="pred2\ninterval", fillcolor="#E7EDF5", color="#33567A"];
+  "pred3" [label="pred3\ndirectional", fillcolor="#E7EDF5", color="#33567A"];
+  "pred4" [label="pred4\npoint", fillcolor="#E7EDF5", color="#33567A"];
+  "result_pred1" [label="passed", fillcolor="#E5F2E7", color="#3E7A46"];
   "pred1" -> "result_pred1";
-  "result_pred4" [label="passed=true"];
+  "result_pred4" [label="passed", fillcolor="#E5F2E7", color="#3E7A46"];
   "pred4" -> "result_pred4";
 }

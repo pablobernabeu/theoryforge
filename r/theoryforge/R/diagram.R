@@ -46,12 +46,76 @@ NULL
   s
 }
 
+# The Meridian palette the DOT views share: fill/border pairs keyed by role.
+# These are part of the IR (both implementations emit them byte-identically),
+# so a renderer needs no styling of its own.
+.tf_INK <- "#12283A"
+.tf_FILLS <- list(
+  construct   = c("#E4F1F1", "#1E7B7B"),
+  proposition = c("#FBF1DC", "#9C6B14"),
+  prediction  = c("#E7EDF5", "#33567A"),
+  passed      = c("#E5F2E7", "#3E7A46"),
+  failed      = c("#F9E5E4", "#B2453C"),
+  scope       = c("#FBF7EA", "#B49B55"),
+  rival       = c("#F1F1F1", "#8A8A8A"),
+  warn        = c("#FBF1DC", "#9C6B14"),
+  fail        = c("#F9E5E4", "#B2453C"),
+  covered     = c("#F1F1F1", "#8A8A8A")
+)
+
+.tf_fill <- function(role) {
+  fc <- .tf_FILLS[[role]]
+  sprintf('fillcolor="%s", color="%s"', fc[[1L]], fc[[2L]])
+}
+
+# The shared style header every DOT view opens with.
+.tf_prelude <- function(name, rankdir, directed = TRUE) {
+  kw <- if (directed) "digraph" else "graph"
+  c(
+    paste0(kw, " ", name, " {"),
+    paste0('  graph [rankdir=', rankdir, ', bgcolor="transparent", fontname="Helvetica", ',
+           'fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];'),
+    paste0('  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", ',
+           'color="#33567A", fillcolor="#F2F6F9", fontcolor="', .tf_INK, '", penwidth=1.1, ',
+           'margin="0.16,0.1"];'),
+    '  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];'
+  )
+}
+
+# Escape a label and wrap it onto lines of at most `width` characters, breaking
+# at spaces (a longer single word stays whole). Wrapping happens after
+# escaping, and lines join with a literal backslash-n, DOT's in-label newline,
+# so nodes stay narrow enough for a documentation column.
+.tf_wrap <- function(s, width = 18L) {
+  text <- .tf_esc(s)
+  if (!nzchar(text)) {
+    return("")
+  }
+  words <- strsplit(text, " ", fixed = TRUE)[[1L]]
+  lines <- character(0)
+  cur <- ""
+  for (word in words) {
+    if (!nzchar(cur)) {
+      cur <- word
+    } else if (nchar(cur) + 1L + nchar(word) <= width) {
+      cur <- paste0(cur, " ", word)
+    } else {
+      lines <- c(lines, cur)
+      cur <- word
+    }
+  }
+  if (nzchar(cur)) {
+    lines <- c(lines, cur)
+  }
+  paste(lines, collapse = "\\n")
+}
+
 .tf_nomological_net <- function(T) {
-  lines <- c("digraph nomological_net {", "  rankdir=LR;",
-             "  node [shape=box, style=rounded];")
+  lines <- .tf_prelude("nomological_net", "LR")
   for (c in .tf_list(T, "constructs")) {
-    lines <- c(lines, sprintf('  "%s" [label="%s"];',
-                              .tf_esc(.tf_get(c, "id")), .tf_esc(.tf_get(c, "label"))))
+    lines <- c(lines, sprintf('  "%s" [label="%s", %s];',
+                              .tf_esc(.tf_get(c, "id")), .tf_wrap(.tf_get(c, "label")),
+                              .tf_fill("construct")))
   }
   for (p in .tf_list(T, "propositions")) {
     lines <- c(lines, sprintf('  "%s" -> "%s" [label="%s"];',
@@ -63,14 +127,15 @@ NULL
 }
 
 .tf_provenance <- function(T) {
-  lines <- c("digraph provenance {", "  rankdir=TB;", "  node [shape=box];")
+  lines <- .tf_prelude("provenance", "TB")
   steps <- .tf_list(T, "provenance")
   for (i in seq_along(steps)) {
     s <- steps[[i]]
     action <- .tf_str(s, "action")
     detail <- .tf_str(s, "detail")
-    label <- if (nzchar(trimws(detail))) paste0(action, ": ", detail) else action
-    lines <- c(lines, sprintf('  "n%d" [label="%s"];', i, .tf_esc(label)))
+    label <- paste0(.tf_esc(action),
+                    if (nzchar(trimws(detail))) paste0("\\n", .tf_wrap(detail, 26L)) else "")
+    lines <- c(lines, sprintf('  "n%d" [label="%s"];', i, label))
   }
   if (length(steps) >= 2L) {
     for (i in seq_len(length(steps) - 1L)) {
@@ -95,14 +160,24 @@ NULL
 
 .tf_development_roadmap <- function(T) {
   rep <- tf_check(T)
-  lines <- c("digraph development_roadmap {", "  rankdir=TB;", "  node [shape=box];")
+  lines <- .tf_prelude("development_roadmap", "TB")
   todo <- Filter(function(it) !identical(it$status, "pass"), rep$items)
   if (length(todo) == 0L) {
-    lines <- c(lines, '  "all_checks_pass" [label="all checks pass"];')
+    lines <- c(lines, sprintf('  "all_checks_pass" [label="all checks pass", %s];',
+                              .tf_fill("passed")))
   } else {
     for (it in todo) {
-      lines <- c(lines, sprintf('  "%s" [label="%s (%s)"];',
-                                .tf_esc(it$id), .tf_esc(it$id), it$status))
+      lines <- c(lines, sprintf('  "%s" [label="%s\\n%s", %s];',
+                                .tf_esc(it$id), .tf_esc(it$id), it$status,
+                                .tf_fill(it$status)))
+    }
+    # Invisible edges chain the items into one column, so a long to-do list
+    # grows downwards instead of into an ever-wider row.
+    if (length(todo) >= 2L) {
+      for (i in seq_len(length(todo) - 1L)) {
+        lines <- c(lines, sprintf('  "%s" -> "%s" [style=invis];',
+                                  .tf_esc(todo[[i]]$id), .tf_esc(todo[[i + 1L]]$id)))
+      }
     }
   }
   lines <- c(lines, "}")
@@ -110,16 +185,17 @@ NULL
 }
 
 .tf_pipeline <- function(T) {
-  lines <- c("digraph pipeline {", "  rankdir=LR;", "  node [shape=box];")
+  lines <- .tf_prelude("pipeline", "LR")
   for (p in .tf_list(T, "predictions")) {
-    lines <- c(lines, sprintf('  "%s" [label="%s"];',
-                              .tf_esc(.tf_get(p, "id")), .tf_esc(.tf_get(p, "type"))))
+    lines <- c(lines, sprintf('  "%s" [label="%s\\n%s", %s];',
+                              .tf_esc(.tf_get(p, "id")), .tf_esc(.tf_get(p, "id")),
+                              .tf_esc(.tf_get(p, "type")), .tf_fill("prediction")))
   }
   for (t in .tf_list(T, "test_outcomes")) {
     pid <- .tf_str(t, "prediction_id")
     rid <- paste0("result_", pid)
-    passed <- if (isTRUE(.tf_get(t, "passed"))) "true" else "false"
-    lines <- c(lines, sprintf('  "%s" [label="passed=%s"];', .tf_esc(rid), passed))
+    role <- if (isTRUE(.tf_get(t, "passed"))) "passed" else "failed"
+    lines <- c(lines, sprintf('  "%s" [label="%s", %s];', .tf_esc(rid), role, .tf_fill(role)))
     lines <- c(lines, sprintf('  "%s" -> "%s";', .tf_esc(pid), .tf_esc(rid)))
   }
   lines <- c(lines, "}")
@@ -127,45 +203,64 @@ NULL
 }
 
 .tf_context <- function(T) {
-  lines <- c("digraph context {", "  rankdir=LR;", "  node [shape=box, style=rounded];")
-  lines <- c(lines, sprintf('  "theory" [shape=ellipse, label="%s"];', .tf_esc(.tf_get(T, "title"))))
+  lines <- .tf_prelude("context", "LR")
+  lines <- c(lines, sprintf('  "theory" [shape=ellipse, label="%s", fillcolor="%s", color="%s", fontcolor="#FFFFFF"];',
+                            .tf_wrap(.tf_get(T, "title"), 20L), .tf_INK, .tf_INK))
   for (c in .tf_list(T, "constructs")) {
     cid <- .tf_esc(.tf_get(c, "id"))
-    lines <- c(lines, sprintf('  "%s" [label="%s"];', cid, .tf_esc(.tf_get(c, "label"))))
+    lines <- c(lines, sprintf('  "%s" [label="%s", %s];', cid,
+                              .tf_wrap(.tf_get(c, "label")), .tf_fill("construct")))
     lines <- c(lines, sprintf('  "theory" -> "%s";', cid))
   }
   bcs <- .tf_list(T, "boundary_conditions")
   for (i in seq_along(bcs)) {
-    lines <- c(lines, sprintf('  "scope%d" [shape=note, label="%s"];', i, .tf_esc(bcs[[i]])))
+    lines <- c(lines, sprintf('  "scope%d" [shape=note, style="filled", label="%s", %s];',
+                              i, .tf_wrap(bcs[[i]]), .tf_fill("scope")))
     lines <- c(lines, sprintf('  "scope%d" -> "theory" [style=dotted, label="holds within"];', i))
   }
   for (a in .tf_list(T, "alternatives")) {
     aid <- .tf_esc(.tf_get(a, "id"))
-    lines <- c(lines, sprintf('  "%s" [shape=box, style=dashed, label="%s"];', aid, .tf_esc(.tf_get(a, "label"))))
+    lines <- c(lines, sprintf('  "%s" [style="rounded,filled,dashed", label="%s", %s];',
+                              aid, .tf_wrap(.tf_get(a, "label")), .tf_fill("rival")))
     lines <- c(lines, sprintf('  "theory" -> "%s" [style=dashed, label="contrasts with"];', aid))
   }
   lines <- c(lines, "}")
   paste0(paste(lines, collapse = "\n"), "\n")
 }
 
+.tf_cluster_open <- function(key, title) {
+  c(sprintf("  subgraph cluster_%s {", key),
+    sprintf('    label="%s";', title),
+    '    style="rounded";',
+    '    color="#C4D1D9";',
+    '    fontcolor="#5B7285";')
+}
+
 .tf_workflow <- function(T) {
-  lines <- c("digraph workflow {", "  rankdir=LR;", "  node [shape=box];")
-  lines <- c(lines, "  subgraph cluster_build {", '    label="building";')
+  lines <- .tf_prelude("workflow", "LR")
+  lines <- c(lines, .tf_cluster_open("build", "building"))
   for (c in .tf_list(T, "constructs")) {
-    lines <- c(lines, sprintf('    "%s" [label="%s"];', .tf_esc(.tf_get(c, "id")), .tf_esc(.tf_get(c, "label"))))
+    lines <- c(lines, sprintf('    "%s" [label="%s", %s];', .tf_esc(.tf_get(c, "id")),
+                              .tf_wrap(.tf_get(c, "label"), 16L), .tf_fill("construct")))
   }
-  lines <- c(lines, "  }", "  subgraph cluster_relate {", '    label="propositions";')
+  lines <- c(lines, "  }", .tf_cluster_open("relate", "propositions"))
   for (p in .tf_list(T, "propositions")) {
-    lines <- c(lines, sprintf('    "prop_%s" [label="%s"];', .tf_esc(.tf_get(p, "id")), .tf_esc(.tf_get(p, "relation"))))
+    lines <- c(lines, sprintf('    "prop_%s" [label="%s\\n%s", %s];',
+                              .tf_esc(.tf_get(p, "id")), .tf_esc(.tf_get(p, "id")),
+                              .tf_esc(.tf_get(p, "relation")), .tf_fill("proposition")))
   }
-  lines <- c(lines, "  }", "  subgraph cluster_predict {", '    label="predictions";')
+  lines <- c(lines, "  }", .tf_cluster_open("predict", "predictions"))
   for (p in .tf_list(T, "predictions")) {
-    lines <- c(lines, sprintf('    "pred_%s" [label="%s"];', .tf_esc(.tf_get(p, "id")), .tf_esc(.tf_get(p, "type"))))
+    lines <- c(lines, sprintf('    "pred_%s" [label="%s\\n%s", %s];',
+                              .tf_esc(.tf_get(p, "id")), .tf_esc(.tf_get(p, "id")),
+                              .tf_esc(.tf_get(p, "type")), .tf_fill("prediction")))
   }
-  lines <- c(lines, "  }", "  subgraph cluster_test {", '    label="testing";')
+  lines <- c(lines, "  }", .tf_cluster_open("test", "testing"))
   for (t in .tf_list(T, "test_outcomes")) {
-    passed <- if (isTRUE(.tf_get(t, "passed"))) "true" else "false"
-    lines <- c(lines, sprintf('    "outcome_%s" [label="passed=%s"];', .tf_esc(.tf_get(t, "prediction_id")), passed))
+    pid <- .tf_esc(.tf_get(t, "prediction_id"))
+    role <- if (isTRUE(.tf_get(t, "passed"))) "passed" else "failed"
+    lines <- c(lines, sprintf('    "outcome_%s" [label="%s\\n%s", %s];',
+                              pid, pid, role, .tf_fill(role)))
   }
   lines <- c(lines, "  }")
   for (p in .tf_list(T, "propositions")) {

@@ -1,9 +1,10 @@
 digraph context {
-  rankdir=LR;
-  node [shape=box, style=rounded];
-  "theory" [shape=ellipse, label="An underspecified motivation theory"];
-  "k_motivation" [label="Motivation"];
+  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+  "theory" [shape=ellipse, label="An underspecified\nmotivation theory", fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
+  "k_motivation" [label="Motivation", fillcolor="#E4F1F1", color="#1E7B7B"];
   "theory" -> "k_motivation";
-  "k_drive" [label="Drive"];
+  "k_drive" [label="Drive", fillcolor="#E4F1F1", color="#1E7B7B"];
   "theory" -> "k_drive";
 }

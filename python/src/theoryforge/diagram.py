@@ -29,10 +29,70 @@ def _list(d: dict, key: str) -> list:
     return v if isinstance(v, list) else []
 
 
+# The Meridian palette the DOT views share: fill/border pairs keyed by role.
+# These are part of the IR (both implementations emit them byte-identically),
+# so a renderer needs no styling of its own.
+_INK = "#12283A"
+_FILL = {
+    "construct":   ("#E4F1F1", "#1E7B7B"),
+    "proposition": ("#FBF1DC", "#9C6B14"),
+    "prediction":  ("#E7EDF5", "#33567A"),
+    "passed":      ("#E5F2E7", "#3E7A46"),
+    "failed":      ("#F9E5E4", "#B2453C"),
+    "scope":       ("#FBF7EA", "#B49B55"),
+    "rival":       ("#F1F1F1", "#8A8A8A"),
+    "warn":        ("#FBF1DC", "#9C6B14"),
+    "fail":        ("#F9E5E4", "#B2453C"),
+    "covered":     ("#F1F1F1", "#8A8A8A"),
+}
+
+
+def _fill(role: str) -> str:
+    f, c = _FILL[role]
+    return f'fillcolor="{f}", color="{c}"'
+
+
+def _prelude(name: str, rankdir: str, directed: bool = True) -> list[str]:
+    """The shared style header every DOT view opens with."""
+    kw = "digraph" if directed else "graph"
+    return [
+        f"{kw} {name} {{",
+        f'  graph [rankdir={rankdir}, bgcolor="transparent", fontname="Helvetica", '
+        'fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];',
+        '  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", '
+        f'color="#33567A", fillcolor="#F2F6F9", fontcolor="{_INK}", penwidth=1.1, '
+        'margin="0.16,0.1"];',
+        '  edge [fontname="Helvetica", fontsize=10, color="#7B909F", '
+        'fontcolor="#0F6E6E", arrowsize=0.7];',
+    ]
+
+
+def _wrap(s, width: int = 18) -> str:
+    """Escape a label and wrap it onto lines of at most `width` characters,
+    breaking at spaces (a longer single word stays whole). Wrapping happens
+    after escaping, and lines join with a literal backslash-n, DOT's in-label
+    newline, so nodes stay narrow enough for a documentation column."""
+    text = _esc(s)
+    if not text:
+        return ""
+    lines, cur = [], ""
+    for word in text.split(" "):
+        if not cur:
+            cur = word
+        elif len(cur) + 1 + len(word) <= width:
+            cur += " " + word
+        else:
+            lines.append(cur)
+            cur = word
+    if cur:
+        lines.append(cur)
+    return "\\n".join(lines)
+
+
 def _nomological_net(T: dict) -> str:
-    lines = ["digraph nomological_net {", "  rankdir=LR;", "  node [shape=box, style=rounded];"]
+    lines = _prelude("nomological_net", "LR")
     for c in _list(T, "constructs"):
-        lines.append(f'  "{_esc(c.get("id"))}" [label="{_esc(c.get("label"))}"];')
+        lines.append(f'  "{_esc(c.get("id"))}" [label="{_wrap(c.get("label"))}", {_fill("construct")}];')
     for p in _list(T, "propositions"):
         frm, to, rel = _esc(p.get("from")), _esc(p.get("to")), _esc(p.get("relation"))
         lines.append(f'  "{frm}" -> "{to}" [label="{rel}"];')
@@ -41,13 +101,13 @@ def _nomological_net(T: dict) -> str:
 
 
 def _provenance(T: dict) -> str:
-    lines = ["digraph provenance {", "  rankdir=TB;", "  node [shape=box];"]
+    lines = _prelude("provenance", "TB")
     steps = _list(T, "provenance")
     for i, s in enumerate(steps, start=1):
         action = str(s.get("action", "") or "")
         detail = str(s.get("detail", "") or "")
-        label = f"{action}: {detail}" if detail.strip() else action
-        lines.append(f'  "n{i}" [label="{_esc(label)}"];')
+        label = _esc(action) + ("\\n" + _wrap(detail, 26) if detail.strip() else "")
+        lines.append(f'  "n{i}" [label="{label}"];')
     for i in range(1, len(steps)):
         lines.append(f'  "n{i}" -> "n{i + 1}";')
     lines.append("}")
@@ -67,69 +127,85 @@ def _development_roadmap(T: dict) -> str:
     from .rigor import check as _check
     rep = _check(T)
     todo = [it for it in rep["items"] if it["status"] != "pass"]
-    lines = ["digraph development_roadmap {", "  rankdir=TB;", "  node [shape=box];"]
+    lines = _prelude("development_roadmap", "TB")
     if not todo:
-        lines.append('  "all_checks_pass" [label="all checks pass"];')
+        lines.append(f'  "all_checks_pass" [label="all checks pass", {_fill("passed")}];')
     else:
         for it in todo:
-            lines.append(f'  "{_esc(it["id"])}" [label="{_esc(it["id"])} ({it["status"]})"];')
+            iid = _esc(it["id"])
+            lines.append(f'  "{iid}" [label="{iid}\\n{it["status"]}", {_fill(it["status"])}];')
+        # Invisible edges chain the items into one column, so a long to-do list
+        # grows downwards instead of into an ever-wider row.
+        for a, b in zip(todo, todo[1:], strict=False):
+            lines.append(f'  "{_esc(a["id"])}" -> "{_esc(b["id"])}" [style=invis];')
     lines.append("}")
     return "\n".join(lines) + "\n"
 
 
 def _pipeline(T: dict) -> str:
-    lines = ["digraph pipeline {", "  rankdir=LR;", "  node [shape=box];"]
+    lines = _prelude("pipeline", "LR")
     for p in _list(T, "predictions"):
-        lines.append(f'  "{_esc(p.get("id"))}" [label="{_esc(p.get("type"))}"];')
+        pid = _esc(p.get("id"))
+        lines.append(f'  "{pid}" [label="{pid}\\n{_esc(p.get("type"))}", {_fill("prediction")}];')
     for t in _list(T, "test_outcomes"):
         rid = f'result_{t.get("prediction_id")}'
-        passed = "true" if t.get("passed") is True else "false"
-        lines.append(f'  "{_esc(rid)}" [label="passed={passed}"];')
+        role = "passed" if t.get("passed") is True else "failed"
+        lines.append(f'  "{_esc(rid)}" [label="{role}", {_fill(role)}];')
         lines.append(f'  "{_esc(t.get("prediction_id"))}" -> "{_esc(rid)}";')
     lines.append("}")
     return "\n".join(lines) + "\n"
 
 
 def _context(T: dict) -> str:
-    lines = ["digraph context {", "  rankdir=LR;", "  node [shape=box, style=rounded];"]
-    lines.append(f'  "theory" [shape=ellipse, label="{_esc(T.get("title"))}"];')
+    lines = _prelude("context", "LR")
+    lines.append(f'  "theory" [shape=ellipse, label="{_wrap(T.get("title"), 20)}", '
+                 f'fillcolor="{_INK}", color="{_INK}", fontcolor="#FFFFFF"];')
     for c in _list(T, "constructs"):
         cid = _esc(c.get("id"))
-        lines.append(f'  "{cid}" [label="{_esc(c.get("label"))}"];')
+        lines.append(f'  "{cid}" [label="{_wrap(c.get("label"))}", {_fill("construct")}];')
         lines.append(f'  "theory" -> "{cid}";')
     for i, bc in enumerate(_as_list(T.get("boundary_conditions")), start=1):
-        lines.append(f'  "scope{i}" [shape=note, label="{_esc(bc)}"];')
+        lines.append(f'  "scope{i}" [shape=note, style="filled", label="{_wrap(bc)}", {_fill("scope")}];')
         lines.append(f'  "scope{i}" -> "theory" [style=dotted, label="holds within"];')
     for a in _list(T, "alternatives"):
         aid = _esc(a.get("id"))
-        lines.append(f'  "{aid}" [shape=box, style=dashed, label="{_esc(a.get("label"))}"];')
+        lines.append(f'  "{aid}" [style="rounded,filled,dashed", '
+                     f'label="{_wrap(a.get("label"))}", {_fill("rival")}];')
         lines.append(f'  "theory" -> "{aid}" [style=dashed, label="contrasts with"];')
     lines.append("}")
     return "\n".join(lines) + "\n"
 
 
+def _cluster(lines: list[str], key: str, title: str) -> None:
+    lines.append(f"  subgraph cluster_{key} {{")
+    lines.append(f'    label="{title}";')
+    lines.append('    style="rounded";')
+    lines.append('    color="#C4D1D9";')
+    lines.append('    fontcolor="#5B7285";')
+
+
 def _workflow(T: dict) -> str:
-    lines = ["digraph workflow {", "  rankdir=LR;", "  node [shape=box];"]
-    lines.append("  subgraph cluster_build {")
-    lines.append('    label="building";')
+    lines = _prelude("workflow", "LR")
+    _cluster(lines, "build", "building")
     for c in _list(T, "constructs"):
-        lines.append(f'    "{_esc(c.get("id"))}" [label="{_esc(c.get("label"))}"];')
+        lines.append(f'    "{_esc(c.get("id"))}" '
+                     f'[label="{_wrap(c.get("label"), 16)}", {_fill("construct")}];')
     lines.append("  }")
-    lines.append("  subgraph cluster_relate {")
-    lines.append('    label="propositions";')
+    _cluster(lines, "relate", "propositions")
     for p in _list(T, "propositions"):
-        lines.append(f'    "prop_{_esc(p.get("id"))}" [label="{_esc(p.get("relation"))}"];')
+        pid = _esc(p.get("id"))
+        lines.append(f'    "prop_{pid}" [label="{pid}\\n{_esc(p.get("relation"))}", {_fill("proposition")}];')
     lines.append("  }")
-    lines.append("  subgraph cluster_predict {")
-    lines.append('    label="predictions";')
+    _cluster(lines, "predict", "predictions")
     for p in _list(T, "predictions"):
-        lines.append(f'    "pred_{_esc(p.get("id"))}" [label="{_esc(p.get("type"))}"];')
+        pid = _esc(p.get("id"))
+        lines.append(f'    "pred_{pid}" [label="{pid}\\n{_esc(p.get("type"))}", {_fill("prediction")}];')
     lines.append("  }")
-    lines.append("  subgraph cluster_test {")
-    lines.append('    label="testing";')
+    _cluster(lines, "test", "testing")
     for t in _list(T, "test_outcomes"):
-        passed = "true" if t.get("passed") is True else "false"
-        lines.append(f'    "outcome_{_esc(t.get("prediction_id"))}" [label="passed={passed}"];')
+        pid = _esc(t.get("prediction_id"))
+        role = "passed" if t.get("passed") is True else "failed"
+        lines.append(f'    "outcome_{pid}" [label="{pid}\\n{role}", {_fill(role)}];')
     lines.append("  }")
     for p in _list(T, "propositions"):
         lines.append(f'  "{_esc(p.get("from"))}" -> "prop_{_esc(p.get("id"))}";')

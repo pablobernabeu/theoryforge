@@ -292,7 +292,9 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
   nodes <- character(0)
   for (e in edges) nodes <- c(nodes, e$a, e$b)
   nodes <- sort(unique(nodes), method = "radix")
-  lines <- c(sprintf("graph %s {", name), "  node [shape=ellipse];")
+  role <- if (identical(name, "keyword_cooccurrence")) "construct" else "prediction"
+  lines <- c(.tf_prelude(name, "LR", directed = FALSE),
+             sprintf('  node [shape=ellipse, style="filled", %s];', .tf_fill(role)))
   for (n in nodes) {
     lines <- c(lines, sprintf('  "%s";', .tf_lit_esc(n)))
   }
@@ -305,14 +307,22 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
   paste0(paste(lines, collapse = "\n"), "\n")
 }
 
+# Theme colours track the landscape statuses: an untouched front is teal (an
+# opportunity), a crowded one amber (a redundancy risk), a covered one grey.
+.tf_THEME_ROLE <- c(under_theorised = "construct", crowded = "proposition",
+                    covered = "covered")
+
 # theme_landscape diagram from a landscape() result.
 .tf_lit_theme_landscape <- function(ls) {
-  lines <- c("digraph theme_landscape {", "  rankdir=LR;", "  node [shape=box];")
+  lines <- .tf_prelude("theme_landscape", "LR")
   for (th in ls$themes) {
     kws <- unlist(th$keywords, use.names = FALSE)
-    label <- sprintf("%s: %s (%s)", th$id, paste(kws, collapse = ", "), th$status)
-    lines <- c(lines, sprintf('  "%s" [label="%s"];',
-                              .tf_lit_esc(th$id), .tf_lit_esc(label)))
+    label <- paste0(.tf_lit_esc(th$id), "\\n",
+                    .tf_wrap(paste(kws, collapse = ", "), 24L),
+                    "\\n(", th$status, ")")
+    lines <- c(lines, sprintf('  "%s" [label="%s", %s];',
+                              .tf_lit_esc(th$id), label,
+                              .tf_fill(.tf_THEME_ROLE[[th$status]])))
   }
   # Collect alternatives in first-seen order across themes.
   alt_ids <- character(0)
@@ -322,10 +332,11 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
     }
   }
   for (a in alt_ids) {
-    lines <- c(lines, sprintf('  "%s" [label="%s", shape=ellipse];',
-                              .tf_lit_esc(a), .tf_lit_esc(a)))
+    lines <- c(lines, sprintf('  "%s" [label="%s", shape=ellipse, %s];',
+                              .tf_lit_esc(a), .tf_wrap(a), .tf_fill("rival")))
   }
-  lines <- c(lines, '  "focal" [label="focal", shape=ellipse, style=bold];')
+  lines <- c(lines, sprintf('  "focal" [label="focal", shape=ellipse, fillcolor="%s", color="%s", fontcolor="#FFFFFF"];',
+                            .tf_INK, .tf_INK))
   for (a in alt_ids) {
     for (th in ls$themes) {
       th_alts <- unlist(th$alternatives, use.names = FALSE)

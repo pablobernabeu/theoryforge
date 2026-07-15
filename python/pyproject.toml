@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "theoryforge"
-version = "0.3.0"
+version = "0.4.0"
 description = "Systematic theory development."
 readme = "README.md"
 license = "MIT"

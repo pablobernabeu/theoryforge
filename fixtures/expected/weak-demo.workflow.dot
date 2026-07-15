@@ -1,21 +1,34 @@
 digraph workflow {
-  rankdir=LR;
-  node [shape=box];
+  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
   subgraph cluster_build {
     label="building";
-    "k_motivation" [label="Motivation"];
-    "k_drive" [label="Drive"];
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "k_motivation" [label="Motivation", fillcolor="#E4F1F1", color="#1E7B7B"];
+    "k_drive" [label="Drive", fillcolor="#E4F1F1", color="#1E7B7B"];
   }
   subgraph cluster_relate {
     label="propositions";
-    "prop_q1" [label="associates"];
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "prop_q1" [label="q1\nassociates", fillcolor="#FBF1DC", color="#9C6B14"];
   }
   subgraph cluster_predict {
     label="predictions";
-    "pred_w1" [label="existence"];
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "pred_w1" [label="w1\nexistence", fillcolor="#E7EDF5", color="#33567A"];
   }
   subgraph cluster_test {
     label="testing";
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
   }
   "k_motivation" -> "prop_q1";
 }

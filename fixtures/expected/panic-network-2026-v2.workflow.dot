@@ -1,29 +1,42 @@
 digraph workflow {
-  rankdir=LR;
-  node [shape=box];
+  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
   subgraph cluster_build {
     label="building";
-    "c_arousal" [label="Physiological arousal"];
-    "c_perceived_threat" [label="Perceived threat"];
-    "c_avoidance" [label="Avoidance behaviour"];
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "c_arousal" [label="Physiological\narousal", fillcolor="#E4F1F1", color="#1E7B7B"];
+    "c_perceived_threat" [label="Perceived threat", fillcolor="#E4F1F1", color="#1E7B7B"];
+    "c_avoidance" [label="Avoidance\nbehaviour", fillcolor="#E4F1F1", color="#1E7B7B"];
   }
   subgraph cluster_relate {
     label="propositions";
-    "prop_p1" [label="increases"];
-    "prop_p2" [label="increases"];
-    "prop_p3" [label="causes"];
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "prop_p1" [label="p1\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
+    "prop_p2" [label="p2\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
+    "prop_p3" [label="p3\ncauses", fillcolor="#FBF1DC", color="#9C6B14"];
   }
   subgraph cluster_predict {
     label="predictions";
-    "pred_pred1" [label="point"];
-    "pred_pred2" [label="interval"];
-    "pred_pred3" [label="directional"];
-    "pred_pred4" [label="point"];
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "pred_pred1" [label="pred1\npoint", fillcolor="#E7EDF5", color="#33567A"];
+    "pred_pred2" [label="pred2\ninterval", fillcolor="#E7EDF5", color="#33567A"];
+    "pred_pred3" [label="pred3\ndirectional", fillcolor="#E7EDF5", color="#33567A"];
+    "pred_pred4" [label="pred4\npoint", fillcolor="#E7EDF5", color="#33567A"];
   }
   subgraph cluster_test {
     label="testing";
-    "outcome_pred1" [label="passed=true"];
-    "outcome_pred4" [label="passed=true"];
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "outcome_pred1" [label="pred1\npassed", fillcolor="#E5F2E7", color="#3E7A46"];
+    "outcome_pred4" [label="pred4\npassed", fillcolor="#E5F2E7", color="#3E7A46"];
   }
   "c_arousal" -> "prop_p1";
   "c_perceived_threat" -> "prop_p2";

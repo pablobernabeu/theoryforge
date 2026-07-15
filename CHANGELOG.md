@@ -6,6 +6,27 @@ version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-16
+
+### Changed
+- The DOT diagram views are redesigned for content and legibility, identically
+  in both packages. Every view now opens with a shared Meridian style prelude
+  (Helvetica type, role-coloured rounded nodes: teal constructs, amber
+  propositions, navy predictions, green/red outcomes, paper scopes, grey
+  rivals); labels are word-wrapped so nodes stay narrow; workflow and pipeline
+  nodes carry the id with the relation or type rather than a bare word; the
+  development roadmap chains its items into a single column instead of an
+  ever-wider row; and the theme landscape colours themes by status. Every view
+  now fits a documentation column without horizontal scrolling. The IR remains
+  byte-identical across R and Python; goldens, tests and the specification are
+  updated (API_SPEC.md).
+
+### Documentation
+- The pages that print or render the diagram views show the new output, and the
+  remaining code blocks without visible results (the literature article's
+  OpenAlex fetch and scopusflow hand-off, and the Python workflow page's
+  provenance, report, preregistration and dossier) now show them.
+
 ## [0.3.0] - 2026-07-15
 
 ### Added

@@ -451,13 +451,13 @@ footer :not(pre) > code { background: rgba(255, 255, 255, .10); color: #E7EDF0; 
 // currentColor text rule above: in dark mode that would paint light text on
 // the white canvas. Present them as a rounded white card at the diagram's own
 // natural size, so a four-node graph stays small and its type stays at
-// Graphviz's legible default; a diagram wider than the column scrolls inside
-// the figure (the same convention wide code blocks follow) rather than being
-// squashed to fit.
+// Graphviz's legible default; the IR wraps its labels and stacks its
+// layouts so every view fits a documentation column; should one still
+// overflow, it shrinks to the column rather than forcing a scrollbar.
 .tf-figure.tf-diagram { overflow-x: auto; }
 .tf-figure.tf-diagram svg {
   width: auto;
-  max-width: none;
+  max-width: 100%;
   background: #fff;
   border-radius: 10px;
   padding: 10px;

@@ -66,8 +66,8 @@ def test_new_diagrams(panic_path, weak_path):
     rm_ok = tf.read(panic_path).diagram("development_roadmap")
     assert '"all_checks_pass"' in rm_ok
     rm_weak = tf.read(weak_path).diagram("development_roadmap")
-    assert '"falsifiability (fail)"' in rm_weak
+    assert '"falsifiability" [label="falsifiability\\nfail"' in rm_weak
     pipe = tf.read(panic_path).diagram("pipeline")
     assert pipe.startswith("digraph pipeline {\n")
-    assert '"result_pred1" [label="passed=true"];' in pipe
+    assert '"result_pred1" [label="passed", fillcolor="#E5F2E7", color="#3E7A46"];' in pipe
     assert '"pred1" -> "result_pred1";' in pipe

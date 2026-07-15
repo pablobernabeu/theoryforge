@@ -1,10 +1,10 @@
 ## Submission
 
-This is a new submission of theoryforge 0.3.0.
+This is a new submission of theoryforge 0.4.0.
 
 ## Test environments
 
-* Local: Windows 11, R 4.6.1 (R CMD check --as-cran, 2026-07-15)
+* Local: Windows 11, R 4.6.1 (R CMD check --as-cran, 2026-07-16)
 * GitHub Actions: ubuntu-latest and windows-latest, each on R release and
   R devel (R CMD check --as-cran)
 

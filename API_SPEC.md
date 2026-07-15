@@ -1,4 +1,4 @@
-# theoryforge: API and parity specification (v0.3.0, P0)
+# theoryforge: API and parity specification (v0.4.0, P0)
 
 This document is the contract that keeps the R and Python packages behaviourally identical.
 Both implementations MUST follow the algorithms below exactly. CI diffs their outputs against it.
@@ -96,23 +96,39 @@ Each item returns `{id, status ∈ {pass,warn,fail}, score ∈ [0,1], weight, se
 
 `tf_diagram(theory, type)` / `theory.diagram(type)` supports `type ∈ {nomological_net, provenance, causal_dag}` in P0.
 
+Every DOT view opens with a shared, byte-identical style prelude (the Meridian
+palette and Helvetica type, so a renderer needs no styling of its own):
+```
+digraph <name> {
+  graph [rankdir=<LR|TB>, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+```
+(undirected lit graphs open `graph <name> {` with the same three attribute
+lines). Role colours as `fillcolor="<fill>", color="<border>"` pairs: construct
+#E4F1F1/#1E7B7B, proposition #FBF1DC/#9C6B14, prediction #E7EDF5/#33567A,
+passed #E5F2E7/#3E7A46, failed #F9E5E4/#B2453C, scope #FBF7EA/#B49B55,
+rival/covered #F1F1F1/#8A8A8A; the theory/focal node is #12283A filled with
+white text. Node labels are escaped then greedily word-wrapped (width 18 unless
+stated; a longer single word stays whole), lines joined with a literal
+backslash-n.
+
 **nomological_net** (Graphviz DOT):
 ```
-digraph nomological_net {
-  rankdir=LR;
-  node [shape=box, style=rounded];
-  "<c.id>" [label="<c.label>"];      # one line per construct, file order
-  "<p.from>" -> "<p.to>" [label="<p.relation>"];   # one line per proposition, file order
+<prelude>
+  "<c.id>" [label="<wrap(c.label)>", fillcolor="#E4F1F1", color="#1E7B7B"];   # per construct, file order
+  "<p.from>" -> "<p.to>" [label="<p.relation>"];   # per proposition, file order
 }
 ```
 (Each content line indented 2 spaces; trailing newline after `}`.)
 
-**provenance** (DOT). Node `n{i}` for the i-th step (1-based), `label = action` or `action + ": " + detail` when detail nonempty; then chain edges `n{i} -> n{i+1}`:
+**provenance** (DOT). Node `n{i}` for the i-th step (1-based), `label = esc(action)` or `esc(action) + "
+" + wrap(detail, 26)` when detail nonempty; then chain edges `n{i} -> n{i+1}`:
 ```
-digraph provenance {
-  rankdir=TB;
-  node [shape=box];
-  "n1" [label="tf_construct: Registered three constructs."];
+<prelude, rankdir=TB>
+  "n1" [label="tf_construct
+Registered three
+constructs."];
   ...
   "n1" -> "n2";
   ...
@@ -221,43 +237,43 @@ Format severity/risk with `fmt(x)`: render to 3 decimals, strip trailing zeros, 
 
 ## 12. New diagram types (byte-identical)
 
-**development_roadmap** (DOT). One node per checklist item whose status ≠ pass (checklist order). If none, a single `all_checks_pass` node:
+**development_roadmap** (DOT). One node per checklist item whose status ≠ pass (checklist order), coloured by status, then invisible edges chaining consecutive items into a single column. If none, a single `all_checks_pass` node:
 ```
-digraph development_roadmap {
-  rankdir=TB;
-  node [shape=box];
-  "<item id>" [label="<item id> (<status>)"];
+<prelude, rankdir=TB>
+  "<item id>" [label="<item id>
+<status>", <fill(status)>];
+  "<item i>" -> "<item i+1>" [style=invis];
 }
 ```
-(When all items pass: a single line `  "all_checks_pass" [label="all checks pass"];`.)
+(When all items pass: a single line `  "all_checks_pass" [label="all checks pass", fillcolor="#E5F2E7", color="#3E7A46"];`.)
 
 **pipeline** (DOT). Prediction nodes (file order), then for each test_outcome (file order) a result node line followed by its edge:
 ```
-digraph pipeline {
-  rankdir=LR;
-  node [shape=box];
-  "<pred.id>" [label="<pred.type>"];
-  "result_<to.prediction_id>" [label="passed=<true|false>"];
+<prelude, rankdir=LR>
+  "<pred.id>" [label="<pred.id>
+<pred.type>", <fill(prediction)>];
+  "result_<to.prediction_id>" [label="<passed|failed>", <fill(passed|failed)>];
   "<to.prediction_id>" -> "result_<to.prediction_id>";
 }
 ```
 
 **context** (DOT). A `theory` hub (ellipse, labelled by title); each construct (file order) as a node with a `theory -> <c.id>` edge; each top-level `boundary_conditions` entry (file order) as a `scope<i>` note node with a dotted `scope<i> -> theory` edge labelled `holds within`; each alternative (file order) as a dashed node with a dashed `theory -> <alt.id>` edge labelled `contrasts with`:
 ```
-digraph context {
-  rankdir=LR;
-  node [shape=box, style=rounded];
-  "theory" [shape=ellipse, label="<title>"];
-  "<c.id>" [label="<c.label>"];
+<prelude, rankdir=LR>
+  "theory" [shape=ellipse, label="<wrap(title, 20)>", fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
+  "<c.id>" [label="<wrap(c.label)>", <fill(construct)>];
   "theory" -> "<c.id>";
-  "scope<i>" [shape=note, label="<boundary condition>"];
+  "scope<i>" [shape=note, style="filled", label="<wrap(boundary condition)>", <fill(scope)>];
   "scope<i>" -> "theory" [style=dotted, label="holds within"];
-  "<alt.id>" [shape=box, style=dashed, label="<alt.label>"];
+  "<alt.id>" [style="rounded,filled,dashed", label="<wrap(alt.label)>", <fill(rival)>];
   "theory" -> "<alt.id>" [style=dashed, label="contrasts with"];
 }
 ```
 
-**workflow** (DOT). Four ordered subgraph clusters then the edges. Clusters: `cluster_build` (constructs, `"<c.id>"` labelled by `<c.label>`), `cluster_relate` (`"prop_<p.id>"` labelled by `<relation>`), `cluster_predict` (`"pred_<pred.id>"` labelled by `<type>`), `cluster_test` (`"outcome_<prediction_id>"` labelled `passed=<true|false>`). Edges, in order: for each proposition `"<from>" -> "prop_<p.id>"`; for each prediction and each of its `derives_from` entries `"prop_<src>" -> "pred_<pred.id>"`; for each test_outcome `"pred_<pid>" -> "outcome_<pid>"`.
+**workflow** (DOT). Four ordered subgraph clusters then the edges. Every cluster opens with `label`, `style="rounded"`, `color="#C4D1D9"`, `fontcolor="#5B7285"`. Clusters: `cluster_build` (constructs, `"<c.id>"` labelled `wrap(c.label, 16)`, construct fill), `cluster_relate` (`"prop_<p.id>"` labelled `<p.id>
+<relation>`, proposition fill), `cluster_predict` (`"pred_<pred.id>"` labelled `<pred.id>
+<type>`, prediction fill), `cluster_test` (`"outcome_<prediction_id>"` labelled `<prediction_id>
+<passed|failed>`, passed/failed fill). Edges, in order: for each proposition `"<from>" -> "prop_<p.id>"`; for each prediction and each of its `derives_from` entries `"prop_<src>" -> "pred_<pred.id>"`; for each test_outcome `"pred_<pid>" -> "outcome_<pid>"`.
 
 **venn** (SVG). The first up to three constructs (file order) as sets of their `boundary_conditions`, drawn at fixed integer coordinates (`viewBox="0 0 380 300"`). Region labels are set cardinalities. Layout: n=1 one circle at cx=190; n=2 two circles at cx=150,230 (counts A−B, A∩B, B−A); n=3 three circles at (150,135),(230,135),(190,195) with the seven region counts. Byte-identical because every coordinate and count is an integer.
 
@@ -313,8 +329,8 @@ Compute `lm = litmap(corpus, min_link)`. Using the §6 tokeniser:
 
 **keyword_cooccurrence** / **co_citation**. Undirected, nodes = endpoints appearing in the edge list (sorted), edges in list order:
 ```
-graph <type> {
-  node [shape=ellipse];
+<prelude (undirected), rankdir=LR>
+  node [shape=ellipse, style="filled", <fill(construct for keyword_cooccurrence, prediction for co_citation)>];
   "<node>";
   "<a>" -- "<b>" [label="<count>"];
 }
@@ -322,12 +338,12 @@ graph <type> {
 
 **theme_landscape** (from a `landscape` result). Theme nodes (litmap order), then alternative nodes in first-seen order across themes, then the focal node, then edges (alt→theme in alt-first-seen × theme order, then focal→theme in theme order):
 ```
-digraph theme_landscape {
-  rankdir=LR;
-  node [shape=box];
-  "theme_1" [label="theme_1: <keywords joined ', '> (<status>)"];
-  "<altid>" [label="<altid>", shape=ellipse];
-  "focal" [label="focal", shape=ellipse, style=bold];
+<prelude, rankdir=LR>
+  "theme_1" [label="theme_1
+<wrap(keywords joined ', ', 24)>
+(<status>)", <fill: under_theorised=construct, crowded=proposition, covered=covered>];
+  "<altid>" [label="<wrap(altid)>", shape=ellipse, <fill(rival)>];
+  "focal" [label="focal", shape=ellipse, fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
   "<altid>" -> "theme_k";
   "focal" -> "theme_k";
 }

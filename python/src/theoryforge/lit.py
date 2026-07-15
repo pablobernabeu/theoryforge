@@ -139,8 +139,11 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
 
 
 def _undirected(name: str, edges: list[dict]) -> str:
+    from .diagram import _fill, _prelude
     nodes = sorted({n for e in edges for n in (e["a"], e["b"])})
-    lines = [f"graph {name} {{", "  node [shape=ellipse];"]
+    role = "construct" if name == "keyword_cooccurrence" else "prediction"
+    lines = _prelude(name, "LR", directed=False)
+    lines.append(f'  node [shape=ellipse, style="filled", {_fill(role)}];')
     for n in nodes:
         lines.append(f'  "{_esc(n)}";')
     for e in edges:
@@ -149,11 +152,17 @@ def _undirected(name: str, edges: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
+# Theme colours track the landscape statuses: an untouched front is teal (an
+# opportunity), a crowded one amber (a redundancy risk), a covered one grey.
+_THEME_ROLE = {"under_theorised": "construct", "crowded": "proposition", "covered": "covered"}
+
+
 def _theme_landscape(ls: dict) -> str:
-    lines = ["digraph theme_landscape {", "  rankdir=LR;", "  node [shape=box];"]
+    from .diagram import _INK, _fill, _prelude, _wrap
+    lines = _prelude("theme_landscape", "LR")
     for th in ls["themes"]:
-        label = f'{th["id"]}: {", ".join(th["keywords"])} ({th["status"]})'
-        lines.append(f'  "{_esc(th["id"])}" [label="{_esc(label)}"];')
+        label = f'{_esc(th["id"])}\\n{_wrap(", ".join(th["keywords"]), 24)}\\n({th["status"]})'
+        lines.append(f'  "{_esc(th["id"])}" [label="{label}", {_fill(_THEME_ROLE[th["status"]])}];')
     # collect alternatives in first-seen order across themes
     alt_ids: list[str] = []
     for th in ls["themes"]:
@@ -161,8 +170,9 @@ def _theme_landscape(ls: dict) -> str:
             if a not in alt_ids:
                 alt_ids.append(a)
     for a in alt_ids:
-        lines.append(f'  "{_esc(a)}" [label="{_esc(a)}", shape=ellipse];')
-    lines.append('  "focal" [label="focal", shape=ellipse, style=bold];')
+        lines.append(f'  "{_esc(a)}" [label="{_wrap(a)}", shape=ellipse, {_fill("rival")}];')
+    lines.append(f'  "focal" [label="focal", shape=ellipse, fillcolor="{_INK}", '
+                 f'color="{_INK}", fontcolor="#FFFFFF"];')
     for a in alt_ids:
         for th in ls["themes"]:
             if a in th["alternatives"]:

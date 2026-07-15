@@ -50,7 +50,8 @@ test_that("new diagram types are byte-identical to the golden files", {
 test_that("development_roadmap collapses to a single node when all checks pass", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   out <- tf_diagram(theory, "development_roadmap")
-  expect_true(grepl('"all_checks_pass" [label="all checks pass"];', out, fixed = TRUE))
+  expect_true(grepl('"all_checks_pass" [label="all checks pass", fillcolor="#E5F2E7", color="#3E7A46"];',
+                    out, fixed = TRUE))
 })
 
 test_that("tf_diagram rejects unknown types", {
@@ -58,10 +59,13 @@ test_that("tf_diagram rejects unknown types", {
   expect_error(tf_diagram(theory, "mindmap"), "unknown diagram type")
 })
 
-test_that("DOT labels escape backslash then double-quote", {
+test_that("DOT labels escape backslash then double-quote, then wrap", {
   theory <- list(constructs = list(
     list(id = "x", label = 'a "quoted" \\ slash', definition = "d")
   ))
   out <- tf_diagram(theory, "nomological_net")
-  expect_true(grepl('label="a \\"quoted\\" \\\\ slash"', out, fixed = TRUE))
+  # Escaped first (backslashes double, quotes gain a backslash), wrapped
+  # second: the escaped text passes the 18-character line width, so "slash"
+  # moves to a new DOT label line (a literal backslash-n).
+  expect_true(grepl('label="a \\"quoted\\" \\\\\\nslash"', out, fixed = TRUE))
 })

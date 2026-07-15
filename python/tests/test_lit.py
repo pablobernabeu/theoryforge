@@ -69,7 +69,15 @@ def test_litmap_mixed_case_keywords_sort_by_codepoint():
     assert lm["keyword_cooccurrence"] == [{"a": "Zeta", "b": "alpha", "count": 2}]
     assert lm["themes"][0]["keywords"] == ["Zeta", "alpha"]
     assert tf.lit_diagram(lm, "keyword_cooccurrence") == (
-        'graph keyword_cooccurrence {\n  node [shape=ellipse];\n'
+        'graph keyword_cooccurrence {\n'
+        '  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", '
+        'fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];\n'
+        '  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", '
+        'color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, '
+        'margin="0.16,0.1"];\n'
+        '  edge [fontname="Helvetica", fontsize=10, color="#7B909F", '
+        'fontcolor="#0F6E6E", arrowsize=0.7];\n'
+        '  node [shape=ellipse, style="filled", fillcolor="#E4F1F1", color="#1E7B7B"];\n'
         '  "Zeta";\n  "alpha";\n'
         '  "Zeta" -- "alpha" [label="2"];\n}\n'
     )

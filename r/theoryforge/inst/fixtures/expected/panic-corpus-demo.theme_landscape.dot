@@ -1,13 +1,14 @@
 digraph theme_landscape {
-  rankdir=LR;
-  node [shape=box];
-  "theme_1" [label="theme_1: appraisal, catastrophic misinterpretation (covered)"];
-  "theme_2" [label="theme_2: arousal, interoception (crowded)"];
-  "theme_3" [label="theme_3: avoidance, exposure (covered)"];
-  "theme_4" [label="theme_4: genetics, heritability (under_theorised)"];
-  "alt_cognitive" [label="alt_cognitive", shape=ellipse];
-  "alt_biological" [label="alt_biological", shape=ellipse];
-  "focal" [label="focal", shape=ellipse, style=bold];
+  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+  "theme_1" [label="theme_1\nappraisal, catastrophic\nmisinterpretation\n(covered)", fillcolor="#F1F1F1", color="#8A8A8A"];
+  "theme_2" [label="theme_2\narousal, interoception\n(crowded)", fillcolor="#FBF1DC", color="#9C6B14"];
+  "theme_3" [label="theme_3\navoidance, exposure\n(covered)", fillcolor="#F1F1F1", color="#8A8A8A"];
+  "theme_4" [label="theme_4\ngenetics, heritability\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "alt_cognitive" [label="alt_cognitive", shape=ellipse, fillcolor="#F1F1F1", color="#8A8A8A"];
+  "alt_biological" [label="alt_biological", shape=ellipse, fillcolor="#F1F1F1", color="#8A8A8A"];
+  "focal" [label="focal", shape=ellipse, fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
   "alt_cognitive" -> "theme_1";
   "alt_biological" -> "theme_2";
   "focal" -> "theme_2";

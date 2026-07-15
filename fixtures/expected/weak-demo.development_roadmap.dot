@@ -1,14 +1,24 @@
 digraph development_roadmap {
-  rankdir=TB;
-  node [shape=box];
-  "falsifiability" [label="falsifiability (fail)"];
-  "precision" [label="precision (warn)"];
-  "risk_severity" [label="risk_severity (warn)"];
-  "construct_clarity" [label="construct_clarity (warn)"];
-  "scope" [label="scope (warn)"];
-  "logical_why" [label="logical_why (warn)"];
-  "causal_testability" [label="causal_testability (warn)"];
-  "diagnosticity" [label="diagnosticity (warn)"];
-  "formalisation" [label="formalisation (warn)"];
-  "derivation_chain" [label="derivation_chain (fail)"];
+  graph [rankdir=TB, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+  "falsifiability" [label="falsifiability\nfail", fillcolor="#F9E5E4", color="#B2453C"];
+  "precision" [label="precision\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
+  "risk_severity" [label="risk_severity\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
+  "construct_clarity" [label="construct_clarity\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
+  "scope" [label="scope\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
+  "logical_why" [label="logical_why\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
+  "causal_testability" [label="causal_testability\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
+  "diagnosticity" [label="diagnosticity\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
+  "formalisation" [label="formalisation\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
+  "derivation_chain" [label="derivation_chain\nfail", fillcolor="#F9E5E4", color="#B2453C"];
+  "falsifiability" -> "precision" [style=invis];
+  "precision" -> "risk_severity" [style=invis];
+  "risk_severity" -> "construct_clarity" [style=invis];
+  "construct_clarity" -> "scope" [style=invis];
+  "scope" -> "logical_why" [style=invis];
+  "logical_why" -> "causal_testability" [style=invis];
+  "causal_testability" -> "diagnosticity" [style=invis];
+  "diagnosticity" -> "formalisation" [style=invis];
+  "formalisation" -> "derivation_chain" [style=invis];
 }

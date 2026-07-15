@@ -1,21 +1,22 @@
 digraph context {
-  rankdir=LR;
-  node [shape=box, style=rounded];
-  "theory" [shape=ellipse, label="Network theory of panic disorder"];
-  "c_arousal" [label="Physiological arousal"];
+  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+  "theory" [shape=ellipse, label="Network theory of\npanic disorder", fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
+  "c_arousal" [label="Physiological\narousal", fillcolor="#E4F1F1", color="#1E7B7B"];
   "theory" -> "c_arousal";
-  "c_perceived_threat" [label="Perceived threat"];
+  "c_perceived_threat" [label="Perceived threat", fillcolor="#E4F1F1", color="#1E7B7B"];
   "theory" -> "c_perceived_threat";
-  "c_avoidance" [label="Avoidance behaviour"];
+  "c_avoidance" [label="Avoidance\nbehaviour", fillcolor="#E4F1F1", color="#1E7B7B"];
   "theory" -> "c_avoidance";
-  "scope1" [shape=note, label="adults"];
+  "scope1" [shape=note, style="filled", label="adults", fillcolor="#FBF7EA", color="#B49B55"];
   "scope1" -> "theory" [style=dotted, label="holds within"];
-  "scope2" [shape=note, label="non-clinical baseline"];
+  "scope2" [shape=note, style="filled", label="non-clinical\nbaseline", fillcolor="#FBF7EA", color="#B49B55"];
   "scope2" -> "theory" [style=dotted, label="holds within"];
-  "scope3" [shape=note, label="no beta-blocker medication"];
+  "scope3" [shape=note, style="filled", label="no beta-blocker\nmedication", fillcolor="#FBF7EA", color="#B49B55"];
   "scope3" -> "theory" [style=dotted, label="holds within"];
-  "alt_cognitive" [shape=box, style=dashed, label="Cognitive model of panic"];
+  "alt_cognitive" [style="rounded,filled,dashed", label="Cognitive model of\npanic", fillcolor="#F1F1F1", color="#8A8A8A"];
   "theory" -> "alt_cognitive" [style=dashed, label="contrasts with"];
-  "alt_biological" [shape=box, style=dashed, label="Biological model of panic"];
+  "alt_biological" [style="rounded,filled,dashed", label="Biological model\nof panic", fillcolor="#F1F1F1", color="#8A8A8A"];
   "theory" -> "alt_biological" [style=dashed, label="contrasts with"];
 }

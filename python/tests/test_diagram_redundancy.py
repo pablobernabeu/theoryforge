@@ -8,7 +8,8 @@ def test_nomological_net_format(panic_path):
     dot = tf.read(panic_path).diagram("nomological_net")
     assert dot.startswith("digraph nomological_net {\n")
     assert dot.endswith("}\n")
-    assert '  "c_arousal" [label="Physiological arousal"];' in dot
+    assert ('  "c_arousal" [label="Physiological\\narousal", '
+            'fillcolor="#E4F1F1", color="#1E7B7B"];') in dot
     assert '  "c_arousal" -> "c_perceived_threat" [label="increases"];' in dot
 
 
@@ -20,14 +21,15 @@ def test_causal_dag(panic_path):
 
 def test_provenance(panic_path):
     dot = tf.read(panic_path).diagram("provenance")
-    assert '"n1" [label="tf_construct: Registered three constructs."];' in dot
+    assert '"n1" [label="tf_construct\\nRegistered three\\nconstructs."];' in dot
     assert '"n1" -> "n2";' in dot
 
 
 def test_context(panic_path):
     dot = tf.read(panic_path).diagram("context")
     assert dot.startswith("digraph context {\n") and dot.endswith("}\n")
-    assert '"theory" [shape=ellipse, label="Network theory of panic disorder"];' in dot
+    assert ('"theory" [shape=ellipse, label="Network theory of\\npanic disorder", '
+            'fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];') in dot
     assert '"theory" -> "c_arousal";' in dot
     assert '"scope1" -> "theory" [style=dotted, label="holds within"];' in dot
     assert '"theory" -> "alt_cognitive" [style=dashed, label="contrasts with"];' in dot
@@ -36,7 +38,7 @@ def test_context(panic_path):
 def test_workflow(panic_path):
     dot = tf.read(panic_path).diagram("workflow")
     assert dot.startswith("digraph workflow {\n") and dot.endswith("}\n")
-    assert '"prop_p1" [label="increases"];' in dot
+    assert '"prop_p1" [label="p1\\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];' in dot
     assert '"prop_p1" -> "pred_pred1";' in dot   # pred1 derives_from p1
     assert '"pred_pred1" -> "outcome_pred1";' in dot
 

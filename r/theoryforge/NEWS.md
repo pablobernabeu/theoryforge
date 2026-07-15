@@ -1,3 +1,13 @@
+# theoryforge 0.4.0
+
+* The DOT diagram views are redesigned for content and legibility. Every view
+  opens with a shared Meridian style prelude (Helvetica type, role-coloured
+  rounded nodes); labels wrap so nodes stay narrow; workflow and pipeline nodes
+  carry the id with the relation or type rather than a bare word; the
+  development roadmap stacks its items in a single column; and the theme
+  landscape colours themes by status. Every view fits a documentation column.
+  The intermediate representation stays byte-identical to the Python twin's.
+
 # theoryforge 0.3.0
 
 * New `tf_render_diagram()` renders the digraph views without leaving R: a

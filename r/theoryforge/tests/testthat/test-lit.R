@@ -132,7 +132,15 @@ test_that("keyword sorting is codepoint-ordered regardless of locale", {
   expect_equal(unlist(lm$themes[[1]]$keywords), c("Zeta", "alpha"))
   expect_identical(
     tf_lit_diagram(lm, "keyword_cooccurrence"),
-    paste0('graph keyword_cooccurrence {\n  node [shape=ellipse];\n',
+    paste0('graph keyword_cooccurrence {\n',
+           '  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", ',
+           'fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];\n',
+           '  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", ',
+           'color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, ',
+           'margin="0.16,0.1"];\n',
+           '  edge [fontname="Helvetica", fontsize=10, color="#7B909F", ',
+           'fontcolor="#0F6E6E", arrowsize=0.7];\n',
+           '  node [shape=ellipse, style="filled", fillcolor="#E4F1F1", color="#1E7B7B"];\n',
            '  "Zeta";\n  "alpha";\n',
            '  "Zeta" -- "alpha" [label="2"];\n}\n')
   )

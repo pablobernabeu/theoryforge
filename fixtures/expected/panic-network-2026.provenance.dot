@@ -1,9 +1,10 @@
 digraph provenance {
-  rankdir=TB;
-  node [shape=box];
-  "n1" [label="tf_construct: Registered three constructs."];
-  "n2" [label="tf_proposition: Linked constructs into a feedback network."];
-  "n3" [label="tf_predict: Derived three predictions from the propositions."];
+  graph [rankdir=TB, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+  "n1" [label="tf_construct\nRegistered three\nconstructs."];
+  "n2" [label="tf_proposition\nLinked constructs into a\nfeedback network."];
+  "n3" [label="tf_predict\nDerived three predictions\nfrom the propositions."];
   "n1" -> "n2";
   "n2" -> "n3";
 }
