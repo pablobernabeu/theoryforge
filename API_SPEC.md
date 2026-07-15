@@ -1,4 +1,4 @@
-# theoryforge: API and parity specification (v0.2.0, P0)
+# theoryforge: API and parity specification (v0.3.0, P0)
 
 This document is the contract that keeps the R and Python packages behaviourally identical.
 Both implementations MUST follow the algorithms below exactly. CI diffs their outputs against it.
@@ -418,3 +418,14 @@ Writes a standalone Quarto report to `path` (forced to a `.qmd` suffix): a YAML 
 ## 25. osf_push(theory, token=None, node=None, filename=None, dry_run=True, base_url="https://files.osf.io/v1/resources/"): assistive, parity-exempt
 
 Builds the request to upload `dossier(theory)` to OSF storage. With `dry_run=True` (default) returns `{dry_run: true, request: {method:"PUT", url, filename, content_bytes}, note}` and sends nothing (`filename` defaults to `<id>.dossier.md`; `url` is `<base_url><node>/providers/osfstorage/?kind=file&name=<percent-encoded filename>` or null when `node` is absent; the filename component is percent-encoded, R `utils::URLencode(fname, reserved = TRUE)` / Python `urllib.parse.quote(fname, safe="")`, so the dry-run request dicts stay identical). `base_url` defaults to `https://files.osf.io/v1/resources/` and may be overridden to target a non-default host (both languages expose it). With `dry_run=False` a live upload requires both `token` and `node` (else error) and performs an authenticated PUT. It depends on the network and credentials, and is excluded from parity and CI. The live path is never exercised automatically.
+
+## 26. render_diagram(x, type="nomological_net") / tf_render_diagram(x, type, as): language-native, parity-exempt
+
+Renders the digraph IRs without leaving the language: Python wraps the DOT in a
+`graphviz.Source` (optional extra `theoryforge[render]`), and R passes it to
+DiagrammeR (`Suggests`), with `as = "svg"` exporting a standalone SVG. Both
+accept a theory or a raw IR string (so `lit_diagram` output renders too), pass
+the three SVG chart views through unchanged, and refuse `causal_dag` with a
+pointer to dagitty. The rendering engines differ by design, so the rendered
+output is NOT byte-identical across languages and is excluded from parity and
+CI; the underlying IR (section 13) remains the parity-tested contract.

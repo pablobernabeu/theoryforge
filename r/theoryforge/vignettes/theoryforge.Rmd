@@ -144,6 +144,20 @@ cat(tf_diagram(theory, type = "nomological_net"))
 cat(tf_diagram(theory, type = "causal_dag"))
 ```
 
+The DOT strings render with any Graphviz tool, and `tf_render_diagram()` does
+this without leaving R: it returns a DiagrammeR widget for the viewer and for
+R Markdown, or a standalone SVG string with `as = "svg"`. The packages it uses
+are optional, in Suggests, so the deterministic core stays dependency-free.
+Rendered, the nomological net above reads as a figure.
+
+```{r diagram-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
+cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "nomological_net", as = "svg"), '</div>', sep = "")
+```
+
+The causal DAG is the one view this does not cover, since it emits dagitty
+syntax rather than DOT; paste it into a dagitty tool such as
+[dagitty.net](https://dagitty.net) instead.
+
 ## Simulation
 
 `tf_simulate()` treats each construct as a state variable and integrates the

@@ -14,8 +14,9 @@ there, pinned by the shared public specification
 so the two implementations produce identical verdicts and byte-identical
 diagram intermediate representations. The only exceptions are the assistive
 helpers that depend on a network service or a user-supplied embedder
-(\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}, \code{\link[=tf_osf_push]{tf_osf_push()}} and \code{\link[=tf_embedding_redundancy]{tf_embedding_redundancy()}}),
-which are documented as such on their own pages.
+(\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}, \code{\link[=tf_osf_push]{tf_osf_push()}} and \code{\link[=tf_embedding_redundancy]{tf_embedding_redundancy()}}) and
+the language-native diagram renderer (\code{\link[=tf_render_diagram]{tf_render_diagram()}}), which are
+documented as such on their own pages.
 }
 \details{
 Key entry points: \code{\link[=tf_read]{tf_read()}}, \code{\link[=tf_validate]{tf_validate()}}, \code{\link[=tf_write]{tf_write()}}, \code{\link[=tf_check]{tf_check()}},

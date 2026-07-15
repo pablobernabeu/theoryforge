@@ -1,3 +1,15 @@
+# theoryforge 0.3.0
+
+* New `tf_render_diagram()` renders the digraph views without leaving R: a
+  DiagrammeR widget for the viewer and R Markdown, or a standalone SVG string
+  with `as = "svg"`. It accepts a theory or a raw DOT string, so
+  `tf_lit_diagram()` output renders the same way; the three SVG chart views
+  pass through unchanged, and `causal_dag` is refused with a pointer to
+  dagitty. The rendering packages (`DiagrammeR`, `DiagrammeRsvg`, `htmltools`)
+  are in Suggests, so the deterministic core stays dependency-free, and
+  rendering sits outside the cross-language parity contract. The articles now
+  show each digraph rendered beneath its intermediate representation.
+
 # theoryforge 0.2.0
 
 * The severity chart is re-laid out: bars start just past the longest row label

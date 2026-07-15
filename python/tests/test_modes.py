@@ -5,7 +5,8 @@ def test_builder_constructs_valid_theory():
     t = (
         tf.new_theory("demo", "Demo theory", maturity="building")
         .add_construct("a", "Alpha", "the first thing", measurement=["m1"], boundary_conditions=["adults"])
-        .add_construct("b", "Beta", "the second different thing", measurement=["m2"], boundary_conditions=["adults"])
+        .add_construct("b", "Beta", "the second different thing", measurement=["m2"],
+                       boundary_conditions=["adults"])
         .add_proposition("p1", "a", "b", "increases", mechanism="a drives b")
         .add_prediction("pred1", "a point claim", "point", derives_from=["p1"])
         .set_formal_model("ode", "models/demo.py")

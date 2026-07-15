@@ -20,6 +20,7 @@ t = tf.read("../fixtures/panic-network.theory.yaml")
 t.validate()                       # structural validation against the shared schema
 print(t.report("json"))            # 12-item rigour checklist + gate
 print(t.diagram("nomological_net"))# Graphviz DOT
+# t.render_diagram("nomological_net")  # rendered inline; needs theoryforge[render]
 t.redundancy_check()               # lexical jingle-jangle screen
 
 # BUILD a theory programmatically (provenance auto-logged)
@@ -52,6 +53,13 @@ your own theory files when running the examples.
 
 ```bash
 pip install theoryforge
+```
+
+The optional render extra adds native diagram rendering (`render_diagram()`,
+which wraps the DOT views in a `graphviz.Source`):
+
+```bash
+pip install "theoryforge[render]"
 ```
 
 To work on the package itself, install an editable checkout with the development extras:

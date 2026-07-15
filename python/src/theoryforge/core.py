@@ -242,6 +242,12 @@ class Theory:
         severity)."""
         return _diagram(self.data, type=type, engine=engine)
 
+    def render_diagram(self, type: str = "nomological_net"):
+        """Render a digraph view via the optional ``graphviz`` library; see
+        :func:`theoryforge.render.render_diagram`."""
+        from .render import render_diagram as _render_diagram
+        return _render_diagram(self.data, type=type)
+
     def severity(self) -> list[dict]:
         """Per-prediction risk and computed severity from the operationalised rubric."""
         return _severity(self.data)

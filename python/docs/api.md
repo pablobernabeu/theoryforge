@@ -28,6 +28,7 @@ canonical path so the function, rather than the module, is shown.
         - compile_sem
         - embedding_redundancy
         - render_report
+        - render_diagram
         - osf_push
 
 ::: theoryforge.diagram.diagram

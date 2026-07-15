@@ -153,11 +153,22 @@ visible in one figure.
 cat(tf_diagram(theory, "workflow"))
 ```
 
+Rendered with `tf_render_diagram()`, which passes the DOT to the DiagrammeR
+engine, the same view reads as a figure.
+
+```{r workflow-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
+cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "workflow", as = "svg"), '</div>', sep = "")
+```
+
 The `context` view places the theory among the scope conditions under which it
 is claimed to hold and the registered rivals it is meant to outpredict.
 
 ```{r context, collapse = FALSE, comment = ""}
 cat(tf_diagram(theory, "context"))
+```
+
+```{r context-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
+cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "context", as = "svg"), '</div>', sep = "")
 ```
 
 The `pipeline` view links each prediction to its recorded test outcome, so
@@ -167,11 +178,19 @@ predictions still awaiting a test are visible as loose ends.
 cat(tf_diagram(theory, "pipeline"))
 ```
 
+```{r pipeline-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
+cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "pipeline", as = "svg"), '</div>', sep = "")
+```
+
 The `provenance` view draws the build log as a digraph, so the record of how
 the theory reached its current state travels with the object itself.
 
 ```{r provenance, collapse = FALSE, comment = ""}
 cat(tf_diagram(theory, "provenance"))
+```
+
+```{r provenance-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
+cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "provenance", as = "svg"), '</div>', sep = "")
 ```
 
 The `venn` view returns an SVG that shows where the constructs share boundary
@@ -207,6 +226,10 @@ weak <- tf_read(
 )
 cat(tf_diagram(theory, "development_roadmap"))
 cat(tf_diagram(weak, "development_roadmap"))
+```
+
+```{r roadmap-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
+cat('<div class="tf-figure tf-diagram">', tf_render_diagram(weak, "development_roadmap", as = "svg"), '</div>', sep = "")
 ```
 
 All of these views are deterministic. The DOT strings render with any Graphviz

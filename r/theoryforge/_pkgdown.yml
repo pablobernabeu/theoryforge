@@ -134,10 +134,11 @@ reference:
   - tf_redundancy_check
   - tf_embedding_redundancy
 - title: Diagram
-  desc: Byte-identical diagram intermediate representations.
+  desc: Byte-identical diagram intermediate representations, and native rendering.
   contents:
   - tf_diagram
   - tf_lit_diagram
+  - tf_render_diagram
 - title: Develop
   desc: Lakatosian amendment appraisal.
   contents:

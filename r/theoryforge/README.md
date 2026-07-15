@@ -60,7 +60,10 @@ positions a theory within a bibliometric corpus.
 ## Public API
 
 The [reference index](https://pablobernabeu.github.io/theoryforge/r/reference/) lists every
-exported function, grouped by workflow stage. For the rationale behind each rigour check and
+exported function, grouped by workflow stage. `tf_render_diagram()` renders any
+digraph view in the viewer through DiagrammeR, or as a standalone SVG string
+with `as = "svg"`; the rendering packages are optional, in Suggests, so the
+deterministic core stays dependency-free. For the rationale behind each rigour check and
 exactly how every reported value is computed, see
 [Methodological foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html).
 

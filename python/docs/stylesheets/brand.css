@@ -288,6 +288,20 @@
   margin: 0 auto;
 }
 .tf-figure svg text { fill: currentColor; }
+
+/* Rendered Graphviz diagrams (render_diagram output) carry their own white
+   canvas and ink-on-white text fills, so they must NOT inherit the
+   currentColor text rule above: in dark mode that would paint light text on
+   the white canvas. Present them as a rounded white card instead, sized by
+   their own aspect ratio up to a wider cap than the chart views. */
+.tf-figure.tf-diagram svg {
+  max-width: 640px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px;
+  border: 1px solid rgba(14, 34, 51, .12);
+}
+.tf-figure.tf-diagram svg text { fill: #1a1a1a; }
 /* ---- Header source chip and primary sidebar ------------------------------ */
 /* The source widget otherwise reserves a wide fixed column and fills it with
    version/stars/forks facts; reduce it to the icon and host name. */

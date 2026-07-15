@@ -1,6 +1,7 @@
-import theoryforge as tf
-from theoryforge.redundancy import tokens, jaccard
 import pytest
+
+import theoryforge as tf
+from theoryforge.redundancy import jaccard, tokens
 
 
 def test_nomological_net_format(panic_path):

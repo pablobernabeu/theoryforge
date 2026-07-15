@@ -1,5 +1,6 @@
-import theoryforge as tf
 import pytest
+
+import theoryforge as tf
 
 
 def test_read_and_validate(panic_path):

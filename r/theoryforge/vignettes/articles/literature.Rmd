@@ -132,6 +132,13 @@ Graphviz renderer.
 cat(tf_lit_diagram(lm, type = "keyword_cooccurrence"))
 ```
 
+`tf_render_diagram()` accepts a DOT string as well as a theory, so the
+literature diagrams render the same way as the theory views.
+
+```{r diagram-keywords-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
+cat('<div class="tf-figure tf-diagram">', tf_render_diagram(tf_lit_diagram(lm, type = "keyword_cooccurrence"), as = "svg"), '</div>', sep = "")
+```
+
 The co-citation map links the references that the corpus cites together, so
 tightly co-cited work stands out as the intellectual base the field shares.
 
@@ -139,11 +146,19 @@ tightly co-cited work stands out as the intellectual base the field shares.
 cat(tf_lit_diagram(lm, type = "co_citation"))
 ```
 
+```{r diagram-cocitation-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
+cat('<div class="tf-figure tf-diagram">', tf_render_diagram(tf_lit_diagram(lm, type = "co_citation"), as = "svg"), '</div>', sep = "")
+```
+
 The theme landscape diagram is produced from the `tf_landscape()` result rather
 than from the map, since it carries the focal theory and the alternatives.
 
 ```{r diagram-landscape, collapse = FALSE, comment = ""}
 cat(tf_lit_diagram(landscape, type = "theme_landscape"))
+```
+
+```{r diagram-landscape-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
+cat('<div class="tf-figure tf-diagram">', tf_render_diagram(tf_lit_diagram(landscape, type = "theme_landscape"), as = "svg"), '</div>', sep = "")
 ```
 
 ## Building a corpus from OpenAlex

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "theoryforge"
-version = "0.2.0"
+version = "0.3.0"
 description = "Systematic theory development."
 readme = "README.md"
 license = "MIT"
@@ -27,6 +27,9 @@ dependencies = ["PyYAML>=6.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "ruff", "mypy"]
+# Native diagram rendering (render_diagram); writing image files additionally
+# needs the Graphviz system binaries.
+render = ["graphviz>=0.20"]
 
 [project.urls]
 Homepage = "https://github.com/pablobernabeu/theoryforge"

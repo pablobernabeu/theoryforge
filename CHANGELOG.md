@@ -6,6 +6,22 @@ version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-15
+
+### Added
+- Native diagram rendering in both packages, tailored to each language and
+  layered on the unchanged, byte-identical IR. R gains `tf_render_diagram()`
+  (DiagrammeR widget, or a standalone SVG string with `as = "svg"`; packages in
+  Suggests), and Python gains `render_diagram()` and `Theory.render_diagram()`
+  (a `graphviz.Source`, via the optional `theoryforge[render]` extra). Both
+  accept a theory or a raw IR string, so literature diagrams render the same
+  way; the three SVG chart views pass through; `causal_dag` is refused with a
+  pointer to dagitty. Rendering is parity-exempt (`API_SPEC.md` section 26).
+
+### Documentation
+- The digraph views now render as figures on both documentation sites,
+  following the code that produces them.
+
 ## [0.2.0] - 2026-07-15
 
 ### Changed

@@ -8,7 +8,8 @@ identically behaving counterpart there, pinned by the shared public specificatio
 implementations produce identical verdicts and byte-identical diagram intermediate
 representations. The only exceptions are the assistive helpers that depend on a
 network service or a user-supplied embedder (``fetch_corpus``, ``osf_push`` and
-``embedding_redundancy``), which are documented as such.
+``embedding_redundancy``) and the language-native diagram renderer
+(``render_diagram``), which are documented as such.
 """
 from __future__ import annotations
 
@@ -23,6 +24,7 @@ from .lit import fetch_corpus, landscape, lit_diagram, litmap, new_evidence_dois
 from .osf import osf_push
 from .prereg import preregister
 from .redundancy import jaccard, redundancy_check, tokens
+from .render import render_diagram
 from .report_render import render_report
 from .rigor import check, report
 from .scoring import severity
@@ -61,6 +63,7 @@ __all__ = [
     "simulate",
     "embedding_redundancy",
     "render_report",
+    "render_diagram",
     "osf_push",
     "__version__",
 ]
