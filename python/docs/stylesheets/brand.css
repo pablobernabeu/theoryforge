@@ -287,7 +287,11 @@
   height: auto;
   margin: 0 auto;
 }
-.tf-figure svg text { fill: currentColor; }
+/* The chart views carry no text fills of their own, so they take the page
+   colour; rendered Graphviz diagrams DO carry explicit fills (including
+   white on the navy theory/focal hubs), so they are excluded here and no
+   rule below may override their text. */
+.tf-figure:not(.tf-diagram) svg text { fill: currentColor; }
 
 /* Rendered Graphviz diagrams (render_diagram output) carry their own white
    canvas and ink-on-white text fills, so they must NOT inherit the
@@ -306,7 +310,6 @@
   padding: 10px;
   border: 1px solid rgba(14, 34, 51, .12);
 }
-.tf-figure.tf-diagram svg text { fill: #1a1a1a; }
 /* ---- Header source chip and primary sidebar ------------------------------ */
 /* The source widget otherwise reserves a wide fixed column and fills it with
    version/stars/forks facts; reduce it to the icon and host name. */
