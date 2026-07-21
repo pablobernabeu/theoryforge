@@ -15,6 +15,10 @@ digraph context {
   "scope2" -> "theory" [style=dotted, label="holds within"];
   "scope3" [shape=note, style="filled", label="no beta-blocker\nmedication", fillcolor="#FBF7EA", color="#B49B55"];
   "scope3" -> "theory" [style=dotted, label="holds within"];
+  "scope4" [shape=note, style="filled", label="waking hours", fillcolor="#FBF7EA", color="#B49B55"];
+  "scope4" -> "theory" [style=dotted, label="holds within"];
+  "scope5" [shape=note, style="filled", label="community sample", fillcolor="#FBF7EA", color="#B49B55"];
+  "scope5" -> "theory" [style=dotted, label="holds within"];
   "alt_cognitive" [style="rounded,filled,dashed", label="Cognitive model of\npanic", fillcolor="#F1F1F1", color="#8A8A8A"];
   "theory" -> "alt_cognitive" [style=dashed, label="contrasts with"];
   "alt_biological" [style="rounded,filled,dashed", label="Biological model\nof panic", fillcolor="#F1F1F1", color="#8A8A8A"];

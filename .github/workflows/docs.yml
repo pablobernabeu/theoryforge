@@ -47,7 +47,7 @@ jobs:
 
       - name: Build mkdocs site
         run: |
-          python -m pip install --quiet -e ./python "mkdocs-material" "mkdocstrings[python]"
+          python -m pip install --quiet -e ./python "mkdocs-material" "mkdocstrings[python]" "markdown-exec"
           cd python && mkdocs build --strict -d ../site/python
 
       - name: Write landing page

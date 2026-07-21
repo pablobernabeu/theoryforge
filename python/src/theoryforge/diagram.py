@@ -47,6 +47,10 @@ _FILL = {
 }
 
 
+# How many advisory steps the development roadmap places side by side.
+_ROADMAP_COLS = 3
+
+
 def _fill(role: str) -> str:
     f, c = _FILL[role]
     return f'fillcolor="{f}", color="{c}"'
@@ -124,20 +128,55 @@ def _causal_dag(T: dict) -> str:
 
 
 def _development_roadmap(T: dict) -> str:
+    from . import _resources
+    from .prereg import _fmt
     from .rigor import check as _check
     rep = _check(T)
+    criterion = {it["id"]: it.get("criterion", "") for it in _resources.checklist()["items"]}
     todo = [it for it in rep["items"] if it["status"] != "pass"]
+    # Blockers before advisories, and heavier checks before lighter ones. The
+    # order is the recommendation: a reader who works down the column addresses
+    # what gates the theory first, rather than whatever the checklist happens to
+    # list first.
+    rank = sorted(range(len(todo)), key=lambda i: (
+        0 if todo[i]["severity_if_fail"] == "blocker" else 1, -todo[i]["weight"], i))
+    todo = [todo[i] for i in rank]
     lines = _prelude("development_roadmap", "TB")
+    # The hub names the theory and its standing, so the column beneath it reads
+    # as this theory's outstanding work rather than an anonymous list.
+    lines.append(f'  "roadmap" [shape=ellipse, label="{_wrap(T.get("title"), 20)}\\n'
+                 f'score {_fmt(rep["aggregate_score"])}, gate {_esc(rep["gate"])}", '
+                 f'fillcolor="{_INK}", color="{_INK}", fontcolor="#FFFFFF"];')
     if not todo:
         lines.append(f'  "all_checks_pass" [label="all checks pass", {_fill("passed")}];')
+        lines.append('  "roadmap" -> "all_checks_pass";')
     else:
-        for it in todo:
+        for n, it in enumerate(todo, start=1):
             iid = _esc(it["id"])
-            lines.append(f'  "{iid}" [label="{iid}\\n{it["status"]}", {_fill(it["status"])}];')
-        # Invisible edges chain the items into one column, so a long to-do list
-        # grows downwards instead of into an ever-wider row.
-        for a, b in zip(todo, todo[1:], strict=False):
-            lines.append(f'  "{_esc(a["id"])}" -> "{_esc(b["id"])}" [style=invis];')
+            consequence = "blocks the gate" if it["severity_if_fail"] == "blocker" else "advisory"
+            lines.append(f'  "{iid}" [label="{n}. {iid}\\n{_wrap(criterion.get(it["id"], ""), 22)}'
+                         f'\\n{consequence}", {_fill(it["status"])}];')
+        # What gates the theory runs down the spine one step at a time; the
+        # advisories that follow are laid out several abreast, which keeps a
+        # long list from growing into a strip too tall to take in at once.
+        blockers = [it for it in todo if it["severity_if_fail"] == "blocker"]
+        advisories = [it for it in todo if it["severity_if_fail"] != "blocker"]
+        prev = "roadmap"
+        for it in blockers:
+            lines.append(f'  "{prev}" -> "{_esc(it["id"])}";')
+            prev = _esc(it["id"])
+        rows = [advisories[i:i + _ROADMAP_COLS] for i in range(0, len(advisories), _ROADMAP_COLS)]
+        for r, row in enumerate(rows):
+            head = _esc(row[0]["id"])
+            if r == 0:
+                lines.append(f'  "{prev}" -> "{head}";')
+            else:
+                lines.append(f'  "{_esc(rows[r - 1][0]["id"])}" -> "{head}" [style=invis];')
+            if len(row) > 1:
+                chain = " -> ".join(f'"{_esc(x["id"])}"' for x in row)
+                lines.append(f"  {{ rank=same; {chain} [style=invis]; }}")
+            else:
+                lines.append(f'  {{ rank=same; "{head}"; }}')
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -220,8 +259,31 @@ def _workflow(T: dict) -> str:
 
 
 def _circle(cx: int, cy: int, r: int) -> str:
+    # The outline carries the set structure, so it is drawn in the teal already
+    # used for construct borders elsewhere in the palette. That colour clears the
+    # 3:1 contrast floor for graphical objects (WCAG 1.4.11) against both the
+    # light paper and the dark page, whereas the former navy outline fell below
+    # it on a dark background and took the whole figure with it. The translucent
+    # fill is decorative reinforcement only: no opacity composites to a readable
+    # ratio on a dark page, which is why the boundary has to do the work.
     return (f'  <circle cx="{cx}" cy="{cy}" r="{r}" '
-            'fill="#4e79a7" fill-opacity="0.35" stroke="#33567a"/>')
+            'fill="#4e79a7" fill-opacity="0.35" stroke="#1e7b7b"/>')
+
+
+def _svg_open(width: int, height: int) -> str:
+    """Open an SVG element carrying explicit dimensions as well as a viewBox.
+
+    A viewBox on its own leaves the image with no intrinsic size, so a browser
+    resolves ``width: auto`` to the full width of the container and scales the
+    declared 13px type by whatever factor that implies. The three chart views
+    declare different viewBox widths, so the same label then rendered at a
+    different size in each figure. Stating width and height gives each view its
+    natural size wherever it is embedded, which is what the rendered Graphviz
+    views already do, and leaves the stylesheet free to shrink a wide chart on a
+    narrow viewport without inflating the type on a wide one.
+    """
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+            f'viewBox="0 0 {width} {height}" font-family="sans-serif" font-size="13">')
 
 
 def _vlabel(x: int, y: int, s) -> str:
@@ -242,8 +304,7 @@ def _venn(T: dict) -> str:
         names.append(str(c.get("label") or c.get("id") or ""))
         sets.append(set(_as_list(bc)))
     n = len(constructs)
-    out = ['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 300" '
-           'font-family="sans-serif" font-size="13">',
+    out = [_svg_open(380, 300),
            '  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap</text>']
     if n == 0:
         out.append(_vlabel(190, 150, "(no constructs)"))
@@ -277,8 +338,7 @@ def _rigor(T: dict) -> str:
     rep = _check(T)
     items = rep["items"]
     h = 60 + len(items) * 24 + 12
-    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 {h}" '
-           'font-family="sans-serif" font-size="13">',
+    out = [_svg_open(460, h),
            '  <text x="20" y="28" font-size="15">Rigour checklist</text>',
            f'  <text x="20" y="46">aggregate score {rep["aggregate_score"]:.1f}, gate {rep["gate"]}</text>']
     for i, it in enumerate(items):
@@ -302,8 +362,7 @@ def _severity_chart(T: dict) -> str:
     # each value label trails its own bar.
     bar_x = 20 + max((len(lab) for lab in labels), default=0) * 8 + 10
     width = bar_x + 250  # 200 for a full bar, then the gap and the value label
-    out = [f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {h}" '
-           'font-family="sans-serif" font-size="13">',
+    out = [_svg_open(width, h),
            '  <text x="20" y="26" font-size="15">Prediction severity</text>']
     if not rows:
         out.append('  <text x="20" y="54">(no predictions)</text>')

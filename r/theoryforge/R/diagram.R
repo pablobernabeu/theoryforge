@@ -63,6 +63,9 @@ NULL
   covered     = c("#F1F1F1", "#8A8A8A")
 )
 
+# How many advisory steps the development roadmap places side by side.
+.tf_ROADMAP_COLS <- 3L
+
 .tf_fill <- function(role) {
   fc <- .tf_FILLS[[role]]
   sprintf('fillcolor="%s", color="%s"', fc[[1L]], fc[[2L]])
@@ -160,24 +163,68 @@ NULL
 
 .tf_development_roadmap <- function(T) {
   rep <- tf_check(T)
-  lines <- .tf_prelude("development_roadmap", "TB")
+  spec <- tf_checklist()
+  criterion <- vapply(spec$items, function(s) .tf_str(s, "criterion"), character(1L))
+  names(criterion) <- vapply(spec$items, function(s) .tf_str(s, "id"), character(1L))
   todo <- Filter(function(it) !identical(it$status, "pass"), rep$items)
+  # Blockers before advisories, and heavier checks before lighter ones. The
+  # order is the recommendation: a reader who works down the column addresses
+  # what gates the theory first, rather than whatever the checklist happens to
+  # list first.
+  if (length(todo) > 0L) {
+    blocks <- vapply(todo, function(it) identical(it$severity_if_fail, "blocker"), logical(1L))
+    weight <- vapply(todo, function(it) as.numeric(it$weight), numeric(1L))
+    todo <- todo[order(ifelse(blocks, 0L, 1L), -weight, seq_along(todo))]
+  }
+  lines <- .tf_prelude("development_roadmap", "TB")
+  # The hub names the theory and its standing, so the column beneath it reads
+  # as this theory's outstanding work rather than an anonymous list.
+  lines <- c(lines, sprintf(
+    '  "roadmap" [shape=ellipse, label="%s\\nscore %s, gate %s", fillcolor="%s", color="%s", fontcolor="#FFFFFF"];',
+    .tf_wrap(.tf_get(T, "title"), 20L), .tf_fmt(rep$aggregate_score), .tf_esc(rep$gate),
+    .tf_INK, .tf_INK))
   if (length(todo) == 0L) {
     lines <- c(lines, sprintf('  "all_checks_pass" [label="all checks pass", %s];',
-                              .tf_fill("passed")))
+                              .tf_fill("passed")),
+               '  "roadmap" -> "all_checks_pass";')
   } else {
-    for (it in todo) {
-      lines <- c(lines, sprintf('  "%s" [label="%s\\n%s", %s];',
-                                .tf_esc(it$id), .tf_esc(it$id), it$status,
-                                .tf_fill(it$status)))
+    for (i in seq_along(todo)) {
+      it <- todo[[i]]
+      consequence <- if (identical(it$severity_if_fail, "blocker")) "blocks the gate" else "advisory"
+      lines <- c(lines, sprintf('  "%s" [label="%d. %s\\n%s\\n%s", %s];',
+                                .tf_esc(it$id), i, .tf_esc(it$id),
+                                .tf_wrap(criterion[[as.character(it$id)]], 22L),
+                                consequence, .tf_fill(it$status)))
     }
-    # Invisible edges chain the items into one column, so a long to-do list
-    # grows downwards instead of into an ever-wider row.
-    if (length(todo) >= 2L) {
-      for (i in seq_len(length(todo) - 1L)) {
-        lines <- c(lines, sprintf('  "%s" -> "%s" [style=invis];',
-                                  .tf_esc(todo[[i]]$id), .tf_esc(todo[[i + 1L]]$id)))
-      }
+    # What gates the theory runs down the spine one step at a time; the
+    # advisories that follow are laid out several abreast, which keeps a
+    # long list from growing into a strip too tall to take in at once.
+    blockers <- Filter(function(it) identical(it$severity_if_fail, "blocker"), todo)
+    advisories <- Filter(function(it) !identical(it$severity_if_fail, "blocker"), todo)
+    prev <- "roadmap"
+    for (it in blockers) {
+      lines <- c(lines, sprintf('  "%s" -> "%s";', prev, .tf_esc(it$id)))
+      prev <- .tf_esc(it$id)
+    }
+    starts <- seq_len(ceiling(length(advisories) / .tf_ROADMAP_COLS))
+    heads <- character(0L)
+    for (r in starts) {
+      from <- (r - 1L) * .tf_ROADMAP_COLS + 1L
+      row <- advisories[from:min(from + .tf_ROADMAP_COLS - 1L, length(advisories))]
+      head <- .tf_esc(row[[1L]]$id)
+      lines <- c(lines, if (r == 1L) {
+        sprintf('  "%s" -> "%s";', prev, head)
+      } else {
+        sprintf('  "%s" -> "%s" [style=invis];', heads[[r - 1L]], head)
+      })
+      heads <- c(heads, head)
+      lines <- c(lines, if (length(row) > 1L) {
+        chain <- paste(vapply(row, function(x) sprintf('"%s"', .tf_esc(x$id)), character(1L)),
+                       collapse = " -> ")
+        sprintf("  { rank=same; %s [style=invis]; }", chain)
+      } else {
+        sprintf('  { rank=same; "%s"; }', head)
+      })
     }
   }
   lines <- c(lines, "}")
@@ -282,8 +329,30 @@ NULL
   paste0(paste(lines, collapse = "\n"), "\n")
 }
 
+# Open an SVG element carrying explicit dimensions as well as a viewBox. A
+# viewBox on its own leaves the image with no intrinsic size, so a browser
+# resolves `width: auto` to the full width of the container and scales the
+# declared 13px type by whatever factor that implies. The three chart views
+# declare different viewBox widths, so the same label then rendered at a
+# different size in each figure. Stating width and height gives each view its
+# natural size wherever it is embedded, which is what the rendered Graphviz
+# views already do, and leaves the stylesheet free to shrink a wide chart on a
+# narrow viewport without inflating the type on a wide one.
+.tf_svg_open <- function(width, height) {
+  sprintf(paste0('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d" ',
+                 'viewBox="0 0 %d %d" font-family="sans-serif" font-size="13">'),
+          width, height, width, height)
+}
+
+# The outline carries the set structure, so it is drawn in the teal already used
+# for construct borders elsewhere in the palette. That colour clears the 3:1
+# contrast floor for graphical objects (WCAG 1.4.11) against both the light
+# paper and the dark page, whereas the former navy outline fell below it on a
+# dark background and took the whole figure with it. The translucent fill is
+# decorative reinforcement only: no opacity composites to a readable ratio on a
+# dark page, which is why the boundary has to do the work.
 .tf_vcircle <- function(cx, cy, r) {
-  sprintf('  <circle cx="%d" cy="%d" r="%d" fill="#4e79a7" fill-opacity="0.35" stroke="#33567a"/>', cx, cy, r)
+  sprintf('  <circle cx="%d" cy="%d" r="%d" fill="#4e79a7" fill-opacity="0.35" stroke="#1e7b7b"/>', cx, cy, r)
 }
 .tf_vlabel <- function(x, y, s) {
   sprintf('  <text x="%d" y="%d" text-anchor="middle">%s</text>', x, y, .tf_xml(s))
@@ -306,7 +375,7 @@ NULL
     s <- if (is.null(bc)) character(0) else unique(as.character(unlist(bc)))
     setlist[[length(setlist) + 1L]] <- s
   }
-  out <- c('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 300" font-family="sans-serif" font-size="13">',
+  out <- c(.tf_svg_open(380L, 300L),
            '  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap</text>')
   if (n == 0L) {
     out <- c(out, .tf_vlabel(190L, 150L, "(no constructs)"))
@@ -343,7 +412,7 @@ NULL
   rep <- tf_check(T)
   items <- rep$items
   h <- 60L + length(items) * 24L + 12L
-  out <- c(sprintf('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 %d" font-family="sans-serif" font-size="13">', h),
+  out <- c(.tf_svg_open(460L, h),
            '  <text x="20" y="28" font-size="15">Rigour checklist</text>',
            sprintf('  <text x="20" y="46">aggregate score %.1f, gate %s</text>',
                    rep$aggregate_score, .tf_xml(rep$gate)))
@@ -372,7 +441,7 @@ NULL
   # each value label trails its own bar.
   bar_x <- 20L + (if (n) max(nchar(labels)) else 0L) * 8L + 10L
   width <- bar_x + 250L  # 200 for a full bar, then the gap and the value label
-  out <- c(sprintf('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 %d %d" font-family="sans-serif" font-size="13">', width, h),
+  out <- c(.tf_svg_open(width, h),
            '  <text x="20" y="26" font-size="15">Prediction severity</text>')
   if (n == 0L) {
     out <- c(out, '  <text x="20" y="54">(no predictions)</text>')

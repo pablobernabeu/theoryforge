@@ -11,9 +11,30 @@ This page assumes you have already read a theory as in
 computation behind the rigour checklist, severity and amendment-appraisal rules
 demonstrated below.
 
-Throughout, the package is imported as `tf`.
+Throughout, the package is imported as `tf`, and `fixtures` names the
+repository's fixture directory, as on the [Getting started](getting-started.md)
+page. Every result shown below is produced by running the code when this page is
+built.
 
-```python
+```python exec="1" session="workflow-modes"
+# Locate the repository's fixtures directory, which holds the sample theories
+# the examples read. Walking up from the build directory finds it whether
+# mkdocs runs from python/ or from the repository root.
+from pathlib import Path
+
+
+def _find_fixtures():
+    for base in (Path.cwd(), *Path.cwd().parents):
+        candidate = base / "fixtures"
+        if (candidate / "panic-network.theory.yaml").exists():
+            return candidate
+    raise RuntimeError("could not locate the fixtures directory")
+
+
+fixtures = _find_fixtures()
+```
+
+```python exec="1" source="material-block" session="workflow-modes"
 import theoryforge as tf
 ```
 
@@ -25,7 +46,7 @@ predictions. Each method returns the same object, so calls chain. Every
 addition is recorded in a provenance log, which gives a step-by-step account
 of how the theory was assembled.
 
-```python
+```python exec="1" source="material-block" session="workflow-modes"
 t = (
     tf.new_theory("panic_demo", "A demonstration theory of panic")
       .add_construct(
@@ -69,43 +90,19 @@ is one of `point`, `interval`, `directional` or `existence`.
 The provenance log is held under `t.data["provenance"]`. Each entry records
 the action and the identifier it affected.
 
-```python
+```python exec="1" source="material-block" result="text" session="workflow-modes"
 for step in t.data["provenance"]:
     print(step["step"], step["action"], step["detail"])
 ```
 
-```
-1 tf_theory panic_demo
-2 tf_add_construct arousal
-3 tf_add_construct catastrophic_interpretation
-4 tf_add_proposition p1
-5 tf_add_prediction pred1
-```
-
 Once the object is assembled, `t.validate()` confirms it satisfies the
-schema's required fields, and `t.report()` returns the rigour checklist.
+schema's required fields, returning `True` silently, and `t.report()` returns
+the rigour checklist. The report opens with the aggregate score and the gate,
+then gives one entry per checklist item.
 
-```python
+```python exec="1" source="material-block" result="json" session="workflow-modes"
 t.validate()
 print(t.report("json"))
-```
-
-`validate()` returns `True` silently; the report opens with the aggregate score
-and the gate, then one entry per checklist item.
-
-```
-{
-  "theory_id": "panic_demo",
-  "schema_version": "1.0",
-  "maturity": "building",
-  "aggregate_score": 57.6,
-  "gate": "pass",
-  "n_blockers_failed": 0,
-  "items": [
-    {
-      "id": "falsifiability",
-      "status": "pass",
-      ...
 ```
 
 ## DEVELOPMENT
@@ -119,9 +116,9 @@ without resorting to ad-hoc immunising assumptions.
 Call `appraise_amendment` on the newer version, passing the prior version as
 the argument.
 
-```python
-v1 = tf.read("panic-network.theory.yaml")
-v2 = tf.read("panic-network-2026-v2.theory.yaml")
+```python exec="1" source="material-block" result="text" session="workflow-modes"
+v1 = tf.read(fixtures / "panic-network.theory.yaml")
+v2 = tf.read(fixtures / "panic-network-2026-v2.theory.yaml")
 
 result = v2.appraise_amendment(v1)
 print(result["verdict"])
@@ -164,7 +161,7 @@ reviewer-facing audit bundle.
 base risk implied by the prediction type and the computed severity after the
 rubric's adjustments.
 
-```python
+```python exec="1" source="material-block" result="text" session="workflow-modes"
 for s in t.severity():
     print(s["prediction_id"], s["risk_score"], s["computed_severity"])
 ```
@@ -190,31 +187,17 @@ its `diagnostic_vs` field, earns a small severity bonus.
 
 `preregister()` renders a Markdown preregistration document. It lists the
 hypotheses with their derivations and a severity line for each prediction.
-Called without an argument it returns the text. Passing a path also writes
-the file.
+Called without an argument it returns the text.
 
-```python
+```python exec="1" source="material-block" result="text" session="workflow-modes"
 text = t.preregister()
 print(text)
-
-t.preregister("panic-prereg.md")    # also writes the document to disk
 ```
 
-The document opens as follows.
+Passing a path writes the document to disk as well as returning it.
 
-```
-# Preregistration: A demonstration theory of panic
-
-- Theory ID: panic_demo
-- Schema version: 1.0
-- Maturity: building
-- Derivation chain verified: yes
-
-## Hypotheses
-1. [directional] higher arousal predicts more catastrophic interpretation (derives from: p1)
-
-## Severity
-- pred1: severity 0.3, risk 0.4
+```python
+t.preregister("panic-prereg.md")
 ```
 
 ### Audit bundle
@@ -222,48 +205,20 @@ The document opens as follows.
 `dossier()` assembles a single Markdown document for reviewers. It composes
 the rigour checklist, the severity table, the provenance log and the
 preregistration into one artefact. The output is deterministic, so it can be
-committed or attached to a submission.
+committed or attached to a submission. The bundle opens with the header and the
+rigour checklist, and the severity table, provenance log and preregistration
+follow.
 
-```python
+```python exec="1" source="material-block" result="text" session="workflow-modes"
 print(t.dossier())
-```
-
-The bundle opens with the header and the rigour checklist, and the severity
-table, provenance log and preregistration follow.
-
-```
-# theoryforge dossier: A demonstration theory of panic
-
-- Theory ID: panic_demo
-- Maturity: building
-- Aggregate rigour score: 57.6/100
-- Gate: pass
-- Blockers failed: 0
-
-## Rigour checklist
-
-| item | status | score | weight |
-| --- | --- | --- | --- |
-...
 ```
 
 `compile_sem()` translates the structural content into lavaan model syntax.
 Constructs with measurement indicators become a latent measurement model
 with `=~`, and directed propositions become structural paths with `~`.
 
-```python
+```python exec="1" source="material-block" result="text" session="workflow-modes"
 print(t.compile_sem())
-```
-
-A representative fragment of the output is shown below.
-
-```
-# lavaan model generated by theoryforge for panic_demo
-# Measurement model
-arousal =~ heart_rate + skin_conductance
-catastrophic_interpretation =~ bsiq
-# Structural model
-catastrophic_interpretation ~ arousal
 ```
 
 These three modes share one object, so a theory built with the BUILDING
@@ -278,65 +233,15 @@ and render inline. These examples use the repository's panic-network fixture
 (see [Getting started](getting-started.md) for where the fixture files live),
 which carries the test outcomes and scope conditions the richer views draw on.
 
-```python
-t = tf.read("panic-network.theory.yaml")
+```python exec="1" source="material-block" session="workflow-modes"
+t = tf.read(fixtures / "panic-network.theory.yaml")
 ```
 
 The `workflow` view traces the lifecycle from constructs, through propositions and
 predictions, to the recorded test outcomes.
 
-```python
+```python exec="1" source="material-block" result="text" session="workflow-modes"
 print(t.diagram("workflow"))
-```
-
-```
-digraph workflow {
-  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
-  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
-  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
-  subgraph cluster_build {
-    label="building";
-    style="rounded";
-    color="#C4D1D9";
-    fontcolor="#5B7285";
-    "c_arousal" [label="Physiological\narousal", fillcolor="#E4F1F1", color="#1E7B7B"];
-    "c_perceived_threat" [label="Perceived threat", fillcolor="#E4F1F1", color="#1E7B7B"];
-    "c_avoidance" [label="Avoidance\nbehaviour", fillcolor="#E4F1F1", color="#1E7B7B"];
-  }
-  subgraph cluster_relate {
-    label="propositions";
-    style="rounded";
-    color="#C4D1D9";
-    fontcolor="#5B7285";
-    "prop_p1" [label="p1\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
-    "prop_p2" [label="p2\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
-    "prop_p3" [label="p3\ncauses", fillcolor="#FBF1DC", color="#9C6B14"];
-  }
-  subgraph cluster_predict {
-    label="predictions";
-    style="rounded";
-    color="#C4D1D9";
-    fontcolor="#5B7285";
-    "pred_pred1" [label="pred1\npoint", fillcolor="#E7EDF5", color="#33567A"];
-    "pred_pred2" [label="pred2\ninterval", fillcolor="#E7EDF5", color="#33567A"];
-    "pred_pred3" [label="pred3\ndirectional", fillcolor="#E7EDF5", color="#33567A"];
-  }
-  subgraph cluster_test {
-    label="testing";
-    style="rounded";
-    color="#C4D1D9";
-    fontcolor="#5B7285";
-    "outcome_pred1" [label="pred1\npassed", fillcolor="#E5F2E7", color="#3E7A46"];
-  }
-  "c_arousal" -> "prop_p1";
-  "c_perceived_threat" -> "prop_p2";
-  "c_perceived_threat" -> "prop_p3";
-  "prop_p1" -> "pred_pred1";
-  "prop_p3" -> "pred_pred1";
-  "prop_p2" -> "pred_pred2";
-  "prop_p2" -> "pred_pred3";
-  "pred_pred1" -> "outcome_pred1";
-}
 ```
 
 With the optional render extra (`pip install theoryforge[render]`), the same
@@ -492,33 +397,8 @@ a figure.
 The `context` view places the theory among the scope conditions under which it is
 claimed to hold and the registered rivals it is meant to outpredict.
 
-```python
+```python exec="1" source="material-block" result="text" session="workflow-modes"
 print(t.diagram("context"))
-```
-
-```
-digraph context {
-  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
-  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
-  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
-  "theory" [shape=ellipse, label="Network theory of\npanic disorder", fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
-  "c_arousal" [label="Physiological\narousal", fillcolor="#E4F1F1", color="#1E7B7B"];
-  "theory" -> "c_arousal";
-  "c_perceived_threat" [label="Perceived threat", fillcolor="#E4F1F1", color="#1E7B7B"];
-  "theory" -> "c_perceived_threat";
-  "c_avoidance" [label="Avoidance\nbehaviour", fillcolor="#E4F1F1", color="#1E7B7B"];
-  "theory" -> "c_avoidance";
-  "scope1" [shape=note, style="filled", label="adults", fillcolor="#FBF7EA", color="#B49B55"];
-  "scope1" -> "theory" [style=dotted, label="holds within"];
-  "scope2" [shape=note, style="filled", label="non-clinical\nbaseline", fillcolor="#FBF7EA", color="#B49B55"];
-  "scope2" -> "theory" [style=dotted, label="holds within"];
-  "scope3" [shape=note, style="filled", label="no beta-blocker\nmedication", fillcolor="#FBF7EA", color="#B49B55"];
-  "scope3" -> "theory" [style=dotted, label="holds within"];
-  "alt_cognitive" [style="rounded,filled,dashed", label="Cognitive model of\npanic", fillcolor="#F1F1F1", color="#8A8A8A"];
-  "theory" -> "alt_cognitive" [style=dashed, label="contrasts with"];
-  "alt_biological" [style="rounded,filled,dashed", label="Biological model\nof panic", fillcolor="#F1F1F1", color="#8A8A8A"];
-  "theory" -> "alt_biological" [style=dashed, label="contrasts with"];
-}
 ```
 
 <div class="tf-figure tf-diagram"><svg width="577pt" height="313pt"
@@ -642,21 +522,8 @@ digraph context {
 The `pipeline` view links each prediction to its recorded test outcome, so
 predictions still awaiting a test are visible as loose ends.
 
-```python
+```python exec="1" source="material-block" result="text" session="workflow-modes"
 print(t.diagram("pipeline"))
-```
-
-```
-digraph pipeline {
-  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
-  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
-  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
-  "pred1" [label="pred1\npoint", fillcolor="#E7EDF5", color="#33567A"];
-  "pred2" [label="pred2\ninterval", fillcolor="#E7EDF5", color="#33567A"];
-  "pred3" [label="pred3\ndirectional", fillcolor="#E7EDF5", color="#33567A"];
-  "result_pred1" [label="passed", fillcolor="#E5F2E7", color="#3E7A46"];
-  "pred1" -> "result_pred1";
-}
 ```
 
 <div class="tf-figure tf-diagram"><svg width="194pt" height="193pt"
@@ -702,21 +569,8 @@ digraph pipeline {
 The `provenance` view draws the build log as a digraph, so the record of how
 the theory reached its current state travels with the object itself.
 
-```python
+```python exec="1" source="material-block" result="text" session="workflow-modes"
 print(t.diagram("provenance"))
-```
-
-```
-digraph provenance {
-  graph [rankdir=TB, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
-  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
-  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
-  "n1" [label="tf_construct\nRegistered three\nconstructs."];
-  "n2" [label="tf_proposition\nLinked constructs into a\nfeedback network."];
-  "n3" [label="tf_predict\nDerived three predictions\nfrom the propositions."];
-  "n1" -> "n2";
-  "n2" -> "n3";
-}
 ```
 
 <div class="tf-figure tf-diagram"><svg width="175pt" height="254pt"
@@ -762,7 +616,10 @@ digraph provenance {
 </g>
 </svg></div>
 
-The `venn` view shows where the first three constructs share boundary conditions.
+The `venn` view takes each construct's boundary conditions as a set and draws the
+first three of them as overlapping discs, so the figure shows where construct
+scopes coincide and where they part company. Each region is labelled with the
+number of conditions that fall in it.
 
 ```python
 print(t.diagram("venn"))      # construct scope overlap
@@ -770,202 +627,180 @@ print(t.diagram("rigour"))    # the rigour checklist as a status grid
 print(t.diagram("severity"))  # per-prediction severity bars
 ```
 
-<div class="tf-figure"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 300" font-family="sans-serif" font-size="13">
-  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap</text>
-  <circle cx="150" cy="135" r="78" fill="#4e79a7" fill-opacity="0.35" stroke="#33567a"/>
-  <circle cx="230" cy="135" r="78" fill="#4e79a7" fill-opacity="0.35" stroke="#33567a"/>
-  <circle cx="190" cy="195" r="78" fill="#4e79a7" fill-opacity="0.35" stroke="#33567a"/>
-  <text x="110" y="45" text-anchor="middle">Physiological arousal</text>
-  <text x="270" y="45" text-anchor="middle">Perceived threat</text>
-  <text x="190" y="290" text-anchor="middle">Avoidance behaviour</text>
-  <text x="120" y="115" text-anchor="middle" font-weight="bold">1</text>
-  <text x="260" y="115" text-anchor="middle" font-weight="bold">0</text>
-  <text x="190" y="230" text-anchor="middle" font-weight="bold">0</text>
-  <text x="190" y="105" text-anchor="middle" font-weight="bold">0</text>
-  <text x="145" y="180" text-anchor="middle" font-weight="bold">0</text>
-  <text x="235" y="180" text-anchor="middle" font-weight="bold">0</text>
-  <text x="190" y="160" text-anchor="middle" font-weight="bold">1</text>
-</svg></div>
+```python exec="1" html="1" session="workflow-modes"
+# These three views are emitted as SVG by the library itself, so the figures on
+# this page are produced when it is built and cannot drift from the calls above.
+print('<div class="tf-figure">' + t.diagram("venn") + "</div>")
+```
 
 The `rigour` view draws the checklist as a status grid, colouring each item by its
 result and reporting the aggregate score and the gate.
 
-<div class="tf-figure"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 360" font-family="sans-serif" font-size="13">
-  <text x="20" y="28" font-size="15">Rigour checklist</text>
-  <text x="20" y="46">aggregate score 84.8, gate pass</text>
-  <rect x="20" y="60" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="72">falsifiability</text>
-  <text x="320" y="72">pass</text>
-  <rect x="20" y="84" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="96">precision</text>
-  <text x="320" y="96">pass</text>
-  <rect x="20" y="108" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="120">risk_severity</text>
-  <text x="320" y="120">pass</text>
-  <rect x="20" y="132" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="144">parsimony</text>
-  <text x="320" y="144">pass</text>
-  <rect x="20" y="156" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="168">non_redundancy</text>
-  <text x="320" y="168">pass</text>
-  <rect x="20" y="180" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="192">construct_clarity</text>
-  <text x="320" y="192">pass</text>
-  <rect x="20" y="204" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="216">scope</text>
-  <text x="320" y="216">pass</text>
-  <rect x="20" y="228" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="240">logical_why</text>
-  <text x="320" y="240">pass</text>
-  <rect x="20" y="252" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="264">causal_testability</text>
-  <text x="320" y="264">pass</text>
-  <rect x="20" y="276" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="288">diagnosticity</text>
-  <text x="320" y="288">pass</text>
-  <rect x="20" y="300" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="312">formalisation</text>
-  <text x="320" y="312">pass</text>
-  <rect x="20" y="324" width="16" height="16" rx="3" fill="#4caf50"/>
-  <text x="44" y="336">derivation_chain</text>
-  <text x="320" y="336">pass</text>
-</svg></div>
+```python exec="1" html="1" session="workflow-modes"
+print('<div class="tf-figure">' + t.diagram("rigour") + "</div>")
+```
 
 The `severity` view draws one bar per prediction, scaled by its computed severity,
 so the riskier tests stand out at a glance.
 
-<div class="tf-figure"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 132" font-family="sans-serif" font-size="13">
-  <text x="20" y="26" font-size="15">Prediction severity</text>
-  <text x="20" y="52">pred1</text>
-  <rect x="70" y="40" width="200" height="16" rx="2" fill="#4e79a7"/>
-  <text x="275" y="52">1.000</text>
-  <text x="20" y="80">pred2</text>
-  <rect x="70" y="68" width="140" height="16" rx="2" fill="#4e79a7"/>
-  <text x="215" y="80">0.700</text>
-  <text x="20" y="108">pred3</text>
-  <rect x="70" y="96" width="60" height="16" rx="2" fill="#4e79a7"/>
-  <text x="135" y="108">0.300</text>
-</svg></div>
+```python exec="1" html="1" session="workflow-modes"
+print('<div class="tf-figure">' + t.diagram("severity") + "</div>")
+```
 
 The `development_roadmap` view turns the same checklist into a worklist by
-keeping only the items that still fail or warn. The panic network passes every
-check, so its roadmap collapses to a single `all checks pass` node, and the
-deliberately weak fixture shipped alongside it shows the worklist in full.
+keeping only the items that still fail or warn, and it orders that worklist the
+way the work should be done. Whatever gates the theory comes first, heaviest
+check first, and the advisory items follow. Each step carries its number, the
+criterion it is measured against and whether missing it blocks the gate or is
+merely advisory, so the figure says what to do next rather than only what went
+wrong. The hub names the theory and its current standing. The panic network
+passes every check, so its roadmap reduces to that hub and an `all checks pass`
+node, and the deliberately weak fixture shipped alongside it shows the worklist
+in full.
 
-```python
-print(tf.read("weak-theory.theory.yaml").diagram("development_roadmap"))
+```python exec="1" source="material-block" result="text" session="workflow-modes"
+print(tf.read(fixtures / "weak-theory.theory.yaml").diagram("development_roadmap"))
 ```
 
-```
-digraph development_roadmap {
-  graph [rankdir=TB, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
-  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
-  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
-  "falsifiability" [label="falsifiability\nfail", fillcolor="#F9E5E4", color="#B2453C"];
-  "precision" [label="precision\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "risk_severity" [label="risk_severity\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "construct_clarity" [label="construct_clarity\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "scope" [label="scope\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "logical_why" [label="logical_why\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "causal_testability" [label="causal_testability\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "diagnosticity" [label="diagnosticity\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "formalisation" [label="formalisation\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "derivation_chain" [label="derivation_chain\nfail", fillcolor="#F9E5E4", color="#B2453C"];
-  "falsifiability" -> "precision" [style=invis];
-  "precision" -> "risk_severity" [style=invis];
-  "risk_severity" -> "construct_clarity" [style=invis];
-  "construct_clarity" -> "scope" [style=invis];
-  "scope" -> "logical_why" [style=invis];
-  "logical_why" -> "causal_testability" [style=invis];
-  "causal_testability" -> "diagnosticity" [style=invis];
-  "diagnosticity" -> "formalisation" [style=invis];
-  "formalisation" -> "derivation_chain" [style=invis];
-}
-```
-
-<div class="tf-figure tf-diagram"><svg width="137pt" height="721pt"
- viewBox="0.00 0.00 136.54 720.80" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(14.4 706.4)">
+<div class="tf-figure tf-diagram"><svg width="489pt" height="704pt"
+ viewBox="0.00 0.00 489.06 704.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(14.4 689.8018)">
 <title>development_roadmap</title>
-<!-- falsifiability -->
+<!-- roadmap -->
 <g id="node1" class="node">
+<title>roadmap</title>
+<ellipse fill="#12283a" stroke="#12283a" stroke-width="1.1" cx="101.6982" cy="-637.5009" rx="101.8968" ry="37.8021"/>
+<text text-anchor="middle" x="101.6982" y="-647.4009" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#ffffff">An underspecified</text>
+<text text-anchor="middle" x="101.6982" y="-634.2009" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#ffffff">motivation theory</text>
+<text text-anchor="middle" x="101.6982" y="-621.0009" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#ffffff">score 12.0, gate blocked</text>
+</g>
+<!-- falsifiability -->
+<g id="node2" class="node">
 <title>falsifiability</title>
-<path fill="#f9e5e4" stroke="#b2453c" stroke-width="1.1" d="M80.5303,-692.202C80.5303,-692.202 27.2083,-692.202 27.2083,-692.202 21.2083,-692.202 15.2083,-686.202 15.2083,-680.202 15.2083,-680.202 15.2083,-663.398 15.2083,-663.398 15.2083,-657.398 21.2083,-651.398 27.2083,-651.398 27.2083,-651.398 80.5303,-651.398 80.5303,-651.398 86.5303,-651.398 92.5303,-657.398 92.5303,-663.398 92.5303,-663.398 92.5303,-680.202 92.5303,-680.202 92.5303,-686.202 86.5303,-692.202 80.5303,-692.202"/>
-<text text-anchor="middle" x="53.8693" y="-675.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">falsifiability</text>
-<text text-anchor="middle" x="53.8693" y="-661.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">fail</text>
+<path fill="#f9e5e4" stroke="#b2453c" stroke-width="1.1" d="M151.2213,-567.6C151.2213,-567.6 52.1751,-567.6 52.1751,-567.6 46.1751,-567.6 40.1751,-561.6 40.1751,-555.6 40.1751,-555.6 40.1751,-499.6 40.1751,-499.6 40.1751,-493.6 46.1751,-487.6 52.1751,-487.6 52.1751,-487.6 151.2213,-487.6 151.2213,-487.6 157.2213,-487.6 163.2213,-493.6 163.2213,-499.6 163.2213,-499.6 163.2213,-555.6 163.2213,-555.6 163.2213,-561.6 157.2213,-567.6 151.2213,-567.6"/>
+<text text-anchor="middle" x="101.6982" y="-550.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">1. falsifiability</text>
+<text text-anchor="middle" x="101.6982" y="-537.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">At least one</text>
+<text text-anchor="middle" x="101.6982" y="-524.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">prediction forbids an</text>
+<text text-anchor="middle" x="101.6982" y="-511.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">observation</text>
+<text text-anchor="middle" x="101.6982" y="-497.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">blocks the gate</text>
+</g>
+<!-- roadmap&#45;&gt;falsifiability -->
+<g id="edge1" class="edge">
+<title>roadmap&#45;&gt;falsifiability</title>
+<path fill="none" stroke="#7b909f" d="M101.6982,-599.3713C101.6982,-591.587 101.6982,-583.3042 101.6982,-575.2356"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="104.1483,-574.9063 101.6982,-567.9063 99.2483,-574.9063 104.1483,-574.9063"/>
+</g>
+<!-- derivation_chain -->
+<g id="node3" class="node">
+<title>derivation_chain</title>
+<path fill="#f9e5e4" stroke="#b2453c" stroke-width="1.1" d="M154.3264,-455.7002C154.3264,-455.7002 49.0701,-455.7002 49.0701,-455.7002 43.0701,-455.7002 37.0701,-449.7002 37.0701,-443.7002 37.0701,-443.7002 37.0701,-374.2998 37.0701,-374.2998 37.0701,-368.2998 43.0701,-362.2998 49.0701,-362.2998 49.0701,-362.2998 154.3264,-362.2998 154.3264,-362.2998 160.3264,-362.2998 166.3264,-368.2998 166.3264,-374.2998 166.3264,-374.2998 166.3264,-443.7002 166.3264,-443.7002 166.3264,-449.7002 160.3264,-455.7002 154.3264,-455.7002"/>
+<text text-anchor="middle" x="101.6982" y="-438.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">2. derivation_chain</text>
+<text text-anchor="middle" x="101.6982" y="-425.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Each prediction is</text>
+<text text-anchor="middle" x="101.6982" y="-412.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">graph&#45;reachable from</text>
+<text text-anchor="middle" x="101.6982" y="-399.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">propositions</text>
+<text text-anchor="middle" x="101.6982" y="-385.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">(reachability only)</text>
+<text text-anchor="middle" x="101.6982" y="-372.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">blocks the gate</text>
+</g>
+<!-- falsifiability&#45;&gt;derivation_chain -->
+<g id="edge2" class="edge">
+<title>falsifiability&#45;&gt;derivation_chain</title>
+<path fill="none" stroke="#7b909f" d="M101.6982,-487.4475C101.6982,-479.5472 101.6982,-471.139 101.6982,-462.8726"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="104.1483,-462.661 101.6982,-455.6611 99.2483,-462.6611 104.1483,-462.661"/>
 </g>
 <!-- precision -->
-<g id="node2" class="node">
+<g id="node4" class="node">
 <title>precision</title>
-<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M75.8726,-619.802C75.8726,-619.802 31.866,-619.802 31.866,-619.802 25.866,-619.802 19.866,-613.802 19.866,-607.802 19.866,-607.802 19.866,-590.998 19.866,-590.998 19.866,-584.998 25.866,-578.998 31.866,-578.998 31.866,-578.998 75.8726,-578.998 75.8726,-578.998 81.8726,-578.998 87.8726,-584.998 87.8726,-590.998 87.8726,-590.998 87.8726,-607.802 87.8726,-607.802 87.8726,-613.802 81.8726,-619.802 75.8726,-619.802"/>
-<text text-anchor="middle" x="53.8693" y="-602.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">precision</text>
-<text text-anchor="middle" x="53.8693" y="-589.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">warn</text>
+<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M144.8657,-323.8C144.8657,-323.8 58.5307,-323.8 58.5307,-323.8 52.5307,-323.8 46.5307,-317.8 46.5307,-311.8 46.5307,-311.8 46.5307,-255.8 46.5307,-255.8 46.5307,-249.8 52.5307,-243.8 58.5307,-243.8 58.5307,-243.8 144.8657,-243.8 144.8657,-243.8 150.8657,-243.8 156.8657,-249.8 156.8657,-255.8 156.8657,-255.8 156.8657,-311.8 156.8657,-311.8 156.8657,-317.8 150.8657,-323.8 144.8657,-323.8"/>
+<text text-anchor="middle" x="101.6982" y="-306.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">3. precision</text>
+<text text-anchor="middle" x="101.6982" y="-293.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Predictions are</text>
+<text text-anchor="middle" x="101.6982" y="-280.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">point/interval, not</text>
+<text text-anchor="middle" x="101.6982" y="-267.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">merely directional</text>
+<text text-anchor="middle" x="101.6982" y="-254.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">advisory</text>
 </g>
-<!-- falsifiability&#45;&gt;precision -->
+<!-- derivation_chain&#45;&gt;precision -->
+<g id="edge3" class="edge">
+<title>derivation_chain&#45;&gt;precision</title>
+<path fill="none" stroke="#7b909f" d="M101.6982,-362.3801C101.6982,-352.0993 101.6982,-341.2022 101.6982,-330.9025"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="104.1483,-330.8821 101.6982,-323.8822 99.2483,-330.8822 104.1483,-330.8821"/>
+</g>
 <!-- risk_severity -->
-<g id="node3" class="node">
+<g id="node5" class="node">
 <title>risk_severity</title>
-<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M84.4766,-547.402C84.4766,-547.402 23.262,-547.402 23.262,-547.402 17.262,-547.402 11.262,-541.402 11.262,-535.402 11.262,-535.402 11.262,-518.598 11.262,-518.598 11.262,-512.598 17.262,-506.598 23.262,-506.598 23.262,-506.598 84.4766,-506.598 84.4766,-506.598 90.4766,-506.598 96.4766,-512.598 96.4766,-518.598 96.4766,-518.598 96.4766,-535.402 96.4766,-535.402 96.4766,-541.402 90.4766,-547.402 84.4766,-547.402"/>
-<text text-anchor="middle" x="53.8693" y="-530.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">risk_severity</text>
-<text text-anchor="middle" x="53.8693" y="-517.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">warn</text>
+<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M268.9371,-323.8C268.9371,-323.8 190.4593,-323.8 190.4593,-323.8 184.4593,-323.8 178.4593,-317.8 178.4593,-311.8 178.4593,-311.8 178.4593,-255.8 178.4593,-255.8 178.4593,-249.8 184.4593,-243.8 190.4593,-243.8 190.4593,-243.8 268.9371,-243.8 268.9371,-243.8 274.9371,-243.8 280.9371,-249.8 280.9371,-255.8 280.9371,-255.8 280.9371,-311.8 280.9371,-311.8 280.9371,-317.8 274.9371,-323.8 268.9371,-323.8"/>
+<text text-anchor="middle" x="229.6982" y="-306.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">4. risk_severity</text>
+<text text-anchor="middle" x="229.6982" y="-293.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Mean prediction</text>
+<text text-anchor="middle" x="229.6982" y="-280.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">severity above</text>
+<text text-anchor="middle" x="229.6982" y="-267.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">threshold</text>
+<text text-anchor="middle" x="229.6982" y="-254.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">advisory</text>
 </g>
 <!-- precision&#45;&gt;risk_severity -->
+<!-- logical_why -->
+<g id="node7" class="node">
+<title>logical_why</title>
+<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M152.0518,-205.2C152.0518,-205.2 51.3446,-205.2 51.3446,-205.2 45.3446,-205.2 39.3446,-199.2 39.3446,-193.2 39.3446,-193.2 39.3446,-137.2 39.3446,-137.2 39.3446,-131.2 45.3446,-125.2 51.3446,-125.2 51.3446,-125.2 152.0518,-125.2 152.0518,-125.2 158.0518,-125.2 164.0518,-131.2 164.0518,-137.2 164.0518,-137.2 164.0518,-193.2 164.0518,-193.2 164.0518,-199.2 158.0518,-205.2 152.0518,-205.2"/>
+<text text-anchor="middle" x="101.6982" y="-188.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">6. logical_why</text>
+<text text-anchor="middle" x="101.6982" y="-175.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Each proposition</text>
+<text text-anchor="middle" x="101.6982" y="-161.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">states a mechanism,</text>
+<text text-anchor="middle" x="101.6982" y="-148.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">not just a correlation</text>
+<text text-anchor="middle" x="101.6982" y="-135.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">advisory</text>
+</g>
+<!-- precision&#45;&gt;logical_why -->
 <!-- construct_clarity -->
-<g id="node4" class="node">
+<g id="node6" class="node">
 <title>construct_clarity</title>
-<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M93.8211,-475.002C93.8211,-475.002 13.9175,-475.002 13.9175,-475.002 7.9175,-475.002 1.9175,-469.002 1.9175,-463.002 1.9175,-463.002 1.9175,-446.198 1.9175,-446.198 1.9175,-440.198 7.9175,-434.198 13.9175,-434.198 13.9175,-434.198 93.8211,-434.198 93.8211,-434.198 99.8211,-434.198 105.8211,-440.198 105.8211,-446.198 105.8211,-446.198 105.8211,-463.002 105.8211,-463.002 105.8211,-469.002 99.8211,-475.002 93.8211,-475.002"/>
-<text text-anchor="middle" x="53.8693" y="-457.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">construct_clarity</text>
-<text text-anchor="middle" x="53.8693" y="-444.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">warn</text>
+<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M440.3187,-330.5002C440.3187,-330.5002 315.0777,-330.5002 315.0777,-330.5002 309.0777,-330.5002 303.0777,-324.5002 303.0777,-318.5002 303.0777,-318.5002 303.0777,-249.0998 303.0777,-249.0998 303.0777,-243.0998 309.0777,-237.0998 315.0777,-237.0998 315.0777,-237.0998 440.3187,-237.0998 440.3187,-237.0998 446.3187,-237.0998 452.3187,-243.0998 452.3187,-249.0998 452.3187,-249.0998 452.3187,-318.5002 452.3187,-318.5002 452.3187,-324.5002 446.3187,-330.5002 440.3187,-330.5002"/>
+<text text-anchor="middle" x="377.6982" y="-313.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">5. construct_clarity</text>
+<text text-anchor="middle" x="377.6982" y="-300.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Every construct has</text>
+<text text-anchor="middle" x="377.6982" y="-287.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">definition +</text>
+<text text-anchor="middle" x="377.6982" y="-273.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">measurement + boundary</text>
+<text text-anchor="middle" x="377.6982" y="-260.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">conditions</text>
+<text text-anchor="middle" x="377.6982" y="-247.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">advisory</text>
 </g>
 <!-- risk_severity&#45;&gt;construct_clarity -->
 <!-- scope -->
-<g id="node5" class="node">
-<title>scope</title>
-<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M68.8693,-402.602C68.8693,-402.602 38.8693,-402.602 38.8693,-402.602 32.8693,-402.602 26.8693,-396.602 26.8693,-390.602 26.8693,-390.602 26.8693,-373.798 26.8693,-373.798 26.8693,-367.798 32.8693,-361.798 38.8693,-361.798 38.8693,-361.798 68.8693,-361.798 68.8693,-361.798 74.8693,-361.798 80.8693,-367.798 80.8693,-373.798 80.8693,-373.798 80.8693,-390.602 80.8693,-390.602 80.8693,-396.602 74.8693,-402.602 68.8693,-402.602"/>
-<text text-anchor="middle" x="53.8693" y="-385.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">scope</text>
-<text text-anchor="middle" x="53.8693" y="-372.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">warn</text>
-</g>
-<!-- construct_clarity&#45;&gt;scope -->
-<!-- logical_why -->
-<g id="node6" class="node">
-<title>logical_why</title>
-<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M82.2076,-330.202C82.2076,-330.202 25.531,-330.202 25.531,-330.202 19.531,-330.202 13.531,-324.202 13.531,-318.202 13.531,-318.202 13.531,-301.398 13.531,-301.398 13.531,-295.398 19.531,-289.398 25.531,-289.398 25.531,-289.398 82.2076,-289.398 82.2076,-289.398 88.2076,-289.398 94.2076,-295.398 94.2076,-301.398 94.2076,-301.398 94.2076,-318.202 94.2076,-318.202 94.2076,-324.202 88.2076,-330.202 82.2076,-330.202"/>
-<text text-anchor="middle" x="53.8693" y="-313.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">logical_why</text>
-<text text-anchor="middle" x="53.8693" y="-299.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">warn</text>
-</g>
-<!-- scope&#45;&gt;logical_why -->
-<!-- causal_testability -->
-<g id="node7" class="node">
-<title>causal_testability</title>
-<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M95.6082,-257.802C95.6082,-257.802 12.1304,-257.802 12.1304,-257.802 6.1304,-257.802 .1304,-251.802 .1304,-245.802 .1304,-245.802 .1304,-228.998 .1304,-228.998 .1304,-222.998 6.1304,-216.998 12.1304,-216.998 12.1304,-216.998 95.6082,-216.998 95.6082,-216.998 101.6082,-216.998 107.6082,-222.998 107.6082,-228.998 107.6082,-228.998 107.6082,-245.802 107.6082,-245.802 107.6082,-251.802 101.6082,-257.802 95.6082,-257.802"/>
-<text text-anchor="middle" x="53.8693" y="-240.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">causal_testability</text>
-<text text-anchor="middle" x="53.8693" y="-227.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">warn</text>
-</g>
-<!-- logical_why&#45;&gt;causal_testability -->
-<!-- diagnosticity -->
 <g id="node8" class="node">
-<title>diagnosticity</title>
-<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M83.8817,-185.402C83.8817,-185.402 23.8569,-185.402 23.8569,-185.402 17.8569,-185.402 11.8569,-179.402 11.8569,-173.402 11.8569,-173.402 11.8569,-156.598 11.8569,-156.598 11.8569,-150.598 17.8569,-144.598 23.8569,-144.598 23.8569,-144.598 83.8817,-144.598 83.8817,-144.598 89.8817,-144.598 95.8817,-150.598 95.8817,-156.598 95.8817,-156.598 95.8817,-173.402 95.8817,-173.402 95.8817,-179.402 89.8817,-185.402 83.8817,-185.402"/>
-<text text-anchor="middle" x="53.8693" y="-168.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">diagnosticity</text>
-<text text-anchor="middle" x="53.8693" y="-155.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">warn</text>
+<title>scope</title>
+<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M297.3411,-198.5003C297.3411,-198.5003 198.0553,-198.5003 198.0553,-198.5003 192.0553,-198.5003 186.0553,-192.5003 186.0553,-186.5003 186.0553,-186.5003 186.0553,-143.8997 186.0553,-143.8997 186.0553,-137.8997 192.0553,-131.8997 198.0553,-131.8997 198.0553,-131.8997 297.3411,-131.8997 297.3411,-131.8997 303.3411,-131.8997 309.3411,-137.8997 309.3411,-143.8997 309.3411,-143.8997 309.3411,-186.5003 309.3411,-186.5003 309.3411,-192.5003 303.3411,-198.5003 297.3411,-198.5003"/>
+<text text-anchor="middle" x="247.6982" y="-181.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">7. scope</text>
+<text text-anchor="middle" x="247.6982" y="-168.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Boundary conditions</text>
+<text text-anchor="middle" x="247.6982" y="-155.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">explicitly stated</text>
+<text text-anchor="middle" x="247.6982" y="-142.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">advisory</text>
 </g>
-<!-- causal_testability&#45;&gt;diagnosticity -->
-<!-- formalisation -->
+<!-- logical_why&#45;&gt;scope -->
+<!-- diagnosticity -->
+<g id="node10" class="node">
+<title>diagnosticity</title>
+<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M152.8836,-93.3002C152.8836,-93.3002 50.5128,-93.3002 50.5128,-93.3002 44.5128,-93.3002 38.5128,-87.3002 38.5128,-81.3002 38.5128,-81.3002 38.5128,-11.8998 38.5128,-11.8998 38.5128,-5.8998 44.5128,.1002 50.5128,.1002 50.5128,.1002 152.8836,.1002 152.8836,.1002 158.8836,.1002 164.8836,-5.8998 164.8836,-11.8998 164.8836,-11.8998 164.8836,-81.3002 164.8836,-81.3002 164.8836,-87.3002 158.8836,-93.3002 152.8836,-93.3002"/>
+<text text-anchor="middle" x="101.6982" y="-76.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">9. diagnosticity</text>
+<text text-anchor="middle" x="101.6982" y="-63.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">At least one</text>
+<text text-anchor="middle" x="101.6982" y="-49.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">prediction</text>
+<text text-anchor="middle" x="101.6982" y="-36.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">discriminates from a</text>
+<text text-anchor="middle" x="101.6982" y="-23.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">registered alternative</text>
+<text text-anchor="middle" x="101.6982" y="-10.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">advisory</text>
+</g>
+<!-- logical_why&#45;&gt;diagnosticity -->
+<!-- causal_testability -->
 <g id="node9" class="node">
+<title>causal_testability</title>
+<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M448.3154,-205.2C448.3154,-205.2 343.0811,-205.2 343.0811,-205.2 337.0811,-205.2 331.0811,-199.2 331.0811,-193.2 331.0811,-193.2 331.0811,-137.2 331.0811,-137.2 331.0811,-131.2 337.0811,-125.2 343.0811,-125.2 343.0811,-125.2 448.3154,-125.2 448.3154,-125.2 454.3154,-125.2 460.3154,-131.2 460.3154,-137.2 460.3154,-137.2 460.3154,-193.2 460.3154,-193.2 460.3154,-199.2 454.3154,-205.2 448.3154,-205.2"/>
+<text text-anchor="middle" x="395.6982" y="-188.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">8. causal_testability</text>
+<text text-anchor="middle" x="395.6982" y="-175.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Causal relations</text>
+<text text-anchor="middle" x="395.6982" y="-161.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">export to a DAG with</text>
+<text text-anchor="middle" x="395.6982" y="-148.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">derivable implications</text>
+<text text-anchor="middle" x="395.6982" y="-135.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">advisory</text>
+</g>
+<!-- scope&#45;&gt;causal_testability -->
+<!-- formalisation -->
+<g id="node11" class="node">
 <title>formalisation</title>
-<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M85.2048,-113.002C85.2048,-113.002 22.5338,-113.002 22.5338,-113.002 16.5338,-113.002 10.5338,-107.002 10.5338,-101.002 10.5338,-101.002 10.5338,-84.198 10.5338,-84.198 10.5338,-78.198 16.5338,-72.198 22.5338,-72.198 22.5338,-72.198 85.2048,-72.198 85.2048,-72.198 91.2048,-72.198 97.2048,-78.198 97.2048,-84.198 97.2048,-84.198 97.2048,-101.002 97.2048,-101.002 97.2048,-107.002 91.2048,-113.002 85.2048,-113.002"/>
-<text text-anchor="middle" x="53.8693" y="-95.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">formalisation</text>
-<text text-anchor="middle" x="53.8693" y="-82.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">warn</text>
+<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M298.0961,-86.6C298.0961,-86.6 199.3004,-86.6 199.3004,-86.6 193.3004,-86.6 187.3004,-80.6 187.3004,-74.6 187.3004,-74.6 187.3004,-18.6 187.3004,-18.6 187.3004,-12.6 193.3004,-6.6 199.3004,-6.6 199.3004,-6.6 298.0961,-6.6 298.0961,-6.6 304.0961,-6.6 310.0961,-12.6 310.0961,-18.6 310.0961,-18.6 310.0961,-74.6 310.0961,-74.6 310.0961,-80.6 304.0961,-86.6 298.0961,-86.6"/>
+<text text-anchor="middle" x="248.6982" y="-69.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">10. formalisation</text>
+<text text-anchor="middle" x="248.6982" y="-56.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">A formal&#45;model stub</text>
+<text text-anchor="middle" x="248.6982" y="-43.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">exists (warn&#45;only at</text>
+<text text-anchor="middle" x="248.6982" y="-30.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">building stage)</text>
+<text text-anchor="middle" x="248.6982" y="-16.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">advisory</text>
 </g>
 <!-- diagnosticity&#45;&gt;formalisation -->
-<!-- derivation_chain -->
-<g id="node10" class="node">
-<title>derivation_chain</title>
-<path fill="#f9e5e4" stroke="#b2453c" stroke-width="1.1" d="M93.9449,-40.602C93.9449,-40.602 13.7937,-40.602 13.7937,-40.602 7.7937,-40.602 1.7937,-34.602 1.7937,-28.602 1.7937,-28.602 1.7937,-11.798 1.7937,-11.798 1.7937,-5.798 7.7937,.202 13.7937,.202 13.7937,.202 93.9449,.202 93.9449,.202 99.9449,.202 105.9449,-5.798 105.9449,-11.798 105.9449,-11.798 105.9449,-28.602 105.9449,-28.602 105.9449,-34.602 99.9449,-40.602 93.9449,-40.602"/>
-<text text-anchor="middle" x="53.8693" y="-23.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">derivation_chain</text>
-<text text-anchor="middle" x="53.8693" y="-10.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">fail</text>
-</g>
-<!-- formalisation&#45;&gt;derivation_chain -->
 </g>
 </svg></div>
 
@@ -985,7 +820,7 @@ threat, threat raises avoidance, and avoidance in turn *decreases* arousal. The
 negative coupling breaks the symmetry between the states, so the qualitative
 dynamics the network implies are visible in the trajectory.
 
-```python
+```python exec="1" source="material-block" result="text" session="workflow-modes"
 s = (
     tf.new_theory("regulation_demo", "Arousal regulated by avoidance")
       .add_construct("arousal", "Physiological arousal", "bodily activation")
@@ -997,21 +832,16 @@ s = (
 )
 
 sim = s.simulate(steps=5)
-sim["states"]          # construct ids, in file order
-sim["trajectory"][0]   # the common initial state
-```
 
-```
->>> sim["states"]
-['arousal', 'threat', 'avoidance']
->>> sim["trajectory"][0]
-[1.0, 1.0, 1.0]
->>> sim["trajectory"][1]
-[0.85, 1.05, 1.05]
->>> sim["trajectory"][5]
-[0.27225, 1.085807, 1.257262]
+print(sim["states"])           # construct ids, in file order
+
+for row in sim["trajectory"]:  # the initial state, then the five Euler steps
+    print(row)
 ```
 
 Arousal falls from the first step, pushed down by the negative coupling from
-avoidance on top of the damping, while threat and avoidance are driven up by
-their positive inputs before the decay takes over.
+avoidance on top of the damping. Threat climbs to a peak at step 4 and turns
+down at step 5, once the falling arousal no longer sustains it. Avoidance is
+still rising at the end of the window, and it is the last of the three to turn
+because it keeps integrating a threat level that stays high across all five
+steps.

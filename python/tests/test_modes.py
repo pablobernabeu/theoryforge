@@ -65,8 +65,15 @@ def test_preregister_doc(panic_path):
 def test_new_diagrams(panic_path, weak_path):
     rm_ok = tf.read(panic_path).diagram("development_roadmap")
     assert '"all_checks_pass"' in rm_ok
+    assert 'label="Network theory of\\npanic disorder\\nscore 84.8, gate pass"' in rm_ok
     rm_weak = tf.read(weak_path).diagram("development_roadmap")
-    assert '"falsifiability" [label="falsifiability\\nfail"' in rm_weak
+    # The failed blocker leads, numbered first and stating what it costs.
+    assert ('"falsifiability" [label="1. falsifiability\\nAt least one\\nprediction forbids an'
+            '\\nobservation\\nblocks the gate", fillcolor="#F9E5E4"') in rm_weak
+    assert '"roadmap" -> "falsifiability";' in rm_weak
+    # The advisories trail the blockers, laid out several to a row.
+    assert ('{ rank=same; "precision" -> "risk_severity" -> "construct_clarity" '
+            "[style=invis]; }") in rm_weak
     pipe = tf.read(panic_path).diagram("pipeline")
     assert pipe.startswith("digraph pipeline {\n")
     assert '"result_pred1" [label="passed", fillcolor="#E5F2E7", color="#3E7A46"];' in pipe

@@ -12,50 +12,74 @@ pip install theoryforge
 
 ## Sample theories
 
-The examples below read a sample theory bundled with the project repository. The fixture files live under `fixtures/` in the repository at [github.com/pablobernabeu/theoryforge](https://github.com/pablobernabeu/theoryforge), for example [`fixtures/panic-network.theory.yaml`](https://github.com/pablobernabeu/theoryforge/blob/main/fixtures/panic-network.theory.yaml). Download a fixture, or point the path at one of your own theory files.
+The examples below read a sample theory bundled with the project repository. The fixture files live under `fixtures/` in the repository at [github.com/pablobernabeu/theoryforge](https://github.com/pablobernabeu/theoryforge), for example [`fixtures/panic-network.theory.yaml`](https://github.com/pablobernabeu/theoryforge/blob/main/fixtures/panic-network.theory.yaml). Download a fixture, or point the path at one of your own theory files. Here `fixtures` names that directory, and every result shown on this page is produced by running the code when the page is built.
 
 ## A first session
 
 Import the package and read a theory from a YAML file. Adjust the path to the file on your own machine.
 
-```python
+```python exec="1" session="getting-started"
+# Locate the repository's fixtures directory, which holds the sample theories
+# the examples read. Walking up from the build directory finds it whether
+# mkdocs runs from python/ or from the repository root.
+from pathlib import Path
+
+
+def _find_fixtures():
+    for base in (Path.cwd(), *Path.cwd().parents):
+        candidate = base / "fixtures"
+        if (candidate / "panic-network.theory.yaml").exists():
+            return candidate
+    raise RuntimeError("could not locate the fixtures directory")
+
+
+fixtures = _find_fixtures()
+```
+
+```python exec="1" source="material-block" session="getting-started"
 import theoryforge as tf
 
-t = tf.read("panic-network.theory.yaml")
+t = tf.read(fixtures / "panic-network.theory.yaml")
 ```
 
 Validate the theory. With no arguments this checks the required fields and enum membership, returning `True` on success and raising `ValueError` with a list of problems otherwise. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection, that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id, and that assumption, test-outcome and evidence entries reference declared predictions.
 
-```python
+```python exec="1" source="material-block" session="getting-started"
 t.validate()
 t.validate(full=True)   # also checks referential integrity
 ```
 
 Produce the rigour report. The `"json"` format returns the 12-item rigour checklist together with the overall gate. `t.check()` returns the same information as a plain Python dictionary; `t.report(format=...)` renders it as a string, in `"json"` or `"html"`.
 
-```python
+```python exec="1" source="material-block" result="json" session="getting-started"
 print(t.report("json"))
 ```
 
 Working from the dictionary that `t.check()` returns, individual results are easy to read off, including each checklist item in order.
 
-```python
+```python exec="1" source="material-block" result="text" session="getting-started"
 report = t.check()
-report["aggregate_score"]    # 84.8
-report["gate"]               # 'pass'
-report["n_blockers_failed"]  # 0
-report["items"][0]["id"]     # 'falsifiability'
-report["items"][0]["status"] # 'pass'
+
+print(report["aggregate_score"])
+print(report["gate"])
+print(report["n_blockers_failed"])
+print(report["items"][0]["id"])
+print(report["items"][0]["status"])
 ```
 
-Export a diagram. The digraph types, such as `nomological_net`, return Graphviz DOT, which you can render with Graphviz or inspect directly, and the `causal_dag` type returns dagitty syntax for causal-inference tooling.
+Export a diagram. The digraph types, such as `nomological_net`, return Graphviz DOT, which you can render with Graphviz or inspect directly.
 
-```python
+```python exec="1" source="material-block" result="text" session="getting-started"
 print(t.diagram("nomological_net"))
+```
+
+The `causal_dag` type returns dagitty syntax instead, for causal-inference tooling. It carries the same edges as the DOT above, without the presentation attributes.
+
+```python exec="1" source="material-block" result="text" session="getting-started"
 print(t.diagram("causal_dag"))
 ```
 
-With the optional render extra (`pip install theoryforge[render]`), `render_diagram(t, "nomological_net")` wraps the DOT in a `graphviz.Source` that displays inline in a notebook; the `causal_dag` view is the one exception, since dagitty syntax renders in a dagitty tool rather than Graphviz. Rendered, the nomological net reads as a figure.
+With the optional render extra (`pip install theoryforge[render]`), `render_diagram(t, "nomological_net")` wraps the DOT in a `graphviz.Source` that displays inline in a notebook; the `causal_dag` view is the one exception, since dagitty syntax renders in a dagitty tool rather than Graphviz. Rendered, the nomological-net DOT printed above reads as the figure below.
 
 <div class="tf-figure tf-diagram"><svg width="446pt" height="69pt"
  viewBox="0.00 0.00 445.97 69.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -107,8 +131,9 @@ With the optional render extra (`pip install theoryforge[render]`), `render_diag
 
 Run the lexical redundancy screen. This returns every construct pair with a lexical similarity of their definitions and an `ok`/`review` flag, marking `review` the pairs whose definitions overlap enough to suggest jingle-jangle redundancy.
 
-```python
-t.redundancy_check()
+```python exec="1" source="material-block" result="text" session="getting-started"
+for pair in t.redundancy_check():
+    print(pair["a"], pair["b"], pair["similarity"], pair["flag"])
 ```
 
 A theory can be written back to disk with `t.write()`. The format follows the file extension, `.json` for JSON and otherwise YAML.

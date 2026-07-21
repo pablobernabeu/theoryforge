@@ -135,11 +135,22 @@ basename(report_path)
 ```
 
 `tf_osf_push()` deposits the rendered report to an Open Science Framework node.
-It makes an authenticated network call, so it sits outside the deterministic
-core and is shown here without being run.
+It defaults to `dry_run = TRUE`, which assembles the request and returns it
+without sending anything, so the planned deposit can be inspected offline and
+without a token.
 
-```{r osf, eval = FALSE}
-tf_osf_push(theory, node = "ab12c", token = Sys.getenv("OSF_PAT"))
+```{r osf}
+str(tf_osf_push(theory, node = "ab12c"))
+```
+
+The returned request records the method, the destination URL, the filename the
+deposit would create and the size of the dossier in bytes, so the step can be
+checked before anything leaves the machine. A live deposit needs
+`dry_run = FALSE` together with a token and the node id, and that is the only
+path that touches the network.
+
+```{r osf-live, eval = FALSE}
+tf_osf_push(theory, node = "ab12c", token = Sys.getenv("OSF_PAT"), dry_run = FALSE)
 ```
 
 ## Visualising the theory
@@ -193,8 +204,10 @@ cat(tf_diagram(theory, "provenance"))
 cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "provenance", as = "svg"), '</div>', sep = "")
 ```
 
-The `venn` view returns an SVG that shows where the constructs share boundary
-conditions. It renders inline because the output is a self-contained image.
+The `venn` view takes each construct's boundary conditions as a set and returns
+an SVG showing where those scopes coincide and where they part company, with
+each region labelled by the number of conditions in it. It renders inline
+because the output is a self-contained image.
 
 ```{r venn, results = "asis"}
 cat('<div class="tf-figure">', tf_diagram(theory, "venn"), '</div>', sep = "")
@@ -216,9 +229,15 @@ cat('<div class="tf-figure">', tf_diagram(theory, "severity"), '</div>', sep = "
 ```
 
 The `development_roadmap` view turns the same checklist into a worklist by
-keeping only the items that still fail or warn. The panic network passes every
-check, so its roadmap collapses to a single node, and the deliberately weak
-theory shipped alongside it shows the worklist in full.
+keeping only the items that still fail or warn, and it orders that worklist the
+way the work should be done. Whatever gates the theory comes first, heaviest
+check first, and the advisory items follow. Each step carries its number, the
+criterion it is measured against and whether missing it blocks the gate or is
+merely advisory, so the figure says what to do next rather than only what went
+wrong. The hub names the theory and its current standing. The panic network
+passes every check, so its roadmap reduces to that hub and an `all checks pass`
+node, and the deliberately weak theory shipped alongside it shows the worklist
+in full.
 
 ```{r roadmap, collapse = FALSE, comment = ""}
 weak <- tf_read(

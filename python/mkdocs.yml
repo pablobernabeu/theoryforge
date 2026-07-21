@@ -53,7 +53,6 @@ theme:
 
 extra_css:
   - stylesheets/brand.css
-  - stylesheets/extra.css
 
 # The app is reached through the header App pill (overrides/partials/header.html),
 # matching the family convention, so it does not repeat in the nav.
@@ -70,6 +69,9 @@ nav:
 
 plugins:
   - search
+  # Runs the example blocks at build time and embeds their real output, so the
+  # guides show results like a knitted R vignette and cannot drift from the code.
+  - markdown-exec
   - mkdocstrings:
       handlers:
         python:

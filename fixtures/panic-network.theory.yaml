@@ -13,17 +13,17 @@ constructs:
     label: "Physiological arousal"
     definition: "Bodily activation indexed by heart rate, respiration and electrodermal response."
     measurement: ["heart-rate variability", "self-reported arousal"]
-    boundary_conditions: ["adults", "non-clinical baseline"]
+    boundary_conditions: ["adults", "non-clinical baseline", "no beta-blocker medication"]
   - id: c_perceived_threat
     label: "Perceived threat"
     definition: "The appraised dangerousness of internal sensations and external context."
     measurement: ["threat appraisal questionnaire"]
-    boundary_conditions: ["adults"]
+    boundary_conditions: ["adults", "non-clinical baseline", "waking hours"]
   - id: c_avoidance
     label: "Avoidance behaviour"
     definition: "Acts that reduce exposure to feared situations or sensations."
     measurement: ["behavioural avoidance task", "diary counts"]
-    boundary_conditions: ["adults"]
+    boundary_conditions: ["adults", "waking hours", "community sample"]
 
 propositions:
   - id: p1
@@ -43,7 +43,7 @@ propositions:
     relation: "causes"
     mechanism: "Catastrophic appraisal triggers sympathetic activation, closing a positive loop."
 
-boundary_conditions: ["adults", "non-clinical baseline", "no beta-blocker medication"]
+boundary_conditions: ["adults", "non-clinical baseline", "no beta-blocker medication", "waking hours", "community sample"]
 
 predictions:
   - id: pred1

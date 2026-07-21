@@ -1,3 +1,26 @@
+# theoryforge (development version)
+
+* The `development_roadmap` view is rebuilt around a theory hub carrying the
+  title, the aggregate score and the gate. Items are ordered blockers first and
+  then by weight, each labelled with its ordinal, the checklist criterion and
+  whether it blocks the gate, with visible edges down the blockers and the
+  advisory items set three abreast.
+* The three SVG chart views (`venn`, `rigour`, `severity`) now declare a `width`
+  and a `height` alongside their `viewBox`, so each renders at its natural size
+  wherever it is embedded. Without an intrinsic size a chart was stretched to
+  the width of its container, and since the three views have different natural
+  widths the same declared 13px label came out at a different size in each one.
+* The `venn` discs take the construct-border teal for their outline in place of
+  the former navy, which fell below the 3:1 contrast floor for graphical objects
+  on a dark page and left the figure close to invisible under the dark theme.
+* The bundled `panic-network` fixtures give the three constructs distinct
+  boundary conditions, so the `venn` view drawn from them shows where construct
+  scopes diverge rather than putting a zero in six of its seven regions.
+* All of the above are mirrored byte for byte in the Python twin.
+* Documentation: the Get started vignette shows what `tf_validate()` returns and
+  demonstrates the failure path, and the development article runs
+  `tf_osf_push()` in its default dry-run mode rather than withholding it.
+
 # theoryforge 0.4.0
 
 * The DOT diagram views are redesigned for content and legibility. Every view

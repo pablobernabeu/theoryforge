@@ -428,18 +428,20 @@ footer :not(pre) > code { background: rgba(255, 255, 255, .10); color: #E7EDF0; 
 
 // ---------------------------------------------------------------------------
 // Package diagrams — the inline SVGs in the articles (the Venn of construct
-// scope, the rigour status grid, the severity bars). They carry a viewBox but
-// no width or height, so left alone they stretch to the full article column and
-// their 13px labels balloon above body size. Cap the width to bring the type
-// back near body size, and colour the text with the current theme colour so it
-// stays legible on the dark theme. Documentation layer only; the byte-identical
-// diagram output is untouched.
+// scope, the rigour status grid, the severity bars) and the rendered Graphviz
+// views. Every one of them declares its own width and height, so each is left
+// at its natural size and its declared type renders at the size the emitter
+// asked for. An earlier version of this rule instead stretched each chart to a
+// common 440px cap, which scaled the three chart views by three different
+// factors, the views having different natural widths, so one identical 13px
+// label came out at 12.4px in one figure and 17.9px in another. A chart wider
+// than the column still shrinks to fit rather than forcing a scrollbar.
 // ---------------------------------------------------------------------------
 .tf-figure { margin: 1.25rem 0; }
 .tf-figure svg {
   display: block;
-  width: 100%;
-  max-width: 440px;
+  width: auto;
+  max-width: 100%;
   height: auto;
   margin: 0 auto;
 }
@@ -452,17 +454,21 @@ footer :not(pre) > code { background: rgba(255, 255, 255, .10); color: #E7EDF0; 
 // Rendered Graphviz diagrams (tf_render_diagram output) carry their own white
 // canvas and ink-on-white text fills, so they must NOT inherit the
 // currentColor text rule above: in dark mode that would paint light text on
-// the white canvas. Present them as a rounded white card at the diagram's own
-// natural size, so a four-node graph stays small and its type stays at
-// Graphviz's legible default; the IR wraps its labels and stacks its
-// layouts so every view fits a documentation column; should one still
-// overflow, it shrinks to the column rather than forcing a scrollbar.
+// the white canvas. Present them as a rounded white card; the sizing above
+// already leaves them at Graphviz's natural dimensions, so a four-node graph
+// stays small and its type stays at the legible default.
 .tf-figure.tf-diagram { overflow-x: auto; }
 .tf-figure.tf-diagram svg {
-  width: auto;
-  max-width: 100%;
   background: #fff;
   border-radius: 10px;
   padding: 10px;
   border: 1px solid rgba(14, 34, 51, .12);
+}
+// The canvas has to stay light for the ink-on-white fills to read, but pure
+// white against the dark page glares, so on the dark theme it settles to a
+// soft off-white. Every node fill in the palette is lighter than this, so the
+// nodes still lift off the canvas.
+[data-bs-theme="dark"] .tf-figure.tf-diagram svg {
+  background: #DDE4EA;
+  border-color: rgba(255, 255, 255, .16);
 }

@@ -42,14 +42,26 @@ theory <- tf_theory("panic-network", "A network theory of panic") |>
   tf_add_prediction("h1", "Arousal raises threat appraisal by a fixed amount.",
                     "point", derives_from = "p1")
 
-tf_validate(theory) # structural checks: required fields and enums
-tf_validate(theory, full = TRUE) # also checks referential integrity of ids and cross-references
+isTRUE(tf_validate(theory)) # structural checks: required fields and enums
+isTRUE(tf_validate(theory, full = TRUE)) # also checks referential integrity of ids and cross-references
 ```
 
 `tf_validate()` returns `TRUE` invisibly on success and stops with a message
-listing every problem otherwise. With `full = TRUE` it additionally checks
+listing every problem otherwise, which is why the calls above are wrapped in
+`isTRUE()` to show the result. With `full = TRUE` it additionally checks
 referential integrity, that ids are unique and every cross-reference points to a
 declared id. It does not require any optional dependency.
+
+The failure path is the more informative one. Pointing a prediction at a
+proposition that was never declared leaves the structural pass untouched, since
+every required field is still present and well formed, so the problem surfaces
+only under `full = TRUE`.
+
+```{r validate-failure, error = TRUE}
+broken <- theory
+broken$predictions[[1]]$derives_from <- "p_missing"
+tf_validate(broken, full = TRUE)
+```
 
 The building vocabulary has two further verbs. `tf_add_assumption()` records an
 auxiliary assumption, and `tf_set_formal_model()` attaches a formal-model

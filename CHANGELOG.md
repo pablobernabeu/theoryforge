@@ -6,6 +6,43 @@ version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
 
 ## [Unreleased]
 
+### Changed
+- The `development_roadmap` view is rebuilt around a theory hub carrying the
+  title, the aggregate score and the gate. Items are ordered blockers first and
+  then by weight, each labelled with its ordinal, the checklist criterion and
+  whether it blocks the gate, with visible edges running down the blockers and
+  the advisory items set three abreast.
+- The three SVG chart views (`venn`, `rigour`, `severity`) now declare a `width`
+  and a `height` alongside their `viewBox`. Lacking an intrinsic size, each
+  chart was previously stretched to the width of its container, and because the
+  three views have different natural widths the same declared 13px label came
+  out at a different size in each figure. Each view now renders at scale 1
+  wherever it is embedded.
+- The `venn` discs take the construct-border teal for their outline in place of
+  the former navy. The outline is what carries the set structure, and the navy
+  fell below the 3:1 contrast floor for graphical objects on a dark page, which
+  left the figure close to invisible under the dark theme.
+- The bundled `panic-network` fixtures give the three constructs distinct
+  boundary conditions, and declare all of those conditions at theory level. The
+  `venn` view drawn from the previous values put a zero in six of its seven
+  regions, so the figure showed nothing about where construct scopes diverge.
+
+All of the above are mirrored byte for byte across R and Python; the goldens,
+the tests and the specification (`API_SPEC.md`) are updated with them.
+
+### Documentation
+- The R Get started vignette shows what `tf_validate()` returns and demonstrates
+  the failure path, which the prose previously only described.
+- The R development article runs `tf_osf_push()` in its default dry-run mode, so
+  the planned deposit is shown rather than withheld as a network call.
+- The Python literature page marks its corpus listing as an excerpt of the
+  eight-record fixture, pairs each `lit_diagram` call with its own output, and
+  renders the keyword co-occurrence and theme landscape views as figures.
+- The Python simulation example prints every step of the trajectory it
+  discusses, and the surrounding prose now matches the printed numbers.
+- The chart figures on the Python guides are generated when the site is built
+  rather than pasted, so they cannot drift from the library.
+
 ## [0.4.0] - 2026-07-16
 
 ### Changed

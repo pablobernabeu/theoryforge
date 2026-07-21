@@ -21,7 +21,11 @@ network-dependent, and is described at the end.
 A corpus is a mapping with a `records` list. Each record may carry an `id`,
 a `title`, a `year`, a list of `keywords` and a list of `references`. The
 keyword and reference lists drive the analysis. Other fields are carried
-through but not required. A small corpus stored as YAML looks like this.
+through but not required. A small corpus stored as YAML looks like this. The
+examples on this page all read the bundled fixture
+[`fixtures/panic-corpus.yaml`](https://github.com/pablobernabeu/theoryforge/blob/main/fixtures/panic-corpus.yaml),
+of which the first and the third of its eight records appear below, so the
+counts in the output are those of the whole file rather than of this excerpt.
 
 ```yaml
 schema_version: "1.0"
@@ -32,6 +36,7 @@ records:
     year: 2018
     keywords: ["arousal", "interoception"]
     references: ["clark1986", "barlow2002"]
+  # ... r2 omitted here, and r4 to r8 below
   - id: r3
     title: "Catastrophic cognitions in panic"
     year: 2017
@@ -40,12 +45,33 @@ records:
 ```
 
 Read it with `tf.read_corpus`, which accepts YAML or JSON and returns a
-plain dictionary.
+plain dictionary. The examples below read the repository's sample corpus and
+theory from the fixture directory named `fixtures`, as on the
+[Getting started](getting-started.md) page, and every result shown is produced
+by running the code when this page is built.
 
-```python
+```python exec="1" session="literature"
+# Locate the repository's fixtures directory, which holds the sample corpus and
+# theories the examples read. Walking up from the build directory finds it
+# whether mkdocs runs from python/ or from the repository root.
+from pathlib import Path
+
+
+def _find_fixtures():
+    for base in (Path.cwd(), *Path.cwd().parents):
+        candidate = base / "fixtures"
+        if (candidate / "panic-corpus.yaml").exists():
+            return candidate
+    raise RuntimeError("could not locate the fixtures directory")
+
+
+fixtures = _find_fixtures()
+```
+
+```python exec="1" source="material-block" session="literature"
 import theoryforge as tf
 
-corpus = tf.read_corpus("panic-corpus.yaml")
+corpus = tf.read_corpus(fixtures / "panic-corpus.yaml")
 ```
 
 ## Mapping the field with litmap
@@ -56,14 +82,14 @@ pairs that meet a minimum link count, and groups the resulting keyword
 network into themes by connected component. It applies the same procedure
 to the `references` field to produce a co-citation network.
 
-```python
+```python exec="1" source="material-block" result="text" session="literature"
 m = tf.litmap(corpus)
 
-m["n_records"]            # number of records read
-m["keywords"]            # sorted list of all keywords seen
-m["keyword_cooccurrence"]# edges {"a", "b", "count"} above the threshold
-m["themes"]              # connected components of the keyword network
-m["co_citation"]         # the same edge structure over references
+print("records read:", m["n_records"])
+print("keywords:", m["keywords"])
+print("keyword co-occurrence:", m["keyword_cooccurrence"])
+print("themes:", m["themes"])
+print("co-citation:", m["co_citation"])
 ```
 
 Each theme is a dictionary with an `id` (for example `theme_1`), the sorted
@@ -73,11 +99,15 @@ keyword, so the output is stable across runs.
 The threshold for retaining an edge defaults to two co-occurrences. A pair
 of keywords or references that appear together only once is dropped, which
 keeps incidental overlaps out of the map. Lower the threshold to include
-sparser links, or raise it to keep only the strongest.
+sparser links, or raise it to keep only the strongest. The count of retained
+keyword edges shows what each threshold does to this small corpus.
 
-```python
+```python exec="1" source="material-block" result="text" session="literature"
 m_sparse = tf.litmap(corpus, min_link=1)   # keep single co-occurrences
 m_strict = tf.litmap(corpus, min_link=3)   # keep only frequent pairs
+
+print("edges at min_link=1:", len(m_sparse["keyword_cooccurrence"]))
+print("edges at min_link=3:", len(m_strict["keyword_cooccurrence"]))
 ```
 
 ## Positioning a theory with landscape
@@ -89,13 +119,13 @@ keywords. A theme that no account touches is flagged as an under-theorised
 front. A theme that two or more accounts touch is flagged as a redundancy
 risk.
 
-```python
-t = tf.read("panic-network.theory.yaml")
+```python exec="1" source="material-block" result="text" session="literature"
+t = tf.read(fixtures / "panic-network.theory.yaml")
 ls = t.landscape(corpus)
 
-ls["under_theorised_fronts"]  # theme ids no account addresses
-ls["redundancy_risk"]         # theme ids two or more accounts crowd
-ls["themes"]                  # per-theme detail
+print("under-theorised fronts:", ls["under_theorised_fronts"])
+print("redundancy risk:", ls["redundancy_risk"])
+print("themes:", ls["themes"])
 ```
 
 Each entry in `ls["themes"]` reports the theme `id`, its `keywords`, the
@@ -110,7 +140,7 @@ corpus)`, which is convenient when the theory is held as a plain dictionary
 rather than a `Theory` object. The `min_link` argument is passed through to
 the underlying `litmap` call.
 
-```python
+```python exec="1" source="material-block" session="literature"
 ls = tf.landscape(t, corpus, min_link=2)
 ```
 
@@ -118,23 +148,204 @@ ls = tf.landscape(t, corpus, min_link=2)
 
 `tf.lit_diagram` exports the literature structures as Graphviz DOT text. It
 accepts the output of `litmap` for the two network views, and the output of
-`landscape` for the theme map.
+`landscape` for the theme map. The default `type` is `keyword_cooccurrence`.
 
-```python
+```python exec="1" source="material-block" session="literature"
 m = tf.litmap(corpus)
 ls = t.landscape(corpus)
+```
 
+The keyword co-occurrence view is an undirected graph over the retained keyword
+pairs, each edge labelled with the number of records in which the pair appears.
+
+```python exec="1" source="material-block" result="text" session="literature"
 print(tf.lit_diagram(m, type="keyword_cooccurrence"))
+```
+
+Passed to Graphviz, that text reads as the figure below. The four themes are
+visible as four disconnected pairs, which is what makes this corpus separate so
+cleanly into components.
+
+<div class="tf-figure tf-diagram"><svg width="408pt" height="247pt"
+ viewBox="0.00 0.00 408.26 247.27" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(14.4 232.8666)">
+<title>keyword_cooccurrence</title>
+<!-- appraisal -->
+<g id="node1" class="node">
+<title>appraisal</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="52.418" cy="-19.2333" rx="48.5408" ry="19.4695"/>
+<text text-anchor="middle" x="52.418" y="-15.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">appraisal</text>
+</g>
+<!-- catastrophic misinterpretation -->
+<g id="node4" class="node">
+<title>catastrophic misinterpretation</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="260.9284" cy="-19.2333" rx="118.5666" ry="19.4695"/>
+<text text-anchor="middle" x="260.9284" y="-15.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">catastrophic misinterpretation</text>
+</g>
+<!-- appraisal&#45;&#45;catastrophic misinterpretation -->
+<g id="edge1" class="edge">
+<title>appraisal&#45;&#45;catastrophic misinterpretation</title>
+<path fill="none" stroke="#7b909f" d="M101.0413,-19.2333C113.5565,-19.2333 127.5843,-19.2333 141.9938,-19.2333"/>
+<text text-anchor="middle" x="123.6156" y="-22.2333" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">2</text>
+</g>
+<!-- arousal -->
+<g id="node2" class="node">
+<title>arousal</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="52.418" cy="-79.2333" rx="42.4411" ry="19.4695"/>
+<text text-anchor="middle" x="52.418" y="-75.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">arousal</text>
+</g>
+<!-- interoception -->
+<g id="node8" class="node">
+<title>interoception</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="260.9284" cy="-79.2333" rx="61.4826" ry="19.4695"/>
+<text text-anchor="middle" x="260.9284" y="-75.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">interoception</text>
+</g>
+<!-- arousal&#45;&#45;interoception -->
+<g id="edge2" class="edge">
+<title>arousal&#45;&#45;interoception</title>
+<path fill="none" stroke="#7b909f" d="M95.1164,-79.2333C125.141,-79.2333 165.7779,-79.2333 199.3071,-79.2333"/>
+<text text-anchor="middle" x="123.6156" y="-82.2333" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">2</text>
+</g>
+<!-- avoidance -->
+<g id="node3" class="node">
+<title>avoidance</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="52.418" cy="-139.2333" rx="52.3362" ry="19.4695"/>
+<text text-anchor="middle" x="52.418" y="-135.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">avoidance</text>
+</g>
+<!-- exposure -->
+<g id="node5" class="node">
+<title>exposure</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="260.9284" cy="-139.2333" rx="48.9151" ry="19.4695"/>
+<text text-anchor="middle" x="260.9284" y="-135.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">exposure</text>
+</g>
+<!-- avoidance&#45;&#45;exposure -->
+<g id="edge3" class="edge">
+<title>avoidance&#45;&#45;exposure</title>
+<path fill="none" stroke="#7b909f" d="M105.034,-139.2333C137.849,-139.2333 179.7956,-139.2333 211.9102,-139.2333"/>
+<text text-anchor="middle" x="123.6156" y="-142.2333" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">2</text>
+</g>
+<!-- genetics -->
+<g id="node6" class="node">
+<title>genetics</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="52.418" cy="-199.2333" rx="45.8637" ry="19.4695"/>
+<text text-anchor="middle" x="52.418" y="-195.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">genetics</text>
+</g>
+<!-- heritability -->
+<g id="node7" class="node">
+<title>heritability</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="260.9284" cy="-199.2333" rx="51.9432" ry="19.4695"/>
+<text text-anchor="middle" x="260.9284" y="-195.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">heritability</text>
+</g>
+<!-- genetics&#45;&#45;heritability -->
+<g id="edge4" class="edge">
+<title>genetics&#45;&#45;heritability</title>
+<path fill="none" stroke="#7b909f" d="M98.4346,-199.2333C131.0556,-199.2333 174.8768,-199.2333 208.7915,-199.2333"/>
+<text text-anchor="middle" x="123.6156" y="-202.2333" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">2</text>
+</g>
+</g>
+</svg></div>
+
+The co-citation view has the same shape, drawn over pairs of cited works rather
+than pairs of keywords. At the default threshold this corpus retains only two
+disjoint pairs, so the text carries the whole picture and no figure is needed.
+
+```python exec="1" source="material-block" result="text" session="literature"
 print(tf.lit_diagram(m, type="co_citation"))
+```
+
+The theme landscape is a directed graph instead. It links the focal theory and
+its registered alternatives to the themes each of them addresses, and labels
+every theme node with its status, so one figure carries what the prose above
+described a piece at a time.
+
+```python exec="1" source="material-block" result="text" session="literature"
 print(tf.lit_diagram(ls, type="theme_landscape"))
 ```
 
-The keyword and co-citation diagrams are undirected graphs with edge labels
-showing the co-occurrence count. The theme landscape is a directed graph
-linking the focal theory and its alternatives to the themes they address,
-with each theme node labelled by its status. The default `type` is
-`keyword_cooccurrence`. Write the returned text to a `.dot` file and render
-it with Graphviz, or pass it to any tool that reads DOT.
+<div class="tf-figure tf-diagram"><svg width="319pt" height="315pt"
+ viewBox="0.00 0.00 318.66 315.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(14.4 300.6)">
+<title>theme_landscape</title>
+<!-- theme_1 -->
+<g id="node1" class="node">
+<title>theme_1</title>
+<path fill="#f1f1f1" stroke="#8a8a8a" stroke-width="1.1" d="M277.8713,-66.7003C277.8713,-66.7003 167.825,-66.7003 167.825,-66.7003 161.825,-66.7003 155.825,-60.7003 155.825,-54.7003 155.825,-54.7003 155.825,-12.0997 155.825,-12.0997 155.825,-6.0997 161.825,-.0997 167.825,-.0997 167.825,-.0997 277.8713,-.0997 277.8713,-.0997 283.8713,-.0997 289.8713,-6.0997 289.8713,-12.0997 289.8713,-12.0997 289.8713,-54.7003 289.8713,-54.7003 289.8713,-60.7003 283.8713,-66.7003 277.8713,-66.7003"/>
+<text text-anchor="middle" x="222.8482" y="-49.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">theme_1</text>
+<text text-anchor="middle" x="222.8482" y="-36.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">appraisal, catastrophic</text>
+<text text-anchor="middle" x="222.8482" y="-23.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">misinterpretation</text>
+<text text-anchor="middle" x="222.8482" y="-10.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">(covered)</text>
+</g>
+<!-- theme_2 -->
+<g id="node2" class="node">
+<title>theme_2</title>
+<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M275.4862,-218.0015C275.4862,-218.0015 170.2101,-218.0015 170.2101,-218.0015 164.2101,-218.0015 158.2101,-212.0015 158.2101,-206.0015 158.2101,-206.0015 158.2101,-176.7985 158.2101,-176.7985 158.2101,-170.7985 164.2101,-164.7985 170.2101,-164.7985 170.2101,-164.7985 275.4862,-164.7985 275.4862,-164.7985 281.4862,-164.7985 287.4862,-170.7985 287.4862,-176.7985 287.4862,-176.7985 287.4862,-206.0015 287.4862,-206.0015 287.4862,-212.0015 281.4862,-218.0015 275.4862,-218.0015"/>
+<text text-anchor="middle" x="222.8482" y="-201.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">theme_2</text>
+<text text-anchor="middle" x="222.8482" y="-188.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">arousal, interoception</text>
+<text text-anchor="middle" x="222.8482" y="-174.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">(crowded)</text>
+</g>
+<!-- theme_3 -->
+<g id="node3" class="node">
+<title>theme_3</title>
+<path fill="#f1f1f1" stroke="#8a8a8a" stroke-width="1.1" d="M273.8296,-142.0015C273.8296,-142.0015 171.8667,-142.0015 171.8667,-142.0015 165.8667,-142.0015 159.8667,-136.0015 159.8667,-130.0015 159.8667,-130.0015 159.8667,-100.7985 159.8667,-100.7985 159.8667,-94.7985 165.8667,-88.7985 171.8667,-88.7985 171.8667,-88.7985 273.8296,-88.7985 273.8296,-88.7985 279.8296,-88.7985 285.8296,-94.7985 285.8296,-100.7985 285.8296,-100.7985 285.8296,-130.0015 285.8296,-130.0015 285.8296,-136.0015 279.8296,-142.0015 273.8296,-142.0015"/>
+<text text-anchor="middle" x="222.8482" y="-125.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">theme_3</text>
+<text text-anchor="middle" x="222.8482" y="-112.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">avoidance, exposure</text>
+<text text-anchor="middle" x="222.8482" y="-98.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">(covered)</text>
+</g>
+<!-- theme_4 -->
+<g id="node4" class="node">
+<title>theme_4</title>
+<path fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" d="M109.9892,-286.0015C109.9892,-286.0015 13.8474,-286.0015 13.8474,-286.0015 7.8474,-286.0015 1.8474,-280.0015 1.8474,-274.0015 1.8474,-274.0015 1.8474,-244.7985 1.8474,-244.7985 1.8474,-238.7985 7.8474,-232.7985 13.8474,-232.7985 13.8474,-232.7985 109.9892,-232.7985 109.9892,-232.7985 115.9892,-232.7985 121.9892,-238.7985 121.9892,-244.7985 121.9892,-244.7985 121.9892,-274.0015 121.9892,-274.0015 121.9892,-280.0015 115.9892,-286.0015 109.9892,-286.0015"/>
+<text text-anchor="middle" x="61.9183" y="-269.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">theme_4</text>
+<text text-anchor="middle" x="61.9183" y="-256.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">genetics, heritability</text>
+<text text-anchor="middle" x="61.9183" y="-242.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">(under_theorised)</text>
+</g>
+<!-- alt_cognitive -->
+<g id="node5" class="node">
+<title>alt_cognitive</title>
+<ellipse fill="#f1f1f1" stroke="#8a8a8a" stroke-width="1.1" cx="61.9183" cy="-33.4" rx="60.3868" ry="19.4695"/>
+<text text-anchor="middle" x="61.9183" y="-30.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">alt_cognitive</text>
+</g>
+<!-- alt_cognitive&#45;&gt;theme_1 -->
+<g id="edge1" class="edge">
+<title>alt_cognitive&#45;&gt;theme_1</title>
+<path fill="none" stroke="#7b909f" d="M122.3005,-33.4C130.8863,-33.4 139.798,-33.4 148.6095,-33.4"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="148.6465,-35.8501 155.6465,-33.4 148.6465,-30.9501 148.6465,-35.8501"/>
+</g>
+<!-- alt_biological -->
+<g id="node6" class="node">
+<title>alt_biological</title>
+<ellipse fill="#f1f1f1" stroke="#8a8a8a" stroke-width="1.1" cx="61.9183" cy="-191.4" rx="61.8367" ry="19.4695"/>
+<text text-anchor="middle" x="61.9183" y="-188.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">alt_biological</text>
+</g>
+<!-- alt_biological&#45;&gt;theme_2 -->
+<g id="edge2" class="edge">
+<title>alt_biological&#45;&gt;theme_2</title>
+<path fill="none" stroke="#7b909f" d="M124.138,-191.4C132.9317,-191.4 142.0323,-191.4 150.989,-191.4"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="151.1327,-193.8501 158.1327,-191.4 151.1327,-188.9501 151.1327,-193.8501"/>
+</g>
+<!-- focal -->
+<g id="node7" class="node">
+<title>focal</title>
+<ellipse fill="#12283a" stroke="#12283a" stroke-width="1.1" cx="61.9183" cy="-123.4" rx="33.2902" ry="19.4695"/>
+<text text-anchor="middle" x="61.9183" y="-120.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#ffffff">focal</text>
+</g>
+<!-- focal&#45;&gt;theme_2 -->
+<g id="edge3" class="edge">
+<title>focal&#45;&gt;theme_2</title>
+<path fill="none" stroke="#7b909f" d="M88.8543,-134.7817C106.4452,-142.2146 130.2826,-152.2869 152.976,-161.8759"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="152.2542,-164.2306 159.6558,-164.6984 154.1614,-159.717 152.2542,-164.2306"/>
+</g>
+<!-- focal&#45;&gt;theme_3 -->
+<g id="edge4" class="edge">
+<title>focal&#45;&gt;theme_3</title>
+<path fill="none" stroke="#7b909f" d="M95.2631,-121.7424C111.9812,-120.9113 132.8893,-119.872 152.9125,-118.8766"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="153.08,-121.3214 159.9497,-118.5268 152.8366,-116.4274 153.08,-121.3214"/>
+</g>
+</g>
+</svg></div>
+
+Write the returned text to a `.dot` file and render it with Graphviz, or pass it
+to any tool that reads DOT.
 
 ```python
 from pathlib import Path
@@ -168,7 +379,7 @@ theory does not already cite. `new_evidence_dois` answers that question
 deterministically, from a theory and a plain list of candidate DOIs,
 regardless of where the DOIs came from.
 
-```python
+```python exec="1" source="material-block" result="text" session="literature"
 t = tf.new_theory("demo", "A demonstration theory")
 t.data["evidence"] = [{"supports": "p1", "source_doi": "10.1016/j.brat.2015.10.002"}]
 
@@ -177,7 +388,7 @@ candidates = [
     "https://doi.org/10.1037/0033-2909.99.1.20",   # not yet cited
 ]
 
-t.new_evidence_dois(candidates)
+print(t.new_evidence_dois(candidates))
 ```
 
 The comparison is on a normalised form of each DOI (lowercased, with a

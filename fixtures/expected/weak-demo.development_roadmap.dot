@@ -2,23 +2,23 @@ digraph development_roadmap {
   graph [rankdir=TB, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
   node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
   edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
-  "falsifiability" [label="falsifiability\nfail", fillcolor="#F9E5E4", color="#B2453C"];
-  "precision" [label="precision\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "risk_severity" [label="risk_severity\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "construct_clarity" [label="construct_clarity\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "scope" [label="scope\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "logical_why" [label="logical_why\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "causal_testability" [label="causal_testability\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "diagnosticity" [label="diagnosticity\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "formalisation" [label="formalisation\nwarn", fillcolor="#FBF1DC", color="#9C6B14"];
-  "derivation_chain" [label="derivation_chain\nfail", fillcolor="#F9E5E4", color="#B2453C"];
-  "falsifiability" -> "precision" [style=invis];
-  "precision" -> "risk_severity" [style=invis];
-  "risk_severity" -> "construct_clarity" [style=invis];
-  "construct_clarity" -> "scope" [style=invis];
-  "scope" -> "logical_why" [style=invis];
-  "logical_why" -> "causal_testability" [style=invis];
-  "causal_testability" -> "diagnosticity" [style=invis];
-  "diagnosticity" -> "formalisation" [style=invis];
-  "formalisation" -> "derivation_chain" [style=invis];
+  "roadmap" [shape=ellipse, label="An underspecified\nmotivation theory\nscore 12.0, gate blocked", fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
+  "falsifiability" [label="1. falsifiability\nAt least one\nprediction forbids an\nobservation\nblocks the gate", fillcolor="#F9E5E4", color="#B2453C"];
+  "derivation_chain" [label="2. derivation_chain\nEach prediction is\ngraph-reachable from\npropositions\n(reachability only)\nblocks the gate", fillcolor="#F9E5E4", color="#B2453C"];
+  "precision" [label="3. precision\nPredictions are\npoint/interval, not\nmerely directional\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "risk_severity" [label="4. risk_severity\nMean prediction\nseverity above\nthreshold\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "construct_clarity" [label="5. construct_clarity\nEvery construct has\ndefinition +\nmeasurement + boundary\nconditions\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "logical_why" [label="6. logical_why\nEach proposition\nstates a mechanism,\nnot just a correlation\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "scope" [label="7. scope\nBoundary conditions\nexplicitly stated\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "causal_testability" [label="8. causal_testability\nCausal relations\nexport to a DAG with\nderivable implications\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "diagnosticity" [label="9. diagnosticity\nAt least one\nprediction\ndiscriminates from a\nregistered alternative\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "formalisation" [label="10. formalisation\nA formal-model stub\nexists (warn-only at\nbuilding stage)\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "roadmap" -> "falsifiability";
+  "falsifiability" -> "derivation_chain";
+  "derivation_chain" -> "precision";
+  { rank=same; "precision" -> "risk_severity" -> "construct_clarity" [style=invis]; }
+  "precision" -> "logical_why" [style=invis];
+  { rank=same; "logical_why" -> "scope" -> "causal_testability" [style=invis]; }
+  "logical_why" -> "diagnosticity" [style=invis];
+  { rank=same; "diagnosticity" -> "formalisation" [style=invis]; }
 }

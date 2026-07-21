@@ -237,15 +237,21 @@ Format severity/risk with `fmt(x)`: render to 3 decimals, strip trailing zeros, 
 
 ## 12. New diagram types (byte-identical)
 
-**development_roadmap** (DOT). One node per checklist item whose status ≠ pass (checklist order), coloured by status, then invisible edges chaining consecutive items into a single column. If none, a single `all_checks_pass` node:
+**development_roadmap** (DOT). A `roadmap` hub (ellipse, INK fill, white text) carrying the theory title (wrapped at 20), the aggregate score formatted by `fmt` and the gate. Then one node per checklist item whose status ≠ pass, ordered by `(severity_if_fail != "blocker", -weight, checklist index)` and numbered from 1 in that order, labelled with the ordinal and id, the checklist `criterion` wrapped at 22, and `blocks the gate` for a blocker or `advisory` otherwise, coloured by status. Edges then run from the hub down through the blockers in order; the advisories follow in rows of `ROADMAP_COLS` = 3, each row entered by one edge (visible for the first row, `style=invis` from the previous row's first node afterwards) and pinned left to right by a `rank=same` group:
 ```
 <prelude, rankdir=TB>
-  "<item id>" [label="<item id>
-<status>", <fill(status)>];
-  "<item i>" -> "<item i+1>" [style=invis];
+  "roadmap" [shape=ellipse, label="<wrap(title, 20)>
+score <fmt(aggregate_score)>, gate <gate>", fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
+  "<item id>" [label="<n>. <item id>
+<wrap(criterion, 22)>
+<blocks the gate|advisory>", <fill(status)>];
+  "<prev>" -> "<blocker id>";
+  "<prev>" -> "<row head>";
+  { rank=same; "<row 1>" -> "<row 2>" -> "<row 3>" [style=invis]; }
+  "<previous row head>" -> "<row head>" [style=invis];
 }
 ```
-(When all items pass: a single line `  "all_checks_pass" [label="all checks pass", fillcolor="#E5F2E7", color="#3E7A46"];`.)
+A row holding a single item emits `  { rank=same; "<row 1>"; }` instead. When all items pass, the hub is followed by `  "all_checks_pass" [label="all checks pass", fillcolor="#E5F2E7", color="#3E7A46"];` and `  "roadmap" -> "all_checks_pass";`.
 
 **pipeline** (DOT). Prediction nodes (file order), then for each test_outcome (file order) a result node line followed by its edge:
 ```
@@ -275,11 +281,13 @@ Format severity/risk with `fmt(x)`: render to 3 decimals, strip trailing zeros, 
 <type>`, prediction fill), `cluster_test` (`"outcome_<prediction_id>"` labelled `<prediction_id>
 <passed|failed>`, passed/failed fill). Edges, in order: for each proposition `"<from>" -> "prop_<p.id>"`; for each prediction and each of its `derives_from` entries `"prop_<src>" -> "pred_<pred.id>"`; for each test_outcome `"pred_<pid>" -> "outcome_<pid>"`.
 
-**venn** (SVG). The first up to three constructs (file order) as sets of their `boundary_conditions`, drawn at fixed integer coordinates (`viewBox="0 0 380 300"`). Region labels are set cardinalities. Layout: n=1 one circle at cx=190; n=2 two circles at cx=150,230 (counts A−B, A∩B, B−A); n=3 three circles at (150,135),(230,135),(190,195) with the seven region counts. Byte-identical because every coordinate and count is an integer.
+**SVG root element (venn, rigour, severity).** All three chart views open with the same root, `<svg xmlns="http://www.w3.org/2000/svg" width="W" height="H" viewBox="0 0 W H" font-family="sans-serif" font-size="13">`, where `W` and `H` are the view's own natural dimensions given below. The width and height attributes are part of the contract rather than decoration. A viewBox on its own leaves the image with no intrinsic size, so an embedding page scales it to fill the container, and because the three views have different natural widths the same declared 13px type then renders at a different size in each of them. Stating both attributes holds the scale at 1 wherever the SVG is embedded, which is what the rendered Graphviz views already do.
 
-**rigour** (SVG). The `check` report as a status grid (`viewBox="0 0 460 H"`, `H = 60 + 24·n + 12`). A title, then `aggregate score %.1f, gate <gate>`, then one row per checklist item (checklist order) at `y = 60 + 24·i`: a 16×16 swatch coloured by status (pass `#4caf50`, warn `#ff9800`, fail `#f44336`, otherwise `#9e9e9e`), the item id, and the status text. Integer coordinates; `aggregate_score` is already rounded to 1 dp, so `%.1f` is byte-stable.
+**venn** (SVG, `W`=380, `H`=300). The first up to three constructs (file order) as sets of their `boundary_conditions`, drawn at fixed integer coordinates. Region labels are set cardinalities. Layout: n=1 one circle at cx=190; n=2 two circles at cx=150,230 (counts A−B, A∩B, B−A); n=3 three circles at (150,135),(230,135),(190,195) with the seven region counts. Every circle is `fill="#4e79a7" fill-opacity="0.35" stroke="#1e7b7b"`: the stroke carries the set structure, so it takes the construct-border teal, which clears the 3:1 contrast floor for graphical objects on a light and a dark page alike, while the translucent fill is decorative reinforcement only. Byte-identical because every coordinate and count is an integer.
 
-**severity** (SVG). The `severity` rows as horizontal bars (`viewBox="0 0 380 H"`, `H = 40 + 28·max(n,1) + 8`). A title, then for each prediction (file order) at `y = 40 + 28·i`: the `prediction_id` (a `prediction_id` longer than 15 characters is truncated to its first 14 characters plus `…` U+2026), a bar of width `floor(computed_severity·200 + 0.5 + 1e-6)` at x=130, and the value `%.3f`. The 1e-6 bias matches `rnd` so the integer width is identical across platforms.
+**rigour** (SVG, `W`=460, `H` = 60 + 24·n + 12). The `check` report as a status grid. A title, then `aggregate score %.1f, gate <gate>`, then one row per checklist item (checklist order) at `y = 60 + 24·i`: a 16×16 swatch coloured by status (pass `#4caf50`, warn `#ff9800`, fail `#f44336`, otherwise `#9e9e9e`), the item id, and the status text. Integer coordinates; `aggregate_score` is already rounded to 1 dp, so `%.1f` is byte-stable.
+
+**severity** (SVG, `W` = `bar_x` + 250, `H` = 40 + 28·max(n,1) + 8). The `severity` rows as horizontal bars. Bars start at `bar_x = 20 + 8·max(nchar(label)) + 10`, derived from the longest row label so that short ids leave no dead gap before the bars, which is why `W` depends on the theory. A title, then for each prediction (file order) at `y = 40 + 28·i`: the `prediction_id` (a `prediction_id` longer than 15 characters is truncated to its first 14 characters plus `…` U+2026), a bar of width `floor(computed_severity·200 + 0.5 + 1e-6)` at `x = bar_x` filled `#4e79a7`, and the value `%.3f` at `x = bar_x + w + 5`. The 1e-6 bias matches `rnd` so the integer width is identical across platforms.
 
 ## 13. Additional golden artefacts (per fixture unless noted)
 
