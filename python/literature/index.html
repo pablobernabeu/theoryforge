@@ -1,0 +1,1583 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Systematic theory development. A reproducible workflow for building, developing and testing scientific theories.">
+      
+      
+        <meta name="author" content="Pablo Bernabeu">
+      
+      
+        <link rel="canonical" href="https://pablobernabeu.github.io/theoryforge/python/literature/">
+      
+      
+        <link rel="prev" href="../workflow-modes/">
+      
+      
+        <link rel="next" href="../methodology/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Literature layer - theoryforge (Python)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_markdown_exec_pyodide.css">
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/brand.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#the-literature-layer" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="theoryforge (Python)" class="md-header__button md-logo" aria-label="theoryforge (Python)" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            theoryforge (Python)
+          </span>
+          <small class="mrd-version" title="Released version">0.5.0</small>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Literature layer
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- App link (added: not part of upstream header.html) -->
+    <a data-md-component="app-link" href="https://pablobernabeu.github.io/theoryforge/apps/py/" title="Open the interactive app" class="md-header__button">App</a>
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pablobernabeu/theoryforge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+    
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../workflow-modes/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../changelog/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../about/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  About
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="theoryforge (Python)" class="md-nav__button md-logo" aria-label="theoryforge (Python)" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    theoryforge (Python)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pablobernabeu/theoryforge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflow-modes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Literature layer
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Literature layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a-corpus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A corpus
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mapping-the-field-with-litmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mapping the field with litmap
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#positioning-a-theory-with-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positioning a theory with landscape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diagrams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagrams
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fetching-a-corpus-from-openalex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fetching a corpus from OpenAlex
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tracking-new-evidence-with-an-external-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracking new evidence with an external search
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tracking new evidence with an external search">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#combining-it-with-scopusflow-py" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining it with scopusflow-py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-scopusflow-for-a-scopus-based-corpus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using scopusflow for a Scopus-based corpus
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methodology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methodological foundations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#a-corpus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A corpus
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mapping-the-field-with-litmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mapping the field with litmap
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#positioning-a-theory-with-landscape" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Positioning a theory with landscape
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#diagrams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Diagrams
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#fetching-a-corpus-from-openalex" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fetching a corpus from OpenAlex
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tracking-new-evidence-with-an-external-search" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tracking new evidence with an external search
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tracking new evidence with an external search">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#combining-it-with-scopusflow-py" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining it with scopusflow-py
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-scopusflow-for-a-scopus-based-corpus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using scopusflow for a Scopus-based corpus
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="the-literature-layer">The literature layer</h1>
+<p>A theory does not stand on its own. Before claiming that a construct or
+proposition adds something new, an author needs a view of the field it
+enters: which questions are already crowded, which fronts are thin, and
+where the proposed theory overlaps with existing accounts. The literature
+layer in <code>theoryforge</code> provides that view from a corpus of records, using
+deterministic computations so that the same corpus always yields the same
+map.</p>
+<p>This layer comprises four entry points. <code>tf.read_corpus</code> loads a corpus
+from disk. <code>tf.litmap</code> summarises the corpus through keyword
+co-occurrence, themes and co-citation. <code>Theory.landscape</code> positions a
+theory and its registered alternatives against those themes. <code>tf.lit_diagram</code>
+exports any of these structures as Graphviz DOT. A fifth function,
+<code>tf.fetch_corpus</code>, builds a corpus from the OpenAlex API. It is optional and
+network-dependent, and is described at the end.</p>
+<h2 id="a-corpus">A corpus</h2>
+<p>A corpus is a mapping with a <code>records</code> list. Each record may carry an <code>id</code>,
+a <code>title</code>, a <code>year</code>, a list of <code>keywords</code> and a list of <code>references</code>. The
+keyword and reference lists drive the analysis. Other fields are carried
+through but not required. A small corpus stored as YAML looks like this. The
+examples on this page all read the bundled fixture
+<a href="https://github.com/pablobernabeu/theoryforge/blob/main/fixtures/panic-corpus.yaml"><code>fixtures/panic-corpus.yaml</code></a>,
+of which the first and the third of its eight records appear below, so the
+counts in the output are those of the whole file rather than of this excerpt.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">schema_version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;1.0&quot;</span>
+<span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;panic-corpus-demo&quot;</span>
+<span class="nt">records</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">r1</span>
+<span class="w">    </span><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Interoceptive</span><span class="nv"> </span><span class="s">accuracy</span><span class="nv"> </span><span class="s">and</span><span class="nv"> </span><span class="s">panic&quot;</span>
+<span class="w">    </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2018</span>
+<span class="w">    </span><span class="nt">keywords</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;arousal&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;interoception&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">references</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;clark1986&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;barlow2002&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="c1"># ... r2 omitted here, and r4 to r8 below</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">r3</span>
+<span class="w">    </span><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Catastrophic</span><span class="nv"> </span><span class="s">cognitions</span><span class="nv"> </span><span class="s">in</span><span class="nv"> </span><span class="s">panic&quot;</span>
+<span class="w">    </span><span class="nt">year</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">2017</span>
+<span class="w">    </span><span class="nt">keywords</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;appraisal&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;catastrophic</span><span class="nv"> </span><span class="s">misinterpretation&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">references</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;clark1986&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;barlow2002&quot;</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<p>Read it with <code>tf.read_corpus</code>, which accepts YAML or JSON and returns a
+plain dictionary. The examples below read the repository's sample corpus and
+theory from the fixture directory named <code>fixtures</code>, as on the
+<a href="../getting-started/">Getting started</a> page, and every result shown is produced
+by running the code when this page is built.</p>
+<p></p>
+<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">theoryforge</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tf</span>
+
+<span class="n">corpus</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">read_corpus</span><span class="p">(</span><span class="n">fixtures</span> <span class="o">/</span> <span class="s2">&quot;panic-corpus.yaml&quot;</span><span class="p">)</span>
+</code></pre></div>
+<div class="result"></div>
+<h2 id="mapping-the-field-with-litmap">Mapping the field with litmap</h2>
+<p><code>tf.litmap</code> reduces a corpus to a set of deterministic summaries. It counts
+how often pairs of keywords appear together across records, retains the
+pairs that meet a minimum link count, and groups the resulting keyword
+network into themes by connected component. It applies the same procedure
+to the <code>references</code> field to produce a co-citation network.</p>
+<div class="highlight"><pre><span></span><code><span class="n">m</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">litmap</span><span class="p">(</span><span class="n">corpus</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;records read:&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">[</span><span class="s2">&quot;n_records&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;keywords:&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">[</span><span class="s2">&quot;keywords&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;keyword co-occurrence:&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">[</span><span class="s2">&quot;keyword_cooccurrence&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;themes:&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">[</span><span class="s2">&quot;themes&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;co-citation:&quot;</span><span class="p">,</span> <span class="n">m</span><span class="p">[</span><span class="s2">&quot;co_citation&quot;</span><span class="p">])</span>
+</code></pre></div>
+<div class="result">
+<div class="highlight"><pre><span></span><code>records read: 8
+keywords: [&#39;appraisal&#39;, &#39;arousal&#39;, &#39;avoidance&#39;, &#39;catastrophic misinterpretation&#39;, &#39;exposure&#39;, &#39;genetics&#39;, &#39;heritability&#39;, &#39;interoception&#39;]
+keyword co-occurrence: [{&#39;a&#39;: &#39;appraisal&#39;, &#39;b&#39;: &#39;catastrophic misinterpretation&#39;, &#39;count&#39;: 2}, {&#39;a&#39;: &#39;arousal&#39;, &#39;b&#39;: &#39;interoception&#39;, &#39;count&#39;: 2}, {&#39;a&#39;: &#39;avoidance&#39;, &#39;b&#39;: &#39;exposure&#39;, &#39;count&#39;: 2}, {&#39;a&#39;: &#39;genetics&#39;, &#39;b&#39;: &#39;heritability&#39;, &#39;count&#39;: 2}]
+themes: [{&#39;id&#39;: &#39;theme_1&#39;, &#39;keywords&#39;: [&#39;appraisal&#39;, &#39;catastrophic misinterpretation&#39;], &#39;size&#39;: 2}, {&#39;id&#39;: &#39;theme_2&#39;, &#39;keywords&#39;: [&#39;arousal&#39;, &#39;interoception&#39;], &#39;size&#39;: 2}, {&#39;id&#39;: &#39;theme_3&#39;, &#39;keywords&#39;: [&#39;avoidance&#39;, &#39;exposure&#39;], &#39;size&#39;: 2}, {&#39;id&#39;: &#39;theme_4&#39;, &#39;keywords&#39;: [&#39;genetics&#39;, &#39;heritability&#39;], &#39;size&#39;: 2}]
+co-citation: [{&#39;a&#39;: &#39;barlow2002&#39;, &#39;b&#39;: &#39;clark1986&#39;, &#39;count&#39;: 3}, {&#39;a&#39;: &#39;bouton2001&#39;, &#39;b&#39;: &#39;craske2008&#39;, &#39;count&#39;: 2}]
+</code></pre></div>
+</div>
+<p>Each theme is a dictionary with an <code>id</code> (for example <code>theme_1</code>), the sorted
+<code>keywords</code> it contains, and its <code>size</code>. Themes are ordered by their smallest
+keyword, so the output is stable across runs.</p>
+<p>The threshold for retaining an edge defaults to two co-occurrences. A pair
+of keywords or references that appear together only once is dropped, which
+keeps incidental overlaps out of the map. Raise it to keep only the strongest
+links, or lower it to admit sparser ones. This fixture corpus is deliberately
+regular, with every keyword pair appearing in exactly two records, so lowering
+the threshold admits nothing further and raising it past two clears the keyword
+map altogether. The co-citation counts do vary, which is where the threshold
+has something to select on.</p>
+<div class="highlight"><pre><span></span><code><span class="n">m_sparse</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">litmap</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">min_link</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>   <span class="c1"># keep single co-occurrences</span>
+<span class="n">m_strict</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">litmap</span><span class="p">(</span><span class="n">corpus</span><span class="p">,</span> <span class="n">min_link</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>   <span class="c1"># keep only frequent pairs</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;keyword edges at min_link=1:&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">m_sparse</span><span class="p">[</span><span class="s2">&quot;keyword_cooccurrence&quot;</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;keyword edges at min_link=3:&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">m_strict</span><span class="p">[</span><span class="s2">&quot;keyword_cooccurrence&quot;</span><span class="p">]))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;co-citation edges at min_link=3:&quot;</span><span class="p">,</span> <span class="n">m_strict</span><span class="p">[</span><span class="s2">&quot;co_citation&quot;</span><span class="p">])</span>
+</code></pre></div>
+<div class="result">
+<div class="highlight"><pre><span></span><code>keyword edges at min_link=1: 4
+keyword edges at min_link=3: 0
+co-citation edges at min_link=3: [{&#39;a&#39;: &#39;barlow2002&#39;, &#39;b&#39;: &#39;clark1986&#39;, &#39;count&#39;: 3}]
+</code></pre></div>
+</div>
+<h2 id="positioning-a-theory-with-landscape">Positioning a theory with landscape</h2>
+<p><code>Theory.landscape</code> takes the themes from <code>litmap</code> and places a theory on
+them. It matches the theory's title and construct labels, and the labels and
+key constructs of any registered alternatives, against each theme's
+keywords. A theme that no account touches is flagged as an under-theorised
+front. A theme that two or more accounts touch is flagged as a redundancy
+risk.</p>
+<div class="highlight"><pre><span></span><code><span class="n">t</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">fixtures</span> <span class="o">/</span> <span class="s2">&quot;panic-network.theory.yaml&quot;</span><span class="p">)</span>
+<span class="n">ls</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">landscape</span><span class="p">(</span><span class="n">corpus</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;under-theorised fronts:&quot;</span><span class="p">,</span> <span class="n">ls</span><span class="p">[</span><span class="s2">&quot;under_theorised_fronts&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;redundancy risk:&quot;</span><span class="p">,</span> <span class="n">ls</span><span class="p">[</span><span class="s2">&quot;redundancy_risk&quot;</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;themes:&quot;</span><span class="p">,</span> <span class="n">ls</span><span class="p">[</span><span class="s2">&quot;themes&quot;</span><span class="p">])</span>
+</code></pre></div>
+<div class="result">
+<div class="highlight"><pre><span></span><code>under-theorised fronts: [&#39;theme_4&#39;]
+redundancy risk: [&#39;theme_2&#39;]
+themes: [{&#39;id&#39;: &#39;theme_1&#39;, &#39;keywords&#39;: [&#39;appraisal&#39;, &#39;catastrophic misinterpretation&#39;], &#39;alternatives&#39;: [&#39;alt_cognitive&#39;], &#39;focal&#39;: False, &#39;status&#39;: &#39;covered&#39;}, {&#39;id&#39;: &#39;theme_2&#39;, &#39;keywords&#39;: [&#39;arousal&#39;, &#39;interoception&#39;], &#39;alternatives&#39;: [&#39;alt_biological&#39;], &#39;focal&#39;: True, &#39;status&#39;: &#39;crowded&#39;}, {&#39;id&#39;: &#39;theme_3&#39;, &#39;keywords&#39;: [&#39;avoidance&#39;, &#39;exposure&#39;], &#39;alternatives&#39;: [], &#39;focal&#39;: True, &#39;status&#39;: &#39;covered&#39;}, {&#39;id&#39;: &#39;theme_4&#39;, &#39;keywords&#39;: [&#39;genetics&#39;, &#39;heritability&#39;], &#39;alternatives&#39;: [], &#39;focal&#39;: False, &#39;status&#39;: &#39;under_theorised&#39;}]
+</code></pre></div>
+</div>
+<p>Each entry in <code>ls["themes"]</code> reports the theme <code>id</code>, its <code>keywords</code>, the
+<code>alternatives</code> that map onto it, whether the focal theory is <code>focal</code> on it,
+and a <code>status</code> of <code>under_theorised</code>, <code>covered</code> or <code>crowded</code>. The
+under-theorised fronts point to questions a new theory could claim, and the
+redundancy risks point to ground where it would need to justify a further
+account.</p>
+<p>The same function is available at module level as <code>tf.landscape(theory,
+corpus)</code>, which is convenient when the theory is held as a plain dictionary
+rather than a <code>Theory</code> object. The <code>min_link</code> argument is passed through to
+the underlying <code>litmap</code> call.</p>
+<div class="highlight"><pre><span></span><code><span class="n">ls</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">landscape</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">corpus</span><span class="p">,</span> <span class="n">min_link</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</code></pre></div>
+<div class="result"></div>
+<h2 id="diagrams">Diagrams</h2>
+<p><code>tf.lit_diagram</code> exports the literature structures as Graphviz DOT text. It
+accepts the output of <code>litmap</code> for the two network views, and the output of
+<code>landscape</code> for the theme map. The default <code>type</code> is <code>keyword_cooccurrence</code>.</p>
+<div class="highlight"><pre><span></span><code><span class="n">m</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">litmap</span><span class="p">(</span><span class="n">corpus</span><span class="p">)</span>
+<span class="n">ls</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">landscape</span><span class="p">(</span><span class="n">corpus</span><span class="p">)</span>
+</code></pre></div>
+<div class="result"></div>
+<p>The keyword co-occurrence view is an undirected graph over the retained keyword
+pairs, each edge labelled with the number of records in which the pair appears.</p>
+<div class="highlight"><pre><span></span><code><span class="nb">print</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">lit_diagram</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;keyword_cooccurrence&quot;</span><span class="p">))</span>
+</code></pre></div>
+<div class="result">
+<div class="highlight"><pre><span></span><code>graph keyword_cooccurrence {
+  graph [rankdir=LR, bgcolor=&quot;transparent&quot;, fontname=&quot;Helvetica&quot;, fontsize=11, pad=&quot;0.2&quot;, nodesep=&quot;0.3&quot;, ranksep=&quot;0.45&quot;];
+  node [fontname=&quot;Helvetica&quot;, fontsize=11, shape=box, style=&quot;rounded,filled&quot;, color=&quot;#33567A&quot;, fillcolor=&quot;#F2F6F9&quot;, fontcolor=&quot;#12283A&quot;, penwidth=1.1, margin=&quot;0.16,0.1&quot;];
+  edge [fontname=&quot;Helvetica&quot;, fontsize=10, color=&quot;#7B909F&quot;, fontcolor=&quot;#0F6E6E&quot;, arrowsize=0.7];
+  node [shape=ellipse, style=&quot;filled&quot;, fillcolor=&quot;#E4F1F1&quot;, color=&quot;#1E7B7B&quot;];
+  &quot;appraisal&quot;;
+  &quot;arousal&quot;;
+  &quot;avoidance&quot;;
+  &quot;catastrophic misinterpretation&quot;;
+  &quot;exposure&quot;;
+  &quot;genetics&quot;;
+  &quot;heritability&quot;;
+  &quot;interoception&quot;;
+  &quot;appraisal&quot; -- &quot;catastrophic misinterpretation&quot; [label=&quot;2&quot;];
+  &quot;arousal&quot; -- &quot;interoception&quot; [label=&quot;2&quot;];
+  &quot;avoidance&quot; -- &quot;exposure&quot; [label=&quot;2&quot;];
+  &quot;genetics&quot; -- &quot;heritability&quot; [label=&quot;2&quot;];
+}
+</code></pre></div>
+</div>
+<p>Passed to Graphviz, that text reads as the figure below. The four themes are
+visible as four disconnected pairs, which is what makes this corpus separate so
+cleanly into components.</p>
+<div class="tf-figure tf-diagram"><svg width="408pt" height="247pt"
+ viewBox="0.00 0.00 408.26 247.27" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(14.4 232.8666)">
+<title>keyword_cooccurrence</title>
+<!-- appraisal -->
+<g id="node1" class="node">
+<title>appraisal</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="52.418" cy="-19.2333" rx="48.5408" ry="19.4695"/>
+<text text-anchor="middle" x="52.418" y="-15.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">appraisal</text>
+</g>
+<!-- catastrophic misinterpretation -->
+<g id="node4" class="node">
+<title>catastrophic misinterpretation</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="260.9284" cy="-19.2333" rx="118.5666" ry="19.4695"/>
+<text text-anchor="middle" x="260.9284" y="-15.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">catastrophic misinterpretation</text>
+</g>
+<!-- appraisal&#45;&#45;catastrophic misinterpretation -->
+<g id="edge1" class="edge">
+<title>appraisal&#45;&#45;catastrophic misinterpretation</title>
+<path fill="none" stroke="#7b909f" d="M101.0413,-19.2333C113.5565,-19.2333 127.5843,-19.2333 141.9938,-19.2333"/>
+<text text-anchor="middle" x="123.6156" y="-22.2333" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">2</text>
+</g>
+<!-- arousal -->
+<g id="node2" class="node">
+<title>arousal</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="52.418" cy="-79.2333" rx="42.4411" ry="19.4695"/>
+<text text-anchor="middle" x="52.418" y="-75.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">arousal</text>
+</g>
+<!-- interoception -->
+<g id="node8" class="node">
+<title>interoception</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="260.9284" cy="-79.2333" rx="61.4826" ry="19.4695"/>
+<text text-anchor="middle" x="260.9284" y="-75.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">interoception</text>
+</g>
+<!-- arousal&#45;&#45;interoception -->
+<g id="edge2" class="edge">
+<title>arousal&#45;&#45;interoception</title>
+<path fill="none" stroke="#7b909f" d="M95.1164,-79.2333C125.141,-79.2333 165.7779,-79.2333 199.3071,-79.2333"/>
+<text text-anchor="middle" x="123.6156" y="-82.2333" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">2</text>
+</g>
+<!-- avoidance -->
+<g id="node3" class="node">
+<title>avoidance</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="52.418" cy="-139.2333" rx="52.3362" ry="19.4695"/>
+<text text-anchor="middle" x="52.418" y="-135.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">avoidance</text>
+</g>
+<!-- exposure -->
+<g id="node5" class="node">
+<title>exposure</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="260.9284" cy="-139.2333" rx="48.9151" ry="19.4695"/>
+<text text-anchor="middle" x="260.9284" y="-135.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">exposure</text>
+</g>
+<!-- avoidance&#45;&#45;exposure -->
+<g id="edge3" class="edge">
+<title>avoidance&#45;&#45;exposure</title>
+<path fill="none" stroke="#7b909f" d="M105.034,-139.2333C137.849,-139.2333 179.7956,-139.2333 211.9102,-139.2333"/>
+<text text-anchor="middle" x="123.6156" y="-142.2333" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">2</text>
+</g>
+<!-- genetics -->
+<g id="node6" class="node">
+<title>genetics</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="52.418" cy="-199.2333" rx="45.8637" ry="19.4695"/>
+<text text-anchor="middle" x="52.418" y="-195.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">genetics</text>
+</g>
+<!-- heritability -->
+<g id="node7" class="node">
+<title>heritability</title>
+<ellipse fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" cx="260.9284" cy="-199.2333" rx="51.9432" ry="19.4695"/>
+<text text-anchor="middle" x="260.9284" y="-195.9333" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">heritability</text>
+</g>
+<!-- genetics&#45;&#45;heritability -->
+<g id="edge4" class="edge">
+<title>genetics&#45;&#45;heritability</title>
+<path fill="none" stroke="#7b909f" d="M98.4346,-199.2333C131.0556,-199.2333 174.8768,-199.2333 208.7915,-199.2333"/>
+<text text-anchor="middle" x="123.6156" y="-202.2333" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">2</text>
+</g>
+</g>
+</svg></div>
+
+<p>The co-citation view has the same shape, drawn over pairs of cited works rather
+than pairs of keywords. At the default threshold this corpus retains only two
+disjoint pairs, so the text carries the whole picture and no figure is needed.</p>
+<div class="highlight"><pre><span></span><code><span class="nb">print</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">lit_diagram</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;co_citation&quot;</span><span class="p">))</span>
+</code></pre></div>
+<div class="result">
+<div class="highlight"><pre><span></span><code>graph co_citation {
+  graph [rankdir=LR, bgcolor=&quot;transparent&quot;, fontname=&quot;Helvetica&quot;, fontsize=11, pad=&quot;0.2&quot;, nodesep=&quot;0.3&quot;, ranksep=&quot;0.45&quot;];
+  node [fontname=&quot;Helvetica&quot;, fontsize=11, shape=box, style=&quot;rounded,filled&quot;, color=&quot;#33567A&quot;, fillcolor=&quot;#F2F6F9&quot;, fontcolor=&quot;#12283A&quot;, penwidth=1.1, margin=&quot;0.16,0.1&quot;];
+  edge [fontname=&quot;Helvetica&quot;, fontsize=10, color=&quot;#7B909F&quot;, fontcolor=&quot;#0F6E6E&quot;, arrowsize=0.7];
+  node [shape=ellipse, style=&quot;filled&quot;, fillcolor=&quot;#E7EDF5&quot;, color=&quot;#33567A&quot;];
+  &quot;barlow2002&quot;;
+  &quot;bouton2001&quot;;
+  &quot;clark1986&quot;;
+  &quot;craske2008&quot;;
+  &quot;barlow2002&quot; -- &quot;clark1986&quot; [label=&quot;3&quot;];
+  &quot;bouton2001&quot; -- &quot;craske2008&quot; [label=&quot;2&quot;];
+}
+</code></pre></div>
+</div>
+<p>The theme landscape is a directed graph instead. It links the focal theory and
+its registered alternatives to the themes each of them addresses, and labels
+every theme node with its status, so one figure carries what the prose above
+described a piece at a time.</p>
+<div class="highlight"><pre><span></span><code><span class="nb">print</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">lit_diagram</span><span class="p">(</span><span class="n">ls</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;theme_landscape&quot;</span><span class="p">))</span>
+</code></pre></div>
+<div class="result">
+<div class="highlight"><pre><span></span><code>digraph theme_landscape {
+  graph [rankdir=LR, bgcolor=&quot;transparent&quot;, fontname=&quot;Helvetica&quot;, fontsize=11, pad=&quot;0.2&quot;, nodesep=&quot;0.3&quot;, ranksep=&quot;0.45&quot;];
+  node [fontname=&quot;Helvetica&quot;, fontsize=11, shape=box, style=&quot;rounded,filled&quot;, color=&quot;#33567A&quot;, fillcolor=&quot;#F2F6F9&quot;, fontcolor=&quot;#12283A&quot;, penwidth=1.1, margin=&quot;0.16,0.1&quot;];
+  edge [fontname=&quot;Helvetica&quot;, fontsize=10, color=&quot;#7B909F&quot;, fontcolor=&quot;#0F6E6E&quot;, arrowsize=0.7];
+  &quot;theme_1&quot; [label=&quot;theme_1\nappraisal, catastrophic\nmisinterpretation\n(covered)&quot;, fillcolor=&quot;#F1F1F1&quot;, color=&quot;#8A8A8A&quot;];
+  &quot;theme_2&quot; [label=&quot;theme_2\narousal, interoception\n(crowded)&quot;, fillcolor=&quot;#FBF1DC&quot;, color=&quot;#9C6B14&quot;];
+  &quot;theme_3&quot; [label=&quot;theme_3\navoidance, exposure\n(covered)&quot;, fillcolor=&quot;#F1F1F1&quot;, color=&quot;#8A8A8A&quot;];
+  &quot;theme_4&quot; [label=&quot;theme_4\ngenetics, heritability\n(under_theorised)&quot;, fillcolor=&quot;#E4F1F1&quot;, color=&quot;#1E7B7B&quot;];
+  &quot;alt_cognitive&quot; [label=&quot;alt_cognitive&quot;, shape=ellipse, fillcolor=&quot;#F1F1F1&quot;, color=&quot;#8A8A8A&quot;];
+  &quot;alt_biological&quot; [label=&quot;alt_biological&quot;, shape=ellipse, fillcolor=&quot;#F1F1F1&quot;, color=&quot;#8A8A8A&quot;];
+  &quot;focal&quot; [label=&quot;focal&quot;, shape=ellipse, fillcolor=&quot;#12283A&quot;, color=&quot;#12283A&quot;, fontcolor=&quot;#FFFFFF&quot;];
+  &quot;alt_cognitive&quot; -&gt; &quot;theme_1&quot;;
+  &quot;alt_biological&quot; -&gt; &quot;theme_2&quot;;
+  &quot;focal&quot; -&gt; &quot;theme_2&quot;;
+  &quot;focal&quot; -&gt; &quot;theme_3&quot;;
+}
+</code></pre></div>
+</div>
+<div class="tf-figure tf-diagram"><svg width="319pt" height="315pt"
+ viewBox="0.00 0.00 318.66 315.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(14.4 300.6)">
+<title>theme_landscape</title>
+<!-- theme_1 -->
+<g id="node1" class="node">
+<title>theme_1</title>
+<path fill="#f1f1f1" stroke="#8a8a8a" stroke-width="1.1" d="M277.8713,-66.7003C277.8713,-66.7003 167.825,-66.7003 167.825,-66.7003 161.825,-66.7003 155.825,-60.7003 155.825,-54.7003 155.825,-54.7003 155.825,-12.0997 155.825,-12.0997 155.825,-6.0997 161.825,-.0997 167.825,-.0997 167.825,-.0997 277.8713,-.0997 277.8713,-.0997 283.8713,-.0997 289.8713,-6.0997 289.8713,-12.0997 289.8713,-12.0997 289.8713,-54.7003 289.8713,-54.7003 289.8713,-60.7003 283.8713,-66.7003 277.8713,-66.7003"/>
+<text text-anchor="middle" x="222.8482" y="-49.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">theme_1</text>
+<text text-anchor="middle" x="222.8482" y="-36.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">appraisal, catastrophic</text>
+<text text-anchor="middle" x="222.8482" y="-23.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">misinterpretation</text>
+<text text-anchor="middle" x="222.8482" y="-10.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">(covered)</text>
+</g>
+<!-- theme_2 -->
+<g id="node2" class="node">
+<title>theme_2</title>
+<path fill="#fbf1dc" stroke="#9c6b14" stroke-width="1.1" d="M275.4862,-218.0015C275.4862,-218.0015 170.2101,-218.0015 170.2101,-218.0015 164.2101,-218.0015 158.2101,-212.0015 158.2101,-206.0015 158.2101,-206.0015 158.2101,-176.7985 158.2101,-176.7985 158.2101,-170.7985 164.2101,-164.7985 170.2101,-164.7985 170.2101,-164.7985 275.4862,-164.7985 275.4862,-164.7985 281.4862,-164.7985 287.4862,-170.7985 287.4862,-176.7985 287.4862,-176.7985 287.4862,-206.0015 287.4862,-206.0015 287.4862,-212.0015 281.4862,-218.0015 275.4862,-218.0015"/>
+<text text-anchor="middle" x="222.8482" y="-201.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">theme_2</text>
+<text text-anchor="middle" x="222.8482" y="-188.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">arousal, interoception</text>
+<text text-anchor="middle" x="222.8482" y="-174.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">(crowded)</text>
+</g>
+<!-- theme_3 -->
+<g id="node3" class="node">
+<title>theme_3</title>
+<path fill="#f1f1f1" stroke="#8a8a8a" stroke-width="1.1" d="M273.8296,-142.0015C273.8296,-142.0015 171.8667,-142.0015 171.8667,-142.0015 165.8667,-142.0015 159.8667,-136.0015 159.8667,-130.0015 159.8667,-130.0015 159.8667,-100.7985 159.8667,-100.7985 159.8667,-94.7985 165.8667,-88.7985 171.8667,-88.7985 171.8667,-88.7985 273.8296,-88.7985 273.8296,-88.7985 279.8296,-88.7985 285.8296,-94.7985 285.8296,-100.7985 285.8296,-100.7985 285.8296,-130.0015 285.8296,-130.0015 285.8296,-136.0015 279.8296,-142.0015 273.8296,-142.0015"/>
+<text text-anchor="middle" x="222.8482" y="-125.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">theme_3</text>
+<text text-anchor="middle" x="222.8482" y="-112.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">avoidance, exposure</text>
+<text text-anchor="middle" x="222.8482" y="-98.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">(covered)</text>
+</g>
+<!-- theme_4 -->
+<g id="node4" class="node">
+<title>theme_4</title>
+<path fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" d="M109.9892,-286.0015C109.9892,-286.0015 13.8474,-286.0015 13.8474,-286.0015 7.8474,-286.0015 1.8474,-280.0015 1.8474,-274.0015 1.8474,-274.0015 1.8474,-244.7985 1.8474,-244.7985 1.8474,-238.7985 7.8474,-232.7985 13.8474,-232.7985 13.8474,-232.7985 109.9892,-232.7985 109.9892,-232.7985 115.9892,-232.7985 121.9892,-238.7985 121.9892,-244.7985 121.9892,-244.7985 121.9892,-274.0015 121.9892,-274.0015 121.9892,-280.0015 115.9892,-286.0015 109.9892,-286.0015"/>
+<text text-anchor="middle" x="61.9183" y="-269.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">theme_4</text>
+<text text-anchor="middle" x="61.9183" y="-256.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">genetics, heritability</text>
+<text text-anchor="middle" x="61.9183" y="-242.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">(under_theorised)</text>
+</g>
+<!-- alt_cognitive -->
+<g id="node5" class="node">
+<title>alt_cognitive</title>
+<ellipse fill="#f1f1f1" stroke="#8a8a8a" stroke-width="1.1" cx="61.9183" cy="-33.4" rx="60.3868" ry="19.4695"/>
+<text text-anchor="middle" x="61.9183" y="-30.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">alt_cognitive</text>
+</g>
+<!-- alt_cognitive&#45;&gt;theme_1 -->
+<g id="edge1" class="edge">
+<title>alt_cognitive&#45;&gt;theme_1</title>
+<path fill="none" stroke="#7b909f" d="M122.3005,-33.4C130.8863,-33.4 139.798,-33.4 148.6095,-33.4"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="148.6465,-35.8501 155.6465,-33.4 148.6465,-30.9501 148.6465,-35.8501"/>
+</g>
+<!-- alt_biological -->
+<g id="node6" class="node">
+<title>alt_biological</title>
+<ellipse fill="#f1f1f1" stroke="#8a8a8a" stroke-width="1.1" cx="61.9183" cy="-191.4" rx="61.8367" ry="19.4695"/>
+<text text-anchor="middle" x="61.9183" y="-188.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">alt_biological</text>
+</g>
+<!-- alt_biological&#45;&gt;theme_2 -->
+<g id="edge2" class="edge">
+<title>alt_biological&#45;&gt;theme_2</title>
+<path fill="none" stroke="#7b909f" d="M124.138,-191.4C132.9317,-191.4 142.0323,-191.4 150.989,-191.4"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="151.1327,-193.8501 158.1327,-191.4 151.1327,-188.9501 151.1327,-193.8501"/>
+</g>
+<!-- focal -->
+<g id="node7" class="node">
+<title>focal</title>
+<ellipse fill="#12283a" stroke="#12283a" stroke-width="1.1" cx="61.9183" cy="-123.4" rx="33.2902" ry="19.4695"/>
+<text text-anchor="middle" x="61.9183" y="-120.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#ffffff">focal</text>
+</g>
+<!-- focal&#45;&gt;theme_2 -->
+<g id="edge3" class="edge">
+<title>focal&#45;&gt;theme_2</title>
+<path fill="none" stroke="#7b909f" d="M88.8543,-134.7817C106.4452,-142.2146 130.2826,-152.2869 152.976,-161.8759"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="152.2542,-164.2306 159.6558,-164.6984 154.1614,-159.717 152.2542,-164.2306"/>
+</g>
+<!-- focal&#45;&gt;theme_3 -->
+<g id="edge4" class="edge">
+<title>focal&#45;&gt;theme_3</title>
+<path fill="none" stroke="#7b909f" d="M95.2631,-121.7424C111.9812,-120.9113 132.8893,-119.872 152.9125,-118.8766"/>
+<polygon fill="#7b909f" stroke="#7b909f" points="153.08,-121.3214 159.9497,-118.5268 152.8366,-116.4274 153.08,-121.3214"/>
+</g>
+</g>
+</svg></div>
+
+<p>Write the returned text to a <code>.dot</code> file and render it with Graphviz, or pass it
+to any tool that reads DOT.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="n">Path</span><span class="p">(</span><span class="s2">&quot;keywords.dot&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">write_text</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">lit_diagram</span><span class="p">(</span><span class="n">m</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="fetching-a-corpus-from-openalex">Fetching a corpus from OpenAlex</h2>
+<p><code>tf.fetch_corpus</code> builds a corpus by querying the OpenAlex API. It is an
+optional convenience adapter. Because it depends on a network service whose
+results change over time, it sits outside the deterministic core of the
+package. Use it to assemble a starting corpus, then save the result and work
+from the saved file so that later analysis stays reproducible.</p>
+<div class="highlight"><pre><span></span><code><span class="n">corpus</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">fetch_corpus</span><span class="p">(</span><span class="s2">&quot;panic disorder theory&quot;</span><span class="p">,</span> <span class="n">per_page</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">mailto</span><span class="o">=</span><span class="s2">&quot;you@example.org&quot;</span><span class="p">)</span>
+</code></pre></div>
+<p>The <code>mailto</code> argument is optional and identifies the caller to OpenAlex, as
+that service requests. The returned mapping has the same shape as a corpus
+read from disk, so it flows straight into <code>litmap</code> and <code>landscape</code>. Supplying
+a corpus file remains the recommended path for any analysis that needs to be
+repeated exactly.</p>
+<h2 id="tracking-new-evidence-with-an-external-search">Tracking new evidence with an external search</h2>
+<p>Locating a corpus is only one use of a literature search. A second, recurring
+need is narrower: checking whether a search has turned up any source the
+theory does not already cite. <code>new_evidence_dois</code> answers that question
+deterministically, from a theory and a plain list of candidate DOIs,
+regardless of where the DOIs came from.</p>
+<p>The panic theory read further up this page records one DOI as evidence and one
+for each of its two registered alternatives, and a DOI cited as an alternative
+counts as cited just as an evidence DOI does. Those are the sources the
+candidate list below is checked against.</p>
+<div class="highlight"><pre><span></span><code><span class="n">candidates</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s2">&quot;10.1016/j.brat.2015.10.002&quot;</span><span class="p">,</span>                    <span class="c1"># already cited as evidence</span>
+    <span class="s2">&quot;https://doi.org/10.1016/0005-7967(86)90011-2&quot;</span><span class="p">,</span>  <span class="c1"># already cited as an alternative, in URL form</span>
+    <span class="s2">&quot;https://doi.org/10.1037/0033-2909.99.1.20&quot;</span><span class="p">,</span>     <span class="c1"># not yet cited</span>
+<span class="p">]</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">new_evidence_dois</span><span class="p">(</span><span class="n">candidates</span><span class="p">))</span>
+</code></pre></div>
+<div class="result">
+<div class="highlight"><pre><span></span><code>[&#39;https://doi.org/10.1037/0033-2909.99.1.20&#39;]
+</code></pre></div>
+</div>
+<p>The comparison is on a normalised form of each DOI (lowercased, with a
+<code>doi.org</code>/<code>dx.doi.org</code> URL prefix stripped), so a plain DOI and a resolvable
+URL for the same work are recognised as the same source. The function takes no
+network dependency itself: the search is left entirely to whichever tool
+supplies the candidate list.</p>
+<h3 id="combining-it-with-scopusflow-py">Combining it with scopusflow-py</h3>
+<p><a href="https://pablobernabeu.github.io/scopusflow-py/"><code>scopusflow-py</code></a> is a
+companion package, by the same author, for querying the Elsevier Scopus
+Search API. It is a natural source of candidate DOIs: <code>fetch_plan</code> retrieves
+records for a search plan, and <code>extract_dois</code> reduces them to a plain list of
+DOIs, which is exactly the input <code>new_evidence_dois</code> expects.
+<code>scopusflow-py</code> is not a dependency of <code>theoryforge</code>, so the snippet below is
+illustrative rather than a tested example. Install <code>scopusflow-py</code>, and
+configure <code>pybliometrics</code> with a Scopus API key, to run it.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scopusflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">scopus_query</span><span class="p">,</span> <span class="n">SearchPlan</span><span class="p">,</span> <span class="n">fetch_plan</span><span class="p">,</span> <span class="n">extract_dois</span>
+
+<span class="n">query</span> <span class="o">=</span> <span class="n">scopus_query</span><span class="p">(</span><span class="s2">&quot;panic disorder&quot;</span><span class="p">,</span> <span class="s2">&quot;interoception&quot;</span><span class="p">,</span> <span class="n">op</span><span class="o">=</span><span class="s2">&quot;AND&quot;</span><span class="p">)</span>
+<span class="n">plan</span> <span class="o">=</span> <span class="n">SearchPlan</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">years</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">2015</span><span class="p">,</span> <span class="mi">2027</span><span class="p">))</span>
+<span class="n">records</span> <span class="o">=</span> <span class="n">fetch_plan</span><span class="p">(</span><span class="n">plan</span><span class="p">)</span>
+<span class="n">candidates</span> <span class="o">=</span> <span class="n">extract_dois</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>
+
+<span class="n">t</span><span class="o">.</span><span class="n">new_evidence_dois</span><span class="p">(</span><span class="n">candidates</span><span class="p">)</span>
+</code></pre></div>
+<p><code>diff_dois</code> extends this to tracking a search over time: it compares an
+earlier and a later retrieval and returns a frame of DOIs marked <code>added</code>,
+<code>removed</code> or <code>unchanged</code>. Re-running a saved plan and passing the <code>added</code> DOIs
+into <code>new_evidence_dois</code> gives a routine for revisiting a theory's evidence
+base as the literature grows.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scopusflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">diff_dois</span>
+
+<span class="n">records_2025</span> <span class="o">=</span> <span class="n">fetch_plan</span><span class="p">(</span><span class="n">SearchPlan</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">years</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">2015</span><span class="p">,</span> <span class="mi">2026</span><span class="p">)))</span>
+<span class="n">records_2026</span> <span class="o">=</span> <span class="n">fetch_plan</span><span class="p">(</span><span class="n">SearchPlan</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="n">years</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">2015</span><span class="p">,</span> <span class="mi">2027</span><span class="p">)))</span>
+<span class="n">diff</span> <span class="o">=</span> <span class="n">diff_dois</span><span class="p">(</span><span class="n">records_2025</span><span class="p">,</span> <span class="n">records_2026</span><span class="p">)</span>
+<span class="n">added</span> <span class="o">=</span> <span class="n">diff</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">diff</span><span class="p">[</span><span class="s2">&quot;status&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;added&quot;</span><span class="p">,</span> <span class="s2">&quot;doi&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+<span class="n">t</span><span class="o">.</span><span class="n">new_evidence_dois</span><span class="p">(</span><span class="n">added</span><span class="p">)</span>
+</code></pre></div>
+<p><code>scopusflow-py</code> also offers <code>compare_topics</code>, which tracks the relative
+publication share of several comparison terms against a reference term across
+a range of years. This suits comparing a theory against its registered
+alternatives on their standing in the literature, using the alternatives'
+labels as the comparison terms.</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">scopusflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">compare_topics</span>
+
+<span class="n">compare_topics</span><span class="p">(</span>
+    <span class="n">reference_query</span><span class="o">=</span><span class="s2">&quot;panic disorder&quot;</span><span class="p">,</span>
+    <span class="n">comparison_terms</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;cognitive appraisal account&quot;</span><span class="p">,</span> <span class="s2">&quot;biological account&quot;</span><span class="p">],</span>
+    <span class="n">years</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">2015</span><span class="p">,</span> <span class="mi">2027</span><span class="p">),</span>
+<span class="p">)</span>
+</code></pre></div>
+<h3 id="using-scopusflow-for-a-scopus-based-corpus">Using scopusflow for a Scopus-based corpus</h3>
+<p><code>litmap</code> and <code>landscape</code> read the <code>keywords</code> and <code>references</code> fields of each
+corpus record, and <code>scopusflow-py</code> supplies both. Its <code>corpus</code> builder takes
+the records from <code>fetch_plan</code> and enriches them, through Abstract Retrieval,
+into a frame of <code>id</code>, <code>title</code>, <code>year</code>, <code>keywords</code> (one list of author keywords
+per row) and <code>references</code> (one DataFrame of cited works per row, with <code>id</code>,
+<code>doi</code>, <code>title</code> and other fields).</p>
+<p><code>fetch_corpus</code> (OpenAlex) stays the built-in default because OpenAlex is free
+and keyless, so the literature layer works with no setup. Scopus needs an
+institutional subscription and an API key, so <code>scopusflow-py</code> is an opt-in
+source rather than a dependency. The two packages exchange plain data, a DOI
+list or a corpus written to a file, with no coupling in either direction; that
+keeps theoryforge dependency-light and usable out of the box, and lets a reader
+reach for whichever index they have access to.</p>
+<p>The corpus format expects a top-level <code>{schema_version, id, records}</code> mapping
+and, within each record, <code>references</code> as a flat list of id strings, whereas
+the <code>corpus</code> builder returns a frame whose <code>references</code> entries are
+DataFrames. So build the mapping explicitly, reducing each references frame to
+one id string per cited work (the DOI where present, the Scopus id otherwise),
+write the result to disk and read it back with <code>read_corpus</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># illustrative: needs scopusflow-py and a configured Scopus API key</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">scopusflow</span><span class="w"> </span><span class="kn">import</span> <span class="n">SearchPlan</span><span class="p">,</span> <span class="n">corpus</span><span class="p">,</span> <span class="n">fetch_plan</span><span class="p">,</span> <span class="n">scopus_query</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">theoryforge</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tf</span>
+
+<span class="n">records</span> <span class="o">=</span> <span class="n">fetch_plan</span><span class="p">(</span><span class="n">SearchPlan</span><span class="p">(</span><span class="n">scopus_query</span><span class="p">(</span><span class="s2">&quot;panic disorder&quot;</span><span class="p">),</span> <span class="n">years</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">2015</span><span class="p">,</span> <span class="mi">2027</span><span class="p">)))</span>
+<span class="n">frame</span> <span class="o">=</span> <span class="n">corpus</span><span class="p">(</span><span class="n">records</span><span class="p">)</span>                   <span class="c1"># id, title, year, keywords, references</span>
+
+<span class="n">corpus_records</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">frame</span><span class="o">.</span><span class="n">itertuples</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="n">refs</span> <span class="o">=</span> <span class="n">row</span><span class="o">.</span><span class="n">references</span>                 <span class="c1"># one DataFrame of cited works</span>
+    <span class="n">ref_ids</span> <span class="o">=</span> <span class="n">refs</span><span class="p">[</span><span class="s2">&quot;doi&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">refs</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">corpus_records</span><span class="o">.</span><span class="n">append</span><span class="p">({</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+        <span class="s2">&quot;year&quot;</span><span class="p">:</span> <span class="n">row</span><span class="o">.</span><span class="n">year</span><span class="p">,</span>
+        <span class="s2">&quot;keywords&quot;</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">keywords</span><span class="p">),</span>
+        <span class="s2">&quot;references&quot;</span><span class="p">:</span> <span class="n">ref_ids</span><span class="p">,</span>
+    <span class="p">})</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;corpus.json&quot;</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">,</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">&quot;utf-8&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
+    <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">({</span><span class="s2">&quot;schema_version&quot;</span><span class="p">:</span> <span class="s2">&quot;1.0&quot;</span><span class="p">,</span>
+               <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;scopus:panic disorder&quot;</span><span class="p">,</span>
+               <span class="s2">&quot;records&quot;</span><span class="p">:</span> <span class="n">corpus_records</span><span class="p">},</span> <span class="n">fh</span><span class="p">)</span>
+
+<span class="n">lit</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">read_corpus</span><span class="p">(</span><span class="s2">&quot;corpus.json&quot;</span><span class="p">)</span>
+<span class="n">tf</span><span class="o">.</span><span class="n">litmap</span><span class="p">(</span><span class="n">lit</span><span class="p">)</span>
+</code></pre></div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../workflow-modes/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Workflow modes">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Workflow modes
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../methodology/" class="md-footer__link md-footer__link--next" aria-label="Next: Methodological foundations">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                Methodological foundations
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      <span class="mrd-footer-badges"> <a href="https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml"><img src="https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a> <a href="https://opensource.org/license/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a> </span> Developed by <a href="https://pablobernabeu.github.io">Pablo Bernabeu</a>. Open, reproducible research software in R and Python. Released under the <a href="https://pablobernabeu.github.io/theoryforge/python/licence/">MIT licence</a>.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "toc.follow", "content.code.copy", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": "0.5.0"}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../assets/_markdown_exec_pyodide.js"></script>
+      
+    
+  </body>
+</html>

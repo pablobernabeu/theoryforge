@@ -1,0 +1,34 @@
+# Deliberately weak theory: exercises the checklist's ability to CATCH problems
+# (falsifiability + derivation-chain blockers fail; several warnings fire).
+schema_version: "1.0"
+id: "weak-demo"
+title: "An underspecified motivation theory"
+maturity: "building"
+theory_form: "variance"
+
+constructs:
+  - id: k_motivation
+    label: "Motivation"
+    definition: "A person's internal drive to act."
+  - id: k_drive
+    label: "Drive"
+    definition: "A person's internal drive to act towards goals."
+
+propositions:
+  - id: q1
+    from: k_motivation
+    to: k_drive
+    relation: "associates"
+
+boundary_conditions: []
+
+predictions:
+  - id: w1
+    derives_from: []
+    statement: "Motivated people exist."
+    type: "existence"
+    severity: 0.2
+    diagnostic_vs: []
+
+formal_model:
+  type: "none"

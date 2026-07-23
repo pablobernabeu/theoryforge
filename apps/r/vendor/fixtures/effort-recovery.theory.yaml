@@ -1,0 +1,103 @@
+# A negative-feedback regulation loop. Demand raises fatigue, fatigue prompts
+# recovery, and recovery brings fatigue back down. Because one coupling is
+# negative, the simulated constructs follow distinct, oscillating trajectories
+# rather than collapsing onto a single curve, which makes it a clear worked
+# example for the simulation operation.
+schema_version: "1.0"
+id: "effort-recovery-2026"
+title: "Effort-recovery regulation"
+maturity: "developing"
+theory_form: "network"
+version:
+  id: "v1"
+  parent_id: null
+  content_hash: null
+
+constructs:
+  - id: c_demand
+    label: "Task demand"
+    definition: "The cognitive and physical load imposed by the work at hand."
+    measurement: ["rated workload", "task pace"]
+    boundary_conditions: ["working adults"]
+  - id: c_fatigue
+    label: "Fatigue"
+    definition: "Accumulated strain that lowers performance capacity."
+    measurement: ["fatigue questionnaire", "reaction-time slowing"]
+    boundary_conditions: ["working adults"]
+  - id: c_recovery
+    label: "Recovery effort"
+    definition: "Deliberate rest and detachment that restores capacity."
+    measurement: ["break frequency", "psychological detachment scale"]
+    boundary_conditions: ["working adults"]
+
+propositions:
+  - id: p1
+    from: c_demand
+    to: c_fatigue
+    relation: "increases"
+    mechanism: "Sustained load draws down regulatory resources, raising strain."
+    functional_form: "monotonic"
+  - id: p2
+    from: c_fatigue
+    to: c_recovery
+    relation: "increases"
+    mechanism: "Rising fatigue is detected and motivates rest and detachment."
+  - id: p3
+    from: c_recovery
+    to: c_fatigue
+    relation: "decreases"
+    mechanism: "Rest and detachment restore resources, closing a negative feedback loop."
+
+boundary_conditions: ["working adults", "no clinical fatigue disorder"]
+
+predictions:
+  - id: pred1
+    derives_from: [p1]
+    statement: "A week of higher task demand raises end-of-day fatigue relative to a matched lighter week."
+    type: "directional"
+    risk_score: 0.4
+    severity: 0.5
+    diagnostic_vs: [alt_accumulation]
+  - id: pred2
+    derives_from: [p3]
+    statement: "An enforced recovery break lowers fatigue by 0.3 to 0.6 SD within the same day."
+    type: "interval"
+    risk_score: 0.6
+    severity: 0.6
+    diagnostic_vs: []
+  - id: pred3
+    derives_from: [p2]
+    statement: "Fatigue and recovery effort oscillate out of phase over a working fortnight."
+    type: "point"
+    risk_score: 0.7
+    severity: 0.7
+    diagnostic_vs: [alt_accumulation]
+
+auxiliary_assumptions:
+  - id: aux1
+    statement: "Self-reported detachment indexes the latent recovery construct."
+    added_for: null
+    protects: [pred2]
+
+alternatives:
+  - id: alt_accumulation
+    label: "Pure accumulation account"
+    key_constructs: ["monotonic strain build-up without active recovery"]
+  - id: alt_trait
+    label: "Stable trait fatigue account"
+    key_constructs: ["dispositional exhaustion"]
+
+formal_model:
+  type: "ode"
+  spec_ref: "models/effort_recovery_ode.py"
+
+provenance:
+  - step: "1"
+    action: "tf_construct"
+    detail: "Registered demand, fatigue and recovery constructs."
+  - step: "2"
+    action: "tf_proposition"
+    detail: "Linked them into a negative feedback loop."
+  - step: "3"
+    action: "tf_predict"
+    detail: "Derived three predictions, including an out-of-phase oscillation."

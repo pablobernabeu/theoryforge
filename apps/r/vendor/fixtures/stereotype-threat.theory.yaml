@@ -1,0 +1,183 @@
+# Encodes Steele & Aronson (1995), "Stereotype threat and the intellectual
+# test performance of African Americans", Journal of Personality and Social
+# Psychology, 69(5), 797-811.
+# https://doi.org/10.1037/0022-3514.69.5.797
+# When a negative stereotype about one's group is relevant to a situation, the
+# apprehension of confirming that stereotype can depress performance in the
+# stereotyped domain. Framing a difficult verbal test as diagnostic of
+# intellectual ability makes the racial stereotype salient for African American
+# test-takers, inducing stereotype threat, which impairs performance. Framing
+# the same test as non-diagnostic removes the threat and closes the gap. The
+# effect is specific to the stereotyped group and moderated by domain
+# identification.
+schema_version: "1.0"
+id: "stereotype-threat-1995"
+title: "Stereotype threat and the intellectual test performance of African Americans"
+maturity: "testing"
+theory_form: "process"
+version:
+  id: "v1"
+  parent_id: null
+  content_hash: null
+
+constructs:
+  - id: c_diagnostic_framing
+    label: "Test-as-diagnostic framing"
+    definition: "The situational framing of a difficult test as a valid measure of intellectual ability, as opposed to a non-evaluative laboratory problem-solving task."
+    measurement: ["experimental instruction manipulation coding the test as diagnostic of ability versus non-diagnostic"]
+    boundary_conditions: ["difficult tests near the limits of ability", "domains covered by a negative group stereotype"]
+  - id: c_stereotype_salience
+    label: "Stereotype salience"
+    definition: "The degree to which the negative group stereotype about intellectual ability is cognitively activated and accessible for the test-taker in the situation."
+    measurement: ["word-fragment completion of race and stereotype-related fragments", "self-reported avoidance of race-relevant activities and preferences"]
+    boundary_conditions: ["members of a negatively stereotyped group", "situations where the stereotype is applicable to the task"]
+  - id: c_stereotype_threat
+    label: "Stereotype threat (evaluative apprehension)"
+    definition: "The apprehension a test-taker feels that poor performance could confirm, or be judged in light of, a negative stereotype about the intellectual ability of their group."
+    measurement: ["self-reported anxiety and evaluative apprehension", "self-handicapping endorsement", "self-doubt and performance-related worry indices"]
+    boundary_conditions: ["members of a negatively stereotyped group", "domains in which the person is identified"]
+  - id: c_domain_identification
+    label: "Domain identification"
+    definition: "The extent to which a person cares about doing well in the intellectual domain and treats competence in it as part of their self-definition."
+    measurement: ["self-reported importance of and identification with academic and verbal ability"]
+    boundary_conditions: ["applies as a moderator only when the domain is personally valued"]
+  - id: c_test_performance
+    label: "Test performance"
+    definition: "Accuracy of performance on a difficult verbal reasoning test, adjusted for prior preparation."
+    measurement: ["number of items solved on a difficult verbal Graduate Record Examination test, covaried for prior SAT scores"]
+    boundary_conditions: ["difficult tests near the limits of ability", "African American and White undergraduate test-takers"]
+
+propositions:
+  - id: p_framing_salience
+    from: c_diagnostic_framing
+    to: c_stereotype_salience
+    relation: "increases"
+    mechanism: "Presenting the test as diagnostic of ability makes the ability stereotype applicable to the self, activating race-related and stereotype-related concepts for members of the stereotyped group."
+    functional_form: "monotonic"
+  - id: p_salience_threat
+    from: c_stereotype_salience
+    to: c_stereotype_threat
+    relation: "increases"
+    mechanism: "Once the stereotype is salient and applicable, the test-taker apprehends that a poor showing could confirm the stereotype as self-characteristic, raising evaluative apprehension."
+    functional_form: "monotonic"
+  - id: p_threat_performance
+    from: c_stereotype_threat
+    to: c_test_performance
+    relation: "decreases"
+    mechanism: "Evaluative apprehension generates anxiety and diverts working-memory and attentional resources away from the task, so fewer resources remain for reasoning and fewer items are solved."
+    functional_form: "monotonic"
+  - id: p_identification_moderates
+    from: c_domain_identification
+    to: c_test_performance
+    relation: "moderates"
+    mechanism: "Because the threat operates through caring about the domain, only test-takers who are identified with intellectual ability have something at stake, so the threat impairs performance for them and not for the unidentified."
+    functional_form: "interaction"
+
+boundary_conditions: ["African American and White undergraduate test-takers", "strong, domain-identified students (identification assumed constant, not manipulated)", "difficult verbal tests near the limits of ability", "a domain covered by a negative group stereotype"]
+
+predictions:
+  - id: pred_gap_by_framing
+    derives_from: [p_framing_salience, p_salience_threat, p_threat_performance]
+    statement: "Among African American test-takers, framing the test as diagnostic of ability lowers performance relative to framing the same test as a non-diagnostic laboratory task, once prior SAT scores are covaried."
+    type: "directional"
+    risk_score: 0.6
+    severity: 0.7
+    diagnostic_vs: [alt_ability_deficit]
+  - id: pred_group_by_framing
+    derives_from: [p_framing_salience, p_salience_threat, p_threat_performance]
+    statement: "There is a group by framing interaction: the diagnostic framing depresses performance for African American test-takers but not for White test-takers, so under non-diagnostic framing the racial performance gap disappears."
+    type: "directional"
+    risk_score: 0.7
+    severity: 0.8
+    diagnostic_vs: [alt_ability_deficit, alt_test_anxiety]
+  - id: pred_salience_activation
+    derives_from: [p_framing_salience]
+    statement: "African American test-takers under diagnostic framing show heightened activation of race-related and stereotype-related concepts and greater avoidance of race-relevant self-descriptions than those under non-diagnostic framing."
+    type: "existence"
+    risk_score: 0.6
+    severity: 0.6
+    diagnostic_vs: [alt_test_anxiety]
+  - id: pred_identification
+    derives_from: [p_identification_moderates]
+    statement: "The performance-depressing effect of diagnostic framing on African American test-takers is confined to those identified with the verbal domain and is absent for the unidentified."
+    type: "directional"
+    risk_score: 0.7
+    severity: 0.6
+    diagnostic_vs: []
+
+auxiliary_assumptions:
+  - id: aux_difficulty
+    statement: "The test is difficult enough to be experienced as frustrating and near the limits of ability, so that the diagnostic frame carries a real risk of a poor showing."
+    added_for: null
+    protects: [pred_gap_by_framing]
+  - id: aux_covariate
+    statement: "Covarying prior SAT scores equates the groups for preparation, so residual performance differences reflect the situational manipulation rather than pre-existing skill."
+    added_for: null
+    protects: [pred_group_by_framing]
+  - id: aux_measures_valid
+    statement: "The word-fragment completions and avoidance measures validly index activation of the stereotype rather than general negative affect."
+    added_for: null
+    protects: [pred_salience_activation]
+  - id: aux_identified
+    statement: "Participants were strong, domain-identified students, so identification was held constant by design rather than manipulated; the tested framing effects therefore hold within a domain-identified sample. The moderating role of identification is a claim of the broader theory and was not itself tested in this study."
+    added_for: null
+    protects: [pred_gap_by_framing]
+
+evidence:
+  - supports: pred_gap_by_framing
+    source_doi: "10.1037/0022-3514.69.5.797"
+    direction: "corroborates"
+  - supports: pred_group_by_framing
+    source_doi: "10.1037/0022-3514.69.5.797"
+    direction: "corroborates"
+  - supports: pred_salience_activation
+    source_doi: "10.1037/0022-3514.69.5.797"
+    direction: "corroborates"
+
+test_outcomes:
+  - prediction_id: pred_gap_by_framing
+    observed: "African American participants in the diagnostic condition solved significantly fewer items than those in the non-diagnostic condition, with prior SAT covaried."
+    passed: true
+    severity_at_test: 0.7
+    registered: null
+    date: "1995"
+  - prediction_id: pred_group_by_framing
+    observed: "A reliable race by test-description interaction: African Americans underperformed Whites under the diagnostic framing, whereas the two groups performed equivalently under the non-diagnostic framing."
+    passed: true
+    severity_at_test: 0.8
+    registered: null
+    date: "1995"
+  - prediction_id: pred_salience_activation
+    observed: "Under diagnostic framing African American participants completed more word fragments with race-related and stereotype-related words and more often avoided race-relevant preferences and self-descriptions."
+    passed: true
+    severity_at_test: 0.6
+    registered: null
+    date: "1995"
+
+alternatives:
+  - id: alt_ability_deficit
+    label: "Genetic or dispositional ability-deficit account"
+    key_constructs: ["fixed group difference in intellectual ability", "performance gap invariant to situational framing"]
+    source_doi: null
+  - id: alt_test_anxiety
+    label: "Generalised test-anxiety account"
+    key_constructs: ["evaluation anxiety common to all test-takers", "anxiety effects not specific to the stereotyped group"]
+    source_doi: null
+
+formal_model:
+  type: "none"
+  spec_ref: null
+
+provenance:
+  - step: "1"
+    action: "tf_construct"
+    detail: "Registered diagnostic framing, stereotype salience, stereotype threat, domain identification and test performance."
+  - step: "2"
+    action: "tf_proposition"
+    detail: "Chained framing to salience to threat to performance, with domain identification moderating the threat-performance link."
+  - step: "3"
+    action: "tf_predict"
+    detail: "Derived the within-group framing effect, the group by framing interaction, the salience activation and the identification boundary condition."
+  - step: "4"
+    action: "tf_diagnose"
+    detail: "Pointed the group by framing interaction against the ability-deficit and test-anxiety rivals, which predict a framing-invariant gap and a non-specific anxiety effect respectively."
