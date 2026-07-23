@@ -4,7 +4,7 @@ All notable changes to theoryforge (the R and Python twin packages) are document
 The format follows [Keep a Changelog](https://keepachangelog.com/). The two packages share a
 version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
 
-## [Unreleased]
+## [0.5.0] - 2026-07-23
 
 ### Changed
 - The `development_roadmap` view is rebuilt around a theory hub carrying the

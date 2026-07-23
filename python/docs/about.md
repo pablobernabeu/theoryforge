@@ -4,14 +4,14 @@
 
 If you use the Python package in your work, please cite it:
 
-<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic theory development</em> (Python package version 0.4.0). <a href="https://doi.org/10.5281/zenodo.21229964">https://doi.org/10.5281/zenodo.21229964</a></p>
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic theory development</em> (Python package version 0.5.0). <a href="https://doi.org/10.5281/zenodo.21229964">https://doi.org/10.5281/zenodo.21229964</a></p>
 
 ```bibtex
 @Manual{theoryforge,
   title  = {theoryforge: Systematic theory development},
   author = {Pablo Bernabeu},
   year   = {2026},
-  note   = {Python package version 0.4.0},
+  note   = {Python package version 0.5.0},
   doi    = {10.5281/zenodo.21229964},
   url    = {https://doi.org/10.5281/zenodo.21229964},
 }

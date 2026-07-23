@@ -1,4 +1,4 @@
-# theoryforge (development version)
+# theoryforge 0.5.0
 
 * The `development_roadmap` view is rebuilt around a theory hub carrying the
   title, the aggregate score and the gate. Items are ordered blockers first and
