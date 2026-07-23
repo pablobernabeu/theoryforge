@@ -52,9 +52,16 @@ tf_read <- function(path) {
 #' @return \code{TRUE} (invisibly) on success; otherwise stops with a message
 #'   listing every problem found.
 #' @examples
-#' theory <- tf_theory("demo-1", "A demonstration theory")
-#' tf_validate(theory)
-#' tf_validate(theory, full = TRUE)
+#' theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
+#'                               package = "theoryforge"))
+#' isTRUE(tf_validate(theory))              # required fields and enums
+#' isTRUE(tf_validate(theory, full = TRUE)) # also ids and cross-references
+#'
+#' # The failure path is the more informative one. Point a prediction at a
+#' # proposition that was never declared.
+#' broken <- theory
+#' broken$predictions[[1]]$derives_from <- "p_missing"
+#' tryCatch(tf_validate(broken, full = TRUE), error = conditionMessage)
 #' @export
 tf_validate <- function(theory, full = FALSE) {
   d <- theory

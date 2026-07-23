@@ -34,7 +34,8 @@ NULL
 #'   tf_add_proposition("p1", "c_arousal", "c_threat", "increases")
 #' sim <- tf_simulate(theory, steps = 5)
 #' sim$states
-#' sim$trajectory[[1]]
+#' sim$trajectory[[1]] # the common initial state
+#' sim$trajectory[[length(sim$trajectory)]] # after five Euler steps
 #' @export
 tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
                         damping = 0.5, init = 1.0) {

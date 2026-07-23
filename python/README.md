@@ -24,10 +24,16 @@ print(t.diagram("nomological_net"))# Graphviz DOT
 t.redundancy_check()               # lexical jingle-jangle screen
 
 # BUILD a theory programmatically (provenance auto-logged)
-b = (tf.new_theory("demo", "Demo theory")
-       .add_construct("a", "Alpha", "the first thing", measurement=["m1"], boundary_conditions=["adults"])
-       .add_proposition("p1", "a", "b", "increases", mechanism="a drives b")
-       .add_prediction("pred1", "a point claim", "point", derives_from=["p1"]))
+b = (tf.new_theory("panic_demo", "A demonstration theory of panic")
+       .add_construct("arousal", "Physiological arousal", "bodily signs of sympathetic activation",
+                      measurement=["heart_rate", "skin_conductance"], boundary_conditions=["adults"])
+       .add_construct("catastrophic_interpretation", "Catastrophic interpretation",
+                      "appraisal of bodily sensations as dangerous", measurement=["bsiq"])
+       .add_proposition("p1", "arousal", "catastrophic_interpretation", "increases",
+                        mechanism="rising arousal is read as evidence of threat")
+       .add_prediction("pred1", "higher arousal predicts more catastrophic interpretation",
+                       "directional", derives_from=["p1"]))
+b.validate(full=True)              # ids are unique and every cross-reference resolves
 
 # DEVELOP: progressive vs degenerating appraisal of an amendment
 v1 = tf.read("../fixtures/panic-network.theory.yaml")

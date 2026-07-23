@@ -22,6 +22,7 @@ always yields the same dossier.
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
+  tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
   tf_add_proposition("p1", "c_arousal", "c_threat", "causes",
                      mechanism = "Activation raises salience of threat cues.") |>
   tf_add_prediction("h1", "Effect is exactly 0.30.", "point")

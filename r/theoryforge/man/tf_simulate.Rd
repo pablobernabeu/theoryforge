@@ -38,5 +38,6 @@ theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_proposition("p1", "c_arousal", "c_threat", "increases")
 sim <- tf_simulate(theory, steps = 5)
 sim$states
-sim$trajectory[[1]]
+sim$trajectory[[1]] # the common initial state
+sim$trajectory[[length(sim$trajectory)]] # after five Euler steps
 }

@@ -26,8 +26,13 @@ sorted by normalised form. Deterministic and takes no network dependency:
 the search itself is left to whichever literature tool the caller prefers.
 }
 \examples{
-theory <- tf_theory("demo-1", "A demonstration theory") |>
-  tf_add_construct("c_arousal", "Arousal", "Bodily activation.")
-theory$evidence <- list(list(supports = "p1", source_doi = "10.1000/known"))
-tf_new_evidence_dois(theory, c("10.1000/known", "10.1000/new"))
+# The bundled panic theory cites one DOI as evidence and one for each of its
+# two registered alternatives. All three count as already cited.
+theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
+                              package = "theoryforge"))
+tf_new_evidence_dois(theory, c(
+  "10.1016/j.brat.2015.10.002",                   # cited as evidence
+  "https://doi.org/10.1016/0005-7967(86)90011-2", # an alternative, in URL form
+  "https://doi.org/10.1037/0033-2909.99.1.20"     # not yet cited
+))
 }

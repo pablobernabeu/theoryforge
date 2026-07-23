@@ -197,16 +197,22 @@ theory does not already cite. `tf_new_evidence_dois()` answers that question
 deterministically, from a theory object and a plain vector of candidate DOIs,
 regardless of where the DOIs came from.
 
+The bundled panic theory records one DOI as evidence and one for each of its
+two registered alternatives, and a DOI cited as an alternative counts as cited
+just as an evidence DOI does. Those are the sources the candidate list below is
+checked against.
+
 ```{r new-evidence-basic}
-theory <- tf_theory("demo", "A demonstration theory") |>
-  tf_add_construct("c_arousal", "Arousal", "Bodily activation.")
-theory$evidence <- list(list(supports = "p1",
-                              source_doi = "10.1016/j.brat.2015.10.002"))
+panic <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
+                             package = "theoryforge"))
 
-candidates <- c("10.1016/j.brat.2015.10.002",       # already cited
-                "https://doi.org/10.1037/0033-2909.99.1.20")  # not yet cited
+candidates <- c(
+  "10.1016/j.brat.2015.10.002",                   # already cited as evidence
+  "https://doi.org/10.1016/0005-7967(86)90011-2", # already cited as an alternative, in URL form
+  "https://doi.org/10.1037/0033-2909.99.1.20"     # not yet cited
+)
 
-tf_new_evidence_dois(theory, candidates)
+tf_new_evidence_dois(panic, candidates)
 ```
 
 The comparison is on a normalised form of each DOI (lowercased, with a
@@ -234,7 +240,7 @@ query <- scopus_query("panic disorder", "interoception", .op = "AND")
 records <- scopus_fetch(query, years = 2015:2026)
 candidates <- scopus_extract_dois(records)
 
-tf_new_evidence_dois(theory, candidates)
+tf_new_evidence_dois(panic, candidates)
 ```
 
 `scopus_diff_dois()` extends this to tracking a search over time: it compares
@@ -249,7 +255,7 @@ records_2026 <- scopus_fetch(query, years = 2015:2026)
 diff <- scopus_diff_dois(records_2025, records_2026)
 added <- diff$doi[diff$status == "added"]
 
-tf_new_evidence_dois(theory, added)
+tf_new_evidence_dois(panic, added)
 ```
 
 The hand-off itself needs nothing from `scopusflow`: `scopus_diff_dois()`
@@ -263,7 +269,7 @@ diff <- data.frame(
 )
 added <- diff$doi[diff$status == "added"]
 
-tf_new_evidence_dois(theory, added)
+tf_new_evidence_dois(panic, added)
 ```
 
 `scopusflow` also offers `scopus_compare_topics()`, which tracks the relative

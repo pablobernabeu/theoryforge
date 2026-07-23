@@ -98,16 +98,20 @@ keyword, so the output is stable across runs.
 
 The threshold for retaining an edge defaults to two co-occurrences. A pair
 of keywords or references that appear together only once is dropped, which
-keeps incidental overlaps out of the map. Lower the threshold to include
-sparser links, or raise it to keep only the strongest. The count of retained
-keyword edges shows what each threshold does to this small corpus.
+keeps incidental overlaps out of the map. Raise it to keep only the strongest
+links, or lower it to admit sparser ones. This fixture corpus is deliberately
+regular, with every keyword pair appearing in exactly two records, so lowering
+the threshold admits nothing further and raising it past two clears the keyword
+map altogether. The co-citation counts do vary, which is where the threshold
+has something to select on.
 
 ```python exec="1" source="material-block" result="text" session="literature"
 m_sparse = tf.litmap(corpus, min_link=1)   # keep single co-occurrences
 m_strict = tf.litmap(corpus, min_link=3)   # keep only frequent pairs
 
-print("edges at min_link=1:", len(m_sparse["keyword_cooccurrence"]))
-print("edges at min_link=3:", len(m_strict["keyword_cooccurrence"]))
+print("keyword edges at min_link=1:", len(m_sparse["keyword_cooccurrence"]))
+print("keyword edges at min_link=3:", len(m_strict["keyword_cooccurrence"]))
+print("co-citation edges at min_link=3:", m_strict["co_citation"])
 ```
 
 ## Positioning a theory with landscape
@@ -379,13 +383,16 @@ theory does not already cite. `new_evidence_dois` answers that question
 deterministically, from a theory and a plain list of candidate DOIs,
 regardless of where the DOIs came from.
 
-```python exec="1" source="material-block" result="text" session="literature"
-t = tf.new_theory("demo", "A demonstration theory")
-t.data["evidence"] = [{"supports": "p1", "source_doi": "10.1016/j.brat.2015.10.002"}]
+The panic theory read further up this page records one DOI as evidence and one
+for each of its two registered alternatives, and a DOI cited as an alternative
+counts as cited just as an evidence DOI does. Those are the sources the
+candidate list below is checked against.
 
+```python exec="1" source="material-block" result="text" session="literature"
 candidates = [
-    "10.1016/j.brat.2015.10.002",                  # already cited
-    "https://doi.org/10.1037/0033-2909.99.1.20",   # not yet cited
+    "10.1016/j.brat.2015.10.002",                    # already cited as evidence
+    "https://doi.org/10.1016/0005-7967(86)90011-2",  # already cited as an alternative, in URL form
+    "https://doi.org/10.1037/0033-2909.99.1.20",     # not yet cited
 ]
 
 print(t.new_evidence_dois(candidates))
