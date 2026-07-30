@@ -7,6 +7,11 @@ on:
       - 'r/theoryforge/**'
       - 'python/**'
       - 'apps/**'
+      # apps/build.mjs vendors the shared schema and the example fixtures into
+      # the published apps, so a change to either alters the deployed site and
+      # must trigger a rebuild.
+      - 'schema/**'
+      - 'fixtures/**'
       - '.github/workflows/docs.yml'
       - '.github/landing.html'
   workflow_dispatch:
@@ -35,6 +40,29 @@ jobs:
 
       - name: Build pkgdown site
         run: Rscript -e 'pkgdown::build_site("r/theoryforge", new_process = FALSE, install = FALSE)'
+
+      - name: Remove the redundant, unrendered licence stub page
+        # pkgdown always renders the bare LICENSE file (needed for CRAN's
+        # "MIT + file LICENSE" field) to its own orphaned page, alongside the full
+        # text built from LICENSE.md. Keep only the full-text page live -- the one
+        # the footer and the home sidebar link -- and drop the markdown copy pkgdown
+        # leaves beside the stub. The rest of the family prunes it here too.
+        #
+        # The sitemap entry goes with the page. pkgdown writes sitemap.xml before
+        # this step runs, so deleting the page alone would leave a <loc> advertising
+        # a URL that 404s -- and a sitemap is read by search engines, which is the
+        # one audience that would then follow it. pkgdown emits one <url> per line,
+        # so a line filter removes exactly that entry.
+        run: |
+          rm -f r/theoryforge/docs/LICENSE-text.html r/theoryforge/docs/LICENSE-text.md
+          if [ -f r/theoryforge/docs/sitemap.xml ]; then
+            grep -v '/LICENSE-text\.html<' r/theoryforge/docs/sitemap.xml > r/theoryforge/docs/sitemap.new || true
+            if [ -s r/theoryforge/docs/sitemap.new ]; then
+              mv r/theoryforge/docs/sitemap.new r/theoryforge/docs/sitemap.xml
+            else
+              rm -f r/theoryforge/docs/sitemap.new
+            fi
+          fi
 
       - name: Stage pkgdown under site/r
         run: |

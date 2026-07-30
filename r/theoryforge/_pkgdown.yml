@@ -46,8 +46,16 @@ footer:
     developed_by: >
       Developed by [Pablo Bernabeu](https://pablobernabeu.github.io). Open,
       reproducible research software in R and Python.
+    # The licence path is root-relative, unlike the home sidebar's below. pkgdown
+    # renders the footer into every page without adjusting a relative href for the
+    # page's depth, so a bare LICENSE.html resolves against the current directory
+    # and 404s everywhere below the root (articles/LICENSE.html and the like). An
+    # absolute URL does not help: pkgdown strips the configured site url back off
+    # and leaves the same bare filename. A leading slash is the one form that
+    # survives, and it is unambiguous from any depth. The sidebar keeps its
+    # relative href because it renders only on the home page, at the site root.
     legal: >
-      Released under the [MIT licence](LICENSE.html).
+      Released under the [MIT licence](/theoryforge/r/LICENSE.html).
 
 home:
   sidebar:
@@ -90,18 +98,26 @@ navbar:
     # follow the workflow arc: continue the Get Started (BUILD) walkthrough
     # into development and testing, then the additive literature layer, then
     # the methodological rationale behind all the checks.
+    #
+    # Relative, as on every other site in the family. pkgdown DOES depth-adjust a
+    # navbar href -- it renders `../articles/x.html` on a page under reference/ and
+    # the bare path at the root -- so a relative link resolves to the same live URL
+    # while also working in a local `preview_site()` or a PR preview build, which an
+    # absolute one silently redirects to production. (The footer is the opposite
+    # case: pkgdown does not adjust it, which is why the footer's licence link is
+    # root-relative.) It also stops the deploy host being hard-coded in the package.
     articles:
       text: Articles
       menu:
       - text: Developing and testing
-        href: https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html
+        href: articles/developing-and-testing.html
       - text: Literature layer
-        href: https://pablobernabeu.github.io/theoryforge/r/articles/literature.html
+        href: articles/literature.html
       - text: Methodological foundations
-        href: https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html
+        href: articles/methodology.html
     about:
       text: About
-      href: https://pablobernabeu.github.io/theoryforge/r/articles/about.html
+      href: articles/about.html
 
 reference:
 - title: Core IO
