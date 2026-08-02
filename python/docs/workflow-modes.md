@@ -237,20 +237,24 @@ render to HTML or PDF. With `render=False`, which is the default, it writes the
 the file it wrote.
 
 ```python
-# illustrative: the calls in this section are shown rather than run when the
-# page is built. Writing the report puts a file on disk, rendering it to HTML or
-# PDF needs a Quarto installation, and a live deposit needs a token and network
-# access.
+# illustrative: this call and the live deposit at the end of the section are
+# shown rather than run when the page is built. Writing the report puts a file
+# on disk, rendering it to HTML or PDF needs a Quarto installation, and a live
+# deposit needs a token and network access.
 report_path = t.render_report("panic-demo.qmd")
 ```
 
-`osf_push()` deposits the rendered report to an Open Science Framework node. It
+`osf_push()` deposits the audit dossier on an Open Science Framework node, as
+`<id>.dossier.md`. It is the dossier that goes up rather than the report just
+written, since the dossier is the machine-checkable bundle a reviewer needs. It
 defaults to `dry_run=True`, which assembles the request and returns it without
 sending anything, so the planned deposit can be inspected offline and without a
 token.
 
-```python
-t.osf_push(node="ab12c")
+```python exec="1" source="material-block" result="json" session="workflow-modes"
+import json
+
+print(json.dumps(t.osf_push(node="ab12c"), indent=2))
 ```
 
 The returned request records the method, the destination URL, the filename the
