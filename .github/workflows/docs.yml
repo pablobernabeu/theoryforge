@@ -12,6 +12,10 @@ on:
       # must trigger a rebuild.
       - 'schema/**'
       - 'fixtures/**'
+      # The mkdocs changelog page is a snippet include of the repository
+      # changelog, so a release note added here changes the published site even
+      # though nothing under python/ is touched.
+      - 'CHANGELOG.md'
       - '.github/workflows/docs.yml'
       - '.github/landing.html'
   workflow_dispatch:

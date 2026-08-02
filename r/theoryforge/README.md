@@ -1,4 +1,4 @@
-# theoryforge (R) <a href="https://pablobernabeu.github.io/theoryforge/r/"><img src="man/figures/logo.png" align="right" height="138" alt="theoryforge hex logo" /></a>
+# theoryforge <small>(R)</small> <a href="https://pablobernabeu.github.io/theoryforge/r/"><img src="man/figures/logo.png" align="right" height="138" alt="theoryforge hex logo" /></a>
 
 <!-- badges: start -->
 [![CI](https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml/badge.svg)](https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml)
@@ -80,7 +80,7 @@ citation("theoryforge")
 
 The [About page](https://pablobernabeu.github.io/theoryforge/r/articles/about.html) carries the
 same citation with a BibTeX entry, and a short note on the developer. The repository also ships
-`CITATION.cff`, which drives GitHub's "Cite this repository" button.
+`CITATION.cff`, which drives GitHub's 'Cite this repository' button.
 
 ## Licence
 

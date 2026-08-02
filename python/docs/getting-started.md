@@ -1,4 +1,4 @@
-# Getting started
+# Get started
 
 This guide walks through installing the Python package and running a first session against an existing theory file.
 

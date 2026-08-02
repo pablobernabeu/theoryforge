@@ -119,6 +119,26 @@ navbar:
       text: About
       href: articles/about.html
 
+# The Articles navbar menu is defined explicitly above; this block only groups
+# the articles index page. About stays internal (off the index and the menu),
+# reached solely through its own navbar item, so it is not listed twice.
+#
+# Each entry carries the articles/ prefix because these four vignettes live in
+# vignettes/articles/, and pkgdown names a topic by its path below vignettes/.
+# The prefixed name matches the topic directly; the bare slug does not, and
+# pkgdown then falls through to evaluating it as tidyselect code, where
+# developing-and-testing parses as three symbols joined by minus signs and the
+# build stops.
+articles:
+- title: Guides
+  contents:
+  - articles/developing-and-testing
+  - articles/literature
+  - articles/methodology
+- title: internal
+  contents:
+  - articles/about
+
 reference:
 - title: Core IO
   desc: Read, validate and write theory objects.

@@ -47,7 +47,7 @@ records:
 Read it with `tf.read_corpus`, which accepts YAML or JSON and returns a
 plain dictionary. The examples below read the repository's sample corpus and
 theory from the fixture directory named `fixtures`, as on the
-[Getting started](getting-started.md) page, and every result shown is produced
+[Get started](getting-started.md) page, and every result shown is produced
 by running the code when this page is built.
 
 ```python exec="1" session="literature"

@@ -6,13 +6,13 @@ modes as it matures. Each mode is a set of methods on the `Theory` object,
 so the same artefact carries from a first draft to a preregistered test.
 
 This page assumes you have already read a theory as in
-[Getting started](getting-started.md); see
+[Get started](getting-started.md); see
 [Methodological foundations](methodology.md) for the rationale and the exact
 computation behind the rigour checklist, severity and amendment-appraisal rules
 demonstrated below.
 
 Throughout, the package is imported as `tf`, and `fixtures` names the
-repository's fixture directory, as on the [Getting started](getting-started.md)
+repository's fixture directory, as on the [Get started](getting-started.md)
 page. Every result shown below is produced by running the code when this page is
 built.
 
@@ -234,7 +234,7 @@ without conversion.
 `diagram()` exports several views of the same object. The graph views return
 Graphviz DOT or dagitty text; three further views are returned directly as SVG
 and render inline. These examples use the repository's panic-network fixture
-(see [Getting started](getting-started.md) for where the fixture files live),
+(see [Get started](getting-started.md) for where the fixture files live),
 which carries the test outcomes and scope conditions the richer views draw on.
 
 ```python exec="1" source="material-block" session="workflow-modes"
@@ -811,7 +811,7 @@ print(
 </svg></div>
 
 Together with the `nomological_net` and `causal_dag` views shown in
-[Getting started](getting-started.md), these complete the set of diagram types
+[Get started](getting-started.md), these complete the set of diagram types
 that `diagram()` exports, each documented in the
 [API reference](api.md#theoryforge.diagram.diagram).
 

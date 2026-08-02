@@ -58,12 +58,12 @@ extra_css:
 # matching the family convention, so it does not repeat in the nav.
 nav:
   - Home: index.md
-  - Getting started: getting-started.md
+  - Get started: getting-started.md
+  - API reference: api.md
   - Guides:
       - Workflow modes: workflow-modes.md
       - Literature layer: literature.md
       - Methodological foundations: methodology.md
-  - API reference: api.md
   - Changelog: changelog.md
   - About: about.md
 
@@ -79,6 +79,11 @@ plugins:
           options:
             show_root_heading: true
             docstring_style: google
+            # api.md groups its objects under ten h2 sections, mirroring the R
+            # package's reference index. At mkdocstrings' default level the object
+            # headings would also be h2, flattening the table of contents into one
+            # list in which no object shows which group it belongs to.
+            heading_level: 3
 
 markdown_extensions:
   - admonition
@@ -91,10 +96,16 @@ markdown_extensions:
       # into a `text` fence from a source block and style it as output.
       pygments_lang_class: true
   - pymdownx.superfences
-  # Snippets embeds the repository LICENSE into the licence page, so the page
-  # can never drift from the file. pymdown-extensions ships with mkdocs-material.
+  # Snippets embeds the repository's LICENSE and CHANGELOG.md into the licence and
+  # changelog pages, so neither page can drift from the file it reports.
+  # pymdown-extensions ships with mkdocs-material. base_path is listed explicitly
+  # because the two files sit at different levels: LICENSE beside this config, the
+  # changelog at the root of the monorepo, which the default base_path never reaches.
   - pymdownx.snippets:
       check_paths: true
+      base_path:
+        - .
+        - ..
 
 # Build with:  pip install mkdocs-material "mkdocstrings[python]" && mkdocs build
 

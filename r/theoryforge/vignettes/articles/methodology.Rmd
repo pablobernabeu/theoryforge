@@ -16,6 +16,11 @@ below.
 
 ## Grounding for each rigour check
 
+The twelve checks are set out below with the criterion each one applies and the
+methodological work that motivates it. The name in brackets is the identifier the check
+carries in the report, and the supporting works are given in full in the references at
+the foot of the page.
+
 | Rigour check | Criterion | Supporting work |
 |---|---|---|
 | Falsifiability (`falsifiability`) | At least one prediction forbids an observation | Popper (1959), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
@@ -41,18 +46,18 @@ The gate is the one-word verdict. Two items are blockers: falsifiability and the
 
 Each item is scored as follows.
 
-- **Falsifiability** passes if at least one prediction is point, interval or directional, that is, a claim that forbids some observation.
-- **Predictive precision** is the share of predictions that are point or interval, and passes at 0.5 or above.
-- **Test severity** averages the declared `severity` field of each prediction (warning with a score of 0 when no prediction declares one), and passes at 0.5 or above. It is distinct from the computed severity of the `tf_severity()` rubric, which offers a principled way of choosing the declared values.
-- **Parsimony** falls as the ratio of auxiliary assumptions to propositions rises, and fails outright if any assumption is ad hoc (added for a prediction that no passing test supports).
-- **Construct non-redundancy** scores one minus the largest lexical similarity between any pair of construct definitions, and warns once that similarity reaches 0.85.
-- **Construct clarity** is the share of constructs that carry a definition, a measurement and boundary conditions, and passes only at 1.
-- **Scope** passes when boundary conditions are stated, either for the theory or on every construct.
-- **Mechanism** is the share of propositions that state a mechanism rather than a bare correlation, and passes only at 1.
-- **Causal testability** passes if at least one proposition is a causal relation (causes, increases or decreases) that exports to a directed acyclic graph.
-- **Diagnosticity** is the share of predictions that name a registered alternative they would discriminate against, and passes once at least one does.
-- **Formalisation** passes if the theory carries a formal-model stub.
-- **Derivation chain** is the share of predictions that derive from declared propositions, and passes only at 1; otherwise it fails.
+- Falsifiability passes if at least one prediction is point, interval or directional, that is, a claim that forbids some observation.
+- Predictive precision is the share of predictions that are point or interval, and passes at 0.5 or above.
+- Test severity averages the declared `severity` field of each prediction (warning with a score of 0 when no prediction declares one), and passes at 0.5 or above. It is distinct from the computed severity of the `tf_severity()` rubric, which offers a principled way of choosing the declared values.
+- Parsimony falls as the ratio of auxiliary assumptions to propositions rises, and fails outright if any assumption is ad hoc (added for a prediction that no passing test supports).
+- Construct non-redundancy scores one minus the largest lexical similarity between any pair of construct definitions, and warns once that similarity reaches 0.85.
+- Construct clarity is the share of constructs that carry a definition, a measurement and boundary conditions, and passes only at 1.
+- Scope passes when boundary conditions are stated, either for the theory or on every construct.
+- Mechanism is the share of propositions that state a mechanism rather than a bare correlation, and passes only at 1.
+- Causal testability passes if at least one proposition is a causal relation (causes, increases or decreases) that exports to a directed acyclic graph.
+- Diagnosticity is the share of predictions that name a registered alternative they would discriminate against, and passes once at least one does.
+- Formalisation passes if the theory carries a formal-model stub.
+- Derivation chain is the share of predictions that derive from declared propositions, and passes only at 1. Otherwise it fails.
 
 ## Scope and limits
 
@@ -62,15 +67,15 @@ The weights that combine the twelve items into the aggregate score, and the thre
 
 ## How the other outputs are computed
 
-**Severity.** Each prediction earns a base risk from its form: existence 0.1, directional 0.4, interval 0.7 and point 0.9. The reported risk score is this base. The computed severity then adjusts it. A merely directional prediction is discounted by 25 per cent, following Meehl's argument that a bare sign is cheap because almost everything in psychology correlates a little. A prediction that names a registered alternative in its `diagnostic_vs` field, and so would discriminate between theories, earns a bonus of 0.1. The computed severity is the discounted base plus the bonus, capped at 1.
+The severity rubric gives each prediction a base risk fixed by its form: existence 0.1, directional 0.4, interval 0.7 and point 0.9. The reported risk score is this base. The computed severity then adjusts it. A merely directional prediction is discounted by 25 per cent, following Meehl's argument that a bare sign is cheap because almost everything in psychology correlates a little. A prediction that names a registered alternative in its `diagnostic_vs` field, and so would discriminate between theories, earns a bonus of 0.1. The computed severity is the discounted base plus the bonus, capped at 1.
 
-**Construct redundancy.** Each construct definition is reduced to a set of content tokens: the text is lowercased and split on anything that is not a letter or digit, and tokens shorter than three characters or in a small stop-word list are dropped. The similarity of two constructs is the Jaccard index of their token sets, the size of the intersection divided by the size of the union. The screen reports every construct pair with its similarity and flags any pair at or above 0.85 for review. This is a deliberately simple lexical screen, calibrated rather than a hard truth; an optional embedding-based screen is available for a semantic comparison.
+The construct redundancy screen reduces each construct definition to a set of content tokens: the text is lowercased and split on anything that is not a letter or digit, and tokens shorter than three characters or in a small stop-word list are dropped. The similarity of two constructs is the Jaccard index of their token sets, the size of the intersection divided by the size of the union. The screen reports every construct pair with its similarity and flags any pair at or above 0.85 for review. This is a deliberately simple lexical screen, calibrated rather than a hard truth. An optional embedding-based screen is available for a semantic comparison.
 
-**Amendment appraisal.** Comparing an amended theory with a prior version, a prediction is new if its identifier did not appear in the prior, and corroborated if a passing test outcome references it. An assumption is ad hoc if it was added for a prediction (its `added_for` field is set) and no passing test supports the prediction it protects. The verdict follows Lakatos: progressive if the amendment adds at least one corroborated new prediction and no ad-hoc assumptions, degenerating if it adds at least one ad-hoc assumption and no corroborated new prediction, and neutral otherwise.
+The amendment appraisal compares an amended theory with a prior version. A prediction is new if its identifier did not appear in the prior, and corroborated if a passing test outcome references it. An assumption is ad hoc if it was added for a prediction (its `added_for` field is set) and no passing test supports the prediction it protects. The verdict follows Lakatos: progressive if the amendment adds at least one corroborated new prediction and no ad-hoc assumptions, degenerating if it adds at least one ad-hoc assumption and no corroborated new prediction, and neutral otherwise.
 
-**Theory landscape.** Against a literature corpus, each theme is labelled by how many of the theory's accounts address it, counting the focal theory and its registered alternatives. A theme that no account touches is under-theorised, one that a single account touches is covered, and one that two or more touch is crowded, which flags a redundancy risk.
+The theory landscape sets the theory against a literature corpus and labels each theme by how many of the theory's accounts address it, counting the focal theory and its registered alternatives. A theme that no account touches is under-theorised, one that a single account touches is covered, and one that two or more touch is crowded, which flags a redundancy risk.
 
-**Simulation.** Each construct becomes a state variable, and each directed proposition contributes a signed coupling between two states, positive for increases, causes and mediates and negative for decreases, scaled by the coupling gain. Every state also decays towards zero at the damping rate. The network is integrated with fixed-step (Euler) updates from a common initial value, and the trajectory is the sequence of state vectors. It is a deliberately transparent linear system, meant to expose the qualitative dynamics a network of propositions implies rather than to fit data.
+The simulation makes each construct a state variable, and each directed proposition contributes a signed coupling between two states, positive for increases, causes and mediates and negative for decreases, scaled by the coupling gain. Every state also decays towards zero at the damping rate. The network is integrated with fixed-step (Euler) updates from a common initial value, and the trajectory is the sequence of state vectors. It is a deliberately transparent linear system, meant to expose the qualitative dynamics a network of propositions implies rather than to fit data.
 
 ## References
 

@@ -15,7 +15,7 @@ behind that guarantee).
 
 For the fuller rationale, what each rigour check establishes, and exactly how every reported
 value is computed, see [Methodological foundations](methodology.md). For a step-by-step
-walkthrough, see [Getting started](getting-started.md). The repository
+walkthrough, see [Get started](getting-started.md). The repository
 [README](https://github.com/pablobernabeu/theoryforge) gives an overview and the
 [API reference](api.md) lists every function.
 

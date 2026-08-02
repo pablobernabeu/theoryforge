@@ -2,7 +2,15 @@
 
 All notable changes to theoryforge (the R and Python twin packages) are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/). The two packages share a
-version and a single behavioural contract ([`API_SPEC.md`](API_SPEC.md)).
+version and a single behavioural contract
+([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)).
+
+<!--
+  The link to the specification is absolute rather than repository-relative because this
+  file is also included verbatim on the Python documentation site, where a relative path
+  would point at a page that does not exist there.
+-->
+
 
 ## [0.5.0] - 2026-07-23
 
