@@ -183,7 +183,7 @@ cat('<div class="tf-figure tf-diagram">',
     sep = "")
 ```
 
-## Building a corpus from OpenAlex
+## Fetching a corpus from OpenAlex
 
 The corpus above was read from a file. A corpus can also be assembled from the
 OpenAlex works API with `tf_fetch_corpus()`. This adapter is assistive. It
@@ -326,7 +326,7 @@ cited works per record, with `id`, `doi`, `title` and other fields).
 free and keyless, so the literature layer works with no setup. Scopus needs an
 institutional subscription and an API key, so `scopusflow` is an opt-in source
 rather than a dependency. The two packages exchange plain data, a DOI vector or
-a corpus written to a file, with no coupling in either direction; that keeps
+a corpus written to a file, with no coupling in either direction. That keeps
 theoryforge dependency-light and usable out of the box, and lets a reader reach
 for whichever index they have access to.
 

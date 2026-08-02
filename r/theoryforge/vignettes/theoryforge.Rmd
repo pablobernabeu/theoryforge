@@ -179,7 +179,7 @@ cat(
 ```
 
 The causal DAG is the one view this does not cover, since it emits dagitty
-syntax rather than DOT; paste it into a dagitty tool such as
+syntax rather than DOT. Paste it into a dagitty tool such as
 [dagitty.net](https://dagitty.net) instead.
 
 ## Simulation

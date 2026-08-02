@@ -58,7 +58,7 @@ function theoryforgeCopyBibtex(btn) {
 ```
 
 In R, the same entry is available with `citation("theoryforge")`. Once on CRAN, the
-package will install with `install.packages("theoryforge")`; until then, use
+package will install with `install.packages("theoryforge")`. Until then, use
 `remotes::install_github("pablobernabeu/theoryforge", subdir = "r/theoryforge")`.
 
 ## The developer
@@ -96,4 +96,4 @@ Bugs and feature requests are best reported on the
 [GitHub issues page](https://github.com/pablobernabeu/theoryforge/issues), and the
 [contributing guide](../CONTRIBUTING.html) explains how to set up a development environment
 and propose a change. Because the OSF deposit adapter takes a personal access token, never
-paste that token, or any other secret, into an issue; replace it with a placeholder.
+paste that token, or any other secret, into an issue. Replace it with a placeholder.

@@ -34,10 +34,13 @@ authors:
 
 # Replace the auto-generated "Citation" sidebar section (which links to
 # authors.html) with one that points at the About page, where the tailored
-# citation lives, plus a direct BibTeX download. pkgdown copies
-# pkgdown/assets/theoryforge.bib to the site root. Dropping the built-in
-# "citation" from the structure and supplying a custom "cite" component is more
-# reliable than trying to override the built-in in place.
+# citation lives. Dropping the built-in "citation" from the structure and
+# supplying a custom "cite" component is more reliable than trying to override
+# the built-in in place. The sidebar used to carry a second link, to a BibTeX
+# file shipped as pkgdown/assets/theoryforge.bib, whose version string was
+# maintained by hand and so was bound to drift. The About page now builds its
+# entry from the installed version and offers it as a self-contained download,
+# which leaves nothing for a shipped file to add.
 footer:
   structure:
     left: [developed_by]
@@ -77,8 +80,7 @@ home:
       cite:
         title: Citation
         text: |
-          [How to cite theoryforge](articles/about.html) ·
-          [Download BibTeX](theoryforge.bib)
+          [How to cite theoryforge](articles/about.html)
 
           [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
 

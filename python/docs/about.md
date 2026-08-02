@@ -4,21 +4,60 @@
 
 If you use the Python package in your work, please cite it:
 
-<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic theory development</em> (Python package version 0.5.0). <a href="https://doi.org/10.5281/zenodo.21229964">https://doi.org/10.5281/zenodo.21229964</a></p>
+````python exec="1"
+# The reference, the BibTeX entry and the download link are all written from
+# one string at build time, so the version can no longer drift between them. It
+# comes from theoryforge.__version__, which reads the installed distribution's
+# metadata, the same source the rest of the site trusts. The version was
+# previously typed out three times on this page, and a hand-maintained copy of
+# the entry shipped beside the site as theoryforge.bib. The download link is now
+# a self-contained data URI carrying exactly the string the fenced block shows,
+# so the two cannot disagree and no file has to be shipped alongside the site.
+#
+# Two further copies of the version are out of reach here, because neither file
+# can execute code, and both still have to be bumped by hand on release: the
+# extra.version chip in mkdocs.yml, and the version field of CITATION.cff.
+from urllib.parse import quote
 
-```bibtex
-@Manual{theoryforge,
-  title  = {theoryforge: Systematic theory development},
-  author = {Pablo Bernabeu},
-  year   = {2026},
-  note   = {Python package version 0.5.0},
-  doi    = {10.5281/zenodo.21229964},
-  url    = {https://doi.org/10.5281/zenodo.21229964},
-}
-```
+import theoryforge
 
-You can <a href="../theoryforge.bib" download>download the BibTeX entry</a>. The package
-installs with `pip install theoryforge`.
+version = theoryforge.__version__
+doi = "10.5281/zenodo.21229964"
+
+bibtex = "\n".join(
+    [
+        "@Manual{theoryforge,",
+        "  title  = {theoryforge: Systematic theory development},",
+        "  author = {Pablo Bernabeu},",
+        "  year   = {2026},",
+        f"  note   = {{Python package version {version}}},",
+        f"  doi    = {{{doi}}},",
+        f"  url    = {{https://doi.org/{doi}}},",
+        "}",
+    ]
+)
+
+print(
+    '<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">'
+    "Bernabeu, P. (2026). <em>theoryforge: Systematic theory development</em> "
+    f"(Python package version {version}). "
+    f'<a href="https://doi.org/{doi}">https://doi.org/{doi}</a></p>'
+)
+print()
+
+# A real fenced block rather than raw HTML, so Material still highlights the
+# entry and still offers its copy button.
+print("```bibtex")
+print(bibtex)
+print("```")
+print()
+
+uri = "data:application/x-bibtex;charset=utf-8," + quote(bibtex, safe="")
+print(
+    f'You can <a href="{uri}" download="theoryforge.bib">download the BibTeX '
+    "entry</a>. The package installs with `pip install theoryforge`."
+)
+````
 
 ## The developer
 
@@ -55,4 +94,4 @@ Bugs and feature requests are best reported on the
 [contributing guide](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CONTRIBUTING.md)
 explains how to set up a development environment and propose a change. Because the OSF deposit
 adapter takes a personal access token, never paste that token, or any other secret, into an
-issue; replace it with a placeholder.
+issue. Replace it with a placeholder.

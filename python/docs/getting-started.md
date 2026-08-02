@@ -49,7 +49,7 @@ t.validate()
 t.validate(full=True)   # also checks referential integrity
 ```
 
-Produce the rigour report. The `"json"` format returns the 12-item rigour checklist together with the overall gate. `t.check()` returns the same information as a plain Python dictionary; `t.report(format=...)` renders it as a string, in `"json"` or `"html"`.
+Produce the rigour report. The `"json"` format returns the 12-item rigour checklist together with the overall gate. `t.check()` returns the same information as a plain Python dictionary, and `t.report(format=...)` renders it as a string, in `"json"` or `"html"`.
 
 ```python exec="1" source="material-block" result="json" session="getting-started"
 print(t.report("json"))
@@ -79,7 +79,7 @@ The `causal_dag` type returns dagitty syntax instead, for causal-inference tooli
 print(t.diagram("causal_dag"))
 ```
 
-With the optional render extra (`pip install theoryforge[render]`), `render_diagram(t, "nomological_net")` wraps the DOT in a `graphviz.Source` that displays inline in a notebook; the `causal_dag` view is the one exception, since dagitty syntax renders in a dagitty tool rather than Graphviz. Rendered, the nomological-net DOT printed above reads as the figure below.
+With the optional render extra (`pip install theoryforge[render]`), `render_diagram(t, "nomological_net")` wraps the DOT in a `graphviz.Source` that displays inline in a notebook. The `causal_dag` view is the one exception, since dagitty syntax renders in a dagitty tool rather than Graphviz. Rendered, the nomological-net DOT printed above reads as the figure below.
 
 <div class="tf-figure tf-diagram"><svg width="446pt" height="69pt"
  viewBox="0.00 0.00 445.97 69.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">

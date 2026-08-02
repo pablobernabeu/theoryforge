@@ -6,7 +6,7 @@ modes as it matures. Each mode is a set of methods on the `Theory` object,
 so the same artefact carries from a first draft to a preregistered test.
 
 This page assumes you have already read a theory as in
-[Get started](getting-started.md); see
+[Get started](getting-started.md). See
 [Methodological foundations](methodology.md) for the rationale and the exact
 computation behind the rigour checklist, severity and amendment-appraisal rules
 demonstrated below.
@@ -229,11 +229,51 @@ These three modes share one object, so a theory built with the BUILDING
 methods can be appraised under DEVELOPMENT and then carried into TESTING
 without conversion.
 
+## Rendering and depositing
+
+`render_report()` writes the dossier as a Quarto source document, ready to
+render to HTML or PDF. With `render=False`, which is the default, it writes the
+`.qmd` without calling Quarto, so the step runs anywhere. It returns the path of
+the file it wrote.
+
+```python
+# illustrative: the calls in this section are shown rather than run when the
+# page is built. Writing the report puts a file on disk, rendering it to HTML or
+# PDF needs a Quarto installation, and a live deposit needs a token and network
+# access.
+report_path = t.render_report("panic-demo.qmd")
+```
+
+`osf_push()` deposits the rendered report to an Open Science Framework node. It
+defaults to `dry_run=True`, which assembles the request and returns it without
+sending anything, so the planned deposit can be inspected offline and without a
+token.
+
+```python
+t.osf_push(node="ab12c")
+```
+
+The returned request records the method, the destination URL, the filename the
+deposit would create and the size of the dossier in bytes, so the step can be
+checked before anything leaves the machine. A live deposit needs `dry_run=False`
+together with a token and the node id, and that is the only path that touches
+the network.
+
+```python
+import os
+
+t.osf_push(
+    node="ab12c",
+    token=os.environ["OSF_PAT"],
+    dry_run=False,
+)
+```
+
 ## Visualising the theory
 
 `diagram()` exports several views of the same object. The graph views return
-Graphviz DOT or dagitty text; three further views are returned directly as SVG
-and render inline. These examples use the repository's panic-network fixture
+Graphviz DOT or dagitty text, and three further views are returned directly as
+SVG and render inline. These examples use the repository's panic-network fixture
 (see [Get started](getting-started.md) for where the fixture files live),
 which carries the test outcomes and scope conditions the richer views draw on.
 

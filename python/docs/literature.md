@@ -16,7 +16,7 @@ exports any of these structures as Graphviz DOT. A fifth function,
 `tf.fetch_corpus`, builds a corpus from the OpenAlex API. It is optional and
 network-dependent, and is described at the end.
 
-## A corpus
+## Reading a corpus
 
 A corpus is a mapping with a `records` list. Each record may carry an `id`,
 a `title`, a `year`, a list of `keywords` and a list of `references`. The
@@ -74,7 +74,7 @@ import theoryforge as tf
 corpus = tf.read_corpus(fixtures / "panic-corpus.yaml")
 ```
 
-## Mapping the field with litmap
+## Building a literature map
 
 `tf.litmap` reduces a corpus to a set of deterministic summaries. It counts
 how often pairs of keywords appear together across records, retains the
@@ -114,7 +114,7 @@ print("keyword edges at min_link=3:", len(m_strict["keyword_cooccurrence"]))
 print("co-citation edges at min_link=3:", m_strict["co_citation"])
 ```
 
-## Positioning a theory with landscape
+## Positioning a theory against the field
 
 `Theory.landscape` takes the themes from `litmap` and places a theory on
 them. It matches the theory's title and construct labels, and the labels and
@@ -148,7 +148,7 @@ the underlying `litmap` call.
 ls = tf.landscape(t, corpus, min_link=2)
 ```
 
-## Diagrams
+## Emitting a literature diagram
 
 `tf.lit_diagram` exports the literature structures as Graphviz DOT text. It
 accepts the output of `litmap` for the two network views, and the output of
@@ -477,7 +477,7 @@ per row) and `references` (one DataFrame of cited works per row, with `id`,
 and keyless, so the literature layer works with no setup. Scopus needs an
 institutional subscription and an API key, so `scopusflow-py` is an opt-in
 source rather than a dependency. The two packages exchange plain data, a DOI
-list or a corpus written to a file, with no coupling in either direction; that
+list or a corpus written to a file, with no coupling in either direction. That
 keeps theoryforge dependency-light and usable out of the box, and lets a reader
 reach for whichever index they have access to.
 
