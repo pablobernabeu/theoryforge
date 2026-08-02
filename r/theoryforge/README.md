@@ -16,12 +16,17 @@ guarantee).
 
 Run the package in your browser, with no installation, using the
 [interactive web app](https://pablobernabeu.github.io/theoryforge/apps/r/). It executes the real
-package client-side via [webR](https://docs.r-wasm.org/webr/latest/): load a theory, run any
-operation, and export both the visualisation (SVG/PNG) and the R code to reproduce it.
+package client-side via [webR](https://docs.r-wasm.org/webr/latest/), so you can load a theory
+and run any operation there, then export the visualisation (SVG/PNG) together with the R code
+that reproduces it.
 
 ## Installation
 
+The package is not on CRAN yet, so it installs from GitHub, pointing at its subdirectory in the
+[monorepo](https://github.com/pablobernabeu/theoryforge) it shares with its Python twin:
+
 ```r
+# install.packages("remotes")
 remotes::install_github("pablobernabeu/theoryforge", subdir = "r/theoryforge")
 ```
 
@@ -62,11 +67,33 @@ positions a theory within a bibliometric corpus.
 The [reference index](https://pablobernabeu.github.io/theoryforge/r/reference/) lists every
 exported function, grouped by workflow stage. `tf_render_diagram()` renders any
 digraph view in the viewer through DiagrammeR, or as a standalone SVG string
-with `as = "svg"`; the rendering packages are optional, in Suggests, so the
-deterministic core stays dependency-free. For the rationale behind each rigour check and
+with `as = "svg"`. The rendering packages sit in Suggests rather than Imports, so the
+deterministic core carries no dependency on them. For the rationale behind each rigour check and
 exactly how every reported value is computed, see
 [Methodological foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html).
+
+## Citation
+
+```r
+citation("theoryforge")
+```
+
+The [About page](https://pablobernabeu.github.io/theoryforge/r/articles/about.html) carries the
+same citation with a BibTeX entry, and a short note on the developer. The repository also ships
+`CITATION.cff`, which drives GitHub's "Cite this repository" button.
 
 ## Licence
 
 MIT. See [`LICENSE`](LICENSE).
+
+## Contributing
+
+Issues and pull requests are welcome. The [contributing
+guide](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CONTRIBUTING.md)
+describes the development setup and the conventions the package follows, and everyone taking
+part is asked to honour the [Code of
+Conduct](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CODE_OF_CONDUCT.md).
+
+Continuous integration runs `R CMD check --as-cran` on Ubuntu and Windows, against both the
+release and the development version of R, alongside the Python suite and the cross-language
+parity check, so a change that breaks the twin is caught on the same push.

@@ -8,7 +8,11 @@ vignette: >
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = FALSE, comment = "")
+# Both optional packages are needed to turn the DOT source into an inline
+# SVG, so the rendering chunks below are skipped when either is absent.
+has_diagram <- requireNamespace("DiagrammeR", quietly = TRUE) &&
+  requireNamespace("DiagrammeRsvg", quietly = TRUE)
 ```
 
 `theoryforge` treats a scientific theory as a versioned, machine-checkable
@@ -37,13 +41,16 @@ theory <- tf_theory("panic-network", "A network theory of panic") |>
                    "Appraised danger of bodily sensations.",
                    measurement = "self-report appraisal scale",
                    boundary_conditions = "awake adults") |>
-  tf_add_proposition("p1", "c_arousal", "c_threat", "causes",
-                     mechanism = "Activation raises the salience of threat cues.") |>
+  tf_add_proposition(
+    "p1", "c_arousal", "c_threat", "causes",
+    mechanism = "Activation raises the salience of threat cues."
+  ) |>
   tf_add_prediction("h1", "Arousal raises threat appraisal by a fixed amount.",
                     "point", derives_from = "p1")
 
 isTRUE(tf_validate(theory)) # structural checks: required fields and enums
-isTRUE(tf_validate(theory, full = TRUE)) # also checks referential integrity of ids and cross-references
+# also checks referential integrity of ids and cross-references
+isTRUE(tf_validate(theory, full = TRUE))
 ```
 
 `tf_validate()` returns `TRUE` invisibly on success and stops with a message
@@ -111,7 +118,7 @@ report$items[[1]]$score   # numeric in [0, 1]
 Render it as JSON (valid, pretty-printed) or as an HTML fragment. The JSON
 string is an artefact in its own right, shown here verbatim:
 
-```{r report-json, collapse = FALSE, comment = ""}
+```{r report-json}
 cat(tf_report(theory, format = "json"))
 ```
 
@@ -151,7 +158,7 @@ tf_embedding_redundancy(theory, embedder)
 diagram types. The digraphs are Graphviz DOT, and the causal DAG uses dagitty
 syntax.
 
-```{r diagram, collapse = FALSE, comment = ""}
+```{r diagram}
 cat(tf_diagram(theory, type = "nomological_net"))
 cat(tf_diagram(theory, type = "causal_dag"))
 ```
@@ -162,8 +169,13 @@ R Markdown, or a standalone SVG string with `as = "svg"`. The packages it uses
 are optional, in Suggests, so the deterministic core stays dependency-free.
 Rendered, the nomological net above reads as a figure.
 
-```{r diagram-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
-cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "nomological_net", as = "svg"), '</div>', sep = "")
+```{r diagram-render, results = "asis", eval = has_diagram}
+cat(
+  '<div class="tf-figure tf-diagram">',
+  tf_render_diagram(theory, "nomological_net", as = "svg"),
+  '</div>',
+  sep = ""
+)
 ```
 
 The causal DAG is the one view this does not cover, since it emits dagitty

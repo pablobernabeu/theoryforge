@@ -366,7 +366,11 @@ package. Use it to assemble a starting corpus, then save the result and work
 from the saved file so that later analysis stays reproducible.
 
 ```python
-corpus = tf.fetch_corpus("panic disorder theory", per_page=25, mailto="you@example.org")
+corpus = tf.fetch_corpus(
+    "panic disorder theory",
+    per_page=25,
+    mailto="you@example.org"
+)
 ```
 
 The `mailto` argument is optional and identifies the caller to OpenAlex, as
@@ -391,7 +395,8 @@ candidate list below is checked against.
 ```python exec="1" source="material-block" result="text" session="literature"
 candidates = [
     "10.1016/j.brat.2015.10.002",                    # already cited as evidence
-    "https://doi.org/10.1016/0005-7967(86)90011-2",  # already cited as an alternative, in URL form
+    # already cited as an alternative, in URL form
+    "https://doi.org/10.1016/0005-7967(86)90011-2",
     "https://doi.org/10.1037/0033-2909.99.1.20",     # not yet cited
 ]
 
@@ -491,8 +496,11 @@ from scopusflow import SearchPlan, corpus, fetch_plan, scopus_query
 
 import theoryforge as tf
 
-records = fetch_plan(SearchPlan(scopus_query("panic disorder"), years=range(2015, 2027)))
-frame = corpus(records)                   # id, title, year, keywords, references
+records = fetch_plan(
+    SearchPlan(scopus_query("panic disorder"), years=range(2015, 2027))
+)
+# id, title, year, keywords, references
+frame = corpus(records)
 
 corpus_records = []
 for row in frame.itertuples(index=False):

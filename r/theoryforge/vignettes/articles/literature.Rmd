@@ -4,7 +4,11 @@ output: rmarkdown::html_vignette
 ---
 
 ```{r, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = FALSE, comment = "")
+# Both optional packages are needed to turn the DOT source into an inline
+# SVG, so the rendering chunks below are skipped when either is absent.
+has_diagram <- requireNamespace("DiagrammeR", quietly = TRUE) &&
+  requireNamespace("DiagrammeRsvg", quietly = TRUE)
 ```
 
 A theory is rarely built in isolation. It sits within a field that already has
@@ -28,7 +32,8 @@ research. The format is chosen by file extension, so the same reader handles
 YAML and JSON.
 
 ```{r read-corpus}
-corpus_path <- system.file("fixtures/panic-corpus.yaml", package = "theoryforge")
+corpus_path <- system.file("fixtures/panic-corpus.yaml",
+                           package = "theoryforge")
 corpus <- tf_read_corpus(corpus_path)
 
 corpus$id
@@ -59,7 +64,8 @@ four themes.
 
 ```{r themes}
 for (theme in lm$themes) {
-  cat(theme$id, ":", paste(unlist(theme$keywords), collapse = ", "), "\n")
+  cat(sprintf("%s: %s\n", theme$id,
+              paste(unlist(theme$keywords), collapse = ", ")))
 }
 ```
 
@@ -102,11 +108,9 @@ focal theory lands on it, and the resulting status.
 
 ```{r landscape-themes}
 for (theme in landscape$themes) {
-  cat(theme$id,
-      "| status:", theme$status,
-      "| focal:", theme$focal,
-      "| alternatives:", paste(unlist(theme$alternatives), collapse = ", "),
-      "\n")
+  cat(sprintf("%s | status: %s | focal: %s | alternatives: %s\n",
+              theme$id, theme$status, theme$focal,
+              paste(unlist(theme$alternatives), collapse = ", ")))
 }
 ```
 
@@ -128,37 +132,55 @@ undirected graphs, and a landscape result renders as a directed theme map. The
 output is a plain string, so it can be written to a `.dot` file or passed to a
 Graphviz renderer.
 
-```{r diagram-keywords, collapse = FALSE, comment = ""}
+```{r diagram-keywords}
 cat(tf_lit_diagram(lm, type = "keyword_cooccurrence"))
 ```
 
 `tf_render_diagram()` accepts a DOT string as well as a theory, so the
 literature diagrams render the same way as the theory views.
 
-```{r diagram-keywords-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
-cat('<div class="tf-figure tf-diagram">', tf_render_diagram(tf_lit_diagram(lm, type = "keyword_cooccurrence"), as = "svg"), '</div>', sep = "")
+```{r diagram-keywords-render, results = "asis", eval = has_diagram}
+cat('<div class="tf-figure tf-diagram">',
+    tf_render_diagram(
+      tf_lit_diagram(lm, type = "keyword_cooccurrence"),
+      as = "svg"
+    ),
+    '</div>',
+    sep = "")
 ```
 
 The co-citation map links the references that the corpus cites together, so
 tightly co-cited work stands out as the intellectual base the field shares.
 
-```{r diagram-cocitation, collapse = FALSE, comment = ""}
+```{r diagram-cocitation}
 cat(tf_lit_diagram(lm, type = "co_citation"))
 ```
 
-```{r diagram-cocitation-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
-cat('<div class="tf-figure tf-diagram">', tf_render_diagram(tf_lit_diagram(lm, type = "co_citation"), as = "svg"), '</div>', sep = "")
+```{r diagram-cocitation-render, results = "asis", eval = has_diagram}
+cat('<div class="tf-figure tf-diagram">',
+    tf_render_diagram(
+      tf_lit_diagram(lm, type = "co_citation"),
+      as = "svg"
+    ),
+    '</div>',
+    sep = "")
 ```
 
 The theme landscape diagram is produced from the `tf_landscape()` result rather
 than from the map, since it carries the focal theory and the alternatives.
 
-```{r diagram-landscape, collapse = FALSE, comment = ""}
+```{r diagram-landscape}
 cat(tf_lit_diagram(landscape, type = "theme_landscape"))
 ```
 
-```{r diagram-landscape-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
-cat('<div class="tf-figure tf-diagram">', tf_render_diagram(tf_lit_diagram(landscape, type = "theme_landscape"), as = "svg"), '</div>', sep = "")
+```{r diagram-landscape-render, results = "asis", eval = has_diagram}
+cat('<div class="tf-figure tf-diagram">',
+    tf_render_diagram(
+      tf_lit_diagram(landscape, type = "theme_landscape"),
+      as = "svg"
+    ),
+    '</div>',
+    sep = "")
 ```
 
 ## Building a corpus from OpenAlex
@@ -208,7 +230,8 @@ panic <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
 
 candidates <- c(
   "10.1016/j.brat.2015.10.002",                   # already cited as evidence
-  "https://doi.org/10.1016/0005-7967(86)90011-2", # already cited as an alternative, in URL form
+  # already cited as an alternative, in URL form
+  "https://doi.org/10.1016/0005-7967(86)90011-2",
   "https://doi.org/10.1037/0033-2909.99.1.20"     # not yet cited
 )
 
@@ -317,7 +340,8 @@ write the result to disk and read it back with `tf_read_corpus()`:
 ```r
 # illustrative: needs scopusflow and a configured Scopus API key
 recs <- scopusflow::scopus_fetch(query, years = 2015:2026)
-sc   <- scopusflow::scopus_corpus(recs)   # id, title, year, keywords, references
+# id, title, year, keywords, references
+sc   <- scopusflow::scopus_corpus(recs)
 
 records <- lapply(seq_len(nrow(sc)), function(i) {
   refs <- sc$references[[i]]              # one data frame of cited works

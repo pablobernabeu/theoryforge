@@ -128,10 +128,13 @@ The return value is a dictionary with four keys.
 
 ```python
 {
-    "verdict": "progressive",          # 'progressive', 'degenerating', or 'neutral'
+    # 'progressive', 'degenerating', or 'neutral'
+    "verdict": "progressive",
     "new_predictions": ["pred4"],      # prediction ids present in v2 but not v1
-    "corroborated_new": ["pred4"],     # of those, the ones with a passed test outcome
-    "ad_hoc_assumptions": [],          # new assumptions that protect untested predictions
+    # of those, the ones with a passed test outcome
+    "corroborated_new": ["pred4"],
+    # new assumptions that protect untested predictions
+    "ad_hoc_assumptions": [],
 }
 ```
 
@@ -173,7 +176,8 @@ Each entry has the shape below.
     "prediction_id": "pred1",
     "type": "directional",
     "risk_score": 0.4,            # base risk from the prediction type
-    "computed_severity": 0.3,     # after the directional discount and any diagnostic bonus
+    # after the directional discount and any diagnostic bonus
+    "computed_severity": 0.3,
 }
 ```
 
@@ -659,7 +663,9 @@ node, and the deliberately weak fixture shipped alongside it shows the worklist
 in full.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
-print(tf.read(fixtures / "weak-theory.theory.yaml").diagram("development_roadmap"))
+print(
+    tf.read(fixtures / "weak-theory.theory.yaml").diagram("development_roadmap")
+)
 ```
 
 <div class="tf-figure tf-diagram"><svg width="489pt" height="704pt"
@@ -825,7 +831,11 @@ s = (
     tf.new_theory("regulation_demo", "Arousal regulated by avoidance")
       .add_construct("arousal", "Physiological arousal", "bodily activation")
       .add_construct("threat", "Perceived threat", "appraised danger")
-      .add_construct("avoidance", "Avoidance behaviour", "protective withdrawal")
+      .add_construct(
+          "avoidance",
+          "Avoidance behaviour",
+          "protective withdrawal"
+      )
       .add_proposition("p1", "arousal", "threat", "increases")
       .add_proposition("p2", "threat", "avoidance", "increases")
       .add_proposition("p3", "avoidance", "arousal", "decreases")

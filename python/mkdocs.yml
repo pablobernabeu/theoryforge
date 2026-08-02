@@ -82,7 +82,14 @@ plugins:
 
 markdown_extensions:
   - admonition
-  - pymdownx.highlight
+  # Renders the clickable anchor beside every heading, so any section can be
+  # linked to directly. The rest of the family's sites carry these.
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      # Tag each block with its language, so brand.css can tell output pasted
+      # into a `text` fence from a source block and style it as output.
+      pygments_lang_class: true
   - pymdownx.superfences
   # Snippets embeds the repository LICENSE into the licence page, so the page
   # can never drift from the file. pymdown-extensions ships with mkdocs-material.

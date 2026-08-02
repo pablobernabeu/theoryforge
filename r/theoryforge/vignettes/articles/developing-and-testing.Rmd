@@ -4,7 +4,11 @@ output: rmarkdown::html_vignette
 ---
 
 ```{r setup, include = FALSE}
-knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+knitr::opts_chunk$set(collapse = FALSE, comment = "")
+# Both optional packages are needed to turn the DOT source into an inline
+# SVG, so the rendering chunks below are skipped when either is absent.
+has_diagram <- requireNamespace("DiagrammeR", quietly = TRUE) &&
+  requireNamespace("DiagrammeRsvg", quietly = TRUE)
 library(theoryforge)
 ```
 
@@ -76,7 +80,10 @@ introduces no new ad-hoc assumptions.
 
 ```{r appraise}
 v2 <- tf_read(
-  system.file("fixtures/panic-network-2026-v2.theory.yaml", package = "theoryforge")
+  system.file(
+    "fixtures/panic-network-2026-v2.theory.yaml",
+    package = "theoryforge"
+  )
 )
 
 appraisal <- tf_appraise_amendment(v2, theory)
@@ -98,7 +105,7 @@ into `lavaan` model syntax. Constructs with indicators become latent
 measurement models with `=~`, and propositions become structural paths with
 `~`, covariances with `~~` or annotated moderation lines.
 
-```{r sem, collapse = FALSE, comment = ""}
+```{r sem}
 cat(tf_compile_sem(theory))
 ```
 
@@ -150,7 +157,12 @@ checked before anything leaves the machine. A live deposit needs
 path that touches the network.
 
 ```{r osf-live, eval = FALSE}
-tf_osf_push(theory, node = "ab12c", token = Sys.getenv("OSF_PAT"), dry_run = FALSE)
+tf_osf_push(
+  theory,
+  node = "ab12c",
+  token = Sys.getenv("OSF_PAT"),
+  dry_run = FALSE
+)
 ```
 
 ## Visualising the theory
@@ -160,48 +172,68 @@ traces the lifecycle from constructs, through propositions and predictions, to
 the recorded test outcomes, so the path from a claim to its planned test is
 visible in one figure.
 
-```{r workflow, collapse = FALSE, comment = ""}
+```{r workflow}
 cat(tf_diagram(theory, "workflow"))
 ```
 
 Rendered with `tf_render_diagram()`, which passes the DOT to the DiagrammeR
 engine, the same view reads as a figure.
 
-```{r workflow-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
-cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "workflow", as = "svg"), '</div>', sep = "")
+```{r workflow-render, results = "asis", eval = has_diagram}
+cat(
+  '<div class="tf-figure tf-diagram">',
+  tf_render_diagram(theory, "workflow", as = "svg"),
+  '</div>',
+  sep = ""
+)
 ```
 
 The `context` view places the theory among the scope conditions under which it
 is claimed to hold and the registered rivals it is meant to outpredict.
 
-```{r context, collapse = FALSE, comment = ""}
+```{r context}
 cat(tf_diagram(theory, "context"))
 ```
 
-```{r context-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
-cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "context", as = "svg"), '</div>', sep = "")
+```{r context-render, results = "asis", eval = has_diagram}
+cat(
+  '<div class="tf-figure tf-diagram">',
+  tf_render_diagram(theory, "context", as = "svg"),
+  '</div>',
+  sep = ""
+)
 ```
 
 The `pipeline` view links each prediction to its recorded test outcome, so
 predictions still awaiting a test are visible as loose ends.
 
-```{r pipeline, collapse = FALSE, comment = ""}
+```{r pipeline}
 cat(tf_diagram(theory, "pipeline"))
 ```
 
-```{r pipeline-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
-cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "pipeline", as = "svg"), '</div>', sep = "")
+```{r pipeline-render, results = "asis", eval = has_diagram}
+cat(
+  '<div class="tf-figure tf-diagram">',
+  tf_render_diagram(theory, "pipeline", as = "svg"),
+  '</div>',
+  sep = ""
+)
 ```
 
 The `provenance` view draws the build log as a digraph, so the record of how
 the theory reached its current state travels with the object itself.
 
-```{r provenance, collapse = FALSE, comment = ""}
+```{r provenance}
 cat(tf_diagram(theory, "provenance"))
 ```
 
-```{r provenance-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
-cat('<div class="tf-figure tf-diagram">', tf_render_diagram(theory, "provenance", as = "svg"), '</div>', sep = "")
+```{r provenance-render, results = "asis", eval = has_diagram}
+cat(
+  '<div class="tf-figure tf-diagram">',
+  tf_render_diagram(theory, "provenance", as = "svg"),
+  '</div>',
+  sep = ""
+)
 ```
 
 The `venn` view takes each construct's boundary conditions as a set and returns
@@ -225,7 +257,12 @@ The `severity` view draws one bar per prediction, scaled by its computed
 severity, so the riskier tests stand out at a glance.
 
 ```{r severity-view, results = "asis"}
-cat('<div class="tf-figure">', tf_diagram(theory, "severity"), '</div>', sep = "")
+cat(
+  '<div class="tf-figure">',
+  tf_diagram(theory, "severity"),
+  '</div>',
+  sep = ""
+)
 ```
 
 The `development_roadmap` view turns the same checklist into a worklist by
@@ -239,7 +276,7 @@ passes every check, so its roadmap reduces to that hub and an `all checks pass`
 node, and the deliberately weak theory shipped alongside it shows the worklist
 in full.
 
-```{r roadmap, collapse = FALSE, comment = ""}
+```{r roadmap}
 weak <- tf_read(
   system.file("fixtures/weak-theory.theory.yaml", package = "theoryforge")
 )
@@ -247,8 +284,13 @@ cat(tf_diagram(theory, "development_roadmap"))
 cat(tf_diagram(weak, "development_roadmap"))
 ```
 
-```{r roadmap-render, results = "asis", eval = requireNamespace("DiagrammeR", quietly = TRUE) && requireNamespace("DiagrammeRsvg", quietly = TRUE)}
-cat('<div class="tf-figure tf-diagram">', tf_render_diagram(weak, "development_roadmap", as = "svg"), '</div>', sep = "")
+```{r roadmap-render, results = "asis", eval = has_diagram}
+cat(
+  '<div class="tf-figure tf-diagram">',
+  tf_render_diagram(weak, "development_roadmap", as = "svg"),
+  '</div>',
+  sep = ""
+)
 ```
 
 All of these views are deterministic. The DOT strings render with any Graphviz
