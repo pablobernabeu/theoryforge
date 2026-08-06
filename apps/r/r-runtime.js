@@ -89,7 +89,8 @@ const RT = {
   docsUrl: "https://pablobernabeu.github.io/theoryforge/r/",
   examples: [],
   corpora: [],
-  version: "",
+  version: "",     // interpreter version (R.version.string), set at boot
+  pkgVersion: "",  // theoryforge release, stamped into the manifest by build.mjs
   _webR: null,
   _corpusFile: null,
   _theoryFile: "your-theory.yaml",
@@ -127,6 +128,10 @@ const RT = {
     await webR.evalRVoid('source("/tf/boot.R")');
 
     this.version = (await webR.evalRString("R.version.string")) || "R";
+    // The theoryforge release shown in the footer. build.mjs stamps it into the
+    // manifest from DESCRIPTION (after checking pyproject.toml agrees), so the
+    // app cannot drift from the packaged version.
+    this.pkgVersion = manifest.pkgVersion || "";
     this.examples = manifest.examples;
     this.corpora = manifest.corpora;
 
@@ -136,7 +141,7 @@ const RT = {
       await webR.evalRVoid(`.tf_load_corpus("${this._fixtures[this._corpusFile]}")`);
     }
     const summary = await this.loadExample(manifest.examples[0].path);
-    return { version: this.version, examples: this.examples, corpora: this.corpora, summary };
+    return { version: this.version, pkgVersion: this.pkgVersion, examples: this.examples, corpora: this.corpora, summary };
   },
 
   async _mkdirp(dirs) {

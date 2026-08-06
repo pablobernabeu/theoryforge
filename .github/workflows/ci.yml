@@ -5,23 +5,36 @@ on:
     branches: [main, master]
   pull_request:
 
+# Every job only checks out and tests the code, so read access to the contents
+# is all the workflow needs; nothing here writes to the repository.
+permissions:
+  contents: read
+
 jobs:
   python:
-    name: Python
+    name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # requires-python is >=3.10 and the classifiers advertise 3.10 to 3.13,
+        # so the full advertised range is tested rather than 3.11 alone. The
+        # parity and apps jobs stay on a single pinned version because they test
+        # cross-language agreement and the app bundle, not Python compatibility.
+        python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
       - name: Install
-        run: pip install -e "python[dev]" build twine
+        run: pip install -e "python[dev]" build twine pytest-cov
       - name: Lint (ruff)
         run: ruff check python/src
       - name: Types (mypy)
         run: mypy python/src/theoryforge --ignore-missing-imports
       - name: Tests
-        run: pytest python -q
+        run: pytest python -q --cov=theoryforge --cov-report=term-missing
       - name: Golden files are up to date
         run: |
           python scripts/gen_golden.py
@@ -37,15 +50,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # This job was Linux-only, so nothing caught a Windows-specific problem
-        # before a CRAN submission. Windows on R-devel is the combination
-        # win-builder checks, so running it here gives that signal on every push
-        # rather than by email after an upload.
+        # The six configurations the rest of the family checks, mirroring what
+        # CRAN itself runs: all three operating systems on the released R, plus
+        # R-devel on Linux and on Windows and oldrel-1 on Linux. Windows on
+        # R-devel is the combination win-builder checks, so running it here
+        # gives that signal on every push rather than by email after an upload.
         config:
-          - {os: ubuntu-latest,  r: 'release'}
-          - {os: ubuntu-latest,  r: 'devel'}
+          - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
           - {os: windows-latest, r: 'devel'}
+          - {os: ubuntu-latest,  r: 'devel', http-user-agent: 'release'}
+          - {os: ubuntu-latest,  r: 'release'}
+          - {os: ubuntu-latest,  r: 'oldrel-1'}
     steps:
       - uses: actions/checkout@v7
       # The vignettes are built during the check, so pandoc must be present on
@@ -54,6 +70,7 @@ jobs:
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.config.r }}
+          http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
@@ -64,6 +81,40 @@ jobs:
           working-directory: r/theoryforge
           args: 'c("--no-manual", "--as-cran")'
           error-on: '"warning"'
+
+  # Reports R test coverage on each run, writing the percentage to the run
+  # summary. It uses no external service (no Codecov), so it needs no token and
+  # adds no badge that could rot. One Linux runner is enough: coverage does not
+  # vary by platform, only the tests it counts do, and those run above.
+  r-coverage:
+    name: R coverage (covr)
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::covr
+          needs: check
+          working-directory: r/theoryforge
+      - name: Measure and report coverage
+        shell: Rscript {0}
+        run: |
+          cov <- covr::package_coverage("r/theoryforge", quiet = FALSE)
+          pct <- round(covr::percent_coverage(cov), 1)
+          cat(sprintf("Test coverage: %s%%\n", pct))
+          summary <- Sys.getenv("GITHUB_STEP_SUMMARY")
+          if (nzchar(summary)) {
+            cat(sprintf("## Test coverage: **%s%%**\n", pct),
+                file = summary, append = TRUE)
+          }
+          if (pct < 80) {
+            cat("::warning::Test coverage is below 80%\n")
+          }
 
   apps:
     name: Apps (syntax + vendor build)

@@ -945,14 +945,20 @@
     const onProgress = (m) => { if (blog) blog.textContent = m; };
     try {
       const info = await RT.init(onProgress);
-      RT.examples = info.examples; RT.version = info.version;
+      RT.examples = info.examples; RT.version = info.version; RT.pkgVersion = info.pkgVersion;
       STATE.summary = info.summary || null;
       document.body.append(el("a", { class: "skip-link", href: "#main" }, "Skip to content"));
       document.body.append(buildHeader());
       const main = el("main", { id: "main", tabindex: "-1" }, [buildSidebar(), buildMain()]);
       document.body.append(main);
+      // Two distinct versions meet here: RT.pkgVersion is the theoryforge
+      // release (stamped into the manifest at build time from DESCRIPTION /
+      // pyproject.toml), while RT.version is the interpreter the engine booted
+      // (R.version.string / "Python x.y.z"). Keep them apart in the footer so
+      // the package version is never mistaken for the interpreter's.
       document.body.append(el("footer", { class: "app", html:
-        "theoryforge " + esc(RT.version || "") + " · running entirely client-side via " + esc(RT.engineLabel) +
+        "theoryforge" + (RT.pkgVersion ? " " + esc(RT.pkgVersion) : "") + " · " + esc(RT.version || "") +
+        " via " + esc(RT.engineLabel) + " · running entirely client-side" +
         " · <a href='https://github.com/pablobernabeu/theoryforge'>source</a>" }));
       updateThemeBtn();
       await applyRestore(onProgress);

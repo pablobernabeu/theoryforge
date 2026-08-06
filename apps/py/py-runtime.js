@@ -92,7 +92,8 @@ const RT = {
   docsUrl: "https://pablobernabeu.github.io/theoryforge/python/",
   examples: [],
   corpora: [],
-  version: "",
+  version: "",     // interpreter version ("Python x.y.z"), set at boot
+  pkgVersion: "",  // theoryforge release, stamped into the manifest by build.mjs
   _py: null,
   _app: null,
   _corpusFile: null,
@@ -131,6 +132,10 @@ const RT = {
     this._app = pyodide.pyimport("_app");
 
     this.version = "Python " + pyodide.runPython("import platform; platform.python_version()");
+    // The theoryforge release shown in the footer. build.mjs stamps it into the
+    // manifest from pyproject.toml (after checking DESCRIPTION agrees), so the
+    // app cannot drift from the packaged version.
+    this.pkgVersion = manifest.pkgVersion || "";
     this.examples = manifest.examples;
     this.corpora = manifest.corpora;
 
@@ -139,7 +144,7 @@ const RT = {
       this._app.load_corpus(this._fixtures[this._corpusFile]);
     }
     const summary = await this.loadExample(manifest.examples[0].path);
-    return { version: this.version, examples: this.examples, corpora: this.corpora, summary };
+    return { version: this.version, pkgVersion: this.pkgVersion, examples: this.examples, corpora: this.corpora, summary };
   },
 
   async loadExample(path) {

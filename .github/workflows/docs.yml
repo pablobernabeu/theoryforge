@@ -18,6 +18,7 @@ on:
       - 'CHANGELOG.md'
       - '.github/workflows/docs.yml'
       - '.github/landing.html'
+      - '.github/404.html'
   workflow_dispatch:
 
 permissions:
@@ -83,9 +84,13 @@ jobs:
           cd python && mkdocs build --strict -d ../site/python
 
       - name: Write landing page
+        # 404.html at the published root is the file GitHub Pages serves for
+        # every URL that matches nothing on the site; without it visitors get
+        # GitHub's generic 404 with no way back to the documentation.
         run: |
           cp r/theoryforge/man/figures/logo.svg site/logo.svg
           cp .github/landing.html site/index.html
+          cp .github/404.html site/404.html
 
       - uses: actions/setup-node@v7
         with:

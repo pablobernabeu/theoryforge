@@ -84,6 +84,25 @@ async function writeJson(p, obj) {
   await fs.writeFile(p, JSON.stringify(obj, null, 2) + "\n", "utf8");
 }
 
+// The package version is declared in two places — r/theoryforge/DESCRIPTION and
+// python/pyproject.toml — and the apps show it in their footers. Read both at
+// build time rather than hard-coding a copy here that would drift on release,
+// and fail the build outright if the two halves disagree: a mismatch means the
+// release process went wrong, and stamping either number into the apps would
+// ship a lie about the other half.
+async function readPackageVersion() {
+  const desc = await fs.readFile(path.join(repo, "r", "theoryforge", "DESCRIPTION"), "utf8");
+  const toml = await fs.readFile(path.join(repo, "python", "pyproject.toml"), "utf8");
+  const rV = (desc.match(/^Version:\s*(\S+)\s*$/m) || [])[1];
+  const pyV = (toml.match(/^version\s*=\s*"([^"]+)"/m) || [])[1];
+  if (!rV) throw new Error("could not read Version from r/theoryforge/DESCRIPTION");
+  if (!pyV) throw new Error("could not read version from python/pyproject.toml");
+  if (rV !== pyV) {
+    throw new Error(`package version mismatch: DESCRIPTION says ${rV} but pyproject.toml says ${pyV} — align the two halves before building the apps`);
+  }
+  return rV;
+}
+
 async function buildR() {
   const vendor = path.join(here, "r", "vendor");
   await rmrf(vendor);
@@ -94,6 +113,7 @@ async function buildR() {
   await copyExamples(path.join(vendor, "fixtures"));
   await fs.copyFile(LOGO, path.join(vendor, "logo.svg"));
   await writeJson(path.join(vendor, "manifest.json"), {
+    pkgVersion: PKG_VERSION,
     rFiles: rFiles.map((f) => `R/${f}`),
     schema: { theory: "schema/theory.schema.json", checklist: "schema/rigor_checklist.yaml" },
     examples: manifestExamples(),
@@ -116,6 +136,7 @@ async function buildPy() {
     .map((f) => `theoryforge/${f.split(path.sep).join("/")}`)
     .sort();
   await writeJson(path.join(vendor, "manifest.json"), {
+    pkgVersion: PKG_VERSION,
     pyFiles: wanted,
     examples: manifestExamples(),
     corpora: manifestCorpora(),
@@ -123,7 +144,9 @@ async function buildPy() {
   return wanted.length;
 }
 
+const PKG_VERSION = await readPackageVersion();
 const nR = await buildR();
 const nPy = await buildPy();
+console.log(`package version: ${PKG_VERSION} (DESCRIPTION and pyproject.toml agree)`);
 console.log(`vendored R: ${nR} source files -> apps/r/vendor`);
 console.log(`vendored Python: ${nPy} package files -> apps/py/vendor`);
