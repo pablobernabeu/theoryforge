@@ -10,9 +10,11 @@ tf_check(theory)
 \item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
 }
 \value{
-A named list with elements \code{theory_id}, \code{schema_version},
-\code{maturity}, \code{aggregate_score}, \code{gate},
-\code{n_blockers_failed}, and \code{items} (a list of per-item lists).
+A named list with elements \code{theory_id}, \code{schema_version}
+(the theory's), \code{checklist_version} (the rigour checklist's, which is
+what the weights and thresholds came from), \code{maturity},
+\code{aggregate_score}, \code{gate}, \code{n_blockers_failed}, and
+\code{items} (a list of per-item lists).
 }
 \description{
 Runs the full rigour checklist (12 items) over a theory object and returns a

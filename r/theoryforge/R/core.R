@@ -31,7 +31,7 @@ tf_read <- function(path) {
   } else {
     data <- yaml::read_yaml(path)
   }
-  if (!is.list(data)) {
+  if (!.tf_is_mapping(data)) {
     stop("Theory data must be a mapping", call. = FALSE)
   }
   data
@@ -82,6 +82,16 @@ tf_validate <- function(theory, full = FALSE) {
     if (!(length(tf) == 1L && tf %in% .tf_FORM)) {
       errors <- c(errors, sprintf("theory_form must be one of %s",
                                   paste(sort(.tf_FORM), collapse = ", ")))
+    }
+  }
+
+  # A misspelt collection key would otherwise pass silently and quietly change
+  # every downstream verdict (a renamed `predictions:` drops the whole
+  # collection), so unrecognised top-level fields are refused.
+  known <- names(.tf_get(tf_theory_schema(), "properties", list()))
+  for (key in names(d)) {
+    if (!(key %in% known)) {
+      errors <- c(errors, sprintf("unknown top-level field: %s", key))
     }
   }
 
@@ -222,12 +232,7 @@ tf_write <- function(theory, path) {
   } else {
     text <- yaml::as.yaml(theory)
   }
-  con <- file(path, open = "wb")
-  on.exit(close(con))
-  # Normalise to LF only.
-  text <- gsub("\r\n", "\n", text, fixed = TRUE)
-  writeBin(charToRaw(text), con)
-  invisible(path)
+  .tf_write_lf(path, text)
 }
 
 # -- builder (BUILDING mode) -------------------------------------------------

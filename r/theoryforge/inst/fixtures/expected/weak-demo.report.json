@@ -1,6 +1,7 @@
 {
   "theory_id": "weak-demo",
   "schema_version": "1.0",
+  "checklist_version": "1.0",
   "maturity": "building",
   "aggregate_score": 12.0,
   "gate": "blocked",

@@ -2,6 +2,7 @@
 
 - Theory ID: panic-network-2026
 - Maturity: developing
+- Checklist version: 1.0
 - Aggregate rigour score: 84.8/100
 - Gate: pass
 - Blockers failed: 0

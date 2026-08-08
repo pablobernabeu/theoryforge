@@ -9,6 +9,7 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+from ._io import write_lf as _write_lf
 from .dossier import dossier as _dossier
 
 
@@ -25,7 +26,7 @@ def render_report(T, path, title: str | None = None, render: bool = False, to: s
     if path.suffix.lower() != ".qmd":
         path = path.with_suffix(".qmd")
     header = f'---\ntitle: "{title}"\nformat: {to}\n---\n\n'
-    path.write_text(header + _dossier(data), encoding="utf-8")
+    _write_lf(path, header + _dossier(data))
     if render:
         subprocess.run(["quarto", "render", str(path), "--to", to], check=True)  # pragma: no cover
     return str(path)

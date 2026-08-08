@@ -14,13 +14,14 @@ NULL
 #' suffix): a YAML header (\code{title}, \code{format}) followed by the
 #' deterministic \code{tf_dossier(theory)} body. Returns the written path. When
 #' \code{render = TRUE}, invokes \code{quarto render}, which requires a Quarto
-#' installation.
+#' installation, and stops if that render fails.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param path Destination path; any extension is replaced with \code{.qmd}.
 #' @param title Optional report title; defaults to
 #'   \code{"theoryforge report: <title-or-id>"}. Double quotes are escaped.
-#' @param render When \code{TRUE}, run \code{quarto render} on the written file.
+#' @param render When \code{TRUE}, run \code{quarto render} on the written file
+#'   and stop if it exits non-zero.
 #' @param to Quarto output format (default \code{"html"}).
 #' @return The path of the written \code{.qmd} file.
 #' @examples
@@ -45,13 +46,15 @@ tf_render_report <- function(theory, path, title = NULL, render = FALSE, to = "h
 
   header <- sprintf("---\ntitle: \"%s\"\nformat: %s\n---\n\n", title, to)
   text <- paste0(header, tf_dossier(T))
-  con <- file(path, open = "wb")
-  on.exit(close(con))
-  text <- gsub("\r\n", "\n", text, fixed = TRUE)
-  writeBin(charToRaw(enc2utf8(text)), con)
+  .tf_write_lf(path, text)
 
   if (render) {
-    system2("quarto", c("render", shQuote(path), "--to", to))  # nocov
+    # A failed render must not return the path as if it had succeeded; the
+    # Python twin's subprocess.run(check = TRUE) raises on the same condition.
+    status <- system2("quarto", c("render", shQuote(path), "--to", to))  # nocov
+    if (!identical(as.integer(status), 0L)) {  # nocov
+      stop("quarto render failed with status ", status, call. = FALSE)  # nocov
+    }
   }
   path
 }

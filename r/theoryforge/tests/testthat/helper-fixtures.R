@@ -3,7 +3,9 @@
 # when R CMD check runs the tests against the built tarball) and also live at
 # the repo root under fixtures/ (used by the Python twin and by in-source runs).
 # Prefer the installed copy via system.file(); fall back to searching upward for
-# the repo-level fixtures/ directory. Both copies are byte-identical.
+# the repo-level fixtures/ directory. The two copies are kept byte-identical by
+# scripts/gen_golden.py, which writes the root tree and then mirrors it here;
+# CI fails on any difference in either tree.
 
 tf_fixtures_dir <- function() {
   installed <- system.file("fixtures", package = "theoryforge")

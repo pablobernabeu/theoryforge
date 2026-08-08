@@ -12,6 +12,66 @@ version and a single behavioural contract
 -->
 
 
+## [Unreleased]
+
+### Fixed
+- **The two engines wrote different bytes on Windows.** Every file the package writes
+  now goes through a single LF-only, UTF-8 writer in each language, so the R half no
+  longer emits CRLF where the Python half emits LF. The byte-identity claim rests on
+  this; nothing else in the contract changed.
+- **A misspelt top-level key silently changed the score.** `predicitions:` was dropped
+  without a word, taking its whole collection with it and moving the rigour score.
+  `validate()` now refuses an unknown top-level field in both languages, with identical
+  message text, and the schema's `additionalProperties` was set to match so a
+  third-party validator agrees with ours.
+- **R scored input that Python refused.** `tf_read` and `tf_read_corpus` accepted a
+  top-level YAML sequence of mappings; both now reject it.
+- **`simulate()` accepted duplicate construct ids**, producing two different but equally
+  plausible trajectories from one file. Both languages now refuse them.
+- **A failed `quarto render` returned its output path as though it had succeeded**, and
+  `tf_write` did not force UTF-8 as its sibling writers do. Both corrected.
+
+### Changed
+- **The rigour report and the dossier record the checklist version that produced them**,
+  so two reports written against different checklist revisions are no longer silently
+  comparable. The package version is deliberately *not* recorded: these artefacts are
+  parity-tested across the twins, and a per-language release number would break that.
+  The reasoning is written into API_SPEC section 4.
+- **`simulate()` echoes back k, damping and init** as well as dt and steps, so a recorded
+  trajectory can be reproduced from what the record itself reports.
+- **The causal-testability criterion now describes what it computes.** It asserted
+  acyclicity and never checked it; rather than add a check whose verdicts would move,
+  the criterion and the methodology pages now state that the export is emitted as
+  written, that it is not verified acyclic, and that the shipped panic-network example
+  is in fact cyclic. No score, gate or status changed.
+- The R network adapters carry the same 30-second timeout as their Python counterparts,
+  and both languages reject a `per_page` outside OpenAlex's documented 1-200 range
+  before making a request.
+
+### Added
+- **The Python package ships the example theories**, with `example_path()` and
+  `example_names()`, mirrored by `tf_example_path()` and `tf_example_names()` in R. The
+  README's R quick start now uses a shipped fixture, so it works straight after
+  `remotes::install_github` with no clone.
+- **CI tests what users install, not only the checkout.** The Python matrix gains
+  3.14, and the classifiers now advertise it. A new job installs the built wheel
+  into a bare environment outside the repository and resolves the packaged JSON
+  schemas from there through `importlib.resources`: theoryforge ships those
+  schemas inside the package, and an editable install would find them in the
+  checkout even if the wheel omitted them entirely. A second new job installs the
+  declared minimum dependency floors — every one of them, not PyYAML alone — and a
+  further job runs the R suite on the declared R 4.1 minimum, which the six-cell
+  `--as-cran` matrix sits well above and so never exercised. A weekly schedule runs
+  the suite when nobody has pushed, so upstream drift surfaces as a dated red badge
+  rather than a surprise.
+- **The golden gate covers every duplicated tree.** It watched the root copy only and
+  reported modifications alone, so a golden the generator newly created or deleted
+  slipped through, as did any drift in the copies shipped inside the two packages.
+  Relatedly, `reproduce_all` verified nothing: it *rewrote* the goldens it was meant to
+  check, so it could never fail. It now verifies, and gates on mypy as CI does.
+  `publish.yml` gained the least-privilege token scope its siblings already declared.
+
+
 ## [0.5.0] - 2026-07-23
 
 ### Changed

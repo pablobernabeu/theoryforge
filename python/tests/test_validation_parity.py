@@ -73,6 +73,20 @@ def test_enum_message_is_comma_joined_without_brackets():
     assert "[" not in text and "'" not in text
 
 
+def test_unknown_top_level_field_is_refused():
+    # A misspelt collection key drops the collection silently; the whole point
+    # is that this is caught rather than scored.
+    t = _consistent()
+    t.data["predicitions"] = t.data.pop("predictions")
+    with pytest.raises(ValueError) as exc:
+        t.validate()
+    assert "unknown top-level field: predicitions" in str(exc.value)
+
+
+def test_known_top_level_fields_are_accepted():
+    assert _consistent().validate() is True
+
+
 def test_read_and_read_corpus_reject_non_mapping(tmp_path):
     p = tmp_path / "bad.yaml"
     p.write_text("- just\n- a\n- list\n", encoding="utf-8")
@@ -80,6 +94,19 @@ def test_read_and_read_corpus_reject_non_mapping(tmp_path):
         tf.read(p)
     c = tmp_path / "badc.yaml"
     c.write_text("- 1\n- 2\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Corpus data must be a mapping"):
+        tf.read_corpus(c)
+
+
+def test_read_and_read_corpus_reject_sequence_of_mappings(tmp_path):
+    # A sequence of mappings, unlike a sequence of scalars, parses to a plain
+    # list in R too, so this is the form that slipped past the R guard.
+    p = tmp_path / "seq.yaml"
+    p.write_text("- {a: 1}\n- {b: 2}\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="Theory data must be a mapping"):
+        tf.read(p)
+    c = tmp_path / "seqc.yaml"
+    c.write_text("- {a: 1}\n- {b: 2}\n", encoding="utf-8")
     with pytest.raises(ValueError, match="Corpus data must be a mapping"):
         tf.read_corpus(c)
 

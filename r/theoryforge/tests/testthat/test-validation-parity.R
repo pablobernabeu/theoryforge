@@ -66,10 +66,32 @@ test_that("enum message is comma-joined without brackets", {
   expect_false(grepl("[", err, fixed = TRUE))
 })
 
+test_that("an unknown top-level field is refused", {
+  # A misspelt collection key drops the collection silently; the whole point is
+  # that this is caught rather than scored.
+  t <- consistent_theory()
+  names(t)[names(t) == "predictions"] <- "predicitions"
+  err <- tryCatch(tf_validate(t), error = function(e) conditionMessage(e))
+  expect_true(grepl("unknown top-level field: predicitions", err, fixed = TRUE))
+})
+
+test_that("known top-level fields are accepted", {
+  expect_true(tf_validate(consistent_theory()))
+})
+
 test_that("tf_read and tf_read_corpus reject non-mapping input", {
   p <- tempfile(fileext = ".yaml"); writeLines(c("- a", "- b"), p)
   expect_error(tf_read(p), "Theory data must be a mapping")
   cpath <- tempfile(fileext = ".yaml"); writeLines(c("- 1", "- 2"), cpath)
+  expect_error(tf_read_corpus(cpath), "Corpus data must be a mapping")
+})
+
+test_that("tf_read and tf_read_corpus reject a sequence of mappings", {
+  # A sequence of mappings, unlike a sequence of scalars, parses to a plain
+  # list here too, so this is the form that slipped past the guard.
+  p <- tempfile(fileext = ".yaml"); writeLines(c("- {a: 1}", "- {b: 2}"), p)
+  expect_error(tf_read(p), "Theory data must be a mapping")
+  cpath <- tempfile(fileext = ".yaml"); writeLines(c("- {a: 1}", "- {b: 2}"), cpath)
   expect_error(tf_read_corpus(cpath), "Corpus data must be a mapping")
 })
 

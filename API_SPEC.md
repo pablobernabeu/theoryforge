@@ -23,6 +23,7 @@ Each package vendors a copy of `schema/` at build time (R uses `inst/schema/`, P
 
 | Concept | R | Python |
 |---|---|---|
+| Packaged examples | `tf_example_names()`, `tf_example_path(name)` | `theoryforge.example_names()`, `theoryforge.example_path(name)` |
 | Read theory from YAML/JSON | `tf_read(path)` → list | `theoryforge.read(path)` → `Theory` |
 | Validate | `tf_validate(theory, full=FALSE)` → TRUE/stop | `theory.validate(full=False)` → True/raises |
 | Write theory | `tf_write(theory, path)` | `theory.write(path)` |
@@ -34,7 +35,9 @@ Each package vendors a copy of `schema/` at build time (R uses `inst/schema/`, P
 
 The two implementations use the same verbs, the same argument names and the same artefacts. Stubs MUST raise a clear "not implemented in P0" error rather than returning incorrect data.
 
-**Validation (`validate`).** The default checks structure: the required top-level fields (`schema_version`, `id`, `title`, `maturity`), the `maturity`/`theory_form`/`relation`/`type` enums, and the required fields of each construct, proposition and prediction. Both languages collect every problem and raise once with the prefix `invalid theory object: ` followed by the messages joined by `; `. With `full=TRUE`/`full=True`, a deterministic referential-integrity pass is appended (same checks, order and message text in both languages):
+**Validation (`validate`).** The default checks structure: the required top-level fields (`schema_version`, `id`, `title`, `maturity`), the `maturity`/`theory_form`/`relation`/`type` enums, the recognised top-level field names, and the required fields of each construct, proposition and prediction. Both languages collect every problem and raise once with the prefix `invalid theory object: ` followed by the messages joined by `; `.
+
+**Unknown top-level fields.** After the enum checks and before the collection checks, each top-level key of the document that is not among the `properties` of `theory.schema.json` yields, in file order, `unknown top-level field: <key>`. The schema is read for its key set alone (no JSON-Schema engine), and it is closed at the top level for this reason: a misspelt collection key such as `predicitions:` would otherwise validate while silently dropping the collection and moving the aggregate score and gate. Item objects remain open, so individual constructs, propositions and predictions may still carry extra metadata. With `full=TRUE`/`full=True`, a deterministic referential-integrity pass is appended (same checks, order and message text in both languages):
 
 1. **Duplicate ids**, for `constructs`, `propositions`, `predictions`, `alternatives`, `auxiliary_assumptions` in that order, each in file order: `duplicate <construct|proposition|prediction|alternative|assumption> id: <id>` the second and later time an id is seen.
 2. **Proposition endpoints** (file order): `proposition[i] from '<id>' is not a known construct`, then `... to '<id>' ...`, when a nonempty `from`/`to` is not a declared construct id.
@@ -49,7 +52,7 @@ Indices are 0-based. Only nonempty references are checked (a missing/empty id is
 
 - **Iteration order = file order.** Never sort collections unless told to. Constructs, propositions, predictions and provenance are processed in the order they appear in the YAML.
 - **Rounding.** All emitted numeric values use a deterministic half-away-from-zero rounding `rnd(x, n) = sign(x) * floor(abs(x)*10^n + 0.5 + 1e-6) / 10^n` (item scores `n=3`, aggregate `n=1`, simulate trajectories `n=6`). Do NOT use the language default `round()`. It is banker's rounding, whose result diverges across platforms at exact half-boundaries (e.g. 0.6125 → 0.612 on one OS, 0.613 on another). The `+1e-6` bias is far larger than cross-platform ULP jitter (~1e-13 at these magnitudes) yet far smaller than the rounding grid, so `rnd` is identical on every platform and across R and Python. R: `tf_rnd <- function(x, n) { s <- 10^n; sign(x) * floor(abs(x) * s + 0.5 + 1e-6) / s }`.
-- **Line endings.** All generated IR strings use `\n` (LF) only, and end with a single trailing `\n`.
+- **Line endings.** All generated IR strings use `\n` (LF) only, and end with a single trailing `\n`. Every function that writes a file goes through one per-language helper (`_io.write_lf` / `.tf_write_lf`) that emits UTF-8 bytes with LF endings, so no writer can pick up the platform's newline translation.
 - **String escaping in DOT labels.** Replace `\` → `\\` then `"` → `\"`.
 
 ## 4. Rigour checklist algorithm
@@ -86,11 +89,13 @@ Each item returns `{id, status ∈ {pass,warn,fail}, score ∈ [0,1], weight, se
 **Report object / JSON shape** (keys in this order; items in checklist order):
 ```json
 {
-  "theory_id": "...", "schema_version": "1.0", "maturity": "...",
+  "theory_id": "...", "schema_version": "1.0", "checklist_version": "1.0", "maturity": "...",
   "aggregate_score": 0.0, "gate": "pass", "n_blockers_failed": 0,
   "items": [ {"id":"falsifiability","status":"pass","score":1.0,"weight":0.15,"severity_if_fail":"blocker","citation":"Popper (1959); Bacharach (1989)"} ]
 }
 ```
+
+`schema_version` is the theory's; `checklist_version` is the `schema_version` of `rigor_checklist.yaml`, whose weights and thresholds produced every number in the report. Without it two reports from different checklist revisions look comparable and are not. The package version is deliberately *not* recorded here: this artefact is parity-tested and byte-identical across the two twins, so a per-language release number would break that contract.
 
 ## 5. Diagram IR (byte-identical across languages)
 
@@ -141,6 +146,7 @@ dag {
   <from> -> <to>
 }
 ```
+The causal subgraph is emitted exactly as written and is not checked for acyclicity, so a theory with a feedback loop (the shipped panic-network example has one) produces a cyclic graph inside a `dag` block, which dagitty will not accept as a DAG. The `causal_testability` checklist item likewise asserts only that at least one causal relation is present.
 
 ## 6. Tokenisation & Jaccard (for the redundancy screen)
 
@@ -361,7 +367,7 @@ Compute `lm = litmap(corpus, min_link)`. Using the §6 tokeniser:
 
 `<cid>.litmap.json`, `<cid>.landscape.json` (semantic); `<cid>.keyword_cooccurrence.dot`, `<cid>.co_citation.dot`, `<cid>.theme_landscape.dot` (byte). `landscape` uses the `panic-network.theory.yaml` theory.
 
-`fetch_corpus`/`tf_fetch_corpus` (OpenAlex `https://api.openalex.org/works?search=…`) maps each work to `{id, title, year:publication_year, keywords (keywords[] else top concepts), references:referenced_works}`. It is network-bound and non-deterministic, and is excluded from parity and CI.
+`fetch_corpus`/`tf_fetch_corpus` (OpenAlex `https://api.openalex.org/works?search=…`) maps each work to `{id, title, year:publication_year, keywords (keywords[] else top concepts), references:referenced_works}`. It is network-bound and non-deterministic, and is excluded from parity and CI. Two things are nevertheless required of both languages: `per_page` outside OpenAlex's 1–200 range raises `per_page must be between 1 and 200` before any request is made, and every outbound request carries a 30-second timeout, so a stalled service fails rather than hanging an interactive session. The same timeout applies to the `osf_push` deposit path (§25).
 
 ## 18. new_evidence_dois(theory, candidate_dois) → new DOIs (deterministic, parity-tested)
 
@@ -394,6 +400,7 @@ Numbers use `fmt()` (§11). Build these lines (joined with `\n`), then append `"
 
 - Theory ID: <id>
 - Maturity: <maturity>
+- Checklist version: <checklist_version>
 - Aggregate rigour score: <fmt(aggregate_score)>/100
 - Gate: <gate>
 - Blockers failed: <n_blockers_failed>
@@ -419,7 +426,7 @@ Numbers use `fmt()` (§11). Build these lines (joined with `\n`), then append `"
 
 ## 21. Additional golden artefacts (per theory)
 
-`<id>.sem.lavaan`, `<id>.dossier.md` (both byte-identical). `expected/` holds 36 files after P3.
+`<id>.sem.lavaan`, `<id>.dossier.md` (both byte-identical). The authoritative count of `expected/` is whatever `scripts/gen_golden.py` writes; a figure quoted here would only become a second thing to keep in step.
 
 ---
 
@@ -429,11 +436,11 @@ New API (mirrored): `tf_simulate` / `theory.simulate()`; `tf_render_report` / `t
 
 ## 22. simulate(theory, steps=10, dt=0.1, k=1.0, damping=0.5, init=1.0) → trajectory (deterministic, parity-tested)
 
-Each construct (file order) is a state variable. Build an `n×n` coupling matrix `A` (zeros): for each proposition with `from`/`to` both constructs, `sign = +1` if relation ∈ {increases, causes, mediates}, `-1` if `decreases`, else `0`; `A[idx(to)][idx(from)] += sign*k`. Initialise `X = [init]*n`. Fixed-step (Euler) update for `steps` steps: `dX = A·X − damping·X`; `X = X + dt·dX`. Return `{states, dt, steps, trajectory}`, where `trajectory` has `steps+1` rows (row 0 = initial state) and every value is rounded to 6 decimals. Golden artefact `<id>.simulate.json` (compared semantically, tolerance 1e-9).
+Each construct (file order) is a state variable. Construct ids must be unique: a repeated id raises `simulate requires unique construct ids; duplicate construct id: <id>` in both languages, reporting the first repeat in file order. (Without this the two engines disagreed — a Python dict comprehension keeps the last index, R's `[[` on a named vector the first — so the same file yielded two different trajectories.) Build an `n×n` coupling matrix `A` (zeros): for each proposition with `from`/`to` both constructs, `sign = +1` if relation ∈ {increases, causes, mediates}, `-1` if `decreases`, else `0`; `A[idx(to)][idx(from)] += sign*k`. Initialise `X = [init]*n`. Fixed-step (Euler) update for `steps` steps: `dX = A·X − damping·X`; `X = X + dt·dX`. Return `{states, dt, steps, k, damping, init, trajectory}`, where `trajectory` has `steps+1` rows (row 0 = initial state) and every value is rounded to 6 decimals. All five knobs are echoed back because the trajectory cannot be reproduced from `dt` and `steps` alone. Golden artefact `<id>.simulate.json` (compared semantically, tolerance 1e-9).
 
 ## 23. render_report(theory, path, title=None, render=False, to="html")
 
-Writes a standalone Quarto report to `path` (forced to a `.qmd` suffix): a YAML header (`title`, `format: <to>`) followed by the deterministic `dossier(theory)` body, and returns the written path. When `render=True`, invokes `quarto render`. The report content is the parity-tested dossier. Only the optional render step is environment-dependent (not in parity/CI).
+Writes a standalone Quarto report to `path` (forced to a `.qmd` suffix): a YAML header (`title`, `format: <to>`) followed by the deterministic `dossier(theory)` body, and returns the written path. When `render=True`, invokes `quarto render` and raises if it exits non-zero, so a failed render is never reported as a written report. The report content is the parity-tested dossier. Only the optional render step is environment-dependent (not in parity/CI).
 
 ## 24. embedding_redundancy(theory, embedder, threshold=redundancy_similarity_max): assistive, parity-exempt
 

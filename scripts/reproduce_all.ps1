@@ -7,11 +7,23 @@ $env:RSTUDIO_PANDOC = "C:/Program Files/Quarto/bin/tools"
 Write-Output "== install Python package =="
 python -m pip install -e "$root/python" --quiet
 
-Write-Output "== regenerate golden files =="
-python "$root/scripts/gen_golden.py"
+Write-Output "== golden files are up to date =="
+# Regenerating is how the goldens are checked, not a licence to move them: if
+# the run changes anything the script has verified nothing, so it stops. All
+# three trees the generator writes are inspected: the root goldens and the
+# copies each package ships.
+python "$root/scripts/gen_golden.py" | Out-Null
+$stale = git -C "$root" status --porcelain -- fixtures r/theoryforge/inst/fixtures python/src/theoryforge/fixtures
+if ($stale) {
+  $stale | Write-Output
+  throw "golden files changed; commit them if the change was intended"
+}
 
-Write-Output "== Python: ruff + pytest =="
+Write-Output "== Python: ruff + mypy + pytest =="
 python -m ruff check "$root/python/src"
+# A hard gate, matching CI and reproduce_all.sh; this step was missing here, so
+# the Windows path was quieter than the other two.
+python -m mypy "$root/python/src/theoryforge" --ignore-missing-imports
 python -m pytest "$root/python" -q
 
 Write-Output "== R: testthat =="

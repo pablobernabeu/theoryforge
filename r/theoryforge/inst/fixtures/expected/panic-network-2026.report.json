@@ -1,6 +1,7 @@
 {
   "theory_id": "panic-network-2026",
   "schema_version": "1.0",
+  "checklist_version": "1.0",
   "maturity": "developing",
   "aggregate_score": 84.8,
   "gate": "pass",

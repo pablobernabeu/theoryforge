@@ -69,17 +69,21 @@ tf_osf_push <- function(theory, token = NULL, node = NULL,
   }
 
   # nocov start - live network path, never exercised in tests.
+  # Both branches carry the same timeout the Python twin passes to urlopen; an
+  # OSF deposit that stalls should fail rather than hang the session.
   if (requireNamespace("httr", quietly = TRUE)) {
     resp <- httr::PUT(
       url,
       httr::add_headers(Authorization = paste("Bearer", token),
                         `Content-Type` = "text/markdown"),
+      httr::timeout(.tf_NET_TIMEOUT),
       body = content
     )
     return(list(dry_run = FALSE, status = httr::status_code(resp), filename = fname))
   }
   if (requireNamespace("curl", quietly = TRUE)) {
-    h <- curl::new_handle()
+    h <- curl::new_handle(timeout = .tf_NET_TIMEOUT,
+                          connecttimeout = .tf_NET_TIMEOUT)
     curl::handle_setheaders(h,
                             Authorization = paste("Bearer", token),
                             `Content-Type` = "text/markdown")

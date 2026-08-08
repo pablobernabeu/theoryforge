@@ -15,7 +15,8 @@ NULL
 #' Treats each construct (in file order) as a state variable and each directed
 #' proposition as a signed linear coupling term, then integrates
 #' \code{dX/dt = A X - damping * X} with fixed-step (Euler) updates. The result
-#' is fully deterministic.
+#' is fully deterministic. Construct ids must be unique; duplicates are refused
+#' rather than resolved to an arbitrary state slot.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param steps Number of Euler steps (default \code{10}).
@@ -23,10 +24,12 @@ NULL
 #' @param k Coupling gain applied to each signed edge (default \code{1.0}).
 #' @param damping Per-state linear decay (default \code{0.5}).
 #' @param init Initial value for every state (default \code{1.0}).
-#' @return A named list \code{list(states, dt, steps, trajectory)}, where
+#' @return A named list
+#'   \code{list(states, dt, steps, k, damping, init, trajectory)}, where
 #'   \code{states} are the construct ids in file order and \code{trajectory} is a
 #'   list of \code{steps + 1} numeric vectors (row 0 = initial state), every
-#'   value rounded to 6 decimals.
+#'   value rounded to 6 decimals. All five knobs are echoed back, because the
+#'   trajectory cannot be reproduced without them.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
@@ -43,6 +46,18 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
   cons <- .tf_list(T, "constructs")
   states <- vapply(cons, function(c) .tf_str(c, "id"), character(1))
   n <- length(states)
+  # Duplicate construct ids have no defensible reading here, and the two engines
+  # resolved them differently by accident (`[[` on a named vector takes the
+  # first index, Python's dict comprehension the last), so the same file
+  # produced two plausible trajectories. Refuse instead of picking a winner.
+  seen <- character(0)
+  for (s in states) {
+    if (s %in% seen) {
+      stop("simulate requires unique construct ids; duplicate construct id: ", s,
+           call. = FALSE)
+    }
+    seen <- c(seen, s)
+  }
   idx <- stats::setNames(seq_along(states), states)
 
   # n x n coupling matrix (zeros). Explicit loops mirror the Python reference
@@ -81,5 +96,6 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
     traj[[s + 1L]] <- if (n == 0L) numeric(0) else .tf_rnd(X, 6)
   }
 
-  list(states = as.list(states), dt = dt, steps = steps, trajectory = traj)
+  list(states = as.list(states), dt = dt, steps = steps, k = k,
+       damping = damping, init = init, trajectory = traj)
 }

@@ -52,7 +52,7 @@ tf_read_corpus <- function(path) {
   } else {
     data <- yaml::read_yaml(path)
   }
-  if (!is.list(data)) {
+  if (!.tf_is_mapping(data)) {
     stop("Corpus data must be a mapping", call. = FALSE)
   }
   data
@@ -469,7 +469,8 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #' concepts when no keywords are present).
 #'
 #' @param query Free-text search query.
-#' @param per_page Number of works to request (default \code{25}).
+#' @param per_page Number of works to request (default \code{25}); OpenAlex
+#'   accepts 1 to 200.
 #' @param mailto Optional contact email for the OpenAlex "polite pool".
 #' @return A corpus object (named list) with \code{schema_version}, \code{id},
 #'   and \code{records}.
@@ -479,6 +480,12 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #' }
 #' @export
 tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL) {
+  # Reject out-of-range page sizes here rather than passing them through for
+  # OpenAlex to reject, and with the same message the Python twin uses.
+  if (!is.numeric(per_page) || length(per_page) != 1L || is.na(per_page) ||
+      per_page != trunc(per_page) || per_page < 1 || per_page > 200) {
+    stop("per_page must be between 1 and 200", call. = FALSE)
+  }
   params <- list(search = query, "per-page" = as.character(per_page))
   if (!is.null(mailto)) params[["mailto"]] <- mailto
   qs <- paste(
@@ -489,7 +496,7 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL) {
     collapse = "&"
   )
   url <- paste0("https://api.openalex.org/works?", qs)
-  data <- jsonlite::fromJSON(url, simplifyVector = FALSE)
+  data <- jsonlite::fromJSON(.tf_fetch_url(url), simplifyVector = FALSE)
 
   results <- if (is.list(data[["results"]])) data[["results"]] else list()
   records <- lapply(results, function(w) {

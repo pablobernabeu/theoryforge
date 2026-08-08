@@ -21,6 +21,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering",
 ]
 dependencies = ["PyYAML>=6.0"]
@@ -44,6 +45,13 @@ Issues = "https://github.com/pablobernabeu/theoryforge/issues"
 packages = ["src/theoryforge"]
 # Non-Python files inside the package dir (schema/*.json, *.yaml, py.typed) are
 # included automatically by hatchling.
+
+# src/theoryforge/fixtures/ holds the example theories, so the wheel can offer
+# them through example_path() as the R twin does through system.file(). They
+# cannot be pulled in from ../fixtures at build time, because `python -m build`
+# builds the wheel from the sdist and the sdist cannot reach outside its own
+# root; they are committed copies instead, written by scripts/gen_golden.py and
+# gated in CI so they cannot drift from the originals.
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

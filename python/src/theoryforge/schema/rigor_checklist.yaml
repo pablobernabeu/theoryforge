@@ -51,7 +51,7 @@ items:
     severity_if_fail: warning
     citation: "Sutton & Staw (1995); Whetten (1989)"
   - id: causal_testability
-    criterion: "Causal relations export to a DAG with derivable implications"
+    criterion: "At least one proposition states a causal relation"
     weight: 0.06
     severity_if_fail: warning
     citation: "Textor et al. (2016); Eronen & Bringmann (2021)"

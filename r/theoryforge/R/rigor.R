@@ -188,9 +188,11 @@ NULL
 #' report, with the items in checklist order.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
-#' @return A named list with elements \code{theory_id}, \code{schema_version},
-#'   \code{maturity}, \code{aggregate_score}, \code{gate},
-#'   \code{n_blockers_failed}, and \code{items} (a list of per-item lists).
+#' @return A named list with elements \code{theory_id}, \code{schema_version}
+#'   (the theory's), \code{checklist_version} (the rigour checklist's, which is
+#'   what the weights and thresholds came from), \code{maturity},
+#'   \code{aggregate_score}, \code{gate}, \code{n_blockers_failed}, and
+#'   \code{items} (a list of per-item lists).
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
@@ -241,6 +243,10 @@ tf_check <- function(theory) {
   list(
     theory_id = .tf_str(T, "id"),
     schema_version = .tf_str(T, "schema_version"),
+    # Every number below comes from the checklist's weights and thresholds, so
+    # two reports are only comparable if they were scored against the same
+    # checklist. `schema_version` above is the theory's, not this.
+    checklist_version = .tf_str(spec, "schema_version"),
     maturity = maturity,
     aggregate_score = .tf_rnd(weighted * 100, 1),
     gate = gate,
@@ -274,14 +280,14 @@ tf_report <- function(theory, format = "json") {
   if (identical(format, "html")) {
     rows <- vapply(rep$items, function(it) {
       sprintf('    <tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
-              it$id, it$status, format_score_html(it$score), it$citation)
+              it$id, it$status, .tf_format_score_html(it$score), it$citation)
     }, character(1))
     rows <- paste(rows, collapse = "\n")
     return(paste0(
       '<section class="theoryforge-report">\n',
       sprintf('  <h2>Rigour report: %s</h2>\n', rep$theory_id),
       sprintf('  <p>Aggregate score: <strong>%s</strong> &middot; gate: <strong>%s</strong></p>\n',
-              format_score_html(rep$aggregate_score), rep$gate),
+              .tf_format_score_html(rep$aggregate_score), rep$gate),
       '  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n',
       rows, '\n  </table>\n</section>\n'
     ))
@@ -290,10 +296,12 @@ tf_report <- function(theory, format = "json") {
 }
 
 # Render a numeric score the way Python's str() would for the HTML table
-# (e.g. 1.0, 0.667). Not parity-tested, but kept readable.
-format_score_html <- function(x) {
+# (e.g. 1.0, 0.667). Not parity-tested, but kept readable. The integrality test
+# uses trunc() rather than base round(), so that no call to base round() (which
+# is banker's rounding, and diverges across platforms) remains in the package.
+.tf_format_score_html <- function(x) {
   if (is.numeric(x)) {
-    if (x == round(x)) {
+    if (x == trunc(x)) {
       return(sprintf("%.1f", x))
     }
     return(format(x, trim = TRUE))

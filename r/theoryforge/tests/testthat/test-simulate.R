@@ -1,7 +1,7 @@
 test_that("tf_simulate returns states, dt, steps, and trajectory of the right shape", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   sim <- tf_simulate(theory)
-  expect_named(sim, c("states", "dt", "steps", "trajectory"))
+  expect_named(sim, c("states", "dt", "steps", "k", "damping", "init", "trajectory"))
   expect_equal(unlist(sim$states),
                c("c_arousal", "c_perceived_threat", "c_avoidance"))
   expect_equal(sim$dt, 0.1)
@@ -9,6 +9,33 @@ test_that("tf_simulate returns states, dt, steps, and trajectory of the right sh
   # trajectory has steps + 1 rows; row 0 = initial state (all init = 1.0).
   expect_length(sim$trajectory, 11L)
   expect_equal(sim$trajectory[[1L]], c(1, 1, 1))
+})
+
+test_that("tf_simulate echoes back every knob that shapes the trajectory", {
+  # Two runs differing only in k produce different numbers, so a record that
+  # omitted k could not be reproduced from what it reports.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  sim <- tf_simulate(theory, steps = 3L, dt = 0.2, k = 0.75, damping = 0.25,
+                     init = 2.0)
+  expect_equal(sim$dt, 0.2)
+  expect_equal(sim$steps, 3L)
+  expect_equal(sim$k, 0.75)
+  expect_equal(sim$damping, 0.25)
+  expect_equal(sim$init, 2.0)
+  other <- tf_simulate(theory, steps = 3L, dt = 0.2, k = 1.5, damping = 0.25,
+                       init = 2.0)
+  expect_false(isTRUE(all.equal(sim$trajectory, other$trajectory)))
+})
+
+test_that("tf_simulate refuses duplicate construct ids", {
+  # R used to index the first occurrence and Python the last, so the same file
+  # gave two different trajectories.
+  theory <- tf_theory("dupe", "Duplicated ids") |>
+    tf_add_construct("c1", "One", "d") |>
+    tf_add_construct("c1", "One again", "d")
+  expect_error(tf_simulate(theory),
+               "simulate requires unique construct ids; duplicate construct id: c1",
+               fixed = TRUE)
 })
 
 test_that("tf_simulate honours custom steps and init", {

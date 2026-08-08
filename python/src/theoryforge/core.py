@@ -6,6 +6,8 @@ from pathlib import Path
 
 import yaml
 
+from . import _resources
+from ._io import write_lf as _write_lf
 from .develop import appraise_amendment as _appraise_amendment
 from .diagram import diagram as _diagram
 from .dossier import dossier as _dossier
@@ -78,6 +80,13 @@ class Theory:
             errors.append(f"maturity must be one of {', '.join(sorted(_MATURITY))}")
         if "theory_form" in d and d["theory_form"] not in _FORM:
             errors.append(f"theory_form must be one of {', '.join(sorted(_FORM))}")
+        # A misspelt collection key would otherwise pass silently and quietly
+        # change every downstream verdict (a renamed `predictions:` drops the
+        # whole collection), so unrecognised top-level fields are refused.
+        known = _resources.theory_schema().get("properties", {})
+        for key in d:
+            if key not in known:
+                errors.append(f"unknown top-level field: {key}")
         for i, c in enumerate(self._list("constructs")):
             for req in ("id", "label", "definition"):
                 if not _nonempty_str(c.get(req)):
@@ -162,12 +171,10 @@ class Theory:
     def write(self, path) -> None:
         path = Path(path)
         if path.suffix.lower() == ".json":
-            path.write_text(json.dumps(self.data, indent=2, ensure_ascii=False), encoding="utf-8")
+            text = json.dumps(self.data, indent=2, ensure_ascii=False)
         else:
-            path.write_text(
-                yaml.safe_dump(self.data, sort_keys=False, allow_unicode=True),
-                encoding="utf-8",
-            )
+            text = yaml.safe_dump(self.data, sort_keys=False, allow_unicode=True)
+        _write_lf(path, text)
 
     # -- builder (BUILDING mode) ----------------------------------------------
     def _provenance(self, action: str, detail: str) -> None:

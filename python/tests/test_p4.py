@@ -1,4 +1,27 @@
+import pytest
+
 import theoryforge as tf
+
+
+def test_simulate_records_every_knob(panic_path):
+    # Two runs differing only in k produce different numbers, so a record that
+    # omitted k could not be reproduced from what it reports.
+    t = tf.read(panic_path)
+    r = t.simulate(steps=3, dt=0.2, k=0.75, damping=0.25, init=2.0)
+    assert list(r) == ["states", "dt", "steps", "k", "damping", "init", "trajectory"]
+    assert (r["dt"], r["steps"], r["k"], r["damping"], r["init"]) == (0.2, 3, 0.75, 0.25, 2.0)
+    other = t.simulate(steps=3, dt=0.2, k=1.5, damping=0.25, init=2.0)
+    assert other["trajectory"] != r["trajectory"]
+
+
+def test_simulate_refuses_duplicate_construct_ids():
+    # R indexed the first occurrence and Python the last, so the same file gave
+    # two different trajectories.
+    t = tf.new_theory("dupe", "Duplicated ids")
+    t.add_construct("c1", "One", "d").add_construct("c1", "One again", "d")
+    with pytest.raises(ValueError) as exc:
+        t.simulate()
+    assert str(exc.value) == "simulate requires unique construct ids; duplicate construct id: c1"
 
 
 def test_simulate_deterministic(panic_path):

@@ -24,6 +24,9 @@ def dossier(T) -> str:
         "",
         f"- Theory ID: {data.get('id', '')}",
         f"- Maturity: {data.get('maturity', '')}",
+        # The score is only interpretable against the checklist that produced
+        # it, so a reviewer reading the bundle can see which one that was.
+        f"- Checklist version: {rep['checklist_version']}",
         f"- Aggregate rigour score: {_fmt(rep['aggregate_score'])}/100",
         f"- Gate: {rep['gate']}",
         f"- Blockers failed: {rep['n_blockers_failed']}",

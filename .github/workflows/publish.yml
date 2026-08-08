@@ -13,6 +13,12 @@ on:
     types: [published]
   workflow_dispatch:
 
+# Without this the build job would inherit the repository's default token scope,
+# which on many repositories is read/write on contents. A release-triggered
+# workflow that checks out and builds is exactly where that matters.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -42,7 +48,11 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/project/theoryforge/
+    # A job-level block replaces the top-level one rather than extending it, so
+    # contents: read is restated here alongside the OIDC scope that trusted
+    # publishing needs.
     permissions:
+      contents: read
       id-token: write
     steps:
       - uses: actions/download-artifact@v8

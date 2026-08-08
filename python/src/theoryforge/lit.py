@@ -245,10 +245,15 @@ def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None) -> d
 
     This adapter is assistive. It depends on a live external service whose results
     change over time, so it sits outside the package's deterministic core.
+    ``per_page`` must be between 1 and 200, the range OpenAlex accepts.
     """
     import urllib.parse
     import urllib.request
 
+    # Reject out-of-range page sizes here rather than passing them through for
+    # OpenAlex to reject, and with the same message the R twin uses.
+    if isinstance(per_page, bool) or not isinstance(per_page, int) or not 1 <= per_page <= 200:
+        raise ValueError("per_page must be between 1 and 200")
     params = {"search": query, "per-page": str(per_page)}
     if mailto:
         params["mailto"] = mailto

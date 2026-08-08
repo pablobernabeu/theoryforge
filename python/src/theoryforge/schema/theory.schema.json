@@ -5,7 +5,8 @@
   "description": "Language-agnostic source of truth for a theory as a versioned, machine-checkable object. Authored as YAML, validated against this JSON Schema, read/written identically by the R and Python packages.",
   "type": "object",
   "required": ["schema_version", "id", "title", "maturity"],
-  "additionalProperties": true,
+  "comment": "Closed at the top level: a misspelt collection key (predicitions) would otherwise be accepted while silently dropping the collection and changing every downstream verdict. Item objects stay open so individual entries can carry extra metadata.",
+  "additionalProperties": false,
   "properties": {
     "schema_version": {
       "type": "string",

@@ -1,8 +1,7 @@
 """Preregistration document export. Deterministic markdown output."""
 from __future__ import annotations
 
-from pathlib import Path
-
+from ._io import write_lf as _write_lf
 from .rigor import _as_list
 from .rigor import check as _check
 from .scoring import severity as _severity
@@ -57,5 +56,5 @@ def preregister(T, path=None) -> str:
 
     text = "\n".join(lines) + "\n"
     if path is not None:
-        Path(path).write_bytes(text.encode("utf-8"))
+        _write_lf(path, text)
     return text

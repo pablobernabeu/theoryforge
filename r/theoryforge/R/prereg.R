@@ -76,9 +76,7 @@ tf_preregister <- function(theory, path = NULL) {
 
   text <- paste0(paste(lines, collapse = "\n"), "\n")
   if (!is.null(path)) {
-    con <- file(path, open = "wb")
-    on.exit(close(con))
-    writeBin(charToRaw(enc2utf8(text)), con)
+    .tf_write_lf(path, text)
   }
   text
 }

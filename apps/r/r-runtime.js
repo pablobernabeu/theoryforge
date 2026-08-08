@@ -14,9 +14,10 @@ const BOOT_R = String.raw`
 .tf_app_files <- list.files("/tf/R", pattern = "[.][Rr]$", full.names = TRUE)
 invisible(lapply(.tf_app_files, source))
 
-# Pre-seed the checklist cache from the vendored file, so the package never
+# Pre-seed the resource caches from the vendored files, so the package never
 # needs system.file() (which only resolves for an installed package).
 .tf_cache$checklist <- yaml::read_yaml("/tf/schema/rigor_checklist.yaml")
+.tf_cache$theory_schema <- jsonlite::fromJSON("/tf/schema/theory.schema.json", simplifyVector = FALSE)
 
 .tf_app <- new.env(parent = emptyenv())
 

@@ -104,19 +104,20 @@ remotes::install_github("pablobernabeu/theoryforge", subdir = "r/theoryforge")
 
 ## Quick start
 
-The example theories live in [`fixtures/`](fixtures/), so run the lines below from a clone of
-this repository. In Python:
-
-```bash
-python -c "import theoryforge as tf; t = tf.read('fixtures/panic-network.theory.yaml'); print(t.report())"
-```
-
-And in R:
+The R package ships the example theories, so this runs straight after installing it:
 
 ```r
 library(theoryforge)
-t <- tf_read("fixtures/panic-network.theory.yaml")
+t <- tf_read(system.file("fixtures", "panic-network.theory.yaml", package = "theoryforge"))
 cat(tf_report(t))
+```
+
+The Python wheel does not carry them, so the line below reads the copy in
+[`fixtures/`](fixtures/) and wants a clone of this repository, or a theory file of your own in
+its place:
+
+```bash
+python -c "import theoryforge as tf; t = tf.read('fixtures/panic-network.theory.yaml'); print(t.report())"
 ```
 
 ## Develop and test

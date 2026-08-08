@@ -1,3 +1,5 @@
+import pytest
+
 import theoryforge as tf
 
 
@@ -94,3 +96,11 @@ def test_lit_diagrams(fixtures_dir, panic_path):
     assert tl.startswith("digraph theme_landscape {\n")
     assert '"focal" -> "theme_2";' in tl
     assert '"alt_biological" -> "theme_2";' in tl
+
+
+@pytest.mark.parametrize("bad", [0, 201, -1, 25.0, True])
+def test_fetch_corpus_rejects_out_of_range_per_page(bad):
+    # The guard runs before any request, so this needs no network.
+    with pytest.raises(ValueError) as exc:
+        tf.fetch_corpus("panic", per_page=bad)
+    assert str(exc.value) == "per_page must be between 1 and 200"

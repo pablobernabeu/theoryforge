@@ -170,3 +170,11 @@ test_that("tf_lit_diagram rejects unknown types", {
   lm <- tf_litmap(corpus)
   expect_error(tf_lit_diagram(lm, "mindmap"), "unknown lit diagram type")
 })
+
+test_that("tf_fetch_corpus rejects an out-of-range per_page", {
+  # The guard runs before any request, so this needs no network.
+  for (bad in list(0, 201, -1, "25", NA_integer_)) {
+    expect_error(tf_fetch_corpus("panic", per_page = bad),
+                 "per_page must be between 1 and 200", fixed = TRUE)
+  }
+})

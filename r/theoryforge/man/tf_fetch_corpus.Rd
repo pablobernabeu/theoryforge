@@ -9,7 +9,8 @@ tf_fetch_corpus(query, per_page = 25, mailto = NULL)
 \arguments{
 \item{query}{Free-text search query.}
 
-\item{per_page}{Number of works to request (default \code{25}).}
+\item{per_page}{Number of works to request (default \code{25}); OpenAlex
+accepts 1 to 200.}
 
 \item{mailto}{Optional contact email for the OpenAlex "polite pool".}
 }

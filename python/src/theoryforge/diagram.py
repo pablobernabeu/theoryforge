@@ -119,6 +119,9 @@ def _provenance(T: dict) -> str:
 
 
 def _causal_dag(T: dict) -> str:
+    # The causal subgraph is emitted as written, with no acyclicity check. A
+    # theory with a feedback loop (the panic-network example has one) therefore
+    # yields a cyclic graph inside a `dag` block, which dagitty will reject.
     lines = ["dag {"]
     for p in _list(T, "propositions"):
         if p.get("relation") in _CAUSAL:

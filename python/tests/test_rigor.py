@@ -21,6 +21,22 @@ def test_panic_passes(panic_path):
     assert 0.0 <= r["aggregate_score"] <= 100.0
 
 
+def test_report_records_the_checklist_version(panic_path):
+    # Every number in the report comes from the checklist's weights and
+    # thresholds, so a report naming only the theory's schema version cannot be
+    # compared against one scored by a different checklist.
+    from theoryforge import _resources
+
+    r = tf.read(panic_path).check()
+    assert r["checklist_version"] == _resources.checklist()["schema_version"]
+    assert list(r)[:4] == ["theory_id", "schema_version", "checklist_version", "maturity"]
+
+
+def test_dossier_header_names_the_checklist_version(panic_path):
+    t = tf.read(panic_path)
+    assert f"- Checklist version: {t.check()['checklist_version']}" in t.dossier()
+
+
 def test_weak_is_blocked(weak_path):
     r = tf.read(weak_path).check()
     assert r["gate"] == "blocked"

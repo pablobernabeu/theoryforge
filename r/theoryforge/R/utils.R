@@ -49,6 +49,55 @@ NULL
   as.character(v)
 }
 
+# Seconds every outbound request is allowed before it is abandoned, matching the
+# `timeout=30` the Python twin passes to urlopen. Without one a stalled service
+# hangs an interactive session indefinitely.
+.tf_NET_TIMEOUT <- 30
+
+# Fetch a URL as UTF-8 text under that timeout. curl (Suggests) gives a
+# per-request timeout when it is installed; otherwise base R's url() connection
+# honours the global `timeout` option, which is restored on exit, so the
+# guarantee holds with no hard dependency.
+.tf_fetch_url <- function(url, timeout = .tf_NET_TIMEOUT) {
+  if (requireNamespace("curl", quietly = TRUE)) {  # nocov start
+    handle <- curl::new_handle(timeout = timeout, connecttimeout = timeout)
+    body <- curl::curl_fetch_memory(url, handle = handle)$content
+  } else {
+    old <- options(timeout = timeout)
+    on.exit(options(old), add = TRUE)
+    con <- base::url(url, open = "rb")
+    on.exit(close(con), add = TRUE)
+    body <- readBin(con, "raw", n = 1e8L)
+  }
+  text <- rawToChar(body)
+  Encoding(text) <- "UTF-8"
+  text
+}  # nocov end
+
+# Does a parsed document look like a mapping, as Python's isinstance(data, dict)
+# asks? A YAML sequence of mappings also parses to an R list, so `is.list` alone
+# lets one through and every collection then reads as empty, scoring nonsense
+# instead of refusing it. Requiring names closes that. Zero-length lists are
+# exempt because the R reader cannot tell `{}` from `[]`, and refusing them
+# would diverge from Python on `{}`, which it accepts.
+.tf_is_mapping <- function(data) {
+  is.list(data) && (length(data) == 0L || !is.null(names(data)))
+}
+
+# The single writer every file-emitting function in the package goes through.
+# API_SPEC.md section 3 pins every generated artefact to LF with a single
+# trailing newline, so the connection is opened "wb" to bypass the platform's
+# newline translation, any CRLF carried in from the theory's own text is folded
+# to LF, and the bytes are UTF-8 whatever the session locale. The Python twin's
+# `_io.write_lf` does the same three things.
+.tf_write_lf <- function(path, text) {
+  con <- file(path, open = "wb")
+  on.exit(close(con))
+  text <- gsub("\r\n", "\n", text, fixed = TRUE)
+  writeBin(charToRaw(enc2utf8(text)), con)
+  invisible(path)
+}
+
 # Deterministic, cross-platform half-away-from-zero rounding (API_SPEC.md
 # section 3). Mirrors the Python `rnd` byte-for-byte. The `+1e-6` bias is far
 # larger than cross-platform ULP jitter yet far smaller than the rounding grid,

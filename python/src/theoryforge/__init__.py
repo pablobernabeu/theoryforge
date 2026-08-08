@@ -20,6 +20,7 @@ from .develop import appraise_amendment
 from .diagram import diagram
 from .dossier import dossier
 from .embedding import embedding_redundancy
+from .examples import example_names, example_path
 from .lit import fetch_corpus, landscape, lit_diagram, litmap, new_evidence_dois, read_corpus
 from .osf import osf_push
 from .prereg import preregister
@@ -65,5 +66,7 @@ __all__ = [
     "render_report",
     "render_diagram",
     "osf_push",
+    "example_path",
+    "example_names",
     "__version__",
 ]

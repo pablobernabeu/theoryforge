@@ -9,6 +9,23 @@ item_status <- function(rep, id) {
   stop("no such item: ", id)
 }
 
+test_that("the report records the checklist version", {
+  # Every number in the report comes from the checklist's weights and
+  # thresholds, so a report naming only the theory's schema version cannot be
+  # compared against one scored by a different checklist.
+  rep <- tf_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
+  expect_identical(rep$checklist_version,
+                   theoryforge:::tf_checklist()$schema_version)
+  expect_identical(names(rep)[1:4],
+                   c("theory_id", "schema_version", "checklist_version", "maturity"))
+})
+
+test_that("the dossier header names the checklist version", {
+  panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  expect_true(grepl(sprintf("- Checklist version: %s", tf_check(panic)$checklist_version),
+                    tf_dossier(panic), fixed = TRUE))
+})
+
 test_that("panic-network rigor matches exact targets", {
   rep <- tf_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
   expect_equal(rep$aggregate_score, 84.8)

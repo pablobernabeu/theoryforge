@@ -14,7 +14,8 @@ tf_render_report(theory, path, title = NULL, render = FALSE, to = "html")
 \item{title}{Optional report title; defaults to
 \code{"theoryforge report: <title-or-id>"}. Double quotes are escaped.}
 
-\item{render}{When \code{TRUE}, run \code{quarto render} on the written file.}
+\item{render}{When \code{TRUE}, run \code{quarto render} on the written file
+and stop if it exits non-zero.}
 
 \item{to}{Quarto output format (default \code{"html"}).}
 }
@@ -26,7 +27,7 @@ Writes a standalone Quarto report to \code{path} (forced to a \code{.qmd}
 suffix): a YAML header (\code{title}, \code{format}) followed by the
 deterministic \code{tf_dossier(theory)} body. Returns the written path. When
 \code{render = TRUE}, invokes \code{quarto render}, which requires a Quarto
-installation.
+installation, and stops if that render fails.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

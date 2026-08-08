@@ -150,6 +150,9 @@ NULL
 }
 
 .tf_causal_dag <- function(T) {
+  # The causal subgraph is emitted as written, with no acyclicity check. A
+  # theory with a feedback loop (the panic-network example has one) therefore
+  # yields a cyclic graph inside a `dag` block, which dagitty will reject.
   lines <- c("dag {")
   for (p in .tf_list(T, "propositions")) {
     rel <- .tf_get(p, "relation")

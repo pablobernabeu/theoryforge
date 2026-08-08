@@ -20,16 +20,19 @@ tf_simulate(theory, steps = 10, dt = 0.1, k = 1, damping = 0.5, init = 1)
 \item{init}{Initial value for every state (default \code{1.0}).}
 }
 \value{
-A named list \code{list(states, dt, steps, trajectory)}, where
+A named list
+\code{list(states, dt, steps, k, damping, init, trajectory)}, where
 \code{states} are the construct ids in file order and \code{trajectory} is a
 list of \code{steps + 1} numeric vectors (row 0 = initial state), every
-value rounded to 6 decimals.
+value rounded to 6 decimals. All five knobs are echoed back, because the
+trajectory cannot be reproduced without them.
 }
 \description{
 Treats each construct (in file order) as a state variable and each directed
 proposition as a signed linear coupling term, then integrates
 \code{dX/dt = A X - damping * X} with fixed-step (Euler) updates. The result
-is fully deterministic.
+is fully deterministic. Construct ids must be unique; duplicates are refused
+rather than resolved to an arbitrary state slot.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

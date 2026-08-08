@@ -10,7 +10,7 @@ digraph development_roadmap {
   "construct_clarity" [label="5. construct_clarity\nEvery construct has\ndefinition +\nmeasurement + boundary\nconditions\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
   "logical_why" [label="6. logical_why\nEach proposition\nstates a mechanism,\nnot just a correlation\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
   "scope" [label="7. scope\nBoundary conditions\nexplicitly stated\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
-  "causal_testability" [label="8. causal_testability\nCausal relations\nexport to a DAG with\nderivable implications\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "causal_testability" [label="8. causal_testability\nAt least one\nproposition states a\ncausal relation\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
   "diagnosticity" [label="9. diagnosticity\nAt least one\nprediction\ndiscriminates from a\nregistered alternative\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
   "formalisation" [label="10. formalisation\nA formal-model stub\nexists (warn-only at\nbuilding stage)\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
   "roadmap" -> "falsifiability";

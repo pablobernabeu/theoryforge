@@ -4,6 +4,11 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  # Dependencies move when this repository does not. A weekly run turns an
+  # upstream break into a dated red badge rather than a surprise on the next push.
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
 
 # Every job only checks out and tests the code, so read access to the contents
 # is all the workflow needs; nothing here writes to the repository.
@@ -17,11 +22,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # requires-python is >=3.10 and the classifiers advertise 3.10 to 3.13,
+        # requires-python is >=3.10 and the classifiers advertise 3.10 to 3.14,
         # so the full advertised range is tested rather than 3.11 alone. The
         # parity and apps jobs stay on a single pinned version because they test
         # cross-language agreement and the app bundle, not Python compatibility.
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -38,11 +43,89 @@ jobs:
       - name: Golden files are up to date
         run: |
           python scripts/gen_golden.py
-          git diff --exit-code -- fixtures/expected || (echo "::error::golden files are stale; run scripts/gen_golden.py" && exit 1)
+          # git diff ignores untracked files, so a golden the generator newly
+          # creates would slip through; --porcelain reports additions,
+          # deletions and modifications. All three trees the generator writes
+          # are checked: the root goldens, the copy shipped inside the R package
+          # (what the testthat suite reads) and the example theories shipped
+          # inside the Python package.
+          stale=$(git status --porcelain -- fixtures r/theoryforge/inst/fixtures python/src/theoryforge/fixtures)
+          if [ -n "$stale" ]; then
+            echo "$stale"
+            echo "::error::golden files are stale; run scripts/gen_golden.py and commit the result"
+            exit 1
+          fi
       - name: Build + twine check
         run: |
           python -m build python
           twine check python/dist/*
+
+  # The matrix above installs the package editable from the checkout, where a
+  # missing packaged file is masked by the source tree sitting next to it.
+  # theoryforge ships schema/ inside the package, so this job proves the built
+  # wheel carries it: install into a bare environment, leave the repository, and
+  # run the two calls that resolve the packaged resources. Listing the directory
+  # would not do; a wheel that shipped theory.schema.json and dropped
+  # rigor_checklist.yaml would pass that and then fail on the first check().
+  wheel:
+    name: Installed wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Build the distributions
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build python
+      - name: Install the wheel outside the checkout and use its packaged data
+        run: |
+          python -m venv "$RUNNER_TEMP/wheel-venv"
+          "$RUNNER_TEMP/wheel-venv/bin/pip" install --upgrade pip
+          "$RUNNER_TEMP/wheel-venv/bin/pip" install python/dist/*.whl
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/wheel-venv/bin/python" - <<'PY'
+          from importlib.resources import files
+          import theoryforge as tf
+          print("theoryforge", tf.__version__)
+          assert tf.__version__
+          t = tf.new_theory("t", "T")
+          # validate() resolves theory.schema.json and check() resolves
+          # rigor_checklist.yaml, both through importlib.resources from outside
+          # the checkout, so a wheel missing either fails here rather than on a
+          # user's first call.
+          assert t.validate() is True
+          report = t.check()
+          assert len(report["items"]) == 12, report
+          assert report["checklist_version"], report
+          assert report["gate"] in ("pass", "blocked", "advisory"), report
+          print("packaged schema:", sorted(p.name for p in files("theoryforge").joinpath("schema").iterdir()))
+          PY
+
+  # The floor in pyproject is a promise to anyone resolving against an older
+  # stack, and nothing tested it. A failure here means the floor needs raising
+  # to what actually works, not that the job is too strict.
+  minimum-versions:
+    name: Declared minimum dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+      - name: Install the declared floors, then the package without resolution
+        run: |
+          python -m pip install --upgrade pip
+          # Every floor pyproject declares, pinned: PyYAML from `dependencies`,
+          # pytest from the `dev` extra and graphviz from `render`. Installing
+          # the latest pytest here would assert `pytest>=7.0` and never exercise
+          # it, and leaving graphviz out leaves render_diagram untested at any
+          # version.
+          pip install "PyYAML==6.0.*" "pytest==7.0.*" "graphviz==0.20.*"
+          pip install -e python --no-deps
+      - name: Tests
+        run: pytest python -q
 
   r:
     name: R (CMD check --as-cran, ${{ matrix.config.os }} ${{ matrix.config.r }})
@@ -81,6 +164,32 @@ jobs:
           working-directory: r/theoryforge
           args: 'c("--no-manual", "--as-cran")'
           error-on: '"warning"'
+
+  # DESCRIPTION declares `R (>= 4.1.0)` — the version that introduced the native
+  # `|>` pipe the examples use — but the matrix above runs release, devel and
+  # oldrel-1, all well above it, so the floor itself was an untested claim. This
+  # runs the test suite on 4.1 exactly. It is deliberately not a second
+  # `--as-cran` check: the claim being tested is "the code runs on the oldest R
+  # we promise", not "the package passes CRAN's checks on an unsupported R".
+  r-minimum:
+    name: R (declared minimum, 4.1)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.1'
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::testthat, any::pkgload
+          working-directory: r/theoryforge
+      - name: Tests
+        shell: Rscript {0}
+        run: |
+          pkgload::load_all("r/theoryforge", quiet = TRUE)
+          res <- testthat::test_dir("r/theoryforge/tests/testthat", stop_on_failure = TRUE)
+          invisible(res)
 
   # Reports R test coverage on each run, writing the percentage to the run
   # summary. It uses no external service (no Codecov), so it needs no token and

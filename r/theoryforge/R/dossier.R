@@ -33,6 +33,9 @@ tf_dossier <- function(theory) {
     "",
     sprintf("- Theory ID: %s", .tf_str(T, "id")),
     sprintf("- Maturity: %s", .tf_str(T, "maturity")),
+    # The score is only interpretable against the checklist that produced it,
+    # so a reviewer reading the bundle can see which one that was.
+    sprintf("- Checklist version: %s", rep$checklist_version),
     sprintf("- Aggregate rigour score: %s/100", .tf_fmt(rep$aggregate_score)),
     sprintf("- Gate: %s", rep$gate),
     sprintf("- Blockers failed: %d", rep$n_blockers_failed),

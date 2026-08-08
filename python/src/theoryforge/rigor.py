@@ -198,6 +198,10 @@ def check(T) -> dict:
     return {
         "theory_id": T.get("id", ""),
         "schema_version": T.get("schema_version", ""),
+        # Every number below comes from the checklist's weights and thresholds,
+        # so two reports are only comparable if they were scored against the
+        # same checklist. `schema_version` above is the theory's, not this.
+        "checklist_version": spec.get("schema_version", ""),
         "maturity": maturity,
         "aggregate_score": rnd(weighted * 100, 1),
         "gate": gate,

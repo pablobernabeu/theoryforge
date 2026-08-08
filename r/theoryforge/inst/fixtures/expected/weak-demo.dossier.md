@@ -2,6 +2,7 @@
 
 - Theory ID: weak-demo
 - Maturity: building
+- Checklist version: 1.0
 - Aggregate rigour score: 12.0/100
 - Gate: blocked
 - Blockers failed: 2

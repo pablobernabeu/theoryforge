@@ -12,34 +12,20 @@ pip install theoryforge
 
 ## Sample theories
 
-The examples below read a sample theory bundled with the project repository. The fixture files live under `fixtures/` in the repository at [github.com/pablobernabeu/theoryforge](https://github.com/pablobernabeu/theoryforge), for example [`fixtures/panic-network.theory.yaml`](https://github.com/pablobernabeu/theoryforge/blob/main/fixtures/panic-network.theory.yaml). Download a fixture, or point the path at one of your own theory files. Here `fixtures` names that directory, and every result shown on this page is produced by running the code when the page is built.
+The package ships a few example theories, so nothing needs downloading. `tf.example_path(name)` returns the path of one of them, and `tf.example_names()` lists what is available; the R twin reaches the same files through `system.file("fixtures", ...)`. Point the path at a theory file of your own whenever you prefer. Every result shown on this page is produced by running the code when the page is built.
 
 ## A first session
 
 Import the package and read a theory from a YAML file. Adjust the path to the file on your own machine.
 
-```python exec="1" session="getting-started"
-# Locate the repository's fixtures directory, which holds the sample theories
-# the examples read. Walking up from the build directory finds it whether
-# mkdocs runs from python/ or from the repository root.
-from pathlib import Path
+```python exec="1" source="material-block" result="text" session="getting-started"
+import theoryforge as tf
 
-
-def _find_fixtures():
-    for base in (Path.cwd(), *Path.cwd().parents):
-        candidate = base / "fixtures"
-        if (candidate / "panic-network.theory.yaml").exists():
-            return candidate
-    raise RuntimeError("could not locate the fixtures directory")
-
-
-fixtures = _find_fixtures()
+print(tf.example_names())
 ```
 
 ```python exec="1" source="material-block" session="getting-started"
-import theoryforge as tf
-
-t = tf.read(fixtures / "panic-network.theory.yaml")
+t = tf.read(tf.example_path("panic-network.theory.yaml"))
 ```
 
 Validate the theory. With no arguments this checks the required fields and enum membership, returning `True` on success and raising `ValueError` with a list of problems otherwise. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection, that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id, and that assumption, test-outcome and evidence entries reference declared predictions.
