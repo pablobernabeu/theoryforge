@@ -148,6 +148,14 @@ reference:
   - tf_read
   - tf_validate
   - tf_write
+- title: Packaged examples
+  desc: >
+    Example theories shipped inside the package, so that nothing has to be
+    downloaded to follow the documentation. The Python twin reaches the same
+    files through example_names() and example_path().
+  contents:
+  - tf_example_names
+  - tf_example_path
 - title: Builder (BUILDING mode)
   desc: Construct a theory incrementally with provenance tracking.
   contents:
