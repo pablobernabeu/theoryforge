@@ -63,7 +63,8 @@ def main() -> int:
         for dtype, ext in DIAGRAMS.items():
             (EXPECTED / f"{tid}.{dtype}.{ext}").write_bytes(t.diagram(dtype).encode("utf-8"))
             written.append(f"{tid}.{dtype}.{ext}")
-        (EXPECTED / f"{tid}.severity.json").write_bytes((json.dumps(t.severity(), indent=2) + "\n").encode("utf-8"))
+        (EXPECTED / f"{tid}.severity.json").write_bytes(
+            (json.dumps(t.severity(), indent=2) + "\n").encode("utf-8"))
         written.append(f"{tid}.severity.json")
         (EXPECTED / f"{tid}.prereg.md").write_bytes(t.preregister().encode("utf-8"))
         written.append(f"{tid}.prereg.md")
@@ -71,7 +72,8 @@ def main() -> int:
         written.append(f"{tid}.sem.lavaan")
         (EXPECTED / f"{tid}.dossier.md").write_bytes(t.dossier().encode("utf-8"))
         written.append(f"{tid}.dossier.md")
-        (EXPECTED / f"{tid}.simulate.json").write_bytes((json.dumps(t.simulate(), indent=2) + "\n").encode("utf-8"))
+        (EXPECTED / f"{tid}.simulate.json").write_bytes(
+            (json.dumps(t.simulate(), indent=2) + "\n").encode("utf-8"))
         written.append(f"{tid}.simulate.json")
 
     # amendment appraisal for the v2-vs-v1 pair (Lakatosian progressive/degenerating)
@@ -103,11 +105,13 @@ def main() -> int:
     cid = corpus["id"]
     lm = tf.litmap(corpus)
     (EXPECTED / f"{cid}.litmap.json").write_bytes((json.dumps(lm, indent=2) + "\n").encode("utf-8"))
-    (EXPECTED / f"{cid}.keyword_cooccurrence.dot").write_bytes(tf.lit_diagram(lm, "keyword_cooccurrence").encode("utf-8"))
+    (EXPECTED / f"{cid}.keyword_cooccurrence.dot").write_bytes(
+        tf.lit_diagram(lm, "keyword_cooccurrence").encode("utf-8"))
     (EXPECTED / f"{cid}.co_citation.dot").write_bytes(tf.lit_diagram(lm, "co_citation").encode("utf-8"))
     ls = tf.read(FIXTURES / "panic-network.theory.yaml").landscape(corpus)
     (EXPECTED / f"{cid}.landscape.json").write_bytes((json.dumps(ls, indent=2) + "\n").encode("utf-8"))
-    (EXPECTED / f"{cid}.theme_landscape.dot").write_bytes(tf.lit_diagram(ls, "theme_landscape").encode("utf-8"))
+    (EXPECTED / f"{cid}.theme_landscape.dot").write_bytes(
+        tf.lit_diagram(ls, "theme_landscape").encode("utf-8"))
     written += [f"{cid}.litmap.json", f"{cid}.keyword_cooccurrence.dot", f"{cid}.co_citation.dot",
                 f"{cid}.landscape.json", f"{cid}.theme_landscape.dot"]
 

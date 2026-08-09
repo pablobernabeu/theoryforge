@@ -1,0 +1,13 @@
+# Ruff settings for the parts of this monorepo outside python/, which in
+# practice means scripts/: the golden generator and the R-vs-Python parity
+# checker. Both are load-bearing and neither was linted by anything.
+#
+# Ruff resolves configuration by walking up from each file, so python/ finds
+# python/pyproject.toml and everything else used to find nothing at all and fall
+# back to whatever ruff currently defaults to. That is not a standard, it is
+# whatever the installed version happens to think this month: ruff 0.16 widened
+# its defaults and turned a sibling package's green CI red without a line of that
+# package changing. Extending the real settings rather than restating them keeps
+# one source of truth, so the rule set cannot drift between the package and the
+# scripts that check it.
+extend = "python/pyproject.toml"

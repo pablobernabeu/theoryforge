@@ -51,7 +51,10 @@ def deep_equal(a, b, path="") -> list[str]:
         if len(a) != len(b):
             return [f"{path}: list length {len(a)} != {len(b)}"]
         diffs = []
-        for i, (x, y) in enumerate(zip(a, b)):
+        # strict=True can never raise here: unequal lengths returned above. It
+        # states that invariant rather than leaving zip free to truncate if the
+        # guard above is ever moved or loosened.
+        for i, (x, y) in enumerate(zip(a, b, strict=True)):
             diffs += deep_equal(x, y, f"{path}[{i}]")
         return diffs
     # leniency: jsonlite auto_unbox may turn a length-1 array into a scalar

@@ -34,8 +34,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install
         run: pip install -e "python[dev]" build twine pytest-cov
+      # python and scripts, not python/src alone: naming the source directory
+      # left both the test suite and the two harnesses in scripts/ -- the golden
+      # generator and the parity checker -- linted by nothing. python/dist and
+      # python/site are build output and gitignored, so ruff skips them without
+      # needing an exclude, and apps/py/vendor is ignored for the same reason.
+      # scripts/ is covered by the root ruff.toml, which extends the package
+      # settings so both trees are held to one rule set.
       - name: Lint (ruff)
-        run: ruff check python/src
+        run: ruff check python scripts
       - name: Types (mypy)
         run: mypy python/src/theoryforge --ignore-missing-imports
       - name: Tests
