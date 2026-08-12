@@ -28,6 +28,11 @@ def emit_r(out_dir: Path) -> None:
     res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
     if res.returncode != 0:
         raise SystemExit("R emitter failed:\n" + res.stdout + "\n" + res.stderr)
+    # Echo which R engine answered. A parity verdict is only as meaningful as the
+    # thing it was taken over, and the emitter reports on the working tree or on
+    # an installed copy depending on what is available, so it says which.
+    if res.stdout.strip():
+        print(res.stdout.strip())
 
 
 def deep_equal(a, b, path="") -> list[str]:

@@ -10,10 +10,35 @@ suppressWarnings(suppressMessages({
   pkg_dir <- if (length(args) >= 3) args[[3]] else "r/theoryforge"
 
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-  if (requireNamespace("theoryforge", quietly = TRUE)) {
+
+  # The source tree wins over an installed copy whenever there is one to load.
+  #
+  # This used to be the other way round, and it made the gate test the wrong
+  # thing. Any machine with theoryforge installed had its parity checked against
+  # that copy rather than against the working tree, silently: the two share a
+  # version number long after their contents diverge, so nothing announced it.
+  # Locally that showed up as sixteen false failures for fields the working tree
+  # had gained and the installed copy lacked. The dangerous direction is the
+  # other one -- an installed copy that happens to satisfy the comparison while
+  # the tree it is standing in for does not, which is a green parity check over
+  # code nobody ran.
+  #
+  # CI was right only by accident of ordering: it runs R CMD INSTALL on this very
+  # directory immediately beforehand, so its installed copy was the working tree.
+  # It no longer has to be, and the R distribution itself is covered by six
+  # R CMD check cells elsewhere in this workflow; what this gate is for is
+  # whether the two languages agree on the code in the repository.
+  loaded_from <- NULL
+  if (dir.exists(pkg_dir) && requireNamespace("pkgload", quietly = TRUE)) {
+    pkgload::load_all(pkg_dir, quiet = TRUE)
+    loaded_from <- paste0("source: ", pkg_dir)
+  } else if (requireNamespace("theoryforge", quietly = TRUE)) {
     library(theoryforge)
+    loaded_from <- paste0("installed package ",
+                          as.character(utils::packageVersion("theoryforge")))
   } else {
-    devtools::load_all(pkg_dir, quiet = TRUE)
+    stop("theoryforge is neither loadable from ", pkg_dir, " nor installed.",
+         call. = FALSE)
   }
 
   write_raw <- function(s, path) writeBin(charToRaw(enc2utf8(s)), path)
@@ -83,5 +108,9 @@ suppressWarnings(suppressMessages({
   write_raw(tf_lit_diagram(ls, "theme_landscape"),
             file.path(out_dir, paste0(cid, ".theme_landscape.dot")))
 
-  cat(sprintf("emitted R outputs for %d fixture(s) to %s\n", length(fixtures), out_dir))
+  # Name what was actually loaded. A parity result means nothing without it: the
+  # same command over the same fixtures reports on the working tree or on some
+  # installed copy depending only on what happens to be on the library path.
+  cat(sprintf("emitted R outputs for %d fixture(s) to %s [R engine from %s]\n",
+              length(fixtures), out_dir, loaded_from))
 }))

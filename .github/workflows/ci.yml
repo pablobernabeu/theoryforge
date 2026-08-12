@@ -269,10 +269,13 @@ jobs:
           packages: |
             any::yaml
             any::jsonlite
+            any::pkgload
           working-directory: r/theoryforge
-      - name: Install both packages
-        run: |
-          pip install -e python
-          R CMD INSTALL r/theoryforge
+      # The R package is loaded from r/theoryforge by the emitter rather than
+      # taken off the library path, so this job no longer depends on having
+      # installed it first: it reports on the tree being reviewed either way.
+      # The distribution itself is covered by the six R CMD check cells above.
+      - name: Install the Python package
+        run: pip install -e python
       - name: Check R == Python on every fixture
         run: python scripts/parity_check.py
