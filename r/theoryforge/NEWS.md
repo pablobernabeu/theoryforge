@@ -1,3 +1,11 @@
+# theoryforge (development version)
+
+* Every vignette now turns console colour off and fixes the console width while
+  it renders. pkgdown passes the calling terminal's colour support into its build
+  subprocess, and the Get started vignette's failure path therefore published the
+  `tf_validate()` error with its bold and yellow escape sequences showing as
+  literal text around the words Error and the exclamation mark.
+
 # theoryforge 0.5.0
 
 * The `development_roadmap` view is rebuilt around a theory hub carrying the
