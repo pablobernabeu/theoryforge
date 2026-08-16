@@ -25,6 +25,16 @@ functions.
 
 ::: theoryforge.write
 
+## Packaged examples
+
+Example theories shipped inside the package, so that nothing has to be
+downloaded to follow the documentation. The R twin reaches the same files
+through `tf_example_names()` and `tf_example_path()`.
+
+::: theoryforge.example_names
+
+::: theoryforge.example_path
+
 ## Rigour
 
 Score a theory against the versioned rigour checklist, and report what the score

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 
 from . import _resources
 from ._num import rnd
@@ -68,7 +69,22 @@ def _check_items(T: dict, thr: dict) -> dict:
         out["precision"] = ("pass" if share >= thr["min_precision_share"] else "warn", rnd(share, 3))
 
     # 3 risk_severity
-    sevs = [p["severity"] for p in preds if p.get("severity") is not None]
+    # A non-numeric severity has no defensible mean, and the two engines read
+    # one differently by accident (R's as.numeric() coerced quoted numbers and
+    # scored, Python crashed mid-sum), so the same file produced a verdict in
+    # one language and a raw TypeError in the other. Refuse instead of
+    # coercing; validate(full=True) reports the same file as invalid.
+    sevs = []
+    for p in preds:
+        s = p.get("severity")
+        if s is None:
+            continue
+        if isinstance(s, bool) or not isinstance(s, (int, float)) or math.isnan(s):
+            raise ValueError(
+                "check requires numeric prediction severities; "
+                f"non-numeric severity for prediction: {p.get('id') or ''}"
+            )
+        sevs.append(s)
     if not sevs:
         out["risk_severity"] = ("warn", 0.0)
     else:
@@ -189,19 +205,22 @@ def check(T) -> dict:
             "citation": spec_item["citation"],
         })
 
-    maturity = T.get("maturity", "")
+    # Explicit nulls read as "" (the R twin's .tf_str reading); dict.get's
+    # default alone covers only absent keys, and the report is compared
+    # semantically across the twins, so a null here must not surface as null.
+    maturity = T.get("maturity") or ""
     if maturity == "draft":
         gate = "advisory"
     else:
         gate = "blocked" if n_blockers_failed > 0 else "pass"
 
     return {
-        "theory_id": T.get("id", ""),
-        "schema_version": T.get("schema_version", ""),
+        "theory_id": T.get("id") or "",
+        "schema_version": T.get("schema_version") or "",
         # Every number below comes from the checklist's weights and thresholds,
         # so two reports are only comparable if they were scored against the
         # same checklist. `schema_version` above is the theory's, not this.
-        "checklist_version": spec.get("schema_version", ""),
+        "checklist_version": spec.get("schema_version") or "",
         "maturity": maturity,
         "aggregate_score": rnd(weighted * 100, 1),
         "gate": gate,

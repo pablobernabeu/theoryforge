@@ -107,6 +107,16 @@ test_that("rigour report matches the golden report JSON semantically", {
   }
 })
 
+test_that("tf_check reads null id and maturity as empty strings", {
+  # The report is compared semantically across the twins, so a null field
+  # must render as "" here exactly as the Python engine now emits.
+  rep <- tf_check(list(schema_version = NULL, id = NULL, title = "T",
+                       maturity = NULL))
+  expect_identical(rep$theory_id, "")
+  expect_identical(rep$schema_version, "")
+  expect_identical(rep$maturity, "")
+})
+
 test_that("tf_report returns valid JSON", {
   out <- tf_report(tf_read(tf_fixture_path("panic-network.theory.yaml")), "json")
   expect_true(jsonlite::validate(out))

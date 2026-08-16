@@ -21,9 +21,10 @@ A data frame with columns \code{a}, \code{b}, \code{cosine},
 \description{
 For every unordered pair of constructs, embeds each definition with the
 supplied \code{embedder} and computes the cosine similarity (rounded to 6
-decimals). Returns a data frame sorted by descending cosine then
-\code{(a, b)}, flagging pairs at or above \code{threshold} for review. This
-assistive screen complements the deterministic lexical
+decimals). The vectors of every compared pair must be of equal, nonzero
+length, or the pair is refused. Returns a data frame sorted by descending
+cosine then \code{(a, b)}, flagging pairs at or above \code{threshold} for
+review. This assistive screen complements the deterministic lexical
 \code{\link[=tf_redundancy_check]{tf_redundancy_check()}}, and its results are only as reproducible as the
 supplied \code{embedder}.
 }

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import yaml
@@ -68,7 +69,8 @@ class Theory:
         With ``full=True`` additionally checks referential integrity: that every
         id is unique within its collection and that every cross-reference
         (proposition endpoints, prediction derivations and diagnostics,
-        assumption/evidence/test-outcome targets) points to a declared id. The
+        assumption/evidence/test-outcome targets) points to a declared id, and
+        that every prediction ``severity`` is a number within [0, 1]. The
         ``full`` checks are deterministic.
         """
         errors: list[str] = []
@@ -166,6 +168,16 @@ class Theory:
             s = e.get("supports")
             if _nonempty_str(s) and s not in prediction_ids:
                 errors.append(f"evidence[{i}] supports '{s}' is not a known prediction")
+        # The schema types prediction severity as a number in [0, 1]; enforced
+        # here so a file cannot pass full validation and then be refused by
+        # the scorer, which rejects non-numeric severities.
+        for i, p in enumerate(preds):
+            s = p.get("severity")
+            if s is None:
+                continue
+            if (isinstance(s, bool) or not isinstance(s, (int, float))
+                    or math.isnan(s) or s < 0 or s > 1):
+                errors.append(f"prediction[{i}] severity must be a number between 0 and 1")
 
     # -- serialisation ---------------------------------------------------------
     def write(self, path) -> None:

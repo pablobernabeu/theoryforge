@@ -51,11 +51,34 @@ def test_embedding_redundancy_with_fake_embedder(weak_path):
     assert {rows[0]["a"], rows[0]["b"]} == {"k_motivation", "k_drive"}
 
 
+def test_embedding_redundancy_refuses_unequal_length_vectors():
+    # R recycled the shorter vector and Python truncated the longer, two
+    # confident wrong cosines from the same embedder. The R suite asserts the
+    # same message.
+    t = tf.new_theory("t", "T")
+    t.add_construct("c1", "One", "one two").add_construct("c2", "Two", "three")
+    vecs = {"one two": [1.0, 2.0], "three": [1.0, 2.0, 3.0]}
+    with pytest.raises(ValueError) as exc:
+        t.embedding_redundancy(lambda d: vecs[d])
+    assert str(exc.value) == (
+        "embedding_redundancy requires equal-length nonempty embedding vectors; "
+        "constructs c1 and c2 have lengths 2 and 3"
+    )
+
+
 def test_osf_push_dry_run(panic_path):
     out = tf.read(panic_path).osf_push()
     assert out["dry_run"] is True
     assert out["request"]["filename"] == "panic-network-2026.dossier.md"
     assert out["request"]["method"] == "PUT"
+
+
+def test_osf_push_filename_falls_back_when_id_is_null_or_empty():
+    # A null id must not stringify into 'None.dossier.md' (nor an empty one
+    # into '.dossier.md'); R falls back to 'theory.dossier.md' in both cases.
+    for d in ({"id": None, "title": "T"}, {"id": "", "title": "T"}, {"title": "T"}):
+        out = tf.Theory(dict(d)).osf_push()
+        assert out["request"]["filename"] == "theory.dossier.md"
 
 
 def test_osf_push_percent_encodes_filename(panic_path):

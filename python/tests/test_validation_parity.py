@@ -111,6 +111,46 @@ def test_read_and_read_corpus_reject_sequence_of_mappings(tmp_path):
         tf.read_corpus(c)
 
 
+def test_string_severity_is_refused_by_full_validation_and_by_scoring(tmp_path):
+    # The schema types severity as a number in [0, 1]. A YAML string severity
+    # previously passed validate(full=True) in both engines and then crashed
+    # Python's check() while R silently coerced and scored; the R suite runs
+    # the same file and asserts the same two messages.
+    p = tmp_path / "string-severity.theory.yaml"
+    p.write_text(
+        'schema_version: "1.0"\n'
+        "id: t\n"
+        "title: T\n"
+        "maturity: building\n"
+        "predictions:\n"
+        "  - id: h1\n"
+        "    statement: s\n"
+        "    type: directional\n"
+        '    severity: "0.8"\n',
+        encoding="utf-8",
+    )
+    t = tf.read(p)
+    assert t.validate() is True  # the structural pass alone does not reach severity
+    with pytest.raises(ValueError) as exc:
+        t.validate(full=True)
+    assert "prediction[0] severity must be a number between 0 and 1" in str(exc.value)
+    with pytest.raises(ValueError) as exc:
+        t.check()
+    assert str(exc.value) == (
+        "check requires numeric prediction severities; non-numeric severity for prediction: h1"
+    )
+
+
+def test_out_of_range_severity_fails_full_validation():
+    t = _consistent()
+    t.data["predictions"][0]["severity"] = 1.5
+    with pytest.raises(ValueError) as exc:
+        t.validate(full=True)
+    assert "prediction[0] severity must be a number between 0 and 1" in str(exc.value)
+    t.data["predictions"][0]["severity"] = 0.8
+    assert t.validate(full=True) is True
+
+
 def test_osf_push_base_url_override():
     res = tf.new_theory("t", "T").osf_push(node="abc12", base_url="https://example.org/v1/resources/")
     assert res["request"]["url"].startswith("https://example.org/v1/resources/abc12/")

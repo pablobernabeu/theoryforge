@@ -2,7 +2,11 @@
 # Runs from the repository root: pwsh scripts/reproduce_all.ps1
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
-$env:RSTUDIO_PANDOC = "C:/Program Files/Quarto/bin/tools"
+# rmarkdown prefers RSTUDIO_PANDOC over any pandoc on PATH whenever the
+# directory exists, so the variable is only set when the Quarto tools
+# directory is actually present (the bash twin sets nothing).
+$quartoTools = "C:/Program Files/Quarto/bin/tools"
+if (Test-Path $quartoTools) { $env:RSTUDIO_PANDOC = $quartoTools }
 
 Write-Output "== install Python package =="
 python -m pip install -e "$root/python" --quiet

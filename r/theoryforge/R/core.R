@@ -44,7 +44,8 @@ tf_read <- function(path) {
 #' \code{full = TRUE} it additionally checks referential integrity: that every id
 #' is unique within its collection and that every cross-reference (proposition
 #' endpoints, prediction derivations and diagnostics, and assumption, evidence and
-#' test-outcome targets) points to a declared id. The \code{full} checks are
+#' test-outcome targets) points to a declared id, and that every prediction
+#' \code{severity} is a number within \[0, 1\]. The \code{full} checks are
 #' deterministic.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
@@ -201,6 +202,17 @@ tf_validate <- function(theory, full = FALSE) {
         s <- .tf_str(ev[[i]], "supports")
         if (!(s %in% prediction_ids))
           errors <- c(errors, sprintf("evidence[%d] supports '%s' is not a known prediction", i - 1L, s))
+      }
+    }
+    # The schema types prediction severity as a number in [0, 1]; enforced here
+    # so a file cannot pass full validation and then be refused by the scorer,
+    # which rejects non-numeric severities.
+    for (i in seq_along(preds)) {
+      s <- .tf_get(preds[[i]], "severity")
+      if (is.null(s)) next
+      if (!is.numeric(s) || length(s) != 1L || is.na(s) || s < 0 || s > 1) {
+        errors <- c(errors,
+                    sprintf("prediction[%d] severity must be a number between 0 and 1", i - 1L))
       }
     }
   }

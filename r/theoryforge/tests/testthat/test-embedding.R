@@ -39,6 +39,22 @@ test_that("tf_embedding_redundancy flags identical definitions for review", {
   expect_identical(df$flag[[1L]], "review")
 })
 
+test_that("tf_embedding_redundancy refuses unequal-length vectors", {
+  # R recycled the shorter vector and Python truncated the longer, two
+  # confident wrong cosines from the same embedder. The Python suite asserts
+  # the same message.
+  theory <- tf_theory("t", "T") |>
+    tf_add_construct("c1", "One", "one two") |>
+    tf_add_construct("c2", "Two", "three")
+  vecs <- list("one two" = c(1.0, 2.0), "three" = c(1.0, 2.0, 3.0))
+  expect_error(
+    tf_embedding_redundancy(theory, function(def) vecs[[def]]),
+    paste0("embedding_redundancy requires equal-length nonempty embedding vectors; ",
+           "constructs c1 and c2 have lengths 2 and 3"),
+    fixed = TRUE
+  )
+})
+
 test_that("tf_embedding_redundancy respects a custom threshold", {
   theory <- tf_theory("demo", "Demo") |>
     tf_add_construct("c1", "One", "alpha beta") |>

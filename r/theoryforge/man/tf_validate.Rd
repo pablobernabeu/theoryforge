@@ -21,7 +21,8 @@ Built-in validation. The default
 \code{full = TRUE} it additionally checks referential integrity: that every id
 is unique within its collection and that every cross-reference (proposition
 endpoints, prediction derivations and diagnostics, and assumption, evidence and
-test-outcome targets) points to a declared id. The \code{full} checks are
+test-outcome targets) points to a declared id, and that every prediction
+\code{severity} is a number within [0, 1]. The \code{full} checks are
 deterministic.
 }
 \examples{

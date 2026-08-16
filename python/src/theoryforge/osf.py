@@ -25,7 +25,9 @@ def osf_push(T, token: str | None = None, node: str | None = None,
     upload (``dry_run=False``) requires both ``token`` and ``node`` (the OSF project id).
     """
     data = T.data if hasattr(T, "data") else T
-    tid = data.get("id", "theory")
+    # A null or empty id must not leak into the filename ('None.dossier.md' /
+    # '.dossier.md'); fall back to 'theory' as the R twin's nzchar guard does.
+    tid = data.get("id") or "theory"
     fname = filename or f"{tid}.dossier.md"
     content = _dossier(data)
     # Percent-encode the filename (theory ids are user-supplied, so fname may

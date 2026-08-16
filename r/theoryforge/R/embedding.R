@@ -25,9 +25,10 @@ NULL
 #'
 #' For every unordered pair of constructs, embeds each definition with the
 #' supplied \code{embedder} and computes the cosine similarity (rounded to 6
-#' decimals). Returns a data frame sorted by descending cosine then
-#' \code{(a, b)}, flagging pairs at or above \code{threshold} for review. This
-#' assistive screen complements the deterministic lexical
+#' decimals). The vectors of every compared pair must be of equal, nonzero
+#' length, or the pair is refused. Returns a data frame sorted by descending
+#' cosine then \code{(a, b)}, flagging pairs at or above \code{threshold} for
+#' review. This assistive screen complements the deterministic lexical
 #' [tf_redundancy_check()], and its results are only as reproducible as the
 #' supplied \code{embedder}.
 #'
@@ -65,6 +66,19 @@ tf_embedding_redundancy <- function(theory, embedder, threshold = NULL) {
   if (n >= 2L) {
     for (i in seq_len(n - 1L)) {
       for (j in (i + 1L):n) {
+        # Unequal or empty vectors have no defensible cosine, and the two
+        # engines read them differently by accident (R recycled the shorter
+        # vector, Python truncated the longer), so the same embedder produced
+        # two confident, different similarities. Refuse instead of picking a
+        # reading.
+        la <- length(vecs[[i]])
+        lb <- length(vecs[[j]])
+        if (la == 0L || lb == 0L || la != lb) {
+          stop("embedding_redundancy requires equal-length nonempty embedding vectors; ",
+               sprintf("constructs %s and %s have lengths %d and %d",
+                       ids[[i]], ids[[j]], la, lb),
+               call. = FALSE)
+        }
         a <- c(a, ids[[i]])
         b <- c(b, ids[[j]])
         cosine <- c(cosine, .tf_rnd(.tf_cosine(vecs[[i]], vecs[[j]]), 6))

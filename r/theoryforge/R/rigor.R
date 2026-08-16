@@ -45,12 +45,21 @@ NULL
   }
 
   # 3 risk_severity
+  # A non-numeric severity has no defensible mean, and the two engines read
+  # one differently by accident (as.numeric() coerced quoted numbers and
+  # scored, Python crashed mid-sum), so the same file produced a verdict in
+  # one language and a raw TypeError in the other. Refuse instead of
+  # coercing; tf_validate(full = TRUE) reports the same file as invalid.
   sevs <- numeric(0)
   for (p in preds) {
     s <- .tf_get(p, "severity")
-    if (!is.null(s) && length(s) == 1L && !is.na(s)) {
-      sevs <- c(sevs, as.numeric(s))
+    if (is.null(s)) next
+    if (!is.numeric(s) || length(s) != 1L || is.na(s)) {
+      stop("check requires numeric prediction severities; ",
+           "non-numeric severity for prediction: ", .tf_str(p, "id"),
+           call. = FALSE)
     }
+    sevs <- c(sevs, as.numeric(s))
   }
   if (length(sevs) == 0L) {
     out$risk_severity <- item("warn", 0.0)

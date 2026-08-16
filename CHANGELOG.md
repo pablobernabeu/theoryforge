@@ -30,6 +30,28 @@ version and a single behavioural contract
   plausible trajectories from one file. Both languages now refuse them.
 - **A failed `quarto render` returned its output path as though it had succeeded**, and
   `tf_write` did not force UTF-8 as its sibling writers do. Both corrected.
+- **A string severity validated in both engines and then crashed one and scored in the
+  other.** The schema types a prediction's `severity` as a number in [0, 1], but
+  `validate(full)` never checked it: Python's `check()` died with a raw TypeError while R
+  silently coerced the string and produced a verdict. Full validation now enforces the
+  typed range, and the scorer refuses a non-numeric severity with the same named error
+  in both languages, so `check()` without `validate()` cannot diverge either.
+- **Unequal-length embedding vectors produced two confident wrong answers.** R recycled
+  the shorter vector and Python silently truncated the longer, so the same embedder
+  could report two different similarities for one construct pair. `embedding_redundancy`
+  now refuses the pair in both languages, naming the constructs and the lengths.
+- **The Python OpenAlex adapter lost its concepts fallback.** A keywords list whose
+  entries all carry a null `display_name` is non-empty before filtering, so the fallback
+  to the top concepts never fired and the record ended up with no keywords at all; nulls
+  are now filtered before the emptiness test, as R always did.
+- **Null fields rendered differently across the twins.** Python's rigour report emitted
+  `null` for a null `id` or `maturity` where R emitted `""`, breaking the semantic
+  comparison, and a null theory id turned the OSF deposit filename into
+  `None.dossier.md` where R fell back to `theory.dossier.md`. Python now reads nulls as
+  empty strings, matching R.
+- `scripts/reproduce_all.ps1` pointed rmarkdown at a Quarto pandoc directory that may
+  not exist on the machine; the variable is now set only when the directory is present,
+  matching the bash twin's restraint.
 
 ### Changed
 - **The rigour report and the dossier record the checklist version that produced them**,
@@ -70,6 +92,19 @@ version and a single behavioural contract
   Relatedly, `reproduce_all` verified nothing: it *rewrote* the goldens it was meant to
   check, so it could never fail. It now verifies, and gates on mypy as CI does.
   `publish.yml` gained the least-privilege token scope its siblings already declared.
+- **The R package's spelling word list is now exercised.** `inst/WORDLIST` shipped with
+  nothing reading it; `spelling` joins Suggests and a `tests/spelling.R` runs the check
+  under `R CMD check`, as the sibling packages in the family do.
+
+### Documentation
+- The Python API reference gains the Packaged examples group (`example_names`,
+  `example_path`), which the R reference index already carried, so the two indexes list
+  the same functions in the same groups. The mkdocs build comment now installs the
+  `docs` extra, whose dependencies include the `markdown-exec` plugin the previously
+  quoted command omitted.
+- The changelog's reference links now cover every released version; the definitions had
+  stopped at v0.2.0, leaving the newer version headings as dead bracket text on the
+  rendered changelog page.
 
 
 ## [0.5.0] - 2026-07-23
@@ -216,6 +251,9 @@ testing scientific theories, delivered as feature-parity R (CRAN) and Python (Py
 - A live OSF upload requires the user's own token. `osf_push` ships with a dry-run default.
 - Richer (nonlinear / agent-based) computational-model runners, and first-class embedding-model integrations beyond the pluggable `embedding_redundancy` interface.
 
-[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pablobernabeu/theoryforge/releases/tag/v0.1.0

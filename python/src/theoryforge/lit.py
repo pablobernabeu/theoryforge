@@ -263,14 +263,20 @@ def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None) -> d
 
     records = []
     for w in data.get("results", []):
+        # Null display_name entries must be dropped before the emptiness test:
+        # a keywords list made only of nulls is non-empty as returned, which
+        # would suppress the concepts fallback and leave the record with no
+        # keywords at all. The R twin filters first for the same reason.
         kws = [k.get("display_name") for k in (w.get("keywords") or [])]
+        kws = [k for k in kws if k]
         if not kws:
             kws = [c.get("display_name") for c in (w.get("concepts") or [])[:5]]
+            kws = [k for k in kws if k]
         records.append({
             "id": w.get("id"),
             "title": w.get("title"),
             "year": w.get("publication_year"),
-            "keywords": [k for k in kws if k],
+            "keywords": kws,
             "references": w.get("referenced_works") or [],
         })
     return {"schema_version": "1.0", "id": f"openalex:{query}", "records": records}

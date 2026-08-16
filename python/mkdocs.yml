@@ -79,8 +79,8 @@ plugins:
           options:
             show_root_heading: true
             docstring_style: google
-            # api.md groups its objects under ten h2 sections, mirroring the R
-            # package's reference index. At mkdocstrings' default level the object
+            # api.md groups its objects under h2 section headings, mirroring the
+            # R package's reference index. At mkdocstrings' default level the object
             # headings would also be h2, flattening the table of contents into one
             # list in which no object shows which group it belongs to.
             heading_level: 3
@@ -107,7 +107,10 @@ markdown_extensions:
         - .
         - ..
 
-# Build with:  pip install mkdocs-material "mkdocstrings[python]" && mkdocs build
+# Build with:  pip install -e .[docs] && mkdocs build
+# (the docs extra carries mkdocs-material, mkdocstrings[python] and
+# markdown-exec, and the editable install lets markdown-exec's example blocks
+# import theoryforge itself)
 
 # The released version shown beside the title in the header (updated on release).
 extra:

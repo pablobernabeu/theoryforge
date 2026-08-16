@@ -104,3 +104,33 @@ def test_fetch_corpus_rejects_out_of_range_per_page(bad):
     with pytest.raises(ValueError) as exc:
         tf.fetch_corpus("panic", per_page=bad)
     assert str(exc.value) == "per_page must be between 1 and 200"
+
+
+def test_fetch_corpus_falls_back_to_concepts_when_keyword_names_are_null(monkeypatch):
+    # OpenAlex can return keyword entries whose display_name is null. Nulls
+    # must be filtered before the emptiness test (as R does), or the non-empty
+    # pre-filter list suppresses the concepts fallback and the record ends up
+    # with no keywords at all. Stubbed response; no network.
+    import json as _json
+
+    payload = {"results": [{
+        "id": "https://openalex.org/W1", "title": "t", "publication_year": 2020,
+        "keywords": [{"display_name": None}, {"display_name": None}],
+        "concepts": [{"display_name": "panic"}, {"display_name": None},
+                     {"display_name": "arousal"}],
+        "referenced_works": [],
+    }]}
+
+    class _Resp:
+        def read(self):
+            return _json.dumps(payload).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda url, timeout: _Resp())
+    corpus = tf.fetch_corpus("panic")
+    assert corpus["records"][0]["keywords"] == ["panic", "arousal"]

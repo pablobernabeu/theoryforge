@@ -54,6 +54,16 @@ def test_draft_is_advisory(weak_path):
     assert r["gate"] == "advisory"  # blockers do not block in draft mode
 
 
+def test_check_reads_null_id_and_maturity_as_empty_strings():
+    # R's .tf_str renders a null as "", and the report is compared
+    # semantically across the twins, so Python must not emit null there.
+    r = tf.Theory({"schema_version": None, "id": None, "title": "T",
+                   "maturity": None}).check()
+    assert r["theory_id"] == ""
+    assert r["schema_version"] == ""
+    assert r["maturity"] == ""
+
+
 def test_report_json_roundtrips(panic_path):
     import json
     r = tf.read(panic_path).report(format="json")

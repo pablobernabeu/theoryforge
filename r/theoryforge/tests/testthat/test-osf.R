@@ -22,6 +22,16 @@ test_that("tf_osf_push builds the OSF storage URL when a node is given", {
   )
 })
 
+test_that("tf_osf_push filename falls back to theory when the id is null or empty", {
+  # Mirrors the Python osf_push test: a null id must not stringify into the
+  # filename, and an empty one must not produce '.dossier.md'.
+  for (theory in list(list(id = NULL, title = "T"), list(id = "", title = "T"),
+                      list(title = "T"))) {
+    res <- tf_osf_push(theory)
+    expect_identical(res$request$filename, "theory.dossier.md")
+  }
+})
+
 test_that("tf_osf_push honours a custom filename", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   res <- tf_osf_push(theory, node = "abc12", filename = "custom.md")

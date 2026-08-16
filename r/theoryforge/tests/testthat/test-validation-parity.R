@@ -95,6 +95,45 @@ test_that("tf_read and tf_read_corpus reject a sequence of mappings", {
   expect_error(tf_read_corpus(cpath), "Corpus data must be a mapping")
 })
 
+test_that("a string severity is refused by full validation and by scoring", {
+  # The schema types severity as a number in [0, 1]. A YAML string severity
+  # previously passed tf_validate(full = TRUE) in both engines and then
+  # crashed Python's check() while R silently coerced and scored; the Python
+  # suite runs the same file and asserts the same two messages.
+  p <- tempfile(fileext = ".yaml")
+  writeLines(c(
+    'schema_version: "1.0"',
+    "id: t",
+    "title: T",
+    "maturity: building",
+    "predictions:",
+    "  - id: h1",
+    "    statement: s",
+    "    type: directional",
+    '    severity: "0.8"'
+  ), p)
+  theory <- tf_read(p)
+  expect_true(tf_validate(theory))  # the structural pass alone does not reach severity
+  expect_error(tf_validate(theory, full = TRUE),
+               "prediction[0] severity must be a number between 0 and 1",
+               fixed = TRUE)
+  expect_error(
+    tf_check(theory),
+    "check requires numeric prediction severities; non-numeric severity for prediction: h1",
+    fixed = TRUE
+  )
+})
+
+test_that("an out-of-range severity fails full validation", {
+  t <- consistent_theory()
+  t$predictions[[1]]$severity <- 1.5
+  expect_error(tf_validate(t, full = TRUE),
+               "prediction[0] severity must be a number between 0 and 1",
+               fixed = TRUE)
+  t$predictions[[1]]$severity <- 0.8
+  expect_true(tf_validate(t, full = TRUE))
+})
+
 test_that("tf_osf_push base_url override is honoured", {
   res <- tf_osf_push(tf_theory("t", "T"), node = "abc12",
                      base_url = "https://example.org/v1/resources/")
