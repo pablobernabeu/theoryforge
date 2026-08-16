@@ -156,17 +156,17 @@ jobs:
       - uses: actions/checkout@v7
       # The vignettes are built during the check, so pandoc must be present on
       # every runner rather than assumed from the image.
-      - uses: r-lib/actions/setup-pandoc@v2
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-pandoc@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           extra-packages: any::rcmdcheck
           working-directory: r/theoryforge
-      - uses: r-lib/actions/check-r-package@v2
+      - uses: r-lib/actions/check-r-package@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           working-directory: r/theoryforge
           args: 'c("--no-manual", "--as-cran")'
@@ -183,11 +183,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           r-version: '4.1'
           use-public-rspm: true
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           extra-packages: any::testthat, any::pkgload
           working-directory: r/theoryforge
@@ -209,10 +209,10 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v7
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           use-public-rspm: true
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           extra-packages: any::covr
           needs: check
@@ -231,6 +231,84 @@ jobs:
           if (pct < 80) {
             cat("::warning::Test coverage is below 80%\n")
           }
+
+  # testthat runs inside the package namespace, where an unexported function is
+  # still visible, so no R test can notice that an @export tag never reached
+  # NAMESPACE; a sibling package lost two exports exactly that way. The other
+  # end of the failure is quieter still: roxygenise() skips a NAMESPACE whose
+  # generated-by header has been removed rather than rewriting it, so the file
+  # silently stops tracking the source while CONTRIBUTING goes on saying that
+  # document() maintains it. Regenerating on a clean checkout and diffing is the
+  # only check that sees either case.
+  #
+  # NAMESPACE alone is gated. Rd formatting shifts between roxygen2 releases, so
+  # extending this to man/ would turn the job red on an upgrade that changed no
+  # source at all.
+  r-namespace:
+    name: R NAMESPACE is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
+        with:
+          r-version: 'release'
+          use-public-rspm: true
+      # roxygenise() loads the package before it can read the tags, so the
+      # package's own dependencies have to be installed here. roxygen2 itself is
+      # pinned to the version DESCRIPTION records: an unpinned upgrade that
+      # rewrote the file in a new style would fail this job with nothing in the
+      # repository changed.
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
+        with:
+          extra-packages: roxygen2@8.0.0
+          working-directory: r/theoryforge
+      - name: Regenerate NAMESPACE from the roxygen tags
+        shell: Rscript {0}
+        run: |
+          installed <- as.character(packageVersion("roxygen2"))
+          # roxygen2 8 records itself in Config/roxygen2/version, earlier
+          # releases in RoxygenNote. Reading whichever is present keeps a
+          # migration of the field from turning this comparison into a no-op.
+          desc <- read.dcf("r/theoryforge/DESCRIPTION")
+          field <- intersect(c("Config/roxygen2/version", "RoxygenNote"), colnames(desc))[1]
+          declared <- if (is.na(field)) NA_character_ else trimws(unname(desc[1, field]))
+          cat(sprintf("roxygen2 %s installed; DESCRIPTION records %s %s\n", installed,
+                      if (is.na(field)) "(no roxygen2 version)" else field, declared))
+          # Two versions of roxygen2 can write the same exports differently. Say
+          # so plainly rather than leaving the next reader to interpret a diff
+          # that has nothing to do with the tags in R/.
+          if (!is.na(declared) && !identical(installed, declared)) {
+            cat(paste0(
+              "::error::roxygen2 ", installed, " is installed but ",
+              "r/theoryforge/DESCRIPTION records ", field, " ", declared,
+              ". Move the pin in .github/workflows/ci.yml and the recorded version ",
+              "together; this is version drift, not a stale NAMESPACE.\n"
+            ))
+            quit(status = 1)
+          }
+          # The quieter half of the failure described above, asserted rather than
+          # assumed: handed a NAMESPACE without that first line, roxygenise()
+          # leaves the file alone and still exits 0, so the diff below would stay
+          # empty however stale the file had become and this job would pass by
+          # never having run.
+          first <- c(readLines("r/theoryforge/NAMESPACE", n = 1, warn = FALSE), "")[1]
+          if (!grepl("^# Generated by roxygen2", first)) {
+            cat(paste0(
+              "::error file=r/theoryforge/NAMESPACE::r/theoryforge/NAMESPACE has lost its ",
+              "\"# Generated by roxygen2: do not edit by hand\" first line, so roxygenise() ",
+              "skips it and this job can no longer see drift. Delete ",
+              "r/theoryforge/NAMESPACE, run devtools::document(\"r/theoryforge\"), and check ",
+              "the regenerated exports against the ones the deleted file declared.\n"
+            ))
+            quit(status = 1)
+          }
+          roxygen2::roxygenise("r/theoryforge", roclets = "namespace")
+      - name: NAMESPACE matches the roxygen @export tags
+        run: |
+          if ! git diff --exit-code -- r/theoryforge/NAMESPACE; then
+            echo '::error file=r/theoryforge/NAMESPACE::r/theoryforge/NAMESPACE is stale: it does not match the @export tags in r/theoryforge/R. Run devtools::document("r/theoryforge") and commit the regenerated NAMESPACE. The diff above is the change that command makes.'
+            exit 1
+          fi
 
   apps:
     name: Apps (syntax + vendor build)
@@ -261,10 +339,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
-      - uses: r-lib/actions/setup-r@v2
+      - uses: r-lib/actions/setup-r@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           r-version: "release"
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - uses: r-lib/actions/setup-r-dependencies@d3c5be51b12e724e68f33216ca3c148b66d5f0b6  # v2.12.1
         with:
           packages: |
             any::yaml
