@@ -153,6 +153,8 @@ NULL
   # The causal subgraph is emitted as written, with no acyclicity check. A
   # theory with a feedback loop (the panic-network example has one) therefore
   # yields a cyclic graph inside a `dag` block, which dagitty will reject.
+  # The view is an export and stays one; tf_implications() is where the same
+  # subgraph is checked and refused when it is cyclic.
   lines <- c("dag {")
   for (p in .tf_list(T, "propositions")) {
     rel <- .tf_get(p, "relation")

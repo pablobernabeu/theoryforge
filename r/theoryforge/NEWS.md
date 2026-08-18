@@ -1,5 +1,21 @@
 # theoryforge (development version)
 
+* New `tf_implications()` derives the testable implications of a theory's causal
+  subgraph. It reads the causal propositions as a directed graph, checks that the
+  graph is acyclic, and returns the basis set of implied conditional
+  independencies: one claim per pair of constructs with no causal relation
+  between them, conditioned on the parents of both, in the notation dagitty
+  prints. That set is the shortest complete statement of what a causal theory
+  forbids in data, so it is what a study can be designed to refute. The package
+  cited the derivability of those implications in its own checklist and derived
+  none of them. A cyclic graph has no basis set and is refused with the cycle
+  named, which is what happens to the bundled panic-network example and its
+  amended version; a theory with no causal relations returns an empty set rather
+  than an error. The Python twin gains `theory.implications()`, returning the
+  same records in the same order. The derived sets were checked against
+  `dagitty` and `ggm`, which sit in Suggests for that purpose and whose tests
+  skip when they are absent.
+
 * Every vignette now turns console colour off and fixes the console width while
   it renders. pkgdown passes the calling terminal's colour support into its build
   subprocess, and the Get started vignette's failure path therefore published the

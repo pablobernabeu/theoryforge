@@ -122,6 +122,8 @@ def _causal_dag(T: dict) -> str:
     # The causal subgraph is emitted as written, with no acyclicity check. A
     # theory with a feedback loop (the panic-network example has one) therefore
     # yields a cyclic graph inside a `dag` block, which dagitty will reject.
+    # The view is an export and stays one; `implications` is where the same
+    # subgraph is checked and refused when it is cyclic.
     lines = ["dag {"]
     for p in _list(T, "propositions"):
         if p.get("relation") in _CAUSAL:

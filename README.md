@@ -55,7 +55,10 @@ diagrams draw those maps. The `fetch_corpus` adapter assembles a corpus from Ope
 part of this layer that needs a network connection, and `new_evidence_dois` checks
 deterministically which candidate DOIs, from any search tool, a theory does not yet cite.
 
-The remaining functions carry a theory through analysis, review and deposit. `compile_sem`
+The remaining functions carry a theory through analysis, review and deposit. `implications`
+reads the causal propositions as a directed graph and returns the conditional independencies
+that graph entails, the shortest complete statement of what the theory forbids in data, or
+refuses a graph whose cycle leaves that set undefined. `compile_sem`
 compiles constructs and propositions to lavaan model syntax, and `dossier` assembles in one
 command a reviewer-facing audit bundle holding the rigour report, severity, provenance and
 preregistration. `simulate` runs the construct network as a deterministic dynamical system,

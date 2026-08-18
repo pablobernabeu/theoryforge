@@ -186,7 +186,10 @@ cat(
 
 The causal DAG is the one view this does not cover, since it emits dagitty
 syntax rather than DOT. Paste it into a dagitty tool such as
-[dagitty.net](https://dagitty.net) instead.
+[dagitty.net](https://dagitty.net) instead. `tf_implications()` reads the same
+subgraph without leaving R, checking it for acyclicity and returning the
+conditional independencies it entails, which the Developing and testing article
+works through.
 
 ## Simulation
 

@@ -59,7 +59,7 @@ Export a diagram. The digraph types, such as `nomological_net`, return Graphviz 
 print(t.diagram("nomological_net"))
 ```
 
-The `causal_dag` type returns dagitty syntax instead, for causal-inference tooling. It carries the same edges as the DOT above, without the presentation attributes.
+The `causal_dag` type returns dagitty syntax instead, for causal-inference tooling. It carries the same edges as the DOT above, without the presentation attributes. To read that subgraph rather than export it, `implications()` checks it for acyclicity and returns the conditional independencies it entails, which [Workflow modes](workflow-modes.md#what-the-causal-graph-commits-you-to) works through.
 
 ```python exec="1" source="material-block" result="text" session="getting-started"
 print(t.diagram("causal_dag"))

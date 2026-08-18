@@ -147,7 +147,7 @@ dag {
   <from> -> <to>
 }
 ```
-The causal subgraph is emitted exactly as written and is not checked for acyclicity, so a theory with a feedback loop (the shipped panic-network example has one) produces a cyclic graph inside a `dag` block, which dagitty will not accept as a DAG. The `causal_testability` checklist item likewise asserts only that at least one causal relation is present.
+The causal subgraph is emitted exactly as written and is not checked for acyclicity, so a theory with a feedback loop (the shipped panic-network example has one) produces a cyclic graph inside a `dag` block, which dagitty will not accept as a DAG. The `causal_testability` checklist item likewise asserts only that at least one causal relation is present. The view is a faithful export rather than a verdict, and both statements are deliberate: `implications` (§27) is where the same subgraph is checked for acyclicity and read for what it entails, and it refuses the two panic-network fixtures for the cycle this view prints without comment.
 
 ## 6. Tokenisation & Jaccard (for the redundancy screen)
 
@@ -461,3 +461,43 @@ the three SVG chart views through unchanged, and refuse `causal_dag` with a
 pointer to dagitty. The rendering engines differ by design, so the rendered
 output is NOT byte-identical across languages and is excluded from parity and
 CI; the underlying IR (section 13) remains the parity-tested contract.
+
+---
+
+# Part F: derived implications
+
+New API (mirrored):
+
+| Concept | R | Python |
+|---|---|---|
+| Implied conditional independencies | `tf_implications(theory)` → list | `theory.implications()` / `theoryforge.implications(theory)` → `dict` |
+
+## 27. implications(theory) → the basis set of the causal subgraph (deterministic, parity-tested)
+
+Reads every proposition whose `relation ∈ {causes, increases, decreases}` (the same subgraph section 5 exports) as a directed edge, then returns the conditional independencies that subgraph entails.
+
+**Vertices and edges.** Iterate the constructs in file order, collecting their ids into `declared`. Iterate the propositions in file order; for each causal one, take `from` and `to` as an ordered pair of positions in `declared` and keep it if that pair has not been seen, so a relation asserted twice is one edge. `n_edges` is the number of kept pairs. The vertex set is the positions appearing in a kept pair, in increasing position order, and `constructs` reports the ids at those positions. A construct that no causal proposition connects is therefore absent: silence about a construct is not a claim that it is independent of anything, and including it would manufacture implications the theory does not make.
+
+**Basis set.** For every pair of vertices `(i, j)` with `i` before `j` in that order and no edge in either direction between them, emit `{a, b, given, statement}` where `a` and `b` are the two ids, `given` is the union of the parents of both, listed in the same vertex order, and `statement` is `<a> _||_ <b> | <given joined by ", ">`, or `<a> _||_ <b>` when `given` is empty. This is the basis set of Pearl (1988) and Shipley (2000): it implies every other conditional independence the graph entails, and it has exactly `k(k-1)/2 - m` members for `k` vertices and `m` edges. In a DAG neither member of a non-adjacent pair can be a parent of the other, so the union needs no further exclusion. Ordering everything by construct file order rather than by a topological sort is what makes the two engines return the same records in the same order; a set would have nothing for the parity check to compare.
+
+**Return shape** (keys in this order):
+```json
+{
+  "theory_id": "...", "acyclic": true, "constructs": ["c_arousal", "c_threat", "c_avoidance"],
+  "n_edges": 2,
+  "implications": [ {"a": "c_arousal", "b": "c_avoidance", "given": ["c_threat"],
+                     "statement": "c_arousal _||_ c_avoidance | c_threat"} ],
+  "n_implications": 1
+}
+```
+`acyclic` is always `true` in a returned record, since a cyclic graph is refused; it is carried so that a serialised record states the verdict rather than leaving a reader to infer that the check ran.
+
+**Refusals** (identical message text in both languages, in this order):
+
+1. A repeated construct id, which would give one vertex two sets of parents: `implications requires unique construct ids; duplicate construct id: <id>`, naming the first repeat in file order.
+2. A causal proposition naming a construct the theory has not declared: `implications requires causal propositions between declared constructs; proposition '<proposition id>' refers to unknown construct '<construct id>'`, reporting the first offending endpoint in file order and taking `from` before `to`. Dropping such an edge would shrink the graph and so add independencies the theory does not imply, which is a confidently wrong answer rather than a missing one.
+3. A cycle, which leaves the basis set undefined: `implications requires an acyclic causal graph; cycle found: <ids joined by " -> ">`, where the path repeats its first vertex at the end and a self loop appears as that vertex twice. The cycle named is the first found by a depth-first search that takes start vertices and successors in construct file order, so both engines name the same one.
+
+A theory with no causal propositions is not an error. Its vertex set is empty, `n_edges` and `n_implications` are 0, and `implications` is the empty list.
+
+No golden artefact is added. Two of the three shipped fixtures have a cyclic causal subgraph and are refused, and the third has no causal relations at all, so a per-fixture golden would carry one empty record and nothing else; the twin test suites assert the same values on the same constructed theories instead. The count of `expected/` is unchanged.

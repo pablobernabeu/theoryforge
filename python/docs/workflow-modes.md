@@ -155,8 +155,8 @@ none of the predictions it claims to protect has a passing test outcome.
 ## TESTING
 
 TESTING prepares a theory for empirical evaluation. It scores how risky each
-prediction is, exports a preregistration document, and assembles a
-reviewer-facing audit bundle.
+prediction is, derives what the causal graph forbids in data, exports a
+preregistration document, and assembles a reviewer-facing audit bundle.
 
 ### Severity
 
@@ -186,6 +186,54 @@ Base risk rises with the strength of the claim: `existence` 0.1,
 carry a discount for the ambient correlations expected in the field. A
 prediction that discriminates the theory from a named alternative, through
 its `diagnostic_vs` field, earns a small severity bonus.
+
+### What the causal graph commits you to
+
+Severity scores the predictions a theory states. A causal theory also commits
+itself to claims it never states, because the propositions taken together are a
+directed graph, and a directed acyclic graph entails a set of conditional
+independencies. `implications()` derives them. Every pair of constructs with no
+causal relation between them yields one claim: the two are independent once the
+parents of both are held fixed. That collection is the basis set, from which
+every other independence the graph entails follows, and each member is something
+a study can be designed to look for and fail to find.
+
+The demonstration theory built above has a single proposition and so no
+non-adjacent pair to say anything about. The shipped panic-network fixture has
+three, and does not get as far as a basis set: its third proposition returns
+from perceived threat to arousal, closing the feedback loop the theory is about,
+and a graph with a cycle has no basis set at all.
+
+```python exec="1" source="material-block" result="text" session="workflow-modes"
+panic = tf.read(fixtures / "panic-network.theory.yaml")
+
+try:
+    panic.implications()
+except ValueError as exc:
+    print(exc)
+```
+
+The refusal names the cycle it found rather than leaving it to be hunted.
+Cutting the return path leaves the chain from arousal through perceived threat
+to avoidance, which does entail something.
+
+```python exec="1" source="material-block" result="text" session="workflow-modes"
+chain = tf.read(fixtures / "panic-network.theory.yaml")
+chain.data["propositions"] = [p for p in chain.data["propositions"] if p["id"] != "p3"]
+
+implied = chain.implications()
+print(implied["n_implications"])
+print(implied["implications"][0]["statement"])
+```
+
+The one implication reads as arousal and avoidance being independent given
+perceived threat, in the notation dagitty prints. It says the chain has no path
+from arousal to avoidance that bypasses appraisal, which is a strong claim about
+a mediator and a straightforward one to test. Should the data show a residual
+association, the chain as drawn is wrong, whatever the individual predictions
+do. For a theory that genuinely holds a feedback loop, this is the point at
+which the loop has to be modelled over time rather than collapsed into a single
+graph.
 
 ### Preregistration
 

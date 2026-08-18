@@ -190,8 +190,11 @@ reference:
   contents:
   - tf_appraise_amendment
 - title: Testing and review
-  desc: Preregistration, SEM compilation and the audit dossier.
+  desc: >
+    The conditional independencies a causal theory commits to, preregistration,
+    SEM compilation and the audit dossier.
   contents:
+  - tf_implications
   - tf_preregister
   - tf_compile_sem
   - tf_dossier

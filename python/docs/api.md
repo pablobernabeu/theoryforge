@@ -6,9 +6,9 @@ and in the same order, so a name is found in the same place on either site. The
 R package prefixes each name with `tf_`, so `check()` here is `tf_check()`
 there.
 
-The three functions whose name matches their module (`diagram`, `dossier`,
-`simulate`) are documented by their canonical path, so that the function rather
-than the module is shown.
+The four functions whose name matches their module (`diagram`, `dossier`,
+`implications`, `simulate`) are documented by their canonical path, so that the
+function rather than the module is shown.
 
 ## Core IO
 
@@ -79,7 +79,10 @@ sense.
 
 ## Testing and review
 
-Preregistration, SEM compilation and the reviewer-facing audit dossier.
+The conditional independencies a causal theory commits to, preregistration, SEM
+compilation and the reviewer-facing audit dossier.
+
+::: theoryforge.implications.implications
 
 ::: theoryforge.preregister
 

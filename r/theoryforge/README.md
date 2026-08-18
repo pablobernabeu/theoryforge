@@ -58,7 +58,8 @@ report$gate              # "pass"
 [Get started](https://pablobernabeu.github.io/theoryforge/r/articles/theoryforge.html) walks
 through building, checking and diagramming a theory.
 [Developing and testing](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
-continues into severity, preregistration, amendment appraisal and the audit dossier, and
+continues into severity, implied conditional independencies, preregistration, amendment
+appraisal and the audit dossier, and
 [Mapping the literature](https://pablobernabeu.github.io/theoryforge/r/articles/literature.html)
 positions a theory within a bibliometric corpus.
 

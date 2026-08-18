@@ -13,6 +13,7 @@ from .develop import appraise_amendment as _appraise_amendment
 from .diagram import diagram as _diagram
 from .dossier import dossier as _dossier
 from .embedding import embedding_redundancy as _embedding_redundancy
+from .implications import implications as _implications
 from .lit import landscape as _landscape
 from .lit import new_evidence_dois as _new_evidence_dois
 from .osf import osf_push as _osf_push
@@ -274,6 +275,10 @@ class Theory:
     def appraise_amendment(self, prior) -> dict:
         """Progressive vs degenerating verdict for this theory relative to a prior version."""
         return _appraise_amendment(self.data, prior)
+
+    def implications(self) -> dict:
+        """The conditional independencies the causal subgraph commits the theory to."""
+        return _implications(self.data)
 
     def preregister(self, path=None) -> str:
         """Render a preregistration document (and write it if a path is given)."""

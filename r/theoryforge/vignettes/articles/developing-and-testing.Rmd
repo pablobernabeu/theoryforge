@@ -20,9 +20,9 @@ library(theoryforge)
 
 The companion vignette covers building a theory and checking its rigour. This
 article continues the workflow into development and testing. It shows how to
-operationalise severity, export a preregistration, appraise an amendment in
-Lakatosian terms, compile a measurement model for `lavaan`, and assemble a
-reviewer-facing audit bundle. The worked example reads the panic-network
+operationalise severity, derive what the causal graph forbids in data, export a
+preregistration, appraise an amendment in Lakatosian terms, compile a
+measurement model for `lavaan`, and assemble a reviewer-facing audit bundle. The worked example reads the panic-network
 fixture shipped with the package, so every chunk runs with only `theoryforge`
 loaded.
 
@@ -49,6 +49,46 @@ The `risk_score` reflects the prediction type, while `computed_severity`
 applies the discounts and bonuses defined in the specification. Reading these
 values before data collection guards against the temptation to read a weak,
 hard-to-fail prediction as though it were a stringent test.
+
+## What the causal graph commits you to
+
+Severity scores the predictions a theory states. A causal theory also commits
+itself to claims it never states, because the propositions taken together are a
+directed graph, and a directed acyclic graph entails a set of conditional
+independencies. `tf_implications()` derives them. Every pair of constructs with
+no causal relation between them yields one claim: the two are independent once
+the parents of both are held fixed. That collection is the basis set, from which
+every other independence the graph entails follows, and each member is something
+a study can be designed to look for and fail to find.
+
+The panic-network example does not get that far. Its third proposition returns
+from perceived threat to arousal, closing the feedback loop the theory is about,
+and a graph with a cycle has no basis set at all.
+
+```{r implications-cycle, error = TRUE}
+tf_implications(theory)
+```
+
+The refusal names the cycle it found rather than leaving it to be hunted. Cutting
+the return path leaves the chain from arousal through perceived threat to
+avoidance, which does entail something.
+
+```{r implications}
+chain <- theory
+chain$propositions <- Filter(function(p) p$id != "p3", chain$propositions)
+
+implied <- tf_implications(chain)
+implied$n_implications
+implied$implications[[1]]$statement
+```
+
+The one implication reads as arousal and avoidance being independent given
+perceived threat, in the notation dagitty prints. It says the chain has no path
+from arousal to avoidance that bypasses appraisal, which is a strong claim about
+a mediator and a straightforward one to test. Should the data show a residual
+association, the chain as drawn is wrong, whatever the individual predictions do.
+For a theory that genuinely holds a feedback loop, this is the point at which the
+loop has to be modelled over time rather than collapsed into a single graph.
 
 ## Preregistration
 

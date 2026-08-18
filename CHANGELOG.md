@@ -62,15 +62,30 @@ version and a single behavioural contract
 - **`simulate()` echoes back k, damping and init** as well as dt and steps, so a recorded
   trajectory can be reproduced from what the record itself reports.
 - **The causal-testability criterion now describes what it computes.** It asserted
-  acyclicity and never checked it; rather than add a check whose verdicts would move,
-  the criterion and the methodology pages now state that the export is emitted as
-  written, that it is not verified acyclic, and that the shipped panic-network example
-  is in fact cyclic. No score, gate or status changed.
+  acyclicity and never checked it; rather than move the verdicts of a scored item, the
+  criterion and the methodology pages now state that the export is emitted as written,
+  that it is not verified acyclic, and that the shipped panic-network example is in fact
+  cyclic. No score, gate or status changed. The acyclicity check that the criterion once
+  implied now lives in `implications()`, where it can refuse rather than quietly rescore.
 - The R network adapters carry the same 30-second timeout as their Python counterparts,
   and both languages reject a `per_page` outside OpenAlex's documented 1-200 range
   before making a request.
 
 ### Added
+- **A theory's testable implications are now derived, not merely promised.** The rigour
+  checklist cited the derivability of a causal theory's implications and the methodology
+  pages said the causal relations export to a DAG with derivable implications, while the
+  export was emitted as written and nothing read it. `implications()` in Python and
+  `tf_implications()` in R read the causal propositions as a directed graph, check it for
+  acyclicity, and return the basis set of implied conditional independencies: one claim
+  per pair of constructs with no causal relation between them, conditioned on the parents
+  of both (Pearl, 1988; Shipley, 2000), rendered in the notation dagitty prints. The set
+  is the shortest complete statement of what the theory forbids in data. A cyclic graph
+  has no basis set and is refused with the cycle named, which is what both panic-network
+  fixtures get; a theory with no causal relations returns an empty set rather than an
+  error. The derived sets were checked against `dagitty` and `ggm`, two published
+  implementations, which join the R package's Suggests for that purpose and whose tests
+  skip when they are absent.
 - **The Python package ships the example theories**, with `example_path()` and
   `example_names()`, mirrored by `tf_example_path()` and `tf_example_names()` in R. The
   README's R quick start now uses a shipped fixture, so it works straight after
