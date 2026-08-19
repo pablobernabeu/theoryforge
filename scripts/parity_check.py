@@ -25,7 +25,16 @@ TOL = 1e-9
 def emit_r(out_dir: Path) -> None:
     cmd = ["Rscript", str(ROOT / "scripts" / "parity_emit.R"),
            str(FIXTURES), str(out_dir), str(ROOT / "r" / "theoryforge")]
-    res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
+    except FileNotFoundError:
+        # Half the check is an R interpreter, and without one there is no verdict to
+        # report. Say so, rather than leaving the operating system's "cannot find the
+        # file specified" to be read as a missing fixture or a missing emitter script.
+        raise SystemExit(
+            "no Rscript on PATH, so the R half of the parity check cannot run. Install R "
+            "and put its bin directory on PATH, or run this script where R is available."
+        ) from None
     if res.returncode != 0:
         raise SystemExit("R emitter failed:\n" + res.stdout + "\n" + res.stderr)
     # Echo which R engine answered. A parity verdict is only as meaningful as the

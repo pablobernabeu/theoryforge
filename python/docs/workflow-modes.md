@@ -213,27 +213,36 @@ except ValueError as exc:
     print(exc)
 ```
 
-The refusal names the cycle it found rather than leaving it to be hunted.
-Cutting the return path leaves the chain from arousal through perceived threat
-to avoidance, which does entail something.
+The refusal names the cycle it found rather than leaving it to be hunted. For a
+theory that genuinely holds a feedback loop, this is the point at which the loop
+has to be modelled over time rather than collapsed into a single graph.
+
+A second shipped fixture has an acyclic causal graph, a theory of modality
+switching in grounded conceptual processing. Sensorimotor experience with a
+concept drives activation of the modality-specific perceptual system. That
+activation both raises the cost of switching modality between consecutive trials
+and eases conceptual access, which lexical familiarity with the word form eases
+as well.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
-chain = tf.read(fixtures / "panic-network.theory.yaml")
-chain.data["propositions"] = [p for p in chain.data["propositions"] if p["id"] != "p3"]
+switching = tf.read(fixtures / "modality-switching.theory.yaml")
 
-implied = chain.implications()
-print(implied["n_implications"])
-print(implied["implications"][0]["statement"])
+implied = switching.implications()
+print(implied["n_edges"], implied["n_implications"])
+for i in implied["implications"]:
+    print(i["statement"])
 ```
 
-The one implication reads as arousal and avoidance being independent given
-perceived threat, in the notation dagitty prints. It says the chain has no path
-from arousal to avoidance that bypasses appraisal, which is a strong claim about
-a mediator and a straightforward one to test. Should the data show a residual
-association, the chain as drawn is wrong, whatever the individual predictions
-do. For a theory that genuinely holds a feedback loop, this is the point at
-which the loop has to be modelled over time rather than collapsed into a single
-graph.
+Five constructs and four causal propositions leave six non-adjacent pairs, and
+so six claims, each written in the notation dagitty prints. Two of them are
+worth dwelling on. Switch cost and ease of conceptual access are the two
+children of a fork at modality activation, so the theory says the correlation
+between them is entirely due to that shared cause and vanishes once it is held
+fixed. Sensorimotor experience and lexical familiarity meet only at the collider at
+conceptual access, and the theory says they are unrelated to each other with
+nothing held fixed, which is what an account deriving perceptual knowledge from
+distributional word statistics would deny. Neither
+claim appears among the theory's own predictions, and either could sink it.
 
 ### Preregistration
 

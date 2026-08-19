@@ -32,7 +32,8 @@ R_EXPECTED = ROOT / "r" / "theoryforge" / "inst" / "fixtures" / "expected"
 # the package still has something to run: R reaches them with system.file(),
 # Python with theoryforge.example_path(). Neither copy is edited by hand.
 EXAMPLE_INPUTS = ("panic-network.theory.yaml", "panic-network-2026-v2.theory.yaml",
-                  "weak-theory.theory.yaml", "panic-corpus.yaml")
+                  "modality-switching.theory.yaml", "weak-theory.theory.yaml",
+                  "panic-corpus.yaml")
 R_INPUTS = ROOT / "r" / "theoryforge" / "inst" / "fixtures"
 PY_INPUTS = ROOT / "python" / "src" / "theoryforge" / "fixtures"
 DIAGRAMS = {

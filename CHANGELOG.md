@@ -86,6 +86,21 @@ version and a single behavioural contract
   error. The derived sets were checked against `dagitty` and `ggm`, two published
   implementations, which join the R package's Suggests for that purpose and whose tests
   skip when they are absent.
+- **A fourth example theory ships with both packages, and it is the worked example for
+  `implications()`.** Both panic-network fixtures are cyclic, so until now no bundled
+  theory demonstrated what the function returns rather than what it refuses.
+  `fixtures/modality-switching.theory.yaml` states the modality-switching effect in
+  grounded conceptual processing: sensorimotor experience with a concept drives
+  activation of the modality-specific perceptual system, which raises the cost of
+  switching modality between consecutive trials and eases conceptual access, as lexical
+  familiarity with the word form does too. Five constructs and four causal propositions
+  give an acyclic graph carrying both a fork and a collider, and a basis set of six
+  conditional independencies, checked statement for statement against `ggm::basiSet` and
+  confirmed by `dagitty::dseparated`. It passes full validation in both engines and the
+  whole rigour checklist. The panic fixtures are kept: a feedback loop is legitimate
+  theory, and the refusal is worth demonstrating too, so the Workflow modes page and the
+  Developing and testing article now show both outcomes. The golden tree grows from 55
+  artefacts to 71 with it.
 - **The Python package ships the example theories**, with `example_path()` and
   `example_names()`, mirrored by `tf_example_path()` and `tf_example_names()` in R. The
   README's R quick start now uses a shipped fixture, so it works straight after

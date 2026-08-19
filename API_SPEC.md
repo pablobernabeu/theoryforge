@@ -147,7 +147,7 @@ dag {
   <from> -> <to>
 }
 ```
-The causal subgraph is emitted exactly as written and is not checked for acyclicity, so a theory with a feedback loop (the shipped panic-network example has one) produces a cyclic graph inside a `dag` block, which dagitty will not accept as a DAG. The `causal_testability` checklist item likewise asserts only that at least one causal relation is present. The view is a faithful export rather than a verdict, and both statements are deliberate: `implications` (§27) is where the same subgraph is checked for acyclicity and read for what it entails, and it refuses the two panic-network fixtures for the cycle this view prints without comment.
+The causal subgraph is emitted exactly as written and is not checked for acyclicity, so a theory with a feedback loop (the shipped panic-network example has one) produces a cyclic graph inside a `dag` block, which dagitty will not accept as a DAG. The `causal_testability` checklist item likewise asserts only that at least one causal relation is present. The view is a faithful export rather than a verdict, and both statements are deliberate: `implications` (§27) is where the same subgraph is checked for acyclicity and read for what it entails, and it refuses the two panic-network fixtures for the cycle this view prints without comment. The shipped `modality-switching` fixture is acyclic, and is the example that gets as far as a basis set.
 
 ## 6. Tokenisation & Jaccard (for the redundancy screen)
 
@@ -500,4 +500,4 @@ Reads every proposition whose `relation ∈ {causes, increases, decreases}` (the
 
 A theory with no causal propositions is not an error. Its vertex set is empty, `n_edges` and `n_implications` are 0, and `implications` is the empty list.
 
-No golden artefact is added. Two of the three shipped fixtures have a cyclic causal subgraph and are refused, and the third has no causal relations at all, so a per-fixture golden would carry one empty record and nothing else; the twin test suites assert the same values on the same constructed theories instead. The count of `expected/` is unchanged.
+No golden artefact is added. Of the four shipped theory fixtures, the two panic-network ones have a cyclic causal subgraph and are refused, `weak-theory` has no causal relations at all, and `modality-switching` is the acyclic case: five constructs, four causal propositions and a basis set of six. The twin test suites assert that set literally, statement for statement, in both languages, so the comparison a golden would make is made there instead. The count of `expected/` is unchanged by this function.

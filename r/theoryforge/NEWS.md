@@ -16,6 +16,21 @@
   `dagitty` and `ggm`, which sit in Suggests for that purpose and whose tests
   skip when they are absent.
 
+* A fourth example theory ships with the package,
+  `modality-switching.theory.yaml`, and it is the worked example for
+  `tf_implications()`. Both panic-network fixtures are cyclic, so until now no
+  bundled theory showed what the function actually returns. This one states the
+  modality-switching effect in grounded conceptual processing: sensorimotor
+  experience with a concept drives activation of the modality-specific
+  perceptual system, which raises the cost of switching modality between
+  consecutive trials and eases conceptual access, as lexical familiarity with
+  the word form does too. Five constructs and four causal propositions give an
+  acyclic graph with a fork and a collider in it, and a basis set of six
+  conditional independencies, confirmed against `dagitty` and `ggm`. The panic
+  fixtures stay as they are: a feedback loop is legitimate theory, and the
+  refusal is worth seeing as well, so the Developing and testing article now
+  shows both outcomes.
+
 * Every vignette now turns console colour off and fixes the console width while
   it renders. pkgdown passes the calling terminal's colour support into its build
   subprocess, and the Get started vignette's failure path therefore published the

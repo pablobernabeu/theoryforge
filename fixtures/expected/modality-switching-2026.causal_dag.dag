@@ -1,0 +1,6 @@
+dag {
+  c_sensorimotor_experience -> c_modality_activation
+  c_modality_activation -> c_switch_cost
+  c_modality_activation -> c_conceptual_access
+  c_lexical_familiarity -> c_conceptual_access
+}

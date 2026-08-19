@@ -1,0 +1,34 @@
+digraph context {
+  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+  "theory" [shape=ellipse, label="Modality switching\nin grounded\nconceptual\nprocessing", fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
+  "c_sensorimotor_experience" [label="Sensorimotor\nexperience with a\nconcept", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theory" -> "c_sensorimotor_experience";
+  "c_modality_activation" [label="Modality-specific\nperceptual\nactivation", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theory" -> "c_modality_activation";
+  "c_switch_cost" [label="Cost of switching\nmodality between\nconsecutive trials", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theory" -> "c_switch_cost";
+  "c_conceptual_access" [label="Ease of conceptual\naccess", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theory" -> "c_conceptual_access";
+  "c_lexical_familiarity" [label="Lexical\nfamiliarity with\nthe word form", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theory" -> "c_lexical_familiarity";
+  "scope1" [shape=note, style="filled", label="adult native\nspeakers", fillcolor="#FBF7EA", color="#B49B55"];
+  "scope1" -> "theory" [style=dotted, label="holds within"];
+  "scope2" [shape=note, style="filled", label="concrete nouns and\ntheir properties", fillcolor="#FBF7EA", color="#B49B55"];
+  "scope2" -> "theory" [style=dotted, label="holds within"];
+  "scope3" [shape=note, style="filled", label="no sensory\nimpairment in the\nmodalities tested", fillcolor="#FBF7EA", color="#B49B55"];
+  "scope3" -> "theory" [style=dotted, label="holds within"];
+  "scope4" [shape=note, style="filled", label="visual word\npresentation", fillcolor="#FBF7EA", color="#B49B55"];
+  "scope4" -> "theory" [style=dotted, label="holds within"];
+  "scope5" [shape=note, style="filled", label="consecutive trials\nwithin one block", fillcolor="#FBF7EA", color="#B49B55"];
+  "scope5" -> "theory" [style=dotted, label="holds within"];
+  "scope6" [shape=note, style="filled", label="no interpolated\ntask between\ntrials", fillcolor="#FBF7EA", color="#B49B55"];
+  "scope6" -> "theory" [style=dotted, label="holds within"];
+  "scope7" [shape=note, style="filled", label="single words\nwithout sentence\ncontext", fillcolor="#FBF7EA", color="#B49B55"];
+  "scope7" -> "theory" [style=dotted, label="holds within"];
+  "alt_grounding_by_interaction" [style="rounded,filled,dashed", label="Grounding by\ninteraction", fillcolor="#F1F1F1", color="#8A8A8A"];
+  "theory" -> "alt_grounding_by_interaction" [style=dashed, label="contrasts with"];
+  "alt_symbol_interdependency" [style="rounded,filled,dashed", label="Symbol\ninterdependency", fillcolor="#F1F1F1", color="#8A8A8A"];
+  "theory" -> "alt_symbol_interdependency" [style=dashed, label="contrasts with"];
+}

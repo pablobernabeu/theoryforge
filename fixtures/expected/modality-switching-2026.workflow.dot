@@ -1,0 +1,53 @@
+digraph workflow {
+  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+  subgraph cluster_build {
+    label="building";
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "c_sensorimotor_experience" [label="Sensorimotor\nexperience with\na concept", fillcolor="#E4F1F1", color="#1E7B7B"];
+    "c_modality_activation" [label="Modality-specific\nperceptual\nactivation", fillcolor="#E4F1F1", color="#1E7B7B"];
+    "c_switch_cost" [label="Cost of\nswitching\nmodality between\nconsecutive\ntrials", fillcolor="#E4F1F1", color="#1E7B7B"];
+    "c_conceptual_access" [label="Ease of\nconceptual\naccess", fillcolor="#E4F1F1", color="#1E7B7B"];
+    "c_lexical_familiarity" [label="Lexical\nfamiliarity with\nthe word form", fillcolor="#E4F1F1", color="#1E7B7B"];
+  }
+  subgraph cluster_relate {
+    label="propositions";
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "prop_p1" [label="p1\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
+    "prop_p2" [label="p2\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
+    "prop_p3" [label="p3\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
+    "prop_p4" [label="p4\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
+  }
+  subgraph cluster_predict {
+    label="predictions";
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "pred_pred1" [label="pred1\ndirectional", fillcolor="#E7EDF5", color="#33567A"];
+    "pred_pred2" [label="pred2\ninterval", fillcolor="#E7EDF5", color="#33567A"];
+    "pred_pred3" [label="pred3\npoint", fillcolor="#E7EDF5", color="#33567A"];
+    "pred_pred4" [label="pred4\ninterval", fillcolor="#E7EDF5", color="#33567A"];
+  }
+  subgraph cluster_test {
+    label="testing";
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+  }
+  "c_sensorimotor_experience" -> "prop_p1";
+  "c_modality_activation" -> "prop_p2";
+  "c_modality_activation" -> "prop_p3";
+  "c_lexical_familiarity" -> "prop_p4";
+  "prop_p1" -> "pred_pred1";
+  "prop_p2" -> "pred_pred1";
+  "prop_p1" -> "pred_pred2";
+  "prop_p2" -> "pred_pred2";
+  "prop_p3" -> "pred_pred3";
+  "prop_p1" -> "pred_pred4";
+  "prop_p4" -> "pred_pred4";
+}

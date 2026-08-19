@@ -18,3 +18,8 @@ def panic_path() -> Path:
 @pytest.fixture
 def weak_path() -> Path:
     return FIXTURES / "weak-theory.theory.yaml"
+
+
+@pytest.fixture
+def modality_path() -> Path:
+    return FIXTURES / "modality-switching.theory.yaml"

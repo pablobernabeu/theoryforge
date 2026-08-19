@@ -23,6 +23,7 @@ test_that("tf_validate(full = TRUE) accepts a consistent theory and the fixtures
   expect_true(tf_validate(consistent_theory(), full = TRUE))
   expect_true(tf_validate(tf_read(tf_fixture_path("panic-network.theory.yaml")), full = TRUE))
   expect_true(tf_validate(tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml")), full = TRUE))
+  expect_true(tf_validate(tf_read(tf_fixture_path("modality-switching.theory.yaml")), full = TRUE))
   expect_true(tf_validate(tf_read(tf_fixture_path("weak-theory.theory.yaml")), full = TRUE))
 })
 

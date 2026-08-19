@@ -65,7 +65,7 @@ preregistration. `simulate` runs the construct network as a deterministic dynami
 `render_report` wraps the dossier in a Quarto report, `embedding_redundancy` adds an opt-in,
 embedder-dependent screen, and `osf_push` deposits to OSF, dry-run by default.
 
-Cross-language parity is enforced over 55 golden artefacts. The diagrams, preregistration,
+Cross-language parity is enforced over 71 golden artefacts. The diagrams, preregistration,
 lavaan and dossier outputs are byte-identical, and the rigour, severity, appraisal, litmap,
 landscape, simulate and new-evidence-DOI JSON outputs are semantically equal. Running
 `python scripts/parity_check.py` reports `PARITY OK`, and the pytest and testthat suites are
@@ -115,13 +115,19 @@ t <- tf_read(system.file("fixtures", "panic-network.theory.yaml", package = "the
 cat(tf_report(t))
 ```
 
-The Python wheel does not carry them, so the line below reads the copy in
-[`fixtures/`](fixtures/) and wants a clone of this repository, or a theory file of your own in
-its place:
+The Python wheel ships the same files, reached through `example_path()`:
 
 ```bash
-python -c "import theoryforge as tf; t = tf.read('fixtures/panic-network.theory.yaml'); print(t.report())"
+python -c "import theoryforge as tf; t = tf.read(tf.example_path('panic-network.theory.yaml')); print(t.report())"
 ```
+
+Four example theories are bundled. Two are versions of a network theory of panic disorder,
+whose feedback loop between arousal and perceived threat makes its causal graph cyclic, so
+`implications` refuses it. One is a theory of modality switching in grounded conceptual
+processing, acyclic, from which `implications` derives a basis set of six conditional
+independencies. The last is a deliberately weak draft, kept as a worked example of what the
+rigour checklist catches. `tf_example_names()` lists them in R and `example_names()` in
+Python, and the originals sit in [`fixtures/`](fixtures/).
 
 ## Develop and test
 

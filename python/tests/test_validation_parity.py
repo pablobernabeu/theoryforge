@@ -30,6 +30,16 @@ def test_full_validation_passes_on_consistent_theory():
     assert _consistent().validate(full=True) is True
 
 
+def test_full_validation_passes_on_every_shipped_theory(fixtures_dir):
+    # The R suite asserts the same over the same files. Reading the directory
+    # rather than a list means a new example cannot be added without being held
+    # to referential integrity.
+    paths = sorted(fixtures_dir.glob("*.theory.yaml"))
+    assert len(paths) == 4
+    for path in paths:
+        assert tf.read(path).validate(full=True) is True, path.name
+
+
 def test_full_validation_flags_dangling_and_duplicate_references():
     t = Theory({
         "schema_version": "1.0", "id": "b", "title": "B", "maturity": "building",

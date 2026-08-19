@@ -123,6 +123,105 @@ test_that("tf_implications handles the degenerate graphs", {
   expect_equal(res$n_implications, 0L)
 })
 
+test_that("tf_implications returns the basis set of the shipped acyclic example", {
+  # The worked example for this function: five constructs, four causal
+  # propositions, a fork at modality activation and a collider at conceptual
+  # access. Asserted literally, so a change to the derivation or to the file is
+  # caught rather than absorbed.
+  theory <- tf_read(tf_fixture_path("modality-switching.theory.yaml"))
+  expect_true(tf_validate(theory, full = TRUE))
+  res <- tf_implications(theory)
+  expect_equal(res$theory_id, "modality-switching-2026")
+  expect_true(res$acyclic)
+  expect_equal(unlist(res$constructs),
+               c("c_sensorimotor_experience", "c_modality_activation", "c_switch_cost",
+                 "c_conceptual_access", "c_lexical_familiarity"))
+  expect_equal(res$n_edges, 4L)
+  # k(k-1)/2 - m with k = 5 and m = 4
+  expect_equal(res$n_implications, 6L)
+  expect_equal(vapply(res$implications, function(i) i$a, character(1)),
+               c("c_sensorimotor_experience", "c_sensorimotor_experience",
+                 "c_sensorimotor_experience", "c_modality_activation",
+                 "c_switch_cost", "c_switch_cost"))
+  expect_equal(vapply(res$implications, function(i) i$b, character(1)),
+               c("c_switch_cost", "c_conceptual_access", "c_lexical_familiarity",
+                 "c_lexical_familiarity", "c_conceptual_access", "c_lexical_familiarity"))
+  expect_equal(lapply(res$implications, function(i) unlist(i$given)),
+               list("c_modality_activation",
+                    c("c_modality_activation", "c_lexical_familiarity"),
+                    NULL,
+                    "c_sensorimotor_experience",
+                    c("c_modality_activation", "c_lexical_familiarity"),
+                    "c_modality_activation"))
+  expect_equal(vapply(res$implications, function(i) i$statement, character(1)),
+               c("c_sensorimotor_experience _||_ c_switch_cost | c_modality_activation",
+                 paste("c_sensorimotor_experience _||_ c_conceptual_access |",
+                       "c_modality_activation, c_lexical_familiarity"),
+                 "c_sensorimotor_experience _||_ c_lexical_familiarity",
+                 paste("c_modality_activation _||_ c_lexical_familiarity |",
+                       "c_sensorimotor_experience"),
+                 paste("c_switch_cost _||_ c_conceptual_access |",
+                       "c_modality_activation, c_lexical_familiarity"),
+                 "c_switch_cost _||_ c_lexical_familiarity | c_modality_activation"))
+})
+
+test_that("the shipped acyclic example carries both a fork and a collider", {
+  # What makes the example instructive rather than a straight chain. The two
+  # children of the fork are independent given their shared parent, and the two
+  # parents of the collider are independent with nothing held fixed, which is
+  # the pair a study would look at to distinguish this account from one that
+  # ties word statistics to perceptual experience.
+  res <- tf_implications(tf_read(tf_fixture_path("modality-switching.theory.yaml")))
+  given_for <- function(a, b) {
+    for (i in res$implications) if (i$a == a && i$b == b) return(unlist(i$given))
+    stop("no implication for that pair")
+  }
+  expect_equal(given_for("c_switch_cost", "c_conceptual_access"),
+               c("c_modality_activation", "c_lexical_familiarity"))
+  expect_null(given_for("c_sensorimotor_experience", "c_lexical_familiarity"))
+})
+
+test_that("dagitty and ggm confirm the shipped acyclic example's basis set", {
+  skip_if_not_installed("dagitty")
+  skip_if_not_installed("ggm")
+  theory <- tf_read(tf_fixture_path("modality-switching.theory.yaml"))
+  res <- tf_implications(theory)
+  causal <- c("causes", "increases", "decreases")
+  from <- character(0)
+  to <- character(0)
+  for (p in theory$propositions) {
+    if (p$relation %in% causal) {
+      from <- c(from, p$from)
+      to <- c(to, p$to)
+    }
+  }
+  g <- dagitty::dagitty(paste0("dag { ",
+                               paste(paste(from, "->", to), collapse = "; "), " }"))
+  expect_true(dagitty::isAcyclic(g))
+  for (x in res$implications) {
+    z <- unlist(x$given)
+    if (is.null(z)) z <- character(0)
+    expect_true(dagitty::dseparated(g, x$a, x$b, z))
+  }
+  # ggm::basiSet implements the same d-separation basis, so the two agree
+  # statement for statement rather than only on the pairs covered.
+  key <- function(a, b, given) {
+    pair <- sort(c(a, b))
+    paste0(pair[[1]], "~", pair[[2]], "~", paste(sort(given), collapse = ","))
+  }
+  used <- unlist(res$constructs)
+  amat <- matrix(0L, length(used), length(used), dimnames = list(used, used))
+  for (e in seq_along(from)) amat[from[[e]], to[[e]]] <- 1L
+  theirs <- sort(vapply(ggm::basiSet(amat),
+                        function(v) key(v[[1]], v[[2]], v[-(1:2)]), character(1)))
+  ours <- sort(vapply(res$implications, function(x) {
+    z <- unlist(x$given)
+    if (is.null(z)) z <- character(0)
+    key(x$a, x$b, z)
+  }, character(1)))
+  expect_equal(ours, theirs)
+})
+
 test_that("tf_implications refuses a cyclic causal graph, naming the cycle", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   expect_error(

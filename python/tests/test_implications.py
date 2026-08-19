@@ -130,6 +130,59 @@ def test_degenerate_graphs():
     assert res["n_implications"] == 0
 
 
+def test_basis_set_of_the_shipped_acyclic_example(modality_path):
+    # The worked example for this function: five constructs, four causal
+    # propositions, a fork at modality activation and a collider at conceptual
+    # access. Asserted literally, so a change to the derivation or to the file
+    # is caught rather than absorbed.
+    t = tf.read(modality_path)
+    assert t.validate(full=True) is True
+    res = t.implications()
+    assert res["theory_id"] == "modality-switching-2026"
+    assert res["acyclic"] is True
+    assert res["constructs"] == [
+        "c_sensorimotor_experience", "c_modality_activation", "c_switch_cost",
+        "c_conceptual_access", "c_lexical_familiarity"]
+    assert res["n_edges"] == 4
+    # k(k-1)/2 - m with k = 5 and m = 4
+    assert res["n_implications"] == 6
+    assert res["implications"] == [
+        {"a": "c_sensorimotor_experience", "b": "c_switch_cost",
+         "given": ["c_modality_activation"],
+         "statement": "c_sensorimotor_experience _||_ c_switch_cost | c_modality_activation"},
+        {"a": "c_sensorimotor_experience", "b": "c_conceptual_access",
+         "given": ["c_modality_activation", "c_lexical_familiarity"],
+         "statement": "c_sensorimotor_experience _||_ c_conceptual_access | "
+                      "c_modality_activation, c_lexical_familiarity"},
+        {"a": "c_sensorimotor_experience", "b": "c_lexical_familiarity",
+         "given": [],
+         "statement": "c_sensorimotor_experience _||_ c_lexical_familiarity"},
+        {"a": "c_modality_activation", "b": "c_lexical_familiarity",
+         "given": ["c_sensorimotor_experience"],
+         "statement": "c_modality_activation _||_ c_lexical_familiarity | c_sensorimotor_experience"},
+        {"a": "c_switch_cost", "b": "c_conceptual_access",
+         "given": ["c_modality_activation", "c_lexical_familiarity"],
+         "statement": "c_switch_cost _||_ c_conceptual_access | "
+                      "c_modality_activation, c_lexical_familiarity"},
+        {"a": "c_switch_cost", "b": "c_lexical_familiarity",
+         "given": ["c_modality_activation"],
+         "statement": "c_switch_cost _||_ c_lexical_familiarity | c_modality_activation"},
+    ]
+
+
+def test_shipped_acyclic_example_carries_a_fork_and_a_collider(modality_path):
+    # What makes the example instructive rather than a straight chain. The two
+    # children of the fork are independent given their shared parent, and the
+    # two parents of the collider are independent with nothing held fixed, which
+    # is the pair a study would look at to distinguish this account from one
+    # that ties word statistics to perceptual experience.
+    res = tf.read(modality_path).implications()
+    by_pair = {(i["a"], i["b"]): i["given"] for i in res["implications"]}
+    assert by_pair[("c_switch_cost", "c_conceptual_access")] == [
+        "c_modality_activation", "c_lexical_familiarity"]
+    assert by_pair[("c_sensorimotor_experience", "c_lexical_familiarity")] == []
+
+
 def test_refuses_a_cyclic_causal_graph_naming_the_cycle(panic_path):
     with pytest.raises(ValueError) as exc:
         tf.read(panic_path).implications()
