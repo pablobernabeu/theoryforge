@@ -5,13 +5,15 @@ This is a new submission of theoryforge 0.5.0.
 ## Test environments
 
 * Local: Windows 11, R 4.6.1 (R CMD check --as-cran, 2026-07-23)
-* GitHub Actions: ubuntu-latest and windows-latest, each on R release and
-  R devel (R CMD check --as-cran)
+* GitHub Actions, six configurations of R CMD check --as-cran: macOS, Windows
+  and Ubuntu on R release, Windows and Ubuntu on R devel, and Ubuntu on
+  oldrel-1
+* GitHub Actions: the test suite on R 4.1, the minimum declared in Depends
 
 ## R CMD check results
 
-`R CMD check --as-cran` returned 0 errors, 0 warnings, and 1 note on all of the
-above environments:
+`R CMD check --as-cran` returned 0 errors, 0 warnings and 1 note in every
+environment above:
 
 ```
 * checking CRAN incoming feasibility ... NOTE

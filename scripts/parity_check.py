@@ -37,7 +37,7 @@ def emit_r(out_dir: Path) -> None:
         ) from None
     if res.returncode != 0:
         raise SystemExit("R emitter failed:\n" + res.stdout + "\n" + res.stderr)
-    # Echo which R engine answered. A parity verdict is only as meaningful as the
+    # Echo which R engine answered. A parity verdict is worth no more than the
     # thing it was taken over, and the emitter reports on the working tree or on
     # an installed copy depending on what is available, so it says which.
     if res.stdout.strip():

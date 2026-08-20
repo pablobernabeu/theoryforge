@@ -99,7 +99,7 @@
   }
   async function copyText(t) {
     try { await navigator.clipboard.writeText(t); toast("Copied to clipboard"); }
-    catch { toast("Copy failed — select and copy manually"); }
+    catch { toast("Copy failed. Select the text and copy it manually."); }
   }
   let toastTimer;
   function toast(msg) {
@@ -490,12 +490,12 @@
       const v = raw;
       if (v.ok) {
         sections.push({ kind: "node", node: wrapSection("Validation", null,
-          el("div", { class: "valid-ok", role: "status" }, "✓ Valid — the theory passes structural validation.")) });
+          el("div", { class: "valid-ok", role: "status" }, "✓ Valid. The theory passes structural validation.")) });
       } else {
         const errs = String(v.message || "invalid theory object").replace(/^invalid theory object:\s*/i, "").split(/;\s*/).filter(Boolean);
         sections.push({ kind: "node", node: wrapSection("Validation", null,
           el("div", { class: "error", role: "alert" }, [
-            el("div", { class: "et", text: "Invalid theory — " + errs.length + " problem" + (errs.length === 1 ? "" : "s") }),
+            el("div", { class: "et", text: "Invalid theory: " + errs.length + " problem" + (errs.length === 1 ? "" : "s") }),
             el("ul", { class: "err-list" }, errs.map((e) => el("li", null, e))),
           ])) });
       }
@@ -524,7 +524,7 @@
         [{ key: "a", label: "construct a" }, { key: "b", label: "construct b" },
          { key: "similarity", label: "Jaccard", num: true }, { key: "flag", label: "flag", pill: true }],
         rows, { extra: [jsonBtn(theoryId + ".redundancy.json", rows)] }));
-      else sections.push({ kind: "node", node: wrapSection("Redundancy screen", null, el("p", { class: "note", text: "Fewer than two constructs — no pairs to compare." })) });
+      else sections.push({ kind: "node", node: wrapSection("Redundancy screen", null, el("p", { class: "note", text: "Fewer than two constructs, so there are no pairs to compare." })) });
     } else if (opId === "diagram") {
       const ir = raw.ir, type = params.type;
       const isSvg = /^\s*<svg/.test(ir);
@@ -588,7 +588,7 @@
       localStorage.setItem(stateKey(), JSON.stringify({
         opId: STATE.opId, params: STATE.params, input: STATE.input, ran: !!STATE.ran,
       }));
-    } catch (e) { /* quota or private mode — non-fatal */ }
+    } catch (e) { /* quota exceeded, or private mode; not worth failing over */ }
   }
   function loadSaved() { try { return JSON.parse(localStorage.getItem(stateKey()) || "null"); } catch (e) { return null; } }
   async function fetchSource(path) {

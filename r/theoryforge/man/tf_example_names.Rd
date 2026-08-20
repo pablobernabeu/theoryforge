@@ -2,15 +2,18 @@
 % Please edit documentation in R/examples.R
 \name{tf_example_names}
 \alias{tf_example_names}
-\title{Names of the packaged example theories}
+\title{Names of the packaged example files}
 \usage{
 tf_example_names()
 }
 \value{
-A sorted character vector of file names.
+A sorted character vector of the \code{.yaml} file names. The Python
+twin's \code{example_names()} applies the same extension filter, so the two
+list the same set.
 }
 \description{
-Names of the packaged example theories
+The bundled set is four example theories and one literature corpus,
+\code{panic-corpus.yaml}, which \code{\link[=tf_read_corpus]{tf_read_corpus()}} reads.
 }
 \examples{
 tf_example_names()

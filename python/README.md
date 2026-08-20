@@ -20,8 +20,9 @@ The rendered documentation site, with the API reference and worked guides, is at
 
 The [interactive web app](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this
 package in your browser via [Pyodide](https://pyodide.org/), with nothing to install. You can
-load a theory and run any operation there, then export the visualisation (SVG/PNG) together
-with the Python code that reproduces it.
+load a theory and run the operations it offers, from the rigour checklist through to the
+literature map, then export the visualisation (SVG/PNG) together with the Python code that
+reproduces it.
 
 ## Installation
 

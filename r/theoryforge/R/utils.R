@@ -20,6 +20,9 @@ NULL
   if (is.character(v) && length(v) == 1L) {
     return(!is.na(v) && nzchar(trimws(v)))
   }
+  # NULL is excluded twice over: length(NULL) is 0, and is.atomic(NULL) is FALSE
+  # from R 4.4 (it was TRUE up to 4.3, and DESCRIPTION declares R >= 4.1). The
+  # line therefore reads a missing key as an absent array on every supported R.
   (is.atomic(v) && !is.null(v)) && length(v) >= 1L
 }
 
@@ -41,6 +44,11 @@ NULL
 }
 
 # Get a scalar string field, returning "" when absent/NULL (mirrors `str(x or "")`).
+# A reader for fields the schema types as a scalar, and deliberately lenient: a
+# YAML sequence where a scalar belongs is read as its first element, so an id or a
+# label still prints somewhere. Refusing such a file is tf_validate()'s job. Do not
+# add validation here, or the reader and the validator would disagree about the
+# same document.
 .tf_str <- function(d, key) {
   v <- .tf_get(d, key, "")
   if (is.null(v) || length(v) == 0L) return("")
@@ -67,6 +75,10 @@ NULL
     on.exit(options(old), add = TRUE)
     con <- base::url(url, open = "rb")
     on.exit(close(con), add = TRUE)
+    # 100 MB is a ceiling on what a mistaken or hostile URL can pull into memory
+    # in a session. It is far above any OpenAlex page (200 records at most), so
+    # a truncated read here means something other than the documented API
+    # answered, and the JSON parse that follows will say so.
     body <- readBin(con, "raw", n = 1e8L)
   }
   text <- rawToChar(body)
@@ -101,7 +113,7 @@ NULL
 # Deterministic, cross-platform half-away-from-zero rounding (API_SPEC.md
 # section 3). Mirrors the Python `rnd` byte-for-byte. The `+1e-6` bias is far
 # larger than cross-platform ULP jitter yet far smaller than the rounding grid,
-# so results are identical on every platform. Vectorized in x (sign/floor/abs).
+# so results are identical on every platform. Vectorised in x (sign/floor/abs).
 # Do not replace with base round(), which is banker's rounding and diverges
 # across platforms at exact decimal half-boundaries.
 .tf_rnd <- function(x, n) {

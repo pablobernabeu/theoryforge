@@ -17,8 +17,8 @@ guarantee).
 Run the package in your browser, with no installation, using the
 [interactive web app](https://pablobernabeu.github.io/theoryforge/apps/r/). It executes the real
 package client-side via [webR](https://docs.r-wasm.org/webr/latest/), so you can load a theory
-and run any operation there, then export the visualisation (SVG/PNG) together with the R code
-that reproduces it.
+and run the operations it offers, from the rigour checklist through to the literature map,
+then export the visualisation (SVG/PNG) together with the R code that reproduces it.
 
 ## Installation
 
@@ -95,6 +95,8 @@ describes the development setup and the conventions the package follows, and eve
 part is asked to honour the [Code of
 Conduct](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CODE_OF_CONDUCT.md).
 
-Continuous integration runs `R CMD check --as-cran` on Ubuntu and Windows, against both the
-release and the development version of R, alongside the Python suite and the cross-language
-parity check, so a change that breaks the twin is caught on the same push.
+Continuous integration runs `R CMD check --as-cran` in six configurations, covering macOS,
+Windows and Ubuntu on the released R, Windows and Ubuntu on R-devel and Ubuntu on oldrel-1,
+with a further job running the suite on the declared R 4.1 minimum. The Python suite and the
+cross-language parity check run alongside them, so a change that breaks the twin is caught on
+the same push.

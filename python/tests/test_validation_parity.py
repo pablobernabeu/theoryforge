@@ -169,3 +169,45 @@ def test_osf_push_base_url_override():
 def test_render_report_falls_back_to_id_on_empty_title(tmp_path):
     out = tf.new_theory("the-id", "").render_report(tmp_path / "r.qmd")
     assert "theoryforge report: the-id" in open(out, encoding="utf-8").read()
+
+
+def test_mistyped_enum_values_are_refused_not_crashed_on():
+    # A YAML sequence or mapping where the schema wants a scalar enum used to
+    # reach `x in <set>` and raise an unhashable-type TypeError, abandoning the
+    # errors already collected. R reported them, so the same file failed
+    # differently in the two engines. Both now give the contract's message.
+    for value in (["draft", "building"], ["draft"], {"stage": "draft"}):
+        t = Theory({"schema_version": "1.0", "id": "x", "title": "T", "maturity": value})
+        with pytest.raises(ValueError) as exc:
+            t.validate()
+        assert str(exc.value) == (
+            "invalid theory object: missing/empty required field: maturity; "
+            "maturity must be one of building, developing, draft, testing"
+        )
+
+    # theory_form is the case where R was the lenient one: `%in%` unboxed the
+    # one-element list and let it through.
+    t = Theory({"schema_version": "1.0", "id": "x", "title": "T",
+                "maturity": "draft", "theory_form": ["network"]})
+    with pytest.raises(ValueError) as exc:
+        t.validate()
+    assert str(exc.value) == (
+        "invalid theory object: theory_form must be one of "
+        "network, process, typology, variance"
+    )
+
+
+def test_collection_entries_that_are_not_mappings_are_refused():
+    # `constructs: [arousal, threat]` is a natural mistake: a sequence of
+    # scalars where the schema wants a sequence of mappings. Each entry has no
+    # fields, so every required one is reported missing, as in R.
+    t = Theory({"schema_version": "1.0", "id": "x", "title": "T",
+                "maturity": "draft", "constructs": ["arousal", "threat"]})
+    with pytest.raises(ValueError) as exc:
+        t.validate(full=True)
+    assert str(exc.value) == (
+        "invalid theory object: construct[0] missing/empty id; "
+        "construct[0] missing/empty label; construct[0] missing/empty definition; "
+        "construct[1] missing/empty id; construct[1] missing/empty label; "
+        "construct[1] missing/empty definition"
+    )

@@ -205,9 +205,9 @@ def check(T) -> dict:
             "citation": spec_item["citation"],
         })
 
-    # Explicit nulls read as "" (the R twin's .tf_str reading); dict.get's
+    # Explicit nulls read as "" (the R twin's .tf_str reading). dict.get's
     # default alone covers only absent keys, and the report is compared
-    # semantically across the twins, so a null here must not surface as null.
+    # semantically across the twins, so a null here must not reach the output.
     maturity = T.get("maturity") or ""
     if maturity == "draft":
         gate = "advisory"

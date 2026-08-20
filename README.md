@@ -38,9 +38,9 @@ under [`apps/`](apps/).
 
 Both packages cover the full theory lifecycle and offer the same operations. The names used
 below are the Python ones, and the R package prefixes each with `tf_`, so `litmap()` there is
-`tf_litmap()`. The two differ in how the operations are reached rather than in what they do:
-where Python calls a method on a theory object, as in `theory.report()`, R calls a function on
-it, as in `tf_report(theory)`.
+`tf_litmap()`. What differs between them is only how an operation is reached: where Python
+calls a method on a theory object, as in `theory.report()`, R calls a function on it, as in
+`tf_report(theory)`.
 
 The deterministic core comprises theory-object I/O and validation against the shared schema,
 the 12-item rigour checklist, ten diagram exporters and a lexical redundancy screen. The three
@@ -125,9 +125,10 @@ Four example theories are bundled. Two are versions of a network theory of panic
 whose feedback loop between arousal and perceived threat makes its causal graph cyclic, so
 `implications` refuses it. One is a theory of modality switching in grounded conceptual
 processing, acyclic, from which `implications` derives a basis set of six conditional
-independencies. The last is a deliberately weak draft, kept as a worked example of what the
-rigour checklist catches. `tf_example_names()` lists them in R and `example_names()` in
-Python, and the originals sit in [`fixtures/`](fixtures/).
+independencies. The last is a deliberately underspecified theory, kept as a worked example of
+what the rigour checklist catches. `tf_example_names()` in R and `example_names()` in Python
+list all four, together with the demonstration literature corpus, and the originals sit in
+[`fixtures/`](fixtures/).
 
 ## Develop and test
 

@@ -2,7 +2,7 @@
  *
  * Boots webR, installs jsonlite + yaml, vendors the live R package source into
  * the in-browser filesystem, sources it, and pre-seeds the schema/checklist
- * cache so the real package functions run unmodified — entirely client-side.
+ * cache, so the real package functions run unmodified and entirely client-side.
  */
 import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
 

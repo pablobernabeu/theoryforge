@@ -41,7 +41,7 @@ import theoryforge as tf
 ## BUILDING
 
 BUILDING assembles a theory from scratch. `tf.new_theory()` returns an empty
-`Theory`, and the `add_*` methods append constructs, propositions, and
+`Theory`, and the `add_*` methods append constructs, propositions and
 predictions. Each method returns the same object, so calls chain. Every
 addition is recorded in a provenance log, which gives a step-by-step account
 of how the theory was assembled.
@@ -156,7 +156,7 @@ none of the predictions it claims to protect has a passing test outcome.
 
 TESTING prepares a theory for empirical evaluation. It scores how risky each
 prediction is, derives what the causal graph forbids in data, exports a
-preregistration document, and assembles a reviewer-facing audit bundle.
+preregistration document and assembles a reviewer-facing audit bundle.
 
 ### Severity
 
@@ -213,9 +213,9 @@ except ValueError as exc:
     print(exc)
 ```
 
-The refusal names the cycle it found rather than leaving it to be hunted. For a
-theory that genuinely holds a feedback loop, this is the point at which the loop
-has to be modelled over time rather than collapsed into a single graph.
+The refusal names the cycle it found, so nobody has to hunt for it. Where a
+theory does hold a feedback loop, this is the point at which the loop has to be
+modelled over time, since a single graph cannot carry it.
 
 A second shipped fixture has an acyclic causal graph, a theory of modality
 switching in grounded conceptual processing. Sensorimotor experience with a
@@ -302,11 +302,11 @@ report_path = t.render_report("panic-demo.qmd")
 ```
 
 `osf_push()` deposits the audit dossier on an Open Science Framework node, as
-`<id>.dossier.md`. It is the dossier that goes up rather than the report just
-written, since the dossier is the machine-checkable bundle a reviewer needs. It
-defaults to `dry_run=True`, which assembles the request and returns it without
-sending anything, so the planned deposit can be inspected offline and without a
-token.
+`<id>.dossier.md`. It defaults to `dry_run=True`, which assembles the request and
+returns it without sending anything, so the planned deposit can be inspected
+offline and without a token. What goes up is the dossier, since that is the
+machine-checkable bundle a reviewer needs. The report written just above stays on
+your own machine.
 
 ```python exec="1" source="material-block" result="json" session="workflow-modes"
 import json
@@ -746,7 +746,7 @@ print('<div class="tf-figure">' + t.diagram("rigour") + "</div>")
 ```
 
 The `severity` view draws one bar per prediction, scaled by its computed severity,
-so the riskier tests stand out at a glance.
+so the riskier tests stand out.
 
 ```python exec="1" html="1" session="workflow-modes"
 print('<div class="tf-figure">' + t.diagram("severity") + "</div>")
@@ -757,11 +757,10 @@ keeping only the items that still fail or warn, and it orders that worklist the
 way the work should be done. Whatever gates the theory comes first, heaviest
 check first, and the advisory items follow. Each step carries its number, the
 criterion it is measured against and whether missing it blocks the gate or is
-merely advisory, so the figure says what to do next rather than only what went
-wrong. The hub names the theory and its current standing. The panic network
-passes every check, so its roadmap reduces to that hub and an `all checks pass`
-node, and the deliberately weak fixture shipped alongside it shows the worklist
-in full.
+merely advisory, so the figure amounts to a plan of work. The hub names the
+theory and its current standing. The panic network passes every check, so its
+roadmap reduces to that hub and an `all checks pass` node, and the deliberately
+weak theory shipped alongside it shows the worklist in full.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
 print(

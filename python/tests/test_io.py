@@ -62,6 +62,11 @@ def test_packaged_examples_are_reachable_and_match_the_repo_copies(fixtures_dir)
         packaged = tf.example_path(name)
         assert packaged.read_bytes() == (fixtures_dir / name).read_bytes(), name
     assert tf.read(tf.example_path("panic-network.theory.yaml")).id == "panic-network-2026"
+    # The R twin filters on the extension, so anything else that lands in the
+    # directory (a __pycache__ left by a local build, say) must not appear here
+    # either, or the two engines would advertise different example sets.
+    assert all(n.endswith(".yaml") for n in names), names
+    assert names == sorted(names)
 
 
 def test_example_path_rejects_an_unknown_name():

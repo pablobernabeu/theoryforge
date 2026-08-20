@@ -65,8 +65,8 @@ lm$keyword_cooccurrence[[1]]        # first kept co-occurrence edge
 ```
 
 The thematic components are the connected groups of co-occurring keywords. The
-fixture is constructed so that the threshold-two graph separates cleanly into
-four themes.
+fixture is constructed so that the threshold-two graph breaks into four
+entirely separate themes.
 
 ```{r themes}
 for (theme in lm$themes) {
@@ -333,15 +333,15 @@ free and keyless, so the literature layer works with no setup. Scopus needs an
 institutional subscription and an API key, so `scopusflow` is an opt-in source
 rather than a dependency. The two packages exchange plain data, a DOI vector or
 a corpus written to a file, with no coupling in either direction. That keeps
-theoryforge dependency-light and usable out of the box, and lets a reader reach
-for whichever index they have access to.
+theoryforge dependency-light and usable straight after install, and lets a
+reader reach for whichever index they have access to.
 
-The corpus format expects a top-level `{schema_version, id, records}` envelope
+The corpus format expects a top-level `{schema_version, id, records}` mapping
 and, within each record, `references` as a flat list of id strings, whereas
 `scopus_corpus()` returns a tibble whose `references` entries are data frames.
-So build the envelope explicitly, reducing each references data frame to one
-id string per cited work (the DOI where present, the Scopus id otherwise),
-write the result to disk and read it back with `tf_read_corpus()`:
+Build the mapping explicitly: reduce each references data frame to one id
+string per cited work (the DOI where present, the Scopus id otherwise), write
+the result to disk and read it back with `tf_read_corpus()`:
 
 ```r
 # illustrative: needs scopusflow and a configured Scopus API key

@@ -167,8 +167,8 @@ print(tf.lit_diagram(m, type="keyword_cooccurrence"))
 ```
 
 Passed to Graphviz, that text reads as the figure below. The four themes are
-visible as four disconnected pairs, which is what makes this corpus separate so
-cleanly into components.
+visible as four disconnected pairs, which is why this corpus breaks into four
+entirely separate components.
 
 <div class="tf-figure tf-diagram"><svg width="408pt" height="247pt"
  viewBox="0.00 0.00 408.26 247.27" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
@@ -478,14 +478,14 @@ and keyless, so the literature layer works with no setup. Scopus needs an
 institutional subscription and an API key, so `scopusflow-py` is an opt-in
 source rather than a dependency. The two packages exchange plain data, a DOI
 list or a corpus written to a file, with no coupling in either direction. That
-keeps theoryforge dependency-light and usable out of the box, and lets a reader
-reach for whichever index they have access to.
+keeps theoryforge dependency-light and usable straight after install, and lets
+a reader reach for whichever index they have access to.
 
 The corpus format expects a top-level `{schema_version, id, records}` mapping
 and, within each record, `references` as a flat list of id strings, whereas
 the `corpus` builder returns a frame whose `references` entries are
-DataFrames. So build the mapping explicitly, reducing each references frame to
-one id string per cited work (the DOI where present, the Scopus id otherwise),
+DataFrames. Build the mapping explicitly: reduce each references frame to one
+id string per cited work (the DOI where present, the Scopus id otherwise),
 write the result to disk and read it back with `read_corpus`:
 
 ```python

@@ -140,3 +140,44 @@ test_that("tf_osf_push base_url override is honoured", {
                      base_url = "https://example.org/v1/resources/")
   expect_true(startsWith(res$request$url, "https://example.org/v1/resources/abc12/"))
 })
+
+test_that("a mistyped enum value is refused, identically to the Python twin", {
+  # A YAML sequence or mapping where the schema wants a scalar enum. `%in%`
+  # coerces, so a one-element list once matched the enum here while Python
+  # raised an unhashable-type TypeError. Both engines now give this message.
+  expected_maturity <- paste(
+    "invalid theory object: missing/empty required field: maturity;",
+    "maturity must be one of building, developing, draft, testing"
+  )
+  for (value in list(list("draft", "building"), list("draft"), list(stage = "draft"))) {
+    bad <- list(schema_version = "1.0", id = "x", title = "T", maturity = value)
+    expect_error(tf_validate(bad), expected_maturity, fixed = TRUE)
+  }
+
+  # theory_form is the case R was lenient about: the one-element list passed.
+  bad_form <- list(schema_version = "1.0", id = "x", title = "T",
+                   maturity = "draft", theory_form = list("network"))
+  expect_error(
+    tf_validate(bad_form),
+    "invalid theory object: theory_form must be one of network, process, typology, variance",
+    fixed = TRUE
+  )
+})
+
+test_that("a collection entry that is not a mapping is refused", {
+  # `constructs: [arousal, threat]` is a natural mistake: a sequence of scalars
+  # where the schema wants a sequence of mappings. Each entry has no fields, so
+  # every required one is reported missing, as in the Python twin.
+  bad <- list(schema_version = "1.0", id = "x", title = "T", maturity = "draft",
+              constructs = list("arousal", "threat"))
+  expect_error(
+    tf_validate(bad, full = TRUE),
+    paste(
+      "invalid theory object: construct[0] missing/empty id;",
+      "construct[0] missing/empty label; construct[0] missing/empty definition;",
+      "construct[1] missing/empty id; construct[1] missing/empty label;",
+      "construct[1] missing/empty definition"
+    ),
+    fixed = TRUE
+  )
+})

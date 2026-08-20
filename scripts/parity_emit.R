@@ -19,7 +19,7 @@ suppressWarnings(suppressMessages({
   # version number long after their contents diverge, so nothing announced it.
   # Locally that showed up as sixteen false failures for fields the working tree
   # had gained and the installed copy lacked. The dangerous direction is the
-  # other one -- an installed copy that happens to satisfy the comparison while
+  # other one: an installed copy that happens to satisfy the comparison while
   # the tree it is standing in for does not, which is a green parity check over
   # code nobody ran.
   #
@@ -108,8 +108,8 @@ suppressWarnings(suppressMessages({
   write_raw(tf_lit_diagram(ls, "theme_landscape"),
             file.path(out_dir, paste0(cid, ".theme_landscape.dot")))
 
-  # Name what was actually loaded. A parity result means nothing without it: the
-  # same command over the same fixtures reports on the working tree or on some
+  # Name what was loaded. A parity result means nothing without it: the same
+  # command over the same fixtures reports on the working tree or on some
   # installed copy depending only on what happens to be on the library path.
   cat(sprintf("emitted R outputs for %d fixture(s) to %s [R engine from %s]\n",
               length(fixtures), out_dir, loaded_from))

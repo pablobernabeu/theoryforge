@@ -3,9 +3,9 @@
 //
 // Each app runs the *real* package entirely client-side (R via webR, Python via
 // Pyodide), so the source it executes must be the live package source. This
-// script copies that source — plus the shared schema and the example fixtures —
-// into apps/r/vendor and apps/py/vendor, and writes a manifest.json telling the
-// app which files to fetch at start-up.
+// script copies that source, together with the shared schema and the example
+// fixtures, into apps/r/vendor and apps/py/vendor, and writes a manifest.json
+// telling the app which files to fetch at start-up.
 //
 // Run locally before serving the apps, and in CI before deploying. The vendor
 // directories are build artefacts (git-ignored); CI rebuilds them on every deploy
@@ -28,10 +28,11 @@ const LOGO = path.join(repo, "r", "theoryforge", "man", "figures", "logo.svg");
 
 // Examples can be drawn from the shared fixtures (kept in lockstep with the
 // golden/parity tests) or from apps/examples (app-only, isolated from CI). Each
-// carries a one-line description shown in the app.
+// carries a one-line description shown in the app, and the parenthetical in
+// each name is that theory's own `maturity` field.
 const EXAMPLES = [
   { name: "Panic disorder network (developing)", file: "panic-network.theory.yaml", src: FIXTURES,
-    desc: "A well-developed network theory of panic — three constructs in a feedback loop. Passes the full rigour checklist." },
+    desc: "A well-developed network theory of panic, three constructs in a feedback loop. Passes the full rigour checklist." },
   { name: "Panic network, amended v2 (testing)", file: "panic-network-2026-v2.theory.yaml", src: FIXTURES,
     desc: "An amended version of the panic theory at the testing stage, with a fourth prediction and test outcomes." },
   { name: "Self-determination theory (developing)", file: "self-determination.theory.yaml", src: APP_EXAMPLES,
@@ -46,8 +47,11 @@ const EXAMPLES = [
     desc: "Steele & Aronson (1995): framing a test as diagnostic of ability depresses performance for a negatively stereotyped group, but not under a non-diagnostic frame." },
   { name: "Theory of planned behaviour (developing)", file: "planned-behaviour.theory.yaml", src: APP_EXAMPLES,
     desc: "Ajzen (1991): attitude, subjective norm and perceived behavioural control predict intention, which predicts behaviour, extending the theory of reasoned action." },
-  { name: "Deliberately weak theory (draft)", file: "weak-theory.theory.yaml", src: FIXTURES,
-    desc: "An underspecified draft kept as a worked example of what the checklist catches — it is blocked." },
+  // The fixture's maturity field reads "building". At draft maturity the
+  // checklist runs in advisory mode and the gate can never be blocked, which is
+  // the one thing this example exists to show.
+  { name: "Deliberately weak theory (building)", file: "weak-theory.theory.yaml", src: FIXTURES,
+    desc: "An underspecified theory kept as a worked example of what the checklist catches. Its gate is blocked." },
 ];
 const CORPUS = [{ name: "Panic literature corpus (demo)", file: "panic-corpus.yaml", src: FIXTURES }];
 
@@ -84,8 +88,8 @@ async function writeJson(p, obj) {
   await fs.writeFile(p, JSON.stringify(obj, null, 2) + "\n", "utf8");
 }
 
-// The package version is declared in two places — r/theoryforge/DESCRIPTION and
-// python/pyproject.toml — and the apps show it in their footers. Read both at
+// The package version is declared in two places, r/theoryforge/DESCRIPTION and
+// python/pyproject.toml, and the apps show it in their footers. Read both at
 // build time rather than hard-coding a copy here that would drift on release,
 // and fail the build outright if the two halves disagree: a mismatch means the
 // release process went wrong, and stamping either number into the apps would
@@ -98,7 +102,7 @@ async function readPackageVersion() {
   if (!rV) throw new Error("could not read Version from r/theoryforge/DESCRIPTION");
   if (!pyV) throw new Error("could not read version from python/pyproject.toml");
   if (rV !== pyV) {
-    throw new Error(`package version mismatch: DESCRIPTION says ${rV} but pyproject.toml says ${pyV} — align the two halves before building the apps`);
+    throw new Error(`package version mismatch: DESCRIPTION says ${rV} but pyproject.toml says ${pyV}; align the two halves before building the apps`);
   }
   return rV;
 }

@@ -34,8 +34,8 @@ library(theoryforge)
 ## Building a theory
 
 A theory is built incrementally with the BUILDING-mode verbs. Each verb appends
-to the theory and records a provenance entry, so the steps compose cleanly with
-the native pipe.
+to the theory and records a provenance entry, and each returns the theory, so
+the steps compose with the native pipe.
 
 ```{r build}
 theory <- tf_theory("panic-network", "A network theory of panic") |>
@@ -67,8 +67,8 @@ declared id. It does not require any optional dependency.
 
 The failure path is the more informative one. Pointing a prediction at a
 proposition that was never declared leaves the structural pass untouched, since
-every required field is still present and well formed, so the problem surfaces
-only under `full = TRUE`.
+every required field is still present and well formed, so only `full = TRUE`
+reports the problem.
 
 ```{r validate-failure, error = TRUE}
 broken <- theory

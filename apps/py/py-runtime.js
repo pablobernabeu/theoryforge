@@ -1,7 +1,7 @@
 /* theoryforge interactive app: Python runtime (Pyodide).
  *
  * Boots Pyodide, loads PyYAML, vendors the live theoryforge package source into
- * the in-browser filesystem, imports it, and runs the real package functions —
+ * the in-browser filesystem, imports it, and runs the real package functions
  * entirely client-side. importlib.resources resolves the bundled schema/.
  */
 import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.mjs";

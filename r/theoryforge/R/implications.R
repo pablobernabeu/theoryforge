@@ -71,8 +71,16 @@ NULL
 #'
 #' Constructs that no causal proposition connects are left out, because silence
 #' about a construct is not a claim that it is independent of anything. A theory
-#' with no causal propositions therefore has an empty basis set rather than an
-#' error.
+#' with no causal propositions therefore comes back with an empty basis set and
+#' no error.
+#'
+#' @section Refusals:
+#' The function stops in three cases. Two constructs sharing an id would give one
+#' node two sets of parents, and a causal proposition naming an undeclared
+#' construct would shrink the graph and so imply independencies the theory never
+#' claimed. A cyclic causal graph has no basis set at all, and the message names
+#' a cycle that was found. The Python twin raises \code{ValueError} on the same
+#' three, with the same message text.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @return A named list

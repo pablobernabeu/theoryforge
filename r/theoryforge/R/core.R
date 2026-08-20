@@ -73,14 +73,19 @@ tf_validate <- function(theory, full = FALSE) {
       errors <- c(errors, sprintf("missing/empty required field: %s", req))
     }
   }
+  # Each enum test asks for a nonempty scalar string before asking about
+  # membership. `%in%` coerces its left operand, so a one-element YAML sequence
+  # such as `theory_form: [network]` used to match the enum and validate here
+  # while the Python twin refused it as a non-string. Requiring the string first
+  # keeps the two engines level on input that is mistyped rather than misspelt.
   mat <- .tf_get(d, "maturity")
-  if (is.null(mat) || !(length(mat) == 1L && mat %in% .tf_MATURITY)) {
+  if (!(.tf_ne_str(mat) && mat %in% .tf_MATURITY)) {
     errors <- c(errors, sprintf("maturity must be one of %s",
                                 paste(sort(.tf_MATURITY), collapse = ", ")))
   }
   if ("theory_form" %in% names(d)) {
-    tf <- .tf_get(d, "theory_form")
-    if (!(length(tf) == 1L && tf %in% .tf_FORM)) {
+    form <- .tf_get(d, "theory_form")
+    if (!(.tf_ne_str(form) && form %in% .tf_FORM)) {
       errors <- c(errors, sprintf("theory_form must be one of %s",
                                   paste(sort(.tf_FORM), collapse = ", ")))
     }
@@ -115,7 +120,7 @@ tf_validate <- function(theory, full = FALSE) {
       }
     }
     rel <- .tf_get(p_i, "relation")
-    if (!(length(rel) == 1L && rel %in% .tf_RELATION) && .tf_ne_str(rel)) {
+    if (.tf_ne_str(rel) && !(rel %in% .tf_RELATION)) {
       errors <- c(errors, sprintf("proposition[%d] relation '%s' not allowed", i - 1L, rel))
     }
   }
@@ -129,7 +134,7 @@ tf_validate <- function(theory, full = FALSE) {
       }
     }
     ty <- .tf_get(p_i, "type")
-    if (!(length(ty) == 1L && ty %in% .tf_PRED_TYPE) && .tf_ne_str(ty)) {
+    if (.tf_ne_str(ty) && !(ty %in% .tf_PRED_TYPE)) {
       errors <- c(errors, sprintf("prediction[%d] type '%s' not allowed", i - 1L, ty))
     }
   }

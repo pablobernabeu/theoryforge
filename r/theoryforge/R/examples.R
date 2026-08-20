@@ -9,9 +9,14 @@
 #' @keywords internal
 NULL
 
-#' Names of the packaged example theories
+#' Names of the packaged example files
 #'
-#' @return A sorted character vector of file names.
+#' The bundled set is four example theories and one literature corpus,
+#' \code{panic-corpus.yaml}, which [tf_read_corpus()] reads.
+#'
+#' @return A sorted character vector of the \code{.yaml} file names. The Python
+#'   twin's \code{example_names()} applies the same extension filter, so the two
+#'   list the same set.
 #' @examples
 #' tf_example_names()
 #' @export
@@ -23,7 +28,7 @@ tf_example_names <- function() {
   sort(list.files(dir, pattern = "\\.yaml$"))
 }
 
-#' Path to a packaged example theory
+#' Path to a packaged example file
 #'
 #' @param name File name, e.g. \code{"panic-network.theory.yaml"}. See
 #'   [tf_example_names()].

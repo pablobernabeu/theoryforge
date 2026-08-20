@@ -37,6 +37,20 @@ def _nonempty_str(v) -> bool:
     return isinstance(v, str) and v.strip() != ""
 
 
+def _field(item, key):
+    """The value of ``key`` in ``item``, or None when ``item`` is not a mapping.
+
+    Mirrors the R twin's ``.tf_get``, which returns its default for anything
+    that is not a list. A collection written as a YAML sequence of scalars
+    (``constructs: [arousal, threat]`` instead of a sequence of mappings) has
+    entries with no fields at all, so every required field is reported missing
+    and the caller gets the contract's ``invalid theory object: ...`` message.
+    Calling ``.get`` on the scalar directly would raise ``AttributeError``
+    instead, which is neither the documented refusal nor what R does.
+    """
+    return item.get(key) if isinstance(item, dict) else None
+
+
 class Theory:
     """A theory as a versioned, machine-checkable object.
 
@@ -79,10 +93,21 @@ class Theory:
         for req in ("schema_version", "id", "title", "maturity"):
             if not _nonempty_str(d.get(req)):
                 errors.append(f"missing/empty required field: {req}")
-        if d.get("maturity") not in _MATURITY:
+        # Each enum test asks whether the value is a nonempty string before
+        # asking whether it is a member. A YAML list or mapping reaches these
+        # lines whenever a field is mistyped, and `x in <set>` raises TypeError
+        # on an unhashable value, which would abandon the collected errors and
+        # report something the contract never promised. The string test also
+        # keeps the twins level: R's `%in%` coerces a one-element list to its
+        # element, so `theory_form: [network]` used to validate there and be
+        # refused here.
+        mat = d.get("maturity")
+        if not (_nonempty_str(mat) and mat in _MATURITY):
             errors.append(f"maturity must be one of {', '.join(sorted(_MATURITY))}")
-        if "theory_form" in d and d["theory_form"] not in _FORM:
-            errors.append(f"theory_form must be one of {', '.join(sorted(_FORM))}")
+        if "theory_form" in d:
+            form = d["theory_form"]
+            if not (_nonempty_str(form) and form in _FORM):
+                errors.append(f"theory_form must be one of {', '.join(sorted(_FORM))}")
         # A misspelt collection key would otherwise pass silently and quietly
         # change every downstream verdict (a renamed `predictions:` drops the
         # whole collection), so unrecognised top-level fields are refused.
@@ -92,20 +117,22 @@ class Theory:
                 errors.append(f"unknown top-level field: {key}")
         for i, c in enumerate(self._list("constructs")):
             for req in ("id", "label", "definition"):
-                if not _nonempty_str(c.get(req)):
+                if not _nonempty_str(_field(c, req)):
                     errors.append(f"construct[{i}] missing/empty {req}")
         for i, p in enumerate(self._list("propositions")):
             for req in ("id", "from", "to", "relation"):
-                if not _nonempty_str(p.get(req)):
+                if not _nonempty_str(_field(p, req)):
                     errors.append(f"proposition[{i}] missing/empty {req}")
-            if p.get("relation") not in _RELATION and _nonempty_str(p.get("relation")):
-                errors.append(f"proposition[{i}] relation '{p.get('relation')}' not allowed")
+            rel = _field(p, "relation")
+            if _nonempty_str(rel) and rel not in _RELATION:
+                errors.append(f"proposition[{i}] relation '{rel}' not allowed")
         for i, p in enumerate(self._list("predictions")):
             for req in ("id", "statement", "type"):
-                if not _nonempty_str(p.get(req)):
+                if not _nonempty_str(_field(p, req)):
                     errors.append(f"prediction[{i}] missing/empty {req}")
-            if p.get("type") not in _PRED_TYPE and _nonempty_str(p.get("type")):
-                errors.append(f"prediction[{i}] type '{p.get('type')}' not allowed")
+            ty = _field(p, "type")
+            if _nonempty_str(ty) and ty not in _PRED_TYPE:
+                errors.append(f"prediction[{i}] type '{ty}' not allowed")
 
         if full:
             self._referential_errors(errors)
@@ -125,15 +152,19 @@ class Theory:
         preds = self._list("predictions")
         alts = self._list("alternatives")
         auxs = self._list("auxiliary_assumptions")
-        construct_ids = {c.get("id") for c in cons if _nonempty_str(c.get("id"))}
-        proposition_ids = {p.get("id") for p in props if _nonempty_str(p.get("id"))}
-        prediction_ids = {p.get("id") for p in preds if _nonempty_str(p.get("id"))}
-        alternative_ids = {a.get("id") for a in alts if _nonempty_str(a.get("id"))}
+
+        def ids_of(items: list) -> set:
+            return {i for i in (_field(it, "id") for it in items) if _nonempty_str(i)}
+
+        construct_ids = ids_of(cons)
+        proposition_ids = ids_of(props)
+        prediction_ids = ids_of(preds)
+        alternative_ids = ids_of(alts)
 
         def dups(items: list, kind: str) -> None:
             seen: set = set()
             for it in items:
-                i = it.get("id")
+                i = _field(it, "id")
                 if _nonempty_str(i):
                     if i in seen:
                         errors.append(f"duplicate {kind} id: {i}")
@@ -145,35 +176,35 @@ class Theory:
         dups(alts, "alternative")
         dups(auxs, "assumption")
         for i, p in enumerate(props):
-            frm, to = p.get("from"), p.get("to")
+            frm, to = _field(p, "from"), _field(p, "to")
             if _nonempty_str(frm) and frm not in construct_ids:
                 errors.append(f"proposition[{i}] from '{frm}' is not a known construct")
             if _nonempty_str(to) and to not in construct_ids:
                 errors.append(f"proposition[{i}] to '{to}' is not a known construct")
         for i, p in enumerate(preds):
-            for dref in _as_list(p.get("derives_from")):
+            for dref in _as_list(_field(p, "derives_from")):
                 if _nonempty_str(dref) and dref not in proposition_ids:
                     errors.append(f"prediction[{i}] derives_from '{dref}' is not a known proposition")
-            for dv in _as_list(p.get("diagnostic_vs")):
+            for dv in _as_list(_field(p, "diagnostic_vs")):
                 if _nonempty_str(dv) and dv not in alternative_ids:
                     errors.append(f"prediction[{i}] diagnostic_vs '{dv}' is not a known alternative")
         for i, a in enumerate(auxs):
-            for pr in _as_list(a.get("protects")):
+            for pr in _as_list(_field(a, "protects")):
                 if _nonempty_str(pr) and pr not in prediction_ids:
                     errors.append(f"assumption[{i}] protects '{pr}' is not a known prediction")
         for i, t in enumerate(self._list("test_outcomes")):
-            pid = t.get("prediction_id")
+            pid = _field(t, "prediction_id")
             if _nonempty_str(pid) and pid not in prediction_ids:
                 errors.append(f"test_outcome[{i}] prediction_id '{pid}' is not a known prediction")
         for i, e in enumerate(self._list("evidence")):
-            s = e.get("supports")
+            s = _field(e, "supports")
             if _nonempty_str(s) and s not in prediction_ids:
                 errors.append(f"evidence[{i}] supports '{s}' is not a known prediction")
         # The schema types prediction severity as a number in [0, 1]; enforced
         # here so a file cannot pass full validation and then be refused by
         # the scorer, which rejects non-numeric severities.
         for i, p in enumerate(preds):
-            s = p.get("severity")
+            s = _field(p, "severity")
             if s is None:
                 continue
             if (isinstance(s, bool) or not isinstance(s, (int, float))

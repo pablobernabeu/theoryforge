@@ -3,8 +3,8 @@
 theoryforge treats a scientific theory as a versioned, machine-checkable object, so that
 building, developing and testing it becomes systematic and reproducible. It targets the
 familiar weaknesses of soft-science theorising: vague constructs, unfalsifiable claims,
-redundant 'jingle-jangle' constructs and amendments that quietly weaken a theory rather than
-strengthen it. Each weakness becomes something the package can surface and check.
+redundant 'jingle-jangle' constructs and amendments that quietly weaken the theory they were
+meant to strengthen. Each weakness becomes something the package can name and check.
 
 The package scaffolds the three workflow modes (building, development and testing), scores a
 theory against a 12-item structural rigour checklist drawn from the methodology literature, generates
@@ -20,9 +20,10 @@ walkthrough, see [Get started](getting-started.md). The repository
 [API reference](api.md) lists every function.
 
 !!! tip "Try it in your browser (no install)"
-    The [**interactive web app**](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this
-    package entirely client-side via [Pyodide](https://pyodide.org/). Load a theory, run any
-    operation, and export both the visualisation (SVG/PNG) and the Python code to reproduce it.
+    The [interactive web app](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this
+    package entirely client-side via [Pyodide](https://pyodide.org/). Load a theory, run any of
+    the operations it offers, from the rigour checklist through to the literature map, and
+    export both the visualisation (SVG/PNG) and the Python code to reproduce it.
 
 ## Install
 
@@ -30,7 +31,7 @@ walkthrough, see [Get started](getting-started.md). The repository
 pip install theoryforge
 ```
 
-## At a glance
+## A first look
 
 ```python
 import theoryforge as tf

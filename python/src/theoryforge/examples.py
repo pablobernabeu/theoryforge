@@ -12,8 +12,15 @@ from pathlib import Path
 
 
 def example_names() -> list[str]:
-    """The names of the example theory and corpus files, sorted."""
-    return sorted(p.name for p in (files("theoryforge") / "fixtures").iterdir())
+    """The names of the example theory and corpus files, sorted.
+
+    Only ``.yaml`` entries count, matching the R twin's ``list.files(pattern =
+    "\\\\.yaml$")``. Listing the directory wholesale would let anything else
+    that lands beside the examples, such as a ``__pycache__`` directory left by
+    a local build, show up here and not in R.
+    """
+    entries = (files("theoryforge") / "fixtures").iterdir()
+    return sorted(p.name for p in entries if p.name.endswith(".yaml"))
 
 
 def example_path(name: str) -> Path:

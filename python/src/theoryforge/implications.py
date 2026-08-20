@@ -86,8 +86,8 @@ def implications(T) -> dict:
     ``a _||_ b | z1, z2``. Pairs come in construct file order, as do the members
     of ``given``, so the two engines return the same records in the same order.
 
-    A theory with no causal propositions has an empty basis set rather than an
-    error: ``constructs`` and ``implications`` are empty and ``n_implications``
+    A theory with no causal propositions comes back with an empty basis set and
+    no error: ``constructs`` and ``implications`` are empty and ``n_implications``
     is 0.
 
     Raises:

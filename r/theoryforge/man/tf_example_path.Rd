@@ -2,7 +2,7 @@
 % Please edit documentation in R/examples.R
 \name{tf_example_path}
 \alias{tf_example_path}
-\title{Path to a packaged example theory}
+\title{Path to a packaged example file}
 \usage{
 tf_example_path(name)
 }
@@ -14,7 +14,7 @@ tf_example_path(name)
 The path to the installed file.
 }
 \description{
-Path to a packaged example theory
+Path to a packaged example file
 }
 \examples{
 tf_read(tf_example_path("panic-network.theory.yaml"))$id
