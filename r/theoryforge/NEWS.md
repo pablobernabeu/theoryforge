@@ -1,4 +1,4 @@
-# theoryforge (development version)
+# theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal
   subgraph. It reads the causal propositions as a directed graph, checks that the
