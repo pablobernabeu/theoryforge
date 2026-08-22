@@ -1,0 +1,261 @@
+# theoryforge (R)
+
+Systematic theory development: a rigorous, reproducible workflow for
+building, developing and testing scientific theories. This is the
+feature-parity twin of [the Python
+package](https://pablobernabeu.github.io/theoryforge/python/) of the
+same name. The two implementations produce identical verdicts and
+byte-identical diagram intermediate representations (see
+[`?theoryforge`](https://pablobernabeu.github.io/theoryforge/r/reference/theoryforge-package.md)
+for the shared specification behind that guarantee).
+
+## Interactive web app
+
+Run the package in your browser, with no installation, using the
+[interactive web
+app](https://pablobernabeu.github.io/theoryforge/apps/r/). It executes
+the real package client-side via
+[webR](https://docs.r-wasm.org/webr/latest/), so you can load a theory
+and run the operations it offers, from the rigour checklist through to
+the literature map, then export the visualisation (SVG/PNG) together
+with the R code that reproduces it.
+
+## Installation
+
+The package is not on CRAN yet, so it installs from GitHub, pointing at
+its subdirectory in the
+[monorepo](https://github.com/pablobernabeu/theoryforge) it shares with
+its Python twin:
+
+``` r
+
+# install.packages("remotes")
+remotes::install_github("pablobernabeu/theoryforge", subdir = "r/theoryforge")
+```
+
+From a local checkout, the package also installs as source:
+
+``` r
+
+# from the repository root
+install.packages("r/theoryforge", repos = NULL, type = "source")
+```
+
+The package depends on `yaml` and `jsonlite`.
+
+## Quick start
+
+``` r
+
+library(theoryforge)
+
+# Read a bundled example theory (or build one incrementally with tf_theory + tf_add_*)
+theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
+                              package = "theoryforge"))
+tf_validate(theory)
+
+# Score it against the 12-item rigour checklist
+report <- tf_check(theory)
+report$aggregate_score   # 84.8
+report$gate              # "pass"
+```
+
+[Get
+started](https://pablobernabeu.github.io/theoryforge/r/articles/theoryforge.html)
+walks through building, checking and diagramming a theory. [Developing
+and
+testing](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
+continues into severity, implied conditional independencies,
+preregistration, amendment appraisal and the audit dossier, and [Mapping
+the
+literature](https://pablobernabeu.github.io/theoryforge/r/articles/literature.html)
+positions a theory within a bibliometric corpus.
+
+## Public API
+
+The [reference
+index](https://pablobernabeu.github.io/theoryforge/r/reference/) lists
+every exported function, grouped by workflow stage.
+[`tf_render_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_render_diagram.md)
+renders any digraph view in the viewer through DiagrammeR, or as a
+standalone SVG string with `as = "svg"`. The rendering packages sit in
+Suggests rather than Imports, so the deterministic core carries no
+dependency on them. For the rationale behind each rigour check and
+exactly how every reported value is computed, see [Methodological
+foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html).
+
+## Citation
+
+``` r
+
+citation("theoryforge")
+```
+
+The [About
+page](https://pablobernabeu.github.io/theoryforge/r/articles/about.html)
+carries the same citation with a BibTeX entry, and a short note on the
+developer. The repository also ships `CITATION.cff`, which drives
+GitHub’s ‘Cite this repository’ button.
+
+## Licence
+
+MIT. See
+[`LICENSE`](https://pablobernabeu.github.io/theoryforge/r/LICENSE).
+
+## Contributing
+
+Issues and pull requests are welcome. The [contributing
+guide](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CONTRIBUTING.md)
+describes the development setup and the conventions the package follows,
+and everyone taking part is asked to honour the [Code of
+Conduct](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CODE_OF_CONDUCT.md).
+
+Continuous integration runs `R CMD check --as-cran` in six
+configurations, covering macOS, Windows and Ubuntu on the released R,
+Windows and Ubuntu on R-devel and Ubuntu on oldrel-1, with a further job
+running the suite on the declared R 4.1 minimum. The Python suite and
+the cross-language parity check run alongside them, so a change that
+breaks the twin is caught on the same push.
+
+# Package index
+
+## Core IO
+
+Read, validate and write theory objects.
+
+- [`tf_read()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_read.md)
+  : Read a theory object from a YAML or JSON file
+- [`tf_validate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_validate.md)
+  : Validate a theory object
+- [`tf_write()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_write.md)
+  : Write a theory object to YAML or JSON
+
+## Packaged examples
+
+Example theories shipped inside the package, so that nothing has to be
+downloaded to follow the documentation. The Python twin reaches the same
+files through example_names() and example_path().
+
+- [`tf_example_names()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_example_names.md)
+  : Names of the packaged example files
+- [`tf_example_path()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_example_path.md)
+  : Path to a packaged example file
+
+## Builder (BUILDING mode)
+
+Construct a theory incrementally with provenance tracking.
+
+- [`tf_theory()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_theory.md)
+  : Start a new, empty theory object (BUILDING mode entry point)
+- [`tf_add_construct()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_add_construct.md)
+  : Add a construct to a theory (BUILDING mode)
+- [`tf_add_proposition()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_add_proposition.md)
+  : Add a proposition to a theory (BUILDING mode)
+- [`tf_add_prediction()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_add_prediction.md)
+  : Add a prediction to a theory (BUILDING mode)
+- [`tf_add_alternative()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_add_alternative.md)
+  : Add an alternative theory (BUILDING mode)
+- [`tf_add_assumption()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_add_assumption.md)
+  : Add an auxiliary assumption (BUILDING mode)
+- [`tf_set_formal_model()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_set_formal_model.md)
+  : Set the formal model (BUILDING mode)
+
+## Rigour
+
+Score a theory against the versioned rigour checklist.
+
+- [`tf_check()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_check.md)
+  : Compute the rigour checklist report
+- [`tf_report()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_report.md)
+  : Render the rigour report as a string
+- [`tf_severity()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_severity.md)
+  : Per-prediction risk and computed severity
+
+## Redundancy
+
+Deterministic lexical redundancy screen.
+
+- [`tf_tokens()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_tokens.md)
+  : Tokenise a string into a set of content tokens
+- [`tf_jaccard()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_jaccard.md)
+  : Jaccard similarity of two token sets
+- [`tf_redundancy_check()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_redundancy_check.md)
+  : Pairwise lexical similarity of construct definitions
+- [`tf_embedding_redundancy()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_embedding_redundancy.md)
+  : Embedding-based pairwise construct-redundancy screen
+
+## Diagram
+
+Byte-identical diagram intermediate representations, and native
+rendering.
+
+- [`tf_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_diagram.md)
+  : Render a diagram intermediate representation
+- [`tf_lit_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_lit_diagram.md)
+  : Render a literature-layer diagram intermediate representation
+- [`tf_render_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_render_diagram.md)
+  : Render a diagram in the viewer or as SVG
+
+## Develop
+
+Lakatosian amendment appraisal.
+
+- [`tf_appraise_amendment()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_appraise_amendment.md)
+  : Appraise an amendment as progressive, degenerating, or neutral
+
+## Testing and review
+
+The conditional independencies a causal theory commits to,
+preregistration, SEM compilation and the audit dossier.
+
+- [`tf_implications()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md)
+  : Derive a theory's implied conditional independencies
+- [`tf_preregister()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_preregister.md)
+  : Render a preregistration document
+- [`tf_compile_sem()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_compile_sem.md)
+  : Compile a theory to lavaan model syntax
+- [`tf_dossier()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_dossier.md)
+  : Render a theory audit dossier (Markdown)
+
+## Simulation
+
+Integrate the construct network as a dynamical system.
+
+- [`tf_simulate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_simulate.md)
+  : Simulate a theory's construct network as a linear dynamical system
+
+## Reporting and deposit
+
+Render a report and deposit it.
+
+- [`tf_render_report()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_render_report.md)
+  : Write a Quarto report for a theory
+- [`tf_osf_push()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_osf_push.md)
+  : Deposit a theory's audit dossier to OSF storage
+
+## Literature layer
+
+Bibliometric mapping of a literature corpus.
+
+- [`tf_read_corpus()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_read_corpus.md)
+  : Read a literature corpus from a YAML or JSON file
+- [`tf_litmap()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_litmap.md)
+  : Bibliometric map of a literature corpus (deterministic)
+- [`tf_landscape()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_landscape.md)
+  : Map a theory and its alternatives onto a literature landscape
+  (deterministic)
+- [`tf_fetch_corpus()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_fetch_corpus.md)
+  : Build a corpus from the OpenAlex API (network call)
+- [`tf_new_evidence_dois()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_new_evidence_dois.md)
+  : DOIs not already cited by a theory (deterministic)
+
+# Articles
+
+### Guides
+
+- [Developing and testing a
+  theory](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.md):
+- [Mapping the
+  literature](https://pablobernabeu.github.io/theoryforge/r/articles/literature.md):
+- [Methodological
+  foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.md):

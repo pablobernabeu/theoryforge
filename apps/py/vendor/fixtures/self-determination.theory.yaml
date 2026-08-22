@@ -1,0 +1,115 @@
+schema_version: "1.0"
+id: "self-determination-2026"
+title: "Self-determination theory of motivation"
+maturity: "developing"
+theory_form: "network"
+version:
+  id: "v1"
+  parent_id: null
+  content_hash: null
+
+constructs:
+  - id: c_autonomy
+    label: "Autonomy"
+    definition: "The experience of acting with a sense of volition and self-endorsement."
+    measurement: ["autonomy need-satisfaction scale"]
+    boundary_conditions: ["adults", "voluntary tasks"]
+  - id: c_competence
+    label: "Competence"
+    definition: "The experience of effectance and mastery in one's activities."
+    measurement: ["perceived competence scale"]
+    boundary_conditions: ["adults"]
+  - id: c_relatedness
+    label: "Relatedness"
+    definition: "The experience of feeling connected to and cared for by others."
+    measurement: ["relatedness need-satisfaction scale"]
+    boundary_conditions: ["adults"]
+  - id: c_intrinsic_motivation
+    label: "Intrinsic motivation"
+    definition: "Engagement in an activity for its inherent interest and enjoyment."
+    measurement: ["intrinsic motivation inventory", "free-choice persistence"]
+    boundary_conditions: ["adults"]
+
+propositions:
+  - id: p1
+    from: c_autonomy
+    to: c_intrinsic_motivation
+    relation: "increases"
+    mechanism: "Volitional engagement internalises the regulation of behaviour."
+  - id: p2
+    from: c_competence
+    to: c_intrinsic_motivation
+    relation: "increases"
+    mechanism: "Mastery feedback sustains effectance motivation."
+  - id: p3
+    from: c_relatedness
+    to: c_intrinsic_motivation
+    relation: "increases"
+    mechanism: "Secure social connection supports internalisation."
+
+boundary_conditions: ["adults", "voluntary tasks", "non-clinical samples"]
+
+predictions:
+  - id: pred1
+    derives_from: [p1]
+    statement: "Supporting autonomy raises free-choice persistence relative to a controlling condition."
+    type: "directional"
+    risk_score: 0.4
+    severity: 0.5
+    diagnostic_vs: [alt_behaviourist]
+  - id: pred2
+    derives_from: [p2]
+    statement: "Competence-supportive feedback raises intrinsic motivation scores within a 0.3-0.6 SD band."
+    type: "interval"
+    risk_score: 0.6
+    severity: 0.6
+    diagnostic_vs: []
+  - id: pred3
+    derives_from: [p3]
+    statement: "Higher relatedness is associated with greater intrinsic motivation."
+    type: "directional"
+    risk_score: 0.3
+    severity: 0.4
+    diagnostic_vs: []
+
+auxiliary_assumptions:
+  - id: aux1
+    statement: "Self-report indexes the latent need-satisfaction constructs."
+    added_for: null
+    protects: [pred1]
+
+evidence:
+  - supports: pred1
+    source_doi: "10.1037/0003-066X.55.1.68"
+    direction: "corroborates"
+
+test_outcomes:
+  - prediction_id: pred1
+    observed: "Autonomy support raised persistence in 71% of studies."
+    passed: true
+    severity_at_test: 0.5
+    registered: "osf.io/example"
+    date: "2026-04-01"
+
+alternatives:
+  - id: alt_behaviourist
+    label: "Behaviourist reinforcement account"
+    key_constructs: ["external reinforcement schedule"]
+  - id: alt_expectancy
+    label: "Expectancy-value account"
+    key_constructs: ["expectancy", "task value"]
+
+formal_model:
+  type: "ode"
+  spec_ref: "models/sdt_ode.py"
+
+provenance:
+  - step: "1"
+    action: "tf_construct"
+    detail: "Registered four basic-need and outcome constructs."
+  - step: "2"
+    action: "tf_proposition"
+    detail: "Linked the needs to intrinsic motivation."
+  - step: "3"
+    action: "tf_predict"
+    detail: "Derived three predictions from the propositions."
