@@ -1,0 +1,155 @@
+# Encodes Festinger & Carlsmith (1959), "Cognitive consequences of forced
+# compliance", The Journal of Abnormal and Social Psychology, 58(2), 203-210.
+# https://doi.org/10.1037/h0041593
+# Cognitive dissonance theory in the forced-compliance paradigm. Holding two
+# inconsistent cognitions produces an aversive state (dissonance). The smaller
+# the external justification for a counter-attitudinal act, the greater the
+# dissonance, and the more the private attitude shifts to align with the act.
+# Participants paid a small incentive ($1) rated a dull task as more enjoyable
+# than those paid a large incentive ($20), the reverse of what reinforcement
+# theory predicts.
+schema_version: "1.0"
+id: "cognitive-dissonance-1959"
+title: "Cognitive dissonance and attitude change under forced compliance"
+maturity: "testing"
+theory_form: "process"
+version:
+  id: "v1"
+  parent_id: null
+  content_hash: null
+
+constructs:
+  - id: c_inconsistency
+    label: "Attitude-behaviour inconsistency"
+    definition: "The extent to which a person's overt counter-attitudinal statement contradicts a privately held cognition, here publicly describing a dull task as enjoyable while privately believing it dull."
+    measurement: ["difference between the valence of the public statement and the privately reported attitude", "experimental induction of a counter-attitudinal statement to a waiting confederate"]
+    boundary_conditions: ["the counter-attitudinal act is performed with a sense of choice", "the private cognition is salient to the person"]
+  - id: c_external_justification
+    label: "External justification"
+    definition: "The magnitude of the outside incentive or reason offered for performing the counter-attitudinal act, operationalised as the size of the monetary payment for making the statement."
+    measurement: ["monetary incentive offered for the counter-attitudinal statement, one US dollar versus twenty US dollars"]
+    boundary_conditions: ["the incentive is contingent on performing the act", "the incentive is the only salient external reason for the act"]
+  - id: c_dissonance
+    label: "Cognitive dissonance"
+    definition: "An aversive state of psychological tension arising from holding two inconsistent cognitions, which the person is motivated to reduce."
+    measurement: ["inferred latent state, not directly measured in the original study", "later operationalised through indices of aversive arousal"]
+    boundary_conditions: ["at least two relevant cognitions are held at once", "the inconsistency is not resolved by adding consonant external reasons"]
+  - id: c_attitude_change
+    label: "Private attitude change"
+    definition: "The degree to which the person's privately reported evaluation of the task shifts towards the position expressed in the counter-attitudinal statement, that is, rating the dull task as more enjoyable."
+    measurement: ["post-task rating of how enjoyable the tasks were on an eleven-point scale from minus five to plus five", "rated willingness to participate again and scientific importance of the tasks"]
+    boundary_conditions: ["measured after the counter-attitudinal act", "the person believes the private rating is independent of the experiment"]
+
+propositions:
+  - id: p_incentive_dissonance
+    from: c_external_justification
+    to: c_dissonance
+    relation: "decreases"
+    mechanism: "A large incentive supplies a sufficient consonant reason for the counter-attitudinal act, so the two cognitions are reconciled and little tension arises. A small incentive is insufficient justification, leaving the inconsistency unresolved, so dissonance is greater the smaller the external justification."
+    functional_form: "monotonic decreasing"
+  - id: p_inconsistency_dissonance
+    from: c_inconsistency
+    to: c_dissonance
+    relation: "increases"
+    mechanism: "Holding a public statement that contradicts a private belief creates two cognitions that do not follow from one another, and this inconsistency is what generates the aversive tension."
+    functional_form: "monotonic"
+  - id: p_dissonance_attitude
+    from: c_dissonance
+    to: c_attitude_change
+    relation: "causes"
+    mechanism: "Because the aversive state is unpleasant, the person is motivated to reduce it. The overt behaviour cannot be undone, so the person changes the more pliable private attitude to bring it into line with the statement, thereby restoring consistency."
+    functional_form: "monotonic"
+
+boundary_conditions: ["counter-attitudinal act performed under perceived free choice", "incentive is the salient external reason for the act", "private attitude assessed after the act and believed to be unmonitored"]
+
+predictions:
+  - id: pred_incentive_inverse
+    derives_from: [p_incentive_dissonance, p_dissonance_attitude]
+    statement: "Participants paid a small incentive of one dollar report a more favourable private attitude towards the dull task than participants paid a large incentive of twenty dollars, an inverse relation between incentive magnitude and attitude change."
+    type: "directional"
+    risk_score: 0.8
+    severity: 0.8
+    diagnostic_vs: [alt_reinforcement]
+  - id: pred_dissonance_mediates
+    derives_from: [p_inconsistency_dissonance, p_dissonance_attitude]
+    statement: "Attitude change occurs only when the counter-attitudinal statement is actually made under insufficient justification, so the one-dollar group shifts above the control group that made no such statement, whereas the twenty-dollar group does not."
+    type: "existence"
+    risk_score: 0.6
+    severity: 0.6
+    diagnostic_vs: [alt_reinforcement]
+  - id: pred_rating_point
+    derives_from: [p_incentive_dissonance, p_dissonance_attitude]
+    statement: "On the eleven-point enjoyment scale the one-dollar group rates the task above the neutral zero point and above both the twenty-dollar and control groups, whose ratings fall near or below zero."
+    type: "point"
+    risk_score: 0.7
+    severity: 0.7
+    diagnostic_vs: [alt_reinforcement]
+
+auxiliary_assumptions:
+  - id: aux_choice
+    statement: "Participants experienced the counter-attitudinal statement as freely chosen rather than coerced, so the act could not be justified as compliance under duress."
+    added_for: null
+    protects: [pred_incentive_inverse]
+  - id: aux_self_report
+    statement: "The post-task enjoyment rating validly indexes the privately held attitude and is not itself distorted by the incentive."
+    added_for: null
+    protects: [pred_rating_point]
+
+evidence:
+  - supports: pred_incentive_inverse
+    source_doi: "10.1037/h0041593"
+    direction: "corroborates"
+  - supports: pred_dissonance_mediates
+    source_doi: "10.1037/h0041593"
+    direction: "corroborates"
+  - supports: pred_rating_point
+    source_doi: "10.1037/h0041593"
+    direction: "corroborates"
+
+test_outcomes:
+  - prediction_id: pred_incentive_inverse
+    observed: "The one-dollar group rated the task as more enjoyable (mean 1.35) than the twenty-dollar group (mean minus 0.05), a statistically significant difference in the direction predicted by dissonance theory and opposite to reinforcement theory."
+    passed: true
+    severity_at_test: 0.8
+    registered: null
+    date: "1959"
+  - prediction_id: pred_dissonance_mediates
+    observed: "The one-dollar group shifted above the control group (mean minus 0.45), while the twenty-dollar group did not differ from control, consistent with attitude change being driven by insufficient justification rather than by the payment itself."
+    passed: true
+    severity_at_test: 0.6
+    registered: null
+    date: "1959"
+  - prediction_id: pred_rating_point
+    observed: "One-dollar mean of 1.35 lay above zero and above the twenty-dollar (minus 0.05) and control (minus 0.45) means, which fell near or below the neutral point."
+    passed: true
+    severity_at_test: 0.7
+    registered: null
+    date: "1959"
+
+alternatives:
+  - id: alt_reinforcement
+    label: "Incentive or reinforcement theory"
+    key_constructs: ["magnitude of reward", "reinforcement of the rewarded response", "positive relation between incentive and attitude change"]
+    source_doi: null
+  - id: alt_self_perception
+    label: "Self-perception account"
+    key_constructs: ["inference of attitude from observed behaviour", "attribution to external incentive when salient"]
+    source_doi: null
+
+formal_model:
+  type: "none"
+  spec_ref: null
+
+provenance:
+  - step: "1"
+    action: "tf_construct"
+    detail: "Registered attitude-behaviour inconsistency, external justification, dissonance and private attitude change."
+  - step: "2"
+    action: "tf_proposition"
+    detail: "Linked inconsistency and low external justification to dissonance, and dissonance to attitude change."
+  - step: "3"
+    action: "tf_predict"
+    detail: "Derived the inverse incentive effect, the mediating role of insufficient justification and the point ordering of the enjoyment ratings, each pointed at the reinforcement alternative."
+  - step: "4"
+    action: "tf_test"
+    detail: "Recorded the one-dollar versus twenty-dollar rating means from the original study as corroborating outcomes."

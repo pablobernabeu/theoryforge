@@ -1,0 +1,191 @@
+# Encodes Turton & Baranowski (2026), "The sociolinguistics of sounding happy:
+# A stable vocalic variable in Manchester English", Language Variation and Change.
+# https://doi.org/10.1017/S0954394526100702
+# The happy vowel (final unstressed vowel in happy, baby) is a rare case of a
+# stable vocalic sociolinguistic variable: socially stratified by class and
+# ethnicity, yet its internal linguistic constraints operate independently of
+# social factors, with no change in apparent time.
+schema_version: "1.0"
+id: "happy-vowel-manchester-2026"
+title: "Stable sociolinguistic variation in the Manchester happy vowel"
+maturity: "testing"
+theory_form: "variance"
+version:
+  id: "v1"
+  parent_id: null
+  content_hash: null
+
+constructs:
+  - id: c_happy_realisation
+    label: "Happy vowel realisation"
+    definition: "The acoustic quality of the final unstressed happy vowel on a lax-to-tense continuum, from open and lax to close and tense."
+    measurement: ["F2 minus F1 in Hz from acoustic analysis of recorded speech"]
+    boundary_conditions: ["Manchester English", "adult speakers"]
+  - id: c_social_class
+    label: "Social class"
+    definition: "The speaker's socioeconomic position, from lower working class to upper middle class."
+    measurement: ["socioeconomic index from occupation and education"]
+    boundary_conditions: ["adult speakers"]
+  - id: c_ethnicity
+    label: "Ethnicity"
+    definition: "The speaker's ethnic and heritage-language background."
+    measurement: ["self-reported ethnic group"]
+    boundary_conditions: ["adult speakers"]
+  - id: c_preceding_vowel_tenseness
+    label: "Preceding vowel tenseness"
+    definition: "The tenseness of the stressed vowel earlier in the word, the source of vowel harmony on the happy vowel."
+    measurement: ["preceding vowel category ordered from tense to lax"]
+    boundary_conditions: ["words with a stressed vowel before the happy vowel"]
+  - id: c_prepausal_position
+    label: "Pre-pausal position"
+    definition: "Whether the happy vowel stands in utterance-final, pre-pausal position."
+    measurement: ["pre-pausal versus non-pre-pausal coding"]
+    boundary_conditions: ["connected speech"]
+  - id: c_vowel_duration
+    label: "Vowel duration"
+    definition: "The acoustic duration of the happy vowel token."
+    measurement: ["vowel duration in milliseconds"]
+    boundary_conditions: ["connected speech"]
+  - id: c_speaker_age
+    label: "Speaker age"
+    definition: "The speaker's age, used to gauge change in apparent time within the community."
+    measurement: ["age in years"]
+    boundary_conditions: ["adult speakers"]
+
+propositions:
+  - id: p_class
+    from: c_social_class
+    to: c_happy_realisation
+    relation: "increases"
+    mechanism: "Higher social classes have more contact with and exposure to the Southern prestige tense variant through education, family and travel, which raises happy tenseness."
+    functional_form: "monotonic"
+  - id: p_ethnicity
+    from: c_ethnicity
+    to: c_happy_realisation
+    relation: "associates"
+    mechanism: "Heritage-language background conditions realisation, with Pakistani-heritage speakers carrying over a tenser vowel from the heritage language."
+  - id: p_harmony
+    from: c_preceding_vowel_tenseness
+    to: c_happy_realisation
+    relation: "increases"
+    mechanism: "Coarticulatory vowel harmony, in which a tenser preceding stressed vowel raises and tenses the following happy vowel."
+    functional_form: "monotonic"
+  - id: p_prepausal
+    from: c_prepausal_position
+    to: c_happy_realisation
+    relation: "decreases"
+    mechanism: "Utterance-final lengthening and lowering lax the vowel, so pre-pausal happy is laxer than happy in other positions."
+  - id: p_duration
+    from: c_vowel_duration
+    to: c_happy_realisation
+    relation: "increases"
+    mechanism: "Tense vowels are phonetically longer in English, so longer happy tokens are realised tenser."
+
+boundary_conditions: ["Manchester English speech community", "adult speakers stratified by age, gender, class and ethnicity"]
+
+predictions:
+  - id: pred_class
+    derives_from: [p_class]
+    statement: "Happy tenseness rises monotonically with social class, and the stratification is stable, showing no change in apparent time (no age effect)."
+    type: "directional"
+    risk_score: 0.4
+    severity: 0.6
+    diagnostic_vs: [alt_change_in_progress]
+  - id: pred_ethnicity
+    derives_from: [p_ethnicity]
+    statement: "Pakistani-heritage speakers realise tenser happy vowels than White and Black Caribbean speakers."
+    type: "directional"
+    risk_score: 0.4
+    severity: 0.4
+    diagnostic_vs: []
+  - id: pred_harmony
+    derives_from: [p_harmony]
+    statement: "A tenser stressed vowel earlier in the word yields a tenser happy vowel."
+    type: "directional"
+    risk_score: 0.3
+    severity: 0.4
+    diagnostic_vs: []
+  - id: pred_prepausal
+    derives_from: [p_prepausal]
+    statement: "Pre-pausal happy is significantly laxer than non-pre-pausal happy."
+    type: "directional"
+    risk_score: 0.3
+    severity: 0.4
+    diagnostic_vs: []
+  - id: pred_independence
+    derives_from: [p_harmony, p_prepausal]
+    statement: "The direction and ordering of the internal linguistic constraints hold across every social class and ethnic group, differing at most in magnitude rather than in direction."
+    type: "point"
+    risk_score: 0.8
+    severity: 0.8
+    diagnostic_vs: [alt_interdependence]
+
+auxiliary_assumptions:
+  - id: aux_measurement
+    statement: "F2 minus F1 validly indexes the lax-to-tense dimension of the happy vowel."
+    added_for: null
+    protects: [pred_class]
+  - id: aux_apparent_time
+    statement: "The apparent-time comparison across speakers of different ages approximates change in real time."
+    added_for: null
+    protects: [pred_class]
+
+evidence:
+  - supports: pred_class
+    source_doi: "10.1017/S0954394526100702"
+    direction: "corroborates"
+  - supports: pred_independence
+    source_doi: "10.1017/S0954394526100702"
+    direction: "corroborates"
+  - supports: pred_ethnicity
+    source_doi: "10.1017/S0954394526100702"
+    direction: "corroborates"
+
+test_outcomes:
+  - prediction_id: pred_class
+    observed: "Monotonic social-class stratification, with higher classes tenser, and no significant age effect or age interactions, indicating stability in apparent time."
+    passed: true
+    severity_at_test: 0.6
+    registered: null
+    date: "2026"
+  - prediction_id: pred_independence
+    observed: "Of fifteen possible linguistic-by-social interactions only three were significant, and all reflected differences in degree, not in constraint ordering; every internal constraint held its direction across social groups."
+    passed: true
+    severity_at_test: 0.8
+    registered: null
+    date: "2026"
+  - prediction_id: pred_ethnicity
+    observed: "Pakistani speakers were significantly tenser than White and Black Caribbean speakers."
+    passed: true
+    severity_at_test: 0.4
+    registered: null
+    date: "2026"
+
+alternatives:
+  - id: alt_change_in_progress
+    label: "Change in progress"
+    key_constructs: ["apparent-time age gradient", "generational sound change toward tensing"]
+    source_doi: null
+  - id: alt_social_evaluation
+    label: "Overt social evaluation account"
+    key_constructs: ["conscious awareness", "stigma of the lax variant", "systematic style-shifting"]
+    source_doi: null
+  - id: alt_interdependence
+    label: "Interdependence of linguistic and social constraints"
+    key_constructs: ["constraint ordering that differs across social groups"]
+    source_doi: null
+
+formal_model:
+  type: "none"
+  spec_ref: null
+
+provenance:
+  - step: "1"
+    action: "tf_construct"
+    detail: "Registered the happy vowel realisation and its social and linguistic conditioning factors."
+  - step: "2"
+    action: "tf_proposition"
+    detail: "Linked social class, ethnicity and the internal linguistic factors to realisation."
+  - step: "3"
+    action: "tf_predict"
+    detail: "Derived the class stratification, the ethnicity effect and the constraint-independence prediction."

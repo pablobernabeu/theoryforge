@@ -1,0 +1,155 @@
+# Encodes Ajzen (1991), "The theory of planned behavior",
+# Organizational Behavior and Human Decision Processes.
+# https://doi.org/10.1016/0749-5978(91)90020-T
+# The theory of planned behaviour extends the theory of reasoned action by
+# adding perceived behavioural control. Behaviour is predicted most proximally
+# by intention; intention is jointly determined by attitude toward the
+# behaviour, subjective norm and perceived behavioural control; perceived
+# behavioural control additionally predicts behaviour directly, to the extent
+# that it reflects actual control over performance.
+schema_version: "1.0"
+id: "planned-behaviour-1991"
+title: "Theory of planned behaviour"
+maturity: "developing"
+theory_form: "variance"
+version:
+  id: "v1"
+  parent_id: null
+  content_hash: null
+
+constructs:
+  - id: c_attitude
+    label: "Attitude toward the behaviour"
+    definition: "The degree to which a person holds a favourable or unfavourable evaluation of performing the behaviour, formed from beliefs about its likely outcomes weighted by their evaluation."
+    measurement: ["semantic-differential evaluative scales (for example good-bad, harmful-beneficial) referring to performing the behaviour", "sum of behavioural belief strength multiplied by outcome evaluation"]
+    boundary_conditions: ["a specific behaviour defined by target, action, context and time", "adult respondents able to report evaluations"]
+  - id: c_subjective_norm
+    label: "Subjective norm"
+    definition: "The perceived social pressure to perform or not perform the behaviour, reflecting whether important referents think the person should carry it out."
+    measurement: ["Likert items on whether important others think the respondent should perform the behaviour", "sum of normative belief strength multiplied by motivation to comply"]
+    boundary_conditions: ["a specific behaviour with identifiable social referents", "adult respondents able to report perceived expectations"]
+  - id: c_perceived_control
+    label: "Perceived behavioural control"
+    definition: "The perceived ease or difficulty of performing the behaviour, reflecting anticipated obstacles, resources and opportunities, and assumed to reflect past experience as well as present impediments."
+    measurement: ["Likert items on how easy or difficult performing the behaviour would be and how much it is up to the respondent", "sum of control belief strength multiplied by perceived power of each control factor"]
+    boundary_conditions: ["a specific behaviour", "behaviours varying in the degree of volitional control", "adult respondents able to report perceived control"]
+  - id: c_intention
+    label: "Intention"
+    definition: "The person's readiness and motivation to perform the behaviour, indicating how hard they are willing to try and how much effort they plan to exert."
+    measurement: ["Likert items on how strongly the respondent intends, plans or will try to perform the behaviour"]
+    boundary_conditions: ["a specific behaviour", "intention measured close in time to the behaviour so it remains stable"]
+  - id: c_behaviour
+    label: "Behaviour"
+    definition: "The observable action of interest, the manifest performance the theory sets out to predict and explain."
+    measurement: ["observed or self-reported performance of the behaviour, matched to intention on target, action, context and time"]
+    boundary_conditions: ["a single behaviour or an aggregated behavioural category", "an opportunity to perform the behaviour arises within the observation window"]
+
+propositions:
+  - id: p_attitude_intention
+    from: c_attitude
+    to: c_intention
+    relation: "increases"
+    mechanism: "A more favourable evaluation of performing the behaviour raises the person's motivation to carry it out, so a stronger positive attitude strengthens intention."
+    functional_form: "monotonic"
+  - id: p_norm_intention
+    from: c_subjective_norm
+    to: c_intention
+    relation: "increases"
+    mechanism: "Greater perceived social pressure from important referents to perform the behaviour raises the person's readiness to comply, strengthening intention."
+    functional_form: "monotonic"
+  - id: p_control_intention
+    from: c_perceived_control
+    to: c_intention
+    relation: "increases"
+    mechanism: "Believing the behaviour is easy and within one's control makes forming a firm intention worthwhile, whereas anticipated obstacles discourage it, so greater perceived control strengthens intention."
+    functional_form: "monotonic"
+  - id: p_intention_behaviour
+    from: c_intention
+    to: c_behaviour
+    relation: "increases"
+    mechanism: "Intention captures the motivation to act, and a stronger intention is enacted more often when an opportunity arises, so it is the most proximal predictor of behaviour."
+    functional_form: "monotonic"
+  - id: p_control_behaviour
+    from: c_perceived_control
+    to: c_behaviour
+    relation: "increases"
+    mechanism: "To the extent that perceived control reflects actual control over the behaviour, it predicts performance directly by standing in for the resources and opportunities needed to translate intention into action."
+    functional_form: "monotonic"
+
+boundary_conditions: ["a specific behaviour defined by target, action, context and time", "the direct control path matters most for behaviours that are not fully under volitional control", "perceived behavioural control predicts behaviour only in so far as it is accurate about actual control"]
+
+predictions:
+  - id: pred_intention_determinants
+    derives_from: [p_attitude_intention, p_norm_intention, p_control_intention]
+    statement: "Attitude toward the behaviour, subjective norm and perceived behavioural control each contribute positively to intention, and together they account for substantial variance in intention across behaviours."
+    type: "directional"
+    risk_score: 0.4
+    severity: 0.5
+    diagnostic_vs: []
+  - id: pred_intention_behaviour
+    derives_from: [p_intention_behaviour]
+    statement: "Stronger intention predicts a higher likelihood of performing the behaviour."
+    type: "directional"
+    risk_score: 0.3
+    severity: 0.5
+    diagnostic_vs: []
+  - id: pred_control_adds_predictive_power
+    derives_from: [p_control_intention, p_control_behaviour]
+    statement: "Perceived behavioural control adds predictive power for intention and for behaviour beyond attitude and subjective norm, and this added contribution is larger for behaviours low in volitional control than for behaviours under full volitional control."
+    type: "directional"
+    risk_score: 0.6
+    severity: 0.7
+    diagnostic_vs: [alt_reasoned_action]
+  - id: pred_control_direct_path
+    derives_from: [p_control_behaviour, p_intention_behaviour]
+    statement: "For behaviours not fully under volitional control, perceived behavioural control predicts behaviour directly, over and above intention, whereas for fully volitional behaviours the direct path adds little."
+    type: "directional"
+    risk_score: 0.6
+    severity: 0.6
+    diagnostic_vs: [alt_reasoned_action]
+
+auxiliary_assumptions:
+  - id: aux_correspondence
+    statement: "The predictors and the behaviour are measured at the same level of correspondence in target, action, context and time, so the relationships are not attenuated by mismatched measures."
+    added_for: null
+    protects: [pred_intention_behaviour]
+  - id: aux_control_accuracy
+    statement: "Perceived behavioural control reflects actual control over the behaviour with reasonable accuracy, which is what licenses its direct path to behaviour."
+    added_for: null
+    protects: [pred_control_direct_path]
+  - id: aux_stability
+    statement: "Intention and perceived control remain stable between measurement and the opportunity to act, so that they still govern behaviour when the opportunity arises."
+    added_for: null
+    protects: [pred_intention_behaviour]
+
+evidence:
+  - supports: pred_intention_determinants
+    source_doi: "10.1016/0749-5978(91)90020-T"
+    direction: "corroborates"
+  - supports: pred_intention_behaviour
+    source_doi: "10.1016/0749-5978(91)90020-T"
+    direction: "corroborates"
+  - supports: pred_control_adds_predictive_power
+    source_doi: "10.1016/0749-5978(91)90020-T"
+    direction: "corroborates"
+
+alternatives:
+  - id: alt_reasoned_action
+    label: "Theory of reasoned action"
+    key_constructs: ["attitude toward the behaviour", "subjective norm", "intention"]
+    source_doi: null
+
+formal_model:
+  type: "sem"
+  spec_ref: "structural model: attitude + subjective norm + PBC -> intention -> behaviour; PBC -> behaviour"
+
+provenance:
+  - step: "1"
+    action: "tf_construct"
+    detail: "Registered the five constructs: attitude toward the behaviour, subjective norm, perceived behavioural control, intention and behaviour."
+  - step: "2"
+    action: "tf_proposition"
+    detail: "Linked attitude, subjective norm and perceived control to intention, intention to behaviour, and added the direct perceived-control to behaviour path."
+  - step: "3"
+    action: "tf_predict"
+    detail: "Derived the intention-determinant, intention-behaviour and perceived-control predictions, pointing the control predictions diagnostically at the theory of reasoned action."

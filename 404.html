@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Page not found &ndash; theoryforge</title>
+  <!-- GitHub Pages serves this one file for a missed URL at ANY depth
+       (/theoryforge/r/no-such-page/, /theoryforge/apps/x/y/...), so every link
+       and asset reference must be absolute under the project-pages prefix;
+       a relative href would resolve against whatever broken path the visitor
+       landed on. The styling mirrors .github/landing.html so the error page
+       looks like part of the site. -->
+  <link rel="icon" href="/theoryforge/logo.svg">
+  <style>
+    :root {
+      --bg:#ffffff; --fg:#1b1b1b; --lead:#444; --muted:#555; --link:#0f7a6a;
+      --card-bg:#ffffff; --card-border:#e3e3e3; --card-hover:#b8b8b8;
+      --code-bg:#f3f3f3; --foot:#666; --btn-border:#cccccc;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:#0f1722; --fg:#e9eef3; --lead:#c3cdd7; --muted:#9fb0c0; --link:#6fd6c4;
+        --card-bg:#16222f; --card-border:#27384a; --card-hover:#3c5570;
+        --code-bg:#1d2c3b; --foot:#8499a8; --btn-border:#2b3d4f;
+      }
+    }
+    html[data-theme="light"] {
+      --bg:#ffffff; --fg:#1b1b1b; --lead:#444; --muted:#555; --link:#0f7a6a;
+      --card-bg:#ffffff; --card-border:#e3e3e3; --card-hover:#b8b8b8;
+      --code-bg:#f3f3f3; --foot:#666; --btn-border:#cccccc;
+    }
+    html[data-theme="dark"] {
+      --bg:#0f1722; --fg:#e9eef3; --lead:#c3cdd7; --muted:#9fb0c0; --link:#6fd6c4;
+      --card-bg:#16222f; --card-border:#27384a; --card-hover:#3c5570;
+      --code-bg:#1d2c3b; --foot:#8499a8; --btn-border:#2b3d4f;
+    }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      max-width: 46rem; margin: 3.5rem auto; padding: 0 1.25rem; line-height: 1.6;
+      background: var(--bg); color: var(--fg); transition: background .2s, color .2s;
+    }
+    h1 { font-size: 2rem; margin-bottom: .25rem; letter-spacing: -.5px; }
+    p.lead { color: var(--lead); margin-top: 0; font-size: 1.05rem; }
+    a { color: var(--link); }
+    ul.destinations { color: var(--muted); }
+    ul.destinations li { margin: .35rem 0; }
+    footer { margin-top: 2.5rem; color: var(--foot); font-size: .9rem; }
+    footer a { color: inherit; }
+    #themeToggle {
+      position: fixed; top: 1rem; right: 1rem; width: 2.3rem; height: 2.3rem; border-radius: 50%;
+      border: 1px solid var(--btn-border); background: var(--card-bg); color: var(--fg);
+      cursor: pointer; font-size: 1.1rem; line-height: 1;
+    }
+    .logo { float: right; margin: 0 0 1rem 1.5rem; width: 128px; }
+    @media (max-width: 480px) { .logo { width: 96px; } h1 { font-size: 1.7rem; } }
+  </style>
+</head>
+<body>
+  <button id="themeToggle" title="Toggle light and dark" aria-label="Toggle light and dark theme">&#9789;</button>
+  <img class="logo" src="/theoryforge/logo.svg" alt="theoryforge hex logo">
+  <h1>theoryforge</h1>
+  <p class="lead">Page not found. The address may be mistyped, or the page may have moved when the
+  documentation was reorganised.</p>
+  <ul class="destinations">
+    <li><a href="/theoryforge/">Documentation home</a> &ndash; the landing page for both packages</li>
+    <li><a href="/theoryforge/r/">R package</a> &ndash; reference and guides (pkgdown)</li>
+    <li><a href="/theoryforge/python/">Python package</a> &ndash; reference and guides (mkdocs)</li>
+  </ul>
+  <footer>Source: <a href="https://github.com/pablobernabeu/theoryforge">github.com/pablobernabeu/theoryforge</a></footer>
+  <script>
+    (function () {
+      var root = document.documentElement, btn = document.getElementById('themeToggle');
+      var saved = localStorage.getItem('tf-theme');
+      if (saved) root.setAttribute('data-theme', saved);
+      function isDark() {
+        var t = root.getAttribute('data-theme');
+        if (t) return t === 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+      function sync() { btn.innerHTML = isDark() ? '&#9728;' : '&#9789;'; }
+      btn.addEventListener('click', function () {
+        var next = isDark() ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('tf-theme', next);
+        sync();
+      });
+      sync();
+    })();
+  </script>
+</body>
+</html>
