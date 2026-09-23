@@ -1,6 +1,7 @@
 # theoryforge <small>(R)</small> <a href="https://pablobernabeu.github.io/theoryforge/r/"><img src="man/figures/logo.png" align="right" height="138" alt="theoryforge hex logo" /></a>
 
 <!-- badges: start -->
+[![CRAN status](https://www.r-pkg.org/badges/version/theoryforge)](https://CRAN.R-project.org/package=theoryforge)
 [![CI](https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml/badge.svg)](https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
@@ -22,7 +23,13 @@ then export the visualisation (SVG/PNG) together with the R code that reproduces
 
 ## Installation
 
-The package is not on CRAN yet, so it installs from GitHub, pointing at its subdirectory in the
+theoryforge is on [CRAN](https://CRAN.R-project.org/package=theoryforge):
+
+```r
+install.packages("theoryforge")
+```
+
+The development version installs from GitHub, pointing at the package's subdirectory in the
 [monorepo](https://github.com/pablobernabeu/theoryforge) it shares with its Python twin:
 
 ```r

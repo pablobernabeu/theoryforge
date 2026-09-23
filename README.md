@@ -3,6 +3,7 @@
 <!-- badges: start -->
 [![CI](https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml/badge.svg)](https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml)
 [![docs](https://github.com/pablobernabeu/theoryforge/actions/workflows/docs.yml/badge.svg)](https://pablobernabeu.github.io/theoryforge/)
+[![CRAN status](https://www.r-pkg.org/badges/version/theoryforge)](https://CRAN.R-project.org/package=theoryforge)
 [![PyPI](https://img.shields.io/pypi/v/theoryforge)](https://pypi.org/project/theoryforge/)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
@@ -97,8 +98,14 @@ The Python package is on [PyPI](https://pypi.org/project/theoryforge/):
 pip install theoryforge
 ```
 
-The R package is not on CRAN, so it installs from GitHub, pointing at its subdirectory in this
-repository:
+The R package is on [CRAN](https://CRAN.R-project.org/package=theoryforge):
+
+```r
+install.packages("theoryforge")
+```
+
+The development version of the R package installs from GitHub, pointing at its subdirectory in
+this repository:
 
 ```r
 # install.packages("remotes")

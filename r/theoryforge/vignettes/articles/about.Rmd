@@ -57,8 +57,8 @@ function theoryforgeCopyBibtex(btn) {
 ', esc(bib), uri))
 ```
 
-In R, the same entry is available with `citation("theoryforge")`. Once on CRAN, the
-package will install with `install.packages("theoryforge")`. Until then, use
+In R, the same entry is available with `citation("theoryforge")`. The package installs from
+CRAN with `install.packages("theoryforge")`, and the development version with
 `remotes::install_github("pablobernabeu/theoryforge", subdir = "r/theoryforge")`.
 
 ## The developer
