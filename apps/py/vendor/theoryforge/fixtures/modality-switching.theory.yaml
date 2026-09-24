@@ -1,0 +1,135 @@
+# Acyclic companion to the two panic-network examples. Its causal propositions
+# form a directed acyclic graph with a fork at modality-specific activation and
+# a collider at ease of conceptual access, so implications() derives a basis set
+# from it where the panic examples are refused for their feedback loop.
+schema_version: "1.0"
+id: "modality-switching-2026"
+title: "Modality switching in grounded conceptual processing"
+maturity: "developing"
+theory_form: "variance"
+version:
+  id: "v1"
+  parent_id: null
+  content_hash: null
+
+constructs:
+  - id: c_sensorimotor_experience
+    label: "Sensorimotor experience with a concept"
+    definition: "The accumulated perceptual and motor engagement a person has had with the referent of a concept, across the modalities in which that referent is met."
+    measurement: ["modality-specific perceptual strength ratings", "sensory experience ratings", "self-reported frequency of first-hand encounters"]
+    boundary_conditions: ["adult native speakers", "concrete nouns and their properties", "no sensory impairment in the modalities tested"]
+  - id: c_modality_activation
+    label: "Modality-specific perceptual activation"
+    definition: "Recruitment of the perceptual system belonging to one modality while a word or property that draws on that modality is understood."
+    measurement: ["BOLD response in modality-specific sensory cortex", "interference from a concurrent load in the same modality"]
+    boundary_conditions: ["adult native speakers", "no sensory impairment in the modalities tested", "visual word presentation"]
+  - id: c_switch_cost
+    label: "Cost of switching modality between consecutive trials"
+    definition: "The extra time taken to verify a property when the trial before it addressed a property of a different perceptual modality."
+    measurement: ["switch-minus-repeat response-time difference", "switch-minus-repeat error-rate difference"]
+    boundary_conditions: ["adult native speakers", "consecutive trials within one block", "no interpolated task between trials"]
+  - id: c_conceptual_access
+    label: "Ease of conceptual access"
+    definition: "The speed and reliability with which the meaning of a word becomes available to the task at hand."
+    measurement: ["semantic categorisation latency", "lexical decision latency", "accuracy on either task"]
+    boundary_conditions: ["adult native speakers", "visual word presentation", "single words without sentence context"]
+  - id: c_lexical_familiarity
+    label: "Lexical familiarity with the word form"
+    definition: "How well established the written or spoken form of a word is for a reader, apart from anything the word refers to."
+    measurement: ["subjective familiarity ratings", "corpus frequency of the word form", "age of acquisition"]
+    boundary_conditions: ["adult native speakers", "single words without sentence context", "concrete nouns and their properties"]
+
+propositions:
+  - id: p1
+    from: c_sensorimotor_experience
+    to: c_modality_activation
+    relation: "increases"
+    mechanism: "Understanding a word re-enacts the perceptual states laid down when its referent was met, so a modality that carries much of that experience is the one recruited most strongly."
+    functional_form: "monotonic"
+  - id: p2
+    from: c_modality_activation
+    to: c_switch_cost
+    relation: "increases"
+    mechanism: "Attention has to be moved from one perceptual system to another between trials, and the more firmly the system engaged on the preceding trial was committed, the longer that move takes."
+  - id: p3
+    from: c_modality_activation
+    to: c_conceptual_access
+    relation: "increases"
+    mechanism: "The perceptual detail the recruited system returns is part of the conceptual content itself, so recruiting it supplies the very information the task is asking for."
+  - id: p4
+    from: c_lexical_familiarity
+    to: c_conceptual_access
+    relation: "increases"
+    mechanism: "A well-established form is recognised quickly and with little competition from its neighbours, which leaves the conceptual system a cleaner signal to work from."
+
+boundary_conditions: ["adult native speakers", "concrete nouns and their properties", "no sensory impairment in the modalities tested", "visual word presentation", "consecutive trials within one block", "no interpolated task between trials", "single words without sentence context"]
+
+predictions:
+  - id: pred1
+    derives_from: [p1, p2]
+    statement: "In property verification with word frequency, word length and property typicality matched across conditions, responses are slower when the property belongs to a different modality from the preceding trial than when it belongs to the same one."
+    type: "directional"
+    risk_score: 0.4
+    severity: 0.45
+    diagnostic_vs: []
+  - id: pred2
+    derives_from: [p1, p2]
+    statement: "In that design the switch cost lies between 20 and 60 ms, averaged over items and participants."
+    type: "interval"
+    risk_score: 0.7
+    severity: 0.6
+    diagnostic_vs: []
+  - id: pred3
+    derives_from: [p3]
+    statement: "Concurrent dynamic visual noise removes the advantage of visual properties over auditory properties in semantic categorisation, leaving a difference of zero under load in the same participants who show the advantage without it."
+    type: "point"
+    risk_score: 0.9
+    severity: 0.75
+    diagnostic_vs: [alt_grounding_by_interaction]
+  - id: pred4
+    derives_from: [p1, p4]
+    statement: "Across a corpus of concrete nouns matched for length, modality-specific perceptual strength and lexical familiarity correlate no more strongly than 0.10 in absolute value."
+    type: "interval"
+    risk_score: 0.7
+    severity: 0.65
+    diagnostic_vs: [alt_symbol_interdependency]
+
+auxiliary_assumptions:
+  - id: aux1
+    statement: "Response latency in these tasks indexes ease of conceptual access rather than ease of selecting a response."
+    added_for: null
+    protects: [pred1, pred2, pred3]
+  - id: aux2
+    statement: "Perceptual strength ratings collected from a norming sample stand in for the sensorimotor experience of the participants tested."
+    added_for: null
+    protects: [pred4]
+
+evidence:
+  - supports: pred1
+    source_doi: "10.1111/1467-9280.t01-1-01429"
+    direction: "corroborates"
+
+alternatives:
+  - id: alt_grounding_by_interaction
+    label: "Grounding by interaction"
+    key_constructs: ["abstract conceptual representation", "sensorimotor activation as a downstream consequence"]
+    source_doi: "10.1016/j.jphysparis.2008.03.004"
+  - id: alt_symbol_interdependency
+    label: "Symbol interdependency"
+    key_constructs: ["linguistic distributional statistics", "perceptual simulation as a slower second route"]
+    source_doi: "10.1111/j.1756-8765.2010.01106.x"
+
+formal_model:
+  type: "sem"
+  spec_ref: "models/modality_switching.lavaan"
+
+provenance:
+  - step: "1"
+    action: "tf_construct"
+    detail: "Registered five constructs from the perceptual-symbols account of conceptual processing (Barsalou, 1999, doi:10.1017/S0140525X99002149)."
+  - step: "2"
+    action: "tf_proposition"
+    detail: "Linked the constructs into an acyclic graph: a fork at modality activation and a collider at conceptual access."
+  - step: "3"
+    action: "tf_predict"
+    detail: "Derived four predictions, two of them diagnostic against a registered alternative."
