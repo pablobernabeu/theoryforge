@@ -180,6 +180,18 @@
   linear, the model cannot show bistability. Matrix joins Suggests for a test
   that checks the propagator against `Matrix::expm()`.
 
+* `tf_fetch_corpus()` stops with the HTTP status when OpenAlex refuses a
+  request, where a rate-limit or permission error returned an empty corpus that
+  read as a literature with no themes. OpenAlex's own message follows the
+  status when the response carries one. A response without a results list,
+  which read as no results, is now refused. The function accepts an OpenAlex
+  API key (`api_key`, by default the `OPENALEX_API_KEY` environment variable),
+  sent as a header, records where and when the corpus was fetched in `source`,
+  keeps each work's DOI and can page through `max_records` results. `mailto` is
+  documented as ignored, since OpenAlex replaced its polite pool with API keys.
+
+* The tests need `testthat` 3.1.7 or later.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

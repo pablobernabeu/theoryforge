@@ -9,6 +9,21 @@
   "properties": {
     "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
     "id": { "type": "string", "minLength": 1 },
+    "source": {
+      "type": "object",
+      "description": "Where, when and how the corpus was fetched, as fetch_corpus records it (API_SPEC.md section 17). Optional: a corpus written by hand need not carry it.",
+      "additionalProperties": true,
+      "properties": {
+        "service": { "type": "string" },
+        "endpoint": { "type": "string" },
+        "query": { "type": "string" },
+        "retrieved": { "type": "string", "format": "date-time", "description": "UTC time of the first request, YYYY-MM-DDTHH:MM:SSZ" },
+        "total_count": { "type": ["integer", "null"], "description": "works matching the query (OpenAlex meta.count)" },
+        "n_records": { "type": "integer", "minimum": 0, "description": "records kept in the corpus" },
+        "per_page": { "type": "integer", "minimum": 1 },
+        "sort": { "type": "string", "description": "the order the service returned the works in" }
+      }
+    },
     "records": {
       "type": "array",
       "items": {
@@ -17,6 +32,7 @@
         "additionalProperties": true,
         "properties": {
           "id": { "type": "string" },
+          "doi": { "type": ["string", "null"], "description": "the work's DOI as the source gives it (OpenAlex: a https://doi.org/ URL), or null" },
           "title": { "type": "string" },
           "year": { "type": ["integer", "string", "null"] },
           "keywords": { "type": "array", "items": { "type": "string" } },

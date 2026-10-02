@@ -224,15 +224,45 @@ The corpus above was read from a file. A corpus can also be assembled from the
 OpenAlex works API with `tf_fetch_corpus()`. This adapter is assistive. It
 makes a live network call and its result depends on an external service that
 changes over time, so it sits outside the deterministic core of the package.
-The call is shown here but not run, and the supplied email enters the OpenAlex
-polite pool.
+The call is shown here but not run.
 
 ```{r fetch, eval = FALSE}
 fetched <- tf_fetch_corpus("panic disorder interoception",
-                           per_page = 25,
-                           mailto = "me@example.org")
+                           per_page = 100,
+                           max_records = 400)
+fetched$source    # the query, when it ran, how many works matched and were kept
+jsonlite::write_json(fetched, "panic-corpus.json", auto_unbox = TRUE,
+                     null = "null")
+fetched <- tf_read_corpus("panic-corpus.json")
 fetched_map <- tf_litmap(fetched)
 ```
+
+OpenAlex answers requests without a key within a budget of USD 0.10 a day. A
+search page costs USD 0.001, so the budget covers about 100 pages. A free API
+key raises the budget to USD 1 a day. Store the key in the `OPENALEX_API_KEY`
+environment variable, for example in `.Renviron`, and `tf_fetch_corpus()`
+sends it in a request header, never in the URL or the corpus. The `mailto`
+argument is still accepted, but OpenAlex now ignores it. When OpenAlex refuses
+a request, typically with HTTP 429 once the budget is spent, the function
+stops with the status and OpenAlex's message. It used to return an empty
+corpus, which read as a literature with no themes.
+
+Each request returns one page of works, ranked by relevance, from a result set
+that is usually far larger: a search for panic disorder matched about 187,000
+works in October 2026. OpenAlex supports pages of up to 100 works and has
+deprecated larger ones, although it still accepts 200. `max_records` pages on
+through OpenAlex's cursor until that many works are collected, and
+`fetched$source` records the query, the UTC time of retrieval, the number of
+works that matched and the number kept. That record matters because the
+keywords change. Since late September 2026, OpenAlex has written each work's
+keywords with a language model that reads its title, abstract and venue. It
+merges and splits that vocabulary over time, so the same works fetched a week
+apart can carry different keywords. Works left without keywords fall back to
+their concepts, a deprecated vocabulary whose capitalised names do not match
+the lower-case keywords. Each record also keeps the work's DOI as OpenAlex
+gives it. The example writes the corpus with `null = "null"`, because
+`jsonlite` would otherwise write a missing DOI or count as an empty object,
+which the corpus schema does not allow.
 
 Once fetched, the corpus object has the same shape as a file-read corpus, so it
 flows into `tf_litmap()`, `tf_landscape()` and `tf_lit_diagram()` without any
@@ -359,12 +389,13 @@ vector of author keywords per record) and `references` (one data frame of
 cited works per record, with `id`, `doi`, `title` and other fields).
 
 `tf_fetch_corpus()` (OpenAlex) stays the built-in default because OpenAlex is
-free and keyless, so the literature layer works with no setup. Scopus needs an
-institutional subscription and an API key, so `scopusflow` is an opt-in source
-rather than a dependency. The two packages exchange plain data, a DOI vector or
-a corpus written to a file, with no coupling in either direction. That keeps
-theoryforge dependency-light and usable straight after install, and lets a
-reader reach for whichever index they have access to.
+free and answers modest use without a key, so the literature layer works with
+no setup. Scopus needs an institutional subscription and an API key, so
+`scopusflow` is an opt-in source rather than a dependency. The two packages
+exchange plain data, a DOI vector or a corpus written to a file, with no
+coupling in either direction. That keeps theoryforge dependency-light and
+usable straight after install, and lets a reader reach for whichever index
+they have access to.
 
 The corpus format expects a top-level `{schema_version, id, records}` mapping
 and, within each record, `references` as a flat list of id strings, whereas

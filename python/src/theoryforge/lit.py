@@ -6,11 +6,16 @@ live network service.
 """
 from __future__ import annotations
 
+import io
 import itertools
 import json
 import math
+import os
+import urllib.error
+from datetime import datetime, timezone
+from urllib.parse import urlencode
 
-from ._access import field, items, str_list, text
+from ._access import field, items, ne_str, str_list, text
 from ._load import load_document
 from ._text import normalise_doi
 from .redundancy import tokens
@@ -350,43 +355,231 @@ def new_evidence_dois(theory, candidate_dois: list) -> list:
     return sorted(out, key=normalise_doi)
 
 
-def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None) -> dict:
+_OPENALEX_WORKS = "https://api.openalex.org/works"
+
+# Seconds every outbound request is allowed before it is abandoned, the timeout
+# the R twin gives curl and url(). Without one, a stalled service hangs an
+# interactive session indefinitely.
+_NET_TIMEOUT = 30
+
+_KEY_MESSAGE = "api_key must be a string of visible ASCII characters"
+
+
+class OpenAlexHTTPError(urllib.error.HTTPError):
+    """OpenAlex refused a request (API_SPEC.md section 17).
+
+    A subclass of ``urllib.error.HTTPError``, so a handler written for the error
+    that ``urlopen`` raises still catches it, with the same ``code``, headers and
+    readable body. Its ``str()`` is the message the R twin stops with:
+    ``OpenAlex request failed with HTTP <code>``, followed by ``: <message>``
+    when the body is a JSON object that carries one.
+    """
+
+    def __init__(self, url: str, code: int, message: str, hdrs, body: bytes):
+        super().__init__(url, code, message, hdrs, io.BytesIO(body))
+
+    def __str__(self) -> str:
+        return self.msg
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__} {self.code}: {self.msg!r}>"
+
+
+def _urlopen(request, timeout):
+    """Send ``request`` with ``urllib.request.urlopen``.
+
+    fetch_corpus sends every request through this function, which the tests
+    replace with a stand-in (R: ``.tf_http``).
+    """
+    from urllib.request import urlopen
+
+    return urlopen(request, timeout=timeout)  # noqa: S310 (documented external call)
+
+
+def _api_key(value) -> str:
+    """The key to send, or "" for none (R: ``.tf_api_key``).
+
+    The key travels in a header, so spaces, tabs and line breaks around it (a
+    key pasted into an environment file, say) are trimmed. Any other character
+    outside visible ASCII is refused before a request is made, because it would
+    break the header and urllib's error about the header prints the key.
+    """
+    if not isinstance(value, str):
+        raise ValueError(_KEY_MESSAGE)
+    key = value.strip(" \t\r\n")
+    if any(not "!" <= ch <= "~" for ch in key):
+        raise ValueError(_KEY_MESSAGE)
+    return key
+
+
+def _json_message(body: bytes) -> str:
+    """The ``message`` field of a JSON object, else its ``error`` field, else ""."""
+    try:
+        data = json.loads(body)
+    except ValueError:
+        return ""
+    if isinstance(data, dict):
+        for name in ("message", "error"):
+            if ne_str(data.get(name)):
+                return data[name]
+    return ""
+
+
+def _openalex_page(params: dict, headers: dict, key: str) -> dict:
+    """One page of OpenAlex works, the parsed response (R: ``.tf_openalex_page``).
+
+    The HTTP status is checked and the results list required. ``params`` are
+    the query parameters in the order they are sent.
+    """
+    from urllib.request import Request
+
+    url = _OPENALEX_WORKS + "?" + urlencode(params)
+    request = Request(url)
+    # urllib copies a request's ordinary headers into the request a redirect
+    # makes, whatever server it points to, so the key could follow a redirect to
+    # another host. An unredirected header is sent with this request only. The R
+    # twin's libcurl keeps it for the same scheme, host and port alone
+    # (API_SPEC.md section 17).
+    for name, value in headers.items():
+        request.add_unredirected_header(name, value)
+    try:
+        with _urlopen(request, timeout=_NET_TIMEOUT) as resp:
+            body = resp.read()
+    except urllib.error.HTTPError as err:
+        body = err.read() if err.fp is not None else b""
+        # A server that repeats the key in an error must not carry it into the message.
+        if key:
+            body = body.replace(key.encode("ascii"), b"<api_key>")
+        message = f"OpenAlex request failed with HTTP {err.code}"
+        detail = _json_message(body)
+        if detail:
+            message += f": {detail}"
+        raise OpenAlexHTTPError(url, err.code, message, err.hdrs, body) from err
+    try:
+        data = json.loads(body)
+    except ValueError:
+        data = None
+    if not isinstance(data, dict) or not isinstance(data.get("results"), list):
+        raise ValueError("OpenAlex response has no results list")
+    return data
+
+
+def _meta(page: dict) -> dict:
+    meta = page.get("meta")
+    return meta if isinstance(meta, dict) else {}
+
+
+def _whole_number(x) -> int | None:
+    """``x`` when it is one whole number, otherwise None (R: ``.tf_whole_number``)."""
+    if isinstance(x, bool) or not isinstance(x, (int, float)):
+        return None
+    if isinstance(x, float) and not (math.isfinite(x) and x.is_integer()):
+        return None
+    return int(x)
+
+
+def _openalex_record(w: dict) -> dict:
+    """One OpenAlex work as a corpus record."""
+    # Null display_name entries must be dropped before the emptiness test:
+    # a keywords list made only of nulls is non-empty as returned, which
+    # would suppress the concepts fallback and leave the record with no
+    # keywords at all. The R twin filters first for the same reason.
+    kws = [k.get("display_name") for k in (w.get("keywords") or [])]
+    kws = [k for k in kws if k]
+    if not kws:
+        kws = [c.get("display_name") for c in (w.get("concepts") or [])[:5]]
+        kws = [k for k in kws if k]
+    return {
+        "id": w.get("id"),
+        "doi": w.get("doi"),
+        "title": w.get("title"),
+        "year": w.get("publication_year"),
+        "keywords": kws,
+        "references": w.get("referenced_works") or [],
+    }
+
+
+def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None,
+                 api_key: str | None = None, max_records: int | None = None) -> dict:
     """Build a corpus from the OpenAlex API (network call).
 
-    This adapter is assistive. It depends on a live external service whose results
-    change over time, so it sits outside the package's deterministic core.
-    ``per_page`` must be between 1 and 200, the range OpenAlex accepts.
-    """
-    import urllib.parse
-    import urllib.request
+    This adapter is assistive. It depends on a live external service whose
+    results change over time, so it sits outside the package's deterministic
+    core. Each work is mapped to ``{id, doi, title, year, keywords, references}``,
+    with the DOI as OpenAlex gives it and the top five concepts standing in for
+    keywords when a work has none.
 
+    OpenAlex returns the works that match a search in pages of ``per_page``,
+    ranked by relevance, and a search usually matches far more works than one
+    page holds. ``per_page`` may be 1 to 200, but OpenAlex supports pages of up
+    to 100 and has deprecated larger ones. A ``max_records`` above ``per_page``
+    pages on through OpenAlex's cursor until that many works are collected or
+    the results run out. By default it equals ``per_page``, so one request is
+    made. Each page is one request and costs USD 0.001. OpenAlex allows USD 0.10
+    a day without a key, about 100 pages, and USD 1 with a free key.
+
+    ``api_key`` defaults to the ``OPENALEX_API_KEY`` environment variable, and
+    ``""`` sends no key. The key is sent only in an ``Authorization: Bearer``
+    header, never in the URL, the corpus or an error message. ``mailto`` is
+    still sent, but OpenAlex now ignores it, since API keys replaced the polite
+    pool it once selected.
+
+    When OpenAlex refuses a request, as it does with HTTP 429 once the budget is
+    spent, ``OpenAlexHTTPError`` (a ``urllib.error.HTTPError``) is raised with
+    the status and OpenAlex's own message, and the request is not retried. A
+    response without a ``results`` list raises ValueError.
+
+    The corpus records where, when and how it was fetched in ``source``. It
+    gives the service, endpoint and query and the UTC time of retrieval
+    (``retrieved``), then the number of works that matched (``total_count``),
+    the number kept (``n_records``), the page size and the order (``sort``).
+    The date matters because the keywords change. Since late September 2026,
+    OpenAlex has written each work's keywords with a language model that reads
+    its title, abstract and venue. It merges and splits that vocabulary over
+    time. Works without keywords fall back to their concepts, a deprecated
+    vocabulary with capitalised names that do not match the lower-case keywords
+    in ``litmap``. Save a fetched corpus and work from the saved file.
+    """
     # Reject out-of-range page sizes here rather than passing them through for
     # OpenAlex to reject, and with the same message the R twin uses.
     if isinstance(per_page, bool) or not isinstance(per_page, int) or not 1 <= per_page <= 200:
         raise ValueError("per_page must be between 1 and 200")
+    max_records = per_page if max_records is None else _positive_int(max_records, "max_records")
+    key = _api_key(os.environ.get("OPENALEX_API_KEY", "") if api_key is None else api_key)
+    headers = {"Authorization": f"Bearer {key}"} if key else {}
     params = {"search": query, "per-page": str(per_page)}
     if mailto:
         params["mailto"] = mailto
-    url = "https://api.openalex.org/works?" + urllib.parse.urlencode(params)
-    with urllib.request.urlopen(url, timeout=30) as resp:  # noqa: S310 (documented external call)
-        data = json.load(resp)
 
-    records = []
-    for w in data.get("results", []):
-        # Null display_name entries must be dropped before the emptiness test:
-        # a keywords list made only of nulls is non-empty as returned, which
-        # would suppress the concepts fallback and leave the record with no
-        # keywords at all. The R twin filters first for the same reason.
-        kws = [k.get("display_name") for k in (w.get("keywords") or [])]
-        kws = [k for k in kws if k]
-        if not kws:
-            kws = [c.get("display_name") for c in (w.get("concepts") or [])[:5]]
-            kws = [k for k in kws if k]
-        records.append({
-            "id": w.get("id"),
-            "title": w.get("title"),
-            "year": w.get("publication_year"),
-            "keywords": kws,
-            "references": w.get("referenced_works") or [],
-        })
-    return {"schema_version": "1.0", "id": f"openalex:{query}", "records": records}
+    # Cursor paging, which OpenAlex serves for a search with no cap on the
+    # number of results: "*" asks for the first page, and each page names the
+    # cursor of the next. The run ends with enough works, an empty page or no
+    # cursor (API_SPEC.md section 17).
+    retrieved = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    page = _openalex_page({**params, "cursor": "*"}, headers, key)
+    total_count = _whole_number(_meta(page).get("count"))
+    records = [_openalex_record(w) for w in page["results"]]
+    cursor = _meta(page).get("next_cursor")
+    while len(records) < max_records and page["results"] and ne_str(cursor):
+        page = _openalex_page({**params, "cursor": cursor}, headers, key)
+        records += [_openalex_record(w) for w in page["results"]]
+        cursor = _meta(page).get("next_cursor")
+    records = records[:max_records]
+
+    return {
+        "schema_version": "1.0",
+        "id": f"openalex:{query}",
+        "source": {
+            "service": "OpenAlex",
+            "endpoint": _OPENALEX_WORKS,
+            "query": query,
+            "retrieved": retrieved,
+            "total_count": total_count,
+            "n_records": len(records),
+            "per_page": per_page,
+            # The order OpenAlex gives a search unless told otherwise. The
+            # adapter sends no sort, so this records that default.
+            "sort": "relevance_score:desc",
+        },
+        "records": records,
+    }

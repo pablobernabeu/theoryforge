@@ -401,16 +401,40 @@ from the saved file so that later analysis stays reproducible.
 ```python
 corpus = tf.fetch_corpus(
     "panic disorder theory",
-    per_page=25,
-    mailto="you@example.org"
+    per_page=100,
+    max_records=400,
 )
+print(corpus["source"])  # the query, when it ran, how many works matched and were kept
 ```
 
-The `mailto` argument is optional and identifies the caller to OpenAlex, as
-that service requests. The returned mapping has the same shape as a corpus
-read from disk, so it flows straight into `litmap` and `landscape`. Supplying
-a corpus file remains the recommended path for any analysis that needs to be
-repeated exactly.
+OpenAlex answers requests without a key within a budget of USD 0.10 a day. A
+search page costs USD 0.001, so the budget covers about 100 pages. A free API
+key raises the budget to USD 1 a day. Store the key in the `OPENALEX_API_KEY`
+environment variable, or pass it as `api_key`, and `fetch_corpus` sends it in
+a request header, never in the URL or the corpus. The `mailto` argument is
+still accepted, but OpenAlex now ignores it. When OpenAlex refuses a request,
+typically with HTTP 429 once the budget is spent, `fetch_corpus` raises
+`OpenAlexHTTPError`, a subclass of `urllib.error.HTTPError`, with the status
+and OpenAlex's message.
+
+Each request returns one page of works, ranked by relevance, from a result set
+that is usually far larger: a search for panic disorder matched about 187,000
+works in October 2026. OpenAlex supports pages of up to 100 works and has
+deprecated larger ones, although it still accepts 200. `max_records` pages on
+through OpenAlex's cursor until that many works are collected, and
+`corpus["source"]` records the query, the UTC time of retrieval, the number of
+works that matched and the number kept. That record matters because the
+keywords change. Since late September 2026, OpenAlex has written each work's
+keywords with a language model that reads its title, abstract and venue. It
+merges and splits that vocabulary over time, so the same works fetched a week
+apart can carry different keywords. Works left without keywords fall back to
+their concepts, a deprecated vocabulary whose capitalised names do not match
+the lower-case keywords. Each record also keeps the work's DOI as OpenAlex
+gives it.
+
+The returned mapping has the same shape as a corpus read from disk, so it
+flows straight into `litmap` and `landscape`. Supplying a corpus file remains
+the recommended path for any analysis that needs to be repeated exactly.
 
 ## Tracking new evidence with an external search
 
@@ -508,12 +532,13 @@ per row) and `references` (one DataFrame of cited works per row, with `id`,
 `doi`, `title` and other fields).
 
 `fetch_corpus` (OpenAlex) stays the built-in default because OpenAlex is free
-and keyless, so the literature layer works with no setup. Scopus needs an
-institutional subscription and an API key, so `scopusflow-py` is an opt-in
-source rather than a dependency. The two packages exchange plain data, a DOI
-list or a corpus written to a file, with no coupling in either direction. That
-keeps theoryforge dependency-light and usable straight after install, and lets
-a reader reach for whichever index they have access to.
+and answers modest use without a key, so the literature layer works with no
+setup. Scopus needs an institutional subscription and an API key, so
+`scopusflow-py` is an opt-in source rather than a dependency. The two packages
+exchange plain data, a DOI list or a corpus written to a file, with no
+coupling in either direction. That keeps theoryforge dependency-light and
+usable straight after install, and lets a reader reach for whichever index
+they have access to.
 
 The corpus format expects a top-level `{schema_version, id, records}` mapping
 and, within each record, `references` as a flat list of id strings, whereas

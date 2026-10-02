@@ -124,29 +124,77 @@ NULL
 # hangs an interactive session indefinitely.
 .tf_NET_TIMEOUT <- 30
 
-# Fetch a URL as UTF-8 text under that timeout. curl (Suggests) gives a
-# per-request timeout when it is installed; otherwise base R's url() connection
-# honours the global `timeout` option, which is restored on exit, so the
-# guarantee holds with no hard dependency.
-.tf_fetch_url <- function(url, timeout = .tf_NET_TIMEOUT) {
-  if (requireNamespace("curl", quietly = TRUE)) {  # nocov start
+# Whether curl (Suggests) is installed. It is a function so that a test can
+# take the base R branch of .tf_http() on a machine that has curl.
+.tf_has_curl <- function() requireNamespace("curl", quietly = TRUE)
+
+# Send one HTTP request under that timeout and return list(status, body): the
+# HTTP status and the body as UTF-8 text. A status of 400 or more is returned,
+# not raised, so the caller decides what it means (.tf_http_check() for
+# OpenAlex). `headers` is a named character vector or NULL, and `body` a string
+# or raw vector to send. curl gives a per-request timeout, any method and the
+# body of an error response. Without it, base R's url() connection honours the
+# global `timeout` option, which is restored on exit, so the guarantee holds
+# with no hard dependency. url() sends only GET and cannot read the body of an
+# error response, so .tf_url_failure() turns what it reports into a status
+# with no body.
+.tf_http <- function(method, url, headers = NULL, body = NULL, timeout = .tf_NET_TIMEOUT) {
+  if (.tf_has_curl()) {
     handle <- curl::new_handle(timeout = timeout, connecttimeout = timeout)
-    body <- curl::curl_fetch_memory(url, handle = handle)$content
-  } else {
-    old <- options(timeout = timeout)
-    on.exit(options(old), add = TRUE)
-    con <- base::url(url, open = "rb")
-    on.exit(close(con), add = TRUE)
-    # 100 MB is a ceiling on what a mistaken or hostile URL can pull into memory
-    # in a session. It is far above any OpenAlex page (200 records at most), so
-    # a truncated read here means something other than the documented API
-    # answered, and the JSON parse that follows will say so.
-    body <- readBin(con, "raw", n = 1e8L)
+    if (length(headers) > 0L) curl::handle_setheaders(handle, .list = as.list(headers))
+    if (!identical(method, "GET")) curl::handle_setopt(handle, customrequest = method)
+    if (!is.null(body)) {
+      if (is.character(body)) body <- charToRaw(enc2utf8(body))
+      curl::handle_setopt(handle, postfields = body)
+    }
+    res <- curl::curl_fetch_memory(url, handle = handle)
+    return(list(status = res$status_code, body = .tf_utf8(res$content)))
   }
-  text <- rawToChar(body)
+  if (!identical(method, "GET")) {
+    stop(sprintf("an HTTP %s request needs the curl package", method), call. = FALSE)
+  }
+  old <- options(timeout = timeout)
+  on.exit(options(old), add = TRUE)
+  warnings <- character(0)
+  con <- withCallingHandlers(
+    tryCatch(base::url(url, open = "rb", headers = headers), error = function(e) NULL),
+    warning = function(w) {
+      warnings <<- c(warnings, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  if (is.null(con)) return(.tf_url_failure(warnings))
+  on.exit(close(con), add = TRUE)
+  # 100 MB is a ceiling on what a mistaken or hostile URL can pull into memory
+  # in a session. It is far above any OpenAlex page (200 records at most), so
+  # a truncated read here means something other than the documented API
+  # answered, and the parse that follows refuses it.
+  list(status = 200L, body = .tf_utf8(readBin(con, "raw", n = 1e8L)))
+}
+
+# What base R's url() reported when it could not open a connection, read from
+# its warnings. An HTTP error ("cannot open URL '<url>': HTTP status was '429
+# Unknown Error'") gives list(status, body = NULL), since url() cannot read the
+# body. Any other failure ("URL '<url>': status was 'Could not connect to
+# server'") stops with the reason. The URL that those warnings and url()'s own
+# error carry is left out of both.
+.tf_url_failure <- function(warnings) {
+  status <- regmatches(warnings, regexpr("(?<=HTTP status was ')[0-9]{3}", warnings, perl = TRUE))
+  if (length(status) > 0L) return(list(status = as.integer(status[[1L]]), body = NULL))
+  # The reason runs to the quote that closes the warning, because libcurl's
+  # wording can hold an apostrophe ("Couldn't resolve host name").
+  reason <- Filter(length, regmatches(warnings, regexec("status was '(.*)'$", warnings)))
+  stop(paste0("cannot open the connection",
+              if (length(reason) > 0L) paste0(": ", reason[[1L]][[2L]])),
+       call. = FALSE)
+}
+
+# Raw bytes as one string marked UTF-8.
+.tf_utf8 <- function(bytes) {
+  text <- rawToChar(bytes)
   Encoding(text) <- "UTF-8"
   text
-}  # nocov end
+}
 
 # Does a parsed document look like a mapping, as Python's isinstance(data, dict)
 # asks? A YAML or JSON sequence also parses to an R list, so `is.list` alone lets

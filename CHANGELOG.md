@@ -144,6 +144,14 @@ version and a single behavioural contract
   `maturity must be a string` where it gave `missing/empty required field: maturity`. A
   collection written as a single value or as a mapping gives `<key> must be a list`, where
   it used to validate and read as empty.
+- R's `tf_fetch_corpus()` returned an empty corpus without an error when OpenAlex refused
+  a request with HTTP 429 (rate limit) or 403, and an HTML error page stopped it with an
+  opaque JSON parse error. Python raised urllib's own HTTPError, with different text. Both
+  twins now raise `OpenAlex request failed with HTTP <status>`, followed by OpenAlex's
+  message when the body carries one. Python raises `OpenAlexHTTPError`, a subclass of
+  `urllib.error.HTTPError`, so existing handlers still catch it. A response without a
+  `results` list, which both twins read as zero results, raises
+  `OpenAlex response has no results list`. API_SPEC section 17 pins the messages.
 
 ### Changed
 - R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new
@@ -201,6 +209,12 @@ version and a single behavioural contract
   `simulate_exact.json` goldens are added, and the edge-case records gain the keys. The
   apps default to the exact method, offer a method selector, show the Euler warning and
   tell an unstable system from a coarse Euler step.
+- `fetch_corpus(query, per_page=25, mailto=None, api_key=None, max_records=None)` accepts
+  an OpenAlex API key, by default the `OPENALEX_API_KEY` environment variable, and sends
+  it only as an `Authorization: Bearer` header. `max_records` pages through OpenAlex's
+  cursor beyond one page. The corpus gains a top-level `source` (service, endpoint,
+  query, UTC retrieval time, total matches, records kept, page size and order) and each
+  record its `doi`, both optional properties in `schema/corpus.schema.json`.
 
 ### Deprecated
 - `simulate()`'s default `method="euler"`. The default will change to `"exact"` in the
@@ -225,6 +239,12 @@ version and a single behavioural contract
 - CONTRIBUTING installs the docs extra needed by `mkdocs build`.
 - The schema documents `risk_score` and `severity_at_test` as informational fields that
   no function reads.
+- The `fetch_corpus` documentation and both literature guides describe API keys in place
+  of the retired polite pool (OpenAlex ignores `mailto`), give the cost of a page and the
+  daily budgets, and explain that OpenAlex keywords have been written by a language model
+  since late September 2026 and change over time, while the concepts fallback brings a
+  deprecated vocabulary with capitalised names. Their examples ask for pages of 100 works,
+  the largest page OpenAlex supports now that it has deprecated 200.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and
@@ -264,6 +284,10 @@ version and a single behavioural contract
   miss, a value of the wrong type in every optional field, a quoted `passed`, four
   formal-model types outside the enum, an extra version key and a `schema_version` of
   `one`.
+- The OpenAlex adapter sends every request through one replaceable call in each twin:
+  `lit._urlopen` in Python, and in R `.tf_http(method, url, headers, body)`, which returns
+  the status and body for `.tf_http_check()` to judge. The R tests replace it with
+  `testthat::local_mocked_bindings()`, so `testthat (>= 3.1.7)` is now in Suggests.
 
 
 ## [0.6.0] - 2026-08-21

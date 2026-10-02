@@ -4,30 +4,79 @@
 \alias{tf_fetch_corpus}
 \title{Build a corpus from the OpenAlex API (network call)}
 \usage{
-tf_fetch_corpus(query, per_page = 25, mailto = NULL)
+tf_fetch_corpus(
+  query,
+  per_page = 25,
+  mailto = NULL,
+  api_key = Sys.getenv("OPENALEX_API_KEY", ""),
+  max_records = NULL
+)
 }
 \arguments{
 \item{query}{Free-text search query.}
 
-\item{per_page}{Number of works to request (default \code{25}); OpenAlex
-accepts 1 to 200.}
+\item{per_page}{Number of works to request in each page (default \code{25}).
+It may be 1 to 200, but OpenAlex supports pages of up to 100 and has
+deprecated larger ones.}
 
-\item{mailto}{Optional contact email for the OpenAlex "polite pool".}
+\item{mailto}{Optional contact email. It is still sent, but OpenAlex now
+ignores it, since API keys replaced the polite pool it once selected.}
+
+\item{api_key}{An OpenAlex API key, by default the \code{OPENALEX_API_KEY}
+environment variable. It is sent only in an \code{Authorization: Bearer}
+header, never in the URL, the corpus or an error message. \code{""} or
+\code{NULL} sends no key.}
+
+\item{max_records}{Number of works to collect, paging as needed.
+\code{NULL} (the default) means \code{per_page}, which is one request.}
 }
 \value{
 A corpus object (named list) with \code{schema_version}, \code{id},
-and \code{records}.
+\code{source} and \code{records}.
 }
 \description{
 Assistive helper that builds a corpus by querying the OpenAlex works API
 (\code{https://api.openalex.org/works?search=...}). This is a network call:
 it depends on a live external service whose results change over time, so it
 sits outside the package's deterministic core. Each work is mapped to
-\code{{id, title, year, keywords, references}} (keywords falls back to the top
-concepts when no keywords are present).
+\code{{id, doi, title, year, keywords, references}}, with the DOI as OpenAlex
+gives it (keywords falls back to the top concepts when no keywords are
+present).
+}
+\details{
+OpenAlex returns the works that match a search in pages of \code{per_page},
+ranked by relevance, and a search usually matches far more works than one
+page holds. A \code{max_records} above \code{per_page} pages on through
+OpenAlex's cursor until that many works are collected or the results run
+out. Each page is one request and costs USD 0.001. OpenAlex allows USD 0.10
+a day without a key, about 100 pages, and USD 1 with a free key. When
+OpenAlex refuses a request, as it does with HTTP 429 once the budget is
+spent, the function stops with the status and OpenAlex's own message, and
+the request is not retried.
+
+The corpus records where, when and how it was fetched in \code{source}. It
+gives the service, endpoint and query and the UTC time of retrieval
+(\code{retrieved}), then the number of works that matched
+(\code{total_count}), the number kept (\code{n_records}), the page size and
+the order (\code{sort}). The date matters because the keywords change.
+Since late September 2026, OpenAlex has written each work's keywords with a
+language model that reads its title, abstract and venue. It merges and
+splits that vocabulary over time. Works without keywords fall back to their
+concepts, a deprecated vocabulary with capitalised names that do not match
+the lower-case keywords in \code{\link[=tf_litmap]{tf_litmap()}}. Save a fetched corpus and work
+from the saved file.
 }
 \examples{
 \dontrun{
-corpus <- tf_fetch_corpus("panic disorder interoception", mailto = "me@example.org")
+# With OPENALEX_API_KEY set, for example in .Renviron, the key is sent in a
+# request header.
+corpus <- tf_fetch_corpus("panic disorder interoception",
+                          per_page = 100, max_records = 400)
+corpus$source
+# null = "null" writes a missing DOI or count as null, where jsonlite would
+# write an empty object.
+path <- tempfile(fileext = ".json")
+jsonlite::write_json(corpus, path, auto_unbox = TRUE, null = "null")
+corpus <- tf_read_corpus(path)
 }
 }

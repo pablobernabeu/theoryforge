@@ -391,7 +391,6 @@ test_that("a record with 300 references maps in seconds", {
 })
 
 test_that("tf_landscape does not count co-citation", {
-  skip_if_not(utils::packageVersion("testthat") >= "3.1.7")
   original <- get(".tf_pair_counts", envir = asNamespace("theoryforge"))
   calls <- 0L
   local_mocked_bindings(.tf_pair_counts = function(values) {

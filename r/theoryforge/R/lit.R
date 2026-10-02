@@ -567,29 +567,131 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #' (\code{https://api.openalex.org/works?search=...}). This is a network call:
 #' it depends on a live external service whose results change over time, so it
 #' sits outside the package's deterministic core. Each work is mapped to
-#' \code{{id, title, year, keywords, references}} (keywords falls back to the top
-#' concepts when no keywords are present).
+#' \code{{id, doi, title, year, keywords, references}}, with the DOI as OpenAlex
+#' gives it (keywords falls back to the top concepts when no keywords are
+#' present).
+#'
+#' OpenAlex returns the works that match a search in pages of \code{per_page},
+#' ranked by relevance, and a search usually matches far more works than one
+#' page holds. A \code{max_records} above \code{per_page} pages on through
+#' OpenAlex's cursor until that many works are collected or the results run
+#' out. Each page is one request and costs USD 0.001. OpenAlex allows USD 0.10
+#' a day without a key, about 100 pages, and USD 1 with a free key. When
+#' OpenAlex refuses a request, as it does with HTTP 429 once the budget is
+#' spent, the function stops with the status and OpenAlex's own message, and
+#' the request is not retried.
+#'
+#' The corpus records where, when and how it was fetched in \code{source}. It
+#' gives the service, endpoint and query and the UTC time of retrieval
+#' (\code{retrieved}), then the number of works that matched
+#' (\code{total_count}), the number kept (\code{n_records}), the page size and
+#' the order (\code{sort}). The date matters because the keywords change.
+#' Since late September 2026, OpenAlex has written each work's keywords with a
+#' language model that reads its title, abstract and venue. It merges and
+#' splits that vocabulary over time. Works without keywords fall back to their
+#' concepts, a deprecated vocabulary with capitalised names that do not match
+#' the lower-case keywords in [tf_litmap()]. Save a fetched corpus and work
+#' from the saved file.
 #'
 #' @param query Free-text search query.
-#' @param per_page Number of works to request (default \code{25}); OpenAlex
-#'   accepts 1 to 200.
-#' @param mailto Optional contact email for the OpenAlex "polite pool".
+#' @param per_page Number of works to request in each page (default \code{25}).
+#'   It may be 1 to 200, but OpenAlex supports pages of up to 100 and has
+#'   deprecated larger ones.
+#' @param mailto Optional contact email. It is still sent, but OpenAlex now
+#'   ignores it, since API keys replaced the polite pool it once selected.
+#' @param api_key An OpenAlex API key, by default the \code{OPENALEX_API_KEY}
+#'   environment variable. It is sent only in an \code{Authorization: Bearer}
+#'   header, never in the URL, the corpus or an error message. \code{""} or
+#'   \code{NULL} sends no key.
+#' @param max_records Number of works to collect, paging as needed.
+#'   \code{NULL} (the default) means \code{per_page}, which is one request.
 #' @return A corpus object (named list) with \code{schema_version}, \code{id},
-#'   and \code{records}.
+#'   \code{source} and \code{records}.
 #' @examples
 #' \dontrun{
-#' corpus <- tf_fetch_corpus("panic disorder interoception", mailto = "me@example.org")
+#' # With OPENALEX_API_KEY set, for example in .Renviron, the key is sent in a
+#' # request header.
+#' corpus <- tf_fetch_corpus("panic disorder interoception",
+#'                           per_page = 100, max_records = 400)
+#' corpus$source
+#' # null = "null" writes a missing DOI or count as null, where jsonlite would
+#' # write an empty object.
+#' path <- tempfile(fileext = ".json")
+#' jsonlite::write_json(corpus, path, auto_unbox = TRUE, null = "null")
+#' corpus <- tf_read_corpus(path)
 #' }
 #' @export
-tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL) {
+tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL,
+                            api_key = Sys.getenv("OPENALEX_API_KEY", ""),
+                            max_records = NULL) {
   # Reject out-of-range page sizes here rather than passing them through for
   # OpenAlex to reject, and with the same message the Python twin uses.
   if (!is.numeric(per_page) || length(per_page) != 1L || is.na(per_page) ||
       per_page != trunc(per_page) || per_page < 1 || per_page > 200) {
     stop("per_page must be between 1 and 200", call. = FALSE)
   }
+  per_page <- as.integer(per_page)
+  max_records <- if (is.null(max_records)) per_page else .tf_positive_int(max_records, "max_records")
+  key <- .tf_api_key(api_key)
+  headers <- if (nzchar(key)) c(Authorization = paste("Bearer", key)) else NULL
   params <- list(search = query, "per-page" = as.character(per_page))
   if (!is.null(mailto)) params[["mailto"]] <- mailto
+
+  # Cursor paging, which OpenAlex serves for a search with no cap on the
+  # number of results: "*" asks for the first page, and each page names the
+  # cursor of the next. The run ends with enough works, an empty page or no
+  # cursor (API_SPEC.md section 17).
+  retrieved <- format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+  page <- .tf_openalex_page(c(params, cursor = "*"), headers, key)
+  total_count <- .tf_whole_number(.tf_get(page$meta, "count"))
+  records <- lapply(page$results, .tf_openalex_record)
+  cursor <- .tf_get(page$meta, "next_cursor")
+  while (length(records) < max_records && length(page$results) > 0L && .tf_ne_str(cursor)) {
+    page <- .tf_openalex_page(c(params, cursor = cursor), headers, key)
+    records <- c(records, lapply(page$results, .tf_openalex_record))
+    cursor <- .tf_get(page$meta, "next_cursor")
+  }
+  records <- utils::head(records, max_records)
+
+  list(
+    schema_version = "1.0",
+    id = paste0("openalex:", query),
+    source = list(
+      service = "OpenAlex",
+      endpoint = .tf_OPENALEX_WORKS,
+      query = query,
+      retrieved = retrieved,
+      total_count = total_count,
+      n_records = length(records),
+      per_page = per_page,
+      # The order OpenAlex gives a search unless told otherwise. The adapter
+      # sends no sort, so this records that default.
+      sort = "relevance_score:desc"
+    ),
+    records = records
+  )
+}
+
+.tf_OPENALEX_WORKS <- "https://api.openalex.org/works"
+
+# The key to send, or "" for none. It travels in a header, so spaces, tabs and
+# line breaks around it (a key pasted into .Renviron, say) are trimmed. Any
+# other character outside visible ASCII is refused before a request is made,
+# because it would break the header and an error about the header could print
+# the key.
+.tf_api_key <- function(value) {
+  msg <- "api_key must be a string of visible ASCII characters"
+  if (is.null(value)) return("")
+  if (!is.character(value) || length(value) != 1L || is.na(value)) stop(msg, call. = FALSE)
+  key <- trimws(value, whitespace = "[ \t\r\n]")
+  if (grepl("[^!-~]", key, useBytes = TRUE)) stop(msg, call. = FALSE)
+  key
+}
+
+# One page of OpenAlex works, list(meta, results), with the HTTP status checked
+# and the results list required. `params` are the query parameters in the order
+# they are sent.
+.tf_openalex_page <- function(params, headers, key) {
   qs <- paste(
     vapply(names(params), function(k) {
       paste0(utils::URLencode(k, reserved = TRUE), "=",
@@ -597,33 +699,80 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL) {
     }, character(1)),
     collapse = "&"
   )
-  url <- paste0("https://api.openalex.org/works?", qs)
-  data <- jsonlite::fromJSON(.tf_fetch_url(url), simplifyVector = FALSE)
+  res <- .tf_http("GET", paste0(.tf_OPENALEX_WORKS, "?", qs), headers)
+  body <- res$body
+  # A server that repeats the key in an error must not carry it into the message.
+  # The replacement works on bytes, so an error page that is not valid UTF-8
+  # still gives the status. The key and its stand-in are ASCII, so a valid body
+  # stays valid and is marked UTF-8 again.
+  if (res$status >= 400 && nzchar(key) && !is.null(body)) {
+    body <- gsub(key, "<api_key>", body, fixed = TRUE, useBytes = TRUE)
+    Encoding(body) <- "UTF-8"
+  }
+  .tf_http_check(res$status, body)
+  # parse_json(), unlike fromJSON(), never reads a file or downloads a URL that
+  # the body names.
+  data <- tryCatch(jsonlite::parse_json(body), error = function(e) NULL)
+  results <- if (.tf_is_mapping(data)) data[["results"]] else NULL
+  # A JSON array is an unnamed list, and `{}` a named one.
+  if (!is.list(results) || .tf_is_mapping(results)) {
+    stop("OpenAlex response has no results list", call. = FALSE)
+  }
+  list(meta = data[["meta"]], results = results)
+}
 
-  results <- if (is.list(data[["results"]])) data[["results"]] else list()
-  records <- lapply(results, function(w) {
-    kws <- character(0)
-    for (k in .tf_as_list(w, "keywords")) {
-      dn <- .tf_get(k, "display_name")
+# Stop when OpenAlex answered with an HTTP error: "OpenAlex request failed with
+# HTTP <status>", followed by ": <message>" when the body is a JSON object whose
+# `message`, or failing that `error`, is a nonempty string. `body` is NULL when
+# base R's url() could not read it. The Python twin raises OpenAlexHTTPError
+# with the same text.
+.tf_http_check <- function(status, body) {
+  if (status < 400) return(invisible(NULL))
+  msg <- sprintf("OpenAlex request failed with HTTP %d", as.integer(status))
+  detail <- .tf_json_message(body)
+  stop(if (nzchar(detail)) paste0(msg, ": ", detail) else msg, call. = FALSE)
+}
+
+# The `message` field of a JSON object, else its `error` field, else "".
+.tf_json_message <- function(body) {
+  data <- if (is.character(body) && length(body) == 1L) {
+    tryCatch(jsonlite::parse_json(body), error = function(e) NULL)
+  }
+  if (!.tf_is_mapping(data)) return("")
+  for (field in c("message", "error")) {
+    if (.tf_ne_str(data[[field]])) return(data[[field]])
+  }
+  ""
+}
+
+# `x` when it is one whole number, otherwise NULL.
+.tf_whole_number <- function(x) {
+  if (is.numeric(x) && length(x) == 1L && is.finite(x) && x == trunc(x)) x else NULL
+}
+
+# One OpenAlex work as a corpus record.
+.tf_openalex_record <- function(w) {
+  kws <- character(0)
+  for (k in .tf_as_list(w, "keywords")) {
+    dn <- .tf_get(k, "display_name")
+    if (!is.null(dn) && nzchar(as.character(dn))) kws <- c(kws, as.character(dn))
+  }
+  if (length(kws) == 0L) {
+    concepts <- .tf_as_list(w, "concepts")
+    concepts <- utils::head(concepts, 5L)
+    for (cc in concepts) {
+      dn <- .tf_get(cc, "display_name")
       if (!is.null(dn) && nzchar(as.character(dn))) kws <- c(kws, as.character(dn))
     }
-    if (length(kws) == 0L) {
-      concepts <- .tf_as_list(w, "concepts")
-      concepts <- utils::head(concepts, 5L)
-      for (cc in concepts) {
-        dn <- .tf_get(cc, "display_name")
-        if (!is.null(dn) && nzchar(as.character(dn))) kws <- c(kws, as.character(dn))
-      }
-    }
-    refs <- vapply(.tf_as_list(w, "referenced_works"),
-                   function(x) as.character(x[[1L]]), character(1))
-    list(
-      id = .tf_get(w, "id"),
-      title = .tf_get(w, "title"),
-      year = .tf_get(w, "publication_year"),
-      keywords = as.list(kws),
-      references = as.list(refs)
-    )
-  })
-  list(schema_version = "1.0", id = paste0("openalex:", query), records = records)
+  }
+  refs <- vapply(.tf_as_list(w, "referenced_works"),
+                 function(x) as.character(x[[1L]]), character(1))
+  list(
+    id = .tf_get(w, "id"),
+    doi = .tf_get(w, "doi"),
+    title = .tf_get(w, "title"),
+    year = .tf_get(w, "publication_year"),
+    keywords = as.list(kws),
+    references = as.list(refs)
+  )
 }
