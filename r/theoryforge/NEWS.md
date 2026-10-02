@@ -164,6 +164,22 @@
   the checklist refuse it too, since they call `tf_check()`. A missing or
   `NULL` `passed` still reads as not passed.
 
+* `tf_simulate()` gains `method = "exact"`, which propagates the linear system
+  with its matrix exponential and so has no step-size limit. The default stays
+  `"euler"` for this release and warns when its steps depart from the exact
+  solution by more than 5 per cent. The default will change to `"exact"` in
+  the next minor release. The Euler steps turned a decaying theory into an
+  alternating explosion once `dt * damping` exceeded 2, and inflated a
+  sustained oscillation into growth even at `dt = 0.1`. The record now names
+  the method (`method`), the propositions that couple nothing (`ignored`:
+  moderates, associates and propositions with an endpoint that is not a
+  declared construct) and the pairs whose increases and decreases offset each
+  other (`opposed`). The help page and the methodology article state what the
+  model leaves out: one gain for every coupling, `causes` and `mediates` taken
+  as positive, `functional_form` not read and a common initial value. Being
+  linear, the model cannot show bistability. Matrix joins Suggests for a test
+  that checks the propagator against `Matrix::expm()`.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

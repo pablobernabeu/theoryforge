@@ -185,8 +185,36 @@ version and a single behavioural contract
   `(a, b)`, with only their endpoints as nodes. Co-citation maps of real corpora run to
   thousands of edges: 200 OpenAlex records give 11,211 at a threshold of 2, against 616
   keyword edges. The literature guides in both languages show both arguments.
+- `simulate()` gains `method="exact"`, which propagates the linear system with its matrix
+  exponential and so has no step-size limit. The default stays `"euler"` for this release
+  and warns (UserWarning in Python, `warning()` in R, the same text) when its steps depart
+  from the exact solution by more than 5 per cent. The Euler steps turned a decaying theory
+  into an alternating explosion once `dt*damping` exceeded 2, and inflated a sustained
+  oscillation into growth even at `dt=0.1`: the regulation example in the workflow page
+  swung more than six times too wide after 500 steps. The record gains `method`,
+  `ignored` (the propositions that couple nothing: moderates, associates and propositions
+  with an endpoint that is not a declared construct) and `opposed` (the pairs whose increases and decreases offset
+  each other), after `init`. The propagator is a degree-18 Taylor polynomial with scaling
+  and squaring (Moler & Van Loan, 2003), written in explicit loops so the two languages
+  give the same bits. API_SPEC section 22 pins the algorithm, the warning and the new keys.
+  The four `simulate.json` goldens gain the keys with unchanged trajectories, four
+  `simulate_exact.json` goldens are added, and the edge-case records gain the keys. The
+  apps default to the exact method, offer a method selector, show the Euler warning and
+  tell an unstable system from a coarse Euler step.
+
+### Deprecated
+- `simulate()`'s default `method="euler"`. The default will change to `"exact"` in the
+  next minor release. Pass `method="euler"` to keep the current trajectories.
 
 ### Documentation
+- Both methodology pages, the docstring and the R help page state what the simulation
+  leaves out: one gain for every coupling, `causes` and `mediates` taken as positive,
+  `moderates` and `associates` coupling nothing, `functional_form` not read and a common
+  initial value. Being linear, it cannot show bistability (Robinaugh et al., 2024). An
+  acyclic theory decays at the damping rate only asymptotically, and the regime of a
+  theory with loops is set by the gain against the damping. The workflow page's
+  simulation example runs for 20 time units with `method="exact"` and shows the
+  oscillation its five Euler steps hid.
 - The literature page's recipe for turning a scopusflow corpus into a theoryforge
   corpus keys cited works by Scopus identifier, folds DOI and keyword case and writes a
   missing year as null. The earlier recipe split one cited work into several nodes, so

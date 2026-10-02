@@ -5,7 +5,8 @@
 \title{Deterministic dynamical-system runner derived from a theory network.}
 \description{
 Each construct is a state variable; each directed proposition contributes a
-signed linear coupling term. The system is integrated with fixed-step (Euler)
-updates, so the trajectory is fully deterministic.
+signed linear coupling term. The system is propagated either with fixed-step
+(Euler) updates or exactly, with the matrix exponential of the coupling
+matrix, so the trajectory is fully deterministic.
 }
 \keyword{internal}

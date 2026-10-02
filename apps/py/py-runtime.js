@@ -11,6 +11,7 @@ const DIAG_SVG = new Set(window.TF.DIAG_SVG);
 
 const APP_PY = String.raw`
 import json
+import warnings
 import theoryforge as tf
 from theoryforge import litmap, lit_diagram, read_corpus
 
@@ -71,13 +72,22 @@ def run(op, params_json):
     if op == "simulate":
         # steps is passed as given, so a fractional value is refused as the
         # package refuses it, not truncated. A refusal or a divergence comes
-        # back as a message for the app to show, as in the R runtime.
+        # back as a message for the app to show, as in the R runtime. The
+        # Euler run's departure warning comes back with the result.
         try:
-            return json.dumps({"result": t.simulate(
-                steps=p["steps"], dt=float(p["dt"]), k=float(p["k"]),
-                damping=float(p["damping"]), init=float(p["init"]))})
+            with warnings.catch_warnings(record=True) as caught:
+                warnings.simplefilter("always")
+                res = t.simulate(
+                    steps=p["steps"], dt=float(p["dt"]), k=float(p["k"]),
+                    damping=float(p["damping"]), init=float(p["init"]),
+                    method=p.get("method", "exact"))
         except ValueError as e:
             return json.dumps({"ok": False, "message": str(e)})
+        out = {"result": res}
+        said = [str(w.message) for w in caught if issubclass(w.category, UserWarning)]
+        if said:
+            out["warning"] = said[0]
+        return json.dumps(out)
     if op == "litmap":
         lm = litmap(_state["corpus"], min_link=int(p["min_link"]))
         return json.dumps({"result": lm, "dots": {
@@ -215,7 +225,7 @@ const RT = {
       case "dossier":
         return `${head}\n\nprint(theory.dossier())           # reviewer-facing audit bundle (Markdown)`;
       case "simulate":
-        return `${head}\n\nsim = theory.simulate(steps=${p.steps}, dt=${p.dt}, k=${p.k}, damping=${p.damping}, init=${p.init})\nsim["trajectory"]                 # list of states per step`;
+        return `${head}\n\nsim = theory.simulate(steps=${p.steps}, dt=${p.dt}, k=${p.k}, damping=${p.damping}, init=${p.init}, method="${p.method || "exact"}")\nsim["trajectory"]                 # list of states per step`;
       case "litmap":
         return `${head}\n${corpus}\n\nlm = tf.litmap(corpus, min_link=${p.min_link})\nlm["themes"]\nprint(tf.lit_diagram(lm, "keyword_cooccurrence"))`;
       case "landscape":

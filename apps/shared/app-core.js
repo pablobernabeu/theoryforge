@@ -44,8 +44,9 @@
       help: "Assembles a reviewer-facing audit bundle in Markdown: the rigour report, severity, provenance and the preregistration in one document." },
     {
       id: "simulate", label: "Simulation", desc: "Dynamical-system trajectory",
-      help: "Treats each construct as a state variable and each directed proposition as a signed coupling, then integrates the network with fixed-step (Euler) updates and plots the trajectory.",
+      help: "Treats each construct as a state variable and each directed proposition as a signed coupling, then propagates the linear system and plots the trajectory. The exact method computes the solution at each step from the matrix exponential, whatever dt is. The Euler method takes fixed explicit steps, which drift from the solution when dt is large against the network's rates.",
       params: [
+        { id: "method", label: "method", type: "select", default: "exact", options: ["exact", "euler"] },
         { id: "steps", label: "steps", type: "number", default: 30, min: 1, max: 500, step: 1 },
         { id: "dt", label: "dt", type: "number", default: 0.1, min: 0.001, max: 2, step: 0.01 },
         { id: "k", label: "k (coupling)", type: "number", default: 1.0, min: 0, max: 10, step: 0.1 },
@@ -361,7 +362,7 @@
     sem: "The constructs become a measurement model and the propositions a structural model, expressed in lavaan syntax. Paste it into an SEM fit in R or other lavaan-compatible software.",
     preregister: "The preregistration lists each hypothesis with its derivation and severity, in file order, ready to timestamp before data collection.",
     dossier: "The dossier gathers the rigour report, severity, provenance and preregistration into one reviewer-facing document.",
-    simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, causes, mediates) or down (decreases) in proportion to another, and every construct decays towards zero at the damping rate. The chart traces the values from the initial state. The table below holds the exact numbers.",
+    simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, causes, mediates) or down (decreases) in proportion to another, with one gain k for every coupling, and every construct decays towards zero at the damping rate. Moderates and associates couple nothing. All constructs start from the same value. The chart traces the values from the initial state, and the table below holds the numbers.",
     litmap: "The bundled corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked.",
     landscape: "The theory and its rivals are placed against the corpus themes. Under-theorised fronts are themes no theory addresses. Redundancy risk marks crowded themes where a new theory would add little.",
   };
@@ -428,13 +429,17 @@
       for (const row of traj) for (const v of row) { if (v < lo) lo = v; if (v > hi) hi = v; }
       if (!isFinite(lo) || !isFinite(hi)) { lo = 0; hi = 0; }
       const coincide = coincidenceGroups(states, traj).filter((g) => g.length > 1);
-      let txt = "The " + plural(states.length, "construct") + " evolve over " + plural(r.steps, "step") + ", with values from " + lo.toFixed(2) + " to " + hi.toFixed(2) + ".";
+      const how = r.method === "exact" ? "computed exactly" : "approximated with Euler steps";
+      let txt = "The " + plural(states.length, "construct") + " evolve over " + plural(r.steps, "step") + " of " + r.dt + " (" + how + "), with values from " + lo.toFixed(2) + " to " + hi.toFixed(2) + ".";
       if (coincide.length) {
         const lists = coincide.map((g) => g.map((i) => states[i]).join(", ")).join("; ");
-        txt += " Some constructs follow an identical path (" + lists + "), so their lines are drawn with a small offset to keep each visible. Give them different couplings, for example a “decreases” relation, to separate the trajectories.";
+        txt += " Some constructs follow an identical path (" + lists + "), so their lines are drawn with a small offset to keep each visible. Every construct starts from the same value and every coupling has the same gain, so constructs that receive the same couplings from the same sources move together. The coincidence follows from these simplifications and is no reason to change the theory.";
       } else {
         txt += " The trajectories are distinct.";
       }
+      const ignored = asArr(r.ignored), opposed = asArr(r.opposed).map(asArr);
+      if (ignored.length) txt += " " + plural(ignored.length, "proposition") + (ignored.length === 1 ? " couples" : " couple") + " nothing here (" + ignored.map((s) => s || "without id").join(", ") + "): moderation, association and links to undeclared constructs have no term in the model.";
+      if (opposed.length) txt += " " + (opposed.length === 1 ? "One pair carries" : opposed.length + " pairs carry") + " both a positive and a negative coupling (" + opposed.map((p) => p.join(" → ")).join("; ") + "), which offset each other.";
       return txt;
     }
     if (opId === "litmap") {
@@ -543,19 +548,29 @@
       sections.push(textSection("Audit dossier (Markdown)", raw.text, theoryId + ".dossier.md", "text/markdown"));
     } else if (opId === "simulate" && raw.ok === false) {
       // Both packages refuse invalid knobs and stop at the step where a state
-      // stops being finite, naming the step and the construct. Show their text.
+      // stops being finite, naming the step and the construct. Show their text,
+      // and say what a divergence means under the method that was run: the
+      // exact solution grows only when the system does, while Euler steps can
+      // diverge from a system that decays.
+      const msg = String(raw.message || "");
+      const kids = [el("div", { class: "et", text: "The simulation stopped" }), el("div", { text: msg })];
+      if (/diverged/.test(msg)) {
+        kids.push(el("div", { text: params.method === "exact"
+          ? "The exact solution itself grows without bound: a feedback loop's gain k outweighs the damping. Raise the damping, lower k or run fewer steps."
+          : "Euler steps can diverge although the system decays, when dt is too coarse, and the system can also grow on its own when a loop's gain k outweighs the damping. Run the exact method to tell the two apart." }));
+      }
       sections.push({ kind: "node", node: wrapSection("Simulation", null,
-        el("div", { class: "error", role: "alert" }, [
-          el("div", { class: "et", text: "The simulation stopped" }),
-          el("div", { text: String(raw.message || "") }),
-        ])) });
+        el("div", { class: "error", role: "alert" }, kids)) });
     } else if (opId === "simulate") {
       const r = raw.result;
       const states = asArr(r.states), traj = asArr(r.trajectory).map(asArr);
+      // The Euler departure warning, which both packages raise with one text.
+      if (raw.warning) sections.push({ kind: "node", node: wrapSection("Euler steps", null,
+        el("p", { class: "note", role: "status", text: String(raw.warning) + ". The exact method gives the solution of the same system." })) });
       sections.push(figureSection("Trajectory", trajectoryChart(states, traj), theoryId + ".simulate"));
       const cols = [{ key: "_step", label: "step" }].concat(states.map((s, i) => ({ key: "s" + i, label: s, num: true })));
       const rows = traj.map((row, i) => { const o = { _step: i }; row.forEach((v, j) => (o["s" + j] = v)); return o; });
-      sections.push(tableSection("State trajectory (steps " + r.steps + ", dt " + r.dt + ")", cols, rows));
+      sections.push(tableSection("State trajectory (" + (r.method || "euler") + ", steps " + r.steps + ", dt " + r.dt + ")", cols, rows));
     } else if (opId === "litmap") {
       const r = raw.result;
       const themes = asArr(r.themes), kw = asArr(r.keywords), cooc = asArr(r.keyword_cooccurrence), cocite = asArr(r.co_citation);

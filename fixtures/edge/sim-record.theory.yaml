@@ -1,0 +1,54 @@
+# Edge case: what the simulation records about the propositions it reads. Alpha
+# both increases and decreases Beta, so the pair's couplings offset each other
+# and simulate() names it in "opposed". The moderation, the association, the
+# proposition to an undeclared construct and the one without an id couple
+# nothing, so simulate() lists their ids in "ignored", the last as "".
+schema_version: "1.0"
+id: edge-sim-record
+title: Offsetting couplings and propositions that couple nothing
+maturity: building
+constructs:
+  - id: a
+    label: Alpha
+    definition: The first construct.
+  - id: b
+    label: Beta
+    definition: The second construct entirely different.
+  - id: c
+    label: Gamma
+    definition: A third construct with its own meaning.
+propositions:
+  - id: p1
+    from: a
+    to: b
+    relation: increases
+    mechanism: Alpha drives Beta.
+  - id: p2
+    from: a
+    to: b
+    relation: decreases
+    mechanism: Alpha also suppresses Beta.
+  - id: p3
+    from: c
+    to: b
+    relation: moderates
+    mechanism: Gamma changes how strongly Alpha acts on Beta.
+  - id: p4
+    from: b
+    to: c
+    relation: associates
+    mechanism: Beta and Gamma covary.
+  - id: p5
+    from: b
+    to: z
+    relation: increases
+    mechanism: Beta drives a construct the theory never declares.
+  - id: p6
+    from: b
+    to: c
+    relation: causes
+    mechanism: Beta drives Gamma.
+  - from: c
+    to: a
+    relation: moderates
+    mechanism: Gamma changes how strongly something acts on Alpha.

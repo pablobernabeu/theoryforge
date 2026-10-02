@@ -631,9 +631,10 @@ class Theory:
         return _dossier(self.data)
 
     def simulate(self, steps: int = 10, dt: float = 0.1, k: float = 1.0,
-                 damping: float = 0.5, init: float = 1.0) -> dict:
-        """Integrate the construct network as a linear dynamical system."""
-        return _simulate(self.data, steps=steps, dt=dt, k=k, damping=damping, init=init)
+                 damping: float = 0.5, init: float = 1.0, method: str = "euler") -> dict:
+        """Propagate the construct network as a linear dynamical system (see ``theoryforge.simulate``)."""
+        return _simulate(self.data, steps=steps, dt=dt, k=k, damping=damping, init=init,
+                         method=method)
 
     def embedding_redundancy(self, embedder, threshold=None) -> list[dict]:
         """An opt-in embedding-based redundancy screen; results depend on the supplied embedder."""

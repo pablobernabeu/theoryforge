@@ -9,6 +9,9 @@
   "k": 1.0,
   "damping": 0.5,
   "init": 1.0,
+  "method": "euler",
+  "ignored": [],
+  "opposed": [],
   "trajectory": [
     [
       1.0,

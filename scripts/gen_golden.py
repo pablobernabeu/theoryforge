@@ -97,6 +97,9 @@ def emit_theory(t: tf.Theory, out_dir: Path) -> list[str]:
     (out_dir / f"{tid}.simulate.json").write_bytes(
         (json.dumps(t.simulate(), indent=2) + "\n").encode("utf-8"))
     written.append(f"{tid}.simulate.json")
+    (out_dir / f"{tid}.simulate_exact.json").write_bytes(
+        (json.dumps(t.simulate(method="exact"), indent=2) + "\n").encode("utf-8"))
+    written.append(f"{tid}.simulate_exact.json")
     return written
 
 

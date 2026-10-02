@@ -85,6 +85,9 @@ suppressWarnings(suppressMessages({
     write_raw(tf_dossier(t), file.path(out_dir, paste0(id, ".dossier.md")))
     write_raw(paste0(jsonlite::toJSON(tf_simulate(t), auto_unbox = TRUE, digits = 10, pretty = TRUE), "\n"),
               file.path(out_dir, paste0(id, ".simulate.json")))
+    write_raw(paste0(jsonlite::toJSON(tf_simulate(t, method = "exact"), auto_unbox = TRUE,
+                                      digits = 10, pretty = TRUE), "\n"),
+              file.path(out_dir, paste0(id, ".simulate_exact.json")))
   }
 
   # The message of a condition as an edge outcome records it: a leading

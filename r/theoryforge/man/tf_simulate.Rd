@@ -4,15 +4,23 @@
 \alias{tf_simulate}
 \title{Simulate a theory's construct network as a linear dynamical system}
 \usage{
-tf_simulate(theory, steps = 10, dt = 0.1, k = 1, damping = 0.5, init = 1)
+tf_simulate(
+  theory,
+  steps = 10,
+  dt = 0.1,
+  k = 1,
+  damping = 0.5,
+  init = 1,
+  method = "euler"
+)
 }
 \arguments{
 \item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
 
-\item{steps}{Number of Euler steps, a whole number of at least 0 (default
+\item{steps}{Number of steps, a whole number of at least 0 (default
 \code{10}).}
 
-\item{dt}{Integration step size, a finite number greater than 0 (default
+\item{dt}{Time between rows, a finite number greater than 0 (default
 \code{0.1}).}
 
 \item{k}{Coupling gain applied to each signed edge, a finite number (default
@@ -23,41 +31,71 @@ tf_simulate(theory, steps = 10, dt = 0.1, k = 1, damping = 0.5, init = 1)
 
 \item{init}{Initial value for every state, a single finite number (default
 \code{1.0}).}
+
+\item{method}{\code{"euler"} (the default for this release) or
+\code{"exact"}.}
 }
 \value{
 A named list
-\code{list(states, dt, steps, k, damping, init, trajectory)}, where
-\code{states} are the construct ids in file order and \code{trajectory} is a
-list of \code{steps + 1} numeric vectors (row 0 = initial state), every
-value rounded to 6 decimals. All five knobs are echoed back as given,
-because the trajectory cannot be reproduced without them. Invalid knobs
-are refused with the Python twin's messages.
+\code{list(states, dt, steps, k, damping, init, method, ignored, opposed,
+  trajectory)}, where \code{states} are the construct ids in file order and
+\code{trajectory} is a list of \code{steps + 1} numeric vectors (row 0 =
+initial state), every value rounded to 6 decimals. The knobs and the method
+are echoed back as given, because the trajectory cannot be reproduced
+without them. \code{ignored} lists the ids of the propositions that couple
+nothing (moderates, associates, a relation outside the schema's set, or an
+endpoint that is not a declared construct), and \code{opposed} the
+\code{c(from, to)} pairs that carry couplings of both signs, which offset
+each other. Invalid knobs are refused with the Python twin's messages.
 }
 \description{
 Treats each construct (in file order) as a state variable and each directed
-proposition as a signed linear coupling term, then integrates
-\code{dX/dt = A X - damping * X} with fixed-step (Euler) updates. The result
-is fully deterministic. Construct ids must be unique; duplicates are refused
-rather than resolved to an arbitrary state slot. A construct without an id
-is a state with no couplings, and two of them do not count as duplicates.
+proposition as a signed linear coupling term, then propagates
+\code{dX/dt = A X - damping * X} either with fixed-step (Euler) updates or
+exactly, with the matrix exponential of \code{(A - damping * I) * dt}. The
+result is fully deterministic. Construct ids must be unique; duplicates are
+refused rather than resolved to an arbitrary state slot. A construct without
+an id is a state with no couplings, and two of them do not count as
+duplicates.
 }
 \details{
-The explicit (Euler) step is stable only when \eqn{|1 + dt \lambda| < 1}
-for every eigenvalue \eqn{\lambda} of \code{A - damping * I}. A theory that
-decays at rate \code{damping} therefore explodes with alternating sign once
-\code{dt * damping} exceeds 2. Raising \code{damping} can cause a divergence
-as well as fail to cure one. Reduce \code{dt}, or \code{k} when the
-network's own feedback outgrows the damping. When a state grows so large
-that a million times it is not a finite number, the function stops with a
-message naming the step and the state.
+With \code{method = "exact"} each step multiplies the state by the matrix
+exponential, computed by scaling and squaring a degree-18 Taylor polynomial
+(Moler and Van Loan, 2003, method 3), so the trajectory is the solution of
+the linear system at times \code{0, dt, 2 * dt, ...} whatever \code{dt} is.
+
+With \code{method = "euler"}, the default for this release, the explicit
+step is stable only when \eqn{|1 + dt \lambda| < 1} for every eigenvalue
+\eqn{\lambda} of \code{A - damping * I}. A theory that decays at rate
+\code{damping} therefore explodes with alternating sign once
+\code{dt * damping} exceeds 2, and the steps inflate a sustained oscillation
+into growth. Raising \code{damping} can cause a divergence as well as fail
+to cure one. The function warns when the Euler trajectory departs from the
+exact one by more than 5 per cent of \code{max(1, |exact|)} at any step. The
+default will change to \code{"exact"} in the next minor release.
+
+When a state grows so large that a million times it is not a finite number,
+the function stops with a message naming the step and the state.
+
+The model is deliberately simple: one gain \code{k} for every coupling,
+\code{causes} and \code{mediates} taken as positive, \code{moderates} and
+\code{associates} coupling nothing, \code{functional_form} not read and a
+common initial value for every state. A linear system has one equilibrium,
+or a continuum of them when its matrix is singular, and never two separate
+ones, so it cannot show bistability.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
   tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
   tf_add_proposition("p1", "c_arousal", "c_threat", "increases")
-sim <- tf_simulate(theory, steps = 5)
+sim <- tf_simulate(theory, steps = 5, method = "exact")
 sim$states
 sim$trajectory[[1]] # the common initial state
-sim$trajectory[[length(sim$trajectory)]] # after five Euler steps
+sim$trajectory[[length(sim$trajectory)]] # at time 5 * dt
+}
+\references{
+Moler, C., & Van Loan, C. (2003). Nineteen dubious ways to
+compute the exponential of a matrix, twenty-five years later. \emph{SIAM
+Review, 45}(1), 3-49. \doi{10.1137/S00361445024180}
 }

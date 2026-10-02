@@ -958,14 +958,16 @@ that `diagram()` exports, each documented in the
 
 ## Simulation
 
-`simulate()` treats each construct as a state variable and integrates the signed
-proposition network as a linear dynamical system with fixed-step (Euler) updates.
-The trajectory is fully deterministic.
+`simulate()` treats each construct as a state variable and propagates the signed
+proposition network as a linear dynamical system. With `method="exact"` each
+row is the solution of that system at its time, computed with the matrix
+exponential, whatever the step size. The trajectory is fully deterministic.
 
 The example below adds a regulating edge to the panic structure: arousal raises
 threat, threat raises avoidance, and avoidance in turn *decreases* arousal. The
-negative coupling breaks the symmetry between the states, so the qualitative
-dynamics the network implies are visible in the trajectory.
+negative coupling breaks the symmetry between the states, and the loop it closes
+makes the network oscillate. The run covers 20 time units in steps of 0.5 and
+prints the state every two time units.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
 s = (
@@ -982,26 +984,39 @@ s = (
       .add_proposition("p3", "avoidance", "arousal", "decreases")
 )
 
-sim = s.simulate(steps=5)
+sim = s.simulate(steps=40, dt=0.5, method="exact")
 
 print(sim["states"])           # construct ids, in file order
 
-for row in sim["trajectory"]:  # the initial state, then the five Euler steps
-    print(row)
+for t, row in enumerate(sim["trajectory"]):
+    if t % 4 == 0:             # every two time units
+        print(t * sim["dt"], row)
 ```
 
-Arousal falls from the first step, pushed down by the negative coupling from
-avoidance on top of the damping. Threat climbs to a peak at step 4 and turns
-down at step 5, once the falling arousal no longer sustains it. Avoidance is
-still rising at the end of the window, and it is the last of the three to turn
-because it keeps integrating a threat level that stays high across all five
-steps.
+Arousal falls first, pushed down by the negative coupling from avoidance.
+Threat follows it down about a time unit later and avoidance later still, and
+by time 6 arousal has climbed back above its starting value. The three
+constructs keep cycling with a period of about 7.3 time units, and the swings
+neither grow nor fade. At the default gain of 1 and damping of 0.5, the
+oscillating part of the loop is exactly undamped, while the rest of the
+initial state decays at rate 1.5.
+
+The default method for this release, `method="euler"`, takes fixed explicit
+steps, and they inflate this oscillation. At `dt=0.1`, each step multiplies its
+amplitude by about 1.0037, so after 500 steps the swings are more than six
+times the exact ones. `simulate()` warns (UserWarning) when an Euler trajectory
+departs from the exact one by more than 5 per cent, and the default will change
+to `"exact"` in the next minor release. The record names the method, lists the
+propositions that couple nothing (`ignored`, here none) and the pairs whose
+increases and decreases offset each other (`opposed`).
 
 `steps` must be a whole number of at least 0, `dt` a finite number above 0,
-and `k`, `damping` and `init` finite numbers. Anything else raises ValueError
-with the message the R twin gives. A run whose states grow too large to round
-stops with a ValueError naming the step and the construct. The explicit step
-is stable only when `dt` times the damping stays below 2 in a network without
-feedback loops, so a larger `damping` can cause a divergence. A smaller `dt`
-is the remedy, or a smaller `k` when the loops themselves outgrow the damping
-(see [Methodology](methodology.md)).
+`k`, `damping` and `init` finite numbers, and `method` either `"euler"` or
+`"exact"`. Anything else raises ValueError with the message the R twin gives.
+A run whose states grow too large to round stops with a ValueError naming the
+step and the construct. The explicit Euler step is stable only when `dt` times
+the damping stays below 2 in a network without feedback loops, so a larger
+`damping` can cause a divergence. A smaller `dt` is the remedy, or a smaller
+`k` when the loops themselves outgrow the damping (see
+[Methodology](methodology.md)). The exact method has no step-size limit, and a
+run with it diverges only when the system itself grows.

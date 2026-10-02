@@ -209,3 +209,15 @@ unlist(sim$trajectory[[6]]) # after five Euler steps
 The two states separate immediately: arousal, which receives no incoming
 coupling, decays under the damping term, while perceived threat is pushed up
 by the positive coupling from arousal before the decay eventually takes over.
+
+The default `method = "euler"` takes fixed explicit steps, which stay close to
+the solution only while `dt` is small against the network's rates. The function
+warns when they depart from it by more than 5 per cent.
+`method = "exact"` propagates the system with its matrix exponential, so each
+row is the solution at its time whatever `dt` is. It will become the default in
+the next minor release:
+
+```{r simulate-exact}
+exact <- tf_simulate(theory, steps = 5, method = "exact")
+unlist(exact$trajectory[[6]]) # the exact solution at time 0.5
+```

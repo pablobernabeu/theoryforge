@@ -60,11 +60,24 @@ invisible(lapply(.tf_app_files, source))
   if (op == "dossier")    return(env(list(text = tf_dossier(t))))
   # steps is passed as given, so a fractional value is refused as the package
   # refuses it, not truncated. A refusal or a divergence comes back as a
-  # message for the app to show, as in the Python runtime.
-  if (op == "simulate")   return(env(tryCatch(list(result = tf_simulate(t,
-                              steps = p$steps, dt = as.numeric(p$dt), k = as.numeric(p$k),
-                              damping = as.numeric(p$damping), init = as.numeric(p$init))),
-                              error = function(e) list(ok = FALSE, message = conditionMessage(e)))))
+  # message for the app to show, as in the Python runtime. The Euler run's
+  # departure warning is caught without stopping the run and comes back with
+  # the result.
+  if (op == "simulate") {
+    warned <- NULL
+    method <- if (is.null(p$method)) "exact" else p$method
+    res <- tryCatch(withCallingHandlers(
+      list(result = tf_simulate(t,
+        steps = p$steps, dt = as.numeric(p$dt), k = as.numeric(p$k),
+        damping = as.numeric(p$damping), init = as.numeric(p$init), method = method)),
+      warning = function(w) {
+        if (is.null(warned)) warned <<- conditionMessage(w)
+        invokeRestart("muffleWarning")
+      }),
+      error = function(e) list(ok = FALSE, message = conditionMessage(e)))
+    if (!is.null(warned) && !is.null(res$result)) res$warning <- warned
+    return(env(res))
+  }
   if (op == "litmap") {
     lm <- tf_litmap(.tf_app$corpus, min_link = as.integer(p$min_link))
     return(env(list(result = lm, dots = list(
@@ -219,7 +232,7 @@ const RT = {
       case "dossier":
         return `${head}\n\ncat(tf_dossier(theory))           # reviewer-facing audit bundle (Markdown)`;
       case "simulate":
-        return `${head}\n\nsim <- tf_simulate(theory, steps = ${p.steps}, dt = ${p.dt}, k = ${p.k}, damping = ${p.damping}, init = ${p.init})\nstr(sim)                          # list(states, dt, steps, trajectory)`;
+        return `${head}\n\nsim <- tf_simulate(theory, steps = ${p.steps}, dt = ${p.dt}, k = ${p.k}, damping = ${p.damping}, init = ${p.init}, method = "${p.method || "exact"}")\nstr(sim)                          # list(states, ..., method, ignored, opposed, trajectory)`;
       case "litmap":
         return `${head}\n${corpus}\n\nlm <- tf_litmap(corpus, min_link = ${p.min_link})\nlm$themes\ncat(tf_lit_diagram(lm, "keyword_cooccurrence"))`;
       case "landscape":

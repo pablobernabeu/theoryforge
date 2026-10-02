@@ -8,9 +8,13 @@ def test_simulate_records_every_knob(panic_path):
     # omitted k could not be reproduced from what it reports.
     t = tf.read(panic_path)
     r = t.simulate(steps=3, dt=0.2, k=0.75, damping=0.25, init=2.0)
-    assert list(r) == ["states", "dt", "steps", "k", "damping", "init", "trajectory"]
+    assert list(r) == ["states", "dt", "steps", "k", "damping", "init", "method", "ignored",
+                       "opposed", "trajectory"]
     assert (r["dt"], r["steps"], r["k"], r["damping"], r["init"]) == (0.2, 3, 0.75, 0.25, 2.0)
-    other = t.simulate(steps=3, dt=0.2, k=1.5, damping=0.25, init=2.0)
+    # At k = 1.5 the feedback loop grows fast enough for three Euler steps of
+    # 0.2 to fall short of the exact solution by more than 5 per cent.
+    with pytest.warns(UserWarning, match="depart from the exact solution"):
+        other = t.simulate(steps=3, dt=0.2, k=1.5, damping=0.25, init=2.0)
     assert other["trajectory"] != r["trajectory"]
 
 
@@ -83,8 +87,10 @@ def test_simulate_stops_with_the_step_and_state_where_it_diverges(panic_path):
     assert str(exc.value) == (
         "simulate diverged at step 228: state 'c_arousal' is not finite; reduce dt or k"
     )
-    # One step fewer runs to completion with every value finite.
-    r = t.simulate(steps=227, dt=2, k=10, damping=0, init=10)
+    # One step fewer runs to completion with every value finite, and warns
+    # that the Euler steps have left the exact solution.
+    with pytest.warns(UserWarning, match="depart from the exact solution"):
+        r = t.simulate(steps=227, dt=2, k=10, damping=0, init=10)
     assert len(r["trajectory"]) == 228
 
 
@@ -103,7 +109,8 @@ def test_simulate_sums_each_product_left_to_right():
              ("d", "e", "increases")]
     for i, (f, to, rel) in enumerate(edges, 1):
         t.add_proposition(f"p{i}", f, to, rel)
-    r = t.simulate(steps=500, k=1, dt=0.1)
+    with pytest.warns(UserWarning, match="depart from the exact solution"):
+        r = t.simulate(steps=500, k=1, dt=0.1)
     assert r["trajectory"][341][3] == -69972264.681408
 
 
