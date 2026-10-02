@@ -78,6 +78,16 @@
   0.6, 0.7 and 0.2 pass the 0.5 threshold on every platform. Rounded values no
   longer print as `-0.0`.
 
+* `tf_simulate()` validates its arguments with the Python twin's messages and
+  stops with a message naming the step and state when the trajectory diverges,
+  where it returned NaN rows, rows of the wrong length or a step count it had
+  truncated. `steps = 2.5` ran two steps, `init = c(1, 2, 3)` gave rows of nine
+  values, a negative `dt` was accepted and a NaN knob gave rows of NaN. Code
+  that read the NaN rows of a diverging run now receives an error. The help
+  page and the methodology article state the step condition. In a network
+  without feedback loops, the explicit step explodes once `dt * damping`
+  exceeds 2, so a larger `damping` is no remedy.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

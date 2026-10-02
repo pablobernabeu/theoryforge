@@ -71,6 +71,23 @@ version and a single behavioural contract
   mean whose last bit depended on the Python version and the R platform, so severities of
   0.6, 0.7 and 0.2 passed or warned by platform. Statuses now come from the rounded score
   and the mean is an explicit left-to-right sum. R no longer emits a negative zero.
+- `simulate()` validates its arguments with one set of messages in both languages and
+  stops with a message naming the step and state when the trajectory diverges. R returned
+  NaN rows, rows of the wrong length or a step count it had truncated, and Python raised
+  OverflowError or TypeError. `steps=2.5` ran two steps in R and raised TypeError in
+  Python, `steps=-1` returned one row in Python, `init` given three values made nine-value
+  rows in R, and both accepted a negative `dt`. On the panic fixture with `dt=2`, `k=10`,
+  `damping=0` and `init=10`, within the apps' ranges, Python raised OverflowError at step
+  228 where R returned rows of Inf and NaN. Both now stop there with `simulate diverged at
+  step 228: state 'c_arousal' is not finite; reduce dt or k`. Python accepts numpy integers
+  and integral floats for `steps` and refuses bools, as R refuses logicals. Python's
+  products are summed left to right as in R: the builtin `sum()` compensates rounding error
+  from Python 3.12, which moved fast-growing trajectories apart beyond the parity tolerance.
+  The apps show the message where they showed a raw error or a "diverged" note, and pass
+  `steps` as entered instead of truncating it. API_SPEC section 22, the docstring, the help
+  page and both methodology pages state the step condition: in a network without feedback
+  loops, the explicit step explodes once `dt*damping` exceeds 2, so raising the damping is
+  no remedy.
 
 ### Changed
 - `severity()` is described for what it is, a pre-data ranking of the form of each

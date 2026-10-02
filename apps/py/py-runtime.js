@@ -69,9 +69,15 @@ def run(op, params_json):
     if op == "dossier":
         return json.dumps({"text": t.dossier()})
     if op == "simulate":
-        return json.dumps({"result": t.simulate(
-            steps=int(p["steps"]), dt=float(p["dt"]), k=float(p["k"]),
-            damping=float(p["damping"]), init=float(p["init"]))})
+        # steps is passed as given, so a fractional value is refused as the
+        # package refuses it, not truncated. A refusal or a divergence comes
+        # back as a message for the app to show, as in the R runtime.
+        try:
+            return json.dumps({"result": t.simulate(
+                steps=p["steps"], dt=float(p["dt"]), k=float(p["k"]),
+                damping=float(p["damping"]), init=float(p["init"]))})
+        except ValueError as e:
+            return json.dumps({"ok": False, "message": str(e)})
     if op == "litmap":
         lm = litmap(_state["corpus"], min_link=int(p["min_link"]))
         return json.dumps({"result": lm, "dots": {

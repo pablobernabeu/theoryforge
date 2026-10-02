@@ -38,6 +38,89 @@ test_that("tf_simulate refuses duplicate construct ids", {
                fixed = TRUE)
 })
 
+test_that("tf_simulate refuses invalid knobs with the Python twin's messages", {
+  # R ran two steps for 2.5 and echoed 2.5, stopped on -1 with a message from
+  # seq_len(), returned NaN rows for NaN knobs, accepted a negative dt and
+  # recycled init = c(1, 2, 3) into nine-value rows. The Python suite asserts
+  # the same messages for the same knobs.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  steps_msg <- "simulate requires steps to be a whole number of at least 0"
+  dt_msg <- "simulate requires dt to be a finite number greater than 0"
+  cases <- list(
+    list(list(steps = 2.5), steps_msg),
+    list(list(steps = -1), steps_msg),
+    list(list(steps = TRUE), steps_msg),
+    list(list(steps = NaN), steps_msg),
+    list(list(steps = Inf), steps_msg),
+    list(list(steps = "3"), steps_msg),
+    list(list(steps = NA_integer_), steps_msg),
+    list(list(steps = c(1, 2)), steps_msg),
+    list(list(dt = 0), dt_msg),
+    list(list(dt = -0.1), dt_msg),
+    list(list(dt = NaN), dt_msg),
+    list(list(dt = Inf), dt_msg),
+    list(list(dt = TRUE), dt_msg),
+    list(list(k = NaN), "simulate requires k to be a finite number"),
+    list(list(k = -Inf), "simulate requires k to be a finite number"),
+    list(list(k = "1"), "simulate requires k to be a finite number"),
+    list(list(damping = NaN), "simulate requires damping to be a finite number"),
+    list(list(damping = NULL), "simulate requires damping to be a finite number"),
+    list(list(init = c(1, 2, 3)), "simulate requires init to be a single finite number"),
+    list(list(init = NaN), "simulate requires init to be a single finite number"),
+    list(list(init = FALSE), "simulate requires init to be a single finite number")
+  )
+  for (case in cases) {
+    expect_error(do.call(tf_simulate, c(list(theory), case[[1]])), case[[2]],
+                 fixed = TRUE, info = deparse(case[[1]]))
+  }
+})
+
+test_that("tf_simulate accepts whole steps of either numeric type", {
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  ref <- tf_simulate(theory, steps = 3L)$trajectory
+  sim <- tf_simulate(theory, steps = 3)
+  expect_identical(sim$trajectory, ref)
+  expect_identical(sim$steps, 3) # echoed as given
+  expect_identical(tf_simulate(theory, steps = 0)$trajectory, list(c(1, 1, 1)))
+})
+
+test_that("tf_simulate stops with the step and state where it diverges", {
+  # Within the app's own ranges. R returned rows of Inf and then NaN, which
+  # the app reported as a divergence, while Python raised OverflowError from
+  # its rounding at step 228, where 1e6 times the state first exceeds the
+  # double range. Both twins now stop at that step.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  expect_error(
+    tf_simulate(theory, steps = 240, dt = 2, k = 10, damping = 0, init = 10),
+    "simulate diverged at step 228: state 'c_arousal' is not finite; reduce dt or k",
+    fixed = TRUE)
+  sim <- tf_simulate(theory, steps = 227, dt = 2, k = 10, damping = 0, init = 10)
+  expect_length(sim$trajectory, 228L)
+  expect_true(all(is.finite(unlist(sim$trajectory))))
+})
+
+test_that("tf_simulate sums each product left to right, as Python does", {
+  # CPython 3.12+'s sum() compensated rounding error where R added left to
+  # right, so in fast-growing regimes the twins drifted apart beyond the 1e-9
+  # parity tolerance. Python now uses the same loop, and its suite asserts the
+  # same value.
+  theory <- tf_theory("fb", "Feedback")
+  for (c in c("a", "b", "c", "d", "e")) {
+    theory <- tf_add_construct(theory, c, toupper(c), "d")
+  }
+  edges <- list(c("a", "b", "increases"), c("b", "c", "causes"),
+                c("c", "a", "increases"), c("a", "c", "increases"),
+                c("a", "d", "increases"), c("b", "d", "increases"),
+                c("c", "d", "decreases"), c("e", "d", "increases"),
+                c("d", "a", "decreases"), c("d", "e", "increases"))
+  for (i in seq_along(edges)) {
+    e <- edges[[i]]
+    theory <- tf_add_proposition(theory, paste0("p", i), e[[1]], e[[2]], e[[3]])
+  }
+  sim <- tf_simulate(theory, steps = 500, k = 1, dt = 0.1)
+  expect_identical(sim$trajectory[[342L]][[4L]], -69972264.681408)
+})
+
 test_that("tf_simulate honours custom steps and init", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   sim <- tf_simulate(theory, steps = 3L, init = 2.0)

@@ -996,3 +996,12 @@ down at step 5, once the falling arousal no longer sustains it. Avoidance is
 still rising at the end of the window, and it is the last of the three to turn
 because it keeps integrating a threat level that stays high across all five
 steps.
+
+`steps` must be a whole number of at least 0, `dt` a finite number above 0,
+and `k`, `damping` and `init` finite numbers. Anything else raises ValueError
+with the message the R twin gives. A run whose states grow too large to round
+stops with a ValueError naming the step and the construct. The explicit step
+is stable only when `dt` times the damping stays below 2 in a network without
+feedback loops, so a larger `damping` can cause a divergence. A smaller `dt`
+is the remedy, or a smaller `k` when the loops themselves outgrow the damping
+(see [Methodology](methodology.md)).

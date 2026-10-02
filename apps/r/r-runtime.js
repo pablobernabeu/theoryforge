@@ -56,9 +56,13 @@ invisible(lapply(.tf_app_files, source))
   if (op == "sem")        return(env(list(text = tf_compile_sem(t))))
   if (op == "preregister")return(env(list(text = tf_preregister(t))))
   if (op == "dossier")    return(env(list(text = tf_dossier(t))))
-  if (op == "simulate")   return(env(list(result = tf_simulate(t,
-                              steps = as.integer(p$steps), dt = as.numeric(p$dt), k = as.numeric(p$k),
-                              damping = as.numeric(p$damping), init = as.numeric(p$init)))))
+  # steps is passed as given, so a fractional value is refused as the package
+  # refuses it, not truncated. A refusal or a divergence comes back as a
+  # message for the app to show, as in the Python runtime.
+  if (op == "simulate")   return(env(tryCatch(list(result = tf_simulate(t,
+                              steps = p$steps, dt = as.numeric(p$dt), k = as.numeric(p$k),
+                              damping = as.numeric(p$damping), init = as.numeric(p$init))),
+                              error = function(e) list(ok = FALSE, message = conditionMessage(e)))))
   if (op == "litmap") {
     lm <- tf_litmap(.tf_app$corpus, min_link = as.integer(p$min_link))
     return(env(list(result = lm, dots = list(

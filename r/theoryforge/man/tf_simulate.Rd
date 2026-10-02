@@ -9,23 +9,29 @@ tf_simulate(theory, steps = 10, dt = 0.1, k = 1, damping = 0.5, init = 1)
 \arguments{
 \item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
 
-\item{steps}{Number of Euler steps (default \code{10}).}
+\item{steps}{Number of Euler steps, a whole number of at least 0 (default
+\code{10}).}
 
-\item{dt}{Integration step size (default \code{0.1}).}
+\item{dt}{Integration step size, a finite number greater than 0 (default
+\code{0.1}).}
 
-\item{k}{Coupling gain applied to each signed edge (default \code{1.0}).}
+\item{k}{Coupling gain applied to each signed edge, a finite number (default
+\code{1.0}).}
 
-\item{damping}{Per-state linear decay (default \code{0.5}).}
+\item{damping}{Per-state linear decay, a finite number (default
+\code{0.5}).}
 
-\item{init}{Initial value for every state (default \code{1.0}).}
+\item{init}{Initial value for every state, a single finite number (default
+\code{1.0}).}
 }
 \value{
 A named list
 \code{list(states, dt, steps, k, damping, init, trajectory)}, where
 \code{states} are the construct ids in file order and \code{trajectory} is a
 list of \code{steps + 1} numeric vectors (row 0 = initial state), every
-value rounded to 6 decimals. All five knobs are echoed back, because the
-trajectory cannot be reproduced without them.
+value rounded to 6 decimals. All five knobs are echoed back as given,
+because the trajectory cannot be reproduced without them. Invalid knobs
+are refused with the Python twin's messages.
 }
 \description{
 Treats each construct (in file order) as a state variable and each directed
@@ -34,6 +40,16 @@ proposition as a signed linear coupling term, then integrates
 is fully deterministic. Construct ids must be unique; duplicates are refused
 rather than resolved to an arbitrary state slot. A construct without an id
 is a state with no couplings, and two of them do not count as duplicates.
+}
+\details{
+The explicit (Euler) step is stable only when \eqn{|1 + dt \lambda| < 1}
+for every eigenvalue \eqn{\lambda} of \code{A - damping * I}. A theory that
+decays at rate \code{damping} therefore explodes with alternating sign once
+\code{dt * damping} exceeds 2. Raising \code{damping} can cause a divergence
+as well as fail to cure one. Reduce \code{dt}, or \code{k} when the
+network's own feedback outgrows the damping. When a state grows so large
+that a million times it is not a finite number, the function stops with a
+message naming the step and the state.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

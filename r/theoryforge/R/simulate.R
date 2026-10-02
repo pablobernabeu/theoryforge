@@ -19,18 +19,33 @@ NULL
 #' rather than resolved to an arbitrary state slot. A construct without an id
 #' is a state with no couplings, and two of them do not count as duplicates.
 #'
+#' The explicit (Euler) step is stable only when \eqn{|1 + dt \lambda| < 1}
+#' for every eigenvalue \eqn{\lambda} of \code{A - damping * I}. A theory that
+#' decays at rate \code{damping} therefore explodes with alternating sign once
+#' \code{dt * damping} exceeds 2. Raising \code{damping} can cause a divergence
+#' as well as fail to cure one. Reduce \code{dt}, or \code{k} when the
+#' network's own feedback outgrows the damping. When a state grows so large
+#' that a million times it is not a finite number, the function stops with a
+#' message naming the step and the state.
+#'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
-#' @param steps Number of Euler steps (default \code{10}).
-#' @param dt Integration step size (default \code{0.1}).
-#' @param k Coupling gain applied to each signed edge (default \code{1.0}).
-#' @param damping Per-state linear decay (default \code{0.5}).
-#' @param init Initial value for every state (default \code{1.0}).
+#' @param steps Number of Euler steps, a whole number of at least 0 (default
+#'   \code{10}).
+#' @param dt Integration step size, a finite number greater than 0 (default
+#'   \code{0.1}).
+#' @param k Coupling gain applied to each signed edge, a finite number (default
+#'   \code{1.0}).
+#' @param damping Per-state linear decay, a finite number (default
+#'   \code{0.5}).
+#' @param init Initial value for every state, a single finite number (default
+#'   \code{1.0}).
 #' @return A named list
 #'   \code{list(states, dt, steps, k, damping, init, trajectory)}, where
 #'   \code{states} are the construct ids in file order and \code{trajectory} is a
 #'   list of \code{steps + 1} numeric vectors (row 0 = initial state), every
-#'   value rounded to 6 decimals. All five knobs are echoed back, because the
-#'   trajectory cannot be reproduced without them.
+#'   value rounded to 6 decimals. All five knobs are echoed back as given,
+#'   because the trajectory cannot be reproduced without them. Invalid knobs
+#'   are refused with the Python twin's messages.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
@@ -43,6 +58,7 @@ NULL
 #' @export
 tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
                         damping = 0.5, init = 1.0) {
+  .tf_sim_check_knobs(steps, dt, k, damping, init)
   T <- theory
   cons <- .tf_list(T, "constructs")
   states <- vapply(cons, function(c) .tf_str(c, "id"), character(1))
@@ -95,10 +111,40 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
       for (i in seq_len(n)) {
         X[i] <- X[i] + dt * dX[i]
       }
+      # Rounding scales by 10^6, and Python's rounding raises OverflowError
+      # once that product leaves the double range, a few steps before the
+      # state itself does. Both twins stop at the same step for that reason.
+      for (i in seq_len(n)) {
+        if (!is.finite(X[i] * 1e6)) {
+          stop("simulate diverged at step ", s, ": state '", states[[i]],
+               "' is not finite; reduce dt or k", call. = FALSE)
+        }
+      }
     }
     traj[[s + 1L]] <- if (n == 0L) numeric(0) else .tf_rnd(X, 6)
   }
 
   list(states = as.list(states), dt = dt, steps = steps, k = k,
        damping = damping, init = init, trajectory = traj)
+}
+
+# Refuses invalid knobs with the Python twin's messages (API_SPEC section 22).
+# Logicals are refused, as Python refuses bool. A whole double such as 3 counts
+# as a number of steps, as an integral float does in Python.
+.tf_sim_check_knobs <- function(steps, dt, k, damping, init) {
+  finite1 <- function(x) is.numeric(x) && length(x) == 1L && is.finite(x)
+  if (!(finite1(steps) && steps >= 0 && steps == floor(steps))) {
+    stop("simulate requires steps to be a whole number of at least 0", call. = FALSE)
+  }
+  if (!(finite1(dt) && dt > 0)) {
+    stop("simulate requires dt to be a finite number greater than 0", call. = FALSE)
+  }
+  if (!finite1(k)) stop("simulate requires k to be a finite number", call. = FALSE)
+  if (!finite1(damping)) {
+    stop("simulate requires damping to be a finite number", call. = FALSE)
+  }
+  if (!finite1(init)) {
+    stop("simulate requires init to be a single finite number", call. = FALSE)
+  }
+  invisible(NULL)
 }

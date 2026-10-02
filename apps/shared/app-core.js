@@ -301,9 +301,9 @@
     const padR = Math.min(244, Math.max(96, 36 + Math.ceil(maxLabel * 6.6)));
     const pad = { l: 48, r: padR, t: 16, b: 30 };
     const W = pad.l + 380 + pad.r, H = Math.max(300, pad.t + pad.b + m * 18 + 8);
-    // Scale to the finite extremes only. A positive-feedback theory can overflow
-    // the Euler integrator to Infinity/NaN under the parameters the UI allows;
-    // those samples must not poison the range or the path.
+    // Scale to the finite extremes only. Both packages stop a run before any
+    // value stops being finite, so this guard only keeps a malformed result
+    // from poisoning the range or the path.
     let lo = Infinity, hi = -Infinity;
     for (const row of trajectory) for (const v of row) { if (Number.isFinite(v)) { if (v < lo) lo = v; if (v > hi) hi = v; } }
     if (!isFinite(lo) || !isFinite(hi)) { lo = 0; hi = 1; }
@@ -420,11 +420,13 @@
       return byType[t] || ("A " + name + " diagram built from " + plural(c.constructs || 0, "construct") + " and " + plural(c.propositions || 0, "proposition") + ".");
     }
     if (opId === "simulate") {
+      // A refusal or a divergence arrives as { ok: false, message }, which
+      // shapeResult shows in place of the chart.
+      if (raw.ok === false) return "";
       const r = raw.result, states = asArr(r.states), traj = asArr(r.trajectory).map(asArr);
-      let lo = Infinity, hi = -Infinity, diverged = false;
-      for (const row of traj) for (const v of row) { if (Number.isFinite(v)) { if (v < lo) lo = v; if (v > hi) hi = v; } else diverged = true; }
+      let lo = Infinity, hi = -Infinity;
+      for (const row of traj) for (const v of row) { if (v < lo) lo = v; if (v > hi) hi = v; }
       if (!isFinite(lo) || !isFinite(hi)) { lo = 0; hi = 0; }
-      if (diverged) return "The simulation diverged. Some values grew beyond what can be plotted. Lower dt, k or the number of steps to keep it bounded.";
       const coincide = coincidenceGroups(states, traj).filter((g) => g.length > 1);
       let txt = "The " + plural(states.length, "construct") + " evolve over " + plural(r.steps, "step") + ", with values from " + lo.toFixed(2) + " to " + hi.toFixed(2) + ".";
       if (coincide.length) {
@@ -539,6 +541,14 @@
       sections.push(textSection("Preregistration (Markdown)", raw.text, theoryId + ".prereg.md", "text/markdown"));
     } else if (opId === "dossier") {
       sections.push(textSection("Audit dossier (Markdown)", raw.text, theoryId + ".dossier.md", "text/markdown"));
+    } else if (opId === "simulate" && raw.ok === false) {
+      // Both packages refuse invalid knobs and stop at the step where a state
+      // stops being finite, naming the step and the construct. Show their text.
+      sections.push({ kind: "node", node: wrapSection("Simulation", null,
+        el("div", { class: "error", role: "alert" }, [
+          el("div", { class: "et", text: "The simulation stopped" }),
+          el("div", { text: String(raw.message || "") }),
+        ])) });
     } else if (opId === "simulate") {
       const r = raw.result;
       const states = asArr(r.states), traj = asArr(r.trajectory).map(asArr);
