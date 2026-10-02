@@ -339,30 +339,92 @@ reader reach for whichever index they have access to.
 The corpus format expects a top-level `{schema_version, id, records}` mapping
 and, within each record, `references` as a flat list of id strings, whereas
 `scopus_corpus()` returns a tibble whose `references` entries are data frames.
-Build the mapping explicitly: reduce each references data frame to one id
-string per cited work (the DOI where present, the Scopus id otherwise), write
-the result to disk and read it back with `tf_read_corpus()`:
+Fetch the records and enrich them first:
 
 ```r
 # illustrative: needs scopusflow and a configured Scopus API key
 recs <- scopusflow::scopus_fetch(query, years = 2015:2026)
 # id, title, year, keywords, references
 sc   <- scopusflow::scopus_corpus(recs)
-
-records <- lapply(seq_len(nrow(sc)), function(i) {
-  refs <- sc$references[[i]]              # one data frame of cited works
-  ref_ids <- ifelse(is.na(refs$doi), refs$id, refs$doi)
-  list(id         = sc$id[[i]],
-       title      = sc$title[[i]],
-       year       = sc$year[[i]],
-       keywords   = as.list(sc$keywords[[i]]),
-       references = as.list(ref_ids[!is.na(ref_ids)]))
-})
-corpus <- list(schema_version = "1.0",
-               id = "scopus:panic disorder",
-               records = records)
-jsonlite::write_json(corpus, "corpus.json", auto_unbox = TRUE)
-
-lit <- tf_read_corpus("corpus.json")
-tf_litmap(lit)
 ```
+
+`tf_litmap()` compares references and keywords as exact strings, so the
+conversion has to give each cited work one spelling across the whole corpus.
+Scopus gives a cited work's DOI in one record, in different capitals in
+another and not at all in a third, so a key built from the DOI splits one work
+into several nodes and the co-citation map comes out empty. Author keywords
+keep their authors' capitals, which splits the keyword themes in the same way.
+The adapter below therefore keys each cited work by its Scopus identifier, as
+`scopus:<id>`. A reference that carries only a DOI borrows the identifier of
+another reference with the same DOI anywhere in the corpus, and is keyed as
+`doi:<doi>`, with the DOI lower-cased and any resolver prefix removed, when
+no such reference exists. References with neither are dropped. Keywords are
+trimmed and lower-cased, and a missing year is written as `null`.
+
+```{r scopus-adapter}
+scopus_corpus_to_tf <- function(sc, id) {
+  # DOIs are case-insensitive over ASCII letters only (DOI Handbook, 2.4), so
+  # the fold leaves every other character alone.
+  fold_doi <- function(doi) {
+    doi <- chartr(paste(LETTERS, collapse = ""), paste(letters, collapse = ""),
+                  trimws(doi))
+    sub("^(https?://(dx\\.)?doi\\.org/|doi:)", "", doi)
+  }
+  present <- function(x) {
+    x <- trimws(as.character(x))
+    x[!is.na(x) & !nzchar(x)] <- NA_character_
+    x
+  }
+  # One (Scopus id, DOI) pair per cited work. A record whose lookup failed or
+  # found no references has an empty entry.
+  cited <- lapply(sc$references, function(refs) {
+    if (!is.data.frame(refs) || nrow(refs) == 0L) {
+      return(data.frame(sid = character(), doi = character()))
+    }
+    data.frame(sid = present(refs$id), doi = fold_doi(present(refs$doi)))
+  })
+  # Every reference that carries both says which Scopus id a DOI belongs to.
+  pairs <- do.call(rbind, c(list(data.frame(sid = character(),
+                                            doi = character())), cited))
+  pairs <- pairs[!is.na(pairs$sid) & !is.na(pairs$doi), , drop = FALSE]
+  pairs <- pairs[!duplicated(pairs$doi), , drop = FALSE]
+  sid_of_doi <- stats::setNames(pairs$sid, pairs$doi)
+
+  records <- lapply(seq_len(nrow(sc)), function(i) {
+    refs <- cited[[i]]
+    sid <- refs$sid
+    borrow <- is.na(sid) & refs$doi %in% names(sid_of_doi)
+    sid[borrow] <- sid_of_doi[refs$doi[borrow]]
+    keys <- ifelse(!is.na(sid), paste0("scopus:", sid),
+                   ifelse(!is.na(refs$doi), paste0("doi:", refs$doi), NA))
+    keywords <- tolower(present(sc$keywords[[i]]))
+    record <- list(id = as.character(sc$id[[i]]),
+                   title = present(sc$title[[i]]),
+                   year = as.integer(sc$year[[i]]),
+                   keywords = I(unique(keywords[!is.na(keywords)])),
+                   references = I(unique(keys[!is.na(keys)])))
+    # The schema accepts a null year, but a title is a string.
+    if (is.na(record$title)) record$title <- NULL
+    record
+  })
+  list(schema_version = "1.0", id = id, records = records)
+}
+```
+
+Write the result with `null = "null"` and `na = "null"`, so that a missing year
+reaches the file as `null` (by default `jsonlite` writes the string `"NA"`), then
+read it back with `tf_read_corpus()`. `I()` in the adapter keeps a one-element keyword or
+reference list an array under `auto_unbox = TRUE`.
+
+```r
+# illustrative: continues from the fetch above
+lit <- scopus_corpus_to_tf(sc, "scopus:panic disorder")
+jsonlite::write_json(lit, "corpus.json", auto_unbox = TRUE,
+                     null = "null", na = "null")
+
+corpus <- tf_read_corpus("corpus.json")
+tf_litmap(corpus)
+```
+
+The next release of `scopusflow` is planned to write this file itself, with the
+same keys, so that the adapter is then needed only for earlier versions.

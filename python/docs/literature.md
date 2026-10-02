@@ -484,41 +484,123 @@ a reader reach for whichever index they have access to.
 The corpus format expects a top-level `{schema_version, id, records}` mapping
 and, within each record, `references` as a flat list of id strings, whereas
 the `corpus` builder returns a frame whose `references` entries are
-DataFrames. Build the mapping explicitly: reduce each references frame to one
-id string per cited work (the DOI where present, the Scopus id otherwise),
-write the result to disk and read it back with `read_corpus`:
+DataFrames. Fetch the records and enrich them first:
 
 ```python
 # illustrative: needs scopusflow-py and a configured Scopus API key
-import json
-
 from scopusflow import SearchPlan, corpus, fetch_plan, scopus_query
-
-import theoryforge as tf
 
 records = fetch_plan(
     SearchPlan(scopus_query("panic disorder"), years=range(2015, 2027))
 )
 # id, title, year, keywords, references
 frame = corpus(records)
-
-corpus_records = []
-for row in frame.itertuples(index=False):
-    refs = row.references                 # one DataFrame of cited works
-    ref_ids = refs["doi"].fillna(refs["id"]).dropna().tolist()
-    corpus_records.append({
-        "id": row.id,
-        "title": row.title,
-        "year": row.year,
-        "keywords": list(row.keywords),
-        "references": ref_ids,
-    })
-
-with open("corpus.json", "w", encoding="utf-8") as fh:
-    json.dump({"schema_version": "1.0",
-               "id": "scopus:panic disorder",
-               "records": corpus_records}, fh)
-
-lit = tf.read_corpus("corpus.json")
-tf.litmap(lit)
 ```
+
+`litmap` compares references and keywords as exact strings, so the conversion
+has to give each cited work one spelling across the whole corpus. Scopus gives
+a cited work's DOI in one record, in different capitals in another and not at
+all in a third, so a key built from the DOI splits one work into several nodes
+and the co-citation map comes out empty. Author keywords keep their authors'
+capitals, which splits the keyword themes in the same way. The adapter below
+therefore keys each cited work by its Scopus identifier, as `scopus:<id>`. A
+reference that carries only a DOI borrows the identifier of another reference
+with the same DOI anywhere in the corpus, and is keyed as `doi:<doi>`, with
+the DOI lower-cased and any resolver prefix removed, when no such reference
+exists. References with neither are dropped. Keywords are trimmed and
+lower-cased, and a missing year is written as `null`. The year is converted
+to a plain `int` because a fresh fetch leaves `pd.NA` for a missing year and
+a resumed checkpoint holds nullable `Int64` years, and the `json` module
+writes neither.
+
+<!-- scopus-adapter -->
+```python
+import string
+
+import pandas as pd
+
+# DOIs are case-insensitive over ASCII letters only (DOI Handbook, 2.4), so
+# the fold leaves every other character alone.
+_ASCII_LOWER = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
+_DOI_RESOLVER = ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/",
+                 "http://dx.doi.org/", "doi:")
+
+
+def _present(value):
+    """The value as a stripped string, or None when it is missing or blank."""
+    if value is None or (not isinstance(value, str) and pd.isna(value)):
+        return None
+    return str(value).strip() or None
+
+
+def _fold_doi(value):
+    doi = _present(value)
+    if doi is None:
+        return None
+    doi = doi.translate(_ASCII_LOWER)
+    for prefix in _DOI_RESOLVER:
+        if doi.startswith(prefix):
+            return doi[len(prefix):] or None
+    return doi
+
+
+def _cited(refs):
+    """One (Scopus id, DOI) pair per cited work, none for a failed lookup."""
+    if not isinstance(refs, pd.DataFrame) or refs.empty:
+        return []
+    return [(_present(sid), _fold_doi(doi)) for sid, doi in zip(refs["id"], refs["doi"])]
+
+
+def scopus_corpus_to_tf(frame, corpus_id):
+    cited = [_cited(refs) for refs in frame["references"]]
+    # Every reference that carries both says which Scopus id a DOI belongs to.
+    sid_of_doi = {}
+    for pairs in cited:
+        for sid, doi in pairs:
+            if sid and doi:
+                sid_of_doi.setdefault(doi, sid)
+
+    records = []
+    for row, pairs in zip(frame.itertuples(index=False), cited):
+        references = []
+        for sid, doi in pairs:
+            sid = sid or sid_of_doi.get(doi)
+            key = f"scopus:{sid}" if sid else (f"doi:{doi}" if doi else None)
+            if key and key not in references:
+                references.append(key)
+        # A list per row. Anything else is a missing value and means no keywords.
+        given = row.keywords if isinstance(row.keywords, (list, tuple)) else []
+        keywords = []
+        for kw in (_present(k) for k in given):
+            if kw and kw.lower() not in keywords:
+                keywords.append(kw.lower())
+        record = {"id": str(row.id)}
+        title = _present(row.title)
+        if title is not None:  # the schema accepts a null year, but a title is a string
+            record["title"] = title
+        record["year"] = None if pd.isna(row.year) else int(row.year)
+        record["keywords"] = keywords
+        record["references"] = references
+        records.append(record)
+    return {"schema_version": "1.0", "id": corpus_id, "records": records}
+```
+
+Write the result with `allow_nan=False`, which stops the write at any stray
+missing value, since the `NaN` that `json` would otherwise write is not valid
+JSON. Then read it back with `read_corpus`:
+
+```python
+# illustrative: continues from the fetch above
+import json
+
+import theoryforge as tf
+
+lit = scopus_corpus_to_tf(frame, "scopus:panic disorder")
+with open("corpus.json", "w", encoding="utf-8") as fh:
+    json.dump(lit, fh, ensure_ascii=False, allow_nan=False)
+
+corpus_map = tf.litmap(tf.read_corpus("corpus.json"))
+```
+
+The next release of `scopusflow-py` is planned to write this file itself, with
+the same keys, so that the adapter is then needed only for earlier versions.

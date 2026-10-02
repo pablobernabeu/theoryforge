@@ -12,6 +12,18 @@ version and a single behavioural contract
 -->
 
 
+## [Unreleased]
+
+### Documentation
+- The literature page's recipe for turning a scopusflow corpus into a theoryforge
+  corpus keys cited works by Scopus identifier, folds DOI and keyword case and writes a
+  missing year as null. The earlier recipe split one cited work into several nodes, so
+  co-citation maps and keyword themes came out empty, and in Python it failed on a
+  missing year and on the `Int64` years of a resumed checkpoint. The recipe is now a
+  function, `scopus_corpus_to_tf()`, shown in full in both languages and run by both
+  test suites on a stand-in corpus.
+
+
 ## [0.6.0] - 2026-08-21
 
 ### Fixed

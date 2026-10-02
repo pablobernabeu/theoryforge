@@ -1,3 +1,12 @@
+# theoryforge (development version)
+
+* The literature article's recipe for turning a scopusflow corpus into a
+  theoryforge corpus keys cited works by Scopus identifier, folds DOI and
+  keyword case and writes a missing year as null. The earlier recipe split one
+  cited work into several nodes, so co-citation maps and keyword themes came out
+  empty. The recipe is now a function, `scopus_corpus_to_tf()`, shown in full
+  and run by the test suite on a stand-in corpus.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal
