@@ -21,10 +21,11 @@ def _as_list(v) -> list:
     """Read a value where the schema expects an array (API_SPEC.md section 4).
 
     A list is returned as is. A nonempty scalar string is read as a singleton
-    list, so natural YAML such as ``derives_from: p1`` means ``["p1"]`` (the R
-    YAML reader cannot distinguish the two forms, so both languages adopt the
-    singleton reading). Anything else, including an empty or whitespace-only
-    scalar, reads as empty.
+    list, so natural YAML such as ``derives_from: p1`` means ``["p1"]``. Both
+    languages keep this reading as a convenience for hand-written YAML. R's
+    reader once collapsed a one-element sequence to a string, so the two forms
+    could not be told apart there, but it now returns every sequence as a list.
+    Anything else, including an empty or whitespace-only scalar, reads as empty.
     """
     if isinstance(v, list):
         return v

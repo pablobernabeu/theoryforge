@@ -8,10 +8,8 @@ from __future__ import annotations
 
 import itertools
 import json
-from pathlib import Path
 
-import yaml
-
+from ._load import load_document
 from .redundancy import tokens
 from .rigor import _as_list
 
@@ -23,10 +21,13 @@ def _esc(s) -> str:
 
 
 def read_corpus(path) -> dict:
-    """Read a literature corpus from YAML or JSON."""
-    path = Path(path)
-    text = path.read_text(encoding="utf-8")
-    data = json.loads(text) if path.suffix.lower() == ".json" else yaml.safe_load(text)
+    """Read a literature corpus from YAML or JSON (JSON when the suffix is ``.json``).
+
+    The file is read by the rules ``read`` follows, which are the R twin's
+    (API_SPEC.md section 3), so an unquoted keyword such as ``y`` or ``n`` stays a
+    string and a repeated key is refused.
+    """
+    data = load_document(path)
     if not isinstance(data, dict):
         raise ValueError("Corpus data must be a mapping")
     return data

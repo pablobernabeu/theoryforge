@@ -62,6 +62,14 @@ def test_unboxing_does_not_recurse_or_unwrap_containers(parity):
     assert parity.deep_equal([[1]], 1) != []
 
 
+def test_unboxing_can_be_turned_off_for_the_round_trip(parity):
+    # A written file must keep a one-element array an array, at any depth.
+    assert parity.deep_equal(["a"], "a", unbox=False) == [": ['a'] != 'a'"]
+    assert parity.deep_equal({"k": [{"d": "a"}]}, {"k": [{"d": ["a"]}]}, unbox=False) != []
+    assert parity.deep_equal({"k": ["a"]}, {"k": ["a"]}, unbox=False) == []
+    assert parity.deep_equal([1.0], [1.0 + 1e-12], unbox=False) == []
+
+
 def test_numbers_within_tolerance(parity):
     assert parity.deep_equal(0.1 + 0.2, 0.3) == []
     assert parity.deep_equal(1.0, 1.0 + 1e-6) != []
@@ -191,3 +199,104 @@ def test_compare_tree_passes_on_identical_trees(parity, tmp_path):
         (d / "t.dag").write_bytes(b"dag {\n}\n")
         (d / "t.report.json").write_text('{"gate": "pass", "items": []}', encoding="utf-8")
     assert parity.compare_tree(golden_dir, actual_dir) == (2, [])
+
+
+# -- the round-trip phase -------------------------------------------------------
+
+def test_roundtrip_inputs_cover_fixtures_apps_and_edge_cases(parity):
+    if not (ROOT / "fixtures" / "edge").is_dir():
+        pytest.skip("the repository's fixtures/ is not reachable from this test run")
+    names = parity.roundtrip_inputs()
+    assert {n.split("--", 1)[0] for n in names} == {"fixtures", "apps", "edge"}
+    assert "fixtures--panic-network" in names
+    # A case that cannot be read is listed too, and skipped when there is nothing to write.
+    assert "edge--dup-json" in names
+
+
+ROUNDTRIP_THEORY = """\
+schema_version: "1.0"
+id: rt
+title: Round trip
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+predictions:
+  - id: h1
+    statement: Alpha exists.
+    type: existence
+    derives_from: [p1]
+propositions:
+  - id: p1
+    from: c1
+    to: c1
+    relation: increases
+"""
+
+
+def test_roundtrip_reports_what_a_writer_lost(parity, tmp_path):
+    tf = parity._gen_golden().tf
+    src = tmp_path / "rt.theory.yaml"
+    src.write_text(ROUNDTRIP_THEORY, encoding="utf-8")
+    dup = tmp_path / "dup.theory.yaml"
+    dup.write_text("id: a\nid: b\n", encoding="utf-8")
+    py_dir, r_dir = tmp_path / "py", tmp_path / "r"
+    originals = parity.write_roundtrip_python(tf, {"case": src, "dup": dup}, py_dir)
+    assert list(originals) == ["case"]  # the unreadable file is skipped
+    r_dir.mkdir()
+    # A writer that rounds the title and writes derives_from as a scalar, and
+    # that never wrote the JSON file.
+    (r_dir / "case.theory.yaml").write_text(
+        ROUNDTRIP_THEORY.replace("title: Round trip", "title: Round").replace(
+            "derives_from: [p1]", "derives_from: p1"),
+        encoding="utf-8")
+    n, failures = parity.roundtrip_failures(tf, originals, {"Python": py_dir, "R": r_dir}, None)
+    assert n == 3
+    assert not [f for f in failures if "written by Python" in f]
+    assert "case.theory.yaml written by R.title: 'Round trip' != 'Round'" in failures
+    assert "case.theory.json written by R: not written" in failures
+    # The scalar derives_from is caught without a validator too: the round trip
+    # does not unbox a one-element array (CI's parity job has no jsonschema).
+    assert "case.theory.yaml written by R.predictions[0].derives_from: ['p1'] != 'p1'" in failures
+    assert len(failures) == 3
+
+
+def test_roundtrip_expects_r_to_box_a_single_value_and_python_to_keep_it(parity, tmp_path):
+    # API_SPEC section 3: R writes a single value in a field the schema types as
+    # an array of strings as a one-element array, and Python writes it as held.
+    paths = parity.string_array_paths(parity.load_schema())
+    assert len(paths) == 7
+    assert ("predictions", "[]", "derives_from") in paths and ("boundary_conditions",) in paths
+    # As R's .tf_box_path() does: "[]" visits a mapping's entries too, null stays null.
+    assert parity.as_r_writes({"constructs": {"a": {"measurement": "m"}}, "boundary_conditions": None},
+                              paths) == {"constructs": {"a": {"measurement": ["m"]}},
+                                         "boundary_conditions": None}
+    tf = parity._gen_golden().tf
+    src = tmp_path / "rt.theory.yaml"
+    src.write_text(ROUNDTRIP_THEORY.replace("derives_from: [p1]", "derives_from: p1"), encoding="utf-8")
+    py_dir, r_dir = tmp_path / "py", tmp_path / "r"
+    originals = parity.write_roundtrip_python(tf, {"case": src}, py_dir)
+    r_dir.mkdir()
+    (r_dir / "case.theory.yaml").write_text(ROUNDTRIP_THEORY, encoding="utf-8")  # boxed, as R writes
+    (r_dir / "case.theory.json").write_bytes((py_dir / "case.theory.json").read_bytes())  # not boxed
+    _, failures = parity.roundtrip_failures(tf, originals, {"Python": py_dir, "R": r_dir}, None)
+    assert failures == ["case.theory.json written by R.predictions[0].derives_from: ['p1'] != 'p1'"]
+
+
+def test_roundtrip_checks_the_schema_when_the_original_validates(parity, tmp_path):
+    pytest.importorskip("jsonschema")
+    tf = parity._gen_golden().tf
+    src = tmp_path / "rt.theory.yaml"
+    src.write_text(ROUNDTRIP_THEORY, encoding="utf-8")
+    py_dir, r_dir = tmp_path / "py", tmp_path / "r"
+    originals = parity.write_roundtrip_python(tf, {"case": src}, py_dir)
+    r_dir.mkdir()
+    (r_dir / "case.theory.yaml").write_text(
+        ROUNDTRIP_THEORY.replace("derives_from: [p1]", "derives_from: p1"), encoding="utf-8")
+    (r_dir / "case.theory.json").write_bytes((py_dir / "case.theory.json").read_bytes())
+    validator = parity.schema_validator()
+    _, failures = parity.roundtrip_failures(tf, originals, {"Python": py_dir, "R": r_dir}, validator)
+    assert failures == ["case.theory.yaml written by R.predictions[0].derives_from: ['p1'] != 'p1'",
+                        "case.theory.yaml written by R: schema: predictions/0/derives_from: "
+                        "'p1' is not of type 'array'"]

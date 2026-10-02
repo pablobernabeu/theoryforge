@@ -16,6 +16,20 @@ A named list holding the parsed theory object.
 Reads a theory object authored as YAML (or JSON, chosen by file extension)
 into a named list.
 }
+\details{
+The file is read exactly as the Python twin's \code{theoryforge.read()}
+reads it (API_SPEC.md section 3). The text is UTF-8, and a byte-order mark
+is ignored. A YAML or JSON sequence is always a list, even with one element,
+so \code{maturity: [draft]} is refused by \code{\link[=tf_validate]{tf_validate()}} as it is in Python.
+Unquoted \code{y}, \code{Y}, \code{n} and \code{N} stay strings, as do
+dates, while \code{yes}, \code{no}, \code{true}, \code{false}, \code{on} and
+\code{off} are logicals. Integers are decimal, octal or hexadecimal only, so
+\code{1:30} and \code{1_000} are strings, and so is a number written with a
+comma (\code{1,000}). An integer too large for an R integer is read as a
+double. A merge key (\code{<<}) lets the mapping's own keys win. A key
+repeated in any mapping, in YAML or JSON, stops with
+\code{(<path>) Duplicate map key: '<key>'}.
+}
 \examples{
 # Round-trip a theory through a temporary file.
 theory <- tf_theory("demo-1", "A demonstration theory")

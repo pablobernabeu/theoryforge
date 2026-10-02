@@ -1,0 +1,16 @@
+﻿{
+  "schema_version": "1.0",
+  "id": "edge-bom-json",
+  "title": "A JSON theory that begins with a byte-order mark",
+  "maturity": "building",
+  "constructs": [
+    {"id": "c1", "label": "Alpha", "definition": "The first construct."},
+    {"id": "c2", "label": "Beta", "definition": "The second construct."}
+  ],
+  "propositions": [
+    {"id": "p1", "from": "c1", "to": "c2", "relation": "increases", "mechanism": "Alpha drives Beta."}
+  ],
+  "predictions": [
+    {"id": "h1", "statement": "Beta rises with Alpha.", "type": "directional", "derives_from": ["p1"]}
+  ]
+}

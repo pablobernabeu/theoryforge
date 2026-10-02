@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "id": "edge-dup-json",
+  "title": "A JSON theory with two predictions arrays",
+  "maturity": "building",
+  "predictions": [
+    {"id": "h1", "statement": "The first array.", "type": "directional"}
+  ],
+  "predictions": [
+    {"id": "h2", "statement": "The second array.", "type": "directional"}
+  ]
+}

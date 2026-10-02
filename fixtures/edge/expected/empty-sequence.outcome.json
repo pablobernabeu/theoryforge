@@ -1,0 +1,5 @@
+{
+  "read": {
+    "error": "Theory data must be a mapping"
+  }
+}

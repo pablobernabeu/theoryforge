@@ -40,7 +40,7 @@ The two implementations use the same verbs, the same argument names and the same
 
 **Validation (`validate`).** The default checks structure: the required top-level fields (`schema_version`, `id`, `title`, `maturity`), the `maturity`/`theory_form`/`relation`/`type` enums, the recognised top-level field names, and the required fields of each construct, proposition and prediction. Both languages collect every problem and raise once with the prefix `invalid theory object: ` followed by the messages joined by `; `.
 
-**Mistyped values.** Every field the structural pass reads is a scalar string, and a value of any other shape is a problem to report, never a reason to abandon the pass. An enum field MUST be tested for being a nonempty string before it is tested for membership, so `maturity: [draft]` is reported as a missing required field and an enum violation rather than matching the enum in R (where `%in%` unboxes) or raising an unhashable-type error in Python. A collection entry that is not a mapping, as in `constructs: [arousal, threat]`, has no fields, so each of its required fields is reported missing in the usual `construct[i] missing/empty <field>` form. Both languages therefore raise the same `invalid theory object: ` message for the same mistyped file.
+**Mistyped values.** Every field the structural pass reads is a scalar string, and a value of any other shape is a problem to report, never a reason to abandon the pass. An enum field MUST be tested for being a nonempty string before it is tested for membership, so `maturity: [draft]` is reported as a missing required field and an enum violation rather than matching the enum in R (where `%in%` unboxes) or raising an unhashable-type error in Python. A collection entry that is not a mapping, as in `constructs: [arousal, threat]`, has no fields, so each of its required fields is reported missing in the usual `construct[i] missing/empty <field>` form. Both languages therefore raise the same `invalid theory object: ` message for the same mistyped file. This holds for files read from YAML and JSON as well as for objects built in memory, because both readers return every sequence as a list, whatever its length (§3, "Reading and writing files").
 
 **Unknown top-level fields.** After the enum checks and before the collection checks, each top-level key of the document that is not among the `properties` of `theory.schema.json` yields, in file order, `unknown top-level field: <key>`. The schema is read for its key set alone (no JSON-Schema engine), and it is closed at the top level for this reason: a misspelt collection key such as `predicitions:` would otherwise validate while silently dropping the collection and moving the aggregate score and gate. Item objects remain open, so individual constructs, propositions and predictions may still carry extra metadata. With `full=TRUE`/`full=True`, a deterministic referential-integrity and typing pass is appended (same checks, order and message text in both languages):
 
@@ -60,6 +60,41 @@ Indices are 0-based. Only nonempty references are checked (a missing/empty id is
 - **Rounding.** All emitted numeric values use a deterministic half-away-from-zero rounding `rnd(x, n) = sign(x) * floor(abs(x)*10^n + 0.5 + 1e-6) / 10^n` (item scores `n=3`, aggregate `n=1`, simulate trajectories `n=6`). Do NOT use the language default `round()`. It is banker's rounding, whose result diverges across platforms at exact half-boundaries (e.g. 0.6125 → 0.612 on one OS, 0.613 on another). The `+1e-6` bias is far larger than cross-platform ULP jitter (~1e-13 at these magnitudes) yet far smaller than the rounding grid, so `rnd` is identical on every platform and across R and Python. R: `tf_rnd <- function(x, n) { s <- 10^n; sign(x) * floor(abs(x) * s + 0.5 + 1e-6) / s }`.
 - **Line endings.** All generated IR strings use `\n` (LF) only, and end with a single trailing `\n`. Every function that writes a file goes through one per-language helper (`_io.write_lf` / `.tf_write_lf`) that emits UTF-8 bytes with LF endings, so no writer can pick up the platform's newline translation.
 - **String escaping in DOT labels.** Replace `\` → `\\` then `"` → `\"`.
+
+### Reading and writing files
+
+The same file MUST give the same theory object in both languages. `read`/`tf_read` and `read_corpus`/`tf_read_corpus`, and the apps through them, follow these rules. Python implements them in `_load.py`, R in `utils.R` (`.tf_read_yaml`, `.tf_read_json`).
+
+- **Text.** A file is read as bytes and decoded as UTF-8. A leading byte-order mark is dropped, and a missing final newline is accepted without a warning. The format is JSON when the extension is `.json`, in any case, and YAML otherwise.
+- **Sequences and mappings.** A sequence is a list whatever its length, so `maturity: [draft]` is a one-element list in both languages and `[]` an empty one (R: an unnamed list). A mapping is a dict (R: a named list), the empty `{}` included. A document that is not a mapping, `[]` included, is refused with `Theory data must be a mapping` (`Corpus data must be a mapping` for a corpus).
+- **Duplicate keys.** A key repeated in any mapping, in YAML or JSON, refuses the file with `(<path>) Duplicate map key: '<key>'`. When several mappings repeat a key, the one reported belongs to the mapping that closes first, so an item's key is reported before a top-level key even when the top-level repeat comes first in the text. Within one mapping, it is the key whose repeat comes first. This is the order in which R's yaml package checks.
+- **Merge keys.** A merge key (`<<: *a` or `<<: [*a, *b]`) adds the keys of the merged mappings that the mapping lacks. The mapping's own keys win and come first, in their order. The merged keys follow, earlier merges first. A key already present is never replaced, so of two merge keys in one mapping the first wins. This is R's yaml package with `merge.precedence = "override"`.
+- **Plain scalars.** An unquoted scalar is read by the table below. A quoted one is always a string. Python's loader replaces PyYAML's integer, float and timestamp resolvers. R's reader keeps `y`, `Y`, `n`, `N` and R's own missing-value forms as text through yaml handlers. The yaml package also takes text with a comma between digits (`1,000`) or a dot with no digit (`.`) for a number, and reads NA for it with a warning, as it does for an integer beyond R's integer range. When it warns, R's reader reads the file again with handlers that follow the table.
+
+| Plain scalars | Read as | Rule |
+|---|---|---|
+| `1:30`, `190:20:30`, `1:30.5` | string | no sexagesimal numbers |
+| `1_000`, `1_000.5`, `0.1_0` | string | no underscores in numbers |
+| `0b101`, `0o17`, `0X1F` | string | no binary, no `0o` octal, no upper-case `0X` |
+| `1e3`, `1e+3`, `1.0e3`, `0.5e3` | string | an exponent needs a decimal point and a signed power |
+| `08`, `tRUE` | string | neither a number nor a boolean spelling |
+| `2026-05-01`, `2026-05-01 10:00:00` | string | no dates or times |
+| `y`, `Y`, `n`, `N` | string | not booleans |
+| `=` | string | no value key |
+| `.na`, `.na.real`, `.na.integer`, `.na.character` | string | R's missing-value forms are text |
+| `1,000`, `0,5`, `1,000.5`, `.` | string | no commas in numbers, and a number needs a digit |
+| `+12`, `-0` | integer | decimal |
+| `0755` and `+0755` (493), `007` (7) | integer | octal with a leading zero |
+| `0x1F` (31), `-0x1F` (-31) | integer | hexadecimal with a lower-case `0x` |
+| `2147483648`, `0x80000000` | integer | beyond R's integer range, held by R as a double (exact up to 2^53) |
+| `1.0e+3`, `1.5E-3`, `.5`, `-.5`, `+.5`, `1.`, `0.` | float | a decimal point, an optional signed exponent, a sign allowed before a leading dot |
+| `.inf`, `-.Inf`, `.nan`, `1.0e+400` | float | non-finite, or beyond the range of a double |
+| `yes`, `No`, `true`, `False`, `on`, `OFF` | boolean | YAML 1.1 booleans other than `y` and `n`, in lower case, with a capital or in capitals |
+| `~`, `null`, `Null`, `NULL`, an empty value | null | |
+
+- **Writing.** `write`/`tf_write` choose the format by extension as the readers do and write UTF-8 with LF line endings and a final newline. Python writes YAML in the theory's key order and quotes every string that a reader could take for another type, whether by PyYAML's own resolvers, by the table above or by theoryforge 0.6.0 in R, which reads `y`, `Y`, `n`, `N`, the `.na` forms and text such as `1,000` or `.` as something else. R writes numbers with 15 significant digits in both formats, logicals as `true` and `false` and a missing value (`NA`) as null. It writes every field that `theory.schema.json` types as an array of strings as an array, even when the theory holds a single string there, since R cannot tell a one-element vector from a scalar. Python writes such a field as it holds it. Both readings agree by the singleton rule of §4. A theory written by either language reads back as the same theory in both, and one that validates against the schema still validates once written (the round-trip phase of §7).
+
+Explicit tags (`!!timestamp`, `!!binary`, R's `!expr`) and files holding more than one YAML document are outside this contract. Mapping keys that are not strings are outside it too, since R names every entry with a string and so reads `1` and `"1"` as one key where Python reads two. JSON has no form for a non-finite number, so a theory holding one keeps it only in YAML. Python's json module writes and reads `NaN` and `Infinity`, jsonlite refuses both, and R writes the strings `"NaN"` and `"Inf"`.
 
 ## 4. Rigour checklist algorithm
 
@@ -181,6 +216,7 @@ jaccard(A, B): if A and B both empty -> 0.0; else round(|A∩B| / |A∪B|, 3)
 - **Byte-identical:** every other file (`.dot`, `.dag`, `.md`, `.svg`, `.lavaan`).
 - **Edge cases:** for every theory in `fixtures/edge/`, `scripts/gen_golden.py` records what each public call makes of it (`read`, `validate`, `validate(full)`, `check`, `severity`, `implications`, `compile_sem`, `simulate(steps = 3)`, `preregister`, with a refusal recorded as its message) in `fixtures/edge/expected/<name>.outcome.json`. R's records must match by the semantic rules above. Only files whose read succeeds or fails with a pinned message belong in the corpus.
 - **App examples:** the theories in `apps/examples/` have no goldens. Both twins write their per-theory artefacts live, and the two sets are compared by the same rules.
+- **Round trip:** Python writes every fixture, app example and readable edge case to YAML and to JSON, R reads each file with `tf_read()` and writes it again with `tf_write()` (`parity_emit.R roundtrip`), and Python reads both sets back. Every file must hold the theory Python first read, compared by the semantic rules above but with its shape kept, so a one-element array never equals its element. R's files may differ only as the writing rule of §3 allows, a single value in a field the schema types as an array of strings coming back as a one-element array. When `jsonschema` is installed, each file must also validate against `theory.schema.json` whenever that theory does (§3, "Reading and writing files").
 
 ---
 
@@ -311,7 +347,7 @@ A row holding a single item emits `  { rank=same; "<row 1>"; }` instead. When al
 
 ## 13. Additional golden artefacts (per fixture unless noted)
 
-`<id>.development_roadmap.dot`, `<id>.pipeline.dot` (byte), `<id>.severity.json`, `<id>.prereg.md` (byte), and, for the amended pair only, `panic-network-2026-v2.appraisal.json` = `appraise_amendment(v2, v1)`. Parity checker: every file in `fixtures/expected/` is compared, `*.json` semantically (float tolerance 1e-9, one-level unboxing of a scalar, booleans typed, key order for `*.report.json`) and all others byte for byte (`.dot`, `.dag`, `.md`, `.svg`, `.lavaan`), together with the edge-case and app-example phases of §7.
+`<id>.development_roadmap.dot`, `<id>.pipeline.dot` (byte), `<id>.severity.json`, `<id>.prereg.md` (byte), and, for the amended pair only, `panic-network-2026-v2.appraisal.json` = `appraise_amendment(v2, v1)`. Parity checker: every file in `fixtures/expected/` is compared, `*.json` semantically (float tolerance 1e-9, one-level unboxing of a scalar, booleans typed, key order for `*.report.json`) and all others byte for byte (`.dot`, `.dag`, `.md`, `.svg`, `.lavaan`), together with the edge-case, app-example and round-trip phases of §7.
 
 ---
 

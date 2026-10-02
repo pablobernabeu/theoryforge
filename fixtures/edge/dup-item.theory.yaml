@@ -1,0 +1,11 @@
+# Edge case: a construct with two definitions. Both twins refuse the file
+# (Python used to keep the second definition without a word).
+schema_version: "1.0"
+id: edge-dup-item
+title: A construct defined twice
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first definition.
+    definition: The second definition.

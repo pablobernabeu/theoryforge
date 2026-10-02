@@ -6,10 +6,10 @@ import math
 from copy import deepcopy
 from pathlib import Path
 
-import yaml
-
 from . import _resources
 from ._io import write_lf as _write_lf
+from ._load import dump_yaml as _dump_yaml
+from ._load import load_document as _load_document
 from .develop import appraise_amendment as _appraise_amendment
 from .diagram import diagram as _diagram
 from .dossier import dossier as _dossier
@@ -238,11 +238,19 @@ class Theory:
 
     # -- serialisation ---------------------------------------------------------
     def write(self, path) -> None:
+        """Write the theory to ``path`` as JSON (a ``.json`` suffix) or YAML (anything else).
+
+        The file is UTF-8 with LF line endings and ends with a newline. YAML keeps
+        the theory's key order and quotes every string a reader could take for
+        something else, ``y``, ``Y``, ``n`` and ``N`` included. The file therefore
+        reads back as the same theory in both twins, and in theoryforge 0.6.0 for R
+        (API_SPEC.md section 3, "Reading and writing files").
+        """
         path = Path(path)
         if path.suffix.lower() == ".json":
-            text = json.dumps(self.data, indent=2, ensure_ascii=False)
+            text = json.dumps(self.data, indent=2, ensure_ascii=False) + "\n"
         else:
-            text = yaml.safe_dump(self.data, sort_keys=False, allow_unicode=True)
+            text = _dump_yaml(self.data)
         _write_lf(path, text)
 
     # -- builder (BUILDING mode) ----------------------------------------------
@@ -427,10 +435,17 @@ class Theory:
 
 
 def read(path) -> Theory:
-    """Read a theory object from a YAML or JSON file."""
-    path = Path(path)
-    text = path.read_text(encoding="utf-8")
-    data = json.loads(text) if path.suffix.lower() == ".json" else yaml.safe_load(text)
+    """Read a theory object from a YAML or JSON file (JSON when the suffix is ``.json``).
+
+    The file is read exactly as the R twin's ``tf_read()`` reads it (API_SPEC.md
+    section 3, "Reading and writing files"). A byte-order mark is ignored. Dates
+    and ``y``, ``Y``, ``n`` and ``N`` stay strings, and integers are decimal, octal
+    or hexadecimal only, so ``1:30`` and ``1_000`` are strings too. A merge key
+    lets the mapping's own keys win. A repeated key anywhere raises
+    ``ValueError("(<path>) Duplicate map key: '<key>'")``, and a document that is
+    not a mapping raises ``ValueError("Theory data must be a mapping")``.
+    """
+    data = _load_document(path)
     if not isinstance(data, dict):
         raise ValueError("Theory data must be a mapping")
     return Theory(data)

@@ -1,0 +1,25 @@
+# Edge case: a construct built from another with a YAML merge key. The second
+# construct's own id wins over the merged one in both twins, giving c1 and c2
+# (R used to keep the merged id, giving c1 twice).
+schema_version: "1.0"
+id: edge-merge-key
+title: A construct merged from another
+maturity: building
+constructs:
+  - &base
+    id: c1
+    label: Shared label
+    definition: A construct whose label and definition a second one reuses.
+  - <<: *base
+    id: c2
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: The first construct raises the second.
+predictions:
+  - id: h1
+    statement: The second construct rises with the first.
+    type: directional
+    derives_from: [p1]

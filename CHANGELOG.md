@@ -21,6 +21,29 @@ version and a single behavioural contract
   template whose collection keys are present with no value (`constructs:`) no longer
   raises AttributeError. A collection that is not a list is refused with a TypeError
   that names the key.
+- The same file no longer gives different theory objects in the two languages. R read
+  unquoted `y` and `n` as booleans and collapsed a one-element YAML sequence to a string.
+  Python read an unquoted date as a date object, which then could not be written to JSON,
+  kept the second of two repeated keys without a word and failed on a byte-order mark in
+  JSON. Both readers now follow one rule set, pinned in API_SPEC section 3 with a table of
+  the scalars that once diverged. Sequences are lists, and `y`, `Y`, `n`, `N` and dates
+  stay strings. Integers are decimal, octal or hexadecimal only, so `1:30` and `1_000` are
+  strings where Python read 90 and 1000, and `-.5` is a number in both. R read `1,000` and
+  an integer beyond its integer range as NA, with a warning. It now reads the first as the
+  string Python reads and the second as a number. A merge key lets the mapping's own
+  keys win and lists them first, as R does. A byte-order mark is ignored. A repeated key
+  in YAML or JSON is refused with `Duplicate map key: '<key>'`, and when several mappings
+  repeat a key both languages name the one in the mapping that closes first. The 0.6.0
+  fix for one-element enum sequences held for objects built in memory and for JSON, but
+  not for YAML read by R. It now holds for files too.
+- Python's `write()` quotes `y`, `Y`, `n` and `N`, so its files stay readable by
+  theoryforge 0.6.0 in R. It also quotes the other strings a reader would take for
+  something else, such as `-.5` and `1,000`, and ends JSON output with a newline.
+- R's `tf_write()` rounded JSON numbers to four decimal places and YAML numbers to seven.
+  It wrote logicals as `yes` and `no`, a missing value as R's own `.na` forms and
+  one-element arrays as scalars that failed the package's own schema. It now keeps 15
+  significant digits, writes `true`, `false` and null, and writes every field the schema
+  types as an array of strings as an array.
 
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`
@@ -44,6 +67,13 @@ version and a single behavioural contract
   one-element arrays, checks the key order of the rigour report, compares the six app
   examples across the two engines and records the outcome of a corpus of malformed
   theories (`fixtures/edge/`).
+- The parity check gains a round-trip phase. Python writes every fixture, app example and
+  readable edge case to YAML and JSON, and R reads each file and writes it again. Every
+  file must then read back as the theory Python first read, a one-element array still an
+  array, and, when jsonschema is installed, still validate against the schema. New edge
+  cases cover the reading rules, with construct ids `y` and `n`, a merge key, unquoted
+  dates, byte-order marks, a missing final newline, repeated keys in YAML and JSON,
+  awkward scalars and an empty sequence.
 
 
 ## [0.6.0] - 2026-08-21

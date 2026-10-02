@@ -16,8 +16,19 @@ The \code{path} (invisibly).
 }
 \description{
 Serialises a theory object to disk. The format is chosen by the file
-extension (\code{.json} -> JSON, otherwise YAML). Files are written with LF
+extension (\code{.json} -> JSON, otherwise YAML). Files are UTF-8 with LF
 line endings.
+}
+\details{
+Numbers keep 15 significant digits in both formats, logicals are written as
+\code{true} and \code{false}, and a missing value (\code{NA}) is written as
+null, which reads back as \code{NULL} in R and \code{None} in Python. Every
+field the schema types as an array of strings (\code{derives_from},
+\code{diagnostic_vs}, \code{protects}, \code{measurement},
+\code{boundary_conditions}, \code{key_constructs}) is written as an array,
+even when the theory holds it as a single string. A written theory therefore
+validates against the package's own schema and reads back the same in R and
+in Python (API_SPEC.md section 3).
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory")

@@ -1,0 +1,3 @@
+# Edge case: an empty sequence, which is not a theory. Both twins refuse it
+# (R used to accept it as an empty theory).
+[]

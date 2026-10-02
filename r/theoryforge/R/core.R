@@ -14,6 +14,19 @@ NULL
 #' Reads a theory object authored as YAML (or JSON, chosen by file extension)
 #' into a named list.
 #'
+#' The file is read exactly as the Python twin's \code{theoryforge.read()}
+#' reads it (API_SPEC.md section 3). The text is UTF-8, and a byte-order mark
+#' is ignored. A YAML or JSON sequence is always a list, even with one element,
+#' so \code{maturity: [draft]} is refused by [tf_validate()] as it is in Python.
+#' Unquoted \code{y}, \code{Y}, \code{n} and \code{N} stay strings, as do
+#' dates, while \code{yes}, \code{no}, \code{true}, \code{false}, \code{on} and
+#' \code{off} are logicals. Integers are decimal, octal or hexadecimal only, so
+#' \code{1:30} and \code{1_000} are strings, and so is a number written with a
+#' comma (\code{1,000}). An integer too large for an R integer is read as a
+#' double. A merge key (\code{<<}) lets the mapping's own keys win. A key
+#' repeated in any mapping, in YAML or JSON, stops with
+#' \code{(<path>) Duplicate map key: '<key>'}.
+#'
 #' @param path Path to a \code{.yaml}/\code{.yml} or \code{.json} file.
 #' @return A named list holding the parsed theory object.
 #' @examples
@@ -24,13 +37,7 @@ NULL
 #' tf_read(path)
 #' @export
 tf_read <- function(path) {
-  ext <- tolower(tools::file_ext(path))
-  if (identical(ext, "json")) {
-    text <- readChar(path, file.info(path)$size, useBytes = TRUE)
-    data <- jsonlite::fromJSON(text, simplifyVector = FALSE)
-  } else {
-    data <- yaml::read_yaml(path)
-  }
+  data <- .tf_read_file(path)
   if (!.tf_is_mapping(data)) {
     stop("Theory data must be a mapping", call. = FALSE)
   }
@@ -231,8 +238,18 @@ tf_validate <- function(theory, full = FALSE) {
 #' Write a theory object to YAML or JSON
 #'
 #' Serialises a theory object to disk. The format is chosen by the file
-#' extension (\code{.json} -> JSON, otherwise YAML). Files are written with LF
+#' extension (\code{.json} -> JSON, otherwise YAML). Files are UTF-8 with LF
 #' line endings.
+#'
+#' Numbers keep 15 significant digits in both formats, logicals are written as
+#' \code{true} and \code{false}, and a missing value (\code{NA}) is written as
+#' null, which reads back as \code{NULL} in R and \code{None} in Python. Every
+#' field the schema types as an array of strings (\code{derives_from},
+#' \code{diagnostic_vs}, \code{protects}, \code{measurement},
+#' \code{boundary_conditions}, \code{key_constructs}) is written as an array,
+#' even when the theory holds it as a single string. A written theory therefore
+#' validates against the package's own schema and reads back the same in R and
+#' in Python (API_SPEC.md section 3).
 #'
 #' @param theory A theory object (named list).
 #' @param path Destination path.
@@ -242,12 +259,19 @@ tf_validate <- function(theory, full = FALSE) {
 #' tf_write(theory, tempfile(fileext = ".yaml"))
 #' @export
 tf_write <- function(theory, path) {
+  theory <- .tf_na_as_null(.tf_box_string_arrays(theory))
   ext <- tolower(tools::file_ext(path))
   if (identical(ext, "json")) {
-    text <- jsonlite::toJSON(theory, pretty = TRUE, auto_unbox = TRUE, null = "null")
+    # digits = NA keeps 15 significant digits. jsonlite's default rounds to four
+    # decimal places, which turned a severity of 0.49996 into 0.5.
+    text <- jsonlite::toJSON(theory, pretty = TRUE, auto_unbox = TRUE, null = "null", digits = NA)
     text <- paste0(as.character(text), "\n")
   } else {
-    text <- yaml::as.yaml(theory)
+    # yaml's default writes doubles to seven decimal places and a logical as yes
+    # or no. .tf_yaml_double keeps 15 significant digits, and verbatim_logical
+    # writes true and false.
+    text <- yaml::as.yaml(theory, handlers = list(logical = yaml::verbatim_logical,
+                                                  numeric = .tf_yaml_double))
   }
   .tf_write_lf(path, text)
 }

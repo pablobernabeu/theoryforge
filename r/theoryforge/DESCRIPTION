@@ -23,7 +23,7 @@ Imports:
     stats,
     tools,
     utils,
-    yaml
+    yaml (>= 2.3.8)
 Suggests:
     testthat (>= 3.0.0),
     knitr,

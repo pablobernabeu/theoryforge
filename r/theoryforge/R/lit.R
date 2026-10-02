@@ -28,7 +28,9 @@ NULL
 #'
 #' Reads a corpus object (\code{{schema_version, id, records}}) into a named
 #' list. The format is chosen by the file extension (\code{.json} -> JSON,
-#' otherwise YAML).
+#' otherwise YAML). The file is read by the rules [tf_read()] follows, which
+#' are the Python twin's, so an unquoted keyword such as \code{y} or \code{n}
+#' stays a string and a repeated key is refused.
 #'
 #' @param path Path to a \code{.yaml}/\code{.yml} or \code{.json} corpus file.
 #' @return A named list holding the parsed corpus object.
@@ -45,13 +47,7 @@ NULL
 #' tf_read_corpus(path)
 #' @export
 tf_read_corpus <- function(path) {
-  ext <- tolower(tools::file_ext(path))
-  if (identical(ext, "json")) {
-    text <- readChar(path, file.info(path)$size, useBytes = TRUE)
-    data <- jsonlite::fromJSON(text, simplifyVector = FALSE)
-  } else {
-    data <- yaml::read_yaml(path)
-  }
+  data <- .tf_read_file(path)
   if (!.tf_is_mapping(data)) {
     stop("Corpus data must be a mapping", call. = FALSE)
   }

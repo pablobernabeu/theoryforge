@@ -11,10 +11,13 @@
 #             (parity_check.py runs it on apps/examples/)
 #   edge      one outcome record per <src_dir>/*.theory.yaml|json, mirroring
 #             edge_outcome() in scripts/gen_golden.py (src_dir is fixtures/edge/)
+#   roundtrip tf_read() then tf_write() for every <src_dir>/*.theory.yaml|json,
+#             each written to <out_dir> under its own name and format
+#             (parity_check.py runs it on the files the Python twin wrote)
 suppressWarnings(suppressMessages({
-  usage <- "usage: Rscript scripts/parity_emit.R <golden|theories|edge> <src_dir> <out_dir> [<pkg_dir>]"
+  usage <- "usage: Rscript scripts/parity_emit.R <golden|theories|edge|roundtrip> <src_dir> <out_dir> [<pkg_dir>]"
   args <- commandArgs(trailingOnly = TRUE)
-  if (length(args) < 3L || !(args[[1]] %in% c("golden", "theories", "edge"))) {
+  if (length(args) < 3L || !(args[[1]] %in% c("golden", "theories", "edge", "roundtrip"))) {
     stop(usage, call. = FALSE)
   }
   mode <- args[[1]]
@@ -132,6 +135,11 @@ suppressWarnings(suppressMessages({
                 file.path(out_dir, paste0(name, ".outcome.json")))
     }
     cat(sprintf("emitted R edge outcomes for %d theory file(s) to %s [R engine from %s]\n",
+                length(inputs), out_dir, loaded_from))
+  } else if (mode == "roundtrip") {
+    inputs <- sort(list.files(src_dir, pattern = "\\.theory\\.(yaml|json)$", full.names = TRUE))
+    for (path in inputs) tf_write(tf_read(path), file.path(out_dir, basename(path)))
+    cat(sprintf("rewrote %d theory file(s) with tf_read() and tf_write() to %s [R engine from %s]\n",
                 length(inputs), out_dir, loaded_from))
   } else {
     fixtures <- theory_files(src_dir)

@@ -1,0 +1,39 @@
+# Edge case: plain scalars that PyYAML's default resolvers read as numbers and
+# R's yaml package reads as strings (or, for .na, as a missing value), carried
+# as item metadata, with two that R's yaml package read as NA with a warning: a
+# number written with a comma and an integer beyond R's integer range. Both
+# twins now read the comma form and the others as strings, and the integer as a
+# number (API_SPEC section 3, the scalar table). No output shows them, so the
+# round-trip phase of scripts/parity_check.py is what compares the values.
+schema_version: "1.0"
+id: edge-yaml-scalars
+title: Item metadata written as awkward YAML scalars
+maturity: testing
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+    n_items: 1_000
+    code: 0b101
+    window: 190:20:30
+  - id: c2
+    label: Beta
+    definition: The second construct.
+    missing: .na
+    sample_size: 1,000
+    record: 85012345678
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+test_outcomes:
+  - prediction_id: h1
+    passed: true
+    observed: 1:30

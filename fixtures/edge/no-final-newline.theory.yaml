@@ -1,0 +1,24 @@
+# Edge case: a file whose last line has no newline. R's reader used to warn
+# about an incomplete final line, and neither twin warns now.
+schema_version: "1.0"
+id: edge-no-final-newline
+title: A theory without a final newline
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]

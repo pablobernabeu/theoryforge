@@ -1,0 +1,14 @@
+# Edge case: two predictions blocks. Both twins refuse the file (Python used to
+# keep the second block alone, and the theory validated without h1).
+schema_version: "1.0"
+id: edge-dup-top
+title: Two predictions blocks
+maturity: building
+predictions:
+  - id: h1
+    statement: The first block.
+    type: directional
+predictions:
+  - id: h2
+    statement: The second block.
+    type: directional

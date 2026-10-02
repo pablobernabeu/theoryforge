@@ -1,0 +1,30 @@
+# Edge case: dates written without quotes. Both twins read them as strings
+# (Python used to read datetime.date objects, which validated and then could
+# not be written to JSON).
+schema_version: "1.0"
+id: edge-unquoted-date
+title: A test outcome dated without quotes
+maturity: testing
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+test_outcomes:
+  - prediction_id: h1
+    passed: true
+    registered: 2026-04-01
+    date: 2026-05-01

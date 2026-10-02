@@ -7,6 +7,34 @@
   empty. The recipe is now a function, `scopus_corpus_to_tf()`, shown in full
   and run by the test suite on a stand-in corpus.
 
+* `tf_read()` and `tf_read_corpus()` now read a file exactly as the Python twin
+  does. A YAML sequence is always returned as a list, so a file with
+  `maturity: [draft]` or `relation: [increases]` is refused by `tf_validate()`
+  as it is in Python. The one-element sequence used to collapse to a string,
+  and the file passed. Unquoted `y`, `Y`, `n` and `N` used to become logicals
+  and now stay strings, as do the R-specific missing-value forms `.na`,
+  `.na.real`, `.na.integer` and `.na.character`. A number written with a
+  comma, such as `1,000`, is now a string and an integer too large for an R
+  integer a double, where `yaml` read both as `NA` with a warning. A merge
+  key lets the mapping's own key win, a byte-order mark is ignored and a
+  missing final newline no longer warns. A repeated key in a JSON file is
+  refused with the message YAML files already gave, and a file holding only an
+  empty sequence (`[]`) is refused as not a mapping.
+
+* `tf_write()` no longer loses information. Numbers keep 15 significant digits
+  in both formats, where JSON rounded them to four decimal places and YAML to
+  seven, so a severity of 0.49996 no longer comes back as 0.5. Logicals are
+  written as `true` and `false`, no longer as `yes` and `no`, and a missing
+  value (`NA`) is written as null, so both twins read it back as missing.
+  `yaml` wrote the R-specific `.na` forms, and `tf_read()` now reads those as
+  text.
+  Every field the schema types as an array of strings, such as
+  `derives_from: [p3]`, is written as an array even when it holds one string,
+  so a theory written and read back validates against the package's own
+  schema.
+
+* The `yaml` package is now required at version 2.3.8 or later.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

@@ -1,0 +1,39 @@
+# Edge case: construct ids that YAML 1.1 lists as booleans. y, Y, n and N stay
+# strings in both twins (R used to read Y and y as TRUE and n as FALSE), so the
+# X -> M -> Y chain validates and every output names the constructs as written.
+schema_version: "1.0"
+id: edge-yn-ids
+title: Constructs named X, M, Y, y and n
+maturity: building
+constructs:
+  - id: X
+    label: Exposure
+    definition: The exposure that starts the chain.
+  - id: M
+    label: Mediator
+    definition: The mediator that carries the effect.
+  - id: Y
+    label: Outcome
+    definition: The outcome at the end of the chain.
+  - id: y
+    label: Lower-case y
+    definition: A construct whose id YAML 1.1 lists as true.
+  - id: n
+    label: Lower-case n
+    definition: A construct whose id YAML 1.1 lists as false.
+propositions:
+  - id: p1
+    from: X
+    to: M
+    relation: increases
+    mechanism: The exposure raises the mediator.
+  - id: p2
+    from: M
+    to: Y
+    relation: increases
+    mechanism: The mediator raises the outcome.
+predictions:
+  - id: h1
+    statement: Y rises with X, through M.
+    type: directional
+    derives_from: [p1, p2]

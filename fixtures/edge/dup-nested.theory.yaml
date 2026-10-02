@@ -1,0 +1,13 @@
+# Edge case: a repeated top-level key early in the file and a repeated item key
+# after it. R's reader checks each mapping as it closes, and the item closes
+# before the document does, so both twins name the item's key, label.
+schema_version: "1.0"
+id: edge-dup-nested
+id: edge-dup-nested-again
+title: Two repeated keys at two depths
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    label: Beta
+    definition: The first construct.
