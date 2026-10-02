@@ -9,27 +9,57 @@ tf_validate(theory, full = FALSE)
 \arguments{
 \item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
 
-\item{full}{When \code{TRUE}, also run the referential-integrity checks.}
+\item{full}{When \code{TRUE}, also check ids, cross-references and the rest
+of the schema.}
 }
 \value{
-\code{TRUE} (invisibly) on success; otherwise stops with a message
-listing every problem found.
+\code{TRUE} (invisibly) on success; otherwise stops with
+\code{"invalid theory object: "} followed by every problem found, joined
+by \code{"; "}.
 }
 \description{
-Built-in validation. The default
-(\code{full = FALSE}) checks required fields and enum membership. With
-\code{full = TRUE} it additionally checks referential integrity: that every id
-is unique within its collection and that every cross-reference (proposition
-endpoints, prediction derivations and diagnostics, and assumption, evidence and
-test-outcome targets) points to a declared id, and that every prediction
-\code{severity} is a number within [0, 1]. The \code{full} checks are
-deterministic.
+Checks a theory against the package's schema, \code{theory.schema.json},
+without a JSON Schema engine, so that it runs wherever R does, webR
+included.
+}
+\details{
+The default (\code{full = FALSE}) checks structure. It covers the required
+top-level fields, the \code{maturity} and \code{theory_form} enums, the
+top-level field names and the required fields and enums of each construct,
+proposition and prediction. It also checks that every collection is a list.
+A field that is absent, \code{NULL} or blank is reported as missing, and one
+that holds another type as such (\code{id must be a string}).
+
+With \code{full = TRUE} it also checks that every id is unique within its
+collection and that every cross-reference (proposition endpoints,
+prediction derivations and diagnostics, and assumption, evidence and
+test-outcome targets) points to a declared id. It then checks the rest of
+the schema. That covers the required fields of assumptions, alternatives,
+evidence and test outcomes, a logical \code{passed}, the evidence direction
+and formal-model type enums, the version block and the
+\code{schema_version} pattern. It also covers numbers within [0, 1] where
+the schema asks for them and the type of every other field and of every
+entry of a string array.
+
+The Python twin's test suite compares the result with a JSON Schema 2020-12
+validator. Besides the ids and references, which the schema cannot express,
+the pass is stricter in two ways, since a blank string counts as missing and
+an entry of a string array must be a nonempty string. It is more lenient in
+three ways, which API_SPEC.md section 2 documents. A \code{NULL}
+optional field is absent and a single string stands for a one-element array
+of strings. An empty \code{list()} stands for an empty mapping as well as an
+empty sequence. A single \code{NA}, which \code{\link[=tf_write]{tf_write()}} writes as null, reads
+as absent.
+
+Both passes are deterministic, and the Python twin's
+\code{Theory.validate()} reports the same problems in the same order with
+the same text.
 }
 \examples{
 theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
                               package = "theoryforge"))
 isTRUE(tf_validate(theory))              # required fields and enums
-isTRUE(tf_validate(theory, full = TRUE)) # also ids and cross-references
+isTRUE(tf_validate(theory, full = TRUE)) # also ids, cross-references and the rest of the schema
 
 # The failure path is the more informative one. Point a prediction at a
 # proposition that was never declared.

@@ -1,10 +1,10 @@
 {
   "read": "ok",
   "validate": {
-    "error": "invalid theory object: proposition[0] missing/empty relation; prediction[0] missing/empty type"
+    "error": "invalid theory object: proposition[0] relation must be a string; prediction[0] type must be a string"
   },
   "validate_full": {
-    "error": "invalid theory object: proposition[0] missing/empty relation; prediction[0] missing/empty type"
+    "error": "invalid theory object: proposition[0] relation must be a string; prediction[0] type must be a string"
   },
   "check": {
     "aggregate_score": 38.0,

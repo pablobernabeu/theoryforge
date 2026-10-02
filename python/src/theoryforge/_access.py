@@ -14,6 +14,7 @@ FORM = frozenset({"variance", "network", "typology", "process"})
 RELATION = frozenset({"increases", "decreases", "moderates", "mediates", "causes", "associates"})
 PRED_TYPE = frozenset({"point", "interval", "directional", "existence"})
 FORMAL_MODEL_TYPE = frozenset({"ode", "abm", "network", "sem", "none"})
+EVIDENCE_DIRECTION = frozenset({"corroborates", "refutes", "mixed"})
 
 
 def ne_str(v) -> bool:

@@ -127,11 +127,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           # Every floor pyproject declares, pinned: PyYAML from `dependencies`,
-          # pytest from the `dev` extra and graphviz from `render`. Installing
-          # the latest pytest here would assert `pytest>=7.0` and never exercise
-          # it, and leaving graphviz out leaves render_diagram untested at any
-          # version.
-          pip install "PyYAML==6.0.*" "pytest==7.0.*" "graphviz==0.20.*"
+          # pytest and jsonschema from the `dev` extra and graphviz from
+          # `render`. Installing the latest pytest here would assert
+          # `pytest>=7.0` and never exercise it, and leaving graphviz out leaves
+          # render_diagram untested at any version.
+          pip install "PyYAML==6.0.*" "pytest==7.0.*" "jsonschema==4.0.*" "graphviz==0.20.*"
           pip install -e python --no-deps
       - name: Tests
         run: pytest python -q

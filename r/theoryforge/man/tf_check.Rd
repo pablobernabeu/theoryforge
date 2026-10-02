@@ -21,6 +21,14 @@ prediction severity that is not a finite number or is below 0 or above 1.
 Runs the full rigour checklist (12 items) over a theory object and returns a
 report, with the items in checklist order.
 }
+\details{
+Two values are refused before anything is scored, since no score built on
+them would be defensible. One is a test outcome whose \code{passed} is
+present and not \code{TRUE} or \code{FALSE}, such as the quoted string
+\code{"true"}. The other is a prediction \code{severity} that is present and
+not a number. Both stop with the message the Python twin raises, and
+\code{\link[=tf_validate]{tf_validate()}} with \code{full = TRUE} reports both.
+}
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>

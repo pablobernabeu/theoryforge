@@ -2,22 +2,24 @@
 from __future__ import annotations
 
 import json
-import math
+import re
 from copy import deepcopy
 from pathlib import Path
 
 from . import _resources
+from ._access import EVIDENCE_DIRECTION as _DIRECTION
 from ._access import FORM as _FORM
+from ._access import FORMAL_MODEL_TYPE as _FORMAL_MODEL_TYPE
 from ._access import MATURITY as _MATURITY
 from ._access import PRED_TYPE as _PRED_TYPE
 from ._access import RELATION as _RELATION
 from ._access import field as _field
 from ._access import items as _items
 from ._access import ne_str as _nonempty_str
-from ._access import str_list as _str_list
 from ._io import write_lf as _write_lf
 from ._load import dump_yaml as _dump_yaml
 from ._load import load_document as _load_document
+from ._text import trim as _trim
 from .develop import appraise_amendment as _appraise_amendment
 from .diagram import diagram as _diagram
 from .dossier import dossier as _dossier
@@ -58,6 +60,113 @@ def _as_str_list(v) -> list:
     return list(items)
 
 
+# -- validation helpers (API_SPEC.md section 2) --------------------------------
+# Each returns the messages for one value, so that validate() lists them in the
+# contract's order. R's core.R holds the same helpers (.tf_required_text and the
+# rest) with the same messages.
+
+# The collections of the schema, in the order validate() reports one that is
+# not a list.
+_COLLECTIONS = ("constructs", "propositions", "predictions", "auxiliary_assumptions",
+                "alternatives", "evidence", "test_outcomes", "provenance")
+_VERSION_KEYS = ("id", "parent_id", "content_hash")
+_SCHEMA_VERSION = re.compile(r"[0-9]+\.[0-9]+")
+
+
+def _not_string(name: str, v) -> str:
+    """The message for a present value that should be a string.
+
+    YAML reads an unquoted ``1.0``, ``2026`` or ``Yes`` as a number or a boolean,
+    so for those the message says how to keep the value a string.
+    """
+    hint = " (quote the value in YAML)" if isinstance(v, (bool, int, float)) else ""
+    return f"{name} must be a string{hint}"
+
+
+def _required_text(v, missing: str, name: str) -> list[str]:
+    """A required text field: ``missing`` when it is absent, null or blank."""
+    if v is None or (isinstance(v, str) and not _trim(v)):
+        return [missing]
+    if not isinstance(v, str):
+        return [_not_string(name, v)]
+    return []
+
+
+def _required_fields(item, prefix: str, names) -> list[str]:
+    msgs: list[str] = []
+    for name in names:
+        msgs += _required_text(_field(item, name), f"{prefix} missing/empty {name}",
+                               f"{prefix} {name}")
+    return msgs
+
+
+def _optional_text(v, name: str, *, nullable: bool = False) -> list[str]:
+    """A field the schema types as a string, or with ``nullable`` as a string or null.
+
+    An absent or null optional field is never reported, since R holds the two
+    alike as NULL.
+    """
+    if v is None or isinstance(v, str):
+        return []
+    return [f"{name} must be a string or null" if nullable else _not_string(name, v)]
+
+
+def _is_unit_number(v) -> bool:
+    """Whether ``v`` is a number within [0, 1]. A boolean is not a number.
+
+    A comparison with NaN is false, so NaN needs no test of its own. A test with
+    ``math.isnan()`` would convert an integer to a float, which overflows beyond
+    about 1.8e308, as an unquoted integer of 400 digits in YAML does.
+    """
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= v <= 1
+
+
+def _unit_number(v, name: str) -> list[str]:
+    if v is None or _is_unit_number(v):
+        return []
+    return [f"{name} must be a number between 0 and 1"]
+
+
+def _not_a_list(v) -> bool:
+    """Whether a present value cannot be read as a sequence: a scalar or a non-empty mapping.
+
+    An empty mapping holds nothing to lose, and R builds an empty mapping and an
+    empty sequence alike as ``list()``, so neither twin reports one.
+    """
+    return v is not None and not isinstance(v, list) and not (isinstance(v, dict) and not v)
+
+
+def _not_a_mapping(v) -> bool:
+    """Whether ``v`` cannot be read as a mapping: null, a scalar or a non-empty sequence."""
+    return not isinstance(v, dict) and not (isinstance(v, list) and not v)
+
+
+def _string_array(v, name: str, known=None, kind: str = "") -> list[str]:
+    """A field the schema types as an array of strings.
+
+    Each entry must be a nonempty string, as the readers ignore any other
+    (API_SPEC.md section 4). A nonempty string is a one-element array, and any
+    other value that is not a list, a blank string included, cannot be read as
+    an array. With ``known``, each nonempty entry is also looked up there, in
+    entry order, and ``kind`` names what it should refer to.
+    """
+    if v is None or (isinstance(v, dict) and not v):
+        return []
+    if isinstance(v, list):
+        entries = v
+    elif _nonempty_str(v):
+        entries = [v]
+    else:
+        return [f"{name} must be a list"]
+    msgs: list[str] = []
+    for k, entry in enumerate(entries):
+        if not _nonempty_str(entry):
+            msgs.append(f"{name} entry {k} must be a nonempty string")
+        elif known is not None and entry not in known:
+            msgs.append(f"{name} '{entry}' is not a known {kind}")
+    return msgs
+
+
 class Theory:
     """A theory as a versioned, machine-checkable object.
 
@@ -86,21 +195,46 @@ class Theory:
 
     # -- validation ------------------------------------------------------------
     def validate(self, *, full: bool = False) -> bool:
-        """Structural validation against the schema's required fields and enums.
+        """Check the theory against the schema, ``theory.schema.json``.
 
-        Returns True on success, raises ValueError listing every problem found.
-        With ``full=True`` additionally checks referential integrity: that every
-        id is unique within its collection and that every cross-reference
-        (proposition endpoints, prediction derivations and diagnostics,
-        assumption/evidence/test-outcome targets) points to a declared id, and
-        that every prediction ``severity`` is a number within [0, 1]. The
-        ``full`` checks are deterministic.
+        The default pass checks structure. It covers the required top-level
+        fields, the ``maturity`` and ``theory_form`` enums, the top-level field
+        names and the required fields and enums of each construct, proposition
+        and prediction. It also checks that every collection is a list. A field
+        that is absent, null or blank is reported as missing, and one that holds
+        another type as such (``id must be a string``).
+
+        With ``full=True`` it also checks that every id is unique within its
+        collection and that every cross-reference (proposition endpoints,
+        prediction derivations and diagnostics, assumption, evidence and
+        test-outcome targets) points to a declared id. It then checks the rest
+        of the schema. That covers the required fields of assumptions,
+        alternatives, evidence and test outcomes, a boolean ``passed``, the
+        evidence direction and formal-model type enums, the version block and
+        the ``schema_version`` pattern. It also covers numbers within [0, 1]
+        where the schema asks for them and the type of every other field and of
+        every entry of a string array.
+
+        CI compares the result with a JSON Schema 2020-12 validator. Besides the
+        ids and references, which the schema cannot express, the pass is
+        stricter in two ways, since a blank string counts as missing and an
+        entry of a string array must be a nonempty string. It is more lenient
+        in three ways, which API_SPEC.md section 2 documents. A null optional
+        field is absent and a single string stands for a one-element array of
+        strings. An empty sequence and an empty mapping stand for each other.
+
+        Returns:
+            True when the theory passes.
+
+        Raises:
+            ValueError: ``"invalid theory object: "`` followed by every problem
+                found, joined by ``"; "``, in the order API_SPEC.md section 2
+                fixes. The R twin's ``tf_validate()`` gives the same message.
         """
         errors: list[str] = []
         d = self.data
         for req in ("schema_version", "id", "title", "maturity"):
-            if not _nonempty_str(d.get(req)):
-                errors.append(f"missing/empty required field: {req}")
+            errors += _required_text(d.get(req), f"missing/empty required field: {req}", req)
         # Each enum test asks whether the value is a nonempty string before
         # asking whether it is a member. A YAML list or mapping reaches these
         # lines whenever a field is mistyped, and `x in <set>` raises TypeError
@@ -123,43 +257,46 @@ class Theory:
         for key in d:
             if key not in known:
                 errors.append(f"unknown top-level field: {key}")
+        # A collection that is not a list reads as empty (API_SPEC.md section 3),
+        # so the theory would lose it without a word.
+        for key in _COLLECTIONS:
+            if _not_a_list(d.get(key)):
+                errors.append(f"{key} must be a list")
         for i, c in enumerate(self._list("constructs")):
-            for req in ("id", "label", "definition"):
-                if not _nonempty_str(_field(c, req)):
-                    errors.append(f"construct[{i}] missing/empty {req}")
+            errors += _required_fields(c, f"construct[{i}]", ("id", "label", "definition"))
         for i, p in enumerate(self._list("propositions")):
-            for req in ("id", "from", "to", "relation"):
-                if not _nonempty_str(_field(p, req)):
-                    errors.append(f"proposition[{i}] missing/empty {req}")
+            errors += _required_fields(p, f"proposition[{i}]", ("id", "from", "to", "relation"))
             rel = _field(p, "relation")
             if _nonempty_str(rel) and rel not in _RELATION:
                 errors.append(f"proposition[{i}] relation '{rel}' not allowed")
         for i, p in enumerate(self._list("predictions")):
-            for req in ("id", "statement", "type"):
-                if not _nonempty_str(_field(p, req)):
-                    errors.append(f"prediction[{i}] missing/empty {req}")
+            errors += _required_fields(p, f"prediction[{i}]", ("id", "statement", "type"))
             ty = _field(p, "type")
             if _nonempty_str(ty) and ty not in _PRED_TYPE:
                 errors.append(f"prediction[{i}] type '{ty}' not allowed")
 
         if full:
-            self._referential_errors(errors)
+            self._full_errors(errors)
 
         if errors:
             raise ValueError("invalid theory object: " + "; ".join(errors))
         return True
 
-    def _referential_errors(self, errors: list[str]) -> None:
-        """Append referential-integrity problems (used by ``validate(full=True)``).
+    def _full_errors(self, errors: list[str]) -> None:
+        """Append the problems only ``validate(full=True)`` looks for.
 
-        Deterministic and mirrored byte-for-byte by the R implementation: the
-        same checks in the same order with the same message text.
+        Items 1 to 14 of API_SPEC.md section 2, in that order. The R twin's
+        ``tf_validate()`` makes the same checks in the same order with the same
+        message text.
         """
+        d = self.data
         cons = self._list("constructs")
         props = self._list("propositions")
         preds = self._list("predictions")
         alts = self._list("alternatives")
         auxs = self._list("auxiliary_assumptions")
+        evs = self._list("evidence")
+        tos = self._list("test_outcomes")
 
         def ids_of(items: list) -> set:
             return {i for i in (_field(it, "id") for it in items) if _nonempty_str(i)}
@@ -189,22 +326,21 @@ class Theory:
                 errors.append(f"proposition[{i}] from '{frm}' is not a known construct")
             if _nonempty_str(to) and to not in construct_ids:
                 errors.append(f"proposition[{i}] to '{to}' is not a known construct")
+        # Items 3 and 4: each entry of a referencing array is either a nonempty
+        # string to look up or a problem in its own right (item 10).
         for i, p in enumerate(preds):
-            for dref in _str_list(_field(p, "derives_from")):
-                if dref not in proposition_ids:
-                    errors.append(f"prediction[{i}] derives_from '{dref}' is not a known proposition")
-            for dv in _str_list(_field(p, "diagnostic_vs")):
-                if dv not in alternative_ids:
-                    errors.append(f"prediction[{i}] diagnostic_vs '{dv}' is not a known alternative")
+            errors += _string_array(_field(p, "derives_from"), f"prediction[{i}] derives_from",
+                                    proposition_ids, "proposition")
+            errors += _string_array(_field(p, "diagnostic_vs"), f"prediction[{i}] diagnostic_vs",
+                                    alternative_ids, "alternative")
         for i, a in enumerate(auxs):
-            for pr in _str_list(_field(a, "protects")):
-                if pr not in prediction_ids:
-                    errors.append(f"assumption[{i}] protects '{pr}' is not a known prediction")
-        for i, t in enumerate(self._list("test_outcomes")):
+            errors += _string_array(_field(a, "protects"), f"assumption[{i}] protects",
+                                    prediction_ids, "prediction")
+        for i, t in enumerate(tos):
             pid = _field(t, "prediction_id")
             if _nonempty_str(pid) and pid not in prediction_ids:
                 errors.append(f"test_outcome[{i}] prediction_id '{pid}' is not a known prediction")
-        for i, e in enumerate(self._list("evidence")):
+        for i, e in enumerate(evs):
             s = _field(e, "supports")
             if _nonempty_str(s) and s not in prediction_ids:
                 errors.append(f"evidence[{i}] supports '{s}' is not a known prediction")
@@ -213,11 +349,93 @@ class Theory:
         # the scorer, which rejects non-numeric severities.
         for i, p in enumerate(preds):
             s = _field(p, "severity")
-            if s is None:
-                continue
-            if (isinstance(s, bool) or not isinstance(s, (int, float))
-                    or math.isnan(s) or s < 0 or s > 1):
+            if s is not None and not _is_unit_number(s):
                 errors.append(f"prediction[{i}] severity must be a number between 0 and 1")
+
+        # 8: the required fields of the other collections. A quoted "true" in
+        # passed read as a failure and turned a progressive amendment into a
+        # degenerating one, so passed must be a boolean.
+        for i, a in enumerate(auxs):
+            errors += _required_fields(a, f"assumption[{i}]", ("id", "statement"))
+        for i, a in enumerate(alts):
+            errors += _required_fields(a, f"alternative[{i}]", ("id", "label"))
+        for i, e in enumerate(evs):
+            errors += _required_fields(e, f"evidence[{i}]", ("supports", "direction"))
+            direction = _field(e, "direction")
+            if _nonempty_str(direction) and direction not in _DIRECTION:
+                errors.append(f"evidence[{i}] direction '{direction}' not allowed")
+        for i, t in enumerate(tos):
+            errors += _required_fields(t, f"test_outcome[{i}]", ("prediction_id",))
+            if not isinstance(_field(t, "passed"), bool):
+                errors.append(f"test_outcome[{i}] passed must be true or false")
+
+        # 9: typed optional fields of assumptions and test outcomes.
+        for i, a in enumerate(auxs):
+            errors += _optional_text(_field(a, "added_for"), f"assumption[{i}] added_for",
+                                     nullable=True)
+        for i, t in enumerate(tos):
+            errors += _unit_number(_field(t, "severity_at_test"), f"test_outcome[{i}] severity_at_test")
+            errors += _optional_text(_field(t, "registered"), f"test_outcome[{i}] registered",
+                                     nullable=True)
+            errors += _optional_text(_field(t, "date"), f"test_outcome[{i}] date", nullable=True)
+
+        # 11: the formal model. A type outside the enum earned the formalisation
+        # point in 0.6.0, and reads as absent since (API_SPEC.md section 3).
+        fm = d.get("formal_model")
+        if fm is not None and _not_a_mapping(fm):
+            errors.append("formal_model must be a mapping")
+        elif isinstance(fm, dict):
+            ty = fm.get("type")
+            if ty is not None and not isinstance(ty, str):
+                errors.append(_not_string("formal_model type", ty))
+            elif ty is not None and ty not in _FORMAL_MODEL_TYPE:
+                errors.append(f"formal_model type '{ty}' not allowed")
+            errors += _optional_text(fm.get("spec_ref"), "formal_model spec_ref", nullable=True)
+
+        # 12: the version block, which the schema closes.
+        ver = d.get("version")
+        if ver is not None and _not_a_mapping(ver):
+            errors.append("version must be a mapping")
+        elif isinstance(ver, dict):
+            for key in ver:
+                if key not in _VERSION_KEYS:
+                    errors.append(f"version has unknown field: {key}")
+            errors += _optional_text(ver.get("id"), "version id")
+            errors += _optional_text(ver.get("parent_id"), "version parent_id", nullable=True)
+            errors += _optional_text(ver.get("content_hash"), "version content_hash", nullable=True)
+
+        # 13: the schema_version pattern. fullmatch, because "$" in a Python
+        # pattern also matches before a final newline.
+        sv = d.get("schema_version")
+        if isinstance(sv, str) and _nonempty_str(sv) and not _SCHEMA_VERSION.fullmatch(sv):
+            errors.append('schema_version must match major.minor (for example "1.0")')
+
+        # 14: the schema's remaining types, collection by collection in the
+        # schema's order.
+        for i, c in enumerate(cons):
+            errors += _string_array(_field(c, "measurement"), f"construct[{i}] measurement")
+            errors += _string_array(_field(c, "boundary_conditions"),
+                                    f"construct[{i}] boundary_conditions")
+        for i, p in enumerate(props):
+            errors += _optional_text(_field(p, "mechanism"), f"proposition[{i}] mechanism")
+            errors += _optional_text(_field(p, "functional_form"), f"proposition[{i}] functional_form")
+        errors += _string_array(d.get("boundary_conditions"), "boundary_conditions")
+        for i, p in enumerate(preds):
+            errors += _unit_number(_field(p, "risk_score"), f"prediction[{i}] risk_score")
+        for i, e in enumerate(evs):
+            errors += _optional_text(_field(e, "source_doi"), f"evidence[{i}] source_doi", nullable=True)
+        for i, t in enumerate(tos):
+            errors += _optional_text(_field(t, "observed"), f"test_outcome[{i}] observed")
+        for i, a in enumerate(alts):
+            errors += _string_array(_field(a, "key_constructs"), f"alternative[{i}] key_constructs")
+            errors += _optional_text(_field(a, "source_doi"), f"alternative[{i}] source_doi",
+                                     nullable=True)
+        for i, step in enumerate(self._list("provenance")):
+            if _not_a_mapping(step):
+                errors.append(f"provenance[{i}] must be a mapping")
+                continue
+            for name in ("step", "action", "detail"):
+                errors += _optional_text(_field(step, name), f"provenance[{i}] {name}")
 
     # -- serialisation ---------------------------------------------------------
     def write(self, path) -> None:

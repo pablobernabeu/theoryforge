@@ -1,0 +1,54 @@
+# Edge case: eight violations of the schema that full validation let through in
+# both twins until the full pass covered the whole schema. An alternative has no
+# label and an assumption no statement. One evidence direction is outside its
+# enum and another is missing. The formal-model type is outside its enum, one
+# passed is quoted and another is missing, and the version block has a key the
+# schema does not define. validate(full = TRUE) reports each of them, and
+# check() refuses the quoted passed, which used to read as a failure.
+schema_version: "1.0"
+id: edge-gaps
+title: Eight violations full validation used to miss
+maturity: testing
+version:
+  id: v1
+  parent_id: ~
+  author: someone
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+    diagnostic_vs: [rival]
+  - id: h2
+    statement: Beta stays above zero.
+    type: interval
+    derives_from: [p1]
+alternatives:
+  - id: rival
+auxiliary_assumptions:
+  - id: x1
+    added_for: h1
+    protects: [h1]
+evidence:
+  - supports: h1
+    direction: supports
+  - supports: h2
+test_outcomes:
+  - prediction_id: h1
+    passed: "true"
+  - prediction_id: h2
+formal_model:
+  type: banana

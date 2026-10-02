@@ -42,6 +42,13 @@ test_that("a lone no-break space is an empty definition", {
   expect_error(tf_validate(t), "construct\\[0\\] missing/empty definition")
 })
 
+test_that("an information separator is text to tf_validate()", {
+  # trimws() and str.strip() disagree on U+001C-001F; the whitespace set keeps them.
+  t <- .text_theory(list(list(id = "a", label = "A", definition = "\u001c")))
+  t$title <- "\u001f"
+  expect_true(tf_validate(t))
+})
+
 test_that("a lone no-break space is no mechanism", {
   t <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   for (i in seq_along(t$propositions)) t$propositions[[i]]$mechanism <- "\u00a0"

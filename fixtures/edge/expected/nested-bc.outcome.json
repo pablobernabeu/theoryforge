@@ -1,7 +1,9 @@
 {
   "read": "ok",
   "validate": true,
-  "validate_full": true,
+  "validate_full": {
+    "error": "invalid theory object: construct[0] boundary_conditions entry 0 must be a nonempty string"
+  },
   "check": {
     "aggregate_score": 57.0,
     "gate": "pass",

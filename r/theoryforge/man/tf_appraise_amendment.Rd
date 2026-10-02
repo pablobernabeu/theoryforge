@@ -21,6 +21,12 @@ character vectors \code{new_predictions}, \code{corroborated_new},
 Compares an amended theory \code{new} against its \code{prior} version and
 returns a Lakatosian verdict.
 }
+\details{
+A test outcome whose \code{passed} is present and not \code{TRUE} or
+\code{FALSE}, in \code{new} (checked first) or in \code{prior}, is refused
+with the message the Python twin raises. A quoted \code{"true"} read as a
+failure and could turn a progressive amendment into a degenerating one.
+}
 \examples{
 prior <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_prediction("h1", "Effect is positive.", "directional")

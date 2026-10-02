@@ -1,7 +1,9 @@
 {
   "read": "ok",
   "validate": true,
-  "validate_full": true,
+  "validate_full": {
+    "error": "invalid theory object: prediction[0] derives_from entry 0 must be a nonempty string; prediction[1] derives_from entry 0 must be a nonempty string; prediction[2] derives_from entry 1 must be a nonempty string"
+  },
   "check": {
     "aggregate_score": 54.3,
     "gate": "blocked",

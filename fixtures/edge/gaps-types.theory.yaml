@@ -1,0 +1,66 @@
+# Edge case: a value of the wrong type in every optional field the schema types,
+# one field at a time. Both twins read each leniently, so a number in a text
+# field reads as "" and an entry of a string array that is not a nonempty
+# string as no entry. validate(full = TRUE) reports each of them, in a fixed
+# order.
+schema_version: "1.0"
+id: edge-gaps-types
+title: Optional fields of the wrong type
+maturity: testing
+version:
+  id: 2
+  parent_id: 1
+  content_hash: [abc]
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+    measurement: [m1, 5]
+    boundary_conditions: [[adults]]
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: 5
+    functional_form: 2
+boundary_conditions: [adults, ~]
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: point
+    derives_from: [p1, ~]
+    diagnostic_vs: [rival, 7]
+    risk_score: 2
+alternatives:
+  - id: rival
+    label: A rival account
+    key_constructs: [3]
+    source_doi: [10.1000/example]
+auxiliary_assumptions:
+  - id: x1
+    statement: Beta is measured at rest.
+    added_for: 5
+    protects: [~]
+evidence:
+  - supports: h1
+    direction: corroborates
+    source_doi: 10
+test_outcomes:
+  - prediction_id: h1
+    passed: true
+    observed: 0.42
+    severity_at_test: 1.5
+    registered: 2026
+    date: 20260501
+formal_model:
+  type: ode
+  spec_ref: 5
+provenance:
+  - step: 1
+    action: tf_theory
+    detail: edge-gaps-types
+  - tf_add_construct

@@ -129,6 +129,41 @@
   which draws only the strongest edges. Co-citation maps of real corpora are
   large: 200 OpenAlex records give over 11,000 edges at a threshold of two.
 
+* `tf_validate(full = TRUE)` now checks the whole schema. It reports a missing
+  required field of an assumption, an alternative, a piece of evidence or a
+  test outcome, and a `passed` that is not `TRUE` or `FALSE`. It also reports
+  any field of the wrong type, an evidence direction or a formal-model type
+  outside its enum, a malformed `version` block, a `schema_version` not of the
+  form `"1.0"` and a number outside 0 to 1 where the schema asks for one. A
+  file with `passed: "true"`, an evidence direction of `supports` or a
+  formal-model type of `banana` used to validate. Three conveniences are kept
+  on purpose. A `NULL` optional field is absent, a single string stands for a
+  one-element array of strings and `list()` stands for an empty mapping or
+  sequence.
+
+* `tf_validate(full = TRUE)` also reports an entry of a string array that is
+  not a nonempty string, such as the null in `derives_from: [p1, ~]` or the
+  empty string in `measurement: [""]`. Every other function ignores such an
+  entry. The schema allows an empty string there, so a theory that matches the
+  schema can now fail full validation for this reason alone.
+
+* `tf_validate()` names a value of the wrong type. A required field holding a
+  number, a logical or a list is reported as `<field> must be a string`, with a
+  reminder to quote a number or a logical in YAML, where it used to be called
+  missing. `maturity: [draft]` therefore gives `maturity must be a string`. A
+  scalar or a mapping where a collection belongs is reported as
+  `<key> must be a list`. `missing/empty` is kept for a field that is absent,
+  `NULL` or blank, and a single `NA` reads as absent, since `tf_write()` writes
+  it as null.
+
+* `tf_check()` and `tf_appraise_amendment()` refuse a test outcome whose
+  `passed` is present and not `TRUE` or `FALSE`. A quoted `passed: "true"`
+  used to read as a failure, so an assumption added to protect the prediction
+  counted as ad hoc and an amendment that should be progressive came out
+  degenerating. `tf_preregister()`, `tf_dossier()` and the diagrams that score
+  the checklist refuse it too, since they call `tf_check()`. A missing or
+  `NULL` `passed` still reads as not passed.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

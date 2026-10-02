@@ -43,9 +43,11 @@ below are the Python ones, and the R package prefixes each with `tf_`, so `litma
 calls a method on a theory object, as in `theory.report()`, R calls a function on it, as in
 `tf_report(theory)`.
 
-The deterministic core comprises theory-object I/O and validation against the shared schema,
-the 12-item rigour checklist, ten diagram exporters and a lexical redundancy screen. The three
-workflow modes sit on the same object. BUILDING is a builder API with auto-logged provenance,
+The deterministic core comprises theory-object I/O and validation, the 12-item rigour
+checklist, ten diagram exporters and a lexical redundancy screen. The validation is built in,
+and `validate(full=True)` checks the schema's required fields, types and enums and every
+cross-reference. CI checks it against a JSON Schema 2020-12 validator. The three workflow modes
+sit on the same object. BUILDING is a builder API with auto-logged provenance,
 DEVELOPMENT is the Lakatosian progressive/degenerating appraisal of an amendment, and TESTING is
 the severity rubric, a pre-data ranking of claim form, with its preregistration export.
 

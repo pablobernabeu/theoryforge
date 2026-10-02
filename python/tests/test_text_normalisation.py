@@ -48,6 +48,13 @@ def test_a_lone_no_break_space_is_an_empty_definition():
         t.validate()
 
 
+def test_an_information_separator_is_text_to_validate():
+    # str.strip() trims U+001C-001F, which the whitespace set keeps as text.
+    t = _theory([{"id": "a", "label": "A", "definition": "\x1c"}])
+    t.data["title"] = "\x1f"
+    assert t.validate() is True
+
+
 def test_a_lone_no_break_space_is_no_mechanism(panic_path):
     t = tf.read(panic_path)
     for p in t.data["propositions"]:

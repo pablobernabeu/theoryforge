@@ -6,7 +6,7 @@ progressive if it yields newly corroborated predictions without ad-hoc immunisin
 from __future__ import annotations
 
 from ._access import field, items, str_list, text
-from .rigor import _passed_for
+from .rigor import _passed_for, _refuse_non_boolean_outcomes
 
 
 def appraise_amendment(new, prior) -> dict:
@@ -18,6 +18,10 @@ def appraise_amendment(new, prior) -> dict:
             one object, which can only be appraised as ``neutral``. Begin the
             amendment with ``prior.copy()``. Two distinct objects with equal
             content are appraised as usual.
+        ValueError: a test outcome's ``passed`` is present and not a boolean,
+            in ``new`` (checked first) or in ``prior``. A quoted ``"true"``
+            read as a failure and could turn a progressive amendment into a
+            degenerating one.
 
     References:
         Lakatos, I. (1970). Falsification and the methodology of scientific
@@ -37,6 +41,8 @@ def appraise_amendment(new, prior) -> dict:
             "the prior are the same object. The Python builders change a theory in place, "
             "so start the amendment from prior.copy()."
         )
+    _refuse_non_boolean_outcomes(new, "appraise_amendment")
+    _refuse_non_boolean_outcomes(prior, "appraise_amendment")
 
     # A missing id reads as "" (API_SPEC.md section 3, "Reading a theory"), as
     # in R. validate() reports the entry; the appraisal still runs.

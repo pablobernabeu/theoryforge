@@ -1,10 +1,10 @@
 {
   "read": "ok",
   "validate": {
-    "error": "invalid theory object: missing/empty required field: maturity; maturity must be one of building, developing, draft, testing"
+    "error": "invalid theory object: maturity must be a string; maturity must be one of building, developing, draft, testing"
   },
   "validate_full": {
-    "error": "invalid theory object: missing/empty required field: maturity; maturity must be one of building, developing, draft, testing"
+    "error": "invalid theory object: maturity must be a string; maturity must be one of building, developing, draft, testing; formal_model type must be a string"
   },
   "check": {
     "aggregate_score": 45.0,

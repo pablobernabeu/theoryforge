@@ -60,6 +60,24 @@ def _passed_for(outcome, prediction_ids) -> bool:
     return isinstance(pid, str) and pid in prediction_ids and field(outcome, "passed") is True
 
 
+def _refuse_non_boolean_outcomes(T, caller: str) -> None:
+    """Refuse a test outcome whose ``passed`` is present and not a boolean.
+
+    A quoted ``"true"`` read as a failure in both engines. The prediction then
+    counted as uncorroborated and an assumption added for it as ad hoc, so an
+    amendment that should be progressive came out degenerating. A missing or
+    null ``passed`` still reads as not passed (API_SPEC.md section 4). The
+    first offending outcome in file order is named.
+    """
+    for t in items(T, "test_outcomes"):
+        passed = field(t, "passed")
+        if passed is not None and not isinstance(passed, bool):
+            raise ValueError(
+                f"{caller} requires boolean test outcomes; "
+                f"non-boolean passed for test outcome of prediction: {text(field(t, 'prediction_id'))}"
+            )
+
+
 def _check_items(T: dict, thr: dict) -> dict:
     preds = items(T, "predictions")
     cons = items(T, "constructs")
@@ -207,10 +225,14 @@ def _check_items(T: dict, thr: dict) -> dict:
 def check(T) -> dict:
     """Compute the full rigour report (dict) for a Theory or theory mapping.
 
-    Raises ValueError for a prediction severity that is not a finite number or
-    lies outside [0, 1] (API_SPEC.md section 4, item 3).
+    Raises:
+        ValueError: a test outcome's ``passed`` is present and not a boolean,
+            or a prediction's ``severity`` is not a finite number or lies
+            outside [0, 1] (API_SPEC.md section 4, item 3).
+            ``validate(full=True)`` reports both.
     """
     T = T.data if hasattr(T, "data") else T
+    _refuse_non_boolean_outcomes(T, "check")
     spec = _resources.checklist()
     thr = spec["thresholds"]
     results = _check_items(T, thr)

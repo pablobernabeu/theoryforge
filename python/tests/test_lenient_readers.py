@@ -225,7 +225,15 @@ predictions:
 
 def test_null_entries_of_a_string_array_are_ignored(tmp_path):
     t = _read(tmp_path, NULL_DERIVES)
-    assert t.validate(full=True) is True
+    # Full validation reports each entry the readers ignore (API_SPEC section 2,
+    # item 10), and every other function reads the theory without them.
+    with pytest.raises(ValueError) as exc:
+        t.validate(full=True)
+    assert str(exc.value) == (
+        "invalid theory object: prediction[0] derives_from entry 0 must be a nonempty string; "
+        "prediction[1] derives_from entry 0 must be a nonempty string; "
+        "prediction[2] derives_from entry 1 must be a nonempty string"
+    )
     deriv = _item(t.check(), "derivation_chain")
     assert (deriv["status"], deriv["score"]) == ("fail", 0.333)
     text = t.preregister()  # raised "expected str instance, NoneType found"
@@ -247,7 +255,8 @@ predictions:
 
 
 def test_an_empty_or_blank_string_array_entry_does_not_count(tmp_path):
-    # The one change for a theory that matches the schema, which allows "".
+    # The one change for a theory that matches the schema, which allows "". Full
+    # validation reports such an entry as it reports a null one.
     text = HEAD + """\
 constructs:
   - id: c1
@@ -262,7 +271,12 @@ constructs:
     boundary_conditions: ["  "]
 """
     t = _read(tmp_path, text)
-    assert t.validate(full=True) is True
+    with pytest.raises(ValueError) as exc:
+        t.validate(full=True)
+    assert str(exc.value) == (
+        "invalid theory object: construct[0] measurement entry 0 must be a nonempty string; "
+        "construct[1] boundary_conditions entry 0 must be a nonempty string"
+    )
     rep = t.check()
     assert _item(rep, "construct_clarity")["score"] == 0.0
     assert _item(rep, "scope")["status"] == "warn"

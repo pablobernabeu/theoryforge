@@ -324,8 +324,8 @@ def test_a_one_element_enum_sequence_in_a_file_is_refused(tmp_path):
     with pytest.raises(ValueError) as err:
         t.validate()
     assert str(err.value) == (
-        "invalid theory object: missing/empty required field: maturity; maturity must be one of "
-        "building, developing, draft, testing; proposition[0] missing/empty relation"
+        "invalid theory object: maturity must be a string; maturity must be one of "
+        "building, developing, draft, testing; proposition[0] relation must be a string"
     )
 
 

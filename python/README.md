@@ -62,7 +62,7 @@ import theoryforge as tf
 
 # read + check an existing theory
 t = tf.read("../fixtures/panic-network.theory.yaml")
-t.validate()                       # structural validation against the shared schema
+t.validate()                       # required fields and enums of the schema
 print(t.report("json"))            # 12-item rigour checklist + gate
 print(t.diagram("nomological_net"))# Graphviz DOT
 # t.render_diagram("nomological_net")  # rendered inline; needs theoryforge[render]
@@ -78,7 +78,7 @@ b = (tf.new_theory("panic_demo", "A demonstration theory of panic")
                         mechanism="rising arousal is read as evidence of threat")
        .add_prediction("pred1", "higher arousal predicts more catastrophic interpretation",
                        "directional", derives_from=["p1"]))
-b.validate(full=True)              # ids are unique and every cross-reference resolves
+b.validate(full=True)              # also every type, unique ids and every cross-reference
 
 # DEVELOP: progressive vs degenerating appraisal of an amendment
 v1 = tf.read("../fixtures/panic-network.theory.yaml")
@@ -112,7 +112,9 @@ pytest
 
 The deterministic core covers theory-object I/O and validation, the 12-item rigour checklist
 with its weighted aggregate score and blocker gate, ten diagram exporters and a lexical
-redundancy screen. The three workflow modes sit on the same object. BUILDING is a builder API
+redundancy screen. The validation is built in, and `validate(full=True)` checks the schema's
+required fields, types and enums and every cross-reference. CI checks it against a JSON Schema
+2020-12 validator. The three workflow modes sit on the same object. BUILDING is a builder API
 that logs its own provenance, DEVELOPMENT is the Lakatosian appraisal of an amendment, and
 TESTING is the severity rubric, a pre-data ranking of claim form, with its preregistration
 export.

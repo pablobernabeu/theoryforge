@@ -55,7 +55,7 @@ theory <- tf_theory("panic-network", "A network theory of panic") |>
                     "point", derives_from = "p1")
 
 isTRUE(tf_validate(theory)) # structural checks: required fields and enums
-# also checks referential integrity of ids and cross-references
+# also ids, cross-references and the rest of the schema
 isTRUE(tf_validate(theory, full = TRUE))
 ```
 
@@ -63,7 +63,9 @@ isTRUE(tf_validate(theory, full = TRUE))
 listing every problem otherwise, which is why the calls above are wrapped in
 `isTRUE()` to show the result. With `full = TRUE` it additionally checks
 referential integrity, that ids are unique and every cross-reference points to a
-declared id. It does not require any optional dependency.
+declared id. It then checks the rest of the schema, such as the evidence
+directions, a logical `passed` on each test outcome and the type of every other
+field. It does not require any optional dependency.
 
 The failure path is the more informative one. Pointing a prediction at a
 proposition that was never declared leaves the structural pass untouched, since

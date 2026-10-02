@@ -1,0 +1,25 @@
+# Edge case: a schema_version that is a string but not major.minor. The
+# structural validation passes, since the field is a nonempty string, and
+# validate(full = TRUE) reports the pattern in both twins.
+schema_version: one
+id: edge-schema-version-one
+title: A schema version written as a word
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]

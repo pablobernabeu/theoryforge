@@ -28,6 +28,23 @@ NULL
     isTRUE(.tf_get(outcome, "passed"))
 }
 
+# Refuse a test outcome whose `passed` is present and not a logical. A quoted
+# "true" read as a failure in both engines. The prediction then counted as
+# uncorroborated and an assumption added for it as ad hoc, so an amendment that
+# should be progressive came out degenerating. A missing or NULL `passed`, or a
+# single NA, still reads as not passed (API_SPEC.md section 4). The first
+# offending outcome in file order is named, as the Python twin names it.
+.tf_refuse_non_boolean_outcomes <- function(theory, caller) {
+  for (t in .tf_list(theory, "test_outcomes")) {
+    passed <- .tf_get(t, "passed")
+    if (!.tf_absent(passed) && !(is.logical(passed) && length(passed) == 1L)) {
+      stop(caller, " requires boolean test outcomes; ",
+           "non-boolean passed for test outcome of prediction: ", .tf_str(t, "prediction_id"),
+           call. = FALSE)
+    }
+  }
+}
+
 # Compute (status, score) for each checklist item; returns a named list of
 # c(status, score) per item id.
 .tf_check_items <- function(T, thr) {
@@ -200,6 +217,13 @@ NULL
 #' Runs the full rigour checklist (12 items) over a theory object and returns a
 #' report, with the items in checklist order.
 #'
+#' Two values are refused before anything is scored, since no score built on
+#' them would be defensible. One is a test outcome whose \code{passed} is
+#' present and not \code{TRUE} or \code{FALSE}, such as the quoted string
+#' \code{"true"}. The other is a prediction \code{severity} that is present and
+#' not a number. Both stop with the message the Python twin raises, and
+#' [tf_validate()] with \code{full = TRUE} reports both.
+#'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @return A named list with elements \code{theory_id}, \code{schema_version}
 #'   (the theory's), \code{checklist_version} (the rigour checklist's, which is
@@ -220,6 +244,7 @@ NULL
 #' @export
 tf_check <- function(theory) {
   T <- theory
+  .tf_refuse_non_boolean_outcomes(T, "check")
   spec <- tf_checklist()
   thr <- spec$thresholds
   results <- .tf_check_items(T, thr)

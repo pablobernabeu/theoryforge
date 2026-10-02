@@ -225,7 +225,13 @@ lr_null_derives <- paste0(lr_head, lr_two_constructs, 'predictions:
 
 test_that("null entries of a string array are ignored", {
   t <- lr_read(lr_null_derives)
-  expect_true(tf_validate(t, full = TRUE))
+  # Full validation reports each entry the readers ignore (API_SPEC.md section 2,
+  # item 10), and every other function reads the theory without them.
+  expect_identical(tryCatch(tf_validate(t, full = TRUE), error = conditionMessage), paste(
+    "invalid theory object: prediction[0] derives_from entry 0 must be a nonempty string;",
+    "prediction[1] derives_from entry 0 must be a nonempty string;",
+    "prediction[2] derives_from entry 1 must be a nonempty string"
+  ))
   deriv <- lr_item(tf_check(t), "derivation_chain")
   # R passed all three predictions, and its preregistration then said the
   # chain was verified beside "(derives from: -)".
@@ -249,7 +255,8 @@ test_that("a single valid entry beside a null passes the derivation check", {
 })
 
 test_that("an empty or blank string-array entry does not count", {
-  # The one change for a theory that matches the schema, which allows "".
+  # The one change for a theory that matches the schema, which allows "". Full
+  # validation reports such an entry as it reports a null one.
   t <- lr_read(paste0(lr_head, 'constructs:
   - id: c1
     label: Alpha
@@ -262,7 +269,10 @@ test_that("an empty or blank string-array entry does not count", {
     measurement: [m2]
     boundary_conditions: ["  "]
 '))
-  expect_true(tf_validate(t, full = TRUE))
+  expect_identical(tryCatch(tf_validate(t, full = TRUE), error = conditionMessage), paste(
+    "invalid theory object: construct[0] measurement entry 0 must be a nonempty string;",
+    "construct[1] boundary_conditions entry 0 must be a nonempty string"
+  ))
   rep <- tf_check(t)
   expect_identical(lr_item(rep, "construct_clarity")$score, 0.0)
   expect_identical(lr_item(rep, "scope")$status, "warn")

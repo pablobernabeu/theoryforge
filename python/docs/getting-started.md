@@ -28,11 +28,11 @@ print(tf.example_names())
 t = tf.read(tf.example_path("panic-network.theory.yaml"))
 ```
 
-Validate the theory. With no arguments this checks the required fields and enum membership, returning `True` on success and raising `ValueError` with a list of problems otherwise. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection, that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id, and that assumption, test-outcome and evidence entries reference declared predictions.
+Validate the theory. With no arguments this checks the required fields and enum membership, returning `True` on success and raising `ValueError` with a list of problems otherwise. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection, that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id, and that assumption, test-outcome and evidence entries reference declared predictions. The full pass then checks the rest of the schema, such as the evidence directions, a boolean `passed` on each test outcome and the type of every other field.
 
 ```python exec="1" source="material-block" session="getting-started"
 t.validate()
-t.validate(full=True)   # also checks referential integrity
+t.validate(full=True)   # also ids, cross-references and the rest of the schema
 ```
 
 Produce the rigour report. The `"json"` format returns the 12-item rigour checklist together with the overall gate. `t.check()` returns the same information as a plain Python dictionary, and `t.report(format=...)` renders it as a string, in `"json"` or `"html"`.

@@ -1,7 +1,11 @@
 {
   "read": "ok",
-  "validate": true,
-  "validate_full": true,
+  "validate": {
+    "error": "invalid theory object: predictions must be a list"
+  },
+  "validate_full": {
+    "error": "invalid theory object: predictions must be a list"
+  },
   "check": {
     "aggregate_score": 52.0,
     "gate": "blocked",

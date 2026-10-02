@@ -9,6 +9,12 @@ NULL
 .tf_RELATION <- c("increases", "decreases", "moderates", "mediates", "causes", "associates")
 .tf_PRED_TYPE <- c("point", "interval", "directional", "existence")
 .tf_FORMAL_MODEL_TYPE <- c("ode", "abm", "network", "sem", "none")
+.tf_EVIDENCE_DIRECTION <- c("corroborates", "refutes", "mixed")
+# The collections of the schema, in the order tf_validate() reports one that is
+# not a list, and the keys of the closed version block.
+.tf_COLLECTIONS <- c("constructs", "propositions", "predictions", "auxiliary_assumptions",
+                     "alternatives", "evidence", "test_outcomes", "provenance")
+.tf_VERSION_KEYS <- c("id", "parent_id", "content_hash")
 
 #' Read a theory object from a YAML or JSON file
 #'
@@ -47,24 +53,53 @@ tf_read <- function(path) {
 
 #' Validate a theory object
 #'
-#' Built-in validation. The default
-#' (\code{full = FALSE}) checks required fields and enum membership. With
-#' \code{full = TRUE} it additionally checks referential integrity: that every id
-#' is unique within its collection and that every cross-reference (proposition
-#' endpoints, prediction derivations and diagnostics, and assumption, evidence and
-#' test-outcome targets) points to a declared id, and that every prediction
-#' \code{severity} is a number within \[0, 1\]. The \code{full} checks are
-#' deterministic.
+#' Checks a theory against the package's schema, \code{theory.schema.json},
+#' without a JSON Schema engine, so that it runs wherever R does, webR
+#' included.
+#'
+#' The default (\code{full = FALSE}) checks structure. It covers the required
+#' top-level fields, the \code{maturity} and \code{theory_form} enums, the
+#' top-level field names and the required fields and enums of each construct,
+#' proposition and prediction. It also checks that every collection is a list.
+#' A field that is absent, \code{NULL} or blank is reported as missing, and one
+#' that holds another type as such (\code{id must be a string}).
+#'
+#' With \code{full = TRUE} it also checks that every id is unique within its
+#' collection and that every cross-reference (proposition endpoints,
+#' prediction derivations and diagnostics, and assumption, evidence and
+#' test-outcome targets) points to a declared id. It then checks the rest of
+#' the schema. That covers the required fields of assumptions, alternatives,
+#' evidence and test outcomes, a logical \code{passed}, the evidence direction
+#' and formal-model type enums, the version block and the
+#' \code{schema_version} pattern. It also covers numbers within \[0, 1\] where
+#' the schema asks for them and the type of every other field and of every
+#' entry of a string array.
+#'
+#' The Python twin's test suite compares the result with a JSON Schema 2020-12
+#' validator. Besides the ids and references, which the schema cannot express,
+#' the pass is stricter in two ways, since a blank string counts as missing and
+#' an entry of a string array must be a nonempty string. It is more lenient in
+#' three ways, which API_SPEC.md section 2 documents. A \code{NULL}
+#' optional field is absent and a single string stands for a one-element array
+#' of strings. An empty \code{list()} stands for an empty mapping as well as an
+#' empty sequence. A single \code{NA}, which [tf_write()] writes as null, reads
+#' as absent.
+#'
+#' Both passes are deterministic, and the Python twin's
+#' \code{Theory.validate()} reports the same problems in the same order with
+#' the same text.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
-#' @param full When \code{TRUE}, also run the referential-integrity checks.
-#' @return \code{TRUE} (invisibly) on success; otherwise stops with a message
-#'   listing every problem found.
+#' @param full When \code{TRUE}, also check ids, cross-references and the rest
+#'   of the schema.
+#' @return \code{TRUE} (invisibly) on success; otherwise stops with
+#'   \code{"invalid theory object: "} followed by every problem found, joined
+#'   by \code{"; "}.
 #' @examples
 #' theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
 #'                               package = "theoryforge"))
 #' isTRUE(tf_validate(theory))              # required fields and enums
-#' isTRUE(tf_validate(theory, full = TRUE)) # also ids and cross-references
+#' isTRUE(tf_validate(theory, full = TRUE)) # also ids, cross-references and the rest of the schema
 #'
 #' # The failure path is the more informative one. Point a prediction at a
 #' # proposition that was never declared.
@@ -77,9 +112,8 @@ tf_validate <- function(theory, full = FALSE) {
   errors <- character(0)
 
   for (req in c("schema_version", "id", "title", "maturity")) {
-    if (!.tf_ne_str(.tf_get(d, req))) {
-      errors <- c(errors, sprintf("missing/empty required field: %s", req))
-    }
+    errors <- c(errors, .tf_required_text(.tf_get(d, req),
+                                          sprintf("missing/empty required field: %s", req), req))
   }
   # Each enum test asks for a nonempty scalar string before asking about
   # membership. `%in%` coerces its left operand, so a one-element YAML sequence
@@ -108,25 +142,25 @@ tf_validate <- function(theory, full = FALSE) {
       errors <- c(errors, sprintf("unknown top-level field: %s", key))
     }
   }
+  # A collection that is not a list reads as empty (API_SPEC.md section 3), so
+  # the theory would lose it without a word.
+  for (key in .tf_COLLECTIONS) {
+    if (.tf_not_a_list(.tf_get(d, key))) {
+      errors <- c(errors, sprintf("%s must be a list", key))
+    }
+  }
 
   cons <- .tf_list(d, "constructs")
   for (i in seq_along(cons)) {
-    c_i <- cons[[i]]
-    for (req in c("id", "label", "definition")) {
-      if (!.tf_ne_str(.tf_get(c_i, req))) {
-        errors <- c(errors, sprintf("construct[%d] missing/empty %s", i - 1L, req))
-      }
-    }
+    errors <- c(errors, .tf_required_fields(cons[[i]], sprintf("construct[%d]", i - 1L),
+                                            c("id", "label", "definition")))
   }
 
   props <- .tf_list(d, "propositions")
   for (i in seq_along(props)) {
     p_i <- props[[i]]
-    for (req in c("id", "from", "to", "relation")) {
-      if (!.tf_ne_str(.tf_get(p_i, req))) {
-        errors <- c(errors, sprintf("proposition[%d] missing/empty %s", i - 1L, req))
-      }
-    }
+    errors <- c(errors, .tf_required_fields(p_i, sprintf("proposition[%d]", i - 1L),
+                                            c("id", "from", "to", "relation")))
     rel <- .tf_get(p_i, "relation")
     if (.tf_ne_str(rel) && !(rel %in% .tf_RELATION)) {
       errors <- c(errors, sprintf("proposition[%d] relation '%s' not allowed", i - 1L, rel))
@@ -136,22 +170,22 @@ tf_validate <- function(theory, full = FALSE) {
   preds <- .tf_list(d, "predictions")
   for (i in seq_along(preds)) {
     p_i <- preds[[i]]
-    for (req in c("id", "statement", "type")) {
-      if (!.tf_ne_str(.tf_get(p_i, req))) {
-        errors <- c(errors, sprintf("prediction[%d] missing/empty %s", i - 1L, req))
-      }
-    }
+    errors <- c(errors, .tf_required_fields(p_i, sprintf("prediction[%d]", i - 1L),
+                                            c("id", "statement", "type")))
     ty <- .tf_get(p_i, "type")
     if (.tf_ne_str(ty) && !(ty %in% .tf_PRED_TYPE)) {
       errors <- c(errors, sprintf("prediction[%d] type '%s' not allowed", i - 1L, ty))
     }
   }
 
-  # Referential-integrity checks (opt-in). Deterministic and mirrored byte-for-byte
-  # by the Python Theory._referential_errors: same checks, order and message text.
+  # The full pass, items 1 to 14 of API_SPEC.md section 2. The Python twin's
+  # Theory._full_errors makes the same checks in the same order with the same
+  # message text.
   if (isTRUE(full)) {
     alts <- .tf_list(d, "alternatives")
     auxs <- .tf_list(d, "auxiliary_assumptions")
+    evs <- .tf_list(d, "evidence")
+    tos <- .tf_list(d, "test_outcomes")
     ids_of <- function(items) {
       out <- character(0)
       for (it in items) if (.tf_ne_str(.tf_get(it, "id"))) out <- c(out, .tf_str(it, "id"))
@@ -185,23 +219,22 @@ tf_validate <- function(theory, full = FALSE) {
           errors <- c(errors, sprintf("proposition[%d] to '%s' is not a known construct", i - 1L, to))
       }
     }
+    # Items 3 and 4: each entry of a referencing array is either a nonempty
+    # string to look up or a problem in its own right (item 10).
     for (i in seq_along(preds)) {
-      for (dref in .tf_str_list(.tf_get(preds[[i]], "derives_from"))) {
-        if (!(dref %in% proposition_ids))
-          errors <- c(errors, sprintf("prediction[%d] derives_from '%s' is not a known proposition", i - 1L, dref))
-      }
-      for (dv in .tf_str_list(.tf_get(preds[[i]], "diagnostic_vs"))) {
-        if (!(dv %in% alternative_ids))
-          errors <- c(errors, sprintf("prediction[%d] diagnostic_vs '%s' is not a known alternative", i - 1L, dv))
-      }
+      errors <- c(errors,
+                  .tf_string_array(.tf_get(preds[[i]], "derives_from"),
+                                   sprintf("prediction[%d] derives_from", i - 1L),
+                                   proposition_ids, "proposition"),
+                  .tf_string_array(.tf_get(preds[[i]], "diagnostic_vs"),
+                                   sprintf("prediction[%d] diagnostic_vs", i - 1L),
+                                   alternative_ids, "alternative"))
     }
     for (i in seq_along(auxs)) {
-      for (pr in .tf_str_list(.tf_get(auxs[[i]], "protects"))) {
-        if (!(pr %in% prediction_ids))
-          errors <- c(errors, sprintf("assumption[%d] protects '%s' is not a known prediction", i - 1L, pr))
-      }
+      errors <- c(errors, .tf_string_array(.tf_get(auxs[[i]], "protects"),
+                                           sprintf("assumption[%d] protects", i - 1L),
+                                           prediction_ids, "prediction"))
     }
-    tos <- .tf_list(d, "test_outcomes")
     for (i in seq_along(tos)) {
       if (.tf_ne_str(.tf_get(tos[[i]], "prediction_id"))) {
         pid <- .tf_str(tos[[i]], "prediction_id")
@@ -209,10 +242,9 @@ tf_validate <- function(theory, full = FALSE) {
           errors <- c(errors, sprintf("test_outcome[%d] prediction_id '%s' is not a known prediction", i - 1L, pid))
       }
     }
-    ev <- .tf_list(d, "evidence")
-    for (i in seq_along(ev)) {
-      if (.tf_ne_str(.tf_get(ev[[i]], "supports"))) {
-        s <- .tf_str(ev[[i]], "supports")
+    for (i in seq_along(evs)) {
+      if (.tf_ne_str(.tf_get(evs[[i]], "supports"))) {
+        s <- .tf_str(evs[[i]], "supports")
         if (!(s %in% prediction_ids))
           errors <- c(errors, sprintf("evidence[%d] supports '%s' is not a known prediction", i - 1L, s))
       }
@@ -228,12 +260,245 @@ tf_validate <- function(theory, full = FALSE) {
                     sprintf("prediction[%d] severity must be a number between 0 and 1", i - 1L))
       }
     }
+
+    # 8: the required fields of the other collections. A quoted "true" in passed
+    # read as a failure and turned a progressive amendment into a degenerating
+    # one, so passed must be a logical.
+    for (i in seq_along(auxs)) {
+      errors <- c(errors, .tf_required_fields(auxs[[i]], sprintf("assumption[%d]", i - 1L),
+                                              c("id", "statement")))
+    }
+    for (i in seq_along(alts)) {
+      errors <- c(errors, .tf_required_fields(alts[[i]], sprintf("alternative[%d]", i - 1L),
+                                              c("id", "label")))
+    }
+    for (i in seq_along(evs)) {
+      errors <- c(errors, .tf_required_fields(evs[[i]], sprintf("evidence[%d]", i - 1L),
+                                              c("supports", "direction")))
+      direction <- .tf_get(evs[[i]], "direction")
+      if (.tf_ne_str(direction) && !(direction %in% .tf_EVIDENCE_DIRECTION)) {
+        errors <- c(errors, sprintf("evidence[%d] direction '%s' not allowed", i - 1L, direction))
+      }
+    }
+    for (i in seq_along(tos)) {
+      errors <- c(errors, .tf_required_fields(tos[[i]], sprintf("test_outcome[%d]", i - 1L),
+                                              "prediction_id"))
+      passed <- .tf_get(tos[[i]], "passed")
+      if (!(is.logical(passed) && length(passed) == 1L && !is.na(passed))) {
+        errors <- c(errors, sprintf("test_outcome[%d] passed must be true or false", i - 1L))
+      }
+    }
+
+    # 9: typed optional fields of assumptions and test outcomes.
+    for (i in seq_along(auxs)) {
+      errors <- c(errors, .tf_optional_text(.tf_get(auxs[[i]], "added_for"),
+                                            sprintf("assumption[%d] added_for", i - 1L),
+                                            nullable = TRUE))
+    }
+    for (i in seq_along(tos)) {
+      t_i <- tos[[i]]
+      prefix <- sprintf("test_outcome[%d]", i - 1L)
+      errors <- c(errors,
+                  .tf_unit_number(.tf_get(t_i, "severity_at_test"), paste(prefix, "severity_at_test")),
+                  .tf_optional_text(.tf_get(t_i, "registered"), paste(prefix, "registered"),
+                                    nullable = TRUE),
+                  .tf_optional_text(.tf_get(t_i, "date"), paste(prefix, "date"), nullable = TRUE))
+    }
+
+    # 11: the formal model. A type outside the enum earned the formalisation
+    # point in 0.6.0, and reads as absent since (API_SPEC.md section 3).
+    fm <- .tf_get(d, "formal_model")
+    if (!.tf_absent(fm) && .tf_not_a_mapping(fm)) {
+      errors <- c(errors, "formal_model must be a mapping")
+    } else if (is.list(fm)) {
+      ty <- .tf_get(fm, "type")
+      if (!.tf_absent(ty) && !.tf_is_string(ty)) {
+        errors <- c(errors, .tf_not_string("formal_model type", ty))
+      } else if (!.tf_absent(ty) && !(ty %in% .tf_FORMAL_MODEL_TYPE)) {
+        errors <- c(errors, sprintf("formal_model type '%s' not allowed", ty))
+      }
+      errors <- c(errors, .tf_optional_text(.tf_get(fm, "spec_ref"), "formal_model spec_ref",
+                                            nullable = TRUE))
+    }
+
+    # 12: the version block, which the schema closes.
+    ver <- .tf_get(d, "version")
+    if (!.tf_absent(ver) && .tf_not_a_mapping(ver)) {
+      errors <- c(errors, "version must be a mapping")
+    } else if (is.list(ver)) {
+      for (key in names(ver)) {
+        if (!(key %in% .tf_VERSION_KEYS)) {
+          errors <- c(errors, sprintf("version has unknown field: %s", key))
+        }
+      }
+      errors <- c(errors,
+                  .tf_optional_text(.tf_get(ver, "id"), "version id"),
+                  .tf_optional_text(.tf_get(ver, "parent_id"), "version parent_id",
+                                    nullable = TRUE),
+                  .tf_optional_text(.tf_get(ver, "content_hash"), "version content_hash",
+                                    nullable = TRUE))
+    }
+
+    # 13: the schema_version pattern. The default regex engine's "$" matches
+    # only at the end of the string, as Python's fullmatch() does.
+    sv <- .tf_get(d, "schema_version")
+    if (.tf_ne_str(sv) && !grepl("^[0-9]+\\.[0-9]+$", sv)) {
+      errors <- c(errors, 'schema_version must match major.minor (for example "1.0")')
+    }
+
+    # 14: the schema's remaining types, collection by collection in the schema's
+    # order.
+    for (i in seq_along(cons)) {
+      prefix <- sprintf("construct[%d]", i - 1L)
+      errors <- c(errors,
+                  .tf_string_array(.tf_get(cons[[i]], "measurement"), paste(prefix, "measurement")),
+                  .tf_string_array(.tf_get(cons[[i]], "boundary_conditions"),
+                                   paste(prefix, "boundary_conditions")))
+    }
+    for (i in seq_along(props)) {
+      prefix <- sprintf("proposition[%d]", i - 1L)
+      errors <- c(errors,
+                  .tf_optional_text(.tf_get(props[[i]], "mechanism"), paste(prefix, "mechanism")),
+                  .tf_optional_text(.tf_get(props[[i]], "functional_form"),
+                                    paste(prefix, "functional_form")))
+    }
+    errors <- c(errors, .tf_string_array(.tf_get(d, "boundary_conditions"), "boundary_conditions"))
+    for (i in seq_along(preds)) {
+      errors <- c(errors, .tf_unit_number(.tf_get(preds[[i]], "risk_score"),
+                                          sprintf("prediction[%d] risk_score", i - 1L)))
+    }
+    for (i in seq_along(evs)) {
+      errors <- c(errors, .tf_optional_text(.tf_get(evs[[i]], "source_doi"),
+                                            sprintf("evidence[%d] source_doi", i - 1L),
+                                            nullable = TRUE))
+    }
+    for (i in seq_along(tos)) {
+      errors <- c(errors, .tf_optional_text(.tf_get(tos[[i]], "observed"),
+                                            sprintf("test_outcome[%d] observed", i - 1L)))
+    }
+    for (i in seq_along(alts)) {
+      prefix <- sprintf("alternative[%d]", i - 1L)
+      errors <- c(errors,
+                  .tf_string_array(.tf_get(alts[[i]], "key_constructs"),
+                                   paste(prefix, "key_constructs")),
+                  .tf_optional_text(.tf_get(alts[[i]], "source_doi"), paste(prefix, "source_doi"),
+                                    nullable = TRUE))
+    }
+    steps <- .tf_list(d, "provenance")
+    for (i in seq_along(steps)) {
+      prefix <- sprintf("provenance[%d]", i - 1L)
+      if (.tf_not_a_mapping(steps[[i]])) {
+        errors <- c(errors, paste(prefix, "must be a mapping"))
+        next
+      }
+      for (name in c("step", "action", "detail")) {
+        errors <- c(errors, .tf_optional_text(.tf_get(steps[[i]], name), paste(prefix, name)))
+      }
+    }
   }
 
   if (length(errors) > 0L) {
     stop("invalid theory object: ", paste(errors, collapse = "; "), call. = FALSE)
   }
   invisible(TRUE)
+}
+
+# -- validation helpers (API_SPEC.md section 2) ------------------------------
+#
+# Each returns the messages for one value, so that tf_validate() lists them in
+# the contract's order. The Python twin's core.py holds the same helpers
+# (_required_text and the rest) with the same messages.
+
+# The message for a present value that should be a string. YAML reads an
+# unquoted 1.0, 2026 or Yes as a number or a logical, so for those the message
+# says how to keep the value a string.
+.tf_not_string <- function(name, v) {
+  hint <- if ((is.numeric(v) || is.logical(v)) && length(v) == 1L) {
+    " (quote the value in YAML)"
+  } else {
+    ""
+  }
+  paste0(name, " must be a string", hint)
+}
+
+# A required text field: `missing` when it is absent, NULL or blank.
+.tf_required_text <- function(v, missing, name) {
+  if (.tf_absent(v) || (.tf_is_string(v) && !nzchar(.tf_trim(v)))) return(missing)
+  if (!.tf_is_string(v)) return(.tf_not_string(name, v))
+  character(0)
+}
+
+.tf_required_fields <- function(item, prefix, names) {
+  out <- character(0)
+  for (name in names) {
+    out <- c(out, .tf_required_text(.tf_get(item, name),
+                                    sprintf("%s missing/empty %s", prefix, name),
+                                    paste(prefix, name)))
+  }
+  out
+}
+
+# A field the schema types as a string, or with `nullable` as a string or null.
+# An absent or NULL optional field is never reported, since R holds the two
+# alike.
+.tf_optional_text <- function(v, name, nullable = FALSE) {
+  if (.tf_absent(v) || .tf_is_string(v)) return(character(0))
+  if (nullable) paste(name, "must be a string or null") else .tf_not_string(name, v)
+}
+
+.tf_unit_number <- function(v, name) {
+  if (.tf_absent(v) || (is.numeric(v) && length(v) == 1L && !is.na(v) && v >= 0 && v <= 1)) {
+    return(character(0))
+  }
+  paste(name, "must be a number between 0 and 1")
+}
+
+# Whether a present value cannot be read as a sequence: a scalar or a non-empty
+# mapping. An empty mapping holds nothing to lose, and list() stands for both
+# kinds of empty value, so neither twin reports one. A vector of two or more
+# values, which only a theory built in memory holds, is a sequence, as
+# .tf_list() reads it.
+.tf_not_a_list <- function(v) {
+  if (is.list(v)) return(length(v) > 0L && .tf_is_mapping(v))
+  length(v) == 1L && !.tf_absent(v)
+}
+
+# Whether a value cannot be read as a mapping: NULL, a scalar or a non-empty
+# sequence. The callers rule out an absent top-level field first.
+.tf_not_a_mapping <- function(v) {
+  if (is.list(v)) return(length(v) > 0L && !.tf_is_mapping(v))
+  is.null(v) || length(v) > 0L
+}
+
+# A field the schema types as an array of strings. Each entry must be a nonempty
+# string, as the readers ignore any other (API_SPEC.md section 4). A nonempty
+# string is a one-element array, and any other value that is not a list, a
+# blank string included, cannot be read as an array. With `known`, each
+# nonempty entry is also looked up there, in entry order, and `kind` names what
+# it should refer to.
+.tf_string_array <- function(v, name, known = NULL, kind = "") {
+  if (is.list(v)) {
+    if (length(v) == 0L) return(character(0))
+    if (.tf_is_mapping(v)) return(paste(name, "must be a list"))
+    entries <- v
+  } else if (length(v) == 0L || .tf_absent(v)) {
+    return(character(0))
+  } else if (length(v) == 1L) {
+    if (!.tf_ne_str(v)) return(paste(name, "must be a list"))
+    entries <- list(v)
+  } else {
+    entries <- as.list(v)
+  }
+  out <- character(0)
+  for (k in seq_along(entries)) {
+    entry <- entries[[k]]
+    if (!.tf_ne_str(entry)) {
+      out <- c(out, sprintf("%s entry %d must be a nonempty string", name, k - 1L))
+    } else if (!is.null(known) && !(entry %in% known)) {
+      out <- c(out, sprintf("%s '%s' is not a known %s", name, entry, kind))
+    }
+  }
+  out
 }
 
 #' Write a theory object to YAML or JSON

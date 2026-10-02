@@ -125,6 +125,25 @@ version and a single behavioural contract
   identifier; quote it`, since R cannot hold it exactly and the two twins would otherwise
   key it differently. Ten corpora in `fixtures/edge/` pin the corpus rules, including
   Scopus-style ids beyond the 32-bit range written unquoted in YAML and JSON.
+- Full validation checked only part of the schema. A quoted `passed: "true"`, an evidence
+  direction of `supports` and a formal-model type of `banana` all validated, and the quoted
+  `passed` then read as a failure in both languages. An assumption added to protect the
+  prediction therefore counted as ad hoc, which turned the panic v2 amendment, given such
+  an assumption, from progressive to degenerating. `validate(full=True)` now checks every
+  required field, type, enum and pattern of the schema, the version block included, with
+  the same messages in both languages and three conveniences that API_SPEC section 2
+  documents. `check()` and `appraise_amendment()` refuse a `passed` that is present and
+  not a boolean, and so do the preregistration, the dossier and the diagrams that score
+  the checklist, since they call `check()`. A test run in CI holds `validate(full=True)` to
+  a JSON Schema 2020-12 validator. Python's full validation also raised OverflowError on
+  a `severity` written as an integer too large for a float, where R reported the value,
+  and now reports it as R does.
+- `validate()` called a present value of the wrong type missing. A number, a boolean or a
+  list in a required text field now gives `<field> must be a string`, with a reminder to
+  quote a number or a boolean in YAML, so `maturity: [draft]` gives
+  `maturity must be a string` where it gave `missing/empty required field: maturity`. A
+  collection written as a single value or as a mapping gives `<key> must be a list`, where
+  it used to validate and read as empty.
 
 ### Changed
 - R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new
@@ -151,6 +170,10 @@ version and a single behavioural contract
   up from 0.2 for the two former `existence` ones. Effort-recovery's precision falls from
   0.667 to 0.333 (warn) and its aggregate from 86.9 to 83.6, happy-vowel's aggregate
   falls from 73.1 to 71.1 and cognitive-dissonance's from 76.7 to 73.3.
+- `validate(full=True)` reports an entry of a string array that is not a nonempty string,
+  such as the null in `derives_from: [p1, ~]` or the empty string in `measurement: [""]`.
+  Every other function ignores such an entry. The schema allows an empty string there, so
+  a theory that matches the schema can now fail full validation for this reason alone.
 
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`
@@ -204,6 +227,15 @@ version and a single behavioural contract
   (`fixtures/edge/<name>.corpus.yaml|json`), recording what `read_corpus` and `litmap`
   make of each. `_access.as_list`, which only the literature layer used, is replaced by
   the corpus checks in `lit.py`.
+- The `dev` extra installs jsonschema 4.0 or later for `tests/test_schema_agreement.py`.
+  The test checks `validate(full=True)` against a validator for the schema's own draft,
+  2020-12, on the shipped theories, the `gaps` files in `fixtures/edge/` and one-fault
+  variants of a theory that uses every field. It skips itself under an older jsonschema,
+  and the CI job that installs the declared minimum versions runs it under jsonschema 4.0.
+  Nine new edge cases pin the full pass in both twins: the eight violations it used to
+  miss, a value of the wrong type in every optional field, a quoted `passed`, four
+  formal-model types outside the enum, an extra version key and a `schema_version` of
+  `one`.
 
 
 ## [0.6.0] - 2026-08-21

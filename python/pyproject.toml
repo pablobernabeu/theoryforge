@@ -31,7 +31,9 @@ classifiers = [
 dependencies = ["PyYAML>=6.0"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0", "ruff", "mypy"]
+# jsonschema 4.0 brought the Draft 2020-12 validator that tests/test_schema_agreement.py
+# holds validate(full=True) to. The test skips itself under an older jsonschema.
+dev = ["pytest>=7.0", "ruff", "mypy", "jsonschema>=4"]
 # Native diagram rendering (render_diagram); writing image files additionally
 # needs the Graphviz system binaries.
 render = ["graphviz>=0.20"]

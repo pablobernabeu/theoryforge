@@ -1,0 +1,28 @@
+# Edge case: a formal-model type that is an empty string.
+# It reads as absent in every consumer of both twins, so the theory is not
+# formalised, and validate(full = TRUE) reports it.
+schema_version: "1.0"
+id: edge-formal-bad-blank
+title: A formal model whose type is not allowed
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+formal_model:
+  type: ""
+  spec_ref: ~

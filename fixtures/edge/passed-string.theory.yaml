@@ -1,0 +1,35 @@
+# Edge case: a test outcome whose passed is the quoted string "true". It read as
+# a failure in both twins, so the assumption added for h1 counted as ad hoc and
+# an amendment that should be progressive came out degenerating. check() now
+# refuses the value, and so do the preregistration and the dossier, which call
+# it. validate(full = TRUE) reports it.
+schema_version: "1.0"
+id: edge-passed-string
+title: A test outcome whose passed is a quoted string
+maturity: testing
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+auxiliary_assumptions:
+  - id: x1
+    statement: The effect needs a calm setting.
+    added_for: h1
+    protects: [h1]
+test_outcomes:
+  - prediction_id: h1
+    passed: "true"

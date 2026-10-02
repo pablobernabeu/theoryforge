@@ -1,0 +1,29 @@
+# Edge case: a version block with a key the schema does not define. The schema
+# closes the block, and validate(full = TRUE) reports the key in both twins.
+schema_version: "1.0"
+id: edge-version-extra
+title: A version block with an extra key
+maturity: building
+version:
+  id: v2
+  parent_id: v1
+  content_hash: ~
+  created: 2026-05-01
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]

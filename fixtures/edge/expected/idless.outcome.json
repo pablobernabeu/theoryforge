@@ -1,7 +1,9 @@
 {
   "read": "ok",
   "validate": true,
-  "validate_full": true,
+  "validate_full": {
+    "error": "invalid theory object: assumption[0] missing/empty id; test_outcome[0] missing/empty prediction_id"
+  },
   "check": {
     "aggregate_score": 45.0,
     "gate": "pass",

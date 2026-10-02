@@ -11,6 +11,17 @@ NULL
   is.character(v) && length(v) == 1L && !is.na(v) && nzchar(.tf_trim(v))
 }
 
+# A single non-NA string, blank or not (Python's isinstance(v, str)).
+.tf_is_string <- function(v) {
+  is.character(v) && length(v) == 1L && !is.na(v)
+}
+
+# Whether validation reads a value as absent: NULL, as a missing key or a YAML
+# null reads, or a single NA that is not NaN, which tf_write() writes as null.
+.tf_absent <- function(v) {
+  is.null(v) || (is.atomic(v) && length(v) == 1L && is.na(v) && !(is.double(v) && is.nan(v)))
+}
+
 # -- Reading a theory ---------------------------------------------------------
 #
 # tf_validate() reports a malformed theory. Every other function reads it

@@ -230,8 +230,8 @@ test_that("a YAML sequence is a list, so a one-element enum sequence is refused"
   expect_error(
     tf_validate(theory),
     paste(
-      "invalid theory object: missing/empty required field: maturity; maturity must be one of",
-      "building, developing, draft, testing; proposition[0] missing/empty relation"
+      "invalid theory object: maturity must be a string; maturity must be one of",
+      "building, developing, draft, testing; proposition[0] relation must be a string"
     ),
     fixed = TRUE
   )

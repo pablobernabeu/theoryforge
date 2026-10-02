@@ -17,7 +17,7 @@
     { id: "check", label: "Rigour checklist", desc: "12-item score, gate, per-item status",
       help: "Scores the theory against the 12-item rigour checklist (falsifiability, precision, parsimony, and so on) and returns an aggregate 0–100 score, a pass/blocked/advisory gate and the colour-coded status grid." },
     { id: "validate", label: "Validate", desc: "Structural + referential checks",
-      help: "Runs the package's full validation: required fields and enum membership, plus referential integrity (unique ids, and every proposition, prediction, assumption, evidence and test-outcome reference points to a declared id). Lists every problem found, or confirms the theory is valid." },
+      help: "Runs the package's full validation: required fields, the type of every field and enum membership, plus referential integrity (unique ids, and every proposition, prediction, assumption, evidence and test-outcome reference points to a declared id). Lists every problem found, or confirms the theory is valid." },
     {
       id: "diagram", label: "Diagram", desc: "Nomological net, DAG, workflow…",
       help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams. The venn, rigour and severity types are emitted directly as SVG.",
@@ -353,7 +353,7 @@
   // to read the output that follows.
   const RESULT_GUIDE = {
     check: "The checklist scores twelve facets of rigour and combines them into an overall score and a gate. Read the gate first. Pass means the theory is ready to test, advisory means it is usable with the noted gaps, and blocked means a must-fix criterion is unmet. The grid below shows each item's status.",
-    validate: "Validation reports structural and referential problems: missing required fields, values outside the allowed set, duplicate identifiers and cross-references that point to nothing. A valid theory is the precondition for every other operation.",
+    validate: "Validation reports structural and referential problems: missing required fields, values of the wrong type or outside the allowed set, duplicate identifiers and cross-references that point to nothing. A valid theory is the precondition for every other operation.",
     diagram: "The diagram is rendered from the package's intermediate representation, shown below the figure. Export the figure as SVG or PNG, or copy the representation to render it elsewhere.",
     severity: "The rubric grades each prediction by the form of its claim alone, so it can be read before any data exist. The risk score reflects how committal the claim is. The computed severity adjusts it down for merely directional claims and up for claims that discriminate between rival theories. Longer bars mark riskier claims. How severely a claim is tested depends on the design and the data, which the rubric does not read.",
     redundancy: "Each pair of constructs is compared by the word overlap of their definitions, the Jaccard index, which runs from 0 to 1. Pairs above the threshold are flagged for review, because near-duplicate constructs blur a theory and inflate its apparent scope.",

@@ -11,6 +11,11 @@ NULL
 #' Compares an amended theory \code{new} against its \code{prior} version and
 #' returns a Lakatosian verdict.
 #'
+#' A test outcome whose \code{passed} is present and not \code{TRUE} or
+#' \code{FALSE}, in \code{new} (checked first) or in \code{prior}, is refused
+#' with the message the Python twin raises. A quoted \code{"true"} read as a
+#' failure and could turn a progressive amendment into a degenerating one.
+#'
 #' @param new The amended theory object (named list).
 #' @param prior The prior theory object (named list).
 #' @return A named list with \code{verdict} (one of \code{"progressive"},
@@ -33,6 +38,8 @@ NULL
 #' tf_appraise_amendment(new, prior)
 #' @export
 tf_appraise_amendment <- function(new, prior) {
+  .tf_refuse_non_boolean_outcomes(new, "appraise_amendment")
+  .tf_refuse_non_boolean_outcomes(prior, "appraise_amendment")
   # A missing id reads as "" (API_SPEC.md section 3, "Reading a theory"), as in
   # Python. tf_validate() reports the entry; the appraisal still runs.
   prior_pred_ids <- unique(vapply(.tf_list(prior, "predictions"),
