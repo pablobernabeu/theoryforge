@@ -12,6 +12,16 @@ NULL
 # Whether a test outcome records a pass for one of `prediction_ids`. The
 # outcome's prediction_id must be a string: `%in%` would match the number 1
 # against the id "1", where the Python twin's `in` does not.
+# The mean as a left fold in file order (API_SPEC.md section 4). R's sum()
+# keeps an extended accumulator on x86_64 but not on Apple Silicon, and CPython
+# 3.12+ sum() compensates, so either can differ from a plain double sum in the
+# last bit, as for c(0.6, 0.7, 0.2).
+.tf_mean <- function(xs) {
+  acc <- 0.0
+  for (x in xs) acc <- acc + x
+  acc / length(xs)
+}
+
 .tf_passed_for <- function(outcome, prediction_ids) {
   pid <- .tf_get(outcome, "prediction_id")
   is.character(pid) && length(pid) == 1L && !is.na(pid) && pid %in% prediction_ids &&
@@ -44,9 +54,9 @@ NULL
     out$precision <- item("warn", 0.0)
   } else {
     n_precise <- sum(vapply(preds, function(p) ptype(p) %in% .tf_PRECISE, logical(1)))
-    share <- n_precise / length(preds)
+    share <- .tf_rnd(n_precise / length(preds), 3)
     out$precision <- item(if (share >= thr$min_precision_share) "pass" else "warn",
-                          .tf_rnd(share, 3))
+                          share)
   }
 
   # 3 risk_severity
@@ -54,14 +64,23 @@ NULL
   # one differently by accident (as.numeric() coerced quoted numbers and
   # scored, Python crashed mid-sum), so the same file produced a verdict in
   # one language and a raw TypeError in the other. Refuse instead of
-  # coercing; tf_validate(full = TRUE) reports the same file as invalid.
+  # coercing; tf_validate(full = TRUE) reports the same file as invalid. An
+  # infinity has no mean either, and a finite value outside [0, 1] would put
+  # the score outside the checklist's scale (a severity of 7 could lift the
+  # aggregate above 100). The status compares the rounded mean with the threshold, so the last
+  # bit of the sum cannot decide it.
   sevs <- numeric(0)
   for (p in preds) {
     s <- .tf_get(p, "severity")
     if (is.null(s)) next
-    if (!is.numeric(s) || length(s) != 1L || is.na(s)) {
+    if (!is.numeric(s) || length(s) != 1L || !is.finite(s)) {
       stop("check requires numeric prediction severities; ",
            "non-numeric severity for prediction: ", .tf_str(p, "id"),
+           call. = FALSE)
+    }
+    if (s < 0 || s > 1) {
+      stop("check requires prediction severities within [0, 1]; ",
+           "out-of-range severity for prediction: ", .tf_str(p, "id"),
            call. = FALSE)
     }
     sevs <- c(sevs, as.numeric(s))
@@ -69,9 +88,8 @@ NULL
   if (length(sevs) == 0L) {
     out$risk_severity <- item("warn", 0.0)
   } else {
-    m <- sum(sevs) / length(sevs)
-    out$risk_severity <- item(if (m >= thr$min_severity) "pass" else "warn",
-                              .tf_rnd(m, 3))
+    m <- .tf_rnd(.tf_mean(sevs), 3)
+    out$risk_severity <- item(if (m >= thr$min_severity) "pass" else "warn", m)
   }
 
   # 4 parsimony
@@ -187,7 +205,8 @@ NULL
 #'   (the theory's), \code{checklist_version} (the rigour checklist's, which is
 #'   what the weights and thresholds came from), \code{maturity},
 #'   \code{aggregate_score}, \code{gate}, \code{n_blockers_failed}, and
-#'   \code{items} (a list of per-item lists).
+#'   \code{items} (a list of per-item lists). An error is raised for a
+#'   prediction severity that is not a finite number or is below 0 or above 1.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>

@@ -1,0 +1,38 @@
+# Edge case: prediction severities whose exact mean, 0.5, equals the checklist's
+# min_severity. A plain left-to-right sum gives 0.49999999999999994, while
+# CPython 3.12+ sum() and R's sum() on x86_64 give 0.5, so comparing the
+# unrounded mean made risk_severity pass or warn by platform. check() sums by an
+# explicit left fold and decides from the rounded score: pass, 0.5.
+schema_version: "1.0"
+id: edge-thresh
+title: A theory whose mean severity sits on the threshold
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+    severity: 0.6
+  - id: h2
+    statement: Beta rises within a stated range.
+    type: interval
+    derives_from: [p1]
+    severity: 0.7
+  - id: h3
+    statement: Beta takes a stated value.
+    type: point
+    derives_from: [p1]
+    severity: 0.2

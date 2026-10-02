@@ -15,5 +15,10 @@ import math
 def rnd(x: float, n: int) -> float:
     s = 10 ** n
     if x >= 0:
-        return math.floor(x * s + 0.5 + 1e-6) / s
-    return -math.floor(-x * s + 0.5 + 1e-6) / s
+        r = math.floor(x * s + 0.5 + 1e-6) / s
+    else:
+        r = -math.floor(-x * s + 0.5 + 1e-6) / s
+    # Adding +0.0 turns a negative zero into +0, as R's `+ 0` does, so a
+    # negative value that rounds to zero never prints as -0.0 (API_SPEC.md
+    # section 3).
+    return r + 0.0

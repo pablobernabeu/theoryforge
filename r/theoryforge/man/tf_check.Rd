@@ -14,7 +14,8 @@ A named list with elements \code{theory_id}, \code{schema_version}
 (the theory's), \code{checklist_version} (the rigour checklist's, which is
 what the weights and thresholds came from), \code{maturity},
 \code{aggregate_score}, \code{gate}, \code{n_blockers_failed}, and
-\code{items} (a list of per-item lists).
+\code{items} (a list of per-item lists). An error is raised for a
+prediction severity that is not a finite number or is below 0 or above 1.
 }
 \description{
 Runs the full rigour checklist (12 items) over a theory object and returns a

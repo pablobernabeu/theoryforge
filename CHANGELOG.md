@@ -64,6 +64,13 @@ version and a single behavioural contract
   entry of a string array, such as `measurement: [""]`, no longer counts as an entry. Ten
   malformed theories in
   `fixtures/edge/` pin the agreement.
+- `check()` accepted severities outside [0, 1], so a severity of 7 gave an aggregate
+  score above 100, and Python raised OverflowError on an infinite one where R reported an
+  aggregate of `Inf`. Both now refuse them with named errors, an infinity with the message
+  already given for NaN. The pass/warn decision for mean severity compared an unrounded
+  mean whose last bit depended on the Python version and the R platform, so severities of
+  0.6, 0.7 and 0.2 passed or warned by platform. Statuses now come from the rounded score
+  and the mean is an explicit left-to-right sum. R no longer emits a negative zero.
 
 ### Changed
 - `severity()` is described for what it is, a pre-data ranking of the form of each

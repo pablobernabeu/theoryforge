@@ -1,0 +1,27 @@
+# Edge case: a prediction severity above 1. check() scored it, so this file
+# had a risk_severity score of 7.0 and an aggregate of 121.7 out of 100.
+# validate(full) and check() now refuse it, check() with the range message of
+# API_SPEC section 4.
+schema_version: "1.0"
+id: edge-sev-range-high
+title: A theory whose prediction severity is above 1
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+    severity: 7

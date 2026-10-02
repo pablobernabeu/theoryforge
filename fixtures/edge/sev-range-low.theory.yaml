@@ -1,0 +1,31 @@
+# Edge case: a negative prediction severity. check() scored it and reported a
+# negative risk_severity score. validate(full) and check() now refuse it,
+# check() with the range message of API_SPEC section 4.
+schema_version: "1.0"
+id: edge-sev-range-low
+title: A theory whose prediction severity is negative
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+    severity: 0.4
+  - id: h2
+    statement: Beta falls when Alpha is absent.
+    type: directional
+    derives_from: [p1]
+    severity: -3

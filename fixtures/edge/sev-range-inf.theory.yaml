@@ -1,0 +1,26 @@
+# Edge case: an infinite prediction severity. Python's check() raised
+# OverflowError from rnd() and R reported an aggregate score of Inf. Both now
+# refuse it as non-numeric, with the message they give for NaN and for strings.
+schema_version: "1.0"
+id: edge-sev-range-inf
+title: A theory whose prediction severity is infinite
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+    severity: .inf

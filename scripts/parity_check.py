@@ -10,7 +10,8 @@ Four phases, each run through ``scripts/parity_emit.R``:
   apps       the per-theory artefacts of the app examples in apps/examples/, written
              live by both twins into temporary directories (they have no goldens).
   roundtrip  Python writes every fixture, app example and readable edge case to
-             YAML and JSON, R reads each file and writes it again, and Python reads
+             YAML and JSON (YAML alone for a theory holding a non-finite number,
+             which JSON cannot hold), R reads each file and writes it again, and Python reads
              both twins' files back. Each must hold the theory Python first read,
              compared as JSON artefacts are (below) but with its shape kept: a
              one-element array never equals its element. R's files may differ in
@@ -35,6 +36,7 @@ Exit 0 indicates that parity holds. Exit 1 indicates a mismatch, with details pr
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 import sys
 import tempfile
@@ -88,7 +90,8 @@ def deep_equal(a, b, path="", unbox=True) -> list[str]:
         same = isinstance(a, bool) and isinstance(b, bool) and a == b
         return [] if same else [f"{path}: {a!r} != {b!r}"]
     if isinstance(a, (int, float)) and isinstance(b, (int, float)):
-        return [] if abs(a - b) <= TOL else [f"{path}: {a} != {b}"]
+        # a == b first, so that two equal infinities match (their difference is NaN).
+        return [] if a == b or abs(a - b) <= TOL else [f"{path}: {a} != {b}"]
     if isinstance(a, dict) and isinstance(b, dict):
         diffs = []
         for k in sorted(set(a) | set(b)):
@@ -282,6 +285,27 @@ def schema_errors(validator, data) -> list[str]:
     )
 
 
+def has_non_finite(x) -> bool:
+    """Whether ``x`` holds an infinity or NaN anywhere."""
+    if isinstance(x, float):
+        return not math.isfinite(x)
+    if isinstance(x, dict):
+        return any(has_non_finite(v) for v in x.values())
+    if isinstance(x, list):
+        return any(has_non_finite(v) for v in x)
+    return False
+
+
+def roundtrip_formats(data) -> tuple[str, ...]:
+    """The formats a theory is round-tripped through.
+
+    JSON has no form for a non-finite number and jsonlite refuses Python's
+    ``Infinity`` (API_SPEC section 3), so a theory holding one, such as the
+    sev-range-inf edge case, is round-tripped through YAML only.
+    """
+    return ("yaml",) if has_non_finite(data) else ("yaml", "json")
+
+
 def write_roundtrip_python(tf, inputs: dict[str, Path], out_dir: Path) -> dict[str, dict]:
     """Python writes each readable input to YAML and JSON in ``out_dir``.
 
@@ -295,7 +319,7 @@ def write_roundtrip_python(tf, inputs: dict[str, Path], out_dir: Path) -> dict[s
         except ValueError:
             continue
         originals[name] = t.data
-        for ext in ("yaml", "json"):
+        for ext in roundtrip_formats(t.data):
             t.write(out_dir / f"{name}.theory.{ext}")
     return originals
 
@@ -320,7 +344,7 @@ def roundtrip_failures(tf, originals: dict[str, dict], dirs: dict[str, Path],
         check_schema = validator is not None and not schema_errors(validator, original)
         for writer, out_dir in dirs.items():
             expected = as_r_writes(original, paths) if writer in boxing else original
-            for ext in ("yaml", "json"):
+            for ext in roundtrip_formats(original):
                 label = f"{name}.theory.{ext} written by {writer}"
                 path = out_dir / f"{name}.theory.{ext}"
                 if not path.exists():

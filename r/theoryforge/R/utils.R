@@ -388,8 +388,10 @@ NULL
 # larger than cross-platform ULP jitter yet far smaller than the rounding grid,
 # so results are identical on every platform. Vectorised in x (sign/floor/abs).
 # Do not replace with base round(), which is banker's rounding and diverges
-# across platforms at exact decimal half-boundaries.
+# across platforms at exact decimal half-boundaries. The final `+ 0` turns the
+# negative zero that sign(x) gives a small negative x into +0, so jsonlite and
+# the dossier never print -0 where Python prints 0.0. NaN and Inf pass through.
 .tf_rnd <- function(x, n) {
   s <- 10^n
-  sign(x) * floor(abs(x) * s + 0.5 + 1e-6) / s
+  sign(x) * floor(abs(x) * s + 0.5 + 1e-6) / s + 0
 }

@@ -70,6 +70,14 @@
   that an empty or blank entry of a string array, such as `measurement: [""]`,
   no longer counts as an entry.
 
+* `tf_check()` refuses a prediction severity that is infinite or lies outside
+  [0, 1]. A severity of 7 gave an aggregate score above 100, and an infinite
+  one an aggregate of `Inf`. It also decides each threshold item from its
+  rounded score and sums severities by an explicit loop, so the verdict no
+  longer depends on the platform's floating-point accumulator: severities of
+  0.6, 0.7 and 0.2 pass the 0.5 threshold on every platform. Rounded values no
+  longer print as `-0.0`.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

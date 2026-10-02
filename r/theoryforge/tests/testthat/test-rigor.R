@@ -117,6 +117,75 @@ test_that("tf_check reads null id and maturity as empty strings", {
   expect_identical(rep$maturity, "")
 })
 
+with_severities <- function(...) {
+  sevs <- list(...)
+  list(
+    schema_version = "1.0", id = "t", title = "T", maturity = "building",
+    predictions = lapply(seq_along(sevs), function(i) {
+      list(id = paste0("h", i), statement = "s", type = "directional",
+           severity = sevs[[i]])
+    })
+  )
+}
+
+test_that("the severity mean is a left fold", {
+  # R's sum() uses an extended accumulator on x86_64 and CPython 3.12+ sum()
+  # compensates, so either gives 0.5 here where a plain left-to-right sum, as
+  # on Apple Silicon R or Python 3.11, gives 0.49999999999999994. The twins
+  # agree only if both fold left in file order (API_SPEC section 4).
+  expect_identical(theoryforge:::.tf_mean(c(0.6, 0.7, 0.2)), 0.49999999999999994)
+})
+
+test_that("the risk_severity status comes from the rounded mean", {
+  # The exact mean equals min_severity (0.5). Comparing the unrounded mean
+  # made the status depend on the platform's accumulator.
+  rep <- tf_check(with_severities(0.6, 0.7, 0.2))
+  expect_identical(item_status(rep, "risk_severity"), "pass")
+  expect_identical(item_score(rep, "risk_severity"), 0.5)
+})
+
+test_that("tf_check refuses a severity outside the unit interval", {
+  # A severity of 7 was scored and could lift the aggregate above 100.
+  for (bad in c(7, -3, 1.5)) {
+    expect_error(
+      tf_check(with_severities(0.5, bad)),
+      paste0("check requires prediction severities within [0, 1]; ",
+             "out-of-range severity for prediction: h2"),
+      fixed = TRUE
+    )
+  }
+  expect_error(tf_check(with_severities(7L)), "out-of-range severity", fixed = TRUE)
+})
+
+test_that("tf_check refuses an infinite severity as non-numeric", {
+  # R printed an aggregate of Inf and Python raised OverflowError from rnd().
+  for (bad in c(Inf, -Inf, NaN)) {
+    expect_error(
+      tf_check(with_severities(bad)),
+      paste0("check requires numeric prediction severities; ",
+             "non-numeric severity for prediction: h1"),
+      fixed = TRUE
+    )
+  }
+})
+
+test_that("tf_check accepts the ends of the unit interval", {
+  rep <- tf_check(with_severities(0, 1L))
+  expect_identical(item_status(rep, "risk_severity"), "pass")
+  expect_identical(item_score(rep, "risk_severity"), 0.5)
+})
+
+test_that(".tf_rnd never returns a negative zero", {
+  for (x in c(-0.0004, -0.0, -1e-9)) {
+    expect_true(1 / theoryforge:::.tf_rnd(x, 3) > 0, info = format(x))
+  }
+  expect_identical(jsonlite::toJSON(theoryforge:::.tf_rnd(-0.0004, 3), digits = NA),
+                   jsonlite::toJSON(0, digits = NA))
+  # NaN and infinities pass through unchanged.
+  expect_true(is.nan(theoryforge:::.tf_rnd(NaN, 3)))
+  expect_identical(theoryforge:::.tf_rnd(-Inf, 3), -Inf)
+})
+
 test_that("tf_report returns valid JSON", {
   out <- tf_report(tf_read(tf_fixture_path("panic-network.theory.yaml")), "json")
   expect_true(jsonlite::validate(out))

@@ -36,7 +36,14 @@ def _ne_list(v) -> bool:
 
 
 def _mean(xs):
-    return sum(xs) / len(xs)
+    # A left fold in file order (API_SPEC.md section 4). CPython 3.12+ sum()
+    # compensates and R's sum() keeps an extended accumulator on x86_64, so
+    # either can differ from a plain double sum in the last bit, as for
+    # (0.6, 0.7, 0.2).
+    acc = 0.0
+    for x in xs:
+        acc += x
+    return acc / len(xs)
 
 
 def _ptype(p) -> str | None:
@@ -72,31 +79,41 @@ def _check_items(T: dict, thr: dict) -> dict:
     if not preds:
         out["precision"] = ("warn", 0.0)
     else:
-        share = sum(1 for p in preds if _ptype(p) in _PRECISE) / len(preds)
-        out["precision"] = ("pass" if share >= thr["min_precision_share"] else "warn", rnd(share, 3))
+        share = rnd(sum(1 for p in preds if _ptype(p) in _PRECISE) / len(preds), 3)
+        out["precision"] = ("pass" if share >= thr["min_precision_share"] else "warn", share)
 
     # 3 risk_severity
     # A non-numeric severity has no defensible mean, and the two engines read
     # one differently by accident (R's as.numeric() coerced quoted numbers and
     # scored, Python crashed mid-sum), so the same file produced a verdict in
     # one language and a raw TypeError in the other. Refuse instead of
-    # coercing; validate(full=True) reports the same file as invalid.
+    # coercing; validate(full=True) reports the same file as invalid. An
+    # infinity has no mean either, and a finite value outside [0, 1] would put
+    # the score outside the checklist's scale (a severity of 7 could lift the
+    # aggregate above 100). The status compares the rounded mean with the threshold, so the
+    # last bit of the sum cannot decide it.
     sevs = []
     for p in preds:
         s = field(p, "severity")
         if s is None:
             continue
-        if isinstance(s, bool) or not isinstance(s, (int, float)) or math.isnan(s):
+        if (isinstance(s, bool) or not isinstance(s, (int, float))
+                or (isinstance(s, float) and not math.isfinite(s))):
             raise ValueError(
                 "check requires numeric prediction severities; "
                 f"non-numeric severity for prediction: {text(field(p, 'id'))}"
+            )
+        if s < 0 or s > 1:
+            raise ValueError(
+                "check requires prediction severities within [0, 1]; "
+                f"out-of-range severity for prediction: {text(field(p, 'id'))}"
             )
         sevs.append(s)
     if not sevs:
         out["risk_severity"] = ("warn", 0.0)
     else:
-        m = _mean(sevs)
-        out["risk_severity"] = ("pass" if m >= thr["min_severity"] else "warn", rnd(m, 3))
+        m = rnd(_mean(sevs), 3)
+        out["risk_severity"] = ("pass" if m >= thr["min_severity"] else "warn", m)
 
     # 4 parsimony
     ratio = len(aux) / max(1, len(props))
@@ -188,7 +205,11 @@ def _check_items(T: dict, thr: dict) -> dict:
 
 
 def check(T) -> dict:
-    """Compute the full rigour report (dict) for a Theory or theory mapping."""
+    """Compute the full rigour report (dict) for a Theory or theory mapping.
+
+    Raises ValueError for a prediction severity that is not a finite number or
+    lies outside [0, 1] (API_SPEC.md section 4, item 3).
+    """
     T = T.data if hasattr(T, "data") else T
     spec = _resources.checklist()
     thr = spec["thresholds"]

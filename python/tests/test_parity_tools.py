@@ -284,6 +284,25 @@ def test_roundtrip_expects_r_to_box_a_single_value_and_python_to_keep_it(parity,
     assert failures == ["case.theory.json written by R.predictions[0].derives_from: ['p1'] != 'p1'"]
 
 
+def test_roundtrip_keeps_a_non_finite_number_to_yaml(parity, tmp_path):
+    # JSON cannot hold an infinity and jsonlite refuses Python's Infinity
+    # (API_SPEC section 3), so such a theory is written and read back as YAML only.
+    assert parity.roundtrip_formats({"predictions": [{"severity": float("inf")}]}) == ("yaml",)
+    assert parity.roundtrip_formats({"predictions": [{"severity": 0.5}]}) == ("yaml", "json")
+    tf = parity._gen_golden().tf
+    src = tmp_path / "rt.theory.yaml"
+    src.write_text(ROUNDTRIP_THEORY.replace("derives_from: [p1]\n",
+                                            "derives_from: [p1]\n    severity: .inf\n"),
+                   encoding="utf-8")
+    py_dir, r_dir = tmp_path / "py", tmp_path / "r"
+    originals = parity.write_roundtrip_python(tf, {"case": src}, py_dir)
+    assert sorted(p.name for p in py_dir.iterdir()) == ["case.theory.yaml"]
+    r_dir.mkdir()
+    (r_dir / "case.theory.yaml").write_bytes((py_dir / "case.theory.yaml").read_bytes())
+    n, failures = parity.roundtrip_failures(tf, originals, {"Python": py_dir, "R": r_dir}, None)
+    assert (n, failures) == (2, [])
+
+
 def test_roundtrip_checks_the_schema_when_the_original_validates(parity, tmp_path):
     pytest.importorskip("jsonschema")
     tf = parity._gen_golden().tf
