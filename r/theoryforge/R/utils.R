@@ -37,8 +37,9 @@ NULL
 }
 
 # The 0.6.0 reading of a list-valued field, kept where nothing may be dropped:
-# the builders append to whatever a collection holds, and corpus records keep
-# their own value rules (API_SPEC.md section 14).
+# the builders append to whatever a collection holds, and tf_fetch_corpus()
+# reads the OpenAlex response with it. Corpus records have their own value rules
+# (.tf_records() in lit.R, API_SPEC.md section 14).
 .tf_as_list <- function(d, key) {
   v <- d[[key]]
   if (is.null(v)) return(list())

@@ -5,8 +5,8 @@ Four phases, each run through ``scripts/parity_emit.R``:
 
   golden     R's artefacts for fixtures/*.theory.yaml and the corpus, against the
              Python-generated goldens in fixtures/expected/.
-  edge       R's outcome records for the malformed or awkward theories in
-             fixtures/edge/, against the Python records in fixtures/edge/expected/.
+  edge       R's outcome records for the malformed or awkward theories and corpora
+             in fixtures/edge/, against the Python records in fixtures/edge/expected/.
   apps       the per-theory artefacts of the app examples in apps/examples/, written
              live by both twins into temporary directories (they have no goldens).
   roundtrip  Python writes every fixture, app example and readable edge case to

@@ -1,0 +1,9 @@
+# NO is nitric oxide, but YAML 1.1 reads it as a boolean. Python dropped it and
+# R wrote FALSE.
+schema_version: "1.0"
+id: corpus-yaml-bool
+records:
+  - id: w1
+    keywords: [NO, cGMP, vasodilation]
+  - id: w2
+    keywords: [NO, cGMP, vasodilation]

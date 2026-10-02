@@ -1,0 +1,7 @@
+# 2^53 + 1: Python holds it exactly and R as the double 2^53, so the twins
+# would key it differently. Both refuse it.
+schema_version: "1.0"
+id: corpus-int-big
+records:
+  - id: w1
+    references: [w0, 9007199254740993]

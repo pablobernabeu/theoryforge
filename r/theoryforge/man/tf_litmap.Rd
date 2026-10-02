@@ -4,13 +4,16 @@
 \alias{tf_litmap}
 \title{Bibliometric map of a literature corpus (deterministic)}
 \usage{
-tf_litmap(corpus, min_link = 2)
+tf_litmap(corpus, min_link = 2, min_cocitation = NULL)
 }
 \arguments{
 \item{corpus}{A corpus object (named list), e.g. from \code{\link[=tf_read_corpus]{tf_read_corpus()}}.}
 
-\item{min_link}{Minimum co-occurrence count for an edge to be kept
-(default \code{2}).}
+\item{min_link}{Minimum co-occurrence count for a keyword pair to be kept
+(default \code{2}). A positive integer.}
+
+\item{min_cocitation}{Minimum count for a reference pair to be kept in
+\code{co_citation}. \code{NULL} (the default) uses \code{min_link}.}
 }
 \value{
 A named list with elements \code{n_records}, \code{keywords},
@@ -19,6 +22,21 @@ A named list with elements \code{n_records}, \code{keywords},
 \description{
 Computes keyword co-occurrence, thematic components, and reference
 co-citation for a corpus. Records iterate in file order.
+}
+\details{
+The corpus is checked before anything is counted, with the Python twin's
+messages. It must hold a \code{records} list of mappings (an empty list is
+an empty corpus). A keyword or reference that is an integer becomes its
+decimal string, so an unquoted PubMed or Scopus id keys the same work in
+both languages; one of \eqn{2^{53}} or more is refused, since R cannot hold
+it exactly. A logical, a fraction or a nested value is refused: an unquoted
+\code{NO} (nitric oxide) or \code{on} in YAML is read as a logical, so quote
+it.
+
+Co-citation maps of real corpora are large. 200 OpenAlex records give about
+11,000 reference pairs that share two or more citing records, so
+\code{min_cocitation} can be set above \code{min_link}, and
+\code{\link[=tf_lit_diagram]{tf_lit_diagram()}} can draw only the strongest edges.
 }
 \examples{
 corpus <- list(

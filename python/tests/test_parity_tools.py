@@ -162,6 +162,31 @@ def test_edge_outcome_stops_after_a_read_error(golden, tmp_path):
     assert golden.edge_outcome(path) == {"read": {"error": "Theory data must be a mapping"}}
 
 
+def test_corpus_edge_outcome_records_the_read_and_the_map(golden, tmp_path):
+    path = tmp_path / "ints.corpus.yaml"
+    path.write_text(
+        'schema_version: "1.0"\nid: ints\nrecords:\n'
+        "  - id: w1\n    references: [85000000001, 85000000002]\n"
+        "  - id: w2\n    references: [85000000001, 85000000002]\n",
+        encoding="utf-8",
+    )
+    out = golden.corpus_edge_outcome(path)
+    assert list(out) == ["read", "litmap"]
+    assert out["litmap"]["co_citation"] == [{"a": "85000000001", "b": "85000000002", "count": 2}]
+    path.write_text('schema_version: "1.0"\nid: x\nrecrods: []\n', encoding="utf-8")
+    assert golden.corpus_edge_outcome(path) == {
+        "read": "ok", "litmap": {"error": "invalid corpus: missing records list"}}
+    path.write_text("- a\n", encoding="utf-8")
+    assert golden.corpus_edge_outcome(path) == {"read": {"error": "Corpus data must be a mapping"}}
+
+
+def test_edge_inputs_keep_theories_and_corpora_apart(golden, tmp_path):
+    for name in ("a.theory.yaml", "b.corpus.yaml", "c.corpus.json", "notes.txt"):
+        (tmp_path / name).write_text("{}\n", encoding="utf-8")
+    assert list(golden.edge_inputs(tmp_path)) == ["a"]
+    assert list(golden.edge_corpus_inputs(tmp_path)) == ["b", "c"]
+
+
 def test_error_text_drops_a_leading_path(golden):
     assert golden.error_text(ValueError("(x/y.yaml) bad thing")) == "bad thing"
     assert golden.error_text(ValueError("bad (thing)")) == "bad (thing)"

@@ -10,8 +10,8 @@ Also mirrors the fixture inputs, the golden tree and the two schema files
 copies each package ships, so that every duplicate in the repository has exactly
 one writer. CI runs this script and fails on any resulting change.
 
-Finally, it records the outcome of every edge-case theory in ``fixtures/edge/``
-(deliberately malformed or awkward inputs) as
+Finally, it records the outcome of every edge-case theory and corpus in
+``fixtures/edge/`` (deliberately malformed or awkward inputs) as
 ``fixtures/edge/expected/<name>.outcome.json``. Neither directory is mirrored
 into a package. ``scripts/parity_check.py`` compares the R twin's outcomes with
 these records.
@@ -156,27 +156,57 @@ def edge_outcome(path: Path) -> dict:
     }
 
 
-def edge_inputs(edge_dir: Path = EDGE) -> dict[str, Path]:
-    """The edge-case theory files keyed by name (the file name less its suffix)."""
+def corpus_edge_outcome(path: Path) -> dict:
+    """What ``read_corpus`` and ``litmap`` make of the corpus file at ``path``.
+
+    Recorded as ``edge_outcome`` records a theory: a call that raises is
+    ``{"error": <message>}``, and a failed read leaves ``read`` alone.
+    ``scripts/parity_emit.R edge`` builds the same record in R.
+    """
+    try:
+        corpus = tf.read_corpus(path)
+    except Exception as err:
+        return {"read": {"error": error_text(err)}}
+    return {"read": "ok", "litmap": _attempt(lambda: tf.litmap(corpus))}
+
+
+def _edge_files(edge_dir: Path, kind: str) -> dict[str, Path]:
     found: dict[str, Path] = {}
-    for path in sorted(edge_dir.glob("*.theory.*")):
+    for path in sorted(edge_dir.glob(f"*.{kind}.*")):
         # Case-sensitive, as the pattern parity_emit.R lists the same directory
         # with, so that both twins see the same set of cases.
         if path.suffix not in (".yaml", ".json"):
             continue
-        name = path.name[: -len(".theory" + path.suffix)]
+        name = path.name[: -len(f".{kind}" + path.suffix)]
         if name in found:
             raise SystemExit(f"two edge cases share the name {name}: {found[name].name}, {path.name}")
         found[name] = path
     return found
 
 
+def edge_inputs(edge_dir: Path = EDGE) -> dict[str, Path]:
+    """The edge-case theory files keyed by name (the file name less its suffix)."""
+    return _edge_files(edge_dir, "theory")
+
+
+def edge_corpus_inputs(edge_dir: Path = EDGE) -> dict[str, Path]:
+    """The edge-case corpus files (``<name>.corpus.yaml|json``) keyed by name."""
+    return _edge_files(edge_dir, "corpus")
+
+
 def write_edge_outcomes() -> list[str]:
     """Write one outcome record per edge case and prune records left by deleted cases."""
     EDGE_EXPECTED.mkdir(parents=True, exist_ok=True)
+    theories, corpora = edge_inputs(), edge_corpus_inputs()
+    # Both kinds write <name>.outcome.json, so a name may be used once.
+    shared = sorted(set(theories) & set(corpora))
+    if shared:
+        raise SystemExit(f"a theory and a corpus edge case share the name {shared[0]}")
+    records = {name: edge_outcome(path) for name, path in theories.items()}
+    records.update({name: corpus_edge_outcome(path) for name, path in corpora.items()})
     written = []
-    for name, path in edge_inputs().items():
-        record = json.dumps(edge_outcome(path), indent=2) + "\n"
+    for name in sorted(records):
+        record = json.dumps(records[name], indent=2) + "\n"
         (EDGE_EXPECTED / f"{name}.outcome.json").write_bytes(record.encode("utf-8"))
         written.append(f"{name}.outcome.json")
     for stale in sorted(EDGE_EXPECTED.iterdir()):

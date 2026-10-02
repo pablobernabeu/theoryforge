@@ -1,0 +1,11 @@
+# Unquoted PubMed-style ids beside DOIs. Python raised a TypeError sorting an
+# integer against a string. 100000 checks that R does not write 1e+05.
+schema_version: "1.0"
+id: corpus-mixed-ids
+records:
+  - id: w1
+    keywords: [panic, 2019]
+    references: [12345678, "10.1037/0033-295X.99.1.20", 100000]
+  - id: w2
+    keywords: [panic, 2019]
+    references: [12345678, "10.1037/0033-295X.99.1.20", 100000]

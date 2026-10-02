@@ -1,0 +1,16 @@
+{
+  "read": "ok",
+  "litmap": {
+    "n_records": 2,
+    "keywords": [],
+    "keyword_cooccurrence": [],
+    "themes": [],
+    "co_citation": [
+      {
+        "a": "85000000001",
+        "b": "85000000002",
+        "count": 2
+      }
+    ]
+  }
+}

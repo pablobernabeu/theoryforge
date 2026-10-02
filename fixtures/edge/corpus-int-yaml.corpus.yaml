@@ -1,0 +1,9 @@
+# Scopus-style integer ids, unquoted. R's yaml package read an integer beyond
+# the 32-bit range as NA, so R found no co-citation edge where Python found one.
+schema_version: "1.0"
+id: corpus-int-yaml
+records:
+  - id: w1
+    references: [85000000001, 85000000002]
+  - id: w2
+    references: [85000000001, 85000000002]

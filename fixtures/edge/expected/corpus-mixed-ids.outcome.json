@@ -1,0 +1,44 @@
+{
+  "read": "ok",
+  "litmap": {
+    "n_records": 2,
+    "keywords": [
+      "2019",
+      "panic"
+    ],
+    "keyword_cooccurrence": [
+      {
+        "a": "2019",
+        "b": "panic",
+        "count": 2
+      }
+    ],
+    "themes": [
+      {
+        "id": "theme_1",
+        "keywords": [
+          "2019",
+          "panic"
+        ],
+        "size": 2
+      }
+    ],
+    "co_citation": [
+      {
+        "a": "10.1037/0033-295X.99.1.20",
+        "b": "100000",
+        "count": 2
+      },
+      {
+        "a": "10.1037/0033-295X.99.1.20",
+        "b": "12345678",
+        "count": 2
+      },
+      {
+        "a": "100000",
+        "b": "12345678",
+        "count": 2
+      }
+    ]
+  }
+}

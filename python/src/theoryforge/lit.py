@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import itertools
 import json
+import math
 
-from ._access import as_list as _as_list
 from ._access import field, items, str_list, text
 from ._load import load_document
 from ._text import normalise_doi
@@ -35,17 +35,96 @@ def read_corpus(path) -> dict:
     return data
 
 
-def _records(corpus) -> list:
+def _positive_int(value, name: str) -> int:
+    """``value`` as an int when it is one integral number of at least 1.
+
+    An int or an integral float passes, never a bool, so that the R twin, which
+    holds 2 and 2.0 alike, takes the same arguments (API_SPEC.md section 14).
+    """
+    ok = (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and math.isfinite(value)
+        and value == int(value)
+        and value >= 1
+    )
+    if not ok:
+        raise ValueError(f"{name} must be a positive integer")
+    return int(value)
+
+
+# R holds a number read from a file as a double, which is exact for integers
+# below 2^53. A larger one cannot be written back as the same decimal string in
+# both twins, so it is refused (API_SPEC.md section 14).
+_EXACT_LIMIT = 2 ** 53
+
+_NOT_STRINGS = ("invalid corpus: record[{i}] {field} must be strings "
+                "(an unquoted no, yes, on or off is read as a boolean; quote it)")
+
+
+def _entry(value, i: int, field: str, k: int) -> str | None:
+    """One keyword or reference as a string, or None when it is dropped.
+
+    A string is kept as it is and an empty one dropped, as null is. An
+    integer-valued number becomes its decimal string. Anything else (a boolean,
+    a fractional or non-finite number, a list or a mapping) is refused.
+    """
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return value or None
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(value, float) and not (math.isfinite(value) and value.is_integer()):
+            raise ValueError(_NOT_STRINGS.format(i=i, field=field))
+        if abs(value) >= _EXACT_LIMIT:
+            raise ValueError(f"invalid corpus: record[{i}] {field} entry {k} is a number "
+                             "too large to be an exact identifier; quote it")
+        return str(int(value))
+    raise ValueError(_NOT_STRINGS.format(i=i, field=field))
+
+
+def _values(record: dict, i: int, field: str) -> list[str]:
+    """The keywords or references of record ``i`` as strings, in file order.
+
+    A sequence gives its entries, null or an absent field gives none, and any
+    other value is a one-entry list (``keywords: arousal``). A mapping is refused.
+    """
+    v = record.get(field)
+    if v is None:
+        return []
+    if isinstance(v, dict):
+        raise ValueError(_NOT_STRINGS.format(i=i, field=field))
+    entries = v if isinstance(v, list) else [v]
+    out = []
+    for k, x in enumerate(entries):
+        s = _entry(x, i, field, k)
+        if s is not None:
+            out.append(s)
+    return out
+
+
+def _records(corpus) -> list[tuple[list[str], list[str]]]:
+    """Each record's (keywords, references), every entry checked (API_SPEC.md section 14).
+
+    The corpus must hold a ``records`` sequence, empty or not, of mappings.
+    """
     corpus = corpus.data if hasattr(corpus, "data") else corpus
-    recs = corpus.get("records")
-    return recs if isinstance(recs, list) else []
+    recs = corpus.get("records") if isinstance(corpus, dict) else None
+    if not isinstance(recs, list):
+        raise ValueError("invalid corpus: missing records list")
+    out = []
+    for i, r in enumerate(recs):
+        if not isinstance(r, dict):
+            raise ValueError(f"invalid corpus: record[{i}] is not a mapping")
+        out.append((_values(r, i, "keywords"), _values(r, i, "references")))
+    return out
 
 
-def _pair_counts(records: list, field: str) -> dict:
+def _pair_counts(values: list[list[str]]) -> dict:
+    """Count every unordered pair (a < b) of each record's sorted unique values."""
     counts: dict[tuple, int] = {}
-    for r in records:
-        items = sorted({x for x in _as_list(r.get(field)) if x})
-        for a, b in itertools.combinations(items, 2):
+    for vals in values:
+        for a, b in itertools.combinations(sorted(set(vals)), 2):
             counts[(a, b)] = counts.get((a, b), 0) + 1
     return counts
 
@@ -87,25 +166,47 @@ def _components(edges: list[dict]) -> list[dict]:
     ]
 
 
-def litmap(corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
-    """Keyword co-occurrence, thematic components, and co-citation, all deterministic."""
+def _litmap(corpus, min_link, min_cocitation=None, co_citation: bool = True) -> dict:
+    """litmap, with the co-citation count skipped when ``co_citation`` is False.
+
+    ``landscape`` reads only the themes, and on a corpus with references the
+    co-citation count is most of the work.
+    """
+    min_link = _positive_int(min_link, "min_link")
+    min_cocitation = (min_link if min_cocitation is None
+                      else _positive_int(min_cocitation, "min_cocitation"))
     records = _records(corpus)
-    all_keywords = sorted({k for r in records for k in _as_list(r.get("keywords")) if k})
-    kw_edges = _edges(_pair_counts(records, "keywords"), min_link)
-    cocit = _edges(_pair_counts(records, "references"), min_link)
-    return {
+    keywords = [kw for kw, _ in records]
+    kw_edges = _edges(_pair_counts(keywords), min_link)
+    out = {
         "n_records": len(records),
-        "keywords": all_keywords,
+        "keywords": sorted({k for kws in keywords for k in kws}),
         "keyword_cooccurrence": kw_edges,
         "themes": _components(kw_edges),
-        "co_citation": cocit,
     }
+    if co_citation:
+        out["co_citation"] = _edges(_pair_counts([refs for _, refs in records]), min_cocitation)
+    return out
+
+
+def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, min_cocitation: int | None = None) -> dict:
+    """Keyword co-occurrence, thematic components, and co-citation, all deterministic.
+
+    ``min_link`` is the smallest count a keyword pair needs to be an edge, and
+    ``min_cocitation`` the same for a reference pair (``min_link`` when None).
+    Co-citation maps of real corpora are large: 200 OpenAlex records give about
+    11,000 reference pairs at a threshold of 2, so a higher ``min_cocitation``
+    is often wanted. Both must be positive integers. The corpus is checked as
+    API_SPEC.md section 14 describes: integer entries become decimal strings,
+    and booleans, fractions and nested values are refused.
+    """
+    return _litmap(corpus, min_link, min_cocitation)
 
 
 def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
     """Map a theory and its registered alternatives onto the literature's themes."""
     T = theory.data if hasattr(theory, "data") else theory
-    lm = litmap(corpus, min_link)
+    lm = _litmap(corpus, min_link, co_citation=False)
 
     focal_src = " ".join(
         [text(T.get("title"))] + [text(field(c, "label")) for c in items(T, "constructs")]
@@ -188,10 +289,26 @@ def _theme_landscape(ls: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def lit_diagram(obj: dict, type: str = "keyword_cooccurrence") -> str:
-    """DOT for the literature layer. type in {keyword_cooccurrence, co_citation, theme_landscape}."""
+def _strongest(edges: list[dict], max_edges: int) -> list[dict]:
+    """The ``max_edges`` edges with the highest counts, ties to the earlier (a, b), in (a, b) order."""
+    kept = sorted(edges, key=lambda e: (-e["count"], e["a"], e["b"]))[:max_edges]
+    return sorted(kept, key=lambda e: (e["a"], e["b"]))
+
+
+def lit_diagram(obj: dict, type: str = "keyword_cooccurrence", max_edges: int | None = None) -> str:
+    """DOT for the literature layer. type in {keyword_cooccurrence, co_citation, theme_landscape}.
+
+    ``max_edges`` caps a keyword_cooccurrence or co_citation diagram at that
+    many edges, the highest counts first and ties broken by (a, b); only their
+    endpoints are drawn. None draws every edge, and theme_landscape ignores it.
+    """
+    if max_edges is not None:
+        max_edges = _positive_int(max_edges, "max_edges")
     if type in ("keyword_cooccurrence", "co_citation"):
-        return _undirected(type, obj.get(type, []))
+        edges = obj.get(type, [])
+        if max_edges is not None and len(edges) > max_edges:
+            edges = _strongest(edges, max_edges)
+        return _undirected(type, edges)
     if type == "theme_landscape":
         return _theme_landscape(obj)
     raise ValueError(

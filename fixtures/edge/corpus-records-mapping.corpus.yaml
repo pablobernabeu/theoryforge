@@ -1,0 +1,6 @@
+# Records keyed by id: R counted two records and Python none.
+schema_version: "1.0"
+id: corpus-records-mapping
+records:
+  w1: {id: w1, keywords: [arousal, threat]}
+  w2: {id: w2, keywords: [arousal, threat]}

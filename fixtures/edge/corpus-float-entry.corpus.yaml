@@ -1,0 +1,7 @@
+schema_version: "1.0"
+id: corpus-float-entry
+records:
+  - id: w1
+    references: [a, b]
+  - id: w2
+    references: [a, 1.5]

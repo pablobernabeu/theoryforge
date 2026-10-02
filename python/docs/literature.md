@@ -44,6 +44,15 @@ records:
     references: ["clark1986", "barlow2002"]
 ```
 
+Keywords and references are strings. An unquoted integer, such as a PubMed or
+Scopus id, is read as its decimal string, so `12345678` and `"12345678"` name
+the same work. `litmap` and `landscape` check the corpus before counting
+anything, and a message names the record at fault. They stop on a missing or
+misspelt `records` key, a record that is not a mapping and a fraction or nested
+list among the values. They also stop on an integer of 2^53 or more, since R
+cannot hold one exactly. YAML reads an unquoted `NO` (nitric oxide), `yes`,
+`on` or `off` as a boolean, so quote such a keyword.
+
 Read it with `tf.read_corpus`, which accepts YAML or JSON and returns a
 plain dictionary. The examples below read the repository's sample corpus and
 theory from the fixture directory named `fixtures`, as on the
@@ -114,6 +123,20 @@ print("keyword edges at min_link=3:", len(m_strict["keyword_cooccurrence"]))
 print("co-citation edges at min_link=3:", m_strict["co_citation"])
 ```
 
+Co-citation maps of real corpora are far larger than keyword maps, because
+each record cites dozens of works and every pair of them counts. 200 OpenAlex
+records on panic disorder give 11,211 co-citation edges at the default
+threshold of two, most of them with a count of exactly two, against 616
+keyword edges. `min_cocitation` sets the co-citation threshold on its own,
+leaving `min_link` to the keywords. It defaults to `min_link`.
+
+```python exec="1" source="material-block" result="text" session="literature"
+m_cited = tf.litmap(corpus, min_link=2, min_cocitation=3)
+
+print("keyword edges:", len(m_cited["keyword_cooccurrence"]))
+print("co-citation edges at min_cocitation=3:", m_cited["co_citation"])
+```
+
 ## Positioning a theory against the field
 
 `Theory.landscape` takes the themes from `litmap` and places a theory on
@@ -142,7 +165,8 @@ account.
 The same function is available at module level as `tf.landscape(theory,
 corpus)`, which is convenient when the theory is held as a plain dictionary
 rather than a `Theory` object. The `min_link` argument is passed through to
-the underlying `litmap` call.
+the underlying `litmap` call, which skips the co-citation count because the
+landscape does not use it.
 
 ```python exec="1" source="material-block" session="literature"
 ls = tf.landscape(t, corpus, min_link=2)
@@ -255,6 +279,15 @@ disjoint pairs, so the text carries the whole picture and no figure is needed.
 
 ```python exec="1" source="material-block" result="text" session="literature"
 print(tf.lit_diagram(m, type="co_citation"))
+```
+
+On a real corpus that diagram can run to thousands of edges and a megabyte of
+DOT, which Graphviz cannot lay out legibly. `max_edges` keeps the strongest
+edges, the highest counts first with ties going to the pair that sorts first,
+and draws only their endpoints. It applies to both network views.
+
+```python exec="1" source="material-block" result="text" session="literature"
+print(tf.lit_diagram(m, type="co_citation", max_edges=1))
 ```
 
 The theme landscape is a directed graph instead. It links the focal theory and

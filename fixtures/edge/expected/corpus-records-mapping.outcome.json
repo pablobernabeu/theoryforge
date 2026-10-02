@@ -1,0 +1,6 @@
+{
+  "read": "ok",
+  "litmap": {
+    "error": "invalid corpus: missing records list"
+  }
+}

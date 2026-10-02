@@ -1,0 +1,6 @@
+{
+  "read": "ok",
+  "litmap": {
+    "error": "invalid corpus: record[0] keywords must be strings (an unquoted no, yes, on or off is read as a boolean; quote it)"
+  }
+}

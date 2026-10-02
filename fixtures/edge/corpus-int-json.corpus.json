@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "id": "corpus-int-json",
+  "records": [
+    {"id": "w1", "references": [85000000001, 85000000002]},
+    {"id": "w2", "references": [85000000001, 85000000002]}
+  ]
+}

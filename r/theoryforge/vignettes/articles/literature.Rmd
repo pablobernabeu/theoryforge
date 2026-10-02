@@ -47,6 +47,15 @@ length(corpus$records)   # number of works in the corpus
 corpus$records[[1]]       # first record
 ```
 
+Keywords and references are strings. An unquoted integer, such as a PubMed or
+Scopus id, is read as its decimal string, so `12345678` and `"12345678"` name
+the same work in R and in Python. `tf_litmap()` and `tf_landscape()` check the
+corpus before counting anything, and a message names the record at fault. They
+stop on a missing or misspelt `records` key, a record that is not a mapping and
+a fraction or nested list among the values. They also stop on an integer of
+2^53 or more, since R cannot hold one exactly. YAML reads an unquoted `NO`
+(nitric oxide), `yes`, `on` or `off` as a logical, so quote such a keyword.
+
 ## Building a literature map
 
 `tf_litmap()` computes three things from the records. It counts keyword
@@ -83,12 +92,23 @@ together.
 lm$co_citation
 ```
 
+Co-citation maps of real corpora are far larger than keyword maps, because each
+record cites dozens of works and every pair of them counts. 200 OpenAlex records
+on panic disorder give 11,211 co-citation edges at the default threshold of two,
+most of them with a count of exactly two, against 616 keyword edges.
+`min_cocitation` sets the co-citation threshold on its own, leaving `min_link`
+to the keywords. It defaults to `min_link`.
+
+```{r cocitation-threshold}
+tf_litmap(corpus, min_link = 2, min_cocitation = 3)$co_citation
+```
+
 ## Positioning a theory against the field
 
 `tf_landscape()` maps a theory's focal constructs and its registered
-alternatives onto the themes from `tf_litmap()`. A theme is tagged
-`"under_theorised"` when neither the focal theory nor any alternative touches it,
-`"covered"` when exactly one does, and `"crowded"` when two or more do. Matching
+alternatives onto the themes from `tf_litmap()`, skipping the co-citation count,
+which it does not use. A theme is tagged `"under_theorised"` when neither the
+focal theory nor any alternative touches it, `"covered"` when exactly one does, and `"crowded"` when two or more do. Matching
 is by shared tokens between the theme keywords and the text of the construct
 labels, the theory title and the alternatives.
 
@@ -170,6 +190,15 @@ cat('<div class="tf-figure tf-diagram">',
     ),
     '</div>',
     sep = "")
+```
+
+On a real corpus that diagram can run to thousands of edges and a megabyte of
+DOT, which Graphviz cannot lay out legibly. `max_edges` keeps the strongest
+edges, the highest counts first with ties going to the pair that sorts first,
+and draws only their endpoints. It applies to both network views.
+
+```{r diagram-cocitation-capped}
+cat(tf_lit_diagram(lm, type = "co_citation", max_edges = 1))
 ```
 
 The theme landscape diagram is produced from the `tf_landscape()` result rather

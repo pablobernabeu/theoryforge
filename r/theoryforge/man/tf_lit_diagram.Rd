@@ -4,7 +4,7 @@
 \alias{tf_lit_diagram}
 \title{Render a literature-layer diagram intermediate representation}
 \usage{
-tf_lit_diagram(obj, type = "keyword_cooccurrence")
+tf_lit_diagram(obj, type = "keyword_cooccurrence", max_edges = NULL)
 }
 \arguments{
 \item{obj}{A \code{\link[=tf_litmap]{tf_litmap()}} result (for \code{"keyword_cooccurrence"} /
@@ -13,6 +13,12 @@ tf_lit_diagram(obj, type = "keyword_cooccurrence")
 
 \item{type}{One of \code{"keyword_cooccurrence"} (default),
 \code{"co_citation"}, or \code{"theme_landscape"}.}
+
+\item{max_edges}{A positive integer that caps a
+\code{"keyword_cooccurrence"} or \code{"co_citation"} diagram at that many
+edges: the highest counts are kept, ties going to the earlier pair in
+\code{(a, b)} order, and only their endpoints are drawn. \code{NULL} (the
+default) draws every edge. \code{"theme_landscape"} ignores it.}
 }
 \value{
 A single string ending in a newline.
@@ -29,4 +35,9 @@ corpus <- list(
   )
 )
 cat(tf_lit_diagram(tf_litmap(corpus), "keyword_cooccurrence"))
+
+# On a large map, draw only the strongest edges.
+fixture <- tf_read_corpus(system.file("fixtures", "panic-corpus.yaml",
+                                      package = "theoryforge"))
+cat(tf_lit_diagram(tf_litmap(fixture), "co_citation", max_edges = 1))
 }

@@ -1,0 +1,5 @@
+# Records that are not mappings: Python raised AttributeError and R returned
+# an empty map.
+schema_version: "1.0"
+id: corpus-scalar-records
+records: [w1, w2]

@@ -12,16 +12,20 @@ NULL
 # Escape a DOT label: replace backslash then double-quote (order matters).
 # Mirrors Python lit._esc (treats NULL/NA as "").
 .tf_lit_esc <- function(s) {
-  if (is.null(s) || length(s) == 0L) {
-    s <- ""
-  } else {
-    s <- s[[1L]]
-    if (is.na(s)) s <- ""
-  }
-  s <- as.character(s)
+  .tf_lit_esc_all(.tf_lit_text(s))
+}
+
+# A label value as one string, NULL and NA read as "" (Python's `s or ""`).
+.tf_lit_text <- function(s) {
+  if (is.null(s) || length(s) == 0L) return("")
+  s <- s[[1L]]
+  if (is.na(s)) "" else as.character(s)
+}
+
+# .tf_lit_esc() over a character vector.
+.tf_lit_esc_all <- function(s) {
   s <- gsub("\\", "\\\\", s, fixed = TRUE)
-  s <- gsub('"', '\\"', s, fixed = TRUE)
-  s
+  gsub('"', '\\"', s, fixed = TRUE)
 }
 
 #' Read a literature corpus from a YAML or JSON file
@@ -54,57 +58,126 @@ tf_read_corpus <- function(path) {
   data
 }
 
-# Mirror Python lit._records: the list of records, or list() when absent.
-.tf_records <- function(corpus) {
-  recs <- corpus[["records"]]
-  if (is.list(recs)) recs else list()
+# `value` as an integer when it is one integral number of at least 1, as the
+# Python twin's _positive_int accepts it. A logical, a string, NA and a vector
+# of two values are refused, where they were truncated, recycled or read as an
+# empty map (API_SPEC.md section 14).
+.tf_positive_int <- function(value, name) {
+  ok <- is.numeric(value) && length(value) == 1L && is.finite(value) &&
+    value == trunc(value) && value >= 1
+  if (!ok) stop(sprintf("%s must be a positive integer", name), call. = FALSE)
+  # A value beyond R's integer range stays a double, which compares as Python's
+  # int does, where as.integer() would make it NA.
+  if (value <= .Machine$integer.max) as.integer(value) else as.numeric(value)
 }
 
-# Pair-counting over a per-record field. For each record take the sorted unique
-# set of its values; for every unordered pair (a < b) increment a counter.
-# Returns a named list keyed by "a\037b" with integer counts and the original
-# a/b stored alongside (deterministic insertion does not matter; we sort later).
-.tf_pair_counts <- function(records, field) {
-  keys <- character(0)
-  a_of <- character(0)
-  b_of <- character(0)
-  counts <- integer(0)
-  for (r in records) {
-    items <- .tf_as_list(r, field)
-    vals <- character(0)
-    for (x in items) {
-      if (!is.null(x) && length(x) == 1L && !is.na(x) && nzchar(as.character(x))) {
-        vals <- c(vals, as.character(x))
-      }
-    }
-    vals <- sort(unique(vals), method = "radix")
-    n <- length(vals)
-    if (n < 2L) next
-    for (i in seq_len(n - 1L)) {
-      for (j in (i + 1L):n) {
-        a <- vals[[i]]
-        b <- vals[[j]]
-        key <- paste0(a, "\037", b)
-        idx <- match(key, keys)
-        if (is.na(idx)) {
-          keys <- c(keys, key)
-          a_of <- c(a_of, a)
-          b_of <- c(b_of, b)
-          counts <- c(counts, 1L)
-        } else {
-          counts[[idx]] <- counts[[idx]] + 1L
-        }
-      }
+# R holds a number read from a file as a double, exact for integers below 2^53.
+# A larger one cannot be written as the same decimal string in both twins, so
+# it is refused (API_SPEC.md section 14).
+.tf_EXACT_LIMIT <- 2^53
+
+.tf_not_strings <- function(i, field) {
+  sprintf(paste("invalid corpus: record[%d] %s must be strings",
+                "(an unquoted no, yes, on or off is read as a boolean; quote it)"),
+          i, field)
+}
+
+# One keyword or reference as a string, or NULL when it is dropped. A string is
+# kept as it is and an empty one dropped, as null and NA are. An integer-valued
+# number becomes its decimal string through format(), since as.character()
+# writes 100000 as "1e+05". A logical, a fractional or non-finite number and a
+# list are refused. NaN is a number, so it is tested before NA drops it.
+.tf_entry <- function(x, i, field, k) {
+  if (is.null(x)) return(NULL)
+  if (is.list(x) || !is.atomic(x) || length(x) != 1L || is.logical(x) && !is.na(x)) {
+    stop(.tf_not_strings(i, field), call. = FALSE)
+  }
+  if (is.double(x) && is.nan(x)) stop(.tf_not_strings(i, field), call. = FALSE)
+  if (is.na(x)) return(NULL)
+  if (is.character(x)) return(if (nzchar(x)) x else NULL)
+  if (!is.numeric(x) || !is.finite(x) || x != trunc(x)) {
+    stop(.tf_not_strings(i, field), call. = FALSE)
+  }
+  if (abs(x) >= .tf_EXACT_LIMIT) {
+    stop(sprintf(paste("invalid corpus: record[%d] %s entry %d is a number too large",
+                       "to be an exact identifier; quote it"), i, field, k), call. = FALSE)
+  }
+  format(x, scientific = FALSE, trim = TRUE)
+}
+
+# The keywords or references of record `i` (0-based) as a character vector, in
+# file order. A sequence gives its entries, an absent or null field none, and
+# any other value is a one-entry list (keywords: arousal). A mapping is refused.
+.tf_values <- function(record, i, field) {
+  v <- record[[field]]
+  if (is.null(v)) return(character(0))
+  if (.tf_is_mapping(v)) stop(.tf_not_strings(i, field), call. = FALSE)
+  entries <- if (is.list(v)) v else as.list(v)
+  out <- character(length(entries))
+  keep <- logical(length(entries))
+  for (k in seq_along(entries)) {
+    s <- .tf_entry(entries[[k]], i, field, k - 1L)
+    if (!is.null(s)) {
+      out[[k]] <- s
+      keep[[k]] <- TRUE
     }
   }
-  list(a = a_of, b = b_of, count = counts)
+  out[keep]
+}
+
+# Each record's keywords and references, every entry checked, mirroring Python
+# lit._records. The corpus must hold a records sequence (an unnamed list, empty
+# or not) of mappings; a named list is a mapping, as it is when read from a file.
+.tf_records <- function(corpus) {
+  recs <- if (.tf_is_mapping(corpus)) corpus[["records"]] else NULL
+  if (!is.list(recs) || .tf_is_mapping(recs)) {
+    stop("invalid corpus: missing records list", call. = FALSE)
+  }
+  lapply(seq_along(recs), function(n) {
+    r <- recs[[n]]
+    i <- n - 1L
+    if (!.tf_is_mapping(r)) {
+      stop(sprintf("invalid corpus: record[%d] is not a mapping", i), call. = FALSE)
+    }
+    list(keywords = .tf_values(r, i, "keywords"), references = .tf_values(r, i, "references"))
+  })
+}
+
+# Count every unordered pair (a < b) of each record's sorted unique values.
+# Pairs are generated a record at a time, keyed once and counted once at the
+# end, which is linear in the number of pairs. Matching each new key against
+# the keys seen so far, as this did, made the count quadratic: a record with 300
+# references took about a minute and a fetched corpus hours. The order of the
+# result is irrelevant, since .tf_edges() sorts it.
+.tf_pair_counts <- function(values) {
+  a_all <- vector("list", length(values))
+  b_all <- vector("list", length(values))
+  for (r in seq_along(values)) {
+    vals <- sort(unique(values[[r]]), method = "radix")
+    n <- length(vals)
+    if (n < 2L) next
+    # The pairs (i, j), i < j, in the order utils::combn(n, 2) lists them.
+    # combn() builds them one at a time in R code, which made it most of the
+    # cost of a record with hundreds of references.
+    a_all[[r]] <- vals[rep.int(seq_len(n - 1L), (n - 1L):1L)]
+    b_all[[r]] <- vals[sequence((n - 1L):1L, from = 2:n)]
+  }
+  a <- unlist(a_all, use.names = FALSE)
+  b <- unlist(b_all, use.names = FALSE)
+  if (length(a) == 0L) return(list(a = character(0), b = character(0), count = integer(0)))
+  # The unit separator cannot occur in a keyword or an identifier, so a key
+  # stands for exactly one pair.
+  key <- paste0(a, "\037", b)
+  first <- !duplicated(key)
+  list(a = a[first], b = b[first],
+       count = tabulate(match(key, key[first]), nbins = sum(first)))
 }
 
 # Build the row-set [{a, b, count}] for pairs with count >= min_link, sorted by
 # (a, b) ascending. Returns an unnamed list of length-3 named lists so that
 # jsonlite serialises it as a JSON array of objects (each count an integer).
 .tf_edges <- function(pc, min_link) {
-  keep <- which(pc$count >= as.integer(min_link))
+  keep <- which(pc$count >= min_link)
   if (length(keep) == 0L) return(list())
   a <- pc$a[keep]
   b <- pc$b[keep]
@@ -162,14 +235,54 @@ tf_read_corpus <- function(path) {
   })
 }
 
+# tf_litmap(), with the co-citation count skipped when `co_citation` is FALSE.
+# tf_landscape() reads only the themes, and on a corpus with references the
+# co-citation count is most of the work.
+.tf_litmap <- function(corpus, min_link, min_cocitation = NULL, co_citation = TRUE) {
+  min_link <- .tf_positive_int(min_link, "min_link")
+  min_cocitation <- if (is.null(min_cocitation)) min_link else
+    .tf_positive_int(min_cocitation, "min_cocitation")
+  records <- .tf_records(corpus)
+  keywords <- lapply(records, `[[`, "keywords")
+  all_kw <- sort(unique(as.character(unlist(keywords, use.names = FALSE))), method = "radix")
+  kw_edges <- .tf_edges(.tf_pair_counts(keywords), min_link)
+  out <- list(
+    n_records = length(records),
+    keywords = as.list(all_kw),
+    keyword_cooccurrence = kw_edges,
+    themes = .tf_components(kw_edges)
+  )
+  if (co_citation) {
+    references <- lapply(records, `[[`, "references")
+    out$co_citation <- .tf_edges(.tf_pair_counts(references), min_cocitation)
+  }
+  out
+}
+
 #' Bibliometric map of a literature corpus (deterministic)
 #'
 #' Computes keyword co-occurrence, thematic components, and reference
 #' co-citation for a corpus. Records iterate in file order.
 #'
+#' The corpus is checked before anything is counted, with the Python twin's
+#' messages. It must hold a \code{records} list of mappings (an empty list is
+#' an empty corpus). A keyword or reference that is an integer becomes its
+#' decimal string, so an unquoted PubMed or Scopus id keys the same work in
+#' both languages; one of \eqn{2^{53}} or more is refused, since R cannot hold
+#' it exactly. A logical, a fraction or a nested value is refused: an unquoted
+#' \code{NO} (nitric oxide) or \code{on} in YAML is read as a logical, so quote
+#' it.
+#'
+#' Co-citation maps of real corpora are large. 200 OpenAlex records give about
+#' 11,000 reference pairs that share two or more citing records, so
+#' \code{min_cocitation} can be set above \code{min_link}, and
+#' [tf_lit_diagram()] can draw only the strongest edges.
+#'
 #' @param corpus A corpus object (named list), e.g. from [tf_read_corpus()].
-#' @param min_link Minimum co-occurrence count for an edge to be kept
-#'   (default \code{2}).
+#' @param min_link Minimum co-occurrence count for a keyword pair to be kept
+#'   (default \code{2}). A positive integer.
+#' @param min_cocitation Minimum count for a reference pair to be kept in
+#'   \code{co_citation}. \code{NULL} (the default) uses \code{min_link}.
 #' @return A named list with elements \code{n_records}, \code{keywords},
 #'   \code{keyword_cooccurrence}, \code{themes}, and \code{co_citation}.
 #' @examples
@@ -182,26 +295,8 @@ tf_read_corpus <- function(path) {
 #' )
 #' tf_litmap(corpus)
 #' @export
-tf_litmap <- function(corpus, min_link = 2) {
-  records <- .tf_records(corpus)
-  all_kw <- character(0)
-  for (r in records) {
-    for (k in .tf_as_list(r, "keywords")) {
-      if (!is.null(k) && length(k) == 1L && !is.na(k) && nzchar(as.character(k))) {
-        all_kw <- c(all_kw, as.character(k))
-      }
-    }
-  }
-  all_kw <- sort(unique(all_kw), method = "radix")
-  kw_edges <- .tf_edges(.tf_pair_counts(records, "keywords"), min_link)
-  cocit <- .tf_edges(.tf_pair_counts(records, "references"), min_link)
-  list(
-    n_records = length(records),
-    keywords = as.list(all_kw),
-    keyword_cooccurrence = kw_edges,
-    themes = .tf_components(kw_edges),
-    co_citation = cocit
-  )
+tf_litmap <- function(corpus, min_link = 2, min_cocitation = NULL) {
+  .tf_litmap(corpus, min_link, min_cocitation)
 }
 
 #' Map a theory and its alternatives onto a literature landscape (deterministic)
@@ -213,7 +308,8 @@ tf_litmap <- function(corpus, min_link = 2) {
 #' @param theory A theory object (named list), e.g. from \code{tf_read()}.
 #' @param corpus A corpus object (named list), e.g. from [tf_read_corpus()].
 #' @param min_link Minimum co-occurrence count passed to [tf_litmap()]
-#'   (default \code{2}).
+#'   (default \code{2}). The co-citation map, which the landscape does not
+#'   use, is not computed.
 #' @return A named list with elements \code{theory_id}, \code{themes} (each
 #'   \code{{id, keywords, alternatives, focal, status}}),
 #'   \code{under_theorised_fronts}, and \code{redundancy_risk}.
@@ -231,7 +327,7 @@ tf_litmap <- function(corpus, min_link = 2) {
 #' @export
 tf_landscape <- function(theory, corpus, min_link = 2) {
   T <- theory
-  lm <- tf_litmap(corpus, min_link)
+  lm <- .tf_litmap(corpus, min_link, co_citation = FALSE)
 
   cons <- .tf_list(T, "constructs")
   con_labels <- vapply(cons, function(c) .tf_str(c, "label"), character(1))
@@ -283,23 +379,37 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
 # Undirected diagram (keyword_cooccurrence / co_citation). Nodes = endpoints
 # appearing in the edge list (sorted), edges in list order; edge label = integer
 # count rendered with as.character(as.integer(.)).
+# The lines are built as whole vectors: appending one line at a time copied the
+# vector on every edge, which on a co-citation map of 200,000 edges took
+# minutes.
 .tf_lit_undirected <- function(name, edges) {
-  nodes <- character(0)
-  for (e in edges) nodes <- c(nodes, e$a, e$b)
-  nodes <- sort(unique(nodes), method = "radix")
+  # Nodes are sorted as written and escaped afterwards, as in Python.
+  raw <- function(key) {
+    vapply(edges, function(e) .tf_lit_text(e[[key]]), character(1), USE.NAMES = FALSE)
+  }
+  a <- raw("a")
+  b <- raw("b")
+  count <- vapply(edges, function(e) as.character(as.integer(e$count)), character(1),
+                  USE.NAMES = FALSE)
+  nodes <- sort(unique(c(rbind(a, b))), method = "radix")
+  esc <- .tf_lit_esc_all
   role <- if (identical(name, "keyword_cooccurrence")) "construct" else "prediction"
   lines <- c(.tf_prelude(name, "LR", directed = FALSE),
-             sprintf('  node [shape=ellipse, style="filled", %s];', .tf_fill(role)))
-  for (n in nodes) {
-    lines <- c(lines, sprintf('  "%s";', .tf_lit_esc(n)))
-  }
-  for (e in edges) {
-    lines <- c(lines, sprintf('  "%s" -- "%s" [label="%s"];',
-                              .tf_lit_esc(e$a), .tf_lit_esc(e$b),
-                              as.character(as.integer(e$count))))
-  }
-  lines <- c(lines, "}")
+             sprintf('  node [shape=ellipse, style="filled", %s];', .tf_fill(role)),
+             sprintf('  "%s";', esc(nodes)),
+             sprintf('  "%s" -- "%s" [label="%s"];', esc(a), esc(b), count),
+             "}")
   paste0(paste(lines, collapse = "\n"), "\n")
+}
+
+# The `max_edges` edges with the highest counts, ties to the earlier (a, b),
+# returned in (a, b) order, as Python lit._strongest.
+.tf_strongest <- function(edges, max_edges) {
+  a <- vapply(edges, function(e) as.character(e$a), character(1))
+  b <- vapply(edges, function(e) as.character(e$b), character(1))
+  count <- vapply(edges, function(e) as.numeric(e$count), numeric(1))
+  kept <- order(-count, a, b, method = "radix")[seq_len(max_edges)]
+  edges[kept[order(a[kept], b[kept], method = "radix")]]
 }
 
 # Theme colours track the landscape statuses: an untouched front is teal (an
@@ -358,6 +468,11 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
 #'   \code{"theme_landscape"}).
 #' @param type One of \code{"keyword_cooccurrence"} (default),
 #'   \code{"co_citation"}, or \code{"theme_landscape"}.
+#' @param max_edges A positive integer that caps a
+#'   \code{"keyword_cooccurrence"} or \code{"co_citation"} diagram at that many
+#'   edges: the highest counts are kept, ties going to the earlier pair in
+#'   \code{(a, b)} order, and only their endpoints are drawn. \code{NULL} (the
+#'   default) draws every edge. \code{"theme_landscape"} ignores it.
 #' @return A single string ending in a newline.
 #' @examples
 #' corpus <- list(
@@ -368,11 +483,20 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
 #'   )
 #' )
 #' cat(tf_lit_diagram(tf_litmap(corpus), "keyword_cooccurrence"))
+#'
+#' # On a large map, draw only the strongest edges.
+#' fixture <- tf_read_corpus(system.file("fixtures", "panic-corpus.yaml",
+#'                                       package = "theoryforge"))
+#' cat(tf_lit_diagram(tf_litmap(fixture), "co_citation", max_edges = 1))
 #' @export
-tf_lit_diagram <- function(obj, type = "keyword_cooccurrence") {
+tf_lit_diagram <- function(obj, type = "keyword_cooccurrence", max_edges = NULL) {
+  if (!is.null(max_edges)) max_edges <- .tf_positive_int(max_edges, "max_edges")
   if (type %in% c("keyword_cooccurrence", "co_citation")) {
     edges <- obj[[type]]
     if (is.null(edges)) edges <- list()
+    if (!is.null(max_edges) && length(edges) > max_edges) {
+      edges <- .tf_strongest(edges, max_edges)
+    }
     return(.tf_lit_undirected(type, edges))
   }
   if (identical(type, "theme_landscape")) {

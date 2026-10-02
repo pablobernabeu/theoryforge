@@ -84,17 +84,3 @@ def str_list(v) -> list[str]:
     if ne_str(v):
         return [v]
     return []
-
-
-def as_list(v) -> list:
-    """A corpus record's keyword or reference list (API_SPEC.md section 14).
-
-    A list is returned as it is and a nonempty scalar string is a one-element
-    list. Corpus values keep this reading, which differs from ``str_list`` in
-    keeping entries of any type, until the corpus record contract is settled.
-    """
-    if isinstance(v, list):
-        return v
-    if ne_str(v):
-        return [v]
-    return []

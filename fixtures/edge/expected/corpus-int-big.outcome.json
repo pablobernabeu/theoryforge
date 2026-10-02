@@ -1,0 +1,6 @@
+{
+  "read": "ok",
+  "litmap": {
+    "error": "invalid corpus: record[0] references entry 1 is a number too large to be an exact identifier; quote it"
+  }
+}

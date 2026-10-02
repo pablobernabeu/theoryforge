@@ -9,8 +9,10 @@
 #             and the literature artefacts (src_dir is fixtures/)
 #   theories  the per-theory artefacts only, for every <src_dir>/*.theory.yaml
 #             (parity_check.py runs it on apps/examples/)
-#   edge      one outcome record per <src_dir>/*.theory.yaml|json, mirroring
-#             edge_outcome() in scripts/gen_golden.py (src_dir is fixtures/edge/)
+#   edge      one outcome record per <src_dir>/*.theory.yaml|json and
+#             <src_dir>/*.corpus.yaml|json, mirroring edge_outcome() and
+#             corpus_edge_outcome() in scripts/gen_golden.py (src_dir is
+#             fixtures/edge/)
 #   roundtrip tf_read() then tf_write() for every <src_dir>/*.theory.yaml|json,
 #             each written to <out_dir> under its own name and format
 #             (parity_check.py runs it on the files the Python twin wrote)
@@ -120,22 +122,35 @@ suppressWarnings(suppressMessages({
     )
   }
 
+  # The record of an edge-case corpus, as corpus_edge_outcome() in
+  # scripts/gen_golden.py.
+  corpus_edge_outcome <- function(path) {
+    corpus <- tryCatch(tf_read_corpus(path), error = function(e) e)
+    if (inherits(corpus, "error")) return(list(read = list(error = error_text(corpus))))
+    list(read = "ok", litmap = attempt(tf_litmap(corpus)))
+  }
+
   theory_files <- function(dir) {
     sort(list.files(dir, pattern = "\\.theory\\.yaml$", full.names = TRUE))
   }
 
   if (mode == "edge") {
-    inputs <- sort(list.files(src_dir, pattern = "\\.theory\\.(yaml|json)$", full.names = TRUE))
-    for (path in inputs) {
-      name <- sub("\\.theory\\.(yaml|json)$", "", basename(path))
-      rec <- edge_outcome(path)
+    write_outcome <- function(rec, name) {
       write_raw(paste0(jsonlite::toJSON(rec, auto_unbox = TRUE, dataframe = "rows",
                                         null = "null", na = "null", digits = NA,
                                         pretty = TRUE), "\n"),
                 file.path(out_dir, paste0(name, ".outcome.json")))
     }
-    cat(sprintf("emitted R edge outcomes for %d theory file(s) to %s [R engine from %s]\n",
-                length(inputs), out_dir, loaded_from))
+    inputs <- sort(list.files(src_dir, pattern = "\\.theory\\.(yaml|json)$", full.names = TRUE))
+    for (path in inputs) {
+      write_outcome(edge_outcome(path), sub("\\.theory\\.(yaml|json)$", "", basename(path)))
+    }
+    corpora <- sort(list.files(src_dir, pattern = "\\.corpus\\.(yaml|json)$", full.names = TRUE))
+    for (path in corpora) {
+      write_outcome(corpus_edge_outcome(path), sub("\\.corpus\\.(yaml|json)$", "", basename(path)))
+    }
+    cat(sprintf("emitted R edge outcomes for %d theory and %d corpus file(s) to %s [R engine from %s]\n",
+                length(inputs), length(corpora), out_dir, loaded_from))
   } else if (mode == "roundtrip") {
     inputs <- sort(list.files(src_dir, pattern = "\\.theory\\.(yaml|json)$", full.names = TRUE))
     for (path in inputs) tf_write(tf_read(path), file.path(out_dir, basename(path)))

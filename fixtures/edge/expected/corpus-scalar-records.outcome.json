@@ -1,0 +1,6 @@
+{
+  "read": "ok",
+  "litmap": {
+    "error": "invalid corpus: record[0] is not a mapping"
+  }
+}

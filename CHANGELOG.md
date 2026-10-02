@@ -104,8 +104,35 @@ version and a single behavioural contract
   now tokenised. They were deleted, so two identical Russian definitions scored no
   overlap and passed the redundancy screen. Greek and Cyrillic are compared without case
   or accents, other scripts as written.
+- `litmap()` and `landscape()` read the same corpus differently in the two twins. A
+  `min_link` of 2.5 kept pairs counted at least 2.5 times in Python and at least twice in
+  R, None raised TypeError where R's `NA` gave an empty map, and `"2"` worked only in R.
+  An unquoted integer id came out as an int in Python and a string in R, and a record
+  mixing one with a DOI raised TypeError in Python. An unquoted `NO` keyword (nitric
+  oxide), which YAML reads as false, was dropped by Python and written as `FALSE` by R,
+  and `ON` raised TypeError. Records written as a mapping were counted by R and ignored by
+  Python, and records that were not mappings raised AttributeError in Python and were
+  dropped by R. A misspelt `records` key gave an empty analysis in both. Both twins now
+  check the arguments and the corpus with the same messages (API_SPEC section 14):
+  `min_link must be a positive integer` (an int or an integral float, never a bool),
+  `invalid corpus: missing records list`, `invalid corpus: record[<i>] is not a mapping`
+  and, for a boolean, a fraction or a nested value,
+  `invalid corpus: record[<i>] keywords must be strings` with a hint about YAML booleans.
+  An integer-valued entry becomes its decimal string in both. A `min_link` of 0 or below,
+  which behaved as 1, now raises.
+- A corpus entry that is an integer of 2^53 or more is refused with
+  `invalid corpus: record[<i>] <field> entry <k> is a number too large to be an exact
+  identifier; quote it`, since R cannot hold it exactly and the two twins would otherwise
+  key it differently. Ten corpora in `fixtures/edge/` pin the corpus rules, including
+  Scopus-style ids beyond the 32-bit range written unquoted in YAML and JSON.
 
 ### Changed
+- R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new
+  pair against all the pairs seen so far, so a record with 300 references took about a
+  minute and a fetched corpus with references hours, against milliseconds in Python. The
+  results are unchanged. `landscape()` no longer computes the co-citation map in either
+  twin, since it never used it. R's `tf_lit_diagram()` builds its lines as whole vectors,
+  where it copied every line written so far for each edge it added.
 - `severity()` is described for what it is, a pre-data ranking of the form of each
   prediction's claim. Its documentation no longer cites Mayo (2018), whose severity is a
   property of a test and its data, and the 0.25 directional discount is documented as
@@ -129,6 +156,12 @@ version and a single behavioural contract
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`
   now refuses to compare a theory with itself, which the in-place builders made easy to
   do by accident and which always returned `neutral`.
+- `litmap(corpus, min_link=2, min_cocitation=None)` thresholds the co-citation map on its
+  own (by default at `min_link`), and `lit_diagram(obj, type, max_edges=None)` draws only
+  the `max_edges` strongest edges of a keyword or co-citation diagram, ties broken by
+  `(a, b)`, with only their endpoints as nodes. Co-citation maps of real corpora run to
+  thousands of edges: 200 OpenAlex records give 11,211 at a threshold of 2, against 616
+  keyword edges. The literature guides in both languages show both arguments.
 
 ### Documentation
 - The literature page's recipe for turning a scopusflow corpus into a theoryforge
@@ -167,6 +200,10 @@ version and a single behavioural contract
   ASCII, the Turkish dotted capital I, Greek and Cyrillic case, decomposed Cyrillic and
   Chinese text, and the DOI golden's candidate list gains the spellings now recognised,
   with an unchanged result.
+- The edge phase of the parity check also covers literature corpora
+  (`fixtures/edge/<name>.corpus.yaml|json`), recording what `read_corpus` and `litmap`
+  make of each. `_access.as_list`, which only the literature layer used, is replaced by
+  the corpus checks in `lit.py`.
 
 
 ## [0.6.0] - 2026-08-21

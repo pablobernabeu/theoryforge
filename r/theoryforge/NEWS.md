@@ -103,6 +103,32 @@
   definitions scored no overlap and passed the redundancy screen. Greek and
   Cyrillic are compared without case or accents, other scripts as written.
 
+* `tf_litmap()` and `tf_landscape()` count pairs in linear time, so a fetched
+  corpus with references maps in seconds instead of hours. A single record
+  with 300 references took about a minute and now takes a fraction of a
+  second. Results are unchanged. `tf_landscape()` no longer computes the
+  co-citation map, since it never used it, and `tf_lit_diagram()` writes the
+  DOT of a large map in one pass, where it copied every line written so far for
+  each edge it added.
+
+* `tf_litmap()`, `tf_landscape()` and `tf_lit_diagram()` check their arguments
+  and the corpus with the Python twin's messages. `min_link` must be a positive
+  integer: 2.5 was truncated to 2, `NA` gave an empty map, `c(2, 3)` was
+  recycled, and 0 or a negative value, which behaved as 1, now raises. A
+  corpus without a `records` list, a misspelt `recrods:` or records keyed by id
+  included, is refused where it gave an empty map, and so is a record that is
+  not a mapping. Integer keywords and references are kept as decimal strings,
+  never in scientific notation, and one of 2^53 or more is refused,
+  since R cannot hold it exactly and the twins would key it differently. A
+  logical, a fraction or a nested value is refused with a hint: an unquoted
+  `NO` or `on` in YAML is read as a logical, which R wrote as `"FALSE"` or
+  `"TRUE"`.
+
+* `tf_litmap()` gains `min_cocitation`, a threshold for the co-citation map
+  alone (by default `min_link`), and `tf_lit_diagram()` gains `max_edges`,
+  which draws only the strongest edges. Co-citation maps of real corpora are
+  large: 200 OpenAlex records give over 11,000 edges at a threshold of two.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

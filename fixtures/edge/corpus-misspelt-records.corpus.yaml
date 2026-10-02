@@ -1,0 +1,6 @@
+# A misspelt records key gave an empty analysis in both twins without a word.
+schema_version: "1.0"
+id: corpus-misspelt-records
+recrods:
+  - id: w1
+    keywords: [arousal, threat]

@@ -12,7 +12,8 @@ tf_landscape(theory, corpus, min_link = 2)
 \item{corpus}{A corpus object (named list), e.g. from \code{\link[=tf_read_corpus]{tf_read_corpus()}}.}
 
 \item{min_link}{Minimum co-occurrence count passed to \code{\link[=tf_litmap]{tf_litmap()}}
-(default \code{2}).}
+(default \code{2}). The co-citation map, which the landscape does not
+use, is not computed.}
 }
 \value{
 A named list with elements \code{theory_id}, \code{themes} (each
