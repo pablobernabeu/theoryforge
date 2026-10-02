@@ -1,0 +1,35 @@
+# Edge case: a relation and a prediction type written as one-element sequences.
+# Both read as absent in every consumer: the proposition contributes no edge to
+# the implications, the model or the simulation, and the prediction has no claim
+# form. Python used to raise "unhashable type: 'list'" and R used to read them as
+# the strings inside.
+schema_version: "1.0"
+id: edge-seq-relation
+title: A relation and a type written as sequences
+maturity: building
+constructs:
+  - id: a
+    label: Alpha
+    definition: The first construct.
+  - id: b
+    label: Beta
+    definition: The second construct entirely different.
+  - id: c
+    label: Gamma
+    definition: A third construct with its own meaning.
+propositions:
+  - id: p1
+    from: a
+    to: b
+    relation: [increases]
+    mechanism: Alpha drives Beta.
+  - id: p2
+    from: b
+    to: c
+    relation: increases
+    mechanism: Beta drives Gamma.
+predictions:
+  - id: h1
+    statement: Gamma rises with Alpha.
+    type: [point]
+    derives_from: [p1, p2]

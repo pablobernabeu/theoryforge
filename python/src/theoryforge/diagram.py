@@ -1,7 +1,7 @@
 """Diagram intermediate representations. Deterministic string renderers for every diagram type."""
 from __future__ import annotations
 
-from .rigor import _as_list
+from ._access import PRED_TYPE, RELATION, enum, field, items, str_list, text
 
 _CAUSAL = {"causes", "increases", "decreases"}
 _TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap",
@@ -24,9 +24,17 @@ def _trunc(s, n: int) -> str:
     return s if len(s) <= n else s[:n - 1] + "…"
 
 
-def _list(d: dict, key: str) -> list:
-    v = d.get(key)
-    return v if isinstance(v, list) else []
+def _t(item, key: str) -> str:
+    """A field read as text (API_SPEC.md section 3, "Reading a theory")."""
+    return text(field(item, key))
+
+
+def _rel(p) -> str:
+    return enum(field(p, "relation"), RELATION) or ""
+
+
+def _ptype(p) -> str:
+    return enum(field(p, "type"), PRED_TYPE) or ""
 
 
 # The Meridian palette the DOT views share: fill/border pairs keyed by role.
@@ -95,10 +103,10 @@ def _wrap(s, width: int = 18) -> str:
 
 def _nomological_net(T: dict) -> str:
     lines = _prelude("nomological_net", "LR")
-    for c in _list(T, "constructs"):
-        lines.append(f'  "{_esc(c.get("id"))}" [label="{_wrap(c.get("label"))}", {_fill("construct")}];')
-    for p in _list(T, "propositions"):
-        frm, to, rel = _esc(p.get("from")), _esc(p.get("to")), _esc(p.get("relation"))
+    for c in items(T, "constructs"):
+        lines.append(f'  "{_esc(_t(c, "id"))}" [label="{_wrap(_t(c, "label"))}", {_fill("construct")}];')
+    for p in items(T, "propositions"):
+        frm, to, rel = _esc(_t(p, "from")), _esc(_t(p, "to")), _esc(_rel(p))
         lines.append(f'  "{frm}" -> "{to}" [label="{rel}"];')
     lines.append("}")
     return "\n".join(lines) + "\n"
@@ -106,10 +114,10 @@ def _nomological_net(T: dict) -> str:
 
 def _provenance(T: dict) -> str:
     lines = _prelude("provenance", "TB")
-    steps = _list(T, "provenance")
+    steps = items(T, "provenance")
     for i, s in enumerate(steps, start=1):
-        action = str(s.get("action", "") or "")
-        detail = str(s.get("detail", "") or "")
+        action = _t(s, "action")
+        detail = _t(s, "detail")
         label = _esc(action) + ("\\n" + _wrap(detail, 26) if detail.strip() else "")
         lines.append(f'  "n{i}" [label="{label}"];')
     for i in range(1, len(steps)):
@@ -125,9 +133,9 @@ def _causal_dag(T: dict) -> str:
     # The view is an export and stays one; `implications` is where the same
     # subgraph is checked and refused when it is cyclic.
     lines = ["dag {"]
-    for p in _list(T, "propositions"):
-        if p.get("relation") in _CAUSAL:
-            lines.append(f'  {p.get("from")} -> {p.get("to")}')
+    for p in items(T, "propositions"):
+        if _rel(p) in _CAUSAL:
+            lines.append(f'  {_t(p, "from")} -> {_t(p, "to")}')
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -149,7 +157,7 @@ def _development_roadmap(T: dict) -> str:
     lines = _prelude("development_roadmap", "TB")
     # The hub names the theory and its standing, so the column beneath it reads
     # as this theory's outstanding work rather than an anonymous list.
-    lines.append(f'  "roadmap" [shape=ellipse, label="{_wrap(T.get("title"), 20)}\\n'
+    lines.append(f'  "roadmap" [shape=ellipse, label="{_wrap(text(T.get("title")), 20)}\\n'
                  f'score {_fmt(rep["aggregate_score"])}, gate {_esc(rep["gate"])}", '
                  f'fillcolor="{_INK}", color="{_INK}", fontcolor="#FFFFFF"];')
     if not todo:
@@ -188,33 +196,34 @@ def _development_roadmap(T: dict) -> str:
 
 def _pipeline(T: dict) -> str:
     lines = _prelude("pipeline", "LR")
-    for p in _list(T, "predictions"):
-        pid = _esc(p.get("id"))
-        lines.append(f'  "{pid}" [label="{pid}\\n{_esc(p.get("type"))}", {_fill("prediction")}];')
-    for t in _list(T, "test_outcomes"):
-        rid = f'result_{t.get("prediction_id")}'
-        role = "passed" if t.get("passed") is True else "failed"
+    for p in items(T, "predictions"):
+        pid = _esc(_t(p, "id"))
+        lines.append(f'  "{pid}" [label="{pid}\\n{_esc(_ptype(p))}", {_fill("prediction")}];')
+    for t in items(T, "test_outcomes"):
+        pid = _t(t, "prediction_id")
+        rid = f"result_{pid}"
+        role = "passed" if field(t, "passed") is True else "failed"
         lines.append(f'  "{_esc(rid)}" [label="{role}", {_fill(role)}];')
-        lines.append(f'  "{_esc(t.get("prediction_id"))}" -> "{_esc(rid)}";')
+        lines.append(f'  "{_esc(pid)}" -> "{_esc(rid)}";')
     lines.append("}")
     return "\n".join(lines) + "\n"
 
 
 def _context(T: dict) -> str:
     lines = _prelude("context", "LR")
-    lines.append(f'  "theory" [shape=ellipse, label="{_wrap(T.get("title"), 20)}", '
+    lines.append(f'  "theory" [shape=ellipse, label="{_wrap(text(T.get("title")), 20)}", '
                  f'fillcolor="{_INK}", color="{_INK}", fontcolor="#FFFFFF"];')
-    for c in _list(T, "constructs"):
-        cid = _esc(c.get("id"))
-        lines.append(f'  "{cid}" [label="{_wrap(c.get("label"))}", {_fill("construct")}];')
+    for c in items(T, "constructs"):
+        cid = _esc(_t(c, "id"))
+        lines.append(f'  "{cid}" [label="{_wrap(_t(c, "label"))}", {_fill("construct")}];')
         lines.append(f'  "theory" -> "{cid}";')
-    for i, bc in enumerate(_as_list(T.get("boundary_conditions")), start=1):
+    for i, bc in enumerate(str_list(T.get("boundary_conditions")), start=1):
         lines.append(f'  "scope{i}" [shape=note, style="filled", label="{_wrap(bc)}", {_fill("scope")}];')
         lines.append(f'  "scope{i}" -> "theory" [style=dotted, label="holds within"];')
-    for a in _list(T, "alternatives"):
-        aid = _esc(a.get("id"))
+    for a in items(T, "alternatives"):
+        aid = _esc(_t(a, "id"))
         lines.append(f'  "{aid}" [style="rounded,filled,dashed", '
-                     f'label="{_wrap(a.get("label"))}", {_fill("rival")}];')
+                     f'label="{_wrap(_t(a, "label"))}", {_fill("rival")}];')
         lines.append(f'  "theory" -> "{aid}" [style=dashed, label="contrasts with"];')
     lines.append("}")
     return "\n".join(lines) + "\n"
@@ -231,33 +240,33 @@ def _cluster(lines: list[str], key: str, title: str) -> None:
 def _workflow(T: dict) -> str:
     lines = _prelude("workflow", "LR")
     _cluster(lines, "build", "building")
-    for c in _list(T, "constructs"):
-        lines.append(f'    "{_esc(c.get("id"))}" '
-                     f'[label="{_wrap(c.get("label"), 16)}", {_fill("construct")}];')
+    for c in items(T, "constructs"):
+        lines.append(f'    "{_esc(_t(c, "id"))}" '
+                     f'[label="{_wrap(_t(c, "label"), 16)}", {_fill("construct")}];')
     lines.append("  }")
     _cluster(lines, "relate", "propositions")
-    for p in _list(T, "propositions"):
-        pid = _esc(p.get("id"))
-        lines.append(f'    "prop_{pid}" [label="{pid}\\n{_esc(p.get("relation"))}", {_fill("proposition")}];')
+    for p in items(T, "propositions"):
+        pid = _esc(_t(p, "id"))
+        lines.append(f'    "prop_{pid}" [label="{pid}\\n{_esc(_rel(p))}", {_fill("proposition")}];')
     lines.append("  }")
     _cluster(lines, "predict", "predictions")
-    for p in _list(T, "predictions"):
-        pid = _esc(p.get("id"))
-        lines.append(f'    "pred_{pid}" [label="{pid}\\n{_esc(p.get("type"))}", {_fill("prediction")}];')
+    for p in items(T, "predictions"):
+        pid = _esc(_t(p, "id"))
+        lines.append(f'    "pred_{pid}" [label="{pid}\\n{_esc(_ptype(p))}", {_fill("prediction")}];')
     lines.append("  }")
     _cluster(lines, "test", "testing")
-    for t in _list(T, "test_outcomes"):
-        pid = _esc(t.get("prediction_id"))
-        role = "passed" if t.get("passed") is True else "failed"
+    for t in items(T, "test_outcomes"):
+        pid = _esc(_t(t, "prediction_id"))
+        role = "passed" if field(t, "passed") is True else "failed"
         lines.append(f'    "outcome_{pid}" [label="{pid}\\n{role}", {_fill(role)}];')
     lines.append("  }")
-    for p in _list(T, "propositions"):
-        lines.append(f'  "{_esc(p.get("from"))}" -> "prop_{_esc(p.get("id"))}";')
-    for pred in _list(T, "predictions"):
-        for src in _as_list(pred.get("derives_from")):
-            lines.append(f'  "prop_{_esc(src)}" -> "pred_{_esc(pred.get("id"))}";')
-    for t in _list(T, "test_outcomes"):
-        pid = _esc(t.get("prediction_id"))
+    for p in items(T, "propositions"):
+        lines.append(f'  "{_esc(_t(p, "from"))}" -> "prop_{_esc(_t(p, "id"))}";')
+    for pred in items(T, "predictions"):
+        for src in str_list(field(pred, "derives_from")):
+            lines.append(f'  "prop_{_esc(src)}" -> "pred_{_esc(_t(pred, "id"))}";')
+    for t in items(T, "test_outcomes"):
+        pid = _esc(_t(t, "prediction_id"))
         lines.append(f'  "pred_{pid}" -> "outcome_{pid}";')
     lines.append("}")
     return "\n".join(lines) + "\n"
@@ -302,12 +311,11 @@ def _vcount(x: int, y: int, k: int) -> str:
 def _venn(T: dict) -> str:
     """Construct scope overlap: the first up to three constructs as sets of their
     boundary conditions, drawn as a fixed-layout (integer-coordinate) Venn diagram."""
-    constructs = _list(T, "constructs")[:3]
+    constructs = items(T, "constructs")[:3]
     names, sets = [], []
     for c in constructs:
-        bc = c.get("boundary_conditions")
-        names.append(str(c.get("label") or c.get("id") or ""))
-        sets.append(set(_as_list(bc)))
+        names.append(_t(c, "label") or _t(c, "id"))
+        sets.append(set(str_list(field(c, "boundary_conditions"))))
     n = len(constructs)
     out = [_svg_open(380, 300),
            '  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap</text>']

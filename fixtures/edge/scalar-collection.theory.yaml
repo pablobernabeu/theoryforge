@@ -1,0 +1,16 @@
+# Edge case: collections written as single strings. A scalar where a collection
+# belongs reads as an empty collection in both twins, as Python always read it.
+# R's reader returns every sequence as a list, so R too can tell this string
+# from a one-element sequence.
+schema_version: "1.0"
+id: edge-scalar-collection
+title: Collections written as single strings
+maturity: building
+constructs: arousal
+propositions:
+  - id: p1
+    from: arousal
+    to: threat
+    relation: increases
+    mechanism: Arousal raises perceived threat.
+predictions: h1

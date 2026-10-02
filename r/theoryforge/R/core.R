@@ -8,6 +8,7 @@ NULL
 .tf_FORM <- c("variance", "network", "typology", "process")
 .tf_RELATION <- c("increases", "decreases", "moderates", "mediates", "causes", "associates")
 .tf_PRED_TYPE <- c("point", "interval", "directional", "existence")
+.tf_FORMAL_MODEL_TYPE <- c("ode", "abm", "network", "sem", "none")
 
 #' Read a theory object from a YAML or JSON file
 #'
@@ -185,18 +186,18 @@ tf_validate <- function(theory, full = FALSE) {
       }
     }
     for (i in seq_along(preds)) {
-      for (dref in .tf_list(preds[[i]], "derives_from")) {
-        if (.tf_ne_str(dref) && !(dref %in% proposition_ids))
+      for (dref in .tf_str_list(.tf_get(preds[[i]], "derives_from"))) {
+        if (!(dref %in% proposition_ids))
           errors <- c(errors, sprintf("prediction[%d] derives_from '%s' is not a known proposition", i - 1L, dref))
       }
-      for (dv in .tf_list(preds[[i]], "diagnostic_vs")) {
-        if (.tf_ne_str(dv) && !(dv %in% alternative_ids))
+      for (dv in .tf_str_list(.tf_get(preds[[i]], "diagnostic_vs"))) {
+        if (!(dv %in% alternative_ids))
           errors <- c(errors, sprintf("prediction[%d] diagnostic_vs '%s' is not a known alternative", i - 1L, dv))
       }
     }
     for (i in seq_along(auxs)) {
-      for (pr in .tf_list(auxs[[i]], "protects")) {
-        if (.tf_ne_str(pr) && !(pr %in% prediction_ids))
+      for (pr in .tf_str_list(.tf_get(auxs[[i]], "protects"))) {
+        if (!(pr %in% prediction_ids))
           errors <- c(errors, sprintf("assumption[%d] protects '%s' is not a known prediction", i - 1L, pr))
       }
     }
@@ -281,7 +282,7 @@ tf_write <- function(theory, path) {
 # Append one provenance entry {step, action, detail} (API_SPEC.md section 8).
 # step = str(new length of provenance), 1-based.
 .tf_provenance_append <- function(theory, action, detail) {
-  prov <- .tf_list(theory, "provenance")
+  prov <- .tf_as_list(theory, "provenance")
   step <- as.character(length(prov) + 1L)
   prov[[length(prov) + 1L]] <- list(step = step, action = action, detail = detail)
   theory$provenance <- prov
@@ -290,7 +291,7 @@ tf_write <- function(theory, path) {
 
 # Append `item` to the named collection (creating it lazily) and return theory.
 .tf_coll_append <- function(theory, key, item) {
-  coll <- .tf_list(theory, key)
+  coll <- .tf_as_list(theory, key)
   coll[[length(coll) + 1L]] <- item
   theory[[key]] <- coll
   theory

@@ -66,6 +66,11 @@ NULL
 # How many advisory steps the development roadmap places side by side.
 .tf_ROADMAP_COLS <- 3L
 
+# The relation and the prediction type as a label: the enum value, or "" when
+# it is absent (API_SPEC.md section 3, "Reading a theory").
+.tf_rel <- function(p) .tf_enum_str(p, "relation", .tf_RELATION)
+.tf_ptype <- function(p) .tf_enum_str(p, "type", .tf_PRED_TYPE)
+
 .tf_fill <- function(role) {
   fc <- .tf_FILLS[[role]]
   sprintf('fillcolor="%s", color="%s"', fc[[1L]], fc[[2L]])
@@ -117,13 +122,13 @@ NULL
   lines <- .tf_prelude("nomological_net", "LR")
   for (c in .tf_list(T, "constructs")) {
     lines <- c(lines, sprintf('  "%s" [label="%s", %s];',
-                              .tf_esc(.tf_get(c, "id")), .tf_wrap(.tf_get(c, "label")),
+                              .tf_esc(.tf_str(c, "id")), .tf_wrap(.tf_str(c, "label")),
                               .tf_fill("construct")))
   }
   for (p in .tf_list(T, "propositions")) {
     lines <- c(lines, sprintf('  "%s" -> "%s" [label="%s"];',
-                              .tf_esc(.tf_get(p, "from")), .tf_esc(.tf_get(p, "to")),
-                              .tf_esc(.tf_get(p, "relation"))))
+                              .tf_esc(.tf_str(p, "from")), .tf_esc(.tf_str(p, "to")),
+                              .tf_esc(.tf_rel(p))))
   }
   lines <- c(lines, "}")
   paste0(paste(lines, collapse = "\n"), "\n")
@@ -157,8 +162,7 @@ NULL
   # subgraph is checked and refused when it is cyclic.
   lines <- c("dag {")
   for (p in .tf_list(T, "propositions")) {
-    rel <- .tf_get(p, "relation")
-    if (length(rel) == 1L && !is.na(rel) && rel %in% .tf_CAUSAL) {
+    if (.tf_rel(p) %in% .tf_CAUSAL) {
       lines <- c(lines, sprintf("  %s -> %s", .tf_str(p, "from"), .tf_str(p, "to")))
     }
   }
@@ -186,7 +190,7 @@ NULL
   # as this theory's outstanding work rather than an anonymous list.
   lines <- c(lines, sprintf(
     '  "roadmap" [shape=ellipse, label="%s\\nscore %s, gate %s", fillcolor="%s", color="%s", fontcolor="#FFFFFF"];',
-    .tf_wrap(.tf_get(T, "title"), 20L), .tf_fmt(rep$aggregate_score), .tf_esc(rep$gate),
+    .tf_wrap(.tf_str(T, "title"), 20L), .tf_fmt(rep$aggregate_score), .tf_esc(rep$gate),
     .tf_INK, .tf_INK))
   if (length(todo) == 0L) {
     lines <- c(lines, sprintf('  "all_checks_pass" [label="all checks pass", %s];',
@@ -240,8 +244,8 @@ NULL
   lines <- .tf_prelude("pipeline", "LR")
   for (p in .tf_list(T, "predictions")) {
     lines <- c(lines, sprintf('  "%s" [label="%s\\n%s", %s];',
-                              .tf_esc(.tf_get(p, "id")), .tf_esc(.tf_get(p, "id")),
-                              .tf_esc(.tf_get(p, "type")), .tf_fill("prediction")))
+                              .tf_esc(.tf_str(p, "id")), .tf_esc(.tf_str(p, "id")),
+                              .tf_esc(.tf_ptype(p)), .tf_fill("prediction")))
   }
   for (t in .tf_list(T, "test_outcomes")) {
     pid <- .tf_str(t, "prediction_id")
@@ -257,23 +261,23 @@ NULL
 .tf_context <- function(T) {
   lines <- .tf_prelude("context", "LR")
   lines <- c(lines, sprintf('  "theory" [shape=ellipse, label="%s", fillcolor="%s", color="%s", fontcolor="#FFFFFF"];',
-                            .tf_wrap(.tf_get(T, "title"), 20L), .tf_INK, .tf_INK))
+                            .tf_wrap(.tf_str(T, "title"), 20L), .tf_INK, .tf_INK))
   for (c in .tf_list(T, "constructs")) {
-    cid <- .tf_esc(.tf_get(c, "id"))
+    cid <- .tf_esc(.tf_str(c, "id"))
     lines <- c(lines, sprintf('  "%s" [label="%s", %s];', cid,
-                              .tf_wrap(.tf_get(c, "label")), .tf_fill("construct")))
+                              .tf_wrap(.tf_str(c, "label")), .tf_fill("construct")))
     lines <- c(lines, sprintf('  "theory" -> "%s";', cid))
   }
-  bcs <- .tf_list(T, "boundary_conditions")
+  bcs <- .tf_str_list(.tf_get(T, "boundary_conditions"))
   for (i in seq_along(bcs)) {
     lines <- c(lines, sprintf('  "scope%d" [shape=note, style="filled", label="%s", %s];',
                               i, .tf_wrap(bcs[[i]]), .tf_fill("scope")))
     lines <- c(lines, sprintf('  "scope%d" -> "theory" [style=dotted, label="holds within"];', i))
   }
   for (a in .tf_list(T, "alternatives")) {
-    aid <- .tf_esc(.tf_get(a, "id"))
+    aid <- .tf_esc(.tf_str(a, "id"))
     lines <- c(lines, sprintf('  "%s" [style="rounded,filled,dashed", label="%s", %s];',
-                              aid, .tf_wrap(.tf_get(a, "label")), .tf_fill("rival")))
+                              aid, .tf_wrap(.tf_str(a, "label")), .tf_fill("rival")))
     lines <- c(lines, sprintf('  "theory" -> "%s" [style=dashed, label="contrasts with"];', aid))
   }
   lines <- c(lines, "}")
@@ -292,42 +296,39 @@ NULL
   lines <- .tf_prelude("workflow", "LR")
   lines <- c(lines, .tf_cluster_open("build", "building"))
   for (c in .tf_list(T, "constructs")) {
-    lines <- c(lines, sprintf('    "%s" [label="%s", %s];', .tf_esc(.tf_get(c, "id")),
-                              .tf_wrap(.tf_get(c, "label"), 16L), .tf_fill("construct")))
+    lines <- c(lines, sprintf('    "%s" [label="%s", %s];', .tf_esc(.tf_str(c, "id")),
+                              .tf_wrap(.tf_str(c, "label"), 16L), .tf_fill("construct")))
   }
   lines <- c(lines, "  }", .tf_cluster_open("relate", "propositions"))
   for (p in .tf_list(T, "propositions")) {
     lines <- c(lines, sprintf('    "prop_%s" [label="%s\\n%s", %s];',
-                              .tf_esc(.tf_get(p, "id")), .tf_esc(.tf_get(p, "id")),
-                              .tf_esc(.tf_get(p, "relation")), .tf_fill("proposition")))
+                              .tf_esc(.tf_str(p, "id")), .tf_esc(.tf_str(p, "id")),
+                              .tf_esc(.tf_rel(p)), .tf_fill("proposition")))
   }
   lines <- c(lines, "  }", .tf_cluster_open("predict", "predictions"))
   for (p in .tf_list(T, "predictions")) {
     lines <- c(lines, sprintf('    "pred_%s" [label="%s\\n%s", %s];',
-                              .tf_esc(.tf_get(p, "id")), .tf_esc(.tf_get(p, "id")),
-                              .tf_esc(.tf_get(p, "type")), .tf_fill("prediction")))
+                              .tf_esc(.tf_str(p, "id")), .tf_esc(.tf_str(p, "id")),
+                              .tf_esc(.tf_ptype(p)), .tf_fill("prediction")))
   }
   lines <- c(lines, "  }", .tf_cluster_open("test", "testing"))
   for (t in .tf_list(T, "test_outcomes")) {
-    pid <- .tf_esc(.tf_get(t, "prediction_id"))
+    pid <- .tf_esc(.tf_str(t, "prediction_id"))
     role <- if (isTRUE(.tf_get(t, "passed"))) "passed" else "failed"
     lines <- c(lines, sprintf('    "outcome_%s" [label="%s\\n%s", %s];',
                               pid, pid, role, .tf_fill(role)))
   }
   lines <- c(lines, "  }")
   for (p in .tf_list(T, "propositions")) {
-    lines <- c(lines, sprintf('  "%s" -> "prop_%s";', .tf_esc(.tf_get(p, "from")), .tf_esc(.tf_get(p, "id"))))
+    lines <- c(lines, sprintf('  "%s" -> "prop_%s";', .tf_esc(.tf_str(p, "from")), .tf_esc(.tf_str(p, "id"))))
   }
   for (pred in .tf_list(T, "predictions")) {
-    df <- .tf_get(pred, "derives_from")
-    if (!is.null(df)) {
-      for (src in as.character(unlist(df))) {
-        lines <- c(lines, sprintf('  "prop_%s" -> "pred_%s";', .tf_esc(src), .tf_esc(.tf_get(pred, "id"))))
-      }
+    for (src in .tf_str_list(.tf_get(pred, "derives_from"))) {
+      lines <- c(lines, sprintf('  "prop_%s" -> "pred_%s";', .tf_esc(src), .tf_esc(.tf_str(pred, "id"))))
     }
   }
   for (t in .tf_list(T, "test_outcomes")) {
-    pid <- .tf_esc(.tf_get(t, "prediction_id"))
+    pid <- .tf_esc(.tf_str(t, "prediction_id"))
     lines <- c(lines, sprintf('  "pred_%s" -> "outcome_%s";', pid, pid))
   }
   lines <- c(lines, "}")
@@ -376,9 +377,7 @@ NULL
     nm <- .tf_str(c, "label")
     if (!nzchar(nm)) nm <- .tf_str(c, "id")
     nms <- c(nms, nm)
-    bc <- .tf_get(c, "boundary_conditions")
-    s <- if (is.null(bc)) character(0) else unique(as.character(unlist(bc)))
-    setlist[[length(setlist) + 1L]] <- s
+    setlist[[length(setlist) + 1L]] <- unique(.tf_str_list(.tf_get(c, "boundary_conditions")))
   }
   out <- c(.tf_svg_open(380L, 300L),
            '  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap</text>')

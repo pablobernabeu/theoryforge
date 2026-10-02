@@ -1,0 +1,20 @@
+# Edge case: collection entries written as bare strings. An
+# entry that is not a mapping has no fields, so every consumer reads it as an
+# entry whose fields are all absent. Python's consumers used to raise
+# AttributeError, and R's full validation stopped with "subscript out of bounds".
+schema_version: "1.0"
+id: edge-scalar-entries
+title: Collection entries written as bare strings
+maturity: building
+constructs: [arousal, threat]
+propositions:
+  - id: p1
+    from: arousal
+    to: threat
+    relation: associates
+    mechanism: Arousal goes with perceived threat.
+predictions: [h1]
+auxiliary_assumptions: [a1]
+test_outcomes: [h1]
+alternatives: [rival]
+provenance: [tf_theory]

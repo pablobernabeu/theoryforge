@@ -12,8 +12,6 @@ NULL
 # lowercase, replace runs of non-[a-z0-9] with "_", strip leading/trailing "_",
 # and fall back to "x" when the result is empty.
 .tf_san <- function(s) {
-  s <- if (is.null(s) || length(s) == 0L) "" else as.character(s)[[1L]]
-  if (is.na(s)) s <- ""
   s <- gsub("[^a-z0-9]+", "_", tolower(s))
   s <- sub("^_+", "", sub("_+$", "", s))
   if (!nzchar(s)) "x" else s
@@ -47,10 +45,9 @@ tf_compile_sem <- function(theory) {
     "# Measurement model"
   )
   for (c in .tf_list(T, "constructs")) {
-    meas <- .tf_get(c, "measurement")
-    if (.tf_ne_list(meas)) {
-      meas <- if (is.list(meas)) meas else as.list(meas)
-      indicators <- vapply(meas, .tf_san, character(1))
+    meas <- .tf_str_list(.tf_get(c, "measurement"))
+    if (length(meas) > 0L) {
+      indicators <- vapply(meas, .tf_san, character(1), USE.NAMES = FALSE)
       lines <- c(lines, sprintf("%s =~ %s",
                                 .tf_str(c, "id"),
                                 paste(indicators, collapse = " + ")))
@@ -58,7 +55,7 @@ tf_compile_sem <- function(theory) {
   }
   lines <- c(lines, "# Structural model")
   for (p in .tf_list(T, "propositions")) {
-    rel <- .tf_str(p, "relation")
+    rel <- .tf_enum_str(p, "relation", .tf_RELATION)
     frm <- .tf_str(p, "from")
     to <- .tf_str(p, "to")
     if (rel %in% .tf_SEM_PATH) {

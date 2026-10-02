@@ -5,6 +5,18 @@ import json
 import math
 
 from . import _resources
+from ._access import (
+    FORMAL_MODEL_TYPE,
+    MATURITY,
+    PRED_TYPE,
+    RELATION,
+    enum,
+    field,
+    items,
+    ne_str,
+    str_list,
+    text,
+)
 from ._num import rnd
 from .redundancy import jaccard, tokens
 
@@ -13,60 +25,54 @@ _FORBIDDING = {"point", "interval", "directional"}
 _PRECISE = {"point", "interval"}
 
 
-def _ne_str(v) -> bool:
-    return isinstance(v, str) and v.strip() != ""
-
-
-def _as_list(v) -> list:
-    """Read a value where the schema expects an array (API_SPEC.md section 4).
-
-    A list is returned as is. A nonempty scalar string is read as a singleton
-    list, so natural YAML such as ``derives_from: p1`` means ``["p1"]``. Both
-    languages keep this reading as a convenience for hand-written YAML. R's
-    reader once collapsed a one-element sequence to a string, so the two forms
-    could not be told apart there, but it now returns every sequence as a list.
-    Anything else, including an empty or whitespace-only scalar, reads as empty.
-    """
-    if isinstance(v, list):
-        return v
-    if _ne_str(v):
-        return [v]
-    return []
-
-
 def _ne_list(v) -> bool:
-    return len(_as_list(v)) > 0
+    """Whether a string array has an entry (API_SPEC.md section 4).
 
-
-def _list(d: dict, key: str) -> list:
-    v = d.get(key)
-    return v if isinstance(v, list) else []
+    A nonempty scalar string counts as a one-element array, as natural YAML such
+    as ``derives_from: p1`` means, and an entry that is not a nonempty string
+    does not count at all.
+    """
+    return len(str_list(v)) > 0
 
 
 def _mean(xs):
     return sum(xs) / len(xs)
 
 
+def _ptype(p) -> str | None:
+    return enum(field(p, "type"), PRED_TYPE)
+
+
+def _passed_for(outcome, prediction_ids) -> bool:
+    """Whether a test outcome records a pass for one of ``prediction_ids``.
+
+    The outcome's ``prediction_id`` must be a string. R's ``%in%`` would match
+    the number 1 against the id "1", and Python's ``in`` would not.
+    """
+    pid = field(outcome, "prediction_id")
+    return isinstance(pid, str) and pid in prediction_ids and field(outcome, "passed") is True
+
+
 def _check_items(T: dict, thr: dict) -> dict:
-    preds = _list(T, "predictions")
-    cons = _list(T, "constructs")
-    props = _list(T, "propositions")
-    aux = _list(T, "auxiliary_assumptions")
-    alts = _list(T, "alternatives")
-    tos = _list(T, "test_outcomes")
-    prop_ids = {p.get("id") for p in props}
-    alt_ids = {a.get("id") for a in alts}
+    preds = items(T, "predictions")
+    cons = items(T, "constructs")
+    props = items(T, "propositions")
+    aux = items(T, "auxiliary_assumptions")
+    alts = items(T, "alternatives")
+    tos = items(T, "test_outcomes")
+    prop_ids = {text(field(p, "id")) for p in props}
+    alt_ids = {text(field(a, "id")) for a in alts}
     out: dict[str, tuple[str, float]] = {}
 
     # 1 falsifiability
-    forbidding = [p for p in preds if p.get("type") in _FORBIDDING]
+    forbidding = [p for p in preds if _ptype(p) in _FORBIDDING]
     out["falsifiability"] = ("pass", 1.0) if len(forbidding) >= 1 else ("fail", 0.0)
 
     # 2 precision
     if not preds:
         out["precision"] = ("warn", 0.0)
     else:
-        share = sum(1 for p in preds if p.get("type") in _PRECISE) / len(preds)
+        share = sum(1 for p in preds if _ptype(p) in _PRECISE) / len(preds)
         out["precision"] = ("pass" if share >= thr["min_precision_share"] else "warn", rnd(share, 3))
 
     # 3 risk_severity
@@ -77,13 +83,13 @@ def _check_items(T: dict, thr: dict) -> dict:
     # coercing; validate(full=True) reports the same file as invalid.
     sevs = []
     for p in preds:
-        s = p.get("severity")
+        s = field(p, "severity")
         if s is None:
             continue
         if isinstance(s, bool) or not isinstance(s, (int, float)) or math.isnan(s):
             raise ValueError(
                 "check requires numeric prediction severities; "
-                f"non-numeric severity for prediction: {p.get('id') or ''}"
+                f"non-numeric severity for prediction: {text(field(p, 'id'))}"
             )
         sevs.append(s)
     if not sevs:
@@ -96,9 +102,9 @@ def _check_items(T: dict, thr: dict) -> dict:
     ratio = len(aux) / max(1, len(props))
     ad_hoc = 0
     for x in aux:
-        if x.get("added_for") is not None:
-            protects = _as_list(x.get("protects"))
-            ok = any(t.get("prediction_id") in protects and t.get("passed") is True for t in tos)
+        if field(x, "added_for") is not None:
+            protects = str_list(field(x, "protects"))
+            ok = any(_passed_for(t, protects) for t in tos)
             if not ok:
                 ad_hoc += 1
     score = rnd(max(0.0, 1.0 - ratio / thr["parsimony_ratio_max"]), 3)
@@ -111,7 +117,7 @@ def _check_items(T: dict, thr: dict) -> dict:
     if len(cons) < 2:
         max_sim = 0.0
     else:
-        toks = [tokens(c.get("definition", "")) for c in cons]
+        toks = [tokens(text(field(c, "definition"))) for c in cons]
         max_sim = 0.0
         for i in range(len(toks)):
             for j in range(i + 1, len(toks)):
@@ -127,16 +133,16 @@ def _check_items(T: dict, thr: dict) -> dict:
     else:
         complete = sum(
             1 for c in cons
-            if _ne_str(c.get("definition"))
-            and _ne_list(c.get("measurement"))
-            and _ne_list(c.get("boundary_conditions"))
+            if ne_str(field(c, "definition"))
+            and _ne_list(field(c, "measurement"))
+            and _ne_list(field(c, "boundary_conditions"))
         )
         frac = complete / len(cons)
         out["construct_clarity"] = ("pass" if frac == 1.0 else "warn", rnd(frac, 3))
 
     # 7 scope
     present = _ne_list(T.get("boundary_conditions")) or (
-        bool(cons) and all(_ne_list(c.get("boundary_conditions")) for c in cons)
+        bool(cons) and all(_ne_list(field(c, "boundary_conditions")) for c in cons)
     )
     out["scope"] = ("pass", 1.0) if present else ("warn", 0.0)
 
@@ -144,11 +150,11 @@ def _check_items(T: dict, thr: dict) -> dict:
     if not props:
         out["logical_why"] = ("warn", 0.0)
     else:
-        frac = sum(1 for p in props if _ne_str(p.get("mechanism"))) / len(props)
+        frac = sum(1 for p in props if ne_str(field(p, "mechanism"))) / len(props)
         out["logical_why"] = ("pass" if frac == 1.0 else "warn", rnd(frac, 3))
 
     # 9 causal_testability
-    causal = [p for p in props if p.get("relation") in _CAUSAL]
+    causal = [p for p in props if enum(field(p, "relation"), RELATION) in _CAUSAL]
     out["causal_testability"] = ("pass", 1.0) if len(causal) >= 1 else ("warn", 0.0)
 
     # 10 diagnosticity
@@ -157,14 +163,13 @@ def _check_items(T: dict, thr: dict) -> dict:
     else:
         diag = [
             p for p in preds
-            if _ne_list(p.get("diagnostic_vs"))
-            and any(d in alt_ids for d in _as_list(p.get("diagnostic_vs")))
+            if any(d in alt_ids for d in str_list(field(p, "diagnostic_vs")))
         ]
         out["diagnosticity"] = ("pass" if len(diag) >= 1 else "warn", rnd(len(diag) / len(preds), 3))
 
     # 11 formalisation
-    fm = T.get("formal_model")
-    present = isinstance(fm, dict) and fm.get("type") not in (None, "none")
+    fm_type = enum(field(T.get("formal_model"), "type"), FORMAL_MODEL_TYPE)
+    present = fm_type not in (None, "none")
     out["formalisation"] = ("pass", 1.0) if present else ("warn", 0.0)
 
     # 12 derivation_chain
@@ -173,7 +178,8 @@ def _check_items(T: dict, thr: dict) -> dict:
     else:
         valid = [
             p for p in preds
-            if _ne_list(p.get("derives_from")) and all(d in prop_ids for d in _as_list(p.get("derives_from")))
+            if _ne_list(field(p, "derives_from"))
+            and all(d in prop_ids for d in str_list(field(p, "derives_from")))
         ]
         frac = len(valid) / len(preds)
         out["derivation_chain"] = ("pass" if frac == 1.0 else "fail", rnd(frac, 3))
@@ -206,18 +212,19 @@ def check(T) -> dict:
             "citation": spec_item["citation"],
         })
 
-    # Explicit nulls read as "" (the R twin's .tf_str reading). dict.get's
-    # default alone covers only absent keys, and the report is compared
-    # semantically across the twins, so a null here must not reach the output.
-    maturity = T.get("maturity") or ""
+    # Nulls, numbers and sequences in these fields read as "" (API_SPEC.md
+    # section 3, "Reading a theory"), and a maturity outside its enum is
+    # absent. The report is compared across the twins, so the value printed
+    # here must be one both engines can produce.
+    maturity = enum(T.get("maturity"), MATURITY) or ""
     if maturity == "draft":
         gate = "advisory"
     else:
         gate = "blocked" if n_blockers_failed > 0 else "pass"
 
     return {
-        "theory_id": T.get("id") or "",
-        "schema_version": T.get("schema_version") or "",
+        "theory_id": text(T.get("id")),
+        "schema_version": text(T.get("schema_version")),
         # Every number below comes from the checklist's weights and thresholds,
         # so two reports are only comparable if they were scored against the
         # same checklist. `schema_version` above is the theory's, not this.

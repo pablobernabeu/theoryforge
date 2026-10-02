@@ -6,15 +6,11 @@ updates, so the trajectory is fully deterministic.
 """
 from __future__ import annotations
 
+from ._access import RELATION, enum, field, items, text
 from ._num import rnd
 
 _POS = {"increases", "causes", "mediates"}
 _NEG = {"decreases"}
-
-
-def _list(d: dict, key: str) -> list:
-    v = d.get(key)
-    return v if isinstance(v, list) else []
 
 
 def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
@@ -24,24 +20,29 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     Returns {states, dt, steps, k, damping, init, trajectory}, where trajectory[t] is the
     state vector at step t (t = 0..steps), each value rounded to 6 decimals. All five
     knobs are echoed back, because the trajectory cannot be reproduced without them.
+    Construct ids must be unique. A construct without an id is a state with no
+    couplings, and two of them do not count as duplicates.
     """
     T = T.data if hasattr(T, "data") else T
-    states = [c.get("id") for c in _list(T, "constructs")]
+    states = [text(field(c, "id")) for c in items(T, "constructs")]
     n = len(states)
     # Duplicate construct ids have no defensible reading here, and the two
     # engines resolved them differently by accident (a dict comprehension keeps
     # the last index, R's `[[` on a named vector the first), so the same file
     # produced two plausible trajectories. Refuse instead of picking a winner.
+    # Constructs without ids share no id: no proposition can name them, so
+    # each is a state with no couplings.
     seen: set = set()
     for s in states:
-        if s in seen:
+        if s in seen and s != "":
             raise ValueError(f"simulate requires unique construct ids; duplicate construct id: {s}")
         seen.add(s)
-    idx = {s: i for i, s in enumerate(states)}
+    idx = {s: i for i, s in enumerate(states) if s != ""}
 
     A = [[0.0] * n for _ in range(n)]
-    for p in _list(T, "propositions"):
-        f, t, rel = p.get("from"), p.get("to"), p.get("relation")
+    for p in items(T, "propositions"):
+        f, t = text(field(p, "from")), text(field(p, "to"))
+        rel = enum(field(p, "relation"), RELATION)
         if f in idx and t in idx:
             sign = 1.0 if rel in _POS else (-1.0 if rel in _NEG else 0.0)
             A[idx[t]][idx[f]] += sign * k

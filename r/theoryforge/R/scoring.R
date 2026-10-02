@@ -71,18 +71,14 @@ tf_severity <- function(theory) {
 
   for (i in seq_len(n)) {
     p <- preds[[i]]
-    typ <- .tf_str(p, "type")
+    typ <- .tf_enum_str(p, "type", .tf_PRED_TYPE)
     base <- if (typ %in% names(.tf_SEV_BASE)) .tf_SEV_BASE[[typ]] else 0.0
     discounted <- if (identical(typ, "directional")) base * (1 - .tf_SEV_CRUD) else base
-    dv <- .tf_get(p, "diagnostic_vs")
+    dv <- .tf_str_list(.tf_get(p, "diagnostic_vs"))
     # A package convention: naming a registered alternative the prediction
     # would discriminate from adds 0.1. The alternative is declared, not
     # checked against the statement.
-    diag_bonus <- 0.0
-    if (.tf_ne_list(dv)) {
-      dv <- unlist(dv, use.names = FALSE)
-      if (any(dv %in% alt_ids)) diag_bonus <- 0.1
-    }
+    diag_bonus <- if (any(dv %in% alt_ids)) 0.1 else 0.0
     prediction_id[i] <- .tf_str(p, "id")
     type[i] <- typ
     risk_score[i] <- .tf_rnd(base, 3)

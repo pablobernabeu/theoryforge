@@ -1,0 +1,36 @@
+# Edge case: predictions written as a mapping keyed by id.
+# A collection that is not a sequence reads as empty in both twins (API_SPEC
+# section 3, "Reading a theory"), so the theory has no predictions and fails
+# falsifiability. R used to iterate the mapping's values and pass the gate.
+schema_version: "1.0"
+id: edge-mapping-collection
+title: Predictions written as a mapping
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+    measurement: [m1]
+    boundary_conditions: [adults]
+  - id: c2
+    label: Beta
+    definition: The second construct entirely different.
+    measurement: [m2]
+    boundary_conditions: [adults]
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  h1:
+    id: h1
+    statement: Beta rises with Alpha.
+    type: point
+    derives_from: [p1]
+  h2:
+    id: h2
+    statement: Beta is above zero.
+    type: interval
+    derives_from: [p1]

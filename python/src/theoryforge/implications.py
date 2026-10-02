@@ -10,16 +10,9 @@ to and what data can refute.
 """
 from __future__ import annotations
 
+from ._access import RELATION, enum, field, items, text
+
 _CAUSAL = {"causes", "increases", "decreases"}
-
-
-def _list(d: dict, key: str) -> list:
-    v = d.get(key)
-    return v if isinstance(v, list) else []
-
-
-def _str(v) -> str:
-    return str(v if v is not None else "")
 
 
 def _first_cycle(adj: list[list[bool]], k: int) -> list[int] | None:
@@ -78,7 +71,8 @@ def implications(T) -> dict:
     n_implications}``. ``constructs`` lists, in file order, the constructs that
     a causal proposition connects; constructs the theory says nothing causal
     about are left out, because silence about a construct is not a claim that it
-    is independent of anything. ``acyclic`` is always True in a returned record,
+    is independent of anything, and so are constructs without an id, which no
+    proposition can name. ``acyclic`` is always True in a returned record,
     since a cyclic graph is refused, and is carried so that a serialised record
     states the verdict rather than leaving a reader to infer that the check ran.
     Each entry of ``implications`` is ``{a, b, given, statement}``, where
@@ -127,8 +121,12 @@ def implications(T) -> dict:
 
     declared: list[str] = []
     position: dict[str, int] = {}
-    for c in _list(T, "constructs"):
-        cid = _str(c.get("id"))
+    for c in items(T, "constructs"):
+        cid = text(field(c, "id"))
+        # A construct without an id cannot be the endpoint of a proposition, so
+        # it takes no part in the graph, and two of them do not share an id.
+        if cid == "":
+            continue
         # Two constructs sharing an id give the same node two sets of parents,
         # and nothing in the maths says which one a proposition meant.
         if cid in position:
@@ -138,11 +136,11 @@ def implications(T) -> dict:
         declared.append(cid)
 
     edges: list[tuple[int, int]] = []
-    for p in _list(T, "propositions"):
-        if p.get("relation") not in _CAUSAL:
+    for p in items(T, "propositions"):
+        if enum(field(p, "relation"), RELATION) not in _CAUSAL:
             continue
-        pid = _str(p.get("id"))
-        frm, to = _str(p.get("from")), _str(p.get("to"))
+        pid = text(field(p, "id"))
+        frm, to = text(field(p, "from")), text(field(p, "to"))
         # Dropping an edge whose endpoint was never declared would shrink the
         # graph and so add independencies the theory does not imply, which is a
         # confidently wrong answer rather than a missing one.
@@ -182,7 +180,7 @@ def implications(T) -> dict:
                         "statement": _statement(nodes[i], nodes[j], given)})
 
     return {
-        "theory_id": _str(T.get("id")),
+        "theory_id": text(T.get("id")),
         "acyclic": True,
         "constructs": nodes,
         "n_edges": len(edges),

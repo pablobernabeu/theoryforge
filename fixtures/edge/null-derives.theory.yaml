@@ -1,0 +1,36 @@
+# Edge case: null entries in derives_from. An entry of a string array that is not
+# a nonempty string is ignored, so [~] and a dangling "-" read as empty and fail
+# the derivation check, and [p1, ~] reads as [p1] and passes, in both twins.
+# R used to pass all three, and Python failed all three and then raised in
+# preregister().
+schema_version: "1.0"
+id: edge-null-derives
+title: Null entries in derives_from
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct entirely different.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [~]
+  - id: h2
+    statement: Beta is above zero.
+    type: interval
+    derives_from:
+      -
+  - id: h3
+    statement: Beta is exactly one.
+    type: point
+    derives_from: [p1, ~]

@@ -70,7 +70,7 @@ tf_read_corpus <- function(path) {
   b_of <- character(0)
   counts <- integer(0)
   for (r in records) {
-    items <- .tf_list(r, field)
+    items <- .tf_as_list(r, field)
     vals <- character(0)
     for (x in items) {
       if (!is.null(x) && length(x) == 1L && !is.na(x) && nzchar(as.character(x))) {
@@ -186,7 +186,7 @@ tf_litmap <- function(corpus, min_link = 2) {
   records <- .tf_records(corpus)
   all_kw <- character(0)
   for (r in records) {
-    for (k in .tf_list(r, "keywords")) {
+    for (k in .tf_as_list(r, "keywords")) {
       if (!is.null(k) && length(k) == 1L && !is.na(k) && nzchar(as.character(k))) {
         all_kw <- c(all_kw, as.character(k))
       }
@@ -247,8 +247,7 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
     th_tokens <- tf_tokens(paste(kws, collapse = " "))
     on <- character(0)
     for (a in alts) {
-      kc <- vapply(.tf_list(a, "key_constructs"),
-                   function(x) as.character(x[[1L]]), character(1))
+      kc <- .tf_str_list(.tf_get(a, "key_constructs"))
       alt_src <- paste(c(.tf_str(a, "label"), kc), collapse = " ")
       alt_tokens <- tf_tokens(alt_src)
       if (length(intersect(alt_tokens, th_tokens)) > 0L) {
@@ -428,16 +427,10 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence") {
 #' @export
 tf_new_evidence_dois <- function(theory, candidate_dois) {
   known <- character(0)
-  for (e in .tf_list(theory, "evidence")) {
-    doi <- .tf_get(e, "source_doi")
-    if (!is.null(doi) && nzchar(as.character(doi))) {
-      known <- c(known, .tf_normalize_doi(doi))
-    }
-  }
-  for (a in .tf_list(theory, "alternatives")) {
-    doi <- .tf_get(a, "source_doi")
-    if (!is.null(doi) && nzchar(as.character(doi))) {
-      known <- c(known, .tf_normalize_doi(doi))
+  for (key in c("evidence", "alternatives")) {
+    for (entry in .tf_list(theory, key)) {
+      doi <- .tf_str(entry, "source_doi")
+      if (nzchar(doi)) known <- c(known, .tf_normalize_doi(doi))
     }
   }
   known <- unique(known)
@@ -497,19 +490,19 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL) {
   results <- if (is.list(data[["results"]])) data[["results"]] else list()
   records <- lapply(results, function(w) {
     kws <- character(0)
-    for (k in .tf_list(w, "keywords")) {
+    for (k in .tf_as_list(w, "keywords")) {
       dn <- .tf_get(k, "display_name")
       if (!is.null(dn) && nzchar(as.character(dn))) kws <- c(kws, as.character(dn))
     }
     if (length(kws) == 0L) {
-      concepts <- .tf_list(w, "concepts")
+      concepts <- .tf_as_list(w, "concepts")
       concepts <- utils::head(concepts, 5L)
       for (cc in concepts) {
         dn <- .tf_get(cc, "display_name")
         if (!is.null(dn) && nzchar(as.character(dn))) kws <- c(kws, as.character(dn))
       }
     }
-    refs <- vapply(.tf_list(w, "referenced_works"),
+    refs <- vapply(.tf_as_list(w, "referenced_works"),
                    function(x) as.character(x[[1L]]), character(1))
     list(
       id = .tf_get(w, "id"),

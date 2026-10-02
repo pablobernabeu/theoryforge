@@ -44,6 +44,26 @@ version and a single behavioural contract
   one-element arrays as scalars that failed the package's own schema. It now keeps 15
   significant digits, writes `true`, `false` and null, and writes every field the schema
   types as an array of strings as an array.
+- Malformed input made the two engines diverge or crash. Python raised AttributeError or
+  TypeError in nearly every function when a collection entry was not a mapping, printed
+  `None` for null fields in the preregistration, the dossier and the diagram IRs, and
+  crashed on id-less entries in `appraise_amendment()`. R scored the same files, stopped
+  in full validation or read them differently, so the gates could disagree (55.4 against
+  84.8 on one file). Both twins now read every value through one set of accessors,
+  pinned in API_SPEC section 3 ("Reading a theory"), so they read a malformed value the
+  same way. A
+  collection given as a mapping or a single string reads as empty. A text field that is
+  not a string reads as `""`, so a number or a boolean no longer prints as `1.0` in one
+  engine and `1` in the other. `type`, `relation`, `maturity` and `formal_model.type`
+  outside their enum are absent, so a formal-model type outside the schema's enum no
+  longer passes formalisation. A null entry in `derives_from` passed full validation and
+  then blocked the gate in Python while R passed it. Both now ignore the entry, so `[~]`
+  fails the derivation check and `[p1, ~]` passes in both. `implications()` and
+  `simulate()` no longer refuse two constructs without ids as duplicates. A theory that
+  matches the schema gives the same results as before, except that an empty or blank
+  entry of a string array, such as `measurement: [""]`, no longer counts as an entry. Ten
+  malformed theories in
+  `fixtures/edge/` pin the agreement.
 
 ### Changed
 - `severity()` is described for what it is, a pre-data ranking of the form of each
@@ -83,6 +103,8 @@ version and a single behavioural contract
   no function reads.
 
 ### Internal
+- Python's two copies of the nonempty-string test (`core._nonempty_str` and
+  `rigor._ne_str`) and the per-module `_list` helpers are merged into `_access.py`.
 - The schema and rigour checklist copies that each package ships are now written only by
   `scripts/gen_golden.py`, CI fails when they drift, and the webR app vendors the copy the
   R package ships. The parity check no longer treats `true` as 1 or unboxes nested

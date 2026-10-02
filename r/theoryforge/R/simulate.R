@@ -16,7 +16,8 @@ NULL
 #' proposition as a signed linear coupling term, then integrates
 #' \code{dX/dt = A X - damping * X} with fixed-step (Euler) updates. The result
 #' is fully deterministic. Construct ids must be unique; duplicates are refused
-#' rather than resolved to an arbitrary state slot.
+#' rather than resolved to an arbitrary state slot. A construct without an id
+#' is a state with no couplings, and two of them do not count as duplicates.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param steps Number of Euler steps (default \code{10}).
@@ -50,9 +51,11 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
   # resolved them differently by accident (`[[` on a named vector takes the
   # first index, Python's dict comprehension the last), so the same file
   # produced two plausible trajectories. Refuse instead of picking a winner.
+  # Constructs without ids share no id: no proposition can name them, so each
+  # is a state with no couplings.
   seen <- character(0)
   for (s in states) {
-    if (s %in% seen) {
+    if (nzchar(s) && s %in% seen) {
       stop("simulate requires unique construct ids; duplicate construct id: ", s,
            call. = FALSE)
     }
@@ -67,7 +70,7 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
   for (p in props) {
     f <- .tf_str(p, "from")
     t <- .tf_str(p, "to")
-    rel <- .tf_str(p, "relation")
+    rel <- .tf_enum_str(p, "relation", .tf_RELATION)
     if (nzchar(f) && nzchar(t) && f %in% states && t %in% states) {
       sign <- if (rel %in% .tf_SIM_POS) 1.0 else if (rel %in% .tf_SIM_NEG) -1.0 else 0.0
       ti <- idx[[t]]

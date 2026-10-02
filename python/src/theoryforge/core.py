@@ -7,6 +7,14 @@ from copy import deepcopy
 from pathlib import Path
 
 from . import _resources
+from ._access import FORM as _FORM
+from ._access import MATURITY as _MATURITY
+from ._access import PRED_TYPE as _PRED_TYPE
+from ._access import RELATION as _RELATION
+from ._access import field as _field
+from ._access import items as _items
+from ._access import ne_str as _nonempty_str
+from ._access import str_list as _str_list
 from ._io import write_lf as _write_lf
 from ._load import dump_yaml as _dump_yaml
 from ._load import load_document as _load_document
@@ -21,35 +29,11 @@ from .osf import osf_push as _osf_push
 from .prereg import preregister as _preregister
 from .redundancy import redundancy_check as _redundancy_check
 from .report_render import render_report as _render_report
-from .rigor import _as_list
 from .rigor import check as _check
 from .rigor import report as _report
 from .scoring import severity as _severity
 from .sem import compile_sem as _compile_sem
 from .simulate import simulate as _simulate
-
-_MATURITY = {"draft", "building", "developing", "testing"}
-_FORM = {"variance", "network", "typology", "process"}
-_RELATION = {"increases", "decreases", "moderates", "mediates", "causes", "associates"}
-_PRED_TYPE = {"point", "interval", "directional", "existence"}
-
-
-def _nonempty_str(v) -> bool:
-    return isinstance(v, str) and v.strip() != ""
-
-
-def _field(item, key):
-    """The value of ``key`` in ``item``, or None when ``item`` is not a mapping.
-
-    Mirrors the R twin's ``.tf_get``, which returns its default for anything
-    that is not a list. A collection written as a YAML sequence of scalars
-    (``constructs: [arousal, threat]`` instead of a sequence of mappings) has
-    entries with no fields at all, so every required field is reported missing
-    and the caller gets the contract's ``invalid theory object: ...`` message.
-    Calling ``.get`` on the scalar directly would raise ``AttributeError``
-    instead, which is neither the documented refusal nor what R does.
-    """
-    return item.get(key) if isinstance(item, dict) else None
 
 
 def _as_str_list(v) -> list:
@@ -98,8 +82,7 @@ class Theory:
         return self.data.get("maturity", "")
 
     def _list(self, key: str) -> list:
-        v = self.data.get(key)
-        return v if isinstance(v, list) else []
+        return _items(self.data, key)
 
     # -- validation ------------------------------------------------------------
     def validate(self, *, full: bool = False) -> bool:
@@ -207,15 +190,15 @@ class Theory:
             if _nonempty_str(to) and to not in construct_ids:
                 errors.append(f"proposition[{i}] to '{to}' is not a known construct")
         for i, p in enumerate(preds):
-            for dref in _as_list(_field(p, "derives_from")):
-                if _nonempty_str(dref) and dref not in proposition_ids:
+            for dref in _str_list(_field(p, "derives_from")):
+                if dref not in proposition_ids:
                     errors.append(f"prediction[{i}] derives_from '{dref}' is not a known proposition")
-            for dv in _as_list(_field(p, "diagnostic_vs")):
-                if _nonempty_str(dv) and dv not in alternative_ids:
+            for dv in _str_list(_field(p, "diagnostic_vs")):
+                if dv not in alternative_ids:
                     errors.append(f"prediction[{i}] diagnostic_vs '{dv}' is not a known alternative")
         for i, a in enumerate(auxs):
-            for pr in _as_list(_field(a, "protects")):
-                if _nonempty_str(pr) and pr not in prediction_ids:
+            for pr in _str_list(_field(a, "protects")):
+                if pr not in prediction_ids:
                     errors.append(f"assumption[{i}] protects '{pr}' is not a known prediction")
         for i, t in enumerate(self._list("test_outcomes")):
             pid = _field(t, "prediction_id")

@@ -70,7 +70,8 @@ NULL
 #' study could find and refute.
 #'
 #' Constructs that no causal proposition connects are left out, because silence
-#' about a construct is not a claim that it is independent of anything. A theory
+#' about a construct is not a claim that it is independent of anything, and so
+#' are constructs without an id, which no proposition can name. A theory
 #' with no causal propositions therefore comes back with an empty basis set and
 #' no error.
 #'
@@ -124,6 +125,9 @@ tf_implications <- function(theory) {
   declared <- character(0)
   for (c in .tf_list(T, "constructs")) {
     cid <- .tf_str(c, "id")
+    # A construct without an id cannot be the endpoint of a proposition, so it
+    # takes no part in the graph, and two of them do not share an id.
+    if (!nzchar(cid)) next
     # Two constructs sharing an id give the same node two sets of parents, and
     # nothing in the maths says which one a proposition meant.
     if (cid %in% declared) {
@@ -136,8 +140,7 @@ tf_implications <- function(theory) {
   edge_from <- integer(0)
   edge_to <- integer(0)
   for (p in .tf_list(T, "propositions")) {
-    rel <- .tf_get(p, "relation")
-    if (!(length(rel) == 1L && !is.na(rel) && rel %in% .tf_CAUSAL)) next
+    if (!(.tf_enum_str(p, "relation", .tf_RELATION) %in% .tf_CAUSAL)) next
     pid <- .tf_str(p, "id")
     frm <- .tf_str(p, "from")
     to <- .tf_str(p, "to")

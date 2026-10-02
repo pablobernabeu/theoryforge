@@ -1,15 +1,10 @@
 """Preregistration document export. Deterministic markdown output."""
 from __future__ import annotations
 
+from ._access import MATURITY, PRED_TYPE, enum, field, items, str_list, text
 from ._io import write_lf as _write_lf
-from .rigor import _as_list
 from .rigor import check as _check
 from .scoring import severity as _severity
-
-
-def _list(d: dict, key: str) -> list:
-    v = d.get(key)
-    return v if isinstance(v, list) else []
 
 
 def _fmt(x) -> str:
@@ -27,23 +22,24 @@ def preregister(T, path=None) -> str:
     verified = "yes" if deriv and deriv["status"] == "pass" else "no"
 
     lines = [
-        f"# Preregistration: {data.get('title', '')}",
+        f"# Preregistration: {text(data.get('title'))}",
         "",
-        f"- Theory ID: {data.get('id', '')}",
-        f"- Schema version: {data.get('schema_version', '')}",
-        f"- Maturity: {data.get('maturity', '')}",
+        f"- Theory ID: {text(data.get('id'))}",
+        f"- Schema version: {text(data.get('schema_version'))}",
+        f"- Maturity: {enum(data.get('maturity'), MATURITY) or ''}",
         f"- Derivation chain verified: {verified}",
         "",
         "## Hypotheses",
     ]
-    preds = _list(data, "predictions")
+    preds = items(data, "predictions")
     if not preds:
         lines.append("_No predictions specified._")
     else:
         for i, p in enumerate(preds, start=1):
-            df = _as_list(p.get("derives_from"))
+            df = str_list(field(p, "derives_from"))
             df_txt = ", ".join(df) if df else "—"
-            lines.append(f"{i}. [{p.get('type')}] {p.get('statement')} (derives from: {df_txt})")
+            ptype = enum(field(p, "type"), PRED_TYPE) or ""
+            lines.append(f"{i}. [{ptype}] {text(field(p, 'statement'))} (derives from: {df_txt})")
 
     # The values grade the form of each claim before any data (API_SPEC section
     # 9). They say nothing of how severely a claim is tested, and the heading
@@ -57,7 +53,7 @@ def preregister(T, path=None) -> str:
             pid, cs, rk = s["prediction_id"], _fmt(s["computed_severity"]), _fmt(s["risk_score"])
             lines.append(f"- {pid}: severity {cs}, risk {rk}")
 
-    text = "\n".join(lines) + "\n"
+    doc = "\n".join(lines) + "\n"
     if path is not None:
-        _write_lf(path, text)
-    return text
+        _write_lf(path, doc)
+    return doc

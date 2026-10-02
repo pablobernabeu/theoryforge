@@ -32,7 +32,8 @@ Treats each construct (in file order) as a state variable and each directed
 proposition as a signed linear coupling term, then integrates
 \code{dX/dt = A X - damping * X} with fixed-step (Euler) updates. The result
 is fully deterministic. Construct ids must be unique; duplicates are refused
-rather than resolved to an arbitrary state slot.
+rather than resolved to an arbitrary state slot. A construct without an id
+is a state with no couplings, and two of them do not count as duplicates.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

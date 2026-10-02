@@ -1,0 +1,32 @@
+# Edge case: an auxiliary assumption without an id and a test outcome without a
+# prediction_id. A missing id reads as the empty string in both twins. The
+# assumption was added for a failure and protects nothing that passed, so
+# parsimony fails, and the pipeline diagram names the outcome "result_".
+schema_version: "1.0"
+id: edge-idless
+title: An assumption and an outcome without ids
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct entirely different.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+auxiliary_assumptions:
+  - statement: The measure of Beta lags by a week.
+    added_for: h1 failed at the first test
+    protects: [h1]
+test_outcomes:
+  - passed: false

@@ -5,8 +5,8 @@ It reads neither the statement nor any test, outcome or data.
 """
 from __future__ import annotations
 
+from ._access import PRED_TYPE, enum, field, items, str_list, text
 from ._num import rnd
-from .rigor import _as_list
 
 # The base riskiness of each claim form. The order follows Popper's (1959,
 # sections 31-33) comparison of falsifiability by the subclass relation. Of two
@@ -21,11 +21,6 @@ BASE = {"existence": 0.1, "directional": 0.4, "interval": 0.7, "point": 0.9}
 # sizes of those ambient (crud) correlations, a different quantity from this
 # discount.
 CRUD = 0.25
-
-
-def _list(d: dict, key: str) -> list:
-    v = d.get(key)
-    return v if isinstance(v, list) else []
 
 
 def severity(T) -> list[dict]:
@@ -55,20 +50,20 @@ def severity(T) -> list[dict]:
         Popper, K. R. (1959). The logic of scientific discovery. Hutchinson.
     """
     T = T.data if hasattr(T, "data") else T
-    preds = _list(T, "predictions")
-    alt_ids = {a.get("id") for a in _list(T, "alternatives")}
+    preds = items(T, "predictions")
+    alt_ids = {text(field(a, "id")) for a in items(T, "alternatives")}
     out = []
     for p in preds:
-        typ = p.get("type")
+        typ = enum(field(p, "type"), PRED_TYPE) or ""
         base = BASE.get(typ, 0.0)
         discounted = base * (1 - CRUD) if typ == "directional" else base
-        dv = _as_list(p.get("diagnostic_vs"))
+        dv = str_list(field(p, "diagnostic_vs"))
         # A package convention: naming a registered alternative the prediction
         # would discriminate from adds 0.1. The alternative is declared, not
         # checked against the statement.
-        diag_bonus = 0.1 if dv and any(d in alt_ids for d in dv) else 0.0
+        diag_bonus = 0.1 if any(d in alt_ids for d in dv) else 0.0
         out.append({
-            "prediction_id": p.get("id"),
+            "prediction_id": text(field(p, "id")),
             "type": typ,
             "risk_score": rnd(base, 3),
             "computed_severity": rnd(min(1.0, discounted + diag_bonus), 3),

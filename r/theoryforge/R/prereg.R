@@ -41,7 +41,7 @@ tf_preregister <- function(theory, path = NULL) {
     "",
     sprintf("- Theory ID: %s", .tf_str(T, "id")),
     sprintf("- Schema version: %s", .tf_str(T, "schema_version")),
-    sprintf("- Maturity: %s", .tf_str(T, "maturity")),
+    sprintf("- Maturity: %s", .tf_enum_str(T, "maturity", .tf_MATURITY)),
     sprintf("- Derivation chain verified: %s", verified),
     "",
     "## Hypotheses"
@@ -53,11 +53,11 @@ tf_preregister <- function(theory, path = NULL) {
   } else {
     for (i in seq_along(preds)) {
       p <- preds[[i]]
-      df <- .tf_get(p, "derives_from")
-      df <- if (is.null(df)) character(0) else unlist(df, use.names = FALSE)
+      df <- .tf_str_list(.tf_get(p, "derives_from"))
       df_txt <- if (length(df) > 0L) paste(df, collapse = ", ") else "\u2014"
       lines <- c(lines, sprintf("%d. [%s] %s (derives from: %s)",
-                                i, .tf_str(p, "type"), .tf_str(p, "statement"), df_txt))
+                                i, .tf_enum_str(p, "type", .tf_PRED_TYPE), .tf_str(p, "statement"),
+                                df_txt))
     }
   }
 

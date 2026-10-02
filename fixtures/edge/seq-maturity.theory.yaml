@@ -1,0 +1,28 @@
+# Edge case: maturity and the formal model type written as one-element sequences.
+# Both are enum fields, and an enum field that is not one of its allowed strings
+# reads as absent in every consumer. The gate is therefore not advisory, and
+# formalisation warns, in both twins.
+schema_version: "1.0"
+id: edge-seq-maturity
+title: Maturity written as a sequence
+maturity: [draft]
+theory_form: network
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct entirely different.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+formal_model:
+  type: [ode]

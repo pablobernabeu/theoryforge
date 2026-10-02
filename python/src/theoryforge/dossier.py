@@ -5,25 +5,21 @@ preregistration document), so the bundle is itself deterministic.
 """
 from __future__ import annotations
 
+from ._access import field, items, text
 from .prereg import _fmt
 from .prereg import preregister as _preregister
 from .rigor import check as _check
 from .scoring import severity as _severity
 
 
-def _list(d: dict, key: str) -> list:
-    v = d.get(key)
-    return v if isinstance(v, list) else []
-
-
 def dossier(T) -> str:
     data = T.data if hasattr(T, "data") else T
     rep = _check(data)
     lines = [
-        f"# theoryforge dossier: {data.get('title', '')}",
+        f"# theoryforge dossier: {text(data.get('title'))}",
         "",
-        f"- Theory ID: {data.get('id', '')}",
-        f"- Maturity: {data.get('maturity', '')}",
+        f"- Theory ID: {text(data.get('id'))}",
+        f"- Maturity: {rep['maturity']}",
         # The score is only interpretable against the checklist that produced
         # it, so a reviewer reading the bundle can see which one that was.
         f"- Checklist version: {rep['checklist_version']}",
@@ -49,13 +45,13 @@ def dossier(T) -> str:
             lines.append(f"- {pid}: severity {cs}, risk {rk}")
 
     lines += ["", "## Provenance", ""]
-    prov = _list(data, "provenance")
+    prov = items(data, "provenance")
     if not prov:
         lines.append("_No provenance recorded._")
     else:
         for i, s in enumerate(prov, start=1):
-            action = str(s.get("action", "") or "")
-            detail = str(s.get("detail", "") or "")
+            action = text(field(s, "action"))
+            detail = text(field(s, "detail"))
             lines.append(f"{i}. {action}: {detail}" if detail.strip() else f"{i}. {action}")
 
     lines += ["", "## Preregistration", ""]

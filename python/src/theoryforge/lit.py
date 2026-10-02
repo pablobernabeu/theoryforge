@@ -9,9 +9,10 @@ from __future__ import annotations
 import itertools
 import json
 
+from ._access import as_list as _as_list
+from ._access import field, items, str_list, text
 from ._load import load_document
 from .redundancy import tokens
-from .rigor import _as_list
 
 DEFAULT_MIN_LINK = 2
 
@@ -106,18 +107,19 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
     lm = litmap(corpus, min_link)
 
     focal_src = " ".join(
-        [T.get("title", "")] + [c.get("label", "") for c in (T.get("constructs") or [])]
+        [text(T.get("title"))] + [text(field(c, "label")) for c in items(T, "constructs")]
     )
     focal_tokens = tokens(focal_src)
-    alts = T.get("alternatives") or []
+    alts = items(T, "alternatives")
 
     themes_out = []
     under, crowded = [], []
     for th in lm["themes"]:
         th_tokens = tokens(" ".join(th["keywords"]))
         on = sorted(
-            a.get("id") for a in alts
-            if tokens(a.get("label", "") + " " + " ".join(_as_list(a.get("key_constructs")))) & th_tokens
+            text(field(a, "id")) for a in alts
+            if tokens(" ".join([text(field(a, "label"))] + str_list(field(a, "key_constructs"))))
+            & th_tokens
         )
         focal_on = bool(focal_tokens & th_tokens)
         n = len(on) + (1 if focal_on else 0)
@@ -132,7 +134,7 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
             crowded.append(th["id"])
 
     return {
-        "theory_id": T.get("id", ""),
+        "theory_id": text(T.get("id")),
         "themes": themes_out,
         "under_theorised_fronts": under,
         "redundancy_risk": crowded,
@@ -220,14 +222,11 @@ def new_evidence_dois(theory, candidate_dois: list) -> list:
     """
     T = theory.data if hasattr(theory, "data") else theory
     known = set()
-    for e in T.get("evidence") or []:
-        doi = e.get("source_doi")
-        if doi:
-            known.add(_normalize_doi(doi))
-    for a in T.get("alternatives") or []:
-        doi = a.get("source_doi")
-        if doi:
-            known.add(_normalize_doi(doi))
+    for key in ("evidence", "alternatives"):
+        for entry in items(T, key):
+            doi = text(field(entry, "source_doi"))
+            if doi:
+                known.add(_normalize_doi(doi))
 
     seen, out = set(), []
     for doi in candidate_dois or []:

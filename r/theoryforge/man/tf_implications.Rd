@@ -33,7 +33,8 @@ study could find and refute.
 }
 \details{
 Constructs that no causal proposition connects are left out, because silence
-about a construct is not a claim that it is independent of anything. A theory
+about a construct is not a claim that it is independent of anything, and so
+are constructs without an id, which no proposition can name. A theory
 with no causal propositions therefore comes back with an empty basis set and
 no error.
 }

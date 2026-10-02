@@ -9,6 +9,15 @@ NULL
 .tf_FORBIDDING <- c("point", "interval", "directional")
 .tf_PRECISE <- c("point", "interval")
 
+# Whether a test outcome records a pass for one of `prediction_ids`. The
+# outcome's prediction_id must be a string: `%in%` would match the number 1
+# against the id "1", where the Python twin's `in` does not.
+.tf_passed_for <- function(outcome, prediction_ids) {
+  pid <- .tf_get(outcome, "prediction_id")
+  is.character(pid) && length(pid) == 1L && !is.na(pid) && pid %in% prediction_ids &&
+    isTRUE(.tf_get(outcome, "passed"))
+}
+
 # Compute (status, score) for each checklist item; returns a named list of
 # c(status, score) per item id.
 .tf_check_items <- function(T, thr) {
@@ -24,21 +33,17 @@ NULL
   out <- list()
   item <- function(status, score) list(status = status, score = score)
 
+  ptype <- function(p) .tf_enum_str(p, "type", .tf_PRED_TYPE)
+
   # 1 falsifiability
-  n_forbidding <- sum(vapply(preds, function(p) {
-    ty <- .tf_get(p, "type")
-    length(ty) == 1L && !is.na(ty) && ty %in% .tf_FORBIDDING
-  }, logical(1)))
+  n_forbidding <- sum(vapply(preds, function(p) ptype(p) %in% .tf_FORBIDDING, logical(1)))
   out$falsifiability <- if (n_forbidding >= 1L) item("pass", 1.0) else item("fail", 0.0)
 
   # 2 precision
   if (length(preds) == 0L) {
     out$precision <- item("warn", 0.0)
   } else {
-    n_precise <- sum(vapply(preds, function(p) {
-      ty <- .tf_get(p, "type")
-      length(ty) == 1L && !is.na(ty) && ty %in% .tf_PRECISE
-    }, logical(1)))
+    n_precise <- sum(vapply(preds, function(p) ptype(p) %in% .tf_PRECISE, logical(1)))
     share <- n_precise / length(preds)
     out$precision <- item(if (share >= thr$min_precision_share) "pass" else "warn",
                           .tf_rnd(share, 3))
@@ -75,19 +80,8 @@ NULL
   for (x in aux) {
     af <- .tf_get(x, "added_for")
     if (!is.null(af)) {
-      protects <- .tf_get(x, "protects")
-      if (is.null(protects)) protects <- list()
-      protects <- unlist(protects, use.names = FALSE)
-      ok <- FALSE
-      for (t in tos) {
-        pid <- .tf_get(t, "prediction_id")
-        passed <- .tf_get(t, "passed")
-        if (!is.null(pid) && length(pid) == 1L && pid %in% protects &&
-            isTRUE(passed)) {
-          ok <- TRUE
-          break
-        }
-      }
+      protects <- .tf_str_list(.tf_get(x, "protects"))
+      ok <- any(vapply(tos, .tf_passed_for, logical(1), prediction_ids = protects))
       if (!ok) ad_hoc <- ad_hoc + 1L
     }
   }
@@ -103,7 +97,7 @@ NULL
   if (length(cons) < 2L) {
     max_sim <- 0.0
   } else {
-    toks <- lapply(cons, function(c) tf_tokens(.tf_get(c, "definition", "")))
+    toks <- lapply(cons, function(c) tf_tokens(.tf_str(c, "definition")))
     max_sim <- 0.0
     n <- length(toks)
     for (i in seq_len(n - 1L)) {
@@ -148,8 +142,7 @@ NULL
 
   # 9 causal_testability
   n_causal <- sum(vapply(props, function(p) {
-    rel <- .tf_get(p, "relation")
-    length(rel) == 1L && !is.na(rel) && rel %in% .tf_CAUSAL
+    .tf_enum_str(p, "relation", .tf_RELATION) %in% .tf_CAUSAL
   }, logical(1)))
   out$causal_testability <- if (n_causal >= 1L) item("pass", 1.0) else item("warn", 0.0)
 
@@ -158,20 +151,15 @@ NULL
     out$diagnosticity <- item("warn", 0.0)
   } else {
     n_diag <- sum(vapply(preds, function(p) {
-      dv <- .tf_get(p, "diagnostic_vs")
-      if (!.tf_ne_list(dv)) return(FALSE)
-      dv <- unlist(dv, use.names = FALSE)
-      any(dv %in% alt_ids)
+      any(.tf_str_list(.tf_get(p, "diagnostic_vs")) %in% alt_ids)
     }, logical(1)))
     out$diagnosticity <- item(if (n_diag >= 1L) "pass" else "warn",
                               .tf_rnd(n_diag / length(preds), 3))
   }
 
   # 11 formalisation
-  fm <- .tf_get(T, "formal_model")
-  fm_type <- if (is.list(fm)) .tf_get(fm, "type") else NULL
-  present <- is.list(fm) && !is.null(fm_type) && length(fm_type) == 1L &&
-    !is.na(fm_type) && !(fm_type %in% "none")
+  fm_type <- .tf_enum_str(.tf_get(T, "formal_model"), "type", .tf_FORMAL_MODEL_TYPE)
+  present <- !(fm_type %in% c("", "none"))
   out$formalisation <- if (present) item("pass", 1.0) else item("warn", 0.0)
 
   # 12 derivation_chain
@@ -179,10 +167,8 @@ NULL
     out$derivation_chain <- item("pass", 1.0)
   } else {
     n_valid <- sum(vapply(preds, function(p) {
-      df <- .tf_get(p, "derives_from")
-      if (!.tf_ne_list(df)) return(FALSE)
-      df <- unlist(df, use.names = FALSE)
-      all(df %in% prop_ids)
+      df <- .tf_str_list(.tf_get(p, "derives_from"))
+      length(df) > 0L && all(df %in% prop_ids)
     }, logical(1)))
     frac <- n_valid / length(preds)
     out$derivation_chain <- item(if (frac == 1.0) "pass" else "fail", .tf_rnd(frac, 3))
@@ -242,7 +228,9 @@ tf_check <- function(theory) {
     )
   }
 
-  maturity <- .tf_str(T, "maturity")
+  # A maturity outside its enum, a sequence included, is absent (API_SPEC.md
+  # section 3, "Reading a theory"), so the report prints "" for it.
+  maturity <- .tf_enum_str(T, "maturity", .tf_MATURITY)
   if (identical(maturity, "draft")) {
     gate <- "advisory"
   } else {

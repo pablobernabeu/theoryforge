@@ -5,12 +5,8 @@ progressive if it yields newly corroborated predictions without ad-hoc immunisin
 """
 from __future__ import annotations
 
-from .rigor import _as_list
-
-
-def _list(d: dict, key: str) -> list:
-    v = d.get(key)
-    return v if isinstance(v, list) else []
+from ._access import field, items, str_list, text
+from .rigor import _passed_for
 
 
 def appraise_amendment(new, prior) -> dict:
@@ -42,25 +38,26 @@ def appraise_amendment(new, prior) -> dict:
             "so start the amendment from prior.copy()."
         )
 
-    prior_pred_ids = {p.get("id") for p in _list(prior, "predictions")}
-    prior_aux_ids = {a.get("id") for a in _list(prior, "auxiliary_assumptions")}
-    tos = _list(new, "test_outcomes")
+    # A missing id reads as "" (API_SPEC.md section 3, "Reading a theory"), as
+    # in R. validate() reports the entry; the appraisal still runs.
+    prior_pred_ids = {text(field(p, "id")) for p in items(prior, "predictions")}
+    prior_aux_ids = {text(field(a, "id")) for a in items(prior, "auxiliary_assumptions")}
+    tos = items(new, "test_outcomes")
 
-    def passed(pid: str) -> bool:
-        return any(t.get("prediction_id") == pid and t.get("passed") is True for t in tos)
-
-    new_predictions = [p.get("id") for p in _list(new, "predictions") if p.get("id") not in prior_pred_ids]
-    corroborated_new = [pid for pid in new_predictions if passed(pid)]
+    new_predictions = [pid for pid in (text(field(p, "id")) for p in items(new, "predictions"))
+                       if pid not in prior_pred_ids]
+    corroborated_new = [pid for pid in new_predictions if any(_passed_for(t, (pid,)) for t in tos)]
 
     ad_hoc = []
-    for a in _list(new, "auxiliary_assumptions"):
-        if a.get("id") in prior_aux_ids:
+    for a in items(new, "auxiliary_assumptions"):
+        aid = text(field(a, "id"))
+        if aid in prior_aux_ids:
             continue
-        if a.get("added_for") is None:
+        if field(a, "added_for") is None:
             continue
-        protects = _as_list(a.get("protects"))
-        if not any(t.get("prediction_id") in protects and t.get("passed") is True for t in tos):
-            ad_hoc.append(a.get("id"))
+        protects = str_list(field(a, "protects"))
+        if not any(_passed_for(t, protects) for t in tos):
+            ad_hoc.append(aid)
 
     if len(corroborated_new) >= 1 and len(ad_hoc) == 0:
         verdict = "progressive"

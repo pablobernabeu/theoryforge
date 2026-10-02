@@ -49,6 +49,27 @@
   a prediction's `risk_score` and a test outcome's `severity_at_test` as
   informational fields that no function reads.
 
+* Malformed input is now read as the Python twin reads it, by every function
+  that takes a theory. A collection written as a mapping, including a named
+  list built in memory, is read as empty, so `tf_check()` on such a theory now
+  reports the gate Python reports where R used to score the mapping's values.
+  A collection written as a single string is read as empty too. Numbers and
+  logicals in text fields read as empty strings, so `id: 2026` and `label: Yes`
+  no longer print as `2026` and `TRUE`. An entry of a string array that is not
+  a nonempty string is ignored. `derives_from: [~]` therefore fails the
+  derivation check, which it used to pass while the preregistration printed no
+  derivation, and `[[adults]]` is no longer flattened to `adults`. `relation`,
+  `type`, `maturity` and `formal_model$type` outside their allowed values,
+  sequences such as `[increases]` included, are read as absent. They add no
+  edge, claim form, advisory gate or formal model and print as empty, so a
+  formal-model type such as `"bayesian"` no longer passes formalisation.
+  `tf_validate(full = TRUE)` no longer stops with "subscript out of bounds"
+  when a collection entry is a scalar, and `tf_implications()` and
+  `tf_simulate()` no longer refuse two constructs without ids as duplicates.
+  A theory that matches the schema gives the same results as before, except
+  that an empty or blank entry of a string array, such as `measurement: [""]`,
+  no longer counts as an entry.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

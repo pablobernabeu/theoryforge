@@ -86,7 +86,7 @@ tf_redundancy_check <- function(theory) {
   cons <- .tf_list(theory, "constructs")
   thr <- tf_checklist()$thresholds$redundancy_similarity_max
   ids <- vapply(cons, function(c) .tf_str(c, "id"), character(1))
-  toks <- lapply(cons, function(c) tf_tokens(.tf_get(c, "definition", "")))
+  toks <- lapply(cons, function(c) tf_tokens(.tf_str(c, "definition")))
 
   a <- character(0)
   b <- character(0)

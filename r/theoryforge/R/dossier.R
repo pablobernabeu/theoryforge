@@ -32,7 +32,7 @@ tf_dossier <- function(theory) {
     sprintf("# theoryforge dossier: %s", .tf_str(T, "title")),
     "",
     sprintf("- Theory ID: %s", .tf_str(T, "id")),
-    sprintf("- Maturity: %s", .tf_str(T, "maturity")),
+    sprintf("- Maturity: %s", rep$maturity),
     # The score is only interpretable against the checklist that produced it,
     # so a reviewer reading the bundle can see which one that was.
     sprintf("- Checklist version: %s", rep$checklist_version),

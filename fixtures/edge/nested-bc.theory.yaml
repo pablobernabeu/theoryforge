@@ -1,0 +1,30 @@
+# Edge case: boundary conditions written as a nested sequence. Only nonempty
+# strings count as entries of a string array, so [[adults]] reads as empty in
+# both twins and the construct has no scope. R's reader used to flatten it to
+# "adults", and Python's Venn diagram raised TypeError on it.
+schema_version: "1.0"
+id: edge-nested-bc
+title: Boundary conditions written as a nested sequence
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+    measurement: [m1]
+    boundary_conditions: [[adults]]
+  - id: c2
+    label: Beta
+    definition: The second construct entirely different.
+    measurement: [m2]
+    boundary_conditions: [adults]
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]

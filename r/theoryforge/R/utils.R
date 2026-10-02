@@ -9,33 +9,38 @@ NULL
   is.character(v) && length(v) == 1L && !is.na(v) && nzchar(trimws(v))
 }
 
-# A list/array field is "nonempty" if it is a list/vector of length >= 1.
-# yaml: `[]` parses to list() (length 0); a missing key is NULL (length 0).
-# Where the schema expects an array, a nonempty scalar string counts as a
-# singleton list (natural YAML such as `derives_from: p1`); an empty or
-# whitespace-only scalar counts as absent. Mirrors the Python `_as_list`
-# reading (API_SPEC.md section 4).
-.tf_ne_list <- function(v) {
-  if (is.list(v)) return(length(v) >= 1L)
-  if (is.character(v) && length(v) == 1L) {
-    return(!is.na(v) && nzchar(trimws(v)))
+# -- Reading a theory ---------------------------------------------------------
+#
+# tf_validate() reports a malformed theory. Every other function reads it
+# leniently, and these accessors fix what lenient means, so that both twins read
+# the same malformed value the same way (API_SPEC.md section 3, "Reading a
+# theory"). The Python twin's _access.py holds the same five readers. tf_read()
+# returns every sequence as an unnamed list and every mapping as a named list,
+# so a value of length one that is not a list is a scalar.
+
+# The collection under `key`: the list when it is a sequence, otherwise empty. A
+# scalar or a mapping (a non-empty named list, built in memory or read from a
+# file) where a collection belongs reads as an empty collection, and so does `d`
+# itself when it is not a list. A vector of two or more values, which only a
+# theory built in memory can hold, is the sequence of its elements. An entry
+# that is not a list is kept, and .tf_get() reads it as an entry with no fields.
+.tf_list <- function(d, key) {
+  if (!is.list(d)) return(list())
+  v <- d[[key]]
+  if (is.null(v)) return(list())
+  if (is.list(v)) {
+    return(if (length(v) > 0L && .tf_is_mapping(v)) list() else v)
   }
-  # NULL is excluded twice over: length(NULL) is 0, and is.atomic(NULL) is FALSE
-  # from R 4.4 (it was TRUE up to 4.3, and DESCRIPTION declares R >= 4.1). The
-  # line therefore reads a missing key as an absent array on every supported R.
-  (is.atomic(v) && !is.null(v)) && length(v) >= 1L
+  if (length(v) >= 2L) as.list(v) else list()
 }
 
-# Mirror Python `T.get(key)` returning a list when present, else [].
-# tf_read() returns every YAML or JSON sequence as a list and every mapping as a
-# named list, and a missing key is absent.
-.tf_list <- function(d, key) {
+# The 0.6.0 reading of a list-valued field, kept where nothing may be dropped:
+# the builders append to whatever a collection holds, and corpus records keep
+# their own value rules (API_SPEC.md section 14).
+.tf_as_list <- function(d, key) {
   v <- d[[key]]
   if (is.null(v)) return(list())
   if (is.list(v)) return(v)
-  # An atomic value: a scalar string from natural YAML such as
-  # `derives_from: p1`, or a vector in a theory built in memory, such as
-  # `derives_from = c("p1", "p2")`. Either is read as the list of its elements.
   as.list(v)
 }
 
@@ -46,18 +51,58 @@ NULL
   if (is.null(v)) default else v
 }
 
-# Get a scalar string field, returning "" when absent/NULL (mirrors `str(x or "")`).
-# A reader for fields the schema types as a scalar, and deliberately lenient: a
-# YAML sequence where a scalar belongs is read as its first element, so an id or a
-# label still prints somewhere. Refusing such a file is tf_validate()'s job. Do not
-# add validation here, or the reader and the validator would disagree about the
-# same document.
+# A value read as text. A string is returned as it is, and a sequence whose
+# first element is a string gives that element. Anything else reads as "": a
+# missing value, a number and a logical included, because R holds `1.0` as the
+# number 1 and `Yes` as TRUE, and no reading of either gives back what the file
+# says. Refusing such a value is tf_validate()'s job.
+.tf_text <- function(v) {
+  if (is.list(v)) {
+    if (length(v) == 0L || .tf_is_mapping(v)) return("")
+    v <- v[[1L]]
+    if (is.list(v)) return("")
+  }
+  if (!is.character(v) || length(v) == 0L || is.na(v[[1L]])) return("")
+  v[[1L]]
+}
+
+# A text field of an entry (mirrors Python's text(field(d, key))).
 .tf_str <- function(d, key) {
-  v <- .tf_get(d, key, "")
-  if (is.null(v) || length(v) == 0L) return("")
-  if (length(v) > 1L) v <- v[[1L]]
-  if (is.na(v)) return("")
-  as.character(v)
+  .tf_text(.tf_get(d, key))
+}
+
+# `v` when it is one of the `allowed` strings, otherwise NULL (absent). Used for
+# type, relation, maturity and formal_model$type wherever they are read, so a
+# value outside the enum, a sequence included, takes part in no verdict and
+# prints as nothing.
+.tf_enum <- function(v, allowed) {
+  if (is.character(v) && length(v) == 1L && !is.na(v) && v %in% allowed) v else NULL
+}
+
+# An enum field of an entry as text: its value, or "" when it is absent.
+.tf_enum_str <- function(d, key, allowed) {
+  v <- .tf_enum(.tf_get(d, key), allowed)
+  if (is.null(v)) "" else v
+}
+
+# A string array: its nonempty string entries, in order, as a character vector.
+# A nonempty scalar string is a one-element array (natural YAML such as
+# `derives_from: p1`). An entry that is not a nonempty string, such as the null
+# in `[p1, ~]` or the inner list in `[[adults]]`, is ignored, and any other value
+# reads as empty (API_SPEC.md section 4).
+.tf_str_list <- function(v) {
+  if (is.list(v)) {
+    if (length(v) == 0L || .tf_is_mapping(v)) return(character(0))
+    keep <- vapply(v, .tf_ne_str, logical(1))
+    return(as.character(unlist(v[keep], use.names = FALSE)))
+  }
+  if (is.character(v)) return(unname(v[!is.na(v) & nzchar(trimws(v))]))
+  character(0)
+}
+
+# Whether a string array has an entry.
+.tf_ne_list <- function(v) {
+  length(.tf_str_list(v)) > 0L
 }
 
 # Seconds every outbound request is allowed before it is abandoned, matching the

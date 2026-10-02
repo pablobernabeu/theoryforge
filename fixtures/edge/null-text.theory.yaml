@@ -1,0 +1,25 @@
+# Edge case: null title, statement and type. A text field that is not a string
+# reads as the empty string in both twins, so the preregistration prints nothing
+# where Python used to print "None".
+schema_version: "1.0"
+id: edge-null-text
+title: ~
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct entirely different.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: ~
+    type: ~
+    derives_from: [p1]

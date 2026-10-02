@@ -33,6 +33,8 @@ NULL
 #' tf_appraise_amendment(new, prior)
 #' @export
 tf_appraise_amendment <- function(new, prior) {
+  # A missing id reads as "" (API_SPEC.md section 3, "Reading a theory"), as in
+  # Python. tf_validate() reports the entry; the appraisal still runs.
   prior_pred_ids <- unique(vapply(.tf_list(prior, "predictions"),
                                   function(p) .tf_str(p, "id"), character(1)))
   prior_aux_ids <- unique(vapply(.tf_list(prior, "auxiliary_assumptions"),
@@ -40,14 +42,7 @@ tf_appraise_amendment <- function(new, prior) {
   tos <- .tf_list(new, "test_outcomes")
 
   passed <- function(pid) {
-    for (t in tos) {
-      to_pid <- .tf_get(t, "prediction_id")
-      if (!is.null(to_pid) && length(to_pid) == 1L && identical(to_pid, pid) &&
-          isTRUE(.tf_get(t, "passed"))) {
-        return(TRUE)
-      }
-    }
-    FALSE
+    any(vapply(tos, .tf_passed_for, logical(1), prediction_ids = pid))
   }
 
   new_predictions <- character(0)
@@ -64,17 +59,8 @@ tf_appraise_amendment <- function(new, prior) {
     if (aid %in% prior_aux_ids) next
     af <- .tf_get(a, "added_for")
     if (is.null(af)) next
-    protects <- .tf_get(a, "protects")
-    protects <- if (is.null(protects)) character(0) else unlist(protects, use.names = FALSE)
-    immunized <- FALSE
-    for (t in tos) {
-      to_pid <- .tf_get(t, "prediction_id")
-      if (!is.null(to_pid) && length(to_pid) == 1L && to_pid %in% protects &&
-          isTRUE(.tf_get(t, "passed"))) {
-        immunized <- TRUE
-        break
-      }
-    }
+    protects <- .tf_str_list(.tf_get(a, "protects"))
+    immunized <- any(vapply(tos, .tf_passed_for, logical(1), prediction_ids = protects))
     if (!immunized) ad_hoc <- c(ad_hoc, aid)
   }
 

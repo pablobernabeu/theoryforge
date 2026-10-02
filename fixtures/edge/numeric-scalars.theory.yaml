@@ -1,0 +1,26 @@
+# Edge case: numbers and a boolean where the schema expects strings. A text field
+# holding a number or a logical reads as the empty string in both twins, so the
+# report, the preregistration and the diagrams print nothing there. R used to
+# print "1" for 1.0 and Python "1.0", and the labels "TRUE" and "True".
+schema_version: 1.0
+id: 2026
+title: Numbers where strings belong
+maturity: building
+constructs:
+  - id: c1
+    label: Yes
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct entirely different.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: 7
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]

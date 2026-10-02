@@ -10,12 +10,8 @@ import math
 from collections.abc import Callable, Sequence
 
 from . import _resources
+from ._access import field, items, text
 from ._num import rnd
-
-
-def _list(d: dict, key: str) -> list:
-    v = d.get(key)
-    return v if isinstance(v, list) else []
 
 
 def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
@@ -41,9 +37,9 @@ def embedding_redundancy(T, embedder: Callable[[str], Sequence[float]],
     T = T.data if hasattr(T, "data") else T
     if threshold is None:
         threshold = _resources.checklist()["thresholds"]["redundancy_similarity_max"]
-    cons = _list(T, "constructs")
-    vecs = [(c.get("id", ""), embedder(c.get("definition", ""))) for c in cons]
-    rows = []
+    cons = items(T, "constructs")
+    vecs = [(text(field(c, "id")), embedder(text(field(c, "definition")))) for c in cons]
+    rows: list[dict] = []
     for i in range(len(vecs)):
         for j in range(i + 1, len(vecs)):
             # Unequal or empty vectors have no defensible cosine, and the two

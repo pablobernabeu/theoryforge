@@ -8,6 +8,7 @@ from __future__ import annotations
 import re
 
 from . import _resources
+from ._access import field, items, text
 from ._num import rnd
 
 STOPWORDS = {
@@ -33,11 +34,6 @@ def jaccard(a: set[str], b: set[str]) -> float:
     return rnd(inter / union, 3)
 
 
-def _list(d: dict, key: str) -> list:
-    v = d.get(key)
-    return v if isinstance(v, list) else []
-
-
 def redundancy_check(T: dict) -> list[dict]:
     """Pairwise lexical similarity of construct definitions.
 
@@ -54,10 +50,10 @@ def redundancy_check(T: dict) -> list[dict]:
         https://doi.org/10.1177/10888683211047101
     """
     T = T.data if hasattr(T, "data") else T
-    cons = _list(T, "constructs")
+    cons = items(T, "constructs")
     thr = _resources.checklist()["thresholds"]["redundancy_similarity_max"]
-    toks = [(c.get("id", ""), tokens(c.get("definition", ""))) for c in cons]
-    rows = []
+    toks = [(text(field(c, "id")), tokens(text(field(c, "definition")))) for c in cons]
+    rows: list[dict] = []
     for i in range(len(toks)):
         for j in range(i + 1, len(toks)):
             sim = jaccard(toks[i][1], toks[j][1])

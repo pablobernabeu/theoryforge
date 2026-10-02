@@ -11,6 +11,7 @@ from __future__ import annotations
 # `urllib` for the whole function body.
 from urllib.parse import quote as _quote
 
+from ._access import text
 from .dossier import dossier as _dossier
 
 _DEFAULT_BASE = "https://files.osf.io/v1/resources/"
@@ -27,7 +28,7 @@ def osf_push(T, token: str | None = None, node: str | None = None,
     data = T.data if hasattr(T, "data") else T
     # A null or empty id must not leak into the filename ('None.dossier.md' /
     # '.dossier.md'); fall back to 'theory' as the R twin's nzchar guard does.
-    tid = data.get("id") or "theory"
+    tid = text(data.get("id")) or "theory"
     fname = filename or f"{tid}.dossier.md"
     content = _dossier(data)
     # Percent-encode the filename (theory ids are user-supplied, so fname may
