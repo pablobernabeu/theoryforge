@@ -62,6 +62,14 @@ def test_preregister_doc(panic_path):
     assert md.endswith("\n")
 
 
+def test_preregister_names_the_rubric_for_what_it_is(panic_path):
+    # The values grade the form of each claim before any data, so the heading
+    # says so. The per-prediction lines keep their shape for readers that parse them.
+    md = tf.read(panic_path).preregister()
+    assert "\n## Severity (pre-data rubric of claim form)\n- pred1: severity 1.0, risk 0.9\n" in md
+    assert "\n## Severity\n" not in md
+
+
 def test_new_diagrams(panic_path, weak_path):
     rm_ok = tf.read(panic_path).diagram("development_roadmap")
     assert '"all_checks_pass"' in rm_ok

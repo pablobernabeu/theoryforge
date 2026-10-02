@@ -45,6 +45,26 @@ version and a single behavioural contract
   significant digits, writes `true`, `false` and null, and writes every field the schema
   types as an array of strings as an array.
 
+### Changed
+- `severity()` is described for what it is, a pre-data ranking of the form of each
+  prediction's claim. Its documentation no longer cites Mayo (2018), whose severity is a
+  property of a test and its data, and the 0.25 directional discount is documented as
+  the package's convention, not Meehl's. The heading over its values in the
+  preregistration and the dossier reads `Severity (pre-data rubric of claim form)`, the
+  `severity` chart is titled `Pre-data riskiness`, and the apps call the longer bars
+  riskier claims, where they called them stronger tests. The values are unchanged.
+  API_SPEC sections 9, 11, 12 and 20 and the goldens change with them.
+- The four prediction types are defined in the schema, API_SPEC section 4, the
+  `add_prediction` docstring, the R help page and both methodology pages, and the
+  bundled panic predictions now state the value and tolerance that their `point` type
+  claims. Five app examples typed a comparative, ordinal, anti-phase or invariance claim
+  as `point` or `existence`, and now type it `directional`, with their declared
+  severities unchanged. Their scores in the apps move with the labels. The rubric now
+  gives each of the five 0.4, down from 1.0 for the three former `point` predictions and
+  up from 0.2 for the two former `existence` ones. Effort-recovery's precision falls from
+  0.667 to 0.333 (warn) and its aggregate from 86.9 to 83.6, happy-vowel's aggregate
+  falls from 73.1 to 71.1 and cognitive-dissonance's from 76.7 to 73.3.
+
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`
   now refuses to compare a theory with itself, which the in-place builders made easy to
@@ -59,6 +79,8 @@ version and a single behavioural contract
   function, `scopus_corpus_to_tf()`, shown in full in both languages and run by both
   test suites on a stand-in corpus.
 - CONTRIBUTING installs the docs extra needed by `mkdocs build`.
+- The schema documents `risk_score` and `severity_at_test` as informational fields that
+  no function reads.
 
 ### Internal
 - The schema and rigour checklist copies that each package ships are now written only by

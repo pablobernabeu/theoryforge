@@ -27,3 +27,12 @@ def test_dossier(panic_path):
     assert "| falsifiability | pass | 1.0 | 0.15 |" in d
     assert "## Preregistration" in d
     assert "# Preregistration: Network theory of panic disorder" in d
+
+
+def test_dossier_names_the_rubric_for_what_it_is(panic_path):
+    # Once in the dossier's own severity list and once in the preregistration
+    # appended to it.
+    d = tf.read(panic_path).dossier()
+    assert d.count("\n## Severity (pre-data rubric of claim form)\n") == 2
+    assert "\n## Severity\n" not in d
+    assert "- pred1: severity 1.0, risk 0.9\n" in d

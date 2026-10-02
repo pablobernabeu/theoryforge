@@ -143,5 +143,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Constructs named X, M, Y, y and n\n\n- Theory ID: edge-yn-ids\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [directional] Y rises with X, through M. (derives from: p1, p2)\n\n## Severity\n- h1: severity 0.3, risk 0.4\n"
+  "preregister": "# Preregistration: Constructs named X, M, Y, y and n\n\n- Theory ID: edge-yn-ids\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [directional] Y rises with X, through M. (derives from: p1, p2)\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
 }

@@ -118,5 +118,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: A construct merged from another\n\n- Theory ID: edge-merge-key\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [directional] The second construct rises with the first. (derives from: p1)\n\n## Severity\n- h1: severity 0.3, risk 0.4\n"
+  "preregister": "# Preregistration: A construct merged from another\n\n- Theory ID: edge-merge-key\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [directional] The second construct rises with the first. (derives from: p1)\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
 }

@@ -83,9 +83,14 @@
           "type": {
             "type": "string",
             "enum": ["point", "interval", "directional", "existence"],
-            "description": "Riskiness ordering: existence < directional < interval < point."
+            "description": "What the prediction asserts. existence: that an effect or relation exists, without a direction. directional: a sign or an order, including comparisons, interactions, the invariance of a direction across groups and claims that an effect occurs only when a condition holds. interval: that a quantity lies in a stated range, the range the theory permits. point: one value, with the tolerance that measurement requires (the width is measurement tolerance, not latitude the theory allows). Riskiness ordering: existence < directional < interval < point. The label is self-declared, and no function checks it against the statement."
           },
-          "risk_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "risk_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Informational, read by no function. The risk_score that severity() reports is derived from the type."
+          },
           "severity": { "type": "number", "minimum": 0, "maximum": 1 },
           "diagnostic_vs": { "type": "array", "items": { "type": "string" } }
         }
@@ -133,7 +138,12 @@
           "prediction_id": { "type": "string" },
           "observed": { "type": "string" },
           "passed": { "type": "boolean" },
-          "severity_at_test": { "type": "number", "minimum": 0, "maximum": 1 },
+          "severity_at_test": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Informational, read by no function."
+          },
           "registered": { "type": ["string", "null"] },
           "date": { "type": ["string", "null"] }
         }

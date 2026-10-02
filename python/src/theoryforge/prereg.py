@@ -45,7 +45,10 @@ def preregister(T, path=None) -> str:
             df_txt = ", ".join(df) if df else "—"
             lines.append(f"{i}. [{p.get('type')}] {p.get('statement')} (derives from: {df_txt})")
 
-    lines += ["", "## Severity"]
+    # The values grade the form of each claim before any data (API_SPEC section
+    # 9). They say nothing of how severely a claim is tested, and the heading
+    # says so.
+    lines += ["", "## Severity (pre-data rubric of claim form)"]
     sev = _severity(data)
     if not sev:
         lines.append("_No predictions specified._")

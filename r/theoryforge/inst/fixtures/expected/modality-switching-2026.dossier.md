@@ -24,7 +24,7 @@
 | formalisation | pass | 1.0 | 0.05 |
 | derivation_chain | pass | 1.0 | 0.08 |
 
-## Severity
+## Severity (pre-data rubric of claim form)
 
 - pred1: severity 0.3, risk 0.4
 - pred2: severity 0.7, risk 0.7
@@ -52,7 +52,7 @@
 3. [point] Concurrent dynamic visual noise removes the advantage of visual properties over auditory properties in semantic categorisation, leaving a difference of zero under load in the same participants who show the advantage without it. (derives from: p3)
 4. [interval] Across a corpus of concrete nouns matched for length, modality-specific perceptual strength and lexical familiarity correlate no more strongly than 0.10 in absolute value. (derives from: p1, p4)
 
-## Severity
+## Severity (pre-data rubric of claim form)
 - pred1: severity 0.3, risk 0.4
 - pred2: severity 0.7, risk 0.7
 - pred3: severity 1.0, risk 0.9

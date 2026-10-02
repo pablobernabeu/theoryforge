@@ -367,8 +367,10 @@ def _severity_chart(T: dict) -> str:
     # each value label trails its own bar.
     bar_x = 20 + max((len(lab) for lab in labels), default=0) * 8 + 10
     width = bar_x + 250  # 200 for a full bar, then the gap and the value label
+    # The bars rank the form of each claim before any data (API_SPEC section 9),
+    # which the title says. At 18 characters it fits the narrowest chart, W = 280.
     out = [_svg_open(width, h),
-           '  <text x="20" y="26" font-size="15">Prediction severity</text>']
+           '  <text x="20" y="26" font-size="15">Pre-data riskiness</text>']
     if not rows:
         out.append('  <text x="20" y="54">(no predictions)</text>')
     for i, r in enumerate(rows):

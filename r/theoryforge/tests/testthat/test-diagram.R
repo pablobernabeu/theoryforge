@@ -71,6 +71,15 @@ test_that("development_roadmap leads on blockers and rows up the advisories", {
                     out, fixed = TRUE))
 })
 
+test_that("the severity chart is titled for what its bars rank", {
+  # The bars rank the form of each claim before any data and do not measure
+  # how severely a claim was tested.
+  svg <- tf_diagram(tf_read(tf_fixture_path("panic-network.theory.yaml")), "severity")
+  expect_true(grepl('<text x="20" y="26" font-size="15">Pre-data riskiness</text>',
+                    svg, fixed = TRUE))
+  expect_false(grepl("Prediction severity", svg, fixed = TRUE))
+})
+
 test_that("tf_diagram rejects unknown types", {
   theory <- tf_read(tf_fixture_path("weak-theory.theory.yaml"))
   expect_error(tf_diagram(theory, "mindmap"), "unknown diagram type")

@@ -68,7 +68,7 @@ predictions:
   - id: pred3
     derives_from: [p2]
     statement: "Fatigue and recovery effort oscillate out of phase over a working fortnight."
-    type: "point"
+    type: "directional"
     risk_score: 0.7
     severity: 0.7
     diagnostic_vs: [alt_accumulation]

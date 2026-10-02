@@ -38,7 +38,7 @@ import theoryforge as tf
 
 t = tf.read("panic-network.theory.yaml")
 t.check()                       # 12-item rigour checklist + gate
-t.severity()                    # operationalised severity rubric
+t.severity()                    # pre-data severity rubric of claim form
 t.preregister()                 # preregistration document
 corpus = tf.read_corpus("panic-corpus.yaml")
 t.landscape(corpus)             # under-theorised fronts + redundancy risk

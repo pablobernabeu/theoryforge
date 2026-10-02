@@ -24,7 +24,7 @@
 | formalisation | warn | 0.0 | 0.05 |
 | derivation_chain | fail | 0.0 | 0.08 |
 
-## Severity
+## Severity (pre-data rubric of claim form)
 
 - w1: severity 0.1, risk 0.1
 
@@ -44,5 +44,5 @@ _No provenance recorded._
 ## Hypotheses
 1. [existence] Motivated people exist. (derives from: —)
 
-## Severity
+## Severity (pre-data rubric of claim form)
 - w1: severity 0.1, risk 0.1

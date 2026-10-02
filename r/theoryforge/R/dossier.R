@@ -50,7 +50,7 @@ tf_dossier <- function(theory) {
                               it$id, it$status, .tf_fmt(it$score), .tf_fmt(it$weight)))
   }
 
-  lines <- c(lines, "", "## Severity", "")
+  lines <- c(lines, "", "## Severity (pre-data rubric of claim form)", "")
   sev <- tf_severity(T)
   if (nrow(sev) == 0L) {
     lines <- c(lines, "_No predictions specified._")

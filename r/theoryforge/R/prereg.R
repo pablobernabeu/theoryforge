@@ -61,7 +61,10 @@ tf_preregister <- function(theory, path = NULL) {
     }
   }
 
-  lines <- c(lines, "", "## Severity")
+  # The values grade the form of each claim before any data (API_SPEC section
+  # 9). They say nothing of how severely a claim is tested, and the heading
+  # says so.
+  lines <- c(lines, "", "## Severity (pre-data rubric of claim form)")
   sev <- tf_severity(T)
   if (nrow(sev) == 0L) {
     lines <- c(lines, "_No predictions specified._")

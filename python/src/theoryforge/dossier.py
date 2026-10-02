@@ -39,7 +39,7 @@ def dossier(T) -> str:
     for it in rep["items"]:
         lines.append(f"| {it['id']} | {it['status']} | {_fmt(it['score'])} | {_fmt(it['weight'])} |")
 
-    lines += ["", "## Severity", ""]
+    lines += ["", "## Severity (pre-data rubric of claim form)", ""]
     sev = _severity(data)
     if not sev:
         lines.append("_No predictions specified._")

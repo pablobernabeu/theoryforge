@@ -326,6 +326,24 @@ class Theory:
         return self._add("propositions", p, "tf_add_proposition", id)
 
     def add_prediction(self, id, statement, type, derives_from=None, diagnostic_vs=None):
+        """Append a prediction and log the step in the provenance.
+
+        ``id`` identifies the prediction and ``statement`` gives the claim in
+        words. ``type`` is the form of the claim, one of four. ``existence``
+        asserts that an effect or relation exists, without a direction.
+        ``directional`` asserts a sign or an order, including comparisons,
+        interactions, the invariance of a direction across groups and claims that
+        an effect occurs only when a condition holds. ``interval`` asserts that a
+        quantity lies in a stated range, the range the theory permits. ``point``
+        asserts one value, with the tolerance that measurement requires. That
+        width is measurement tolerance, not latitude the theory allows. The label
+        is self-declared, and no function checks it against the statement.
+
+        ``derives_from`` holds the ids of the propositions the prediction derives
+        from, and ``diagnostic_vs`` the ids of the registered alternatives it
+        would discriminate from. The theory is returned, so that builder calls
+        chain.
+        """
         p = {"id": id, "statement": statement, "type": type}
         if derives_from is not None:
             p["derives_from"] = _as_str_list(derives_from)
@@ -376,7 +394,7 @@ class Theory:
         return _render_diagram(self.data, type=type)
 
     def severity(self) -> list[dict]:
-        """Per-prediction risk and computed severity from the operationalised rubric."""
+        """Per-prediction risk and computed severity from the claim-form riskiness rubric."""
         return _severity(self.data)
 
     def appraise_amendment(self, prior) -> dict:

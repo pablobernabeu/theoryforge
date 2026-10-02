@@ -35,6 +35,16 @@ test_that("tf_dossier reflects severity and provenance placeholders", {
   expect_true(grepl("Gate: blocked", out, fixed = TRUE))
 })
 
+test_that("tf_dossier names the rubric for what it is", {
+  # Once in the dossier's own severity list and once in the preregistration
+  # appended to it.
+  out <- tf_dossier(tf_read(tf_fixture_path("panic-network.theory.yaml")))
+  heading <- "\n## Severity (pre-data rubric of claim form)\n"
+  expect_identical(lengths(regmatches(out, gregexpr(heading, out, fixed = TRUE))), 2L)
+  expect_false(grepl("\n## Severity\n", out, fixed = TRUE))
+  expect_true(grepl("- pred1: severity 1.0, risk 0.9\n", out, fixed = TRUE))
+})
+
 test_that("tf_dossier output ends with a single trailing newline (LF)", {
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   out <- tf_dossier(panic)

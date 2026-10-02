@@ -85,7 +85,7 @@ v1 = tf.read("../fixtures/panic-network.theory.yaml")
 v2 = tf.read("../fixtures/panic-network-2026-v2.theory.yaml")
 print(v2.appraise_amendment(v1))   # -> {'verdict': 'progressive', ...}
 
-# TEST: operationalised severity + a preregistration document
+# TEST: the pre-data severity rubric + a preregistration document
 t.severity()                       # per-prediction risk + computed severity
 print(t.preregister())             # markdown prereg
 
@@ -114,7 +114,8 @@ The deterministic core covers theory-object I/O and validation, the 12-item rigo
 with its weighted aggregate score and blocker gate, ten diagram exporters and a lexical
 redundancy screen. The three workflow modes sit on the same object. BUILDING is a builder API
 that logs its own provenance, DEVELOPMENT is the Lakatosian appraisal of an amendment, and
-TESTING is the operationalised severity rubric with its preregistration export.
+TESTING is the severity rubric, a pre-data ranking of claim form, with its preregistration
+export.
 
 The literature layer starts from `read_corpus`. `litmap` derives keyword co-occurrence,
 deterministic connected-component themes and co-citation, and `landscape` maps a theory and its

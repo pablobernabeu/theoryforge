@@ -118,5 +118,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: A YAML theory that begins with a byte-order mark\n\n- Theory ID: edge-bom-yaml\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [directional] Beta rises with Alpha. (derives from: p1)\n\n## Severity\n- h1: severity 0.3, risk 0.4\n"
+  "preregister": "# Preregistration: A YAML theory that begins with a byte-order mark\n\n- Theory ID: edge-bom-yaml\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [directional] Beta rises with Alpha. (derives from: p1)\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
 }

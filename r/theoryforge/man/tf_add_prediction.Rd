@@ -16,7 +16,20 @@ tf_add_prediction(
 \arguments{
 \item{theory}{A theory object (named list).}
 
-\item{id, statement, type}{Prediction fields.}
+\item{id}{The prediction's identifier.}
+
+\item{statement}{The claim in words.}
+
+\item{type}{The form of the claim, one of four. \code{"existence"} asserts
+that an effect or relation exists, without a direction.
+\code{"directional"} asserts a sign or an order, including comparisons,
+interactions, the invariance of a direction across groups and claims that
+an effect occurs only when a condition holds. \code{"interval"} asserts
+that a quantity lies in a stated range, the range the theory permits.
+\code{"point"} asserts one value, with the tolerance that measurement
+requires. That width is measurement tolerance, not latitude the theory
+allows. The label is self-declared, and no function checks it against the
+statement.}
 
 \item{derives_from, diagnostic_vs}{Optional character vectors.}
 }
@@ -24,7 +37,7 @@ tf_add_prediction(
 The (mutated) theory object.
 }
 \description{
-Add a prediction to a theory (BUILDING mode)
+Appends a prediction and a provenance entry, returning the mutated theory.
 }
 \examples{
 tf_theory("demo-1", "A demonstration theory") |>

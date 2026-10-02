@@ -93,7 +93,7 @@ predictions:
   - id: pred_salience_activation
     derives_from: [p_framing_salience]
     statement: "African American test-takers under diagnostic framing show heightened activation of race-related and stereotype-related concepts and greater avoidance of race-relevant self-descriptions than those under non-diagnostic framing."
-    type: "existence"
+    type: "directional"
     risk_score: 0.6
     severity: 0.6
     diagnostic_vs: [alt_test_anxiety]

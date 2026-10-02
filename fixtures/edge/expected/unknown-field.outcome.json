@@ -115,5 +115,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: A theory with a misspelt predictions key\n\n- Theory ID: edge-unknown-field\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n_No predictions specified._\n\n## Severity\n_No predictions specified._\n"
+  "preregister": "# Preregistration: A theory with a misspelt predictions key\n\n- Theory ID: edge-unknown-field\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
 }

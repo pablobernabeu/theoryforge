@@ -47,7 +47,7 @@ The deterministic core comprises theory-object I/O and validation against the sh
 the 12-item rigour checklist, ten diagram exporters and a lexical redundancy screen. The three
 workflow modes sit on the same object. BUILDING is a builder API with auto-logged provenance,
 DEVELOPMENT is the Lakatosian progressive/degenerating appraisal of an amendment, and TESTING is
-the operationalised severity rubric with its preregistration export.
+the severity rubric, a pre-data ranking of claim form, with its preregistration export.
 
 A bibliometric layer connects a theory to its field. `litmap` derives keyword co-occurrence,
 connected-component themes and co-citation. `landscape` then maps a theory and its alternatives

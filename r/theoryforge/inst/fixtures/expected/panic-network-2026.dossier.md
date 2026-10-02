@@ -24,7 +24,7 @@
 | formalisation | pass | 1.0 | 0.05 |
 | derivation_chain | pass | 1.0 | 0.08 |
 
-## Severity
+## Severity (pre-data rubric of claim form)
 
 - pred1: severity 1.0, risk 0.9
 - pred2: severity 0.7, risk 0.7
@@ -46,11 +46,11 @@
 - Derivation chain verified: yes
 
 ## Hypotheses
-1. [point] An interoceptive challenge raises arousal to a specified level within 90 seconds. (derives from: p1, p3)
+1. [point] An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds. (derives from: p1, p3)
 2. [interval] Avoidance frequency falls within a 20-35% band after exposure therapy. (derives from: p2)
 3. [directional] Higher perceived threat is associated with more avoidance. (derives from: p2)
 
-## Severity
+## Severity (pre-data rubric of claim form)
 - pred1: severity 1.0, risk 0.9
 - pred2: severity 0.7, risk 0.7
 - pred3: severity 0.3, risk 0.4

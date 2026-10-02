@@ -20,12 +20,12 @@ library(theoryforge)
 
 The companion vignette covers building a theory and checking its rigour. This
 article continues the workflow into development and testing. It shows how to
-operationalise severity, derive what the causal graph forbids in data, export a
-preregistration, appraise an amendment in Lakatosian terms, compile a
-measurement model for `lavaan` and assemble a reviewer-facing audit bundle. The
-worked example reads the panic-network fixture shipped with the package, joined
-in one section by the shipped modality-switching fixture, so every chunk runs
-with only `theoryforge` loaded.
+grade the riskiness of each prediction's claim, derive what the causal graph
+forbids in data, export a preregistration, appraise an amendment in Lakatosian
+terms, compile a measurement model for `lavaan` and assemble a reviewer-facing
+audit bundle. The worked example reads the panic-network fixture shipped with
+the package, joined in one section by the shipped modality-switching fixture,
+so every chunk runs with only `theoryforge` loaded.
 
 ```{r read}
 theory <- tf_read(
@@ -34,22 +34,26 @@ theory <- tf_read(
 theory$id
 ```
 
-## Operationalised severity
+## The severity rubric
 
 A prediction earns evidential weight in proportion to the risk it takes. A
 point prediction stakes more on the data than a directional one, and that
-asymmetry should be made explicit before any test is run. `tf_severity()`
-reports, for each prediction in file order, the riskiness of its claim form and
-the resulting computed severity.
+asymmetry should be made explicit before any test is run. `tf_severity()` is a
+pre-data rubric of claim form. It reports, for each prediction in file order,
+the riskiness of its declared type and the resulting computed severity.
 
 ```{r severity}
 tf_severity(theory)
 ```
 
 The `risk_score` reflects the prediction type, while `computed_severity`
-applies the discounts and bonuses defined in the specification. Reading these
-values before data collection guards against the temptation to read a weak,
-hard-to-fail prediction as though it were a stringent test.
+applies the directional discount and the diagnostic bonus defined in the
+specification, both of them the package's conventions. The rubric reads only
+the declared type and the named rivals, never the statement or the data, so it
+says nothing about how severely a claim has been tested. That depends on the
+design and the data. Reading these values before data collection guards against
+the temptation to read a weak, hard-to-fail prediction as though it were a risky
+one.
 
 ## What the causal graph commits you to
 
@@ -316,7 +320,7 @@ cat('<div class="tf-figure">', tf_diagram(theory, "rigour"), '</div>', sep = "")
 ```
 
 The `severity` view draws one bar per prediction, scaled by its computed
-severity, so the riskier tests stand out.
+severity, so the riskier claims stand out.
 
 ```{r severity-view, results = "asis"}
 cat(

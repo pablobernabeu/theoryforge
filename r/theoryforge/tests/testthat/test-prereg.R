@@ -37,6 +37,15 @@ test_that("derivation chain verified reflects the rigour item status", {
   expect_true(grepl("Derivation chain verified: no", tf_preregister(weak), fixed = TRUE))
 })
 
+test_that("the severity heading names the rubric for what it is", {
+  # The values grade the form of each claim before any data, so the heading
+  # says so. The per-prediction lines keep their shape for readers that parse them.
+  out <- tf_preregister(tf_read(tf_fixture_path("panic-network.theory.yaml")))
+  expect_true(grepl(paste0("\n## Severity (pre-data rubric of claim form)\n",
+                           "- pred1: severity 1.0, risk 0.9\n"), out, fixed = TRUE))
+  expect_false(grepl("\n## Severity\n", out, fixed = TRUE))
+})
+
 test_that("a theory with no predictions emits the placeholder", {
   t <- tf_theory("nopred", "No predictions")
   out <- tf_preregister(t)

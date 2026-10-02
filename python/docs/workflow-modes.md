@@ -91,6 +91,16 @@ single string, where `type` is one of `point`, `interval`, `directional` or
 `derives_from="p1"` means `["p1"]`, as it does in R. The same holds for
 `key_constructs` in `add_alternative()` and `protects` in `add_assumption()`.
 
+The `type` names the form of the claim. An `existence` prediction asserts that
+an effect or relation exists, without a direction. A `directional` one asserts
+a sign or an order, which covers comparisons, interactions, the invariance of a
+direction across groups and claims that an effect occurs only when a condition
+holds. An `interval` prediction asserts that a quantity lies in a stated range,
+the range the theory permits. A `point` prediction asserts one value, with the
+tolerance that measurement requires, and that width is measurement tolerance,
+not latitude the theory allows. The label is self-declared, and no function
+checks it against the statement.
+
 The provenance log is held under `t.data["provenance"]`. Each entry records
 the action and the identifier it affected.
 
@@ -212,7 +222,11 @@ Base risk rises with the strength of the claim: `existence` 0.1,
 `directional` 0.4, `interval` 0.7, `point` 0.9. Directional predictions
 carry a discount for the ambient correlations expected in the field. A
 prediction that discriminates the theory from a named alternative, through
-its `diagnostic_vs` field, earns a small severity bonus.
+its `diagnostic_vs` field, earns a small severity bonus. The values, the
+discount and the bonus are the package's conventions. The rubric reads only the
+declared type and the named alternatives, never the statement or the data. It
+therefore ranks claims by their form and says nothing about how severely a
+claim has been tested, which depends on the design and the data.
 
 ### What the causal graph commits you to
 
@@ -773,7 +787,7 @@ print('<div class="tf-figure">' + t.diagram("rigour") + "</div>")
 ```
 
 The `severity` view draws one bar per prediction, scaled by its computed severity,
-so the riskier tests stand out.
+so the riskier claims stand out.
 
 ```python exec="1" html="1" session="workflow-modes"
 print('<div class="tf-figure">' + t.diagram("severity") + "</div>")

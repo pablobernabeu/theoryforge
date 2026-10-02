@@ -2,7 +2,7 @@
 % Please edit documentation in R/scoring.R
 \name{tf_severity}
 \alias{tf_severity}
-\title{Per-prediction risk and computed severity}
+\title{Per-prediction claim-form riskiness}
 \usage{
 tf_severity(theory)
 }
@@ -15,8 +15,20 @@ A \code{data.frame} with columns \code{prediction_id}, \code{type},
 file order.
 }
 \description{
-Computes, for each prediction (in file order), the riskiness of the claim
-form and the discounted/bonus-adjusted severity.
+A pre-data rubric of the form of each prediction's claim. \code{risk_score}
+is the base riskiness of the declared type: existence 0.1, directional 0.4,
+interval 0.7 and point 0.9. \code{computed_severity} discounts a directional
+prediction by 25 per cent, adds 0.1 when \code{diagnostic_vs} names a
+registered alternative and is capped at 1. The order of the types follows
+Popper (1959, sections 31-33) for nested claims about one quantity, and the
+directional penalty follows Meehl's (1967, 1990b) argument that a sign alone
+risks little. The base values, the discount and the bonus are the package's
+conventions, and neither source gives them.
+}
+\details{
+How severely a claim is tested depends on the design and the data, which the
+rubric does not read. A prediction scores the same however it is tested, and
+a failed test leaves the value where it was.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
@@ -25,10 +37,13 @@ theory <- tf_theory("demo-1", "A demonstration theory") |>
 tf_severity(theory)
 }
 \references{
-Mayo, D. G. (2018). \emph{Statistical inference as severe testing}. Cambridge
-University Press. \doi{10.1017/9781107286184}
+Meehl, P. E. (1967). Theory-testing in psychology and physics: A
+methodological paradox. \emph{Philosophy of Science}, 34(2), 103-115.
+\doi{10.1086/288135}
 
-Meehl, P. E. (1990). Why summaries of research on psychological theories are
-often uninterpretable. \emph{Psychological Reports}, 66, 195-244.
+Meehl, P. E. (1990b). Why summaries of research on psychological theories
+are often uninterpretable. \emph{Psychological Reports}, 66(1), 195-244.
 \doi{10.2466/pr0.1990.66.1.195}
+
+Popper, K. R. (1959). \emph{The logic of scientific discovery}. Hutchinson.
 }

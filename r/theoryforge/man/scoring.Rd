@@ -2,8 +2,10 @@
 % Please edit documentation in R/scoring.R
 \name{scoring}
 \alias{scoring}
-\title{Severity rubric (deterministic).}
+\title{Claim-form riskiness rubric (deterministic, pre-data)}
 \description{
-A documented, deterministic operationalisation of predictive risk.
+A pre-data ranking of the form of each prediction's claim. It reads a
+prediction's declared \code{type} and its \code{diagnostic_vs} ids, and
+neither the statement nor any test, outcome or data.
 }
 \keyword{internal}

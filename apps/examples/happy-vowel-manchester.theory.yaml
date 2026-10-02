@@ -115,7 +115,7 @@ predictions:
   - id: pred_independence
     derives_from: [p_harmony, p_prepausal]
     statement: "The direction and ordering of the internal linguistic constraints hold across every social class and ethnic group, differing at most in magnitude rather than in direction."
-    type: "point"
+    type: "directional"
     risk_score: 0.8
     severity: 0.8
     diagnostic_vs: [alt_interdependence]

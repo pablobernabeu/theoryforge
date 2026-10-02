@@ -73,14 +73,14 @@ predictions:
   - id: pred_dissonance_mediates
     derives_from: [p_inconsistency_dissonance, p_dissonance_attitude]
     statement: "Attitude change occurs only when the counter-attitudinal statement is actually made under insufficient justification, so the one-dollar group shifts above the control group that made no such statement, whereas the twenty-dollar group does not."
-    type: "existence"
+    type: "directional"
     risk_score: 0.6
     severity: 0.6
     diagnostic_vs: [alt_reinforcement]
   - id: pred_rating_point
     derives_from: [p_incentive_dissonance, p_dissonance_attitude]
     statement: "On the eleven-point enjoyment scale the one-dollar group rates the task above the neutral zero point and above both the twenty-dollar and control groups, whose ratings fall near or below zero."
-    type: "point"
+    type: "directional"
     risk_score: 0.7
     severity: 0.7
     diagnostic_vs: [alt_reinforcement]

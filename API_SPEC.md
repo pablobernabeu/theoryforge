@@ -105,6 +105,8 @@ Load `rigor_checklist.yaml`. Let `thr` = its `thresholds`. For theory `T`:
 A field is "nonempty" if present and (for arrays) length ≥ 1 and (for strings) trimmed length ≥ 1.
 Where the schema declares an array of strings (`derives_from`, `diagnostic_vs`, `protects`, `measurement`, `boundary_conditions`, …), a nonempty scalar string is read as a singleton array, so natural YAML such as `derives_from: p1` means `["p1"]`; an empty or whitespace-only scalar counts as absent. Both implementations apply this reading wherever such arrays are consumed (checklist, validation, appraisal).
 
+**Prediction types.** Items 1 and 2 below, and the rubric of §9, read each prediction's declared `type`. Its four values are defined as follows, in the schema and the help pages alike. `existence` asserts that an effect or relation exists, without a direction. `directional` asserts a sign or an order, including comparisons, interactions, the invariance of a direction across groups and claims that an effect occurs only when a condition holds. `interval` asserts that a quantity lies in a stated range, the range the theory permits. `point` asserts one value, with the tolerance that measurement requires, and that width is measurement tolerance, not latitude the theory allows. The labels are self-declared, and no function checks a statement against its type.
+
 Each item returns `{id, status ∈ {pass,warn,fail}, score ∈ [0,1], weight, severity_if_fail, citation}`.
 
 1. **falsifiability.** `forbidding = [p for p in preds if p.type in {point,interval,directional}]`. `pass` if `len(forbidding) ≥ 1` else `fail`; score = 1.0/0.0.
@@ -233,7 +235,7 @@ P1 implements the three modes as full features. New public API (mirrored):
 | Add alternative | `tf_add_alternative(theory, id, label, key_constructs=NULL)` | `theory.add_alternative(id, label, key_constructs=None)` |
 | Add assumption | `tf_add_assumption(theory, id, statement, added_for=NULL, protects=NULL)` | `theory.add_assumption(id, statement, added_for=None, protects=None)` |
 | Set formal model | `tf_set_formal_model(theory, type, spec_ref=NULL)` | `theory.set_formal_model(type, spec_ref=None)` |
-| Severity rubric | `tf_severity(theory)` → data.frame | `theory.severity()` → list[dict] |
+| Claim-form riskiness rubric | `tf_severity(theory)` → data.frame | `theory.severity()` → list[dict] |
 | Amendment appraisal | `tf_appraise_amendment(theory, prior)` → list | `theory.appraise_amendment(prior)` → dict |
 | Preregistration doc | `tf_preregister(theory, path=NULL)` → string | `theory.preregister(path=None)` → str |
 
@@ -249,15 +251,19 @@ Each builder/mutator appends one provenance entry `{step, action, detail}` where
 
 **Copies and aliasing.** R's builders return a modified copy, so `v2 <- tf_add_prediction(v1, ...)` leaves `v1` unchanged. Python's builders change the theory in place and return it, so `v2 = v1.add_prediction(...)` makes `v2` and `v1` one object. An amendment that must leave its prior intact therefore begins from `prior.copy()`, a Python-only method that returns an independent deep copy. `tf.Theory(dict(t.data))` is a shallow copy that shares the collections with `t`. Python's `appraise_amendment` raises `ValueError("appraise_amendment needs two distinct theory objects, but the amendment and the prior are the same object. The Python builders change a theory in place, so start the amendment from prior.copy().")` when, after unwrapping, the amendment and the prior are the same mapping. It tests identity only, so two distinct objects with equal content are appraised as usual, as R appraises them. R cannot alias two values and has no such refusal.
 
-## 9. Severity rubric (deterministic; central feature of Part B)
+## 9. Claim-form riskiness rubric (deterministic; central feature of Part B)
 
-`BASE = {existence:0.1, directional:0.4, interval:0.7, point:0.9}`. `CRUD = 0.25` (Meehl 1990 ambient-correlation discount). For each prediction (file order):
+`tf_severity`/`severity()` grades each prediction by the form of its claim, before any data. It reads the declared `type` and `diagnostic_vs` of each prediction and the ids of the registered alternatives. It reads neither the statement nor any test, outcome or data. How severely a claim is tested depends on the design and the data, which the rubric does not read. A prediction therefore scores the same however it is tested, and a failed test leaves the value where it was. The function and its output keys keep their names.
+
+The order of the four types (§4) follows Popper's (1959, §§31–33) comparison of falsifiability by the subclass relation, which ranks nested claims about one quantity. The directional discount follows Meehl's (1967, 1990b) argument that a sign alone risks little where almost everything correlates a little. The base values, the discount and the bonus are package conventions fixed for reproducibility, and neither source gives them. The .25 and .30 that Meehl (1990b) mentions are sizes of those ambient (crud) correlations, a different quantity from the 0.25 discount.
+
+`BASE = {existence:0.1, directional:0.4, interval:0.7, point:0.9}`. `CRUD = 0.25` (the directional discount). For each prediction (file order):
 - `risk_score = round(BASE[type], 3)` (the riskiness of the claim *form*).
 - `discounted = BASE[type] * (1 - CRUD)` if `type == "directional"` else `BASE[type]`.
 - `diag_bonus = 0.1` if `diagnostic_vs` nonempty AND any of its ids is a registered alternative id, else `0.0`.
 - `computed_severity = round(min(1.0, discounted + diag_bonus), 3)`.
 
-`tf_severity`/`severity()` returns one record per prediction: `{prediction_id, type, risk_score, computed_severity}` in file order.
+`tf_severity`/`severity()` returns one record per prediction: `{prediction_id, type, risk_score, computed_severity}` in file order. A `risk_score` declared on a prediction and a test outcome's `severity_at_test` are informational, and no function reads them.
 
 ## 10. Amendment appraisal (progressive vs degenerating; Lakatos, 1970; Meehl, 1990)
 
@@ -283,7 +289,7 @@ Each builder/mutator appends one provenance entry `{step, action, detail}` where
 1. [<type>] <statement> (derives from: <derives_from joined by ", ", or "—" if none>)
 2. ...
 
-## Severity
+## Severity (pre-data rubric of claim form)
 - <prediction_id>: severity <computed_severity>, risk <risk_score>
 ...
 ```
@@ -343,7 +349,7 @@ A row holding a single item emits `  { rank=same; "<row 1>"; }` instead. When al
 
 **rigour** (SVG, `W`=460, `H` = 60 + 24·n + 12). The `check` report as a status grid. A title, then `aggregate score %.1f, gate <gate>`, then one row per checklist item (checklist order) at `y = 60 + 24·i`: a 16×16 swatch coloured by status (pass `#4caf50`, warn `#ff9800`, fail `#f44336`, otherwise `#9e9e9e`), the item id, and the status text. Integer coordinates; `aggregate_score` is already rounded to 1 dp, so `%.1f` is byte-stable.
 
-**severity** (SVG, `W` = `bar_x` + 250, `H` = 40 + 28·max(n,1) + 8). The `severity` rows as horizontal bars. Bars start at `bar_x = 20 + 8·max(nchar(label)) + 10`, derived from the longest row label so that short ids leave no dead gap before the bars, which is why `W` depends on the theory. A title, then for each prediction (file order) at `y = 40 + 28·i`: the `prediction_id` (a `prediction_id` longer than 15 characters is truncated to its first 14 characters plus `…` U+2026), a bar of width `floor(computed_severity·200 + 0.5 + 1e-6)` at `x = bar_x` filled `#4e79a7`, and the value `%.3f` at `x = bar_x + w + 5`. The 1e-6 bias matches `rnd` so the integer width is identical across platforms.
+**severity** (SVG, `W` = `bar_x` + 250, `H` = 40 + 28·max(n,1) + 8). The `severity` rows as horizontal bars. Bars start at `bar_x = 20 + 8·max(nchar(label)) + 10`, derived from the longest row label so that short ids leave no dead gap before the bars, which is why `W` depends on the theory. The title reads `Pre-data riskiness`, since the bars rank claim form (§9). Below it, for each prediction (file order) at `y = 40 + 28·i`: the `prediction_id` (a `prediction_id` longer than 15 characters is truncated to its first 14 characters plus `…` U+2026), a bar of width `floor(computed_severity·200 + 0.5 + 1e-6)` at `x = bar_x` filled `#4e79a7`, and the value `%.3f` at `x = bar_x + w + 5`. The 1e-6 bias matches `rnd` so the integer width is identical across platforms.
 
 ## 13. Additional golden artefacts (per fixture unless noted)
 
@@ -461,7 +467,7 @@ Numbers use `fmt()` (§11). Build these lines (joined with `\n`), then append `"
 | --- | --- | --- | --- |
 | <id> | <status> | <fmt(score)> | <fmt(weight)> |        # one row per item, checklist order
 
-## Severity
+## Severity (pre-data rubric of claim form)
 
 - <pid>: severity <fmt(computed_severity)>, risk <fmt(risk_score)>   # per prediction, file order; else "_No predictions specified._"
 

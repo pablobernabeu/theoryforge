@@ -8,5 +8,5 @@
 ## Hypotheses
 1. [existence] Motivated people exist. (derives from: —)
 
-## Severity
+## Severity (pre-data rubric of claim form)
 - w1: severity 0.1, risk 0.1

@@ -35,6 +35,20 @@
 
 * The `yaml` package is now required at version 2.3.8 or later.
 
+* `tf_severity()` is described for what it is, a pre-data ranking of the form
+  of each prediction's claim. Its documentation no longer cites Mayo (2018),
+  whose severity is a property of a test and its data, and the 0.25 directional
+  discount is documented as the package's convention, not Meehl's. The heading
+  over its values in the preregistration and the dossier reads
+  `Severity (pre-data rubric of claim form)`, and the severity chart is titled
+  `Pre-data riskiness`. The values are unchanged.
+
+* The four prediction types are defined in the schema, in `?tf_add_prediction`
+  and in the methodology article, and the bundled panic predictions now state
+  the value and tolerance that their `point` type claims. The schema also marks
+  a prediction's `risk_score` and a test outcome's `severity_at_test` as
+  informational fields that no function reads.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

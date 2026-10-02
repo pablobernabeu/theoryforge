@@ -48,7 +48,7 @@ boundary_conditions: ["adults", "non-clinical baseline", "no beta-blocker medica
 predictions:
   - id: pred1
     derives_from: [p1, p3]
-    statement: "An interoceptive challenge raises arousal to a specified level within 90 seconds."
+    statement: "An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds."
     type: "point"
     risk_score: 0.8
     severity: 0.7

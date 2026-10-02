@@ -49,7 +49,7 @@ boundary_conditions: ["adults", "non-clinical baseline", "no beta-blocker medica
 predictions:
   - id: pred1
     derives_from: [p1, p3]
-    statement: "An interoceptive challenge raises arousal to a specified level within 90 seconds."
+    statement: "An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds."
     type: "point"
     severity: 0.7
     diagnostic_vs: [alt_cognitive]
@@ -67,7 +67,7 @@ predictions:
     diagnostic_vs: []
   - id: pred4
     derives_from: [p1, p2]
-    statement: "Blocking interoceptive feedback lowers avoidance to a specified level within two weeks."
+    statement: "Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks."
     type: "point"
     severity: 0.75
     diagnostic_vs: [alt_cognitive]

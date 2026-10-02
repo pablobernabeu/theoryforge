@@ -446,8 +446,10 @@ NULL
   # each value label trails its own bar.
   bar_x <- 20L + (if (n) max(nchar(labels)) else 0L) * 8L + 10L
   width <- bar_x + 250L  # 200 for a full bar, then the gap and the value label
+  # The bars rank the form of each claim before any data (API_SPEC section 9),
+  # which the title says. At 18 characters it fits the narrowest chart, W = 280.
   out <- c(.tf_svg_open(width, h),
-           '  <text x="20" y="26" font-size="15">Prediction severity</text>')
+           '  <text x="20" y="26" font-size="15">Pre-data riskiness</text>')
   if (n == 0L) {
     out <- c(out, '  <text x="20" y="54">(no predictions)</text>')
   } else {

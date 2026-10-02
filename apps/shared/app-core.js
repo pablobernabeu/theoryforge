@@ -28,7 +28,7 @@
       }],
     },
     { id: "severity", label: "Severity rubric", desc: "Per-prediction risk & severity",
-      help: "Applies the operationalised severity rubric to every prediction, returning its risk score (the riskiness of the claim form) and computed severity (with the directional discount and the diagnostic bonus)." },
+      help: "Applies the severity rubric, a pre-data ranking of claim form, to every prediction, returning its risk score (the riskiness of the claim form) and computed severity (with the directional discount and the diagnostic bonus)." },
     { id: "redundancy", label: "Redundancy screen", desc: "Lexical overlap of constructs",
       help: "Compares every pair of construct definitions by token-set Jaccard overlap and flags pairs above the redundancy threshold for review." },
     {
@@ -355,7 +355,7 @@
     check: "The checklist scores twelve facets of rigour and combines them into an overall score and a gate. Read the gate first. Pass means the theory is ready to test, advisory means it is usable with the noted gaps, and blocked means a must-fix criterion is unmet. The grid below shows each item's status.",
     validate: "Validation reports structural and referential problems: missing required fields, values outside the allowed set, duplicate identifiers and cross-references that point to nothing. A valid theory is the precondition for every other operation.",
     diagram: "The diagram is rendered from the package's intermediate representation, shown below the figure. Export the figure as SVG or PNG, or copy the representation to render it elsewhere.",
-    severity: "Severity grades each prediction by how much a passing test would corroborate the theory. The risk score reflects how committal the claim is. The computed severity adjusts it down for merely directional claims and up for claims that discriminate between rival theories. Longer bars are stronger tests.",
+    severity: "The rubric grades each prediction by the form of its claim alone, so it can be read before any data exist. The risk score reflects how committal the claim is. The computed severity adjusts it down for merely directional claims and up for claims that discriminate between rival theories. Longer bars mark riskier claims. How severely a claim is tested depends on the design and the data, which the rubric does not read.",
     redundancy: "Each pair of constructs is compared by the word overlap of their definitions, the Jaccard index, which runs from 0 to 1. Pairs above the threshold are flagged for review, because near-duplicate constructs blur a theory and inflate its apparent scope.",
     appraise: "Following Lakatos, an amendment is progressive when it adds independently testable content that survives testing, and degenerating when it mainly adds assumptions that shield the theory from refutation. The verdict and its components appear below.",
     sem: "The constructs become a measurement model and the propositions a structural model, expressed in lavaan syntax. Paste it into an SEM fit in R or other lavaan-compatible software.",
@@ -389,7 +389,7 @@
       const sev = rows.map((r) => Number(r.computed_severity));
       const top = rows[sev.indexOf(Math.max(...sev))];
       const mean = sev.reduce((a, b) => a + b, 0) / sev.length;
-      return "Across " + plural(rows.length, "prediction") + ", computed severity runs from " + Math.min(...sev).toFixed(2) + " to " + Math.max(...sev).toFixed(2) + " (mean " + mean.toFixed(2) + "). The strongest test is " + top.prediction_id + ".";
+      return "Across " + plural(rows.length, "prediction") + ", computed severity runs from " + Math.min(...sev).toFixed(2) + " to " + Math.max(...sev).toFixed(2) + " (mean " + mean.toFixed(2) + "). The riskiest claim is " + top.prediction_id + ".";
     }
     if (opId === "redundancy") {
       const rows = asArr(raw.rows);
