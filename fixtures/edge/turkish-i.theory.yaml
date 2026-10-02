@@ -1,0 +1,29 @@
+# Edge case: the Turkish dotted capital I (U+0130). Python's lower() gives i plus
+# a combining dot, which split the word and made the two definitions 0.6 similar
+# in Python and identical in R. Both twins now fold it to I and lowercase ASCII
+# only, so the definitions are identical, and the measurement label compiles to
+# interview_score in both.
+schema_version: "1.0"
+id: edge-turkish-i
+title: The Turkish dotted capital I
+maturity: building
+constructs:
+  - id: a
+    label: İstanbul arousal
+    definition: İstanbul arousal level measure.
+    measurement: [İnterview score, Müller scale]
+  - id: b
+    label: Istanbul arousal
+    definition: istanbul arousal level measure.
+    measurement: [Möller scale]
+propositions:
+  - id: p1
+    from: a
+    to: b
+    relation: increases
+    mechanism: The first drives the second.
+predictions:
+  - id: h1
+    statement: The second rises with the first.
+    type: directional
+    derives_from: [p1]

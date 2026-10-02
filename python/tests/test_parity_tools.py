@@ -128,7 +128,7 @@ def test_schema_mirror_writes_every_copy(golden, tmp_path):
 def test_package_schema_copies_match_the_root():
     if not (ROOT / "schema").is_dir():
         pytest.skip("the repository's schema/ is not reachable from this test run")
-    for name in ("theory.schema.json", "rigor_checklist.yaml"):
+    for name in ("theory.schema.json", "rigor_checklist.yaml", "fold.json"):
         root = (ROOT / "schema" / name).read_bytes()
         assert (ROOT / "r" / "theoryforge" / "inst" / "schema" / name).read_bytes() == root, name
         assert (ROOT / "python" / "src" / "theoryforge" / "schema" / name).read_bytes() == root, name

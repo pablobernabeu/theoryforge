@@ -88,6 +88,21 @@
   without feedback loops, the explicit step explodes once `dt * damping`
   exceeds 2, so a larger `damping` is no remedy.
 
+* Text is normalised as in the Python twin. Both trim one set of Unicode
+  whitespace characters, lowercase ASCII letters only and fold accented Latin
+  letters through a fixed table, so `naïve` no longer vanishes from a
+  definition and `Émotion` no longer matches `motion`. A lone no-break space no
+  longer counts as a definition, a mechanism or a provenance detail, and
+  `tf_compile_sem()` names the indicator `Müller scale` `muller_scale`, where
+  it gave `m_ller_scale`. `tf_new_evidence_dois()` recognises DOIs written as
+  `doi: 10...`, `DOI 10...`, `doi.org/10...`, `https://www.doi.org/10...` or
+  percent-encoded, and ignores a trailing full stop, comma or semicolon.
+
+* Construct definitions and keywords in Greek, Cyrillic and other non-Latin
+  scripts are now tokenised. They were deleted, so two identical Russian
+  definitions scored no overlap and passed the redundancy screen. Greek and
+  Cyrillic are compared without case or accents, other scripts as written.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

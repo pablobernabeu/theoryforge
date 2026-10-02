@@ -50,7 +50,7 @@ PY_INPUTS = ROOT / "python" / "src" / "theoryforge" / "fixtures"
 # the CRAN tarball nor the sdist can reach the repository root. The webR app
 # vendors the R package's copy (apps/build.mjs).
 SCHEMA = ROOT / "schema"
-SCHEMA_FILES = ("theory.schema.json", "rigor_checklist.yaml")
+SCHEMA_FILES = ("theory.schema.json", "rigor_checklist.yaml", "fold.json")
 SCHEMA_COPIES = (ROOT / "r" / "theoryforge" / "inst" / "schema",
                  ROOT / "python" / "src" / "theoryforge" / "schema")
 EDGE = FIXTURES / "edge"
@@ -195,6 +195,11 @@ def mirror_schema(src: Path, dests) -> None:
 
 
 def main() -> int:
+    # Mirror the schema, checklist and fold table into each package's shipped
+    # copy first: the package reads its own copy, so the goldens below must be
+    # computed from the files this run ships, not from the previous run's.
+    mirror_schema(SCHEMA, SCHEMA_COPIES)
+
     EXPECTED.mkdir(parents=True, exist_ok=True)
     written = []
     for fx in sorted(FIXTURES.glob("*.theory.yaml")):
@@ -219,6 +224,18 @@ def main() -> int:
         "10.1037/0033-2909.99.1.20",
         "10.1037/0033-2909.99.1.20",
         "10.1016/j.cpr.2011.09.005",
+        # Spellings of the cited DOIs that the normaliser of API_SPEC.md
+        # section 18 recognises, so the output is the same as without them.
+        "doi: 10.1016/j.brat.2015.10.002",
+        "DOI 10.1016/j.brat.2015.10.002",
+        "doi.org/10.1016/j.brat.2015.10.002",
+        "dx.doi.org/10.1016/j.brat.2015.10.002",
+        "https://www.doi.org/10.1016/j.brat.2015.10.002",
+        "info:doi/10.1016/j.brat.2015.10.002",
+        "urn:doi:10.1016/j.brat.2015.10.002",
+        "https://doi.org/10.1016/0005-7967%2886%2990011-2",
+        "10.1016/j.brat.2015.10.002.",
+        "10.1016/J.BRAT.2015.10.002\u00a0",
     ]
     new_dois = v1.new_evidence_dois(new_evidence_candidates)
     (EXPECTED / "panic-network-2026.new_evidence_dois.json").write_bytes(
@@ -265,9 +282,6 @@ def main() -> int:
         dest.mkdir(parents=True, exist_ok=True)
         for name in EXAMPLE_INPUTS:
             shutil.copyfile(FIXTURES / name, dest / name)
-
-    # Mirror the schema and checklist into each package's shipped copy.
-    mirror_schema(SCHEMA, SCHEMA_COPIES)
 
     edge_written = write_edge_outcomes()
 

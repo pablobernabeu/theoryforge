@@ -13,10 +13,18 @@ tf_tokens(s)
 A character vector of unique tokens (possibly empty).
 }
 \description{
-Lowercases, replaces every run of non-\code{[a-z0-9]} characters with a
-single space, splits, drops tokens shorter than 3 characters and the
-canonical stopwords, then returns the unique set.
+Folds the text through the package's fold table (accented Latin letters to
+ASCII, Greek and Cyrillic letters to small unaccented ones) and lowercases
+ASCII letters, then takes every maximal run of letters, marks and digits in
+any script (Unicode general categories L, M and N) as a token. Tokens
+shorter than 3 code points and the canonical English stopwords are dropped,
+and the unique set is returned. Scripts other than Latin, Greek and Cyrillic
+are compared as written, and text written without spaces, such as Chinese,
+gives one token per run.
 }
 \examples{
 tf_tokens("The physiological arousal response to a threat")
+# Accents and case are folded, so these give the same tokens.
+tf_tokens("Na\u00efve \u00c9motion")
+tf_tokens("naive emotion")
 }

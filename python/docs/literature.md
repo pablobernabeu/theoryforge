@@ -403,9 +403,10 @@ candidates = [
 print(t.new_evidence_dois(candidates))
 ```
 
-The comparison is on a normalised form of each DOI (lowercased, with a
-`doi.org`/`dx.doi.org` URL prefix stripped), so a plain DOI and a resolvable
-URL for the same work are recognised as the same source. The function takes no
+The comparison is on a normalised form of each DOI, the DOI itself found
+wherever it sits in the text, lowercased and percent-decoded. A plain DOI, a
+resolvable URL and the forms `doi: 10...` and `DOI 10...` for the same work are
+therefore recognised as the same source, and a trailing full stop is ignored. The function takes no
 network dependency itself: the search is left entirely to whichever tool
 supplies the candidate list.
 

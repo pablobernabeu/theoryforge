@@ -1,8 +1,9 @@
 /* theoryforge interactive app: R runtime (webR).
  *
  * Boots webR, installs jsonlite + yaml, vendors the live R package source into
- * the in-browser filesystem, sources it, and pre-seeds the schema/checklist
- * cache, so the real package functions run unmodified and entirely client-side.
+ * the in-browser filesystem, sources it, and pre-seeds the schema, checklist
+ * and fold-table caches, so the real package functions run unmodified and
+ * entirely client-side.
  */
 import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
 
@@ -18,6 +19,7 @@ invisible(lapply(.tf_app_files, source))
 # needs system.file() (which only resolves for an installed package).
 .tf_cache$checklist <- yaml::read_yaml("/tf/schema/rigor_checklist.yaml")
 .tf_cache$theory_schema <- jsonlite::fromJSON("/tf/schema/theory.schema.json", simplifyVector = FALSE)
+.tf_cache$fold <- .tf_fold_compile(jsonlite::fromJSON("/tf/schema/fold.json", simplifyVector = FALSE))
 
 .tf_app <- new.env(parent = emptyenv())
 
@@ -124,6 +126,7 @@ const RT = {
     for (const f of manifest.rFiles) await writeVendor(f, "/tf/" + f);
     await writeVendor(manifest.schema.theory, "/tf/schema/theory.schema.json");
     await writeVendor(manifest.schema.checklist, "/tf/schema/rigor_checklist.yaml");
+    await writeVendor(manifest.schema.fold, "/tf/schema/fold.json");
     this._fixtures = {};
     for (const e of manifest.examples) { const dest = "/tf/" + e.path; await writeVendor(e.path, dest); this._fixtures[e.path] = dest; }
     for (const c of manifest.corpora) { const dest = "/tf/" + c.path; await writeVendor(c.path, dest); this._fixtures[c.path] = dest; }

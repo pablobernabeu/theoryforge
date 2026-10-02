@@ -1,0 +1,17 @@
+# Edge case: Chinese text, written without spaces. Each run of letters is one
+# token, so the two identical definitions overlap fully, and a run shorter than
+# three characters (the third definition) gives no token at all.
+schema_version: "1.0"
+id: edge-cjk-run
+title: Text written without spaces
+maturity: building
+constructs:
+  - id: a
+    label: 惊恐
+    definition: 惊恐障碍患者的身体感觉
+  - id: b
+    label: 感觉
+    definition: 惊恐障碍患者的身体感觉
+  - id: c
+    label: 恐惧
+    definition: 恐惧

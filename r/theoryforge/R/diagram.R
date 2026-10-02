@@ -142,7 +142,7 @@ NULL
     action <- .tf_str(s, "action")
     detail <- .tf_str(s, "detail")
     label <- paste0(.tf_esc(action),
-                    if (nzchar(trimws(detail))) paste0("\\n", .tf_wrap(detail, 26L)) else "")
+                    if (nzchar(.tf_trim(detail))) paste0("\\n", .tf_wrap(detail, 26L)) else "")
     lines <- c(lines, sprintf('  "n%d" [label="%s"];', i, label))
   }
   if (length(steps) >= 2L) {

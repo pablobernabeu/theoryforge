@@ -18,11 +18,15 @@ deduplicated and sorted.
 \description{
 Compares each DOI in \code{candidate_dois} against the theory's
 \code{evidence[].source_doi} and \code{alternatives[].source_doi} fields, by
-normalised form (lowercased, with any doi.org/dx.doi.org URL prefix
-stripped), so a fresh literature search, for example via OpenAlex, Scopus, or
-any other source, can be checked against what the theory already engages
-with. Returns the qualifying DOIs in their original form, deduplicated and
-sorted by normalised form. Deterministic and takes no network dependency:
+normalised form, so a fresh literature search, for example via OpenAlex,
+Scopus, or any other source, can be checked against what the theory already
+engages with. The normalised form is the DOI itself, trimmed, lowercased
+(ASCII letters only) and percent-decoded, wherever it sits in the text, so
+\code{doi: 10...}, \code{DOI 10...}, \code{doi.org/10...},
+\code{https://www.doi.org/10...} and a URL with \code{\%2F} all match the
+bare DOI, and trailing full stops, commas and semicolons are dropped.
+Returns the qualifying DOIs in their original form, deduplicated and sorted
+by normalised form. Deterministic and takes no network dependency:
 the search itself is left to whichever literature tool the caller prefers.
 }
 \examples{

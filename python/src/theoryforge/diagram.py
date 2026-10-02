@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from ._access import PRED_TYPE, RELATION, enum, field, items, str_list, text
+from ._text import trim
 
 _CAUSAL = {"causes", "increases", "decreases"}
 _TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap",
@@ -118,7 +119,7 @@ def _provenance(T: dict) -> str:
     for i, s in enumerate(steps, start=1):
         action = _t(s, "action")
         detail = _t(s, "detail")
-        label = _esc(action) + ("\\n" + _wrap(detail, 26) if detail.strip() else "")
+        label = _esc(action) + ("\\n" + _wrap(detail, 26) if trim(detail) else "")
         lines.append(f'  "n{i}" [label="{label}"];')
     for i in range(1, len(steps)):
         lines.append(f'  "n{i}" -> "n{i + 1}";')

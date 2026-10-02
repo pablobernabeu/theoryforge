@@ -8,14 +8,20 @@ from __future__ import annotations
 import re
 
 from ._access import RELATION, enum, field, items, str_list, text
+from ._text import normalise_words
 
 _PATH = {"causes", "increases", "decreases", "mediates"}
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 
 def _san(s: str) -> str:
-    """Sanitise a measurement label into a syntactic lavaan variable name."""
-    s = _NON_ALNUM.sub("_", s.lower()).strip("_")
+    """Sanitise a measurement label into a syntactic lavaan variable name.
+
+    The label is folded and lowercased as tokens are (``Müller`` gives
+    ``muller``), and every run of characters outside ``[a-z0-9]`` becomes one
+    underscore, since lavaan names must be ASCII.
+    """
+    s = _NON_ALNUM.sub("_", normalise_words(s)).strip("_")
     return s or "x"
 
 

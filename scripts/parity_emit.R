@@ -162,7 +162,19 @@ suppressWarnings(suppressMessages({
         "10.1176/AJP.146.2.148",
         "10.1037/0033-2909.99.1.20",
         "10.1037/0033-2909.99.1.20",
-        "10.1016/j.cpr.2011.09.005"
+        "10.1016/j.cpr.2011.09.005",
+        # Spellings of the cited DOIs that the normaliser of API_SPEC.md
+        # section 18 recognises, so the output is the same as without them.
+        "doi: 10.1016/j.brat.2015.10.002",
+        "DOI 10.1016/j.brat.2015.10.002",
+        "doi.org/10.1016/j.brat.2015.10.002",
+        "dx.doi.org/10.1016/j.brat.2015.10.002",
+        "https://www.doi.org/10.1016/j.brat.2015.10.002",
+        "info:doi/10.1016/j.brat.2015.10.002",
+        "urn:doi:10.1016/j.brat.2015.10.002",
+        "https://doi.org/10.1016/0005-7967%2886%2990011-2",
+        "10.1016/j.brat.2015.10.002.",
+        "10.1016/J.BRAT.2015.10.002\u00a0"
       )
       new_dois <- tf_new_evidence_dois(v1, new_evidence_candidates)
       write_raw(paste0(jsonlite::toJSON(new_dois, auto_unbox = FALSE, pretty = TRUE), "\n"),

@@ -5,24 +5,39 @@ enhancement.
 """
 from __future__ import annotations
 
-import re
+import unicodedata
 
 from . import _resources
 from ._access import field, items, text
 from ._num import rnd
+from ._text import normalise_words
 
 STOPWORDS = {
     "the", "and", "for", "that", "with", "from", "are", "was", "its", "our", "their",
     "this", "these", "those", "towards", "toward", "into", "onto", "per", "via",
 }
 
-_NON_ALNUM = re.compile(r"[^a-z0-9]+")
-
 
 def tokens(s: str) -> set[str]:
-    """Tokenise a string into a set of content tokens."""
-    s = (s or "").lower()
-    parts = _NON_ALNUM.sub(" ", s).split()
+    """Tokenise a string into a set of content tokens (API_SPEC.md section 6).
+
+    The text is folded through ``schema/fold.json`` (accented Latin letters to
+    ASCII, Greek and Cyrillic to small unaccented letters) and lowercased in
+    ASCII. A token is a maximal run of letters, marks and digits in any script
+    (Unicode general categories L, M and N). Tokens shorter than three code
+    points and English stopwords are dropped.
+    """
+    s = normalise_words(s or "")
+    parts: list[str] = []
+    run: list[str] = []
+    for ch in s:
+        if unicodedata.category(ch)[0] in "LMN":
+            run.append(ch)
+        elif run:
+            parts.append("".join(run))
+            run = []
+    if run:
+        parts.append("".join(run))
     return {t for t in parts if len(t) >= 3 and t not in STOPWORDS}
 
 

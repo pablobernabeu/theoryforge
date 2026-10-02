@@ -12,14 +12,22 @@ NULL
 
 #' Tokenise a string into a set of content tokens
 #'
-#' Lowercases, replaces every run of non-\code{[a-z0-9]} characters with a
-#' single space, splits, drops tokens shorter than 3 characters and the
-#' canonical stopwords, then returns the unique set.
+#' Folds the text through the package's fold table (accented Latin letters to
+#' ASCII, Greek and Cyrillic letters to small unaccented ones) and lowercases
+#' ASCII letters, then takes every maximal run of letters, marks and digits in
+#' any script (Unicode general categories L, M and N) as a token. Tokens
+#' shorter than 3 code points and the canonical English stopwords are dropped,
+#' and the unique set is returned. Scripts other than Latin, Greek and Cyrillic
+#' are compared as written, and text written without spaces, such as Chinese,
+#' gives one token per run.
 #'
 #' @param s A single string (or \code{NULL}, treated as "").
 #' @return A character vector of unique tokens (possibly empty).
 #' @examples
 #' tf_tokens("The physiological arousal response to a threat")
+#' # Accents and case are folded, so these give the same tokens.
+#' tf_tokens("Na\u00efve \u00c9motion")
+#' tf_tokens("naive emotion")
 #' @export
 tf_tokens <- function(s) {
   if (is.null(s) || length(s) == 0L) {
@@ -28,11 +36,9 @@ tf_tokens <- function(s) {
     s <- as.character(s[[1L]])
     if (is.na(s)) s <- ""
   }
-  s <- tolower(s)
-  s <- gsub("[^a-z0-9]+", " ", s)
-  parts <- strsplit(s, " ", fixed = TRUE)[[1L]]
-  parts <- parts[nzchar(parts)]
-  keep <- nchar(parts) >= 3L & !(parts %in% .tf_STOPWORDS)
+  s <- .tf_normalise_words(s)
+  parts <- regmatches(s, gregexpr("[\\p{L}\\p{M}\\p{N}]+", s, perl = TRUE))[[1L]]
+  keep <- nchar(parts, type = "chars") >= 3L & !(parts %in% .tf_STOPWORDS)
   unique(parts[keep])
 }
 

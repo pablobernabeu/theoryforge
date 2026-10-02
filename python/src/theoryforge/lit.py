@@ -12,6 +12,7 @@ import json
 from ._access import as_list as _as_list
 from ._access import field, items, str_list, text
 from ._load import load_document
+from ._text import normalise_doi
 from .redundancy import tokens
 
 DEFAULT_MIN_LINK = 2
@@ -199,25 +200,17 @@ def lit_diagram(obj: dict, type: str = "keyword_cooccurrence") -> str:
     )
 
 
-_DOI_PREFIXES = ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/", "doi:")
-
-
-def _normalize_doi(doi) -> str:
-    d = str(doi or "").strip().lower()
-    for prefix in _DOI_PREFIXES:
-        if d.startswith(prefix):
-            return d[len(prefix):]
-    return d
-
-
 def new_evidence_dois(theory, candidate_dois: list) -> list:
     """DOIs in `candidate_dois` not already cited by the theory's evidence or alternatives.
 
-    Compares by normalised form (lowercased, with any doi.org/dx.doi.org URL prefix
-    stripped), so a fresh literature search, for example via OpenAlex, Scopus, or any
-    other source, can be checked against what the theory already engages with. Returns
-    the qualifying DOIs in their original form, deduplicated and sorted by normalised
-    form. Deterministic and takes no network dependency: the search itself is left to
+    Compares by normalised form, so a fresh literature search, for example via OpenAlex,
+    Scopus, or any other source, can be checked against what the theory already engages
+    with. The normalised form is the DOI itself, trimmed, lowercased (ASCII letters only)
+    and percent-decoded, wherever it sits in the text, so `doi: 10...`, `DOI 10...`,
+    `doi.org/10...`, `https://www.doi.org/10...` and a URL with `%2F` all match the bare
+    DOI, and trailing full stops, commas and semicolons are dropped. Returns the
+    qualifying DOIs in their original form, deduplicated and sorted by normalised form.
+    Deterministic and takes no network dependency: the search itself is left to
     whichever literature tool the caller prefers.
     """
     T = theory.data if hasattr(theory, "data") else theory
@@ -226,18 +219,18 @@ def new_evidence_dois(theory, candidate_dois: list) -> list:
         for entry in items(T, key):
             doi = text(field(entry, "source_doi"))
             if doi:
-                known.add(_normalize_doi(doi))
+                known.add(normalise_doi(doi))
 
     seen, out = set(), []
     for doi in candidate_dois or []:
         if not doi:
             continue
-        norm = _normalize_doi(doi)
+        norm = normalise_doi(doi)
         if norm in known or norm in seen:
             continue
         seen.add(norm)
         out.append(doi)
-    return sorted(out, key=_normalize_doi)
+    return sorted(out, key=normalise_doi)
 
 
 def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None) -> dict:

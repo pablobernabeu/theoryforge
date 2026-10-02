@@ -99,15 +99,16 @@ jobs:
           print("theoryforge", tf.__version__)
           assert tf.__version__
           t = tf.new_theory("t", "T")
-          # validate() resolves theory.schema.json and check() resolves
-          # rigor_checklist.yaml, both through importlib.resources from outside
-          # the checkout, so a wheel missing either fails here rather than on a
-          # user's first call.
+          # validate() resolves theory.schema.json, check() resolves
+          # rigor_checklist.yaml and tokens() resolves fold.json, all through
+          # importlib.resources from outside the checkout, so a wheel missing
+          # any of them fails here rather than on a user's first call.
           assert t.validate() is True
           report = t.check()
           assert len(report["items"]) == 12, report
           assert report["checklist_version"], report
           assert report["gate"] in ("pass", "blocked", "advisory"), report
+          assert tf.tokens("Émotion") == {"emotion"}
           print("packaged schema:", sorted(p.name for p in files("theoryforge").joinpath("schema").iterdir()))
           PY
 

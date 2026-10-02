@@ -88,6 +88,22 @@ version and a single behavioural contract
   page and both methodology pages state the step condition: in a network without feedback
   loops, the explicit step explodes once `dt*damping` exceeds 2, so raising the damping is
   no remedy.
+- Text is normalised identically in both twins. Both trim one set of Unicode whitespace
+  characters, lowercase ASCII letters only and fold accented Latin letters through a
+  fixed table (`schema/fold.json`), so `naïve` no longer vanishes from a definition and
+  `Émotion` no longer matches `motion`. R accepted a lone no-break space as a mechanism
+  or definition where Python refused it, and the two lowercased the Turkish dotted
+  capital I differently, splitting scores, redundancy flags and the lavaan indicator
+  names. `compile_sem()` now names the indicator `Müller scale` `muller_scale`, where it
+  gave `m_ller_scale`, and a whitespace provenance detail is left out of the provenance
+  diagram and the dossier in both. `new_evidence_dois()` recognises DOIs written as
+  `doi: 10...`, `DOI 10...`, `doi.org/10...`, `https://www.doi.org/10...` or
+  percent-encoded, and ignores a trailing full stop, comma or semicolon. API_SPEC
+  sections 3, 6, 18 and 19 pin the rules.
+- Construct definitions and keywords in Greek, Cyrillic and other non-Latin scripts are
+  now tokenised. They were deleted, so two identical Russian definitions scored no
+  overlap and passed the redundancy screen. Greek and Cyrillic are compared without case
+  or accents, other scripts as written.
 
 ### Changed
 - `severity()` is described for what it is, a pre-data ranking of the form of each
@@ -142,6 +158,15 @@ version and a single behavioural contract
   cases cover the reading rules, with construct ids `y` and `n`, a merge key, unquoted
   dates, byte-order marks, a missing final newline, repeated keys in YAML and JSON,
   awkward scalars and an empty sequence.
+- `scripts/gen_fold_table.py` writes the fold table `schema/fold.json` from Python's
+  `unicodedata`, once, so neither twin depends on its runtime's Unicode tables, and a
+  test fails when the committed table differs from what the script writes.
+  `scripts/gen_golden.py` mirrors it into both packages with the schema and checklist,
+  and now does so before it computes the goldens, so they come from the files the
+  packages ship. The webR app vendors it. Eight edge cases cover whitespace outside
+  ASCII, the Turkish dotted capital I, Greek and Cyrillic case, decomposed Cyrillic and
+  Chinese text, and the DOI golden's candidate list gains the spellings now recognised,
+  with an unchanged result.
 
 
 ## [0.6.0] - 2026-08-21

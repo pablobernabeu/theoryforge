@@ -6,6 +6,7 @@ preregistration document), so the bundle is itself deterministic.
 from __future__ import annotations
 
 from ._access import field, items, text
+from ._text import trim
 from .prereg import _fmt
 from .prereg import preregister as _preregister
 from .rigor import check as _check
@@ -52,7 +53,7 @@ def dossier(T) -> str:
         for i, s in enumerate(prov, start=1):
             action = text(field(s, "action"))
             detail = text(field(s, "detail"))
-            lines.append(f"{i}. {action}: {detail}" if detail.strip() else f"{i}. {action}")
+            lines.append(f"{i}. {action}: {detail}" if trim(detail) else f"{i}. {action}")
 
     lines += ["", "## Preregistration", ""]
     return "\n".join(lines) + "\n" + _preregister(data)

@@ -1,0 +1,20 @@
+# Edge case: two constructs with the same Russian definition. Text outside ASCII
+# used to tokenise to nothing, so the pair scored no overlap and passed the
+# redundancy screen. Tokens now keep every script, and non_redundancy warns.
+schema_version: "1.0"
+id: edge-cyrillic-redundant
+title: Two identical Russian definitions
+maturity: building
+constructs:
+  - id: a
+    label: Страх
+    definition: Страх перед телесными ощущениями.
+  - id: b
+    label: Тревога
+    definition: Страх перед телесными ощущениями.
+propositions:
+  - id: p1
+    from: a
+    to: b
+    relation: increases
+    mechanism: The first drives the second.

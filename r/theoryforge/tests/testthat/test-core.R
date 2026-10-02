@@ -102,7 +102,7 @@ test_that("packaged examples are reachable and match the repository copies", {
                    "panic-network-2026")
 })
 
-test_that("the shipped schema and checklist match the repository copies", {
+test_that("the shipped schema, checklist and fold table match the repository copies", {
   # scripts/gen_golden.py writes inst/schema/ from the root schema/ and CI fails
   # on any difference. The root is out of reach when the tests run against a
   # built tarball, so the comparison is skipped there.
@@ -110,7 +110,7 @@ test_that("the shipped schema and checklist match the repository copies", {
                         winslash = "/", mustWork = FALSE)
   skip_if_not(file.exists(file.path(root, "schema", "theory.schema.json")),
               "repository schema/ not reachable")
-  for (name in c("theory.schema.json", "rigor_checklist.yaml")) {
+  for (name in c("theory.schema.json", "rigor_checklist.yaml", "fold.json")) {
     shipped <- system.file("schema", name, package = "theoryforge")
     expect_identical(tf_read_golden(shipped),
                      tf_read_golden(file.path(root, "schema", name)), info = name)

@@ -1,0 +1,39 @@
+# Edge case: every mechanism is whitespace outside ASCII, two lone no-break
+# spaces (U+00A0) and an ideographic space (U+3000). Both twins trim Unicode's
+# White_Space set, so no proposition has a mechanism and logical_why scores 0.
+# R used to read each one as a mechanism and score 1, 8 points above Python.
+schema_version: "1.0"
+id: edge-nbsp-mechanism
+title: Mechanisms written as whitespace
+maturity: building
+constructs:
+  - id: a
+    label: Alpha
+    definition: The first construct.
+  - id: b
+    label: Beta
+    definition: The second construct entirely different.
+  - id: c
+    label: Gamma
+    definition: A third construct with its own meaning.
+propositions:
+  - id: p1
+    from: a
+    to: b
+    relation: increases
+    mechanism: "\u00a0"
+  - id: p2
+    from: b
+    to: c
+    relation: increases
+    mechanism: "\u00a0"
+  - id: p3
+    from: a
+    to: c
+    relation: causes
+    mechanism: "\u3000"
+predictions:
+  - id: h1
+    statement: Gamma rises with Alpha.
+    type: directional
+    derives_from: [p1, p2]

@@ -1,0 +1,25 @@
+# Edge case: a construct definition that is a lone no-break space (U+00A0).
+# validate() reports the definition as missing in both twins; R used to accept
+# it.
+schema_version: "1.0"
+id: edge-nbsp-definition
+title: A definition written as a no-break space
+maturity: building
+constructs:
+  - id: a
+    label: Alpha
+    definition: "\u00a0"
+  - id: b
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: a
+    to: b
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]

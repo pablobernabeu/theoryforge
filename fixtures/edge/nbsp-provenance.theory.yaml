@@ -1,0 +1,33 @@
+# Edge case: provenance details that are whitespace outside ASCII (U+00A0 and
+# U+2009). The provenance diagram and the dossier leave such a detail out in both
+# twins, where R used to print it; the outcome record pins that the rest of the
+# theory reads as usual.
+schema_version: "1.0"
+id: edge-nbsp-provenance
+title: Provenance details written as whitespace
+maturity: building
+constructs:
+  - id: a
+    label: Alpha
+    definition: The first construct.
+  - id: b
+    label: Beta
+    definition: The second construct entirely different.
+propositions:
+  - id: p1
+    from: a
+    to: b
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+provenance:
+  - step: "1"
+    action: tf_construct
+    detail: "\u00a0"
+  - step: "2"
+    action: tf_proposition
+    detail: "\u2009\u00a0"

@@ -116,13 +116,13 @@ async function buildR() {
   // Package R source. Order is irrelevant (all definitions are lazy), but a
   // stable, deterministic order keeps the manifest diff-friendly.
   const rFiles = (await copyInto(R_SRC, path.join(vendor, "R"), [".r"])).sort();
-  await copyFiles(SCHEMA, path.join(vendor, "schema"), ["theory.schema.json", "rigor_checklist.yaml"]);
+  await copyFiles(SCHEMA, path.join(vendor, "schema"), ["theory.schema.json", "rigor_checklist.yaml", "fold.json"]);
   await copyExamples(path.join(vendor, "fixtures"));
   await fs.copyFile(LOGO, path.join(vendor, "logo.svg"));
   await writeJson(path.join(vendor, "manifest.json"), {
     pkgVersion: PKG_VERSION,
     rFiles: rFiles.map((f) => `R/${f}`),
-    schema: { theory: "schema/theory.schema.json", checklist: "schema/rigor_checklist.yaml" },
+    schema: { theory: "schema/theory.schema.json", checklist: "schema/rigor_checklist.yaml", fold: "schema/fold.json" },
     examples: manifestExamples(),
     corpora: manifestCorpora(),
   });

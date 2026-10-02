@@ -1,0 +1,14 @@
+# Edge case: the same Russian definition with й precomposed (U+0439) and
+# decomposed (и followed by the combining breve U+0306). Both fold to и, so the
+# NFC and NFD spellings give the same tokens.
+schema_version: "1.0"
+id: edge-nfd-cyrillic
+title: Precomposed and decomposed Cyrillic
+maturity: building
+constructs:
+  - id: a
+    label: Первый
+    definition: "Мой страх перед болью"
+  - id: b
+    label: Второй
+    definition: "Мои\u0306 страх перед болью"

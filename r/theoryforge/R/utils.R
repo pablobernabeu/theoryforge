@@ -5,8 +5,10 @@
 NULL
 
 # A field is "nonempty" if it is a single non-NA string of trimmed length >= 1.
+# Trimming removes the whitespace set of text.R (Unicode's White_Space), so a
+# lone no-break space is empty in both twins.
 .tf_ne_str <- function(v) {
-  is.character(v) && length(v) == 1L && !is.na(v) && nzchar(trimws(v))
+  is.character(v) && length(v) == 1L && !is.na(v) && nzchar(.tf_trim(v))
 }
 
 # -- Reading a theory ---------------------------------------------------------
@@ -96,7 +98,7 @@ NULL
     keep <- vapply(v, .tf_ne_str, logical(1))
     return(as.character(unlist(v[keep], use.names = FALSE)))
   }
-  if (is.character(v)) return(unname(v[!is.na(v) & nzchar(trimws(v))]))
+  if (is.character(v)) return(unname(v[!is.na(v) & nzchar(.tf_trim(v))]))
   character(0)
 }
 

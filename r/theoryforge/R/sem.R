@@ -8,11 +8,12 @@ NULL
 # Relations that compile to a directed structural path (`<to> ~ <from>`).
 .tf_SEM_PATH <- c("causes", "increases", "decreases", "mediates")
 
-# Sanitise a measurement label into a syntactic lavaan variable name:
-# lowercase, replace runs of non-[a-z0-9] with "_", strip leading/trailing "_",
-# and fall back to "x" when the result is empty.
+# Sanitise a measurement label into a syntactic lavaan variable name: fold and
+# lowercase it as tokens are (text.R), replace runs of non-[a-z0-9] with "_",
+# strip leading/trailing "_", and fall back to "x" when the result is empty.
+# lavaan names must be ASCII, so a label in another script reads as "x".
 .tf_san <- function(s) {
-  s <- gsub("[^a-z0-9]+", "_", tolower(s))
+  s <- gsub("[^a-z0-9]+", "_", .tf_normalise_words(s), perl = TRUE)
   s <- sub("^_+", "", sub("_+$", "", s))
   if (!nzchar(s)) "x" else s
 }

@@ -72,7 +72,7 @@ tf_dossier <- function(theory) {
       s <- prov[[i]]
       action <- .tf_str(s, "action")
       detail <- .tf_str(s, "detail")
-      lines <- c(lines, if (nzchar(trimws(detail))) {
+      lines <- c(lines, if (nzchar(.tf_trim(detail))) {
         sprintf("%d. %s: %s", i, action, detail)
       } else {
         sprintf("%d. %s", i, action)

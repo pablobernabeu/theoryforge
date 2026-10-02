@@ -1,0 +1,14 @@
+# Edge case: one Greek definition in capitals and one in small letters with
+# accents and a final sigma. The fold table maps both to the same small,
+# unaccented letters, so the definitions are identical in both twins.
+schema_version: "1.0"
+id: edge-greek-case
+title: Greek capitals against small letters
+maturity: building
+constructs:
+  - id: a
+    label: Οδός
+    definition: ΟΔΟΣ ΔΙΑΦΥΓΗΣ ΑΠΟ ΤΟΝ ΦΟΒΟ
+  - id: b
+    label: Διαφυγή
+    definition: οδός διαφυγής από τον φόβο

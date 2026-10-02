@@ -7,6 +7,8 @@ read the same malformed value the same way. R's ``utils.R`` mirrors each of them
 """
 from __future__ import annotations
 
+from ._text import trim
+
 MATURITY = frozenset({"draft", "building", "developing", "testing"})
 FORM = frozenset({"variance", "network", "typology", "process"})
 RELATION = frozenset({"increases", "decreases", "moderates", "mediates", "causes", "associates"})
@@ -15,8 +17,12 @@ FORMAL_MODEL_TYPE = frozenset({"ode", "abm", "network", "sem", "none"})
 
 
 def ne_str(v) -> bool:
-    """Whether ``v`` is a string with at least one character left after trimming."""
-    return isinstance(v, str) and v.strip() != ""
+    """Whether ``v`` is a string with at least one character left after trimming.
+
+    Trimming removes the whitespace set of ``_text.WS`` (Unicode's White_Space),
+    so a lone no-break space is empty in both languages.
+    """
+    return isinstance(v, str) and trim(v) != ""
 
 
 def items(d, key: str) -> list:
