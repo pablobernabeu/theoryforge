@@ -7,9 +7,10 @@ on:
       - 'r/theoryforge/**'
       - 'python/**'
       - 'apps/**'
-      # apps/build.mjs vendors the shared schema and the example fixtures into
-      # the published apps, so a change to either alters the deployed site and
-      # must trigger a rebuild.
+      # apps/build.mjs vendors the schema (the R package's copy, which
+      # scripts/gen_golden.py writes from schema/) and the example fixtures
+      # into the published apps, so a change to either alters the deployed site
+      # and must trigger a rebuild.
       - 'schema/**'
       - 'fixtures/**'
       # The mkdocs changelog page is a snippet include of the repository

@@ -1,0 +1,27 @@
+# Edge case: a prediction severity written as a quoted string. The structural
+# validation passes, while validate(full = TRUE) and check() refuse it with the
+# messages API_SPEC section 4 pins. The severity rubric scores claim form only,
+# so it never reads the declared value.
+schema_version: "1.0"
+id: edge-string-severity
+title: A theory whose prediction severity is a string
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+    severity: "0.7"

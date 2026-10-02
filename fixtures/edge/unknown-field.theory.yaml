@@ -1,0 +1,25 @@
+# Edge case: a misspelt collection key. validate() refuses the unknown
+# top-level field in both twins, and every other call runs as if the theory had
+# no predictions at all.
+schema_version: "1.0"
+id: edge-unknown-field
+title: A theory with a misspelt predictions key
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predicitions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]

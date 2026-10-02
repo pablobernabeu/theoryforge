@@ -29,7 +29,7 @@ devtools::check("r/theoryforge")      # a full R CMD check
 The Python package:
 
 ```bash
-pip install -e "./python[dev]"
+pip install -e "./python[dev,docs]"
 cd python
 pytest                 # run the test suite
 ruff check             # lint

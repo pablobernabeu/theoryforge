@@ -5,16 +5,26 @@ Writes every parity artefact named in API_SPEC.md sections 13, 17, 21 and 22
 into ``fixtures/expected/``. Listing the artefact types here as well would only
 give them a second place to drift from; the spec is the list.
 
-Also mirrors the fixture inputs and the golden tree into the copies each package
-ships, so that every duplicate in the repository has exactly one writer. CI runs
-this script and fails on any resulting change.
+Also mirrors the fixture inputs, the golden tree and the two schema files
+(``schema/theory.schema.json`` and ``schema/rigor_checklist.yaml``) into the
+copies each package ships, so that every duplicate in the repository has exactly
+one writer. CI runs this script and fails on any resulting change.
+
+Finally, it records the outcome of every edge-case theory in ``fixtures/edge/``
+(deliberately malformed or awkward inputs) as
+``fixtures/edge/expected/<name>.outcome.json``. Neither directory is mirrored
+into a package. ``scripts/parity_check.py`` compares the R twin's outcomes with
+these records.
 """
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "python" / "src"))
@@ -36,6 +46,15 @@ EXAMPLE_INPUTS = ("panic-network.theory.yaml", "panic-network-2026-v2.theory.yam
                   "panic-corpus.yaml")
 R_INPUTS = ROOT / "r" / "theoryforge" / "inst" / "fixtures"
 PY_INPUTS = ROOT / "python" / "src" / "theoryforge" / "fixtures"
+# Each package reads its own copy of the schema and checklist, because neither
+# the CRAN tarball nor the sdist can reach the repository root. The webR app
+# vendors the R package's copy (apps/build.mjs).
+SCHEMA = ROOT / "schema"
+SCHEMA_FILES = ("theory.schema.json", "rigor_checklist.yaml")
+SCHEMA_COPIES = (ROOT / "r" / "theoryforge" / "inst" / "schema",
+                 ROOT / "python" / "src" / "theoryforge" / "schema")
+EDGE = FIXTURES / "edge"
+EDGE_EXPECTED = EDGE / "expected"
 DIAGRAMS = {
     "nomological_net": "dot",
     "provenance": "dot",
@@ -50,32 +69,138 @@ DIAGRAMS = {
 }
 
 
+def emit_theory(t: tf.Theory, out_dir: Path) -> list[str]:
+    """Write the per-theory artefact set of ``t`` into ``out_dir``.
+
+    Returns the file names written. ``scripts/parity_check.py`` calls this for
+    the app examples, which have no goldens, and compares the result with the
+    files ``parity_emit.R theories`` writes for the same inputs.
+    """
+    tid = t.id
+    written = []
+    # write raw bytes with LF endings (no platform newline translation) so
+    # the diagram goldens are byte-identical targets on every OS.
+    (out_dir / f"{tid}.report.json").write_bytes((t.report("json") + "\n").encode("utf-8"))
+    written.append(f"{tid}.report.json")
+    for dtype, ext in DIAGRAMS.items():
+        (out_dir / f"{tid}.{dtype}.{ext}").write_bytes(t.diagram(dtype).encode("utf-8"))
+        written.append(f"{tid}.{dtype}.{ext}")
+    (out_dir / f"{tid}.severity.json").write_bytes(
+        (json.dumps(t.severity(), indent=2) + "\n").encode("utf-8"))
+    written.append(f"{tid}.severity.json")
+    (out_dir / f"{tid}.prereg.md").write_bytes(t.preregister().encode("utf-8"))
+    written.append(f"{tid}.prereg.md")
+    (out_dir / f"{tid}.sem.lavaan").write_bytes(t.compile_sem().encode("utf-8"))
+    written.append(f"{tid}.sem.lavaan")
+    (out_dir / f"{tid}.dossier.md").write_bytes(t.dossier().encode("utf-8"))
+    written.append(f"{tid}.dossier.md")
+    (out_dir / f"{tid}.simulate.json").write_bytes(
+        (json.dumps(t.simulate(), indent=2) + "\n").encode("utf-8"))
+    written.append(f"{tid}.simulate.json")
+    return written
+
+
+# A reader may prefix its message with the offending path in parentheses. The
+# path differs between machines, and the twins spell it differently (R joins
+# with "/"), so it is dropped before the message is recorded. The match ends at
+# the first ") " and not at the first ")", so that a path such as
+# "C:/Program Files (x86)/..." is dropped whole.
+_PATH_PREFIX = re.compile(r"^\(.*?\) ")
+
+
+def error_text(err: BaseException) -> str:
+    """The message of ``err`` as an edge outcome records it."""
+    return _PATH_PREFIX.sub("", str(err), count=1)
+
+
+def _attempt(call: Callable[[], Any]) -> Any:
+    try:
+        return call()
+    # Every refusal is part of the record, whatever its class: the R twin has
+    # only a message to compare, so the message is what is kept.
+    except Exception as err:
+        return {"error": error_text(err)}
+
+
+def _check_summary(rep: dict) -> dict:
+    return {
+        "aggregate_score": rep["aggregate_score"],
+        "gate": rep["gate"],
+        "n_blockers_failed": rep["n_blockers_failed"],
+        "items": [{"id": it["id"], "status": it["status"], "score": it["score"]}
+                  for it in rep["items"]],
+    }
+
+
+def edge_outcome(path: Path) -> dict:
+    """What each public call makes of the theory file at ``path``.
+
+    The keys follow the order of the calls. A call that raises is recorded as
+    ``{"error": <message>}``. When the file cannot be read, the record holds
+    ``read`` alone. ``scripts/parity_emit.R edge`` builds the same record in R.
+    """
+    try:
+        t = tf.read(path)
+    except Exception as err:
+        return {"read": {"error": error_text(err)}}
+    return {
+        "read": "ok",
+        "validate": _attempt(t.validate),
+        "validate_full": _attempt(lambda: t.validate(full=True)),
+        "check": _attempt(lambda: _check_summary(t.check())),
+        "severity": _attempt(t.severity),
+        "implications": _attempt(t.implications),
+        "compile_sem": _attempt(t.compile_sem),
+        "simulate": _attempt(lambda: t.simulate(steps=3)),
+        "preregister": _attempt(t.preregister),
+    }
+
+
+def edge_inputs(edge_dir: Path = EDGE) -> dict[str, Path]:
+    """The edge-case theory files keyed by name (the file name less its suffix)."""
+    found: dict[str, Path] = {}
+    for path in sorted(edge_dir.glob("*.theory.*")):
+        # Case-sensitive, as the pattern parity_emit.R lists the same directory
+        # with, so that both twins see the same set of cases.
+        if path.suffix not in (".yaml", ".json"):
+            continue
+        name = path.name[: -len(".theory" + path.suffix)]
+        if name in found:
+            raise SystemExit(f"two edge cases share the name {name}: {found[name].name}, {path.name}")
+        found[name] = path
+    return found
+
+
+def write_edge_outcomes() -> list[str]:
+    """Write one outcome record per edge case and prune records left by deleted cases."""
+    EDGE_EXPECTED.mkdir(parents=True, exist_ok=True)
+    written = []
+    for name, path in edge_inputs().items():
+        record = json.dumps(edge_outcome(path), indent=2) + "\n"
+        (EDGE_EXPECTED / f"{name}.outcome.json").write_bytes(record.encode("utf-8"))
+        written.append(f"{name}.outcome.json")
+    for stale in sorted(EDGE_EXPECTED.iterdir()):
+        if stale.name not in written:
+            stale.unlink()
+            print(f"pruned stale edge outcome: {stale.name}")
+    return written
+
+
+def mirror_schema(src: Path, dests) -> None:
+    """Copy the schema and checklist from ``src`` into each directory in ``dests``."""
+    for dest in dests:
+        dest.mkdir(parents=True, exist_ok=True)
+        for name in SCHEMA_FILES:
+            shutil.copyfile(src / name, dest / name)
+
+
 def main() -> int:
     EXPECTED.mkdir(parents=True, exist_ok=True)
     written = []
     for fx in sorted(FIXTURES.glob("*.theory.yaml")):
         t = tf.read(fx)
         t.validate()
-        tid = t.id
-        # write raw bytes with LF endings (no platform newline translation) so
-        # the diagram goldens are byte-identical targets on every OS.
-        (EXPECTED / f"{tid}.report.json").write_bytes((t.report("json") + "\n").encode("utf-8"))
-        written.append(f"{tid}.report.json")
-        for dtype, ext in DIAGRAMS.items():
-            (EXPECTED / f"{tid}.{dtype}.{ext}").write_bytes(t.diagram(dtype).encode("utf-8"))
-            written.append(f"{tid}.{dtype}.{ext}")
-        (EXPECTED / f"{tid}.severity.json").write_bytes(
-            (json.dumps(t.severity(), indent=2) + "\n").encode("utf-8"))
-        written.append(f"{tid}.severity.json")
-        (EXPECTED / f"{tid}.prereg.md").write_bytes(t.preregister().encode("utf-8"))
-        written.append(f"{tid}.prereg.md")
-        (EXPECTED / f"{tid}.sem.lavaan").write_bytes(t.compile_sem().encode("utf-8"))
-        written.append(f"{tid}.sem.lavaan")
-        (EXPECTED / f"{tid}.dossier.md").write_bytes(t.dossier().encode("utf-8"))
-        written.append(f"{tid}.dossier.md")
-        (EXPECTED / f"{tid}.simulate.json").write_bytes(
-            (json.dumps(t.simulate(), indent=2) + "\n").encode("utf-8"))
-        written.append(f"{tid}.simulate.json")
+        written += emit_theory(t, EXPECTED)
 
     # amendment appraisal for the v2-vs-v1 pair (Lakatosian progressive/degenerating)
     v1 = tf.read(FIXTURES / "panic-network.theory.yaml")
@@ -141,10 +266,18 @@ def main() -> int:
         for name in EXAMPLE_INPUTS:
             shutil.copyfile(FIXTURES / name, dest / name)
 
+    # Mirror the schema and checklist into each package's shipped copy.
+    mirror_schema(SCHEMA, SCHEMA_COPIES)
+
+    edge_written = write_edge_outcomes()
+
     print(f"wrote {len(written)} golden files to {EXPECTED}")
     print(f"mirrored the golden tree to {R_EXPECTED}")
     print(f"mirrored {len(EXAMPLE_INPUTS)} example theories to {R_INPUTS} and {PY_INPUTS}")
-    for w in written:
+    print(f"mirrored {len(SCHEMA_FILES)} schema files to "
+          + " and ".join(str(d) for d in SCHEMA_COPIES))
+    print(f"wrote {len(edge_written)} edge-case outcome records to {EDGE_EXPECTED}")
+    for w in written + edge_written:
         print("  " + w)
     return 0
 

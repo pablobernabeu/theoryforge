@@ -1,0 +1,29 @@
+# Edge case: scalar strings where the schema expects arrays of strings, read as
+# one-element arrays (API_SPEC section 4). The same YAML as
+# test-scalar-singleton.R and test_scalar_singleton.py.
+schema_version: "1.0"
+id: scalar-singleton-demo
+title: Scalar singleton demo
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+    measurement: m1
+    boundary_conditions: adults
+  - id: c2
+    label: Beta
+    definition: The second construct entirely different.
+    measurement: [m2]
+    boundary_conditions: [adults]
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: p1

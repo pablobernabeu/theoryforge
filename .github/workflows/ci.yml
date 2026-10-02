@@ -52,11 +52,12 @@ jobs:
           python scripts/gen_golden.py
           # git diff ignores untracked files, so a golden the generator newly
           # creates would slip through; --porcelain reports additions,
-          # deletions and modifications. All three trees the generator writes
-          # are checked: the root goldens, the copy shipped inside the R package
-          # (what the testthat suite reads) and the example theories shipped
-          # inside the Python package.
-          stale=$(git status --porcelain -- fixtures r/theoryforge/inst/fixtures python/src/theoryforge/fixtures)
+          # deletions and modifications. Every tree the generator writes is
+          # checked: the root goldens and edge-case outcomes, the copy shipped
+          # inside the R package (what the testthat suite reads), the example
+          # theories shipped inside the Python package and the schema and
+          # checklist copies each package ships.
+          stale=$(git status --porcelain -- fixtures r/theoryforge/inst/fixtures python/src/theoryforge/fixtures r/theoryforge/inst/schema python/src/theoryforge/schema)
           if [ -n "$stale" ]; then
             echo "$stale"
             echo "::error::golden files are stale; run scripts/gen_golden.py and commit the result"

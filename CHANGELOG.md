@@ -22,6 +22,15 @@ version and a single behavioural contract
   missing year and on the `Int64` years of a resumed checkpoint. The recipe is now a
   function, `scopus_corpus_to_tf()`, shown in full in both languages and run by both
   test suites on a stand-in corpus.
+- CONTRIBUTING installs the docs extra needed by `mkdocs build`.
+
+### Internal
+- The schema and rigour checklist copies that each package ships are now written only by
+  `scripts/gen_golden.py`, CI fails when they drift, and the webR app vendors the copy the
+  R package ships. The parity check no longer treats `true` as 1 or unboxes nested
+  one-element arrays, checks the key order of the rigour report, compares the six app
+  examples across the two engines and records the outcome of a corpus of malformed
+  theories (`fixtures/edge/`).
 
 
 ## [0.6.0] - 2026-08-21

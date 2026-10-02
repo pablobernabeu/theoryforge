@@ -3,7 +3,7 @@
 //
 // Each app runs the *real* package entirely client-side (R via webR, Python via
 // Pyodide), so the source it executes must be the live package source. This
-// script copies that source, together with the shared schema and the example
+// script copies that source, together with the schema it ships and the example
 // fixtures, into apps/r/vendor and apps/py/vendor, and writes a manifest.json
 // telling the app which files to fetch at start-up.
 //
@@ -20,16 +20,19 @@ const repo = path.resolve(here, "..");
 
 const R_SRC = path.join(repo, "r", "theoryforge", "R");
 const PY_SRC = path.join(repo, "python", "src", "theoryforge");
-const SCHEMA = path.join(repo, "schema");
+// The copy the R package ships, so the webR app scores with exactly the
+// checklist R reads. scripts/gen_golden.py writes it from the root schema/.
+const SCHEMA = path.join(repo, "r", "theoryforge", "inst", "schema");
 const FIXTURES = path.join(repo, "fixtures");
 const APP_EXAMPLES = path.join(here, "examples");
 // Single source of truth for the brand logo, so the apps cannot drift from it.
 const LOGO = path.join(repo, "r", "theoryforge", "man", "figures", "logo.svg");
 
 // Examples can be drawn from the shared fixtures (kept in lockstep with the
-// golden/parity tests) or from apps/examples (app-only, isolated from CI). Each
-// carries a one-line description shown in the app, and the parenthetical in
-// each name is that theory's own `maturity` field.
+// golden/parity tests) or from apps/examples. The app examples have no goldens,
+// but scripts/parity_check.py runs both engines on them and compares the
+// results. Each carries a one-line description shown in the app, and the
+// parenthetical in each name is that theory's own `maturity` field.
 const EXAMPLES = [
   { name: "Panic disorder network (developing)", file: "panic-network.theory.yaml", src: FIXTURES,
     desc: "A well-developed network theory of panic, three constructs in a feedback loop. Passes the full rigour checklist." },
