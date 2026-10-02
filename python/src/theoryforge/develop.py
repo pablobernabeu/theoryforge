@@ -16,6 +16,13 @@ def _list(d: dict, key: str) -> list:
 def appraise_amendment(new, prior) -> dict:
     """Appraise an amendment as progressive, degenerating, or neutral relative to a prior version.
 
+    Raises:
+        ValueError: ``new`` and ``prior`` are the same object. The builders
+            work in place, so ``new = prior.add_prediction(...)`` makes the two
+            one object, which can only be appraised as ``neutral``. Begin the
+            amendment with ``prior.copy()``. Two distinct objects with equal
+            content are appraised as usual.
+
     References:
         Lakatos, I. (1970). Falsification and the methodology of scientific
         research programmes. In Criticism and the growth of knowledge
@@ -26,6 +33,14 @@ def appraise_amendment(new, prior) -> dict:
     """
     new = new.data if hasattr(new, "data") else new
     prior = prior.data if hasattr(prior, "data") else prior
+    # Only identity is refused. Equal content in two objects is a legitimate
+    # comparison, which R appraises as neutral, so it must pass here too.
+    if new is prior:
+        raise ValueError(
+            "appraise_amendment needs two distinct theory objects, but the amendment and "
+            "the prior are the same object. The Python builders change a theory in place, "
+            "so start the amendment from prior.copy()."
+        )
 
     prior_pred_ids = {p.get("id") for p in _list(prior, "predictions")}
     prior_aux_ids = {a.get("id") for a in _list(prior, "auxiliary_assumptions")}

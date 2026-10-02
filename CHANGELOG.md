@@ -14,6 +14,19 @@ version and a single behavioural contract
 
 ## [Unreleased]
 
+### Fixed
+- The Python builders split a single string into characters. `derives_from="p1"` was
+  stored as `["p", "1"]`, which blocked the gate, and `measurement="heart rate"` compiled
+  to one indicator per character. A single string is now a one-element list, as in R. A
+  template whose collection keys are present with no value (`constructs:`) no longer
+  raises AttributeError. A collection that is not a list is refused with a TypeError
+  that names the key.
+
+### Added
+- `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`
+  now refuses to compare a theory with itself, which the in-place builders made easy to
+  do by accident and which always returned `neutral`.
+
 ### Documentation
 - The literature page's recipe for turning a scopusflow corpus into a theoryforge
   corpus keys cited works by Scopus identifier, folds DOI and keyword case and writes a

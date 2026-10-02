@@ -65,3 +65,57 @@ test_that("optional fields are omitted when NULL", {
   expect_false("measurement" %in% names(t$constructs[[1]]))
   expect_false("boundary_conditions" %in% names(t$constructs[[1]]))
 })
+
+# The R builders have always taken a single string and a template with null
+# collections. The Python builders of 0.6.0 split the string into characters and
+# failed on the template. test_builders.py runs the same calls there, and these
+# two tests keep the R side as it is.
+test_that("a single string is stored as a one-element list", {
+  t <- tf_theory("demo-5", "Single strings") |>
+    tf_add_construct("c_arousal", "Physiological arousal", "Bodily activation.",
+                     measurement = "heart-rate variability",
+                     boundary_conditions = "awake adults") |>
+    tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
+    tf_add_proposition("p1", "c_arousal", "c_threat", "causes") |>
+    tf_add_alternative("alt1", "A rival", key_constructs = "c_threat") |>
+    tf_add_prediction("h1", "A claim.", "point", derives_from = "p1",
+                      diagnostic_vs = "alt1") |>
+    tf_add_assumption("a1", "An assumption.", added_for = "h1", protects = "h1")
+  expect_identical(t$constructs[[1]]$measurement, list("heart-rate variability"))
+  expect_identical(t$constructs[[1]]$boundary_conditions, list("awake adults"))
+  expect_identical(t$alternatives[[1]]$key_constructs, list("c_threat"))
+  expect_identical(t$predictions[[1]]$derives_from, list("p1"))
+  expect_identical(t$predictions[[1]]$diagnostic_vs, list("alt1"))
+  expect_identical(t$auxiliary_assumptions[[1]]$protects, list("h1"))
+  expect_true(tf_validate(t, full = TRUE))
+  expect_match(tf_compile_sem(t), "c_arousal =~ heart_rate_variability\n",
+               fixed = TRUE)
+})
+
+test_that("builders work on a template whose collections are NULL", {
+  path <- tempfile(fileext = ".yaml")
+  writeLines(c('schema_version: "1.0"', "id: stub", "title: Stub",
+               "maturity: draft", "constructs:", "propositions:",
+               "provenance:"), path)
+  t <- tf_read(path)
+  expect_true("constructs" %in% names(t))
+  expect_null(t$constructs)
+  expect_null(t$provenance)
+  t <- t |>
+    tf_add_construct("c1", "C one", "the first") |>
+    tf_add_construct("c2", "C two", "the second") |>
+    tf_add_proposition("p1", "c1", "c2", "causes") |>
+    tf_set_formal_model("ode")
+  expect_identical(vapply(t$constructs, function(x) x$id, character(1)),
+                   c("c1", "c2"))
+  expect_identical(vapply(t$propositions, function(x) x$id, character(1)), "p1")
+  expect_identical(t$formal_model$type, "ode")
+  expect_identical(
+    vapply(t$provenance, function(s) s$action, character(1)),
+    c("tf_add_construct", "tf_add_construct", "tf_add_proposition",
+      "tf_set_formal_model")
+  )
+  expect_identical(vapply(t$provenance, function(s) s$step, character(1)),
+                   c("1", "2", "3", "4"))
+  expect_true(tf_validate(t, full = TRUE))
+})

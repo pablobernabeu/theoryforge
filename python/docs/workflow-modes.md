@@ -42,9 +42,9 @@ import theoryforge as tf
 
 BUILDING assembles a theory from scratch. `tf.new_theory()` returns an empty
 `Theory`, and the `add_*` methods append constructs, propositions and
-predictions. Each method returns the same object, so calls chain. Every
-addition is recorded in a provenance log, which gives a step-by-step account
-of how the theory was assembled.
+predictions. Each method changes the theory in place and returns it, so calls
+chain. Every addition is recorded in a provenance log, which gives a
+step-by-step account of how the theory was assembled.
 
 ```python exec="1" source="material-block" session="workflow-modes"
 t = (
@@ -79,13 +79,17 @@ t = (
 ```
 
 The positional arguments follow the schema. `add_construct(id, label,
-definition)` takes optional `measurement` and `boundary_conditions` lists.
+definition)` takes optional `measurement` and `boundary_conditions`, each a
+list or a single string.
 `add_proposition(id, frm, to, relation)` takes an optional `mechanism`,
 where `relation` is one of `increases`, `decreases`, `moderates`,
 `mediates`, `causes` or `associates` (`frm` stands in for the schema's
 `from` field, since `from` is a reserved word in Python). `add_prediction(id, statement,
-type)` takes optional `derives_from` and `diagnostic_vs` lists, where `type`
-is one of `point`, `interval`, `directional` or `existence`.
+type)` takes optional `derives_from` and `diagnostic_vs`, each a list or a
+single string, where `type` is one of `point`, `interval`, `directional` or
+`existence`. A single string is stored as a one-element list, so
+`derives_from="p1"` means `["p1"]`, as it does in R. The same holds for
+`key_constructs` in `add_alternative()` and `protects` in `add_assumption()`.
 
 The provenance log is held under `t.data["provenance"]`. Each entry records
 the action and the identifier it affected.
@@ -105,6 +109,26 @@ t.validate()
 print(t.report("json"))
 ```
 
+Because the methods change the theory in place, assigning the result to a new
+name does not keep a second version. After `v2 = v1.add_prediction(...)`, the
+names `v2` and `v1` refer to one object. The R builders return a modified copy,
+so the same line in R leaves `v1` as it was. To amend a theory and keep the
+version it started from, begin with `copy()`, which copies every collection the
+theory holds. `tf.Theory(dict(t.data))` copies only the top-level mapping, so
+the two objects would go on sharing their constructs, propositions and
+predictions.
+
+```python exec="1" source="material-block" result="text" session="workflow-modes"
+amended = t.copy().add_prediction(
+    "pred2",
+    "the standardised effect of arousal lies between 0.2 and 0.4",
+    "interval",
+    derives_from="p1",
+)
+print([p["id"] for p in t.data["predictions"]])
+print([p["id"] for p in amended.data["predictions"]])
+```
+
 ## DEVELOPMENT
 
 DEVELOPMENT compares two versions of a theory and judges whether an
@@ -114,7 +138,10 @@ amendment is progressive when it yields newly corroborated predictions
 without resorting to ad-hoc immunising assumptions.
 
 Call `appraise_amendment` on the newer version, passing the prior version as
-the argument.
+the argument. The two versions must be distinct objects, as they are when the
+amendment begins from `copy()`. Given the same object twice, the call raises a
+`ValueError` that points to `copy()`, because a theory compared with itself can
+only come out `neutral`.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
 v1 = tf.read(fixtures / "panic-network.theory.yaml")

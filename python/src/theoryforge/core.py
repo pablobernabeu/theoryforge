@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+from copy import deepcopy
 from pathlib import Path
 
 import yaml
@@ -51,11 +52,35 @@ def _field(item, key):
     return item.get(key) if isinstance(item, dict) else None
 
 
+def _as_str_list(v) -> list:
+    """A builder's array argument as the list the schema stores.
+
+    A string is one element, so ``derives_from="p1"`` is stored as ``["p1"]``,
+    as R's ``as.list("p1")`` stores it. Calling ``list()`` on the string would
+    split it into characters. Any other iterable is listed in its own order, and
+    a value that is not iterable becomes a one-element list, again as
+    ``as.list`` makes it. The builders leave the field out when the argument is
+    None, so None never reaches this function.
+    """
+    if isinstance(v, str):
+        return [v]
+    # Only iter() is guarded. A TypeError raised while a generator runs is the
+    # caller's error and propagates. Catching it too would store the generator
+    # itself as the one element.
+    try:
+        items = iter(v)
+    except TypeError:
+        return [v]
+    return list(items)
+
+
 class Theory:
     """A theory as a versioned, machine-checkable object.
 
     Wraps the parsed mapping (``self.data``); all accessors tolerate missing
-    optional collections by treating them as empty.
+    optional collections by treating them as empty. The builder methods
+    (``add_*`` and ``set_formal_model``) change the theory in place and return
+    it, so calls chain. ``copy()`` gives an independent copy to amend.
     """
 
     def __init__(self, data: dict):
@@ -221,58 +246,101 @@ class Theory:
         _write_lf(path, text)
 
     # -- builder (BUILDING mode) ----------------------------------------------
-    def _provenance(self, action: str, detail: str) -> None:
-        prov = self.data.setdefault("provenance", [])
-        prov.append({"step": str(len(prov) + 1), "action": action, "detail": detail})
+    # The builders change self.data in place and return self, where the R
+    # builders return a modified copy (API_SPEC.md section 8).
+    def copy(self) -> Theory:
+        """An independent copy of the theory, to amend while the original stays as it is.
+
+        The builders work in place, so after ``v2 = v1.add_prediction(...)`` the
+        names ``v2`` and ``v1`` refer to one object. Appraising one against the
+        other then compares a theory with itself. Beginning the amendment with
+        ``v2 = v1.copy()`` keeps ``v1`` intact. The copy is deep, since
+        ``Theory(dict(v1.data))`` would copy only the top-level mapping and the
+        two objects would still share their constructs, propositions and
+        predictions.
+
+        Returns:
+            A new ``Theory`` holding a deep copy of ``self.data``.
+        """
+        return Theory(deepcopy(self.data))
 
     def _coll(self, key: str) -> list:
-        return self.data.setdefault(key, [])
+        """The list a builder appends to under ``key``.
+
+        A missing key gives a new empty list, and so does a null one. A template
+        that leaves ``constructs:`` blank reads as null, and ``setdefault`` would
+        hand that None back. The caller stores the list once it has appended to
+        it. Any other value that is not a list is refused with a message that
+        names the key.
+        """
+        v = self.data.get(key)
+        if v is None:
+            return []
+        if not isinstance(v, list):
+            kind = type(v).__name__
+            # "an int" and "an OrderedDict", but "a UUID": a type name that
+            # opens with a u is read with a consonant sound.
+            article = "an" if kind[:1].lower() in "aeio" else "a"
+            raise TypeError(
+                f"cannot add to '{key}': the theory holds {article} {kind} there, not a list")
+        return v
+
+    def _provenance(self, action: str, detail: str) -> None:
+        prov = self._coll("provenance")
+        prov.append({"step": str(len(prov) + 1), "action": action, "detail": detail})
+        self.data["provenance"] = prov
+
+    def _add(self, key: str, item: dict, action: str, detail: str) -> Theory:
+        """Append ``item`` to the collection under ``key`` and log the step.
+
+        The provenance log is checked before the item is stored, so a call
+        that is refused adds nothing to the theory.
+        """
+        coll = self._coll(key)
+        self._coll("provenance")
+        coll.append(item)
+        self.data[key] = coll
+        self._provenance(action, detail)
+        return self
 
     def add_construct(self, id, label, definition, measurement=None, boundary_conditions=None):
         c = {"id": id, "label": label, "definition": definition}
         if measurement is not None:
-            c["measurement"] = list(measurement)
+            c["measurement"] = _as_str_list(measurement)
         if boundary_conditions is not None:
-            c["boundary_conditions"] = list(boundary_conditions)
-        self._coll("constructs").append(c)
-        self._provenance("tf_add_construct", id)
-        return self
+            c["boundary_conditions"] = _as_str_list(boundary_conditions)
+        return self._add("constructs", c, "tf_add_construct", id)
 
     def add_proposition(self, id, frm, to, relation, mechanism=None):
         p = {"id": id, "from": frm, "to": to, "relation": relation}
         if mechanism is not None:
             p["mechanism"] = mechanism
-        self._coll("propositions").append(p)
-        self._provenance("tf_add_proposition", id)
-        return self
+        return self._add("propositions", p, "tf_add_proposition", id)
 
     def add_prediction(self, id, statement, type, derives_from=None, diagnostic_vs=None):
         p = {"id": id, "statement": statement, "type": type}
         if derives_from is not None:
-            p["derives_from"] = list(derives_from)
+            p["derives_from"] = _as_str_list(derives_from)
         if diagnostic_vs is not None:
-            p["diagnostic_vs"] = list(diagnostic_vs)
-        self._coll("predictions").append(p)
-        self._provenance("tf_add_prediction", id)
-        return self
+            p["diagnostic_vs"] = _as_str_list(diagnostic_vs)
+        return self._add("predictions", p, "tf_add_prediction", id)
 
     def add_alternative(self, id, label, key_constructs=None):
         a = {"id": id, "label": label}
         if key_constructs is not None:
-            a["key_constructs"] = list(key_constructs)
-        self._coll("alternatives").append(a)
-        self._provenance("tf_add_alternative", id)
-        return self
+            a["key_constructs"] = _as_str_list(key_constructs)
+        return self._add("alternatives", a, "tf_add_alternative", id)
 
     def add_assumption(self, id, statement, added_for=None, protects=None):
         a = {"id": id, "statement": statement, "added_for": added_for}
         if protects is not None:
-            a["protects"] = list(protects)
-        self._coll("auxiliary_assumptions").append(a)
-        self._provenance("tf_add_assumption", id)
-        return self
+            a["protects"] = _as_str_list(protects)
+        return self._add("auxiliary_assumptions", a, "tf_add_assumption", id)
 
     def set_formal_model(self, type, spec_ref=None):
+        # The log is checked first, as in _add, so a refused call leaves the
+        # formal model as it was.
+        self._coll("provenance")
         self.data["formal_model"] = {"type": type, "spec_ref": spec_ref}
         self._provenance("tf_set_formal_model", type)
         return self
@@ -304,7 +372,11 @@ class Theory:
         return _severity(self.data)
 
     def appraise_amendment(self, prior) -> dict:
-        """Progressive vs degenerating verdict for this theory relative to a prior version."""
+        """Progressive vs degenerating verdict for this theory relative to a prior version.
+
+        Passing this theory itself as the prior raises ValueError, so begin an
+        amendment with ``prior.copy()`` (see :func:`theoryforge.appraise_amendment`).
+        """
         return _appraise_amendment(self.data, prior)
 
     def implications(self) -> dict:
