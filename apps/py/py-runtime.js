@@ -32,10 +32,22 @@ def _summary(t):
         },
     }
 
+def _validation(t):
+    try:
+        t.validate(full=True)
+        return {"ok": True}
+    except ValueError as e:
+        return {"ok": False, "message": str(e)}
+
+# A file that cannot be read raises, and the previous theory stays loaded. One
+# that reads but fails validation is loaded, and the summary says so, so the
+# app can flag it before an operation trips over it.
 def load(path):
     t = tf.read(path)
     _state["theory"] = t
-    return json.dumps(_summary(t))
+    out = _summary(t)
+    out["validation"] = _validation(t)
+    return json.dumps(out)
 
 def load_corpus(path):
     _state["corpus"] = read_corpus(path)
@@ -49,11 +61,7 @@ def run(op, params_json):
     if op == "check":
         return json.dumps({"report": t.check(), "svg": t.diagram("rigour")})
     if op == "validate":
-        try:
-            t.validate(full=True)
-            return json.dumps({"ok": True})
-        except ValueError as e:
-            return json.dumps({"ok": False, "message": str(e)})
+        return json.dumps(_validation(t))
     if op == "severity":
         return json.dumps({"rows": t.severity(), "svg": t.diagram("severity")})
     if op == "redundancy":
@@ -163,17 +171,22 @@ const RT = {
     return { version: this.version, pkgVersion: this.pkgVersion, examples: this.examples, corpora: this.corpora, summary };
   },
 
+  // The code panel names _theoryFile, so it changes only once the engine holds
+  // the new theory. A load that fails leaves the previous theory in the engine
+  // and its name here.
   async loadExample(path) {
+    const summary = JSON.parse(this._str(this._app.load(this._fixtures[path])));
     this._theoryFile = path.split("/").pop();
-    return JSON.parse(this._str(this._app.load(this._fixtures[path])));
+    return summary;
   },
 
   async loadTheoryText(text, filename) {
     const ext = /\.json$/i.test(filename) ? "json" : "yaml";
     const dest = "/pkg/input." + ext;
     this._py.FS.writeFile(dest, new TextEncoder().encode(text));
+    const summary = JSON.parse(this._str(this._app.load(dest)));
     this._theoryFile = filename || "your-theory." + ext;
-    return JSON.parse(this._str(this._app.load(dest)));
+    return summary;
   },
 
   async run(opId, params) {

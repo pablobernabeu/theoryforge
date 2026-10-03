@@ -152,6 +152,31 @@ version and a single behavioural contract
   `urllib.error.HTTPError`, so existing handlers still catch it. A response without a
   `results` list, which both twins read as zero results, raises
   `OpenAlex response has no results list`. API_SPEC section 17 pins the messages.
+- Apps: after an upload that could not be read, the apps went on computing with the
+  previous theory while the reproducible code named the failed file, and a failed restore
+  left the same mismatch. The code now names a file only once it has loaded. A failed
+  upload keeps the active theory's summary under the message
+  `Could not load <file>; the active theory is still <title>`. A failed restore falls back
+  to the first example, says so and leaves the saved operation unrun, since its result
+  belonged to another theory. Uploads were never checked, so an empty mapping or a misspelt
+  `predicitions:` ran every operation without a word. Each load now runs full validation
+  and the theory card shows `valid` or the number of problems. An operation that fails on
+  an invalid theory says so and offers Validate. Engine errors show their last line, with
+  the full traceback in a collapsed section. A change of theory clears the result and the
+  code computed on the previous one.
+- Apps: a browser that blocks site storage left the apps on a blank page, because the
+  theme toggle read `localStorage` before start-up was guarded. Storage is now optional:
+  the apps start, and the theme toggle works for the session without being remembered. A
+  start-up failure shows its message even when it happens before the loading screen
+  exists. The documentation site's landing and 404 pages guard their toggles the same way.
+- Site: under a dark operating-system theme, the landing page drew its links at 3.44:1
+  contrast against the background, below the WCAG AA minimum of 4.5:1. They now use the
+  dark theme's link colour (10.37:1). The landing and 404 pages read the `system` value the
+  apps store as a theme of its own, which showed the wrong toggle icon and made the first
+  click do nothing. They now apply a stored theme only when it is `light` or `dark`.
+- Site: the deployed Python app carried the bytecode caches (`__pycache__`, 21 `.pyc`
+  files) that building the documentation leaves in the package source. `apps/build.mjs`
+  now copies only the file types the app's manifest lists. The 404 page links both apps.
 
 ### Changed
 - R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new

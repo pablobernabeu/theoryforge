@@ -13,7 +13,7 @@
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg:#0f1722; --fg:#e9eef3; --lead:#c3cdd7; --muted:#9fb0c0;
+        --bg:#0f1722; --fg:#e9eef3; --lead:#c3cdd7; --muted:#9fb0c0; --link:#6fd6c4;
         --card-bg:#16222f; --card-border:#27384a; --card-hover:#3c5570;
         --code-bg:#1d2c3b; --foot:#8499a8; --btn-border:#2b3d4f;
       }
@@ -116,8 +116,12 @@
   <script>
     (function () {
       var root = document.documentElement, btn = document.getElementById('themeToggle');
-      var saved = localStorage.getItem('tf-theme');
-      if (saved) root.setAttribute('data-theme', saved);
+      // A browser that blocks site data throws on any use of localStorage. The
+      // apps store 'system' in the same key, which, like a missing value, is
+      // left to the media query, so only 'light' and 'dark' are applied.
+      var saved = null;
+      try { saved = localStorage.getItem('tf-theme'); } catch (e) { saved = null; }
+      if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
       function isDark() {
         var t = root.getAttribute('data-theme');
         if (t) return t === 'dark';
@@ -127,7 +131,7 @@
       btn.addEventListener('click', function () {
         var next = isDark() ? 'light' : 'dark';
         root.setAttribute('data-theme', next);
-        localStorage.setItem('tf-theme', next);
+        try { localStorage.setItem('tf-theme', next); } catch (e) { /* kept for this visit only */ }
         sync();
       });
       sync();

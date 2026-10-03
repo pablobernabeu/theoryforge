@@ -61,16 +61,26 @@ const CORPUS = [{ name: "Panic literature corpus (demo)", file: "panic-corpus.ya
 async function rmrf(p) {
   await fs.rm(p, { recursive: true, force: true });
 }
+// The extensions of the files the Python app fetches at start-up. The vendor
+// tree holds exactly these, so it matches the manifest: a bytecode cache left
+// by an earlier import of the package (docs.yml builds the docs first) is never
+// deployed.
+export const PY_EXTS = [".py", ".json", ".yaml", ".typed"];
+
+// Copy the files of srcDir whose extension is in filterExt into destDir,
+// recursively, and return their paths relative to srcDir. A directory is
+// created only when a file is copied into it, and __pycache__ is never entered.
 async function copyInto(srcDir, destDir, filterExt) {
-  await fs.mkdir(destDir, { recursive: true });
   const entries = await fs.readdir(srcDir, { withFileTypes: true });
   const copied = [];
   for (const e of entries) {
     const s = path.join(srcDir, e.name);
     const d = path.join(destDir, e.name);
     if (e.isDirectory()) {
+      if (e.name === "__pycache__") continue;
       copied.push(...(await copyInto(s, d, filterExt)).map((f) => path.join(e.name, f)));
-    } else if (!filterExt || filterExt.includes(path.extname(e.name).toLowerCase())) {
+    } else if (filterExt.includes(path.extname(e.name).toLowerCase())) {
+      await fs.mkdir(destDir, { recursive: true });
       await fs.copyFile(s, d);
       copied.push(e.name);
     }
@@ -110,8 +120,7 @@ async function readPackageVersion() {
   return rV;
 }
 
-async function buildR() {
-  const vendor = path.join(here, "r", "vendor");
+async function buildR(vendor = path.join(here, "r", "vendor"), pkgVersion = "") {
   await rmrf(vendor);
   // Package R source. Order is irrelevant (all definitions are lazy), but a
   // stable, deterministic order keeps the manifest diff-friendly.
@@ -120,7 +129,7 @@ async function buildR() {
   await copyExamples(path.join(vendor, "fixtures"));
   await fs.copyFile(LOGO, path.join(vendor, "logo.svg"));
   await writeJson(path.join(vendor, "manifest.json"), {
-    pkgVersion: PKG_VERSION,
+    pkgVersion,
     rFiles: rFiles.map((f) => `R/${f}`),
     schema: { theory: "schema/theory.schema.json", checklist: "schema/rigor_checklist.yaml", fold: "schema/fold.json" },
     examples: manifestExamples(),
@@ -129,21 +138,21 @@ async function buildR() {
   return rFiles.length;
 }
 
-async function buildPy() {
-  const vendor = path.join(here, "py", "vendor");
+// vendor and src default to the app's vendor tree and the package source; the
+// tests in apps/tests pass a scratch tree.
+export async function buildPy(vendor = path.join(here, "py", "vendor"), src = PY_SRC, pkgVersion = "") {
   await rmrf(vendor);
   // The Python package vendors its own schema/ inside the package dir, so a
-  // wholesale copy of the package tree is import-ready and importlib-resources
-  // resolves correctly.
-  const pkgFiles = await copyInto(PY_SRC, path.join(vendor, "theoryforge"), null);
+  // copy of the package tree is import-ready and importlib-resources resolves
+  // correctly.
+  const pkgFiles = await copyInto(src, path.join(vendor, "theoryforge"), PY_EXTS);
   await copyExamples(path.join(vendor, "fixtures"));
   await fs.copyFile(LOGO, path.join(vendor, "logo.svg"));
   const wanted = pkgFiles
-    .filter((f) => f.endsWith(".py") || f.endsWith(".json") || f.endsWith(".yaml") || f.endsWith(".typed"))
     .map((f) => `theoryforge/${f.split(path.sep).join("/")}`)
     .sort();
   await writeJson(path.join(vendor, "manifest.json"), {
-    pkgVersion: PKG_VERSION,
+    pkgVersion,
     pyFiles: wanted,
     examples: manifestExamples(),
     corpora: manifestCorpora(),
@@ -151,9 +160,12 @@ async function buildPy() {
   return wanted.length;
 }
 
-const PKG_VERSION = await readPackageVersion();
-const nR = await buildR();
-const nPy = await buildPy();
-console.log(`package version: ${PKG_VERSION} (DESCRIPTION and pyproject.toml agree)`);
-console.log(`vendored R: ${nR} source files -> apps/r/vendor`);
-console.log(`vendored Python: ${nPy} package files -> apps/py/vendor`);
+// Build only when run as a script, so the tests can import buildPy.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const PKG_VERSION = await readPackageVersion();
+  const nR = await buildR(undefined, PKG_VERSION);
+  const nPy = await buildPy(undefined, undefined, PKG_VERSION);
+  console.log(`package version: ${PKG_VERSION} (DESCRIPTION and pyproject.toml agree)`);
+  console.log(`vendored R: ${nR} source files -> apps/r/vendor`);
+  console.log(`vendored Python: ${nPy} package files -> apps/py/vendor`);
+}

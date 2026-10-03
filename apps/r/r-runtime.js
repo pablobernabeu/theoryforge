@@ -36,9 +36,19 @@ invisible(lapply(.tf_app_files, source))
     ))
 }
 
+.tf_validation <- function(t) {
+  tryCatch({ tf_validate(t, full = TRUE); list(ok = TRUE) },
+           error = function(e) list(ok = FALSE, message = conditionMessage(e)))
+}
+
+# A file that cannot be read stops, and the previous theory stays loaded. One
+# that reads but fails validation is loaded, and the summary says so, so the
+# app can flag it before an operation trips over it.
 .tf_load <- function(path) {
   .tf_app$theory <- tf_read(path)
-  as.character(jsonlite::toJSON(.tf_summary(.tf_app$theory), auto_unbox = TRUE, digits = NA, null = "null"))
+  out <- .tf_summary(.tf_app$theory)
+  out$validation <- .tf_validation(.tf_app$theory)
+  as.character(jsonlite::toJSON(out, auto_unbox = TRUE, digits = NA, null = "null"))
 }
 .tf_load_corpus <- function(path) {
   .tf_app$corpus <- tf_read_corpus(path)
@@ -49,8 +59,7 @@ invisible(lapply(.tf_app_files, source))
   t <- .tf_app$theory
   env <- function(x) as.character(jsonlite::toJSON(x, auto_unbox = TRUE, digits = NA, null = "null"))
   if (op == "check")      return(env(list(report = tf_check(t), svg = tf_diagram(t, "rigour"))))
-  if (op == "validate")   return(env(tryCatch({ tf_validate(t, full = TRUE); list(ok = TRUE) },
-                                              error = function(e) list(ok = FALSE, message = conditionMessage(e)))))
+  if (op == "validate")   return(env(.tf_validation(t)))
   if (op == "severity")   return(env(list(rows = tf_severity(t), svg = tf_diagram(t, "severity"))))
   if (op == "redundancy") return(env(list(rows = tf_redundancy_check(t))))
   if (op == "appraise")   return(env(tf_appraise_amendment(t, tf_read(p$prior))))
@@ -169,9 +178,12 @@ const RT = {
     for (const d of dirs) { try { await this._webR.FS.mkdir(d); } catch (e) { /* exists */ } }
   },
 
+  // The code panel names _theoryFile, so it changes only once the engine holds
+  // the new theory. A load that fails leaves the previous theory in the engine
+  // and its name here.
   async loadExample(path) {
-    this._theoryFile = path.split("/").pop();
     const json = await this._webR.evalRString(`.tf_load("${this._fixtures[path]}")`);
+    this._theoryFile = path.split("/").pop();
     return JSON.parse(json);
   },
 
@@ -179,8 +191,8 @@ const RT = {
     const ext = /\.json$/i.test(filename) ? "json" : "yaml";
     const dest = "/tf/input." + ext;
     await this._webR.FS.writeFile(dest, new TextEncoder().encode(text));
-    this._theoryFile = filename || "your-theory." + ext;
     const json = await this._webR.evalRString(`.tf_load("${dest}")`);
+    this._theoryFile = filename || "your-theory." + ext;
     return JSON.parse(json);
   },
 

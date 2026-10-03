@@ -338,6 +338,10 @@ jobs:
           node apps/build.mjs
           node -e "const m=require('./apps/r/vendor/manifest.json'); if(!m.rFiles.length||!m.examples.length) throw new Error('empty R manifest')"
           node -e "const m=require('./apps/py/vendor/manifest.json'); if(!m.pyFiles.length||!m.examples.length) throw new Error('empty Python manifest')"
+      # The UI core, both runtimes, the vendor build and the site's landing and
+      # 404 pages under a stub DOM (apps/tests/dom.mjs), with no dependency.
+      - name: App and site tests
+        run: node --test apps/tests/*.test.mjs
 
   parity:
     name: Cross-language parity

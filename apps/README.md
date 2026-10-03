@@ -28,6 +28,24 @@ python -m http.server 8765     # serve over HTTP (file:// will not work)
 # open http://localhost:8765/r/  and  http://localhost:8765/py/
 ```
 
+Each load runs the package's full validation, and the theory card says whether the
+theory is valid or how many problems it has. A file that cannot be read leaves the
+previous theory loaded. The apps keep the session and the theme in the browser's
+storage when it is available and run without it when the browser blocks it.
+
+## Test
+
+`apps/tests/` holds tests for the UI core, the two runtimes, `build.mjs` and the site's
+landing and 404 pages. They run under Node's own test runner with a small stand-in for
+the browser DOM (`tests/dom.mjs`), so they need no browser and no dependency:
+
+```bash
+node --test apps/tests/*.test.mjs   # from the repository root
+```
+
+The glue code each runtime runs in its engine is tested in the package suites
+(`python/tests/test_app_glue.py`, `r/theoryforge/tests/testthat/test-app-glue.R`).
+
 ## Deploy
 
 The `docs` GitHub Actions workflow runs `node build.mjs` and copies `apps/` into

@@ -173,6 +173,10 @@ button.btn.sm { padding: 5px 11px; font-size: .82rem; }
   border-radius: 999px; padding: 3px 9px; color: var(--ink-soft);
 }
 .chip b { color: var(--ink); font-weight: 700; }
+/* Validity of the loaded theory: the border carries the colour and the word
+   carries the meaning, so the text keeps the ink's contrast. */
+.chip.valid { border-color: var(--ok); color: var(--ink); font-weight: 600; }
+.chip.invalid { border-color: var(--danger); color: var(--ink); font-weight: 600; }
 
 /* operations */
 .ops { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -279,6 +283,12 @@ table.grid tbody tr:hover td { background: color-mix(in srgb, var(--accent) 9%, 
   color: var(--ink); border-radius: 10px; padding: 12px 14px; font-size: .88rem;
 }
 .error .et { font-weight: 700; color: var(--danger); margin-bottom: 4px; }
+.error .lead { margin: 0 0 6px; }
+.error .last { font-family: var(--mono); font-size: .82rem; overflow-wrap: anywhere; }
+.error details { margin-top: 8px; }
+.error details summary { cursor: pointer; color: var(--ink-soft); }
+.error details pre.text { margin-top: 6px; max-height: 18rem; }
+#summaryWrap .error { margin-bottom: 10px; }
 .err-list { margin: 6px 0 0; padding-left: 1.2rem; }
 .err-list li { margin-bottom: 3px; }
 .valid-ok {

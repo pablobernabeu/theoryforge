@@ -152,12 +152,23 @@
     if (mode === "system") document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", mode);
   }
-  function currentTheme() { return localStorage.getItem("tf-theme") || "system"; }
+  // A browser that blocks site data throws a SecurityError on any touch of
+  // localStorage, so every access is guarded. The choice made in this session
+  // is kept in memory as well, which lets the toggle cycle when nothing can be
+  // stored. A stored value other than light or dark means "system".
+  let _sessionTheme = null;
+  function currentTheme() {
+    let t = _sessionTheme;
+    if (t === null) { try { t = localStorage.getItem("tf-theme"); } catch (e) { t = null; } }
+    return t === "light" || t === "dark" ? t : "system";
+  }
   function initTheme() { applyTheme(currentTheme()); }
   function cycleTheme() {
     const order = ["light", "dark", "system"];
     const next = order[(order.indexOf(currentTheme()) + 1) % order.length];
-    localStorage.setItem("tf-theme", next); applyTheme(next); updateThemeBtn();
+    _sessionTheme = next;
+    try { localStorage.setItem("tf-theme", next); } catch (e) { /* storage blocked: kept for this session only */ }
+    applyTheme(next); updateThemeBtn();
     toast("Theme: " + next);
   }
   function updateThemeBtn() {
@@ -368,6 +379,11 @@
   };
   const fmtNum = (x) => (typeof x === "number" ? (Number.isInteger(x) ? String(x) : x.toFixed(2)) : String(x));
   const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+  // Both packages report full validation as "invalid theory object: " followed
+  // by the problems joined by "; ". The Validate result, its interpretation and
+  // the sidebar chip all count problems through this one split.
+  const problemList = (message) =>
+    String(message).replace(/^invalid theory object:\s*/i, "").split(/;\s*/).filter(Boolean);
 
   // A result-specific sentence that reads the actual output, to help interpret it.
   function interpret(opId, raw, params) {
@@ -381,7 +397,7 @@
     }
     if (opId === "validate") {
       if (raw.ok) return "The theory is structurally valid and every internal reference resolves.";
-      const errs = String(raw.message || "").replace(/^invalid theory object:\s*/i, "").split(/;\s*/).filter(Boolean);
+      const errs = problemList(raw.message || "");
       return "Validation found " + plural(errs.length, "problem") + ". Each one is listed below.";
     }
     if (opId === "severity") {
@@ -502,7 +518,7 @@
         sections.push({ kind: "node", node: wrapSection("Validation", null,
           el("div", { class: "valid-ok", role: "status" }, "✓ Valid. The theory passes structural validation.")) });
       } else {
-        const errs = String(v.message || "invalid theory object").replace(/^invalid theory object:\s*/i, "").split(/;\s*/).filter(Boolean);
+        const errs = problemList(v.message || "invalid theory object");
         sections.push({ kind: "node", node: wrapSection("Validation", null,
           el("div", { class: "error", role: "alert" }, [
             el("div", { class: "et", text: "Invalid theory: " + errs.length + " problem" + (errs.length === 1 ? "" : "s") }),
@@ -615,6 +631,9 @@
 
   // ---- UI ------------------------------------------------------------------
   let RT, STATE = { opId: "check", params: {}, summary: null, input: null, source: null, ran: false };
+  // Whether the result panel holds an operation's output or error, which a
+  // change of theory then clears.
+  let resultShown = false;
 
   // ---- persistence (restore the session on refresh) -----------------------
   function stateKey() { return "tf-app-" + (RT ? RT.lang : "x"); }
@@ -714,10 +733,17 @@
     if (!s) return el("p", { class: "note", text: "No theory loaded." });
     const c = s.counts || {};
     const chip = (label, n) => el("span", { class: "chip", html: "<b>" + n + "</b> " + label });
+    // The load validates the theory in full, so the card can say at once
+    // whether every operation has a valid theory to work on.
+    const v = s.validation;
+    const status = !v ? null : v.ok
+      ? el("span", { class: "chip valid", title: "Full validation found no problem", text: "valid" })
+      : el("span", { class: "chip invalid", title: "Run Validate to list them", text: plural(problemList(v.message || "invalid theory object").length, "problem") });
     return el("div", { class: "summary" }, [
       el("div", { class: "ttl", text: s.title || s.id || "(untitled)" }),
       el("div", { class: "meta" }, [s.id || "", s.maturity ? " · " + s.maturity : "", s.form ? " · " + s.form : ""].join("")),
       el("div", { class: "chips" }, [
+        status,
         chip("constructs", c.constructs || 0), chip("propositions", c.propositions || 0),
         chip("predictions", c.predictions || 0), chip("alternatives", c.alternatives || 0),
         chip("assumptions", c.assumptions || 0),
@@ -847,15 +873,44 @@
     updateOpHelp(); renderParams(); saveState();
   }
 
+  const theoryName = (s) => (s && (s.title || s.id)) || "(untitled)";
+
+  // A result and its code belong to the theory they were computed on, so a
+  // change of theory removes both.
+  function clearResult() {
+    if (!resultShown) return;
+    resultShown = false;
+    $("#output").replaceChildren(el("p", { class: "note", text: "Loaded " + theoryName(STATE.summary) + ". Choose an operation and press Run." }));
+    $("#outTitle").textContent = "Result";
+    $("#codePanel").style.display = "none";
+    $("#codeBlock").textContent = "";
+    STATE.ran = false;
+  }
+
+  // A load that fails leaves the engine on the theory it held, so the card
+  // keeps that theory's summary under the error.
+  function loadFailed(name, err) {
+    $("#summaryWrap").replaceChildren(
+      errorBox("Could not load " + name + (STATE.summary ? "; the active theory is still " + theoryName(STATE.summary) : ""), err),
+      summaryCard(STATE.summary));
+  }
+
   async function onExampleChange(e) {
     const idx = Number(e.target.value);
     const ex = RT.examples[idx];
     await withBusy("Loading " + ex.name + "…", async () => {
-      STATE.summary = await RT.loadExample(ex.path);
+      try {
+        STATE.summary = await RT.loadExample(ex.path);
+      } catch (err) {
+        loadFailed(ex.name, err);
+        if (STATE.input && STATE.input.mode === "example") e.target.value = String(STATE.input.index);
+        return;
+      }
       STATE.input = { mode: "example", index: idx };
       STATE.source = await exampleSource(ex.path.split("/").pop(), ex.path);
       $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
       $("#fileInput").value = "";
+      clearResult();
       updateExampleDesc(); saveState();
     });
   }
@@ -865,19 +920,32 @@
     await withBusy("Loading " + f.name + "…", async () => {
       try {
         STATE.summary = await RT.loadTheoryText(text, f.name);
-        STATE.input = { mode: "upload", name: f.name, text };
-        STATE.source = { name: f.name, text };
-        $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
-        updateExampleDesc(); saveState();
       } catch (err) {
-        $("#summaryWrap").replaceChildren(errorBox("Could not load this file", err));
+        loadFailed(f.name, err);
+        $("#fileInput").value = "";
+        return;
       }
+      STATE.input = { mode: "upload", name: f.name, text };
+      STATE.source = { name: f.name, text };
+      $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
+      clearResult();
+      updateExampleDesc(); saveState();
     });
   }
 
-  function errorBox(title, err) {
-    const msg = (err && (err.message || err.toString())) || String(err);
-    return el("div", { class: "error", role: "alert" }, [el("div", { class: "et", text: title }), el("div", { text: msg })]);
+  // Engine errors arrive as a whole traceback (Pyodide's PythonError) or as R's
+  // condition text. The box shows the last line, which names the error, and
+  // keeps the full text in a details element. `lead` is an optional node or
+  // text placed between the title and the error.
+  function errorBox(title, err, lead) {
+    const msg = String((err && (err.message || err.toString())) || err);
+    const lines = msg.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    const last = lines.length ? lines[lines.length - 1] : msg;
+    const kids = [el("div", { class: "et", text: title })];
+    if (lead) kids.push(el("p", { class: "lead" }, lead));
+    kids.push(el("div", { class: "last", text: last }));
+    if (lines.length > 1) kids.push(el("details", null, [el("summary", null, "Full error"), el("pre", { class: "text", text: msg })]));
+    return el("div", { class: "error", role: "alert" }, kids);
   }
 
   let busy = false;
@@ -901,6 +969,7 @@
     if (op.corpus && !RT.hasCorpus()) { toast("This operation needs a corpus"); return; }
     const out = $("#output");
     await withBusy("Running…", async () => {
+      resultShown = true;
       out.replaceChildren(el("p", { class: "note", text: "Running " + op.label + "…" }));
       $("#outTitle").textContent = op.label;
       try {
@@ -912,10 +981,22 @@
         $("#codeBlock").textContent = code;
         STATE.ran = true; saveState();
       } catch (err) {
-        out.replaceChildren(errorBox("Operation failed", err));
+        $("#codePanel").style.display = "none";
+        out.replaceChildren(failureBox(err));
         console.error(err);
       }
     });
+  }
+
+  // Most operations assume a valid theory, so a failure on an invalid one is
+  // reported as such, with a way to the Validate operation that lists why.
+  function failureBox(err) {
+    const v = STATE.summary && STATE.summary.validation;
+    if (!v || v.ok) return errorBox("Operation failed", err);
+    const n = problemList(v.message || "invalid theory object").length;
+    const toValidate = el("button", { class: "linklike", onclick: () => { selectOp("validate"); runOp(); } }, "Run Validate");
+    return errorBox("Operation failed on an invalid theory", err,
+      ["This theory has " + plural(n, "problem") + ". ", toValidate, " to list them, then correct the file and upload it again."]);
   }
 
   // ---- boot ---------------------------------------------------------------
@@ -930,8 +1011,13 @@
 
   // Restore theory + operation + params from a previous session, then optionally
   // re-run the last operation so a refresh lands back where the user left off.
+  // init has already loaded example 0, and a load that fails leaves it loaded,
+  // so a failed restore falls back to it. The returned note says so; start()
+  // shows it once the boot overlay, which would hide a toast, is gone.
   async function applyRestore(blog) {
     const saved = loadSaved();
+    let note = null;
+    const fallback = (name) => "Could not restore " + name + "; showing " + RT.examples[0].name + " instead";
     STATE.input = STATE.input || { mode: "example", index: 0 };
     if (saved) {
       if (saved.input && saved.input.mode === "upload" && saved.input.text) {
@@ -940,14 +1026,20 @@
           STATE.summary = await RT.loadTheoryText(saved.input.text, saved.input.name);
           STATE.input = saved.input;
           STATE.source = { name: saved.input.name, text: saved.input.text };
-        } catch (e) { STATE.input = { mode: "example", index: 0 }; }
+        } catch (e) {
+          STATE.input = { mode: "example", index: 0 };
+          note = fallback(saved.input.name || "your uploaded theory");
+        }
       } else if (saved.input && saved.input.mode === "example") {
-        const idx = Math.min(Math.max(0, saved.input.index | 0), RT.examples.length - 1);
+        let idx = Math.min(Math.max(0, saved.input.index | 0), RT.examples.length - 1);
         if (idx !== 0) {
           try {
             if (blog) blog("Restoring " + RT.examples[idx].name + "…");
             STATE.summary = await RT.loadExample(RT.examples[idx].path);
-          } catch (e) { /* keep default example 0 already loaded */ }
+          } catch (e) {
+            note = fallback(RT.examples[idx].name);
+            idx = 0;
+          }
         }
         STATE.input = { mode: "example", index: idx };
       }
@@ -966,7 +1058,8 @@
     for (const b of document.querySelectorAll(".op")) b.classList.toggle("active", b.getAttribute("data-op") === STATE.opId);
     updateExampleDesc(); updateOpHelp(); renderParams();
     const op = OPS.find((o) => o.id === STATE.opId);
-    if (saved && saved.ran && op && !(op.corpus && !RT.hasCorpus())) await runOp();
+    if (saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus())) await runOp();
+    return note;
   }
 
   async function start(runtime) {
@@ -996,18 +1089,33 @@
         " via " + esc(RT.engineLabel) + " · running entirely client-side" +
         " · <a href='https://github.com/pablobernabeu/theoryforge'>source</a>" }));
       updateThemeBtn();
-      await applyRestore(onProgress);
+      const note = await applyRestore(onProgress);
       $("#boot").classList.add("hidden");
+      if (note) toast(note);
     } catch (err) {
-      console.error(err);
-      const b = $("#boot");
-      if (b) b.replaceChildren(el("div", { class: "boot-error", role: "alert" }, [
-        el("div", { class: "bt", text: "The app could not start" }),
-        el("p", { class: "note", text: "Loading the " + RT.langLabel + " runtime failed: " + (err && err.message || err) }),
-        el("button", { class: "btn", onclick: () => location.reload() }, "Reload"),
-      ]));
+      bootFailed(err);
     }
   }
 
-  window.TF = { start, OPS, DIAG_SVG, util: { el, esc, download, copyText, toast, renderDot } };
+  // Show why the app could not start. A failure before the boot overlay was
+  // appended leaves no panel to fill, so one is created.
+  function bootFailed(err) {
+    console.error(err);
+    let b = $("#boot");
+    if (!b) { b = el("div", { id: "boot" }); document.body.append(b); }
+    b.classList.remove("hidden");
+    let lang = "";
+    try { lang = RT && RT.langLabel ? RT.langLabel + " " : ""; } catch (e) { lang = ""; }
+    b.replaceChildren(el("div", { class: "boot-error", role: "alert" }, [
+      el("div", { class: "bt", text: "The app could not start" }),
+      el("p", { class: "note", text: "Loading the " + lang + "runtime failed: " + ((err && err.message) || err) }),
+      el("button", { class: "btn", onclick: () => location.reload() }, "Reload"),
+    ]));
+  }
+
+  // The runtimes call TF.start(RT) without awaiting it, so a rejection is
+  // caught here, where it can still be shown.
+  const startCaught = (runtime) => start(runtime).catch(bootFailed);
+
+  window.TF = { start: startCaught, OPS, DIAG_SVG, util: { el, esc, download, copyText, toast, renderDot } };
 })();

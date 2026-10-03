@@ -65,13 +65,19 @@
     <li><a href="/theoryforge/">Documentation home</a> &ndash; the landing page for both packages</li>
     <li><a href="/theoryforge/r/">R package</a> &ndash; reference and guides (pkgdown)</li>
     <li><a href="/theoryforge/python/">Python package</a> &ndash; reference and guides (mkdocs)</li>
+    <li><a href="/theoryforge/apps/r/">R app</a> &ndash; the R package in your browser (webR)</li>
+    <li><a href="/theoryforge/apps/py/">Python app</a> &ndash; the Python package in your browser (Pyodide)</li>
   </ul>
   <footer>Source: <a href="https://github.com/pablobernabeu/theoryforge">github.com/pablobernabeu/theoryforge</a></footer>
   <script>
     (function () {
       var root = document.documentElement, btn = document.getElementById('themeToggle');
-      var saved = localStorage.getItem('tf-theme');
-      if (saved) root.setAttribute('data-theme', saved);
+      // A browser that blocks site data throws on any use of localStorage. The
+      // apps store 'system' in the same key, which, like a missing value, is
+      // left to the media query, so only 'light' and 'dark' are applied.
+      var saved = null;
+      try { saved = localStorage.getItem('tf-theme'); } catch (e) { saved = null; }
+      if (saved === 'light' || saved === 'dark') root.setAttribute('data-theme', saved);
       function isDark() {
         var t = root.getAttribute('data-theme');
         if (t) return t === 'dark';
@@ -81,7 +87,7 @@
       btn.addEventListener('click', function () {
         var next = isDark() ? 'light' : 'dark';
         root.setAttribute('data-theme', next);
-        localStorage.setItem('tf-theme', next);
+        try { localStorage.setItem('tf-theme', next); } catch (e) { /* kept for this visit only */ }
         sync();
       });
       sync();
