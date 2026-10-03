@@ -37,13 +37,21 @@ Co-citation maps of real corpora are large. 200 OpenAlex records give about
 11,000 reference pairs that share two or more citing records, so
 \code{min_cocitation} can be set above \code{min_link}, and
 \code{\link[=tf_lit_diagram]{tf_lit_diagram()}} can draw only the strongest edges.
+
+A theme is a connected component of the keyword map, and on a real corpus a
+few keywords shared by most records join nearly every keyword into one.
+When the largest theme holds more than half the linked keywords, a warning
+says so: such themes, and any landscape built on them, do not describe the
+field. The result is returned unchanged.
 }
 \examples{
 corpus <- list(
   schema_version = "1.0", id = "demo-corpus",
   records = list(
     list(id = "w1", keywords = list("arousal", "threat")),
-    list(id = "w2", keywords = list("arousal", "threat"))
+    list(id = "w2", keywords = list("arousal", "threat")),
+    list(id = "w3", keywords = list("avoidance", "exposure")),
+    list(id = "w4", keywords = list("avoidance", "exposure"))
   )
 )
 tf_litmap(corpus)

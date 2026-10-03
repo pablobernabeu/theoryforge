@@ -129,6 +129,28 @@
   which draws only the strongest edges. Co-citation maps of real corpora are
   large: 200 OpenAlex records give over 11,000 edges at a threshold of two.
 
+* `tf_landscape()` reports the words behind every match, in `focal_terms` and
+  `alternative_terms`, and three kinds of word no longer decide a match. Words
+  in the keywords of more than `max_token_share` of the records, a new
+  argument set to 0.5 by default, are shared by most of the corpus and are
+  reported as `field_tokens`. The words of the theory's title name the
+  phenomenon that every account explains and are reported as
+  `phenomenon_tokens`. Words such as "theory" and "model" name a kind of
+  account. "Panic" and "disorder" from the title used to make a theme on
+  genetics crowded, and "theory" alone matched a theory of panic to a corpus
+  on ego depletion. The title no longer supplies matches, so a construct word
+  that also appears in it no longer matches either. The statuses are described
+  as what they are, a count of the registered accounts that address a theme. A
+  crowded theme calls for predictions that discriminate between its accounts,
+  and is not a finding of redundancy. On the bundled corpus, the statuses are
+  unchanged.
+
+* `tf_litmap()` warns when one theme holds more than half the linked keywords,
+  which happens on real corpora: seven OpenAlex corpora of 100 to 600 records
+  each gave one theme holding at least 98.8 per cent of them. Such themes, and
+  any landscape built on them, are not informative. `tf_landscape()` gives the
+  same warning.
+
 * `tf_validate(full = TRUE)` now checks the whole schema. It reports a missing
   required field of an assumption, an alternative, a piece of evidence or a
   test outcome, and a `passed` that is not `TRUE` or `FALSE`. It also reports

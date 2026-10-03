@@ -105,6 +105,32 @@ Each theme is a dictionary with an `id` (for example `theme_1`), the sorted
 `keywords` it contains, and its `size`. Themes are ordered by their smallest
 keyword, so the output is stable across runs.
 
+Connected components suit this fixture, built to fall into four separate
+themes. On a real corpus, a few keywords that most records carry, such
+as the name of the field, link nearly every keyword to every other, so a single
+component holds the map. Seven OpenAlex corpora of 100 to 600 records each gave
+a largest theme holding at least 98.8 per cent of the linked keywords. When one
+theme holds more than half of them, `litmap` warns that the themes, and any
+landscape built on them, are not informative. The map itself is returned
+unchanged. Below, one keyword shared by two pairs joins them into one theme.
+
+```python exec="1" source="material-block" result="text" session="literature"
+import warnings
+
+hub = {"schema_version": "1.0", "id": "hub", "records": [
+    {"id": "w1", "keywords": ["anxiety", "arousal"]},
+    {"id": "w2", "keywords": ["anxiety", "arousal"]},
+    {"id": "w3", "keywords": ["anxiety", "avoidance"]},
+    {"id": "w4", "keywords": ["anxiety", "avoidance"]},
+]}
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always")
+    hub_map = tf.litmap(hub)
+
+print("themes:", hub_map["themes"])
+print(caught[0].message)
+```
+
 The threshold for retaining an edge defaults to two co-occurrences. A pair
 of keywords or references that appear together only once is dropped, which
 keeps incidental overlaps out of the map. Raise it to keep only the strongest
@@ -140,36 +166,55 @@ print("co-citation edges at min_cocitation=3:", m_cited["co_citation"])
 ## Positioning a theory against the field
 
 `Theory.landscape` takes the themes from `litmap` and places a theory on
-them. It matches the theory's title and construct labels, and the labels and
-key constructs of any registered alternatives, against each theme's
-keywords. A theme that no account touches is flagged as an under-theorised
-front. A theme that two or more accounts touch is flagged as a redundancy
-risk.
+them. A theme is matched by the words its keywords share with the focal
+theory's construct labels, or with the label and key constructs of a
+registered alternative, and the result names those words. Three kinds of word
+never match. Field tokens, the words most of the corpus shares, are those in
+the keywords of more than `max_token_share` of the records, half by default.
+Phenomenon tokens are the words of the theory's title, which names the
+phenomenon that the focal theory and its rivals all explain. A construct word
+that also appears in the title is one of them, so give the theory a title that
+names its phenomenon. The third kind is a fixed list of words that name a kind
+of account: theory, model, account, hypothesis, framework and approach, with
+their plurals. One shared word is enough for a match.
+
+A theme that none of the registered accounts addresses is under-theorised, one
+that a single account addresses is covered, and one that two or more address
+is crowded.
 
 ```python exec="1" source="material-block" result="text" session="literature"
 t = tf.read(fixtures / "panic-network.theory.yaml")
 ls = t.landscape(corpus)
 
+print("field tokens:", ls["field_tokens"])
+print("phenomenon tokens:", ls["phenomenon_tokens"])
+for theme in ls["themes"]:
+    print(theme["id"], theme["status"], "| focal:", theme["focal_terms"],
+          "| alternatives:", theme["alternative_terms"])
 print("under-theorised fronts:", ls["under_theorised_fronts"])
-print("redundancy risk:", ls["redundancy_risk"])
-print("themes:", ls["themes"])
+print("crowded themes:", ls["redundancy_risk"])
 ```
 
 Each entry in `ls["themes"]` reports the theme `id`, its `keywords`, the
 `alternatives` that map onto it, whether the focal theory is `focal` on it,
-and a `status` of `under_theorised`, `covered` or `crowded`. The
-under-theorised fronts point to questions a new theory could claim, and the
-redundancy risks point to ground where it would need to justify a further
-account.
+a `status` of `under_theorised`, `covered` or `crowded`, and the words behind
+each match, in `focal_terms` and in `alternative_terms`, one `{id, terms}`
+entry per alternative. The statuses count the registered
+accounts only. An under-theorised theme is one that none of them addresses, so
+an account the theory does not register may still address it. A crowded theme
+calls for predictions that discriminate between its accounts, and does not
+show that any of them is redundant. The two lists keep the keys they had in
+0.6.0, `under_theorised_fronts` and `redundancy_risk`.
 
 The same function is available at module level as `tf.landscape(theory,
 corpus)`, which is convenient when the theory is held as a plain dictionary
 rather than a `Theory` object. The `min_link` argument is passed through to
 the underlying `litmap` call, which skips the co-citation count because the
-landscape does not use it.
+landscape does not use it. `max_token_share` sets the share of records above
+which a word counts as a field token.
 
 ```python exec="1" source="material-block" session="literature"
-ls = tf.landscape(t, corpus, min_link=2)
+ls = tf.landscape(t, corpus, min_link=2, max_token_share=0.5)
 ```
 
 ## Emitting a literature diagram

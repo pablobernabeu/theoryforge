@@ -84,6 +84,26 @@ for (theme in lm$themes) {
 }
 ```
 
+Connected components suit this fixture, built to fall into separate themes. On
+a real corpus, a few keywords that most records carry, such as the name of the
+field, link nearly every keyword to every other, so a single component holds the
+map. Seven OpenAlex corpora of 100 to 600 records each gave a largest theme
+holding at least 98.8 per cent of the linked keywords. When one theme holds more
+than half of them, `tf_litmap()` warns that the themes, and any landscape built
+on them, are not informative. The map itself is returned unchanged. Below, one
+keyword shared by two pairs joins them into one theme.
+
+```{r hub-warning}
+hub <- list(schema_version = "1.0", id = "hub", records = list(
+  list(id = "w1", keywords = list("anxiety", "arousal")),
+  list(id = "w2", keywords = list("anxiety", "arousal")),
+  list(id = "w3", keywords = list("anxiety", "avoidance")),
+  list(id = "w4", keywords = list("anxiety", "avoidance"))
+))
+hub_map <- tf_litmap(hub)
+length(hub_map$themes)
+```
+
 Co-citation is computed the same way over the `references` field. Two cited
 sources are linked when at least `min_link` records in the corpus cite them
 together.
@@ -109,15 +129,25 @@ tf_litmap(corpus, min_link = 2, min_cocitation = 3)$co_citation
 alternatives onto the themes from `tf_litmap()`, skipping the co-citation count,
 which it does not use. A theme is tagged `"under_theorised"` when neither the
 focal theory nor any alternative touches it, `"covered"` when exactly one does, and `"crowded"` when two or more do. Matching
-is by shared tokens between the theme keywords and the text of the construct
-labels, the theory title and the alternatives.
+is by shared words between the theme keywords and the construct labels, or the
+label and key constructs of an alternative, and the result names the words
+behind every match. Three kinds of word never match. Field tokens, the words
+most of the corpus shares, are those in the keywords of more than
+`max_token_share` of the records, half by default. Phenomenon tokens are the
+words of the theory's title, which names the phenomenon that the focal theory
+and its rivals all explain. A construct word that also appears in the title
+does not match either. The third kind is a fixed list of words that name a kind
+of account: theory, model, account, hypothesis, framework and approach, with
+their plurals. One shared word is enough for a match.
 
-We build a small theory whose constructs speak to arousal and to appraisal, and
-register one alternative that also speaks to appraisal. This leaves the arousal
-theme covered, the appraisal theme crowded and the remaining themes untouched.
+We build a small theory of panic attacks whose constructs speak to arousal and
+to appraisal, and register one alternative that also speaks to appraisal. The
+title names the phenomenon, so its words are set aside and the construct labels
+decide the matches. This leaves the arousal theme covered, the appraisal theme
+crowded and the remaining themes untouched.
 
 ```{r theory}
-theory <- tf_theory("panic-appraisal", "Arousal and appraisal in panic") |>
+theory <- tf_theory("panic-appraisal", "A theory of panic attacks") |>
   tf_add_construct("c_arousal", "Physiological arousal",
                    "Bodily activation in response to a stressor.") |>
   tf_add_construct("c_appraisal", "Threat appraisal",
@@ -127,23 +157,29 @@ theory <- tf_theory("panic-appraisal", "Arousal and appraisal in panic") |>
 
 landscape <- tf_landscape(theory, corpus, min_link = 2)
 landscape$theory_id
+unlist(landscape$phenomenon_tokens)
 ```
 
 Each theme in the result records which alternatives land on it, whether the
-focal theory lands on it, and the resulting status.
+focal theory lands on it, the resulting status and the words behind each match,
+in `focal_terms` and in `alternative_terms`.
 
 ```{r landscape-themes}
+words <- function(x) if (length(x) > 0L) paste(unlist(x), collapse = ", ") else "none"
 for (theme in landscape$themes) {
+  alts <- vapply(theme$alternative_terms,
+                 function(a) sprintf("%s (%s)", a$id, words(a$terms)), character(1))
   cat(sprintf("%s | status: %s | focal: %s | alternatives: %s\n",
-              theme$id, theme$status, theme$focal,
-              paste(unlist(theme$alternatives), collapse = ", ")))
+              theme$id, theme$status, words(theme$focal_terms), words(alts)))
 }
 ```
 
 Two summaries draw out the practical reading. The under-theorised fronts are
-themes that the field around this theory has not yet engaged, and so are
-candidates for new work. The redundancy risk lists crowded themes, where a new
-contribution would have to distinguish itself from existing accounts.
+themes that none of the registered accounts addresses, which says nothing of
+accounts the theory does not register. The crowded themes, listed under the key
+`redundancy_risk` that 0.6.0 gave them, are addressed by two or more accounts,
+so they call for predictions that discriminate between those accounts. They do
+not show that any account is redundant.
 
 ```{r landscape-summary}
 unlist(landscape$under_theorised_fronts)

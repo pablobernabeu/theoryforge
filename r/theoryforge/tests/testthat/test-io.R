@@ -212,7 +212,7 @@ records:
 '
   c <- tf_read_corpus(io_file(corpus))
   expect_identical(c$records[[1]]$keywords, list("y", "n", "arousal"))
-  expect_identical(unlist(tf_litmap(c)$keywords), c("arousal", "n", "y"))
+  expect_identical(unlist(one_theme(tf_litmap(c))$keywords), c("arousal", "n", "y"))
   expect_error(tf_read_corpus(io_file("id: a\nid: b\n")), "Duplicate map key: 'id'", fixed = TRUE)
 })
 

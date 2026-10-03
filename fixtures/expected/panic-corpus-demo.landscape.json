@@ -1,5 +1,13 @@
 {
   "theory_id": "panic-network-2026",
+  "max_token_share": 0.5,
+  "field_tokens": [],
+  "phenomenon_tokens": [
+    "disorder",
+    "network",
+    "panic",
+    "theory"
+  ],
   "themes": [
     {
       "id": "theme_1",
@@ -11,7 +19,17 @@
         "alt_cognitive"
       ],
       "focal": false,
-      "status": "covered"
+      "status": "covered",
+      "focal_terms": [],
+      "alternative_terms": [
+        {
+          "id": "alt_cognitive",
+          "terms": [
+            "catastrophic",
+            "misinterpretation"
+          ]
+        }
+      ]
     },
     {
       "id": "theme_2",
@@ -23,7 +41,18 @@
         "alt_biological"
       ],
       "focal": true,
-      "status": "crowded"
+      "status": "crowded",
+      "focal_terms": [
+        "arousal"
+      ],
+      "alternative_terms": [
+        {
+          "id": "alt_biological",
+          "terms": [
+            "arousal"
+          ]
+        }
+      ]
     },
     {
       "id": "theme_3",
@@ -33,7 +62,11 @@
       ],
       "alternatives": [],
       "focal": true,
-      "status": "covered"
+      "status": "covered",
+      "focal_terms": [
+        "avoidance"
+      ],
+      "alternative_terms": []
     },
     {
       "id": "theme_4",
@@ -43,7 +76,9 @@
       ],
       "alternatives": [],
       "focal": false,
-      "status": "under_theorised"
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": []
     }
   ],
   "under_theorised_fronts": [

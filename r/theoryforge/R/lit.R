@@ -9,6 +9,14 @@ NULL
 
 .tf_DEFAULT_MIN_LINK <- 2L
 
+# Words that name a kind of account and say nothing about what it is about, so
+# that "model" in a rival's label cannot match a theme on model fit
+# (API_SPEC.md section 15). Python lit.THEORY_WORDS.
+.tf_THEORY_WORDS <- c(
+  "theory", "theories", "model", "models", "account", "accounts",
+  "hypothesis", "hypotheses", "framework", "frameworks", "approach", "approaches"
+)
+
 # Escape a DOT label: replace backslash then double-quote (order matters).
 # Mirrors Python lit._esc (treats NULL/NA as "").
 .tf_lit_esc <- function(s) {
@@ -69,6 +77,16 @@ tf_read_corpus <- function(path) {
   # A value beyond R's integer range stays a double, which compares as Python's
   # int does, where as.integer() would make it NA.
   if (value <= .Machine$integer.max) as.integer(value) else as.numeric(value)
+}
+
+# `value` as a double when it is one number from 0 to 1, as the Python twin's
+# _share accepts it. A logical, a string, NA, NaN, an infinity and a vector of
+# two values are refused (API_SPEC.md section 15).
+.tf_share <- function(value, name) {
+  ok <- is.numeric(value) && length(value) == 1L && !is.na(value) &&
+    value >= 0 && value <= 1
+  if (!ok) stop(sprintf("%s must be a number between 0 and 1", name), call. = FALSE)
+  as.numeric(value)
 }
 
 # R holds a number read from a file as a double, exact for integers below 2^53.
@@ -237,12 +255,14 @@ tf_read_corpus <- function(path) {
 
 # tf_litmap(), with the co-citation count skipped when `co_citation` is FALSE.
 # tf_landscape() reads only the themes, and on a corpus with references the
-# co-citation count is most of the work.
-.tf_litmap <- function(corpus, min_link, min_cocitation = NULL, co_citation = TRUE) {
+# co-citation count is most of the work. It also passes the `records` it has
+# already checked, since it reads their keywords as well.
+.tf_litmap <- function(corpus, min_link, min_cocitation = NULL, co_citation = TRUE,
+                       records = NULL) {
   min_link <- .tf_positive_int(min_link, "min_link")
   min_cocitation <- if (is.null(min_cocitation)) min_link else
     .tf_positive_int(min_cocitation, "min_cocitation")
-  records <- .tf_records(corpus)
+  if (is.null(records)) records <- .tf_records(corpus)
   keywords <- lapply(records, `[[`, "keywords")
   all_kw <- sort(unique(as.character(unlist(keywords, use.names = FALSE))), method = "radix")
   kw_edges <- .tf_edges(.tf_pair_counts(keywords), min_link)
@@ -257,6 +277,25 @@ tf_read_corpus <- function(path) {
     out$co_citation <- .tf_edges(.tf_pair_counts(references), min_cocitation)
   }
   out
+}
+
+# Warn when the largest theme holds more than half the linked keywords, as
+# Python lit._warn_if_one_theme_dominates. Connected components merge every
+# theme that shares a keyword, so the hub keywords of a real corpus join it
+# into one theme (API_SPEC.md section 14). The call is left out, so that the
+# text is the Python twin's.
+.tf_warn_if_one_theme_dominates <- function(themes) {
+  if (length(themes) == 0L) return(invisible(NULL))
+  sizes <- vapply(themes, function(th) as.integer(th$size), integer(1))
+  n <- sum(sizes)
+  largest <- max(sizes)
+  if (2L * largest <= n) return(invisible(NULL))
+  p <- .tf_rnd(100 * (largest / n), 1)
+  warning(sprintf(paste("litmap: one theme holds %.1f per cent of the %d linked keywords;",
+                        "connected components cannot separate themes in a corpus this",
+                        "connected, so the themes and any landscape built on them are not",
+                        "informative"), p, n),
+          call. = FALSE)
 }
 
 #' Bibliometric map of a literature corpus (deterministic)
@@ -278,6 +317,12 @@ tf_read_corpus <- function(path) {
 #' \code{min_cocitation} can be set above \code{min_link}, and
 #' [tf_lit_diagram()] can draw only the strongest edges.
 #'
+#' A theme is a connected component of the keyword map, and on a real corpus a
+#' few keywords shared by most records join nearly every keyword into one.
+#' When the largest theme holds more than half the linked keywords, a warning
+#' says so: such themes, and any landscape built on them, do not describe the
+#' field. The result is returned unchanged.
+#'
 #' @param corpus A corpus object (named list), e.g. from [tf_read_corpus()].
 #' @param min_link Minimum co-occurrence count for a keyword pair to be kept
 #'   (default \code{2}). A positive integer.
@@ -290,13 +335,32 @@ tf_read_corpus <- function(path) {
 #'   schema_version = "1.0", id = "demo-corpus",
 #'   records = list(
 #'     list(id = "w1", keywords = list("arousal", "threat")),
-#'     list(id = "w2", keywords = list("arousal", "threat"))
+#'     list(id = "w2", keywords = list("arousal", "threat")),
+#'     list(id = "w3", keywords = list("avoidance", "exposure")),
+#'     list(id = "w4", keywords = list("avoidance", "exposure"))
 #'   )
 #' )
 #' tf_litmap(corpus)
 #' @export
 tf_litmap <- function(corpus, min_link = 2, min_cocitation = NULL) {
-  .tf_litmap(corpus, min_link, min_cocitation)
+  out <- .tf_litmap(corpus, min_link, min_cocitation)
+  .tf_warn_if_one_theme_dominates(out$themes)
+  out
+}
+
+# Tokens of more than `max_token_share` of the records' keywords, as Python
+# lit._field_tokens. A record counts once for each token of its keywords, and
+# the share is taken over every record, those without keywords included.
+.tf_field_tokens <- function(keyword_lists, max_token_share) {
+  n <- length(keyword_lists)
+  toks <- unlist(lapply(keyword_lists, function(kws) tf_tokens(paste(kws, collapse = " "))),
+                 use.names = FALSE)
+  if (length(toks) == 0L) return(character(0))
+  # tf_tokens() returns each record's tokens once, so a count is a number of
+  # records.
+  u <- unique(toks)
+  counts <- tabulate(match(toks, u), nbins = length(u))
+  u[counts / n > max_token_share]
 }
 
 #' Map a theory and its alternatives onto a literature landscape (deterministic)
@@ -305,53 +369,101 @@ tf_litmap <- function(corpus, min_link = 2, min_cocitation = NULL) {
 #' thematic structure of a corpus (computed by [tf_litmap()]). Each theme is
 #' tagged \code{"under_theorised"}, \code{"covered"}, or \code{"crowded"}.
 #'
+#' A theme is matched by the words its keywords share with the focal theory's
+#' construct labels, or with an alternative's label and key constructs, and
+#' every match reports those words (\code{focal_terms} and
+#' \code{alternative_terms}). Three kinds of word never match. Field tokens,
+#' the words most of the corpus shares, are those in the keywords of more than
+#' \code{max_token_share} of the records. Phenomenon tokens are the words of
+#' the theory's title, which names the phenomenon that the focal theory and its
+#' rivals all explain. A construct word that also appears in the title does not
+#' match either. The third kind is a fixed list of words that name a kind of
+#' account: theory, model, account, hypothesis, framework and approach, with
+#' their plurals. One shared word is enough for a match.
+#'
+#' The statuses count the registered accounts, the focal theory and its
+#' registered alternatives, that address a theme. A theme is
+#' \code{"under_theorised"} when none of them addresses it, which says nothing
+#' of accounts the theory does not register, \code{"covered"} when one does and
+#' \code{"crowded"} when two or more do. A crowded theme calls for predictions
+#' that discriminate between the accounts, and is not a finding of redundancy.
+#' The two lists keep their 0.6.0 names, \code{under_theorised_fronts} and
+#' \code{redundancy_risk}.
+#'
+#' The arguments are checked in the order \code{min_link},
+#' \code{max_token_share}, then the corpus, with the Python twin's messages.
+#' The themes are those of [tf_litmap()], and \code{tf_landscape()} gives its
+#' warning when one of them holds most of the linked keywords.
+#'
 #' @param theory A theory object (named list), e.g. from \code{tf_read()}.
 #' @param corpus A corpus object (named list), e.g. from [tf_read_corpus()].
 #' @param min_link Minimum co-occurrence count passed to [tf_litmap()]
 #'   (default \code{2}). The co-citation map, which the landscape does not
 #'   use, is not computed.
-#' @return A named list with elements \code{theory_id}, \code{themes} (each
-#'   \code{{id, keywords, alternatives, focal, status}}),
-#'   \code{under_theorised_fronts}, and \code{redundancy_risk}.
+#' @param max_token_share A number from 0 to 1 (default \code{0.5}). A word in
+#'   the keywords of more than this share of the records is a field token and
+#'   never matches.
+#' @return A named list with elements \code{theory_id},
+#'   \code{max_token_share}, \code{field_tokens}, \code{phenomenon_tokens},
+#'   \code{themes}, \code{under_theorised_fronts} and \code{redundancy_risk}.
+#'   Each theme holds \code{id}, \code{keywords}, \code{alternatives},
+#'   \code{focal}, \code{status}, \code{focal_terms} and
+#'   \code{alternative_terms}, the last a list of \code{{id, terms}} in the
+#'   order of \code{alternatives}.
 #' @examples
-#' theory <- tf_theory("demo-1", "Arousal and threat") |>
+#' theory <- tf_theory("demo-1", "A theory of panic") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.")
 #' corpus <- list(
 #'   schema_version = "1.0", id = "demo-corpus",
 #'   records = list(
 #'     list(id = "w1", keywords = list("arousal", "threat")),
-#'     list(id = "w2", keywords = list("arousal", "threat"))
+#'     list(id = "w2", keywords = list("arousal", "threat")),
+#'     list(id = "w3", keywords = list("avoidance", "exposure")),
+#'     list(id = "w4", keywords = list("avoidance", "exposure"))
 #'   )
 #' )
 #' tf_landscape(theory, corpus)
 #' @export
-tf_landscape <- function(theory, corpus, min_link = 2) {
+tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5) {
   T <- theory
-  lm <- .tf_litmap(corpus, min_link, co_citation = FALSE)
+  min_link <- .tf_positive_int(min_link, "min_link")
+  max_token_share <- .tf_share(max_token_share, "max_token_share")
+  records <- .tf_records(corpus)
+  lm <- .tf_litmap(corpus, min_link, co_citation = FALSE, records = records)
+  .tf_warn_if_one_theme_dominates(lm$themes)
 
+  field_tokens <- .tf_field_tokens(lapply(records, `[[`, "keywords"), max_token_share)
+  phenomenon_tokens <- tf_tokens(.tf_str(T, "title"))
+  excluded <- c(phenomenon_tokens, .tf_THEORY_WORDS)
   cons <- .tf_list(T, "constructs")
   con_labels <- vapply(cons, function(c) .tf_str(c, "label"), character(1))
-  focal_src <- paste(c(.tf_str(T, "title"), con_labels), collapse = " ")
-  focal_tokens <- tf_tokens(focal_src)
+  focal_tokens <- setdiff(tf_tokens(paste(con_labels, collapse = " ")), excluded)
   alts <- .tf_list(T, "alternatives")
+  alt_ids <- vapply(alts, function(a) .tf_str(a, "id"), character(1))
+  alt_tokens <- lapply(alts, function(a) {
+    kc <- .tf_str_list(.tf_get(a, "key_constructs"))
+    setdiff(tf_tokens(paste(c(.tf_str(a, "label"), kc), collapse = " ")), excluded)
+  })
+  # Sorted by id once, stably, so a repeated id keeps its file order.
+  by_id <- order(alt_ids, method = "radix")
 
   themes_out <- list()
   under <- character(0)
   crowded <- character(0)
   for (th in lm$themes) {
     kws <- unlist(th$keywords, use.names = FALSE)
-    th_tokens <- tf_tokens(paste(kws, collapse = " "))
-    on <- character(0)
-    for (a in alts) {
-      kc <- .tf_str_list(.tf_get(a, "key_constructs"))
-      alt_src <- paste(c(.tf_str(a, "label"), kc), collapse = " ")
-      alt_tokens <- tf_tokens(alt_src)
-      if (length(intersect(alt_tokens, th_tokens)) > 0L) {
-        on <- c(on, .tf_str(a, "id"))
+    th_tokens <- setdiff(tf_tokens(paste(kws, collapse = " ")),
+                         c(field_tokens, .tf_THEORY_WORDS))
+    focal_terms <- sort(intersect(focal_tokens, th_tokens), method = "radix")
+    alt_terms <- list()
+    for (k in by_id) {
+      terms <- sort(intersect(alt_tokens[[k]], th_tokens), method = "radix")
+      if (length(terms) > 0L) {
+        alt_terms[[length(alt_terms) + 1L]] <- list(id = alt_ids[[k]], terms = as.list(terms))
       }
     }
-    on <- sort(on, method = "radix")
-    focal_on <- length(intersect(focal_tokens, th_tokens)) > 0L
+    on <- vapply(alt_terms, function(a) a$id, character(1))
+    focal_on <- length(focal_terms) > 0L
     n <- length(on) + (if (focal_on) 1L else 0L)
     status <- if (n == 0L) "under_theorised" else if (n >= 2L) "crowded" else "covered"
     themes_out[[length(themes_out) + 1L]] <- list(
@@ -359,7 +471,9 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
       keywords = as.list(kws),
       alternatives = as.list(on),
       focal = focal_on,
-      status = status
+      status = status,
+      focal_terms = as.list(focal_terms),
+      alternative_terms = alt_terms
     )
     if (identical(status, "under_theorised")) {
       under <- c(under, th$id)
@@ -370,6 +484,9 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
 
   list(
     theory_id = .tf_str(T, "id"),
+    max_token_share = max_token_share,
+    field_tokens = as.list(sort(field_tokens, method = "radix")),
+    phenomenon_tokens = as.list(sort(phenomenon_tokens, method = "radix")),
     themes = themes_out,
     under_theorised_fronts = as.list(under),
     redundancy_risk = as.list(crowded)
@@ -412,8 +529,9 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
   edges[kept[order(a[kept], b[kept], method = "radix")]]
 }
 
-# Theme colours track the landscape statuses: an untouched front is teal (an
-# opportunity), a crowded one amber (a redundancy risk), a covered one grey.
+# Theme colours track the landscape statuses: a theme no registered account
+# addresses is teal, one that two or more address is amber and a covered one
+# grey.
 .tf_THEME_ROLE <- c(under_theorised = "construct", crowded = "proposition",
                     covered = "covered")
 
@@ -479,7 +597,9 @@ tf_landscape <- function(theory, corpus, min_link = 2) {
 #'   schema_version = "1.0", id = "demo-corpus",
 #'   records = list(
 #'     list(id = "w1", keywords = list("arousal", "threat")),
-#'     list(id = "w2", keywords = list("arousal", "threat"))
+#'     list(id = "w2", keywords = list("arousal", "threat")),
+#'     list(id = "w3", keywords = list("avoidance", "exposure")),
+#'     list(id = "w4", keywords = list("avoidance", "exposure"))
 #'   )
 #' )
 #' cat(tf_lit_diagram(tf_litmap(corpus), "keyword_cooccurrence"))

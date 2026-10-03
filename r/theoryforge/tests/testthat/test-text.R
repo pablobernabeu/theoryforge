@@ -129,7 +129,7 @@ test_that("an accented word no longer matches its tail", {
     list(id = "r2", keywords = list("motion perception", "visual motion"))))
   t <- .text_theory(list(list(id = "e", label = "\u00c9motion", definition = "d")))
   t$title <- "R\u00e9gulation des \u00e9motions"
-  themes <- tf_landscape(t, corpus)$themes
+  themes <- one_theme(tf_landscape(t, corpus))$themes
   expect_length(themes, 1L)
   expect_false(isTRUE(themes[[1]]$focal))
 })

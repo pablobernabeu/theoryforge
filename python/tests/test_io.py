@@ -293,6 +293,8 @@ def test_a_duplicate_key_is_refused_with_the_r_message(tmp_path, name, text, key
     assert str(err.value) == f"({path}) Duplicate map key: '{key}'"
 
 
+# The corpus forms one theme, so litmap warns that it holds every linked keyword.
+@pytest.mark.filterwarnings("ignore:litmap:UserWarning")
 def test_a_corpus_reads_through_the_same_reader(tmp_path):
     corpus = """\
 schema_version: "1.0"

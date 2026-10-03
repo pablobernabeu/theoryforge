@@ -91,7 +91,7 @@ test_that("the article's Scopus adapter yields co-citation edges and themes", {
   expect_identical(unlist(read$records[[2]]$keywords),
                    c("panic disorder", "interoception"))
 
-  lm <- tf_litmap(read, min_link = 2)
+  lm <- one_theme(tf_litmap(read, min_link = 2))
   expect_length(lm$co_citation, 1L)
   expect_identical(lm$co_citation[[1]]$count, 3L)
   expect_length(lm$keyword_cooccurrence, 1L)

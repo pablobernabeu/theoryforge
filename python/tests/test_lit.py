@@ -7,6 +7,12 @@ def _corpus(fixtures_dir):
     return tf.read_corpus(fixtures_dir / "panic-corpus.yaml")
 
 
+# A corpus whose keywords form a single theme warns that the theme holds every
+# linked keyword (API_SPEC.md section 14). Tests that use one for another
+# purpose ignore that warning.
+one_theme = pytest.mark.filterwarnings("ignore:litmap:UserWarning")
+
+
 def test_litmap_themes(fixtures_dir):
     lm = tf.litmap(_corpus(fixtures_dir))
     assert lm["n_records"] == 8
@@ -59,6 +65,7 @@ def test_new_evidence_dois_empty_theory():
     assert t.new_evidence_dois([None, ""]) == []
 
 
+@one_theme
 def test_litmap_mixed_case_keywords_sort_by_codepoint():
     # Uppercase sorts before lowercase (Z < a). The R suite runs the same
     # corpus and asserts the same order, locking the locale-independent sort.
@@ -211,6 +218,7 @@ def test_a_mapping_in_place_of_a_list_is_refused():
         tf.litmap(corpus)
 
 
+@one_theme
 def test_integer_references_become_decimal_strings_beside_dois():
     # Python raised TypeError sorting an int against a str, and R kept the
     # integers as strings. Both now read them as decimal strings.
@@ -224,6 +232,7 @@ def test_integer_references_become_decimal_strings_beside_dois():
     assert kw["keywords"] == ["7", "seven"]
 
 
+@one_theme
 def test_null_and_empty_entries_are_dropped():
     lm = tf.litmap(_two("keywords", ["a", None, "", "b"]))
     assert lm["keywords"] == ["a", "b"]
@@ -276,6 +285,170 @@ def test_landscape_does_not_count_co_citation(fixtures_dir, panic_path, monkeypa
     calls.clear()
     tf.litmap(_corpus(fixtures_dir))
     assert len(calls) == 2
+
+
+# -- landscape: matched terms, field and phenomenon words (API_SPEC.md section 15) --
+# The R suite runs the same cases and expects the same results.
+
+def _paired(*keyword_lists):
+    """A corpus holding each keyword list in two records, so each pair is linked."""
+    records = [{"id": f"r{i}{j}", "keywords": list(kws)}
+               for i, kws in enumerate(keyword_lists) for j in (1, 2)]
+    return {"schema_version": "1.0", "id": "c", "records": records}
+
+
+def _account(title, labels=(), alternatives=()):
+    """A theory with ``title``, one construct per label and (id, label, key constructs) rivals."""
+    return {
+        "schema_version": "1.0", "id": "t", "title": title, "maturity": "draft",
+        "constructs": [{"id": f"c{i}", "label": label, "definition": "d"}
+                       for i, label in enumerate(labels)],
+        "alternatives": [{"id": aid, "label": label, "key_constructs": list(kc)}
+                         for aid, label, kc in alternatives],
+    }
+
+
+def test_landscape_reports_the_terms_behind_every_match(fixtures_dir, panic_path):
+    ls = tf.read(panic_path).landscape(_corpus(fixtures_dir))
+    assert list(ls) == ["theory_id", "max_token_share", "field_tokens", "phenomenon_tokens",
+                        "themes", "under_theorised_fronts", "redundancy_risk"]
+    assert ls["max_token_share"] == 0.5
+    assert ls["field_tokens"] == []
+    assert ls["phenomenon_tokens"] == ["disorder", "network", "panic", "theory"]
+    assert list(ls["themes"][0]) == ["id", "keywords", "alternatives", "focal", "status",
+                                     "focal_terms", "alternative_terms"]
+    terms = {t["id"]: (t["focal_terms"], t["alternative_terms"]) for t in ls["themes"]}
+    assert terms == {
+        "theme_1": ([], [{"id": "alt_cognitive", "terms": ["catastrophic", "misinterpretation"]}]),
+        "theme_2": (["arousal"], [{"id": "alt_biological", "terms": ["arousal"]}]),
+        "theme_3": (["avoidance"], []),
+        "theme_4": ([], []),
+    }
+    # One shared word is enough. A rule that wanted two left every theme of real
+    # corpora under-theorised, so it was not adopted.
+    assert [t["status"] for t in ls["themes"]] == ["covered", "crowded", "covered", "under_theorised"]
+
+
+def test_a_word_of_the_title_no_longer_crowds_a_theme(fixtures_dir, panic_path):
+    # "panic disorder" on the two genetics records made theme_4 crowded through
+    # "panic" and "disorder", words of the title that every account of panic
+    # shares, and left the corpus with no under-theorised front.
+    corpus = _corpus(fixtures_dir)
+    for record in corpus["records"]:
+        if record["id"] in ("r7", "r8"):
+            record["keywords"] = [*record["keywords"], "panic disorder"]
+    ls = tf.read(panic_path).landscape(corpus)
+    th4 = ls["themes"][3]
+    assert th4["keywords"] == ["genetics", "heritability", "panic disorder"]
+    assert (th4["status"], th4["focal"], th4["alternatives"]) == ("under_theorised", False, [])
+    assert (th4["focal_terms"], th4["alternative_terms"]) == ([], [])
+    assert ls["under_theorised_fronts"] == ["theme_4"]
+
+
+def test_a_construct_word_in_the_title_counts_as_a_phenomenon_word():
+    ls = tf.landscape(_account("Arousal and threat", ["Arousal"]),
+                      _paired(["arousal", "threat"], ["avoidance", "exposure"]))
+    assert ls["phenomenon_tokens"] == ["arousal", "threat"]
+    assert [(t["focal"], t["status"]) for t in ls["themes"]] == [
+        (False, "under_theorised"), (False, "under_theorised")]
+
+
+def test_words_that_name_a_kind_of_account_never_match():
+    from theoryforge.lit import THEORY_WORDS
+
+    assert sorted(THEORY_WORDS) == [
+        "account", "accounts", "approach", "approaches", "framework", "frameworks",
+        "hypotheses", "hypothesis", "model", "models", "theories", "theory"]
+    corpus = _paired(["model fit", "structural equations"], ["updating", "working memory"])
+    theory = _account("Executive control in ageing", ["Working memory capacity", "Mental model"],
+                      [("alt_speed", "Processing-speed model", ["slowing"])])
+    th1, th2 = tf.landscape(theory, corpus)["themes"]
+    # "model" made theme_1 crowded, through a construct label and a rival's label.
+    assert (th1["status"], th1["focal"], th1["alternatives"]) == ("under_theorised", False, [])
+    assert (th2["status"], th2["focal_terms"]) == ("covered", ["memory", "working"])
+
+
+def test_words_most_of_the_corpus_shares_are_field_tokens():
+    corpus = _paired(["anxiety sensitivity", "interoception"], ["anxiety disorders", "exposure"],
+                     ["genetics", "heritability"])
+    theory = _account("Panic as a learned alarm", ["Anxiety"])
+    # "anxiety" is in four of the six records, more than half.
+    ls = tf.landscape(theory, corpus)
+    assert ls["field_tokens"] == ["anxiety"]
+    assert [t["status"] for t in ls["themes"]] == ["under_theorised"] * 3
+    # A rival's words meet the same theme tokens, so a field token matches neither.
+    rival = _account("Panic as a learned alarm", (), [("alt_anx", "Trait anxiety", [])])
+    assert [t["status"] for t in tf.landscape(rival, corpus)["themes"]] == ["under_theorised"] * 3
+    loose = tf.landscape(theory, corpus, max_token_share=0.7)
+    assert (loose["max_token_share"], loose["field_tokens"]) == (0.7, [])
+    assert [t["focal_terms"] for t in loose["themes"]] == [["anxiety"], ["anxiety"], []]
+    assert [t["status"] for t in loose["themes"]] == ["covered", "covered", "under_theorised"]
+    # A share equal to max_token_share is not more than it.
+    two = _paired(["anxiety sensitivity", "interoception"], ["anxiety disorders", "exposure"])
+    assert tf.landscape(theory, two, max_token_share=1)["field_tokens"] == []
+    assert tf.landscape(theory, two, max_token_share=0)["field_tokens"] == [
+        "anxiety", "disorders", "exposure", "interoception", "sensitivity"]
+
+
+def test_alternative_terms_follow_the_alternative_id_order():
+    theory = _account("A theory of panic", (), [
+        ("alt_z", "Arousal account", []),
+        ("alt_a", "Interoceptive accuracy", ["interoception"]),
+    ])
+    corpus = _paired(["arousal", "interoception"], ["genetics", "heritability"])
+    th1 = tf.landscape(theory, corpus)["themes"][0]
+    assert th1["alternatives"] == ["alt_a", "alt_z"]
+    assert th1["alternative_terms"] == [{"id": "alt_a", "terms": ["interoception"]},
+                                        {"id": "alt_z", "terms": ["arousal"]}]
+    assert th1["status"] == "crowded"
+
+
+@pytest.mark.parametrize("bad", [-0.1, 1.5, "0.5", True, None, float("nan"), float("inf"), [0.5]])
+def test_landscape_refuses_a_max_token_share_outside_0_to_1(fixtures_dir, panic_path, bad):
+    with pytest.raises(ValueError) as exc:
+        tf.read(panic_path).landscape(_corpus(fixtures_dir), max_token_share=bad)
+    assert str(exc.value) == "max_token_share must be a number between 0 and 1"
+
+
+def test_landscape_checks_min_link_then_max_token_share_then_the_corpus(panic_path):
+    t = tf.read(panic_path)
+    misspelt = {"schema_version": "1.0", "id": "c", "recrods": []}
+    with pytest.raises(ValueError, match="^min_link must be a positive integer$"):
+        t.landscape(misspelt, min_link=0, max_token_share=2)
+    with pytest.raises(ValueError, match="^max_token_share must be a number between 0 and 1$"):
+        t.landscape(misspelt, max_token_share=2)
+    with pytest.raises(ValueError, match="^invalid corpus: missing records list$"):
+        t.landscape(misspelt)
+
+
+GIANT_THEME = ("litmap: one theme holds {p} per cent of the {n} linked keywords; connected "
+               "components cannot separate themes in a corpus this connected, so the themes and "
+               "any landscape built on them are not informative")
+
+
+def test_litmap_warns_when_one_theme_holds_most_linked_keywords():
+    corpus = _paired(["k1", "k2", "k3", "k4"], ["m1", "m2"])
+    with pytest.warns(UserWarning) as caught:
+        lm = tf.litmap(corpus)
+    assert [str(w.message) for w in caught] == [GIANT_THEME.format(p="66.7", n=6)]
+    assert [t["size"] for t in lm["themes"]] == [4, 2]
+    # landscape is built on the same themes and warns alike.
+    with pytest.warns(UserWarning) as caught:
+        tf.landscape(_account("A theory of panic"), corpus)
+    assert [str(w.message) for w in caught] == [GIANT_THEME.format(p="66.7", n=6)]
+    with pytest.warns(UserWarning) as caught:
+        tf.litmap(_paired(["alpha", "Zeta"]))
+    assert [str(w.message) for w in caught] == [GIANT_THEME.format(p="100.0", n=2)]
+
+
+def test_litmap_is_silent_when_no_theme_holds_more_than_half(fixtures_dir):
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        tf.litmap(_paired(["a1", "hub"], ["b1", "b2"]))  # two of four keywords: half
+        tf.litmap(_corpus(fixtures_dir))
+        tf.litmap(_paired())
 
 
 def _four_edges():

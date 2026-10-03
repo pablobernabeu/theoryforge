@@ -92,7 +92,7 @@ print(t.preregister())             # markdown prereg
 # LITERATURE: map the field, then position the theory against it
 corpus = tf.read_corpus("../fixtures/panic-corpus.yaml")
 tf.litmap(corpus)                  # keyword co-occurrence, themes, co-citation
-t.landscape(corpus)                # -> themes flagged 'under_theorised' / 'crowded' (redundancy risk)
+t.landscape(corpus)                # -> each theme under_theorised, covered or crowded, with matched words
 # tf.fetch_corpus("panic disorder theory")  # optional OpenAlex fetch (network call)
 ```
 
@@ -120,8 +120,10 @@ TESTING is the severity rubric, a pre-data ranking of claim form, with its prere
 export.
 
 The literature layer starts from `read_corpus`. `litmap` derives keyword co-occurrence,
-deterministic connected-component themes and co-citation, and `landscape` maps a theory and its
-alternatives onto those themes, flagging under-theorised fronts and redundancy risk.
+deterministic connected-component themes and co-citation, and warns when one theme holds most of
+the linked keywords, which happens on real corpora. `landscape` maps a theory and its
+alternatives onto those themes, names the words behind each match and marks each theme
+under-theorised, covered or crowded by how many of the registered accounts address it.
 `lit_diagram` draws the co-occurrence, co-citation and theme-landscape views. Where a network
 connection is available, the `fetch_corpus` OpenAlex adapter retrieves a corpus, and
 `new_evidence_dois` checks deterministically which candidate DOIs, from any search tool, a

@@ -22,6 +22,7 @@ import json
 import re
 import shutil
 import sys
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -165,12 +166,19 @@ def corpus_edge_outcome(path: Path) -> dict:
     Recorded as ``edge_outcome`` records a theory: a call that raises is
     ``{"error": <message>}``, and a failed read leaves ``read`` alone.
     ``scripts/parity_emit.R edge`` builds the same record in R.
+
+    The warning litmap gives when one theme holds most of the linked keywords
+    (API_SPEC.md section 14) is not printed, since a corpus of a few keywords
+    gives it and the R emitter runs under ``suppressWarnings()``. Both test
+    suites pin its text.
     """
     try:
         corpus = tf.read_corpus(path)
     except Exception as err:
         return {"read": {"error": error_text(err)}}
-    return {"read": "ok", "litmap": _attempt(lambda: tf.litmap(corpus))}
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message="litmap: one theme holds", category=UserWarning)
+        return {"read": "ok", "litmap": _attempt(lambda: tf.litmap(corpus))}
 
 
 def _edge_files(edge_dir: Path, kind: str) -> dict[str, Path]:

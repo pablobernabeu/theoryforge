@@ -41,7 +41,7 @@ t.check()                       # 12-item rigour checklist + gate
 t.severity()                    # pre-data severity rubric of claim form
 t.preregister()                 # preregistration document
 corpus = tf.read_corpus("panic-corpus.yaml")
-t.landscape(corpus)             # under-theorised fronts + redundancy risk
+t.landscape(corpus)             # themes by how many registered accounts address them
 ```
 
 ## Author

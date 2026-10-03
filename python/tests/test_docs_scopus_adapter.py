@@ -75,6 +75,9 @@ YEARS = {
 
 
 @pytest.mark.parametrize("years", YEARS.values(), ids=YEARS.keys())
+# The stand-in corpus forms one theme, so litmap warns that it holds every
+# linked keyword.
+@pytest.mark.filterwarnings("ignore:litmap:UserWarning")
 def test_scopus_adapter_yields_cocitation_and_themes(years, tmp_path):
     ns = _adapter_namespace()
     lit = ns["scopus_corpus_to_tf"](_stand_in(years), "scopus:panic disorder")

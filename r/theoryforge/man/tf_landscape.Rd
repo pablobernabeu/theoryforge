@@ -4,7 +4,7 @@
 \alias{tf_landscape}
 \title{Map a theory and its alternatives onto a literature landscape (deterministic)}
 \usage{
-tf_landscape(theory, corpus, min_link = 2)
+tf_landscape(theory, corpus, min_link = 2, max_token_share = 0.5)
 }
 \arguments{
 \item{theory}{A theory object (named list), e.g. from \code{tf_read()}.}
@@ -14,25 +14,62 @@ tf_landscape(theory, corpus, min_link = 2)
 \item{min_link}{Minimum co-occurrence count passed to \code{\link[=tf_litmap]{tf_litmap()}}
 (default \code{2}). The co-citation map, which the landscape does not
 use, is not computed.}
+
+\item{max_token_share}{A number from 0 to 1 (default \code{0.5}). A word in
+the keywords of more than this share of the records is a field token and
+never matches.}
 }
 \value{
-A named list with elements \code{theory_id}, \code{themes} (each
-\code{{id, keywords, alternatives, focal, status}}),
-\code{under_theorised_fronts}, and \code{redundancy_risk}.
+A named list with elements \code{theory_id},
+\code{max_token_share}, \code{field_tokens}, \code{phenomenon_tokens},
+\code{themes}, \code{under_theorised_fronts} and \code{redundancy_risk}.
+Each theme holds \code{id}, \code{keywords}, \code{alternatives},
+\code{focal}, \code{status}, \code{focal_terms} and
+\code{alternative_terms}, the last a list of \code{{id, terms}} in the
+order of \code{alternatives}.
 }
 \description{
 Maps a theory's focal constructs and its registered alternatives onto the
 thematic structure of a corpus (computed by \code{\link[=tf_litmap]{tf_litmap()}}). Each theme is
 tagged \code{"under_theorised"}, \code{"covered"}, or \code{"crowded"}.
 }
+\details{
+A theme is matched by the words its keywords share with the focal theory's
+construct labels, or with an alternative's label and key constructs, and
+every match reports those words (\code{focal_terms} and
+\code{alternative_terms}). Three kinds of word never match. Field tokens,
+the words most of the corpus shares, are those in the keywords of more than
+\code{max_token_share} of the records. Phenomenon tokens are the words of
+the theory's title, which names the phenomenon that the focal theory and its
+rivals all explain. A construct word that also appears in the title does not
+match either. The third kind is a fixed list of words that name a kind of
+account: theory, model, account, hypothesis, framework and approach, with
+their plurals. One shared word is enough for a match.
+
+The statuses count the registered accounts, the focal theory and its
+registered alternatives, that address a theme. A theme is
+\code{"under_theorised"} when none of them addresses it, which says nothing
+of accounts the theory does not register, \code{"covered"} when one does and
+\code{"crowded"} when two or more do. A crowded theme calls for predictions
+that discriminate between the accounts, and is not a finding of redundancy.
+The two lists keep their 0.6.0 names, \code{under_theorised_fronts} and
+\code{redundancy_risk}.
+
+The arguments are checked in the order \code{min_link},
+\code{max_token_share}, then the corpus, with the Python twin's messages.
+The themes are those of \code{\link[=tf_litmap]{tf_litmap()}}, and \code{tf_landscape()} gives its
+warning when one of them holds most of the linked keywords.
+}
 \examples{
-theory <- tf_theory("demo-1", "Arousal and threat") |>
+theory <- tf_theory("demo-1", "A theory of panic") |>
   tf_add_construct("c_arousal", "Arousal", "Bodily activation.")
 corpus <- list(
   schema_version = "1.0", id = "demo-corpus",
   records = list(
     list(id = "w1", keywords = list("arousal", "threat")),
-    list(id = "w2", keywords = list("arousal", "threat"))
+    list(id = "w2", keywords = list("arousal", "threat")),
+    list(id = "w3", keywords = list("avoidance", "exposure")),
+    list(id = "w4", keywords = list("avoidance", "exposure"))
   )
 )
 tf_landscape(theory, corpus)

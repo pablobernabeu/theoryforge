@@ -160,6 +160,23 @@ version and a single behavioural contract
   results are unchanged. `landscape()` no longer computes the co-citation map in either
   twin, since it never used it. R's `tf_lit_diagram()` builds its lines as whole vectors,
   where it copied every line written so far for each edge it added.
+- `landscape()` reports the words behind every match, in `focal_terms` and
+  `alternative_terms`, and three kinds of word no longer decide a match. Words in the
+  keywords of more than `max_token_share` of the records, a new argument set to 0.5 by
+  default, are shared by most of the corpus and are reported as `field_tokens`. The words
+  of the theory's title name the phenomenon that every account explains and are reported as
+  `phenomenon_tokens`. Words such as "theory" and "model" name a kind of account. "Panic"
+  and "disorder" from the title used to make a theme on genetics crowded, and "theory" alone
+  matched a theory of panic to a corpus on ego depletion. The title no longer supplies
+  matches, so a construct word that also appears in it no longer matches either. The result
+  gains `max_token_share`, `field_tokens` and `phenomenon_tokens` after `theory_id`. The
+  three status names and the existing keys are unchanged, and so are the bundled corpus's
+  statuses. API_SPEC section 15 pins the rules, and the landscape golden gains the new keys.
+- `litmap()` and `landscape()` give a `UserWarning` when one theme holds more than half the
+  linked keywords, which happens on real corpora: seven OpenAlex corpora of 100 to 600
+  records each gave one theme holding at least 98.8 per cent of them. Such themes, and any
+  landscape built on them, are not informative. The text is the same in both twins
+  (API_SPEC section 14).
 - `severity()` is described for what it is, a pre-data ranking of the form of each
   prediction's claim. Its documentation no longer cites Mayo (2018), whose severity is a
   property of a test and its data, and the 0.25 directional discount is documented as
@@ -236,6 +253,14 @@ version and a single behavioural contract
   missing year and on the `Int64` years of a resumed checkpoint. The recipe is now a
   function, `scopus_corpus_to_tf()`, shown in full in both languages and run by both
   test suites on a stand-in corpus.
+- The landscape statuses are described as what they are. Under-theorised means that none of
+  the registered accounts addresses a theme, and crowded that two or more do, which calls
+  for predictions that discriminate between them. The methodology and literature pages,
+  the READMEs and the apps called a crowded theme a redundancy risk, and the apps one where
+  a new theory would add little. The literature pages and the apps' help say that
+  connected components put nearly every keyword of a real corpus in one theme, and the
+  literature pages show the warning. The R article's example theory is titled after its
+  phenomenon, since a title naming its constructs now leaves them unmatched.
 - CONTRIBUTING installs the docs extra needed by `mkdocs build`.
 - The schema documents `risk_score` and `severity_at_test` as informational fields that
   no function reads.

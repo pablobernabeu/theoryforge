@@ -125,7 +125,7 @@ test_that("keyword sorting is codepoint-ordered regardless of locale", {
       list(id = "w2", keywords = list("Zeta", "alpha"))
     )
   )
-  lm <- tf_litmap(corpus)
+  lm <- one_theme(tf_litmap(corpus))
   expect_equal(unlist(lm$keywords), c("Zeta", "alpha"))
   expect_equal(lm$keyword_cooccurrence[[1]]$a, "Zeta")
   expect_equal(lm$keyword_cooccurrence[[1]]$b, "alpha")
@@ -304,12 +304,12 @@ test_that("integer references become decimal strings beside DOIs", {
   # as.character() would have written 1e+05.
   lm <- tf_litmap(two_records("references", list(100000, "a")))
   expect_identical(edge_strings(lm$co_citation), "100000|a|2")
-  kw <- tf_litmap(two_records("keywords", list(7L, "seven")))
+  kw <- one_theme(tf_litmap(two_records("keywords", list(7L, "seven"))))
   expect_identical(unlist(kw$keywords), c("7", "seven"))
 })
 
 test_that("null, missing and empty entries are dropped", {
-  lm <- tf_litmap(two_records("keywords", list("a", NULL, NA, "", "b")))
+  lm <- one_theme(tf_litmap(two_records("keywords", list("a", NULL, NA, "", "b"))))
   expect_identical(unlist(lm$keywords), c("a", "b"))
   expect_identical(edge_strings(lm$keyword_cooccurrence), "a|b|2")
 })
@@ -403,6 +403,192 @@ test_that("tf_landscape does not count co-citation", {
   calls <- 0L
   tf_litmap(corpus)
   expect_identical(calls, 2L)
+})
+
+# -- landscape: matched terms, field and phenomenon words (API_SPEC.md section 15) --
+# The Python suite runs the same cases and expects the same results.
+
+# A corpus holding each keyword vector in two records, so each pair is linked.
+paired <- function(...) {
+  lists <- list(...)
+  records <- list()
+  for (i in seq_along(lists)) {
+    for (j in 1:2) {
+      records[[length(records) + 1L]] <- list(id = sprintf("r%d%d", i - 1L, j),
+                                              keywords = as.list(lists[[i]]))
+    }
+  }
+  list(schema_version = "1.0", id = "c", records = records)
+}
+
+# A theory with `title`, one construct per label and list(id, label, key
+# constructs) rivals.
+account <- function(title, labels = character(0), alternatives = list()) {
+  list(
+    schema_version = "1.0", id = "t", title = title, maturity = "draft",
+    constructs = lapply(seq_along(labels), function(i) {
+      list(id = paste0("c", i - 1L), label = labels[[i]], definition = "d")
+    }),
+    alternatives = lapply(alternatives, function(a) {
+      list(id = a[[1L]], label = a[[2L]], key_constructs = as.list(a[[3L]]))
+    })
+  )
+}
+
+statuses <- function(ls) vapply(ls$themes, function(th) th$status, character(1))
+
+test_that("tf_landscape reports the terms behind every match", {
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  ls <- tf_landscape(theory, tf_read_corpus(tf_fixture_path("panic-corpus.yaml")))
+  expect_identical(names(ls), c("theory_id", "max_token_share", "field_tokens",
+                                "phenomenon_tokens", "themes", "under_theorised_fronts",
+                                "redundancy_risk"))
+  expect_identical(ls$max_token_share, 0.5)
+  expect_identical(ls$field_tokens, list())
+  expect_identical(ls$phenomenon_tokens, list("disorder", "network", "panic", "theory"))
+  expect_identical(names(ls$themes[[1]]), c("id", "keywords", "alternatives", "focal", "status",
+                                            "focal_terms", "alternative_terms"))
+  terms <- lapply(ls$themes, function(th) list(th$focal_terms, th$alternative_terms))
+  expect_identical(terms, list(
+    list(list(), list(list(id = "alt_cognitive", terms = list("catastrophic", "misinterpretation")))),
+    list(list("arousal"), list(list(id = "alt_biological", terms = list("arousal")))),
+    list(list("avoidance"), list()),
+    list(list(), list())
+  ))
+  # One shared word is enough. A rule that wanted two left every theme of real
+  # corpora under-theorised, so it was not adopted.
+  expect_identical(statuses(ls), c("covered", "crowded", "covered", "under_theorised"))
+})
+
+test_that("a word of the title no longer crowds a theme", {
+  # "panic disorder" on the two genetics records made theme_4 crowded through
+  # "panic" and "disorder", words of the title that every account of panic
+  # shares, and left the corpus with no under-theorised front.
+  corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
+  for (i in 7:8) {
+    corpus$records[[i]]$keywords <- c(corpus$records[[i]]$keywords, list("panic disorder"))
+  }
+  ls <- tf_landscape(tf_read(tf_fixture_path("panic-network.theory.yaml")), corpus)
+  th4 <- ls$themes[[4]]
+  expect_identical(unlist(th4$keywords), c("genetics", "heritability", "panic disorder"))
+  expect_identical(list(th4$status, th4$focal, th4$alternatives),
+                   list("under_theorised", FALSE, list()))
+  expect_identical(list(th4$focal_terms, th4$alternative_terms), list(list(), list()))
+  expect_identical(unlist(ls$under_theorised_fronts), "theme_4")
+})
+
+test_that("a construct word in the title counts as a phenomenon word", {
+  ls <- tf_landscape(account("Arousal and threat", "Arousal"),
+                     paired(c("arousal", "threat"), c("avoidance", "exposure")))
+  expect_identical(ls$phenomenon_tokens, list("arousal", "threat"))
+  expect_identical(vapply(ls$themes, function(th) th$focal, logical(1)), c(FALSE, FALSE))
+  expect_identical(statuses(ls), c("under_theorised", "under_theorised"))
+})
+
+test_that("words that name a kind of account never match", {
+  expect_identical(sort(.tf_THEORY_WORDS, method = "radix"), c(
+    "account", "accounts", "approach", "approaches", "framework", "frameworks",
+    "hypotheses", "hypothesis", "model", "models", "theories", "theory"))
+  corpus <- paired(c("model fit", "structural equations"), c("updating", "working memory"))
+  theory <- account("Executive control in ageing", c("Working memory capacity", "Mental model"),
+                    list(list("alt_speed", "Processing-speed model", "slowing")))
+  themes <- tf_landscape(theory, corpus)$themes
+  # "model" made theme_1 crowded, through a construct label and a rival's label.
+  expect_identical(list(themes[[1]]$status, themes[[1]]$focal, themes[[1]]$alternatives),
+                   list("under_theorised", FALSE, list()))
+  expect_identical(list(themes[[2]]$status, themes[[2]]$focal_terms),
+                   list("covered", list("memory", "working")))
+})
+
+test_that("words most of the corpus shares are field tokens", {
+  corpus <- paired(c("anxiety sensitivity", "interoception"), c("anxiety disorders", "exposure"),
+                   c("genetics", "heritability"))
+  theory <- account("Panic as a learned alarm", "Anxiety")
+  # "anxiety" is in four of the six records, more than half.
+  ls <- tf_landscape(theory, corpus)
+  expect_identical(ls$field_tokens, list("anxiety"))
+  expect_identical(statuses(ls), rep("under_theorised", 3L))
+  # A rival's words meet the same theme tokens, so a field token matches neither.
+  rival <- account("Panic as a learned alarm", character(0),
+                   list(list("alt_anx", "Trait anxiety", character(0))))
+  expect_identical(statuses(tf_landscape(rival, corpus)), rep("under_theorised", 3L))
+  loose <- tf_landscape(theory, corpus, max_token_share = 0.7)
+  expect_identical(list(loose$max_token_share, loose$field_tokens), list(0.7, list()))
+  expect_identical(lapply(loose$themes, function(th) th$focal_terms),
+                   list(list("anxiety"), list("anxiety"), list()))
+  expect_identical(statuses(loose), c("covered", "covered", "under_theorised"))
+  # A share equal to max_token_share is not more than it.
+  two <- paired(c("anxiety sensitivity", "interoception"), c("anxiety disorders", "exposure"))
+  expect_identical(tf_landscape(theory, two, max_token_share = 1)$field_tokens, list())
+  expect_identical(tf_landscape(theory, two, max_token_share = 0)$field_tokens,
+                   list("anxiety", "disorders", "exposure", "interoception", "sensitivity"))
+})
+
+test_that("alternative terms follow the alternative id order", {
+  theory <- account("A theory of panic", character(0), list(
+    list("alt_z", "Arousal account", character(0)),
+    list("alt_a", "Interoceptive accuracy", "interoception")
+  ))
+  corpus <- paired(c("arousal", "interoception"), c("genetics", "heritability"))
+  th1 <- tf_landscape(theory, corpus)$themes[[1]]
+  expect_identical(th1$alternatives, list("alt_a", "alt_z"))
+  expect_identical(th1$alternative_terms, list(list(id = "alt_a", terms = list("interoception")),
+                                               list(id = "alt_z", terms = list("arousal"))))
+  expect_identical(th1$status, "crowded")
+})
+
+test_that("tf_landscape refuses a max_token_share outside 0 to 1", {
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
+  for (bad in list(-0.1, 1.5, "0.5", TRUE, NULL, NA, NA_real_, NaN, Inf, c(0.2, 0.3), list(0.5))) {
+    expect_refusal(tf_landscape(theory, corpus, max_token_share = bad),
+                   "max_token_share must be a number between 0 and 1")
+  }
+})
+
+test_that("tf_landscape checks min_link, then max_token_share, then the corpus", {
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  misspelt <- list(schema_version = "1.0", id = "c", recrods = list())
+  expect_refusal(tf_landscape(theory, misspelt, min_link = 0, max_token_share = 2),
+                 "min_link must be a positive integer")
+  expect_refusal(tf_landscape(theory, misspelt, max_token_share = 2),
+                 "max_token_share must be a number between 0 and 1")
+  expect_refusal(tf_landscape(theory, misspelt), "invalid corpus: missing records list")
+})
+
+giant_theme <- function(p, n) {
+  sprintf(paste("litmap: one theme holds %s per cent of the %d linked keywords; connected",
+                "components cannot separate themes in a corpus this connected, so the themes",
+                "and any landscape built on them are not informative"), p, n)
+}
+
+# The messages of the warnings that evaluating `expr` gives.
+warnings_of <- function(expr) {
+  got <- character(0)
+  withCallingHandlers(expr, warning = function(w) {
+    got <<- c(got, conditionMessage(w))
+    invokeRestart("muffleWarning")
+  })
+  got
+}
+
+test_that("tf_litmap warns when one theme holds most linked keywords", {
+  corpus <- paired(c("k1", "k2", "k3", "k4"), c("m1", "m2"))
+  expect_identical(warnings_of(lm <- tf_litmap(corpus)), giant_theme("66.7", 6L))
+  expect_identical(vapply(lm$themes, function(th) th$size, integer(1)), c(4L, 2L))
+  # tf_landscape() is built on the same themes and warns alike.
+  expect_identical(warnings_of(tf_landscape(account("A theory of panic"), corpus)),
+                   giant_theme("66.7", 6L))
+  expect_identical(warnings_of(tf_litmap(paired(c("alpha", "Zeta")))), giant_theme("100.0", 2L))
+  # The text is the whole message, with no call before it, as in Python.
+  w <- tryCatch(tf_litmap(corpus), warning = function(w) w)
+  expect_null(conditionCall(w))
+})
+
+test_that("tf_litmap is silent when no theme holds more than half", {
+  expect_silent(tf_litmap(paired(c("a1", "hub"), c("b1", "b2"))))  # two of four keywords: half
+  expect_silent(tf_litmap(tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))))
+  expect_silent(tf_litmap(paired()))
 })
 
 four_edges <- function() {

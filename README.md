@@ -52,8 +52,10 @@ DEVELOPMENT is the Lakatosian progressive/degenerating appraisal of an amendment
 the severity rubric, a pre-data ranking of claim form, with its preregistration export.
 
 A bibliometric layer connects a theory to its field. `litmap` derives keyword co-occurrence,
-connected-component themes and co-citation. `landscape` then maps a theory and its alternatives
-onto those themes, flagging under-theorised fronts and redundancy risk. Three literature
+connected-component themes and co-citation, and warns when one theme holds most of the linked
+keywords, which happens on real corpora. `landscape` then maps a theory and its alternatives
+onto those themes, names the words behind each match and marks each theme under-theorised,
+covered or crowded by how many of the registered accounts address it. Three literature
 diagrams draw those maps. The `fetch_corpus` adapter assembles a corpus from OpenAlex, the one
 part of this layer that needs a network connection, and `new_evidence_dois` checks
 deterministically which candidate DOIs, from any search tool, a theory does not yet cite.

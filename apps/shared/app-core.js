@@ -56,12 +56,12 @@
     },
     {
       id: "litmap", label: "Literature map", desc: "Co-occurrence, themes, co-citation", corpus: true,
-      help: "Maps the bundled literature corpus: keyword co-occurrence, connected-component themes and co-citation. min_link is the minimum number of records a pair must share to count as a link.",
+      help: "Maps the bundled literature corpus: keyword co-occurrence, connected-component themes and co-citation. min_link is the minimum number of records a pair must share to count as a link. On a real corpus, connected components put nearly every keyword in one theme.",
       params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
     },
     {
       id: "landscape", label: "Theory landscape", desc: "Map theory onto lit themes", corpus: true,
-      help: "Positions the theory and its alternatives against the corpus themes, flagging under-theorised fronts (no theory addresses them) and redundancy risk (crowded themes).",
+      help: "Positions the theory and its alternatives against the corpus themes and names the words behind each match. A theme is under-theorised when none of the registered accounts addresses it, and crowded when two or more do, which calls for predictions that tell them apart.",
       params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
     },
   ];
@@ -363,8 +363,8 @@
     preregister: "The preregistration lists each hypothesis with its derivation and severity, in file order, ready to timestamp before data collection.",
     dossier: "The dossier gathers the rigour report, severity, provenance and preregistration into one reviewer-facing document.",
     simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, causes, mediates) or down (decreases) in proportion to another, with one gain k for every coupling, and every construct decays towards zero at the damping rate. Moderates and associates couple nothing. All constructs start from the same value. The chart traces the values from the initial state, and the table below holds the numbers.",
-    litmap: "The bundled corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked.",
-    landscape: "The theory and its rivals are placed against the corpus themes. Under-theorised fronts are themes no theory addresses. Redundancy risk marks crowded themes where a new theory would add little.",
+    litmap: "The bundled corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked. A theme is a connected group of keywords, which separates this small designed corpus into four. On a real corpus, nearly every keyword joins one group, and the package warns that such themes are not informative.",
+    landscape: "The theory and its rivals are placed against the corpus themes by the words a theme's keywords share with the theory's construct labels, or with a rival's label and key constructs. Words of the theory's title, words most records carry and words such as theory or model do not count. Under-theorised fronts are themes that none of the registered accounts addresses. Crowded themes are addressed by two or more of them and call for predictions that discriminate between the accounts.",
   };
   const fmtNum = (x) => (typeof x === "number" ? (Number.isInteger(x) ? String(x) : x.toFixed(2)) : String(x));
   const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
@@ -448,7 +448,7 @@
     }
     if (opId === "landscape") {
       const r = raw.result;
-      return plural(asArr(r.themes).length, "theme") + " mapped. " + plural(asArr(r.under_theorised_fronts).length, "front") + " under-theorised, " + plural(asArr(r.redundancy_risk).length, "theme") + " at redundancy risk.";
+      return plural(asArr(r.themes).length, "theme") + " mapped. " + plural(asArr(r.under_theorised_fronts).length, "front") + " under-theorised, " + plural(asArr(r.redundancy_risk).length, "theme") + " crowded.";
     }
     return "";
   }
@@ -593,7 +593,7 @@
         themes.map((t) => Object.assign({}, t, { focal: t.focal ? "yes" : "—", keywords: asArr(t.keywords), alternatives: asArr(t.alternatives) }))));
       sections.push(kvSection("Flags", [
         ["Under-theorised fronts", asArr(r.under_theorised_fronts).join(", ") || "—"],
-        ["Redundancy risk", asArr(r.redundancy_risk).join(", ") || "—"],
+        ["Crowded themes", asArr(r.redundancy_risk).join(", ") || "—"],
       ]));
       if (raw.dot) sections.push(figureSection("Theme landscape", await renderDot(raw.dot), theoryId + ".theme_landscape"));
       sections.push(textSection("landscape JSON", JSON.stringify(r, null, 2), theoryId + ".landscape.json", "application/json"));

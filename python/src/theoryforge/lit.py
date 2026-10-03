@@ -12,15 +12,26 @@ import json
 import math
 import os
 import urllib.error
+import warnings
 from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 from ._access import field, items, ne_str, str_list, text
 from ._load import load_document
+from ._num import rnd
 from ._text import normalise_doi
 from .redundancy import tokens
 
 DEFAULT_MIN_LINK = 2
+DEFAULT_MAX_TOKEN_SHARE = 0.5
+
+# Words that name a kind of account and say nothing about what it is about, so
+# that "model" in a rival's label cannot match a theme on model fit
+# (API_SPEC.md section 15).
+THEORY_WORDS = frozenset({
+    "theory", "theories", "model", "models", "account", "accounts",
+    "hypothesis", "hypotheses", "framework", "frameworks", "approach", "approaches",
+})
 
 
 def _esc(s) -> str:
@@ -56,6 +67,17 @@ def _positive_int(value, name: str) -> int:
     if not ok:
         raise ValueError(f"{name} must be a positive integer")
     return int(value)
+
+
+def _share(value, name: str) -> float:
+    """``value`` as a float when it is one number from 0 to 1, never a bool.
+
+    NaN fails both comparisons and an infinity the upper one, so neither passes
+    (API_SPEC.md section 15).
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0 <= value <= 1:
+        raise ValueError(f"{name} must be a number between 0 and 1")
+    return float(value)
 
 
 # R holds a number read from a file as a double, which is exact for integers
@@ -171,16 +193,19 @@ def _components(edges: list[dict]) -> list[dict]:
     ]
 
 
-def _litmap(corpus, min_link, min_cocitation=None, co_citation: bool = True) -> dict:
+def _litmap(corpus, min_link, min_cocitation=None, co_citation: bool = True,
+            records: list | None = None) -> dict:
     """litmap, with the co-citation count skipped when ``co_citation`` is False.
 
     ``landscape`` reads only the themes, and on a corpus with references the
-    co-citation count is most of the work.
+    co-citation count is most of the work. It also passes the ``records`` it
+    has already checked, since it reads their keywords as well.
     """
     min_link = _positive_int(min_link, "min_link")
     min_cocitation = (min_link if min_cocitation is None
                       else _positive_int(min_cocitation, "min_cocitation"))
-    records = _records(corpus)
+    if records is None:
+        records = _records(corpus)
     keywords = [kw for kw, _ in records]
     kw_edges = _edges(_pair_counts(keywords), min_link)
     out = {
@@ -194,6 +219,27 @@ def _litmap(corpus, min_link, min_cocitation=None, co_citation: bool = True) -> 
     return out
 
 
+def _warn_if_one_theme_dominates(themes: list[dict]) -> None:
+    """Warn when the largest theme holds more than half the linked keywords.
+
+    Connected components merge every theme that shares a keyword, so the hub
+    keywords of a real corpus join it into one theme (API_SPEC.md section 14).
+    """
+    if not themes:
+        return
+    n = sum(t["size"] for t in themes)
+    largest = max(t["size"] for t in themes)
+    if 2 * largest <= n:
+        return
+    p = rnd(100 * (largest / n), 1)
+    # stacklevel 3 names the caller of litmap or landscape.
+    warnings.warn(
+        f"litmap: one theme holds {p:.1f} per cent of the {n} linked keywords; connected "
+        "components cannot separate themes in a corpus this connected, so the themes and "
+        "any landscape built on them are not informative",
+        UserWarning, stacklevel=3)
+
+
 def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, min_cocitation: int | None = None) -> dict:
     """Keyword co-occurrence, thematic components, and co-citation, all deterministic.
 
@@ -204,36 +250,95 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, min_cocitation: int | None 
     is often wanted. Both must be positive integers. The corpus is checked as
     API_SPEC.md section 14 describes: integer entries become decimal strings,
     and booleans, fractions and nested values are refused.
+
+    A theme is a connected component of the keyword map, and on a real corpus
+    a few keywords shared by most records join nearly every keyword into one.
+    When the largest theme holds more than half the linked keywords, a
+    UserWarning says so: such themes, and any landscape built on them, do not
+    describe the field. The result is returned unchanged.
     """
-    return _litmap(corpus, min_link, min_cocitation)
+    out = _litmap(corpus, min_link, min_cocitation)
+    _warn_if_one_theme_dominates(out["themes"])
+    return out
 
 
-def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
-    """Map a theory and its registered alternatives onto the literature's themes."""
+def _field_tokens(keyword_lists: list[list[str]], max_token_share: float) -> set[str]:
+    """Tokens of more than ``max_token_share`` of the records' keywords.
+
+    A record counts once for each token of its keywords, and the share is taken
+    over every record, those without keywords included.
+    """
+    n = len(keyword_lists)
+    counts: dict[str, int] = {}
+    for kws in keyword_lists:
+        for t in tokens(" ".join(kws)):
+            counts[t] = counts.get(t, 0) + 1
+    return {t for t, c in counts.items() if c / n > max_token_share}
+
+
+def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
+              max_token_share: float = DEFAULT_MAX_TOKEN_SHARE) -> dict:
+    """Map a theory and its registered alternatives onto the literature's themes.
+
+    A theme is matched by the words its keywords share with the focal theory's
+    construct labels, or with an alternative's label and key constructs, and
+    every match reports those words (``focal_terms``, ``alternative_terms``).
+    Three kinds of word never match. Field tokens, the words most of the corpus
+    shares, are those in the keywords of more than ``max_token_share`` of the
+    records. Phenomenon tokens are the words of the theory's title, which names
+    the phenomenon that the focal theory and its rivals all explain. A
+    construct word that also appears in the title does not match either. The
+    third kind is the words that name a kind of account, held in
+    ``theoryforge.lit.THEORY_WORDS``: theory, model, account, hypothesis,
+    framework and approach, with their plurals. One shared word is enough for
+    a match.
+
+    A theme is ``under_theorised`` when none of the registered accounts (the
+    focal theory and its registered alternatives) addresses it, ``covered``
+    when one does and ``crowded`` when two or more do. A crowded theme calls for
+    predictions that discriminate between the accounts, and is not a finding of
+    redundancy. The two lists keep their 0.6.0 keys, ``under_theorised_fronts``
+    and ``redundancy_risk``.
+
+    ``min_link`` must be a positive integer and ``max_token_share`` a number
+    from 0 to 1, checked in that order and before the corpus (API_SPEC.md
+    section 15). The themes are litmap's, and the same warning is given when
+    one of them holds most of the linked keywords.
+    """
     T = theory.data if hasattr(theory, "data") else theory
-    lm = _litmap(corpus, min_link, co_citation=False)
+    min_link = _positive_int(min_link, "min_link")
+    max_token_share = _share(max_token_share, "max_token_share")
+    records = _records(corpus)
+    lm = _litmap(corpus, min_link, co_citation=False, records=records)
+    _warn_if_one_theme_dominates(lm["themes"])
 
-    focal_src = " ".join(
-        [text(T.get("title"))] + [text(field(c, "label")) for c in items(T, "constructs")]
+    field_tokens = _field_tokens([kw for kw, _ in records], max_token_share)
+    phenomenon_tokens = tokens(text(T.get("title")))
+    excluded = phenomenon_tokens | THEORY_WORDS
+    focal_tokens = tokens(" ".join(text(field(c, "label")) for c in items(T, "constructs"))) - excluded
+    # Sorted by id once, stably, so a repeated id keeps its file order.
+    alts = sorted(
+        ((text(field(a, "id")),
+          tokens(" ".join([text(field(a, "label"))] + str_list(field(a, "key_constructs")))) - excluded)
+         for a in items(T, "alternatives")),
+        key=lambda alt: alt[0],
     )
-    focal_tokens = tokens(focal_src)
-    alts = items(T, "alternatives")
 
     themes_out = []
     under, crowded = [], []
     for th in lm["themes"]:
-        th_tokens = tokens(" ".join(th["keywords"]))
-        on = sorted(
-            text(field(a, "id")) for a in alts
-            if tokens(" ".join([text(field(a, "label"))] + str_list(field(a, "key_constructs"))))
-            & th_tokens
-        )
-        focal_on = bool(focal_tokens & th_tokens)
+        th_tokens = tokens(" ".join(th["keywords"])) - field_tokens - THEORY_WORDS
+        focal_terms = sorted(focal_tokens & th_tokens)
+        alt_terms = [{"id": aid, "terms": sorted(a_tokens & th_tokens)}
+                     for aid, a_tokens in alts if a_tokens & th_tokens]
+        on = [a["id"] for a in alt_terms]
+        focal_on = bool(focal_terms)
         n = len(on) + (1 if focal_on else 0)
         status = "under_theorised" if n == 0 else ("crowded" if n >= 2 else "covered")
         themes_out.append({
             "id": th["id"], "keywords": th["keywords"],
             "alternatives": on, "focal": focal_on, "status": status,
+            "focal_terms": focal_terms, "alternative_terms": alt_terms,
         })
         if status == "under_theorised":
             under.append(th["id"])
@@ -242,6 +347,9 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK) -> dict:
 
     return {
         "theory_id": text(T.get("id")),
+        "max_token_share": max_token_share,
+        "field_tokens": sorted(field_tokens),
+        "phenomenon_tokens": sorted(phenomenon_tokens),
         "themes": themes_out,
         "under_theorised_fronts": under,
         "redundancy_risk": crowded,
@@ -262,8 +370,9 @@ def _undirected(name: str, edges: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
-# Theme colours track the landscape statuses: an untouched front is teal (an
-# opportunity), a crowded one amber (a redundancy risk), a covered one grey.
+# Theme colours track the landscape statuses: a theme no registered account
+# addresses is teal, one that two or more address is amber and a covered one
+# grey.
 _THEME_ROLE = {"under_theorised": "construct", "crowded": "proposition", "covered": "covered"}
 
 

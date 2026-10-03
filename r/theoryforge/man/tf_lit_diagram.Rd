@@ -31,7 +31,9 @@ corpus <- list(
   schema_version = "1.0", id = "demo-corpus",
   records = list(
     list(id = "w1", keywords = list("arousal", "threat")),
-    list(id = "w2", keywords = list("arousal", "threat"))
+    list(id = "w2", keywords = list("arousal", "threat")),
+    list(id = "w3", keywords = list("avoidance", "exposure")),
+    list(id = "w4", keywords = list("avoidance", "exposure"))
   )
 )
 cat(tf_lit_diagram(tf_litmap(corpus), "keyword_cooccurrence"))

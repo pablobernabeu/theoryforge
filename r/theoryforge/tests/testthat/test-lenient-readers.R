@@ -79,7 +79,7 @@ test_that("every consumer reads entries that are not mappings", {
   red <- tf_redundancy_check(t)
   expect_identical(red$a, "")
   expect_identical(red$similarity, 0.0)
-  expect_identical(tf_landscape(t, lr_corpus)$theory_id, "t")
+  expect_identical(one_theme(tf_landscape(t, lr_corpus))$theory_id, "t")
   expect_identical(tf_new_evidence_dois(t, "10.1/x"), "10.1/x")
   expect_identical(tf_osf_push(t)$request$filename, "t.dossier.md")
   qmd <- tf_render_report(t, tempfile(fileext = ".qmd"))

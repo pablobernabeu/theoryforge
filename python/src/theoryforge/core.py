@@ -614,9 +614,12 @@ class Theory:
         """Render a preregistration document (and write it if a path is given)."""
         return _preregister(self.data, path)
 
-    def landscape(self, corpus, min_link: int = 2) -> dict:
-        """Map this theory and its alternatives onto a literature corpus's themes."""
-        return _landscape(self.data, corpus, min_link=min_link)
+    def landscape(self, corpus, min_link: int = 2, max_token_share: float = 0.5) -> dict:
+        """Map this theory and its alternatives onto a literature corpus's themes.
+
+        See :func:`theoryforge.landscape` for the matching rules and statuses.
+        """
+        return _landscape(self.data, corpus, min_link=min_link, max_token_share=max_token_share)
 
     def new_evidence_dois(self, candidate_dois: list) -> list:
         """DOIs in `candidate_dois` not already cited by this theory's evidence or alternatives."""

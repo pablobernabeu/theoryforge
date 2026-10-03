@@ -68,6 +68,8 @@ CORPUS = {"schema_version": "1.0", "id": "c", "records": [
 ]}
 
 
+# CORPUS forms one theme, so landscape warns that it holds every linked keyword.
+@pytest.mark.filterwarnings("ignore:litmap:UserWarning")
 def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
     # Python raised "'str' object has no attribute 'get'" in nearly every one.
     t = _read(tmp_path, SCALAR_ENTRIES)

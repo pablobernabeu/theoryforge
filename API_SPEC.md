@@ -416,7 +416,7 @@ New API (mirrored):
 |---|---|---|
 | Read corpus | `tf_read_corpus(path)` | `theoryforge.read_corpus(path)` |
 | Bibliometric map | `tf_litmap(corpus, min_link=2, min_cocitation=NULL)` | `theoryforge.litmap(corpus, min_link=2, min_cocitation=None)` |
-| Theory landscape | `tf_landscape(theory, corpus, min_link=2)` | `theory.landscape(corpus)` / `theoryforge.landscape(theory, corpus)` |
+| Theory landscape | `tf_landscape(theory, corpus, min_link=2, max_token_share=0.5)` | `theory.landscape(corpus, min_link=2, max_token_share=0.5)` / `theoryforge.landscape(theory, corpus, ...)` |
 | Lit diagram | `tf_lit_diagram(obj, type, max_edges=NULL)` | `theoryforge.lit_diagram(obj, type, max_edges=None)` |
 | OpenAlex fetch (assistive) | `tf_fetch_corpus(query, ...)` | `theoryforge.fetch_corpus(query, ...)` |
 | New-DOI check | `tf_new_evidence_dois(theory, candidate_dois)` | `theory.new_evidence_dois(candidate_dois)` / `theoryforge.new_evidence_dois(theory, candidate_dois)` |
@@ -434,6 +434,8 @@ Records iterate in file order. `min_link` defaults to 2 and `min_cocitation` (R:
 
 Co-citation maps of real corpora are large: 200 OpenAlex records on panic disorder give 11,211 reference pairs at a threshold of 2 (9,249 of them with a count of exactly 2) against 616 keyword pairs, so `min_cocitation` thresholds them separately, and `lit_diagram`'s `max_edges` (§16) draws only the strongest. R generates each record's pairs at once and counts them all at the end, so its time grows in proportion to the number of pairs, as Python's does, and not with its square.
 
+**One theme that holds most of the map.** A connected component merges any two themes that share a keyword, and the few keywords that most records of a real corpus carry join nearly every keyword into one. Seven OpenAlex corpora of 100 to 600 records, on six topics, each gave a largest theme holding 98.8 to 100 per cent of the linked keywords at the default threshold. Let `n` be the number of keywords in `keyword_cooccurrence` (the sum of the theme sizes) and `largest` the size of the largest theme. When `2 * largest > n`, litmap warns (Python `UserWarning`, R `warning(call. = FALSE)`) with `litmap: one theme holds <p> per cent of the <n> linked keywords; connected components cannot separate themes in a corpus this connected, so the themes and any landscape built on them are not informative`. `<p>` is `rnd(100 * (largest / n), 1)` written with one decimal (`%.1f`), and `<n>` is written in decimal digits. A theme of exactly half the linked keywords gives no warning. The result is returned unchanged, and landscape (§15), which reads the same themes, gives the same warning. No golden or edge record holds the warning, and both test suites pin its text.
+
 **Arguments.** `min_link`, `min_cocitation` (when given) and `lit_diagram`'s `max_edges` (when given) must each be one integral number of at least 1, or the call raises `<name> must be a positive integer`. Python accepts an int or an integral float and never a bool. R accepts a numeric of length 1 that is finite and integral, so a logical, a string, `NA` and a vector of two values are refused, and keeps a value beyond its integer range as a double. 0 and negative values, which counted as 1, are refused too. The arguments are checked in the order `min_link`, `min_cocitation`, then the corpus.
 
 **Corpus records.** Both languages check the corpus before counting, raise the first problem found and agree on every message:
@@ -446,15 +448,22 @@ Co-citation maps of real corpora are large: 200 OpenAlex records on panic disord
 
 The corpora in `fixtures/edge/*.corpus.*` pin these rules in both languages (§7).
 
-## 15. landscape(theory, corpus, min_link=2): deterministic
+## 15. landscape(theory, corpus, min_link=2, max_token_share=0.5): deterministic
 
-Compute `lm = litmap(corpus, min_link)`, with the same argument and corpus checks (§14) but without the co-citation count, which the landscape does not read and which is most of the work on a corpus with references. Using the §6 tokeniser:
-- `focal_tokens = tokens(theory.title + " " + join(construct.label for construct in constructs))`.
-- For each theme (in litmap order): `theme_tokens = tokens(join(theme.keywords))`.
-  - `alternatives` = sorted alt ids where `tokens(alt.label + " " + join(alt.key_constructs)) ∩ theme_tokens` is non-empty.
-  - `focal` = `focal_tokens ∩ theme_tokens` non-empty.
-  - `n = len(alternatives) + (1 if focal else 0)`; `status = "under_theorised"` if `n==0`, `"crowded"` if `n>=2`, else `"covered"`.
-- Returns `{theory_id, themes:[{id, keywords, alternatives, focal, status}], under_theorised_fronts:[ids with under_theorised], redundancy_risk:[ids with crowded]}`.
+The arguments are checked in the order `min_link` (§14), `max_token_share`, then the corpus (§14). `max_token_share` must be one number from 0 to 1, or the call raises `max_token_share must be a number between 0 and 1`. Python accepts an int or a float and never a bool, R a numeric of length 1 that is not `NA`, and NaN and the infinities are refused in both. Compute `lm = litmap(corpus, min_link)` without the co-citation count, which the landscape does not read and which is most of the work on a corpus with references. It warns as litmap does (§14). Using the §6 tokeniser, with `join` joining strings with a space:
+
+- `THEORY_WORDS = {theory, theories, model, models, account, accounts, hypothesis, hypotheses, framework, frameworks, approach, approaches}`. These words name a kind of account, not what it is about.
+- `field_tokens`: each record's token set is `tokens(join(record.keywords))`, and a token is a field token when the number of records whose set holds it, divided by the number of records (`n_records`, records without keywords included), is greater than `max_token_share`. A word that most of the corpus carries cannot tell its themes apart.
+- `phenomenon_tokens = tokens(theory.title)`. The title names the phenomenon that the focal theory and its rivals explain, so its words are shared by every account. A construct word that also appears in the title is therefore a phenomenon word too.
+- `focal_tokens = tokens(join(construct.label for construct in constructs)) − phenomenon_tokens − THEORY_WORDS`. The title is not a source of focal tokens.
+- For each alternative: `alt_tokens = tokens(alt.label + " " + join(alt.key_constructs)) − phenomenon_tokens − THEORY_WORDS`.
+- For each theme (in litmap order): `theme_tokens = tokens(join(theme.keywords)) − field_tokens − THEORY_WORDS`.
+  - `focal_terms` = `focal_tokens ∩ theme_tokens`, sorted, and `focal` = `focal_terms` non-empty.
+  - `alternative_terms` = `[{id, terms}]` with one entry for each alternative whose `terms = alt_tokens ∩ theme_tokens`, sorted, is non-empty. The entries are in alternative id order, a stable sort, so repeated ids keep their file order. `alternatives` = the ids of `alternative_terms`, in the same order. `alternative_terms` is a list, so an empty one is `[]` in both languages.
+  - `n = len(alternatives) + (1 if focal else 0)`; `status = "under_theorised"` if `n==0`, `"crowded"` if `n>=2`, else `"covered"`. One shared token is enough. A rule requiring two made every theme of three real corpora under-theorised, so it was rejected.
+- Returns `{theory_id, max_token_share, field_tokens, phenomenon_tokens, themes:[{id, keywords, alternatives, focal, status, focal_terms, alternative_terms}], under_theorised_fronts:[ids with under_theorised], redundancy_risk:[ids with crowded]}`, keys in this order. `max_token_share` is the value used, as a float, and every token list is sorted by code point.
+
+**What the statuses mean.** They count the registered accounts, the focal theory and its registered alternatives, that address a theme. `under_theorised` means that none of them addresses it, which says nothing of accounts the theory does not register. `crowded` means that two or more do, which calls for predictions that discriminate between them, and is not evidence that the accounts are redundant. The keys `under_theorised_fronts` and `redundancy_risk` keep their 0.6.0 names.
 
 ## 16. Lit diagrams (byte-identical)
 
