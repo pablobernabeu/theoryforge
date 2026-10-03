@@ -35,13 +35,16 @@ def test_severity_rubric(panic_path):
 
 
 def test_appraisal_progressive(fixtures_dir):
+    # v2 adds proposition p4 and derives pred4 from it, and a registered test
+    # corroborates pred4: new content that survived a test.
     v1 = tf.read(fixtures_dir / "panic-network.theory.yaml")
     v2 = tf.read(fixtures_dir / "panic-network-2026-v2.theory.yaml")
-    a = v2.appraise_amendment(v1)
-    assert a["verdict"] == "progressive"
-    assert a["new_predictions"] == ["pred4"]
-    assert a["corroborated_new"] == ["pred4"]
-    assert a["ad_hoc_assumptions"] == []
+    assert v2.appraise_amendment(v1) == {
+        "verdict": "progressive", "new_predictions": ["pred4"], "corroborated_new": ["pred4"],
+        "ad_hoc_assumptions": [], "articulated": [], "underived": [],
+        "corroborated_new_registered": ["pred4"], "renamed": [], "dropped": [],
+        "dropped_corroborated": [], "content_lost": [], "new_anomalies": [], "assumptions": [],
+    }
 
 
 def test_appraisal_degenerating(fixtures_dir):

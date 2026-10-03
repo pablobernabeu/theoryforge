@@ -7,3 +7,4 @@ c_avoidance =~ behavioural_avoidance_task + diary_counts
 c_perceived_threat ~ c_arousal
 c_avoidance ~ c_perceived_threat
 c_arousal ~ c_perceived_threat
+c_avoidance ~ c_arousal

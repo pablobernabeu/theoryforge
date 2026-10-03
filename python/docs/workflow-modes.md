@@ -144,8 +144,10 @@ print([p["id"] for p in amended.data["predictions"]])
 DEVELOPMENT compares two versions of a theory and judges whether an
 amendment is an improvement. The appraisal operationalises the Lakatosian
 distinction between progressive and degenerating problem shifts. An
-amendment is progressive when it yields newly corroborated predictions
-without resorting to ad-hoc immunising assumptions.
+amendment is progressive when it adds content its prior version lacked and a
+test corroborates a prediction derived from that content, with no ad hoc
+assumption added and no corroborated prediction dropped. The two versions are
+compared by what they claim, not by the ids of their predictions.
 
 Call `appraise_amendment` on the newer version, passing the prior version as
 the argument. The two versions must be distinct objects, as they are when the
@@ -161,33 +163,58 @@ result = v2.appraise_amendment(v1)
 print(result["verdict"])
 ```
 
-The return value is a dictionary with four keys.
+The shipped v2 adds proposition `p4`, a direct path from arousal to avoidance,
+and derives `pred4` from it, and a registered test corroborates `pred4`. The
+return value is a dictionary that gives the verdict and the evidence behind it.
 
 ```python
 {
     # 'progressive', 'degenerating', or 'neutral'
     "verdict": "progressive",
-    "new_predictions": ["pred4"],      # prediction ids present in v2 but not v1
-    # of those, the ones with a passed test outcome
+    "new_predictions": ["pred4"],      # in v2 but not in v1, renames excepted
+    # of those, the ones some test passes and none fails
     "corroborated_new": ["pred4"],
-    # new assumptions that protect untested predictions
+    # new assumptions added for an anomaly that nothing new corroborates
     "ad_hoc_assumptions": [],
+    "articulated": [],      # new predictions derived only from v1's propositions
+    "underived": [],        # new predictions derived from no proposition
+    # corroborated new predictions whose passing test was preregistered
+    "corroborated_new_registered": ["pred4"],
+    "renamed": [],          # {"prior": ..., "new": ...}: one claim under a new id
+    "dropped": [],          # predictions of v1 that v2 no longer holds
+    "dropped_corroborated": [],  # of those, the ones v1 had corroborated
+    "content_lost": [],     # of those, the ones v1 had never tested
+    "new_anomalies": [],    # retained predictions that now fail a test
+    # one record per new assumption added for an anomaly, with its class
+    "assumptions": [],
 }
 ```
 
-The verdict depends on the recorded test outcomes and any new auxiliary
-assumptions in the newer version. The rule is as follows.
+The verdict reads the content of both versions and the recorded test
+outcomes. The rule is as follows.
 
-- `progressive`: at least one new prediction is corroborated and no ad-hoc
-  assumptions were added.
-- `degenerating`: at least one ad-hoc assumption was added and no new
-  prediction is corroborated.
-- `neutral`: any other combination.
+- `progressive`: a corroborated new prediction adds content, no ad hoc
+  assumption was added and no corroborated prediction was dropped.
+- `degenerating`: an ad hoc assumption was added and no corroborated new
+  prediction adds content.
+- `neutral`: any other combination. Lakatos's scheme has only the two
+  verdicts above, and `neutral` is theoryforge's label for an amendment that
+  meets neither.
 
-A new prediction counts as corroborated when the newer version carries a
-matching entry under `test_outcomes` with `passed` set to `True`. A new
-auxiliary assumption counts as ad-hoc when it has an `added_for` reason but
-none of the predictions it claims to protect has a passing test outcome.
+A new prediction adds content unless it is an articulation, derived only from
+propositions that v1 already held with the same endpoints and relation and
+protected by no new assumption, or derives from no proposition at all. A
+prediction under a new id that makes the same claim as a dropped one, with the
+same statement and type, is that prediction renamed and is not new. A
+prediction counts as corroborated when at least one entry under
+`test_outcomes` passes it and none fails it.
+`added_for` holds the id of the prediction whose anomaly an assumption
+answers. A new assumption with an `added_for` counts as ad hoc unless one of
+the predictions it protects is new in this version, is not that anomaly and is
+corroborated. Re-analysing the anomaly until it passes therefore does not clear
+it. The appraisal reads `registered` only for `corroborated_new_registered`,
+and it reads no date, so which version is the prior is the caller's
+responsibility.
 
 ## TESTING
 
@@ -726,8 +753,8 @@ print(t.diagram("provenance"))
 <!-- n1 -->
 <g id="node1" class="node">
 <title>n1</title>
-<path fill="#f2f6f9" stroke="#33567a" stroke-width="1.1" d="M113.9163,-224.6015C113.9163,-224.6015 32.3245,-224.6015 32.3245,-224.6015 26.3245,-224.6015 20.3245,-218.6015 20.3245,-212.6015 20.3245,-212.6015 20.3245,-183.3985 20.3245,-183.3985 20.3245,-177.3985 26.3245,-171.3985 32.3245,-171.3985 32.3245,-171.3985 113.9163,-171.3985 113.9163,-171.3985 119.9163,-171.3985 125.9163,-177.3985 125.9163,-183.3985 125.9163,-183.3985 125.9163,-212.6015 125.9163,-212.6015 125.9163,-218.6015 119.9163,-224.6015 113.9163,-224.6015"/>
-<text text-anchor="middle" x="73.1204" y="-207.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">tf_construct</text>
+<path fill="#f2f6f9" stroke="#33567a" stroke-width="1.1" d="M113.9296,-224.6015C113.9296,-224.6015 32.3112,-224.6015 32.3112,-224.6015 26.3112,-224.6015 20.3112,-218.6015 20.3112,-212.6015 20.3112,-212.6015 20.3112,-183.3985 20.3112,-183.3985 20.3112,-177.3985 26.3112,-171.3985 32.3112,-171.3985 32.3112,-171.3985 113.9296,-171.3985 113.9296,-171.3985 119.9296,-171.3985 125.9296,-177.3985 125.9296,-183.3985 125.9296,-183.3985 125.9296,-212.6015 125.9296,-212.6015 125.9296,-218.6015 119.9296,-224.6015 113.9296,-224.6015"/>
+<text text-anchor="middle" x="73.1204" y="-207.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">tf_add_construct</text>
 <text text-anchor="middle" x="73.1204" y="-194.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Registered three</text>
 <text text-anchor="middle" x="73.1204" y="-181.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">constructs.</text>
 </g>
@@ -735,7 +762,7 @@ print(t.diagram("provenance"))
 <g id="node2" class="node">
 <title>n2</title>
 <path fill="#f2f6f9" stroke="#33567a" stroke-width="1.1" d="M130.6553,-139.0015C130.6553,-139.0015 15.5855,-139.0015 15.5855,-139.0015 9.5855,-139.0015 3.5855,-133.0015 3.5855,-127.0015 3.5855,-127.0015 3.5855,-97.7985 3.5855,-97.7985 3.5855,-91.7985 9.5855,-85.7985 15.5855,-85.7985 15.5855,-85.7985 130.6553,-85.7985 130.6553,-85.7985 136.6553,-85.7985 142.6553,-91.7985 142.6553,-97.7985 142.6553,-97.7985 142.6553,-127.0015 142.6553,-127.0015 142.6553,-133.0015 136.6553,-139.0015 130.6553,-139.0015"/>
-<text text-anchor="middle" x="73.1204" y="-122.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">tf_proposition</text>
+<text text-anchor="middle" x="73.1204" y="-122.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">tf_add_proposition</text>
 <text text-anchor="middle" x="73.1204" y="-109.1" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Linked constructs into a</text>
 <text text-anchor="middle" x="73.1204" y="-95.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">feedback network.</text>
 </g>
@@ -749,7 +776,7 @@ print(t.diagram("provenance"))
 <g id="node3" class="node">
 <title>n3</title>
 <path fill="#f2f6f9" stroke="#33567a" stroke-width="1.1" d="M134.3614,-53.4015C134.3614,-53.4015 11.8794,-53.4015 11.8794,-53.4015 5.8794,-53.4015 -.1206,-47.4015 -.1206,-41.4015 -.1206,-41.4015 -.1206,-12.1985 -.1206,-12.1985 -.1206,-6.1985 5.8794,-.1985 11.8794,-.1985 11.8794,-.1985 134.3614,-.1985 134.3614,-.1985 140.3614,-.1985 146.3614,-6.1985 146.3614,-12.1985 146.3614,-12.1985 146.3614,-41.4015 146.3614,-41.4015 146.3614,-47.4015 140.3614,-53.4015 134.3614,-53.4015"/>
-<text text-anchor="middle" x="73.1204" y="-36.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">tf_predict</text>
+<text text-anchor="middle" x="73.1204" y="-36.7" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">tf_add_prediction</text>
 <text text-anchor="middle" x="73.1204" y="-23.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Derived three predictions</text>
 <text text-anchor="middle" x="73.1204" y="-10.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">from the propositions.</text>
 </g>

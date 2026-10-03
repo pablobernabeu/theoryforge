@@ -12,16 +12,44 @@ tf_appraise_amendment(new, prior)
 \item{prior}{The prior theory object (named list).}
 }
 \value{
-A named list with \code{verdict} (one of \code{"progressive"},
-\code{"degenerating"}, \code{"neutral"}) and the ascending-sorted
-character vectors \code{new_predictions}, \code{corroborated_new},
-\code{ad_hoc_assumptions}.
+A named list whose first element, \code{verdict}, is one of
+\code{"progressive"}, \code{"degenerating"} and \code{"neutral"}.
+\code{new_predictions}, \code{corroborated_new}, \code{ad_hoc_assumptions},
+\code{articulated}, \code{underived}, \code{corroborated_new_registered},
+\code{dropped}, \code{dropped_corroborated}, \code{content_lost} and
+\code{new_anomalies} are ascending-sorted character vectors.
+\code{renamed} is a list of \code{list(prior, new)} pairs sorted by
+\code{new}, and \code{assumptions} holds one
+\code{list(id, added_for, class, independent)} per new assumption added
+for an anomaly, in file order. The four elements of earlier versions come
+first, in their old order.
 }
 \description{
-Compares an amended theory \code{new} against its \code{prior} version and
-returns a Lakatosian verdict.
+Compares an amended theory \code{new} with its \code{prior} version by
+content, not by prediction ids, and returns a Lakatosian verdict with the
+evidence behind it.
 }
 \details{
+A new prediction whose statement and type match a prediction the amendment
+dropped is that prediction renamed. A new prediction derived only from
+propositions the prior already held, and needing no new assumption,
+articulates old content. A prediction is corroborated when at least one test
+outcome passes it and none fails it. An assumption added for an anomaly (its
+\code{added_for} names the prediction it answers) is ad hoc unless a
+prediction it protects that is new in this version, other than the anomaly,
+is corroborated.
+
+The verdict is \code{"progressive"} when a corroborated new prediction is
+neither an articulation nor underived, no assumption is ad hoc and no
+corroborated prediction is dropped. It is \code{"degenerating"} when an
+assumption is ad hoc and no such prediction exists, and \code{"neutral"}
+otherwise. Lakatos has only the first two. \code{"neutral"} is
+theoryforge's label for an amendment that meets neither rule, and the
+vectors returned tell its cases apart. Only
+\code{corroborated_new_registered} reads a test outcome's
+\code{registered}, and no date or \code{version} field is read, so which
+version is the prior is the caller's responsibility.
+
 A test outcome whose \code{passed} is present and not \code{TRUE} or
 \code{FALSE}, in \code{new} (checked first) or in \code{prior}, is refused
 with the message the Python twin raises. A quoted \code{"true"} read as a
@@ -29,17 +57,25 @@ failure and could turn a progressive amendment into a degenerating one.
 }
 \examples{
 prior <- tf_theory("demo-1", "A demonstration theory") |>
-  tf_add_prediction("h1", "Effect is positive.", "directional")
+  tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
+  tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
+  tf_add_proposition("p1", "c_arousal", "c_threat", "increases") |>
+  tf_add_prediction("h1", "Threat rises with arousal.", "directional",
+                    derives_from = "p1")
 new <- prior |>
-  tf_add_prediction("h2", "Effect is exactly 0.30.", "point")
+  tf_add_construct("c_avoid", "Avoidance", "Withdrawal from feared situations.") |>
+  tf_add_proposition("p2", "c_threat", "c_avoid", "increases") |>
+  tf_add_prediction("h2", "Avoidance rises 0.3 SD per SD of threat.", "point",
+                    derives_from = "p2")
 new$test_outcomes <- list(list(prediction_id = "h2", passed = TRUE))
-tf_appraise_amendment(new, prior)
+tf_appraise_amendment(new, prior)$verdict
 }
 \references{
 Lakatos, I. (1970). Falsification and the methodology of scientific research
 programmes. In \emph{Criticism and the growth of knowledge} (pp. 91-196).
 Cambridge University Press. \doi{10.1017/cbo9781139171434.009}
 
-Meehl, P. E. (1990). Appraising and amending theories. \emph{Psychological
+Meehl, P. E. (1990a). Appraising and amending theories: The strategy of
+Lakatosian defense and two principles that warrant it. \emph{Psychological
 Inquiry}, 1(2), 108-141. \doi{10.1207/s15327965pli0102_1}
 }

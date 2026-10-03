@@ -3,7 +3,7 @@
   "schema_version": "1.0",
   "checklist_version": "1.0",
   "maturity": "testing",
-  "aggregate_score": 87.1,
+  "aggregate_score": 87.7,
   "gate": "pass",
   "n_blockers_failed": 0,
   "items": [
@@ -34,7 +34,7 @@
     {
       "id": "parsimony",
       "status": "pass",
-      "score": 0.667,
+      "score": 0.75,
       "weight": 0.08,
       "severity_if_fail": "warning",
       "citation": "Forster & Sober (1994); Lakatos (1970)"

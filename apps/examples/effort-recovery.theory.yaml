@@ -93,11 +93,11 @@ formal_model:
 
 provenance:
   - step: "1"
-    action: "tf_construct"
+    action: "tf_add_construct"
     detail: "Registered demand, fatigue and recovery constructs."
   - step: "2"
-    action: "tf_proposition"
+    action: "tf_add_proposition"
     detail: "Linked them into a negative feedback loop."
   - step: "3"
-    action: "tf_predict"
+    action: "tf_add_prediction"
     detail: "Derived three predictions, including an out-of-phase oscillation."

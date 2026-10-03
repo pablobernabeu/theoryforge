@@ -96,9 +96,12 @@ def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
     assert t.osf_push()["request"]["filename"] == "t.dossier.md"
     assert t.render_report(tmp_path / "r.qmd").endswith("r.qmd")
     prior = _read(tmp_path, HEAD + TWO_CONSTRUCTS, "prior.theory.yaml")
+    # The scalar prediction has no fields, so nothing derives it.
     assert t.appraise_amendment(prior) == {
         "verdict": "neutral", "new_predictions": [""], "corroborated_new": [],
-        "ad_hoc_assumptions": [],
+        "ad_hoc_assumptions": [], "articulated": [], "underived": [""],
+        "corroborated_new_registered": [], "renamed": [], "dropped": [],
+        "dropped_corroborated": [], "content_lost": [], "new_anomalies": [], "assumptions": [],
     }
 
 
@@ -326,9 +329,14 @@ def test_entries_without_ids_read_as_empty_ids(tmp_path):
     assert _item(t.check(), "parsimony")["status"] == "fail"
     prior = _read(tmp_path, HEAD + TWO_CONSTRUCTS, "prior.theory.yaml")
     # Python compared None with a string while sorting and raised TypeError.
+    # h1 needs the new assumption, so it is not an articulation of p1.
     assert t.appraise_amendment(prior) == {
         "verdict": "degenerating", "new_predictions": ["h1"], "corroborated_new": [],
-        "ad_hoc_assumptions": [""],
+        "ad_hoc_assumptions": [""], "articulated": [], "underived": [],
+        "corroborated_new_registered": [], "renamed": [], "dropped": [],
+        "dropped_corroborated": [], "content_lost": [], "new_anomalies": [],
+        "assumptions": [{"id": "", "added_for": "h1 failed at the first test", "class": "ad_hoc2",
+                         "independent": [{"id": "h1", "status": "untested"}]}],
     }
     two_new = IDLESS.replace("auxiliary_assumptions:", """\
   - statement: A prediction without an id.

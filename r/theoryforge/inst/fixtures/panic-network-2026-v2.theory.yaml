@@ -1,5 +1,7 @@
-# Amended version of panic-network-2026: adds one new prediction (pred4) that is
-# subsequently corroborated, with no new ad-hoc assumptions -> a PROGRESSIVE shift.
+# Amended version of panic-network-2026. It adds a direct path from arousal to
+# avoidance (proposition p4) and derives a new prediction from it (pred4). A
+# registered test corroborates pred4 and no ad hoc assumption is added, so the
+# amendment is a progressive problemshift in Lakatos's sense.
 schema_version: "1.0"
 id: "panic-network-2026-v2"
 title: "Network theory of panic disorder"
@@ -33,6 +35,7 @@ propositions:
     to: c_perceived_threat
     relation: "increases"
     mechanism: "Interoceptive feedback: rising arousal is detected and appraised as danger."
+    functional_form: "monotonic"
   - id: p2
     from: c_perceived_threat
     to: c_avoidance
@@ -43,6 +46,11 @@ propositions:
     to: c_arousal
     relation: "causes"
     mechanism: "Catastrophic appraisal triggers sympathetic activation, closing a positive loop."
+  - id: p4
+    from: c_arousal
+    to: c_avoidance
+    relation: "increases"
+    mechanism: "Bodily sensations are themselves feared, so activities that raise arousal are avoided directly, not only through the appraisal of threat."
 
 boundary_conditions: ["adults", "non-clinical baseline", "no beta-blocker medication", "waking hours", "community sample"]
 
@@ -66,7 +74,7 @@ predictions:
     severity: 0.4
     diagnostic_vs: []
   - id: pred4
-    derives_from: [p1, p2]
+    derives_from: [p4]
     statement: "Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks."
     type: "point"
     severity: 0.75
@@ -113,5 +121,8 @@ formal_model:
 
 provenance:
   - step: "1"
-    action: "tf_amend"
-    detail: "Added pred4 and its corroborating outcome."
+    action: "tf_add_proposition"
+    detail: "p4"
+  - step: "2"
+    action: "tf_add_prediction"
+    detail: "pred4"

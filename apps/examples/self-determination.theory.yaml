@@ -105,11 +105,11 @@ formal_model:
 
 provenance:
   - step: "1"
-    action: "tf_construct"
+    action: "tf_add_construct"
     detail: "Registered four basic-need and outcome constructs."
   - step: "2"
-    action: "tf_proposition"
+    action: "tf_add_proposition"
     detail: "Linked the needs to intrinsic motivation."
   - step: "3"
-    action: "tf_predict"
+    action: "tf_add_prediction"
     detail: "Derived three predictions from the propositions."

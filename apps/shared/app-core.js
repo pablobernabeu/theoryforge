@@ -33,7 +33,7 @@
       help: "Compares every pair of construct definitions by token-set Jaccard overlap and flags pairs above the redundancy threshold for review." },
     {
       id: "appraise", label: "Appraise amendment", desc: "Progressive vs degenerating", needsPrior: true,
-      help: "Compares the current theory, treated as the amendment, against a prior version and classifies the change as progressive, degenerating or neutral (Lakatos, 1970). Choose the prior version below.",
+      help: "Compares what the current theory, treated as the amendment, claims with what a prior version claims, and classifies the change as progressive or degenerating (Lakatos, 1970). Neutral is theoryforge's label for an amendment that meets neither rule. Choose the prior version below.",
       params: [{ id: "prior", label: "Prior theory", type: "theory" }],
     },
     { id: "sem", label: "SEM (lavaan)", desc: "Compile to lavaan model syntax",
@@ -358,7 +358,7 @@
     diagram: "The diagram is rendered from the package's intermediate representation, shown below the figure. Export the figure as SVG or PNG, or copy the representation to render it elsewhere.",
     severity: "The rubric grades each prediction by the form of its claim alone, so it can be read before any data exist. The risk score reflects how committal the claim is. The computed severity adjusts it down for merely directional claims and up for claims that discriminate between rival theories. Longer bars mark riskier claims. How severely a claim is tested depends on the design and the data, which the rubric does not read.",
     redundancy: "Each pair of constructs is compared by the word overlap of their definitions, the Jaccard index, which runs from 0 to 1. Pairs above the threshold are flagged for review, because near-duplicate constructs blur a theory and inflate its apparent scope.",
-    appraise: "Following Lakatos, an amendment is progressive when it adds independently testable content that survives testing, and degenerating when it mainly adds assumptions that shield the theory from refutation. The verdict and its components appear below.",
+    appraise: "An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added and no corroborated prediction dropped. It is degenerating when it adds an ad hoc assumption and no corroborated new content, and neutral otherwise. A prediction is corroborated when some test passes it and none fails it, and an assumption added for an anomaly is ad hoc unless new content it protects is corroborated. A prediction that only changed its id is a rename, and one derived only from the prior's own propositions is an articulation, so neither counts as new content. The verdict and its components appear below.",
     sem: "The constructs become a measurement model and the propositions a structural model, expressed in lavaan syntax. Paste it into an SEM fit in R or other lavaan-compatible software.",
     preregister: "The preregistration lists each hypothesis with its derivation and severity, in file order, ready to timestamp before data collection.",
     dossier: "The dossier gathers the rigour report, severity, provenance and preregistration into one reviewer-facing document.",
@@ -402,7 +402,10 @@
     }
     if (opId === "appraise") {
       const r = raw, np = asArr(r.new_predictions).length, cn = asArr(r.corroborated_new).length, ah = asArr(r.ad_hoc_assumptions).length;
-      return "The amendment is " + r.verdict + ". It introduces " + plural(np, "new prediction") + ", of which " + cn + (cn === 1 ? " is" : " are") + " corroborated, and " + plural(ah, "ad-hoc assumption") + ".";
+      const ar = asArr(r.articulated).length, dr = asArr(r.dropped).length, dc = asArr(r.dropped_corroborated).length;
+      let txt = "The amendment is " + r.verdict + ". It introduces " + plural(np, "new prediction") + ", of which " + cn + (cn === 1 ? " is" : " are") + " corroborated and " + ar + (ar === 1 ? " only articulates" : " only articulate") + " the prior's propositions, and " + plural(ah, "ad hoc assumption") + ".";
+      if (dr) txt += " It drops " + plural(dr, "prediction") + " of the prior, " + dc + " of them corroborated.";
+      return txt;
     }
     if (opId === "sem") return "The measurement model covers " + plural(c.constructs || 0, "construct") + " and the structural model " + plural(c.propositions || 0, "proposition") + ".";
     if (opId === "preregister") { const k = c.predictions || 0; return "The document preregisters " + k + (k === 1 ? " hypothesis." : " hypotheses."); }
@@ -515,7 +518,14 @@
         [
           { k: "New predictions", v: asArr(r.new_predictions).join(", ") || "—" },
           { k: "Corroborated new", v: asArr(r.corroborated_new).join(", ") || "—" },
-          { k: "Ad-hoc assumptions", v: asArr(r.ad_hoc_assumptions).join(", ") || "—" },
+          { k: "Preregistered corroborations", v: asArr(r.corroborated_new_registered).join(", ") || "—" },
+          { k: "Articulations of prior content", v: asArr(r.articulated).join(", ") || "—" },
+          { k: "Derived from no proposition", v: asArr(r.underived).join(", ") || "—" },
+          { k: "Renamed", v: asArr(r.renamed).map((p) => p.prior + " → " + p.new).join(", ") || "—" },
+          { k: "Dropped", v: asArr(r.dropped).join(", ") || "—" },
+          { k: "Dropped corroborated", v: asArr(r.dropped_corroborated).join(", ") || "—" },
+          { k: "New anomalies", v: asArr(r.new_anomalies).join(", ") || "—" },
+          { k: "Ad hoc assumptions", v: asArr(r.ad_hoc_assumptions).join(", ") || "—" },
         ], { extra: [jsonBtn(theoryId + ".appraisal.json", r)] }));
     } else if (opId === "severity") {
       const rows = asArr(raw.rows);

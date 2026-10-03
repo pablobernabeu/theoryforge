@@ -108,9 +108,13 @@
           "statement": { "type": "string" },
           "added_for": {
             "type": ["string", "null"],
-            "description": "A null value indicates a core assumption. A prediction or anomaly id indicates an assumption added in response, which is a candidate ad-hoc move."
+            "description": "A null value marks a core assumption. Otherwise, it is the id of the prediction whose anomaly the assumption was added to answer. The amendment appraisal counts such an assumption as ad hoc unless one of the predictions it protects is new in the amended version, differs from this one and is corroborated."
           },
-          "protects": { "type": "array", "items": { "type": "string" } }
+          "protects": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "The ids of the predictions the assumption shields from refutation. Only a prediction new in an amended version, other than added_for, can clear an assumption added for an anomaly."
+          }
         }
       }
     },
@@ -144,7 +148,10 @@
             "maximum": 1,
             "description": "Informational, read by no function."
           },
-          "registered": { "type": ["string", "null"] },
+          "registered": {
+            "type": ["string", "null"],
+            "description": "Where the test was preregistered, such as an OSF registration. The amendment appraisal reads it only to report which corroborations were preregistered, and no verdict depends on it."
+          },
           "date": { "type": ["string", "null"] }
         }
       }

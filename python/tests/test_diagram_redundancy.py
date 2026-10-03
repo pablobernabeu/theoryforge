@@ -21,7 +21,7 @@ def test_causal_dag(panic_path):
 
 def test_provenance(panic_path):
     dot = tf.read(panic_path).diagram("provenance")
-    assert '"n1" [label="tf_construct\\nRegistered three\\nconstructs."];' in dot
+    assert '"n1" [label="tf_add_construct\\nRegistered three\\nconstructs."];' in dot
     assert '"n1" -> "n2";' in dot
 
 

@@ -138,8 +138,9 @@ adds assumptions to absorb anomalies. `tf_appraise_amendment()` compares an
 amended theory against its prior version and returns a verdict in those terms.
 
 Here the prior is the panic-network fixture and the amended version is its 2026
-revision, which adds one new prediction that is later corroborated and
-introduces no new ad-hoc assumptions.
+revision. The revision adds a proposition, a direct path from arousal to
+avoidance, and derives from it a new prediction that a registered test later
+corroborates. It introduces no ad hoc assumption.
 
 ```{r appraise}
 v2 <- tf_read(
@@ -153,13 +154,17 @@ appraisal <- tf_appraise_amendment(v2, theory)
 appraisal$verdict
 appraisal$new_predictions
 appraisal$corroborated_new
+appraisal$articulated
 appraisal$ad_hoc_assumptions
 ```
 
-A `progressive` verdict reflects new content that survived a test. Had the
-amendment instead added assumptions tied to specific anomalies without
-generating corroborated predictions, the verdict would record that as
-degenerating.
+A `progressive` verdict reflects new content that survived a test. The
+appraisal compares what the two versions claim. A prediction that only changed
+its identifier is reported under `renamed`, and one derived only from
+propositions the prior already held is reported under `articulated` and does
+not make the amendment progressive. Had the amendment instead added
+assumptions tied to specific anomalies without generating corroborated
+predictions, the verdict would record that as degenerating.
 
 ## Compiling a measurement model
 

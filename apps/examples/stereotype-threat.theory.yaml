@@ -170,13 +170,13 @@ formal_model:
 
 provenance:
   - step: "1"
-    action: "tf_construct"
+    action: "tf_add_construct"
     detail: "Registered diagnostic framing, stereotype salience, stereotype threat, domain identification and test performance."
   - step: "2"
-    action: "tf_proposition"
+    action: "tf_add_proposition"
     detail: "Chained framing to salience to threat to performance, with domain identification moderating the threat-performance link."
   - step: "3"
-    action: "tf_predict"
+    action: "tf_add_prediction"
     detail: "Derived the within-group framing effect, the group by framing interaction, the salience activation and the identification boundary condition."
   - step: "4"
     action: "tf_diagnose"

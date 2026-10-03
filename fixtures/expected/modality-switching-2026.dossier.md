@@ -33,9 +33,9 @@
 
 ## Provenance
 
-1. tf_construct: Registered five constructs from the perceptual-symbols account of conceptual processing (Barsalou, 1999, doi:10.1017/S0140525X99002149).
-2. tf_proposition: Linked the constructs into an acyclic graph: a fork at modality activation and a collider at conceptual access.
-3. tf_predict: Derived four predictions, two of them diagnostic against a registered alternative.
+1. tf_add_construct: Registered five constructs from the perceptual-symbols account of conceptual processing (Barsalou, 1999, doi:10.1017/S0140525X99002149).
+2. tf_add_proposition: Linked the constructs into an acyclic graph: a fork at modality activation and a collider at conceptual access.
+3. tf_add_prediction: Derived four predictions, two of them diagnostic against a registered alternative.
 
 ## Preregistration
 

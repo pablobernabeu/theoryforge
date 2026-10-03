@@ -15,6 +15,14 @@ ALIASING_MESSAGE = (
     "the amendment from prior.copy()."
 )
 
+# The record of an amendment that adds nothing, keys in the order of API_SPEC.md section 10.
+NOTHING_NEW = {
+    "verdict": "neutral", "new_predictions": [], "corroborated_new": [],
+    "ad_hoc_assumptions": [], "articulated": [], "underived": [],
+    "corroborated_new_registered": [], "renamed": [], "dropped": [],
+    "dropped_corroborated": [], "content_lost": [], "new_anomalies": [], "assumptions": [],
+}
+
 
 def _get_started_theory():
     """The theory the R Get started vignette builds, with the single strings it passes."""
@@ -180,20 +188,29 @@ def test_appraising_a_theory_against_itself_is_refused():
 def test_equal_content_in_distinct_objects_is_never_refused():
     prior = tf.new_theory("demo-1", "A demonstration theory").add_prediction(
         "h1", "Effect is positive.", "directional")
-    assert prior.copy().appraise_amendment(prior) == {
-        "verdict": "neutral", "new_predictions": [], "corroborated_new": [],
-        "ad_hoc_assumptions": [],
-    }
+    result = prior.copy().appraise_amendment(prior)
+    assert result == NOTHING_NEW
+    assert list(result) == list(NOTHING_NEW)
 
 
 def test_the_develop_help_example_started_from_a_copy_is_progressive():
     # tf_appraise_amendment()'s help example, with the amendment begun from a copy.
-    prior = tf.new_theory("demo-1", "A demonstration theory").add_prediction(
-        "h1", "Effect is positive.", "directional")
-    new = prior.copy().add_prediction("h2", "Effect is exactly 0.30.", "point")
+    prior = (
+        tf.new_theory("demo-1", "A demonstration theory")
+        .add_construct("c_arousal", "Arousal", "Bodily activation.")
+        .add_construct("c_threat", "Perceived threat", "Appraised danger.")
+        .add_proposition("p1", "c_arousal", "c_threat", "increases")
+        .add_prediction("h1", "Threat rises with arousal.", "directional", derives_from="p1")
+    )
+    new = (
+        prior.copy()
+        .add_construct("c_avoid", "Avoidance", "Withdrawal from feared situations.")
+        .add_proposition("p2", "c_threat", "c_avoid", "increases")
+        .add_prediction("h2", "Avoidance rises 0.3 SD per SD of threat.", "point", derives_from="p2")
+    )
     new.data["test_outcomes"] = [{"prediction_id": "h2", "passed": True}]
     assert [p["id"] for p in prior.data["predictions"]] == ["h1"]
     assert new.appraise_amendment(prior) == {
-        "verdict": "progressive", "new_predictions": ["h2"], "corroborated_new": ["h2"],
-        "ad_hoc_assumptions": [],
+        **NOTHING_NEW, "verdict": "progressive", "new_predictions": ["h2"],
+        "corroborated_new": ["h2"],
     }

@@ -215,7 +215,7 @@ backslash-n.
 " + wrap(detail, 26)` when detail nonempty; then chain edges `n{i} -> n{i+1}`:
 ```
 <prelude, rankdir=TB>
-  "n1" [label="tf_construct
+  "n1" [label="tf_add_construct
 Registered three
 constructs."];
   ...
@@ -310,15 +310,23 @@ The order of the four types (§4) follows Popper's (1959, §§31–33) compariso
 
 `tf_severity`/`severity()` returns one record per prediction: `{prediction_id, type, risk_score, computed_severity}` in file order. A `risk_score` declared on a prediction and a test outcome's `severity_at_test` are informational, and no function reads them.
 
-## 10. Amendment appraisal (progressive vs degenerating; Lakatos, 1970; Meehl, 1990)
+## 10. Amendment appraisal (progressive vs degenerating; Lakatos, 1970; Meehl, 1990a)
 
-`appraise_amendment(new, prior)`: let `prior_pred_ids`, `prior_aux_ids` be the id sets from `prior`.
+`appraise_amendment(new, prior)` compares the content of two versions of a theory, not the ids of their predictions. Lakatos (1970, p. 118) calls a problemshift progressive when the new theory predicts a fact its predecessor did not and some of that excess content is corroborated, and degenerating when it is not. `neutral` is theoryforge's own label for an amendment that meets neither of the two rules below. Every value is read through the accessors of §3, "Reading a theory". Ids, statements, `from`, `to`, `added_for` and `registered` are read through `text`, `type` and `relation` through `enum` (`""` when absent), and `derives_from` and `protects` through `str_list`. Collections are walked in file order. No `date`, `severity_at_test` or `version` field is read, so which version is the prior is the caller's responsibility.
+
 - Before anything is computed, a test outcome whose `passed` is present and not a boolean, in `new` and then in `prior`, raises `appraise_amendment requires boolean test outcomes; non-boolean passed for test outcome of prediction: <id>` by the rule of §4. In Python, the refusal of an amendment that is the prior itself (§8) comes first.
-- `new_predictions = [p.id for p in new.predictions if p.id not in prior_pred_ids]`
-- `corroborated_new = [pid in new_predictions if any test_outcome t in new with t.prediction_id == pid and t.passed == true]`
-- `ad_hoc_assumptions = [a.id for a in new.auxiliary_assumptions if a.id not in prior_aux_ids and a.added_for is not null and not any(t in new.test_outcomes with t.prediction_id in (a.protects or []) and t.passed == true)]`
-- `verdict`: `"progressive"` if `len(corroborated_new) ≥ 1 and len(ad_hoc_assumptions) == 0`; `"degenerating"` if `len(ad_hoc_assumptions) ≥ 1 and len(corroborated_new) == 0`; else `"neutral"`.
-- Returns `{verdict, new_predictions, corroborated_new, ad_hoc_assumptions}` with each list sorted ascending.
+- **Status.** The status of a prediction id over a list of test outcomes reads every outcome whose `prediction_id` is a string equal to that id, whatever their order. A `prediction_id` that is not a string, a one-element sequence included, matches no prediction, as in the checklist. It is `corroborated` when at least one has `passed: true` and none `passed: false`, `refuted` when some have `false` and none `true`, `mixed` when both occur and `untested` otherwise. A missing or null `passed`, and in R a single `NA`, is neither. Statuses in the new version come from `new.test_outcomes`, and statuses in the prior from `prior.test_outcomes`.
+- **Content key.** A prediction's content key is its statement, with each run of characters of the whitespace set (§3, "Normalising text") replaced by one space and the result trimmed, paired with its type.
+- **Renames.** Each prediction of the new version, in file order, whose id is not among the prior's prediction ids and whose statement is not blank takes the first prior prediction, in file order, that has the same content key, has an id that is not among the new version's prediction ids and was not taken before. The pair `{prior, new}` is a rename. `renamed` lists the pairs sorted by `new`, ties in file order.
+- `new_predictions` = the new version's prediction ids that are not among the prior's and are not the `new` of a rename. `corroborated_new` = those whose status in the new version is `corroborated`.
+- **Old content.** A proposition of the new version holds old content when the prior holds a proposition with the same `(from, to, relation)`, whatever its id. An entry of `derives_from` names the first proposition of the new version with that id. An assumption is new when its id is not among the prior's assumption ids.
+- `underived` = the new predictions whose `derives_from` is empty. `articulated` = the new predictions with a nonempty `derives_from` whose every entry names a proposition of the new version holding old content, and which no new assumption lists in `protects`. A prediction that needs a new assumption is new content, since a new auxiliary clause is how a problemshift arises.
+- `dropped` = the prior's prediction ids that are not among the new version's and are not the `prior` of a rename. `dropped_corroborated` = those whose status in the prior is `corroborated`, and `content_lost` = those untested in the prior.
+- `new_anomalies` = the retained predictions, those whose id is in both versions and the `new` of each rename, whose status in the new version is `refuted` or `mixed` and whose status in the prior, under the prior id, was `corroborated` or `untested`. It is reported and never decides the verdict.
+- **Assumptions.** For each new assumption, in file order, whose `added_for` is a nonempty string, `independent` holds the distinct entries of its `protects`, in their order, that are in `new_predictions` and differ from `added_for`, each as `{id, status}` with its status in the new version. The assumption's `class` is `ad_hoc1` when `independent` is empty, `ad_hoc2` when no entry is `corroborated` and `independently_corroborated` otherwise. `assumptions` lists `{id, added_for, class, independent}` for these assumptions in file order, and `ad_hoc_assumptions` = the ids of those classed `ad_hoc1` or `ad_hoc2`. Content the prior already held, a renamed prediction included, therefore cannot clear an assumption, and neither can an entry of `protects` that names no new prediction.
+- `corroborated_new_registered` = the corroborated new predictions with an outcome that has `passed: true` and a nonempty `registered`. It is reported and never decides the verdict, following Mayo's (1991) argument that novelty matters only in so far as it bears on the severity of a test.
+- **Verdict.** Let `adds_content` be the corroborated new predictions that are neither articulated nor underived. The verdict is `"progressive"` when `adds_content` is nonempty and both `ad_hoc_assumptions` and `dropped_corroborated` are empty, `"degenerating"` when `ad_hoc_assumptions` is nonempty and `adds_content` is empty, and `"neutral"` otherwise.
+- **Result.** The keys, in this order: `verdict`, `new_predictions`, `corroborated_new`, `ad_hoc_assumptions`, `articulated`, `underived`, `corroborated_new_registered`, `renamed`, `dropped`, `dropped_corroborated`, `content_lost`, `new_anomalies`, `assumptions`. The four keys of 0.6.0 come first. Each list of ids holds one element per entry it was drawn from and is sorted ascending by code point (R: `sort(method = "radix")`). `renamed` is sorted by `new`, and `assumptions` keeps file order. In R, the lists of ids are character vectors, and `renamed`, `assumptions` and each `independent` are unnamed lists of named lists.
 
 ## 11. Preregistration document (markdown; byte-identical golden)
 

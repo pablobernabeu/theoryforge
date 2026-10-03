@@ -103,11 +103,11 @@ formal_model:
 
 provenance:
   - step: "1"
-    action: "tf_construct"
+    action: "tf_add_construct"
     detail: "Registered three constructs."
   - step: "2"
-    action: "tf_proposition"
+    action: "tf_add_proposition"
     detail: "Linked constructs into a feedback network."
   - step: "3"
-    action: "tf_predict"
+    action: "tf_add_prediction"
     detail: "Derived three predictions from the propositions."

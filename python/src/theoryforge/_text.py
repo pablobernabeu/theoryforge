@@ -1,4 +1,4 @@
-"""Text normalisation shared by every consumer (API_SPEC.md sections 3, 6, 18 and 19).
+"""Text normalisation shared by every consumer (API_SPEC.md sections 3, 6, 10, 18 and 19).
 
 The two languages disagree on what whitespace is and on how to lowercase:
 Python's ``str.strip()`` and R's ``trimws()`` trim different characters, and
@@ -20,11 +20,17 @@ WS = ("\t\n\x0b\x0c\r \x85\xa0\u1680"
       + "\u2028\u2029\u202f\u205f\u3000")
 
 _ASCII_LOWER = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
+_WS_RUN = re.compile("[" + re.escape(WS) + "]+")
 
 
 def trim(s: str) -> str:
     """``s`` without leading or trailing characters of the whitespace set."""
     return s.strip(WS)
+
+
+def squish(s: str) -> str:
+    """``s`` trimmed, with each run of whitespace-set characters inside it made one space."""
+    return trim(_WS_RUN.sub(" ", s))
 
 
 def ascii_lower(s: str) -> str:

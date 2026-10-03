@@ -6,5 +6,16 @@
   "corroborated_new": [
     "pred4"
   ],
-  "ad_hoc_assumptions": []
+  "ad_hoc_assumptions": [],
+  "articulated": [],
+  "underived": [],
+  "corroborated_new_registered": [
+    "pred4"
+  ],
+  "renamed": [],
+  "dropped": [],
+  "dropped_corroborated": [],
+  "content_lost": [],
+  "new_anomalies": [],
+  "assumptions": []
 }

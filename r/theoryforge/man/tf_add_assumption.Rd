@@ -11,9 +11,14 @@ tf_add_assumption(theory, id, statement, added_for = NULL, protects = NULL)
 
 \item{id, statement}{Assumption fields.}
 
-\item{added_for}{Optional reason the assumption was added.}
+\item{added_for}{Optional id of the prediction whose anomaly the assumption
+was added to answer. Leave it \code{NULL} for a core assumption.
+\code{\link[=tf_appraise_amendment]{tf_appraise_amendment()}} counts an assumption added for an anomaly as ad
+hoc unless a prediction it protects that is new in the amended version,
+other than this one, is corroborated.}
 
-\item{protects}{Optional character vector of prediction ids it protects.}
+\item{protects}{Optional character vector of the ids of the predictions the
+assumption shields from refutation.}
 }
 \value{
 The (mutated) theory object.

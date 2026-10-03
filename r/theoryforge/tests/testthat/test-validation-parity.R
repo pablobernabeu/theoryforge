@@ -546,5 +546,10 @@ test_that("tf_appraise_amendment() refuses a non-logical passed in either theory
   expect_identical(tryCatch(tf_appraise_amendment(new, prior), error = conditionMessage),
                    paste(msg, "h1"))
   prior$test_outcomes <- list(list(prediction_id = "h1"))
-  expect_identical(tf_appraise_amendment(new, prior)$verdict, "progressive")
+  # The logical pass now counts. h2 derives from p1 alone, which the prior
+  # already held, so it articulates old content and the amendment is neutral.
+  ap <- tf_appraise_amendment(new, prior)
+  expect_identical(ap$corroborated_new, "h2")
+  expect_identical(ap$articulated, "h2")
+  expect_identical(ap$verdict, "neutral")
 })

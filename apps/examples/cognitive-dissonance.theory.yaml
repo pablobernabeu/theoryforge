@@ -142,13 +142,13 @@ formal_model:
 
 provenance:
   - step: "1"
-    action: "tf_construct"
+    action: "tf_add_construct"
     detail: "Registered attitude-behaviour inconsistency, external justification, dissonance and private attitude change."
   - step: "2"
-    action: "tf_proposition"
+    action: "tf_add_proposition"
     detail: "Linked inconsistency and low external justification to dissonance, and dissonance to attitude change."
   - step: "3"
-    action: "tf_predict"
+    action: "tf_add_prediction"
     detail: "Derived the inverse incentive effect, the mediating role of insufficient justification and the point ordering of the enjoyment ratings, each pointed at the reinforcement alternative."
   - step: "4"
     action: "tf_test"

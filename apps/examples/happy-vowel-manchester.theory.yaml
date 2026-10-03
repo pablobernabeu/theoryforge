@@ -181,11 +181,11 @@ formal_model:
 
 provenance:
   - step: "1"
-    action: "tf_construct"
+    action: "tf_add_construct"
     detail: "Registered the happy vowel realisation and its social and linguistic conditioning factors."
   - step: "2"
-    action: "tf_proposition"
+    action: "tf_add_proposition"
     detail: "Linked social class, ethnicity and the internal linguistic factors to realisation."
   - step: "3"
-    action: "tf_predict"
+    action: "tf_add_prediction"
     detail: "Derived the class stratification, the ethnicity effect and the constraint-independence prediction."

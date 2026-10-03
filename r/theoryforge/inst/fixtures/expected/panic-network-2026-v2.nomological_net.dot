@@ -8,4 +8,5 @@ digraph nomological_net {
   "c_arousal" -> "c_perceived_threat" [label="increases"];
   "c_perceived_threat" -> "c_avoidance" [label="increases"];
   "c_perceived_threat" -> "c_arousal" [label="causes"];
+  "c_arousal" -> "c_avoidance" [label="increases"];
 }

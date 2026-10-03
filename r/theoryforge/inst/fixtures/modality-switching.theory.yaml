@@ -125,11 +125,11 @@ formal_model:
 
 provenance:
   - step: "1"
-    action: "tf_construct"
+    action: "tf_add_construct"
     detail: "Registered five constructs from the perceptual-symbols account of conceptual processing (Barsalou, 1999, doi:10.1017/S0140525X99002149)."
   - step: "2"
-    action: "tf_proposition"
+    action: "tf_add_proposition"
     detail: "Linked the constructs into an acyclic graph: a fork at modality activation and a collider at conceptual access."
   - step: "3"
-    action: "tf_predict"
+    action: "tf_add_prediction"
     detail: "Derived four predictions, two of them diagnostic against a registered alternative."

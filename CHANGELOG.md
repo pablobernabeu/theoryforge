@@ -199,6 +199,21 @@ version and a single behavioural contract
   such as the null in `derives_from: [p1, ~]` or the empty string in `measurement: [""]`.
   Every other function ignores such an entry. The schema allows an empty string there, so
   a theory that matches the schema can now fail full validation for this reason alone.
+- `appraise_amendment()` now compares the content of two versions, not their prediction
+  ids. A renamed prediction, with the same statement and type under a new id, is no longer
+  new. A prediction derived only from propositions the prior already held, and protected
+  by no new assumption, is reported as an articulation and does not make an amendment
+  progressive. A prediction counts as corroborated only when no outcome refutes it, and a
+  corroborated prediction that is dropped blocks a progressive verdict. An assumption added
+  for an anomaly is ad hoc unless a prediction it protects that is new in this version,
+  other than the anomaly, is corroborated. The result keeps its four keys first and adds
+  the evidence behind the verdict: `articulated`, `underived`, `corroborated_new_registered`,
+  `renamed`, `dropped`, `dropped_corroborated`, `content_lost`, `new_anomalies` and
+  `assumptions`. The appraisal reads `registered` only to report which corroborations were
+  preregistered, and never gates on it. The amended panic example now adds a proposition,
+  so its verdict remains progressive for a reason the appraisal can see, and its aggregate
+  score moves from 87.1 to 87.7. API_SPEC section 10 states the rules, and the appraisal
+  golden and the goldens of the amended example change with them.
 
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`
@@ -270,6 +285,12 @@ version and a single behavioural contract
   since late September 2026 and change over time, while the concepts fallback brings a
   deprecated vocabulary with capitalised names. Their examples ask for pages of 100 works,
   the largest page OpenAlex supports now that it has deprecated 200.
+- The schema, the `add_assumption()` docstring and the R help page define `added_for` as
+  the id of the prediction whose anomaly an assumption answers, and the schema describes
+  `protects` and `registered`. The methodology pages and the apps no longer attribute the
+  `neutral` verdict to Lakatos, whose scheme has only progressive and degenerating
+  problemshifts. The bundled examples and the app examples record the builder names in
+  their provenance (`tf_add_construct`, `tf_add_proposition`, `tf_add_prediction`).
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and

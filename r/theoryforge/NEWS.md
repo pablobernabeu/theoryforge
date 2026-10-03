@@ -214,6 +214,29 @@
 
 * The tests need `testthat` 3.1.7 or later.
 
+* `tf_appraise_amendment()` now compares the content of two versions, not
+  their prediction ids. A renamed prediction, with the same statement and type
+  under a new id, is no longer new. A prediction derived only from propositions
+  the prior already held, and protected by no new assumption, is reported as an
+  articulation and does not make an amendment progressive. A prediction counts
+  as corroborated only when no outcome refutes it, and a corroborated
+  prediction that is dropped blocks a progressive verdict. An assumption added
+  for an anomaly is ad hoc unless a prediction it protects that is new in this
+  version, other than the anomaly, is corroborated. The result keeps its four
+  fields first and adds the evidence behind the verdict: `articulated`,
+  `underived`, `corroborated_new_registered`, `renamed`, `dropped`,
+  `dropped_corroborated`, `content_lost`, `new_anomalies` and `assumptions`.
+  The amended panic example now adds a proposition, so its verdict remains
+  progressive for a reason the appraisal can see, and its aggregate score moves
+  from 87.1 to 87.7.
+
+* `?tf_add_assumption` and the schema define `added_for` as the id of the
+  prediction whose anomaly an assumption answers, where the help page called it
+  a reason. The methodology article no longer attributes the `neutral` verdict
+  to Lakatos, whose scheme has only progressive and degenerating problemshifts.
+  The bundled examples record the builder names in their provenance
+  (`tf_add_construct`, `tf_add_proposition`, `tf_add_prediction`).
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

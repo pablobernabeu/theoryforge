@@ -682,8 +682,13 @@ tf_add_alternative <- function(theory, id, label, key_constructs = NULL) {
 #'
 #' @param theory A theory object (named list).
 #' @param id,statement Assumption fields.
-#' @param added_for Optional reason the assumption was added.
-#' @param protects Optional character vector of prediction ids it protects.
+#' @param added_for Optional id of the prediction whose anomaly the assumption
+#'   was added to answer. Leave it \code{NULL} for a core assumption.
+#'   [tf_appraise_amendment()] counts an assumption added for an anomaly as ad
+#'   hoc unless a prediction it protects that is new in the amended version,
+#'   other than this one, is corroborated.
+#' @param protects Optional character vector of the ids of the predictions the
+#'   assumption shields from refutation.
 #' @return The (mutated) theory object.
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory") |>

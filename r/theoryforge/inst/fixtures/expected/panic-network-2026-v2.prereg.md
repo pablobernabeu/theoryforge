@@ -9,7 +9,7 @@
 1. [point] An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds. (derives from: p1, p3)
 2. [interval] Avoidance frequency falls within a 20-35% band after exposure therapy. (derives from: p2)
 3. [directional] Higher perceived threat is associated with more avoidance. (derives from: p2)
-4. [point] Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks. (derives from: p1, p2)
+4. [point] Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks. (derives from: p4)
 
 ## Severity (pre-data rubric of claim form)
 - pred1: severity 1.0, risk 0.9

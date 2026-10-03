@@ -559,6 +559,16 @@ class Theory:
         return self._add("alternatives", a, "tf_add_alternative", id)
 
     def add_assumption(self, id, statement, added_for=None, protects=None):
+        """Append an auxiliary assumption and log the step in the provenance.
+
+        ``added_for`` is the id of the prediction whose anomaly the assumption
+        was added to answer, and None marks a core assumption.
+        ``appraise_amendment`` counts an assumption added for an anomaly as ad
+        hoc unless a prediction it protects that is new in the amended version,
+        other than this one, is corroborated. ``protects`` holds the ids of the
+        predictions the assumption shields from refutation, a list or a single
+        string. The theory is returned, so that builder calls chain.
+        """
         a = {"id": id, "statement": statement, "added_for": added_for}
         if protects is not None:
             a["protects"] = _as_str_list(protects)
@@ -599,10 +609,12 @@ class Theory:
         return _severity(self.data)
 
     def appraise_amendment(self, prior) -> dict:
-        """Progressive vs degenerating verdict for this theory relative to a prior version.
+        """Appraise this theory, by content, as an amendment of a prior version.
 
-        Passing this theory itself as the prior raises ValueError, so begin an
-        amendment with ``prior.copy()`` (see :func:`theoryforge.appraise_amendment`).
+        The verdict is progressive, degenerating or neutral, with the evidence
+        behind it. Passing this theory itself as the prior raises ValueError,
+        so begin an amendment with ``prior.copy()`` (see
+        :func:`theoryforge.appraise_amendment`).
         """
         return _appraise_amendment(self.data, prior)
 

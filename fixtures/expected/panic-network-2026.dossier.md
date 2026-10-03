@@ -32,9 +32,9 @@
 
 ## Provenance
 
-1. tf_construct: Registered three constructs.
-2. tf_proposition: Linked constructs into a feedback network.
-3. tf_predict: Derived three predictions from the propositions.
+1. tf_add_construct: Registered three constructs.
+2. tf_add_proposition: Linked constructs into a feedback network.
+3. tf_add_prediction: Derived three predictions from the propositions.
 
 ## Preregistration
 

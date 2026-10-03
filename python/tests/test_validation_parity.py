@@ -582,4 +582,8 @@ def test_appraise_amendment_refuses_a_non_boolean_passed_in_either_theory():
         "non-boolean passed for test outcome of prediction: h1"
     )
     prior.data["test_outcomes"] = [{"prediction_id": "h1"}]
-    assert new.appraise_amendment(prior)["verdict"] == "progressive"
+    # The boolean pass now counts. h2 derives from p1 alone, which the prior
+    # already held, so it articulates old content and the amendment is neutral.
+    result = new.appraise_amendment(prior)
+    assert result["corroborated_new"] == ["h2"]
+    assert (result["articulated"], result["verdict"]) == (["h2"], "neutral")

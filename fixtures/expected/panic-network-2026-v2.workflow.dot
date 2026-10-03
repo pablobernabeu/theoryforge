@@ -19,6 +19,7 @@ digraph workflow {
     "prop_p1" [label="p1\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
     "prop_p2" [label="p2\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
     "prop_p3" [label="p3\ncauses", fillcolor="#FBF1DC", color="#9C6B14"];
+    "prop_p4" [label="p4\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
   }
   subgraph cluster_predict {
     label="predictions";
@@ -41,12 +42,12 @@ digraph workflow {
   "c_arousal" -> "prop_p1";
   "c_perceived_threat" -> "prop_p2";
   "c_perceived_threat" -> "prop_p3";
+  "c_arousal" -> "prop_p4";
   "prop_p1" -> "pred_pred1";
   "prop_p3" -> "pred_pred1";
   "prop_p2" -> "pred_pred2";
   "prop_p2" -> "pred_pred3";
-  "prop_p1" -> "pred_pred4";
-  "prop_p2" -> "pred_pred4";
+  "prop_p4" -> "pred_pred4";
   "pred_pred1" -> "outcome_pred1";
   "pred_pred4" -> "outcome_pred4";
 }

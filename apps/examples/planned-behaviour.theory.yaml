@@ -145,11 +145,11 @@ formal_model:
 
 provenance:
   - step: "1"
-    action: "tf_construct"
+    action: "tf_add_construct"
     detail: "Registered the five constructs: attitude toward the behaviour, subjective norm, perceived behavioural control, intention and behaviour."
   - step: "2"
-    action: "tf_proposition"
+    action: "tf_add_proposition"
     detail: "Linked attitude, subjective norm and perceived control to intention, intention to behaviour, and added the direct perceived-control to behaviour path."
   - step: "3"
-    action: "tf_predict"
+    action: "tf_add_prediction"
     detail: "Derived the intention-determinant, intention-behaviour and perceived-control predictions, pointing the control predictions diagnostically at the theory of reasoned action."

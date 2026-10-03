@@ -86,9 +86,13 @@ test_that("every consumer reads entries that are not mappings", {
   expect_true(file.exists(qmd))
   unlink(qmd)
   prior <- lr_read(paste0(lr_head, lr_two_constructs))
+  # The scalar prediction has no fields, so nothing derives it.
   expect_identical(tf_appraise_amendment(t, prior), list(
     verdict = "neutral", new_predictions = "", corroborated_new = character(0),
-    ad_hoc_assumptions = character(0)))
+    ad_hoc_assumptions = character(0), articulated = character(0), underived = "",
+    corroborated_new_registered = character(0), renamed = list(), dropped = character(0),
+    dropped_corroborated = character(0), content_lost = character(0),
+    new_anomalies = character(0), assumptions = list()))
 })
 
 test_that("full validation reports scalar entries instead of stopping", {
@@ -313,9 +317,15 @@ test_that("entries without ids read as empty ids", {
   expect_true(grepl('"result_" [label="failed"', tf_diagram(t, "pipeline"), fixed = TRUE))
   expect_identical(lr_item(tf_check(t), "parsimony")$status, "fail")
   prior <- lr_read(paste0(lr_head, lr_two_constructs))
+  # h1 needs the new assumption, so it is not an articulation of p1.
   expect_identical(tf_appraise_amendment(t, prior), list(
     verdict = "degenerating", new_predictions = "h1", corroborated_new = character(0),
-    ad_hoc_assumptions = ""))
+    ad_hoc_assumptions = "", articulated = character(0), underived = character(0),
+    corroborated_new_registered = character(0), renamed = list(), dropped = character(0),
+    dropped_corroborated = character(0), content_lost = character(0),
+    new_anomalies = character(0),
+    assumptions = list(list(id = "", added_for = "h1 failed at the first test", class = "ad_hoc2",
+                            independent = list(list(id = "h1", status = "untested"))))))
   two_new <- sub("auxiliary_assumptions:", "  - statement: A prediction without an id.
     type: directional
 auxiliary_assumptions:", lr_idless, fixed = TRUE)

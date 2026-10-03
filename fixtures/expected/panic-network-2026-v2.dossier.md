@@ -3,7 +3,7 @@
 - Theory ID: panic-network-2026-v2
 - Maturity: testing
 - Checklist version: 1.0
-- Aggregate rigour score: 87.1/100
+- Aggregate rigour score: 87.7/100
 - Gate: pass
 - Blockers failed: 0
 
@@ -14,7 +14,7 @@
 | falsifiability | pass | 1.0 | 0.15 |
 | precision | pass | 0.75 | 0.1 |
 | risk_severity | pass | 0.613 | 0.1 |
-| parsimony | pass | 0.667 | 0.08 |
+| parsimony | pass | 0.75 | 0.08 |
 | non_redundancy | pass | 0.909 | 0.1 |
 | construct_clarity | pass | 1.0 | 0.08 |
 | scope | pass | 1.0 | 0.06 |
@@ -33,7 +33,8 @@
 
 ## Provenance
 
-1. tf_amend: Added pred4 and its corroborating outcome.
+1. tf_add_proposition: p4
+2. tf_add_prediction: pred4
 
 ## Preregistration
 
@@ -48,7 +49,7 @@
 1. [point] An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds. (derives from: p1, p3)
 2. [interval] Avoidance frequency falls within a 20-35% band after exposure therapy. (derives from: p2)
 3. [directional] Higher perceived threat is associated with more avoidance. (derives from: p2)
-4. [point] Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks. (derives from: p1, p2)
+4. [point] Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks. (derives from: p4)
 
 ## Severity (pre-data rubric of claim form)
 - pred1: severity 1.0, risk 0.9

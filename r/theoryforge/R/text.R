@@ -4,9 +4,9 @@
 #' R's trimws() and Python's str.strip() trim different characters, and
 #' Python's str.lower() turns the Turkish dotted capital I into two code points
 #' where tolower() gives one, while ?tolower calls tolower() platform-dependent.
-#' These helpers pin one reading (API_SPEC.md sections 3, 6, 18 and 19), and the
-#' Python twin's _text.py mirrors each of them. The file is ASCII, as CRAN asks,
-#' so every other character is written as an escape.
+#' These helpers pin one reading (API_SPEC.md sections 3, 6, 10, 18 and 19),
+#' and the Python twin's _text.py mirrors each of them. The file is ASCII, as
+#' CRAN asks, so every other character is written as an escape.
 #'
 #' @keywords internal
 #' @noRd
@@ -24,6 +24,12 @@ NULL
 # `x` without leading or trailing characters of the whitespace set.
 .tf_trim <- function(x) {
   trimws(enc2utf8(x), whitespace = .tf_WS_CLASS)
+}
+
+# `x` trimmed, with each run of whitespace-set characters inside it made one
+# space. Mirrors Python's _text.squish.
+.tf_squish <- function(x) {
+  .tf_trim(gsub(paste0(.tf_WS_CLASS, "+"), " ", enc2utf8(x), perl = TRUE))
 }
 
 # `x` with A-Z lowercased and every other character kept.

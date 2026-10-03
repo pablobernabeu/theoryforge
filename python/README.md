@@ -80,7 +80,8 @@ b = (tf.new_theory("panic_demo", "A demonstration theory of panic")
                        "directional", derives_from=["p1"]))
 b.validate(full=True)              # also every type, unique ids and every cross-reference
 
-# DEVELOP: progressive vs degenerating appraisal of an amendment
+# DEVELOP: appraise an amendment by content, as progressive, degenerating or neutral.
+# v2 adds a proposition and a prediction derived from it, which a registered test corroborates.
 v1 = tf.read("../fixtures/panic-network.theory.yaml")
 v2 = tf.read("../fixtures/panic-network-2026-v2.theory.yaml")
 print(v2.appraise_amendment(v1))   # -> {'verdict': 'progressive', ...}
