@@ -21,8 +21,47 @@ test_that("tf_render_report forces a .qmd suffix and escapes quotes in the title
   expect_true(file.exists(out))
 
   text <- readChar(out, file.info(out)$size, useBytes = TRUE)
-  expect_match(text, "title: \"A 'quoted' title\"", fixed = TRUE)
+  expect_match(text, 'title: "A \\"quoted\\" title"', fixed = TRUE)
   expect_match(text, "format: pdf", fixed = TRUE)
+})
+
+# The Python twin's test_osf_report.py pins the same header line for the same
+# title, so the two twins write one YAML header.
+test_that("tf_render_report escapes the title as a YAML double-quoted scalar", {
+  theory <- tf_theory("t", "T")
+  # R refuses Unicode and octal escapes in one literal, hence the paste0().
+  title <- paste0("Effects of A\\B on \"C\": \\emph{fluency}, $\\alpha$\nline\ttwo\001\177",
+                  "é\u0085")
+  out <- tf_render_report(theory, tempfile(fileext = ".qmd"), title = title)
+  lines <- strsplit(readChar(out, file.info(out)$size, useBytes = TRUE), "\n", fixed = TRUE)[[1L]]
+  expected <- paste0(
+    'title: "Effects of A\\\\B on \\"C\\": \\\\emph{fluency}, $\\\\alpha$',
+    '\\nline\\ttwo\\x01\\x7Fé\\x85"'
+  )
+  got <- lines[[2L]]
+  Encoding(got) <- "UTF-8"
+  expect_identical(got, enc2utf8(expected))
+  # A YAML parser reads back exactly the title that was passed.
+  header <- yaml::yaml.load(paste(lines[2:3], collapse = "\n"))
+  expect_identical(header$title, enc2utf8(title))
+})
+
+test_that("tf_render_report escapes the noncharacters U+FFFE and U+FFFF", {
+  # YAML forbids both raw, as it does the control characters.
+  title <- paste0("a", intToUtf8(0xFFFE), "b", intToUtf8(0xFFFF))
+  out <- tf_render_report(tf_theory("t", "T"), tempfile(fileext = ".qmd"), title = title)
+  lines <- strsplit(readChar(out, file.info(out)$size, useBytes = TRUE), "\n", fixed = TRUE)[[1L]]
+  expect_identical(lines[[2L]], 'title: "a\\uFFFEb\\uFFFF"')
+  header <- yaml::yaml.load(paste(lines[2:3], collapse = "\n"))
+  expect_identical(utf8ToInt(header$title), utf8ToInt(title))
+})
+
+test_that("tf_render_report treats an empty title as absent, as Python does", {
+  for (title in list("", NA_character_)) {
+    out <- tf_render_report(tf_theory("the-id", ""), tempfile(fileext = ".qmd"), title = title)
+    text <- readChar(out, file.info(out)$size, useBytes = TRUE)
+    expect_match(text, 'title: "theoryforge report: the-id"', fixed = TRUE)
+  }
 })
 
 # tf_render_diagram() is a language-native convenience over the deterministic

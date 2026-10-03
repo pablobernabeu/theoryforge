@@ -398,6 +398,14 @@ t.osf_push(
 )
 ```
 
+OSF refuses to create a file whose name already exists in the project, so
+depositing the same theory a second time raises `OSFUploadError` with HTTP 409.
+Either pass a filename that names the version, or add `overwrite=True`, which
+lists the project folder first and sends the dossier to the existing file as a
+new OSF version. Any other refusal also raises `OSFUploadError`, a subclass of
+`urllib.error.HTTPError`, so a returned value always describes an upload that
+OSF accepted.
+
 ## Visualising the theory
 
 `diagram()` exports several views of the same object. The graph views return

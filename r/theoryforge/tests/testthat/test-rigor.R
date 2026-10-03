@@ -200,3 +200,12 @@ test_that("tf_report html format works and json/html are the only formats", {
   expect_error(tf_report(tf_read(tf_fixture_path("weak-theory.theory.yaml")), "xml"),
                "unknown report format")
 })
+
+test_that("tf_report html escapes the id and every cell it interpolates", {
+  # The schema allows any non-empty id, and the checklist citations hold a
+  # bare '&', so both reached the HTML unescaped.
+  html <- tf_report(tf_theory("a<b&c", "T"), "html")
+  expect_match(html, "<h2>Rigour report: a&lt;b&amp;c</h2>", fixed = TRUE)
+  expect_false(grepl("a<b&c", html, fixed = TRUE))
+  expect_false(grepl("&(?!amp;|lt;|gt;|middot;)", html, perl = TRUE))
+})

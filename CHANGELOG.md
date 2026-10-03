@@ -177,6 +177,21 @@ version and a single behavioural contract
 - Site: the deployed Python app carried the bytecode caches (`__pycache__`, 21 `.pyc`
   files) that building the documentation leaves in the package source. `apps/build.mjs`
   now copies only the file types the app's manifest lists. The 404 page links both apps.
+- `render_report()` escapes the title as a YAML double-quoted scalar, by one rule in both
+  twins (API_SPEC section 23), so backslashes, quotes and control characters survive. A
+  backslash in a title used to stop Quarto with a YAML error, and `\emph` or `$\alpha$`
+  turned into an escape character. Double quotes are now kept, where they became
+  apostrophes. Quarto reads the title as Markdown, so raw TeX is dropped from HTML output
+  and `$\alpha$` becomes mathematics. `report(format="html")` escapes every value it
+  writes into the HTML, so a theory id such as `a<b&c` no longer reaches the markup raw.
+- `osf_push()` raises `OSFUploadError` when OSF refuses the upload, with the message the
+  R twin now stops with, `OSF upload failed with HTTP <status>`, and for a 409 a hint
+  that a file of that name already exists. It subclasses `urllib.error.HTTPError`, so
+  existing handlers still catch it. R returned any refused upload, a 409 or a 501 among
+  them, as a completed one. The dry runs of the two twins now agree for an empty node,
+  an empty filename and a filename that holds a `%XX` sequence, which R did not encode.
+  The token is sent as an unredirected header, as `fetch_corpus()` sends its key, so a
+  redirect of the folder listing cannot carry it to another server.
 
 ### Changed
 - R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new
@@ -290,6 +305,12 @@ version and a single behavioural contract
   and on the demo corpus. It was made by replaying one OpenAlex response saved on
   2026-10-01 through `fetch_corpus`, keeps `source`, drops the references and is offered
   under CC0, as OpenAlex's data are.
+- `osf_push(overwrite=False)`. OSF storage answers 409 to a second upload under the same
+  filename, so depositing a theory again failed in both twins with no way round it.
+  `overwrite=True` lists the project folder first and sends the dossier to the existing
+  file's upload link, WaterButler's update route, which records a new OSF version. When
+  no file of that name exists, the file is created as usual. The dry run then shows the
+  lookup request too. `OSFUploadError` is exported.
 
 ### Deprecated
 - `simulate()`'s default `method="euler"`. The default will change to `"exact"` in the
@@ -319,6 +340,8 @@ version and a single behavioural contract
   connected components put nearly every keyword of a real corpus in one theme, and the
   literature pages show the warning. The R article's example theory is titled after its
   phenomenon, since a title naming its constructs now leaves them unmatched.
+- The workflow pages in both languages say what a repeated OSF deposit does and how
+  `overwrite` adds a new version.
 - CONTRIBUTING installs the docs extra needed by `mkdocs build`.
 - The schema documents `risk_score` and `severity_at_test` as informational fields that
   no function reads.

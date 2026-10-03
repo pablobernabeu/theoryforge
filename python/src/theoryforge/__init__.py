@@ -23,7 +23,7 @@ from .embedding import embedding_redundancy
 from .examples import example_names, example_path
 from .implications import implications
 from .lit import fetch_corpus, landscape, lit_diagram, litmap, new_evidence_dois, read_corpus
-from .osf import osf_push
+from .osf import OSFUploadError, osf_push
 from .prereg import preregister
 from .redundancy import jaccard, redundancy_check, tokens
 from .render import render_diagram
@@ -68,6 +68,7 @@ __all__ = [
     "render_report",
     "render_diagram",
     "osf_push",
+    "OSFUploadError",
     "example_path",
     "example_names",
     "__version__",

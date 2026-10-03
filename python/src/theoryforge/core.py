@@ -662,10 +662,14 @@ class Theory:
         return _render_report(self.data, path, title=title, render=render, to=to)
 
     def osf_push(self, token=None, node=None, filename=None, dry_run: bool = True,
-                 base_url: str | None = None) -> dict:
-        """Deposit the dossier on OSF (dry-run by default). A live push needs a token and node."""
+                 base_url: str | None = None, overwrite: bool = False) -> dict:
+        """Deposit the dossier on OSF (dry-run by default). A live push needs a token and node.
+
+        ``overwrite=True`` adds a new version of an existing file of the same name.
+        """
         kw = {} if base_url is None else {"base_url": base_url}
-        return _osf_push(self.data, token=token, node=node, filename=filename, dry_run=dry_run, **kw)
+        return _osf_push(self.data, token=token, node=node, filename=filename, dry_run=dry_run,
+                         overwrite=overwrite, **kw)
 
     def __repr__(self) -> str:
         return f"Theory(id={self.id!r}, maturity={self.maturity!r})"

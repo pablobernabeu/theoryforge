@@ -104,6 +104,8 @@ Render a report from a theory, and deposit the result.
 
 ::: theoryforge.osf_push
 
+::: theoryforge.OSFUploadError
+
 ## Literature layer
 
 Map the literature a theory sits in, and check what of it the theory does not

@@ -300,7 +300,7 @@ tf_check <- function(theory) {
 #'
 #' Renders the result of [tf_check()] as a string. \code{format = "json"}
 #' returns valid, pretty-printed JSON; \code{format = "html"} returns an HTML
-#' fragment.
+#' fragment in which every interpolated value is escaped.
 #'
 #' @param theory A theory object (named list).
 #' @param format One of \code{"json"} (default) or \code{"html"}.
@@ -319,16 +319,19 @@ tf_report <- function(theory, format = "json") {
     return(as.character(json))
   }
   if (identical(format, "html")) {
+    # Every interpolated value is escaped: the schema allows any non-empty id,
+    # so '<' or '&' in it would otherwise reach the markup.
     rows <- vapply(rep$items, function(it) {
       sprintf('    <tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
-              it$id, it$status, .tf_format_score_html(it$score), it$citation)
+              .tf_xml(it$id), .tf_xml(it$status),
+              .tf_xml(.tf_format_score_html(it$score)), .tf_xml(it$citation))
     }, character(1))
     rows <- paste(rows, collapse = "\n")
     return(paste0(
       '<section class="theoryforge-report">\n',
-      sprintf('  <h2>Rigour report: %s</h2>\n', rep$theory_id),
+      sprintf('  <h2>Rigour report: %s</h2>\n', .tf_xml(rep$theory_id)),
       sprintf('  <p>Aggregate score: <strong>%s</strong> &middot; gate: <strong>%s</strong></p>\n',
-              .tf_format_score_html(rep$aggregate_score), rep$gate),
+              .tf_xml(.tf_format_score_html(rep$aggregate_score)), .tf_xml(rep$gate)),
       '  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n',
       rows, '\n  </table>\n</section>\n'
     ))

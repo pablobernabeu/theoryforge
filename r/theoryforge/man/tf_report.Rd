@@ -17,7 +17,7 @@ A single string.
 \description{
 Renders the result of \code{\link[=tf_check]{tf_check()}} as a string. \code{format = "json"}
 returns valid, pretty-printed JSON; \code{format = "html"} returns an HTML
-fragment.
+fragment in which every interpolated value is escaped.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

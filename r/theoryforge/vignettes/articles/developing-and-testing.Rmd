@@ -236,6 +236,13 @@ tf_osf_push(
 )
 ```
 
+OSF refuses to create a file whose name already exists in the project, so
+depositing the same theory a second time stops with HTTP 409. Either pass a
+filename that names the version, or add `overwrite = TRUE`, which lists the
+project folder first and sends the dossier to the existing file as a new OSF
+version. Any other refusal also stops with its HTTP status, so a returned value
+always describes an upload that OSF accepted.
+
 ## Visualising the theory
 
 `tf_diagram()` exports several views of the same object. The `workflow` view

@@ -28,7 +28,6 @@ Suggests:
     testthat (>= 3.1.7),
     knitr,
     rmarkdown,
-    httr,
     curl,
     dagitty,
     ggm,

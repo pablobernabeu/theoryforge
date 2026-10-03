@@ -18,6 +18,7 @@ from ._access import (
     text,
 )
 from ._num import rnd
+from .diagram import _xml
 from .redundancy import jaccard, tokens
 
 _CAUSAL = {"causes", "increases", "decreases"}
@@ -281,21 +282,26 @@ def check(T) -> dict:
 
 
 def report(T, format: str = "json") -> str:
-    """Render the rigour report. format in {'json', 'html'}."""
+    """Render the rigour report. format in {'json', 'html'}.
+
+    The HTML fragment escapes every value it interpolates.
+    """
     rep = check(T)  # check() unwraps Theory -> mapping
     if format == "json":
         return json.dumps(rep, indent=2, ensure_ascii=False)
     if format == "html":
+        # Every interpolated value is escaped: the schema allows any non-empty id,
+        # so '<' or '&' in it would otherwise reach the markup.
         rows = "\n".join(
-            f'    <tr><td>{it["id"]}</td><td>{it["status"]}</td>'
-            f'<td>{it["score"]}</td><td>{it["citation"]}</td></tr>'
+            f'    <tr><td>{_xml(it["id"])}</td><td>{_xml(it["status"])}</td>'
+            f'<td>{_xml(it["score"])}</td><td>{_xml(it["citation"])}</td></tr>'
             for it in rep["items"]
         )
         return (
             f'<section class="theoryforge-report">\n'
-            f'  <h2>Rigour report: {rep["theory_id"]}</h2>\n'
-            f'  <p>Aggregate score: <strong>{rep["aggregate_score"]}</strong> &middot; '
-            f'gate: <strong>{rep["gate"]}</strong></p>\n'
+            f'  <h2>Rigour report: {_xml(rep["theory_id"])}</h2>\n'
+            f'  <p>Aggregate score: <strong>{_xml(rep["aggregate_score"])}</strong> &middot; '
+            f'gate: <strong>{_xml(rep["gate"])}</strong></p>\n'
             f'  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n'
             f'{rows}\n  </table>\n</section>\n'
         )

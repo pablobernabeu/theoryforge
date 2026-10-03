@@ -12,7 +12,12 @@ tf_render_report(theory, path, title = NULL, render = FALSE, to = "html")
 \item{path}{Destination path; any extension is replaced with \code{.qmd}.}
 
 \item{title}{Optional report title; defaults to
-\code{"theoryforge report: <title-or-id>"}. Double quotes are escaped.}
+\code{"theoryforge report: <title-or-id>"}, also when \code{NULL},
+\code{NA} or empty. It is written as a YAML double-quoted scalar with backslashes,
+double quotes and control characters escaped, so a YAML parser reads back
+exactly the string passed. Quarto then reads the title as Markdown, so
+raw TeX such as \verb{\\emph\{\}} is dropped from HTML output and \verb{$\\alpha$}
+becomes mathematics.}
 
 \item{render}{When \code{TRUE}, run \code{quarto render} on the written file
 and stop if it exits non-zero.}

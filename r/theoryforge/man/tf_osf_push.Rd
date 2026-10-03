@@ -10,7 +10,8 @@ tf_osf_push(
   node = NULL,
   filename = NULL,
   dry_run = TRUE,
-  base_url = .tf_OSF_BASE
+  base_url = .tf_OSF_BASE,
+  overwrite = FALSE
 )
 }
 \arguments{
@@ -19,19 +20,27 @@ tf_osf_push(
 \item{token}{OSF personal access token (required when \code{dry_run = FALSE}).}
 
 \item{node}{OSF project (node) id; used to build the upload URL and required
-when \code{dry_run = FALSE}.}
+when \code{dry_run = FALSE}. An empty string counts as absent.}
 
-\item{filename}{Destination filename; defaults to \code{<id>.dossier.md}.}
+\item{filename}{Destination filename; defaults to \code{<id>.dossier.md}
+(also when \code{NULL} or empty).}
 
 \item{dry_run}{When \code{TRUE} (default), return the planned request without
 sending it.}
 
 \item{base_url}{OSF storage base URL; override to target a non-default host.}
+
+\item{overwrite}{When \code{TRUE}, add a new version of an existing file of
+the same name instead of failing with HTTP 409. Default \code{FALSE}.}
 }
 \value{
 When \code{dry_run = TRUE}, a list \code{list(dry_run = TRUE,
-  request = list(method, url, filename, content_bytes), note)}. When
-\code{dry_run = FALSE}, a list describing the completed upload.
+  request = list(method, url, filename, content_bytes), note)}, with a
+\code{lookup = list(method = "GET", url)} entry before \code{note} when
+\code{overwrite = TRUE}. When \code{dry_run = FALSE}, \code{list(dry_run =
+  FALSE, status, filename)} for the completed upload. A status outside 2xx
+stops with \code{OSF upload failed with HTTP <status>}, so a refused upload
+is never returned as a completed one.
 }
 \description{
 Builds (and optionally sends) a request to upload \code{tf_dossier(theory)} to
@@ -40,8 +49,18 @@ returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 both \code{token} and \code{node} (the OSF project id) and performs an
 authenticated \code{PUT}. The live path is network- and credential-dependent.
 }
+\details{
+OSF storage refuses to create a file whose name already exists in the
+project folder (HTTP 409), so depositing the same theory twice under the
+default filename fails. Pass a version-specific \code{filename}, or
+\code{overwrite = TRUE} to add a new version of the existing file: the
+folder is listed first and the dossier is sent to that file's upload link,
+the WaterButler route that records a new OSF version. When the folder holds
+no file of that name, \code{overwrite = TRUE} creates it as usual.
+}
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory")
 tf_osf_push(theory)
 tf_osf_push(theory, node = "abc12")$request$url
+tf_osf_push(theory, node = "abc12", overwrite = TRUE)$lookup
 }

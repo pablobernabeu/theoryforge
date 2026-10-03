@@ -253,6 +253,27 @@
   The bundled examples record the builder names in their provenance
   (`tf_add_construct`, `tf_add_proposition`, `tf_add_prediction`).
 
+* `tf_osf_push()` stops when OSF refuses the upload, where it returned the
+  failure as a completed upload. Any status outside 2xx, a 501 included, stops
+  with `OSF upload failed with HTTP <status>`, and a 409 adds that a file of
+  that name already exists. It gains `overwrite`, which adds a new version of
+  an existing file of the same name: the folder is listed first and the
+  dossier goes to that file's upload link. Without it a second deposit under
+  the same filename still fails, so pass a version-specific `filename` or
+  `overwrite = TRUE`. Dry runs match the Python twin for an empty node, an
+  empty filename and filenames containing percent signs, which `URLencode()`
+  used to pass through without encoding anything, spaces and `&` included.
+  A live deposit now sends its requests through curl, as `tf_fetch_corpus()`
+  does, and httr leaves Suggests (httr itself depends on curl).
+
+* `tf_render_report()` escapes the title for YAML, so backslashes and quotes
+  survive. A backslash in a title used to stop Quarto with a YAML error, and
+  `\emph` turned into an escape character. Double quotes are now kept, where
+  they became apostrophes, and an empty or `NA` `title` means the default, as
+  an empty one does in Python. Quarto reads the title as Markdown, so raw TeX is dropped from HTML
+  output and `$\alpha$` becomes mathematics. `tf_report(format = "html")`
+  escapes every value it writes into the HTML, the theory id included.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal
