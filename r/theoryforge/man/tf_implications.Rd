@@ -4,22 +4,32 @@
 \alias{tf_implications}
 \title{Derive a theory's implied conditional independencies}
 \usage{
-tf_implications(theory)
+tf_implications(theory, cycles = "refuse")
 }
 \arguments{
 \item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+
+\item{cycles}{What to do with a graph whose directed edges form a cycle:
+\code{"refuse"} (the default) stops with an error, and \code{"sigma"}
+derives the statements by sigma-separation (see the section on feedback
+loops).}
 }
 \value{
 A named list
 \code{list(theory_id, criterion, acyclic, constructs, n_edges,
   n_bidirected, feedback, implications, n_implications, inseparable)}.
-\code{criterion} names the separation criterion, \code{"m"}.
+\code{criterion} names the separation criterion, \code{"m"} under
+\code{cycles = "refuse"} and \code{"sigma"} under \code{cycles = "sigma"}.
 \code{constructs} holds the vertices in file order. \code{n_edges} counts
-the directed edges and \code{n_bidirected} the bidirected ones, a pair
-stated twice counting once. \code{acyclic} is always \code{TRUE} and
-\code{feedback} always empty in a returned record, since a cyclic graph is
-refused, and both are carried so that a serialised record states the
-verdict. Each entry of \code{implications} is a list
+the directed edges the theory states and \code{n_bidirected} the
+bidirected ones, a pair stated twice counting once, before any
+acyclification. \code{feedback} lists the feedback loops, each a list of
+the ids of its members in file order and the loops in the order of their
+first members. A loop has two or more members, or one construct with an
+edge to itself. \code{acyclic} is \code{TRUE} when \code{feedback} is
+empty, which is always the case under \code{cycles = "refuse"}, and both
+are carried so that a serialised record states the verdict. Each entry of
+\code{implications} is a list
 \code{list(a, b, given, statement)}, where \code{statement} renders the
 claim as \code{a _||_ b | z1, z2}, and each entry of \code{inseparable} is
 \code{list(a, b)}. Pairs come in construct file order, as do the members of
@@ -33,17 +43,16 @@ Reads every proposition through the relation table (API_SPEC.md section
 covariance the theory leaves unexplained, as a latent common cause of the two
 constructs would. The constructs that a directed relation names are the
 vertices, and an association is an edge only between two of them. The
-function checks that the directed edges form no cycle and then takes every
-pair of vertices that no edge joins. The pair is stated independent given
-the parents of both when those m-separate it (Richardson, 2003), and
-otherwise given all the other ancestors of the two when those do. A pair
-that neither set separates is separated by no set of constructs (Richardson
-& Spirtes, 2002, Theorem 4.2), so the theory implies no independence for it,
-and it is listed under \code{inseparable}. These are the conditional
-independencies the causal graph implies, each one a claim that data could
-refute. When every relation is directed, they are the basis set of Pearl
-(1988) and Shipley (2000), from which every other independence the graph
-implies follows.
+function then takes every pair of vertices that no edge joins. The pair is
+stated independent given the parents of both when those m-separate it
+(Richardson, 2003), and otherwise given all the other ancestors of the two
+when those do. A pair that neither set separates is separated by no set of
+constructs (Richardson & Spirtes, 2002, Theorem 4.2), so the theory implies
+no independence for it, and it is listed under \code{inseparable}. These are
+the conditional independencies the causal graph implies, each one a claim
+that data could refute. When every relation is directed and the graph is
+acyclic, they are the basis set of Pearl (1988) and Shipley (2000), from
+which every other independence the graph implies follows.
 }
 \details{
 Constructs that no directed relation names are left out, because silence
@@ -68,17 +77,40 @@ models, such as one built on the measurement model that \code{\link[=tf_compile_
 writes (Thoemmes et al., 2018).
 }
 
+\section{Feedback loops}{
+
+With \code{cycles = "sigma"}, a graph whose directed edges form a cycle is
+read by sigma-separation (Bongers et al., 2021), the criterion that holds
+when each feedback loop, a strongly connected component of the directed
+edges, has a unique equilibrium. The graph is replaced by its
+acyclification (Definition A.13): every member of a loop takes the parents
+of the whole loop from outside it, and the members of a loop are joined to
+each other by bidirected edges. Each pair the theory leaves unjoined is then
+tested in that graph as above, where m-separation equals sigma-separation in
+the theory's own graph (Proposition A.19). There, two members of one loop
+are always joined. So is a construct outside a loop to every member, when it
+enters one of them or when it or a member of its own loop is associated with
+one of them. No set separates such a pair, and when the theory itself leaves
+the pair unjoined, it is listed under \code{inseparable}. A theory that
+posits alternative stable states, such as a bistable network, has more than
+one equilibrium and violates the assumption, and its sigma statements are
+not guaranteed. On an acyclic graph, the two options give the same
+statements. Applying d-separation to a cyclic graph, as dagitty does with
+the causal_dag export, is valid only in special cases such as a linear
+model.
+}
+
 \section{Refusals}{
 
-The function stops in three cases. Two constructs sharing an id would give one
-node two sets of parents, and a directed relation naming an undeclared
-construct would shrink the graph and so imply independencies the theory never
-claimed. A cycle among the directed edges is refused too, and the message
-names a cycle that was found. A cyclic graph also implies independencies,
-under sigma-separation, when each feedback loop has a unique equilibrium
-(Bongers et al., 2021), but this function does not derive them.
-The Python twin raises \code{ValueError} on the same three, with the same
-message text.
+The function stops in four cases. A value of \code{cycles} other than
+\code{"refuse"} or \code{"sigma"} is refused before the theory is read. Two
+constructs sharing an id would give one node two sets of parents, and a
+directed relation naming an undeclared construct would shrink the graph and
+so imply independencies the theory never claimed. With
+\code{cycles = "refuse"}, the default, a cycle among the directed edges is
+refused too, and the message names a cycle that was found and the
+\code{"sigma"} option. The Python twin raises \code{ValueError} in the same
+cases, with the same message text.
 }
 
 \examples{
@@ -99,6 +131,15 @@ implied$implications[[1]]$statement
 # leaves open withdraws that claim: the pair is joined by an edge.
 covary <- tf_add_proposition(theory, "p3", "c_arousal", "c_avoidance", "associates")
 tf_implications(covary)$n_implications
+
+# Closing a feedback loop from threat back to arousal makes the graph cyclic.
+# The default refuses it, and sigma-separation keeps the claim, since holding
+# threat fixed still cuts the one way out of the loop towards avoidance.
+loop <- tf_add_proposition(theory, "p3", "c_threat", "c_arousal", "causes")
+try(tf_implications(loop))
+implied <- tf_implications(loop, cycles = "sigma")
+lapply(implied$feedback, unlist)
+implied$implications[[1]]$statement
 }
 \references{
 Bongers, S., Forré, P., Peters, J., & Mooij, J. M. (2021). Foundations of

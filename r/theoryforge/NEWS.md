@@ -346,6 +346,15 @@
   article and the README warn that a conditional implication tested on
   fallible measures is rejected too often, and point to latent-variable tests.
 
+* `tf_implications()` gains `cycles = "sigma"`, which derives the
+  independencies a cyclic theory implies by sigma-separation (Bongers et al.,
+  2021), valid when each feedback loop has a unique equilibrium. The record
+  then names the criterion `"sigma"`, says whether the graph is acyclic and
+  lists the feedback loops. The bundled panic network implies that arousal and
+  avoidance are independent given perceived threat. The default still refuses
+  a cyclic graph, and its message names the option. A golden file of the
+  sigma record for each bundled theory joins the parity check.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

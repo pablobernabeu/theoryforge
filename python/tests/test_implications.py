@@ -1,4 +1,5 @@
 import itertools
+import json
 import math
 import random
 from pathlib import Path
@@ -374,12 +375,15 @@ def test_shipped_acyclic_example_carries_a_fork_and_a_collider(modality_path):
     assert by_pair[("c_sensorimotor_experience", "c_lexical_familiarity")] == []
 
 
+SIGMA_HINT = "; set cycles to 'sigma' to derive sigma-separation statements"
+
+
 def test_refuses_a_cyclic_causal_graph_naming_the_cycle(panic_path):
     with pytest.raises(ValueError) as exc:
         tf.read(panic_path).implications()
     assert str(exc.value) == (
         "implications requires an acyclic causal graph; "
-        "cycle found: c_arousal -> c_perceived_threat -> c_arousal")
+        "cycle found: c_arousal -> c_perceived_threat -> c_arousal" + SIGMA_HINT)
 
 
 def test_refuses_a_self_loop():
@@ -387,7 +391,8 @@ def test_refuses_a_self_loop():
     t.add_construct("a", "A", "d").add_proposition("p1", "a", "a", "causes")
     with pytest.raises(ValueError) as exc:
         t.implications()
-    assert str(exc.value) == "implications requires an acyclic causal graph; cycle found: a -> a"
+    assert str(exc.value) == (
+        "implications requires an acyclic causal graph; cycle found: a -> a" + SIGMA_HINT)
 
 
 def test_refuses_duplicate_construct_ids():
@@ -426,7 +431,8 @@ def test_refuses_a_cycle_closed_by_a_moderation():
     t = relation_theory("loop", ["a", "b"], [("a", "causes", "b"), ("b", "moderates", "a")])
     with pytest.raises(ValueError) as exc:
         t.implications()
-    assert str(exc.value) == "implications requires an acyclic causal graph; cycle found: a -> b -> a"
+    assert str(exc.value) == (
+        "implications requires an acyclic causal graph; cycle found: a -> b -> a" + SIGMA_HINT)
 
 
 def test_basis_set_cardinality_identity():
@@ -561,3 +567,298 @@ def test_derived_independence_holds_in_simulated_data():
     assert abs(_corr(arousal, avoidance)) > 0.2
     # an adjacent pair is not implied independent, and is not independent here
     assert abs(_pcor(threat, avoidance, arousal)) > 0.2
+
+
+# -- cycles = "sigma" (API_SPEC.md section 27) ---------------------------------
+
+FIXTURES_DIR = Path(__file__).resolve().parents[2] / "fixtures"
+
+
+@pytest.mark.parametrize("value", ["Sigma", "", "d", None, 1, True, ["sigma"], ("refuse",)])
+def test_cycles_must_be_refuse_or_sigma(value, modality_path):
+    with pytest.raises(ValueError) as exc:
+        tf.read(modality_path).implications(cycles=value)
+    assert str(exc.value) == "implications requires cycles to be 'refuse' or 'sigma'"
+
+
+def test_cycles_is_checked_before_the_theory_is_read():
+    t = tf.new_theory("dupe", "Duplicated ids")
+    t.add_construct("c1", "One", "d").add_construct("c1", "One again", "d")
+    with pytest.raises(ValueError) as exc:
+        tf.implications(t, cycles="linear")
+    assert str(exc.value) == "implications requires cycles to be 'refuse' or 'sigma'"
+
+
+def test_refuse_is_the_default(panic_path):
+    t = tf.read(panic_path)
+    with pytest.raises(ValueError) as default:
+        t.implications()
+    with pytest.raises(ValueError) as named:
+        t.implications(cycles="refuse")
+    assert str(default.value) == str(named.value)
+
+
+def test_sigma_derives_the_panic_network_statement(panic_path):
+    # Arousal and perceived threat form a feedback loop, and perceived threat
+    # drives avoidance. Holding perceived threat fixed blocks the one way out of
+    # the loop towards avoidance, so the theory implies that arousal and
+    # avoidance are independent given perceived threat (Bongers et al., 2021,
+    # Theorem 6.3(2) and Proposition A.19).
+    res = tf.read(panic_path).implications(cycles="sigma")
+    assert list(res) == ["theory_id", "criterion", "acyclic", "constructs", "n_edges",
+                         "n_bidirected", "feedback", "implications", "n_implications",
+                         "inseparable"]
+    assert res == {
+        "theory_id": "panic-network-2026",
+        "criterion": "sigma",
+        "acyclic": False,
+        "constructs": ["c_arousal", "c_perceived_threat", "c_avoidance"],
+        "n_edges": 3,
+        "n_bidirected": 0,
+        "feedback": [["c_arousal", "c_perceived_threat"]],
+        "implications": [{
+            "a": "c_arousal", "b": "c_avoidance", "given": ["c_perceived_threat"],
+            "statement": "c_arousal _||_ c_avoidance | c_perceived_threat"}],
+        "n_implications": 1,
+        "inseparable": [],
+    }
+
+
+def test_sigma_on_the_amended_panic_network_implies_nothing():
+    # The amendment's p4 joins arousal to avoidance, so every pair is adjacent.
+    res = tf.read(FIXTURES_DIR / "panic-network-2026-v2.theory.yaml").implications(cycles="sigma")
+    assert res["acyclic"] is False
+    assert res["n_edges"] == 4
+    assert res["feedback"] == [["c_arousal", "c_perceived_threat"]]
+    assert res["implications"] == []
+    assert res["inseparable"] == []
+
+
+def test_sigma_on_an_acyclic_theory_gives_the_m_separation_statements(modality_path, weak_path):
+    for path in (modality_path, weak_path):
+        t = tf.read(path)
+        m, s = t.implications(), t.implications(cycles="sigma")
+        assert s["criterion"] == "sigma"
+        assert s["acyclic"] is True
+        assert s["feedback"] == []
+        assert {**s, "criterion": "m"} == m
+
+
+def test_sigma_does_not_assert_what_only_d_separation_gives():
+    # Example A.8 of Bongers et al. (2021): x1 -> x3, x2 -> x4 and a feedback
+    # loop between x3 and x4. d-separation holds x1 and x2 independent given
+    # {x3, x4}, which fails in the nonlinear model of that example, and
+    # sigma-separation does not. The two are independent with nothing held
+    # fixed, and that is the one statement derived. Each input and the loop
+    # member it does not enter directly are connected through the loop whatever
+    # is held fixed, so those two pairs are inseparable.
+    t = relation_theory("a8", ["x1", "x2", "x3", "x4"], [
+        ("x1", "causes", "x3"), ("x3", "causes", "x4"),
+        ("x4", "causes", "x3"), ("x2", "causes", "x4"),
+    ])
+    directed = [("x1", "x3"), ("x3", "x4"), ("x4", "x3"), ("x2", "x4")]
+    assert not _sigma_connected(directed, [], "x1", "x2", ["x3", "x4"], sigma=False)
+    assert _sigma_connected(directed, [], "x1", "x2", ["x3", "x4"])
+    res = t.implications(cycles="sigma")
+    assert res["feedback"] == [["x3", "x4"]]
+    assert statements(res) == ["x1 _||_ x2"]
+    assert res["inseparable"] == [{"a": "x1", "b": "x4"}, {"a": "x2", "b": "x3"}]
+
+
+def test_a_self_loop_is_feedback_and_constrains_nothing():
+    t = relation_theory("loop", ["a", "b", "c"], [
+        ("a", "causes", "a"), ("a", "causes", "b"), ("b", "causes", "c"),
+    ])
+    res = t.implications(cycles="sigma")
+    assert res["acyclic"] is False
+    assert res["n_edges"] == 3
+    assert res["feedback"] == [["a"]]
+    assert statements(res) == ["a _||_ c | b"]
+
+
+def test_feedback_components_follow_vertex_order():
+    # Members of each component in declaration order, components ordered by
+    # their first member, and a vertex on no cycle is no component.
+    t = relation_theory("loops", ["d", "c", "b", "a", "e", "f"], [
+        ("a", "causes", "b"), ("b", "causes", "a"), ("c", "causes", "d"),
+        ("d", "moderates", "c"), ("e", "causes", "e"), ("b", "increases", "e"),
+        ("e", "causes", "f"),
+    ])
+    res = t.implications(cycles="sigma")
+    assert res["feedback"] == [["d", "c"], ["b", "a"], ["e"]]
+
+
+def test_a_loop_member_shares_the_parents_of_the_loop():
+    # x -> a, a -> b -> a, b -> y. In the acyclification x is a parent of both
+    # members of the loop, so no set separates x and b, which the theory leaves
+    # unjoined, and the pair is inseparable. x and y are independent given b,
+    # and a and y given x and b.
+    t = relation_theory("enter", ["x", "a", "b", "y"], [
+        ("x", "causes", "a"), ("a", "causes", "b"), ("b", "causes", "a"), ("b", "causes", "y"),
+    ])
+    res = t.implications(cycles="sigma")
+    assert statements(res) == ["x _||_ y | b", "a _||_ y | x, b"]
+    assert res["inseparable"] == [{"a": "x", "b": "b"}]
+
+
+def test_pairs_the_acyclification_joins_are_inseparable_not_dropped():
+    # In the loop a -> b -> c -> d -> a, the theory joins neither a and c nor b
+    # and d, and no set separates either pair, since the loop connects them
+    # whatever is held fixed. An association with one member of a loop, and an
+    # edge into one member of a second loop, likewise leave pairs that no set
+    # separates. Each such pair is listed as inseparable.
+    loop = relation_theory("loop4", ["a", "b", "c", "d"], [
+        ("a", "causes", "b"), ("b", "causes", "c"), ("c", "causes", "d"), ("d", "causes", "a"),
+    ])
+    res = loop.implications(cycles="sigma")
+    assert res["implications"] == []
+    assert res["inseparable"] == [{"a": "a", "b": "c"}, {"a": "b", "b": "d"}]
+    assoc = relation_theory("assoc", ["x", "a", "b", "y"], [
+        ("a", "causes", "b"), ("b", "causes", "a"), ("x", "causes", "y"), ("x", "associates", "a"),
+    ])
+    res = assoc.implications(cycles="sigma")
+    assert statements(res) == ["a _||_ y | x", "b _||_ y | x"]
+    assert res["inseparable"] == [{"a": "x", "b": "b"}]
+    two = relation_theory("two", ["a", "b", "c", "d"], [
+        ("a", "causes", "b"), ("b", "causes", "a"), ("c", "causes", "d"), ("d", "causes", "c"),
+        ("b", "causes", "c"),
+    ])
+    res = two.implications(cycles="sigma")
+    assert statements(res) == ["a _||_ c | b", "a _||_ d | b"]
+    assert res["inseparable"] == [{"a": "b", "b": "d"}]
+
+
+def _sigma_connected(directed, bidirected, a, b, given, sigma=True):
+    """Brute force from Definition A.16 of Bongers et al. (2021), over the
+    simple paths between a and b, which suffice (Lemma A.17). A path connects
+    the two given Z when every collider on it is an ancestor of Z (Z included)
+    and every other vertex on it is either outside Z or, under
+    sigma-separation, points only to neighbours on the path in its own strongly
+    connected component. ``sigma=False`` gives d-separation. Every simple path
+    is enumerated, so this shares no code or idea with the package's
+    acyclification and walk."""
+    def reached(u):
+        seen, stack = {u}, [u]
+        while stack:
+            v = stack.pop()
+            for s, w in directed:
+                if s == v and w not in seen:
+                    seen.add(w)
+                    stack.append(w)
+        return seen
+
+    vertices = {v for e in directed + bidirected for v in e} | {a, b}
+    reach = {v: reached(v) for v in vertices}
+    z = set(given)
+    anc = {u for u in vertices if reach[u] & z}
+
+    def sc(v):
+        return {w for w in vertices if w in reach[v] and v in reach[w]}
+
+    # (from, to, arrowhead at from, arrowhead at to); a self loop is no step
+    steps = ([(u, v, False, True) for u, v in directed if u != v]
+             + [(v, u, True, False) for u, v in directed if u != v]
+             + [(u, v, True, True) for u, v in bidirected if u != v]
+             + [(v, u, True, True) for u, v in bidirected if u != v])
+
+    def extend(path, head_in, points_back):
+        v = path[-1]
+        for s, w, head_s, head_w in steps:
+            if s != v or w in path:
+                continue
+            if len(path) > 1:
+                if head_in and head_s:
+                    if v not in anc:
+                        continue
+                elif v in z:
+                    if not sigma:
+                        continue
+                    points_on = not head_s and head_w
+                    if (points_back and path[-2] not in sc(v)) or (points_on and w not in sc(v)):
+                        continue
+            if w == b or extend(path + [w], head_w, not head_w and head_s):
+                return True
+        return False
+
+    return extend([a], False, False)
+
+
+def test_every_sigma_statement_and_inseparable_pair_agrees_with_a_brute_force_oracle():
+    # Random mixed graphs with feedback loops, every directed relation in use,
+    # associations anywhere and declaration order shuffled. Each stated
+    # independence must hold by sigma-separation in the cyclic graph itself,
+    # each pair that some set of vertices separates must be stated, and every
+    # other pair the theory leaves unjoined must be listed as inseparable.
+    rng = random.Random(20261003)
+    rels = sorted(DIRECTED)
+    stated = inseparable = cyclic = 0
+    for _ in range(150):
+        k = rng.randint(3, 5)
+        nodes = [f"v{i}" for i in range(k)]
+        directed = [(nodes[i], nodes[j]) for i in range(k) for j in range(k)
+                    if i != j and rng.random() < 0.3]
+        bidirected = [(nodes[i], nodes[j]) for i in range(k) for j in range(i + 1, k)
+                      if rng.random() < 0.15]
+        if not directed:
+            continue
+        order = nodes[:]
+        rng.shuffle(order)
+        props = ([(a, rng.choice(rels), b) for a, b in directed]
+                 + [(a, "associates", b) for a, b in bidirected])
+        rng.shuffle(props)
+        res = relation_theory("random", order, props).implications(cycles="sigma")
+        vertices = [n for n in order if any(n in e for e in directed)]
+        assert res["constructs"] == vertices
+        cyclic += not res["acyclic"]
+        separable = []
+        for a, b in itertools.combinations(vertices, 2):
+            others = [v for v in vertices if v not in (a, b)]
+            if any(not _sigma_connected(directed, bidirected, a, b, zs)
+                   for r in range(len(others) + 1)
+                   for zs in itertools.combinations(others, r)):
+                separable.append((a, b))
+        assert [(i["a"], i["b"]) for i in res["implications"]] == separable
+        for i in res["implications"]:
+            assert not _sigma_connected(directed, bidirected, i["a"], i["b"], i["given"])
+            assert i["given"] == [v for v in vertices if v in i["given"]]
+        # Every pair the theory leaves unjoined is either stated or inseparable.
+        joined = {frozenset(e) for e in directed + bidirected}
+        unjoined = [p for p in itertools.combinations(vertices, 2) if frozenset(p) not in joined]
+        assert [(p["a"], p["b"]) for p in res["inseparable"]] == [
+            p for p in unjoined if p not in separable]
+        stated += len(res["implications"])
+        inseparable += len(res["inseparable"])
+    assert cyclic > 50
+    assert stated > 100
+    assert inseparable > 5
+
+
+def test_sigma_and_refuse_agree_on_random_acyclic_graphs():
+    rng = random.Random(1309)
+    for _ in range(100):
+        order, edges = random_dag(rng, kmin=3, kmax=6)
+        if not edges:
+            continue
+        t = dag_theory(order, edges)
+        assert {**t.implications(cycles="sigma"), "criterion": "m"} == t.implications()
+
+
+@pytest.mark.parametrize("name", sorted(p.name for p in FIXTURES_DIR.glob("*.theory.yaml")))
+def test_implications_goldens(name):
+    # gen_golden.py writes <id>.implications.json with cycles = "sigma" for
+    # every fixture, and the R twin must reproduce it (scripts/parity_check.py).
+    t = tf.read(FIXTURES_DIR / name)
+    golden = FIXTURES_DIR / "expected" / f"{t.id}.implications.json"
+    assert json.loads(golden.read_text(encoding="utf-8")) == t.implications(cycles="sigma")
+
+
+def test_implications_goldens_hold_the_planned_statements():
+    def golden(tid):
+        return json.loads((FIXTURES_DIR / "expected" / f"{tid}.implications.json")
+                          .read_text(encoding="utf-8"))
+
+    assert statements(golden("panic-network-2026")) == [
+        "c_arousal _||_ c_avoidance | c_perceived_threat"]
+    assert statements(golden("panic-network-2026-v2")) == []
+    assert len(golden("modality-switching-2026")["implications"]) == 6
+    assert golden("weak-demo")["constructs"] == []

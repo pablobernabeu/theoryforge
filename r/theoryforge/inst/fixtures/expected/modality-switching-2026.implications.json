@@ -1,0 +1,67 @@
+{
+  "theory_id": "modality-switching-2026",
+  "criterion": "sigma",
+  "acyclic": true,
+  "constructs": [
+    "c_sensorimotor_experience",
+    "c_modality_activation",
+    "c_switch_cost",
+    "c_conceptual_access",
+    "c_lexical_familiarity"
+  ],
+  "n_edges": 4,
+  "n_bidirected": 0,
+  "feedback": [],
+  "implications": [
+    {
+      "a": "c_sensorimotor_experience",
+      "b": "c_switch_cost",
+      "given": [
+        "c_modality_activation"
+      ],
+      "statement": "c_sensorimotor_experience _||_ c_switch_cost | c_modality_activation"
+    },
+    {
+      "a": "c_sensorimotor_experience",
+      "b": "c_conceptual_access",
+      "given": [
+        "c_modality_activation",
+        "c_lexical_familiarity"
+      ],
+      "statement": "c_sensorimotor_experience _||_ c_conceptual_access | c_modality_activation, c_lexical_familiarity"
+    },
+    {
+      "a": "c_sensorimotor_experience",
+      "b": "c_lexical_familiarity",
+      "given": [],
+      "statement": "c_sensorimotor_experience _||_ c_lexical_familiarity"
+    },
+    {
+      "a": "c_modality_activation",
+      "b": "c_lexical_familiarity",
+      "given": [
+        "c_sensorimotor_experience"
+      ],
+      "statement": "c_modality_activation _||_ c_lexical_familiarity | c_sensorimotor_experience"
+    },
+    {
+      "a": "c_switch_cost",
+      "b": "c_conceptual_access",
+      "given": [
+        "c_modality_activation",
+        "c_lexical_familiarity"
+      ],
+      "statement": "c_switch_cost _||_ c_conceptual_access | c_modality_activation, c_lexical_familiarity"
+    },
+    {
+      "a": "c_switch_cost",
+      "b": "c_lexical_familiarity",
+      "given": [
+        "c_modality_activation"
+      ],
+      "statement": "c_switch_cost _||_ c_lexical_familiarity | c_modality_activation"
+    }
+  ],
+  "n_implications": 6,
+  "inseparable": []
+}

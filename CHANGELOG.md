@@ -370,6 +370,17 @@ version and a single behavioural contract
   file's upload link, WaterButler's update route, which records a new OSF version. When
   no file of that name exists, the file is created as usual. The dry run then shows the
   lookup request too. `OSFUploadError` is exported.
+- `implications(theory, cycles="refuse")` gains `cycles="sigma"`, which derives the
+  independencies a cyclic theory implies by sigma-separation (Bongers et al., 2021),
+  valid when each feedback loop has a unique equilibrium. The graph is replaced by its
+  acyclification and read by m-separation there, so the record names the criterion
+  `"sigma"`, says in `acyclic` whether the graph has a cycle and lists the feedback loops
+  in `feedback`. The bundled panic network implies that arousal and avoidance are
+  independent given perceived threat. The default still refuses a cyclic graph, and its
+  message now ends `; set cycles to 'sigma' to derive sigma-separation statements`. Any
+  other value of `cycles` raises `implications requires cycles to be 'refuse' or
+  'sigma'`. Four goldens, `<id>.implications.json`, hold the sigma record of each
+  fixture, and API_SPEC section 27 pins the acyclification and the order of the loops.
 
 ### Deprecated
 - `simulate()`'s default `method="euler"`. The default will change to `"exact"` in the
@@ -446,6 +457,11 @@ version and a single behavioural contract
   latent-variable model (Thoemmes et al., 2018). The statements are called the conditional
   independencies the causal graph implies, and a basis set only for a graph of directed
   relations alone.
+- Both workflow pages show the panic network's sigma-separation statement together with
+  the assumption it rests on, a single equilibrium for each feedback loop, which a theory
+  of alternative stable states violates. The methodology pages, the README and API_SPEC
+  sections 5 and 27 describe the `cycles` option, and the README no longer quotes a count
+  of golden artefacts.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and

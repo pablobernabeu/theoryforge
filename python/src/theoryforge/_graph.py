@@ -3,6 +3,14 @@
 A graph has the vertices 0 to k - 1. ``directed[u][v]`` is True for an edge
 u -> v, and ``bidirected[u][v]``, kept symmetric, for an edge u <-> v. R's
 ``graph.R`` holds the same routines.
+
+References:
+    Bongers, S., Forré, P., Peters, J., & Mooij, J. M. (2021). Foundations of
+    structural causal models with cycles and latent variables. The Annals of
+    Statistics, 49(5), 2885-2915. https://doi.org/10.1214/21-AOS2064
+    Richardson, T. (2003). Markov properties for acyclic directed mixed graphs.
+    Scandinavian Journal of Statistics, 30(1), 145-157.
+    https://doi.org/10.1111/1467-9469.00323
 """
 from __future__ import annotations
 
@@ -58,6 +66,61 @@ def reach(directed: list[list[bool]], k: int) -> list[list[bool]]:
                     r[s][v] = True
                     stack.append(v)
     return r
+
+
+def strong_components(r: list[list[bool]]) -> list[list[int]]:
+    """The strongly connected components of a graph whose ``reach()`` is ``r``.
+
+    Two vertices share a component when each reaches the other. The members of
+    a component come in vertex order and the components in the order of their
+    first members, so both engines list them alike. A vertex on no cycle is a
+    component of its own.
+    """
+    k = len(r)
+    seen = [False] * k
+    out = []
+    for i in range(k):
+        if seen[i]:
+            continue
+        comp = [j for j in range(k) if r[i][j] and r[j][i]]
+        for j in comp:
+            seen[j] = True
+        out.append(comp)
+    return out
+
+
+def acyclify(directed: list[list[bool]], bidirected: list[list[bool]],
+             comps: list[list[int]]) -> tuple[list[list[bool]], list[list[bool]]]:
+    """The acyclification of a directed mixed graph (Bongers et al., 2021, Def. A.13).
+
+    ``comps`` are the strongly connected components of ``directed``. In the
+    result, j -> i when j is a parent of some member of i's component and lies
+    outside it, so every member of a feedback loop shares the loop's outside
+    parents. i <-> j, for i and j distinct, when the two share a component or
+    some member of i's component and some member of j's are joined by a
+    bidirected edge. Sigma-separation in the original graph is m-separation in
+    this acyclic one (Proposition A.19).
+    """
+    k = len(directed)
+    comp_of = [0] * k
+    for c, comp in enumerate(comps):
+        for v in comp:
+            comp_of[v] = c
+    # Whether some member of component c has the parent j, and whether some
+    # members of components c and d are joined by a bidirected edge.
+    parent_of_comp = [[False] * k for _ in comps]
+    joined = [[False] * len(comps) for _ in comps]
+    for u in range(k):
+        for v in range(k):
+            if directed[u][v]:
+                parent_of_comp[comp_of[v]][u] = True
+            if bidirected[u][v]:
+                joined[comp_of[u]][comp_of[v]] = True
+    d_acy = [[parent_of_comp[comp_of[i]][j] and comp_of[j] != comp_of[i] for i in range(k)]
+             for j in range(k)]
+    b_acy = [[i != j and (comp_of[i] == comp_of[j] or joined[comp_of[i]][comp_of[j]])
+              for j in range(k)] for i in range(k)]
+    return d_acy, b_acy
 
 
 def _ends(directed: list[list[bool]], bidirected: list[list[bool]],

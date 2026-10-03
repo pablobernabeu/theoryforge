@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Generate golden outputs from the Python reference implementation.
 
-Writes every parity artefact named in API_SPEC.md sections 13, 17, 21 and 22
-into ``fixtures/expected/``. Listing the artefact types here as well would only
+Writes every parity artefact named in API_SPEC.md sections 13, 17, 21, 22 and
+27 into ``fixtures/expected/``. Listing the artefact types here as well would only
 give them a second place to drift from; the spec is the list.
 
 Also mirrors the fixture inputs, the golden tree and the two schema files
@@ -102,6 +102,12 @@ def emit_theory(t: tf.Theory, out_dir: Path) -> list[str]:
     (out_dir / f"{tid}.simulate_exact.json").write_bytes(
         (json.dumps(t.simulate(method="exact"), indent=2) + "\n").encode("utf-8"))
     written.append(f"{tid}.simulate_exact.json")
+    # Sigma-separation, so that a theory with a feedback loop has a record too
+    # (API_SPEC.md section 27). On an acyclic theory, it gives the statements of
+    # the default.
+    (out_dir / f"{tid}.implications.json").write_bytes(
+        (json.dumps(t.implications(cycles="sigma"), indent=2) + "\n").encode("utf-8"))
+    written.append(f"{tid}.implications.json")
     return written
 
 

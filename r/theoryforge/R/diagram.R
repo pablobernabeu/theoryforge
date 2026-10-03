@@ -165,8 +165,8 @@ NULL
   # loop (the panic-network example has one) yields a cyclic graph inside a
   # `dag` block. dagitty accepts it but reads it by d-separation, which a cyclic
   # model is guaranteed to satisfy only in special cases, a linear model among
-  # them (Bongers et al., 2021, Theorem 6.3), and tf_implications() refuses the
-  # graph.
+  # them (Bongers et al., 2021, Theorem 6.3). tf_implications() refuses the
+  # graph by default and reads it by sigma-separation with cycles = "sigma".
   props <- .tf_list(T, "propositions")
   vertices <- character(0)
   for (p in props) {

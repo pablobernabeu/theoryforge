@@ -273,9 +273,9 @@ the theory then implies no independence for it.
 
 The demonstration theory built above has a single proposition and so no
 non-adjacent pair to say anything about. The shipped panic-network fixture has
-three, and gets no statements: its third proposition returns from perceived
-threat to arousal, closing the feedback loop the theory is about, and
-`implications()` refuses a graph with a cycle.
+three, and gets no statements by default. Its third proposition returns from
+perceived threat to arousal, closing the feedback loop the theory is about, and
+`implications()` refuses a graph with a cycle unless it is told how to read one.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
 panic = tf.read(fixtures / "panic-network.theory.yaml")
@@ -286,15 +286,31 @@ except ValueError as exc:
     print(exc)
 ```
 
-The refusal names the cycle it found, so nobody has to hunt for it. A cyclic
-graph does imply conditional independencies, and dagitty accepts the
-`causal_dag` export of one. dagitty reads it by d-separation, though, which a
-model with feedback is guaranteed to satisfy only in special cases, a linear
-model among them. The criterion that holds whenever each feedback loop has a
-unique equilibrium is sigma-separation
+The refusal names the cycle it found, so nobody has to hunt for it, and the
+option that reads it. A cyclic graph does imply conditional independencies, and
+dagitty accepts the `causal_dag` export of one. dagitty reads it by
+d-separation, though, which a model with feedback is guaranteed to satisfy only
+in special cases, a linear model among them. The criterion that holds whenever
+each feedback loop has a unique equilibrium is sigma-separation
 ([Bongers et al., 2021](https://doi.org/10.1214/21-AOS2064)), and
-`implications()` does not apply it. `simulate()`, described below, runs the
-loop over time.
+`cycles="sigma"` applies it.
+
+```python exec="1" source="material-block" result="text" session="workflow-modes"
+implied = panic.implications(cycles="sigma")
+print(implied["feedback"])
+for i in implied["implications"]:
+    print(i["statement"])
+```
+
+The loop between arousal and perceived threat is the one feedback loop.
+Holding perceived threat fixed cuts the only way out of the loop towards
+avoidance. The theory therefore implies that arousal and avoidance are
+independent given perceived threat, a claim it never states and a study could
+refute. The claim rests on an assumption the graph cannot check, that for given
+inputs the loop settles into a single equilibrium. A network theory that posits
+alternative stable states, such as a calm state and a panic state that each
+sustain themselves, violates it. The statement is then not guaranteed.
+`simulate()`, described below, runs the loop over time.
 
 A second shipped fixture has an acyclic causal graph, a theory of modality
 switching in grounded conceptual processing. Sensorimotor experience with a

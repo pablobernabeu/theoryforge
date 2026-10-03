@@ -67,6 +67,59 @@
   reach
 }
 
+# The strongly connected components of a graph whose .tf_reach() is `reach`, as
+# a list of integer vectors. Two vertices share a component when each reaches
+# the other. The members of a component come in vertex order and the components
+# in the order of their first members, so both engines list them alike. A vertex
+# on no cycle is a component of its own.
+.tf_strong_components <- function(reach) {
+  k <- nrow(reach)
+  seen <- logical(k)
+  out <- list()
+  for (i in seq_len(k)) {
+    if (seen[[i]]) next
+    comp <- which(reach[i, ] & reach[, i])
+    seen[comp] <- TRUE
+    out[[length(out) + 1L]] <- comp
+  }
+  out
+}
+
+# The acyclification of a directed mixed graph (Bongers et al., 2021, Definition
+# A.13), as list(directed, bidirected). `comps` are the strongly connected
+# components of `directed`. In the result, j -> i when j is a parent of some
+# member of i's component and lies outside it, so every member of a feedback
+# loop shares the loop's outside parents. i <-> j, for i and j distinct, when
+# the two share a component or some member of i's component and some member of
+# j's are joined by a bidirected edge. Sigma-separation in the original graph is
+# m-separation in this acyclic one (Proposition A.19).
+.tf_acyclify <- function(directed, bidirected, comps) {
+  k <- nrow(directed)
+  n_comp <- length(comps)
+  comp_of <- integer(k)
+  for (c in seq_len(n_comp)) comp_of[comps[[c]]] <- c
+  # Whether the vertex j is a parent of some member of component c, and whether
+  # some members of components c and d are joined by a bidirected edge.
+  parent_of_comp <- matrix(FALSE, nrow = n_comp, ncol = k)
+  joined <- matrix(FALSE, nrow = n_comp, ncol = n_comp)
+  for (u in seq_len(k)) {
+    for (v in seq_len(k)) {
+      if (directed[u, v]) parent_of_comp[comp_of[[v]], u] <- TRUE
+      if (bidirected[u, v]) joined[comp_of[[u]], comp_of[[v]]] <- TRUE
+    }
+  }
+  d_acy <- matrix(FALSE, nrow = k, ncol = k)
+  b_acy <- matrix(FALSE, nrow = k, ncol = k)
+  for (i in seq_len(k)) {
+    for (j in seq_len(k)) {
+      d_acy[j, i] <- parent_of_comp[comp_of[[i]], j] && comp_of[[j]] != comp_of[[i]]
+      b_acy[i, j] <- i != j &&
+        (comp_of[[i]] == comp_of[[j]] || joined[comp_of[[i]], comp_of[[j]]])
+    }
+  }
+  list(directed = d_acy, bidirected = b_acy)
+}
+
 # The edges at v as rows (w, arrowhead at v, arrowhead at w), with 1 for an
 # arrowhead and 0 for a tail.
 .tf_ends <- function(directed, bidirected, v) {

@@ -8,13 +8,18 @@ two constructs would. Each pair of constructs that no edge joins is
 independent given some set of other constructs whenever a set m-separates the
 pair (Richardson, 2003), and those statements are what data can refute. A graph
 of directed edges alone is a DAG, where m-separation is d-separation and the
-statements are the basis set of Pearl (1988) and Shipley (2000).
+statements are the basis set of Pearl (1988) and Shipley (2000). A graph with
+feedback loops is refused by default, or read by sigma-separation on request
+(Bongers et al., 2021).
 """
 from __future__ import annotations
 
 from ._access import RELATION, enum, field, items, text
-from ._graph import first_cycle, m_separated, reach
+from ._graph import acyclify, first_cycle, m_separated, reach, strong_components
 from ._relations import BIDIRECTED, DIRECTED
+
+# The values of the ``cycles`` option, the default first.
+CYCLES = ("refuse", "sigma")
 
 
 def _statement(a: str, b: str, given: list[str]) -> str:
@@ -24,7 +29,7 @@ def _statement(a: str, b: str, given: list[str]) -> str:
     return f"{a} _||_ {b} | " + ", ".join(given)
 
 
-def implications(T) -> dict:
+def implications(T, cycles: str = "refuse") -> dict:
     """Conditional independencies implied by the graph a theory's propositions state.
 
     Reads every proposition through the relation table (API_SPEC.md section
@@ -33,35 +38,58 @@ def implications(T) -> dict:
     ``associates`` is a bidirected edge, covariance the theory leaves
     unexplained. The constructs that a directed relation names are the
     vertices, and an association is an edge only between two of them. The
-    function checks that the directed edges form no cycle and then takes every
-    pair of vertices that no edge joins. The pair is stated independent given
-    the parents of both when those m-separate it (Richardson, 2003), and
-    otherwise given all the other ancestors of the two when those do. A pair
-    that neither set separates is separated by no set of constructs
-    (Richardson & Spirtes, 2002, Theorem 4.2), so the theory implies no
-    independence for it, and it is listed under ``inseparable``. When every
-    relation is directed, the statements are the basis set of Pearl (1988)
-    and Shipley (2000), from which every other independence the graph
-    implies follows.
+    function then takes every pair of vertices that no edge joins. The pair is
+    stated independent given the parents of both when those m-separate it
+    (Richardson, 2003), and otherwise given all the other ancestors of the two
+    when those do. A pair that neither set separates is separated by no set of
+    constructs (Richardson & Spirtes, 2002, Theorem 4.2), so the theory
+    implies no independence for it, and it is listed under ``inseparable``.
+    When every relation is directed and the graph is acyclic, the statements
+    are the basis set of Pearl (1988) and Shipley (2000), from which every
+    other independence the graph implies follows.
+
+    ``cycles`` says what to do with a graph whose directed edges form a cycle.
+    The default, ``"refuse"``, raises an error that names a cycle found.
+    ``"sigma"`` reads the graph by sigma-separation (Bongers et al., 2021),
+    the criterion that holds when each feedback loop, a strongly connected
+    component of the directed edges, has a unique equilibrium. The graph is
+    then replaced by its acyclification (Definition A.13): every member of a
+    loop takes the parents of the whole loop from outside it, and the members
+    of a loop are joined to each other by bidirected edges. Each pair the
+    theory leaves unjoined is then tested in that graph as above, where
+    m-separation equals sigma-separation in the theory's own graph
+    (Proposition A.19). There, two members of one loop are always joined. So
+    is a construct outside a loop to every member, when it enters one of them
+    or when it or a member of its own loop is associated with one of them. No
+    set separates such a pair, and when the theory itself leaves the pair
+    unjoined, it is listed under ``inseparable``. A theory that posits
+    alternative stable states, such as a bistable network, has more than one
+    equilibrium and violates the assumption, and its sigma statements are not
+    guaranteed. On an acyclic graph, the two options give the same statements.
+    Applying d-separation to a cyclic graph, as dagitty does with the
+    causal_dag export, is valid only in special cases such as a linear model.
 
     Returns ``{theory_id, criterion, acyclic, constructs, n_edges,
     n_bidirected, feedback, implications, n_implications, inseparable}``.
-    ``criterion`` names the separation criterion, ``"m"``. ``constructs``
-    lists the vertices in file order. Constructs that no directed relation
-    names are left out, because silence about a construct is not a claim that
-    it is independent of anything, and so are constructs without an id, which
-    no proposition can name. A construct named only by associations would be a
-    collider on every path through it, so leaving it out loses no statement
-    about the others. ``n_edges`` counts the directed edges and
-    ``n_bidirected`` the bidirected ones, a pair stated twice counting once.
-    ``acyclic`` is always True and ``feedback`` always empty in a returned
-    record, since a cyclic graph is refused, and both are carried so that a
-    serialised record states the verdict. Each entry of ``implications`` is
-    ``{a, b, given, statement}``, where ``statement`` renders the claim in the
-    notation dagitty prints, ``a _||_ b | z1, z2``, and each entry of
-    ``inseparable`` is ``{a, b}``. Pairs come in construct file order, as do
-    the members of ``given``, so the two engines return the same records in
-    the same order.
+    ``criterion`` names the separation criterion, ``"m"`` under ``"refuse"``
+    and ``"sigma"`` under ``"sigma"``. ``constructs`` lists the vertices in
+    file order. Constructs that no directed relation names are left out,
+    because silence about a construct is not a claim that it is independent of
+    anything, and so are constructs without an id, which no proposition can
+    name. A construct named only by associations would be a collider on every
+    path through it, so leaving it out loses no statement about the others.
+    ``n_edges`` counts the directed edges the theory states and
+    ``n_bidirected`` the bidirected ones, a pair stated twice counting once,
+    before any acyclification. ``feedback`` lists the feedback loops, each the
+    ids of its members in file order and the loops in the order of their first
+    members. A loop has two or more members, or one construct with an edge to
+    itself. ``acyclic`` is True when ``feedback`` is empty, which is always the
+    case under ``"refuse"``, and both are carried so that a serialised record
+    states the verdict. Each entry of ``implications`` is ``{a, b, given,
+    statement}``, where ``statement`` renders the claim in the notation
+    dagitty prints, ``a _||_ b | z1, z2``, and each entry of ``inseparable``
+    is ``{a, b}``. Pairs come in construct file order, as do the members of
+    ``given``, so the two engines return the same records in the same order.
 
     The statements concern constructs, and a study measures them with error.
     Error in a conditioning construct leaves part of the dependence that
@@ -80,13 +108,12 @@ def implications(T) -> dict:
     ``n_implications`` is 0.
 
     Raises:
-        ValueError: if two constructs share an id, if a directed relation names
-            a construct the theory has not declared, or if the directed edges
-            form a cycle, in which case the message names a cycle that was
-            found. A cyclic graph also implies independencies, under
-            sigma-separation, when each feedback loop has a unique
-            equilibrium (Bongers et al., 2021), but this function does not
-            derive them.
+        ValueError: if ``cycles`` is not ``"refuse"`` or ``"sigma"``, which is
+            checked before the theory is read, if two constructs share an id
+            or if a directed relation names a construct the theory has not
+            declared. Under ``"refuse"`` it is also raised when the directed
+            edges form a cycle, and the message then names a cycle found and
+            the ``"sigma"`` option.
 
     References:
         Bongers, S., Forré, P., Peters, J., & Mooij, J. M. (2021). Foundations
@@ -135,7 +162,26 @@ def implications(T) -> dict:
         leaves open (``t.add_proposition("p3", "c_arousal", "c_avoidance",
         "associates")``) withdraws that claim: the pair is then joined by an
         edge, and nothing is implied.
+
+        Closing a feedback loop from perceived threat back to arousal makes the
+        graph cyclic. The default refuses it, and sigma-separation keeps the
+        claim, since holding perceived threat fixed still cuts the one way
+        out of the loop towards avoidance.
+
+        ```python
+        t.add_proposition("p3", "c_threat", "c_arousal", "causes")
+
+        implied = t.implications(cycles="sigma")
+        implied["feedback"]
+        # [['c_arousal', 'c_threat']]
+        [i["statement"] for i in implied["implications"]]
+        # ['c_arousal _||_ c_avoidance | c_threat']
+        ```
     """
+    # Checked before the theory is read, so that a mistyped option is reported
+    # as such whatever the theory holds.
+    if not isinstance(cycles, str) or cycles not in CYCLES:
+        raise ValueError("implications requires cycles to be 'refuse' or 'sigma'")
     T = T.data if hasattr(T, "data") else T
 
     declared: list[str] = []
@@ -197,18 +243,38 @@ def implications(T) -> dict:
         bidirected[a][b] = bidirected[b][a] = True
         n_bidirected += 1
 
-    cycle = first_cycle(directed, k)
-    if cycle is not None:
-        raise ValueError(
-            "implications requires an acyclic causal graph; cycle found: "
-            + " -> ".join(nodes[i] for i in cycle))
+    # The pairs are those the theory leaves unjoined. Under "sigma", the
+    # acyclification below can join more of them, and those are then separated
+    # by no set and listed as inseparable, not dropped.
+    adjacent = [[directed[i][j] or directed[j][i] or bidirected[i][j] for j in range(k)]
+                for i in range(k)]
+    criterion = "m"
+    feedback: list[list[str]] = []
+    if cycles == "refuse":
+        cycle = first_cycle(directed, k)
+        if cycle is not None:
+            raise ValueError(
+                "implications requires an acyclic causal graph; cycle found: "
+                + " -> ".join(nodes[i] for i in cycle)
+                + "; set cycles to 'sigma' to derive sigma-separation statements")
+    else:
+        # A feedback loop is a component of two or more vertices, or one with a
+        # self loop. The pairs are then read off the acyclification, where
+        # m-separation is sigma-separation in the theory's own graph (Bongers
+        # et al., 2021, Proposition A.19). The counts and the vertices above
+        # stay those of the theory's graph.
+        comps = strong_components(reach(directed, k))
+        feedback = [[nodes[v] for v in comp] for comp in comps
+                    if len(comp) > 1 or directed[comp[0]][comp[0]]]
+        directed, bidirected = acyclify(directed, bidirected, comps)
+        criterion = "sigma"
 
     r = reach(directed, k)
     out: list[dict] = []
     inseparable: list[dict] = []
     for i in range(k):
         for j in range(i + 1, k):
-            if directed[i][j] or directed[j][i] or bidirected[i][j]:
+            if adjacent[i][j]:
                 continue
             # The parents of the pair separate it in every DAG, so a theory of
             # directed relations alone gets the basis set. With bidirected
@@ -230,12 +296,12 @@ def implications(T) -> dict:
 
     return {
         "theory_id": text(T.get("id")),
-        "criterion": "m",
-        "acyclic": True,
+        "criterion": criterion,
+        "acyclic": not feedback,
         "constructs": nodes,
         "n_edges": len(edges),
         "n_bidirected": n_bidirected,
-        "feedback": [],
+        "feedback": feedback,
         "implications": out,
         "n_implications": len(out),
         "inseparable": inseparable,

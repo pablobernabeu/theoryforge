@@ -71,22 +71,39 @@ look for and fail to find. An association can leave a pair that no set
 separates, and `tf_implications()` lists such a pair under `inseparable`, since
 the theory then implies no independence for it.
 
-The panic-network example gets no statements. Its third proposition returns
-from perceived threat to arousal, closing the feedback loop the theory is about,
-and `tf_implications()` refuses a graph with a cycle.
+The panic-network example gets no statements by default. Its third proposition
+returns from perceived threat to arousal, closing the feedback loop the theory
+is about, and `tf_implications()` refuses a graph with a cycle unless it is told
+how to read one.
 
 ```{r implications-cycle, error = TRUE}
 tf_implications(theory)
 ```
 
-The refusal names the cycle it found, so nobody has to hunt for it. A cyclic
-graph does imply conditional independencies, and dagitty accepts the
-`causal_dag` export of one. dagitty reads it by d-separation, though, which a
-model with feedback is guaranteed to satisfy only in special cases, a linear
-model among them. The criterion that holds whenever each feedback loop has a
-unique equilibrium is sigma-separation
+The refusal names the cycle it found, so nobody has to hunt for it, and the
+option that reads it. A cyclic graph does imply conditional independencies, and
+dagitty accepts the `causal_dag` export of one. dagitty reads it by
+d-separation, though, which a model with feedback is guaranteed to satisfy only
+in special cases, a linear model among them. The criterion that holds whenever
+each feedback loop has a unique equilibrium is sigma-separation
 ([Bongers et al., 2021](https://doi.org/10.1214/21-AOS2064)), and
-`tf_implications()` does not apply it. `tf_simulate()` runs the loop over time.
+`cycles = "sigma"` applies it.
+
+```{r implications-sigma}
+implied <- tf_implications(theory, cycles = "sigma")
+lapply(implied$feedback, unlist)
+implied$implications[[1]]$statement
+```
+
+The loop between arousal and perceived threat is the one feedback loop.
+Holding perceived threat fixed cuts the only way out of the loop towards
+avoidance. The theory therefore implies that arousal and avoidance are
+independent given perceived threat, a claim it never states and a study could
+refute. The claim rests on an assumption the graph cannot check, that for given
+inputs the loop settles into a single equilibrium. A network theory that posits
+alternative stable states, such as a calm state and a panic state that each
+sustain themselves, violates it. The statement is then not guaranteed.
+`tf_simulate()` runs the loop over time.
 
 The package ships a second example whose causal graph is acyclic, a theory of
 modality switching in grounded conceptual processing. Sensorimotor experience

@@ -34,6 +34,9 @@ tf_statements <- function(res) {
   vapply(res$implications, function(i) i$statement, character(1))
 }
 
+# The clause the cycle refusal ends with (API_SPEC.md section 27).
+tf_sigma_hint <- "; set cycles to 'sigma' to derive sigma-separation statements"
+
 # The app examples sit at the repository root, outside the package, so the
 # checks that read them run only from a source checkout.
 tf_app_example <- function(name) {
@@ -403,8 +406,8 @@ test_that("tf_implications refuses a cyclic causal graph, naming the cycle", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   expect_error(
     tf_implications(theory),
-    paste("implications requires an acyclic causal graph; cycle found:",
-          "c_arousal -> c_perceived_threat -> c_arousal"),
+    paste0("implications requires an acyclic causal graph; cycle found: ",
+           "c_arousal -> c_perceived_threat -> c_arousal", tf_sigma_hint),
     fixed = TRUE
   )
 })
@@ -415,7 +418,7 @@ test_that("tf_implications refuses a self loop", {
     tf_add_proposition("p1", "a", "a", "causes")
   expect_error(
     tf_implications(theory),
-    "implications requires an acyclic causal graph; cycle found: a -> a",
+    paste0("implications requires an acyclic causal graph; cycle found: a -> a", tf_sigma_hint),
     fixed = TRUE
   )
 })
@@ -463,7 +466,8 @@ test_that("tf_implications refuses a cycle closed by a moderation", {
   theory <- tf_relation_theory("loop", c("a", "b"),
                                list(c("a", "causes", "b"), c("b", "moderates", "a")))
   expect_error(tf_implications(theory),
-               "implications requires an acyclic causal graph; cycle found: a -> b -> a",
+               paste0("implications requires an acyclic causal graph; cycle found: a -> b -> a",
+                      tf_sigma_hint),
                fixed = TRUE)
 })
 
@@ -652,4 +656,343 @@ test_that("derived independencies show as near-zero partial correlations in simu
   expect_gt(pcor(X, x$a, x$b, character(0)), 0.2)
   # an adjacent pair is not implied independent, and is not independent here
   expect_gt(pcor(X, "c_threat", "c_avoidance", "c_arousal"), 0.2)
+})
+
+# -- cycles = "sigma" (API_SPEC.md section 27) ---------------------------------
+
+# Brute force from Definition A.16 of Bongers et al. (2021), over the simple
+# paths between a and b, which suffice (Lemma A.17). A path connects the two
+# given Z when every collider on it is an ancestor of Z (Z included) and every
+# other vertex on it is either outside Z or, under sigma-separation, points only
+# to neighbours on the path in its own strongly connected component.
+# `sigma = FALSE` gives d-separation. `directed` and `bidirected` are
+# two-column character matrices of (from, to). Every simple path is
+# enumerated, so this shares no code or idea with the package's acyclification
+# and walk.
+tf_sigma_connected <- function(directed, bidirected, a, b, given, sigma = TRUE) {
+  vertices <- unique(c(as.vector(directed), as.vector(bidirected), a, b))
+  reached <- function(u) {
+    seen <- u
+    stack <- u
+    while (length(stack) > 0L) {
+      v <- stack[[length(stack)]]
+      stack <- stack[-length(stack)]
+      for (w in directed[directed[, 1] == v, 2]) {
+        if (!(w %in% seen)) {
+          seen <- c(seen, w)
+          stack <- c(stack, w)
+        }
+      }
+    }
+    seen
+  }
+  reach <- lapply(stats::setNames(vertices, vertices), reached)
+  anc <- vertices[vapply(vertices, function(u) any(given %in% reach[[u]]), logical(1))]
+  sc <- function(v) {
+    vertices[vapply(vertices, function(w) w %in% reach[[v]] && v %in% reach[[w]], logical(1))]
+  }
+  # (from, to, arrowhead at from, arrowhead at to); a self loop is no step
+  d <- directed[directed[, 1] != directed[, 2], , drop = FALSE]
+  bi <- bidirected[bidirected[, 1] != bidirected[, 2], , drop = FALSE]
+  nd <- nrow(d)
+  nb <- nrow(bi)
+  steps <- data.frame(
+    s = c(d[, 1], d[, 2], bi[, 1], bi[, 2]),
+    w = c(d[, 2], d[, 1], bi[, 2], bi[, 1]),
+    head_s = c(rep(FALSE, nd), rep(TRUE, nd), rep(TRUE, 2L * nb)),
+    head_w = c(rep(TRUE, nd), rep(FALSE, nd), rep(TRUE, 2L * nb))
+  )
+  extend <- function(path, head_in, points_back) {
+    v <- path[[length(path)]]
+    for (e in which(steps$s == v)) {
+      w <- steps$w[[e]]
+      head_s <- steps$head_s[[e]]
+      head_w <- steps$head_w[[e]]
+      if (w %in% path) next
+      if (length(path) > 1L) {
+        if (head_in && head_s) {
+          if (!(v %in% anc)) next
+        } else if (v %in% given) {
+          if (!sigma) next
+          points_on <- !head_s && head_w
+          if ((points_back && !(path[[length(path) - 1L]] %in% sc(v))) ||
+              (points_on && !(w %in% sc(v)))) next
+        }
+      }
+      if (w == b || extend(c(path, w), head_w, !head_w && head_s)) return(TRUE)
+    }
+    FALSE
+  }
+  extend(a, FALSE, FALSE)
+}
+
+tf_pairs <- function(rows) {
+  vapply(rows, function(x) paste(x$a, x$b, sep = "~"), character(1))
+}
+
+test_that("tf_implications requires cycles to be 'refuse' or 'sigma'", {
+  theory <- tf_read(tf_fixture_path("modality-switching.theory.yaml"))
+  bad <- list("Sigma", "", "d", NULL, NA_character_, NA, 1, TRUE, c("refuse", "sigma"),
+              list("sigma"))
+  for (value in bad) {
+    expect_error(tf_implications(theory, cycles = value),
+                 "implications requires cycles to be 'refuse' or 'sigma'", fixed = TRUE)
+  }
+})
+
+test_that("cycles is checked before the theory is read", {
+  theory <- tf_theory("dupe", "Duplicated ids") |>
+    tf_add_construct("c1", "One", "d") |>
+    tf_add_construct("c1", "One again", "d")
+  expect_error(tf_implications(theory, cycles = "linear"),
+               "implications requires cycles to be 'refuse' or 'sigma'", fixed = TRUE)
+})
+
+test_that("refuse is the default", {
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  default <- tryCatch(tf_implications(theory), error = conditionMessage)
+  named <- tryCatch(tf_implications(theory, cycles = "refuse"), error = conditionMessage)
+  expect_identical(default, named)
+})
+
+test_that("sigma derives the panic network statement", {
+  # Arousal and perceived threat form a feedback loop, and perceived threat
+  # drives avoidance. Holding perceived threat fixed blocks the one way out of
+  # the loop towards avoidance, so the theory implies that arousal and
+  # avoidance are independent given perceived threat (Bongers et al., 2021,
+  # Theorem 6.3(2) and Proposition A.19).
+  res <- tf_implications(tf_read(tf_fixture_path("panic-network.theory.yaml")), cycles = "sigma")
+  expect_identical(res, list(
+    theory_id = "panic-network-2026",
+    criterion = "sigma",
+    acyclic = FALSE,
+    constructs = list("c_arousal", "c_perceived_threat", "c_avoidance"),
+    n_edges = 3L,
+    n_bidirected = 0L,
+    feedback = list(list("c_arousal", "c_perceived_threat")),
+    implications = list(list(
+      a = "c_arousal", b = "c_avoidance", given = list("c_perceived_threat"),
+      statement = "c_arousal _||_ c_avoidance | c_perceived_threat")),
+    n_implications = 1L,
+    inseparable = list()
+  ))
+})
+
+test_that("sigma on the amended panic network implies nothing", {
+  # The amendment's p4 joins arousal to avoidance, so every pair is adjacent.
+  res <- tf_implications(tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml")),
+                         cycles = "sigma")
+  expect_false(res$acyclic)
+  expect_identical(res$n_edges, 4L)
+  expect_identical(res$feedback, list(list("c_arousal", "c_perceived_threat")))
+  expect_identical(res$implications, list())
+  expect_identical(res$inseparable, list())
+})
+
+test_that("sigma on an acyclic theory gives the m-separation statements", {
+  for (name in c("modality-switching.theory.yaml", "weak-theory.theory.yaml")) {
+    theory <- tf_read(tf_fixture_path(name))
+    s <- tf_implications(theory, cycles = "sigma")
+    expect_identical(s$criterion, "sigma", info = name)
+    expect_true(s$acyclic, info = name)
+    expect_identical(s$feedback, list(), info = name)
+    s$criterion <- "m"
+    expect_identical(s, tf_implications(theory), info = name)
+  }
+})
+
+test_that("sigma does not assert what only d-separation gives", {
+  # Example A.8 of Bongers et al. (2021): x1 -> x3, x2 -> x4 and a feedback
+  # loop between x3 and x4. d-separation holds x1 and x2 independent given
+  # {x3, x4}, which fails in the nonlinear model of that example, and
+  # sigma-separation does not. The two are independent with nothing held
+  # fixed, and that is the one statement derived. Each input and the loop
+  # member it does not enter directly are connected through the loop whatever
+  # is held fixed, so those two pairs are inseparable.
+  theory <- tf_relation_theory("a8", c("x1", "x2", "x3", "x4"), list(
+    c("x1", "causes", "x3"), c("x3", "causes", "x4"),
+    c("x4", "causes", "x3"), c("x2", "causes", "x4")))
+  directed <- rbind(c("x1", "x3"), c("x3", "x4"), c("x4", "x3"), c("x2", "x4"))
+  none <- matrix(character(0), ncol = 2L)
+  expect_false(tf_sigma_connected(directed, none, "x1", "x2", c("x3", "x4"), sigma = FALSE))
+  expect_true(tf_sigma_connected(directed, none, "x1", "x2", c("x3", "x4")))
+  res <- tf_implications(theory, cycles = "sigma")
+  expect_identical(res$feedback, list(list("x3", "x4")))
+  expect_identical(tf_statements(res), "x1 _||_ x2")
+  expect_identical(res$inseparable, list(list(a = "x1", b = "x4"), list(a = "x2", b = "x3")))
+})
+
+test_that("a self loop is feedback and constrains nothing", {
+  theory <- tf_relation_theory("loop", c("a", "b", "c"), list(
+    c("a", "causes", "a"), c("a", "causes", "b"), c("b", "causes", "c")))
+  res <- tf_implications(theory, cycles = "sigma")
+  expect_false(res$acyclic)
+  expect_identical(res$n_edges, 3L)
+  expect_identical(res$feedback, list(list("a")))
+  expect_identical(tf_statements(res), "a _||_ c | b")
+})
+
+test_that("feedback components follow vertex order", {
+  # Members of each component in declaration order, components ordered by
+  # their first member, and a vertex on no cycle is no component.
+  theory <- tf_relation_theory("loops", c("d", "c", "b", "a", "e", "f"), list(
+    c("a", "causes", "b"), c("b", "causes", "a"), c("c", "causes", "d"),
+    c("d", "moderates", "c"), c("e", "causes", "e"), c("b", "increases", "e"),
+    c("e", "causes", "f")))
+  res <- tf_implications(theory, cycles = "sigma")
+  expect_identical(res$feedback, list(list("d", "c"), list("b", "a"), list("e")))
+})
+
+test_that("a loop member shares the parents of the loop", {
+  # x -> a, a -> b -> a, b -> y. In the acyclification x is a parent of both
+  # members of the loop, so no set separates x and b, which the theory leaves
+  # unjoined, and the pair is inseparable. x and y are independent given b,
+  # and a and y given x and b.
+  theory <- tf_relation_theory("enter", c("x", "a", "b", "y"), list(
+    c("x", "causes", "a"), c("a", "causes", "b"), c("b", "causes", "a"),
+    c("b", "causes", "y")))
+  res <- tf_implications(theory, cycles = "sigma")
+  expect_identical(tf_statements(res), c("x _||_ y | b", "a _||_ y | x, b"))
+  expect_identical(res$inseparable, list(list(a = "x", b = "b")))
+})
+
+test_that("pairs the acyclification joins are inseparable, not dropped", {
+  # In the loop a -> b -> c -> d -> a, the theory joins neither a and c nor b
+  # and d, and no set separates either pair, since the loop connects them
+  # whatever is held fixed. An association with one member of a loop, and an
+  # edge into one member of a second loop, likewise leave pairs that no set
+  # separates. Each such pair is listed as inseparable.
+  loop <- tf_relation_theory("loop4", c("a", "b", "c", "d"), list(
+    c("a", "causes", "b"), c("b", "causes", "c"), c("c", "causes", "d"),
+    c("d", "causes", "a")))
+  res <- tf_implications(loop, cycles = "sigma")
+  expect_identical(res$implications, list())
+  expect_identical(res$inseparable, list(list(a = "a", b = "c"), list(a = "b", b = "d")))
+  assoc <- tf_relation_theory("assoc", c("x", "a", "b", "y"), list(
+    c("a", "causes", "b"), c("b", "causes", "a"), c("x", "causes", "y"),
+    c("x", "associates", "a")))
+  res <- tf_implications(assoc, cycles = "sigma")
+  expect_identical(tf_statements(res), c("a _||_ y | x", "b _||_ y | x"))
+  expect_identical(res$inseparable, list(list(a = "x", b = "b")))
+  two <- tf_relation_theory("two", c("a", "b", "c", "d"), list(
+    c("a", "causes", "b"), c("b", "causes", "a"), c("c", "causes", "d"),
+    c("d", "causes", "c"), c("b", "causes", "c")))
+  res <- tf_implications(two, cycles = "sigma")
+  expect_identical(tf_statements(res), c("a _||_ c | b", "a _||_ d | b"))
+  expect_identical(res$inseparable, list(list(a = "b", b = "d")))
+})
+
+test_that("every sigma statement and inseparable pair agrees with a brute-force oracle", {
+  # Random mixed graphs with feedback loops, every directed relation in use,
+  # associations anywhere and declaration order shuffled. Each stated
+  # independence must hold by sigma-separation in the cyclic graph itself, each
+  # pair that some set of vertices separates must be stated, and every other
+  # pair the theory leaves unjoined must be listed as inseparable.
+  set.seed(20261003)
+  rels <- sort(theoryforge:::.tf_DIRECTED)
+  stated <- 0L
+  inseparable <- 0L
+  cyclic <- 0L
+  for (rep in 1:100) {
+    k <- sample(3:5, 1)
+    nodes <- paste0("v", seq_len(k))
+    directed <- matrix(character(0), ncol = 2L)
+    bidirected <- matrix(character(0), ncol = 2L)
+    for (i in seq_len(k)) {
+      for (j in seq_len(k)) {
+        if (i != j && stats::runif(1) < 0.3) directed <- rbind(directed, c(nodes[[i]], nodes[[j]]))
+        if (i < j && stats::runif(1) < 0.15) bidirected <- rbind(bidirected, c(nodes[[i]], nodes[[j]]))
+      }
+    }
+    if (nrow(directed) == 0L) next
+    props <- c(
+      lapply(seq_len(nrow(directed)), function(e) c(directed[e, 1], sample(rels, 1), directed[e, 2])),
+      lapply(seq_len(nrow(bidirected)), function(e) c(bidirected[e, 1], "associates", bidirected[e, 2]))
+    )
+    order <- sample(nodes)
+    res <- tf_implications(tf_relation_theory("random", order, props[sample(length(props))]),
+                           cycles = "sigma")
+    vertices <- order[order %in% as.vector(directed)]
+    expect_identical(unlist(res$constructs), vertices)
+    if (!res$acyclic) cyclic <- cyclic + 1L
+    separable <- character(0)
+    for (pair in utils::combn(vertices, 2L, simplify = FALSE)) {
+      others <- setdiff(vertices, pair)
+      sets <- c(list(character(0)),
+                unlist(lapply(seq_along(others), function(r) {
+                  utils::combn(others, r, simplify = FALSE)
+                }), recursive = FALSE))
+      if (any(vapply(sets, function(z) {
+        !tf_sigma_connected(directed, bidirected, pair[[1]], pair[[2]], z)
+      }, logical(1)))) {
+        separable <- c(separable, paste(pair, collapse = "~"))
+      }
+    }
+    expect_identical(unname(tf_pairs(res$implications)), separable)
+    for (x in res$implications) {
+      z <- unlist(x$given)
+      if (is.null(z)) z <- character(0)
+      expect_false(tf_sigma_connected(directed, bidirected, x$a, x$b, z), info = x$statement)
+      expect_identical(z, vertices[vertices %in% z])
+    }
+    # Every pair the theory leaves unjoined is either stated or inseparable.
+    edges <- rbind(directed, bidirected)
+    joined <- c(paste(edges[, 1], edges[, 2], sep = "~"), paste(edges[, 2], edges[, 1], sep = "~"))
+    unjoined <- vapply(utils::combn(vertices, 2L, simplify = FALSE),
+                       function(p) paste(p, collapse = "~"), character(1))
+    unjoined <- unjoined[!(unjoined %in% joined)]
+    expect_identical(unname(tf_pairs(res$inseparable)), unjoined[!(unjoined %in% separable)])
+    stated <- stated + length(res$implications)
+    inseparable <- inseparable + length(res$inseparable)
+  }
+  expect_gt(cyclic, 30L)
+  expect_gt(stated, 60L)
+  expect_gt(inseparable, 3L)
+})
+
+test_that("sigma and refuse agree on random acyclic graphs", {
+  set.seed(1309)
+  for (rep in 1:60) {
+    k <- sample(3:6, 1)
+    nodes <- paste0("v", seq_len(k))
+    from <- character(0)
+    to <- character(0)
+    for (i in seq_len(k - 1L)) {
+      for (j in (i + 1L):k) {
+        if (stats::runif(1) < 0.45) {
+          from <- c(from, nodes[[i]])
+          to <- c(to, nodes[[j]])
+        }
+      }
+    }
+    if (length(from) == 0L) next
+    theory <- tf_dag_theory(sample(nodes), cbind(from, to))
+    s <- tf_implications(theory, cycles = "sigma")
+    s$criterion <- "m"
+    expect_identical(s, tf_implications(theory))
+  }
+})
+
+test_that("tf_implications reproduces the implications goldens", {
+  # scripts/gen_golden.py writes <id>.implications.json with cycles = "sigma"
+  # for every fixture from the Python twin.
+  as_json <- function(x) {
+    jsonlite::fromJSON(jsonlite::toJSON(x, auto_unbox = TRUE), simplifyVector = FALSE)
+  }
+  golden <- function(id) {
+    jsonlite::fromJSON(tf_expected_path(paste0(id, ".implications.json")),
+                       simplifyVector = FALSE)
+  }
+  files <- list.files(tf_fixtures_dir(), pattern = "\\.theory\\.yaml$", full.names = TRUE)
+  expect_length(files, 4L)
+  for (path in files) {
+    theory <- tf_read(path)
+    expect_identical(as_json(tf_implications(theory, cycles = "sigma")), golden(theory$id),
+                     info = basename(path))
+  }
+  expect_identical(tf_statements(golden("panic-network-2026")),
+                   "c_arousal _||_ c_avoidance | c_perceived_threat")
+  expect_identical(golden("panic-network-2026-v2")$implications, list())
+  expect_length(golden("modality-switching-2026")$implications, 6L)
+  expect_identical(golden("weak-demo")$constructs, list())
 })

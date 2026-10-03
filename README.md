@@ -65,20 +65,22 @@ deterministically which candidate DOIs, from any search tool, a theory does not 
 
 The remaining functions carry a theory through analysis, review and deposit. `implications`
 reads the propositions as a causal graph, the directed relations as arrows and associations as
-unexplained covariance, and returns the conditional independencies the causal graph implies,
-refusing a cyclic graph. The statements concern constructs, and a conditional one tested on
-fallible measures is rejected too often, so latent-variable models are the better test. `compile_sem`
-compiles constructs and propositions to lavaan model syntax, and `dossier` assembles in one
+unexplained covariance, and returns the conditional independencies the causal graph implies.
+It refuses a cyclic graph by default, and with `cycles = "sigma"` reads one by
+sigma-separation, whose statements hold when each feedback loop has a unique equilibrium. The
+statements concern constructs, and a conditional one tested on fallible measures is rejected
+too often, so latent-variable models are the better test. `compile_sem` compiles constructs
+and propositions to lavaan model syntax, and `dossier` assembles in one
 command a reviewer-facing audit bundle holding the rigour report, severity, provenance and
 preregistration. `simulate` runs the construct network as a deterministic dynamical system,
 `render_report` wraps the dossier in a Quarto report, `embedding_redundancy` adds an opt-in,
 embedder-dependent screen, and `osf_push` deposits to OSF, dry-run by default.
 
-Cross-language parity is enforced over 71 golden artefacts. The diagrams, preregistration,
-lavaan and dossier outputs are byte-identical, and the rigour, severity, appraisal, litmap,
-landscape, simulate and new-evidence-DOI JSON outputs are semantically equal. Running
-`python scripts/parity_check.py` reports `PARITY OK`, and the pytest and testthat suites are
-green. Reproduce the whole verification with
+Cross-language parity is enforced over every golden artefact that `scripts/gen_golden.py`
+writes. The diagrams, preregistration, lavaan and dossier outputs are byte-identical, and the
+rigour, severity, appraisal, litmap, landscape, simulate, implications and new-evidence-DOI
+JSON outputs are semantically equal. Running `python scripts/parity_check.py` reports
+`PARITY OK`, and the pytest and testthat suites are green. Reproduce the whole verification with
 [`scripts/reproduce_all.ps1`](https://github.com/pablobernabeu/theoryforge/blob/main/scripts/reproduce_all.ps1)
 (or [`scripts/reproduce_all.sh`](https://github.com/pablobernabeu/theoryforge/blob/main/scripts/reproduce_all.sh)).
 The [changelog](CHANGELOG.md) records what each release changed.
@@ -138,10 +140,11 @@ python -c "import theoryforge as tf; t = tf.read(tf.example_path('panic-network.
 
 Four example theories are bundled. Two are versions of a network theory of panic disorder,
 whose feedback loop between arousal and perceived threat makes its causal graph cyclic, so
-`implications` refuses it. One is a theory of modality switching in grounded conceptual
-processing, acyclic, from which `implications` derives a basis set of six conditional
-independencies. The last is a deliberately underspecified theory, kept as a worked example of
-what the rigour checklist catches. `tf_example_names()` in R and `example_names()` in Python
+`implications` refuses both by default. Read by sigma-separation, the first implies that
+arousal and avoidance are independent given perceived threat. One is a theory of modality
+switching in grounded conceptual processing, acyclic, from which `implications` derives a
+basis set of six conditional independencies. The last is a deliberately underspecified
+theory, kept as a worked example of what the rigour checklist catches. `tf_example_names()` in R and `example_names()` in Python
 list all four, together with the demonstration literature corpus, and the originals sit in
 [`fixtures/`](fixtures/).
 

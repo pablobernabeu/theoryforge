@@ -1,0 +1,30 @@
+{
+  "theory_id": "panic-network-2026",
+  "criterion": "sigma",
+  "acyclic": false,
+  "constructs": [
+    "c_arousal",
+    "c_perceived_threat",
+    "c_avoidance"
+  ],
+  "n_edges": 3,
+  "n_bidirected": 0,
+  "feedback": [
+    [
+      "c_arousal",
+      "c_perceived_threat"
+    ]
+  ],
+  "implications": [
+    {
+      "a": "c_arousal",
+      "b": "c_avoidance",
+      "given": [
+        "c_perceived_threat"
+      ],
+      "statement": "c_arousal _||_ c_avoidance | c_perceived_threat"
+    }
+  ],
+  "n_implications": 1,
+  "inseparable": []
+}

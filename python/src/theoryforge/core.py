@@ -624,12 +624,14 @@ class Theory:
         """
         return _appraise_amendment(self.data, prior)
 
-    def implications(self) -> dict:
+    def implications(self, cycles: str = "refuse") -> dict:
         """The conditional independencies the theory's causal graph implies.
 
-        See :func:`theoryforge.implications`.
+        ``cycles="sigma"`` reads a graph with feedback loops by
+        sigma-separation, which the default refuses. See
+        :func:`theoryforge.implications`.
         """
-        return _implications(self.data)
+        return _implications(self.data, cycles=cycles)
 
     def preregister(self, path=None) -> str:
         """Render a preregistration document (and write it if a path is given)."""
