@@ -364,11 +364,11 @@
   // It complements the sidebar help (what the operation does) by explaining how
   // to read the output that follows.
   const RESULT_GUIDE = {
-    check: "The checklist scores twelve facets of rigour and combines them into an overall score and a gate. Read the gate first. Pass means the theory is ready to test, advisory means it is usable with the noted gaps, and blocked means a must-fix criterion is unmet. The grid below shows each item's status.",
+    check: "The checklist scores twelve facets of rigour and combines them into an overall score and a gate. Read the gate first. Pass means the theory is ready to test, advisory means it is usable with the noted gaps, and blocked means a must-fix criterion is unmet. An item with nothing to assess, such as redundancy in a theory with one construct, is marked n/a and left out of the score, which is the weighted mean of the applicable items. The coverage is their share of the checklist's weight. The grid below shows each item's status.",
     validate: "Validation reports structural and referential problems: missing required fields, values of the wrong type or outside the allowed set, duplicate identifiers and cross-references that point to nothing. A valid theory is the precondition for every other operation.",
     diagram: "The diagram is rendered from the package's intermediate representation, shown below the figure. Export the figure as SVG or PNG, or copy the representation to render it elsewhere.",
     severity: "The rubric grades each prediction by the form of its claim alone, so it can be read before any data exist. The risk score reflects how committal the claim is. The computed severity adjusts it down for merely directional claims and up for claims that discriminate between rival theories. Longer bars mark riskier claims. How severely a claim is tested depends on the design and the data, which the rubric does not read.",
-    redundancy: "Each pair of constructs is compared by the word overlap of their definitions, the Jaccard index, which runs from 0 to 1. Pairs above the threshold are flagged for review, because near-duplicate constructs blur a theory and inflate its apparent scope.",
+    redundancy: "Each pair of constructs is compared by the words their definitions share. The Jaccard index divides the shared words by all the words of the two definitions, and the overlap coefficient divides them by the words of the shorter one, so both run from 0 to 1. A pair is flagged for review when its Jaccard index reaches 0.85, a near-duplicate, or when both definitions hold at least three content words and the overlap reaches 0.85, one definition contained in the other. Near-duplicate constructs blur a theory and inflate its apparent scope. The screen compares words only, so it cannot tell whether two constructs are empirically redundant.",
     appraise: "An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added and no corroborated prediction dropped. It is degenerating when it adds an ad hoc assumption and no corroborated new content, and neutral otherwise. A prediction is corroborated when some test passes it and none fails it, and an assumption added for an anomaly is ad hoc unless new content it protects is corroborated. A prediction that only changed its id is a rename, and one derived only from the prior's own propositions is an articulation, so neither counts as new content. The verdict and its components appear below.",
     sem: "The constructs become a measurement model and the propositions a structural model, expressed in lavaan syntax. Paste it into an SEM fit in R or other lavaan-compatible software.",
     preregister: "The preregistration lists each hypothesis with its derivation and severity, in file order, ready to timestamp before data collection.",
@@ -391,9 +391,14 @@
     if (opId === "check") {
       const r = raw.report, items = asArr(r.items);
       const by = (st) => items.filter((i) => i.status === st).length;
+      const na = by("n/a");
       const gate = { pass: "passes the gate", advisory: "clears the gate with advisories", blocked: "is blocked" }[r.gate] || ("gate " + r.gate);
       const blockers = r.n_blockers_failed > 0 ? ", with " + plural(r.n_blockers_failed, "blocking item") + " unmet." : ", and no blocking item is unmet.";
-      return "This theory scores " + fmtNum(r.aggregate_score) + " out of 100 and " + gate + ". Of " + items.length + " items, " + by("pass") + " pass, " + by("warn") + " warn and " + by("fail") + " fail" + blockers;
+      let txt = "This theory scores " + fmtNum(r.aggregate_score) + " out of 100 and " + gate + ". Of the " + (items.length - na) + " applicable items, " + by("pass") + " pass, " + by("warn") + " warn and " + by("fail") + " fail" + blockers;
+      // Items with nothing to assess are left out of the score, which then
+      // covers less than the whole checklist.
+      if (na) txt += " " + (na === 1 ? "One item has" : na + " items have") + " nothing to assess and " + (na === 1 ? "is" : "are") + " left out of the score, which covers " + Math.round(Number(r.coverage) * 100) + " per cent of the checklist's weight.";
+      return txt;
     }
     if (opId === "validate") {
       if (raw.ok) return "The theory is structurally valid and every internal reference resolves.";
@@ -413,8 +418,8 @@
       if (!rows.length) return "There are fewer than two constructs, so there are no pairs to compare.";
       const flagged = rows.filter((r) => String(r.flag) === "review").length;
       const top = rows[0];
-      const lead = flagged ? plural(flagged, "pair") + " of " + rows.length + " exceed the threshold and are flagged for review." : "No pair exceeds the threshold.";
-      return lead + " The most similar pair is " + top.a + " and " + top.b + " (Jaccard " + fmtNum(top.similarity) + ").";
+      const lead = flagged ? plural(flagged, "pair") + " of " + rows.length + (flagged === 1 ? " is" : " are") + " flagged for review." : "No pair is flagged for review.";
+      return lead + " The most similar pair is " + top.a + " and " + top.b + " (Jaccard " + fmtNum(top.similarity) + ", overlap " + fmtNum(top.overlap) + ").";
     }
     if (opId === "appraise") {
       const r = raw, np = asArr(r.new_predictions).length, cn = asArr(r.corroborated_new).length, ah = asArr(r.ad_hoc_assumptions).length;
@@ -435,7 +440,7 @@
         venn: "Overlap of the boundary conditions declared on the theory's constructs (up to three).",
         provenance: "The recorded build steps in order.",
         pipeline: "Each prediction linked to its recorded test outcome.",
-        development_roadmap: "The checklist items not yet passing.",
+        development_roadmap: "The checklist items that fail or warn, in the order to address them.",
       };
       return byType[t] || ("A " + name + " diagram built from " + plural(c.constructs || 0, "construct") + " and " + plural(c.propositions || 0, "proposition") + ".");
     }
@@ -503,15 +508,18 @@
       sections.push(figureSection("Rigour grid", raw.svg, theoryId + ".rigour"));
       sections.push(kvSection("Summary", [
         ["Aggregate score", rep.aggregate_score + " / 100"],
+        ["Coverage", num(rep.coverage) + " of the checklist's weight"],
         ["Gate", pill(rep.gate)],
         ["Blockers failed", String(rep.n_blockers_failed)],
         ["Maturity", rep.maturity],
       ]));
+      // An item with nothing to assess has a null score, shown as n/a.
+      const checkRows = asArr(rep.items).map((it) => Object.assign({}, it, { score: it.score == null ? "n/a" : it.score }));
       sections.push(tableSection("Checklist items",
         [{ key: "id", label: "item" }, { key: "status", label: "status", pill: true },
          { key: "score", label: "score", num: true }, { key: "weight", label: "weight", num: true },
          { key: "severity_if_fail", label: "severity if fail", grow: true }],
-        asArr(rep.items), { extra: [jsonBtn(theoryId + ".report.json", rep)] }));
+        checkRows, { extra: [jsonBtn(theoryId + ".report.json", rep)] }));
     } else if (opId === "validate") {
       const v = raw;
       if (v.ok) {
@@ -555,7 +563,8 @@
       const rows = asArr(raw.rows);
       if (rows.length) sections.push(tableSection("Construct pairs (descending similarity)",
         [{ key: "a", label: "construct a" }, { key: "b", label: "construct b" },
-         { key: "similarity", label: "Jaccard", num: true }, { key: "flag", label: "flag", pill: true }],
+         { key: "similarity", label: "Jaccard", num: true }, { key: "overlap", label: "overlap", num: true },
+         { key: "flag", label: "flag", pill: true }],
         rows, { extra: [jsonBtn(theoryId + ".redundancy.json", rows)] }));
       else sections.push({ kind: "node", node: wrapSection("Redundancy screen", null, el("p", { class: "note", text: "Fewer than two constructs, so there are no pairs to compare." })) });
     } else if (opId === "diagram") {

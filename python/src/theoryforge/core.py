@@ -526,7 +526,8 @@ class Theory:
             p["mechanism"] = mechanism
         return self._add("propositions", p, "tf_add_proposition", id)
 
-    def add_prediction(self, id, statement, type, derives_from=None, diagnostic_vs=None):
+    def add_prediction(self, id, statement, type, derives_from=None, diagnostic_vs=None,
+                       severity=None):
         """Append a prediction and log the step in the provenance.
 
         ``id`` identifies the prediction and ``statement`` gives the claim in
@@ -542,14 +543,19 @@ class Theory:
 
         ``derives_from`` holds the ids of the propositions the prediction derives
         from, and ``diagnostic_vs`` the ids of the registered alternatives it
-        would discriminate from. The theory is returned, so that builder calls
-        chain.
+        would discriminate from. ``severity`` is a declared pre-data severity
+        from 0 to 1, stored only when given. The checklist's risk_severity item
+        reads it, and reads the claim-form rubric's value for a prediction that
+        declares none. The dossier sets the two side by side. The theory is
+        returned, so that builder calls chain.
         """
         p = {"id": id, "statement": statement, "type": type}
         if derives_from is not None:
             p["derives_from"] = _as_str_list(derives_from)
         if diagnostic_vs is not None:
             p["diagnostic_vs"] = _as_str_list(diagnostic_vs)
+        if severity is not None:
+            p["severity"] = severity
         return self._add("predictions", p, "tf_add_prediction", id)
 
     def add_alternative(self, id, label, key_constructs=None):

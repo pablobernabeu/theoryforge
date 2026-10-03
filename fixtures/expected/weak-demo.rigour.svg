@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="460" height="360" viewBox="0 0 460 360" font-family="sans-serif" font-size="13">
   <text x="20" y="28" font-size="15">Rigour checklist</text>
-  <text x="20" y="46">aggregate score 12.0, gate blocked</text>
+  <text x="20" y="46">aggregate score 2.2, gate blocked</text>
   <rect x="20" y="60" width="16" height="16" rx="3" fill="#f44336"/>
   <text x="44" y="72">falsifiability</text>
   <text x="320" y="72">fail</text>
@@ -10,12 +10,12 @@
   <rect x="20" y="108" width="16" height="16" rx="3" fill="#ff9800"/>
   <text x="44" y="120">risk_severity</text>
   <text x="320" y="120">warn</text>
-  <rect x="20" y="132" width="16" height="16" rx="3" fill="#4caf50"/>
+  <rect x="20" y="132" width="16" height="16" rx="3" fill="#9e9e9e"/>
   <text x="44" y="144">parsimony</text>
-  <text x="320" y="144">pass</text>
-  <rect x="20" y="156" width="16" height="16" rx="3" fill="#4caf50"/>
+  <text x="320" y="144">n/a</text>
+  <rect x="20" y="156" width="16" height="16" rx="3" fill="#ff9800"/>
   <text x="44" y="168">non_redundancy</text>
-  <text x="320" y="168">pass</text>
+  <text x="320" y="168">warn</text>
   <rect x="20" y="180" width="16" height="16" rx="3" fill="#ff9800"/>
   <text x="44" y="192">construct_clarity</text>
   <text x="320" y="192">warn</text>

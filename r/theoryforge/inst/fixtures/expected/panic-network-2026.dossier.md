@@ -2,8 +2,9 @@
 
 - Theory ID: panic-network-2026
 - Maturity: developing
-- Checklist version: 1.0
-- Aggregate rigour score: 84.8/100
+- Checklist version: 2.0
+- Aggregate rigour score: 87.3/100
+- Checklist coverage: 0.92
 - Gate: pass
 - Blockers failed: 0
 
@@ -14,8 +15,8 @@
 | falsifiability | pass | 1.0 | 0.15 |
 | precision | pass | 0.667 | 0.1 |
 | risk_severity | pass | 0.567 | 0.1 |
-| parsimony | pass | 0.667 | 0.08 |
-| non_redundancy | pass | 0.909 | 0.1 |
+| parsimony | n/a | n/a | 0.08 |
+| non_redundancy | pass | 1.0 | 0.1 |
 | construct_clarity | pass | 1.0 | 0.08 |
 | scope | pass | 1.0 | 0.06 |
 | logical_why | pass | 1.0 | 0.08 |
@@ -26,9 +27,9 @@
 
 ## Severity (pre-data rubric of claim form)
 
-- pred1: severity 1.0, risk 0.9
-- pred2: severity 0.7, risk 0.7
-- pred3: severity 0.3, risk 0.4
+- pred1: severity 1.0, risk 0.9, declared 0.7
+- pred2: severity 0.7, risk 0.7, declared 0.6
+- pred3: severity 0.3, risk 0.4, declared 0.4
 
 ## Provenance
 

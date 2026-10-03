@@ -49,6 +49,39 @@ def test_weak_is_blocked(weak_path):
     assert r["n_blockers_failed"] == 2
 
 
+# Exact targets, as test-rigor.R asserts them in R.
+def _statuses(report):
+    return {it["id"]: (it["status"], it["score"]) for it in report["items"]}
+
+
+def test_panic_network_matches_exact_targets(panic_path):
+    r = tf.read(panic_path).check()
+    assert (r["aggregate_score"], r["coverage"], r["gate"], r["n_blockers_failed"]) == (
+        87.3, 0.92, "pass", 0)
+    assert _statuses(r) == {
+        "falsifiability": ("pass", 1.0), "precision": ("pass", 0.667),
+        "risk_severity": ("pass", 0.567), "parsimony": ("n/a", None),
+        "non_redundancy": ("pass", 1.0), "construct_clarity": ("pass", 1.0),
+        "scope": ("pass", 1.0), "logical_why": ("pass", 1.0),
+        "causal_testability": ("pass", 1.0), "diagnosticity": ("pass", 0.333),
+        "formalisation": ("pass", 1.0), "derivation_chain": ("pass", 1.0),
+    }
+
+
+def test_weak_demo_matches_exact_targets(weak_path):
+    r = tf.read(weak_path).check()
+    assert (r["aggregate_score"], r["coverage"], r["gate"], r["n_blockers_failed"]) == (
+        2.2, 0.92, "blocked", 2)
+    assert _statuses(r) == {
+        "falsifiability": ("fail", 0.0), "precision": ("warn", 0.0),
+        "risk_severity": ("warn", 0.2), "parsimony": ("n/a", None),
+        "non_redundancy": ("warn", 0.0), "construct_clarity": ("warn", 0.0),
+        "scope": ("warn", 0.0), "logical_why": ("warn", 0.0),
+        "causal_testability": ("warn", 0.0), "diagnosticity": ("warn", 0.0),
+        "formalisation": ("warn", 0.0), "derivation_chain": ("fail", 0.0),
+    }
+
+
 def test_draft_is_advisory(weak_path):
     t = tf.read(weak_path)
     d = copy.deepcopy(t.data)

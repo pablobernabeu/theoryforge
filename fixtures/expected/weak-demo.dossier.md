@@ -2,10 +2,11 @@
 
 - Theory ID: weak-demo
 - Maturity: building
-- Checklist version: 1.0
-- Aggregate rigour score: 12.0/100
+- Checklist version: 2.0
+- Aggregate rigour score: 2.2/100
+- Checklist coverage: 0.92
 - Gate: blocked
-- Blockers failed: 2
+- Blockers failed: 2 (falsifiability, derivation_chain)
 
 ## Rigour checklist
 
@@ -14,8 +15,8 @@
 | falsifiability | fail | 0.0 | 0.15 |
 | precision | warn | 0.0 | 0.1 |
 | risk_severity | warn | 0.2 | 0.1 |
-| parsimony | pass | 1.0 | 0.08 |
-| non_redundancy | pass | 0.2 | 0.1 |
+| parsimony | n/a | n/a | 0.08 |
+| non_redundancy | warn | 0.0 | 0.1 |
 | construct_clarity | warn | 0.0 | 0.08 |
 | scope | warn | 0.0 | 0.06 |
 | logical_why | warn | 0.0 | 0.08 |
@@ -26,7 +27,7 @@
 
 ## Severity (pre-data rubric of claim form)
 
-- w1: severity 0.1, risk 0.1
+- w1: severity 0.1, risk 0.1, declared 0.2
 
 ## Provenance
 

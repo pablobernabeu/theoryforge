@@ -1,0 +1,47 @@
+# Edge case: checklist 2.0 rules that no shipped theory reaches. x1 was added
+# for the anomaly of h1 and also protects h2, which a test corroborates, so
+# parsimony passes at 1.0. The core assumption a1 is not assessed. One
+# definition is contained in the other, so the redundancy screen flags the pair
+# although their Jaccard similarity is 0.6, and non_redundancy warns. The only
+# relation is mediates, a directed relation, so causal_testability passes. h2
+# declares its severity and h1 takes the rubric's value.
+schema_version: "1.0"
+id: edge-anomaly-corroborated
+title: An assumption corroborated beyond its anomaly
+maturity: testing
+constructs:
+  - id: c1
+    label: Arousal
+    definition: Bodily arousal response.
+  - id: c2
+    label: Threat arousal
+    definition: Bodily arousal response under threat.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: mediates
+    mechanism: Arousal carries the effect of a threat cue.
+predictions:
+  - id: h1
+    statement: Threat arousal rises with arousal.
+    type: directional
+    derives_from: [p1]
+  - id: h2
+    statement: Threat arousal peaks one second after arousal.
+    type: point
+    derives_from: [p1]
+    severity: 0.95
+auxiliary_assumptions:
+  - id: a1
+    statement: Self-report tracks arousal.
+    added_for: ~
+  - id: x1
+    statement: The effect needs a calm setting.
+    added_for: h1
+    protects: [h1, h2]
+test_outcomes:
+  - prediction_id: h1
+    passed: false
+  - prediction_id: h2
+    passed: true

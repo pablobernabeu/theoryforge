@@ -175,7 +175,9 @@ NULL
   spec <- tf_checklist()
   criterion <- vapply(spec$items, function(s) .tf_str(s, "criterion"), character(1L))
   names(criterion) <- vapply(spec$items, function(s) .tf_str(s, "id"), character(1L))
-  todo <- Filter(function(it) !identical(it$status, "pass"), rep$items)
+  # An item with nothing to assess asks for no work, so only failed and warned
+  # items are steps.
+  todo <- Filter(function(it) it$status %in% c("fail", "warn"), rep$items)
   # Blockers before advisories, and heavier checks before lighter ones. The
   # order is the recommendation: a reader who works down the column addresses
   # what gates the theory first, rather than whatever the checklist happens to
@@ -410,7 +412,8 @@ NULL
   paste0(paste(out, collapse = "\n"), "\n")
 }
 
-.tf_STATUS_COLOUR <- c(pass = "#4caf50", warn = "#ff9800", fail = "#f44336")
+# An item with nothing to assess (n/a), like any other status, is grey.
+.tf_STATUS_COLOUR <- c(pass = "#4caf50", warn = "#ff9800", fail = "#f44336", "n/a" = "#9e9e9e")
 
 .tf_rigor <- function(T) {
   rep <- tf_check(T)

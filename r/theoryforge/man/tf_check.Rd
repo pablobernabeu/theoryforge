@@ -13,15 +13,24 @@ tf_check(theory)
 A named list with elements \code{theory_id}, \code{schema_version}
 (the theory's), \code{checklist_version} (the rigour checklist's, which is
 what the weights and thresholds came from), \code{maturity},
-\code{aggregate_score}, \code{gate}, \code{n_blockers_failed}, and
-\code{items} (a list of per-item lists). An error is raised for a
-prediction severity that is not a finite number or is below 0 or above 1.
+\code{aggregate_score}, \code{coverage}, \code{gate},
+\code{n_blockers_failed}, and \code{items} (a list of per-item lists). An
+error is raised for a prediction severity that is not a finite number or
+is below 0 or above 1.
 }
 \description{
 Runs the full rigour checklist (12 items) over a theory object and returns a
 report, with the items in checklist order.
 }
 \details{
+Each item has a status (\code{"pass"}, \code{"warn"} or \code{"fail"}) and
+a score from 0 to 1. An item with nothing to assess has the status
+\code{"n/a"} and a \code{NULL} score: the redundancy screen with fewer than
+two constructs, the derivation chain with no prediction and parsimony when
+no auxiliary assumption was added in response to an anomaly. The aggregate
+score is the weighted mean of the applicable items' scores, times 100, and
+\code{coverage} is the share of the checklist's weight that was applicable.
+
 Two values are refused before anything is scored, since no score built on
 them would be defensible. One is a test outcome whose \code{passed} is
 present and not \code{TRUE} or \code{FALSE}, such as the quoted string

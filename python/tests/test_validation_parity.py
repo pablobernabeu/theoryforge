@@ -553,10 +553,15 @@ def test_check_refuses_a_test_outcome_whose_passed_is_not_a_boolean(tmp_path):
     with pytest.raises(ValueError, match="^check requires boolean test outcomes; "):
         t.check()
     del t.data["predictions"][0]["severity"]
-    t.data["test_outcomes"][0]["passed"] = True
+    # Only a prediction other than h1, the anomaly x1 answers, can support x1,
+    # so a second prediction carries the outcome from here on.
+    t.data["predictions"].append({"id": "h2", "statement": "Beta lags Alpha by a day.",
+                                  "type": "directional", "derives_from": ["p1"]})
+    t.data["auxiliary_assumptions"][0]["protects"] = ["h1", "h2"]
+    t.data["test_outcomes"] = [{"prediction_id": "h2", "passed": True}]
     assert _item(t.check(), "parsimony")["status"] == "pass"
     # A missing or null passed still reads as not passed.
-    for outcome in ({"prediction_id": "h1"}, {"prediction_id": "h1", "passed": None}):
+    for outcome in ({"prediction_id": "h2"}, {"prediction_id": "h2", "passed": None}):
         t.data["test_outcomes"] = [outcome]
         assert _item(t.check(), "parsimony")["status"] == "fail"
 

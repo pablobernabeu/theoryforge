@@ -147,7 +147,9 @@ def _development_roadmap(T: dict) -> str:
     from .rigor import check as _check
     rep = _check(T)
     criterion = {it["id"]: it.get("criterion", "") for it in _resources.checklist()["items"]}
-    todo = [it for it in rep["items"] if it["status"] != "pass"]
+    # An item with nothing to assess asks for no work, so only failed and
+    # warned items are steps.
+    todo = [it for it in rep["items"] if it["status"] in ("fail", "warn")]
     # Blockers before advisories, and heavier checks before lighter ones. The
     # order is the recommendation: a reader who works down the column addresses
     # what gates the theory first, rather than whatever the checklist happens to
@@ -343,7 +345,8 @@ def _venn(T: dict) -> str:
     return "\n".join(out) + "\n"
 
 
-_STATUS_COLOUR = {"pass": "#4caf50", "warn": "#ff9800", "fail": "#f44336"}
+# An item with nothing to assess (n/a), like any other status, is grey.
+_STATUS_COLOUR = {"pass": "#4caf50", "warn": "#ff9800", "fail": "#f44336", "n/a": "#9e9e9e"}
 
 
 def _rigor(T: dict) -> str:

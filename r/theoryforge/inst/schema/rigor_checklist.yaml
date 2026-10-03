@@ -1,13 +1,18 @@
 # theoryforge rigour checklist. Shared, versioned specification.
 # Both the R and Python packages read this file. The scoring algorithm is pinned
 # in API_SPEC.md so that the two implementations produce identical verdicts.
-schema_version: "1.0"
+# Every report records schema_version as checklist_version, since the weights and
+# thresholds below produce every number in it.
+schema_version: "2.0"
 
+# The package's defaults, fixed for reproducibility and not derived from a
+# validation study.
 thresholds:
-  redundancy_similarity_max: 0.85   # lexical-screen default (calibrated, not hard truth); embeddings opt-in
+  redundancy_similarity_max: 0.85   # Jaccard similarity at which the lexical screen flags a pair
+  redundancy_overlap_max: 0.85      # overlap coefficient at which it flags a pair whose definitions both have 3+ tokens
+  embedding_similarity_max: 0.85    # cosine at which the opt-in embedding screen flags a pair (model-specific)
   min_precision_share: 0.5          # share of point/interval predictions for item 'precision' to pass
   min_severity: 0.5                 # mean severity for item 'risk_severity' to pass
-  parsimony_ratio_max: 1.0          # auxiliary assumptions per proposition
 
 items:
   - id: falsifiability
@@ -21,17 +26,17 @@ items:
     severity_if_fail: warning
     citation: "Meehl (1967, 1990)"
   - id: risk_severity
-    criterion: "Mean prediction severity above threshold"
+    criterion: "Mean prediction severity (declared, else the claim-form rubric) at or above threshold"
     weight: 0.10
     severity_if_fail: warning
-    citation: "Mayo (2018); Meehl (1990)"
+    citation: "Popper (1959); Meehl (1967, 1990)"
   - id: parsimony
-    criterion: "Few auxiliary assumptions; none added purely defensively"
+    criterion: "No auxiliary assumption added in response to an anomaly lacks independent corroboration"
     weight: 0.08
     severity_if_fail: warning
-    citation: "Forster & Sober (1994); Lakatos (1970)"
+    citation: "Lakatos (1970); Meehl (1990)"
   - id: non_redundancy
-    criterion: "No construct pair exceeds the calibrated similarity screen"
+    criterion: "No pair of construct definitions is a near-duplicate or contained in the other (lexical screen)"
     weight: 0.10
     severity_if_fail: warning
     citation: "Kelley (1927); Le et al. (2010); Lawson & Robins (2021)"
@@ -56,17 +61,17 @@ items:
     severity_if_fail: warning
     citation: "Textor et al. (2016); Eronen & Bringmann (2021)"
   - id: diagnosticity
-    criterion: "At least one prediction discriminates from a registered alternative"
+    criterion: "At least one prediction names a registered alternative it is declared to discriminate from (declared, not verified)"
     weight: 0.06
     severity_if_fail: warning
     citation: "Platt (1964); Fiedler (2017)"
   - id: formalisation
-    criterion: "A formal-model stub exists (warn-only at building stage)"
+    criterion: "A formal model of a recognised type (ode, abm, network, sem) is declared"
     weight: 0.05
     severity_if_fail: warning
     citation: "Robinaugh et al. (2021); Guest & Martin (2021)"
   - id: derivation_chain
-    criterion: "Each prediction is graph-reachable from propositions (reachability only)"
+    criterion: "Every prediction cites at least one proposition, and every cited id is a declared proposition (reference check only)"
     weight: 0.08
     severity_if_fail: blocker
     citation: "Scheel et al. (2021); Szollosi et al. (2020)"

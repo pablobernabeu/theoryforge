@@ -28,53 +28,56 @@ test_that("the dossier header names the checklist version", {
 
 test_that("panic-network rigor matches exact targets", {
   rep <- tf_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
-  expect_equal(rep$aggregate_score, 84.8)
+  expect_equal(rep$aggregate_score, 87.3)
+  expect_equal(rep$coverage, 0.92)
   expect_identical(rep$gate, "pass")
   expect_identical(rep$n_blockers_failed, 0L)
 
+  # An item with nothing to assess has the status "n/a" and a NULL score.
   expected <- list(
-    falsifiability     = c("pass", 1.0),
-    precision          = c("pass", 0.667),
-    risk_severity      = c("pass", 0.567),
-    parsimony          = c("pass", 0.667),
-    non_redundancy     = c("pass", 0.909),
-    construct_clarity  = c("pass", 1.0),
-    scope              = c("pass", 1.0),
-    logical_why        = c("pass", 1.0),
-    causal_testability = c("pass", 1.0),
-    diagnosticity      = c("pass", 0.333),
-    formalisation      = c("pass", 1.0),
-    derivation_chain   = c("pass", 1.0)
+    falsifiability     = list("pass", 1.0),
+    precision          = list("pass", 0.667),
+    risk_severity      = list("pass", 0.567),
+    parsimony          = list("n/a", NULL),
+    non_redundancy     = list("pass", 1.0),
+    construct_clarity  = list("pass", 1.0),
+    scope              = list("pass", 1.0),
+    logical_why        = list("pass", 1.0),
+    causal_testability = list("pass", 1.0),
+    diagnosticity      = list("pass", 0.333),
+    formalisation      = list("pass", 1.0),
+    derivation_chain   = list("pass", 1.0)
   )
   for (id in names(expected)) {
     expect_identical(item_status(rep, id), expected[[id]][[1]], info = id)
-    expect_equal(item_score(rep, id), as.numeric(expected[[id]][[2]]), info = id)
+    expect_equal(item_score(rep, id), expected[[id]][[2]], info = id)
   }
 })
 
 test_that("weak-demo rigor matches exact targets", {
   rep <- tf_check(tf_read(tf_fixture_path("weak-theory.theory.yaml")))
-  expect_equal(rep$aggregate_score, 12.0)
+  expect_equal(rep$aggregate_score, 2.2)
+  expect_equal(rep$coverage, 0.92)
   expect_identical(rep$gate, "blocked")
   expect_identical(rep$n_blockers_failed, 2L)
 
   expected <- list(
-    falsifiability     = c("fail", 0.0),
-    precision          = c("warn", 0.0),
-    risk_severity      = c("warn", 0.2),
-    parsimony          = c("pass", 1.0),
-    non_redundancy     = c("pass", 0.2),
-    construct_clarity  = c("warn", 0.0),
-    scope              = c("warn", 0.0),
-    logical_why        = c("warn", 0.0),
-    causal_testability = c("warn", 0.0),
-    diagnosticity      = c("warn", 0.0),
-    formalisation      = c("warn", 0.0),
-    derivation_chain   = c("fail", 0.0)
+    falsifiability     = list("fail", 0.0),
+    precision          = list("warn", 0.0),
+    risk_severity      = list("warn", 0.2),
+    parsimony          = list("n/a", NULL),
+    non_redundancy     = list("warn", 0.0),
+    construct_clarity  = list("warn", 0.0),
+    scope              = list("warn", 0.0),
+    logical_why        = list("warn", 0.0),
+    causal_testability = list("warn", 0.0),
+    diagnosticity      = list("warn", 0.0),
+    formalisation      = list("warn", 0.0),
+    derivation_chain   = list("fail", 0.0)
   )
   for (id in names(expected)) {
     expect_identical(item_status(rep, id), expected[[id]][[1]], info = id)
-    expect_equal(item_score(rep, id), as.numeric(expected[[id]][[2]]), info = id)
+    expect_equal(item_score(rep, id), expected[[id]][[2]], info = id)
   }
 })
 
@@ -89,6 +92,7 @@ test_that("rigour report matches the golden report JSON semantically", {
 
     expect_equal(rep$aggregate_score, golden$aggregate_score, tolerance = 1e-9,
                  info = cs[[2]])
+    expect_equal(rep$coverage, golden$coverage, tolerance = 1e-9, info = cs[[2]])
     expect_identical(rep$gate, golden$gate, info = cs[[2]])
     expect_equal(as.integer(rep$n_blockers_failed), as.integer(golden$n_blockers_failed),
                  info = cs[[2]])
@@ -190,7 +194,10 @@ test_that("tf_report returns valid JSON", {
   out <- tf_report(tf_read(tf_fixture_path("panic-network.theory.yaml")), "json")
   expect_true(jsonlite::validate(out))
   parsed <- jsonlite::fromJSON(out, simplifyVector = FALSE)
-  expect_equal(parsed$aggregate_score, 84.8, tolerance = 1e-9)
+  expect_equal(parsed$aggregate_score, 87.3, tolerance = 1e-9)
+  # A NULL score is written as null, the value Python's None gives.
+  expect_null(parsed$items[[4]]$score)
+  expect_true(grepl('"score": null', out, fixed = TRUE))
   expect_identical(parsed$gate, "pass")
 })
 

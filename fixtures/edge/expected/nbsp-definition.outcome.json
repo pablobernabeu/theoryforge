@@ -7,7 +7,8 @@
     "error": "invalid theory object: construct[0] missing/empty definition"
   },
   "check": {
-    "aggregate_score": 55.0,
+    "aggregate_score": 54.3,
+    "coverage": 0.92,
     "gate": "pass",
     "n_blockers_failed": 0,
     "items": [
@@ -24,12 +25,12 @@
       {
         "id": "risk_severity",
         "status": "warn",
-        "score": 0.0
+        "score": 0.3
       },
       {
         "id": "parsimony",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       },
       {
         "id": "non_redundancy",

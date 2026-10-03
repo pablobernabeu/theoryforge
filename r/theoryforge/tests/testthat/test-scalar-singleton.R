@@ -42,7 +42,8 @@ test_that("scalar fields where the schema expects arrays read as singletons", {
   rep <- tf_check(theory)
   expect_identical(rep$gate, "pass")
   expect_identical(rep$n_blockers_failed, 0L)
-  expect_equal(rep$aggregate_score, 67.0)
+  # risk_severity counts h1 at its rubric value, 0.3, since it declares none.
+  expect_equal(rep$aggregate_score, 69.6)
 
   items <- rep$items
   names(items) <- vapply(items, function(it) it$id, character(1))

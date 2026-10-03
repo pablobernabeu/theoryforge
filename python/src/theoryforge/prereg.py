@@ -9,7 +9,10 @@ from .scoring import severity as _severity
 
 def _fmt(x) -> str:
     """Format a number identically across languages: 3dp, trailing zeros stripped,
-    at least one decimal kept (1.0 -> '1.0', 0.667 -> '0.667')."""
+    at least one decimal kept (1.0 -> '1.0', 0.667 -> '0.667'). None, the score
+    of a checklist item with nothing to assess, is 'n/a'."""
+    if x is None:
+        return "n/a"
     s = f"{float(x):.3f}".rstrip("0")
     return s + "0" if s.endswith(".") else s
 

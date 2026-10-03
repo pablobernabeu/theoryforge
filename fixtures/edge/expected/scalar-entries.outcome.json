@@ -7,7 +7,8 @@
     "error": "invalid theory object: construct[0] missing/empty id; construct[0] missing/empty label; construct[0] missing/empty definition; construct[1] missing/empty id; construct[1] missing/empty label; construct[1] missing/empty definition; prediction[0] missing/empty id; prediction[0] missing/empty statement; prediction[0] missing/empty type; proposition[0] from 'arousal' is not a known construct; proposition[0] to 'threat' is not a known construct; assumption[0] missing/empty id; assumption[0] missing/empty statement; alternative[0] missing/empty id; alternative[0] missing/empty label; test_outcome[0] missing/empty prediction_id; test_outcome[0] passed must be true or false; provenance[0] must be a mapping"
   },
   "check": {
-    "aggregate_score": 18.0,
+    "aggregate_score": 19.6,
+    "coverage": 0.92,
     "gate": "blocked",
     "n_blockers_failed": 2,
     "items": [
@@ -28,8 +29,8 @@
       },
       {
         "id": "parsimony",
-        "status": "pass",
-        "score": 0.0
+        "status": "n/a",
+        "score": null
       },
       {
         "id": "non_redundancy",

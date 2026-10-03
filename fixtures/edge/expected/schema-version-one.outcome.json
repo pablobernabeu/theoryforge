@@ -5,7 +5,8 @@
     "error": "invalid theory object: schema_version must match major.minor (for example \"1.0\")"
   },
   "check": {
-    "aggregate_score": 51.7,
+    "aggregate_score": 54.3,
+    "coverage": 0.92,
     "gate": "pass",
     "n_blockers_failed": 0,
     "items": [
@@ -22,17 +23,17 @@
       {
         "id": "risk_severity",
         "status": "warn",
-        "score": 0.0
+        "score": 0.3
       },
       {
         "id": "parsimony",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       },
       {
         "id": "non_redundancy",
         "status": "pass",
-        "score": 0.667
+        "score": 1.0
       },
       {
         "id": "construct_clarity",

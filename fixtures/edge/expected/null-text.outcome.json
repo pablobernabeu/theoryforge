@@ -7,7 +7,8 @@
     "error": "invalid theory object: missing/empty required field: title; prediction[0] missing/empty statement; prediction[0] missing/empty type"
   },
   "check": {
-    "aggregate_score": 38.0,
+    "aggregate_score": 34.8,
+    "coverage": 0.92,
     "gate": "blocked",
     "n_blockers_failed": 1,
     "items": [
@@ -28,13 +29,13 @@
       },
       {
         "id": "parsimony",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       },
       {
         "id": "non_redundancy",
         "status": "pass",
-        "score": 0.8
+        "score": 1.0
       },
       {
         "id": "construct_clarity",

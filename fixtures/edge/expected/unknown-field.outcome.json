@@ -7,7 +7,8 @@
     "error": "invalid theory object: unknown top-level field: predicitions"
   },
   "check": {
-    "aggregate_score": 36.7,
+    "aggregate_score": 28.6,
+    "coverage": 0.84,
     "gate": "blocked",
     "n_blockers_failed": 1,
     "items": [
@@ -28,13 +29,13 @@
       },
       {
         "id": "parsimony",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       },
       {
         "id": "non_redundancy",
         "status": "pass",
-        "score": 0.667
+        "score": 1.0
       },
       {
         "id": "construct_clarity",
@@ -68,8 +69,8 @@
       },
       {
         "id": "derivation_chain",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       }
     ]
   },
@@ -118,5 +119,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: A theory with a misspelt predictions key\n\n- Theory ID: edge-unknown-field\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
+  "preregister": "# Preregistration: A theory with a misspelt predictions key\n\n- Theory ID: edge-unknown-field\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: no\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
 }

@@ -35,7 +35,10 @@ NULL
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param embedder A function mapping a definition string to a numeric vector.
 #' @param threshold Cosine threshold for the \code{"review"} flag; defaults to
-#'   the checklist's \code{redundancy_similarity_max}.
+#'   the checklist's \code{embedding_similarity_max} (0.85). How high a cosine
+#'   two unrelated definitions reach depends on the embedding model, so a
+#'   threshold suited to one model may flag everything or nothing under
+#'   another, and the value is best set for the model in use.
 #' @return A data frame with columns \code{a}, \code{b}, \code{cosine},
 #'   \code{flag}.
 #' @examples
@@ -53,7 +56,7 @@ NULL
 tf_embedding_redundancy <- function(theory, embedder, threshold = NULL) {
   T <- theory
   if (is.null(threshold)) {
-    threshold <- tf_checklist()$thresholds$redundancy_similarity_max
+    threshold <- tf_checklist()$thresholds$embedding_similarity_max
   }
   cons <- .tf_list(T, "constructs")
   ids <- vapply(cons, function(c) .tf_str(c, "id"), character(1))

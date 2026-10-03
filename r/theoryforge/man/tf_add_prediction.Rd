@@ -10,7 +10,8 @@ tf_add_prediction(
   statement,
   type,
   derives_from = NULL,
-  diagnostic_vs = NULL
+  diagnostic_vs = NULL,
+  severity = NULL
 )
 }
 \arguments{
@@ -32,6 +33,11 @@ allows. The label is self-declared, and no function checks it against the
 statement.}
 
 \item{derives_from, diagnostic_vs}{Optional character vectors.}
+
+\item{severity}{Optional declared pre-data severity from 0 to 1, stored only
+when given. The checklist's risk_severity item reads it, and reads the
+claim-form rubric's value (\code{\link[=tf_severity]{tf_severity()}}) for a prediction that declares
+none. \code{\link[=tf_dossier]{tf_dossier()}} sets the two side by side.}
 }
 \value{
 The (mutated) theory object.

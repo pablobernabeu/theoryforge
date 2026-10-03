@@ -90,7 +90,8 @@ def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
                  "pipeline", "context", "workflow", "venn", "rigour", "severity"):
         assert t.diagram(kind).endswith("\n")
     assert '"result_"' in t.diagram("pipeline")
-    assert t.redundancy_check() == [{"a": "", "b": "", "similarity": 0.0, "flag": "ok"}]
+    assert t.redundancy_check() == [{"a": "", "b": "", "similarity": 0.0, "overlap": 0.0,
+                                     "flag": "ok"}]
     assert t.landscape(CORPUS)["theory_id"] == "t"
     assert t.new_evidence_dois(["10.1/x"]) == ["10.1/x"]
     assert t.osf_push()["request"]["filename"] == "t.dossier.md"
@@ -127,10 +128,10 @@ predictions:
 """
     t = _read(tmp_path, text)
     rep = t.check()
-    # No predictions: nothing is falsifiable, and the derivation check passes
-    # vacuously. R used to iterate the mapping's values and pass the gate.
+    # No predictions: nothing is falsifiable, and there is no derivation to
+    # check. R used to iterate the mapping's values and pass the gate.
     assert _item(rep, "falsifiability")["status"] == "fail"
-    assert _item(rep, "derivation_chain")["status"] == "pass"
+    assert _item(rep, "derivation_chain")["status"] == "n/a"
     assert rep["gate"] == "blocked"
     assert t.severity() == []
 
@@ -139,7 +140,7 @@ def test_a_collection_written_as_a_single_string_reads_as_empty(tmp_path):
     t = _read(tmp_path, HEAD + TWO_CONSTRUCTS + "predictions: h1\n")
     rep = t.check()
     assert _item(rep, "falsifiability")["status"] == "fail"
-    assert _item(rep, "derivation_chain")["status"] == "pass"
+    assert _item(rep, "derivation_chain")["status"] == "n/a"
     assert t.severity() == []
 
 

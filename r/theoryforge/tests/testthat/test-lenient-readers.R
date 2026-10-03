@@ -121,9 +121,10 @@ test_that("a collection written as a mapping reads as empty", {
     derives_from: [p1]
 '))
   rep <- tf_check(t)
-  # R used to iterate the mapping's values and pass the gate.
+  # No predictions: nothing is falsifiable, and there is no derivation to
+  # check. R used to iterate the mapping's values and pass the gate.
   expect_identical(lr_item(rep, "falsifiability")$status, "fail")
-  expect_identical(lr_item(rep, "derivation_chain")$status, "pass")
+  expect_identical(lr_item(rep, "derivation_chain")$status, "n/a")
   expect_identical(rep$gate, "blocked")
   expect_identical(nrow(tf_severity(t)), 0L)
 })
@@ -140,7 +141,7 @@ test_that("a collection written as a single string reads as empty", {
   t <- lr_read(paste0(lr_head, lr_two_constructs, "predictions: h1\n"))
   rep <- tf_check(t)
   expect_identical(lr_item(rep, "falsifiability")$status, "fail")
-  expect_identical(lr_item(rep, "derivation_chain")$status, "pass")
+  expect_identical(lr_item(rep, "derivation_chain")$status, "n/a")
   expect_identical(nrow(tf_severity(t)), 0L)
 })
 

@@ -1,9 +1,10 @@
 {
   "theory_id": "modality-switching-2026",
   "schema_version": "1.0",
-  "checklist_version": "1.0",
+  "checklist_version": "2.0",
   "maturity": "developing",
-  "aggregate_score": 85.1,
+  "aggregate_score": 89.8,
+  "coverage": 0.92,
   "gate": "pass",
   "n_blockers_failed": 0,
   "items": [
@@ -29,20 +30,20 @@
       "score": 0.613,
       "weight": 0.1,
       "severity_if_fail": "warning",
-      "citation": "Mayo (2018); Meehl (1990)"
+      "citation": "Popper (1959); Meehl (1967, 1990)"
     },
     {
       "id": "parsimony",
-      "status": "pass",
-      "score": 0.5,
+      "status": "n/a",
+      "score": null,
       "weight": 0.08,
       "severity_if_fail": "warning",
-      "citation": "Forster & Sober (1994); Lakatos (1970)"
+      "citation": "Lakatos (1970); Meehl (1990)"
     },
     {
       "id": "non_redundancy",
       "status": "pass",
-      "score": 0.85,
+      "score": 1.0,
       "weight": 0.1,
       "severity_if_fail": "warning",
       "citation": "Kelley (1927); Le et al. (2010); Lawson & Robins (2021)"

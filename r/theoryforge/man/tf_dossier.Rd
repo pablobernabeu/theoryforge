@@ -19,6 +19,14 @@ table, the severity list, the provenance list, and the appended
 preregistration document. The output is deterministic, so the same theory
 always yields the same dossier.
 }
+\details{
+The header gives the checklist version, the aggregate score, the checklist
+coverage, the gate and the blockers that failed. The rigour table prints
+\code{n/a} for an item with nothing to assess. The severity list gives each
+prediction's claim-form rubric values and, when the prediction declares a
+severity, that value too, with a note when it exceeds the rubric by more
+than 0.2.
+}
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>

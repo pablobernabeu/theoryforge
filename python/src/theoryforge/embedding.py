@@ -33,10 +33,15 @@ def embedding_redundancy(T, embedder: Callable[[str], Sequence[float]],
     pair must be of equal, nonzero length, or the pair is refused. Returns one record per
     unordered construct pair, sorted by descending similarity then (a, b), with a
     `review`/`ok` flag.
+
+    `threshold` defaults to the checklist's `embedding_similarity_max` (0.85). How high
+    a cosine two unrelated definitions reach depends on the embedding model, so a
+    threshold suited to one model may flag everything or nothing under another, and
+    the value is best set for the model in use.
     """
     T = T.data if hasattr(T, "data") else T
     if threshold is None:
-        threshold = _resources.checklist()["thresholds"]["redundancy_similarity_max"]
+        threshold = _resources.checklist()["thresholds"]["embedding_similarity_max"]
     cons = items(T, "constructs")
     vecs = [(text(field(c, "id")), embedder(text(field(c, "definition")))) for c in cons]
     rows: list[dict] = []

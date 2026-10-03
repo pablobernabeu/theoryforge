@@ -149,7 +149,8 @@ def test_edge_outcome_records_each_call_in_order(golden, tmp_path):
     assert list(out) == OUTCOME_KEYS
     assert out["read"] == "ok"
     assert out["validate"] == {"error": "invalid theory object: unknown top-level field: predicitions"}
-    assert set(out["check"]) == {"aggregate_score", "gate", "n_blockers_failed", "items"}
+    assert list(out["check"]) == ["aggregate_score", "coverage", "gate", "n_blockers_failed",
+                                  "items"]
     assert list(out["check"]["items"][0]) == ["id", "status", "score"]
     assert out["simulate"]["steps"] == 3
     assert isinstance(out["compile_sem"], str)

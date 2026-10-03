@@ -274,6 +274,52 @@
   output and `$\alpha$` becomes mathematics. `tf_report(format = "html")`
   escapes every value it writes into the HTML, the theory id included.
 
+* The rigour checklist moves to version 2.0, which every report records as
+  `checklist_version`. An item with nothing to assess is reported as `n/a`,
+  with a `NULL` score, and left out of the aggregate, which is now the weighted
+  mean of the applicable items. The report gains `coverage`, the share of the
+  checklist's weight that was applicable. An empty theory scored 26 and now
+  scores 0, and adding a prediction to it no longer lowers its score.
+  Parsimony no longer penalises declared auxiliary assumptions. It fails only
+  when an assumption added in response to an anomaly has no independent
+  corroboration, and it is `n/a` when no assumption was added that way.
+  Non-redundancy follows the redundancy screen's flags, and the screen also
+  flags a definition contained in another (`tf_redundancy_check()` gains an
+  `overlap` column), so the deliberately redundant pair in the weak example is
+  now caught. Mean severity counts every prediction, using the claim-form
+  rubric where none is declared, and `tf_add_prediction()` gains `severity`.
+  Causal testability counts every directed relation, `mediates` and
+  `moderates` included. Most well-specified theories score a few points higher
+  (the bundled panic example moves from 84.8 to 87.3) and the weak example
+  lower (from 12.0 to 2.2).
+
+* `tf_dossier()` gives the checklist coverage, names the blockers that failed,
+  prints `n/a` for an item with nothing to assess and sets a prediction's
+  declared severity beside the rubric's value, with a note when the declared
+  value exceeds the rubric's by more than 0.2. `tf_report(format = "html")`
+  prints `n/a` for such an item, the development roadmap leaves it out and the
+  rigour grid shows it in grey. The preregistration of a theory without
+  predictions now reads `Derivation chain verified: no`, where it said `yes`.
+
+* `tf_embedding_redundancy()` takes its default threshold from the checklist's
+  new `embedding_similarity_max`, 0.85 as before, since how high a cosine runs
+  depends on the embedding model.
+
+* The methodology article quotes the checklist's criteria and corrects the
+  causal testability row. It calls the five thresholds the package's defaults
+  where it called them calibrated, and no longer says that a theory passing
+  every item scores 100. It explains that the aggregate is compensatory, so a
+  blocked theory can outscore one whose gate passes, that the weights and
+  thresholds are fixed and that the lexical screen cannot detect empirical
+  redundancy (Rönkkö & Cho, 2022). Diagnosticity and the rubric's bonus are
+  described as resting on a declared rival, and the derivation chain as a
+  check of references. The article also notes that a prediction without a
+  declared severity is credited for its type and its named rival twice, in
+  prediction severity as well as in precision and diagnosticity.
+  `?tf_redundancy_check` gives its references' full titles.
+  `inst/REFERENCES.bib` drops Forster and Sober (1994), which no item cites any
+  more, and adds Rönkkö and Cho (2022).
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

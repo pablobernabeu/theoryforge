@@ -91,7 +91,12 @@
             "maximum": 1,
             "description": "Informational, read by no function. The risk_score that severity() reports is derived from the type."
           },
-          "severity": { "type": "number", "minimum": 0, "maximum": 1 },
+          "severity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "A declared pre-data severity of the claim, from 0 to 1. The checklist's risk_severity item reads it, and uses the claim-form rubric of severity() for a prediction that declares none."
+          },
           "diagnostic_vs": { "type": "array", "items": { "type": "string" } }
         }
       }

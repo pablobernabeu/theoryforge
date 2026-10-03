@@ -82,6 +82,8 @@ def test_tokens_and_jaccard():
 
 def test_redundancy_flags_near_duplicates(weak_path):
     rows = tf.read(weak_path).redundancy_check()
-    assert rows  # at least one pair
+    assert len(rows) == 1
     top = rows[0]
-    assert top["similarity"] >= 0.5  # the two near-identical definitions
+    # The Jaccard similarity, 0.8, is under 0.85, but one definition is
+    # contained in the other: the overlap coefficient is 1.
+    assert (top["similarity"], top["overlap"], top["flag"]) == (0.8, 1.0, "review")

@@ -276,6 +276,8 @@ table.grid tbody tr:hover td { background: color-mix(in srgb, var(--accent) 9%, 
 .pill.pass, .pill.ok, .pill.covered, .pill.progressive { background: #2e7d46; color: #ffffff; }
 .pill.warn, .pill.advisory, .pill.review, .pill.neutral, .pill.crowded { background: #e8a33d; color: #3a2600; }
 .pill.fail, .pill.blocked, .pill.degenerating, .pill.under_theorised { background: #b5392f; color: #ffffff; }
+/* A checklist item with nothing to assess (status n/a, class n_a). */
+.pill.n_a { background: #616161; color: #ffffff; }
 
 .note { font-size: .85rem; color: var(--ink-soft); }
 .error {

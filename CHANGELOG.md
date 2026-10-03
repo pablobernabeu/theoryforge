@@ -254,6 +254,41 @@ version and a single behavioural contract
   so its verdict remains progressive for a reason the appraisal can see, and its aggregate
   score moves from 87.1 to 87.7. API_SPEC section 10 states the rules, and the appraisal
   golden and the goldens of the amended example change with them.
+- The rigour checklist moves to version 2.0, which every report records as
+  `checklist_version`. An item with nothing to assess is reported as `n/a`, with a null
+  score, and left out of the aggregate, which is now the weighted mean of the applicable
+  items. The report gains `coverage`, the share of the checklist's weight that was
+  applicable, after `aggregate_score`. An empty theory scored 26.0 and now scores 0.0, and
+  adding a prediction to it no longer lowers its score (18.0 became 1.2). Parsimony no
+  longer penalises declared auxiliary assumptions. It fails only when an assumption added
+  in response to an anomaly has no independent corroboration, by the appraisal's ad hoc
+  rule, and it is `n/a` when no assumption was added that way. `parsimony_ratio_max` is
+  removed. Non-redundancy follows the redundancy screen's flags, and the screen also flags
+  a definition contained in another: `redundancy_check()` gains `overlap`, the overlap
+  coefficient, and flags a pair whose overlap reaches `redundancy_overlap_max` (0.85) when
+  both definitions hold at least three tokens. The deliberately redundant pair in the weak example
+  (Jaccard 0.8, overlap 1.0) is now caught. Mean severity counts every prediction, using
+  the claim-form rubric where none is declared, and `add_prediction()` gains `severity`.
+  Causal testability counts every directed relation, `mediates` and `moderates`
+  included, from a relation table that API_SPEC section 28 sets out. The bundled theories
+  move from 84.8 to 87.3 (panic network), 87.7 to 89.8 (its amended version), 85.1 to
+  89.8 (modality switching) and 12.0 to 2.2 (the weak example), each with a coverage of
+  0.92. The app examples move from 73.3 to 80.4 (cognitive dissonance), 83.6 to 86.2
+  (effort and recovery), 71.1 to 74.6 (happy-vowel), 76.8 to 81.3 (planned behaviour), 80.6
+  to 83.0 (self-determination) and 68.6 to 78.5 (stereotype threat). API_SPEC sections 4
+  and 6 state the rules, and the report, dossier, rigour and roadmap goldens of the four
+  fixtures change with them.
+- `dossier()` gives the checklist coverage, names the blockers that failed, prints `n/a`
+  for an item with nothing to assess and sets a prediction's declared severity beside the
+  rubric's value, with a note when the declared value exceeds the rubric's by more than
+  0.2. `report(format="html")` prints `n/a` for such an item, the development roadmap
+  leaves it out and the rigour grid shows it in grey. The preregistration of a theory
+  without predictions now reads `Derivation chain verified: no`, where it said `yes`.
+  The apps show `n/a` and the coverage, count the items with nothing to assess and show
+  the overlap of each construct pair.
+- `embedding_redundancy()` takes its default threshold from the checklist's new
+  `embedding_similarity_max`, 0.85 as before, since how high a cosine runs depends on the
+  embedding model.
 
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`
@@ -357,6 +392,24 @@ version and a single behavioural contract
   `neutral` verdict to Lakatos, whose scheme has only progressive and degenerating
   problemshifts. The bundled examples and the app examples record the builder names in
   their provenance (`tf_add_construct`, `tf_add_proposition`, `tf_add_prediction`).
+- Both methodology pages quote the checklist's criteria and correct the causal
+  testability row, which described an export to a DAG with derivable implications. They
+  call the five thresholds the package's defaults where they called them calibrated, and
+  no longer say that a theory passing every item scores 100: the panic example passed all
+  twelve at 84.8. They explain that the aggregate is compensatory, so a blocked theory can
+  outscore one whose gate passes, and that items can pass below a score of 1. They no
+  longer say that a field can override the weights in its own copy of the checklist: the
+  weights and thresholds are fixed, every report records the checklist version, and
+  recombining the per-item scores gives a result not comparable with the default
+  aggregate. They add that the lexical screen cannot detect empirical redundancy
+  (Le et al., 2010; Rönkkö & Cho, 2022), that a rival named in `diagnostic_vs` is declared
+  and not verified, which holds for the rubric's 0.1 bonus as well, and that the
+  derivation chain checks references only. The checklist's criteria say the same, and its
+  comments call the thresholds defaults. The pages also note that a prediction without a
+  declared severity is credited for its type and its named rival twice, in prediction
+  severity as well as in precision and diagnosticity. The schema describes a prediction's
+  `severity` as a declared pre-data severity, `redundancy_check()` gives its references'
+  full titles and the getting-started page shows both measures of the redundancy screen.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and
@@ -400,6 +453,13 @@ version and a single behavioural contract
   `lit._urlopen` in Python, and in R `.tf_http(method, url, headers, body)`, which returns
   the status and body for `.tf_http_check()` to judge. The R tests replace it with
   `testthat::local_mocked_bindings()`, so `testthat (>= 3.1.7)` is now in Suggests.
+- The relation table of API_SPEC section 28 is defined once in each twin (`_relations.py`,
+  `relations.R`), and both suites check it against the schema's enum. The checklist's
+  parsimony item and the amendment appraisal share one ad hoc rule
+  (`_status.classify_auxiliary`, `.tf_classify_auxiliary`), and the non_redundancy item
+  reads the redundancy screen's own flags. The edge-case records gain the report's
+  `coverage`, and a new edge case covers an assumption corroborated beyond its anomaly, a
+  definition contained in another and a theory whose only relation is `mediates`.
 
 
 ## [0.6.0] - 2026-08-21

@@ -230,7 +230,7 @@ const RT = {
       case "severity":
         return `${head}\n\nsev = theory.severity()           # per-prediction risk & computed severity\nopen("severity.svg", "w").write(theory.diagram("severity"))`;
       case "redundancy":
-        return `${head}\n\ntheory.redundancy_check()         # pairwise Jaccard overlap of construct definitions`;
+        return `${head}\n\ntheory.redundancy_check()         # pairwise Jaccard and overlap of construct definitions`;
       case "sem":
         return `${head}\n\nprint(theory.compile_sem())       # lavaan model syntax`;
       case "preregister":

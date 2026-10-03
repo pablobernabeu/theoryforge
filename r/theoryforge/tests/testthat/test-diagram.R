@@ -50,7 +50,7 @@ test_that("new diagram types are byte-identical to the golden files", {
 test_that("development_roadmap collapses to a single node when all checks pass", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   out <- tf_diagram(theory, "development_roadmap")
-  expect_true(grepl('label="Network theory of\\npanic disorder\\nscore 84.8, gate pass"',
+  expect_true(grepl('label="Network theory of\\npanic disorder\\nscore 87.3, gate pass"',
                     out, fixed = TRUE))
   expect_true(grepl('"all_checks_pass" [label="all checks pass", fillcolor="#E5F2E7", color="#3E7A46"];',
                     out, fixed = TRUE))
@@ -66,9 +66,11 @@ test_that("development_roadmap leads on blockers and rows up the advisories", {
                            'fillcolor="#F9E5E4"'),
                     out, fixed = TRUE))
   expect_true(grepl('"roadmap" -> "falsifiability";', out, fixed = TRUE))
-  # Advisories follow, pinned three to a row.
-  expect_true(grepl('{ rank=same; "precision" -> "risk_severity" -> "construct_clarity" [style=invis]; }',
+  # Advisories follow, pinned three to a row. parsimony has nothing to assess
+  # and is left out.
+  expect_true(grepl('{ rank=same; "precision" -> "risk_severity" -> "non_redundancy" [style=invis]; }',
                     out, fixed = TRUE))
+  expect_false(grepl('"parsimony"', out, fixed = TRUE))
 })
 
 test_that("the severity chart is titled for what its bars rank", {

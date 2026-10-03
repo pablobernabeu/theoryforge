@@ -520,11 +520,16 @@ test_that("tf_check() refuses a test outcome whose passed is not a logical", {
   t$predictions[[1]]$severity <- "0.8"
   expect_error(tf_check(t), "^check requires boolean test outcomes; ")
   t$predictions[[1]]$severity <- NULL
-  t$test_outcomes[[1]]$passed <- TRUE
+  # Only a prediction other than h1, the anomaly x1 answers, can support x1, so
+  # a second prediction carries the outcome from here on.
+  t$predictions[[2]] <- list(id = "h2", statement = "Beta lags Alpha by a day.",
+                             type = "directional", derives_from = list("p1"))
+  t$auxiliary_assumptions[[1]]$protects <- list("h1", "h2")
+  t$test_outcomes <- list(list(prediction_id = "h2", passed = TRUE))
   expect_identical(vp_item(tf_check(t), "parsimony")$status, "pass")
   # A missing or null passed still reads as not passed, and so does NA.
-  for (outcome in list(list(prediction_id = "h1"), list(prediction_id = "h1", passed = NULL),
-                       list(prediction_id = "h1", passed = NA))) {
+  for (outcome in list(list(prediction_id = "h2"), list(prediction_id = "h2", passed = NULL),
+                       list(prediction_id = "h2", passed = NA))) {
     t$test_outcomes <- list(outcome)
     expect_identical(vp_item(tf_check(t), "parsimony")$status, "fail")
   }

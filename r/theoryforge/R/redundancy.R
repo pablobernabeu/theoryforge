@@ -62,24 +62,84 @@ tf_jaccard <- function(a, b) {
   .tf_rnd(inter / union, 3)
 }
 
+# The overlap coefficient flags a pair only when both definitions hold at least
+# this many tokens. One or two content words contained in a longer definition
+# are too few to call the two constructs the same.
+.tf_MIN_OVERLAP_TOKENS <- 3L
+
+# The overlap coefficient, |A and B| / min(|A|, |B|), rounded to 3 decimals, or
+# 0 when either set is empty.
+.tf_overlap <- function(a, b) {
+  if (length(a) == 0L || length(b) == 0L) return(0.0)
+  .tf_rnd(length(intersect(a, b)) / min(length(a), length(b)), 3)
+}
+
+# The screen's record of every unordered construct pair, in construct order, as
+# a data frame. A pair is flagged "review" when its Jaccard similarity reaches
+# redundancy_similarity_max, a near-duplicate, or when both definitions hold at
+# least three tokens and their overlap coefficient reaches
+# redundancy_overlap_max, one definition contained in the other. The
+# checklist's non_redundancy item reads the same flags.
+.tf_redundancy_pairs <- function(theory, thr) {
+  cons <- .tf_list(theory, "constructs")
+  ids <- vapply(cons, function(c) .tf_str(c, "id"), character(1))
+  toks <- lapply(cons, function(c) tf_tokens(.tf_str(c, "definition")))
+
+  a <- character(0)
+  b <- character(0)
+  sim <- numeric(0)
+  overlap <- numeric(0)
+  flag <- character(0)
+  n <- length(cons)
+  if (n >= 2L) {
+    for (i in seq_len(n - 1L)) {
+      for (j in (i + 1L):n) {
+        s <- tf_jaccard(toks[[i]], toks[[j]])
+        ov <- .tf_overlap(toks[[i]], toks[[j]])
+        contained <- length(toks[[i]]) >= .tf_MIN_OVERLAP_TOKENS &&
+          length(toks[[j]]) >= .tf_MIN_OVERLAP_TOKENS &&
+          ov >= thr$redundancy_overlap_max
+        a <- c(a, ids[[i]])
+        b <- c(b, ids[[j]])
+        sim <- c(sim, s)
+        overlap <- c(overlap, ov)
+        flag <- c(flag, if (s >= thr$redundancy_similarity_max || contained) "review" else "ok")
+      }
+    }
+  }
+  data.frame(a = a, b = b, similarity = sim, overlap = overlap, flag = flag,
+             stringsAsFactors = FALSE)
+}
+
 #' Pairwise lexical similarity of construct definitions
 #'
-#' Computes Jaccard similarity for every unordered pair of construct
-#' definitions. Returns a data frame with one row per pair, sorted by
-#' descending similarity then \code{(a, b)} ascending. The \code{flag} column
-#' is \code{"review"} when similarity meets or exceeds the configured
-#' \code{redundancy_similarity_max} threshold, otherwise \code{"ok"}.
+#' Compares the definitions of every unordered pair of constructs and returns
+#' a data frame with one row per pair, sorted by descending similarity then
+#' \code{(a, b)} ascending. \code{similarity} is the Jaccard index of the two
+#' definitions' token sets and \code{overlap} their overlap coefficient, the
+#' shared tokens over the tokens of the shorter definition. \code{flag} is
+#' \code{"review"} for a near-duplicate, a similarity at or above the
+#' checklist's \code{redundancy_similarity_max}, and for a definition contained
+#' in the other, an overlap at or above \code{redundancy_overlap_max} when both
+#' definitions hold at least three tokens. It is \code{"ok"} otherwise.
+#'
+#' The screen compares words, so it cannot detect empirical redundancy, two
+#' differently defined constructs that correlate almost perfectly once
+#' measurement error is corrected for (Le et al., 2010). Sibling constructs
+#' (Lawson & Robins, 2021) may share vocabulary without being redundant.
 #'
 #' @param theory A theory object (named list).
 #' @return A data frame with columns \code{a}, \code{b}, \code{similarity},
-#'   \code{flag}.
+#'   \code{overlap}, \code{flag}.
 #' @references
 #' Le, H., Schmidt, F. L., Harter, J. K., & Lauver, K. J. (2010). The problem of
-#'   empirical redundancy of constructs. \emph{Organizational Behavior and Human
-#'   Decision Processes}, 112(2), 112-125. \doi{10.1016/j.obhdp.2010.02.003}
+#'   empirical redundancy of constructs in organizational research: An empirical
+#'   investigation. \emph{Organizational Behavior and Human Decision Processes},
+#'   112(2), 112-125. \doi{10.1016/j.obhdp.2010.02.003}
 #'
-#' Lawson, K. M., & Robins, R. W. (2021). Sibling constructs. \emph{Personality
-#'   and Social Psychology Review}, 25(4), 344-366. \doi{10.1177/10888683211047101}
+#' Lawson, K. M., & Robins, R. W. (2021). Sibling constructs: What are they, why
+#'   do they matter, and how should you handle them? \emph{Personality and
+#'   Social Psychology Review}, 25(4), 344-366. \doi{10.1177/10888683211047101}
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal",
@@ -89,27 +149,7 @@ tf_jaccard <- function(a, b) {
 #' tf_redundancy_check(theory)
 #' @export
 tf_redundancy_check <- function(theory) {
-  cons <- .tf_list(theory, "constructs")
-  thr <- tf_checklist()$thresholds$redundancy_similarity_max
-  ids <- vapply(cons, function(c) .tf_str(c, "id"), character(1))
-  toks <- lapply(cons, function(c) tf_tokens(.tf_str(c, "definition")))
-
-  a <- character(0)
-  b <- character(0)
-  sim <- numeric(0)
-  n <- length(cons)
-  if (n >= 2L) {
-    for (i in seq_len(n - 1L)) {
-      for (j in (i + 1L):n) {
-        a <- c(a, ids[[i]])
-        b <- c(b, ids[[j]])
-        sim <- c(sim, tf_jaccard(toks[[i]], toks[[j]]))
-      }
-    }
-  }
-  flag <- ifelse(sim >= thr, "review", "ok")
-  df <- data.frame(a = a, b = b, similarity = sim, flag = flag,
-                   stringsAsFactors = FALSE)
+  df <- .tf_redundancy_pairs(theory, tf_checklist()$thresholds)
   if (nrow(df) > 0L) {
     ord <- order(-df$similarity, df$a, df$b, method = "radix")
     df <- df[ord, , drop = FALSE]

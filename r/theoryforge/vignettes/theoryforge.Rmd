@@ -123,6 +123,11 @@ report$items[[1]]$status  # "pass" / "warn" / "fail"
 report$items[[1]]$score   # numeric in [0, 1]
 ```
 
+An item with nothing to assess, such as the redundancy screen of a theory with
+a single construct, has the status `"n/a"` and a `NULL` score. It is left out
+of the aggregate, the weighted mean of the applicable items, and
+`report$coverage` gives their share of the checklist's weight.
+
 Render it as JSON (valid, pretty-printed) or as an HTML fragment. The JSON
 string is an artefact in its own right, shown here verbatim:
 
@@ -138,8 +143,10 @@ cat(tf_report(theory, format = "html"))
 
 ### Screening for redundant constructs
 
-The lexical redundancy screen reports the Jaccard similarity of every pair of
-construct definitions, sorted by descending similarity.
+The lexical redundancy screen reports the Jaccard similarity and the overlap
+coefficient of every pair of construct definitions, sorted by descending
+similarity. A pair is flagged for review when the definitions are near
+duplicates or one is contained in the other.
 
 ```{r redundancy}
 tf_redundancy_check(theory)

@@ -130,6 +130,7 @@ def _attempt(call: Callable[[], Any]) -> Any:
 def _check_summary(rep: dict) -> dict:
     return {
         "aggregate_score": rep["aggregate_score"],
+        "coverage": rep["coverage"],
         "gate": rep["gate"],
         "n_blockers_failed": rep["n_blockers_failed"],
         "items": [{"id": it["id"], "status": it["status"], "score": it["score"]}

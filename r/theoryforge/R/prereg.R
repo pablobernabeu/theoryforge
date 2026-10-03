@@ -7,7 +7,9 @@ NULL
 
 # Format a number identically across languages: 3dp, trailing zeros stripped,
 # at least one decimal kept (1.0 -> "1.0", 0.9 -> "0.9", 0.667 -> "0.667").
+# NULL, the score of a checklist item with nothing to assess, is "n/a".
 .tf_fmt <- function(x) {
+  if (is.null(x)) return("n/a")
   sub("\\.$", ".0", sub("0+$", "", sprintf("%.3f", as.numeric(x))))
 }
 

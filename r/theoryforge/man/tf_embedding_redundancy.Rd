@@ -12,7 +12,10 @@ tf_embedding_redundancy(theory, embedder, threshold = NULL)
 \item{embedder}{A function mapping a definition string to a numeric vector.}
 
 \item{threshold}{Cosine threshold for the \code{"review"} flag; defaults to
-the checklist's \code{redundancy_similarity_max}.}
+the checklist's \code{embedding_similarity_max} (0.85). How high a cosine
+two unrelated definitions reach depends on the embedding model, so a
+threshold suited to one model may flag everything or nothing under
+another, and the value is best set for the model in use.}
 }
 \value{
 A data frame with columns \code{a}, \code{b}, \code{cosine},

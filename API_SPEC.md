@@ -135,7 +135,7 @@ Every emptiness test, trim and lowercasing goes through the helpers below, ident
 
 ## 4. Rigour checklist algorithm
 
-Load `rigor_checklist.yaml`. Let `thr` = its `thresholds`. For theory `T`:
+Load `rigor_checklist.yaml` (checklist version 2.0). Let `thr` = its `thresholds`. The package fixes these five defaults for reproducibility, and no validation study derived them: `redundancy_similarity_max` and `redundancy_overlap_max` (0.85 each, read by the redundancy screen of §6), `embedding_similarity_max` (0.85, read only by §24), `min_precision_share` (0.5) and `min_severity` (0.5). For theory `T`:
 `preds = T.predictions or []`, `cons = T.constructs or []`, `props = T.propositions or []`,
 `aux = T.auxiliary_assumptions or []`, `alts = T.alternatives or []`, `tos = T.test_outcomes or []`.
 `prop_ids = {p.id for p in props}`, `alt_ids = {a.id for a in alts}`.
@@ -146,40 +146,41 @@ Where the schema declares an array of strings (`derives_from`, `diagnostic_vs`, 
 
 **Test outcomes.** Before any item is scored, a test outcome whose `passed` is present and not a boolean (R: a logical of length 1) raises `check requires boolean test outcomes; non-boolean passed for test outcome of prediction: <id>` in both languages. `<id>` is the `prediction_id`, read as text, of the first such outcome in file order. A missing or null `passed`, and in R a single `NA`, reads as not passed. A quoted `passed: "true"` used to read as a failure, so an assumption added to protect the prediction counted as ad hoc (item 4) and an amendment that should be progressive came out degenerating (§10). `validate(full)` reports the same value (§2 item 8), as it reports the severities item 3 refuses.
 
-Each item returns `{id, status ∈ {pass,warn,fail}, score ∈ [0,1], weight, severity_if_fail, citation}`.
+Each item returns `{id, status ∈ {pass,warn,fail,n/a}, score, weight, severity_if_fail, citation}`. The score lies in [0, 1], except that an item with nothing to assess has the status `n/a` and a null score (Python `None`, R `NULL`, JSON `null`). Three items can be `n/a`: non_redundancy with fewer than two constructs, derivation_chain with no predictions and parsimony with no assumption added for an anomaly. Each of them used to score 1.0 with nothing to assess, so an empty theory scored 26.0 and adding a prediction lowered the score. A `pass` does not require a score of 1: precision, risk_severity and diagnosticity pass below it.
 
-**Numerics.** A sum of doubles (the mean severity of item 3 and the weighted aggregate) is an explicit left-to-right loop in file or checklist order, never the language's `sum()`: CPython 3.12+ compensates its sum, and R's `sum()` keeps an extended accumulator on x86_64 but not on Apple Silicon, so either can change the last bit. Counts are integers and exact. An item whose status compares its score with a threshold (precision and risk_severity) compares the rounded score `rnd(x, 3)`, the value the report prints, so a score whose exact value equals the threshold cannot pass on one platform and warn on another. Severities (0.6, 0.7, 0.2) have the exact mean 0.5, which a left fold computes as 0.49999999999999994 and rounds to 0.5: `pass`.
+**Numerics.** A sum of doubles (the mean severity of item 3, the weighted aggregate and the applicable weight) is an explicit left-to-right loop in file or checklist order, never the language's `sum()`: CPython 3.12+ compensates its sum, and R's `sum()` keeps an extended accumulator on x86_64 but not on Apple Silicon, so either can change the last bit. Counts are integers and exact. An item whose status compares its score with a threshold (precision and risk_severity) compares the rounded score `rnd(x, 3)`, the value the report prints, so a score whose exact value equals the threshold cannot pass on one platform and warn on another. Severities (0.6, 0.7, 0.2) have the exact mean 0.5, which a left fold computes as 0.49999999999999994 and rounds to 0.5: `pass`.
 
 1. **falsifiability.** `forbidding = [p for p in preds if p.type in {point,interval,directional}]`. `pass` if `len(forbidding) ≥ 1` else `fail`; score = 1.0/0.0.
 2. **precision.** if `len(preds)==0`: score 0.0, warn. Else `share = count(p.type in {point,interval}) / len(preds)`; score = round(share,3); `pass` if `score ≥ thr.min_precision_share` else `warn`.
-3. **risk_severity.** `sevs = [p.severity for p in preds if p.severity is not None]`. A non-null severity that is not a finite number (strings, booleans, NaN, `.inf` and `-.inf`) raises `check requires numeric prediction severities; non-numeric severity for prediction: <id>` in both languages. A finite severity outside [0, 1] raises `check requires prediction severities within [0, 1]; out-of-range severity for prediction: <id>`. Predictions are checked in file order and the first offending one is reported, with whichever message applies to it; `validate(full)` reports the same file as invalid (§2 item 7). If empty: score 0.0, warn. Else `m = mean(sevs)`, summed by a left fold (see Numerics above); score round(m,3); `pass` if `score ≥ thr.min_severity` else `warn`.
-4. **parsimony.** `ratio = len(aux) / max(1, len(props))`. `ad_hoc = count(x in aux where x.added_for is not null AND NOT any(to in tos with to.prediction_id in (x.protects or []) and to.passed == true))`. score = round(max(0.0, 1.0 - ratio / thr.parsimony_ratio_max), 3). If `ad_hoc > 0`: status `fail`, score 0.0. Else `pass` if `ratio ≤ thr.parsimony_ratio_max` else `warn`.
-5. **non_redundancy.** if `len(cons) < 2`: `max_sim = 0.0`. Else `max_sim = max` over all unordered construct pairs of `jaccard(tokens(c_i.definition), tokens(c_j.definition))` (see §6). score = round(1.0 - max_sim, 3); `pass` if `max_sim < thr.redundancy_similarity_max` else `warn`.
+3. **risk_severity.** Every prediction counts. `sevs = [p.severity if p.severity is not None else rubric(p).computed_severity for p in preds]`, where `rubric(p)` is the prediction's record from the claim-form rubric of §9, matched by position. A declared severity is used as given whatever the rubric says, and the dossier sets the two side by side (§20). Skipping undeclared predictions scored a theory built without severities 0.0 however risky its claims. A non-null severity that is not a finite number (strings, booleans, NaN, `.inf` and `-.inf`) raises `check requires numeric prediction severities; non-numeric severity for prediction: <id>` in both languages. A finite severity outside [0, 1] raises `check requires prediction severities within [0, 1]; out-of-range severity for prediction: <id>`. Predictions are checked in file order and the first offending one is reported, with whichever message applies to it; `validate(full)` reports the same file as invalid (§2 item 7). If no predictions: score 0.0, warn. Else `m = mean(sevs)`, summed by a left fold (see Numerics above); score round(m,3); `pass` if `score ≥ thr.min_severity` else `warn`.
+4. **parsimony.** `defensive = [x for x in aux if text(x.added_for) is nonempty]`, the assumptions added in response to an anomaly. If none: `n/a`. Each defensive assumption is classed by the rule of §10 with `independent` = the distinct entries of `str_list(x.protects)`, in order, that differ from `text(x.added_for)`, each with its status over `tos` (§10, "Status"). With no prior version to compare, every prediction it protects counts. The class is `ad_hoc1` when `independent` is empty, `ad_hoc2` when none of it is `corroborated` and `independently_corroborated` otherwise. `fail` with score 0.0 if any defensive assumption is `ad_hoc1` or `ad_hoc2`, else `pass` with 1.0. The amendment appraisal (§10), which counts only predictions new in the amended version, is the authoritative check. Core assumptions (`added_for` null) are not counted, since every derivation uses auxiliaries (Meehl, 1990a). A ratio of assumptions to propositions penalised declaring them.
+5. **non_redundancy.** if `len(cons) < 2`: `n/a`. Else `pass` with score 1.0 when the redundancy screen of §6 flags no pair `review`, `warn` with 0.0 otherwise. Scoring `1 - max(jaccard)` docked points for vocabulary that sibling constructs share, and the Jaccard ceiling alone missed a definition contained in another.
 6. **construct_clarity.** if no cons: score 0.0, warn. Else `complete = count(c where c.definition nonempty AND c.measurement nonempty AND c.boundary_conditions nonempty)`; `frac = complete/len(cons)`; score round(frac,3); `pass` if `frac == 1.0` else `warn`.
 7. **scope.** `present = T.boundary_conditions nonempty OR (cons nonempty AND every c has boundary_conditions nonempty)`. score 1.0/0.0; `pass`/`warn`.
 8. **logical_why.** if no props: score 0.0, warn. Else `frac = count(p.mechanism nonempty)/len(props)`; score round(frac,3); `pass` if `frac == 1.0` else `warn`.
-9. **causal_testability.** `causal = [p for p in props if p.relation in {causes,increases,decreases}]`. `pass` if `len(causal) ≥ 1` else `warn`; score 1.0/0.0.
-10. **diagnosticity.** `diag = [p for p in preds if p.diagnostic_vs nonempty AND any(d in alt_ids for d in p.diagnostic_vs)]`. If no preds: score 0.0, warn. Else score = round(len(diag)/len(preds),3); `pass` if `len(diag) ≥ 1` else `warn`.
+9. **causal_testability.** `causal = [p for p in props if p.relation is directed in the relation table of §28]`, that is `increases`, `decreases`, `causes`, `mediates` or `moderates`. `pass` if `len(causal) ≥ 1` else `warn`; score 1.0/0.0.
+10. **diagnosticity.** `diag = [p for p in preds if p.diagnostic_vs nonempty AND any(d in alt_ids for d in p.diagnostic_vs)]`. If no preds: score 0.0, warn. Else score = round(len(diag)/len(preds),3); `pass` if `len(diag) ≥ 1` else `warn`. The alternative is declared, not verified: the schema records nothing a rival predicts, so no function checks that the prediction discriminates, and the rubric's 0.1 bonus (§9) rests on the same declaration.
 11. **formalisation.** `present = T.formal_model.type is one of {ode, abm, network, sem}` (the schema's enum less `none`). An absent formal model, an absent type and a type outside the enum all count as not present. score 1.0/0.0; `pass`/`warn`.
-12. **derivation_chain.** if no preds: score 1.0, `pass` (vacuous). Else `valid = [p for p in preds if p.derives_from nonempty AND every d in p.derives_from is in prop_ids]`; `frac = len(valid)/len(preds)`; score round(frac,3); `pass` if `frac == 1.0` else `fail`.
+12. **derivation_chain.** if no preds: `n/a`. Else `valid = [p for p in preds if p.derives_from nonempty AND every d in p.derives_from is in prop_ids]`; `frac = len(valid)/len(preds)`; score round(frac,3); `pass` if `frac == 1.0` else `fail`. It checks references only: a cited id must name a declared proposition, and nothing checks that the prediction follows from it.
 
-**Aggregate:** `aggregate_score = round( sum(weight_i * score_i) * 100, 1 )`, the sum a left fold in checklist order starting from 0.0.
+**Aggregate:** two left folds over the items in checklist order, starting from 0.0 and skipping the `n/a` items: `weighted = Σ weight_i * score_i` and `applicable = Σ weight_i`. `aggregate_score = round(weighted / applicable * 100, 1)`, the weighted mean of the applicable items' scores, and `coverage = round(applicable, 3)`, the share of the checklist's weight that was applicable. Nine items always apply, so `applicable` is at least 0.74. The aggregate is compensatory: a high score on one item offsets a low one on another, and a failed blocker counts like any other item, so a blocked theory can outscore one whose gate passes. The gate below is the non-compensatory verdict.
 
 **Gate:**
-- `blockers = items whose severity_if_fail == "blocker"`. `n_blockers_failed = count(blockers with status == fail)`.
+- `blockers = items whose severity_if_fail == "blocker"`. `n_blockers_failed = count(blockers with status == fail)`. An `n/a` blocker has not failed.
 - If `T.maturity == "draft"`: `gate = "advisory"` (blockers never block).
 - Else `gate = "blocked"` if `n_blockers_failed > 0` else `"pass"`.
 
 **Report object / JSON shape** (keys in this order; items in checklist order):
 ```json
 {
-  "theory_id": "...", "schema_version": "1.0", "checklist_version": "1.0", "maturity": "...",
-  "aggregate_score": 0.0, "gate": "pass", "n_blockers_failed": 0,
-  "items": [ {"id":"falsifiability","status":"pass","score":1.0,"weight":0.15,"severity_if_fail":"blocker","citation":"Popper (1959); Bacharach (1989)"} ]
+  "theory_id": "...", "schema_version": "1.0", "checklist_version": "2.0", "maturity": "...",
+  "aggregate_score": 0.0, "coverage": 0.92, "gate": "pass", "n_blockers_failed": 0,
+  "items": [ {"id":"falsifiability","status":"pass","score":1.0,"weight":0.15,"severity_if_fail":"blocker","citation":"Popper (1959); Bacharach (1989)"},
+             {"id":"parsimony","status":"n/a","score":null,"weight":0.08,"severity_if_fail":"warning","citation":"Lakatos (1970); Meehl (1990)"} ]
 }
 ```
 
-A missing, null or non-string `theory_id` or `schema_version`, and a `maturity` outside its enum, read as the empty string `""` in both languages (§3, "Reading a theory") (the report is compared semantically across the twins, so a null must not surface in one language and `""` in the other). `schema_version` is the theory's; `checklist_version` is the `schema_version` of `rigor_checklist.yaml`, whose weights and thresholds produced every number in the report. Without it two reports from different checklist revisions look comparable and are not. The package version is deliberately *not* recorded here: this artefact is parity-tested and byte-identical across the two twins, so a per-language release number would break that contract.
+The null score of an `n/a` item is written as JSON `null` in both languages (R's `jsonlite::toJSON(null = "null")`), and R keeps it as a `NULL` element, so the item keeps all six keys. A missing, null or non-string `theory_id` or `schema_version`, and a `maturity` outside its enum, read as the empty string `""` in both languages (§3, "Reading a theory") (the report is compared semantically across the twins, so a null must not surface in one language and `""` in the other). `schema_version` is the theory's; `checklist_version` is the `schema_version` of `rigor_checklist.yaml`, whose weights and thresholds produced every number in the report. Without it two reports from different checklist revisions look comparable and are not. The package version is deliberately *not* recorded here: this artefact is parity-tested and byte-identical across the two twins, so a per-language release number would break that contract.
 
 ## 5. Diagram IR (byte-identical across languages)
 
@@ -230,9 +231,9 @@ dag {
   <from> -> <to>
 }
 ```
-The causal subgraph is emitted exactly as written and is not checked for acyclicity, so a theory with a feedback loop (the shipped panic-network example has one) produces a cyclic graph inside a `dag` block, which dagitty will not accept as a DAG. The `causal_testability` checklist item likewise asserts only that at least one causal relation is present. The view is a faithful export rather than a verdict, and both statements are deliberate: `implications` (§27) is where the same subgraph is checked for acyclicity and read for what it entails, and it refuses the two panic-network fixtures for the cycle this view prints without comment. The shipped `modality-switching` fixture is acyclic, and is the example that gets as far as a basis set.
+The causal subgraph is emitted exactly as written and is not checked for acyclicity, so a theory with a feedback loop (the shipped panic-network example has one) produces a cyclic graph inside a `dag` block, which dagitty will not accept as a DAG. The `causal_testability` checklist item likewise asserts only that at least one directed relation (§28) is present. The view is a faithful export rather than a verdict, and both statements are deliberate: `implications` (§27) is where the same subgraph is checked for acyclicity and read for what it entails, and it refuses the two panic-network fixtures for the cycle this view prints without comment. The shipped `modality-switching` fixture is acyclic, and is the example that gets as far as a basis set.
 
-## 6. Tokenisation & Jaccard (for the redundancy screen)
+## 6. Tokenisation, Jaccard and overlap (for the redundancy screen)
 
 ```
 tokens(s):
@@ -252,8 +253,14 @@ R takes the runs with `regmatches(s, gregexpr("[\\p{L}\\p{M}\\p{N}]+", s, perl =
 
 Case and accents are folded for Latin, Greek and Cyrillic only. Other scripts are compared as written, so their NFC and NFD forms can tokenise differently. The stopword list is English. Text written without spaces, such as Chinese and Japanese, forms one token per run, and the three-character minimum drops shorter runs. Each language reads general categories from its own Unicode tables (Python 3.10 has Unicode 13.0), so parity fixtures use only characters assigned by Unicode 13.0.
 
-`tf_redundancy_check` returns, for every unordered construct pair, `{a, b, similarity, flag}` where
-`flag = "review"` if `similarity ≥ thresholds.redundancy_similarity_max` else `"ok"`, sorted by descending similarity then by `(a,b)` ascending for ties.
+```
+overlap(A, B): if A or B is empty -> 0.0; else round(|A∩B| / min(|A|, |B|), 3)
+```
+
+`tf_redundancy_check` returns `{a, b, similarity, overlap, flag}` for every unordered construct pair, sorted by descending similarity then by `(a,b)` ascending for ties. For the token sets `A` and `B` of the two definitions, `similarity = jaccard(A, B)` and `overlap = overlap(A, B)`.
+`flag = "review"` if `similarity ≥ thresholds.redundancy_similarity_max`, or if `overlap ≥ thresholds.redundancy_overlap_max` while `|A| ≥ 3` and `|B| ≥ 3`, else `"ok"`. The Jaccard index flags a near-duplicate, and the overlap coefficient a definition contained in another. The deliberately redundant pair of the weak example, `A person's internal drive to act.` and the same words followed by `towards goals`, has a Jaccard index of 0.8 and an overlap of 1.0. The minimum of three tokens keeps one or two content words that recur in a longer definition from flagging a pair. The checklist's non_redundancy item reads the same flags (§4, item 5).
+
+The screen compares words, so it cannot detect empirical redundancy: two constructs that correlate almost perfectly once measurement error is corrected for may be defined in different words (Le et al., 2010), and assessing that needs data (Rönkkö & Cho, 2022). Sibling constructs (Lawson & Robins, 2021) may share vocabulary without being redundant.
 
 ## 7. Parity contract (what CI checks)
 
@@ -276,7 +283,7 @@ P1 implements the three modes as full features. New public API (mirrored):
 | New empty theory | `tf_theory(id, title, maturity="building", theory_form="network")` | `theoryforge.new_theory(id, title, maturity="building", theory_form="network")` |
 | Add construct | `tf_add_construct(theory, id, label, definition, measurement=NULL, boundary_conditions=NULL)` | `theory.add_construct(id, label, definition, measurement=None, boundary_conditions=None)` |
 | Add proposition | `tf_add_proposition(theory, id, from, to, relation, mechanism=NULL)` | `theory.add_proposition(id, frm, to, relation, mechanism=None)` |
-| Add prediction | `tf_add_prediction(theory, id, statement, type, derives_from=NULL, diagnostic_vs=NULL)` | `theory.add_prediction(id, statement, type, derives_from=None, diagnostic_vs=None)` |
+| Add prediction | `tf_add_prediction(theory, id, statement, type, derives_from=NULL, diagnostic_vs=NULL, severity=NULL)` | `theory.add_prediction(id, statement, type, derives_from=None, diagnostic_vs=None, severity=None)` |
 | Add alternative | `tf_add_alternative(theory, id, label, key_constructs=NULL)` | `theory.add_alternative(id, label, key_constructs=None)` |
 | Add assumption | `tf_add_assumption(theory, id, statement, added_for=NULL, protects=NULL)` | `theory.add_assumption(id, statement, added_for=None, protects=None)` |
 | Set formal model | `tf_set_formal_model(theory, type, spec_ref=NULL)` | `theory.set_formal_model(type, spec_ref=None)` |
@@ -290,7 +297,7 @@ P1 implements the three modes as full features. New public API (mirrored):
 
 Each builder/mutator appends one provenance entry `{step, action, detail}` where `step = str(new length of provenance)` (1-based), `action = the function name` (Python uses the R `tf_*` name for parity, e.g. `"tf_add_construct"`), and `detail = the primary id` added (construct/proposition/prediction/alternative/assumption id; for `tf_theory` detail = theory id, and for `tf_set_formal_model` detail = the type). Builders return the theory with the addition, which in R is a modified copy and in Python the same object changed in place. `new_theory` starts with `schema_version="1.0"`, empty collections created lazily, and a first provenance entry `{step:"1", action:"tf_theory", detail:<id>}`.
 
-**Array arguments.** `measurement`, `boundary_conditions`, `derives_from`, `diagnostic_vs`, `key_constructs` and `protects` each take a list or a single string. A single string is stored as a one-element list, so `derives_from = "p1"` stores `["p1"]` as R's `as.list()` does. Any other sequence is stored as a list in its own order, and an omitted argument leaves the field out.
+**Array arguments.** `measurement`, `boundary_conditions`, `derives_from`, `diagnostic_vs`, `key_constructs` and `protects` each take a list or a single string. A single string is stored as a one-element list, so `derives_from = "p1"` stores `["p1"]` as R's `as.list()` does. Any other sequence is stored as a list in its own order, and an omitted argument leaves the field out. The prediction builder's `severity`, a declared pre-data severity, is stored as given after `diagnostic_vs`, and only when it is given.
 
 **Collections.** A builder treats a collection that is missing or null as empty, so a template whose collection keys are present with no value (`constructs:`) can be built on in both languages. A collection that is not a list is invalid, and only Python refuses it. It raises `TypeError("cannot add to '<key>': the theory holds a <type> there, not a list")` and leaves the theory unchanged, and `provenance` is checked in the same way.
 
@@ -347,13 +354,13 @@ The order of the four types (§4) follows Popper's (1959, §§31–33) compariso
 - <prediction_id>: severity <computed_severity>, risk <risk_score>
 ...
 ```
-(Hypotheses numbered in file order starting at 1; Severity lines in file order using §9 values. If there are no predictions, write `_No predictions specified._` under each section heading instead of a list.)
+(Hypotheses numbered in file order starting at 1; Severity lines in file order using §9 values. If there are no predictions, write `_No predictions specified._` under each section heading instead of a list. A theory without predictions has the derivation_chain status `n/a` (§4), so its derivation line reads `no`.)
 
 Format severity/risk with `fmt(x)`: render to 3 decimals, strip trailing zeros and keep at least one decimal, so `1.0 -> "1.0"`, `0.9 -> "0.9"`, `0.667 -> "0.667"`. (R: `sub("\\.$", ".0", sub("0+$", "", sprintf("%.3f", x)))`.)
 
 ## 12. New diagram types (byte-identical)
 
-**development_roadmap** (DOT). A `roadmap` hub (ellipse, INK fill, white text) carrying the theory title (wrapped at 20), the aggregate score formatted by `fmt` and the gate. Then one node per checklist item whose status ≠ pass, ordered by `(severity_if_fail != "blocker", -weight, checklist index)` and numbered from 1 in that order, labelled with the ordinal and id, the checklist `criterion` wrapped at 22, and `blocks the gate` for a blocker or `advisory` otherwise, coloured by status. Edges then run from the hub down through the blockers in order; the advisories follow in rows of `ROADMAP_COLS` = 3, each row entered by one edge (visible for the first row, `style=invis` from the previous row's first node afterwards) and pinned left to right by a `rank=same` group:
+**development_roadmap** (DOT). A `roadmap` hub (ellipse, INK fill, white text) carrying the theory title (wrapped at 20), the aggregate score formatted by `fmt` and the gate. Then one node per checklist item whose status is `fail` or `warn`, ordered by `(severity_if_fail != "blocker", -weight, checklist index)` and numbered from 1 in that order, labelled with the ordinal and id, the checklist `criterion` wrapped at 22, and `blocks the gate` for a blocker or `advisory` otherwise, coloured by status. Edges then run from the hub down through the blockers in order; the advisories follow in rows of `ROADMAP_COLS` = 3, each row entered by one edge (visible for the first row, `style=invis` from the previous row's first node afterwards) and pinned left to right by a `rank=same` group:
 ```
 <prelude, rankdir=TB>
   "roadmap" [shape=ellipse, label="<wrap(title, 20)>
@@ -401,7 +408,7 @@ A row holding a single item emits `  { rank=same; "<row 1>"; }` instead. When al
 
 **venn** (SVG, `W`=380, `H`=300). The first up to three constructs (file order) as sets of their `boundary_conditions`, drawn at fixed integer coordinates. Region labels are set cardinalities. Layout: n=1 one circle at cx=190; n=2 two circles at cx=150,230 (counts A−B, A∩B, B−A); n=3 three circles at (150,135),(230,135),(190,195) with the seven region counts. Every circle is `fill="#4e79a7" fill-opacity="0.35" stroke="#1e7b7b"`: the stroke carries the set structure, so it takes the construct-border teal, which clears the 3:1 contrast floor for graphical objects on a light and a dark page alike, while the translucent fill is decorative reinforcement only. Byte-identical because every coordinate and count is an integer.
 
-**rigour** (SVG, `W`=460, `H` = 60 + 24·n + 12). The `check` report as a status grid. A title, then `aggregate score %.1f, gate <gate>`, then one row per checklist item (checklist order) at `y = 60 + 24·i`: a 16×16 swatch coloured by status (pass `#4caf50`, warn `#ff9800`, fail `#f44336`, otherwise `#9e9e9e`), the item id, and the status text. Integer coordinates; `aggregate_score` is already rounded to 1 dp, so `%.1f` is byte-stable.
+**rigour** (SVG, `W`=460, `H` = 60 + 24·n + 12). The `check` report as a status grid. A title, then `aggregate score %.1f, gate <gate>`, then one row per checklist item (checklist order) at `y = 60 + 24·i`: a 16×16 swatch coloured by status (pass `#4caf50`, warn `#ff9800`, fail `#f44336`, and `#9e9e9e` for `n/a` or any other status), the item id, and the status text. Integer coordinates; `aggregate_score` is already rounded to 1 dp, so `%.1f` is byte-stable.
 
 **severity** (SVG, `W` = `bar_x` + 250, `H` = 40 + 28·max(n,1) + 8). The `severity` rows as horizontal bars. Bars start at `bar_x = 20 + 8·max(nchar(label)) + 10`, derived from the longest row label so that short ids leave no dead gap before the bars, which is why `W` depends on the theory. The title reads `Pre-data riskiness`, since the bars rank claim form (§9). Below it, for each prediction (file order) at `y = 40 + 28·i`: the `prediction_id` (a `prediction_id` longer than 15 characters is truncated to its first 14 characters plus `…` U+2026), a bar of width `floor(computed_severity·200 + 0.5 + 1e-6)` at `x = bar_x` filled `#4e79a7`, and the value `%.3f` at `x = bar_x + w + 5`. The 1e-6 bias matches `rnd` so the integer width is identical across platforms.
 
@@ -562,7 +569,7 @@ New API (mirrored): `tf_compile_sem(theory)` / `theory.compile_sem()`; `tf_dossi
 
 ## 20. dossier(theory) → Markdown audit bundle (deterministic, byte-identical)
 
-Numbers use `fmt()` (§11). Build these lines (joined with `\n`), then append `"\n" + preregister(theory)`:
+Numbers use `fmt()` (§11), which writes a null, the score of an `n/a` item, as `n/a`. Build these lines (joined with `\n`), then append `"\n" + preregister(theory)`:
 ```
 # theoryforge dossier: <title>
 
@@ -570,8 +577,9 @@ Numbers use `fmt()` (§11). Build these lines (joined with `\n`), then append `"
 - Maturity: <maturity>
 - Checklist version: <checklist_version>
 - Aggregate rigour score: <fmt(aggregate_score)>/100
+- Checklist coverage: <fmt(coverage)>
 - Gate: <gate>
-- Blockers failed: <n_blockers_failed>
+- Blockers failed: <n_blockers_failed>                     # "0", or "<n> (<ids>)": the failed blockers' ids joined by ", ", checklist order
 
 ## Rigour checklist
 
@@ -581,7 +589,7 @@ Numbers use `fmt()` (§11). Build these lines (joined with `\n`), then append `"
 
 ## Severity (pre-data rubric of claim form)
 
-- <pid>: severity <fmt(computed_severity)>, risk <fmt(risk_score)>   # per prediction, file order; else "_No predictions specified._"
+- <pid>: severity <fmt(computed_severity)>, risk <fmt(risk_score)>[, declared <fmt(severity)>[ (declared exceeds the rubric by more than 0.2)]]   # per prediction, file order; else "_No predictions specified._"
 
 ## Provenance
 
@@ -591,6 +599,8 @@ Numbers use `fmt()` (§11). Build these lines (joined with `\n`), then append `"
 
 ```
 (The final `## Preregistration` heading and blank line are the last two list entries; the joined block ends with `\n`, then `preregister(theory)` is appended verbatim.)
+
+A severity line gains `, declared <fmt(severity)>` when the prediction declares a `severity`, and then the note ` (declared exceeds the rubric by more than 0.2)` when `rnd(severity - computed_severity, 3) > 0.2`, with the 0.2 written by `fmt`. The checklist uses the declared value (§4, item 3), and the note shows a reader where it outruns the claim's form. It changes no status. The severity lines of the appended preregistration keep the format of §11.
 
 ## 21. Additional golden artefacts (per theory)
 
@@ -647,9 +657,9 @@ Writes a standalone Quarto report to `path` (forced to a `.qmd` suffix): a YAML 
 
 `report(theory, format="html")` (§4) escapes every value it interpolates (the theory id, each item's id, status, score and citation, the aggregate score and the gate) as the diagram labels of §5 are escaped: `&` becomes `&amp;` first, then `<` becomes `&lt;` and `>` becomes `&gt;`.
 
-## 24. embedding_redundancy(theory, embedder, threshold=redundancy_similarity_max): assistive, parity-exempt
+## 24. embedding_redundancy(theory, embedder, threshold=embedding_similarity_max): assistive, parity-exempt
 
-`embedder` maps a definition string to a numeric vector. The two vectors of every compared pair must be of equal, nonzero length; otherwise both languages raise `embedding_redundancy requires equal-length nonempty embedding vectors; constructs <a> and <b> have lengths <la> and <lb>` (without the check, R recycled the shorter vector and Python truncated the longer, two confident wrong cosines). For each unordered construct pair, compute cosine similarity (round 6); return `[{a, b, cosine, flag}]` sorted by descending cosine then `(a, b)`, `flag = "review"` if `cosine ≥ threshold` else `"ok"`. It is non-deterministic across embedders and model versions, and is therefore excluded from parity and CI. The deterministic lexical screen in §6 remains the default.
+`embedder` maps a definition string to a numeric vector. `threshold` defaults to the checklist's `embedding_similarity_max` (0.85), a cosine threshold kept apart from the lexical screen's Jaccard threshold. How high a cosine two unrelated definitions reach depends on the embedding model, so the value is best set for the model in use. The two vectors of every compared pair must be of equal, nonzero length; otherwise both languages raise `embedding_redundancy requires equal-length nonempty embedding vectors; constructs <a> and <b> have lengths <la> and <lb>` (without the check, R recycled the shorter vector and Python truncated the longer, two confident wrong cosines). For each unordered construct pair, compute cosine similarity (round 6); return `[{a, b, cosine, flag}]` sorted by descending cosine then `(a, b)`, `flag = "review"` if `cosine ≥ threshold` else `"ok"`. It is non-deterministic across embedders and model versions, and is therefore excluded from parity and CI. The deterministic lexical screen in §6 remains the default.
 
 ## 25. osf_push(theory, token=None, node=None, filename=None, dry_run=True, base_url="https://files.osf.io/v1/resources/", overwrite=False): assistive, parity-exempt
 
@@ -709,3 +719,26 @@ Reads every proposition whose `relation ∈ {causes, increases, decreases}` (the
 A theory with no causal propositions is not an error. Its vertex set is empty, `n_edges` and `n_implications` are 0, and `implications` is the empty list.
 
 No golden artefact is added. Of the four shipped theory fixtures, the two panic-network ones have a cyclic causal subgraph and are refused, `weak-theory` has no causal relations at all, and `modality-switching` is the acyclic case: five constructs, four causal propositions and a basis set of six. The twin test suites assert that set literally, statement for statement, in both languages, so the comparison a golden would make is made there instead. The count of `expected/` is unchanged by this function.
+
+---
+
+# Part G: relation semantics
+
+What each relation a proposition can state means, defined once and shared by the functions that read it.
+
+## 28. Relation semantics
+
+What each of the six relations of a proposition asserts is defined once in each language, in Python's `_relations.py` (`RELATIONS`, `DIRECTED`) and R's `relations.R` (`.tf_RELATIONS`, `.tf_DIRECTED`). Both test suites check the table against the schema's enum.
+
+| relation | kind | sign | what it asserts |
+|---|---|---|---|
+| `increases` | directed | +1 | `from` raises `to` |
+| `decreases` | directed | -1 | `from` lowers `to` |
+| `causes` | directed | unspecified | `from` affects `to`, in a direction the relation does not state |
+| `mediates` | directed | unspecified | an effect of `from` on `to` that is one link of a mediated path, which is written as a chain of propositions |
+| `moderates` | directed | unspecified | `from` modifies the effect of other causes on `to`, as a direct effect modifier (VanderWeele & Robins, 2007) |
+| `associates` | bidirected | unspecified | covariance between `from` and `to` that the theory leaves unexplained, as a latent common cause of the two would |
+
+The sign is Python `None` and R `NA` where the relation does not fix one. A proposition's `functional_form` is descriptive, and no function reads it.
+
+The checklist's causal_testability item (§4, item 9) counts the five directed relations. The other functions read the relations as their own sections state. The causal_dag view (§5) and `implications` (§27) take only `causes`, `increases` and `decreases` as edges. `compile_sem` (§19) writes `mediates` as a regression, `associates` as a covariance and `moderates` as a comment, and `simulate` (§22) couples `causes` and `mediates` positively and `moderates` and `associates` not at all.

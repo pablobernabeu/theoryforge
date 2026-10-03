@@ -114,7 +114,8 @@ def test_identical_cyrillic_definitions_are_flagged():
     d = "Страх перед телесными ощущениями."
     t = _theory([{"id": "a", "label": "A", "definition": d},
                  {"id": "b", "label": "B", "definition": d}])
-    assert t.redundancy_check() == [{"a": "a", "b": "b", "similarity": 1.0, "flag": "review"}]
+    assert t.redundancy_check() == [{"a": "a", "b": "b", "similarity": 1.0, "overlap": 1.0,
+                                     "flag": "review"}]
 
 
 # The corpus forms one theme, so landscape warns that it holds every linked keyword.

@@ -236,7 +236,7 @@ const RT = {
       case "severity":
         return `${head}\n\nsev <- tf_severity(theory)        # per-prediction risk & computed severity\nsev\nwriteLines(tf_diagram(theory, "severity"), "severity.svg")`;
       case "redundancy":
-        return `${head}\n\ntf_redundancy_check(theory)       # pairwise Jaccard overlap of construct definitions`;
+        return `${head}\n\ntf_redundancy_check(theory)       # pairwise Jaccard and overlap of construct definitions`;
       case "sem":
         return `${head}\n\ncat(tf_compile_sem(theory))       # lavaan model syntax`;
       case "preregister":

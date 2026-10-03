@@ -115,11 +115,11 @@ With the optional render extra (`pip install theoryforge[render]`), `render_diag
 </g>
 </svg></div>
 
-Run the lexical redundancy screen. This returns every construct pair with a lexical similarity of their definitions and an `ok`/`review` flag, marking `review` the pairs whose definitions overlap enough to suggest jingle-jangle redundancy.
+Run the lexical redundancy screen. This returns every construct pair with two measures of the words their definitions share, the Jaccard similarity and the overlap coefficient, and an `ok`/`review` flag. A pair is marked `review` when the definitions are near duplicates or one is contained in the other, which suggests jingle-jangle redundancy.
 
 ```python exec="1" source="material-block" result="text" session="getting-started"
 for pair in t.redundancy_check():
-    print(pair["a"], pair["b"], pair["similarity"], pair["flag"])
+    print(pair["a"], pair["b"], pair["similarity"], pair["overlap"], pair["flag"])
 ```
 
 A theory can be written back to disk with `t.write()`. The format follows the file extension, `.json` for JSON and otherwise YAML.

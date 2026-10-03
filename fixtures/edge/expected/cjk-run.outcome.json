@@ -3,7 +3,8 @@
   "validate": true,
   "validate_full": true,
   "check": {
-    "aggregate_score": 16.0,
+    "aggregate_score": 0.0,
+    "coverage": 0.84,
     "gate": "blocked",
     "n_blockers_failed": 1,
     "items": [
@@ -24,8 +25,8 @@
       },
       {
         "id": "parsimony",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       },
       {
         "id": "non_redundancy",
@@ -64,8 +65,8 @@
       },
       {
         "id": "derivation_chain",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       }
     ]
   },
@@ -116,5 +117,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Text written without spaces\n\n- Theory ID: edge-cjk-run\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
+  "preregister": "# Preregistration: Text written without spaces\n\n- Theory ID: edge-cjk-run\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: no\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
 }

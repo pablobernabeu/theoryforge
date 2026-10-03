@@ -15,7 +15,7 @@ test_that("tf_jaccard rounds to 3dp and handles empty sets", {
 test_that("tf_redundancy_check returns a sorted data.frame with expected columns", {
   df <- tf_redundancy_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
   expect_s3_class(df, "data.frame")
-  expect_identical(names(df), c("a", "b", "similarity", "flag"))
+  expect_identical(names(df), c("a", "b", "similarity", "overlap", "flag"))
   # 3 constructs -> 3 unordered pairs
   expect_equal(nrow(df), 3L)
   # sorted by descending similarity
@@ -23,9 +23,12 @@ test_that("tf_redundancy_check returns a sorted data.frame with expected columns
   expect_true(all(df$flag %in% c("ok", "review")))
 })
 
-test_that("weak-demo redundancy reflects non_redundancy score (max_sim = 0.8)", {
+test_that("weak-demo's deliberately redundant pair is flagged for review", {
   df <- tf_redundancy_check(tf_read(tf_fixture_path("weak-theory.theory.yaml")))
   expect_equal(nrow(df), 1L)
+  # The Jaccard similarity, 0.8, is under 0.85, but one definition is contained
+  # in the other: the overlap coefficient is 1.
   expect_equal(df$similarity[[1]], 0.8)
-  expect_identical(df$flag[[1]], "ok")  # 0.8 < 0.85 threshold
+  expect_equal(df$overlap[[1]], 1.0)
+  expect_identical(df$flag[[1]], "review")
 })

@@ -7,7 +7,8 @@
     "error": "invalid theory object: constructs must be a list; predictions must be a list; proposition[0] from 'arousal' is not a known construct; proposition[0] to 'threat' is not a known construct"
   },
   "check": {
-    "aggregate_score": 40.0,
+    "aggregate_score": 18.9,
+    "coverage": 0.74,
     "gate": "blocked",
     "n_blockers_failed": 1,
     "items": [
@@ -28,13 +29,13 @@
       },
       {
         "id": "parsimony",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       },
       {
         "id": "non_redundancy",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       },
       {
         "id": "construct_clarity",
@@ -68,8 +69,8 @@
       },
       {
         "id": "derivation_chain",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       }
     ]
   },
@@ -97,5 +98,5 @@
       []
     ]
   },
-  "preregister": "# Preregistration: Collections written as single strings\n\n- Theory ID: edge-scalar-collection\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
+  "preregister": "# Preregistration: Collections written as single strings\n\n- Theory ID: edge-scalar-collection\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: no\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
 }

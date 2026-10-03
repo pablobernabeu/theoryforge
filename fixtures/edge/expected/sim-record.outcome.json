@@ -7,7 +7,8 @@
     "error": "invalid theory object: proposition[6] missing/empty id; proposition[4] to 'z' is not a known construct"
   },
   "check": {
-    "aggregate_score": 38.0,
+    "aggregate_score": 28.6,
+    "coverage": 0.84,
     "gate": "blocked",
     "n_blockers_failed": 1,
     "items": [
@@ -28,13 +29,13 @@
       },
       {
         "id": "parsimony",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       },
       {
         "id": "non_redundancy",
         "status": "pass",
-        "score": 0.8
+        "score": 1.0
       },
       {
         "id": "construct_clarity",
@@ -68,8 +69,8 @@
       },
       {
         "id": "derivation_chain",
-        "status": "pass",
-        "score": 1.0
+        "status": "n/a",
+        "score": null
       }
     ]
   },
@@ -125,5 +126,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Offsetting couplings and propositions that couple nothing\n\n- Theory ID: edge-sim-record\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
+  "preregister": "# Preregistration: Offsetting couplings and propositions that couple nothing\n\n- Theory ID: edge-sim-record\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: no\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
 }

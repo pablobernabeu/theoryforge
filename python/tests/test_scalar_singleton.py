@@ -45,7 +45,8 @@ def test_scalar_fields_read_as_singleton_lists(tmp_path):
     rep = t.check()
     assert rep["gate"] == "pass"
     assert rep["n_blockers_failed"] == 0
-    assert rep["aggregate_score"] == 67.0
+    # risk_severity counts h1 at its rubric value, 0.3, since it declares none.
+    assert rep["aggregate_score"] == 69.6
     items = {i["id"]: i for i in rep["items"]}
     assert items["derivation_chain"]["status"] == "pass"
     assert items["derivation_chain"]["score"] == 1.0

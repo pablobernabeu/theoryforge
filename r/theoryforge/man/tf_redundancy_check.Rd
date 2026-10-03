@@ -11,14 +11,24 @@ tf_redundancy_check(theory)
 }
 \value{
 A data frame with columns \code{a}, \code{b}, \code{similarity},
-\code{flag}.
+\code{overlap}, \code{flag}.
 }
 \description{
-Computes Jaccard similarity for every unordered pair of construct
-definitions. Returns a data frame with one row per pair, sorted by
-descending similarity then \code{(a, b)} ascending. The \code{flag} column
-is \code{"review"} when similarity meets or exceeds the configured
-\code{redundancy_similarity_max} threshold, otherwise \code{"ok"}.
+Compares the definitions of every unordered pair of constructs and returns
+a data frame with one row per pair, sorted by descending similarity then
+\code{(a, b)} ascending. \code{similarity} is the Jaccard index of the two
+definitions' token sets and \code{overlap} their overlap coefficient, the
+shared tokens over the tokens of the shorter definition. \code{flag} is
+\code{"review"} for a near-duplicate, a similarity at or above the
+checklist's \code{redundancy_similarity_max}, and for a definition contained
+in the other, an overlap at or above \code{redundancy_overlap_max} when both
+definitions hold at least three tokens. It is \code{"ok"} otherwise.
+}
+\details{
+The screen compares words, so it cannot detect empirical redundancy, two
+differently defined constructs that correlate almost perfectly once
+measurement error is corrected for (Le et al., 2010). Sibling constructs
+(Lawson & Robins, 2021) may share vocabulary without being redundant.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
@@ -30,9 +40,11 @@ tf_redundancy_check(theory)
 }
 \references{
 Le, H., Schmidt, F. L., Harter, J. K., & Lauver, K. J. (2010). The problem of
-empirical redundancy of constructs. \emph{Organizational Behavior and Human
-Decision Processes}, 112(2), 112-125. \doi{10.1016/j.obhdp.2010.02.003}
+empirical redundancy of constructs in organizational research: An empirical
+investigation. \emph{Organizational Behavior and Human Decision Processes},
+112(2), 112-125. \doi{10.1016/j.obhdp.2010.02.003}
 
-Lawson, K. M., & Robins, R. W. (2021). Sibling constructs. \emph{Personality
-and Social Psychology Review}, 25(4), 344-366. \doi{10.1177/10888683211047101}
+Lawson, K. M., & Robins, R. W. (2021). Sibling constructs: What are they, why
+do they matter, and how should you handle them? \emph{Personality and
+Social Psychology Review}, 25(4), 344-366. \doi{10.1177/10888683211047101}
 }

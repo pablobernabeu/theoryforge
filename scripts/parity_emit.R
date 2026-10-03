@@ -100,6 +100,7 @@ suppressWarnings(suppressMessages({
   check_summary <- function(rep) {
     list(
       aggregate_score = rep$aggregate_score,
+      coverage = rep$coverage,
       gate = rep$gate,
       n_blockers_failed = rep$n_blockers_failed,
       items = lapply(rep$items, function(it) {

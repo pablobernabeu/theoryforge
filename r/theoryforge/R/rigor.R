@@ -5,13 +5,12 @@
 #' @keywords internal
 NULL
 
-.tf_CAUSAL <- c("causes", "increases", "decreases")
 .tf_FORBIDDING <- c("point", "interval", "directional")
 .tf_PRECISE <- c("point", "interval")
+# The schema's formal-model types less "none", which declares that there is no
+# model. core.R, which defines the enum, is sourced before this file.
+.tf_FORMAL <- setdiff(.tf_FORMAL_MODEL_TYPE, "none")
 
-# Whether a test outcome records a pass for one of `prediction_ids`. The
-# outcome's prediction_id must be a string: `%in%` would match the number 1
-# against the id "1", where the Python twin's `in` does not.
 # The mean as a left fold in file order (API_SPEC.md section 4). R's sum()
 # keeps an extended accumulator on x86_64 but not on Apple Silicon, and CPython
 # 3.12+ sum() compensates, so either can differ from a plain double sum in the
@@ -20,12 +19,6 @@ NULL
   acc <- 0.0
   for (x in xs) acc <- acc + x
   acc / length(xs)
-}
-
-.tf_passed_for <- function(outcome, prediction_ids) {
-  pid <- .tf_get(outcome, "prediction_id")
-  is.character(pid) && length(pid) == 1L && !is.na(pid) && pid %in% prediction_ids &&
-    isTRUE(.tf_get(outcome, "passed"))
 }
 
 # Refuse a test outcome whose `passed` is present and not a logical. A quoted
@@ -46,7 +39,8 @@ NULL
 }
 
 # Compute (status, score) for each checklist item; returns a named list of
-# c(status, score) per item id.
+# list(status, score) per item id. An item with nothing to assess is
+# list(status = "n/a", score = NULL).
 .tf_check_items <- function(T, thr) {
   preds <- .tf_list(T, "predictions")
   cons <- .tf_list(T, "constructs")
@@ -77,6 +71,10 @@ NULL
   }
 
   # 3 risk_severity
+  # Every prediction counts, with its declared severity when it has one and the
+  # claim-form rubric's computed_severity otherwise. Skipping undeclared
+  # predictions scored a theory built without severities 0.0 however risky its
+  # claims, and let one declared value stand for a list of undeclared claims.
   # A non-numeric severity has no defensible mean, and the two engines read
   # one differently by accident (as.numeric() coerced quoted numbers and
   # scored, Python crashed mid-sum), so the same file produced a verdict in
@@ -86,10 +84,15 @@ NULL
   # the score outside the checklist's scale (a severity of 7 could lift the
   # aggregate above 100). The status compares the rounded mean with the threshold, so the last
   # bit of the sum cannot decide it.
+  rubric <- tf_severity(T)$computed_severity
   sevs <- numeric(0)
-  for (p in preds) {
+  for (i in seq_along(preds)) {
+    p <- preds[[i]]
     s <- .tf_get(p, "severity")
-    if (is.null(s)) next
+    if (is.null(s)) {
+      sevs <- c(sevs, rubric[[i]])
+      next
+    }
     if (!is.numeric(s) || length(s) != 1L || !is.finite(s)) {
       stop("check requires numeric prediction severities; ",
            "non-numeric severity for prediction: ", .tf_str(p, "id"),
@@ -110,41 +113,37 @@ NULL
   }
 
   # 4 parsimony
-  ratio <- length(aux) / max(1L, length(props))
-  ad_hoc <- 0L
-  for (x in aux) {
-    af <- .tf_get(x, "added_for")
-    if (!is.null(af)) {
-      protects <- .tf_str_list(.tf_get(x, "protects"))
-      ok <- any(vapply(tos, .tf_passed_for, logical(1), prediction_ids = protects))
-      if (!ok) ad_hoc <- ad_hoc + 1L
-    }
-  }
-  score <- .tf_rnd(max(0.0, 1.0 - ratio / thr$parsimony_ratio_max), 3)
-  if (ad_hoc > 0L) {
-    out$parsimony <- item("fail", 0.0)
+  # Only an assumption added for an anomaly, one whose added_for names the
+  # prediction it answers, is assessed. It is ad hoc, and fails the item, when
+  # nothing it protects besides the anomaly is corroborated, by the rule of the
+  # amendment appraisal (.tf_classify_auxiliary() in develop.R). With no prior
+  # version to compare, every prediction it protects counts, so
+  # tf_appraise_amendment(), which counts only the content an amendment adds,
+  # is the authoritative check. Core assumptions are not counted: every
+  # derivation uses auxiliaries (Meehl, 1990a), and a ratio of assumptions to
+  # propositions penalised declaring them.
+  defensive <- Filter(function(x) .tf_ne_str(.tf_str(x, "added_for")), aux)
+  if (length(defensive) == 0L) {
+    out$parsimony <- item("n/a", NULL)
   } else {
-    out$parsimony <- item(if (ratio <= thr$parsimony_ratio_max) "pass" else "warn",
-                          score)
+    ad_hoc <- vapply(defensive, function(x) {
+      protects <- .tf_str_list(.tf_get(x, "protects"))
+      !identical(.tf_classify_auxiliary(x, tos, protects)$class, "independently_corroborated")
+    }, logical(1))
+    out$parsimony <- if (any(ad_hoc)) item("fail", 0.0) else item("pass", 1.0)
   }
 
   # 5 non_redundancy
+  # The item follows the redundancy screen's flags (API_SPEC.md section 6).
+  # Scoring 1 - max Jaccard docked points for vocabulary that sibling
+  # constructs share, and the Jaccard ceiling alone missed a definition
+  # contained in another.
   if (length(cons) < 2L) {
-    max_sim <- 0.0
+    out$non_redundancy <- item("n/a", NULL)
   } else {
-    toks <- lapply(cons, function(c) tf_tokens(.tf_str(c, "definition")))
-    max_sim <- 0.0
-    n <- length(toks)
-    for (i in seq_len(n - 1L)) {
-      for (j in (i + 1L):n) {
-        max_sim <- max(max_sim, tf_jaccard(toks[[i]], toks[[j]]))
-      }
-    }
+    flagged <- any(.tf_redundancy_pairs(T, thr)$flag == "review")
+    out$non_redundancy <- if (flagged) item("warn", 0.0) else item("pass", 1.0)
   }
-  out$non_redundancy <- item(
-    if (max_sim < thr$redundancy_similarity_max) "pass" else "warn",
-    .tf_rnd(1.0 - max_sim, 3)
-  )
 
   # 6 construct_clarity
   if (length(cons) == 0L) {
@@ -176,8 +175,10 @@ NULL
   }
 
   # 9 causal_testability
+  # Every relation that the relation table calls directed states an effect,
+  # mediates and moderates included (API_SPEC.md section 28).
   n_causal <- sum(vapply(props, function(p) {
-    .tf_enum_str(p, "relation", .tf_RELATION) %in% .tf_CAUSAL
+    .tf_enum_str(p, "relation", .tf_RELATION) %in% .tf_DIRECTED
   }, logical(1)))
   out$causal_testability <- if (n_causal >= 1L) item("pass", 1.0) else item("warn", 0.0)
 
@@ -194,12 +195,13 @@ NULL
 
   # 11 formalisation
   fm_type <- .tf_enum_str(.tf_get(T, "formal_model"), "type", .tf_FORMAL_MODEL_TYPE)
-  present <- !(fm_type %in% c("", "none"))
-  out$formalisation <- if (present) item("pass", 1.0) else item("warn", 0.0)
+  out$formalisation <- if (fm_type %in% .tf_FORMAL) item("pass", 1.0) else item("warn", 0.0)
 
   # 12 derivation_chain
+  # With no prediction there is no derivation to check, which used to pass at
+  # 1.0 and lift the empty theory's score.
   if (length(preds) == 0L) {
-    out$derivation_chain <- item("pass", 1.0)
+    out$derivation_chain <- item("n/a", NULL)
   } else {
     n_valid <- sum(vapply(preds, function(p) {
       df <- .tf_str_list(.tf_get(p, "derives_from"))
@@ -217,6 +219,14 @@ NULL
 #' Runs the full rigour checklist (12 items) over a theory object and returns a
 #' report, with the items in checklist order.
 #'
+#' Each item has a status (\code{"pass"}, \code{"warn"} or \code{"fail"}) and
+#' a score from 0 to 1. An item with nothing to assess has the status
+#' \code{"n/a"} and a \code{NULL} score: the redundancy screen with fewer than
+#' two constructs, the derivation chain with no prediction and parsimony when
+#' no auxiliary assumption was added in response to an anomaly. The aggregate
+#' score is the weighted mean of the applicable items' scores, times 100, and
+#' \code{coverage} is the share of the checklist's weight that was applicable.
+#'
 #' Two values are refused before anything is scored, since no score built on
 #' them would be defensible. One is a test outcome whose \code{passed} is
 #' present and not \code{TRUE} or \code{FALSE}, such as the quoted string
@@ -228,9 +238,10 @@ NULL
 #' @return A named list with elements \code{theory_id}, \code{schema_version}
 #'   (the theory's), \code{checklist_version} (the rigour checklist's, which is
 #'   what the weights and thresholds came from), \code{maturity},
-#'   \code{aggregate_score}, \code{gate}, \code{n_blockers_failed}, and
-#'   \code{items} (a list of per-item lists). An error is raised for a
-#'   prediction severity that is not a finite number or is below 0 or above 1.
+#'   \code{aggregate_score}, \code{coverage}, \code{gate},
+#'   \code{n_blockers_failed}, and \code{items} (a list of per-item lists). An
+#'   error is raised for a prediction severity that is not a finite number or
+#'   is below 0 or above 1.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
@@ -251,6 +262,7 @@ tf_check <- function(theory) {
 
   items <- vector("list", length(spec$items))
   weighted <- 0.0
+  applicable <- 0.0
   n_blockers_failed <- 0L
   for (k in seq_along(spec$items)) {
     spec_item <- spec$items[[k]]
@@ -258,7 +270,12 @@ tf_check <- function(theory) {
     res <- results[[iid]]
     status <- res$status
     score <- res$score
-    weighted <- weighted + spec_item$weight * score
+    # An item with nothing to assess is in neither sum. It used to score 1.0,
+    # so the empty theory scored 26 and outscored a weak but real one.
+    if (!is.null(score)) {
+      weighted <- weighted + spec_item$weight * score
+      applicable <- applicable + spec_item$weight
+    }
     if (identical(spec_item$severity_if_fail, "blocker") && identical(status, "fail")) {
       n_blockers_failed <- n_blockers_failed + 1L
     }
@@ -289,7 +306,9 @@ tf_check <- function(theory) {
     # checklist. `schema_version` above is the theory's, not this.
     checklist_version = .tf_str(spec, "schema_version"),
     maturity = maturity,
-    aggregate_score = .tf_rnd(weighted * 100, 1),
+    # Nine of the twelve items always apply, so `applicable` is at least 0.74.
+    aggregate_score = .tf_rnd(weighted / applicable * 100, 1),
+    coverage = .tf_rnd(applicable, 3),
     gate = gate,
     n_blockers_failed = n_blockers_failed,
     items = items
@@ -340,10 +359,12 @@ tf_report <- function(theory, format = "json") {
 }
 
 # Render a numeric score the way Python's str() would for the HTML table
-# (e.g. 1.0, 0.667). Not parity-tested, but kept readable. The integrality test
-# uses trunc() rather than base round(), so that no call to base round() (which
-# is banker's rounding, and diverges across platforms) remains in the package.
+# (e.g. 1.0, 0.667), and the NULL score of an item with nothing to assess as
+# "n/a". Not parity-tested, but kept readable. The integrality test uses
+# trunc() rather than base round(), so that no call to base round() (which is
+# banker's rounding, and diverges across platforms) remains in the package.
 .tf_format_score_html <- function(x) {
+  if (is.null(x)) return("n/a")
   if (is.numeric(x)) {
     if (x == trunc(x)) {
       return(sprintf("%.1f", x))

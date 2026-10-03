@@ -2,8 +2,9 @@
 
 - Theory ID: modality-switching-2026
 - Maturity: developing
-- Checklist version: 1.0
-- Aggregate rigour score: 85.1/100
+- Checklist version: 2.0
+- Aggregate rigour score: 89.8/100
+- Checklist coverage: 0.92
 - Gate: pass
 - Blockers failed: 0
 
@@ -14,8 +15,8 @@
 | falsifiability | pass | 1.0 | 0.15 |
 | precision | pass | 0.75 | 0.1 |
 | risk_severity | pass | 0.613 | 0.1 |
-| parsimony | pass | 0.5 | 0.08 |
-| non_redundancy | pass | 0.85 | 0.1 |
+| parsimony | n/a | n/a | 0.08 |
+| non_redundancy | pass | 1.0 | 0.1 |
 | construct_clarity | pass | 1.0 | 0.08 |
 | scope | pass | 1.0 | 0.06 |
 | logical_why | pass | 1.0 | 0.08 |
@@ -26,10 +27,10 @@
 
 ## Severity (pre-data rubric of claim form)
 
-- pred1: severity 0.3, risk 0.4
-- pred2: severity 0.7, risk 0.7
-- pred3: severity 1.0, risk 0.9
-- pred4: severity 0.8, risk 0.7
+- pred1: severity 0.3, risk 0.4, declared 0.45
+- pred2: severity 0.7, risk 0.7, declared 0.6
+- pred3: severity 1.0, risk 0.9, declared 0.75
+- pred4: severity 0.8, risk 0.7, declared 0.65
 
 ## Provenance
 

@@ -646,16 +646,22 @@ tf_add_proposition <- function(theory, id, from, to, relation, mechanism = NULL)
 #'   allows. The label is self-declared, and no function checks it against the
 #'   statement.
 #' @param derives_from,diagnostic_vs Optional character vectors.
+#' @param severity Optional declared pre-data severity from 0 to 1, stored only
+#'   when given. The checklist's risk_severity item reads it, and reads the
+#'   claim-form rubric's value ([tf_severity()]) for a prediction that declares
+#'   none. [tf_dossier()] sets the two side by side.
 #' @return The (mutated) theory object.
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_prediction("h1", "Arousal precedes threat appraisal.", "directional")
 #' @export
 tf_add_prediction <- function(theory, id, statement, type,
-                              derives_from = NULL, diagnostic_vs = NULL) {
+                              derives_from = NULL, diagnostic_vs = NULL,
+                              severity = NULL) {
   p_item <- list(id = id, statement = statement, type = type)
   if (!is.null(derives_from)) p_item$derives_from <- as.list(derives_from)
   if (!is.null(diagnostic_vs)) p_item$diagnostic_vs <- as.list(diagnostic_vs)
+  if (!is.null(severity)) p_item$severity <- severity
   theory <- .tf_coll_append(theory, "predictions", p_item)
   .tf_provenance_append(theory, "tf_add_prediction", id)
 }
