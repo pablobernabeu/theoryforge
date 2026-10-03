@@ -1,6 +1,7 @@
 # What each proposition relation asserts (API_SPEC.md section 28, "Relation
 # semantics"). The table is defined once here and read wherever a relation's
-# meaning matters. The Python twin's _relations.py holds the same table.
+# meaning matters. The Python twin's _relations.py holds the same table
+# (RELATIONS, DIRECTED, BIDIRECTED).
 #
 # A directed relation states an effect of `from` on `to`. A bidirected one
 # states covariance that the theory leaves unexplained, as a latent common cause
@@ -19,10 +20,11 @@
   associates = list(kind = "bidirected", sign = NA_integer_)
 )
 
-# The relations that state an effect of one construct on another, which the
-# checklist's causal_testability item counts.
+# The relations that state an effect of one construct on another: the edges
+# from -> to of the graph that tf_implications() and the causal_dag view read,
+# and what the checklist's causal_testability item counts.
 .tf_DIRECTED <- names(Filter(function(r) identical(r$kind, "directed"), .tf_RELATIONS))
 
-# The causal_dag view and tf_implications() read only these three relations
-# (API_SPEC.md sections 5 and 27).
-.tf_CAUSAL <- c("causes", "increases", "decreases")
+# The relations that state unexplained covariance: the bidirected edges of that
+# graph, and the edges the nomological_net view draws without arrowheads.
+.tf_BIDIRECTED <- names(Filter(function(r) identical(r$kind, "bidirected"), .tf_RELATIONS))

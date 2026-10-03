@@ -1,7 +1,8 @@
 """What each proposition relation asserts (API_SPEC.md section 28, "Relation semantics").
 
 The table is defined once here and read wherever a relation's meaning matters.
-R's ``relations.R`` holds the same table (``.tf_RELATIONS``, ``.tf_DIRECTED``).
+R's ``relations.R`` holds the same table (``.tf_RELATIONS``, ``.tf_DIRECTED``,
+``.tf_BIDIRECTED``).
 """
 from __future__ import annotations
 
@@ -22,6 +23,11 @@ RELATIONS: dict[str, tuple[str, int | None]] = {
     "associates": ("bidirected", None),
 }
 
-# The relations that state an effect of one construct on another, which the
-# checklist's causal_testability item counts.
+# The relations that state an effect of one construct on another: the edges
+# from -> to of the graph that implications() and the causal_dag view read, and
+# what the checklist's causal_testability item counts.
 DIRECTED = frozenset(r for r, (kind, _) in RELATIONS.items() if kind == "directed")
+
+# The relations that state unexplained covariance: the bidirected edges of that
+# graph, and the edges the nomological_net view draws without arrowheads.
+BIDIRECTED = frozenset(r for r, (kind, _) in RELATIONS.items() if kind == "bidirected")

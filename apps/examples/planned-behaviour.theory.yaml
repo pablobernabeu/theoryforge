@@ -6,7 +6,9 @@
 # by intention; intention is jointly determined by attitude toward the
 # behaviour, subjective norm and perceived behavioural control; perceived
 # behavioural control additionally predicts behaviour directly, to the extent
-# that it reflects actual control over performance.
+# that it reflects actual control over performance. Figure 1 of the article
+# joins the three determinants of intention by double-headed arrows, which the
+# three `associates` propositions encode.
 schema_version: "1.0"
 id: "planned-behaviour-1991"
 title: "Theory of planned behaviour"
@@ -75,6 +77,21 @@ propositions:
     relation: "increases"
     mechanism: "To the extent that perceived control reflects actual control over the behaviour, it predicts performance directly by standing in for the resources and opportunities needed to translate intention into action."
     functional_form: "monotonic"
+  - id: p_attitude_norm
+    from: c_attitude
+    to: c_subjective_norm
+    relation: "associates"
+    mechanism: "The theory treats attitude and subjective norm as correlated determinants of intention, drawn with a double-headed arrow, and does not say what makes them covary."
+  - id: p_attitude_control
+    from: c_attitude
+    to: c_perceived_control
+    relation: "associates"
+    mechanism: "The theory treats attitude and perceived behavioural control as correlated determinants of intention, drawn with a double-headed arrow, and does not say what makes them covary."
+  - id: p_norm_control
+    from: c_subjective_norm
+    to: c_perceived_control
+    relation: "associates"
+    mechanism: "The theory treats subjective norm and perceived behavioural control as correlated determinants of intention, drawn with a double-headed arrow, and does not say what makes them covary."
 
 boundary_conditions: ["a specific behaviour defined by target, action, context and time", "the direct control path matters most for behaviours that are not fully under volitional control", "perceived behavioural control predicts behaviour only in so far as it is accurate about actual control"]
 
@@ -153,3 +170,6 @@ provenance:
   - step: "3"
     action: "tf_add_prediction"
     detail: "Derived the intention-determinant, intention-behaviour and perceived-control predictions, pointing the control predictions diagnostically at the theory of reasoned action."
+  - step: "4"
+    action: "tf_add_proposition"
+    detail: "Stated the associations among attitude, subjective norm and perceived behavioural control that Figure 1 of the article draws as double-headed arrows."

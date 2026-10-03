@@ -137,6 +137,21 @@ test("a failed restore of an upload falls back to the first example and says so"
   assert.match($("#summaryWrap").textContent, /Title a\.theory\.yaml/);
 });
 
+test("the causal DAG renders an association as a dashed edge with two arrowheads", () => {
+  // DOT has no `<->`, so the bidirected lines of the dagitty export are
+  // rewritten for Graphviz. A directed line is left as it is.
+  const ctx = makeWindow();
+  runScript(ctx, CORE);
+  const { dagToDigraph } = ctx.TF.util;
+  assert.equal(dagToDigraph("dag {\n  a -> b\n  a <-> c\n}\n"),
+    "digraph causal_dag {\n  rankdir=LR;\n  node [shape=box, style=rounded];\n" +
+    "  a -> b\n  a -> c [dir=both, style=dashed]\n}\n");
+  // A quoted identifier is kept whole.
+  assert.equal(dagToDigraph('dag {\n  "self-efficacy" <-> "task \\"persistence\\""\n}\n'),
+    "digraph causal_dag {\n  rankdir=LR;\n  node [shape=box, style=rounded];\n" +
+    '  "self-efficacy" -> "task \\"persistence\\"" [dir=both, style=dashed]\n}\n');
+});
+
 test("a failed restore of an example falls back to the first example and says so", async () => {
   const saved = { "tf-app-py": JSON.stringify({ opId: "check", params: {}, ran: false, input: { mode: "example", index: 1 } }) };
   const rt = stubRuntime({ badExamples: [EXAMPLES[1].path] });

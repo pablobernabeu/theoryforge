@@ -2,11 +2,11 @@
 % Please edit documentation in R/implications.R
 \name{implications}
 \alias{implications}
-\title{Testable implications derived from a theory's causal subgraph.}
+\title{Testable implications derived from the graph a theory's propositions state.}
 \description{
-The causal propositions form a directed graph over the constructs they
-connect. When that graph is acyclic it entails a set of conditional
-independencies, and the basis set is the smallest such set from which every
-other implied independence follows.
+Every proposition is read through the relation table: the directed relations
+are edges and \code{associates} is a bidirected edge. Each pair of constructs that
+no edge joins is independent given some set of other constructs whenever a
+set m-separates the pair.
 }
 \keyword{internal}

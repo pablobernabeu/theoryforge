@@ -13,10 +13,34 @@ def test_nomological_net_format(panic_path):
     assert '  "c_arousal" -> "c_perceived_threat" [label="increases"];' in dot
 
 
+def test_nomological_net_draws_an_association_without_arrowheads(weak_path):
+    # An association states covariance with no direction (API_SPEC.md section
+    # 28), so its edge has no arrowhead. A directed relation keeps its arrow.
+    dot = tf.read(weak_path).diagram("nomological_net")
+    assert '  "k_motivation" -> "k_drive" [label="associates", dir=none];' in dot
+
+
 def test_causal_dag(panic_path):
     dag = tf.read(panic_path).diagram("causal_dag")
     assert dag.startswith("dag {\n") and dag.endswith("}\n")
     assert "  c_perceived_threat -> c_arousal" in dag  # the 'causes' edge
+
+
+def test_causal_dag_exports_the_graph_implications_reads():
+    # Every directed relation is an edge, and an association between two
+    # constructs that a directed relation names is a bidirected edge (API_SPEC.md
+    # sections 5 and 27). An association touching any other construct, or joining
+    # a construct to itself, is left out, as implications() leaves it out.
+    t = tf.new_theory("mixed", "Mixed relations")
+    for n in ("a", "b", "c", "d", "k"):
+        t.add_construct(n, n.upper(), "d")
+    t.add_proposition("p1", "a", "b", "mediates")
+    t.add_proposition("p2", "c", "b", "moderates")
+    t.add_proposition("p3", "a", "c", "associates")
+    t.add_proposition("p4", "k", "a", "associates")
+    t.add_proposition("p5", "b", "d", "decreases")
+    t.add_proposition("p6", "d", "d", "associates")
+    assert t.diagram("causal_dag") == "dag {\n  a -> b\n  c -> b\n  a <-> c\n  b -> d\n}\n"
 
 
 def test_provenance(panic_path):

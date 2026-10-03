@@ -207,10 +207,11 @@ backslash-n.
 ```
 <prelude>
   "<c.id>" [label="<wrap(c.label)>", fillcolor="#E4F1F1", color="#1E7B7B"];   # per construct, file order
-  "<p.from>" -> "<p.to>" [label="<p.relation>"];   # per proposition, file order
+  "<p.from>" -> "<p.to>" [label="<p.relation>"];             # per proposition, file order
+  "<p.from>" -> "<p.to>" [label="associates", dir=none];     # the same line for an association
 }
 ```
-(Each content line indented 2 spaces; trailing newline after `}`.)
+(Each content line indented 2 spaces; trailing newline after `}`.) An association states covariance with no direction (§28), so its edge carries `dir=none` and is drawn without arrowheads.
 
 **provenance** (DOT). Node `n{i}` for the i-th step (1-based), `label = esc(action)` or `esc(action) + "
 " + wrap(detail, 26)` when detail nonempty; then chain edges `n{i} -> n{i+1}`:
@@ -225,13 +226,14 @@ constructs."];
 }
 ```
 
-**causal_dag** (dagitty syntax). One edge line per proposition whose `relation ∈ {causes,increases,decreases}`, file order:
+**causal_dag** (dagitty syntax). The graph `implications` reads (§27), one line per proposition in file order: `<from> -> <to>` for a directed relation (§28), and `<from> <-> <to>` for an association whose two endpoints differ and are each the `from` or `to` of some directed proposition. Any other proposition adds no line:
 ```
 dag {
   <from> -> <to>
+  <from> <-> <to>
 }
 ```
-The causal subgraph is emitted exactly as written and is not checked for acyclicity, so a theory with a feedback loop (the shipped panic-network example has one) produces a cyclic graph inside a `dag` block, which dagitty will not accept as a DAG. The `causal_testability` checklist item likewise asserts only that at least one directed relation (§28) is present. The view is a faithful export rather than a verdict, and both statements are deliberate: `implications` (§27) is where the same subgraph is checked for acyclicity and read for what it entails, and it refuses the two panic-network fixtures for the cycle this view prints without comment. The shipped `modality-switching` fixture is acyclic, and is the example that gets as far as a basis set.
+The graph is emitted exactly as written and is not checked for acyclicity, so a theory with a feedback loop (the shipped panic-network example has one) produces a cyclic graph inside a `dag` block. dagitty accepts it, but it reads the graph by d-separation, which a cyclic model is guaranteed to satisfy only in special cases, a linear model among them (Bongers et al., 2021, Theorem 6.3). The `causal_testability` checklist item likewise asserts only that at least one directed relation (§28) is present. The view is a faithful export and passes no verdict: `implications` (§27) is where the same graph is checked for acyclicity and read for what it implies, and it refuses the two panic-network fixtures for the cycle this view prints without comment. The shipped `modality-switching` fixture is acyclic, and is the example that gets as far as a set of statements. The weak example's one association joins two constructs that no directed relation names, so its export is `dag {\n}`. The apps draw the export with Graphviz. DOT has no bidirected edge, so the apps rewrite each `a <-> b` line as `a -> b [dir=both, style=dashed]` before rendering.
 
 ## 6. Tokenisation, Jaccard and overlap (for the redundancy screen)
 
@@ -690,35 +692,41 @@ New API (mirrored):
 |---|---|---|
 | Implied conditional independencies | `tf_implications(theory)` → list | `theory.implications()` / `theoryforge.implications(theory)` → `dict` |
 
-## 27. implications(theory) → the basis set of the causal subgraph (deterministic, parity-tested)
+## 27. implications(theory) → the conditional independencies the causal graph implies (deterministic, parity-tested)
 
-Reads every proposition whose `relation ∈ {causes, increases, decreases}` (the same subgraph section 5 exports) as a directed edge, then returns the conditional independencies that subgraph entails.
+Reads every proposition through the relation table (§28) as an edge of an acyclic directed mixed graph, the graph section 5's causal_dag view exports, and returns the conditional independencies that graph implies by m-separation (Richardson, 2003). The graph routines live in Python's `_graph.py` and R's `graph.R`.
 
-**Vertices and edges.** Iterate the constructs in file order, collecting their ids into `declared`. Iterate the propositions in file order; for each causal one, take `from` and `to` as an ordered pair of positions in `declared` and keep it if that pair has not been seen, so a relation asserted twice is one edge. `n_edges` is the number of kept pairs. The vertex set is the positions appearing in a kept pair, in increasing position order, and `constructs` reports the ids at those positions. A construct that no causal proposition connects is therefore absent: silence about a construct is not a claim that it is independent of anything, and including it would manufacture implications the theory does not make.
+**Vertices and edges.** Iterate the constructs in file order, collecting their ids into `declared`. Iterate the propositions in file order. A directed relation (`increases`, `decreases`, `causes`, `mediates` or `moderates`) takes `from` and `to` as an ordered pair of positions in `declared`, kept if that pair has not been seen, so a relation asserted twice is one edge. `n_edges` is the number of kept pairs. The vertex set is the positions appearing in a kept pair, in increasing position order, and `constructs` reports the ids at those positions. An `associates` proposition adds a bidirected edge when `from` and `to` are both vertices and differ. The pair is unordered and kept once, and `n_bidirected` is the number kept. A proposition with any other relation, or none, adds nothing. A construct that no directed relation names is absent: silence about a construct is not a claim that it is independent of anything, and including it would manufacture implications the theory does not make. That holds for a construct named only by associations as well. Every path through it enters and leaves by an arrowhead, and it is an ancestor of no vertex, so it closes every such path whatever set of vertices is held fixed, and leaving it out changes no statement about the vertices.
 
-**Basis set.** For every pair of vertices `(i, j)` with `i` before `j` in that order and no edge in either direction between them, emit `{a, b, given, statement}` where `a` and `b` are the two ids, `given` is the union of the parents of both, listed in the same vertex order, and `statement` is `<a> _||_ <b> | <given joined by ", ">`, or `<a> _||_ <b>` when `given` is empty. This is the basis set of Pearl (1988) and Shipley (2000): it implies every other conditional independence the graph entails, and it has exactly `k(k-1)/2 - m` members for `k` vertices and `m` edges. In a DAG neither member of a non-adjacent pair can be a parent of the other, so the union needs no further exclusion. Ordering everything by construct file order, and never by a topological sort, is what makes the two engines return the same records in the same order. A set would have nothing for the parity check to compare.
+**Statements.** For every pair of vertices `(i, j)` with `i` before `j` in vertex order and no edge between them, directed either way or bidirected, try two conditioning sets in turn: `C1`, the parents of both, then `C2`, every ancestor of either other than the two themselves. The first that m-separates the pair gives `{a, b, given, statement}`, where `a` and `b` are the two ids, `given` lists the set in vertex order and `statement` is `<a> _||_ <b> | <given joined by ", ">`, or `<a> _||_ <b>` when `given` is empty. When neither set separates the pair, `{a, b}` goes to `inseparable`. A path between `a` and `b` connects them given `Z` when every collider on it, a vertex into which both of its edges on the path point, is in `Z` or an ancestor of a member of `Z`, and no other vertex on it is in `Z`. The two are m-separated given `Z` when no path connects them. Both engines decide this by a search over the states (vertex, whether the search arrived through an arrowhead), and its result is a boolean, so the order of the search does not matter.
+
+In a DAG, `C1` always separates a non-adjacent pair, so a theory of directed relations alone gets the basis set of Pearl (1988) and Shipley (2000). The basis set implies every other conditional independence the graph entails, it has exactly `k(k-1)/2 - m` members for `k` vertices and `m` edges, and `inseparable` is empty. With bidirected edges, holding a parent fixed can open a path on which that parent is a collider, and then `C2` is tried. When `C2` fails, no set separates the pair. Every vertex on a path that connects the pair given `C2` is an ancestor of `a`, `b` or a member of `C2`, so every vertex between `a` and `b` lies in `C2` and must be a collider. Such a path is an inducing path. The two ends of an inducing path are connected given every set of the other vertices (Richardson & Spirtes, 2002, Theorem 4.2), so the theory implies no independence for the pair. The theorem is stated for ancestral graphs, and it applies here through the DAG that puts a latent common cause in place of each bidirected edge, which has the same separations and the same ancestors among the vertices. The smallest case is `z -> x -> y` with `x` associates `y`: `x` is a collider on `z -> x <-> y`, and `z` and `y` are inseparable. Ordering everything by construct file order, and never by a topological sort, is what makes the two engines return the same records in the same order. A set would have nothing for the parity check to compare.
 
 **Return shape** (keys in this order):
 ```json
 {
-  "theory_id": "...", "acyclic": true, "constructs": ["c_arousal", "c_threat", "c_avoidance"],
-  "n_edges": 2,
+  "theory_id": "...", "criterion": "m", "acyclic": true,
+  "constructs": ["c_arousal", "c_threat", "c_avoidance"],
+  "n_edges": 2, "n_bidirected": 0, "feedback": [],
   "implications": [ {"a": "c_arousal", "b": "c_avoidance", "given": ["c_threat"],
                      "statement": "c_arousal _||_ c_avoidance | c_threat"} ],
-  "n_implications": 1
+  "n_implications": 1,
+  "inseparable": []
 }
 ```
-`acyclic` is always `true` in a returned record, since a cyclic graph is refused; it is carried so that a serialised record states the verdict rather than leaving a reader to infer that the check ran.
+`criterion` names the separation criterion, `"m"`. `acyclic` is always `true` and `feedback` always empty in a returned record, since a cyclic graph is refused. Both are carried so that a serialised record states the verdict, where a reader would otherwise have to infer that the check ran. Each entry of `inseparable` is `{a, b}`, and its pairs come in the same order as those of `implications`.
 
 **Refusals** (identical message text in both languages, in this order):
 
 1. A repeated construct id, which would give one vertex two sets of parents: `implications requires unique construct ids; duplicate construct id: <id>`, naming the first repeat in file order. A construct without an id is not declared at all (§3, "Reading a theory"), so two of them are no repeat.
-2. A causal proposition naming a construct the theory has not declared: `implications requires causal propositions between declared constructs; proposition '<proposition id>' refers to unknown construct '<construct id>'`, reporting the first offending endpoint in file order and taking `from` before `to`. Dropping such an edge would shrink the graph and so add independencies the theory does not imply, which is a confidently wrong answer rather than a missing one.
-3. A cycle, which leaves the basis set undefined: `implications requires an acyclic causal graph; cycle found: <ids joined by " -> ">`, where the path repeats its first vertex at the end and a self loop appears as that vertex twice. The cycle named is the first found by a depth-first search that takes start vertices and successors in construct file order, so both engines name the same one.
+2. A directed relation naming a construct the theory has not declared: `implications requires causal propositions between declared constructs; proposition '<proposition id>' refers to unknown construct '<construct id>'`, reporting the first offending endpoint in file order and taking `from` before `to`. Dropping such an edge would shrink the graph and so add independencies the theory does not imply, which is a confidently wrong answer rather than a missing one. An association with an undeclared endpoint is not refused: it names no vertex, so it adds no edge, as an association with a construct that only associations name adds none.
+3. A cycle among the directed edges: `implications requires an acyclic causal graph; cycle found: <ids joined by " -> ">`, where the path repeats its first vertex at the end and a self loop appears as that vertex twice. The cycle named is the first found by a depth-first search that takes start vertices and successors in construct file order, so both engines name the same one. A cyclic graph does imply independencies, by sigma-separation, when each strongly connected component has a unique solution (Bongers et al., 2021, Theorem 6.3), but this function does not derive them.
 
-A theory with no causal propositions is not an error. Its vertex set is empty, `n_edges` and `n_implications` are 0, and `implications` is the empty list.
+A theory with no directed relations is not an error. Its vertex set is empty, `n_edges`, `n_bidirected` and `n_implications` are 0, and `implications` and `inseparable` are empty lists.
 
-No golden artefact is added. Of the four shipped theory fixtures, the two panic-network ones have a cyclic causal subgraph and are refused, `weak-theory` has no causal relations at all, and `modality-switching` is the acyclic case: five constructs, four causal propositions and a basis set of six. The twin test suites assert that set literally, statement for statement, in both languages, so the comparison a golden would make is made there instead. The count of `expected/` is unchanged by this function.
+**Measurement.** The statements concern constructs, and a study observes them through fallible measures. Error in a conditioning construct leaves part of the dependence that holding it fixed should remove, so a conditional statement tested on observed scores is rejected too often, and more often the larger the sample (Westfall & Yarkoni, 2016). Take a chain whose two paths have standardised coefficients of .5, with the middle construct measured at a reliability of .8. The partial correlation of the two ends given the observed middle is then .0625, and a test at the 5 per cent level rejects the true statement in about 14, 29 and 51 per cent of studies of 200, 500 and 1,000 observations. A marginal statement is not biased this way. Testing a conditional statement in a latent-variable model, such as one built on the measurement model `compile_sem` writes (§19), takes the measurement error into account (Thoemmes et al., 2018).
+
+No golden artefact is added. Of the four shipped theory fixtures, the two panic-network ones have a cyclic graph and are refused, `weak-theory` has no directed relation (its one association names no vertex), and `modality-switching` is the acyclic case: five constructs, four causal propositions and a basis set of six. The twin test suites assert that set literally, statement for statement, in both languages, so the comparison a golden would make is made there instead, and the edge-case records (§7) hold the whole record for every edge theory. The count of `expected/` is unchanged by this function.
 
 ---
 
@@ -728,7 +736,7 @@ What each relation a proposition can state means, defined once and shared by the
 
 ## 28. Relation semantics
 
-What each of the six relations of a proposition asserts is defined once in each language, in Python's `_relations.py` (`RELATIONS`, `DIRECTED`) and R's `relations.R` (`.tf_RELATIONS`, `.tf_DIRECTED`). Both test suites check the table against the schema's enum.
+What each of the six relations of a proposition asserts is defined once in each language, in Python's `_relations.py` (`RELATIONS`, `DIRECTED`, `BIDIRECTED`) and R's `relations.R` (`.tf_RELATIONS`, `.tf_DIRECTED`, `.tf_BIDIRECTED`). Both test suites check the table against the schema's enum.
 
 | relation | kind | sign | what it asserts |
 |---|---|---|---|
@@ -741,4 +749,4 @@ What each of the six relations of a proposition asserts is defined once in each 
 
 The sign is Python `None` and R `NA` where the relation does not fix one. A proposition's `functional_form` is descriptive, and no function reads it.
 
-The checklist's causal_testability item (§4, item 9) counts the five directed relations. The other functions read the relations as their own sections state. The causal_dag view (§5) and `implications` (§27) take only `causes`, `increases` and `decreases` as edges. `compile_sem` (§19) writes `mediates` as a regression, `associates` as a covariance and `moderates` as a comment, and `simulate` (§22) couples `causes` and `mediates` positively and `moderates` and `associates` not at all.
+The checklist's causal_testability item (§4, item 9) counts the five directed relations. `implications` (§27) and the causal_dag view (§5) read the graph the table defines: every directed relation is an edge from `from` to `to`, and an association is a bidirected edge between two constructs that a directed relation names. The nomological_net view (§5) draws an association without arrowheads. The other functions read the relations as their own sections state. `compile_sem` (§19) writes `mediates` as a regression, `associates` as a covariance and `moderates` as a comment, and `simulate` (§22) couples `causes` and `mediates` positively and `moderates` and `associates` not at all.

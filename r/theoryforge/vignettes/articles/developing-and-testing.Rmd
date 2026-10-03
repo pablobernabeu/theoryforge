@@ -59,24 +59,34 @@ one.
 
 Severity scores the predictions a theory states. A causal theory also commits
 itself to claims it never states, because the propositions taken together are a
-directed graph, and a directed acyclic graph entails a set of conditional
-independencies. `tf_implications()` derives them. Every pair of constructs with
-no causal relation between them yields one claim: the two are independent once
-the parents of both are held fixed. That collection is the basis set, from which
-every other independence the graph entails follows, and each member is something
-a study can be designed to look for and fail to find.
+graph, and the graph implies a set of conditional independencies.
+`tf_implications()` derives them. Each directed relation (increases, decreases,
+causes, mediates and moderates) is an arrow, and an association is a
+bidirected edge, covariance the theory leaves unexplained. Every pair of
+constructs with no edge between them yields one claim when some set of other
+constructs separates them, usually the parents of both. When every relation is
+directed, those claims are the basis set, from which every other independence
+the graph implies follows. Each claim is something a study can be designed to
+look for and fail to find. An association can leave a pair that no set
+separates, and `tf_implications()` lists such a pair under `inseparable`, since
+the theory then implies no independence for it.
 
-The panic-network example does not get that far. Its third proposition returns
+The panic-network example gets no statements. Its third proposition returns
 from perceived threat to arousal, closing the feedback loop the theory is about,
-and a graph with a cycle has no basis set at all.
+and `tf_implications()` refuses a graph with a cycle.
 
 ```{r implications-cycle, error = TRUE}
 tf_implications(theory)
 ```
 
-The refusal names the cycle it found, so nobody has to hunt for it. Where a
-theory does hold a feedback loop, this is the point at which the loop has to be
-modelled over time, since a single graph cannot carry it.
+The refusal names the cycle it found, so nobody has to hunt for it. A cyclic
+graph does imply conditional independencies, and dagitty accepts the
+`causal_dag` export of one. dagitty reads it by d-separation, though, which a
+model with feedback is guaranteed to satisfy only in special cases, a linear
+model among them. The criterion that holds whenever each feedback loop has a
+unique equilibrium is sigma-separation
+([Bongers et al., 2021](https://doi.org/10.1214/21-AOS2064)), and
+`tf_implications()` does not apply it. `tf_simulate()` runs the loop over time.
 
 The package ships a second example whose causal graph is acyclic, a theory of
 modality switching in grounded conceptual processing. Sensorimotor experience
@@ -105,7 +115,23 @@ fixed. Sensorimotor experience and lexical familiarity meet only at the collider
 conceptual access, and the theory says they are unrelated to each other with
 nothing held fixed, which is what an account deriving perceptual knowledge from
 distributional word statistics would deny. Neither
-claim appears among the theory's own predictions, and either could sink it.
+claim appears among the theory's own predictions, and either could sink it. A
+version of the theory that granted sensorimotor experience and lexical
+familiarity some covariance would state it with `associates`, and the claim that
+the two are unrelated would then be withdrawn.
+
+The claims concern constructs, and a study observes them through fallible
+measures. Error in a conditioning construct leaves part of the dependence that
+holding it fixed should remove. A conditional claim tested on observed scores is
+therefore rejected too often, and more often the larger the sample
+([Westfall & Yarkoni, 2016](https://doi.org/10.1371/journal.pone.0152719)). Take
+a chain whose two paths have standardised coefficients of .5, with the middle
+construct measured at a reliability of .8. A partial-correlation test at the 5
+per cent level then rejects the true claim in about 14, 29 and 51 per cent of
+studies of 200, 500 and 1,000 observations. Five of the six claims above are
+conditional. They are better tested in a latent-variable model, such as one
+built on the measurement model that `tf_compile_sem()` writes
+([Thoemmes et al., 2018](https://doi.org/10.1037/met0000147)).
 
 ## Preregistration
 

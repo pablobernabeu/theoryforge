@@ -64,9 +64,10 @@ part of this layer that needs a network connection, and `new_evidence_dois` chec
 deterministically which candidate DOIs, from any search tool, a theory does not yet cite.
 
 The remaining functions carry a theory through analysis, review and deposit. `implications`
-reads the causal propositions as a directed graph and returns the conditional independencies
-that graph entails, the shortest complete statement of what the theory forbids in data, or
-refuses a graph whose cycle leaves that set undefined. `compile_sem`
+reads the propositions as a causal graph, the directed relations as arrows and associations as
+unexplained covariance, and returns the conditional independencies the causal graph implies,
+refusing a cyclic graph. The statements concern constructs, and a conditional one tested on
+fallible measures is rejected too often, so latent-variable models are the better test. `compile_sem`
 compiles constructs and propositions to lavaan model syntax, and `dossier` assembles in one
 command a reviewer-facing audit bundle holding the rigour report, severity, provenance and
 preregistration. `simulate` runs the construct network as a deterministic dynamical system,

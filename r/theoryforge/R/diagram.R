@@ -126,9 +126,12 @@ NULL
                               .tf_fill("construct")))
   }
   for (p in .tf_list(T, "propositions")) {
-    lines <- c(lines, sprintf('  "%s" -> "%s" [label="%s"];',
+    # An association states covariance with no direction (API_SPEC.md section
+    # 28), so its edge is drawn without arrowheads.
+    undirected <- if (.tf_rel(p) %in% .tf_BIDIRECTED) ", dir=none" else ""
+    lines <- c(lines, sprintf('  "%s" -> "%s" [label="%s"%s];',
                               .tf_esc(.tf_str(p, "from")), .tf_esc(.tf_str(p, "to")),
-                              .tf_esc(.tf_rel(p))))
+                              .tf_esc(.tf_rel(p)), undirected))
   }
   lines <- c(lines, "}")
   paste0(paste(lines, collapse = "\n"), "\n")
@@ -155,15 +158,31 @@ NULL
 }
 
 .tf_causal_dag <- function(T) {
-  # The causal subgraph is emitted as written, with no acyclicity check. A
-  # theory with a feedback loop (the panic-network example has one) therefore
-  # yields a cyclic graph inside a `dag` block, which dagitty will reject.
-  # The view is an export and stays one; tf_implications() is where the same
-  # subgraph is checked and refused when it is cyclic.
+  # The graph tf_implications() reads (API_SPEC.md sections 5 and 27): a line
+  # per directed relation, and a bidirected line per association between two
+  # constructs that a directed relation names, in proposition file order. It is
+  # emitted as written, with no acyclicity check, so a theory with a feedback
+  # loop (the panic-network example has one) yields a cyclic graph inside a
+  # `dag` block. dagitty accepts it but reads it by d-separation, which a cyclic
+  # model is guaranteed to satisfy only in special cases, a linear model among
+  # them (Bongers et al., 2021, Theorem 6.3), and tf_implications() refuses the
+  # graph.
+  props <- .tf_list(T, "propositions")
+  vertices <- character(0)
+  for (p in props) {
+    if (.tf_rel(p) %in% .tf_DIRECTED) {
+      vertices <- c(vertices, .tf_str(p, "from"), .tf_str(p, "to"))
+    }
+  }
   lines <- c("dag {")
-  for (p in .tf_list(T, "propositions")) {
-    if (.tf_rel(p) %in% .tf_CAUSAL) {
-      lines <- c(lines, sprintf("  %s -> %s", .tf_str(p, "from"), .tf_str(p, "to")))
+  for (p in props) {
+    frm <- .tf_str(p, "from")
+    to <- .tf_str(p, "to")
+    if (.tf_rel(p) %in% .tf_DIRECTED) {
+      lines <- c(lines, sprintf("  %s -> %s", frm, to))
+    } else if (.tf_rel(p) %in% .tf_BIDIRECTED && frm != to &&
+               frm %in% vertices && to %in% vertices) {
+      lines <- c(lines, sprintf("  %s <-> %s", frm, to))
     }
   }
   lines <- c(lines, "}")

@@ -11,41 +11,74 @@ tf_implications(theory)
 }
 \value{
 A named list
-\code{list(theory_id, acyclic, constructs, n_edges, implications,
-  n_implications)}. \code{constructs} holds, in file order, the constructs a
-causal proposition connects. \code{acyclic} is always \code{TRUE} in a
-returned record, since a cyclic graph is refused; it is carried so that a
-serialised record states the verdict rather than leaving a reader to infer
-that the check ran. Each entry of \code{implications} is a list
+\code{list(theory_id, criterion, acyclic, constructs, n_edges,
+  n_bidirected, feedback, implications, n_implications, inseparable)}.
+\code{criterion} names the separation criterion, \code{"m"}.
+\code{constructs} holds the vertices in file order. \code{n_edges} counts
+the directed edges and \code{n_bidirected} the bidirected ones, a pair
+stated twice counting once. \code{acyclic} is always \code{TRUE} and
+\code{feedback} always empty in a returned record, since a cyclic graph is
+refused, and both are carried so that a serialised record states the
+verdict. Each entry of \code{implications} is a list
 \code{list(a, b, given, statement)}, where \code{statement} renders the
-claim as \code{a _||_ b | z1, z2}. Pairs come in construct file order, as do
-the members of \code{given}.
+claim as \code{a _||_ b | z1, z2}, and each entry of \code{inseparable} is
+\code{list(a, b)}. Pairs come in construct file order, as do the members of
+\code{given}.
 }
 \description{
-Reads the propositions whose relation is causal (\code{"causes"},
-\code{"increases"}, \code{"decreases"}) as directed edges over the constructs
-they connect, checks that the resulting graph is acyclic, and returns its
-basis set: for every pair of non-adjacent constructs, the claim that the two
-are independent given the parents of both. A basis set implies every other
-conditional independence the graph entails, so it is the shortest complete
-statement of what the theory forbids in data, and each entry is something a
-study could find and refute.
+Reads every proposition through the relation table (API_SPEC.md section
+28). A directed relation (\code{"increases"}, \code{"decreases"},
+\code{"causes"}, \code{"mediates"} or \code{"moderates"}) is an edge from
+\code{from} to \code{to}, and \code{"associates"} is a bidirected edge,
+covariance the theory leaves unexplained, as a latent common cause of the two
+constructs would. The constructs that a directed relation names are the
+vertices, and an association is an edge only between two of them. The
+function checks that the directed edges form no cycle and then takes every
+pair of vertices that no edge joins. The pair is stated independent given
+the parents of both when those m-separate it (Richardson, 2003), and
+otherwise given all the other ancestors of the two when those do. A pair
+that neither set separates is separated by no set of constructs (Richardson
+& Spirtes, 2002, Theorem 4.2), so the theory implies no independence for it,
+and it is listed under \code{inseparable}. These are the conditional
+independencies the causal graph implies, each one a claim that data could
+refute. When every relation is directed, they are the basis set of Pearl
+(1988) and Shipley (2000), from which every other independence the graph
+implies follows.
 }
 \details{
-Constructs that no causal proposition connects are left out, because silence
+Constructs that no directed relation names are left out, because silence
 about a construct is not a claim that it is independent of anything, and so
-are constructs without an id, which no proposition can name. A theory
-with no causal propositions therefore comes back with an empty basis set and
-no error.
+are constructs without an id, which no proposition can name. A construct
+named only by associations would be a collider on every path through it, so
+leaving it out loses no statement about the others. A theory with no
+directed relations therefore comes back with no vertices and no error.
 }
+\section{Measurement}{
+
+The statements concern constructs, and a study measures them with error.
+Error in a conditioning construct leaves part of the dependence that holding
+it fixed should remove. A conditional statement tested on observed scores is
+therefore rejected too often, and more often the larger the sample (Westfall
+& Yarkoni, 2016). Take a chain whose two paths have standardised
+coefficients of .5, with the middle construct measured at a reliability of
+.8. A partial-correlation test at the 5 per cent level then rejects the true
+statement in about 14, 29 and 51 per cent of studies of 200, 500 and 1,000
+observations. Conditional statements are better tested with latent-variable
+models, such as one built on the measurement model that \code{\link[=tf_compile_sem]{tf_compile_sem()}}
+writes (Thoemmes et al., 2018).
+}
+
 \section{Refusals}{
 
 The function stops in three cases. Two constructs sharing an id would give one
-node two sets of parents, and a causal proposition naming an undeclared
+node two sets of parents, and a directed relation naming an undeclared
 construct would shrink the graph and so imply independencies the theory never
-claimed. A cyclic causal graph has no basis set at all, and the message names
-a cycle that was found. The Python twin raises \code{ValueError} on the same
-three, with the same message text.
+claimed. A cycle among the directed edges is refused too, and the message
+names a cycle that was found. A cyclic graph also implies independencies,
+under sigma-separation, when each feedback loop has a unique equilibrium
+(Bongers et al., 2021), but this function does not derive them.
+The Python twin raises \code{ValueError} on the same three, with the same
+message text.
 }
 
 \examples{
@@ -61,18 +94,43 @@ theory <- tf_theory("mediation", "A mediated chain") |>
 implied <- tf_implications(theory)
 implied$n_implications
 implied$implications[[1]]$statement
+
+# Stating that arousal and avoidance also covary for reasons the theory
+# leaves open withdraws that claim: the pair is joined by an edge.
+covary <- tf_add_proposition(theory, "p3", "c_arousal", "c_avoidance", "associates")
+tf_implications(covary)$n_implications
 }
 \references{
+Bongers, S., Forré, P., Peters, J., & Mooij, J. M. (2021). Foundations of
+structural causal models with cycles and latent variables. \emph{The Annals
+of Statistics}, 49(5), 2885-2915. \doi{10.1214/21-AOS2064}
+
 Pearl, J. (1988). \emph{Probabilistic reasoning in intelligent systems:
 Networks of plausible inference}. Morgan Kaufmann.
+
+Richardson, T. (2003). Markov properties for acyclic directed mixed graphs.
+\emph{Scandinavian Journal of Statistics}, 30(1), 145-157.
+\doi{10.1111/1467-9469.00323}
+
+Richardson, T., & Spirtes, P. (2002). Ancestral graph Markov models.
+\emph{The Annals of Statistics}, 30(4), 962-1030.
+\doi{10.1214/aos/1031689015}
 
 Shipley, B. (2000). A new inferential test for path models based on directed
 acyclic graphs. \emph{Structural Equation Modeling}, 7(2), 206-218.
 \doi{10.1207/S15328007SEM0702_4}
+
+Thoemmes, F., Rosseel, Y., & Textor, J. (2018). Local fit evaluation of
+structural equation models using graphical criteria. \emph{Psychological
+Methods}, 23(1), 27-41. \doi{10.1037/met0000147}
+
+Westfall, J., & Yarkoni, T. (2016). Statistically controlling for
+confounding constructs is harder than you think. \emph{PLOS ONE}, 11(3),
+e0152719. \doi{10.1371/journal.pone.0152719}
 }
 \seealso{
 \code{\link[=tf_diagram]{tf_diagram()}} with \code{type = "causal_dag"}, which exports the
-same subgraph as dagitty syntax without reading it, and the methodological
+same graph as dagitty syntax without reading it, and the methodological
 foundations article for the literature behind the causal-testability
 criterion.
 }

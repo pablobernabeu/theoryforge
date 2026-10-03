@@ -2,9 +2,9 @@
 from __future__ import annotations
 
 from ._access import PRED_TYPE, RELATION, enum, field, items, str_list, text
+from ._relations import BIDIRECTED, DIRECTED
 from ._text import trim
 
-_CAUSAL = {"causes", "increases", "decreases"}
 _TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap",
           "pipeline", "context", "workflow", "venn", "rigour", "severity")
 
@@ -108,7 +108,10 @@ def _nomological_net(T: dict) -> str:
         lines.append(f'  "{_esc(_t(c, "id"))}" [label="{_wrap(_t(c, "label"))}", {_fill("construct")}];')
     for p in items(T, "propositions"):
         frm, to, rel = _esc(_t(p, "from")), _esc(_t(p, "to")), _esc(_rel(p))
-        lines.append(f'  "{frm}" -> "{to}" [label="{rel}"];')
+        # An association states covariance with no direction (API_SPEC.md
+        # section 28), so its edge is drawn without arrowheads.
+        undirected = ", dir=none" if _rel(p) in BIDIRECTED else ""
+        lines.append(f'  "{frm}" -> "{to}" [label="{rel}"{undirected}];')
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -128,15 +131,27 @@ def _provenance(T: dict) -> str:
 
 
 def _causal_dag(T: dict) -> str:
-    # The causal subgraph is emitted as written, with no acyclicity check. A
-    # theory with a feedback loop (the panic-network example has one) therefore
-    # yields a cyclic graph inside a `dag` block, which dagitty will reject.
-    # The view is an export and stays one; `implications` is where the same
-    # subgraph is checked and refused when it is cyclic.
+    # The graph implications() reads (API_SPEC.md sections 5 and 27): a line
+    # per directed relation, and a bidirected line per association between two
+    # constructs that a directed relation names, in proposition file order.
+    # It is emitted as written, with no acyclicity check, so a theory with a
+    # feedback loop (the panic-network example has one) yields a cyclic graph
+    # inside a `dag` block. dagitty accepts it but reads it by d-separation,
+    # which a cyclic model is guaranteed to satisfy only in special cases, a
+    # linear model among them (Bongers et al., 2021, Theorem 6.3), and
+    # implications() refuses the graph.
+    props = items(T, "propositions")
+    vertices: set[str] = set()
+    for p in props:
+        if _rel(p) in DIRECTED:
+            vertices.update((_t(p, "from"), _t(p, "to")))
     lines = ["dag {"]
-    for p in items(T, "propositions"):
-        if _rel(p) in _CAUSAL:
-            lines.append(f'  {_t(p, "from")} -> {_t(p, "to")}')
+    for p in props:
+        frm, to = _t(p, "from"), _t(p, "to")
+        if _rel(p) in DIRECTED:
+            lines.append(f"  {frm} -> {to}")
+        elif _rel(p) in BIDIRECTED and frm != to and frm in vertices and to in vertices:
+            lines.append(f"  {frm} <-> {to}")
     lines.append("}")
     return "\n".join(lines) + "\n"
 

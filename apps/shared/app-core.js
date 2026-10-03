@@ -199,9 +199,15 @@
     return svg;
   }
   // The causal DAG is emitted as dagitty syntax (`dag { a -> b }`); wrap it as a
-  // digraph purely for rendering. The exported IR keeps the dagitty form.
+  // digraph purely for rendering. The exported IR keeps the dagitty form. DOT has
+  // no bidirected edge, so an association, `a <-> b`, is drawn as a dashed edge
+  // with an arrowhead at each end. An identifier may be bare or double-quoted.
+  const DAG_ID = '("(?:[^"\\\\]|\\\\.)*"|[^\\s"]+)';
+  const BIDIRECTED_LINE = new RegExp("^([ \\t]*)" + DAG_ID + " <-> " + DAG_ID + "[ \\t]*$", "gm");
   function dagToDigraph(ir) {
-    return ir.replace(/^\s*dag\s*\{/, "digraph causal_dag {\n  rankdir=LR;\n  node [shape=box, style=rounded];");
+    return ir
+      .replace(/^\s*dag\s*\{/, "digraph causal_dag {\n  rankdir=LR;\n  node [shape=box, style=rounded];")
+      .replace(BIDIRECTED_LINE, "$1$2 -> $3 [dir=both, style=dashed]");
   }
 
   // ---- result shaping: raw package output -> display sections -------------
@@ -1126,5 +1132,5 @@
   // caught here, where it can still be shown.
   const startCaught = (runtime) => start(runtime).catch(bootFailed);
 
-  window.TF = { start: startCaught, OPS, DIAG_SVG, util: { el, esc, download, copyText, toast, renderDot } };
+  window.TF = { start: startCaught, OPS, DIAG_SVG, util: { el, esc, download, copyText, toast, renderDot, dagToDigraph } };
 })();

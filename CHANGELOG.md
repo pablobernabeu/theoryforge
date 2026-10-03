@@ -192,6 +192,30 @@ version and a single behavioural contract
   an empty filename and a filename that holds a `%XX` sequence, which R did not encode.
   The token is sent as an unredirected header, as `fetch_corpus()` sends its key, so a
   redirect of the folder listing cannot carry it to another server.
+- `implications()` ignored `mediates`, `moderates` and `associates`, which `compile_sem()`
+  and `simulate()` read, so it asserted independencies that the theory's own propositions
+  deny. With `x` associated with `y`, the chain `z -> x -> y` gave `z _||_ y | x`. With
+  `a` associated with `b`, the collider `a -> c <- b` gave `a _||_ b`, the negation of the
+  association. A construct that moderated two outcomes left them independent given their
+  other causes. Every relation is now read through the relation table (API_SPEC section
+  28): `mediates` and `moderates` are directed edges, and `associates` is a bidirected
+  edge, covariance the theory leaves unexplained. The statements are derived by
+  m-separation (Richardson, 2003), given the parents of the pair or, when those do not
+  separate it, given its other ancestors. A pair that no set separates is listed in the
+  new `inseparable` field. The record also gains `criterion`, `n_bidirected` and
+  `feedback`. A theory with only `causes`, `increases` and `decreases` gets the same
+  statements as before, and so do the four bundled theories. A `mediates` or `moderates`
+  proposition naming an undeclared construct is refused, as a causal one was, and so is a
+  cycle that one of them closes. In the app examples, domain identification moderates
+  test performance in the stereotype-threat theory, so that theory gains three statements
+  and two of its conditioning sets widen. The planned-behaviour theory now states the
+  associations among its three antecedents of intention that Ajzen (1991, Figure 1)
+  draws, so the three statements that made them independent are gone. The `causal_dag`
+  view exports the same graph, with `a <-> b` for an association between two of its
+  constructs, the `nomological_net` view draws an association without arrowheads, and
+  the apps draw a bidirected edge as a dashed line with an arrowhead at each end.
+  API_SPEC sections 5, 27 and 28 state the rules. The weak example's `nomological_net`
+  golden changes, and the edge-case records gain the new keys.
 
 ### Changed
 - R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new
@@ -410,6 +434,18 @@ version and a single behavioural contract
   severity as well as in precision and diagnosticity. The schema describes a prediction's
   `severity` as a declared pre-data severity, `redundancy_check()` gives its references'
   full titles and the getting-started page shows both measures of the redundancy screen.
+- The documentation no longer says that a cyclic theory implies nothing testable or that
+  dagitty rejects its `causal_dag` export. dagitty accepts the export but reads it by
+  d-separation, which a model with feedback is guaranteed to satisfy only in special cases,
+  a linear model among them (Bongers et al., 2021). The `implications` docstring, the R
+  help page, both workflow pages and the README warn that a conditional implication tested
+  on fallible measures is rejected too often. With standardised paths of .5 and a
+  conditioning construct measured at a reliability of .8, a true statement is rejected in
+  about 14, 29 and 51 per cent of studies of 200, 500 and 1,000 observations, because the
+  error leaves residual dependence (Westfall & Yarkoni, 2016). They point to tests in a
+  latent-variable model (Thoemmes et al., 2018). The statements are called the conditional
+  independencies the causal graph implies, and a basis set only for a graph of directed
+  relations alone.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and

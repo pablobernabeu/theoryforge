@@ -320,6 +320,32 @@
   `inst/REFERENCES.bib` drops Forster and Sober (1994), which no item cites any
   more, and adds Rönkkö and Cho (2022).
 
+* `tf_implications()` reads every relation the theory states. `mediates` and
+  `moderates` are directed edges and `associates` is a bidirected edge,
+  covariance the theory leaves unexplained, and the statements are derived by
+  m-separation, so the function no longer asserts independencies that the
+  theory's own propositions deny. With `x` associated with `y`, the chain
+  `z -> x -> y` used to give `z _||_ y | x`. A pair that no set of constructs
+  separates is listed in the new `inseparable` field, and the record also
+  gains `criterion`, `n_bidirected` and `feedback`. For a theory with only
+  `causes`, `increases` and `decreases`, the statements are unchanged, and so
+  are those of the bundled theories. A `mediates` or `moderates` proposition
+  naming an undeclared construct is now refused, as a causal one was, and so
+  is a cycle that one of them closes. In the stereotype-threat app example,
+  domain identification moderates test performance, so the function gives
+  three more statements and widens the conditioning sets of two others. The
+  `causal_dag` view of `tf_diagram()` exports the same graph, with `a <-> b`
+  for an association, and the nomological net draws an association without
+  arrowheads.
+
+* The documentation no longer says that a cyclic theory implies nothing
+  testable or that dagitty rejects its `causal_dag` export. dagitty accepts the
+  export but reads it by d-separation, which a model with feedback is
+  guaranteed to satisfy only in special cases, a linear model among them
+  (Bongers et al., 2021). `?tf_implications`, the Developing and testing
+  article and the README warn that a conditional implication tested on
+  fallible measures is rejected too often, and point to latent-variable tests.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

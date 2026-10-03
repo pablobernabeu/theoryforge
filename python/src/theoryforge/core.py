@@ -625,7 +625,10 @@ class Theory:
         return _appraise_amendment(self.data, prior)
 
     def implications(self) -> dict:
-        """The conditional independencies the causal subgraph commits the theory to."""
+        """The conditional independencies the theory's causal graph implies.
+
+        See :func:`theoryforge.implications`.
+        """
         return _implications(self.data)
 
     def preregister(self, path=None) -> str:
