@@ -39,12 +39,13 @@ EXPECTED = FIXTURES / "expected"
 # reads the root copy. A desync would silently split the two gates onto
 # different reference data, so this script owns both.
 R_EXPECTED = ROOT / "r" / "theoryforge" / "inst" / "fixtures" / "expected"
-# Both packages ship the example theories so that a reader who installed only
-# the package still has something to run: R reaches them with system.file(),
-# Python with theoryforge.example_path(). Neither copy is edited by hand.
+# Both packages ship the example theories and corpora so that a reader who
+# installed only the package still has something to run: R reaches them with
+# system.file(), Python with theoryforge.example_path(). Neither copy is edited
+# by hand.
 EXAMPLE_INPUTS = ("panic-network.theory.yaml", "panic-network-2026-v2.theory.yaml",
                   "modality-switching.theory.yaml", "weak-theory.theory.yaml",
-                  "panic-corpus.yaml")
+                  "panic-corpus.yaml", "openalex-panic-2026.corpus.yaml")
 R_INPUTS = ROOT / "r" / "theoryforge" / "inst" / "fixtures"
 PY_INPUTS = ROOT / "python" / "src" / "theoryforge" / "fixtures"
 # Each package reads its own copy of the schema and checklist, because neither
@@ -227,6 +228,12 @@ def write_edge_outcomes() -> list[str]:
     return written
 
 
+def _write_json(name: str, obj) -> str:
+    """Write ``obj`` to ``fixtures/expected/<name>`` as indented JSON and return ``name``."""
+    (EXPECTED / name).write_bytes((json.dumps(obj, indent=2) + "\n").encode("utf-8"))
+    return name
+
+
 def mirror_schema(src: Path, dests) -> None:
     """Copy the schema and checklist from ``src`` into each directory in ``dests``."""
     for dest in dests:
@@ -298,6 +305,26 @@ def main() -> int:
         tf.lit_diagram(ls, "theme_landscape").encode("utf-8"))
     written += [f"{cid}.litmap.json", f"{cid}.keyword_cooccurrence.dot", f"{cid}.co_citation.dot",
                 f"{cid}.landscape.json", f"{cid}.theme_landscape.dot"]
+    written.append(_write_json(f"{cid}.litmap_simple_centres.json",
+                               tf.litmap(corpus, method="simple_centres")))
+
+    # Every real corpus frozen in fixtures/ (API_SPEC.md section 17). Its
+    # components map is kept to show what that method makes of a real corpus,
+    # and the warning that goes with it is captured so that it is not printed.
+    for path in sorted(FIXTURES.glob("*.corpus.yaml")):
+        corpus = tf.read_corpus(path)
+        cid = corpus["id"]
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            lm = tf.litmap(corpus)
+        written.append(_write_json(f"{cid}.litmap.json", lm))
+        written.append(_write_json(f"{cid}.litmap_simple_centres.json",
+                                   tf.litmap(corpus, method="simple_centres")))
+        ls = tf.read(FIXTURES / "panic-network.theory.yaml").landscape(corpus, method="simple_centres")
+        written.append(_write_json(f"{cid}.landscape_simple_centres.json", ls))
+        (EXPECTED / f"{cid}.theme_landscape_simple_centres.dot").write_bytes(
+            tf.lit_diagram(ls, "theme_landscape").encode("utf-8"))
+        written.append(f"{cid}.theme_landscape_simple_centres.dot")
 
     # A golden left behind by a deleted fixture would otherwise linger as a
     # tracked file that nobody regenerates and no gate notices, so anything not
@@ -328,7 +355,7 @@ def main() -> int:
 
     print(f"wrote {len(written)} golden files to {EXPECTED}")
     print(f"mirrored the golden tree to {R_EXPECTED}")
-    print(f"mirrored {len(EXAMPLE_INPUTS)} example theories to {R_INPUTS} and {PY_INPUTS}")
+    print(f"mirrored {len(EXAMPLE_INPUTS)} example theories and corpora to {R_INPUTS} and {PY_INPUTS}")
     print(f"mirrored {len(SCHEMA_FILES)} schema files to "
           + " and ".join(str(d) for d in SCHEMA_COPIES))
     print(f"wrote {len(edge_written)} edge-case outcome records to {EDGE_EXPECTED}")

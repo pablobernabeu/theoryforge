@@ -4,7 +4,15 @@
 \alias{tf_litmap}
 \title{Bibliometric map of a literature corpus (deterministic)}
 \usage{
-tf_litmap(corpus, min_link = 2, min_cocitation = NULL)
+tf_litmap(
+  corpus,
+  min_link = 2,
+  method = "components",
+  min_cocitation = NULL,
+  min_theme_size = 2,
+  max_theme_size = 10,
+  max_df = 1
+)
 }
 \arguments{
 \item{corpus}{A corpus object (named list), e.g. from \code{\link[=tf_read_corpus]{tf_read_corpus()}}.}
@@ -12,12 +20,29 @@ tf_litmap(corpus, min_link = 2, min_cocitation = NULL)
 \item{min_link}{Minimum co-occurrence count for a keyword pair to be kept
 (default \code{2}). A positive integer.}
 
+\item{method}{\code{"components"} (the default) or \code{"simple_centres"}.}
+
 \item{min_cocitation}{Minimum count for a reference pair to be kept in
 \code{co_citation}. \code{NULL} (the default) uses \code{min_link}.}
+
+\item{min_theme_size, max_theme_size}{The smallest theme kept (default
+\code{2}) and the largest a theme may grow (default \code{10}) with
+\code{"simple_centres"}. A positive integer, and an integer of at least 2
+no smaller than \code{min_theme_size}.}
+
+\item{max_df}{A number from 0 to 1 (default \code{1}). With
+\code{"simple_centres"}, a keyword in more than this share of the records
+is a field term, left out of the map and listed in \code{field_terms}.
+The three theme settings are checked with either method, although only
+\code{"simple_centres"} reads them.}
 }
 \value{
 A named list with elements \code{n_records}, \code{keywords},
-\code{keyword_cooccurrence}, \code{themes}, and \code{co_citation}.
+\code{keyword_cooccurrence}, \code{themes}, and \code{co_citation}. With
+\code{"simple_centres"}, each theme also holds \code{centrality},
+\code{density} and \code{quadrant}, and the list ends with
+\code{method}, \code{parameters} (the five settings used) and
+\code{field_terms}.
 }
 \description{
 Computes keyword co-occurrence, thematic components, and reference
@@ -38,11 +63,30 @@ Co-citation maps of real corpora are large. 200 OpenAlex records give about
 \code{min_cocitation} can be set above \code{min_link}, and
 \code{\link[=tf_lit_diagram]{tf_lit_diagram()}} can draw only the strongest edges.
 
-A theme is a connected component of the keyword map, and on a real corpus a
-few keywords shared by most records join nearly every keyword into one.
-When the largest theme holds more than half the linked keywords, a warning
-says so: such themes, and any landscape built on them, do not describe the
-field. The result is returned unchanged.
+\code{method} chooses how keywords are grouped into themes. With
+\code{"components"}, the default, a theme is a connected component of the
+keyword map, and on a real corpus a few keywords shared by most records join
+nearly every keyword into one. When the largest theme holds more than half
+the linked keywords, a warning says so: such themes, and any landscape built
+on them, do not describe the field. The result is returned unchanged.
+
+\code{"simple_centres"} is the co-word clustering of Coulter et al. (1998)
+and Cobo et al. (2011). Each link is weighted by the equivalence index
+\eqn{c^2 / (df_a df_b)}, where \eqn{c} counts the records holding both
+keywords and \eqn{df} the records holding each. The strongest link between
+two unassigned keywords seeds a theme, which takes its strongest unassigned
+neighbour until it holds \code{max_theme_size} keywords, ties going to the
+keyword first in code-point order. A keyword whose links all reach keywords
+already in themes joins none. Themes smaller than \code{min_theme_size} are
+dropped. Each theme gains its centrality (ten times the summed index of its
+links to the keywords of other themes) and its density (100 times the
+summed index of its internal links, over its size), the measures
+of Callon et al. (1991) as Cobo et al. (2011) scale them. It also gains its
+quadrant in the strategic diagram, split here at the median of each:
+\code{"motor"} (both high), \code{"basic"} (central but not dense),
+\code{"niche"} (dense but not central) or \code{"emerging_or_declining"}
+(both low). On real corpora, this gives bounded themes where components give
+one. Components remain the default for this release.
 }
 \examples{
 corpus <- list(
@@ -55,4 +99,26 @@ corpus <- list(
   )
 )
 tf_litmap(corpus)
+
+# Simple centres on the frozen OpenAlex corpus, where components give one
+# theme.
+openalex <- tf_read_corpus(tf_example_path("openalex-panic-2026.corpus.yaml"))
+lm <- tf_litmap(openalex, method = "simple_centres")
+table(vapply(lm$themes, function(th) th$quadrant, character(1)))
+}
+\references{
+Callon, M., Courtial, J. P., & Laville, F. (1991). Co-word analysis as a
+tool for describing the network of interactions between basic and
+technological research: The case of polymer chemistry. \emph{Scientometrics,
+22}(1), 155-205. \doi{10.1007/BF02019280}
+
+Coulter, N., Monarch, I., & Konda, S. (1998). Software engineering as seen
+through its research literature: A study in co-word analysis. \emph{Journal
+of the American Society for Information Science, 49}(13), 1206-1223.
+
+Cobo, M. J., López-Herrera, A. G., Herrera-Viedma, E., & Herrera, F.
+(2011). An approach for detecting, quantifying, and visualizing the
+evolution of a research field: A practical application to the Fuzzy Sets
+Theory field. \emph{Journal of Informetrics, 5}(1), 146-166.
+\doi{10.1016/j.joi.2010.10.002}
 }

@@ -53,7 +53,10 @@ the severity rubric, a pre-data ranking of claim form, with its preregistration 
 
 A bibliometric layer connects a theory to its field. `litmap` derives keyword co-occurrence,
 connected-component themes and co-citation, and warns when one theme holds most of the linked
-keywords, which happens on real corpora. `landscape` then maps a theory and its alternatives
+keywords, which happens on real corpora. Its `simple_centres` method, the co-word clustering of
+Coulter et al. (1998) and Cobo et al. (2011), gives bounded themes with their centrality,
+density and strategic-diagram quadrant instead. A frozen 150-record OpenAlex corpus ships with
+both packages to show the difference. `landscape` then maps a theory and its alternatives
 onto those themes, names the words behind each match and marks each theme under-theorised,
 covered or crowded by how many of the registered accounts address it. Three literature
 diagrams draw those maps. The `fetch_corpus` adapter assembles a corpus from OpenAlex, the one

@@ -151,6 +151,22 @@
   any landscape built on them, are not informative. `tf_landscape()` gives the
   same warning.
 
+* `tf_litmap()` and `tf_landscape()` gain `method = "simple_centres"`, the
+  co-word clustering of Coulter et al. (1998) and Cobo et al. (2011), which
+  gives bounded themes with centrality, density and a strategic-diagram
+  quadrant on real corpora. `tf_litmap()` also gains `min_theme_size`,
+  `max_theme_size` and `max_df`, which excludes keywords shared by most
+  records. `method` is the third argument of `tf_litmap()`, so a
+  `min_cocitation` given by position must now be named. Components remain the
+  default for this release, and the giant-theme warning names the new method.
+  The default is planned to become `"simple_centres"` in the next minor
+  release.
+
+* A frozen OpenAlex corpus of 150 works on panic disorder,
+  `openalex-panic-2026.corpus.yaml`, ships with the package beside the example
+  theories (see `tf_example_path()`), so that the two methods can be compared on
+  a real corpus. It is offered under CC0, as OpenAlex's data are.
+
 * `tf_validate(full = TRUE)` now checks the whole schema. It reports a missing
   required field of an assumption, an alternative, a piece of evidence or a
   test outcome, and a `passed` that is not `TRUE` or `FALSE`. It also reports

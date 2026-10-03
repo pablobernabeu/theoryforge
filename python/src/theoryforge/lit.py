@@ -193,29 +193,161 @@ def _components(edges: list[dict]) -> list[dict]:
     ]
 
 
-def _litmap(corpus, min_link, min_cocitation=None, co_citation: bool = True,
-            records: list | None = None) -> dict:
-    """litmap, with the co-citation count skipped when ``co_citation`` is False.
+METHODS = ("components", "simple_centres")
+
+
+def _method(value) -> str:
+    if not isinstance(value, str) or value not in METHODS:
+        raise ValueError("litmap requires method to be 'components' or 'simple_centres'")
+    return value
+
+
+def _settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, max_df) -> dict:
+    """litmap's arguments checked in signature order (API_SPEC.md section 14).
+
+    The theme sizes and ``max_df`` are checked whichever method is asked for,
+    although only simple centres reads them.
+    """
+    min_link = _positive_int(min_link, "min_link")
+    method = _method(method)
+    min_cocitation = (min_link if min_cocitation is None
+                      else _positive_int(min_cocitation, "min_cocitation"))
+    min_theme_size = _positive_int(min_theme_size, "min_theme_size")
+    ok = (not isinstance(max_theme_size, bool) and isinstance(max_theme_size, (int, float))
+          and math.isfinite(max_theme_size) and max_theme_size == int(max_theme_size)
+          and max_theme_size >= 2)
+    if not ok:
+        raise ValueError("max_theme_size must be an integer of at least 2")
+    max_theme_size = int(max_theme_size)
+    if min_theme_size > max_theme_size:
+        raise ValueError("min_theme_size must not exceed max_theme_size")
+    max_df = _share(max_df, "max_df")
+    return {"method": method, "min_link": min_link, "min_cocitation": min_cocitation,
+            "min_theme_size": min_theme_size, "max_theme_size": max_theme_size, "max_df": max_df}
+
+
+def _quadrants(themes: list[dict]) -> None:
+    """Place each theme in the strategic diagram of Cobo et al. (2011).
+
+    Both axes are split at their median, and a value at the median counts as
+    high. The median of an even count is the mean of the middle two values.
+    """
+    def median(values: list[float]) -> float:
+        v = sorted(values)
+        mid = len(v) // 2
+        return v[mid] if len(v) % 2 else (v[mid - 1] + v[mid]) / 2
+
+    if not themes:
+        return
+    c_med = median([t["centrality"] for t in themes])
+    d_med = median([t["density"] for t in themes])
+    for t in themes:
+        high_c, high_d = t["centrality"] >= c_med, t["density"] >= d_med
+        t["quadrant"] = ("motor" if high_d else "basic") if high_c else (
+            "niche" if high_d else "emerging_or_declining")
+
+
+def _simple_centres(keyword_lists: list[list[str]], s: dict) -> tuple[list[str], list[dict], list[dict]]:
+    """Co-word themes by simple centres (Coulter et al., 1998; Cobo et al., 2011).
+
+    Returns the field terms, the keyword edges over the other keywords and the
+    themes, each with its centrality, density and quadrant. Every rule,
+    tie-break and summation order is pinned in API_SPEC.md section 14, so that
+    the R twin computes the same floats.
+    """
+    sets = [sorted(set(kws)) for kws in keyword_lists]
+    n = len(sets)
+    df: dict[str, int] = {}
+    for kws in sets:
+        for k in kws:
+            df[k] = df.get(k, 0) + 1
+    field_terms = sorted(k for k, v in df.items() if v / n > s["max_df"])
+    field = set(field_terms)
+    counts = _pair_counts([[k for k in kws if k not in field] for kws in sets])
+    kw_edges = _edges(counts, s["min_link"])
+
+    # The equivalence index from the integer counts, in one division.
+    links = [(e["a"], e["b"], (e["count"] * e["count"]) / (df[e["a"]] * df[e["b"]]))
+             for e in kw_edges]
+    adj: dict[str, dict[str, float]] = {}
+    for a, b, e in links:
+        adj.setdefault(a, {})[b] = e
+        adj.setdefault(b, {})[a] = e
+
+    # Pass 1: the strongest link whose ends are both free seeds a theme, which
+    # takes the free neighbour of a member with the strongest link, the smaller
+    # keyword on a tie, until it reaches max_theme_size or has no free
+    # neighbour.
+    assigned: set[str] = set()
+    groups = []
+    for a, b, _ in sorted(links, key=lambda x: (-x[2], x[0], x[1])):
+        if a in assigned or b in assigned:
+            continue
+        members = {a, b}
+        while len(members) < s["max_theme_size"]:
+            best = None
+            for m in members:
+                for h, e in adj[m].items():
+                    if h not in members and h not in assigned and (best is None or (-e, h) < best):
+                        best = (-e, h)
+            if best is None:
+                break
+            members.add(best[1])
+        assigned |= members
+        if len(members) >= s["min_theme_size"]:
+            groups.append(sorted(members))
+    groups.sort(key=lambda kws: kws[0])
+
+    # Pass 2: centrality sums the links from the theme to the keywords of other
+    # themes, density the links inside it, each added one at a time over the
+    # sorted keywords. A link to a keyword in no theme counts for neither,
+    # since Cobo et al. (2011) define centrality over the links to other themes.
+    theme_of = {k: i for i, kws in enumerate(groups, start=1) for k in kws}
+    themes = []
+    for i, kws in enumerate(groups, start=1):
+        external = internal = 0.0
+        for j, m in enumerate(kws):
+            for h in sorted(adj[m]):
+                if theme_of.get(h, i) != i:
+                    external += adj[m][h]
+            for h in kws[j + 1:]:
+                if h in adj[m]:
+                    internal += adj[m][h]
+        themes.append({"id": f"theme_{i}", "keywords": kws, "size": len(kws),
+                       "centrality": rnd(10 * external, 6),
+                       "density": rnd(100 * internal / len(kws), 6)})
+    _quadrants(themes)
+    return field_terms, kw_edges, themes
+
+
+def _litmap(corpus, s: dict, co_citation: bool = True, records: list | None = None) -> dict:
+    """litmap with its settings checked, the co-citation count skipped when ``co_citation`` is False.
 
     ``landscape`` reads only the themes, and on a corpus with references the
     co-citation count is most of the work. It also passes the ``records`` it
     has already checked, since it reads their keywords as well.
     """
-    min_link = _positive_int(min_link, "min_link")
-    min_cocitation = (min_link if min_cocitation is None
-                      else _positive_int(min_cocitation, "min_cocitation"))
     if records is None:
         records = _records(corpus)
     keywords = [kw for kw, _ in records]
-    kw_edges = _edges(_pair_counts(keywords), min_link)
+    if s["method"] == "simple_centres":
+        field_terms, kw_edges, themes = _simple_centres(keywords, s)
+    else:
+        kw_edges = _edges(_pair_counts(keywords), s["min_link"])
+        themes = _components(kw_edges)
     out = {
         "n_records": len(records),
         "keywords": sorted({k for kws in keywords for k in kws}),
         "keyword_cooccurrence": kw_edges,
-        "themes": _components(kw_edges),
+        "themes": themes,
     }
     if co_citation:
-        out["co_citation"] = _edges(_pair_counts([refs for _, refs in records]), min_cocitation)
+        out["co_citation"] = _edges(_pair_counts([refs for _, refs in records]), s["min_cocitation"])
+    if s["method"] == "simple_centres":
+        out["method"] = s["method"]
+        out["parameters"] = {k: s[k] for k in ("min_link", "min_cocitation", "min_theme_size",
+                                               "max_theme_size", "max_df")}
+        out["field_terms"] = field_terms
     return out
 
 
@@ -236,12 +368,15 @@ def _warn_if_one_theme_dominates(themes: list[dict]) -> None:
     warnings.warn(
         f"litmap: one theme holds {p:.1f} per cent of the {n} linked keywords; connected "
         "components cannot separate themes in a corpus this connected, so the themes and "
-        "any landscape built on them are not informative",
+        "any landscape built on them are not informative (method 'simple_centres' gives "
+        "bounded themes)",
         UserWarning, stacklevel=3)
 
 
-def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, min_cocitation: int | None = None) -> dict:
-    """Keyword co-occurrence, thematic components, and co-citation, all deterministic.
+def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
+           min_cocitation: int | None = None, min_theme_size: int = 2,
+           max_theme_size: int = 10, max_df: float = 1.0) -> dict:
+    """Keyword co-occurrence, themes and co-citation, all deterministic.
 
     ``min_link`` is the smallest count a keyword pair needs to be an edge, and
     ``min_cocitation`` the same for a reference pair (``min_link`` when None).
@@ -251,14 +386,49 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, min_cocitation: int | None 
     API_SPEC.md section 14 describes: integer entries become decimal strings,
     and booleans, fractions and nested values are refused.
 
-    A theme is a connected component of the keyword map, and on a real corpus
-    a few keywords shared by most records join nearly every keyword into one.
-    When the largest theme holds more than half the linked keywords, a
-    UserWarning says so: such themes, and any landscape built on them, do not
-    describe the field. The result is returned unchanged.
+    ``method`` chooses how keywords are grouped into themes. With
+    ``"components"``, the default, a theme is a connected component of the
+    keyword map, and on a real corpus a few keywords shared by most records
+    join nearly every keyword into one. When the largest theme holds more than
+    half the linked keywords, a UserWarning says so: such themes, and any
+    landscape built on them, do not describe the field. The result is returned
+    unchanged.
+
+    ``"simple_centres"`` is the co-word clustering of Coulter et al. (1998) and
+    Cobo et al. (2011). Each link is weighted by the equivalence index
+    ``c * c / (df_a * df_b)``, where ``c`` counts the records holding both
+    keywords and ``df`` the records holding each. The strongest link between
+    two unassigned keywords seeds a theme, which takes its strongest unassigned
+    neighbour until it holds ``max_theme_size`` keywords, ties going to the
+    keyword first in code-point order. A keyword whose links all reach
+    keywords already in themes joins none. Themes smaller than
+    ``min_theme_size`` are dropped. Keywords in more than ``max_df`` of the
+    records are field terms, left out of the map and reported as
+    ``field_terms``. Each theme gains its centrality (ten times the summed
+    index of its links to the keywords of other themes) and its density (100
+    times the summed index of its internal links, over its size), the measures
+    of Callon et al. (1991) as Cobo et al. (2011) scale them. It also gains its quadrant in the
+    strategic diagram, split here at the median of each: ``motor`` (both high),
+    ``basic`` (central but not dense), ``niche`` (dense but not central) or
+    ``emerging_or_declining`` (both low). The record gains ``method``,
+    ``parameters`` (the five settings used) and ``field_terms``. Components
+    remain the default for this release.
+
+    ``min_theme_size`` must be a positive integer, ``max_theme_size`` an
+    integer of at least 2 no smaller than it, and ``max_df`` a number from 0 to
+    1. They are checked with either method, although only simple centres reads
+    them.
+
+    References: Callon, Courtial and Laville (1991), Scientometrics 22,
+    155-205, https://doi.org/10.1007/BF02019280. Coulter, Monarch and Konda
+    (1998), Journal of the American Society for Information Science 49,
+    1206-1223. Cobo, López-Herrera, Herrera-Viedma and Herrera (2011), Journal
+    of Informetrics 5, 146-166, https://doi.org/10.1016/j.joi.2010.10.002.
     """
-    out = _litmap(corpus, min_link, min_cocitation)
-    _warn_if_one_theme_dominates(out["themes"])
+    s = _settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, max_df)
+    out = _litmap(corpus, s)
+    if s["method"] == "components":
+        _warn_if_one_theme_dominates(out["themes"])
     return out
 
 
@@ -277,7 +447,8 @@ def _field_tokens(keyword_lists: list[list[str]], max_token_share: float) -> set
 
 
 def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
-              max_token_share: float = DEFAULT_MAX_TOKEN_SHARE) -> dict:
+              max_token_share: float = DEFAULT_MAX_TOKEN_SHARE,
+              method: str = "components") -> dict:
     """Map a theory and its registered alternatives onto the literature's themes.
 
     A theme is matched by the words its keywords share with the focal theory's
@@ -300,17 +471,22 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
     redundancy. The two lists keep their 0.6.0 keys, ``under_theorised_fronts``
     and ``redundancy_risk``.
 
-    ``min_link`` must be a positive integer and ``max_token_share`` a number
-    from 0 to 1, checked in that order and before the corpus (API_SPEC.md
-    section 15). The themes are litmap's, and the same warning is given when
-    one of them holds most of the linked keywords.
+    ``min_link`` must be a positive integer, ``max_token_share`` a number
+    from 0 to 1 and ``method`` one of litmap's, checked in that order and
+    before the corpus (API_SPEC.md section 15). The themes are litmap's, built
+    by ``method`` with litmap's other defaults. With ``"components"``, the same
+    warning is given when one theme holds most of the linked keywords. With
+    ``"simple_centres"``, the record gains ``method`` after ``theory_id`` and
+    each theme its ``centrality``, ``density`` and ``quadrant``.
     """
     T = theory.data if hasattr(theory, "data") else theory
     min_link = _positive_int(min_link, "min_link")
     max_token_share = _share(max_token_share, "max_token_share")
+    s = _settings(min_link, method, None, 2, 10, 1.0)
     records = _records(corpus)
-    lm = _litmap(corpus, min_link, co_citation=False, records=records)
-    _warn_if_one_theme_dominates(lm["themes"])
+    lm = _litmap(corpus, s, co_citation=False, records=records)
+    if s["method"] == "components":
+        _warn_if_one_theme_dominates(lm["themes"])
 
     field_tokens = _field_tokens([kw for kw, _ in records], max_token_share)
     phenomenon_tokens = tokens(text(T.get("title")))
@@ -335,18 +511,24 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
         focal_on = bool(focal_terms)
         n = len(on) + (1 if focal_on else 0)
         status = "under_theorised" if n == 0 else ("crowded" if n >= 2 else "covered")
-        themes_out.append({
+        theme = {
             "id": th["id"], "keywords": th["keywords"],
             "alternatives": on, "focal": focal_on, "status": status,
             "focal_terms": focal_terms, "alternative_terms": alt_terms,
-        })
+        }
+        if s["method"] == "simple_centres":
+            theme.update({k: th[k] for k in ("centrality", "density", "quadrant")})
+        themes_out.append(theme)
         if status == "under_theorised":
             under.append(th["id"])
         elif status == "crowded":
             crowded.append(th["id"])
 
+    head = {"theory_id": text(T.get("id"))}
+    if s["method"] == "simple_centres":
+        head["method"] = s["method"]
     return {
-        "theory_id": text(T.get("id")),
+        **head,
         "max_token_share": max_token_share,
         "field_tokens": sorted(field_tokens),
         "phenomenon_tokens": sorted(phenomenon_tokens),

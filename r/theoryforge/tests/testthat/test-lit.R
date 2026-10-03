@@ -559,7 +559,8 @@ test_that("tf_landscape checks min_link, then max_token_share, then the corpus",
 giant_theme <- function(p, n) {
   sprintf(paste("litmap: one theme holds %s per cent of the %d linked keywords; connected",
                 "components cannot separate themes in a corpus this connected, so the themes",
-                "and any landscape built on them are not informative"), p, n)
+                "and any landscape built on them are not informative (method 'simple_centres'",
+                "gives bounded themes)"), p, n)
 }
 
 # The messages of the warnings that evaluating `expr` gives.
@@ -589,6 +590,268 @@ test_that("tf_litmap is silent when no theme holds more than half", {
   expect_silent(tf_litmap(paired(c("a1", "hub"), c("b1", "b2"))))  # two of four keywords: half
   expect_silent(tf_litmap(tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))))
   expect_silent(tf_litmap(paired()))
+})
+
+# -- simple centres (API_SPEC.md section 14) ----------------------------------
+# The Python suite runs the same cases and expects the same results.
+
+# A corpus with one record for each keyword vector.
+records_of <- function(...) {
+  lists <- list(...)
+  records <- lapply(seq_along(lists), function(i) {
+    list(id = paste0("w", i - 1L), keywords = as.list(lists[[i]]))
+  })
+  list(schema_version = "1.0", id = "c", records = records)
+}
+
+sc <- function(corpus, ...) tf_litmap(corpus, method = "simple_centres", ...)
+
+theme_keywords <- function(lm) {
+  lapply(lm$themes, function(th) unlist(th$keywords, use.names = FALSE))
+}
+
+method_message <- "litmap requires method to be 'components' or 'simple_centres'"
+
+test_that("tf_litmap and tf_landscape refuse an unknown method", {
+  corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  for (bad in list("louvain", "Simple_centres", "", NULL, NA, NA_character_, 1,
+                   c("components", "simple_centres"), list("components"))) {
+    expect_refusal(tf_litmap(corpus, method = bad), method_message)
+    expect_refusal(tf_landscape(theory, corpus, method = bad), method_message)
+  }
+})
+
+test_that("bad theme settings are refused in either method", {
+  corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
+  cases <- list(
+    list(list(min_theme_size = 0), "min_theme_size must be a positive integer"),
+    list(list(min_theme_size = 2.5), "min_theme_size must be a positive integer"),
+    list(list(min_theme_size = TRUE), "min_theme_size must be a positive integer"),
+    list(list(max_theme_size = 1), "max_theme_size must be an integer of at least 2"),
+    list(list(max_theme_size = 3.5), "max_theme_size must be an integer of at least 2"),
+    list(list(max_theme_size = "10"), "max_theme_size must be an integer of at least 2"),
+    list(list(min_theme_size = 4, max_theme_size = 3),
+         "min_theme_size must not exceed max_theme_size"),
+    list(list(max_df = -0.1), "max_df must be a number between 0 and 1"),
+    list(list(max_df = 1.5), "max_df must be a number between 0 and 1"),
+    list(list(max_df = "1"), "max_df must be a number between 0 and 1"),
+    list(list(max_df = TRUE), "max_df must be a number between 0 and 1"),
+    list(list(max_df = NaN), "max_df must be a number between 0 and 1")
+  )
+  for (method in c("components", "simple_centres")) {
+    for (cs in cases) {
+      args <- c(list(corpus, method = method), cs[[1]])
+      expect_refusal(do.call(tf_litmap, args), cs[[2]])
+    }
+  }
+})
+
+test_that("tf_litmap checks its arguments in signature order", {
+  misspelt <- list(schema_version = "1.0", id = "c", recrods = list())
+  calls <- list(
+    list(list(min_link = 0, method = "x", min_cocitation = 0), "min_link must be a positive integer"),
+    list(list(method = "x", min_cocitation = 0), method_message),
+    list(list(min_cocitation = 0, min_theme_size = 0), "min_cocitation must be a positive integer"),
+    list(list(min_theme_size = 0, max_theme_size = 1), "min_theme_size must be a positive integer"),
+    list(list(max_theme_size = 1, max_df = 2), "max_theme_size must be an integer of at least 2"),
+    list(list(min_theme_size = 5, max_theme_size = 4, max_df = 2),
+         "min_theme_size must not exceed max_theme_size"),
+    list(list(max_df = 2), "max_df must be a number between 0 and 1"),
+    list(list(), "invalid corpus: missing records list")
+  )
+  for (cs in calls) {
+    expect_refusal(do.call(tf_litmap, c(list(misspelt), cs[[1]])), cs[[2]])
+  }
+})
+
+test_that("the components record is unchanged by the new arguments", {
+  corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
+  lm <- tf_litmap(corpus)
+  expect_identical(names(lm), c("n_records", "keywords", "keyword_cooccurrence", "themes",
+                                "co_citation"))
+  expect_identical(tf_litmap(corpus, method = "components", min_theme_size = 3,
+                             max_theme_size = 4, max_df = 0.1), lm)
+})
+
+test_that("simple centres reproduce the four designed themes", {
+  corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
+  lm <- sc(corpus)
+  components <- tf_litmap(corpus)
+  expect_identical(names(lm), c("n_records", "keywords", "keyword_cooccurrence", "themes",
+                                "co_citation", "method", "parameters", "field_terms"))
+  expect_identical(lm$method, "simple_centres")
+  expect_identical(lm$parameters, list(min_link = 2L, min_cocitation = 2L, min_theme_size = 2L,
+                                       max_theme_size = 10L, max_df = 1))
+  expect_identical(lm$field_terms, list())
+  expect_identical(theme_keywords(lm), theme_keywords(components))
+  for (key in c("n_records", "keywords", "keyword_cooccurrence", "co_citation")) {
+    expect_identical(lm[[key]], components[[key]], info = key)
+  }
+  # Four isolated pairs that always occur together: no external links, and an
+  # equivalence index of 1 inside each, so 100 * 1 / 2 = 50.
+  got <- lapply(lm$themes, function(th) list(th$id, th$size, th$centrality, th$density, th$quadrant))
+  expect_identical(got, lapply(1:4, function(i) list(paste0("theme_", i), 2L, 0, 50, "motor")))
+})
+
+test_that("simple centres seed themes by the strongest link in code point order", {
+  # (B, m) and (a, m) have the same equivalence index, and "B" sorts before "a"
+  # by code point, so (B, m) seeds the first theme and takes m.
+  corpus <- records_of(c("a", "m"), c("a", "m"), c("B", "m"), c("B", "m"))
+  expect_identical(theme_keywords(sc(corpus, max_theme_size = 2)), list(c("B", "m")))
+  # Without the cap, the theme grows through m to a.
+  expect_identical(theme_keywords(sc(corpus)), list(c("B", "a", "m")))
+})
+
+test_that("simple centres grow by the strongest neighbour", {
+  # s and t always occur together (e = 1). z joins them in three records
+  # (e = 9 / 15 = 0.6) and a in two (e = 4 / 10 = 0.4), so z joins first.
+  corpus <- records_of(c("s", "t", "a"), c("s", "t", "a"), c("s", "t", "z"), c("s", "t", "z"),
+                       c("s", "t", "z"))
+  expect_identical(theme_keywords(sc(corpus, max_theme_size = 3)), list(c("s", "t", "z")))
+  expect_identical(theme_keywords(sc(corpus)), list(c("a", "s", "t", "z")))
+})
+
+test_that("simple centres break a growth tie by code point", {
+  # a and Z are equally strong neighbours, and "Z" sorts before "a".
+  corpus <- records_of(c("s", "t", "a"), c("s", "t", "a"), c("s", "t", "Z"), c("s", "t", "Z"))
+  expect_identical(theme_keywords(sc(corpus, max_theme_size = 3)), list(c("Z", "s", "t")))
+})
+
+test_that("simple centres keep themes of at least min_theme_size", {
+  corpus <- records_of(c("a", "b"), c("a", "b"), c("c", "d", "e"), c("c", "d", "e"))
+  expect_identical(theme_keywords(sc(corpus)), list(c("a", "b"), c("c", "d", "e")))
+  lm <- sc(corpus, min_theme_size = 3)
+  expect_identical(lapply(lm$themes, function(th) list(th$id, unlist(th$keywords))),
+                   list(list("theme_1", c("c", "d", "e"))))
+  expect_identical(lm$parameters$min_theme_size, 3L)
+})
+
+test_that("simple centres score centrality and density", {
+  # The theme {s, t, z} has three internal links, s-t (1) and s-z and t-z
+  # (0.6 each). Its links s-a and t-a reach a keyword in no theme, which
+  # centrality does not count (Cobo et al., 2011).
+  keywords <- list(c("s", "t", "a"), c("s", "t", "a"), c("s", "t", "z"), c("s", "t", "z"),
+                   c("s", "t", "z"))
+  themes <- sc(do.call(records_of, keywords), max_theme_size = 3)$themes
+  expect_identical(themes, list(list(id = "theme_1", keywords = list("s", "t", "z"), size = 3L,
+                                     centrality = 0, density = 73.333333, quadrant = "motor")))
+  # Once a forms the theme {a, q}, s-a and t-a (4 / 20 = 0.2 each) link two
+  # themes and count for both.
+  corpus <- do.call(records_of, c(keywords, list(c("a", "q"), c("a", "q"))))
+  themes <- sc(corpus, max_theme_size = 3)$themes
+  expect_identical(themes, list(
+    list(id = "theme_1", keywords = list("a", "q"), size = 2L,
+         centrality = 4, density = 25, quadrant = "basic"),
+    list(id = "theme_2", keywords = list("s", "t", "z"), size = 3L,
+         centrality = 4, density = 73.333333, quadrant = "motor")
+  ))
+})
+
+test_that("simple centres split the strategic diagram at the medians", {
+  # Two themes of two: {a, b} (internal 1) and {x, y} (internal 0.5), both with
+  # external links a-x and b-x of 0.5. Centrality is 10 for both, and the
+  # density median of an even count is the mean of the middle two, 37.5.
+  corpus <- records_of(c("a", "b", "x"), c("a", "b", "x"), c("x", "y"), c("x", "y"))
+  got <- lapply(sc(corpus, max_theme_size = 2)$themes, function(th) {
+    list(unlist(th$keywords), th$centrality, th$density, th$quadrant)
+  })
+  expect_identical(got, list(list(c("a", "b"), 10, 50, "motor"),
+                             list(c("x", "y"), 10, 25, "basic")))
+})
+
+test_that("max_df excludes field terms", {
+  corpus <- records_of(c("hub", "a", "b"), c("hub", "a", "b"), c("hub", "c", "d"),
+                       c("hub", "c", "d"))
+  # A keyword in every record is not in more than max_df = 1 of them, so the
+  # hub links the two pairs into one theme.
+  expect_identical(theme_keywords(sc(corpus)), list(c("a", "b", "c", "d", "hub")))
+  lm <- sc(corpus, max_df = 0.5)
+  expect_identical(lm$field_terms, list("hub"))
+  expect_identical(lm$parameters$max_df, 0.5)
+  expect_identical(unlist(lm$keywords), c("a", "b", "c", "d", "hub"))
+  expect_identical(edge_strings(lm$keyword_cooccurrence), c("a|b|2", "c|d|2"))
+  expect_identical(theme_keywords(lm), list(c("a", "b"), c("c", "d")))
+})
+
+test_that("simple centres give no giant-theme warning", {
+  lm <- expect_silent(sc(paired(c("k1", "k2", "k3", "k4"), c("m1", "m2"))))
+  expect_identical(vapply(lm$themes, function(th) th$size, integer(1)), c(4L, 2L))
+})
+
+test_that("simple centres on an empty corpus", {
+  lm <- sc(list(schema_version = "1.0", id = "c", records = list()))
+  expect_identical(list(lm$themes, lm$field_terms, lm$keyword_cooccurrence),
+                   list(list(), list(), list()))
+})
+
+openalex <- "openalex-panic-2026.corpus.yaml"
+
+test_that("the frozen OpenAlex corpus ships in the package", {
+  expect_true(openalex %in% tf_example_names())
+  corpus <- tf_read_corpus(tf_example_path(openalex))
+  expect_identical(corpus$id, "openalex-panic-2026")
+  expect_identical(corpus$source$n_records, 150L)
+  expect_length(corpus$records, 150L)
+  expect_identical(corpus$source$retrieved, "2026-10-01T23:29:27Z")
+  expect_false(any(vapply(corpus$records, function(r) "references" %in% names(r), logical(1))))
+})
+
+test_that("components give one giant theme on the frozen corpus", {
+  corpus <- tf_read_corpus(tf_fixture_path(openalex))
+  expect_warning(tf_litmap(corpus), "^litmap: one theme holds ")
+})
+
+test_that("simple centres give bounded themes on the frozen corpus", {
+  corpus <- tf_read_corpus(tf_fixture_path(openalex))
+  lm <- expect_silent(sc(corpus))
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  ls <- expect_silent(tf_landscape(theory, corpus, method = "simple_centres"))
+  sizes <- vapply(lm$themes, function(th) th$size, integer(1))
+  expect_gt(length(sizes), 1L)
+  expect_lte(max(sizes), 10L)
+  expect_setequal(vapply(lm$themes, function(th) th$quadrant, character(1)),
+                  c("motor", "basic", "niche", "emerging_or_declining"))
+  expect_identical(ls$method, "simple_centres")
+  expect_identical(lapply(ls$themes, function(th) unlist(th$keywords)), theme_keywords(lm))
+})
+
+test_that("tf_landscape carries the strategic diagram with simple centres", {
+  corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  ls <- tf_landscape(theory, corpus, method = "simple_centres")
+  expect_identical(names(ls), c("theory_id", "method", "max_token_share", "field_tokens",
+                                "phenomenon_tokens", "themes", "under_theorised_fronts",
+                                "redundancy_risk"))
+  expect_identical(names(ls$themes[[1]]), c("id", "keywords", "alternatives", "focal", "status",
+                                            "focal_terms", "alternative_terms", "centrality",
+                                            "density", "quadrant"))
+  # The demo's four themes are the same by either method, and so are their statuses.
+  components <- tf_landscape(theory, corpus)
+  expect_identical(statuses(ls), statuses(components))
+  expect_false("method" %in% names(components))
+})
+
+test_that("simple centres match the goldens", {
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  # Read without simplifying, so that an array stays a list and is compared as
+  # one, and compare numbers within the parity tolerance.
+  golden <- function(name) jsonlite::fromJSON(tf_expected_path(name), simplifyVector = FALSE)
+  for (cs in list(c("panic-corpus.yaml", "panic-corpus-demo"),
+                  c(openalex, "openalex-panic-2026"))) {
+    corpus <- tf_read_corpus(tf_fixture_path(cs[[1]]))
+    got <- jsonlite::fromJSON(jsonlite::toJSON(sc(corpus), auto_unbox = TRUE, digits = NA),
+                              simplifyVector = FALSE)
+    expect_equal(got, golden(paste0(cs[[2]], ".litmap_simple_centres.json")), tolerance = 1e-9,
+                 info = cs[[2]])
+  }
+  corpus <- tf_read_corpus(tf_fixture_path(openalex))
+  ls <- tf_landscape(theory, corpus, method = "simple_centres")
+  got <- jsonlite::fromJSON(jsonlite::toJSON(ls, auto_unbox = TRUE, digits = NA),
+                            simplifyVector = FALSE)
+  expect_equal(got, golden("openalex-panic-2026.landscape_simple_centres.json"), tolerance = 1e-9)
+  expect_identical(tf_lit_diagram(ls, "theme_landscape"),
+                   tf_read_golden(tf_expected_path("openalex-panic-2026.theme_landscape_simple_centres.dot")))
 })
 
 four_edges <- function() {

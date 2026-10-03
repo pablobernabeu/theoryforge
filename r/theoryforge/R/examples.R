@@ -11,8 +11,10 @@ NULL
 
 #' Names of the packaged example files
 #'
-#' The bundled set is four example theories and one literature corpus,
-#' \code{panic-corpus.yaml}, which [tf_read_corpus()] reads.
+#' The bundled set is four example theories and two literature corpora, which
+#' [tf_read_corpus()] reads. \code{panic-corpus.yaml} is a small corpus designed
+#' to fall into four themes, and \code{openalex-panic-2026.corpus.yaml} holds
+#' 150 works fetched from OpenAlex and frozen.
 #'
 #' @return A sorted character vector of the \code{.yaml} file names. The Python
 #'   twin's \code{example_names()} applies the same extension filter, so the two

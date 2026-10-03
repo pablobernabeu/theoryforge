@@ -4,7 +4,13 @@
 \alias{tf_landscape}
 \title{Map a theory and its alternatives onto a literature landscape (deterministic)}
 \usage{
-tf_landscape(theory, corpus, min_link = 2, max_token_share = 0.5)
+tf_landscape(
+  theory,
+  corpus,
+  min_link = 2,
+  max_token_share = 0.5,
+  method = "components"
+)
 }
 \arguments{
 \item{theory}{A theory object (named list), e.g. from \code{tf_read()}.}
@@ -18,6 +24,9 @@ use, is not computed.}
 \item{max_token_share}{A number from 0 to 1 (default \code{0.5}). A word in
 the keywords of more than this share of the records is a field token and
 never matches.}
+
+\item{method}{How \code{\link[=tf_litmap]{tf_litmap()}} builds the themes: \code{"components"}
+(the default) or \code{"simple_centres"}.}
 }
 \value{
 A named list with elements \code{theory_id},
@@ -56,9 +65,13 @@ The two lists keep their 0.6.0 names, \code{under_theorised_fronts} and
 \code{redundancy_risk}.
 
 The arguments are checked in the order \code{min_link},
-\code{max_token_share}, then the corpus, with the Python twin's messages.
-The themes are those of \code{\link[=tf_litmap]{tf_litmap()}}, and \code{tf_landscape()} gives its
-warning when one of them holds most of the linked keywords.
+\code{max_token_share}, \code{method}, then the corpus, with the Python
+twin's messages. The themes are those of \code{\link[=tf_litmap]{tf_litmap()}}, built by
+\code{method} with its other defaults. With \code{"components"},
+\code{tf_landscape()} gives the warning of \code{\link[=tf_litmap]{tf_litmap()}} when one theme
+holds most of the linked keywords. With \code{"simple_centres"}, the result
+gains \code{method} after \code{theory_id}, and each theme its
+\code{centrality}, \code{density} and \code{quadrant}.
 }
 \examples{
 theory <- tf_theory("demo-1", "A theory of panic") |>

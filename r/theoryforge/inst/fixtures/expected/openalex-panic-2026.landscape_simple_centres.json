@@ -1,0 +1,385 @@
+{
+  "theory_id": "panic-network-2026",
+  "method": "simple_centres",
+  "max_token_share": 0.5,
+  "field_tokens": [
+    "disorder",
+    "panic"
+  ],
+  "phenomenon_tokens": [
+    "disorder",
+    "network",
+    "panic",
+    "theory"
+  ],
+  "themes": [
+    {
+      "id": "theme_1",
+      "keywords": [
+        "Anxiety Sensitivity Index",
+        "anxiety sensitivity",
+        "bodily sensations",
+        "body vigilance",
+        "catastrophic misinterpretation"
+      ],
+      "alternatives": [
+        "alt_cognitive"
+      ],
+      "focal": false,
+      "status": "covered",
+      "focal_terms": [],
+      "alternative_terms": [
+        {
+          "id": "alt_cognitive",
+          "terms": [
+            "catastrophic",
+            "misinterpretation"
+          ]
+        }
+      ],
+      "centrality": 2.672471,
+      "density": 16.527778,
+      "quadrant": "basic"
+    },
+    {
+      "id": "theme_2",
+      "keywords": [
+        "Epidemiologic Catchment Area study",
+        "age of onset",
+        "alcohol abuse",
+        "disability",
+        "health care utilization",
+        "long-term follow-up",
+        "psychiatric comorbidity",
+        "quality of life",
+        "sex differences",
+        "suicide attempts"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 21.568953,
+      "density": 25.107143,
+      "quadrant": "basic"
+    },
+    {
+      "id": "theme_3",
+      "keywords": [
+        "Panic Disorder Severity Scale",
+        "cognitive behavioral therapy",
+        "cognitive restructuring",
+        "imipramine",
+        "internal consistency",
+        "interoceptive exposure",
+        "primary care",
+        "relapse prevention",
+        "treatment outcomes",
+        "treatment response"
+      ],
+      "alternatives": [
+        "alt_cognitive"
+      ],
+      "focal": false,
+      "status": "covered",
+      "focal_terms": [],
+      "alternative_terms": [
+        {
+          "id": "alt_cognitive",
+          "terms": [
+            "cognitive"
+          ]
+        }
+      ],
+      "centrality": 22.628193,
+      "density": 20.960784,
+      "quadrant": "basic"
+    },
+    {
+      "id": "theme_4",
+      "keywords": [
+        "adverse events",
+        "antidepressant efficacy",
+        "dose-response relationship",
+        "drug safety",
+        "outpatients",
+        "placebo comparison",
+        "selective serotonin reuptake inhibitors",
+        "sertraline",
+        "treatment efficacy",
+        "treatment tolerability"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 8.99724,
+      "density": 32.592593,
+      "quadrant": "motor"
+    },
+    {
+      "id": "theme_5",
+      "keywords": [
+        "agoraphobia",
+        "anxiety disorders",
+        "autonomic dysfunction",
+        "comorbidities",
+        "heart rate variability",
+        "major depressive disorder",
+        "panic attacks",
+        "panic disorder",
+        "post-traumatic stress disorder",
+        "prevalence"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 62.11641,
+      "density": 45.993651,
+      "quadrant": "motor"
+    },
+    {
+      "id": "theme_6",
+      "keywords": [
+        "alcoholism",
+        "behavior therapy",
+        "clinical course",
+        "depression",
+        "family studies",
+        "first-degree relatives",
+        "generalized anxiety disorder",
+        "heartbeat perception",
+        "social anxiety disorder"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 11.797484,
+      "density": 10.37037,
+      "quadrant": "basic"
+    },
+    {
+      "id": "theme_7",
+      "keywords": [
+        "alprazolam",
+        "anxiety",
+        "benzodiazepines",
+        "carbon dioxide inhalation",
+        "drug efficacy",
+        "fear",
+        "hyperventilation",
+        "maintenance of treatment gains",
+        "respiratory control",
+        "sodium lactate infusion"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 12.684047,
+      "density": 27.979243,
+      "quadrant": "basic"
+    },
+    {
+      "id": "theme_8",
+      "keywords": [
+        "amygdala",
+        "antidepressants",
+        "anxiolytics",
+        "fear network",
+        "hippocampus",
+        "limbic system",
+        "medial prefrontal cortex",
+        "pharmacotherapy",
+        "prefrontal cortex",
+        "serotonin"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 16.321312,
+      "density": 60.666667,
+      "quadrant": "motor"
+    },
+    {
+      "id": "theme_9",
+      "keywords": [
+        "anticipatory anxiety",
+        "fear-potentiated startle",
+        "phobic avoidance"
+      ],
+      "alternatives": [],
+      "focal": true,
+      "status": "covered",
+      "focal_terms": [
+        "avoidance"
+      ],
+      "alternative_terms": [],
+      "centrality": 1.637324,
+      "density": 20.0,
+      "quadrant": "emerging_or_declining"
+    },
+    {
+      "id": "theme_10",
+      "keywords": [
+        "booster sessions",
+        "cognitive therapy",
+        "cost-effectiveness",
+        "exposure therapy",
+        "maintenance of treatment effects",
+        "psychological intervention",
+        "relaxation training",
+        "self-instructional module",
+        "treatment duration",
+        "treatment expectations"
+      ],
+      "alternatives": [
+        "alt_cognitive"
+      ],
+      "focal": false,
+      "status": "covered",
+      "focal_terms": [],
+      "alternative_terms": [
+        {
+          "id": "alt_cognitive",
+          "terms": [
+            "cognitive"
+          ]
+        }
+      ],
+      "centrality": 9.275913,
+      "density": 144.240741,
+      "quadrant": "motor"
+    },
+    {
+      "id": "theme_11",
+      "keywords": [
+        "classical conditioning",
+        "conditioned anxiety"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 0.665339,
+      "density": 33.333333,
+      "quadrant": "niche"
+    },
+    {
+      "id": "theme_12",
+      "keywords": [
+        "clonidine",
+        "yohimbine"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 1.153144,
+      "density": 33.333333,
+      "quadrant": "niche"
+    },
+    {
+      "id": "theme_13",
+      "keywords": [
+        "combined psychotherapy and pharmacotherapy",
+        "placebo response"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 1.758414,
+      "density": 13.333333,
+      "quadrant": "emerging_or_declining"
+    },
+    {
+      "id": "theme_14",
+      "keywords": [
+        "disease severity assessment",
+        "inter-rater reliability"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 0.272109,
+      "density": 50.0,
+      "quadrant": "niche"
+    },
+    {
+      "id": "theme_15",
+      "keywords": [
+        "familial aggregation",
+        "genetic transmission"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 0.47619,
+      "density": 37.5,
+      "quadrant": "niche"
+    },
+    {
+      "id": "theme_16",
+      "keywords": [
+        "hypervigilance",
+        "somatic symptoms"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 0.755102,
+      "density": 14.285714,
+      "quadrant": "emerging_or_declining"
+    },
+    {
+      "id": "theme_17",
+      "keywords": [
+        "psychometric properties",
+        "reliability"
+      ],
+      "alternatives": [],
+      "focal": false,
+      "status": "under_theorised",
+      "focal_terms": [],
+      "alternative_terms": [],
+      "centrality": 0.272109,
+      "density": 50.0,
+      "quadrant": "niche"
+    }
+  ],
+  "under_theorised_fronts": [
+    "theme_2",
+    "theme_4",
+    "theme_5",
+    "theme_6",
+    "theme_7",
+    "theme_8",
+    "theme_11",
+    "theme_12",
+    "theme_13",
+    "theme_14",
+    "theme_15",
+    "theme_16",
+    "theme_17"
+  ],
+  "redundancy_risk": []
+}

@@ -163,6 +163,61 @@ print("keyword edges:", len(m_cited["keyword_cooccurrence"]))
 print("co-citation edges at min_cocitation=3:", m_cited["co_citation"])
 ```
 
+## Themes by simple centres
+
+`method="simple_centres"` groups keywords as co-word analysis does, by the
+simple-centres algorithm of Coulter et al. (1998) as Cobo et al. (2011)
+describe it. Each pair of linked keywords is weighted by its equivalence
+index: the square of the number of records holding both, divided by the
+product of the numbers holding each. Two keywords that always occur together
+score 1. A keyword that most records carry scores little with the rarer
+keywords it meets, because the index cannot exceed the ratio of the smaller
+record count to the larger. With the cap on a theme's size, this keeps a few
+such keywords from pulling the map into one theme. The strongest link between
+two keywords not yet in a theme starts one. The theme then takes the free
+keyword most strongly linked to any of its members, one at a time, until it
+holds `max_theme_size` keywords, ten by default, or has no free neighbour.
+A keyword whose links all reach keywords already in themes joins none, and on
+the real corpus below about two in five linked keywords end up in no theme.
+Themes smaller than `min_theme_size`, two by default, are dropped. `max_df`
+leaves out the keywords held by more than that share of the records and lists
+them as `field_terms`. At its default of 1, it leaves out none.
+
+On the designed fixture, simple centres find the same four themes as
+components. The package also ships a real corpus, frozen so that its results
+stay fixed. It holds the 150 works that OpenAlex ranked first for the search
+"panic disorder" on 1 October 2026, with OpenAlex's keywords of that date and
+without their references. Components put every linked keyword of it in one
+theme, while simple centres give bounded ones.
+
+```python exec="1" source="material-block" result="text" session="literature"
+openalex = tf.read_corpus(tf.example_path("openalex-panic-2026.corpus.yaml"))
+with warnings.catch_warnings(record=True):
+    warnings.simplefilter("always")
+    print("components:", [t["size"] for t in tf.litmap(openalex)["themes"]])
+
+sc = tf.litmap(openalex, method="simple_centres")
+print("simple centres:", [t["size"] for t in sc["themes"]])
+for theme in sc["themes"][:6]:
+    print(theme["id"], theme["quadrant"], theme["centrality"], theme["density"],
+          "|", ", ".join(theme["keywords"][:4]))
+```
+
+Each simple-centres theme also carries the two measures of Callon et al.
+(1991), scaled as Cobo et al. (2011) scale them. Centrality is ten times the
+summed index of the theme's links to the keywords of other themes, and says
+how strongly the theme is tied to the rest of the field. Density is 100 times the
+summed index of its internal links, divided by its size, and says how strongly
+the theme holds together. Splitting each measure at its median places the
+theme in one quadrant of the strategic diagram. Motor themes are both central
+and dense, basic themes central but not dense, niche themes dense but
+peripheral, and the rest `emerging_or_declining`. Telling an emerging theme
+from a declining one needs corpora from more than one period. The record also
+gains `method`, the five `parameters` used and `field_terms`.
+
+Components remain the default for this release, and the default is planned to
+become simple centres in the next minor release.
+
 ## Positioning a theory against the field
 
 `Theory.landscape` takes the themes from `litmap` and places a theory on
@@ -211,10 +266,18 @@ corpus)`, which is convenient when the theory is held as a plain dictionary
 rather than a `Theory` object. The `min_link` argument is passed through to
 the underlying `litmap` call, which skips the co-citation count because the
 landscape does not use it. `max_token_share` sets the share of records above
-which a word counts as a field token.
+which a word counts as a field token. `method` chooses how `litmap` builds the
+themes. With `"simple_centres"`, the record gains `method` after `theory_id`,
+and each theme keeps its `centrality`, `density` and `quadrant`. A front that
+none of the accounts addresses can then be read with its place in the
+strategic diagram.
 
-```python exec="1" source="material-block" session="literature"
+```python exec="1" source="material-block" result="text" session="literature"
 ls = tf.landscape(t, corpus, min_link=2, max_token_share=0.5)
+
+real = t.landscape(openalex, method="simple_centres")
+for theme in real["themes"][:6]:
+    print(theme["id"], theme["status"], theme["quadrant"], "|", ", ".join(theme["keywords"][:3]))
 ```
 
 ## Emitting a literature diagram

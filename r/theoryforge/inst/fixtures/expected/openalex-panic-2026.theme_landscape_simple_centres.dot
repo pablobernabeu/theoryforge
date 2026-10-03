@@ -1,0 +1,28 @@
+digraph theme_landscape {
+  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+  "theme_1" [label="theme_1\nAnxiety Sensitivity\nIndex, anxiety\nsensitivity, bodily\nsensations, body\nvigilance, catastrophic\nmisinterpretation\n(covered)", fillcolor="#F1F1F1", color="#8A8A8A"];
+  "theme_2" [label="theme_2\nEpidemiologic Catchment\nArea study, age of\nonset, alcohol abuse,\ndisability, health care\nutilization, long-term\nfollow-up, psychiatric\ncomorbidity, quality of\nlife, sex differences,\nsuicide attempts\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_3" [label="theme_3\nPanic Disorder Severity\nScale, cognitive\nbehavioral therapy,\ncognitive restructuring,\nimipramine, internal\nconsistency,\ninteroceptive exposure,\nprimary care, relapse\nprevention, treatment\noutcomes, treatment\nresponse\n(covered)", fillcolor="#F1F1F1", color="#8A8A8A"];
+  "theme_4" [label="theme_4\nadverse events,\nantidepressant efficacy,\ndose-response\nrelationship, drug\nsafety, outpatients,\nplacebo comparison,\nselective serotonin\nreuptake inhibitors,\nsertraline, treatment\nefficacy, treatment\ntolerability\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_5" [label="theme_5\nagoraphobia, anxiety\ndisorders, autonomic\ndysfunction,\ncomorbidities, heart\nrate variability, major\ndepressive disorder,\npanic attacks, panic\ndisorder, post-traumatic\nstress disorder,\nprevalence\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_6" [label="theme_6\nalcoholism, behavior\ntherapy, clinical\ncourse, depression,\nfamily studies,\nfirst-degree relatives,\ngeneralized anxiety\ndisorder, heartbeat\nperception, social\nanxiety disorder\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_7" [label="theme_7\nalprazolam, anxiety,\nbenzodiazepines, carbon\ndioxide inhalation, drug\nefficacy, fear,\nhyperventilation,\nmaintenance of treatment\ngains, respiratory\ncontrol, sodium lactate\ninfusion\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_8" [label="theme_8\namygdala,\nantidepressants,\nanxiolytics, fear\nnetwork, hippocampus,\nlimbic system, medial\nprefrontal cortex,\npharmacotherapy,\nprefrontal cortex,\nserotonin\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_9" [label="theme_9\nanticipatory anxiety,\nfear-potentiated\nstartle, phobic\navoidance\n(covered)", fillcolor="#F1F1F1", color="#8A8A8A"];
+  "theme_10" [label="theme_10\nbooster sessions,\ncognitive therapy,\ncost-effectiveness,\nexposure therapy,\nmaintenance of treatment\neffects, psychological\nintervention, relaxation\ntraining,\nself-instructional\nmodule, treatment\nduration, treatment\nexpectations\n(covered)", fillcolor="#F1F1F1", color="#8A8A8A"];
+  "theme_11" [label="theme_11\nclassical conditioning,\nconditioned anxiety\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_12" [label="theme_12\nclonidine, yohimbine\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_13" [label="theme_13\ncombined psychotherapy\nand pharmacotherapy,\nplacebo response\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_14" [label="theme_14\ndisease severity\nassessment, inter-rater\nreliability\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_15" [label="theme_15\nfamilial aggregation,\ngenetic transmission\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_16" [label="theme_16\nhypervigilance, somatic\nsymptoms\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "theme_17" [label="theme_17\npsychometric properties,\nreliability\n(under_theorised)", fillcolor="#E4F1F1", color="#1E7B7B"];
+  "alt_cognitive" [label="alt_cognitive", shape=ellipse, fillcolor="#F1F1F1", color="#8A8A8A"];
+  "focal" [label="focal", shape=ellipse, fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
+  "alt_cognitive" -> "theme_1";
+  "alt_cognitive" -> "theme_3";
+  "alt_cognitive" -> "theme_10";
+  "focal" -> "theme_9";
+}

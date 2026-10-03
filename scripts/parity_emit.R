@@ -214,6 +214,30 @@ suppressWarnings(suppressMessages({
                 file.path(out_dir, paste0(cid, ".landscape.json")))
       write_raw(tf_lit_diagram(ls, "theme_landscape"),
                 file.path(out_dir, paste0(cid, ".theme_landscape.dot")))
+
+      # digits = NA writes every double in full, where the default four digits
+      # would round centrality and density.
+      write_json <- function(x, name) {
+        write_raw(paste0(jsonlite::toJSON(x, auto_unbox = TRUE, digits = NA, pretty = TRUE), "\n"),
+                  file.path(out_dir, name))
+      }
+      write_json(tf_litmap(corpus, method = "simple_centres"),
+                 paste0(cid, ".litmap_simple_centres.json"))
+
+      # Every real corpus frozen in fixtures/, as scripts/gen_golden.py
+      # processes it. The giant-theme warning of the components map is
+      # suppressed with every other warning here.
+      for (path in sort(list.files(fixtures_dir, pattern = "\\.corpus\\.yaml$", full.names = TRUE))) {
+        corpus <- tf_read_corpus(path)
+        cid <- corpus$id
+        write_json(tf_litmap(corpus), paste0(cid, ".litmap.json"))
+        write_json(tf_litmap(corpus, method = "simple_centres"),
+                   paste0(cid, ".litmap_simple_centres.json"))
+        ls <- tf_landscape(panic, corpus, method = "simple_centres")
+        write_json(ls, paste0(cid, ".landscape_simple_centres.json"))
+        write_raw(tf_lit_diagram(ls, "theme_landscape"),
+                  file.path(out_dir, paste0(cid, ".theme_landscape_simple_centres.dot")))
+      }
     }
 
     # Name what was loaded. A parity result means nothing without it: the same

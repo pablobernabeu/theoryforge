@@ -423,7 +423,8 @@ def test_landscape_checks_min_link_then_max_token_share_then_the_corpus(panic_pa
 
 GIANT_THEME = ("litmap: one theme holds {p} per cent of the {n} linked keywords; connected "
                "components cannot separate themes in a corpus this connected, so the themes and "
-               "any landscape built on them are not informative")
+               "any landscape built on them are not informative (method 'simple_centres' gives "
+               "bounded themes)")
 
 
 def test_litmap_warns_when_one_theme_holds_most_linked_keywords():
@@ -449,6 +450,262 @@ def test_litmap_is_silent_when_no_theme_holds_more_than_half(fixtures_dir):
         tf.litmap(_paired(["a1", "hub"], ["b1", "b2"]))  # two of four keywords: half
         tf.litmap(_corpus(fixtures_dir))
         tf.litmap(_paired())
+
+
+# -- simple centres (API_SPEC.md section 14) ----------------------------------
+# The R suite runs the same cases and expects the same results.
+
+def _records(*keyword_lists):
+    """A corpus with one record for each keyword list."""
+    records = [{"id": f"w{i}", "keywords": list(kws)} for i, kws in enumerate(keyword_lists)]
+    return {"schema_version": "1.0", "id": "c", "records": records}
+
+
+def _sc(corpus, **kw):
+    return tf.litmap(corpus, method="simple_centres", **kw)
+
+
+def _theme_keywords(lm):
+    return [t["keywords"] for t in lm["themes"]]
+
+
+METHOD_MESSAGE = "litmap requires method to be 'components' or 'simple_centres'"
+
+
+@pytest.mark.parametrize("bad", ["louvain", "Simple_centres", "", None, 1, ["components"]])
+def test_litmap_refuses_an_unknown_method(fixtures_dir, panic_path, bad):
+    with pytest.raises(ValueError) as exc:
+        tf.litmap(_corpus(fixtures_dir), method=bad)
+    assert str(exc.value) == METHOD_MESSAGE
+    with pytest.raises(ValueError) as exc:
+        tf.read(panic_path).landscape(_corpus(fixtures_dir), method=bad)
+    assert str(exc.value) == METHOD_MESSAGE
+
+
+@pytest.mark.parametrize(("kw", "message"), [
+    ({"min_theme_size": 0}, "min_theme_size must be a positive integer"),
+    ({"min_theme_size": 2.5}, "min_theme_size must be a positive integer"),
+    ({"min_theme_size": True}, "min_theme_size must be a positive integer"),
+    ({"max_theme_size": 1}, "max_theme_size must be an integer of at least 2"),
+    ({"max_theme_size": 3.5}, "max_theme_size must be an integer of at least 2"),
+    ({"max_theme_size": "10"}, "max_theme_size must be an integer of at least 2"),
+    ({"min_theme_size": 4, "max_theme_size": 3}, "min_theme_size must not exceed max_theme_size"),
+    ({"max_df": -0.1}, "max_df must be a number between 0 and 1"),
+    ({"max_df": 1.5}, "max_df must be a number between 0 and 1"),
+    ({"max_df": "1"}, "max_df must be a number between 0 and 1"),
+    ({"max_df": True}, "max_df must be a number between 0 and 1"),
+    ({"max_df": float("nan")}, "max_df must be a number between 0 and 1"),
+])
+@pytest.mark.parametrize("method", ["components", "simple_centres"])
+def test_litmap_refuses_bad_theme_settings_in_either_method(fixtures_dir, kw, message, method):
+    with pytest.raises(ValueError) as exc:
+        tf.litmap(_corpus(fixtures_dir), method=method, **kw)
+    assert str(exc.value) == message
+
+
+def test_litmap_checks_its_arguments_in_signature_order():
+    misspelt = {"schema_version": "1.0", "id": "c", "recrods": []}
+    calls = [
+        ({"min_link": 0, "method": "x", "min_cocitation": 0}, "min_link must be a positive integer"),
+        ({"method": "x", "min_cocitation": 0}, METHOD_MESSAGE),
+        ({"min_cocitation": 0, "min_theme_size": 0}, "min_cocitation must be a positive integer"),
+        ({"min_theme_size": 0, "max_theme_size": 1}, "min_theme_size must be a positive integer"),
+        ({"max_theme_size": 1, "max_df": 2}, "max_theme_size must be an integer of at least 2"),
+        ({"min_theme_size": 5, "max_theme_size": 4, "max_df": 2},
+         "min_theme_size must not exceed max_theme_size"),
+        ({"max_df": 2}, "max_df must be a number between 0 and 1"),
+        ({}, "invalid corpus: missing records list"),
+    ]
+    for kw, message in calls:
+        with pytest.raises(ValueError) as exc:
+            tf.litmap(misspelt, **kw)
+        assert str(exc.value) == message, kw
+
+
+def test_the_components_record_is_unchanged_by_the_new_arguments(fixtures_dir):
+    corpus = _corpus(fixtures_dir)
+    lm = tf.litmap(corpus)
+    assert list(lm) == ["n_records", "keywords", "keyword_cooccurrence", "themes", "co_citation"]
+    assert tf.litmap(corpus, method="components", min_theme_size=3, max_theme_size=4,
+                     max_df=0.1) == lm
+
+
+def test_simple_centres_reproduces_the_four_designed_themes(fixtures_dir):
+    corpus = _corpus(fixtures_dir)
+    lm = _sc(corpus)
+    components = tf.litmap(corpus)
+    assert list(lm) == ["n_records", "keywords", "keyword_cooccurrence", "themes", "co_citation",
+                        "method", "parameters", "field_terms"]
+    assert lm["method"] == "simple_centres"
+    assert lm["parameters"] == {"min_link": 2, "min_cocitation": 2, "min_theme_size": 2,
+                                "max_theme_size": 10, "max_df": 1.0}
+    assert lm["field_terms"] == []
+    assert _theme_keywords(lm) == _theme_keywords(components)
+    for key in ("n_records", "keywords", "keyword_cooccurrence", "co_citation"):
+        assert lm[key] == components[key], key
+    # Four isolated pairs that always occur together: no external links, and
+    # an equivalence index of 1 inside each, so 100 * 1 / 2 = 50.
+    assert [(t["id"], t["size"], t["centrality"], t["density"], t["quadrant"])
+            for t in lm["themes"]] == [(f"theme_{i}", 2, 0.0, 50.0, "motor") for i in range(1, 5)]
+
+
+def test_simple_centres_seeds_themes_by_the_strongest_link_in_code_point_order():
+    # (B, m) and (a, m) have the same equivalence index, and "B" sorts before
+    # "a" by code point, so (B, m) seeds the first theme and takes m.
+    corpus = _records(["a", "m"], ["a", "m"], ["B", "m"], ["B", "m"])
+    assert _theme_keywords(_sc(corpus, max_theme_size=2)) == [["B", "m"]]
+    # Without the cap, the theme grows through m to a.
+    assert _theme_keywords(_sc(corpus)) == [["B", "a", "m"]]
+
+
+def test_simple_centres_grows_by_the_strongest_neighbour():
+    # s and t always occur together (e = 1). z joins them in three records
+    # (e = 9 / 15 = 0.6) and a in two (e = 4 / 10 = 0.4), so z joins first.
+    corpus = _records(["s", "t", "a"], ["s", "t", "a"], ["s", "t", "z"], ["s", "t", "z"],
+                      ["s", "t", "z"])
+    assert _theme_keywords(_sc(corpus, max_theme_size=3)) == [["s", "t", "z"]]
+    assert _theme_keywords(_sc(corpus)) == [["a", "s", "t", "z"]]
+
+
+def test_simple_centres_breaks_a_growth_tie_by_code_point():
+    # a and Z are equally strong neighbours, and "Z" sorts before "a".
+    corpus = _records(["s", "t", "a"], ["s", "t", "a"], ["s", "t", "Z"], ["s", "t", "Z"])
+    assert _theme_keywords(_sc(corpus, max_theme_size=3)) == [["Z", "s", "t"]]
+
+
+def test_simple_centres_keeps_themes_of_at_least_min_theme_size():
+    corpus = _records(["a", "b"], ["a", "b"], ["c", "d", "e"], ["c", "d", "e"])
+    assert _theme_keywords(_sc(corpus)) == [["a", "b"], ["c", "d", "e"]]
+    lm = _sc(corpus, min_theme_size=3)
+    assert [(t["id"], t["keywords"]) for t in lm["themes"]] == [("theme_1", ["c", "d", "e"])]
+    assert lm["parameters"]["min_theme_size"] == 3
+
+
+def test_simple_centres_scores_centrality_and_density():
+    # The theme {s, t, z} has three internal links, s-t (1) and s-z and t-z
+    # (0.6 each). Its links s-a and t-a reach a keyword in no theme, which
+    # centrality does not count (Cobo et al., 2011).
+    keywords = [["s", "t", "a"], ["s", "t", "a"], ["s", "t", "z"], ["s", "t", "z"],
+                ["s", "t", "z"]]
+    (theme,) = _sc(_records(*keywords), max_theme_size=3)["themes"]
+    assert theme == {"id": "theme_1", "keywords": ["s", "t", "z"], "size": 3,
+                     "centrality": 0.0, "density": 73.333333, "quadrant": "motor"}
+    # Once a forms the theme {a, q}, s-a and t-a (4 / 20 = 0.2 each) link two
+    # themes and count for both.
+    lm = _sc(_records(*keywords, ["a", "q"], ["a", "q"]), max_theme_size=3)
+    assert lm["themes"] == [
+        {"id": "theme_1", "keywords": ["a", "q"], "size": 2,
+         "centrality": 4.0, "density": 25.0, "quadrant": "basic"},
+        {"id": "theme_2", "keywords": ["s", "t", "z"], "size": 3,
+         "centrality": 4.0, "density": 73.333333, "quadrant": "motor"},
+    ]
+
+
+def test_simple_centres_splits_the_strategic_diagram_at_the_medians():
+    # Two themes of two: {a, b} (internal 1) and {x, y} (internal 0.5), both
+    # with external links a-x and b-x of 0.5. Centrality is 10 for both, and the
+    # density median of an even count is the mean of the middle two, 37.5.
+    corpus = _records(["a", "b", "x"], ["a", "b", "x"], ["x", "y"], ["x", "y"])
+    lm = _sc(corpus, max_theme_size=2)
+    assert [(t["keywords"], t["centrality"], t["density"], t["quadrant"]) for t in lm["themes"]] == [
+        (["a", "b"], 10.0, 50.0, "motor"),
+        (["x", "y"], 10.0, 25.0, "basic"),
+    ]
+
+
+def test_max_df_excludes_field_terms():
+    corpus = _records(["hub", "a", "b"], ["hub", "a", "b"], ["hub", "c", "d"], ["hub", "c", "d"])
+    # A keyword in every record is not in more than max_df = 1 of them, so the
+    # hub links the two pairs into one theme.
+    assert _theme_keywords(_sc(corpus)) == [["a", "b", "c", "d", "hub"]]
+    lm = _sc(corpus, max_df=0.5)
+    assert lm["field_terms"] == ["hub"]
+    assert lm["parameters"]["max_df"] == 0.5
+    assert lm["keywords"] == ["a", "b", "c", "d", "hub"]
+    assert lm["keyword_cooccurrence"] == [{"a": "a", "b": "b", "count": 2},
+                                          {"a": "c", "b": "d", "count": 2}]
+    assert _theme_keywords(lm) == [["a", "b"], ["c", "d"]]
+
+
+def test_simple_centres_gives_no_giant_theme_warning():
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        lm = _sc(_paired(["k1", "k2", "k3", "k4"], ["m1", "m2"]))
+    assert [t["size"] for t in lm["themes"]] == [4, 2]
+
+
+def test_simple_centres_on_an_empty_corpus():
+    lm = _sc({"schema_version": "1.0", "id": "c", "records": []})
+    assert (lm["themes"], lm["field_terms"], lm["keyword_cooccurrence"]) == ([], [], [])
+
+
+OPENALEX = "openalex-panic-2026.corpus.yaml"
+
+
+def test_the_frozen_openalex_corpus_ships_in_the_package(fixtures_dir):
+    assert OPENALEX in tf.example_names()
+    corpus = tf.read_corpus(tf.example_path(OPENALEX))
+    assert corpus["id"] == "openalex-panic-2026"
+    assert corpus["source"]["n_records"] == len(corpus["records"]) == 150
+    assert corpus["source"]["retrieved"] == "2026-10-01T23:29:27Z"
+    assert all("references" not in r for r in corpus["records"])
+
+
+def test_components_give_one_giant_theme_on_the_frozen_corpus(fixtures_dir):
+    corpus = tf.read_corpus(fixtures_dir / OPENALEX)
+    with pytest.warns(UserWarning, match="^litmap: one theme holds "):
+        tf.litmap(corpus)
+
+
+def test_simple_centres_give_bounded_themes_on_the_frozen_corpus(fixtures_dir, panic_path):
+    import warnings
+
+    corpus = tf.read_corpus(fixtures_dir / OPENALEX)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        lm = _sc(corpus)
+        ls = tf.read(panic_path).landscape(corpus, method="simple_centres")
+    assert len(lm["themes"]) > 1
+    assert max(t["size"] for t in lm["themes"]) <= 10
+    assert {t["quadrant"] for t in lm["themes"]} == {
+        "motor", "basic", "niche", "emerging_or_declining"}
+    assert ls["method"] == "simple_centres"
+    assert [t["keywords"] for t in ls["themes"]] == _theme_keywords(lm)
+
+
+def test_landscape_carries_the_strategic_diagram_with_simple_centres(fixtures_dir, panic_path):
+    corpus = _corpus(fixtures_dir)
+    t = tf.read(panic_path)
+    ls = t.landscape(corpus, method="simple_centres")
+    assert list(ls) == ["theory_id", "method", "max_token_share", "field_tokens",
+                        "phenomenon_tokens", "themes", "under_theorised_fronts", "redundancy_risk"]
+    assert list(ls["themes"][0]) == ["id", "keywords", "alternatives", "focal", "status",
+                                     "focal_terms", "alternative_terms", "centrality", "density",
+                                     "quadrant"]
+    # The demo's four themes are the same by either method, and so are their statuses.
+    components = t.landscape(corpus)
+    assert [th["status"] for th in ls["themes"]] == [th["status"] for th in components["themes"]]
+    assert "method" not in components
+
+
+@pytest.mark.parametrize(("corpus_file", "cid"), [
+    ("panic-corpus.yaml", "panic-corpus-demo"), (OPENALEX, "openalex-panic-2026")])
+def test_simple_centres_match_the_goldens(fixtures_dir, panic_path, corpus_file, cid):
+    import json
+
+    corpus = tf.read_corpus(fixtures_dir / corpus_file)
+    golden = json.loads((fixtures_dir / "expected" / f"{cid}.litmap_simple_centres.json")
+                        .read_text(encoding="utf-8"))
+    assert _sc(corpus) == golden
+    if cid == "openalex-panic-2026":
+        ls = tf.read(panic_path).landscape(corpus, method="simple_centres")
+        golden = json.loads((fixtures_dir / "expected" / f"{cid}.landscape_simple_centres.json")
+                            .read_text(encoding="utf-8"))
+        assert ls == golden
+        dot = (fixtures_dir / "expected" / f"{cid}.theme_landscape_simple_centres.dot").read_bytes()
+        assert tf.lit_diagram(ls, "theme_landscape").encode("utf-8") == dot
 
 
 def _four_edges():

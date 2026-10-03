@@ -1,0 +1,2969 @@
+{
+  "n_records": 150,
+  "keywords": [
+    "ACTH",
+    "ACTH response",
+    "Anxiety Sensitivity Index",
+    "CCK-4",
+    "CO2 challenge",
+    "CO2 sensitivity",
+    "Clinical Global Impression Scale",
+    "D-cycloserine",
+    "DSM-III-R",
+    "DSM-III-R criteria",
+    "DSM-III-R diagnosis",
+    "DSM-IV",
+    "DSM-V",
+    "Diagnostic Interview Schedule",
+    "Epidemiologic Catchment Area study",
+    "Europe",
+    "GABA",
+    "GABAA receptor",
+    "GAD-7",
+    "GM-CSF",
+    "HPA axis dysregulation",
+    "Hospital Anxiety and Depression Scale",
+    "MAOA gene",
+    "MCP-1",
+    "MHPG",
+    "MIP-1\u03b1",
+    "NESARC",
+    "NREM sleep",
+    "National Comorbidity Survey",
+    "National Comorbidity Survey Replication",
+    "Panic Disorder Severity Scale",
+    "Patient Health Questionnaire",
+    "REM latency",
+    "Sheehan Disability Scale",
+    "Stroop interference",
+    "Stroop task",
+    "Taiwan",
+    "Toronto Alexithymia Scale",
+    "United States",
+    "acoustic startle response",
+    "adenosine receptor antagonism",
+    "adverse effects",
+    "adverse events",
+    "aerobic exercise",
+    "age differences",
+    "age distribution",
+    "age of onset",
+    "agoraphobia",
+    "agoraphobic avoidance",
+    "alcohol abuse",
+    "alcohol and drug abuse",
+    "alcohol-related disorders",
+    "alcoholism",
+    "alexithymia",
+    "alpha power",
+    "alpha-2 adrenergic agonists",
+    "alprazolam",
+    "ambulatory monitoring",
+    "amygdala",
+    "anterior cingulate cortex",
+    "anthropology of mental illness",
+    "anticipatory anxiety",
+    "antidepressant efficacy",
+    "antidepressant mechanism",
+    "antidepressant tapering",
+    "antidepressants",
+    "anxiety",
+    "anxiety attacks",
+    "anxiety disorder treatment",
+    "anxiety disorders",
+    "anxiety levels",
+    "anxiety maintenance",
+    "anxiety reduction",
+    "anxiety sensitivity",
+    "anxiety symptoms",
+    "anxiety treatment",
+    "anxiogenic effects",
+    "anxiolytic effects",
+    "anxiolytic efficacy",
+    "anxiolytics",
+    "applied relaxation",
+    "assessment battery",
+    "associative learning",
+    "asthma",
+    "attention training",
+    "attentional bias",
+    "attrition",
+    "augmentation therapy",
+    "autogenic training",
+    "autonomic arousal",
+    "autonomic dysfunction",
+    "autonomic nervous system",
+    "autonomic regulation",
+    "autonomic symptoms",
+    "aversive stimuli",
+    "avoidance",
+    "avoidance behavior",
+    "behavior therapy",
+    "behavioral inhibition",
+    "benzodiazepine dependence",
+    "benzodiazepine discontinuation",
+    "benzodiazepine sensitivity",
+    "benzodiazepine tapering",
+    "benzodiazepines",
+    "beta-blockers",
+    "bidirectional relationship",
+    "biological evaluation",
+    "blood pressure",
+    "bodily sensations",
+    "body vigilance",
+    "booster sessions",
+    "brain receptor binding",
+    "brainstem",
+    "brainstem dysfunction",
+    "breathing retraining",
+    "buspirone",
+    "caffeine",
+    "caffeine consumption",
+    "caffeine sensitivity",
+    "caffeine side effects",
+    "carbon dioxide challenge",
+    "carbon dioxide inhalation",
+    "carbon dioxide sensitivity",
+    "cardiac neurosis",
+    "cardiac symptoms",
+    "cardiovascular disease",
+    "cardiovascular effects",
+    "cardiovascular reactivity",
+    "case finding",
+    "catastrophic misinterpretation",
+    "cerebral blood flow",
+    "cerebral blood volume",
+    "cerebral oxygen consumption",
+    "cerebrovascular disease",
+    "challenge studies",
+    "chemokines",
+    "chest pain",
+    "childhood stress",
+    "cholecystokinin",
+    "chronic anxiety",
+    "chronicity",
+    "citalopram",
+    "classical conditioning",
+    "client-centered therapy",
+    "clinical course",
+    "clomipramine",
+    "clonazepam",
+    "clonidine",
+    "co-occurring disorders",
+    "coffee consumption",
+    "cognitive behavioral therapy",
+    "cognitive interference",
+    "cognitive restructuring",
+    "cognitive therapy",
+    "cognitive-behavioral intervention",
+    "collaborative care",
+    "combination therapy",
+    "combined psychotherapy and pharmacotherapy",
+    "community survey",
+    "comorbid depression",
+    "comorbidities",
+    "complementary therapy",
+    "conceptual model",
+    "conditioned anxiety",
+    "conditioned response acquisition",
+    "construct validity",
+    "contextual cues",
+    "contextual effects",
+    "contextual fear",
+    "convergent validity",
+    "cortical inhibition",
+    "corticotropin-releasing factor",
+    "corticotropin-releasing hormone stimulation test",
+    "cortisol",
+    "cortisol response",
+    "cortisol secretion",
+    "cost-effectiveness",
+    "criterion validity",
+    "cross-cultural psychiatry",
+    "crossover design",
+    "cultural validity",
+    "culture",
+    "cut-off values",
+    "delta sleep",
+    "demographic factors",
+    "depression",
+    "depressive affect",
+    "depressive symptoms",
+    "desensitization",
+    "diagnosis",
+    "diagnostic accuracy",
+    "diagnostic algorithm",
+    "diagnostic criteria",
+    "diagnostic screening",
+    "diagnostic validity",
+    "diaphragmatic breathing",
+    "diastolic blood pressure",
+    "diazepam",
+    "differential conditioning",
+    "differential diagnosis",
+    "disability",
+    "disability assessment",
+    "discriminant validity",
+    "disease classification",
+    "disease conviction",
+    "disease duration",
+    "disease onset",
+    "disease severity assessment",
+    "disease specificity",
+    "disorder severity",
+    "disruptive behavior disorders",
+    "distractibility",
+    "diurnal cortisol rhythm",
+    "dose-response relationship",
+    "drug abuse",
+    "drug discontinuation",
+    "drug efficacy",
+    "drug efficacy evaluation",
+    "drug safety",
+    "drug safety and tolerability",
+    "drug tolerability",
+    "dyspnea",
+    "early childhood development",
+    "early intervention",
+    "early life experience",
+    "economic burden",
+    "educational attainment",
+    "ejaculatory dysfunction",
+    "electrodermal activity",
+    "emergency department",
+    "emergency department screening",
+    "emergency department visits",
+    "emotion regulation",
+    "emotional acceptance",
+    "emotional awareness",
+    "emotional interference",
+    "emotional learning",
+    "emotional suppression",
+    "emotional symptoms",
+    "emotional valence",
+    "emotional well-being",
+    "end-tidal PCO2",
+    "end-tidal carbon dioxide",
+    "endogenous depression",
+    "endogenous stimuli",
+    "endophenotypes",
+    "eotaxin",
+    "epidemiology",
+    "epigastric distress",
+    "escitalopram",
+    "etiology",
+    "evaluation algorithm",
+    "excess mortality",
+    "exercise therapy",
+    "expectancy",
+    "exposure therapy",
+    "extinction",
+    "eye velocity",
+    "eyeblink response",
+    "face-to-face psychotherapy",
+    "factor structure",
+    "familial aggregation",
+    "familial risk",
+    "family history",
+    "family psychiatry",
+    "family studies",
+    "fear",
+    "fear circuitry",
+    "fear conditioning",
+    "fear extinction",
+    "fear generalization",
+    "fear network",
+    "fear of fear",
+    "fear potentiation",
+    "fear-potentiated startle",
+    "female patients",
+    "fenfluramine",
+    "first-degree family history",
+    "first-degree relatives",
+    "floods",
+    "flumazenil",
+    "fluoxetine",
+    "fluvoxamine",
+    "follow-up care",
+    "follow-up outcomes",
+    "functional disability",
+    "gabapentin",
+    "gastrointestinal symptoms",
+    "general anxiety",
+    "general practitioner visits",
+    "generalized anxiety disorder",
+    "genetic association",
+    "genetic etiology",
+    "genetic risk",
+    "genetic susceptibility",
+    "genetic transmission",
+    "growth hormone",
+    "growth hormone response",
+    "habituation",
+    "headache",
+    "headache prevalence",
+    "health anxiety",
+    "health care costs",
+    "health care utilization",
+    "health effects",
+    "heart rate",
+    "heart rate variability",
+    "heartbeat perception",
+    "hemispheric lateralization",
+    "heritability",
+    "hippocampus",
+    "history of psychiatry",
+    "history of science",
+    "homework",
+    "hyperarousal",
+    "hypercapnia",
+    "hypercortisolism",
+    "hypertension",
+    "hyperventilation",
+    "hypervigilance",
+    "hypocapnia",
+    "hypothalamic-pituitary-adrenal axis",
+    "imipramine",
+    "in vivo exposure",
+    "individual sensitivity",
+    "inflammatory cytokines",
+    "information processing",
+    "information processing biases",
+    "insula",
+    "inter-rater reliability",
+    "interferon-alpha",
+    "interleukin-1",
+    "interleukin-6",
+    "internal consistency",
+    "internet-based CBT",
+    "internet-based cognitive behavioral therapy",
+    "internet-delivered treatment",
+    "interoception",
+    "interoceptive attention",
+    "interoceptive conditioning",
+    "interoceptive cues",
+    "interoceptive exposure",
+    "late-onset depression",
+    "life events",
+    "lifetime prevalence",
+    "limbic system",
+    "locus coeruleus",
+    "long-term clinical course",
+    "long-term follow-up",
+    "long-term outcomes",
+    "long-term treatment outcomes",
+    "longitudinal course",
+    "loss events",
+    "loss of control",
+    "low self-esteem",
+    "m-chlorophenylpiperazine",
+    "maintenance of treatment effects",
+    "maintenance of treatment gains",
+    "maintenance therapy",
+    "major depressive disorder",
+    "major depressive episode",
+    "major gene model",
+    "marital conflict",
+    "marital functioning",
+    "medial prefrontal cortex",
+    "medical outpatients",
+    "medical resource utilization",
+    "medication adherence",
+    "medication-free patients",
+    "memory",
+    "meta-worry",
+    "metacognition",
+    "migraine",
+    "minute ventilation",
+    "misattribution",
+    "misdiagnosis",
+    "misinterpretation",
+    "mobile phone dependence",
+    "mobile phone use",
+    "monoamine oxidase A",
+    "monoamine oxidase A inhibitors",
+    "mood disorders",
+    "mortality risk",
+    "multifactorial threshold model",
+    "naturalistic follow-up",
+    "negative affect",
+    "negative emotions",
+    "neuroanatomical model",
+    "neurobiology",
+    "neurobiology of fear",
+    "neuroendocrine peptides",
+    "neuroendocrine response",
+    "neuroimaging",
+    "neurological symptoms",
+    "neuromodulators",
+    "neurosis",
+    "neurotransmitters",
+    "nomophobia",
+    "non-pharmacological treatment",
+    "noradrenergic dysfunction",
+    "noradrenergic function",
+    "norepinephrine",
+    "object relations",
+    "observer ratings",
+    "obsessive-compulsive disorder",
+    "offspring risk",
+    "online intervention",
+    "online therapy",
+    "orbitofrontal cortex",
+    "outcome measures",
+    "outcomes",
+    "outpatients",
+    "palpitations",
+    "panic anxiety",
+    "panic attacks",
+    "panic disorder",
+    "panic disorder with agoraphobia",
+    "panic symptoms",
+    "parahippocampal gyrus",
+    "parasympathetic activity",
+    "parental criticism",
+    "paroxetine",
+    "pathogenesis",
+    "pathological worry",
+    "pathophysiology",
+    "pentagastrin",
+    "peptic ulcer",
+    "perceived control",
+    "perceived controllability",
+    "personality disorders",
+    "personality traits",
+    "pharmacotherapy",
+    "phobia",
+    "phobic avoidance",
+    "phobic fear",
+    "phobic symptoms",
+    "physical activity",
+    "physical health",
+    "physician diagnosis",
+    "physiological symptoms",
+    "pindolol",
+    "placebo",
+    "placebo comparison",
+    "placebo response",
+    "plasma cortisol",
+    "polygenic inheritance",
+    "population-based sample",
+    "positron emission tomography",
+    "post-traumatic stress disorder",
+    "posterior cingulate cortex",
+    "power spectrum analysis",
+    "predictors of treatment outcome",
+    "prefrontal cortex",
+    "prevalence",
+    "prevention",
+    "prevention workshops",
+    "primary care",
+    "primary depression",
+    "prognosis",
+    "prognostic factors",
+    "progressive muscle relaxation",
+    "prolactin",
+    "promoter polymorphism",
+    "propranolol",
+    "psychiatric comorbidity",
+    "psychiatric consultation",
+    "psychiatric diagnosis",
+    "psychiatric epidemiology",
+    "psychiatric morbidity",
+    "psychiatric outpatients",
+    "psychoanalytic psychotherapy",
+    "psychodynamic model",
+    "psychodynamic psychotherapy",
+    "psychoeducation",
+    "psychological intervention",
+    "psychological stress response",
+    "psychometric properties",
+    "psychopathology",
+    "psychophysiological responses",
+    "psychosocial functioning",
+    "psychosocial interventions",
+    "psychosocial stressors",
+    "psychosomatic outpatients",
+    "psychotherapy",
+    "psychotherapy versus pharmacotherapy",
+    "psychotropic drugs",
+    "publication bias",
+    "quality of life",
+    "questionnaire acceptability",
+    "radioligand binding",
+    "raphe nuclei",
+    "rapid-acting antidepressants",
+    "rating scale development",
+    "rating scales",
+    "receptor binding imaging",
+    "recovery",
+    "recurrence",
+    "relapse",
+    "relapse after drug withdrawal",
+    "relapse after treatment discontinuation",
+    "relapse prevention",
+    "relatives of patients",
+    "relaxation training",
+    "reliability",
+    "remission",
+    "repeat polymorphism",
+    "research comparability",
+    "respiration",
+    "respiratory abnormalities",
+    "respiratory alterations",
+    "respiratory control",
+    "respiratory hypersensitivity",
+    "respiratory rate",
+    "respiratory sinus arrhythmia",
+    "respiratory symptoms",
+    "risk factors",
+    "risk-benefit ratio",
+    "role impairment",
+    "running",
+    "saccades",
+    "safety-seeking behavior",
+    "schema theory",
+    "screening questionnaire",
+    "screening tool",
+    "secondary depression",
+    "secondary disabilities",
+    "sedation",
+    "selective serotonin reuptake inhibitors",
+    "self-efficacy",
+    "self-focus",
+    "self-help programs",
+    "self-instructional module",
+    "self-monitoring",
+    "self-rated anxiety",
+    "self-ratings",
+    "self-report questionnaire",
+    "sensitivity to change",
+    "separation anxiety disorder",
+    "serotonergic dysfunction",
+    "serotonergic neurotransmission",
+    "serotonin",
+    "serotonin receptors",
+    "serotonin reuptake inhibitors",
+    "serotonin syndrome",
+    "sertraline",
+    "serum cytokine levels",
+    "severe headache",
+    "severity rating",
+    "sex differences",
+    "sex differences in treatment response",
+    "sighing",
+    "sighs",
+    "skin conductance response",
+    "sleep disorders",
+    "sleep disruption",
+    "sleep efficiency",
+    "sleep latency",
+    "sleepiness",
+    "smartphone addiction",
+    "smoking",
+    "smoking cessation",
+    "social anxiety disorder",
+    "social avoidance",
+    "social consequences",
+    "social functioning",
+    "social maladjustment",
+    "social support",
+    "sociodemographic correlates",
+    "sociodemographic risk factors",
+    "sociology of mental illness",
+    "sodium lactate",
+    "sodium lactate infusion",
+    "somatic anxiety",
+    "somatic sensation",
+    "somatic symptoms",
+    "somatization",
+    "specific phobia",
+    "spontaneous EEG",
+    "standardized assessment",
+    "startle potentiation",
+    "startle response",
+    "stimulus valence",
+    "stress",
+    "stroke",
+    "subjective anxiety",
+    "subjective well-being",
+    "substance use disorders",
+    "subtyping",
+    "suicidal ideation",
+    "suicide",
+    "suicide attempts",
+    "suicide risk",
+    "supportive therapy",
+    "sympathetic activation",
+    "sympathetic activity",
+    "sympathetic nervous system",
+    "symptom profiles",
+    "symptom severity",
+    "symptom severity assessment",
+    "systemic inflammation",
+    "tachycardia",
+    "technology dependence",
+    "telemedicine",
+    "telephone contact",
+    "temperament",
+    "tension reduction",
+    "test-retest reliability",
+    "therapeutic implications",
+    "therapeutic relationship",
+    "threat anticipation",
+    "threat cues",
+    "threat of shock",
+    "threat processing",
+    "tidal volume",
+    "tidal volume variability",
+    "time interval estimation",
+    "tobacco use",
+    "tolerability",
+    "treatment accessibility",
+    "treatment adequacy",
+    "treatment comparison",
+    "treatment credibility",
+    "treatment discontinuation",
+    "treatment dissemination",
+    "treatment duration",
+    "treatment effectiveness",
+    "treatment efficacy",
+    "treatment efficacy comparison",
+    "treatment expectations",
+    "treatment integration",
+    "treatment outcome assessment",
+    "treatment outcome comparison",
+    "treatment outcome measures",
+    "treatment outcomes",
+    "treatment response",
+    "treatment response prediction",
+    "treatment satisfaction",
+    "treatment seeking",
+    "treatment tolerability",
+    "treatment utilization",
+    "tricyclic antidepressants",
+    "twin studies",
+    "two-factor model",
+    "underdiagnosis",
+    "undertreatment",
+    "unpredictability",
+    "usual care",
+    "validity",
+    "ventilatory response",
+    "volume of distribution",
+    "vulnerability factors",
+    "vulnerable children",
+    "waitlist control",
+    "withdrawal symptoms",
+    "women",
+    "xerostomia",
+    "yohimbine"
+  ],
+  "keyword_cooccurrence": [
+    {
+      "a": "Anxiety Sensitivity Index",
+      "b": "anxiety sensitivity",
+      "count": 2
+    },
+    {
+      "a": "Anxiety Sensitivity Index",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "CCK-4",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "CCK-4",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "DSM-IV",
+      "b": "agoraphobia",
+      "count": 2
+    },
+    {
+      "a": "DSM-IV",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "DSM-IV",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "Epidemiologic Catchment Area study",
+      "b": "major depressive disorder",
+      "count": 2
+    },
+    {
+      "a": "Epidemiologic Catchment Area study",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "Epidemiologic Catchment Area study",
+      "b": "suicide attempts",
+      "count": 2
+    },
+    {
+      "a": "MHPG",
+      "b": "agoraphobia",
+      "count": 2
+    },
+    {
+      "a": "MHPG",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "Panic Disorder Severity Scale",
+      "b": "cognitive behavioral therapy",
+      "count": 2
+    },
+    {
+      "a": "Panic Disorder Severity Scale",
+      "b": "internal consistency",
+      "count": 2
+    },
+    {
+      "a": "Panic Disorder Severity Scale",
+      "b": "panic disorder",
+      "count": 4
+    },
+    {
+      "a": "Panic Disorder Severity Scale",
+      "b": "treatment response",
+      "count": 2
+    },
+    {
+      "a": "adverse effects",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "adverse events",
+      "b": "drug safety",
+      "count": 2
+    },
+    {
+      "a": "adverse events",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "adverse events",
+      "b": "selective serotonin reuptake inhibitors",
+      "count": 2
+    },
+    {
+      "a": "adverse events",
+      "b": "sertraline",
+      "count": 2
+    },
+    {
+      "a": "adverse events",
+      "b": "treatment efficacy",
+      "count": 2
+    },
+    {
+      "a": "age of onset",
+      "b": "agoraphobia",
+      "count": 2
+    },
+    {
+      "a": "age of onset",
+      "b": "anxiety disorders",
+      "count": 2
+    },
+    {
+      "a": "age of onset",
+      "b": "comorbidities",
+      "count": 2
+    },
+    {
+      "a": "age of onset",
+      "b": "generalized anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "age of onset",
+      "b": "major depressive disorder",
+      "count": 2
+    },
+    {
+      "a": "age of onset",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "age of onset",
+      "b": "panic disorder",
+      "count": 5
+    },
+    {
+      "a": "age of onset",
+      "b": "prevalence",
+      "count": 2
+    },
+    {
+      "a": "age of onset",
+      "b": "sex differences",
+      "count": 2
+    },
+    {
+      "a": "age of onset",
+      "b": "symptom profiles",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "alcoholism",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "alprazolam",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "anticipatory anxiety",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "antidepressant efficacy",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "antidepressants",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "anxiety",
+      "count": 4
+    },
+    {
+      "a": "agoraphobia",
+      "b": "anxiety disorders",
+      "count": 7
+    },
+    {
+      "a": "agoraphobia",
+      "b": "benzodiazepines",
+      "count": 3
+    },
+    {
+      "a": "agoraphobia",
+      "b": "citalopram",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "clomipramine",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "cognitive behavioral therapy",
+      "count": 6
+    },
+    {
+      "a": "agoraphobia",
+      "b": "cognitive therapy",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "comorbidities",
+      "count": 11
+    },
+    {
+      "a": "agoraphobia",
+      "b": "depression",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "depressive symptoms",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "exposure therapy",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "factor structure",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "generalized anxiety disorder",
+      "count": 4
+    },
+    {
+      "a": "agoraphobia",
+      "b": "health care utilization",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "interoceptive exposure",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "major depressive disorder",
+      "count": 6
+    },
+    {
+      "a": "agoraphobia",
+      "b": "mood disorders",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "nomophobia",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "panic attacks",
+      "count": 11
+    },
+    {
+      "a": "agoraphobia",
+      "b": "panic disorder",
+      "count": 40
+    },
+    {
+      "a": "agoraphobia",
+      "b": "pharmacotherapy",
+      "count": 5
+    },
+    {
+      "a": "agoraphobia",
+      "b": "phobic avoidance",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "placebo comparison",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "prevalence",
+      "count": 5
+    },
+    {
+      "a": "agoraphobia",
+      "b": "primary depression",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "psychiatric comorbidity",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "psychological intervention",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "quality of life",
+      "count": 4
+    },
+    {
+      "a": "agoraphobia",
+      "b": "recovery",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "relaxation training",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "secondary depression",
+      "count": 3
+    },
+    {
+      "a": "agoraphobia",
+      "b": "selective serotonin reuptake inhibitors",
+      "count": 3
+    },
+    {
+      "a": "agoraphobia",
+      "b": "sex differences",
+      "count": 3
+    },
+    {
+      "a": "agoraphobia",
+      "b": "social anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "somatic symptoms",
+      "count": 2
+    },
+    {
+      "a": "agoraphobia",
+      "b": "treatment efficacy",
+      "count": 5
+    },
+    {
+      "a": "agoraphobia",
+      "b": "treatment outcomes",
+      "count": 2
+    },
+    {
+      "a": "agoraphobic avoidance",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "agoraphobic avoidance",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "alcohol abuse",
+      "b": "comorbidities",
+      "count": 2
+    },
+    {
+      "a": "alcohol abuse",
+      "b": "major depressive disorder",
+      "count": 2
+    },
+    {
+      "a": "alcohol abuse",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "alcohol abuse",
+      "b": "quality of life",
+      "count": 2
+    },
+    {
+      "a": "alcohol abuse",
+      "b": "suicide attempts",
+      "count": 2
+    },
+    {
+      "a": "alcohol and drug abuse",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "alcohol and drug abuse",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "alcoholism",
+      "b": "generalized anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "alcoholism",
+      "b": "major depressive disorder",
+      "count": 2
+    },
+    {
+      "a": "alcoholism",
+      "b": "panic disorder",
+      "count": 4
+    },
+    {
+      "a": "alprazolam",
+      "b": "anxiety",
+      "count": 2
+    },
+    {
+      "a": "alprazolam",
+      "b": "benzodiazepines",
+      "count": 5
+    },
+    {
+      "a": "alprazolam",
+      "b": "drug efficacy",
+      "count": 2
+    },
+    {
+      "a": "alprazolam",
+      "b": "exposure therapy",
+      "count": 2
+    },
+    {
+      "a": "alprazolam",
+      "b": "panic disorder",
+      "count": 6
+    },
+    {
+      "a": "alprazolam",
+      "b": "treatment outcomes",
+      "count": 2
+    },
+    {
+      "a": "amygdala",
+      "b": "anxiety disorders",
+      "count": 2
+    },
+    {
+      "a": "amygdala",
+      "b": "fear network",
+      "count": 2
+    },
+    {
+      "a": "amygdala",
+      "b": "hippocampus",
+      "count": 3
+    },
+    {
+      "a": "amygdala",
+      "b": "limbic system",
+      "count": 2
+    },
+    {
+      "a": "amygdala",
+      "b": "medial prefrontal cortex",
+      "count": 2
+    },
+    {
+      "a": "amygdala",
+      "b": "panic disorder",
+      "count": 4
+    },
+    {
+      "a": "amygdala",
+      "b": "serotonin",
+      "count": 2
+    },
+    {
+      "a": "anticipatory anxiety",
+      "b": "fear-potentiated startle",
+      "count": 2
+    },
+    {
+      "a": "anticipatory anxiety",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "anticipatory anxiety",
+      "b": "panic disorder",
+      "count": 5
+    },
+    {
+      "a": "anticipatory anxiety",
+      "b": "phobic avoidance",
+      "count": 2
+    },
+    {
+      "a": "antidepressant efficacy",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "antidepressant efficacy",
+      "b": "selective serotonin reuptake inhibitors",
+      "count": 2
+    },
+    {
+      "a": "antidepressants",
+      "b": "cognitive behavioral therapy",
+      "count": 2
+    },
+    {
+      "a": "antidepressants",
+      "b": "cognitive restructuring",
+      "count": 2
+    },
+    {
+      "a": "antidepressants",
+      "b": "imipramine",
+      "count": 2
+    },
+    {
+      "a": "antidepressants",
+      "b": "panic disorder",
+      "count": 6
+    },
+    {
+      "a": "antidepressants",
+      "b": "pharmacotherapy",
+      "count": 3
+    },
+    {
+      "a": "antidepressants",
+      "b": "placebo comparison",
+      "count": 2
+    },
+    {
+      "a": "antidepressants",
+      "b": "serotonin",
+      "count": 2
+    },
+    {
+      "a": "antidepressants",
+      "b": "treatment outcomes",
+      "count": 2
+    },
+    {
+      "a": "anxiety",
+      "b": "benzodiazepines",
+      "count": 2
+    },
+    {
+      "a": "anxiety",
+      "b": "depression",
+      "count": 2
+    },
+    {
+      "a": "anxiety",
+      "b": "fear",
+      "count": 2
+    },
+    {
+      "a": "anxiety",
+      "b": "hyperventilation",
+      "count": 2
+    },
+    {
+      "a": "anxiety",
+      "b": "major depressive disorder",
+      "count": 2
+    },
+    {
+      "a": "anxiety",
+      "b": "panic attacks",
+      "count": 5
+    },
+    {
+      "a": "anxiety",
+      "b": "panic disorder",
+      "count": 13
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "attentional bias",
+      "count": 2
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "comorbidities",
+      "count": 4
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "generalized anxiety disorder",
+      "count": 3
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "hippocampus",
+      "count": 2
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "hyperventilation",
+      "count": 2
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "limbic system",
+      "count": 2
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "major depressive disorder",
+      "count": 2
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "mood disorders",
+      "count": 2
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "panic attacks",
+      "count": 9
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "panic disorder",
+      "count": 22
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "post-traumatic stress disorder",
+      "count": 2
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "prevalence",
+      "count": 3
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "social anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "anxiety disorders",
+      "b": "symptom severity",
+      "count": 2
+    },
+    {
+      "a": "anxiety levels",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "anxiety sensitivity",
+      "b": "bodily sensations",
+      "count": 3
+    },
+    {
+      "a": "anxiety sensitivity",
+      "b": "body vigilance",
+      "count": 2
+    },
+    {
+      "a": "anxiety sensitivity",
+      "b": "cognitive behavioral therapy",
+      "count": 3
+    },
+    {
+      "a": "anxiety sensitivity",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "anxiety sensitivity",
+      "b": "panic disorder",
+      "count": 8
+    },
+    {
+      "a": "anxiogenic effects",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "anxiolytics",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "anxiolytics",
+      "b": "serotonin",
+      "count": 2
+    },
+    {
+      "a": "attentional bias",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "autonomic dysfunction",
+      "b": "heart rate variability",
+      "count": 2
+    },
+    {
+      "a": "autonomic dysfunction",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "autonomic dysfunction",
+      "b": "post-traumatic stress disorder",
+      "count": 2
+    },
+    {
+      "a": "autonomic symptoms",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "aversive stimuli",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "avoidance",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "behavior therapy",
+      "b": "generalized anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "behavior therapy",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "benzodiazepines",
+      "b": "cognitive behavioral therapy",
+      "count": 2
+    },
+    {
+      "a": "benzodiazepines",
+      "b": "drug efficacy",
+      "count": 3
+    },
+    {
+      "a": "benzodiazepines",
+      "b": "exposure therapy",
+      "count": 2
+    },
+    {
+      "a": "benzodiazepines",
+      "b": "generalized anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "benzodiazepines",
+      "b": "maintenance of treatment gains",
+      "count": 2
+    },
+    {
+      "a": "benzodiazepines",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "benzodiazepines",
+      "b": "panic disorder",
+      "count": 8
+    },
+    {
+      "a": "benzodiazepines",
+      "b": "treatment outcomes",
+      "count": 2
+    },
+    {
+      "a": "bodily sensations",
+      "b": "catastrophic misinterpretation",
+      "count": 2
+    },
+    {
+      "a": "bodily sensations",
+      "b": "cognitive behavioral therapy",
+      "count": 2
+    },
+    {
+      "a": "bodily sensations",
+      "b": "panic disorder",
+      "count": 6
+    },
+    {
+      "a": "body vigilance",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "booster sessions",
+      "b": "cognitive therapy",
+      "count": 2
+    },
+    {
+      "a": "booster sessions",
+      "b": "cost-effectiveness",
+      "count": 2
+    },
+    {
+      "a": "booster sessions",
+      "b": "maintenance of treatment effects",
+      "count": 2
+    },
+    {
+      "a": "booster sessions",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "booster sessions",
+      "b": "self-instructional module",
+      "count": 2
+    },
+    {
+      "a": "booster sessions",
+      "b": "treatment duration",
+      "count": 2
+    },
+    {
+      "a": "booster sessions",
+      "b": "treatment expectations",
+      "count": 2
+    },
+    {
+      "a": "brainstem",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "breathing retraining",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "caffeine",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "carbon dioxide challenge",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "carbon dioxide inhalation",
+      "b": "hyperventilation",
+      "count": 4
+    },
+    {
+      "a": "carbon dioxide inhalation",
+      "b": "panic attacks",
+      "count": 4
+    },
+    {
+      "a": "carbon dioxide inhalation",
+      "b": "panic disorder",
+      "count": 4
+    },
+    {
+      "a": "carbon dioxide inhalation",
+      "b": "sodium lactate infusion",
+      "count": 2
+    },
+    {
+      "a": "catastrophic misinterpretation",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "cerebral blood flow",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "chronicity",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "citalopram",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "classical conditioning",
+      "b": "conditioned anxiety",
+      "count": 2
+    },
+    {
+      "a": "classical conditioning",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "classical conditioning",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "clinical course",
+      "b": "generalized anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "clinical course",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "clomipramine",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "clonazepam",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "clonidine",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "clonidine",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "clonidine",
+      "b": "yohimbine",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "cognitive restructuring",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "combined psychotherapy and pharmacotherapy",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "comorbidities",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "health care utilization",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "imipramine",
+      "count": 3
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "interoceptive exposure",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "long-term follow-up",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "maintenance therapy",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "panic disorder",
+      "count": 16
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "pharmacotherapy",
+      "count": 5
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "placebo response",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "primary care",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "relapse prevention",
+      "count": 4
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "treatment efficacy",
+      "count": 2
+    },
+    {
+      "a": "cognitive behavioral therapy",
+      "b": "treatment response",
+      "count": 2
+    },
+    {
+      "a": "cognitive restructuring",
+      "b": "interoceptive exposure",
+      "count": 2
+    },
+    {
+      "a": "cognitive restructuring",
+      "b": "panic disorder",
+      "count": 4
+    },
+    {
+      "a": "cognitive restructuring",
+      "b": "pharmacotherapy",
+      "count": 2
+    },
+    {
+      "a": "cognitive restructuring",
+      "b": "treatment outcomes",
+      "count": 2
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "cost-effectiveness",
+      "count": 2
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "generalized anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "maintenance of treatment effects",
+      "count": 2
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "panic attacks",
+      "count": 3
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "panic disorder",
+      "count": 9
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "relaxation training",
+      "count": 2
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "selective serotonin reuptake inhibitors",
+      "count": 2
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "self-instructional module",
+      "count": 2
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "treatment duration",
+      "count": 2
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "treatment efficacy",
+      "count": 3
+    },
+    {
+      "a": "cognitive therapy",
+      "b": "treatment expectations",
+      "count": 2
+    },
+    {
+      "a": "combined psychotherapy and pharmacotherapy",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "combined psychotherapy and pharmacotherapy",
+      "b": "placebo response",
+      "count": 2
+    },
+    {
+      "a": "community survey",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "comorbidities",
+      "b": "family studies",
+      "count": 2
+    },
+    {
+      "a": "comorbidities",
+      "b": "generalized anxiety disorder",
+      "count": 4
+    },
+    {
+      "a": "comorbidities",
+      "b": "health care utilization",
+      "count": 3
+    },
+    {
+      "a": "comorbidities",
+      "b": "major depressive disorder",
+      "count": 8
+    },
+    {
+      "a": "comorbidities",
+      "b": "misdiagnosis",
+      "count": 2
+    },
+    {
+      "a": "comorbidities",
+      "b": "panic attacks",
+      "count": 4
+    },
+    {
+      "a": "comorbidities",
+      "b": "panic disorder",
+      "count": 19
+    },
+    {
+      "a": "comorbidities",
+      "b": "prevalence",
+      "count": 5
+    },
+    {
+      "a": "comorbidities",
+      "b": "quality of life",
+      "count": 3
+    },
+    {
+      "a": "comorbidities",
+      "b": "sex differences",
+      "count": 2
+    },
+    {
+      "a": "comorbidities",
+      "b": "suicide attempts",
+      "count": 2
+    },
+    {
+      "a": "conditioned anxiety",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "cortisol",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "cost-effectiveness",
+      "b": "maintenance of treatment effects",
+      "count": 2
+    },
+    {
+      "a": "cost-effectiveness",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "cost-effectiveness",
+      "b": "self-instructional module",
+      "count": 2
+    },
+    {
+      "a": "cost-effectiveness",
+      "b": "treatment duration",
+      "count": 2
+    },
+    {
+      "a": "cost-effectiveness",
+      "b": "treatment expectations",
+      "count": 2
+    },
+    {
+      "a": "depression",
+      "b": "generalized anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "depression",
+      "b": "heartbeat perception",
+      "count": 2
+    },
+    {
+      "a": "depression",
+      "b": "panic attacks",
+      "count": 3
+    },
+    {
+      "a": "depression",
+      "b": "panic disorder",
+      "count": 8
+    },
+    {
+      "a": "depressive symptoms",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "diagnostic validity",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "diazepam",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "differential diagnosis",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "disability",
+      "b": "health care utilization",
+      "count": 2
+    },
+    {
+      "a": "disability",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "disease severity assessment",
+      "b": "inter-rater reliability",
+      "count": 2
+    },
+    {
+      "a": "disease severity assessment",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "dose-response relationship",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "dose-response relationship",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "dose-response relationship",
+      "b": "placebo comparison",
+      "count": 2
+    },
+    {
+      "a": "drug efficacy",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "drug safety",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "drug safety",
+      "b": "treatment efficacy",
+      "count": 2
+    },
+    {
+      "a": "electrodermal activity",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "end-tidal carbon dioxide",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "etiology",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "exposure therapy",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "exposure therapy",
+      "b": "panic disorder with agoraphobia",
+      "count": 2
+    },
+    {
+      "a": "exposure therapy",
+      "b": "psychological intervention",
+      "count": 2
+    },
+    {
+      "a": "exposure therapy",
+      "b": "relaxation training",
+      "count": 3
+    },
+    {
+      "a": "factor structure",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "familial aggregation",
+      "b": "genetic transmission",
+      "count": 3
+    },
+    {
+      "a": "familial aggregation",
+      "b": "panic disorder",
+      "count": 4
+    },
+    {
+      "a": "family studies",
+      "b": "generalized anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "family studies",
+      "b": "major depressive disorder",
+      "count": 2
+    },
+    {
+      "a": "family studies",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "fear",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "fear conditioning",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "fear network",
+      "b": "hippocampus",
+      "count": 2
+    },
+    {
+      "a": "fear network",
+      "b": "medial prefrontal cortex",
+      "count": 2
+    },
+    {
+      "a": "fear network",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "fear of fear",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "fear-potentiated startle",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "first-degree relatives",
+      "b": "generalized anxiety disorder",
+      "count": 2
+    },
+    {
+      "a": "first-degree relatives",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "generalized anxiety disorder",
+      "b": "major depressive disorder",
+      "count": 4
+    },
+    {
+      "a": "generalized anxiety disorder",
+      "b": "panic attacks",
+      "count": 3
+    },
+    {
+      "a": "generalized anxiety disorder",
+      "b": "panic disorder",
+      "count": 15
+    },
+    {
+      "a": "generalized anxiety disorder",
+      "b": "psychiatric comorbidity",
+      "count": 2
+    },
+    {
+      "a": "generalized anxiety disorder",
+      "b": "quality of life",
+      "count": 2
+    },
+    {
+      "a": "generalized anxiety disorder",
+      "b": "sex differences",
+      "count": 2
+    },
+    {
+      "a": "generalized anxiety disorder",
+      "b": "social anxiety disorder",
+      "count": 4
+    },
+    {
+      "a": "genetic transmission",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "health anxiety",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "health care utilization",
+      "b": "panic disorder",
+      "count": 4
+    },
+    {
+      "a": "health care utilization",
+      "b": "quality of life",
+      "count": 2
+    },
+    {
+      "a": "heart rate",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "heart rate variability",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "heart rate variability",
+      "b": "post-traumatic stress disorder",
+      "count": 2
+    },
+    {
+      "a": "heartbeat perception",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "hemispheric lateralization",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "heritability",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "hippocampus",
+      "b": "medial prefrontal cortex",
+      "count": 2
+    },
+    {
+      "a": "hippocampus",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "hyperventilation",
+      "b": "panic attacks",
+      "count": 7
+    },
+    {
+      "a": "hyperventilation",
+      "b": "panic disorder",
+      "count": 9
+    },
+    {
+      "a": "hyperventilation",
+      "b": "respiratory control",
+      "count": 2
+    },
+    {
+      "a": "hyperventilation",
+      "b": "sodium lactate infusion",
+      "count": 2
+    },
+    {
+      "a": "hypervigilance",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "hypervigilance",
+      "b": "somatic symptoms",
+      "count": 2
+    },
+    {
+      "a": "hypothalamic-pituitary-adrenal axis",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "imipramine",
+      "b": "panic disorder",
+      "count": 6
+    },
+    {
+      "a": "imipramine",
+      "b": "relapse prevention",
+      "count": 2
+    },
+    {
+      "a": "imipramine",
+      "b": "treatment outcomes",
+      "count": 2
+    },
+    {
+      "a": "inter-rater reliability",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "internal consistency",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "interoceptive exposure",
+      "b": "panic disorder",
+      "count": 4
+    },
+    {
+      "a": "limbic system",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "limbic system",
+      "b": "prefrontal cortex",
+      "count": 2
+    },
+    {
+      "a": "long-term follow-up",
+      "b": "panic disorder",
+      "count": 4
+    },
+    {
+      "a": "long-term follow-up",
+      "b": "sex differences",
+      "count": 2
+    },
+    {
+      "a": "maintenance of treatment effects",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "maintenance of treatment effects",
+      "b": "self-instructional module",
+      "count": 2
+    },
+    {
+      "a": "maintenance of treatment effects",
+      "b": "treatment duration",
+      "count": 2
+    },
+    {
+      "a": "maintenance of treatment effects",
+      "b": "treatment expectations",
+      "count": 2
+    },
+    {
+      "a": "maintenance therapy",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "major depressive disorder",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "major depressive disorder",
+      "b": "panic disorder",
+      "count": 16
+    },
+    {
+      "a": "major depressive disorder",
+      "b": "psychiatric comorbidity",
+      "count": 4
+    },
+    {
+      "a": "major depressive disorder",
+      "b": "quality of life",
+      "count": 2
+    },
+    {
+      "a": "major depressive disorder",
+      "b": "social anxiety disorder",
+      "count": 3
+    },
+    {
+      "a": "major depressive disorder",
+      "b": "suicide attempts",
+      "count": 4
+    },
+    {
+      "a": "medial prefrontal cortex",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "misdiagnosis",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "mood disorders",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "negative affect",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "nomophobia",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "noradrenergic function",
+      "b": "panic attacks",
+      "count": 2
+    },
+    {
+      "a": "noradrenergic function",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "norepinephrine",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "obsessive-compulsive disorder",
+      "b": "panic disorder",
+      "count": 3
+    },
+    {
+      "a": "outpatients",
+      "b": "panic disorder",
+      "count": 2
+    },
+    {
+      "a": "outpatients",
+      "b": "selective serotonin reuptake inhibitors",
+      "count": 2
+    },
+    {
+      "a": "panic attacks",
+      "b": "panic disorder",
+      "count": 41
+    },
+    {
+      "a": "panic attacks",
+      "b": "phobic avoidance",
+      "count": 2
+    },
+    {
+      "a": "panic attacks",
+      "b": "placebo",
+      "count": 2
+    },
+    {
+      "a": "panic attacks",
+      "b": "placebo comparison",
+      "count": 3
+    },
+    {
+      "a": "panic attacks",
+      "b": "placebo response",
+      "count": 2
+    },
+    {
+      "a": "panic attacks",
+      "b": "prevalence",
+      "count": 4
+    },
+    {
+      "a": "panic attacks",
+      "b": "selective serotonin reuptake inhibitors",
+      "count": 4
+    },
+    {
+      "a": "panic attacks",
+      "b": "sex differences",
+      "count": 2
+    },
+    {
+      "a": "panic attacks",
+      "b": "sodium lactate infusion",
+      "count": 2
+    },
+    {
+      "a": "panic attacks",
+      "b": "treatment tolerability",
+      "count": 2
+    },
+    {
+      "a": "panic attacks",
+      "b": "yohimbine",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "panic disorder with agoraphobia",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "pathophysiology",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "pharmacotherapy",
+      "count": 6
+    },
+    {
+      "a": "panic disorder",
+      "b": "phobic avoidance",
+      "count": 4
+    },
+    {
+      "a": "panic disorder",
+      "b": "placebo",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "placebo comparison",
+      "count": 6
+    },
+    {
+      "a": "panic disorder",
+      "b": "placebo response",
+      "count": 4
+    },
+    {
+      "a": "panic disorder",
+      "b": "post-traumatic stress disorder",
+      "count": 3
+    },
+    {
+      "a": "panic disorder",
+      "b": "prefrontal cortex",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "prevalence",
+      "count": 6
+    },
+    {
+      "a": "panic disorder",
+      "b": "primary care",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "primary depression",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "psychiatric comorbidity",
+      "count": 7
+    },
+    {
+      "a": "panic disorder",
+      "b": "psychological intervention",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "psychometric properties",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "psychopathology",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "quality of life",
+      "count": 7
+    },
+    {
+      "a": "panic disorder",
+      "b": "recovery",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "relapse",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "relapse prevention",
+      "count": 5
+    },
+    {
+      "a": "panic disorder",
+      "b": "relaxation training",
+      "count": 3
+    },
+    {
+      "a": "panic disorder",
+      "b": "reliability",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "remission",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "respiratory control",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "respiratory rate",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "respiratory symptoms",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "risk factors",
+      "count": 3
+    },
+    {
+      "a": "panic disorder",
+      "b": "secondary depression",
+      "count": 4
+    },
+    {
+      "a": "panic disorder",
+      "b": "selective serotonin reuptake inhibitors",
+      "count": 8
+    },
+    {
+      "a": "panic disorder",
+      "b": "self-instructional module",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "serotonin",
+      "count": 5
+    },
+    {
+      "a": "panic disorder",
+      "b": "sertraline",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "sex differences",
+      "count": 8
+    },
+    {
+      "a": "panic disorder",
+      "b": "sleepiness",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "smoking",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "social anxiety disorder",
+      "count": 6
+    },
+    {
+      "a": "panic disorder",
+      "b": "sodium lactate infusion",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "somatic symptoms",
+      "count": 7
+    },
+    {
+      "a": "panic disorder",
+      "b": "suicide attempts",
+      "count": 4
+    },
+    {
+      "a": "panic disorder",
+      "b": "symptom profiles",
+      "count": 3
+    },
+    {
+      "a": "panic disorder",
+      "b": "symptom severity",
+      "count": 3
+    },
+    {
+      "a": "panic disorder",
+      "b": "temperament",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "test-retest reliability",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "therapeutic implications",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "treatment discontinuation",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "treatment duration",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "treatment efficacy",
+      "count": 9
+    },
+    {
+      "a": "panic disorder",
+      "b": "treatment expectations",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "treatment outcomes",
+      "count": 5
+    },
+    {
+      "a": "panic disorder",
+      "b": "treatment response",
+      "count": 4
+    },
+    {
+      "a": "panic disorder",
+      "b": "treatment tolerability",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "tricyclic antidepressants",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "twin studies",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "waitlist control",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "women",
+      "count": 2
+    },
+    {
+      "a": "panic disorder",
+      "b": "yohimbine",
+      "count": 3
+    },
+    {
+      "a": "pharmacotherapy",
+      "b": "treatment outcomes",
+      "count": 2
+    },
+    {
+      "a": "placebo comparison",
+      "b": "selective serotonin reuptake inhibitors",
+      "count": 2
+    },
+    {
+      "a": "prevalence",
+      "b": "sex differences",
+      "count": 2
+    },
+    {
+      "a": "psychiatric comorbidity",
+      "b": "sex differences",
+      "count": 2
+    },
+    {
+      "a": "psychiatric comorbidity",
+      "b": "suicide attempts",
+      "count": 2
+    },
+    {
+      "a": "psychological intervention",
+      "b": "relaxation training",
+      "count": 2
+    },
+    {
+      "a": "psychometric properties",
+      "b": "reliability",
+      "count": 2
+    },
+    {
+      "a": "quality of life",
+      "b": "suicide attempts",
+      "count": 2
+    },
+    {
+      "a": "relaxation training",
+      "b": "treatment outcomes",
+      "count": 2
+    },
+    {
+      "a": "selective serotonin reuptake inhibitors",
+      "b": "sertraline",
+      "count": 2
+    },
+    {
+      "a": "selective serotonin reuptake inhibitors",
+      "b": "treatment efficacy",
+      "count": 2
+    },
+    {
+      "a": "selective serotonin reuptake inhibitors",
+      "b": "treatment tolerability",
+      "count": 2
+    },
+    {
+      "a": "self-instructional module",
+      "b": "treatment duration",
+      "count": 2
+    },
+    {
+      "a": "self-instructional module",
+      "b": "treatment expectations",
+      "count": 2
+    },
+    {
+      "a": "treatment duration",
+      "b": "treatment expectations",
+      "count": 2
+    }
+  ],
+  "themes": [
+    {
+      "id": "theme_1",
+      "keywords": [
+        "Anxiety Sensitivity Index",
+        "CCK-4",
+        "DSM-IV",
+        "Epidemiologic Catchment Area study",
+        "MHPG",
+        "Panic Disorder Severity Scale",
+        "adverse effects",
+        "adverse events",
+        "age of onset",
+        "agoraphobia",
+        "agoraphobic avoidance",
+        "alcohol abuse",
+        "alcohol and drug abuse",
+        "alcoholism",
+        "alprazolam",
+        "amygdala",
+        "anticipatory anxiety",
+        "antidepressant efficacy",
+        "antidepressants",
+        "anxiety",
+        "anxiety disorders",
+        "anxiety levels",
+        "anxiety sensitivity",
+        "anxiogenic effects",
+        "anxiolytics",
+        "attentional bias",
+        "autonomic dysfunction",
+        "autonomic symptoms",
+        "aversive stimuli",
+        "avoidance",
+        "behavior therapy",
+        "benzodiazepines",
+        "bodily sensations",
+        "body vigilance",
+        "booster sessions",
+        "brainstem",
+        "breathing retraining",
+        "caffeine",
+        "carbon dioxide challenge",
+        "carbon dioxide inhalation",
+        "catastrophic misinterpretation",
+        "cerebral blood flow",
+        "chronicity",
+        "citalopram",
+        "classical conditioning",
+        "clinical course",
+        "clomipramine",
+        "clonazepam",
+        "clonidine",
+        "cognitive behavioral therapy",
+        "cognitive restructuring",
+        "cognitive therapy",
+        "combined psychotherapy and pharmacotherapy",
+        "community survey",
+        "comorbidities",
+        "conditioned anxiety",
+        "cortisol",
+        "cost-effectiveness",
+        "depression",
+        "depressive symptoms",
+        "diagnostic validity",
+        "diazepam",
+        "differential diagnosis",
+        "disability",
+        "disease severity assessment",
+        "dose-response relationship",
+        "drug efficacy",
+        "drug safety",
+        "electrodermal activity",
+        "end-tidal carbon dioxide",
+        "etiology",
+        "exposure therapy",
+        "factor structure",
+        "familial aggregation",
+        "family studies",
+        "fear",
+        "fear conditioning",
+        "fear network",
+        "fear of fear",
+        "fear-potentiated startle",
+        "first-degree relatives",
+        "generalized anxiety disorder",
+        "genetic transmission",
+        "health anxiety",
+        "health care utilization",
+        "heart rate",
+        "heart rate variability",
+        "heartbeat perception",
+        "hemispheric lateralization",
+        "heritability",
+        "hippocampus",
+        "hyperventilation",
+        "hypervigilance",
+        "hypothalamic-pituitary-adrenal axis",
+        "imipramine",
+        "inter-rater reliability",
+        "internal consistency",
+        "interoceptive exposure",
+        "limbic system",
+        "long-term follow-up",
+        "maintenance of treatment effects",
+        "maintenance of treatment gains",
+        "maintenance therapy",
+        "major depressive disorder",
+        "medial prefrontal cortex",
+        "misdiagnosis",
+        "mood disorders",
+        "negative affect",
+        "nomophobia",
+        "noradrenergic function",
+        "norepinephrine",
+        "obsessive-compulsive disorder",
+        "outpatients",
+        "panic attacks",
+        "panic disorder",
+        "panic disorder with agoraphobia",
+        "pathophysiology",
+        "pharmacotherapy",
+        "phobic avoidance",
+        "placebo",
+        "placebo comparison",
+        "placebo response",
+        "post-traumatic stress disorder",
+        "prefrontal cortex",
+        "prevalence",
+        "primary care",
+        "primary depression",
+        "psychiatric comorbidity",
+        "psychological intervention",
+        "psychometric properties",
+        "psychopathology",
+        "quality of life",
+        "recovery",
+        "relapse",
+        "relapse prevention",
+        "relaxation training",
+        "reliability",
+        "remission",
+        "respiratory control",
+        "respiratory rate",
+        "respiratory symptoms",
+        "risk factors",
+        "secondary depression",
+        "selective serotonin reuptake inhibitors",
+        "self-instructional module",
+        "serotonin",
+        "sertraline",
+        "sex differences",
+        "sleepiness",
+        "smoking",
+        "social anxiety disorder",
+        "sodium lactate infusion",
+        "somatic symptoms",
+        "suicide attempts",
+        "symptom profiles",
+        "symptom severity",
+        "temperament",
+        "test-retest reliability",
+        "therapeutic implications",
+        "treatment discontinuation",
+        "treatment duration",
+        "treatment efficacy",
+        "treatment expectations",
+        "treatment outcomes",
+        "treatment response",
+        "treatment tolerability",
+        "tricyclic antidepressants",
+        "twin studies",
+        "waitlist control",
+        "women",
+        "yohimbine"
+      ],
+      "size": 171
+    }
+  ],
+  "co_citation": []
+}

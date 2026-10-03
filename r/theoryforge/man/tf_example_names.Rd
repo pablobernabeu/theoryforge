@@ -12,8 +12,10 @@ twin's \code{example_names()} applies the same extension filter, so the two
 list the same set.
 }
 \description{
-The bundled set is four example theories and one literature corpus,
-\code{panic-corpus.yaml}, which \code{\link[=tf_read_corpus]{tf_read_corpus()}} reads.
+The bundled set is four example theories and two literature corpora, which
+\code{\link[=tf_read_corpus]{tf_read_corpus()}} reads. \code{panic-corpus.yaml} is a small corpus designed
+to fall into four themes, and \code{openalex-panic-2026.corpus.yaml} holds
+150 works fetched from OpenAlex and frozen.
 }
 \examples{
 tf_example_names()

@@ -272,6 +272,24 @@ version and a single behavioural contract
   cursor beyond one page. The corpus gains a top-level `source` (service, endpoint,
   query, UTC retrieval time, total matches, records kept, page size and order) and each
   record its `doi`, both optional properties in `schema/corpus.schema.json`.
+- `litmap()` and `landscape()` gain `method="simple_centres"`, the co-word clustering of
+  Coulter et al. (1998) and Cobo et al. (2011), which gives bounded themes with
+  centrality, density and a strategic-diagram quadrant on real corpora, where connected
+  components give one theme. `litmap()` also gains `min_theme_size`, `max_theme_size` and
+  `max_df`, which excludes keywords shared by most records and reports them as
+  `field_terms`. The full signature is `litmap(corpus, min_link=2, method="components",
+  min_cocitation=None, min_theme_size=2, max_theme_size=10, max_df=1.0)`, so a
+  `min_cocitation` passed by position must now be named. API_SPEC section 14 pins every
+  rule, tie-break and summation order, and both twins give the same floats. Components
+  remain the default for this release, the components record is unchanged and the
+  giant-theme warning now names the new method. The default is planned to become
+  `"simple_centres"` in the next minor release.
+- A frozen OpenAlex corpus of 150 works on panic disorder,
+  `fixtures/openalex-panic-2026.corpus.yaml`, ships in both packages
+  (`example_path("openalex-panic-2026.corpus.yaml")`), with five new goldens built on it
+  and on the demo corpus. It was made by replaying one OpenAlex response saved on
+  2026-10-01 through `fetch_corpus`, keeps `source`, drops the references and is offered
+  under CC0, as OpenAlex's data are.
 
 ### Deprecated
 - `simulate()`'s default `method="euler"`. The default will change to `"exact"` in the

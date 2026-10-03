@@ -253,28 +253,184 @@ tf_read_corpus <- function(path) {
   })
 }
 
-# tf_litmap(), with the co-citation count skipped when `co_citation` is FALSE.
-# tf_landscape() reads only the themes, and on a corpus with references the
-# co-citation count is most of the work. It also passes the `records` it has
-# already checked, since it reads their keywords as well.
-.tf_litmap <- function(corpus, min_link, min_cocitation = NULL, co_citation = TRUE,
-                       records = NULL) {
+.tf_METHODS <- c("components", "simple_centres")
+
+.tf_method <- function(value) {
+  if (!is.character(value) || length(value) != 1L || is.na(value) ||
+      !(value %in% .tf_METHODS)) {
+    stop("litmap requires method to be 'components' or 'simple_centres'", call. = FALSE)
+  }
+  value
+}
+
+# tf_litmap()'s arguments checked in signature order, as Python lit._settings
+# (API_SPEC.md section 14). The theme sizes and max_df are checked whichever
+# method is asked for, although only simple centres reads them.
+.tf_settings <- function(min_link, method, min_cocitation, min_theme_size, max_theme_size,
+                         max_df) {
   min_link <- .tf_positive_int(min_link, "min_link")
+  method <- .tf_method(method)
   min_cocitation <- if (is.null(min_cocitation)) min_link else
     .tf_positive_int(min_cocitation, "min_cocitation")
+  min_theme_size <- .tf_positive_int(min_theme_size, "min_theme_size")
+  ok <- is.numeric(max_theme_size) && length(max_theme_size) == 1L &&
+    is.finite(max_theme_size) && max_theme_size == trunc(max_theme_size) && max_theme_size >= 2
+  if (!ok) stop("max_theme_size must be an integer of at least 2", call. = FALSE)
+  max_theme_size <- if (max_theme_size <= .Machine$integer.max) as.integer(max_theme_size) else
+    as.numeric(max_theme_size)
+  if (min_theme_size > max_theme_size) {
+    stop("min_theme_size must not exceed max_theme_size", call. = FALSE)
+  }
+  max_df <- .tf_share(max_df, "max_df")
+  list(method = method, min_link = min_link, min_cocitation = min_cocitation,
+       min_theme_size = min_theme_size, max_theme_size = max_theme_size, max_df = max_df)
+}
+
+# The median of `values`, the mean of the middle two for an even count.
+.tf_median <- function(values) {
+  v <- sort(values)
+  mid <- length(v) %/% 2L
+  if (length(v) %% 2L == 1L) v[[mid + 1L]] else (v[[mid]] + v[[mid + 1L]]) / 2
+}
+
+# Co-word themes by simple centres (Coulter et al., 1998; Cobo et al., 2011),
+# as Python lit._simple_centres: the field terms, the keyword edges over the
+# other keywords and the themes, each with its centrality, density and
+# quadrant. Every rule, tie-break and summation order is pinned in API_SPEC.md
+# section 14, so that the two twins compute the same floats. Sums are added one
+# term at a time, since sum() accumulates in extended precision.
+.tf_simple_centres <- function(keyword_lists, s) {
+  sets <- lapply(keyword_lists, function(k) sort(unique(k), method = "radix"))
+  n <- length(sets)
+  all_kw <- unlist(sets, use.names = FALSE)
+  if (length(all_kw) == 0L) return(list(field_terms = list(), edges = list(), themes = list()))
+  kws <- unique(all_kw)
+  df <- tabulate(match(all_kw, kws), nbins = length(kws))
+  field <- sort(kws[df / n > s$max_df], method = "radix")
+  rest <- lapply(sets, function(k) k[!(k %in% field)])
+  edges <- .tf_edges(.tf_pair_counts(rest), s$min_link)
+  themes <- list()
+  if (length(edges) > 0L) {
+    a <- vapply(edges, function(x) x$a, character(1))
+    b <- vapply(edges, function(x) x$b, character(1))
+    cnt <- vapply(edges, function(x) as.numeric(x$count), numeric(1))
+    # The equivalence index from the integer counts, in one division. Doubles
+    # hold these products exactly, and an integer product could overflow.
+    e <- (cnt * cnt) / (as.numeric(df[match(a, kws)]) * as.numeric(df[match(b, kws)]))
+    nb_to <- split(c(b, a), c(a, b))
+    nb_e <- split(c(e, e), c(a, b))
+    linked <- names(nb_to)
+    assigned <- stats::setNames(logical(length(linked)), linked)
+
+    # Pass 1: the strongest link whose ends are both free seeds a theme, which
+    # takes the free neighbour of a member with the strongest link, the smaller
+    # keyword on a tie, until it reaches max_theme_size or has no free
+    # neighbour.
+    groups <- list()
+    for (i in order(-e, a, b, method = "radix")) {
+      if (assigned[[a[[i]]]] || assigned[[b[[i]]]]) next
+      members <- c(a[[i]], b[[i]])
+      while (length(members) < s$max_theme_size) {
+        cand_h <- character(0)
+        cand_e <- numeric(0)
+        for (m in members) {
+          h <- nb_to[[m]]
+          keep <- !(h %in% members) & !assigned[h]
+          cand_h <- c(cand_h, h[keep])
+          cand_e <- c(cand_e, nb_e[[m]][keep])
+        }
+        if (length(cand_h) == 0L) break
+        members <- c(members, cand_h[[order(-cand_e, cand_h, method = "radix")[[1L]]]])
+      }
+      assigned[members] <- TRUE
+      if (length(members) >= s$min_theme_size) {
+        groups[[length(groups) + 1L]] <- sort(members, method = "radix")
+      }
+    }
+    if (length(groups) > 0L) {
+      groups <- groups[order(vapply(groups, function(g) g[[1L]], character(1)), method = "radix")]
+    }
+
+    # Pass 2: centrality sums the links from the theme to the keywords of other
+    # themes, density the links inside it, each added one at a time over the
+    # sorted keywords. A link to a keyword in no theme counts for neither,
+    # since Cobo et al. (2011) define centrality over the links to other themes.
+    theme_kw <- unlist(groups, use.names = FALSE)
+    theme_of <- rep(seq_along(groups), lengths(groups))
+    themes <- lapply(seq_along(groups), function(i) {
+      g <- groups[[i]]
+      external <- 0
+      internal <- 0
+      for (j in seq_along(g)) {
+        h <- nb_to[[g[[j]]]]
+        eh <- nb_e[[g[[j]]]]
+        o <- order(h, method = "radix")
+        h <- h[o]
+        eh <- eh[o]
+        for (k in seq_along(h)) {
+          t_h <- theme_of[match(h[[k]], theme_kw)]
+          if (!is.na(t_h) && t_h != i) external <- external + eh[[k]]
+        }
+        for (other in g[seq_along(g) > j]) {
+          k <- match(other, h)
+          if (!is.na(k)) internal <- internal + eh[[k]]
+        }
+      }
+      list(id = paste0("theme_", i), keywords = as.list(g), size = length(g),
+           centrality = .tf_rnd(10 * external, 6),
+           density = .tf_rnd(100 * internal / length(g), 6))
+    })
+    # The strategic diagram of Cobo et al. (2011), each axis split here at its
+    # median, a value at the median counting as high.
+    if (length(themes) > 0L) {
+      c_med <- .tf_median(vapply(themes, function(th) th$centrality, numeric(1)))
+      d_med <- .tf_median(vapply(themes, function(th) th$density, numeric(1)))
+      for (i in seq_along(themes)) {
+        high_c <- themes[[i]]$centrality >= c_med
+        high_d <- themes[[i]]$density >= d_med
+        themes[[i]]$quadrant <- if (high_c) {
+          if (high_d) "motor" else "basic"
+        } else {
+          if (high_d) "niche" else "emerging_or_declining"
+        }
+      }
+    }
+  }
+  list(field_terms = as.list(field), edges = edges, themes = themes)
+}
+
+# tf_litmap() with its settings `s` checked, the co-citation count skipped when
+# `co_citation` is FALSE. tf_landscape() reads only the themes, and on a corpus
+# with references the co-citation count is most of the work. It also passes the
+# `records` it has already checked, since it reads their keywords as well.
+.tf_litmap <- function(corpus, s, co_citation = TRUE, records = NULL) {
   if (is.null(records)) records <- .tf_records(corpus)
   keywords <- lapply(records, `[[`, "keywords")
   all_kw <- sort(unique(as.character(unlist(keywords, use.names = FALSE))), method = "radix")
-  kw_edges <- .tf_edges(.tf_pair_counts(keywords), min_link)
+  simple <- identical(s$method, "simple_centres")
+  if (simple) {
+    sc <- .tf_simple_centres(keywords, s)
+    kw_edges <- sc$edges
+    themes <- sc$themes
+  } else {
+    kw_edges <- .tf_edges(.tf_pair_counts(keywords), s$min_link)
+    themes <- .tf_components(kw_edges)
+  }
   out <- list(
     n_records = length(records),
     keywords = as.list(all_kw),
     keyword_cooccurrence = kw_edges,
-    themes = .tf_components(kw_edges)
+    themes = themes
   )
   if (co_citation) {
     references <- lapply(records, `[[`, "references")
-    out$co_citation <- .tf_edges(.tf_pair_counts(references), min_cocitation)
+    out$co_citation <- .tf_edges(.tf_pair_counts(references), s$min_cocitation)
+  }
+  if (simple) {
+    out$method <- s$method
+    out$parameters <- s[c("min_link", "min_cocitation", "min_theme_size", "max_theme_size",
+                          "max_df")]
+    out$field_terms <- sc$field_terms
   }
   out
 }
@@ -294,7 +450,7 @@ tf_read_corpus <- function(path) {
   warning(sprintf(paste("litmap: one theme holds %.1f per cent of the %d linked keywords;",
                         "connected components cannot separate themes in a corpus this",
                         "connected, so the themes and any landscape built on them are not",
-                        "informative"), p, n),
+                        "informative (method 'simple_centres' gives bounded themes)"), p, n),
           call. = FALSE)
 }
 
@@ -317,19 +473,67 @@ tf_read_corpus <- function(path) {
 #' \code{min_cocitation} can be set above \code{min_link}, and
 #' [tf_lit_diagram()] can draw only the strongest edges.
 #'
-#' A theme is a connected component of the keyword map, and on a real corpus a
-#' few keywords shared by most records join nearly every keyword into one.
-#' When the largest theme holds more than half the linked keywords, a warning
-#' says so: such themes, and any landscape built on them, do not describe the
-#' field. The result is returned unchanged.
+#' \code{method} chooses how keywords are grouped into themes. With
+#' \code{"components"}, the default, a theme is a connected component of the
+#' keyword map, and on a real corpus a few keywords shared by most records join
+#' nearly every keyword into one. When the largest theme holds more than half
+#' the linked keywords, a warning says so: such themes, and any landscape built
+#' on them, do not describe the field. The result is returned unchanged.
+#'
+#' \code{"simple_centres"} is the co-word clustering of Coulter et al. (1998)
+#' and Cobo et al. (2011). Each link is weighted by the equivalence index
+#' \eqn{c^2 / (df_a df_b)}, where \eqn{c} counts the records holding both
+#' keywords and \eqn{df} the records holding each. The strongest link between
+#' two unassigned keywords seeds a theme, which takes its strongest unassigned
+#' neighbour until it holds \code{max_theme_size} keywords, ties going to the
+#' keyword first in code-point order. A keyword whose links all reach keywords
+#' already in themes joins none. Themes smaller than \code{min_theme_size} are
+#' dropped. Each theme gains its centrality (ten times the summed index of its
+#' links to the keywords of other themes) and its density (100 times the
+#' summed index of its internal links, over its size), the measures
+#' of Callon et al. (1991) as Cobo et al. (2011) scale them. It also gains its
+#' quadrant in the strategic diagram, split here at the median of each:
+#' \code{"motor"} (both high), \code{"basic"} (central but not dense),
+#' \code{"niche"} (dense but not central) or \code{"emerging_or_declining"}
+#' (both low). On real corpora, this gives bounded themes where components give
+#' one. Components remain the default for this release.
 #'
 #' @param corpus A corpus object (named list), e.g. from [tf_read_corpus()].
 #' @param min_link Minimum co-occurrence count for a keyword pair to be kept
 #'   (default \code{2}). A positive integer.
+#' @param method \code{"components"} (the default) or \code{"simple_centres"}.
 #' @param min_cocitation Minimum count for a reference pair to be kept in
 #'   \code{co_citation}. \code{NULL} (the default) uses \code{min_link}.
+#' @param min_theme_size,max_theme_size The smallest theme kept (default
+#'   \code{2}) and the largest a theme may grow (default \code{10}) with
+#'   \code{"simple_centres"}. A positive integer, and an integer of at least 2
+#'   no smaller than \code{min_theme_size}.
+#' @param max_df A number from 0 to 1 (default \code{1}). With
+#'   \code{"simple_centres"}, a keyword in more than this share of the records
+#'   is a field term, left out of the map and listed in \code{field_terms}.
+#'   The three theme settings are checked with either method, although only
+#'   \code{"simple_centres"} reads them.
 #' @return A named list with elements \code{n_records}, \code{keywords},
-#'   \code{keyword_cooccurrence}, \code{themes}, and \code{co_citation}.
+#'   \code{keyword_cooccurrence}, \code{themes}, and \code{co_citation}. With
+#'   \code{"simple_centres"}, each theme also holds \code{centrality},
+#'   \code{density} and \code{quadrant}, and the list ends with
+#'   \code{method}, \code{parameters} (the five settings used) and
+#'   \code{field_terms}.
+#' @references
+#' Callon, M., Courtial, J. P., & Laville, F. (1991). Co-word analysis as a
+#' tool for describing the network of interactions between basic and
+#' technological research: The case of polymer chemistry. \emph{Scientometrics,
+#' 22}(1), 155-205. \doi{10.1007/BF02019280}
+#'
+#' Coulter, N., Monarch, I., & Konda, S. (1998). Software engineering as seen
+#' through its research literature: A study in co-word analysis. \emph{Journal
+#' of the American Society for Information Science, 49}(13), 1206-1223.
+#'
+#' Cobo, M. J., López-Herrera, A. G., Herrera-Viedma, E., & Herrera, F.
+#' (2011). An approach for detecting, quantifying, and visualizing the
+#' evolution of a research field: A practical application to the Fuzzy Sets
+#' Theory field. \emph{Journal of Informetrics, 5}(1), 146-166.
+#' \doi{10.1016/j.joi.2010.10.002}
 #' @examples
 #' corpus <- list(
 #'   schema_version = "1.0", id = "demo-corpus",
@@ -341,10 +545,18 @@ tf_read_corpus <- function(path) {
 #'   )
 #' )
 #' tf_litmap(corpus)
+#'
+#' # Simple centres on the frozen OpenAlex corpus, where components give one
+#' # theme.
+#' openalex <- tf_read_corpus(tf_example_path("openalex-panic-2026.corpus.yaml"))
+#' lm <- tf_litmap(openalex, method = "simple_centres")
+#' table(vapply(lm$themes, function(th) th$quadrant, character(1)))
 #' @export
-tf_litmap <- function(corpus, min_link = 2, min_cocitation = NULL) {
-  out <- .tf_litmap(corpus, min_link, min_cocitation)
-  .tf_warn_if_one_theme_dominates(out$themes)
+tf_litmap <- function(corpus, min_link = 2, method = "components", min_cocitation = NULL,
+                      min_theme_size = 2, max_theme_size = 10, max_df = 1) {
+  s <- .tf_settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, max_df)
+  out <- .tf_litmap(corpus, s)
+  if (identical(s$method, "components")) .tf_warn_if_one_theme_dominates(out$themes)
   out
 }
 
@@ -391,9 +603,13 @@ tf_litmap <- function(corpus, min_link = 2, min_cocitation = NULL) {
 #' \code{redundancy_risk}.
 #'
 #' The arguments are checked in the order \code{min_link},
-#' \code{max_token_share}, then the corpus, with the Python twin's messages.
-#' The themes are those of [tf_litmap()], and \code{tf_landscape()} gives its
-#' warning when one of them holds most of the linked keywords.
+#' \code{max_token_share}, \code{method}, then the corpus, with the Python
+#' twin's messages. The themes are those of [tf_litmap()], built by
+#' \code{method} with its other defaults. With \code{"components"},
+#' \code{tf_landscape()} gives the warning of [tf_litmap()] when one theme
+#' holds most of the linked keywords. With \code{"simple_centres"}, the result
+#' gains \code{method} after \code{theory_id}, and each theme its
+#' \code{centrality}, \code{density} and \code{quadrant}.
 #'
 #' @param theory A theory object (named list), e.g. from \code{tf_read()}.
 #' @param corpus A corpus object (named list), e.g. from [tf_read_corpus()].
@@ -403,6 +619,8 @@ tf_litmap <- function(corpus, min_link = 2, min_cocitation = NULL) {
 #' @param max_token_share A number from 0 to 1 (default \code{0.5}). A word in
 #'   the keywords of more than this share of the records is a field token and
 #'   never matches.
+#' @param method How [tf_litmap()] builds the themes: \code{"components"}
+#'   (the default) or \code{"simple_centres"}.
 #' @return A named list with elements \code{theory_id},
 #'   \code{max_token_share}, \code{field_tokens}, \code{phenomenon_tokens},
 #'   \code{themes}, \code{under_theorised_fronts} and \code{redundancy_risk}.
@@ -424,13 +642,16 @@ tf_litmap <- function(corpus, min_link = 2, min_cocitation = NULL) {
 #' )
 #' tf_landscape(theory, corpus)
 #' @export
-tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5) {
+tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5,
+                         method = "components") {
   T <- theory
   min_link <- .tf_positive_int(min_link, "min_link")
   max_token_share <- .tf_share(max_token_share, "max_token_share")
+  s <- .tf_settings(min_link, method, NULL, 2, 10, 1)
+  simple <- identical(s$method, "simple_centres")
   records <- .tf_records(corpus)
-  lm <- .tf_litmap(corpus, min_link, co_citation = FALSE, records = records)
-  .tf_warn_if_one_theme_dominates(lm$themes)
+  lm <- .tf_litmap(corpus, s, co_citation = FALSE, records = records)
+  if (!simple) .tf_warn_if_one_theme_dominates(lm$themes)
 
   field_tokens <- .tf_field_tokens(lapply(records, `[[`, "keywords"), max_token_share)
   phenomenon_tokens <- tf_tokens(.tf_str(T, "title"))
@@ -466,7 +687,7 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5) {
     focal_on <- length(focal_terms) > 0L
     n <- length(on) + (if (focal_on) 1L else 0L)
     status <- if (n == 0L) "under_theorised" else if (n >= 2L) "crowded" else "covered"
-    themes_out[[length(themes_out) + 1L]] <- list(
+    theme <- list(
       id = th$id,
       keywords = as.list(kws),
       alternatives = as.list(on),
@@ -475,6 +696,8 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5) {
       focal_terms = as.list(focal_terms),
       alternative_terms = alt_terms
     )
+    if (simple) theme <- c(theme, th[c("centrality", "density", "quadrant")])
+    themes_out[[length(themes_out) + 1L]] <- theme
     if (identical(status, "under_theorised")) {
       under <- c(under, th$id)
     } else if (identical(status, "crowded")) {
@@ -482,14 +705,17 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5) {
     }
   }
 
-  list(
-    theory_id = .tf_str(T, "id"),
-    max_token_share = max_token_share,
-    field_tokens = as.list(sort(field_tokens, method = "radix")),
-    phenomenon_tokens = as.list(sort(phenomenon_tokens, method = "radix")),
-    themes = themes_out,
-    under_theorised_fronts = as.list(under),
-    redundancy_risk = as.list(crowded)
+  c(
+    list(theory_id = .tf_str(T, "id")),
+    if (simple) list(method = s$method),
+    list(
+      max_token_share = max_token_share,
+      field_tokens = as.list(sort(field_tokens, method = "radix")),
+      phenomenon_tokens = as.list(sort(phenomenon_tokens, method = "radix")),
+      themes = themes_out,
+      under_theorised_fronts = as.list(under),
+      redundancy_risk = as.list(crowded)
+    )
   )
 }
 
