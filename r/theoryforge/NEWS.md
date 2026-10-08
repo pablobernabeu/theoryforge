@@ -355,6 +355,23 @@
   a cyclic graph, and its message names the option. A golden file of the
   sigma record for each bundled theory joins the parity check.
 
+* The `causal_dag` view of `tf_diagram()` quotes a construct id that dagitty
+  or Graphviz would otherwise split or misread, such as `self-efficacy`,
+  `1arousal` or `a.b`, and stops on the ids `node` and `graph`, which dagitty
+  reserves. dagitty read `self-efficacy -> task-persistence -> outcome` as
+  five nodes and implied eight independencies where `tf_implications()` gives
+  one. `tf_compile_sem()` renames construct ids and indicator names that
+  lavaan would refuse or misread, such as `c-arousal`, `1arousal`, `NA`,
+  `efa` or `7_point_likert_rating`, with a comment recording each renaming.
+  lavaan read `c-arousal =~ q1` as a latent variable named `arousal`. A
+  comment writes a control character or a character outside the Basic
+  Multilingual Plane as `<U+XXXX>`, because lavaan could otherwise read part
+  of a comment as a model line. `tf_compile_sem()` also refuses a name
+  collision it used to write without a word, between two constructs, two
+  indicators of one construct or a construct and an indicator. The bundled
+  theories are unaffected. lavaan joins Suggests for a test that parses the
+  renamed syntax with `lavaan::lavaanify()`.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

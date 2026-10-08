@@ -30,6 +30,17 @@ Produces a deterministic diagram IR string for the requested type. The
 engine independent (Graphviz DOT for the two digraphs, dagitty syntax for
 the causal DAG).
 }
+\details{
+The causal DAG is read by \pkg{dagitty} and drawn by the apps with Graphviz.
+It writes a construct id bare only when the id is made of ASCII letters,
+digits and underscores, does not begin with a digit and is not a DOT keyword.
+The keywords are \code{node}, \code{edge}, \code{graph}, \code{digraph},
+\code{subgraph} and \code{strict}, in any case. Any other id is
+double-quoted, with a double quote inside it escaped by a backslash, so
+\code{self-efficacy} stays one node where dagitty used to read two. The view
+stops when it would write the id \code{node} or \code{graph}, which dagitty
+refuses even quoted.
+}
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>

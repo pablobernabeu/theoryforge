@@ -34,6 +34,7 @@ Suggests:
     DiagrammeR,
     DiagrammeRsvg,
     htmltools,
+    lavaan,
     Matrix,
     spelling
 VignetteBuilder: knitr

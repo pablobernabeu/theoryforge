@@ -1,12 +1,23 @@
 """Diagram intermediate representations. Deterministic string renderers for every diagram type."""
 from __future__ import annotations
 
+import re
+
 from ._access import PRED_TYPE, RELATION, enum, field, items, str_list, text
 from ._relations import BIDIRECTED, DIRECTED
-from ._text import trim
+from ._text import ascii_lower, trim
 
 _TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap",
           "pipeline", "context", "workflow", "venn", "rigour", "severity")
+
+# An id the causal_dag view writes bare: one that DOT reads as an identifier
+# without quotes and that is not one of DOT's keywords, which Graphviz matches
+# in any case (API_SPEC.md section 5). dagitty reads every such id as written.
+_DAG_BARE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_DOT_KEYWORDS = frozenset({"node", "edge", "graph", "digraph", "subgraph", "strict"})
+# dagitty refuses a node with either name even when it is quoted. It compares
+# the name exactly, so `Node` is exported, quoted.
+_DAGITTY_RESERVED = frozenset({"node", "graph"})
 
 
 def _esc(s) -> str:
@@ -130,6 +141,21 @@ def _provenance(T: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _dag_id(s: str) -> str:
+    """An id as the causal_dag view writes it (API_SPEC.md section 5).
+
+    Bare when DOT reads it bare, and otherwise double-quoted with each double
+    quote escaped by a backslash. Other backslashes are kept as they are,
+    because dagitty does not unescape them, so the id reads back as written.
+    The two ids dagitty reserves cannot be written at all.
+    """
+    if s in _DAGITTY_RESERVED:
+        raise ValueError(f"causal_dag cannot export construct id '{s}': dagitty reserves it")
+    if _DAG_BARE.fullmatch(s) and ascii_lower(s) not in _DOT_KEYWORDS:
+        return s
+    return '"' + s.replace('"', '\\"') + '"'
+
+
 def _causal_dag(T: dict) -> str:
     # The graph implications() reads (API_SPEC.md sections 5 and 27): a line
     # per directed relation, and a bidirected line per association between two
@@ -147,12 +173,16 @@ def _causal_dag(T: dict) -> str:
         if _rel(p) in DIRECTED:
             vertices.update((_t(p, "from"), _t(p, "to")))
     lines = ["dag {"]
+    # Each id goes through _dag_id, `from` before `to`, so a refused id is the
+    # first one the view would write.
     for p in props:
         frm, to = _t(p, "from"), _t(p, "to")
         if _rel(p) in DIRECTED:
-            lines.append(f"  {frm} -> {to}")
+            a = _dag_id(frm)
+            lines.append(f"  {a} -> {_dag_id(to)}")
         elif _rel(p) in BIDIRECTED and frm != to and frm in vertices and to in vertices:
-            lines.append(f"  {frm} <-> {to}")
+            a = _dag_id(frm)
+            lines.append(f"  {a} <-> {_dag_id(to)}")
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -418,6 +448,19 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
     ``engine`` is accepted but has no effect, because the IR is engine-independent
     (DOT for the digraphs, dagitty syntax for the causal DAG, and SVG for the Venn,
     the rigour grid and the severity chart).
+
+    The causal DAG is read by dagitty and drawn by the apps with Graphviz. It
+    writes a construct id bare only when the id is made of ASCII letters,
+    digits and underscores, does not begin with a digit and is not a DOT
+    keyword. The keywords are ``node``, ``edge``, ``graph``, ``digraph``,
+    ``subgraph`` and ``strict``, in any case. Any other id is double-quoted,
+    with a double quote inside it escaped by a backslash, so ``self-efficacy``
+    stays one node where dagitty used to read two.
+
+    Raises:
+        ValueError: for an unknown ``type``, and for a causal DAG that would
+            write the id ``node`` or ``graph``, which dagitty refuses even
+            quoted.
     """
     T = T.data if hasattr(T, "data") else T
     if type == "nomological_net":

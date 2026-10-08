@@ -216,6 +216,24 @@ version and a single behavioural contract
   the apps draw a bidirected edge as a dashed line with an arrowhead at each end.
   API_SPEC sections 5, 27 and 28 state the rules. The weak example's `nomological_net`
   golden changes, and the edge-case records gain the new keys.
+- The `causal_dag` view and `compile_sem()` wrote construct ids verbatim. dagitty read the
+  export of `self-efficacy -> task-persistence -> outcome` as five nodes and implied eight
+  independencies where `implications()` gives one, and the apps' Graphviz rendering
+  stopped at a hyphen or a dot and drew `1arousal` as two nodes. The view now writes an
+  id bare only when DOT reads it as one identifier and quotes any other, and it refuses
+  the ids `node` and `graph`, which dagitty reserves even in quotes. In the syntax
+  `compile_sem()` wrote, lavaan stopped at `threat ~ c-arousal`, at `NA =~ q1` and at
+  the indicators `7_point_likert_rating` and `efa`, and it read `c-arousal =~ q1` as a
+  latent variable named `arousal`. It also merged two indicators of one construct that
+  sanitise alike without a word, and read a construct named like another construct's
+  indicator as a second-order factor. `compile_sem()` now renames such ids and
+  indicators, with a comment recording each renaming, and refuses a name collision
+  between two constructs, two indicators of one construct or a construct and an
+  indicator, naming both. A comment writes a control character or a character above
+  U+FFFF as `<U+XXXX>`. A line feed in an id would otherwise end its comment early and
+  turn the rest into a model line, and on Windows two characters above U+FFFF in a
+  comment made lavaan read `outcome ~ mood` as `utcome ~ mood`. API_SPEC sections 5 and
+  19 state the rules. The bundled theories and the goldens are unchanged.
 
 ### Changed
 - R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new

@@ -601,7 +601,7 @@ class Theory:
     def diagram(self, type: str = "nomological_net", engine: str = "graphviz") -> str:
         """Return the diagram IR for ``type`` (one of nomological_net, provenance,
         causal_dag, development_roadmap, pipeline, context, workflow, venn, rigour,
-        severity)."""
+        severity); see :func:`theoryforge.diagram.diagram`."""
         return _diagram(self.data, type=type, engine=engine)
 
     def render_diagram(self, type: str = "nomological_net"):
@@ -651,7 +651,11 @@ class Theory:
         return _new_evidence_dois(self.data, candidate_dois)
 
     def compile_sem(self) -> str:
-        """Compile constructs and propositions to lavaan model syntax."""
+        """Compile constructs and propositions to lavaan model syntax.
+
+        See :func:`theoryforge.compile_sem` for how names are written and when
+        a collision is refused.
+        """
         return _compile_sem(self.data)
 
     def dossier(self) -> str:

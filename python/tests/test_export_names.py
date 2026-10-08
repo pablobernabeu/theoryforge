@@ -1,0 +1,240 @@
+"""Identifiers in the two exports that other tools read (API_SPEC.md sections 5 and 19).
+
+The causal_dag view is read by dagitty and drawn by the apps with Graphviz, and
+compile_sem's syntax is read by lavaan. A construct id is free text, so both
+exports write each id in a form those tools read as written, and compile_sem
+refuses two names that would merge. The R suite (test-export-names.R) asserts
+the same outputs and messages, and checks them with dagitty and lavaan.
+"""
+import pytest
+
+import theoryforge as tf
+
+
+def _theory(constructs, propositions=(), theory_id="ids"):
+    """A theory from (id, measurement) pairs and (id, from, to, relation) tuples."""
+    t = tf.new_theory(theory_id, "Identifiers")
+    for cid, measurement in constructs:
+        t.add_construct(cid, "Label", "A definition.", measurement=measurement)
+    for pid, frm, to, relation in propositions:
+        t.add_proposition(pid, frm, to, relation)
+    return t
+
+
+# -- causal_dag ---------------------------------------------------------------
+
+IDS = ["self-efficacy", "task persistence", "1arousal", "a.b", "c_ärger", "NA", "if",
+       "edge", "Node", 'say "hi"', "x\\y"]
+
+
+def test_causal_dag_quotes_ids_that_dagitty_or_graphviz_would_misread():
+    # dagitty read `self-efficacy -> task-persistence` as four nodes, and
+    # Graphviz split `1arousal` and stopped at a hyphen or a dot. An id is bare
+    # only when it is a DOT identifier that is not a keyword in any case. Any
+    # other id is quoted, with `"` escaped and a backslash kept as it is, since
+    # dagitty keeps it literally.
+    t = _theory([(c, None) for c in IDS], [
+        ("p1", "self-efficacy", "task persistence", "increases"),
+        ("p2", "1arousal", "a.b", "causes"),
+        ("p3", "c_ärger", "NA", "decreases"),
+        ("p4", "if", "edge", "mediates"),
+        ("p5", "Node", 'say "hi"', "moderates"),
+        ("p6", "x\\y", "self-efficacy", "causes"),
+        ("p7", "self-efficacy", "1arousal", "associates"),
+    ])
+    assert t.diagram("causal_dag") == (
+        "dag {\n"
+        '  "self-efficacy" -> "task persistence"\n'
+        '  "1arousal" -> "a.b"\n'
+        '  "c_ärger" -> NA\n'
+        '  if -> "edge"\n'
+        '  "Node" -> "say \\"hi\\""\n'
+        '  "x\\y" -> "self-efficacy"\n'
+        '  "self-efficacy" <-> "1arousal"\n'
+        "}\n"
+    )
+
+
+def test_causal_dag_refuses_the_two_ids_dagitty_reserves():
+    # dagitty refuses a node named `node` or `graph` even when it is quoted. The
+    # first such id the view would write is named, in file order.
+    t = _theory([(c, None) for c in ("a", "b", "graph", "node")], [
+        ("p1", "a", "graph", "causes"),
+        ("p2", "node", "b", "causes"),
+    ])
+    with pytest.raises(ValueError) as exc:
+        t.diagram("causal_dag")
+    assert str(exc.value) == "causal_dag cannot export construct id 'graph': dagitty reserves it"
+    # Only an id the view writes is refused: this association joins two
+    # constructs that no directed relation names, so it is not exported.
+    t = _theory([(c, None) for c in ("a", "b", "node", "k")], [
+        ("p1", "a", "b", "causes"),
+        ("p2", "node", "k", "associates"),
+    ])
+    assert t.diagram("causal_dag") == "dag {\n  a -> b\n}\n"
+
+
+def test_causal_dag_quotes_an_empty_endpoint():
+    # A missing `from` reads as "" (API_SPEC.md section 3), which is no bare
+    # identifier, so the line stays one that dagitty can parse.
+    t = tf.Theory({"id": "t", "constructs": [{"id": "b"}],
+                   "propositions": [{"id": "p1", "to": "b", "relation": "causes"}]})
+    assert t.diagram("causal_dag") == 'dag {\n  "" -> b\n}\n'
+
+
+# -- compile_sem --------------------------------------------------------------
+
+def test_compile_sem_renames_ids_and_indicators_that_lavaan_cannot_read_as_written():
+    # lavaan refuses or misreads `c-arousal`, `1arousal`, R's reserved words and
+    # an indicator such as `7_point_likert_rating`. A construct id is renamed
+    # with a comment that records the renaming, an unsafe indicator name gains
+    # `i_`, and safe names are written as they are, `node` among them, since
+    # only dagitty reserves it.
+    t = _theory([
+        ("self-efficacy", ["7-point Likert rating", "Self report"]),
+        ("task persistence", ["Time on task"]),
+        ("1arousal", None),
+        ("NA", ["In"]),
+        ("if", None),
+        ("c_ärger", None),
+        (".1a", None),
+        (".hidden", None),
+        ("a.b", None),
+        ("node", None),
+    ], [
+        ("p1", "self-efficacy", "task persistence", "increases"),
+        ("p2", "1arousal", "NA", "causes"),
+        ("p3", "if", "c_ärger", "decreases"),
+        ("p4", ".hidden", "a.b", "associates"),
+        ("p5", "NA", "task persistence", "moderates"),
+        ("p6", ".1a", "if", "associates"),
+        ("p7", "node", "a.b", "causes"),
+    ])
+    assert t.compile_sem() == (
+        "# lavaan model generated by theoryforge for ids\n"
+        "# renamed for lavaan: 'self-efficacy' -> self_efficacy\n"
+        "# renamed for lavaan: 'task persistence' -> task_persistence\n"
+        "# renamed for lavaan: '1arousal' -> c_1arousal\n"
+        "# renamed for lavaan: 'NA' -> c_NA\n"
+        "# renamed for lavaan: 'if' -> c_if\n"
+        "# renamed for lavaan: 'c_ärger' -> c_arger\n"
+        "# renamed for lavaan: '.1a' -> c_.1a\n"
+        "# Measurement model\n"
+        "self_efficacy =~ i_7_point_likert_rating + self_report\n"
+        "task_persistence =~ time_on_task\n"
+        "c_NA =~ i_in\n"
+        "# Structural model\n"
+        "task_persistence ~ self_efficacy\n"
+        "c_NA ~ c_1arousal\n"
+        "c_arger ~ c_if\n"
+        ".hidden ~~ a.b\n"
+        "# moderation: c_NA moderates the path into task_persistence "
+        "(specify interaction manually)\n"
+        "c_.1a ~~ c_if\n"
+        "a.b ~ node\n"
+    )
+
+
+def test_compile_sem_renames_lavaans_own_keyword_efa():
+    # lavaan's parser takes `efa` as the start of an exploratory factor block
+    # wherever it stands, so it refused `traits =~ openness + efa`. The name
+    # is renamed in both positions, although make.names() accepts it.
+    t = _theory([("efa", ["q1", "q2"]), ("traits", ["Openness", "EFA"])],
+                [("p1", "efa", "traits", "causes")])
+    assert t.compile_sem() == (
+        "# lavaan model generated by theoryforge for ids\n"
+        "# renamed for lavaan: 'efa' -> c_efa\n"
+        "# Measurement model\n"
+        "c_efa =~ q1 + q2\n"
+        "traits =~ openness + i_efa\n"
+        "# Structural model\n"
+        "traits ~ c_efa\n"
+    )
+
+
+def test_compile_sem_keeps_each_comment_on_one_line():
+    # A line feed in an id carried the rest of its renaming comment into the
+    # model, where lavaan read `f ~~ 0*g' -> x_f_0_g` as a covariance. On
+    # Windows, two characters outside the Basic Multilingual Plane in a
+    # comment made lavaan read `outcome ~ mood` as `utcome ~ mood`. A comment
+    # writes control characters and such characters as <U+XXXX>, in the
+    # header's theory id as well.
+    t = _theory([("outcome", None), ("mood\U0001f600\U0001f600", None),
+                 ("x\nf ~~ 0*g", None)],
+                [("p1", "mood\U0001f600\U0001f600", "outcome", "causes"),
+                 ("p2", "x\nf ~~ 0*g", "outcome", "causes")],
+                theory_id="t\r1")
+    assert t.compile_sem() == (
+        "# lavaan model generated by theoryforge for t<U+000D>1\n"
+        "# renamed for lavaan: 'mood<U+1F600><U+1F600>' -> mood\n"
+        "# renamed for lavaan: 'x<U+000A>f ~~ 0*g' -> x_f_0_g\n"
+        "# Measurement model\n"
+        "# Structural model\n"
+        "outcome ~ mood\n"
+        "outcome ~ x_f_0_g\n"
+    )
+
+
+def _collision(t) -> str:
+    with pytest.raises(ValueError) as exc:
+        t.compile_sem()
+    return str(exc.value)
+
+
+def test_compile_sem_refuses_two_indicators_of_one_construct_with_one_name():
+    # lavaan merged the two into one indicator without a word.
+    t = _theory([("c_avoidance", ["Self-reported avoidance", "self reported avoidance"])])
+    assert _collision(t) == ("compile_sem found a name collision: construct 'c_avoidance' "
+                             "has two indicators that both become self_reported_avoidance")
+
+
+def test_compile_sem_refuses_a_construct_named_like_an_indicator():
+    # `anxiety =~ anxiety` drew a warning from lavaan and then an unidentified
+    # fit, and a construct named like another's indicator made a second-order
+    # factor. The message is the same whichever comes first in the file.
+    t = _theory([("anxiety", ["Anxiety"])])
+    assert _collision(t) == ("compile_sem found a name collision: construct 'anxiety' and an "
+                             "indicator of construct 'anxiety' both become anxiety")
+    message = ("compile_sem found a name collision: construct 'threat' and an indicator of "
+               "construct 'appraisal' both become threat")
+    assert _collision(_theory([("threat", ["q1", "q2"]), ("appraisal", ["Threat", "q3"])])) == message
+    assert _collision(_theory([("appraisal", ["Threat", "q3"]), ("threat", ["q1", "q2"])])) == message
+
+
+def test_compile_sem_refuses_two_constructs_with_one_name():
+    t = _theory([("self-efficacy", ["q1"]), ("self_efficacy", ["q2"])])
+    assert _collision(t) == ("compile_sem found a name collision: constructs 'self-efficacy' "
+                             "and 'self_efficacy' both become self_efficacy")
+
+
+def test_compile_sem_reports_the_first_collision_in_file_order():
+    t = _theory([("a", ["X", "x"]), ("b-c", ["q1"]), ("b_c", ["q2"])])
+    assert _collision(t) == ("compile_sem found a name collision: construct 'a' has two "
+                             "indicators that both become x")
+
+
+def test_compile_sem_names_an_undeclared_endpoint_by_the_same_rule():
+    # validate() reports an endpoint that names no construct. compile_sem still
+    # writes it, renamed and recorded like a construct, and refuses it when it
+    # would merge with a declared name, where lavaan used to stop at `x-1`.
+    t = _theory([("y", None)], [("p1", "my-x", "y", "causes")])
+    sem = t.compile_sem()
+    assert "# renamed for lavaan: 'my-x' -> my_x\n# Measurement model\n" in sem
+    assert sem.endswith("# Structural model\ny ~ my_x\n")
+    t = _theory([("x_1", None), ("y", None)], [("p1", "x-1", "y", "causes")])
+    assert _collision(t) == ("compile_sem found a name collision: constructs 'x_1' and 'x-1' "
+                             "both become x_1")
+
+
+def test_compile_sem_allows_an_indicator_shared_by_two_constructs():
+    # A cross-loading is one observed variable measuring two constructs.
+    t = _theory([("a", ["x", "y"]), ("b", ["y", "z"])])
+    assert "# Measurement model\na =~ x + y\nb =~ y + z\n" in t.compile_sem()
+
+
+def test_compile_sem_keeps_an_empty_id_empty():
+    # A construct without an id reads as "" (API_SPEC.md section 3) in both
+    # twins, and the empty name is neither renamed nor recorded.
+    t = tf.Theory({"id": "t", "constructs": [{"measurement": ["m1"]}]})
+    assert t.compile_sem() == ("# lavaan model generated by theoryforge for t\n"
+                               "# Measurement model\n =~ m1\n# Structural model\n")

@@ -20,6 +20,30 @@ model (\code{=~}), and propositions become structural paths (\code{~}),
 covariances (\code{~~}), or moderation comment lines. The output is
 deterministic.
 }
+\section{Names}{
+
+Every name is one lavaan reads as written. Construct ids that lavaan would
+refuse or misread, such as \code{self-efficacy}, \code{1arousal}, \code{NA}
+or its own keyword \code{efa}, are renamed. A comment after the header
+records each renaming
+(\verb{# renamed for lavaan: 'self-efficacy' -> self_efficacy}). An
+indicator is its measurement entry folded and lowercased, with each run of
+other characters made one underscore. \code{i_} goes in front when the
+result would still be refused, so \code{7-point Likert rating} gives
+\code{i_7_point_likert_rating}. A comment writes each control character of
+an id, and each character outside the Basic Multilingual Plane, as
+\verb{<U+XXXX>}, so that it stays one line that lavaan reads as a comment.
+API_SPEC.md section 19 states the rules.
+
+The function stops when two different ids would share a name, since lavaan
+would merge them. Such a pair is two constructs, two indicators of one
+construct or a construct and an indicator. A construct and an indicator
+collide when the construct is measured by its own name or named like an
+indicator of another construct. An indicator shared by two constructs, a
+cross-loading, is allowed. The Python twin raises \code{ValueError} with the
+same message text.
+}
+
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_arousal", "Arousal", "Bodily activation.",

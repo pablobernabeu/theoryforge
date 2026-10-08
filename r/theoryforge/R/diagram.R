@@ -157,6 +157,33 @@ NULL
   paste0(paste(lines, collapse = "\n"), "\n")
 }
 
+# An id the causal_dag view writes bare: one that DOT reads as an identifier
+# without quotes and that is not one of DOT's keywords, which Graphviz matches
+# in any case (API_SPEC.md section 5). dagitty reads every such id as written.
+# PCRE's "$" also matches before a final newline, so the pattern ends at "\z",
+# the end of the string, as Python's fullmatch() does.
+.tf_DAG_BARE <- "^[A-Za-z_][A-Za-z0-9_]*\\z"
+.tf_DOT_KEYWORDS <- c("node", "edge", "graph", "digraph", "subgraph", "strict")
+# dagitty refuses a node with either name even when it is quoted. It compares
+# the name exactly, so `Node` is exported, quoted.
+.tf_DAGITTY_RESERVED <- c("node", "graph")
+
+# An id as the causal_dag view writes it: bare when DOT reads it bare, and
+# otherwise double-quoted with each double quote escaped by a backslash. Other
+# backslashes are kept as they are, because dagitty does not unescape them, so
+# the id reads back as written. The two ids dagitty reserves cannot be written
+# at all.
+.tf_dag_id <- function(s) {
+  if (s %in% .tf_DAGITTY_RESERVED) {
+    stop(sprintf("causal_dag cannot export construct id '%s': dagitty reserves it", s),
+         call. = FALSE)
+  }
+  if (grepl(.tf_DAG_BARE, s, perl = TRUE) && !(.tf_ascii_lower(s) %in% .tf_DOT_KEYWORDS)) {
+    return(s)
+  }
+  paste0('"', gsub('"', '\\"', s, fixed = TRUE), '"')
+}
+
 .tf_causal_dag <- function(T) {
   # The graph tf_implications() reads (API_SPEC.md sections 5 and 27): a line
   # per directed relation, and a bidirected line per association between two
@@ -175,14 +202,18 @@ NULL
     }
   }
   lines <- c("dag {")
+  # Each id goes through .tf_dag_id(), `from` before `to`, so a refused id is
+  # the first one the view would write.
   for (p in props) {
     frm <- .tf_str(p, "from")
     to <- .tf_str(p, "to")
     if (.tf_rel(p) %in% .tf_DIRECTED) {
-      lines <- c(lines, sprintf("  %s -> %s", frm, to))
+      a <- .tf_dag_id(frm)
+      lines <- c(lines, sprintf("  %s -> %s", a, .tf_dag_id(to)))
     } else if (.tf_rel(p) %in% .tf_BIDIRECTED && frm != to &&
                frm %in% vertices && to %in% vertices) {
-      lines <- c(lines, sprintf("  %s <-> %s", frm, to))
+      a <- .tf_dag_id(frm)
+      lines <- c(lines, sprintf("  %s <-> %s", a, .tf_dag_id(to)))
     }
   }
   lines <- c(lines, "}")
@@ -494,6 +525,16 @@ NULL
 #' \code{engine} argument is accepted but has no effect, because the IR is
 #' engine independent (Graphviz DOT for the two digraphs, dagitty syntax for
 #' the causal DAG).
+#'
+#' The causal DAG is read by \pkg{dagitty} and drawn by the apps with Graphviz.
+#' It writes a construct id bare only when the id is made of ASCII letters,
+#' digits and underscores, does not begin with a digit and is not a DOT keyword.
+#' The keywords are \code{node}, \code{edge}, \code{graph}, \code{digraph},
+#' \code{subgraph} and \code{strict}, in any case. Any other id is
+#' double-quoted, with a double quote inside it escaped by a backslash, so
+#' \code{self-efficacy} stays one node where dagitty used to read two. The view
+#' stops when it would write the id \code{node} or \code{graph}, which dagitty
+#' refuses even quoted.
 #'
 #' @param theory A theory object (named list).
 #' @param type One of \code{"nomological_net"} (default), \code{"provenance"},
