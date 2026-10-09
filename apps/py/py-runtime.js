@@ -14,8 +14,22 @@ import json
 import warnings
 import theoryforge as tf
 from theoryforge import litmap, lit_diagram, read_corpus
+from theoryforge._access import field, text
 
 _state = {}
+
+# The prior the app's "Upload a prior version" option stands for, which
+# load_prior() holds in _state["prior"].
+UPLOADED_PRIOR = "upload"
+
+# The id, title and version record of a theory, each read as text, so a
+# missing field is "". The app takes a candidate prior for the declared parent
+# of the loaded theory when the candidate's version id is the theory's
+# parent_id and the theory's id begins with the candidate's.
+def _lineage(d):
+    v = field(d, "version")
+    return {"id": text(field(d, "id")), "title": text(field(d, "title")),
+            "version": {"id": text(field(v, "id")), "parent_id": text(field(v, "parent_id"))}}
 
 def _summary(t):
     d = t.data
@@ -25,6 +39,7 @@ def _summary(t):
     return {
         "id": d.get("id"), "title": d.get("title"),
         "maturity": d.get("maturity"), "form": d.get("theory_form"),
+        "version": _lineage(d)["version"],
         "counts": {
             "constructs": n("constructs"), "propositions": n("propositions"),
             "predictions": n("predictions"), "alternatives": n("alternatives"),
@@ -53,6 +68,24 @@ def load_corpus(path):
     _state["corpus"] = read_corpus(path)
     return "ok"
 
+# The lineage of each candidate prior, read without loading it. A file that
+# cannot be read has none, so it is never taken for a declared parent.
+def lineage(paths_json):
+    out = []
+    for path in json.loads(paths_json):
+        try:
+            out.append(_lineage(tf.read(path).data))
+        except Exception:
+            out.append(None)
+    return json.dumps(out)
+
+# An uploaded prior is held apart from the theory. A file that cannot be read
+# raises, and the prior uploaded before it stays.
+def load_prior(path):
+    prior = tf.read(path)
+    _state["prior"] = prior
+    return json.dumps(_lineage(prior.data))
+
 def run(op, params_json):
     p = json.loads(params_json) if params_json else {}
     t = _state.get("theory")
@@ -67,8 +100,21 @@ def run(op, params_json):
     if op == "redundancy":
         return json.dumps({"rows": t.redundancy_check()})
     if op == "appraise":
-        prior = tf.read(p["prior"])
+        if p.get("prior") == UPLOADED_PRIOR:
+            prior = _state.get("prior")
+            if prior is None:
+                raise RuntimeError("No prior version uploaded")
+        else:
+            prior = tf.read(p["prior"])
         return json.dumps(t.appraise_amendment(prior))
+    if op == "implications":
+        # A refusal, a feedback loop under the default or a relation the graph
+        # cannot be built from, is a result the app shows with its message.
+        try:
+            res = t.implications(cycles=p.get("cycles", "refuse"))
+        except ValueError as e:
+            return json.dumps({"ok": False, "message": str(e)})
+        return json.dumps({"result": res})
     if op == "diagram":
         return json.dumps({"ir": t.diagram(p["type"])})
     if op == "sem":
@@ -122,6 +168,11 @@ const RT = {
   _app: null,
   _corpusFile: null,
   _theoryFile: "your-theory.yaml",
+  // Whether the package ships the theory's file, which the code then reads
+  // through example_path(). An upload never is.
+  _theoryShipped: false,
+  // The uploaded prior's file name, set once the engine has read it.
+  _priorFile: null,
 
   hasCorpus() { return this.corpora.length > 0; },
 
@@ -160,7 +211,11 @@ const RT = {
     // manifest from pyproject.toml (after checking DESCRIPTION agrees), so the
     // app cannot drift from the packaged version.
     this.pkgVersion = manifest.pkgVersion || "";
-    this.examples = manifest.examples;
+    // Each example's lineage, read once, lets the appraisal default to the
+    // version the loaded theory declares as its parent.
+    onProgress("Reading the examples' versions…");
+    const lineage = await this.lineageOf(manifest.examples.map((e) => this._fixtures[e.path]));
+    this.examples = manifest.examples.map((e, i) => Object.assign({}, e, { lineage: lineage[i] }));
     this.corpora = manifest.corpora;
 
     if (manifest.corpora.length) {
@@ -177,6 +232,7 @@ const RT = {
   async loadExample(path) {
     const summary = JSON.parse(this._str(this._app.load(this._fixtures[path])));
     this._theoryFile = path.split("/").pop();
+    this._theoryShipped = this._shipped(this.examples, path);
     return summary;
   },
 
@@ -186,7 +242,30 @@ const RT = {
     this._py.FS.writeFile(dest, new TextEncoder().encode(text));
     const summary = JSON.parse(this._str(this._app.load(dest)));
     this._theoryFile = filename || "your-theory." + ext;
+    this._theoryShipped = false;
     return summary;
+  },
+
+  // An uploaded prior has a file of its own and is held apart from the theory.
+  // Its name is recorded for the code panel only once the engine has read it.
+  async loadPriorText(text, filename) {
+    const ext = /\.json$/i.test(filename) ? "json" : "yaml";
+    const dest = "/pkg/prior." + ext;
+    this._py.FS.writeFile(dest, new TextEncoder().encode(text));
+    const lineage = JSON.parse(this._str(this._app.load_prior(dest)));
+    this._priorFile = filename || "prior." + ext;
+    return lineage;
+  },
+
+  // The lineage of each file in `paths` (in-FS paths), null for one that
+  // cannot be read. Nothing is loaded.
+  async lineageOf(paths) {
+    return JSON.parse(this._str(this._app.lineage(JSON.stringify(paths))));
+  },
+
+  _shipped(list, path) {
+    const e = (list || []).find((x) => x.path === path);
+    return !!(e && e.shipped);
   },
 
   async run(opId, params) {
@@ -207,32 +286,52 @@ const RT = {
   },
 
   // ---- reproducible Python code -------------------------------------------
+  // A file the package ships is read through example_path(), so the code runs
+  // wherever the package is installed. Any other file, an app-only example or
+  // an upload, has to be saved beside the script first. `note` ends that
+  // comment. The name is a JSON string literal in the code, which Python
+  // reads as written. In the comment, a line feed or carriage return in an
+  // uploaded file's name would end the comment and leave the rest of the
+  // name as code, so every control character is shown as "?".
+  _read(name, fn, file, shipped, note) {
+    const lit = JSON.stringify(file);
+    const shown = String(file).replace(/[\u0000-\u001f\u007f]/g, "?");
+    return shipped
+      ? `${name} = ${fn}(tf.example_path(${lit}))`
+      : `# Save ${shown} beside this script first${note || "."}\n${name} = ${fn}(${lit})`;
+  },
+
   code(opId, p) {
-    const f = this._theoryFile;
-    const head = `import theoryforge as tf\ntheory = tf.read("${f}")`;
-    const corpus = `corpus = tf.read_corpus("${(this._corpusFile || "corpus.yaml").split("/").pop()}")`;
+    const head = "import theoryforge as tf\n" +
+      this._read("theory", "tf.read", this._theoryFile, this._theoryShipped, " (View source in the app offers a download).");
+    const cf = this._corpusFile || "corpus.yaml";
+    const corpus = this._read("corpus", "tf.read_corpus", cf.split("/").pop(), this._shipped(this.corpora, cf));
     switch (opId) {
       case "check":
-        return `${head}\n\nreport = theory.check()\nreport["aggregate_score"]   # overall 0-100\nreport["gate"]              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nopen("rigour.svg", "w").write(theory.diagram("rigour"))`;
+        return `${head}\n\nreport = theory.check()\nreport["aggregate_score"]   # overall 0-100\nreport["gate"]              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nopen("rigour.svg", "w", encoding="utf-8").write(theory.diagram("rigour"))`;
       case "validate":
         return `${head}\n\ntheory.validate(full=True)        # structural + referential integrity; raises listing every problem`;
       case "appraise": {
-        const pf = (p.prior || "prior.theory.yaml").split("/").pop();
-        return `${head}\nprior = tf.read("${pf}")\n\nappr = theory.appraise_amendment(prior)\nappr["verdict"]                   # progressive / degenerating / neutral`;
+        const uploaded = p.prior === "upload";
+        const pf = uploaded ? this._priorFile || "prior.theory.yaml" : String(p.prior || "prior.theory.yaml").split("/").pop();
+        const prior = this._read("prior", "tf.read", pf, !uploaded && this._shipped(this.examples, p.prior));
+        return `${head}\n${prior}\n\nappr = theory.appraise_amendment(prior)\nappr["verdict"]                   # progressive / degenerating / neutral`;
       }
       case "diagram": {
         const t = p.type;
         const isSvg = DIAG_SVG.has(t);
         return `${head}\n\nir = theory.diagram("${t}")\nprint(ir)\n` + (isSvg
-          ? `# '${t}' is emitted directly as SVG:\nopen("${t}.svg", "w").write(ir)`
+          ? `# '${t}' is emitted directly as SVG:\nopen("${t}.svg", "w", encoding="utf-8").write(ir)`
           : `# '${t}' is ${t === "causal_dag" ? "dagitty" : "Graphviz DOT"}; render with e.g.\n# graphviz.Source(ir).render("${t}", format="svg")`);
       }
       case "severity":
-        return `${head}\n\nsev = theory.severity()           # per-prediction risk & computed severity\nopen("severity.svg", "w").write(theory.diagram("severity"))`;
+        return `${head}\n\nsev = theory.severity()           # per-prediction risk & computed severity\nopen("severity.svg", "w", encoding="utf-8").write(theory.diagram("severity"))`;
       case "redundancy":
         return `${head}\n\ntheory.redundancy_check()         # pairwise Jaccard and overlap of construct definitions`;
       case "sem":
         return `${head}\n\nprint(theory.compile_sem())       # lavaan model syntax`;
+      case "implications":
+        return `${head}\n\n# A refusal raises ValueError with the message the app shows.\nimplied = theory.implications(cycles="${p.cycles || "refuse"}")\nfor s in implied["implications"]:\n    print(s["statement"])`;
       case "preregister":
         return `${head}\n\nprint(theory.preregister())       # preregistration document (Markdown)`;
       case "dossier":

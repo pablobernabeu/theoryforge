@@ -20,6 +20,10 @@ const repo = path.resolve(here, "..");
 
 const R_SRC = path.join(repo, "r", "theoryforge", "R");
 const PY_SRC = path.join(repo, "python", "src", "theoryforge");
+// The examples the R package ships, which tf_example_path() resolves. buildPy
+// reads the Python package's own fixtures/, which tf.example_path() resolves.
+// scripts/gen_golden.py mirrors the root fixtures/ into both.
+const R_SHIPPED = path.join(repo, "r", "theoryforge", "inst", "fixtures");
 // The copy the R package ships, so the webR app scores with exactly the
 // checklist R reads. scripts/gen_golden.py writes it from the root schema/.
 const SCHEMA = path.join(repo, "r", "theoryforge", "inst", "schema");
@@ -41,7 +45,7 @@ const EXAMPLES = [
   { name: "Self-determination theory (developing)", file: "self-determination.theory.yaml", src: APP_EXAMPLES,
     desc: "Three basic needs driving intrinsic motivation. A solid theory with one precision warning." },
   { name: "Effort-recovery regulation (developing)", file: "effort-recovery.theory.yaml", src: APP_EXAMPLES,
-    desc: "A negative feedback loop. Its constructs follow distinct, oscillating trajectories under simulation, so the curves do not coincide." },
+    desc: "A negative feedback loop: fatigue overshoots its resting level of zero while recovery peaks, a damped oscillation that keeps the curves distinct. Lower damping to 0.1 and raise steps to 150 to see it cycle." },
   { name: "Happy vowel, Manchester English (testing)", file: "happy-vowel-manchester.theory.yaml", src: APP_EXAMPLES,
     desc: "Turton & Baranowski (2026), a real sociolinguistic study: a stable vocalic variable, socially stratified yet with linguistic constraints that hold independently of social class and ethnicity." },
   { name: "Cognitive dissonance (testing)", file: "cognitive-dissonance.theory.yaml", src: APP_EXAMPLES,
@@ -55,6 +59,9 @@ const EXAMPLES = [
   // the one thing this example exists to show.
   { name: "Deliberately weak theory (building)", file: "weak-theory.theory.yaml", src: FIXTURES,
     desc: "An underspecified theory kept as a worked example of what the checklist catches. Its gate is blocked." },
+  // Appended, so the examples before it keep their places in the list.
+  { name: "Modality switching (developing)", file: "modality-switching.theory.yaml", src: FIXTURES,
+    desc: "An acyclic theory of grounded conceptual processing. Implied independencies derives six statements from it, among them the independence its fourth prediction tests." },
 ];
 const CORPUS = [{ name: "Panic literature corpus (demo)", file: "panic-corpus.yaml", src: FIXTURES }];
 
@@ -95,8 +102,23 @@ async function copyExamples(destDir) {
   await fs.mkdir(destDir, { recursive: true });
   for (const e of [...EXAMPLES, ...CORPUS]) await fs.copyFile(path.join(e.src, e.file), path.join(destDir, e.file));
 }
-const manifestExamples = () => EXAMPLES.map((e) => ({ name: e.name, path: `fixtures/${e.file}`, kind: e.kind || "theory", desc: e.desc || "" }));
-const manifestCorpora = () => CORPUS.map((c) => ({ name: c.name, path: `fixtures/${c.file}`, desc: c.desc || "" }));
+// `shipped` says whether the package installs the file among its examples, in
+// `shippedDir`. The reproducible code reads such a file through
+// example_path(), which works wherever the package is installed, and asks for
+// any other file to be saved beside the script first.
+const isFile = (p) => fs.stat(p).then((s) => s.isFile(), () => false);
+export async function manifestExamples(shippedDir) {
+  return Promise.all(EXAMPLES.map(async (e) => ({
+    name: e.name, path: `fixtures/${e.file}`, kind: e.kind || "theory", desc: e.desc || "",
+    shipped: await isFile(path.join(shippedDir, e.file)),
+  })));
+}
+export async function manifestCorpora(shippedDir) {
+  return Promise.all(CORPUS.map(async (c) => ({
+    name: c.name, path: `fixtures/${c.file}`, desc: c.desc || "",
+    shipped: await isFile(path.join(shippedDir, c.file)),
+  })));
+}
 async function writeJson(p, obj) {
   await fs.writeFile(p, JSON.stringify(obj, null, 2) + "\n", "utf8");
 }
@@ -132,8 +154,8 @@ async function buildR(vendor = path.join(here, "r", "vendor"), pkgVersion = "") 
     pkgVersion,
     rFiles: rFiles.map((f) => `R/${f}`),
     schema: { theory: "schema/theory.schema.json", checklist: "schema/rigor_checklist.yaml", fold: "schema/fold.json" },
-    examples: manifestExamples(),
-    corpora: manifestCorpora(),
+    examples: await manifestExamples(R_SHIPPED),
+    corpora: await manifestCorpora(R_SHIPPED),
   });
   return rFiles.length;
 }
@@ -154,8 +176,8 @@ export async function buildPy(vendor = path.join(here, "py", "vendor"), src = PY
   await writeJson(path.join(vendor, "manifest.json"), {
     pkgVersion,
     pyFiles: wanted,
-    examples: manifestExamples(),
-    corpora: manifestCorpora(),
+    examples: await manifestExamples(path.join(src, "fixtures")),
+    corpora: await manifestCorpora(path.join(src, "fixtures")),
   });
   return wanted.length;
 }

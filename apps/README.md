@@ -33,6 +33,12 @@ theory is valid or how many problems it has. A file that cannot be read leaves t
 previous theory loaded. The apps keep the session and the theme in the browser's
 storage when it is available and run without it when the browser blocks it.
 
+The amendment appraisal defaults to the version the loaded theory declares as its
+parent and otherwise waits for a prior to be chosen or uploaded. The runtimes read
+each example's version record when the app starts. `build.mjs` marks in each manifest
+the files that package ships. The reproducible code reads those through
+`example_path()` and asks for any other file to be saved beside the script first.
+
 ## Test
 
 `apps/tests/` holds tests for the UI core, the two runtimes, `build.mjs` and the site's

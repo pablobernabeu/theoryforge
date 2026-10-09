@@ -33,11 +33,16 @@
       help: "Compares every pair of construct definitions by token-set Jaccard overlap and flags pairs above the redundancy threshold for review." },
     {
       id: "appraise", label: "Appraise amendment", desc: "Progressive vs degenerating", needsPrior: true,
-      help: "Compares what the current theory, treated as the amendment, claims with what a prior version claims, and classifies the change as progressive or degenerating (Lakatos, 1970). Neutral is theoryforge's label for an amendment that meets neither rule. Choose the prior version below.",
-      params: [{ id: "prior", label: "Prior theory", type: "theory" }],
+      help: "Compares what the current theory, treated as the amendment, claims with what a prior version claims, and classifies the change as progressive or degenerating (Lakatos, 1970). Neutral is theoryforge's label for an amendment that meets neither rule. The prior defaults to the version the theory declares as its parent, an example whose version id is the theory's parent_id and whose id the theory's id begins with. Choose another below or upload one. Predictions are matched by id, so a version of another theory gives a meaningless verdict.",
+      params: [{ id: "prior", label: "Prior version", type: "theory" }],
     },
     { id: "sem", label: "SEM (lavaan)", desc: "Compile to lavaan model syntax",
       help: "Compiles the constructs (measurement model) and propositions (structural model) to lavaan model syntax you can paste straight into an SEM fit." },
+    {
+      id: "implications", label: "Implied independencies", desc: "What the causal graph implies",
+      help: "Derives the conditional independencies that the theory's causal graph implies, the claims data can refute. Only constructs that a directed relation (increases, decreases, causes, mediates or moderates) names enter the graph, and an association joins two of them as covariance the theory leaves unexplained. A missing edge is read as no direct effect, so the statements hold only if the graph omits no common cause of two of its constructs. A feedback loop is refused unless cycles is set to sigma, whose statements hold only when every loop has a unique equilibrium.",
+      params: [{ id: "cycles", label: "cycles", type: "select", default: "refuse", options: ["refuse", "sigma"] }],
+    },
     { id: "preregister", label: "Preregistration", desc: "Preregistration document",
       help: "Generates a preregistration document in Markdown: hypotheses numbered in file order with their derivation, and the per-prediction severity." },
     { id: "dossier", label: "Audit dossier", desc: "Reviewer-facing bundle",
@@ -370,13 +375,14 @@
   // It complements the sidebar help (what the operation does) by explaining how
   // to read the output that follows.
   const RESULT_GUIDE = {
-    check: "The checklist scores twelve facets of rigour and combines them into an overall score and a gate. Read the gate first. Pass means the theory is ready to test, advisory means it is usable with the noted gaps, and blocked means a must-fix criterion is unmet. An item with nothing to assess, such as redundancy in a theory with one construct, is marked n/a and left out of the score, which is the weighted mean of the applicable items. The coverage is their share of the checklist's weight. The grid below shows each item's status.",
+    check: "The checklist scores twelve facets of rigour and combines them into an overall score and a gate. Read the gate first. Pass means neither blocking item failed, and blocked means at least one did. At draft maturity, the gate is always advisory: the checklist reports but never blocks, so read the item statuses. An item with nothing to assess, such as redundancy in a theory with one construct, is marked n/a and left out of the score, which is the weighted mean of the applicable items. The coverage is their share of the checklist's weight. The grid below shows each item's status.",
     validate: "Validation reports structural and referential problems: missing required fields, values of the wrong type or outside the allowed set, duplicate identifiers and cross-references that point to nothing. A valid theory is the precondition for every other operation.",
     diagram: "The diagram is rendered from the package's intermediate representation, shown below the figure. Export the figure as SVG or PNG, or copy the representation to render it elsewhere.",
     severity: "The rubric grades each prediction by the form of its claim alone, so it can be read before any data exist. The risk score reflects how committal the claim is. The computed severity adjusts it down for merely directional claims and up for claims that discriminate between rival theories. Longer bars mark riskier claims. How severely a claim is tested depends on the design and the data, which the rubric does not read.",
     redundancy: "Each pair of constructs is compared by the words their definitions share. The Jaccard index divides the shared words by all the words of the two definitions, and the overlap coefficient divides them by the words of the shorter one, so both run from 0 to 1. A pair is flagged for review when its Jaccard index reaches 0.85, a near-duplicate, or when both definitions hold at least three content words and the overlap reaches 0.85, one definition contained in the other. Near-duplicate constructs blur a theory and inflate its apparent scope. The screen compares words only, so it cannot tell whether two constructs are empirically redundant.",
     appraise: "An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added and no corroborated prediction dropped. It is degenerating when it adds an ad hoc assumption and no corroborated new content, and neutral otherwise. A prediction is corroborated when some test passes it and none fails it, and an assumption added for an anomaly is ad hoc unless new content it protects is corroborated. A prediction that only changed its id is a rename, and one derived only from the prior's own propositions is an articulation, so neither counts as new content. The verdict and its components appear below.",
     sem: "The constructs become a measurement model and the propositions a structural model, expressed in lavaan syntax. Paste it into an SEM fit in R or other lavaan-compatible software.",
+    implications: "Each statement says that two constructs are independent once the constructs after the bar are held fixed, a claim data can refute, for instance by a partial correlation in a linear model. The statements follow from the edges the theory leaves out, so each omission is read as a claim. A conditional statement tested on observed scores is rejected too often when the constructs held fixed are measured with error. A latent-variable model, such as one built on the SEM operation's measurement model, takes that error into account. A pair that no set of constructs separates is listed apart, since the theory implies no independence for it.",
     preregister: "The preregistration lists each hypothesis with its derivation and severity, in file order, ready to timestamp before data collection.",
     dossier: "The dossier gathers the rigour report, severity, provenance and preregistration into one reviewer-facing document.",
     simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, causes, mediates) or down (decreases) in proportion to another, with one gain k for every coupling, and every construct decays towards zero at the damping rate. Moderates and associates couple nothing. All constructs start from the same value. The chart traces the values from the initial state, and the table below holds the numbers.",
@@ -385,6 +391,8 @@
   };
   const fmtNum = (x) => (typeof x === "number" ? (Number.isInteger(x) ? String(x) : x.toFixed(2)) : String(x));
   const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+  // "a", "a and b", "a, b and c".
+  const listAnd = (xs) => (xs.length < 2 ? xs.join("") : xs.slice(0, -1).join(", ") + " and " + xs[xs.length - 1]);
   // Both packages report full validation as "invalid theory object: " followed
   // by the problems joined by "; ". The Validate result, its interpretation and
   // the sidebar chip all count problems through this one split.
@@ -398,9 +406,20 @@
       const r = raw.report, items = asArr(r.items);
       const by = (st) => items.filter((i) => i.status === st).length;
       const na = by("n/a");
-      const gate = { pass: "passes the gate", advisory: "clears the gate with advisories", blocked: "is blocked" }[r.gate] || ("gate " + r.gate);
-      const blockers = r.n_blockers_failed > 0 ? ", with " + plural(r.n_blockers_failed, "blocking item") + " unmet." : ", and no blocking item is unmet.";
-      let txt = "This theory scores " + fmtNum(r.aggregate_score) + " out of 100 and " + gate + ". Of the " + (items.length - na) + " applicable items, " + by("pass") + " pass, " + by("warn") + " warn and " + by("fail") + " fail" + blockers;
+      // The failed blockers are read from the report, so the sentence follows
+      // whichever items the checklist makes blocking.
+      const failed = items.filter((i) => i.severity_if_fail === "blocker" && i.status === "fail").map((i) => i.id);
+      const score = "This theory scores " + fmtNum(r.aggregate_score) + " out of 100";
+      // At draft maturity the gate is advisory whatever fails, so it says
+      // nothing about readiness and the sentence says why it was given.
+      let txt = r.gate === "advisory"
+        ? score + ". It is at draft maturity, where the gate is advisory and blocks nothing."
+        : score + " and " + ({ pass: "passes the gate", blocked: "is blocked" }[r.gate] || "has the gate " + r.gate) + ".";
+      txt += " Of the " + (items.length - na) + " applicable items, " + by("pass") + " pass, " + by("warn") + " warn and " + by("fail") + " fail";
+      txt += failed.length
+        ? ", and the blocking " + (failed.length === 1 ? "item " : "items ") + listAnd(failed) + (failed.length === 1 ? " fails" : " fail") +
+          (r.gate === "advisory" ? ", which would block the theory at any later maturity." : ".")
+        : ", and no blocking item fails.";
       // Items with nothing to assess are left out of the score, which then
       // covers less than the whole checklist.
       if (na) txt += " " + (na === 1 ? "One item has" : na + " items have") + " nothing to assess and " + (na === 1 ? "is" : "are") + " left out of the score, which covers " + Math.round(Number(r.coverage) * 100) + " per cent of the checklist's weight.";
@@ -432,9 +451,29 @@
       const ar = asArr(r.articulated).length, dr = asArr(r.dropped).length, dc = asArr(r.dropped_corroborated).length;
       let txt = "The amendment is " + r.verdict + ". It introduces " + plural(np, "new prediction") + ", of which " + cn + (cn === 1 ? " is" : " are") + " corroborated and " + ar + (ar === 1 ? " only articulates" : " only articulate") + " the prior's propositions, and " + plural(ah, "ad hoc assumption") + ".";
       if (dr) txt += " It drops " + plural(dr, "prediction") + " of the prior, " + dc + " of them corroborated.";
+      if (!isDeclaredParent(S, priorLineage(params.prior))) txt += " " + PRIOR_CAUTION;
       return txt;
     }
     if (opId === "sem") return "The measurement model covers " + plural(c.constructs || 0, "construct") + " and the structural model " + plural(c.propositions || 0, "proposition") + ".";
+    if (opId === "implications") {
+      if (raw.ok === false) {
+        return /cycle found/.test(String(raw.message)) && params.cycles !== "sigma"
+          ? "The directed relations form a feedback loop, which the default reading refuses. Set cycles to sigma to derive the statements by sigma-separation, which assumes that every loop has a unique equilibrium."
+          : "No statement can be derived until the problem the message names is corrected.";
+      }
+      const r = raw.result, n = asArr(r.constructs).length, k = asArr(r.implications).length;
+      const ins = asArr(r.inseparable).length, loops = asArr(r.feedback).map(asArr);
+      if (!n) return "The theory states no directed relation between constructs, so its causal graph has no vertices and implies no independence.";
+      let txt = "The causal graph holds " + plural(n, "construct") + ", " + plural(r.n_edges, "directed edge") + " and " + plural(r.n_bidirected, "association") +
+        ", and implies " + plural(k, "independence statement") + " by " + (r.criterion === "sigma" ? "sigma" : "m") + "-separation.";
+      if (!k && !ins) txt += " Every pair of constructs in the causal graph is adjacent, so no pair is left to state.";
+      if (ins) txt += " " + (ins === 1 ? "One pair the theory leaves unjoined is" : ins + " pairs the theory leaves unjoined are") + " separated by no set of constructs, so the theory implies no independence for " + (ins === 1 ? "it." : "them.");
+      if (loops.length) {
+        txt += " The graph has " + plural(loops.length, "feedback loop") + " (" + loops.map((l) => l.join(", ")).join("; ") + ")" +
+          (k ? ", so the statements hold only if each loop has a unique equilibrium." : ".");
+      }
+      return txt;
+    }
     if (opId === "preregister") { const k = c.predictions || 0; return "The document preregisters " + k + (k === 1 ? " hypothesis." : " hypotheses."); }
     if (opId === "dossier") return "The dossier bundles the rigour report, severity, provenance and preregistration for " + (S.title || S.id || "this theory") + ".";
     if (opId === "diagram") {
@@ -541,8 +580,10 @@
       }
     } else if (opId === "appraise") {
       const r = raw;
-      const priorName = (RT.examples.find((e) => e.path === params.prior) || {}).name || params.prior || "—";
-      sections.push(kvSection("Appraisal", [["Verdict", pill(r.verdict)], ["Prior version", priorName]]));
+      // The reading above the result carries the caution when this is "no".
+      const parent = isDeclaredParent(STATE.summary, priorLineage(params.prior));
+      sections.push(kvSection("Appraisal", [["Verdict", pill(r.verdict)], ["Prior version", priorName(params.prior) || "—"],
+        ["Declared parent", parent ? "yes" : "no"]]));
       sections.push(tableSection("Detail",
         [{ key: "k", label: "category" }, { key: "v", label: "ids", grow: true }],
         [
@@ -583,6 +624,24 @@
       if (!isSvg) sections.push(textSection("Intermediate representation (" + (type === "causal_dag" ? "dagitty" : "Graphviz DOT") + ")", ir, theoryId + "." + type + (type === "causal_dag" ? ".dag" : ".dot"), "text/plain"));
     } else if (opId === "sem") {
       sections.push(textSection("lavaan model syntax", raw.text, theoryId + ".sem.lavaan", "text/plain"));
+    } else if (opId === "implications" && raw.ok === false) {
+      // A refusal is the package's answer for this theory, so it is shown as a
+      // result with the package's message.
+      sections.push({ kind: "node", node: wrapSection("Implied independencies", null,
+        el("p", { class: "refusal", text: String(raw.message || "") })) });
+    } else if (opId === "implications") {
+      const r = raw.result, stmts = asArr(r.implications), ins = asArr(r.inseparable);
+      const loops = asArr(r.feedback).map((l) => asArr(l).join(", "));
+      sections.push(kvSection("Summary", [
+        ["Criterion", r.criterion === "sigma" ? "sigma-separation" : "m-separation"],
+        ["Constructs in the graph", String(asArr(r.constructs).length)],
+        ["Directed edges", String(r.n_edges)], ["Associations", String(r.n_bidirected)],
+        ["Feedback loops", loops.join("; ") || "none"],
+        ["Statements", String(stmts.length)], ["Pairs no set separates", String(ins.length)],
+      ]));
+      if (stmts.length) sections.push(textSection("Implied independencies", stmts.map((s) => s.statement).join("\n") + "\n", theoryId + ".implications.txt", "text/plain"));
+      if (ins.length) sections.push(tableSection("Pairs no set separates", [{ key: "a", label: "construct a" }, { key: "b", label: "construct b" }], ins));
+      sections.push(textSection("implications JSON", JSON.stringify(r, null, 2), theoryId + ".implications.json", "application/json"));
     } else if (opId === "preregister") {
       sections.push(textSection("Preregistration (Markdown)", raw.text, theoryId + ".prereg.md", "text/markdown"));
     } else if (opId === "dossier") {
@@ -645,17 +704,80 @@
   }
 
   // ---- UI ------------------------------------------------------------------
-  let RT, STATE = { opId: "check", params: {}, summary: null, input: null, source: null, ran: false };
+  // `input` is { mode: "example", path } or { mode: "upload", name, text }.
+  // `prior` is the uploaded prior version, { name, lineage }, and `priorError`
+  // the last failed upload of one, { name, err }.
+  let RT, STATE = { opId: "check", params: {}, summary: null, input: null, source: null, ran: false, prior: null, priorError: null };
   // Whether the result panel holds an operation's output or error, which a
   // change of theory then clears.
   let resultShown = false;
 
+  // ---- the appraisal's prior -----------------------------------------------
+  // A candidate prior is the declared parent of the loaded theory when its
+  // version id is the parent_id the theory declares and the theory's id equals
+  // or begins with the candidate's. The amended panic network's id,
+  // panic-network-2026-v2, begins with panic-network-2026. Nearly every
+  // example is version v1, so the version alone would make most of them a
+  // parent. The runtimes read each example's lineage at start-up, and each
+  // load reports the theory's version.
+  const UPLOADED_PRIOR = "upload";
+  const PRIOR_CAUTION = "This version is not the declared parent of the loaded theory. Predictions are matched by id, so a version of another theory can make the verdict meaningless.";
+  function isDeclaredParent(theory, cand) {
+    const tv = (theory && theory.version) || {}, cv = (cand && cand.version) || {};
+    const tid = theory && theory.id, cid = cand && cand.id;
+    return typeof tv.parent_id === "string" && tv.parent_id !== "" && cv.id === tv.parent_id &&
+      typeof tid === "string" && typeof cid === "string" && cid !== "" && tid.startsWith(cid);
+  }
+  function priorLineage(value) {
+    if (value === UPLOADED_PRIOR) return STATE.prior ? STATE.prior.lineage : null;
+    const ex = RT.examples.find((e) => e.path === value);
+    return ex ? ex.lineage : null;
+  }
+  function priorName(value) {
+    if (value === UPLOADED_PRIOR) return STATE.prior ? STATE.prior.name : "";
+    const ex = RT.examples.find((e) => e.path === value);
+    return ex ? ex.name : String(value || "");
+  }
+  // The declared parents among the examples, other than the loaded one, and an
+  // uploaded prior.
+  function declaredParents() {
+    const own = STATE.input && STATE.input.mode === "example" ? STATE.input.path : null;
+    const cands = RT.examples.filter((e) => e.path !== own).map((e) => ({ value: e.path, lineage: e.lineage }));
+    if (STATE.prior) cands.push({ value: UPLOADED_PRIOR, lineage: STATE.prior.lineage });
+    return cands.filter((c) => isDeclaredParent(STATE.summary, c.lineage)).map((c) => c.value);
+  }
+  // The prior defaults to the declared parent when exactly one candidate is
+  // one, and otherwise to no prior, which Run waits on.
+  function defaultPrior() {
+    const parents = declaredParents();
+    return parents.length === 1 ? parents[0] : "";
+  }
+  const priorValues = () => ["", UPLOADED_PRIOR].concat(RT.examples.map((e) => e.path));
+  // A prior chosen for one theory is no prior for the next.
+  function resetPrior() {
+    STATE.params.prior = defaultPrior();
+    STATE.priorError = null;
+    const op = OPS.find((o) => o.id === STATE.opId);
+    if (op && op.needsPrior) renderParams();
+  }
+  // Why the appraisal cannot run yet, or "" when it can.
+  function priorMissing() {
+    const v = STATE.params.prior;
+    if (!v) return "Choose a prior version first";
+    if (v === UPLOADED_PRIOR && !STATE.prior) return "Upload a prior version first";
+    return "";
+  }
+
   // ---- persistence (restore the session on refresh) -----------------------
+  // The format of the saved session. Before format 2 the app saved the
+  // example's place in the list and gave every theory the first example as its
+  // prior by default, so a prior saved then may never have been chosen.
+  const STATE_FORMAT = 2;
   function stateKey() { return "tf-app-" + (RT ? RT.lang : "x"); }
   function saveState() {
     try {
       localStorage.setItem(stateKey(), JSON.stringify({
-        opId: STATE.opId, params: STATE.params, input: STATE.input, ran: !!STATE.ran,
+        v: STATE_FORMAT, opId: STATE.opId, params: STATE.params, input: STATE.input, ran: !!STATE.ran,
       }));
     } catch (e) { /* quota exceeded, or private mode; not worth failing over */ }
   }
@@ -714,7 +836,7 @@
     let txt = "";
     if (STATE.input && STATE.input.mode === "upload") txt = "Your uploaded theory.";
     else if (STATE.input && STATE.input.mode === "example") {
-      const ex = RT.examples[STATE.input.index]; txt = (ex && ex.desc) || "";
+      const ex = RT.examples.find((x) => x.path === STATE.input.path); txt = (ex && ex.desc) || "";
     }
     e2.textContent = txt; e2.style.display = txt ? "" : "none";
   }
@@ -768,7 +890,7 @@
 
   function buildSidebar() {
     const exSelect = el("select", { id: "exampleSel", onchange: onExampleChange },
-      RT.examples.map((e, i) => el("option", { value: i }, e.name)));
+      RT.examples.map((e) => el("option", { value: e.path }, e.name)));
     const fileInput = el("input", { type: "file", id: "fileInput", accept: ".yaml,.yml,.json", onchange: onFileChange });
     const summaryWrap = el("div", { id: "summaryWrap" }, summaryCard(STATE.summary));
 
@@ -834,7 +956,7 @@
           el("button", { class: "btn ghost sm", id: "copyCode", onclick: () => copyText($("#codeBlock").textContent) }, "Copy"),
           el("button", { class: "btn ghost sm", id: "dlCode", onclick: () => download("theoryforge_reproduce." + (RT.lang === "r" ? "R" : "py"), $("#codeBlock").textContent, "text/plain") }, "Download"),
         ]),
-        el("p", { class: "note", style: "margin-top:0", text: "Paste into " + RT.langLabel + " to reproduce exactly what the app computed." }),
+        el("p", { class: "note", style: "margin-top:0", text: "Paste into " + RT.langLabel + " to reproduce this result with the installed package." }),
         el("pre", { class: "code" }, el("code", { id: "codeBlock" }, "")),
       ]),
     ]);
@@ -850,18 +972,20 @@
       let input;
       if (p.type === "select") {
         if (!p.options.includes(STATE.params[p.id])) STATE.params[p.id] = p.default;  // drop stale persisted value
-        input = el("select", { onchange: (e) => { STATE.params[p.id] = e.target.value; saveState(); } },
+        input = el("select", { id: "param-" + p.id, onchange: (e) => { STATE.params[p.id] = e.target.value; saveState(); } },
           p.options.map((o) => el("option", { value: o, selected: o === STATE.params[p.id] ? "" : null }, o)));
+        input.value = STATE.params[p.id];
       } else if (p.type === "theory") {
-        const opts = RT.examples.map((e) => ({ value: e.path, label: e.name }));
-        if (!opts.some((o) => o.value === STATE.params[p.id])) STATE.params[p.id] = opts.length ? opts[0].value : null;
-        input = el("select", { onchange: (e) => { STATE.params[p.id] = e.target.value; saveState(); } },
-          opts.map((o) => el("option", { value: o.value, selected: o.value === STATE.params[p.id] ? "" : null }, o.label)));
+        if (!priorValues().includes(STATE.params[p.id])) STATE.params[p.id] = defaultPrior();  // drop stale persisted value
+        wrap.append(priorField(p));
+        continue;
       } else {
         STATE.params[p.id] = clampNum(STATE.params[p.id] === undefined ? "" : STATE.params[p.id], p);  // clamp persisted value
         input = el("input", {
-          type: "number", value: STATE.params[p.id], min: p.min, max: p.max, step: p.step,
+          type: "number", id: "param-" + p.id, value: STATE.params[p.id], min: p.min, max: p.max, step: p.step,
           oninput: (e) => { STATE.params[p.id] = clampNum(e.target.value, p); saveState(); },
+          // Once the entry is complete, the field shows the value a run uses.
+          onchange: (e) => { e.target.value = STATE.params[p.id]; },
         });
       }
       const field = el("label", { class: "field", style: "margin:0" }, [el("span", null, p.label), input]);
@@ -870,12 +994,93 @@
     }
     if (inRow) wrap.append(rows);
   }
+  // A parameter whose step is a whole number, steps or min_link, takes whole
+  // values only, and both packages refuse a fractional one. The value typed is
+  // rounded, so the run and the code use the same whole number.
   function clampNum(raw, p) {
     let n = raw === "" ? p.default : Number(raw);
     if (!Number.isFinite(n)) n = p.default;
+    if (Number.isInteger(p.step)) n = Math.round(n);
     if (typeof p.min === "number") n = Math.max(p.min, n);
     if (typeof p.max === "number") n = Math.min(p.max, n);
     return n;
+  }
+
+  // The prior's selector lists the examples and an option to upload a version,
+  // and marks the declared parent. Choosing the upload shows a file field. The
+  // note beneath says whether the chosen prior is the declared parent.
+  function priorField(p) {
+    const sel = el("select", { id: "param-prior", onchange: (e) => {
+      STATE.params.prior = e.target.value; STATE.priorError = null; saveState(); fillPriorMore();
+    } });
+    fillPriorOptions(sel);
+    return el("div", { class: "prior" }, [
+      el("label", { class: "field", style: "margin:0" }, [el("span", null, p.label), sel]),
+      fillPriorMore(el("div", { id: "priorMore" })),
+    ]);
+  }
+  function fillPriorOptions(sel) {
+    const parents = declaredParents();
+    const mark = (v) => (parents.includes(v) ? " (declared parent)" : "");
+    sel.replaceChildren(
+      el("option", { value: "" }, "Choose a prior version…"),
+      ...RT.examples.map((e) => el("option", { value: e.path }, e.name + mark(e.path))),
+      el("option", { value: UPLOADED_PRIOR }, STATE.prior ? "Uploaded: " + STATE.prior.name + mark(UPLOADED_PRIOR) : "Upload a prior version…"));
+    sel.value = STATE.params.prior;
+  }
+  function fillPriorMore(more) {
+    more = more || $("#priorMore");
+    if (!more) return more;
+    const cur = STATE.params.prior, parents = declaredParents();
+    const kids = [];
+    if (cur === UPLOADED_PRIOR) {
+      kids.push(el("label", { class: "field", style: "margin:8px 0 0" }, [el("span", null, "Prior version file (YAML / JSON)"),
+        el("div", { class: "filewrap" }, el("input", { type: "file", id: "priorFile", accept: ".yaml,.yml,.json", onchange: onPriorFileChange }))]));
+    }
+    if (STATE.priorError) {
+      kids.push(errorBox("Could not load " + STATE.priorError.name + (STATE.prior ? "; the prior is still " + STATE.prior.name : ""), STATE.priorError.err));
+    }
+    let cls = "note prior-note", txt;
+    if (!cur) {
+      // A theory that names no parent is not declared an amendment of anything,
+      // so the note does not take for granted that it amends some version.
+      const named = ((STATE.summary && STATE.summary.version) || {}).parent_id;
+      txt = parents.length > 1
+        ? "More than one version listed is the declared parent of this theory. Choose the one it amends."
+        : named
+          ? "This theory names version " + named + " as its parent, which is not listed. Upload that version, or choose the one the theory amends."
+          : "This theory names no parent version. To appraise it as an amendment, choose or upload the version it amends.";
+    } else if (cur === UPLOADED_PRIOR && !STATE.prior) {
+      txt = "Upload the file of the version this theory amends.";
+    } else if (parents.includes(cur)) {
+      txt = "The declared parent of this theory: its version id is the parent_id the theory names.";
+    } else {
+      cls = "caution prior-note"; txt = PRIOR_CAUTION;
+    }
+    kids.push(el("p", { class: cls, id: "priorNote", text: txt }));
+    more.replaceChildren(...kids);
+    return more;
+  }
+
+  // An uploaded prior is read by the engine and held apart from the theory. A
+  // file it cannot read leaves the prior uploaded before it, if any.
+  async function onPriorFileChange(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const text = await f.text();
+    await withBusy("Loading " + f.name + "…", async () => {
+      try {
+        const lineage = await RT.loadPriorText(text, f.name);
+        STATE.prior = { name: f.name, lineage: lineage || null };
+        STATE.priorError = null;
+        STATE.params.prior = UPLOADED_PRIOR;
+        saveState();
+      } catch (err) {
+        STATE.priorError = { name: f.name, err };
+      }
+      const sel = $("#param-prior");
+      if (sel) fillPriorOptions(sel);
+      fillPriorMore();
+    });
   }
 
   function selectOp(id) {
@@ -911,21 +1116,22 @@
   }
 
   async function onExampleChange(e) {
-    const idx = Number(e.target.value);
-    const ex = RT.examples[idx];
+    const ex = RT.examples.find((x) => x.path === e.target.value);
+    if (!ex) return;
     await withBusy("Loading " + ex.name + "…", async () => {
       try {
         STATE.summary = await RT.loadExample(ex.path);
       } catch (err) {
         loadFailed(ex.name, err);
-        if (STATE.input && STATE.input.mode === "example") e.target.value = String(STATE.input.index);
+        if (STATE.input && STATE.input.mode === "example") e.target.value = STATE.input.path;
         return;
       }
-      STATE.input = { mode: "example", index: idx };
+      STATE.input = { mode: "example", path: ex.path };
       STATE.source = await exampleSource(ex.path.split("/").pop(), ex.path);
       $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
       $("#fileInput").value = "";
       clearResult();
+      resetPrior();
       updateExampleDesc(); saveState();
     });
   }
@@ -944,6 +1150,7 @@
       STATE.source = { name: f.name, text };
       $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
       clearResult();
+      resetPrior();
       updateExampleDesc(); saveState();
     });
   }
@@ -968,7 +1175,7 @@
     if (busy) return; busy = true;
     const btn = $("#runBtn"); const prev = btn ? btn.textContent : "";
     // Lock all theory/operation controls so the UI cannot desync mid-flight.
-    const controls = [...document.querySelectorAll("#exampleSel, #fileInput, #viewSrc, #runBtn, .op")];
+    const controls = [...document.querySelectorAll("#exampleSel, #fileInput, #viewSrc, #runBtn, .op, #param-prior, #priorFile")];
     for (const c of controls) { c.setAttribute("data-busywas", c.disabled ? "1" : "0"); c.disabled = true; }
     if (btn && label) btn.textContent = label;
     try { await fn(); } finally {
@@ -982,6 +1189,11 @@
     const op = OPS.find((o) => o.id === STATE.opId);
     if (!STATE.summary) { toast("Load a theory first"); return; }
     if (op.corpus && !RT.hasCorpus()) { toast("This operation needs a corpus"); return; }
+    if (op.needsPrior && priorMissing()) {
+      toast(priorMissing());
+      const sel = $("#param-prior"); if (sel) sel.focus();
+      return;
+    }
     const out = $("#output");
     await withBusy("Running…", async () => {
       resultShown = true;
@@ -1032,9 +1244,23 @@
   async function applyRestore(blog) {
     const saved = loadSaved();
     let note = null;
-    const fallback = (name) => "Could not restore " + name + "; showing " + RT.examples[0].name + " instead";
-    STATE.input = STATE.input || { mode: "example", index: 0 };
+    const first = RT.examples[0];
+    const fallback = (name) => "Could not restore " + name + "; showing " + first.name + " instead";
+    STATE.input = STATE.input || { mode: "example", path: first.path };
     if (saved) {
+      // A session saved in an earlier format named the example by its place in
+      // the list, which an added example can shift, so the place is mapped to
+      // that example's path. Its prior is dropped, uploaded theory or not:
+      // restoring a default the user may never have chosen would run the
+      // appraisal against an unrelated version again. The session is saved
+      // again below, so this happens once.
+      if (saved.v !== STATE_FORMAT) {
+        if (saved.input && saved.input.mode === "example" && typeof saved.input.path !== "string") {
+          const idx = Math.min(Math.max(0, saved.input.index | 0), RT.examples.length - 1);
+          saved.input = { mode: "example", path: RT.examples[idx].path };
+        }
+        if (saved.params) delete saved.params.prior;
+      }
       if (saved.input && saved.input.mode === "upload" && saved.input.text) {
         try {
           if (blog) blog("Restoring your uploaded theory…");
@@ -1042,38 +1268,39 @@
           STATE.input = saved.input;
           STATE.source = { name: saved.input.name, text: saved.input.text };
         } catch (e) {
-          STATE.input = { mode: "example", index: 0 };
+          STATE.input = { mode: "example", path: first.path };
           note = fallback(saved.input.name || "your uploaded theory");
         }
-      } else if (saved.input && saved.input.mode === "example") {
-        let idx = Math.min(Math.max(0, saved.input.index | 0), RT.examples.length - 1);
-        if (idx !== 0) {
-          try {
-            if (blog) blog("Restoring " + RT.examples[idx].name + "…");
-            STATE.summary = await RT.loadExample(RT.examples[idx].path);
-          } catch (e) {
-            note = fallback(RT.examples[idx].name);
-            idx = 0;
-          }
+      } else if (saved.input && saved.input.mode === "example" && saved.input.path !== first.path) {
+        const ex = RT.examples.find((x) => x.path === saved.input.path);
+        try {
+          if (!ex) throw new Error("no longer an example");
+          if (blog) blog("Restoring " + ex.name + "…");
+          STATE.summary = await RT.loadExample(ex.path);
+          STATE.input = { mode: "example", path: ex.path };
+        } catch (e) {
+          note = fallback(ex ? ex.name : saved.input.path.split("/").pop());
         }
-        STATE.input = { mode: "example", index: idx };
       }
       if (saved.opId && OPS.some((o) => o.id === saved.opId)) STATE.opId = saved.opId;
       if (saved.params) STATE.params = Object.assign({}, STATE.params, saved.params);
     }
     // Ensure the example source is available for the source viewer.
     if (STATE.input.mode === "example" && !STATE.source) {
-      const ex = RT.examples[STATE.input.index];
-      STATE.source = await exampleSource(ex.path.split("/").pop(), ex.path);
+      STATE.source = await exampleSource(STATE.input.path.split("/").pop(), STATE.input.path);
     }
     // Reflect the restored selection in the UI.
     const sel = $("#exampleSel");
-    if (sel && STATE.input.mode === "example") sel.value = String(STATE.input.index);
+    if (sel && STATE.input.mode === "example") sel.value = STATE.input.path;
     $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
     for (const b of document.querySelectorAll(".op")) b.classList.toggle("active", b.getAttribute("data-op") === STATE.opId);
+    // A saved prior belongs to the saved theory, so it goes with a failed
+    // restore, and one that is no longer offered falls back to the default.
+    if (note || (STATE.params.prior !== undefined && !priorValues().includes(STATE.params.prior))) STATE.params.prior = defaultPrior();
     updateExampleDesc(); updateOpHelp(); renderParams();
+    saveState();
     const op = OPS.find((o) => o.id === STATE.opId);
-    if (saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus())) await runOp();
+    if (saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus()) && !(op.needsPrior && priorMissing())) await runOp();
     return note;
   }
 

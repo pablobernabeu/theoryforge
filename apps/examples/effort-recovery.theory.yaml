@@ -1,8 +1,9 @@
 # A negative-feedback regulation loop. Demand raises fatigue, fatigue prompts
-# recovery, and recovery brings fatigue back down. Because one coupling is
-# negative, the simulated constructs follow distinct, oscillating trajectories
-# rather than collapsing onto a single curve, which makes it a clear worked
-# example for the simulation operation.
+# recovery, and recovery brings fatigue back down. Under simulation, fatigue
+# overshoots its resting level of zero while recovery peaks, a damped
+# oscillation that keeps the curves distinct and makes this a clear worked
+# example for the simulation operation. Lower damping to 0.1 and raise steps to
+# 150 to see it cycle.
 schema_version: "1.0"
 id: "effort-recovery-2026"
 title: "Effort-recovery regulation"

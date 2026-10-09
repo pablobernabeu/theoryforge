@@ -234,6 +234,45 @@ version and a single behavioural contract
   turn the rest into a model line, and on Windows two characters above U+FFFF in a
   comment made lavaan read `outcome ~ mood` as `utcome ~ mood`. API_SPEC sections 5 and
   19 state the rules. The bundled theories and the goldens are unchanged.
+- Apps: the amendment appraisal gave every theory the first example, version 1 of the
+  panic network, as its prior by default, and 0.6.0 reported three unrelated app examples
+  as progressive amendments of it. Predictions are matched by id, so a version of another
+  theory gives a meaningless verdict. The prior now defaults to the version the loaded
+  theory declares as its parent, when exactly one version listed is that parent. A
+  declared parent has the theory's `parent_id` as its version id, and the theory's id
+  begins with its id. Otherwise, no prior is chosen and Run waits for one, and the note
+  under the selector says whether the theory names a parent at all. A prior that is not
+  the declared parent carries a caution in the selector and in the result, and a prior
+  version can be uploaded. Of the app examples, only the amended panic network has a
+  default prior, its first version.
+- Apps: the apps did not offer the conditional independencies a theory implies, the
+  claims data can refute, and left out the modality-switching example, the worked example
+  of `implications()`. Both apps now offer Implied independencies with the `cycles`
+  choice of `implications()`. A refusal, such as the default's for a feedback loop, is
+  shown as a result with the package's message, and the help states what the statements
+  assume. Modality switching is the tenth example. The apps remembered the chosen example
+  by its place in the list and now remember it by its file. A session saved the old way
+  is mapped once, and its prior is dropped, as it may be the default that app set.
+- Apps: the reproducible code read every file by its bare name, so pasted code stopped
+  with file-not-found, even for the examples the package ships. It now reads those, the
+  corpus and a shipped prior through `example_path()`, and asks for any other file to be
+  saved beside the script first. The Python code wrote its SVG files in the locale's
+  encoding, which on Windows turns the ellipsis of a shortened prediction id into a byte
+  no XML reader accepts. That broke the severity chart of four app examples, and the code
+  now writes UTF-8. The R simulate comment lists all ten elements of the record, and the
+  code panel says the code reproduces the result with the installed package, where it
+  promised exactly what the app computed.
+- Apps: the checklist's guide said an advisory gate meant a theory usable with the noted
+  gaps, and a draft theory failing both blocking items was told it cleared the gate with
+  advisories. The gate is advisory at draft maturity whatever fails. The guide now says
+  that pass means neither blocking item failed and blocked that at least one did. The
+  reading puts an advisory gate down to draft maturity and names the blocking items that
+  fail. The effort-recovery example promised oscillating trajectories that its default
+  run does not show. It now says what the run shows, fatigue overshooting its resting
+  level of zero while recovery peaks. It also names the settings that make the loop cycle.
+- Apps: the number fields passed a fractional `steps` to the package, which refuses it.
+  The glue truncated a fractional `min_link`, while the code showed the fraction.
+  Whole-number parameters are now rounded, and each field shows the value a run uses.
 
 ### Changed
 - R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new

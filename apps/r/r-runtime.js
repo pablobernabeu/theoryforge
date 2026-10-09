@@ -23,10 +23,25 @@ invisible(lapply(.tf_app_files, source))
 
 .tf_app <- new.env(parent = emptyenv())
 
+# The prior the app's "Upload a prior version" option stands for, which
+# .tf_load_prior() holds in .tf_app$prior.
+.tf_UPLOADED_PRIOR <- "upload"
+
+# The id, title and version record of a theory, each read as text, so a
+# missing field is "". The app takes a candidate prior for the declared parent
+# of the loaded theory when the candidate's version id is the theory's
+# parent_id and the theory's id begins with the candidate's.
+.tf_lineage_of <- function(t) {
+  v <- .tf_get(t, "version")
+  list(id = .tf_str(t, "id"), title = .tf_str(t, "title"),
+       version = list(id = .tf_str(v, "id"), parent_id = .tf_str(v, "parent_id")))
+}
+
 .tf_summary <- function(t) {
   list(
     id = .tf_get(t, "id"), title = .tf_get(t, "title"),
     maturity = .tf_get(t, "maturity"), form = .tf_get(t, "theory_form"),
+    version = .tf_lineage_of(t)$version,
     counts = list(
       constructs = length(.tf_list(t, "constructs")),
       propositions = length(.tf_list(t, "propositions")),
@@ -55,6 +70,29 @@ invisible(lapply(.tf_app_files, source))
   "ok"
 }
 
+# The lineage of each candidate prior, read without loading it. A file that
+# cannot be read has none, so it is never taken for a declared parent.
+.tf_lineage <- function(paths) {
+  out <- lapply(unname(paths), function(p) {
+    tryCatch(.tf_lineage_of(tf_read(p)), error = function(e) NULL)
+  })
+  as.character(jsonlite::toJSON(out, auto_unbox = TRUE, digits = NA, null = "null"))
+}
+.tf_lineage_call <- function() {
+  call <- jsonlite::fromJSON(
+    readChar("/tf/call.json", file.info("/tf/call.json")$size, useBytes = TRUE),
+    simplifyVector = TRUE)
+  .tf_lineage(call$paths)
+}
+
+# An uploaded prior is held apart from the theory. A file that cannot be read
+# stops, and the prior uploaded before it stays.
+.tf_load_prior <- function(path) {
+  .tf_app$prior <- tf_read(path)
+  as.character(jsonlite::toJSON(.tf_lineage_of(.tf_app$prior),
+                                auto_unbox = TRUE, digits = NA, null = "null"))
+}
+
 .tf_run <- function(op, p) {
   t <- .tf_app$theory
   env <- function(x) as.character(jsonlite::toJSON(x, auto_unbox = TRUE, digits = NA, null = "null"))
@@ -62,7 +100,18 @@ invisible(lapply(.tf_app_files, source))
   if (op == "validate")   return(env(.tf_validation(t)))
   if (op == "severity")   return(env(list(rows = tf_severity(t), svg = tf_diagram(t, "severity"))))
   if (op == "redundancy") return(env(list(rows = tf_redundancy_check(t))))
-  if (op == "appraise")   return(env(tf_appraise_amendment(t, tf_read(p$prior))))
+  if (op == "appraise") {
+    prior <- if (identical(p$prior, .tf_UPLOADED_PRIOR)) .tf_app$prior else tf_read(p$prior)
+    if (is.null(prior)) stop("No prior version uploaded", call. = FALSE)
+    return(env(tf_appraise_amendment(t, prior)))
+  }
+  # A refusal, a feedback loop under the default or a relation the graph
+  # cannot be built from, is a result the app shows with its message.
+  if (op == "implications") {
+    cycles <- if (is.null(p$cycles)) "refuse" else p$cycles
+    return(env(tryCatch(list(result = tf_implications(t, cycles = cycles)),
+                        error = function(e) list(ok = FALSE, message = conditionMessage(e)))))
+  }
   if (op == "diagram")    return(env(list(ir = tf_diagram(t, p$type))))
   if (op == "sem")        return(env(list(text = tf_compile_sem(t))))
   if (op == "preregister")return(env(list(text = tf_preregister(t))))
@@ -123,6 +172,11 @@ const RT = {
   _webR: null,
   _corpusFile: null,
   _theoryFile: "your-theory.yaml",
+  // Whether the package ships the theory's file, which the code then reads
+  // through tf_example_path(). An upload never is.
+  _theoryShipped: false,
+  // The uploaded prior's file name, set once the engine has read it.
+  _priorFile: null,
 
   hasCorpus() { return this.corpora.length > 0; },
 
@@ -162,7 +216,11 @@ const RT = {
     // manifest from DESCRIPTION (after checking pyproject.toml agrees), so the
     // app cannot drift from the packaged version.
     this.pkgVersion = manifest.pkgVersion || "";
-    this.examples = manifest.examples;
+    // Each example's lineage, read once, lets the appraisal default to the
+    // version the loaded theory declares as its parent.
+    onProgress("Reading the examples' versions…");
+    const lineage = await this.lineageOf(manifest.examples.map((e) => this._fixtures[e.path]));
+    this.examples = manifest.examples.map((e, i) => Object.assign({}, e, { lineage: lineage[i] }));
     this.corpora = manifest.corpora;
 
     // Load a corpus (for the literature operations) and the first example.
@@ -184,6 +242,7 @@ const RT = {
   async loadExample(path) {
     const json = await this._webR.evalRString(`.tf_load("${this._fixtures[path]}")`);
     this._theoryFile = path.split("/").pop();
+    this._theoryShipped = this._shipped(this.examples, path);
     return JSON.parse(json);
   },
 
@@ -193,7 +252,32 @@ const RT = {
     await this._webR.FS.writeFile(dest, new TextEncoder().encode(text));
     const json = await this._webR.evalRString(`.tf_load("${dest}")`);
     this._theoryFile = filename || "your-theory." + ext;
+    this._theoryShipped = false;
     return JSON.parse(json);
+  },
+
+  // An uploaded prior has a file of its own and is held apart from the theory.
+  // Its name is recorded for the code panel only once the engine has read it.
+  async loadPriorText(text, filename) {
+    const ext = /\.json$/i.test(filename) ? "json" : "yaml";
+    const dest = "/tf/prior." + ext;
+    await this._webR.FS.writeFile(dest, new TextEncoder().encode(text));
+    const json = await this._webR.evalRString(`.tf_load_prior("${dest}")`);
+    this._priorFile = filename || "prior." + ext;
+    return JSON.parse(json);
+  },
+
+  // The lineage of each file in `paths` (in-FS paths), null for one that
+  // cannot be read. Nothing is loaded. The paths travel as a JSON call file,
+  // as an operation's parameters do.
+  async lineageOf(paths) {
+    await this._webR.FS.writeFile("/tf/call.json", new TextEncoder().encode(JSON.stringify({ paths })));
+    return JSON.parse(await this._webR.evalRString(".tf_lineage_call()"));
+  },
+
+  _shipped(list, path) {
+    const e = (list || []).find((x) => x.path === path);
+    return !!(e && e.shipped);
   },
 
   async run(opId, params) {
@@ -213,18 +297,36 @@ const RT = {
   },
 
   // ---- reproducible R code ------------------------------------------------
+  // A file the package ships is read through tf_example_path(), so the code
+  // runs wherever the package is installed. Any other file, an app-only
+  // example or an upload, has to be saved beside the script first. `note`
+  // ends that comment. The name is a JSON string literal in the code, which R
+  // reads as written. In the comment, a line feed or carriage return in an
+  // uploaded file's name would end the comment and leave the rest of the
+  // name as code, so every control character is shown as "?".
+  _read(name, fn, file, shipped, note) {
+    const lit = JSON.stringify(file);
+    const shown = String(file).replace(/[\u0000-\u001f\u007f]/g, "?");
+    return shipped
+      ? `${name} <- ${fn}(tf_example_path(${lit}))`
+      : `# Save ${shown} beside this script first${note || "."}\n${name} <- ${fn}(${lit})`;
+  },
+
   code(opId, p) {
-    const f = this._theoryFile;
-    const head = `library(theoryforge)\ntheory <- tf_read("${f}")`;
-    const corpus = `corpus <- tf_read_corpus("${(this._corpusFile || "corpus.yaml").split("/").pop()}")`;
+    const head = "library(theoryforge)\n" +
+      this._read("theory", "tf_read", this._theoryFile, this._theoryShipped, " (View source in the app offers a download).");
+    const cf = this._corpusFile || "corpus.yaml";
+    const corpus = this._read("corpus", "tf_read_corpus", cf.split("/").pop(), this._shipped(this.corpora, cf));
     switch (opId) {
       case "check":
         return `${head}\n\nreport <- tf_check(theory)\nreport$aggregate_score   # overall 0-100\nreport$gate              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nwriteLines(tf_diagram(theory, "rigour"), "rigour.svg")`;
       case "validate":
         return `${head}\n\ntf_validate(theory, full = TRUE)   # structural + referential integrity; stops, listing every problem`;
       case "appraise": {
-        const pf = (p.prior || "prior.theory.yaml").split("/").pop();
-        return `${head}\nprior <- tf_read("${pf}")\n\nappr <- tf_appraise_amendment(theory, prior)\nappr$verdict                      # progressive / degenerating / neutral`;
+        const uploaded = p.prior === "upload";
+        const pf = uploaded ? this._priorFile || "prior.theory.yaml" : String(p.prior || "prior.theory.yaml").split("/").pop();
+        const prior = this._read("prior", "tf_read", pf, !uploaded && this._shipped(this.examples, p.prior));
+        return `${head}\n${prior}\n\nappr <- tf_appraise_amendment(theory, prior)\nappr$verdict                      # progressive / degenerating / neutral`;
       }
       case "diagram": {
         const t = p.type;
@@ -239,12 +341,14 @@ const RT = {
         return `${head}\n\ntf_redundancy_check(theory)       # pairwise Jaccard and overlap of construct definitions`;
       case "sem":
         return `${head}\n\ncat(tf_compile_sem(theory))       # lavaan model syntax`;
+      case "implications":
+        return `${head}\n\n# A refusal stops with the message the app shows.\nimplied <- tf_implications(theory, cycles = "${p.cycles || "refuse"}")\nvapply(implied$implications, function(s) s$statement, character(1))`;
       case "preregister":
         return `${head}\n\ncat(tf_preregister(theory))       # preregistration document (Markdown)`;
       case "dossier":
         return `${head}\n\ncat(tf_dossier(theory))           # reviewer-facing audit bundle (Markdown)`;
       case "simulate":
-        return `${head}\n\nsim <- tf_simulate(theory, steps = ${p.steps}, dt = ${p.dt}, k = ${p.k}, damping = ${p.damping}, init = ${p.init}, method = "${p.method || "exact"}")\nstr(sim)                          # list(states, ..., method, ignored, opposed, trajectory)`;
+        return `${head}\n\nsim <- tf_simulate(theory, steps = ${p.steps}, dt = ${p.dt}, k = ${p.k}, damping = ${p.damping}, init = ${p.init}, method = "${p.method || "exact"}")\nstr(sim)                          # list(states, dt, steps, k, damping, init, method, ignored, opposed, trajectory)`;
       case "litmap":
         return `${head}\n${corpus}\n\nlm <- tf_litmap(corpus, min_link = ${p.min_link})\nlm$themes\ncat(tf_lit_diagram(lm, "keyword_cooccurrence"))`;
       case "landscape":
