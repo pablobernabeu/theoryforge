@@ -24,7 +24,7 @@ grade the riskiness of each prediction's claim, derive what the causal graph
 forbids in data, export a preregistration, appraise an amendment in Lakatosian
 terms, compile a measurement model for `lavaan` and assemble a reviewer-facing
 audit bundle. The worked example reads the panic-network fixture shipped with
-the package, joined in one section by the shipped modality-switching fixture,
+the package, joined in two sections by the shipped modality-switching fixture,
 so every chunk runs with only `theoryforge` loaded.
 
 ```{r read}
@@ -211,18 +211,37 @@ predictions, the verdict would record that as degenerating.
 
 ## Compiling a measurement model
 
-When constructs carry measurement indicators, `tf_compile_sem()` compiles them
-into `lavaan` model syntax. Constructs with indicators become latent
-measurement models with `=~`, and propositions become structural paths with
-`~`, covariances with `~~` or annotated moderation lines.
+When constructs carry measurement indicators, `tf_compile_sem()` compiles the
+theory into `lavaan` model syntax written for `lavaan::sem()`. Constructs with
+indicators become latent variables with `=~`, and propositions become
+structural paths with `~` and covariances with `~~`. The modality-switching
+theory shows the rest of what the syntax carries.
 
 ```{r sem}
-cat(tf_compile_sem(theory))
+cat(tf_compile_sem(switching))
 ```
 
+The last block fixes two covariances at zero, those behind the two claims
+singled out above. Sensorimotor experience and lexical familiarity are both
+exogenous, and switch cost and conceptual access are both terminal.
+`lavaan::sem()` frees the covariance of each such pair by default, so a fit with
+its defaults could not refute either claim. With the block, the structural
+model tests all six. Deleting the block restores lavaan's defaults.
+
+The syntax is a starting point for a fit. The indicator names are the sanitised
+measurement entries and must match columns of the data, so entries written as
+column names give syntax that fits as it stands. `lavaan::sem()`
+treats a construct with a single indicator as measured without error, which a
+comment notes, and a manipulation or a categorical predictor with more than two
+levels has to be re-specified by hand. A feedback loop makes the model
+non-recursive, and such a model may not be identified
+([Bollen, 1989](https://doi.org/10.1002/9781118619179)). The syntax flags each
+loop in a comment. The panic network's loop between arousal and perceived threat
+leaves its model unidentified as it stands, and the model needs an instrument or
+a further restriction before it can be fitted.
+
 The function returns a plain string and does not require `lavaan` to be
-installed. The output can be passed directly to `lavaan::sem()` once the data
-are available.
+installed.
 
 ## The reviewer audit bundle
 

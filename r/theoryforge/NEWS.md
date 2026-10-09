@@ -372,6 +372,35 @@
   theories are unaffected. lavaan joins Suggests for a test that parses the
   renamed syntax with `lavaan::lavaanify()`.
 
+* `tf_compile_sem()` writes the covariances the theory fixes at zero, which
+  `lavaan::sem()` would otherwise free, so a fitted model can refute the
+  implications the theory makes. Two constructs that are both exogenous or
+  both terminal, with no association between them, are unrelated by the
+  theory's account, and `lavaan::sem()` frees their covariance by default. In
+  the bundled modality-switching theory, those are two of the six
+  independencies `tf_implications()` derives. The syntax now ends with
+  `c_sensorimotor_experience ~~ 0*c_lexical_familiarity` and
+  `c_switch_cost ~~ 0*c_conceptual_access`, and the model's degrees of
+  freedom rise from 59 to 61. A pair with a moderator keeps lavaan's
+  defaults, and deleting the block restores them all. Once a covariance line
+  names an observed exogenous variable, lavaan treats it as random and fixes
+  at zero each of its covariances left unwritten. The block therefore writes
+  those of an observed moderator as free. A moderation used to
+  lose the moderator's main effect, and `tf_compile_sem()` now writes it,
+  with a comment on the product term to add by hand. It also cautions that
+  each feedback loop may not be identified, lists the constructs with a
+  single indicator and names `lavaan::sem()` as the target. The four bundled
+  `sem.lavaan` files change.
+
+* The Developing and testing article demonstrates `tf_compile_sem()` on the
+  modality-switching theory and no longer says that the panic network's
+  syntax can be passed directly to `lavaan::sem()`: its feedback loop leaves
+  the model unidentified. `?tf_compile_sem` says that the syntax is a starting
+  point for a fit. Indicator names must match columns of the data, a
+  single-indicator construct is treated as measured without error, and
+  manipulations and categorical predictors with more than two levels have to
+  be re-specified by hand.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

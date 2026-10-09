@@ -273,6 +273,27 @@ version and a single behavioural contract
 - Apps: the number fields passed a fractional `steps` to the package, which refuses it.
   The glue truncated a fractional `min_link`, while the code showed the fraction.
   Whole-number parameters are now rounded, and each field shows the value a run uses.
+- `compile_sem()` wrote a model that `lavaan::sem()` does not read as the theory's own,
+  so a fit could not refute some of the implications the theory makes. Two constructs
+  that are both exogenous or both terminal, with no association between them, are
+  unrelated by the theory's account, and `lavaan::sem()` frees their covariance by
+  default. In the modality-switching theory, those are two of the six independencies
+  `implications()` derives. The syntax now ends with a block that fixes each such
+  covariance at zero, `c_sensorimotor_experience ~~ 0*c_lexical_familiarity` and
+  `c_switch_cost ~~ 0*c_conceptual_access` there, which raises the model's degrees of
+  freedom from 59 to 61. A pair with a moderator keeps lavaan's defaults, and deleting the
+  block restores them all. Once a covariance line names an observed exogenous variable,
+  lavaan treats it as random and fixes at zero each of its covariances left unwritten. The
+  block therefore writes those of an observed moderator as free. A moderation compiled to a
+  comment alone, so the moderator had no path to the outcome. It now gives the moderator's
+  main effect, unless a path relation already writes that line, and a comment on the
+  product term to add by hand. A comment cautions that each feedback loop may not be
+  identified, without claiming that an instrument is needed: the effort-recovery app
+  example is identified without one, and both panic-network models are not. A comment
+  lists the constructs with a single indicator, whose residual variance lavaan fixes at
+  zero, and the header names `lavaan::sem()` as the target. API_SPEC section 19 states
+  the rules. The four `sem.lavaan` goldens change, and so does the `compile_sem` entry of
+  every edge-case record that holds one.
 
 ### Changed
 - R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new
@@ -519,6 +540,16 @@ version and a single behavioural contract
   of alternative stable states violates. The methodology pages, the README and API_SPEC
   sections 5 and 27 describe the `cycles` option, and the README no longer quotes a count
   of golden artefacts.
+- The R article on developing and testing a theory demonstrates `compile_sem()` on the
+  modality-switching theory and no longer says that the panic network's syntax can be
+  passed directly to `lavaan::sem()`. The apps no longer say that the syntax can be pasted
+  straight into a fit. The panic network's feedback loop leaves its model unidentified.
+  The `compile_sem()` docstring, which the API page renders, the R help page, the apps and
+  API_SPEC section 19 call the syntax a starting point for a fit. Indicator names are the
+  sanitised measurement entries, so entries written as data column names give syntax that
+  fits as it stands. A single-indicator construct is treated as measured without error,
+  and manipulations and categorical predictors with more than two levels have to be
+  re-specified by hand.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and

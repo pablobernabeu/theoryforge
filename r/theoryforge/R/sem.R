@@ -8,6 +8,31 @@ NULL
 # Relations that compile to a directed structural path (`<to> ~ <from>`).
 .tf_SEM_PATH <- c("causes", "increases", "decreases", "mediates")
 
+# The comment lines of the syntax (API_SPEC.md section 19), shared with
+# Python's sem.py. lavaan drops a comment before it reads a semicolon as a line
+# break, so the semicolons inside them stay comment text.
+.tf_SEM_WRITTEN_FOR <- paste0("# Written for lavaan::sem(); indicator names are the sanitised ",
+                              "measurement entries and must match columns of the data.")
+.tf_SEM_SINGLE <- paste0("# Single-indicator constructs (lavaan fixes the indicator's residual ",
+                         "variance at zero, so each is treated as measured without error): ")
+# The order and rank conditions assume that the disturbances of a loop may
+# correlate (Bollen, 1989, ch. 4). sem() leaves them uncorrelated, and then a
+# loop can be identified without an instrument, as the effort-recovery app
+# example is. The comment therefore cautions and does not judge.
+.tf_SEM_LOOP <- paste0("# Feedback loop among %s: a non-recursive model may not be identified. ",
+                       "lavaan::sem() leaves these disturbances uncorrelated, and the order and ",
+                       "rank conditions (Bollen, 1989) assume they may correlate, so check ",
+                       "identification before fitting.")
+.tf_SEM_MODERATION <- paste0("# moderation: %1$s moderates the paths into %2$s; add the product ",
+                             "term by hand (%2$s ~ <x>:%1$s for an observed predictor <x>; ",
+                             "lavaan::sam() or the modsem package for latent variables)")
+.tf_SEM_ZERO <- paste0("# Covariances the theory fixes at zero (lavaan::sem() frees them by ",
+                       "default; delete this block to restore its defaults)")
+.tf_SEM_FREE <- paste0("# Covariances with a moderator, left free (once a covariance names an ",
+                       "observed exogenous variable, lavaan treats the variable as random and ",
+                       "fixes at zero each of its covariances that the syntax does not write, ",
+                       "including one with a product term added by hand)")
+
 # A name lavaan reads as written: an ASCII syntactic R name that is not a
 # reserved word, which make.names() leaves unchanged. lavaan 0.7 refuses many
 # other names (lav_parse_check_name()) and misreads some, reading
@@ -146,13 +171,206 @@ NULL
   comments
 }
 
+# The causal graph the structural model states, as list(nodes, directed,
+# bidirected, moderator). It is the graph tf_implications() reads (API_SPEC.md
+# section 27). Every directed relation is an edge from -> to, the vertices are
+# the ids those edges name and an association is a bidirected edge between two
+# of them. tf_implications() refuses a repeated construct id and an undeclared
+# endpoint, which the syntax writes all the same, so here a repeated id is one
+# vertex and an undeclared endpoint follows the declared constructs. Vertices
+# come in claim order, as in .tf_sem_renamings(). An empty id names no vertex,
+# and a relation with an empty endpoint adds no edge. `moderator` marks each
+# vertex that some `moderates` edge leaves. Mirrors Python's sem._graph().
+.tf_sem_graph <- function(T) {
+  ids <- character(0)
+  add <- function(cid) {
+    if (nzchar(cid) && !(cid %in% ids)) ids <<- c(ids, cid)
+  }
+  for (con in .tf_list(T, "constructs")) add(.tf_str(con, "id"))
+  props <- .tf_list(T, "propositions")
+  for (p in props) {
+    if (nzchar(.tf_enum_str(p, "relation", .tf_RELATION))) {
+      add(.tf_str(p, "from"))
+      add(.tf_str(p, "to"))
+    }
+  }
+  edge_from <- integer(0)
+  edge_to <- integer(0)
+  moderators <- character(0)
+  assoc_from <- character(0)
+  assoc_to <- character(0)
+  for (p in props) {
+    rel <- .tf_enum_str(p, "relation", .tf_RELATION)
+    frm <- .tf_str(p, "from")
+    to <- .tf_str(p, "to")
+    if (!nzchar(frm) || !nzchar(to)) next
+    if (rel %in% .tf_DIRECTED) {
+      u <- match(frm, ids)
+      v <- match(to, ids)
+      if (!any(edge_from == u & edge_to == v)) {
+        edge_from <- c(edge_from, u)
+        edge_to <- c(edge_to, v)
+      }
+      if (identical(rel, "moderates")) moderators <- c(moderators, frm)
+    } else if (rel %in% .tf_BIDIRECTED) {
+      assoc_from <- c(assoc_from, frm)
+      assoc_to <- c(assoc_to, to)
+    }
+  }
+  used <- sort(unique(c(edge_from, edge_to)))
+  nodes <- ids[used]
+  k <- length(nodes)
+  directed <- matrix(FALSE, nrow = k, ncol = k)
+  for (e in seq_along(edge_from)) {
+    directed[match(edge_from[[e]], used), match(edge_to[[e]], used)] <- TRUE
+  }
+  bidirected <- matrix(FALSE, nrow = k, ncol = k)
+  for (e in seq_along(assoc_from)) {
+    a <- match(assoc_from[[e]], nodes)
+    b <- match(assoc_to[[e]], nodes)
+    if (is.na(a) || is.na(b) || a == b) next
+    bidirected[a, b] <- TRUE
+    bidirected[b, a] <- TRUE
+  }
+  list(nodes = nodes, directed = directed, bidirected = bidirected,
+       moderator = nodes %in% moderators)
+}
+
+# The lines after the structural model: one caution per feedback loop, then the
+# covariances the theory fixes at zero. A feedback loop is a strongly connected
+# component of two or more vertices, or one with an edge to itself, as in
+# tf_implications(). The zero block takes every pair of vertices, in vertex
+# order, that are both exogenous (no edge enters either) or both terminal (no
+# edge leaves either). It passes over a pair that an association joins or that
+# holds a moderator. The theory states no common cause for such a pair beyond
+# the causes it names, so their disturbances are uncorrelated. lavaan::sem()
+# frees the covariance of two exogenous latent variables and of two terminal
+# variables by default, and takes that of two exogenous observed variables
+# from the data. Where lavaan fixes the covariance at zero already, as between
+# an exogenous latent variable and an exogenous observed one, the line
+# restates that. The rule encodes uncorrelated disturbances, so it holds in a
+# cyclic graph too. A moderator keeps lavaan's defaults, since the product term
+# the user adds changes its role.
+#
+# lavaan::sem() takes the covariances of the observed exogenous variables from
+# the data (fixed.x) until a covariance line names one of them. It then treats
+# that variable as random and fixes at zero each of its covariances that the
+# syntax does not write. A zero line alone would thus also fix the covariance
+# of an observed moderator with it. `given` holds the exogenous vertices that
+# are observed, their names heading no `=~` line (`latent`), and that no
+# association names. Without the block, lavaan takes these as given. Once a
+# zero line names one of them, the block frees each pair of them that holds a
+# moderator. A moderator that an association names is random already, and
+# lavaan fixes its covariances with them at zero with or without the block.
+# Mirrors Python's sem._cautions().
+.tf_sem_cautions <- function(T, latent) {
+  g <- .tf_sem_graph(T)
+  k <- length(g$nodes)
+  if (k == 0L) return(character(0))
+  cnames <- vapply(g$nodes, .tf_lavaan_construct, character(1), USE.NAMES = FALSE)
+  out <- character(0)
+  for (comp in .tf_strong_components(.tf_reach(g$directed, k))) {
+    if (length(comp) > 1L || g$directed[comp[[1L]], comp[[1L]]]) {
+      out <- c(out, sprintf(.tf_SEM_LOOP, paste(cnames[comp], collapse = ", ")))
+    }
+  }
+  exogenous <- colSums(g$directed) == 0
+  terminal <- rowSums(g$directed) == 0
+  zero_a <- integer(0)
+  zero_b <- integer(0)
+  if (k >= 2L) {
+    for (i in seq_len(k - 1L)) {
+      for (j in (i + 1L):k) {
+        if (g$moderator[[i]] || g$moderator[[j]] || g$bidirected[i, j]) next
+        if ((exogenous[[i]] && exogenous[[j]]) || (terminal[[i]] && terminal[[j]])) {
+          zero_a <- c(zero_a, i)
+          zero_b <- c(zero_b, j)
+        }
+      }
+    }
+  }
+  if (length(zero_a) == 0L) return(out)
+  out <- c(out, .tf_SEM_ZERO, sprintf("%s ~~ 0*%s", cnames[zero_a], cnames[zero_b]))
+  named <- character(0)
+  for (p in .tf_list(T, "propositions")) {
+    if (identical(.tf_enum_str(p, "relation", .tf_RELATION), "associates")) {
+      named <- c(named, .tf_lavaan_construct(.tf_str(p, "from")),
+                 .tf_lavaan_construct(.tf_str(p, "to")))
+    }
+  }
+  given <- which(exogenous & !(cnames %in% latent) & !(cnames %in% named))
+  if (length(given) < 2L || !any(c(zero_a, zero_b) %in% given)) return(out)
+  free <- character(0)
+  for (a in seq_len(length(given) - 1L)) {
+    for (b in (a + 1L):length(given)) {
+      i <- given[[a]]
+      j <- given[[b]]
+      if (g$moderator[[i]] || g$moderator[[j]]) {
+        free <- c(free, sprintf("%s ~~ %s", cnames[[i]], cnames[[j]]))
+      }
+    }
+  }
+  if (length(free) > 0L) out <- c(out, .tf_SEM_FREE, free)
+  out
+}
+
 #' Compile a theory to lavaan model syntax
 #'
-#' Compiles a theory's constructs and propositions into a \pkg{lavaan} model
-#' string: constructs with measurement indicators become a latent measurement
-#' model (\code{=~}), and propositions become structural paths (\code{~}),
-#' covariances (\code{~~}), or moderation comment lines. The output is
-#' deterministic.
+#' Compiles a theory's constructs and propositions into \pkg{lavaan} model
+#' syntax written for \code{lavaan::sem()}. Constructs with measurement
+#' indicators become a latent measurement model (\code{=~}), propositions
+#' become structural paths (\code{~}) and covariances (\code{~~}), and the
+#' covariances the theory rules out are fixed at zero. Comments say what to
+#' check before a fit. The output is deterministic.
+#'
+#' @section The structural model:
+#' Each proposition becomes a line in file order: a regression
+#' (\code{to ~ from}) for \code{causes}, \code{increases}, \code{decreases} and
+#' \code{mediates}, and a covariance (\code{from ~~ to}) for
+#' \code{associates}. A \code{moderates} proposition gives the moderator's
+#' main effect, \code{to ~ from}, unless a path relation already writes that
+#' line. A comment follows on the product term, which has to be added by hand:
+#' \code{to ~ x:from} for an observed predictor \code{x}, and
+#' \code{lavaan::sam()} or the modsem package when the variables are latent.
+#'
+#' The propositions form the graph that [tf_implications()] reads. Two of its
+#' constructs that are both exogenous, with no proposition pointing into
+#' either, or both terminal, with neither pointing to another construct, are
+#' unrelated by the theory's account unless an association joins them. By
+#' default, \code{lavaan::sem()} frees the covariance of two exogenous latent
+#' variables and of two terminal variables, and takes that of two exogenous
+#' observed variables from the data. A fit with those defaults could not refute
+#' the claim. In the modality-switching example, two of the six independencies
+#' [tf_implications()] derives would go untested. The syntax therefore ends
+#' with a block that fixes each such covariance at zero (\verb{a ~~ 0*b}), and
+#' deleting the block restores lavaan's defaults. A pair with a moderator keeps
+#' those defaults, because the product term changes the moderator's role.
+#'
+#' lavaan takes the covariances of observed exogenous variables from the data
+#' only until a covariance line names one of them. It then treats that variable
+#' as random and fixes at zero each of its covariances that the syntax does not
+#' write. Where a zero line names such a variable, the block therefore ends by
+#' freeing each covariance between two observed exogenous variables that no
+#' association names, when either is a moderator (\verb{x ~~ m}). The moderator
+#' then keeps lavaan's defaults.
+#'
+#' @section Before fitting:
+#' The syntax is a starting point for a fit. Indicator names are the sanitised
+#' measurement entries and must match columns of the data, so entries written
+#' as column names, such as \code{heart_rate}, give syntax that fits as it
+#' stands. A comment lists each construct with a single indicator, whose
+#' residual variance \code{lavaan::sem()} fixes at zero, so the construct is
+#' treated as measured without error. A comment flags each feedback loop. A
+#' non-recursive model may not be identified (Bollen, 1989), and the
+#' panic-network example is not, so check identification before fitting. Some
+#' constructs have to be re-specified by hand. A manipulation is better entered
+#' as a coded observed variable and a categorical predictor with more than two
+#' levels as dummy variables. A covariate that a measurement entry only
+#' describes needs a variable of its own. Once the block names an observed
+#' predictor, a product term added by hand needs a free covariance with each
+#' observed exogenous variable that a covariance line names. lavaan fixes each
+#' one left unwritten at zero, and each takes a line of its own
+#' (\verb{x:m ~~ x}).
 #'
 #' @section Names:
 #' Every name is one lavaan reads as written. Construct ids that lavaan would
@@ -179,14 +397,23 @@ NULL
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @return The lavaan model syntax as a single string (LF line endings, single
 #'   trailing newline).
+#' @references
+#' Bollen, K. A. (1989). \emph{Structural equations with latent variables}.
+#'   Wiley. \doi{10.1002/9781118619179}
+#' @seealso [tf_implications()] for the independencies the zero block encodes.
 #' @examples
+#' # Measurement entries written as column names give syntax that fits as it
+#' # stands. Threat and avoidance both follow from arousal alone, so the
+#' # syntax fixes the covariance of their disturbances at zero.
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.",
-#'                    measurement = c("heart-rate variability",
-#'                                    "self-reported arousal")) |>
+#'                    measurement = c("heart_rate", "arousal_rating")) |>
 #'   tf_add_construct("c_threat", "Perceived threat", "Appraised danger.",
-#'                    measurement = c("threat appraisal questionnaire")) |>
-#'   tf_add_proposition("p1", "c_arousal", "c_threat", "increases")
+#'                    measurement = "threat_rating") |>
+#'   tf_add_construct("c_avoidance", "Avoidance", "Withdrawal from the trigger.",
+#'                    measurement = c("avoidance_task", "avoidance_diary")) |>
+#'   tf_add_proposition("p1", "c_arousal", "c_threat", "increases") |>
+#'   tf_add_proposition("p2", "c_arousal", "c_avoidance", "increases")
 #' cat(tf_compile_sem(theory))
 #' @export
 tf_compile_sem <- function(theory) {
@@ -194,20 +421,48 @@ tf_compile_sem <- function(theory) {
   lines <- c(
     sprintf("# lavaan model generated by theoryforge for %s",
             .tf_sem_comment_text(.tf_str(T, "id"))),
+    .tf_SEM_WRITTEN_FOR,
     .tf_sem_renamings(T),
     "# Measurement model"
   )
+  # The indicators of each construct name, in the order of its first line.
+  # lavaan reads two lines with one name, from a repeated id, as one factor.
+  # The names are those of the latent variables, which the zero block needs.
+  factor_names <- character(0)
+  factor_indicators <- list()
   for (con in .tf_list(T, "constructs")) {
     meas <- .tf_str_list(.tf_get(con, "measurement"))
     if (length(meas) > 0L) {
+      name <- .tf_lavaan_construct(.tf_str(con, "id"))
       indicators <- vapply(meas, .tf_lavaan_indicator, character(1), USE.NAMES = FALSE)
-      lines <- c(lines, sprintf("%s =~ %s",
-                                .tf_lavaan_construct(.tf_str(con, "id")),
-                                paste(indicators, collapse = " + ")))
+      lines <- c(lines, sprintf("%s =~ %s", name, paste(indicators, collapse = " + ")))
+      if (!nzchar(name)) next
+      k <- match(name, factor_names)
+      if (is.na(k)) {
+        factor_names <- c(factor_names, name)
+        factor_indicators[[length(factor_names)]] <- indicators
+      } else {
+        factor_indicators[[k]] <- union(factor_indicators[[k]], indicators)
+      }
     }
   }
+  single <- factor_names[lengths(factor_indicators) == 1L]
+  if (length(single) > 0L) {
+    lines <- c(lines, paste0(.tf_SEM_SINGLE, paste(single, collapse = ", ")))
+  }
   lines <- c(lines, "# Structural model")
-  for (p in .tf_list(T, "propositions")) {
+  props <- .tf_list(T, "propositions")
+  # A moderator's main effect is written unless a path relation, wherever it
+  # stands in the file, or an earlier moderation already writes that line.
+  path_lines <- character(0)
+  for (p in props) {
+    if (.tf_enum_str(p, "relation", .tf_RELATION) %in% .tf_SEM_PATH) {
+      path_lines <- c(path_lines, sprintf("%s ~ %s", .tf_lavaan_construct(.tf_str(p, "to")),
+                                          .tf_lavaan_construct(.tf_str(p, "from"))))
+    }
+  }
+  main_effects <- character(0)
+  for (p in props) {
     rel <- .tf_enum_str(p, "relation", .tf_RELATION)
     frm <- .tf_lavaan_construct(.tf_str(p, "from"))
     to <- .tf_lavaan_construct(.tf_str(p, "to"))
@@ -216,10 +471,14 @@ tf_compile_sem <- function(theory) {
     } else if (identical(rel, "associates")) {
       lines <- c(lines, sprintf("%s ~~ %s", frm, to))
     } else if (identical(rel, "moderates")) {
-      lines <- c(lines, sprintf(
-        "# moderation: %s moderates the path into %s (specify interaction manually)",
-        frm, to))
+      main <- sprintf("%s ~ %s", to, frm)
+      if (!(main %in% path_lines) && !(main %in% main_effects)) {
+        main_effects <- c(main_effects, main)
+        lines <- c(lines, main)
+      }
+      lines <- c(lines, sprintf(.tf_SEM_MODERATION, frm, to))
     }
   }
+  lines <- c(lines, .tf_sem_cautions(T, factor_names))
   paste0(paste(lines, collapse = "\n"), "\n")
 }
