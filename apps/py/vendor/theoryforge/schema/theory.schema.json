@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pablobernabeu/theoryforge/schema/theory.schema.json",
+  "title": "theoryforge theory object",
+  "description": "Language-agnostic source of truth for a theory as a versioned, machine-checkable object. Authored as YAML, validated against this JSON Schema, read/written identically by the R and Python packages.",
+  "type": "object",
+  "required": ["schema_version", "id", "title", "maturity"],
+  "comment": "Closed at the top level: a misspelt collection key (predicitions) would otherwise be accepted while silently dropping the collection and changing every downstream verdict. Item objects stay open so individual entries can carry extra metadata.",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Semantic version of this schema. The major version gates loading.",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "id": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "maturity": {
+      "type": "string",
+      "enum": ["draft", "building", "developing", "testing"],
+      "description": "When set to draft, the theory is treated as interim and advisory, so blocker checks are downgraded to warnings and partial theories are scaffolded rather than penalized."
+    },
+    "theory_form": {
+      "type": "string",
+      "enum": ["variance", "network", "typology", "process"],
+      "default": "network",
+      "description": "Selects the schema/checklist profile. v1.0 fully supports variance/network; typology/process are partial."
+    },
+    "version": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "parent_id": { "type": ["string", "null"] },
+        "content_hash": { "type": ["string", "null"] }
+      }
+    },
+    "constructs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "definition"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "definition": { "type": "string" },
+          "measurement": { "type": "array", "items": { "type": "string" } },
+          "boundary_conditions": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "propositions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "from", "to", "relation"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "relation": {
+            "type": "string",
+            "enum": ["increases", "decreases", "moderates", "mediates", "causes", "associates"]
+          },
+          "mechanism": { "type": "string", "description": "the logical 'why' (Sutton & Staw, 1995)" },
+          "functional_form": { "type": "string" }
+        }
+      }
+    },
+    "boundary_conditions": { "type": "array", "items": { "type": "string" } },
+    "predictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "type"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "derives_from": { "type": "array", "items": { "type": "string" } },
+          "statement": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["point", "interval", "directional", "existence"],
+            "description": "What the prediction asserts. existence: that an effect or relation exists, without a direction. directional: a sign or an order, including comparisons, interactions, the invariance of a direction across groups and claims that an effect occurs only when a condition holds. interval: that a quantity lies in a stated range, the range the theory permits. point: one value, with the tolerance that measurement requires (the width is measurement tolerance, not latitude the theory allows). Riskiness ordering: existence < directional < interval < point. The label is self-declared, and no function checks it against the statement."
+          },
+          "risk_score": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Informational, read by no function. The risk_score that severity() reports is derived from the type."
+          },
+          "severity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "A declared pre-data severity of the claim, from 0 to 1. The checklist's risk_severity item reads it, and uses the claim-form rubric of severity() for a prediction that declares none."
+          },
+          "diagnostic_vs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "auxiliary_assumptions": {
+      "type": "array",
+      "description": "The Lakatosian protective belt, represented as first-class versioned entities.",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "statement": { "type": "string" },
+          "added_for": {
+            "type": ["string", "null"],
+            "description": "A null value marks a core assumption. Otherwise, it is the id of the prediction whose anomaly the assumption was added to answer. The amendment appraisal counts such an assumption as ad hoc unless one of the predictions it protects is new in the amended version, differs from this one and is corroborated."
+          },
+          "protects": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "The ids of the predictions the assumption shields from refutation. Only a prediction new in an amended version, other than added_for, can clear an assumption added for an anomaly."
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["supports", "direction"],
+        "additionalProperties": true,
+        "properties": {
+          "supports": { "type": "string" },
+          "source_doi": { "type": ["string", "null"] },
+          "direction": { "type": "string", "enum": ["corroborates", "refutes", "mixed"] }
+        }
+      }
+    },
+    "test_outcomes": {
+      "type": "array",
+      "description": "Links a registered prediction to its realized result.",
+      "items": {
+        "type": "object",
+        "required": ["prediction_id", "passed"],
+        "additionalProperties": true,
+        "properties": {
+          "prediction_id": { "type": "string" },
+          "observed": { "type": "string" },
+          "passed": { "type": "boolean" },
+          "severity_at_test": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Informational, read by no function."
+          },
+          "registered": {
+            "type": ["string", "null"],
+            "description": "Where the test was preregistered, such as an OSF registration. The amendment appraisal reads it only to report which corroborations were preregistered, and no verdict depends on it."
+          },
+          "date": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "key_constructs": { "type": "array", "items": { "type": "string" } },
+          "source_doi": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "formal_model": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "type": { "type": "string", "enum": ["ode", "abm", "network", "sem", "none"] },
+        "spec_ref": { "type": ["string", "null"] }
+      }
+    },
+    "provenance": {
+      "type": "array",
+      "description": "Auto-logged build steps.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "step": { "type": "string" },
+          "action": { "type": "string" },
+          "detail": { "type": "string" }
+        }
+      }
+    }
+  }
+}

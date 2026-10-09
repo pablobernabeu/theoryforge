@@ -1,0 +1,2594 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Systematic theory development. A reproducible workflow for building, developing and testing scientific theories.">
+      
+      
+        <meta name="author" content="Pablo Bernabeu">
+      
+      
+        <link rel="canonical" href="https://pablobernabeu.github.io/theoryforge/python/changelog/">
+      
+      
+        <link rel="prev" href="../methodology/">
+      
+      
+        <link rel="next" href="../about/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Changelog - theoryforge (Python)</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_markdown_exec_pyodide.css">
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../stylesheets/brand.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#changelog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+      <div data-md-color-scheme="default" data-md-component="outdated" hidden>
+        
+      </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="theoryforge (Python)" class="md-header__button md-logo" aria-label="theoryforge (Python)" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            theoryforge (Python)
+          </span>
+          <small class="mrd-version" title="Released version">0.6.0</small>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Changelog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- App link (added: not part of upstream header.html) -->
+    <a data-md-component="app-link" href="https://pablobernabeu.github.io/theoryforge/apps/py/" title="Open the interactive app" class="md-header__button">App</a>
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/pablobernabeu/theoryforge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+    
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="black" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../getting-started/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Get started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../api/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../workflow-modes/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Changelog
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../about/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  About
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="theoryforge (Python)" class="md-nav__button md-logo" aria-label="theoryforge (Python)" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="logo">
+
+    </a>
+    theoryforge (Python)
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/pablobernabeu/theoryforge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Get started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflow-modes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflow modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../literature/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Literature layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methodology/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methodological foundations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unreleased
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deprecated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internal
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#060-2026-08-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.6.0 - 2026-08-21
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.6.0 - 2026-08-21">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#050-2026-07-23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.5.0 - 2026-07-23
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.5.0 - 2026-07-23">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#040-2026-07-16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.0 - 2026-07-16
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.4.0 - 2026-07-16">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#030-2026-07-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.3.0 - 2026-07-15
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.3.0 - 2026-07-15">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-2026-07-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.2.0 - 2026-07-15
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.2.0 - 2026-07-15">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-2026-07-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0 - 2026-07-10
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0 - 2026-07-10">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-p0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core (P0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-modes-p1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow modes (P1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bibliometric-layer-p2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bibliometric layer (P2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sem-compilation-and-audit-bundle-p3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SEM compilation and audit bundle (P3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#simulation-reporting-adapters-p4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Simulation, reporting &amp; adapters (P4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visualisation-and-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visualisation and references
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quality-reproducibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quality &amp; reproducibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-yet-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not yet implemented
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../about/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#unreleased" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unreleased
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Unreleased">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deprecated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deprecated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#internal" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Internal
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#060-2026-08-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.6.0 - 2026-08-21
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.6.0 - 2026-08-21">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#fixed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Fixed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#changed_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#added_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#050-2026-07-23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.5.0 - 2026-07-23
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.5.0 - 2026-07-23">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#040-2026-07-16" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.4.0 - 2026-07-16
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.4.0 - 2026-07-16">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#030-2026-07-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.3.0 - 2026-07-15
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.3.0 - 2026-07-15">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#added_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Added
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#020-2026-07-15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.2.0 - 2026-07-15
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.2.0 - 2026-07-15">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#changed_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#010-2026-07-10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.1.0 - 2026-07-10
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="0.1.0 - 2026-07-10">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-p0" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core (P0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#workflow-modes-p1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workflow modes (P1)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bibliometric-layer-p2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bibliometric layer (P2)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sem-compilation-and-audit-bundle-p3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SEM compilation and audit bundle (P3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#simulation-reporting-adapters-p4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Simulation, reporting &amp; adapters (P4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#visualisation-and-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Visualisation and references
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quality-reproducibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quality &amp; reproducibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#not-yet-implemented" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not yet implemented
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<!--
+  The repository's CHANGELOG.md is included verbatim rather than summarised here, so
+  this page cannot drift from the file that records what actually shipped. The R and
+  Python packages are released in lockstep under one version, so there is one
+  changelog for both and it lives at the root of the monorepo. Its own H1 and intro
+  paragraph become this page's, which is why the page adds neither.
+-->
+
+<h1 id="changelog">Changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<p>All notable changes to theoryforge (the R and Python twin packages) are documented here.
+The format follows <a href="https://keepachangelog.com/">Keep a Changelog</a>. The two packages share a
+version and a single behavioural contract
+(<a href="https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md"><code>API_SPEC.md</code></a>).</p>
+<!--
+  The link to the specification is absolute rather than repository-relative because this
+  file is also included verbatim on the Python documentation site, where a relative path
+  would point at a page that does not exist there.
+-->
+
+<h2 id="unreleased"><a href="https://github.com/pablobernabeu/theoryforge/compare/v0.6.0...HEAD">Unreleased</a><a class="headerlink" href="#unreleased" title="Permanent link">&para;</a></h2>
+<h3 id="fixed">Fixed<a class="headerlink" href="#fixed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The Python builders split a single string into characters. <code>derives_from="p1"</code> was
+  stored as <code>["p", "1"]</code>, which blocked the gate, and <code>measurement="heart rate"</code> compiled
+  to one indicator per character. A single string is now a one-element list, as in R. A
+  template whose collection keys are present with no value (<code>constructs:</code>) no longer
+  raises AttributeError. A collection that is not a list is refused with a TypeError
+  that names the key.</li>
+<li>The same file no longer gives different theory objects in the two languages. R read
+  unquoted <code>y</code> and <code>n</code> as booleans and collapsed a one-element YAML sequence to a string.
+  Python read an unquoted date as a date object, which then could not be written to JSON,
+  kept the second of two repeated keys without a word and failed on a byte-order mark in
+  JSON. Both readers now follow one rule set, pinned in API_SPEC section 3 with a table of
+  the scalars that once diverged. Sequences are lists, and <code>y</code>, <code>Y</code>, <code>n</code>, <code>N</code> and dates
+  stay strings. Integers are decimal, octal or hexadecimal only, so <code>1:30</code> and <code>1_000</code> are
+  strings where Python read 90 and 1000, and <code>-.5</code> is a number in both. R read <code>1,000</code> and
+  an integer beyond its integer range as NA, with a warning. It now reads the first as the
+  string Python reads and the second as a number. A merge key lets the mapping's own
+  keys win and lists them first, as R does. A byte-order mark is ignored. A repeated key
+  in YAML or JSON is refused with <code>Duplicate map key: '&lt;key&gt;'</code>, and when several mappings
+  repeat a key both languages name the one in the mapping that closes first. The 0.6.0
+  fix for one-element enum sequences held for objects built in memory and for JSON, but
+  not for YAML read by R. It now holds for files too.</li>
+<li>Python's <code>write()</code> quotes <code>y</code>, <code>Y</code>, <code>n</code> and <code>N</code>, so its files stay readable by
+  theoryforge 0.6.0 in R. It also quotes the other strings a reader would take for
+  something else, such as <code>-.5</code> and <code>1,000</code>, and ends JSON output with a newline.</li>
+<li>R's <code>tf_write()</code> rounded JSON numbers to four decimal places and YAML numbers to seven.
+  It wrote logicals as <code>yes</code> and <code>no</code>, a missing value as R's own <code>.na</code> forms and
+  one-element arrays as scalars that failed the package's own schema. It now keeps 15
+  significant digits, writes <code>true</code>, <code>false</code> and null, and writes every field the schema
+  types as an array of strings as an array.</li>
+<li>Malformed input made the two engines diverge or crash. Python raised AttributeError or
+  TypeError in nearly every function when a collection entry was not a mapping, printed
+  <code>None</code> for null fields in the preregistration, the dossier and the diagram IRs, and
+  crashed on id-less entries in <code>appraise_amendment()</code>. R scored the same files, stopped
+  in full validation or read them differently, so the gates could disagree (55.4 against
+  84.8 on one file). Both twins now read every value through one set of accessors,
+  pinned in API_SPEC section 3 ("Reading a theory"), so they read a malformed value the
+  same way. A
+  collection given as a mapping or a single string reads as empty. A text field that is
+  not a string reads as <code>""</code>, so a number or a boolean no longer prints as <code>1.0</code> in one
+  engine and <code>1</code> in the other. <code>type</code>, <code>relation</code>, <code>maturity</code> and <code>formal_model.type</code>
+  outside their enum are absent, so a formal-model type outside the schema's enum no
+  longer passes formalisation. A null entry in <code>derives_from</code> passed full validation and
+  then blocked the gate in Python while R passed it. Both now ignore the entry, so <code>[~]</code>
+  fails the derivation check and <code>[p1, ~]</code> passes in both. <code>implications()</code> and
+  <code>simulate()</code> no longer refuse two constructs without ids as duplicates. A theory that
+  matches the schema gives the same results as before, except that an empty or blank
+  entry of a string array, such as <code>measurement: [""]</code>, no longer counts as an entry. Ten
+  malformed theories in
+  <code>fixtures/edge/</code> pin the agreement.</li>
+<li><code>check()</code> accepted severities outside [0, 1], so a severity of 7 gave an aggregate
+  score above 100, and Python raised OverflowError on an infinite one where R reported an
+  aggregate of <code>Inf</code>. Both now refuse them with named errors, an infinity with the message
+  already given for NaN. The pass/warn decision for mean severity compared an unrounded
+  mean whose last bit depended on the Python version and the R platform, so severities of
+  0.6, 0.7 and 0.2 passed or warned by platform. Statuses now come from the rounded score
+  and the mean is an explicit left-to-right sum. R no longer emits a negative zero.</li>
+<li><code>simulate()</code> validates its arguments with one set of messages in both languages and
+  stops with a message naming the step and state when the trajectory diverges. R returned
+  NaN rows, rows of the wrong length or a step count it had truncated, and Python raised
+  OverflowError or TypeError. <code>steps=2.5</code> ran two steps in R and raised TypeError in
+  Python, <code>steps=-1</code> returned one row in Python, <code>init</code> given three values made nine-value
+  rows in R, and both accepted a negative <code>dt</code>. On the panic fixture with <code>dt=2</code>, <code>k=10</code>,
+  <code>damping=0</code> and <code>init=10</code>, within the apps' ranges, Python raised OverflowError at step
+  228 where R returned rows of Inf and NaN. Both now stop there with <code>simulate diverged at
+  step 228: state 'c_arousal' is not finite; reduce dt or k</code>. Python accepts numpy integers
+  and integral floats for <code>steps</code> and refuses bools, as R refuses logicals. Python's
+  products are summed left to right as in R: the builtin <code>sum()</code> compensates rounding error
+  from Python 3.12, which moved fast-growing trajectories apart beyond the parity tolerance.
+  The apps show the message where they showed a raw error or a "diverged" note, and pass
+  <code>steps</code> as entered instead of truncating it. API_SPEC section 22, the docstring, the help
+  page and both methodology pages state the step condition: in a network without feedback
+  loops, the explicit step explodes once <code>dt*damping</code> exceeds 2, so raising the damping is
+  no remedy.</li>
+<li>Text is normalised identically in both twins. Both trim one set of Unicode whitespace
+  characters, lowercase ASCII letters only and fold accented Latin letters through a
+  fixed table (<code>schema/fold.json</code>), so <code>naïve</code> no longer vanishes from a definition and
+  <code>Émotion</code> no longer matches <code>motion</code>. R accepted a lone no-break space as a mechanism
+  or definition where Python refused it, and the two lowercased the Turkish dotted
+  capital I differently, splitting scores, redundancy flags and the lavaan indicator
+  names. <code>compile_sem()</code> now names the indicator <code>Müller scale</code> <code>muller_scale</code>, where it
+  gave <code>m_ller_scale</code>, and a whitespace provenance detail is left out of the provenance
+  diagram and the dossier in both. <code>new_evidence_dois()</code> recognises DOIs written as
+  <code>doi: 10...</code>, <code>DOI 10...</code>, <code>doi.org/10...</code>, <code>https://www.doi.org/10...</code> or
+  percent-encoded, and ignores a trailing full stop, comma or semicolon. API_SPEC
+  sections 3, 6, 18 and 19 pin the rules.</li>
+<li>Construct definitions and keywords in Greek, Cyrillic and other non-Latin scripts are
+  now tokenised. They were deleted, so two identical Russian definitions scored no
+  overlap and passed the redundancy screen. Greek and Cyrillic are compared without case
+  or accents, other scripts as written.</li>
+<li><code>litmap()</code> and <code>landscape()</code> read the same corpus differently in the two twins. A
+  <code>min_link</code> of 2.5 kept pairs counted at least 2.5 times in Python and at least twice in
+  R, None raised TypeError where R's <code>NA</code> gave an empty map, and <code>"2"</code> worked only in R.
+  An unquoted integer id came out as an int in Python and a string in R, and a record
+  mixing one with a DOI raised TypeError in Python. An unquoted <code>NO</code> keyword (nitric
+  oxide), which YAML reads as false, was dropped by Python and written as <code>FALSE</code> by R,
+  and <code>ON</code> raised TypeError. Records written as a mapping were counted by R and ignored by
+  Python, and records that were not mappings raised AttributeError in Python and were
+  dropped by R. A misspelt <code>records</code> key gave an empty analysis in both. Both twins now
+  check the arguments and the corpus with the same messages (API_SPEC section 14):
+  <code>min_link must be a positive integer</code> (an int or an integral float, never a bool),
+  <code>invalid corpus: missing records list</code>, <code>invalid corpus: record[&lt;i&gt;] is not a mapping</code>
+  and, for a boolean, a fraction or a nested value,
+  <code>invalid corpus: record[&lt;i&gt;] keywords must be strings</code> with a hint about YAML booleans.
+  An integer-valued entry becomes its decimal string in both. A <code>min_link</code> of 0 or below,
+  which behaved as 1, now raises.</li>
+<li>A corpus entry that is an integer of 2^53 or more is refused with
+  <code>invalid corpus: record[&lt;i&gt;] &lt;field&gt; entry &lt;k&gt; is a number too large to be an exact
+  identifier; quote it</code>, since R cannot hold it exactly and the two twins would otherwise
+  key it differently. Ten corpora in <code>fixtures/edge/</code> pin the corpus rules, including
+  Scopus-style ids beyond the 32-bit range written unquoted in YAML and JSON.</li>
+<li>Full validation checked only part of the schema. A quoted <code>passed: "true"</code>, an evidence
+  direction of <code>supports</code> and a formal-model type of <code>banana</code> all validated, and the quoted
+  <code>passed</code> then read as a failure in both languages. An assumption added to protect the
+  prediction therefore counted as ad hoc, which turned the panic v2 amendment, given such
+  an assumption, from progressive to degenerating. <code>validate(full=True)</code> now checks every
+  required field, type, enum and pattern of the schema, the version block included, with
+  the same messages in both languages and three conveniences that API_SPEC section 2
+  documents. <code>check()</code> and <code>appraise_amendment()</code> refuse a <code>passed</code> that is present and
+  not a boolean, and so do the preregistration, the dossier and the diagrams that score
+  the checklist, since they call <code>check()</code>. A test run in CI holds <code>validate(full=True)</code> to
+  a JSON Schema 2020-12 validator. Python's full validation also raised OverflowError on
+  a <code>severity</code> written as an integer too large for a float, where R reported the value,
+  and now reports it as R does.</li>
+<li><code>validate()</code> called a present value of the wrong type missing. A number, a boolean or a
+  list in a required text field now gives <code>&lt;field&gt; must be a string</code>, with a reminder to
+  quote a number or a boolean in YAML, so <code>maturity: [draft]</code> gives
+  <code>maturity must be a string</code> where it gave <code>missing/empty required field: maturity</code>. A
+  collection written as a single value or as a mapping gives <code>&lt;key&gt; must be a list</code>, where
+  it used to validate and read as empty.</li>
+<li>R's <code>tf_fetch_corpus()</code> returned an empty corpus without an error when OpenAlex refused
+  a request with HTTP 429 (rate limit) or 403, and an HTML error page stopped it with an
+  opaque JSON parse error. Python raised urllib's own HTTPError, with different text. Both
+  twins now raise <code>OpenAlex request failed with HTTP &lt;status&gt;</code>, followed by OpenAlex's
+  message when the body carries one. Python raises <code>OpenAlexHTTPError</code>, a subclass of
+  <code>urllib.error.HTTPError</code>, so existing handlers still catch it. A response without a
+  <code>results</code> list, which both twins read as zero results, raises
+  <code>OpenAlex response has no results list</code>. API_SPEC section 17 pins the messages.</li>
+<li>Apps: after an upload that could not be read, the apps went on computing with the
+  previous theory while the reproducible code named the failed file, and a failed restore
+  left the same mismatch. The code now names a file only once it has loaded. A failed
+  upload keeps the active theory's summary under the message
+  <code>Could not load &lt;file&gt;; the active theory is still &lt;title&gt;</code>. A failed restore falls back
+  to the first example, says so and leaves the saved operation unrun, since its result
+  belonged to another theory. Uploads were never checked, so an empty mapping or a misspelt
+  <code>predicitions:</code> ran every operation without a word. Each load now runs full validation
+  and the theory card shows <code>valid</code> or the number of problems. An operation that fails on
+  an invalid theory says so and offers Validate. Engine errors show their last line, with
+  the full traceback in a collapsed section. A change of theory clears the result and the
+  code computed on the previous one.</li>
+<li>Apps: a browser that blocks site storage left the apps on a blank page, because the
+  theme toggle read <code>localStorage</code> before start-up was guarded. Storage is now optional:
+  the apps start, and the theme toggle works for the session without being remembered. A
+  start-up failure shows its message even when it happens before the loading screen
+  exists. The documentation site's landing and 404 pages guard their toggles the same way.</li>
+<li>Site: under a dark operating-system theme, the landing page drew its links at 3.44:1
+  contrast against the background, below the WCAG AA minimum of 4.5:1. They now use the
+  dark theme's link colour (10.37:1). The landing and 404 pages read the <code>system</code> value the
+  apps store as a theme of its own, which showed the wrong toggle icon and made the first
+  click do nothing. They now apply a stored theme only when it is <code>light</code> or <code>dark</code>.</li>
+<li>Site: the deployed Python app carried the bytecode caches (<code>__pycache__</code>, 21 <code>.pyc</code>
+  files) that building the documentation leaves in the package source. <code>apps/build.mjs</code>
+  now copies only the file types the app's manifest lists. The 404 page links both apps.</li>
+<li><code>render_report()</code> escapes the title as a YAML double-quoted scalar, by one rule in both
+  twins (API_SPEC section 23), so backslashes, quotes and control characters survive. A
+  backslash in a title used to stop Quarto with a YAML error, and <code>\emph</code> or <code>$\alpha$</code>
+  turned into an escape character. Double quotes are now kept, where they became
+  apostrophes. Quarto reads the title as Markdown, so raw TeX is dropped from HTML output
+  and <code>$\alpha$</code> becomes mathematics. <code>report(format="html")</code> escapes every value it
+  writes into the HTML, so a theory id such as <code>a&lt;b&amp;c</code> no longer reaches the markup raw.</li>
+<li><code>osf_push()</code> raises <code>OSFUploadError</code> when OSF refuses the upload, with the message the
+  R twin now stops with, <code>OSF upload failed with HTTP &lt;status&gt;</code>, and for a 409 a hint
+  that a file of that name already exists. It subclasses <code>urllib.error.HTTPError</code>, so
+  existing handlers still catch it. R returned any refused upload, a 409 or a 501 among
+  them, as a completed one. The dry runs of the two twins now agree for an empty node,
+  an empty filename and a filename that holds a <code>%XX</code> sequence, which R did not encode.
+  The token is sent as an unredirected header, as <code>fetch_corpus()</code> sends its key, so a
+  redirect of the folder listing cannot carry it to another server.</li>
+<li><code>implications()</code> ignored <code>mediates</code>, <code>moderates</code> and <code>associates</code>, which <code>compile_sem()</code>
+  and <code>simulate()</code> read, so it asserted independencies that the theory's own propositions
+  deny. With <code>x</code> associated with <code>y</code>, the chain <code>z -&gt; x -&gt; y</code> gave <code>z _||_ y | x</code>. With
+  <code>a</code> associated with <code>b</code>, the collider <code>a -&gt; c &lt;- b</code> gave <code>a _||_ b</code>, the negation of the
+  association. A construct that moderated two outcomes left them independent given their
+  other causes. Every relation is now read through the relation table (API_SPEC section
+  28): <code>mediates</code> and <code>moderates</code> are directed edges, and <code>associates</code> is a bidirected
+  edge, covariance the theory leaves unexplained. The statements are derived by
+  m-separation (Richardson, 2003), given the parents of the pair or, when those do not
+  separate it, given its other ancestors. A pair that no set separates is listed in the
+  new <code>inseparable</code> field. The record also gains <code>criterion</code>, <code>n_bidirected</code> and
+  <code>feedback</code>. A theory with only <code>causes</code>, <code>increases</code> and <code>decreases</code> gets the same
+  statements as before, and so do the four bundled theories. A <code>mediates</code> or <code>moderates</code>
+  proposition naming an undeclared construct is refused, as a causal one was, and so is a
+  cycle that one of them closes. In the app examples, domain identification moderates
+  test performance in the stereotype-threat theory, so that theory gains three statements
+  and two of its conditioning sets widen. The planned-behaviour theory now states the
+  associations among its three antecedents of intention that Ajzen (1991, Figure 1)
+  draws, so the three statements that made them independent are gone. The <code>causal_dag</code>
+  view exports the same graph, with <code>a &lt;-&gt; b</code> for an association between two of its
+  constructs, the <code>nomological_net</code> view draws an association without arrowheads, and
+  the apps draw a bidirected edge as a dashed line with an arrowhead at each end.
+  API_SPEC sections 5, 27 and 28 state the rules. The weak example's <code>nomological_net</code>
+  golden changes, and the edge-case records gain the new keys.</li>
+<li>The <code>causal_dag</code> view and <code>compile_sem()</code> wrote construct ids verbatim. dagitty read the
+  export of <code>self-efficacy -&gt; task-persistence -&gt; outcome</code> as five nodes and implied eight
+  independencies where <code>implications()</code> gives one, and the apps' Graphviz rendering
+  stopped at a hyphen or a dot and drew <code>1arousal</code> as two nodes. The view now writes an
+  id bare only when DOT reads it as one identifier and quotes any other, and it refuses
+  the ids <code>node</code> and <code>graph</code>, which dagitty reserves even in quotes. In the syntax
+  <code>compile_sem()</code> wrote, lavaan stopped at <code>threat ~ c-arousal</code>, at <code>NA =~ q1</code> and at
+  the indicators <code>7_point_likert_rating</code> and <code>efa</code>, and it read <code>c-arousal =~ q1</code> as a
+  latent variable named <code>arousal</code>. It also merged two indicators of one construct that
+  sanitise alike without a word, and read a construct named like another construct's
+  indicator as a second-order factor. <code>compile_sem()</code> now renames such ids and
+  indicators, with a comment recording each renaming, and refuses a name collision
+  between two constructs, two indicators of one construct or a construct and an
+  indicator, naming both. A comment writes a control character or a character above
+  U+FFFF as <code>&lt;U+XXXX&gt;</code>. A line feed in an id would otherwise end its comment early and
+  turn the rest into a model line, and on Windows two characters above U+FFFF in a
+  comment made lavaan read <code>outcome ~ mood</code> as <code>utcome ~ mood</code>. API_SPEC sections 5 and
+  19 state the rules. The bundled theories and the goldens are unchanged.</li>
+<li>Apps: the amendment appraisal gave every theory the first example, version 1 of the
+  panic network, as its prior by default, and 0.6.0 reported three unrelated app examples
+  as progressive amendments of it. Predictions are matched by id, so a version of another
+  theory gives a meaningless verdict. The prior now defaults to the version the loaded
+  theory declares as its parent, when exactly one version listed is that parent. A
+  declared parent has the theory's <code>parent_id</code> as its version id, and the theory's id
+  begins with its id. Otherwise, no prior is chosen and Run waits for one, and the note
+  under the selector says whether the theory names a parent at all. A prior that is not
+  the declared parent carries a caution in the selector and in the result, and a prior
+  version can be uploaded. Of the app examples, only the amended panic network has a
+  default prior, its first version.</li>
+<li>Apps: the apps did not offer the conditional independencies a theory implies, the
+  claims data can refute, and left out the modality-switching example, the worked example
+  of <code>implications()</code>. Both apps now offer Implied independencies with the <code>cycles</code>
+  choice of <code>implications()</code>. A refusal, such as the default's for a feedback loop, is
+  shown as a result with the package's message, and the help states what the statements
+  assume. Modality switching is the tenth example. The apps remembered the chosen example
+  by its place in the list and now remember it by its file. A session saved the old way
+  is mapped once, and its prior is dropped, as it may be the default that app set.</li>
+<li>Apps: the reproducible code read every file by its bare name, so pasted code stopped
+  with file-not-found, even for the examples the package ships. It now reads those, the
+  corpus and a shipped prior through <code>example_path()</code>, and asks for any other file to be
+  saved beside the script first. The Python code wrote its SVG files in the locale's
+  encoding, which on Windows turns the ellipsis of a shortened prediction id into a byte
+  no XML reader accepts. That broke the severity chart of four app examples, and the code
+  now writes UTF-8. The R simulate comment lists all ten elements of the record, and the
+  code panel says the code reproduces the result with the installed package, where it
+  promised exactly what the app computed.</li>
+<li>Apps: the checklist's guide said an advisory gate meant a theory usable with the noted
+  gaps, and a draft theory failing both blocking items was told it cleared the gate with
+  advisories. The gate is advisory at draft maturity whatever fails. The guide now says
+  that pass means neither blocking item failed and blocked that at least one did. The
+  reading puts an advisory gate down to draft maturity and names the blocking items that
+  fail. The effort-recovery example promised oscillating trajectories that its default
+  run does not show. It now says what the run shows, fatigue overshooting its resting
+  level of zero while recovery peaks. It also names the settings that make the loop cycle.</li>
+<li>Apps: the number fields passed a fractional <code>steps</code> to the package, which refuses it.
+  The glue truncated a fractional <code>min_link</code>, while the code showed the fraction.
+  Whole-number parameters are now rounded, and each field shows the value a run uses.</li>
+<li><code>compile_sem()</code> wrote a model that <code>lavaan::sem()</code> does not read as the theory's own,
+  so a fit could not refute some of the implications the theory makes. Two constructs
+  that are both exogenous or both terminal, with no association between them, are
+  unrelated by the theory's account, and <code>lavaan::sem()</code> frees their covariance by
+  default. In the modality-switching theory, those are two of the six independencies
+  <code>implications()</code> derives. The syntax now ends with a block that fixes each such
+  covariance at zero, <code>c_sensorimotor_experience ~~ 0*c_lexical_familiarity</code> and
+  <code>c_switch_cost ~~ 0*c_conceptual_access</code> there, which raises the model's degrees of
+  freedom from 59 to 61. A pair with a moderator keeps lavaan's defaults, and deleting the
+  block restores them all. Once a covariance line names an observed exogenous variable,
+  lavaan treats it as random and fixes at zero each of its covariances left unwritten. The
+  block therefore writes those of an observed moderator as free. A moderation compiled to a
+  comment alone, so the moderator had no path to the outcome. It now gives the moderator's
+  main effect, unless a path relation already writes that line, and a comment on the
+  product term to add by hand. A comment cautions that each feedback loop may not be
+  identified, without claiming that an instrument is needed: the effort-recovery app
+  example is identified without one, and both panic-network models are not. A comment
+  lists the constructs with a single indicator, whose residual variance lavaan fixes at
+  zero, and the header names <code>lavaan::sem()</code> as the target. API_SPEC section 19 states
+  the rules. The four <code>sem.lavaan</code> goldens change, and so does the <code>compile_sem</code> entry of
+  every edge-case record that holds one.</li>
+</ul>
+<h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
+<ul>
+<li>R's <code>tf_litmap()</code> and <code>tf_landscape()</code> count pairs in linear time. R matched every new
+  pair against all the pairs seen so far, so a record with 300 references took about a
+  minute and a fetched corpus with references hours, against milliseconds in Python. The
+  results are unchanged. <code>landscape()</code> no longer computes the co-citation map in either
+  twin, since it never used it. R's <code>tf_lit_diagram()</code> builds its lines as whole vectors,
+  where it copied every line written so far for each edge it added.</li>
+<li><code>landscape()</code> reports the words behind every match, in <code>focal_terms</code> and
+  <code>alternative_terms</code>, and three kinds of word no longer decide a match. Words in the
+  keywords of more than <code>max_token_share</code> of the records, a new argument set to 0.5 by
+  default, are shared by most of the corpus and are reported as <code>field_tokens</code>. The words
+  of the theory's title name the phenomenon that every account explains and are reported as
+  <code>phenomenon_tokens</code>. Words such as "theory" and "model" name a kind of account. "Panic"
+  and "disorder" from the title used to make a theme on genetics crowded, and "theory" alone
+  matched a theory of panic to a corpus on ego depletion. The title no longer supplies
+  matches, so a construct word that also appears in it no longer matches either. The result
+  gains <code>max_token_share</code>, <code>field_tokens</code> and <code>phenomenon_tokens</code> after <code>theory_id</code>. The
+  three status names and the existing keys are unchanged, and so are the bundled corpus's
+  statuses. API_SPEC section 15 pins the rules, and the landscape golden gains the new keys.</li>
+<li><code>litmap()</code> and <code>landscape()</code> give a <code>UserWarning</code> when one theme holds more than half the
+  linked keywords, which happens on real corpora: seven OpenAlex corpora of 100 to 600
+  records each gave one theme holding at least 98.8 per cent of them. Such themes, and any
+  landscape built on them, are not informative. The text is the same in both twins
+  (API_SPEC section 14).</li>
+<li><code>severity()</code> is described for what it is, a pre-data ranking of the form of each
+  prediction's claim. Its documentation no longer cites Mayo (2018), whose severity is a
+  property of a test and its data, and the 0.25 directional discount is documented as
+  the package's convention, not Meehl's. The heading over its values in the
+  preregistration and the dossier reads <code>Severity (pre-data rubric of claim form)</code>, the
+  <code>severity</code> chart is titled <code>Pre-data riskiness</code>, and the apps call the longer bars
+  riskier claims, where they called them stronger tests. The values are unchanged.
+  API_SPEC sections 9, 11, 12 and 20 and the goldens change with them.</li>
+<li>The four prediction types are defined in the schema, API_SPEC section 4, the
+  <code>add_prediction</code> docstring, the R help page and both methodology pages, and the
+  bundled panic predictions now state the value and tolerance that their <code>point</code> type
+  claims. Five app examples typed a comparative, ordinal, anti-phase or invariance claim
+  as <code>point</code> or <code>existence</code>, and now type it <code>directional</code>, with their declared
+  severities unchanged. Their scores in the apps move with the labels. The rubric now
+  gives each of the five 0.4, down from 1.0 for the three former <code>point</code> predictions and
+  up from 0.2 for the two former <code>existence</code> ones. Effort-recovery's precision falls from
+  0.667 to 0.333 (warn) and its aggregate from 86.9 to 83.6, happy-vowel's aggregate
+  falls from 73.1 to 71.1 and cognitive-dissonance's from 76.7 to 73.3.</li>
+<li><code>validate(full=True)</code> reports an entry of a string array that is not a nonempty string,
+  such as the null in <code>derives_from: [p1, ~]</code> or the empty string in <code>measurement: [""]</code>.
+  Every other function ignores such an entry. The schema allows an empty string there, so
+  a theory that matches the schema can now fail full validation for this reason alone.</li>
+<li><code>appraise_amendment()</code> now compares the content of two versions, not their prediction
+  ids. A renamed prediction, with the same statement and type under a new id, is no longer
+  new. A prediction derived only from propositions the prior already held, and protected
+  by no new assumption, is reported as an articulation and does not make an amendment
+  progressive. A prediction counts as corroborated only when no outcome refutes it, and a
+  corroborated prediction that is dropped blocks a progressive verdict. An assumption added
+  for an anomaly is ad hoc unless a prediction it protects that is new in this version,
+  other than the anomaly, is corroborated. The result keeps its four keys first and adds
+  the evidence behind the verdict: <code>articulated</code>, <code>underived</code>, <code>corroborated_new_registered</code>,
+  <code>renamed</code>, <code>dropped</code>, <code>dropped_corroborated</code>, <code>content_lost</code>, <code>new_anomalies</code> and
+  <code>assumptions</code>. The appraisal reads <code>registered</code> only to report which corroborations were
+  preregistered, and never gates on it. The amended panic example now adds a proposition,
+  so its verdict remains progressive for a reason the appraisal can see, and its aggregate
+  score moves from 87.1 to 87.7. API_SPEC section 10 states the rules, and the appraisal
+  golden and the goldens of the amended example change with them.</li>
+<li>The rigour checklist moves to version 2.0, which every report records as
+  <code>checklist_version</code>. An item with nothing to assess is reported as <code>n/a</code>, with a null
+  score, and left out of the aggregate, which is now the weighted mean of the applicable
+  items. The report gains <code>coverage</code>, the share of the checklist's weight that was
+  applicable, after <code>aggregate_score</code>. An empty theory scored 26.0 and now scores 0.0, and
+  adding a prediction to it no longer lowers its score (18.0 became 1.2). Parsimony no
+  longer penalises declared auxiliary assumptions. It fails only when an assumption added
+  in response to an anomaly has no independent corroboration, by the appraisal's ad hoc
+  rule, and it is <code>n/a</code> when no assumption was added that way. <code>parsimony_ratio_max</code> is
+  removed. Non-redundancy follows the redundancy screen's flags, and the screen also flags
+  a definition contained in another: <code>redundancy_check()</code> gains <code>overlap</code>, the overlap
+  coefficient, and flags a pair whose overlap reaches <code>redundancy_overlap_max</code> (0.85) when
+  both definitions hold at least three tokens. The deliberately redundant pair in the weak example
+  (Jaccard 0.8, overlap 1.0) is now caught. Mean severity counts every prediction, using
+  the claim-form rubric where none is declared, and <code>add_prediction()</code> gains <code>severity</code>.
+  Causal testability counts every directed relation, <code>mediates</code> and <code>moderates</code>
+  included, from a relation table that API_SPEC section 28 sets out. The bundled theories
+  move from 84.8 to 87.3 (panic network), 87.7 to 89.8 (its amended version), 85.1 to
+  89.8 (modality switching) and 12.0 to 2.2 (the weak example), each with a coverage of
+  0.92. The app examples move from 73.3 to 80.4 (cognitive dissonance), 83.6 to 86.2
+  (effort and recovery), 71.1 to 74.6 (happy-vowel), 76.8 to 81.3 (planned behaviour), 80.6
+  to 83.0 (self-determination) and 68.6 to 78.5 (stereotype threat). API_SPEC sections 4
+  and 6 state the rules, and the report, dossier, rigour and roadmap goldens of the four
+  fixtures change with them.</li>
+<li><code>dossier()</code> gives the checklist coverage, names the blockers that failed, prints <code>n/a</code>
+  for an item with nothing to assess and sets a prediction's declared severity beside the
+  rubric's value, with a note when the declared value exceeds the rubric's by more than
+  0.2. <code>report(format="html")</code> prints <code>n/a</code> for such an item, the development roadmap
+  leaves it out and the rigour grid shows it in grey. The preregistration of a theory
+  without predictions now reads <code>Derivation chain verified: no</code>, where it said <code>yes</code>.
+  The apps show <code>n/a</code> and the coverage, count the items with nothing to assess and show
+  the overlap of each construct pair.</li>
+<li><code>embedding_redundancy()</code> takes its default threshold from the checklist's new
+  <code>embedding_similarity_max</code>, 0.85 as before, since how high a cosine runs depends on the
+  embedding model.</li>
+</ul>
+<h3 id="added">Added<a class="headerlink" href="#added" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>Theory.copy()</code> returns an independent copy of a theory to amend. <code>appraise_amendment()</code>
+  now refuses to compare a theory with itself, which the in-place builders made easy to
+  do by accident and which always returned <code>neutral</code>.</li>
+<li><code>litmap(corpus, min_link=2, min_cocitation=None)</code> thresholds the co-citation map on its
+  own (by default at <code>min_link</code>), and <code>lit_diagram(obj, type, max_edges=None)</code> draws only
+  the <code>max_edges</code> strongest edges of a keyword or co-citation diagram, ties broken by
+  <code>(a, b)</code>, with only their endpoints as nodes. Co-citation maps of real corpora run to
+  thousands of edges: 200 OpenAlex records give 11,211 at a threshold of 2, against 616
+  keyword edges. The literature guides in both languages show both arguments.</li>
+<li><code>simulate()</code> gains <code>method="exact"</code>, which propagates the linear system with its matrix
+  exponential and so has no step-size limit. The default stays <code>"euler"</code> for this release
+  and warns (UserWarning in Python, <code>warning()</code> in R, the same text) when its steps depart
+  from the exact solution by more than 5 per cent. The Euler steps turned a decaying theory
+  into an alternating explosion once <code>dt*damping</code> exceeded 2, and inflated a sustained
+  oscillation into growth even at <code>dt=0.1</code>: the regulation example in the workflow page
+  swung more than six times too wide after 500 steps. The record gains <code>method</code>,
+  <code>ignored</code> (the propositions that couple nothing: moderates, associates and propositions
+  with an endpoint that is not a declared construct) and <code>opposed</code> (the pairs whose increases and decreases offset
+  each other), after <code>init</code>. The propagator is a degree-18 Taylor polynomial with scaling
+  and squaring (Moler &amp; Van Loan, 2003), written in explicit loops so the two languages
+  give the same bits. API_SPEC section 22 pins the algorithm, the warning and the new keys.
+  The four <code>simulate.json</code> goldens gain the keys with unchanged trajectories, four
+  <code>simulate_exact.json</code> goldens are added, and the edge-case records gain the keys. The
+  apps default to the exact method, offer a method selector, show the Euler warning and
+  tell an unstable system from a coarse Euler step.</li>
+<li><code>fetch_corpus(query, per_page=25, mailto=None, api_key=None, max_records=None)</code> accepts
+  an OpenAlex API key, by default the <code>OPENALEX_API_KEY</code> environment variable, and sends
+  it only as an <code>Authorization: Bearer</code> header. <code>max_records</code> pages through OpenAlex's
+  cursor beyond one page. The corpus gains a top-level <code>source</code> (service, endpoint,
+  query, UTC retrieval time, total matches, records kept, page size and order) and each
+  record its <code>doi</code>, both optional properties in <code>schema/corpus.schema.json</code>.</li>
+<li><code>litmap()</code> and <code>landscape()</code> gain <code>method="simple_centres"</code>, the co-word clustering of
+  Coulter et al. (1998) and Cobo et al. (2011), which gives bounded themes with
+  centrality, density and a strategic-diagram quadrant on real corpora, where connected
+  components give one theme. <code>litmap()</code> also gains <code>min_theme_size</code>, <code>max_theme_size</code> and
+  <code>max_df</code>, which excludes keywords shared by most records and reports them as
+  <code>field_terms</code>. The full signature is <code>litmap(corpus, min_link=2, method="components",
+  min_cocitation=None, min_theme_size=2, max_theme_size=10, max_df=1.0)</code>, so a
+  <code>min_cocitation</code> passed by position must now be named. API_SPEC section 14 pins every
+  rule, tie-break and summation order, and both twins give the same floats. Components
+  remain the default for this release, the components record is unchanged and the
+  giant-theme warning now names the new method. The default is planned to become
+  <code>"simple_centres"</code> in the next minor release.</li>
+<li>A frozen OpenAlex corpus of 150 works on panic disorder,
+  <code>fixtures/openalex-panic-2026.corpus.yaml</code>, ships in both packages
+  (<code>example_path("openalex-panic-2026.corpus.yaml")</code>), with five new goldens built on it
+  and on the demo corpus. It was made by replaying one OpenAlex response saved on
+  2026-10-01 through <code>fetch_corpus</code>, keeps <code>source</code>, drops the references and is offered
+  under CC0, as OpenAlex's data are.</li>
+<li><code>osf_push(overwrite=False)</code>. OSF storage answers 409 to a second upload under the same
+  filename, so depositing a theory again failed in both twins with no way round it.
+  <code>overwrite=True</code> lists the project folder first and sends the dossier to the existing
+  file's upload link, WaterButler's update route, which records a new OSF version. When
+  no file of that name exists, the file is created as usual. The dry run then shows the
+  lookup request too. <code>OSFUploadError</code> is exported.</li>
+<li><code>implications(theory, cycles="refuse")</code> gains <code>cycles="sigma"</code>, which derives the
+  independencies a cyclic theory implies by sigma-separation (Bongers et al., 2021),
+  valid when each feedback loop has a unique equilibrium. The graph is replaced by its
+  acyclification and read by m-separation there, so the record names the criterion
+  <code>"sigma"</code>, says in <code>acyclic</code> whether the graph has a cycle and lists the feedback loops
+  in <code>feedback</code>. The bundled panic network implies that arousal and avoidance are
+  independent given perceived threat. The default still refuses a cyclic graph, and its
+  message now ends <code>; set cycles to 'sigma' to derive sigma-separation statements</code>. Any
+  other value of <code>cycles</code> raises <code>implications requires cycles to be 'refuse' or
+  'sigma'</code>. Four goldens, <code>&lt;id&gt;.implications.json</code>, hold the sigma record of each
+  fixture, and API_SPEC section 27 pins the acyclification and the order of the loops.</li>
+</ul>
+<h3 id="deprecated">Deprecated<a class="headerlink" href="#deprecated" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>simulate()</code>'s default <code>method="euler"</code>. The default will change to <code>"exact"</code> in the
+  next minor release. Pass <code>method="euler"</code> to keep the current trajectories.</li>
+</ul>
+<h3 id="documentation">Documentation<a class="headerlink" href="#documentation" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Both methodology pages, the docstring and the R help page state what the simulation
+  leaves out: one gain for every coupling, <code>causes</code> and <code>mediates</code> taken as positive,
+  <code>moderates</code> and <code>associates</code> coupling nothing, <code>functional_form</code> not read and a common
+  initial value. Being linear, it cannot show bistability (Robinaugh et al., 2024). An
+  acyclic theory decays at the damping rate only asymptotically, and the regime of a
+  theory with loops is set by the gain against the damping. The workflow page's
+  simulation example runs for 20 time units with <code>method="exact"</code> and shows the
+  oscillation its five Euler steps hid.</li>
+<li>The literature page's recipe for turning a scopusflow corpus into a theoryforge
+  corpus keys cited works by Scopus identifier, folds DOI and keyword case and writes a
+  missing year as null. The earlier recipe split one cited work into several nodes, so
+  co-citation maps and keyword themes came out empty, and in Python it failed on a
+  missing year and on the <code>Int64</code> years of a resumed checkpoint. The recipe is now a
+  function, <code>scopus_corpus_to_tf()</code>, shown in full in both languages and run by both
+  test suites on a stand-in corpus.</li>
+<li>The landscape statuses are described as what they are. Under-theorised means that none of
+  the registered accounts addresses a theme, and crowded that two or more do, which calls
+  for predictions that discriminate between them. The methodology and literature pages,
+  the READMEs and the apps called a crowded theme a redundancy risk, and the apps one where
+  a new theory would add little. The literature pages and the apps' help say that
+  connected components put nearly every keyword of a real corpus in one theme, and the
+  literature pages show the warning. The R article's example theory is titled after its
+  phenomenon, since a title naming its constructs now leaves them unmatched.</li>
+<li>The workflow pages in both languages say what a repeated OSF deposit does and how
+  <code>overwrite</code> adds a new version.</li>
+<li>CONTRIBUTING installs the docs extra needed by <code>mkdocs build</code>.</li>
+<li>The schema documents <code>risk_score</code> and <code>severity_at_test</code> as informational fields that
+  no function reads.</li>
+<li>The <code>fetch_corpus</code> documentation and both literature guides describe API keys in place
+  of the retired polite pool (OpenAlex ignores <code>mailto</code>), give the cost of a page and the
+  daily budgets, and explain that OpenAlex keywords have been written by a language model
+  since late September 2026 and change over time, while the concepts fallback brings a
+  deprecated vocabulary with capitalised names. Their examples ask for pages of 100 works,
+  the largest page OpenAlex supports now that it has deprecated 200.</li>
+<li>The schema, the <code>add_assumption()</code> docstring and the R help page define <code>added_for</code> as
+  the id of the prediction whose anomaly an assumption answers, and the schema describes
+  <code>protects</code> and <code>registered</code>. The methodology pages and the apps no longer attribute the
+  <code>neutral</code> verdict to Lakatos, whose scheme has only progressive and degenerating
+  problemshifts. The bundled examples and the app examples record the builder names in
+  their provenance (<code>tf_add_construct</code>, <code>tf_add_proposition</code>, <code>tf_add_prediction</code>).</li>
+<li>Both methodology pages quote the checklist's criteria and correct the causal
+  testability row, which described an export to a DAG with derivable implications. They
+  call the five thresholds the package's defaults where they called them calibrated, and
+  no longer say that a theory passing every item scores 100: the panic example passed all
+  twelve at 84.8. They explain that the aggregate is compensatory, so a blocked theory can
+  outscore one whose gate passes, and that items can pass below a score of 1. They no
+  longer say that a field can override the weights in its own copy of the checklist: the
+  weights and thresholds are fixed, every report records the checklist version, and
+  recombining the per-item scores gives a result not comparable with the default
+  aggregate. They add that the lexical screen cannot detect empirical redundancy
+  (Le et al., 2010; Rönkkö &amp; Cho, 2022), that a rival named in <code>diagnostic_vs</code> is declared
+  and not verified, which holds for the rubric's 0.1 bonus as well, and that the
+  derivation chain checks references only. The checklist's criteria say the same, and its
+  comments call the thresholds defaults. The pages also note that a prediction without a
+  declared severity is credited for its type and its named rival twice, in prediction
+  severity as well as in precision and diagnosticity. The schema describes a prediction's
+  <code>severity</code> as a declared pre-data severity, <code>redundancy_check()</code> gives its references'
+  full titles and the getting-started page shows both measures of the redundancy screen.</li>
+<li>The documentation no longer says that a cyclic theory implies nothing testable or that
+  dagitty rejects its <code>causal_dag</code> export. dagitty accepts the export but reads it by
+  d-separation, which a model with feedback is guaranteed to satisfy only in special cases,
+  a linear model among them (Bongers et al., 2021). The <code>implications</code> docstring, the R
+  help page, both workflow pages and the README warn that a conditional implication tested
+  on fallible measures is rejected too often. With standardised paths of .5 and a
+  conditioning construct measured at a reliability of .8, a true statement is rejected in
+  about 14, 29 and 51 per cent of studies of 200, 500 and 1,000 observations, because the
+  error leaves residual dependence (Westfall &amp; Yarkoni, 2016). They point to tests in a
+  latent-variable model (Thoemmes et al., 2018). The statements are called the conditional
+  independencies the causal graph implies, and a basis set only for a graph of directed
+  relations alone.</li>
+<li>Both workflow pages show the panic network's sigma-separation statement together with
+  the assumption it rests on, a single equilibrium for each feedback loop, which a theory
+  of alternative stable states violates. The methodology pages, the README and API_SPEC
+  sections 5 and 27 describe the <code>cycles</code> option, and the README no longer quotes a count
+  of golden artefacts.</li>
+<li>The R article on developing and testing a theory demonstrates <code>compile_sem()</code> on the
+  modality-switching theory and no longer says that the panic network's syntax can be
+  passed directly to <code>lavaan::sem()</code>. The apps no longer say that the syntax can be pasted
+  straight into a fit. The panic network's feedback loop leaves its model unidentified.
+  The <code>compile_sem()</code> docstring, which the API page renders, the R help page, the apps and
+  API_SPEC section 19 call the syntax a starting point for a fit. Indicator names are the
+  sanitised measurement entries, so entries written as data column names give syntax that
+  fits as it stands. A single-indicator construct is treated as measured without error,
+  and manipulations and categorical predictors with more than two levels have to be
+  re-specified by hand.</li>
+</ul>
+<h3 id="internal">Internal<a class="headerlink" href="#internal" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Python's two copies of the nonempty-string test (<code>core._nonempty_str</code> and
+  <code>rigor._ne_str</code>) and the per-module <code>_list</code> helpers are merged into <code>_access.py</code>.</li>
+<li>The schema and rigour checklist copies that each package ships are now written only by
+  <code>scripts/gen_golden.py</code>, CI fails when they drift, and the webR app vendors the copy the
+  R package ships. The parity check no longer treats <code>true</code> as 1 or unboxes nested
+  one-element arrays, checks the key order of the rigour report, compares the six app
+  examples across the two engines and records the outcome of a corpus of malformed
+  theories (<code>fixtures/edge/</code>).</li>
+<li>The parity check gains a round-trip phase. Python writes every fixture, app example and
+  readable edge case to YAML and JSON, and R reads each file and writes it again. Every
+  file must then read back as the theory Python first read, a one-element array still an
+  array, and, when jsonschema is installed, still validate against the schema. New edge
+  cases cover the reading rules, with construct ids <code>y</code> and <code>n</code>, a merge key, unquoted
+  dates, byte-order marks, a missing final newline, repeated keys in YAML and JSON,
+  awkward scalars and an empty sequence.</li>
+<li><code>scripts/gen_fold_table.py</code> writes the fold table <code>schema/fold.json</code> from Python's
+  <code>unicodedata</code>, once, so neither twin depends on its runtime's Unicode tables, and a
+  test fails when the committed table differs from what the script writes.
+  <code>scripts/gen_golden.py</code> mirrors it into both packages with the schema and checklist,
+  and now does so before it computes the goldens, so they come from the files the
+  packages ship. The webR app vendors it. Eight edge cases cover whitespace outside
+  ASCII, the Turkish dotted capital I, Greek and Cyrillic case, decomposed Cyrillic and
+  Chinese text, and the DOI golden's candidate list gains the spellings now recognised,
+  with an unchanged result.</li>
+<li>The edge phase of the parity check also covers literature corpora
+  (<code>fixtures/edge/&lt;name&gt;.corpus.yaml|json</code>), recording what <code>read_corpus</code> and <code>litmap</code>
+  make of each. <code>_access.as_list</code>, which only the literature layer used, is replaced by
+  the corpus checks in <code>lit.py</code>.</li>
+<li>The <code>dev</code> extra installs jsonschema 4.0 or later for <code>tests/test_schema_agreement.py</code>.
+  The test checks <code>validate(full=True)</code> against a validator for the schema's own draft,
+  2020-12, on the shipped theories, the <code>gaps</code> files in <code>fixtures/edge/</code> and one-fault
+  variants of a theory that uses every field. It skips itself under an older jsonschema,
+  and the CI job that installs the declared minimum versions runs it under jsonschema 4.0.
+  Nine new edge cases pin the full pass in both twins: the eight violations it used to
+  miss, a value of the wrong type in every optional field, a quoted <code>passed</code>, four
+  formal-model types outside the enum, an extra version key and a <code>schema_version</code> of
+  <code>one</code>.</li>
+<li>The OpenAlex adapter sends every request through one replaceable call in each twin:
+  <code>lit._urlopen</code> in Python, and in R <code>.tf_http(method, url, headers, body)</code>, which returns
+  the status and body for <code>.tf_http_check()</code> to judge. The R tests replace it with
+  <code>testthat::local_mocked_bindings()</code>, so <code>testthat (&gt;= 3.1.7)</code> is now in Suggests.</li>
+<li>The relation table of API_SPEC section 28 is defined once in each twin (<code>_relations.py</code>,
+  <code>relations.R</code>), and both suites check it against the schema's enum. The checklist's
+  parsimony item and the amendment appraisal share one ad hoc rule
+  (<code>_status.classify_auxiliary</code>, <code>.tf_classify_auxiliary</code>), and the non_redundancy item
+  reads the redundancy screen's own flags. The edge-case records gain the report's
+  <code>coverage</code>, and a new edge case covers an assumption corroborated beyond its anomaly, a
+  definition contained in another and a theory whose only relation is <code>mediates</code>.</li>
+</ul>
+<h2 id="060-2026-08-21"><a href="https://github.com/pablobernabeu/theoryforge/compare/v0.5.0...v0.6.0">0.6.0</a> - 2026-08-21<a class="headerlink" href="#060-2026-08-21" title="Permanent link">&para;</a></h2>
+<h3 id="fixed_1">Fixed<a class="headerlink" href="#fixed_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The two engines wrote different bytes on Windows. Every file the package writes now
+  goes through a single LF-only, UTF-8 writer in each language, so the R half no longer
+  emits CRLF where the Python half emits LF. The byte-identity claim rests on that
+  writer, and nothing else in the contract changed.</li>
+<li>A misspelt top-level key silently changed the score: <code>predicitions:</code> was dropped
+  without a word, taking its whole collection with it and moving the rigour score.
+  <code>validate()</code> now refuses an unknown top-level field in both languages, with identical
+  message text, and the schema's <code>additionalProperties</code> was set to match so a
+  third-party validator agrees with ours.</li>
+<li>R scored input that Python refused. <code>tf_read</code> and <code>tf_read_corpus</code> accepted a
+  top-level YAML sequence of mappings, and both now reject it.</li>
+<li>A mistyped enum value, such as <code>theory_form: [network]</code>, took the two validators in
+  opposite directions. R's <code>%in%</code> unboxed the one-element sequence and let the file
+  through, while Python reached <code>x in &lt;set&gt;</code> on an unhashable value and abandoned the
+  errors it had collected for a raw TypeError. Both engines now test for a nonempty
+  string before testing for membership, and a collection entry that is not a mapping,
+  as in <code>constructs: [arousal, threat]</code>, has each of its required fields reported
+  missing, where Python used to raise an AttributeError. API_SPEC section 2 records
+  the rule.</li>
+<li><code>simulate()</code> accepted duplicate construct ids, producing two different but equally
+  plausible trajectories from one file. Both languages now refuse them.</li>
+<li>A failed <code>quarto render</code> returned its output path as though it had succeeded, and
+  <code>tf_write</code> did not force UTF-8 as its sibling writers do. Both corrected.</li>
+<li>A string severity validated in both engines, then crashed one and scored in the other.
+  The schema types a prediction's <code>severity</code> as a number in [0, 1], but <code>validate(full)</code>
+  never checked it: Python's <code>check()</code> died with a raw TypeError while R silently
+  coerced the string and produced a verdict. Full validation now enforces the typed
+  range, and the scorer refuses a non-numeric severity with the same named error in both
+  languages, so <code>check()</code> without <code>validate()</code> cannot diverge either.</li>
+<li>Unequal-length embedding vectors produced two confident wrong answers. R recycled the
+  shorter vector and Python silently truncated the longer, so the same embedder could
+  report two different similarities for one construct pair. <code>embedding_redundancy</code> now
+  refuses the pair in both languages, naming the constructs and the lengths.</li>
+<li>The Python OpenAlex adapter lost its concepts fallback. A keywords list whose entries
+  all carry a null <code>display_name</code> is non-empty before filtering, so the fallback to the
+  top concepts never fired and the record ended up with no keywords at all. Nulls are
+  now filtered before the emptiness test, as R always did.</li>
+<li>Null fields rendered differently across the twins. Python's rigour report emitted
+  <code>null</code> for a null <code>id</code> or <code>maturity</code> where R emitted <code>""</code>, breaking the semantic
+  comparison, and a null theory id turned the OSF deposit filename into
+  <code>None.dossier.md</code> where R fell back to <code>theory.dossier.md</code>. Python now reads nulls as
+  empty strings, matching R.</li>
+<li><code>scripts/reproduce_all.ps1</code> pointed rmarkdown at a Quarto pandoc directory that may
+  not exist on the machine. The variable is now set only when the directory is present,
+  matching the bash twin's restraint.</li>
+</ul>
+<h3 id="changed_1">Changed<a class="headerlink" href="#changed_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The rigour report and the dossier record the checklist version that produced them, so
+  two reports written against different checklist revisions are no longer silently
+  comparable. The package version is deliberately <em>not</em> recorded: these artefacts are
+  parity-tested across the twins, and a per-language release number would break that.
+  The reasoning is written into API_SPEC section 4.</li>
+<li><code>simulate()</code> echoes back k, damping and init as well as dt and steps, so a recorded
+  trajectory can be reproduced from what the record itself reports.</li>
+<li>The causal-testability criterion now describes what it computes. It asserted
+  acyclicity and never checked it. Moving the verdicts of a scored item would have been
+  the larger change, so the criterion and the methodology pages now state that the
+  export is emitted as written, that it is not verified acyclic, and that the shipped
+  panic-network example is in fact cyclic. No score, gate or status changed. The
+  acyclicity check the criterion once implied now lives in <code>implications()</code>, which can
+  refuse a graph outright instead of quietly rescoring it.</li>
+<li>The R network adapters carry the same 30-second timeout as their Python counterparts,
+  and both languages reject a <code>per_page</code> outside OpenAlex's documented 1-200 range
+  before making a request.</li>
+</ul>
+<h3 id="added_1">Added<a class="headerlink" href="#added_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A theory's testable implications are now derived. The
+  rigour checklist cited the derivability of a causal theory's implications and the
+  methodology pages said the causal relations export to a DAG with derivable
+  implications, while the export was emitted as written and nothing read it.
+  <code>implications()</code> in Python and
+  <code>tf_implications()</code> in R read the causal propositions as a directed graph, check it for
+  acyclicity, and return the basis set of implied conditional independencies: one claim
+  per pair of constructs with no causal relation between them, conditioned on the parents
+  of both (Pearl, 1988; Shipley, 2000), rendered in the notation dagitty prints. The set
+  is the shortest complete statement of what the theory forbids in data. A cyclic graph
+  has no basis set and is refused with the cycle named, which is what both panic-network
+  fixtures get. A theory with no causal relations comes back with an empty set and no
+  error. The derived sets were checked against <code>dagitty</code> and <code>ggm</code>, two published
+  implementations, which join the R package's Suggests for that purpose and whose tests
+  skip when they are absent.</li>
+<li>A fourth example theory ships with both packages, and it is the worked example for
+  <code>implications()</code>. Both panic-network fixtures are cyclic, so until now every bundled
+  theory demonstrated only what the function refuses.
+  <code>fixtures/modality-switching.theory.yaml</code> states the modality-switching effect in
+  grounded conceptual processing: sensorimotor experience with a concept drives
+  activation of the modality-specific perceptual system, which raises the cost of
+  switching modality between consecutive trials and eases conceptual access, as lexical
+  familiarity with the word form does too. Five constructs and four causal propositions
+  give an acyclic graph carrying both a fork and a collider, and a basis set of six
+  conditional independencies, checked statement for statement against <code>ggm::basiSet</code> and
+  confirmed by <code>dagitty::dseparated</code>. It passes full validation in both engines and the
+  whole rigour checklist. The panic fixtures are kept: a feedback loop is legitimate
+  theory, and the refusal is worth demonstrating too, so the Workflow modes page and the
+  Developing and testing article now show both outcomes. The golden tree grows from 55
+  artefacts to 71 with it.</li>
+<li>Both packages ship the example theories and the demonstration corpus. Python reaches
+  them with <code>example_path()</code> and <code>example_names()</code>, R with <code>tf_example_path()</code> and
+  <code>tf_example_names()</code>, and both list the same <code>.yaml</code> files in the same order. The
+  README's R quick start now uses a shipped fixture, so it works straight after
+  <code>remotes::install_github</code> with no clone.</li>
+<li>CI now exercises the wheel a user would install, where it used to exercise only the
+  checkout. The Python matrix gains
+  3.14, and the classifiers now advertise it. A new job installs the built wheel
+  into a bare environment outside the repository and resolves the packaged JSON
+  schemas from there through <code>importlib.resources</code>: theoryforge ships those
+  schemas inside the package, and an editable install would find them in the
+  checkout even if the wheel omitted them entirely. A second new job installs every
+  declared minimum dependency floor, PyYAML and the two extras alike, and a
+  further job runs the R suite on the declared R 4.1 minimum, which the six-cell
+  <code>--as-cran</code> matrix sits well above and so never exercised. A weekly schedule runs
+  the suite when nobody has pushed, so upstream drift shows up as a dated red badge
+  before it can catch the next release.</li>
+<li>The golden gate covers every duplicated tree. It watched the root copy only and
+  reported modifications alone, so a golden the generator newly created or deleted
+  slipped through, as did any drift in the copies shipped inside the two packages.
+  Relatedly, <code>reproduce_all</code> verified nothing: it <em>rewrote</em> the goldens it was meant to
+  check, so it could never fail. It now verifies, and gates on mypy as CI does.
+  <code>publish.yml</code> gained the least-privilege token scope its siblings already declared.</li>
+<li>The R package's spelling word list is read at last. <code>inst/WORDLIST</code> shipped with
+  nothing consulting it, so <code>spelling</code> joins Suggests and a <code>tests/spelling.R</code> runs the
+  check under <code>R CMD check</code>, as the sibling packages in the family do.</li>
+</ul>
+<h3 id="documentation_1">Documentation<a class="headerlink" href="#documentation_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The Python API reference gains the Packaged examples group (<code>example_names</code>,
+  <code>example_path</code>), which the R reference index already carried, so the two indexes list
+  the same functions in the same groups. The mkdocs build comment now installs the
+  <code>docs</code> extra, whose dependencies include the <code>markdown-exec</code> plugin the previously
+  quoted command omitted.</li>
+<li>The changelog's reference links now cover every released version. The definitions had
+  stopped at v0.2.0, leaving the newer version headings as dead bracket text on the
+  rendered changelog page.</li>
+</ul>
+<h2 id="050-2026-07-23"><a href="https://github.com/pablobernabeu/theoryforge/compare/v0.4.0...v0.5.0">0.5.0</a> - 2026-07-23<a class="headerlink" href="#050-2026-07-23" title="Permanent link">&para;</a></h2>
+<h3 id="changed_2">Changed<a class="headerlink" href="#changed_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The <code>development_roadmap</code> view is rebuilt around a theory hub carrying the
+  title, the aggregate score and the gate. Items are ordered blockers first and
+  then by weight, each labelled with its ordinal, the checklist criterion and
+  whether it blocks the gate, with visible edges running down the blockers and
+  the advisory items set three abreast.</li>
+<li>The three SVG chart views (<code>venn</code>, <code>rigour</code>, <code>severity</code>) now declare a <code>width</code>
+  and a <code>height</code> alongside their <code>viewBox</code>. Lacking an intrinsic size, each
+  chart was previously stretched to the width of its container, and because the
+  three views have different natural widths the same declared 13px label came
+  out at a different size in each figure. Each view now renders at scale 1
+  wherever it is embedded.</li>
+<li>The <code>venn</code> discs take the construct-border teal for their outline in place of
+  the former navy. The outline is what carries the set structure, and the navy
+  fell below the 3:1 contrast floor for graphical objects on a dark page, which
+  left the figure close to invisible under the dark theme.</li>
+<li>The bundled <code>panic-network</code> fixtures give the three constructs distinct
+  boundary conditions, and declare all of those conditions at theory level. The
+  <code>venn</code> view drawn from the previous values put a zero in six of its seven
+  regions, so the figure showed nothing about where construct scopes diverge.</li>
+</ul>
+<p>All of the above are mirrored byte for byte across R and Python, and the goldens,
+the tests and the specification (<code>API_SPEC.md</code>) are updated with them.</p>
+<h3 id="documentation_2">Documentation<a class="headerlink" href="#documentation_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The R Get started vignette shows what <code>tf_validate()</code> returns and demonstrates
+  the failure path, which the prose previously only described.</li>
+<li>The R development article runs <code>tf_osf_push()</code> in its default dry-run mode, so
+  the planned deposit appears on the page, where it was previously withheld as a
+  network call.</li>
+<li>The Python literature page marks its corpus listing as an excerpt of the
+  eight-record fixture, pairs each <code>lit_diagram</code> call with its own output, and
+  renders the keyword co-occurrence and theme landscape views as figures.</li>
+<li>The Python simulation example prints every step of the trajectory it
+  discusses, and the surrounding prose now matches the printed numbers.</li>
+<li>The chart figures on the Python guides are generated when the site is built,
+  no longer pasted in, so they cannot drift from the library.</li>
+</ul>
+<h2 id="040-2026-07-16"><a href="https://github.com/pablobernabeu/theoryforge/compare/v0.3.0...v0.4.0">0.4.0</a> - 2026-07-16<a class="headerlink" href="#040-2026-07-16" title="Permanent link">&para;</a></h2>
+<h3 id="changed_3">Changed<a class="headerlink" href="#changed_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The DOT diagram views are redesigned for content and legibility, identically
+  in both packages. Every view now opens with a shared Meridian style prelude
+  (Helvetica type, role-coloured rounded nodes: teal constructs, amber
+  propositions, navy predictions, green/red outcomes, paper scopes, grey
+  rivals); labels are word-wrapped so nodes stay narrow; workflow and pipeline
+  nodes carry the id together with the relation or type, where a bare word stood
+  before; the development roadmap chains its items into a single column, in place
+  of an ever-wider row; and the theme landscape colours themes by status. Every view
+  now fits a documentation column without horizontal scrolling. The IR remains
+  byte-identical across R and Python; goldens, tests and the specification are
+  updated (API_SPEC.md).</li>
+</ul>
+<h3 id="documentation_3">Documentation<a class="headerlink" href="#documentation_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The pages that print or render the diagram views show the new output, and the
+  remaining code blocks without visible results (the literature article's
+  OpenAlex fetch and scopusflow hand-off, and the Python workflow page's
+  provenance, report, preregistration and dossier) now show them.</li>
+</ul>
+<h2 id="030-2026-07-15"><a href="https://github.com/pablobernabeu/theoryforge/compare/v0.2.0...v0.3.0">0.3.0</a> - 2026-07-15<a class="headerlink" href="#030-2026-07-15" title="Permanent link">&para;</a></h2>
+<h3 id="added_2">Added<a class="headerlink" href="#added_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Native diagram rendering in both packages, tailored to each language and
+  layered on the unchanged, byte-identical IR. R gains <code>tf_render_diagram()</code>
+  (DiagrammeR widget, or a standalone SVG string with <code>as = "svg"</code>; packages in
+  Suggests), and Python gains <code>render_diagram()</code> and <code>Theory.render_diagram()</code>
+  (a <code>graphviz.Source</code>, via the optional <code>theoryforge[render]</code> extra). Both
+  accept a theory or a raw IR string, so literature diagrams render the same
+  way; the three SVG chart views pass through; <code>causal_dag</code> is refused with a
+  pointer to dagitty. Rendering is parity-exempt (<code>API_SPEC.md</code> section 26).</li>
+</ul>
+<h3 id="documentation_4">Documentation<a class="headerlink" href="#documentation_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The digraph views now render as figures on both documentation sites,
+  following the code that produces them.</li>
+</ul>
+<h2 id="020-2026-07-15"><a href="https://github.com/pablobernabeu/theoryforge/compare/v0.1.0...v0.2.0">0.2.0</a> - 2026-07-15<a class="headerlink" href="#020-2026-07-15" title="Permanent link">&para;</a></h2>
+<h3 id="changed_4">Changed<a class="headerlink" href="#changed_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The severity chart is re-laid out: bars now start just past the longest row label, and each
+  value trails its own bar. This changes the diagram intermediate representation for
+  <code>type = "severity"</code>, and R and Python remain byte-identical.</li>
+</ul>
+<h3 id="documentation_5">Documentation<a class="headerlink" href="#documentation_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The documentation now shows the <code>provenance</code>, <code>development_roadmap</code>, <code>pipeline</code> and
+  <code>co_citation</code> views, the embedding-redundancy screen, <code>validate(full = TRUE)</code> and the
+  remaining build verbs, and it gains a section on rendering and depositing.</li>
+</ul>
+<h2 id="010-2026-07-10"><a href="https://github.com/pablobernabeu/theoryforge/releases/tag/v0.1.0">0.1.0</a> - 2026-07-10<a class="headerlink" href="#010-2026-07-10" title="Permanent link">&para;</a></h2>
+<p>This is the first public release: a rigorous, reproducible workflow for building, developing and
+testing scientific theories, delivered as feature-parity R (CRAN) and Python (PyPI) packages.</p>
+<h3 id="core-p0">Core (P0)<a class="headerlink" href="#core-p0" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>theory.schema.json</code> + <code>rigor_checklist.yaml</code> as the shared, versioned source of truth,
+  with API_SPEC.md pinning edge-case behaviour, including the severity chart's 15-character
+  id truncation rule, the scalar-singleton array reading and the OSF filename encoding.</li>
+<li>Theory-object I/O and structural validation (<code>read</code>/<code>write</code>/<code>validate</code>). Where the schema
+  expects an array of strings, a nonempty scalar string is read as a singleton list in both
+  packages (API_SPEC.md section 4), so natural YAML such as <code>derives_from: p1</code> yields the same
+  rigour verdict, gate and validation outcome in R and Python; an empty or whitespace-only
+  scalar counts as absent, and cross-language regression tests cover the rule.</li>
+<li>The 12-item machine-checkable rigour checklist with weighted aggregate score and a blocker gate (<code>check</code>/<code>report</code>).</li>
+<li>Diagram intermediate representations: nomological net, provenance, causal DAG (<code>diagram</code>).</li>
+<li>Deterministic lexical construct-redundancy screen (<code>redundancy_check</code>).</li>
+</ul>
+<h3 id="workflow-modes-p1">Workflow modes (P1)<a class="headerlink" href="#workflow-modes-p1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>BUILDING: a fluent builder API with auto-logged provenance (<code>new_theory</code>/<code>tf_theory</code> + <code>add_*</code>/<code>tf_add_*</code>).</li>
+<li>TESTING: an operationalised severity rubric (<code>severity</code>) and preregistration export (<code>preregister</code>).</li>
+<li>DEVELOPMENT: Lakatosian progressive/degenerating amendment appraisal (<code>appraise_amendment</code>).</li>
+<li>Two further diagrams: development roadmap and hypothesis→tested-theory pipeline.</li>
+<li>A <code>draft</code> maturity state that runs the checklist in advisory (non-blocking) mode.</li>
+</ul>
+<h3 id="bibliometric-layer-p2">Bibliometric layer (P2)<a class="headerlink" href="#bibliometric-layer-p2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>read_corpus</code>, <code>litmap</code> (keyword co-occurrence, deterministic connected-component themes, co-citation).</li>
+<li><code>landscape</code>: maps a theory and its alternatives onto themes, flagging under-theorised fronts and redundancy risk.</li>
+<li><code>lit_diagram</code> (keyword co-occurrence, co-citation, theme landscape) and a parity-exempt OpenAlex <code>fetch_corpus</code> adapter. <code>lit_diagram</code>/<code>tf_lit_diagram</code> list the valid types in the unknown-type error, matching <code>diagram</code>/<code>tf_diagram</code>.</li>
+<li><code>new_evidence_dois</code>: a deterministic, dependency-free check for candidate DOIs not yet cited by a theory's evidence or alternatives, so a search from any external tool, including the companion <code>scopusflow</code>/<code>scopusflow-py</code> packages, can be checked against what the theory already engages with.</li>
+</ul>
+<h3 id="sem-compilation-and-audit-bundle-p3">SEM compilation and audit bundle (P3)<a class="headerlink" href="#sem-compilation-and-audit-bundle-p3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>compile_sem</code>: compile constructs + propositions to lavaan model syntax.</li>
+<li><code>dossier</code>: a reviewer-facing Markdown audit bundle (rigour report + severity + provenance + preregistration).</li>
+</ul>
+<h3 id="simulation-reporting-adapters-p4">Simulation, reporting &amp; adapters (P4)<a class="headerlink" href="#simulation-reporting-adapters-p4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>simulate</code>: a deterministic dynamical-system runner derived from the construct network (parity-tested trajectories).</li>
+<li><code>render_report</code>: a Quarto report wrapping the deterministic audit dossier.</li>
+<li><code>embedding_redundancy</code>: an opt-in, parity-exempt embedding screen (pluggable embedder), complementing the default lexical screen.</li>
+<li><code>osf_push</code>: an OSF deposit adapter (dry-run by default, with a live upload requiring the user's token). <code>osf_push</code>/<code>tf_osf_push</code> percent-encode the filename component of the OSF upload URL, keeping the dry-run request dicts identical across languages.</li>
+</ul>
+<h3 id="visualisation-and-references">Visualisation and references<a class="headerlink" href="#visualisation-and-references" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Ten diagram views via <code>diagram</code>/<code>tf_diagram</code>: nomological net, provenance, causal DAG, development roadmap, pipeline, and the new <code>context</code> (the theory, its scope and its rivals), <code>workflow</code> (the building-to-testing pipeline), <code>venn</code> (construct scope overlap), <code>rigour</code> (the checklist as a colour-coded status grid), and <code>severity</code> (per-prediction severity bars). The last three are returned as SVG.</li>
+<li>A "Methodological foundations" documentation page that cites the verified literature behind each rigour item, with DOIs. The machine-readable BibTeX ships with the R package at <code>inst/REFERENCES.bib</code>. The risk-severity item's citation was corrected after a Crossref re-audit (Cohen, 1992 removed as not supporting prediction severity).</li>
+</ul>
+<h3 id="quality-reproducibility">Quality &amp; reproducibility<a class="headerlink" href="#quality-reproducibility" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Cross-language parity enforced over 55 golden artefacts in CI, with byte-identical diagrams (DOT and SVG), markdown, and lavaan outputs and semantically-equal JSON. The <code>panic-network-2026.new_evidence_dois.json</code> golden is vendored with the R package and exercised by its tests.</li>
+<li>The R literature layer and amendment appraisal sort with radix (codepoint) ordering regardless of locale, matching Python for mixed-case keywords and ids. A mixed-case parity test runs in both suites.</li>
+<li>Both packages read their version from package metadata, with no copy duplicated in source: Python <code>__version__</code> comes from the installed distribution's metadata, and the R citation (<code>inst/CITATION</code> and the About article) from the package metadata.</li>
+<li>R passes <code>R CMD check --as-cran</code> with 0 errors and 0 warnings (1 note, the standard new-submission note). Python builds a wheel and sdist passing <code>twine check</code>, is ruff- and mypy-clean, and ships <code>py.typed</code>.</li>
+<li>Test suites: Python (pytest) and R (testthat), plus a dedicated parity job.</li>
+</ul>
+<h3 id="not-yet-implemented">Not yet implemented<a class="headerlink" href="#not-yet-implemented" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A live OSF upload requires the user's own token. <code>osf_push</code> ships with a dry-run default.</li>
+<li>Richer (nonlinear / agent-based) computational-model runners, and built-in embedding-model integrations beyond the pluggable <code>embedding_redundancy</code> interface.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../methodology/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Methodological foundations">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                Methodological foundations
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../about/" class="md-footer__link md-footer__link--next" aria-label="Next: About">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                About
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      <span class="mrd-footer-badges"> <a href="https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml"><img src="https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml/badge.svg" alt="CI"></a> <a href="https://lifecycle.r-lib.org/articles/stages.html#experimental"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a> <a href="https://opensource.org/license/MIT"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a> </span> Developed by <a href="https://pablobernabeu.github.io">Pablo Bernabeu</a>. Open, reproducible research software in R and Python. Released under the <a href="https://pablobernabeu.github.io/theoryforge/python/licence/">MIT licence</a>.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "navigation.footer", "toc.follow", "content.code.copy", "search.suggest", "search.highlight"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": "0.6.0"}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../assets/_markdown_exec_pyodide.js"></script>
+      
+    
+  </body>
+</html>

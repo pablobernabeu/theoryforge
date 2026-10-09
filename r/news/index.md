@@ -1,0 +1,741 @@
+# Changelog
+
+## theoryforge (development version)
+
+- The literature article’s recipe for turning a scopusflow corpus into a
+  theoryforge corpus keys cited works by Scopus identifier, folds DOI
+  and keyword case and writes a missing year as null. The earlier recipe
+  split one cited work into several nodes, so co-citation maps and
+  keyword themes came out empty. The recipe is now a function,
+  `scopus_corpus_to_tf()`, shown in full and run by the test suite on a
+  stand-in corpus.
+
+- [`tf_read()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_read.md)
+  and
+  [`tf_read_corpus()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_read_corpus.md)
+  now read a file exactly as the Python twin does. A YAML sequence is
+  always returned as a list, so a file with `maturity: [draft]` or
+  `relation: [increases]` is refused by
+  [`tf_validate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_validate.md)
+  as it is in Python. The one-element sequence used to collapse to a
+  string, and the file passed. Unquoted `y`, `Y`, `n` and `N` used to
+  become logicals and now stay strings, as do the R-specific
+  missing-value forms `.na`, `.na.real`, `.na.integer` and
+  `.na.character`. A number written with a comma, such as `1,000`, is
+  now a string and an integer too large for an R integer a double, where
+  `yaml` read both as `NA` with a warning. A merge key lets the
+  mapping’s own key win, a byte-order mark is ignored and a missing
+  final newline no longer warns. A repeated key in a JSON file is
+  refused with the message YAML files already gave, and a file holding
+  only an empty sequence (`[]`) is refused as not a mapping.
+
+- [`tf_write()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_write.md)
+  no longer loses information. Numbers keep 15 significant digits in
+  both formats, where JSON rounded them to four decimal places and YAML
+  to seven, so a severity of 0.49996 no longer comes back as 0.5.
+  Logicals are written as `true` and `false`, no longer as `yes` and
+  `no`, and a missing value (`NA`) is written as null, so both twins
+  read it back as missing. `yaml` wrote the R-specific `.na` forms, and
+  [`tf_read()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_read.md)
+  now reads those as text. Every field the schema types as an array of
+  strings, such as `derives_from: [p3]`, is written as an array even
+  when it holds one string, so a theory written and read back validates
+  against the package’s own schema.
+
+- The `yaml` package is now required at version 2.3.8 or later.
+
+- [`tf_severity()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_severity.md)
+  is described for what it is, a pre-data ranking of the form of each
+  prediction’s claim. Its documentation no longer cites Mayo (2018),
+  whose severity is a property of a test and its data, and the 0.25
+  directional discount is documented as the package’s convention, not
+  Meehl’s. The heading over its values in the preregistration and the
+  dossier reads `Severity (pre-data rubric of claim form)`, and the
+  severity chart is titled `Pre-data riskiness`. The values are
+  unchanged.
+
+- The four prediction types are defined in the schema, in
+  [`?tf_add_prediction`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_add_prediction.md)
+  and in the methodology article, and the bundled panic predictions now
+  state the value and tolerance that their `point` type claims. The
+  schema also marks a prediction’s `risk_score` and a test outcome’s
+  `severity_at_test` as informational fields that no function reads.
+
+- Malformed input is now read as the Python twin reads it, by every
+  function that takes a theory. A collection written as a mapping,
+  including a named list built in memory, is read as empty, so
+  [`tf_check()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_check.md)
+  on such a theory now reports the gate Python reports where R used to
+  score the mapping’s values. A collection written as a single string is
+  read as empty too. Numbers and logicals in text fields read as empty
+  strings, so `id: 2026` and `label: Yes` no longer print as `2026` and
+  `TRUE`. An entry of a string array that is not a nonempty string is
+  ignored. `derives_from: [~]` therefore fails the derivation check,
+  which it used to pass while the preregistration printed no derivation,
+  and `[[adults]]` is no longer flattened to `adults`. `relation`,
+  `type`, `maturity` and `formal_model$type` outside their allowed
+  values, sequences such as `[increases]` included, are read as absent.
+  They add no edge, claim form, advisory gate or formal model and print
+  as empty, so a formal-model type such as `"bayesian"` no longer passes
+  formalisation. `tf_validate(full = TRUE)` no longer stops with
+  “subscript out of bounds” when a collection entry is a scalar, and
+  [`tf_implications()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md)
+  and
+  [`tf_simulate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_simulate.md)
+  no longer refuse two constructs without ids as duplicates. A theory
+  that matches the schema gives the same results as before, except that
+  an empty or blank entry of a string array, such as
+  `measurement: [""]`, no longer counts as an entry.
+
+- [`tf_check()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_check.md)
+  refuses a prediction severity that is infinite or lies outside \[0,
+  1\]. A severity of 7 gave an aggregate score above 100, and an
+  infinite one an aggregate of `Inf`. It also decides each threshold
+  item from its rounded score and sums severities by an explicit loop,
+  so the verdict no longer depends on the platform’s floating-point
+  accumulator: severities of 0.6, 0.7 and 0.2 pass the 0.5 threshold on
+  every platform. Rounded values no longer print as `-0.0`.
+
+- [`tf_simulate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_simulate.md)
+  validates its arguments with the Python twin’s messages and stops with
+  a message naming the step and state when the trajectory diverges,
+  where it returned NaN rows, rows of the wrong length or a step count
+  it had truncated. `steps = 2.5` ran two steps, `init = c(1, 2, 3)`
+  gave rows of nine values, a negative `dt` was accepted and a NaN knob
+  gave rows of NaN. Code that read the NaN rows of a diverging run now
+  receives an error. The help page and the methodology article state the
+  step condition. In a network without feedback loops, the explicit step
+  explodes once `dt * damping` exceeds 2, so a larger `damping` is no
+  remedy.
+
+- Text is normalised as in the Python twin. Both trim one set of Unicode
+  whitespace characters, lowercase ASCII letters only and fold accented
+  Latin letters through a fixed table, so `naïve` no longer vanishes
+  from a definition and `Émotion` no longer matches `motion`. A lone
+  no-break space no longer counts as a definition, a mechanism or a
+  provenance detail, and
+  [`tf_compile_sem()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_compile_sem.md)
+  names the indicator `Müller scale` `muller_scale`, where it gave
+  `m_ller_scale`.
+  [`tf_new_evidence_dois()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_new_evidence_dois.md)
+  recognises DOIs written as `doi: 10...`, `DOI 10...`, `doi.org/10...`,
+  `https://www.doi.org/10...` or percent-encoded, and ignores a trailing
+  full stop, comma or semicolon.
+
+- Construct definitions and keywords in Greek, Cyrillic and other
+  non-Latin scripts are now tokenised. They were deleted, so two
+  identical Russian definitions scored no overlap and passed the
+  redundancy screen. Greek and Cyrillic are compared without case or
+  accents, other scripts as written.
+
+- [`tf_litmap()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_litmap.md)
+  and
+  [`tf_landscape()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_landscape.md)
+  count pairs in linear time, so a fetched corpus with references maps
+  in seconds instead of hours. A single record with 300 references took
+  about a minute and now takes a fraction of a second. Results are
+  unchanged.
+  [`tf_landscape()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_landscape.md)
+  no longer computes the co-citation map, since it never used it, and
+  [`tf_lit_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_lit_diagram.md)
+  writes the DOT of a large map in one pass, where it copied every line
+  written so far for each edge it added.
+
+- [`tf_litmap()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_litmap.md),
+  [`tf_landscape()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_landscape.md)
+  and
+  [`tf_lit_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_lit_diagram.md)
+  check their arguments and the corpus with the Python twin’s messages.
+  `min_link` must be a positive integer: 2.5 was truncated to 2, `NA`
+  gave an empty map, `c(2, 3)` was recycled, and 0 or a negative value,
+  which behaved as 1, now raises. A corpus without a `records` list, a
+  misspelt `recrods:` or records keyed by id included, is refused where
+  it gave an empty map, and so is a record that is not a mapping.
+  Integer keywords and references are kept as decimal strings, never in
+  scientific notation, and one of 2^53 or more is refused, since R
+  cannot hold it exactly and the twins would key it differently. A
+  logical, a fraction or a nested value is refused with a hint: an
+  unquoted `NO` or `on` in YAML is read as a logical, which R wrote as
+  `"FALSE"` or `"TRUE"`.
+
+- [`tf_litmap()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_litmap.md)
+  gains `min_cocitation`, a threshold for the co-citation map alone (by
+  default `min_link`), and
+  [`tf_lit_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_lit_diagram.md)
+  gains `max_edges`, which draws only the strongest edges. Co-citation
+  maps of real corpora are large: 200 OpenAlex records give over 11,000
+  edges at a threshold of two.
+
+- [`tf_landscape()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_landscape.md)
+  reports the words behind every match, in `focal_terms` and
+  `alternative_terms`, and three kinds of word no longer decide a match.
+  Words in the keywords of more than `max_token_share` of the records, a
+  new argument set to 0.5 by default, are shared by most of the corpus
+  and are reported as `field_tokens`. The words of the theory’s title
+  name the phenomenon that every account explains and are reported as
+  `phenomenon_tokens`. Words such as “theory” and “model” name a kind of
+  account. “Panic” and “disorder” from the title used to make a theme on
+  genetics crowded, and “theory” alone matched a theory of panic to a
+  corpus on ego depletion. The title no longer supplies matches, so a
+  construct word that also appears in it no longer matches either. The
+  statuses are described as what they are, a count of the registered
+  accounts that address a theme. A crowded theme calls for predictions
+  that discriminate between its accounts, and is not a finding of
+  redundancy. On the bundled corpus, the statuses are unchanged.
+
+- [`tf_litmap()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_litmap.md)
+  warns when one theme holds more than half the linked keywords, which
+  happens on real corpora: seven OpenAlex corpora of 100 to 600 records
+  each gave one theme holding at least 98.8 per cent of them. Such
+  themes, and any landscape built on them, are not informative.
+  [`tf_landscape()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_landscape.md)
+  gives the same warning.
+
+- [`tf_litmap()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_litmap.md)
+  and
+  [`tf_landscape()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_landscape.md)
+  gain `method = "simple_centres"`, the co-word clustering of Coulter et
+  al. (1998) and Cobo et al. (2011), which gives bounded themes with
+  centrality, density and a strategic-diagram quadrant on real corpora.
+  [`tf_litmap()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_litmap.md)
+  also gains `min_theme_size`, `max_theme_size` and `max_df`, which
+  excludes keywords shared by most records. `method` is the third
+  argument of
+  [`tf_litmap()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_litmap.md),
+  so a `min_cocitation` given by position must now be named. Components
+  remain the default for this release, and the giant-theme warning names
+  the new method. The default is planned to become `"simple_centres"` in
+  the next minor release.
+
+- A frozen OpenAlex corpus of 150 works on panic disorder,
+  `openalex-panic-2026.corpus.yaml`, ships with the package beside the
+  example theories (see
+  [`tf_example_path()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_example_path.md)),
+  so that the two methods can be compared on a real corpus. It is
+  offered under CC0, as OpenAlex’s data are.
+
+- `tf_validate(full = TRUE)` now checks the whole schema. It reports a
+  missing required field of an assumption, an alternative, a piece of
+  evidence or a test outcome, and a `passed` that is not `TRUE` or
+  `FALSE`. It also reports any field of the wrong type, an evidence
+  direction or a formal-model type outside its enum, a malformed
+  `version` block, a `schema_version` not of the form `"1.0"` and a
+  number outside 0 to 1 where the schema asks for one. A file with
+  `passed: "true"`, an evidence direction of `supports` or a
+  formal-model type of `banana` used to validate. Three conveniences are
+  kept on purpose. A `NULL` optional field is absent, a single string
+  stands for a one-element array of strings and
+  [`list()`](https://rdrr.io/r/base/list.html) stands for an empty
+  mapping or sequence.
+
+- `tf_validate(full = TRUE)` also reports an entry of a string array
+  that is not a nonempty string, such as the null in
+  `derives_from: [p1, ~]` or the empty string in `measurement: [""]`.
+  Every other function ignores such an entry. The schema allows an empty
+  string there, so a theory that matches the schema can now fail full
+  validation for this reason alone.
+
+- [`tf_validate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_validate.md)
+  names a value of the wrong type. A required field holding a number, a
+  logical or a list is reported as `<field> must be a string`, with a
+  reminder to quote a number or a logical in YAML, where it used to be
+  called missing. `maturity: [draft]` therefore gives
+  `maturity must be a string`. A scalar or a mapping where a collection
+  belongs is reported as `<key> must be a list`. `missing/empty` is kept
+  for a field that is absent, `NULL` or blank, and a single `NA` reads
+  as absent, since
+  [`tf_write()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_write.md)
+  writes it as null.
+
+- [`tf_check()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_check.md)
+  and
+  [`tf_appraise_amendment()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_appraise_amendment.md)
+  refuse a test outcome whose `passed` is present and not `TRUE` or
+  `FALSE`. A quoted `passed: "true"` used to read as a failure, so an
+  assumption added to protect the prediction counted as ad hoc and an
+  amendment that should be progressive came out degenerating.
+  [`tf_preregister()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_preregister.md),
+  [`tf_dossier()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_dossier.md)
+  and the diagrams that score the checklist refuse it too, since they
+  call
+  [`tf_check()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_check.md).
+  A missing or `NULL` `passed` still reads as not passed.
+
+- [`tf_simulate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_simulate.md)
+  gains `method = "exact"`, which propagates the linear system with its
+  matrix exponential and so has no step-size limit. The default stays
+  `"euler"` for this release and warns when its steps depart from the
+  exact solution by more than 5 per cent. The default will change to
+  `"exact"` in the next minor release. The Euler steps turned a decaying
+  theory into an alternating explosion once `dt * damping` exceeded 2,
+  and inflated a sustained oscillation into growth even at `dt = 0.1`.
+  The record now names the method (`method`), the propositions that
+  couple nothing (`ignored`: moderates, associates and propositions with
+  an endpoint that is not a declared construct) and the pairs whose
+  increases and decreases offset each other (`opposed`). The help page
+  and the methodology article state what the model leaves out: one gain
+  for every coupling, `causes` and `mediates` taken as positive,
+  `functional_form` not read and a common initial value. Being linear,
+  the model cannot show bistability. Matrix joins Suggests for a test
+  that checks the propagator against
+  [`Matrix::expm()`](https://rdrr.io/pkg/Matrix/man/expm-methods.html).
+
+- [`tf_fetch_corpus()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_fetch_corpus.md)
+  stops with the HTTP status when OpenAlex refuses a request, where a
+  rate-limit or permission error returned an empty corpus that read as a
+  literature with no themes. OpenAlex’s own message follows the status
+  when the response carries one. A response without a results list,
+  which read as no results, is now refused. The function accepts an
+  OpenAlex API key (`api_key`, by default the `OPENALEX_API_KEY`
+  environment variable), sent as a header, records where and when the
+  corpus was fetched in `source`, keeps each work’s DOI and can page
+  through `max_records` results. `mailto` is documented as ignored,
+  since OpenAlex replaced its polite pool with API keys.
+
+- The tests need `testthat` 3.1.7 or later.
+
+- [`tf_appraise_amendment()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_appraise_amendment.md)
+  now compares the content of two versions, not their prediction ids. A
+  renamed prediction, with the same statement and type under a new id,
+  is no longer new. A prediction derived only from propositions the
+  prior already held, and protected by no new assumption, is reported as
+  an articulation and does not make an amendment progressive. A
+  prediction counts as corroborated only when no outcome refutes it, and
+  a corroborated prediction that is dropped blocks a progressive
+  verdict. An assumption added for an anomaly is ad hoc unless a
+  prediction it protects that is new in this version, other than the
+  anomaly, is corroborated. The result keeps its four fields first and
+  adds the evidence behind the verdict: `articulated`, `underived`,
+  `corroborated_new_registered`, `renamed`, `dropped`,
+  `dropped_corroborated`, `content_lost`, `new_anomalies` and
+  `assumptions`. The amended panic example now adds a proposition, so
+  its verdict remains progressive for a reason the appraisal can see,
+  and its aggregate score moves from 87.1 to 87.7.
+
+- [`?tf_add_assumption`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_add_assumption.md)
+  and the schema define `added_for` as the id of the prediction whose
+  anomaly an assumption answers, where the help page called it a reason.
+  The methodology article no longer attributes the `neutral` verdict to
+  Lakatos, whose scheme has only progressive and degenerating
+  problemshifts. The bundled examples record the builder names in their
+  provenance (`tf_add_construct`, `tf_add_proposition`,
+  `tf_add_prediction`).
+
+- [`tf_osf_push()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_osf_push.md)
+  stops when OSF refuses the upload, where it returned the failure as a
+  completed upload. Any status outside 2xx, a 501 included, stops with
+  `OSF upload failed with HTTP <status>`, and a 409 adds that a file of
+  that name already exists. It gains `overwrite`, which adds a new
+  version of an existing file of the same name: the folder is listed
+  first and the dossier goes to that file’s upload link. Without it a
+  second deposit under the same filename still fails, so pass a
+  version-specific `filename` or `overwrite = TRUE`. Dry runs match the
+  Python twin for an empty node, an empty filename and filenames
+  containing percent signs, which
+  [`URLencode()`](https://rdrr.io/r/utils/URLencode.html) used to pass
+  through without encoding anything, spaces and `&` included. A live
+  deposit now sends its requests through curl, as
+  [`tf_fetch_corpus()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_fetch_corpus.md)
+  does, and httr leaves Suggests (httr itself depends on curl).
+
+- [`tf_render_report()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_render_report.md)
+  escapes the title for YAML, so backslashes and quotes survive. A
+  backslash in a title used to stop Quarto with a YAML error, and
+  `\emph` turned into an escape character. Double quotes are now kept,
+  where they became apostrophes, and an empty or `NA` `title` means the
+  default, as an empty one does in Python. Quarto reads the title as
+  Markdown, so raw TeX is dropped from HTML output and `$\alpha$`
+  becomes mathematics. `tf_report(format = "html")` escapes every value
+  it writes into the HTML, the theory id included.
+
+- The rigour checklist moves to version 2.0, which every report records
+  as `checklist_version`. An item with nothing to assess is reported as
+  `n/a`, with a `NULL` score, and left out of the aggregate, which is
+  now the weighted mean of the applicable items. The report gains
+  `coverage`, the share of the checklist’s weight that was applicable.
+  An empty theory scored 26 and now scores 0, and adding a prediction to
+  it no longer lowers its score. Parsimony no longer penalises declared
+  auxiliary assumptions. It fails only when an assumption added in
+  response to an anomaly has no independent corroboration, and it is
+  `n/a` when no assumption was added that way. Non-redundancy follows
+  the redundancy screen’s flags, and the screen also flags a definition
+  contained in another
+  ([`tf_redundancy_check()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_redundancy_check.md)
+  gains an `overlap` column), so the deliberately redundant pair in the
+  weak example is now caught. Mean severity counts every prediction,
+  using the claim-form rubric where none is declared, and
+  [`tf_add_prediction()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_add_prediction.md)
+  gains `severity`. Causal testability counts every directed relation,
+  `mediates` and `moderates` included. Most well-specified theories
+  score a few points higher (the bundled panic example moves from 84.8
+  to 87.3) and the weak example lower (from 12.0 to 2.2).
+
+- [`tf_dossier()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_dossier.md)
+  gives the checklist coverage, names the blockers that failed, prints
+  `n/a` for an item with nothing to assess and sets a prediction’s
+  declared severity beside the rubric’s value, with a note when the
+  declared value exceeds the rubric’s by more than 0.2.
+  `tf_report(format = "html")` prints `n/a` for such an item, the
+  development roadmap leaves it out and the rigour grid shows it in
+  grey. The preregistration of a theory without predictions now reads
+  `Derivation chain verified: no`, where it said `yes`.
+
+- [`tf_embedding_redundancy()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_embedding_redundancy.md)
+  takes its default threshold from the checklist’s new
+  `embedding_similarity_max`, 0.85 as before, since how high a cosine
+  runs depends on the embedding model.
+
+- The methodology article quotes the checklist’s criteria and corrects
+  the causal testability row. It calls the five thresholds the package’s
+  defaults where it called them calibrated, and no longer says that a
+  theory passing every item scores 100. It explains that the aggregate
+  is compensatory, so a blocked theory can outscore one whose gate
+  passes, that the weights and thresholds are fixed and that the lexical
+  screen cannot detect empirical redundancy (Rönkkö & Cho, 2022).
+  Diagnosticity and the rubric’s bonus are described as resting on a
+  declared rival, and the derivation chain as a check of references. The
+  article also notes that a prediction without a declared severity is
+  credited for its type and its named rival twice, in prediction
+  severity as well as in precision and diagnosticity.
+  [`?tf_redundancy_check`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_redundancy_check.md)
+  gives its references’ full titles. `inst/REFERENCES.bib` drops Forster
+  and Sober (1994), which no item cites any more, and adds Rönkkö and
+  Cho (2022).
+
+- [`tf_implications()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md)
+  reads every relation the theory states. `mediates` and `moderates` are
+  directed edges and `associates` is a bidirected edge, covariance the
+  theory leaves unexplained, and the statements are derived by
+  m-separation, so the function no longer asserts independencies that
+  the theory’s own propositions deny. With `x` associated with `y`, the
+  chain `z -> x -> y` used to give `z _||_ y | x`. A pair that no set of
+  constructs separates is listed in the new `inseparable` field, and the
+  record also gains `criterion`, `n_bidirected` and `feedback`. For a
+  theory with only `causes`, `increases` and `decreases`, the statements
+  are unchanged, and so are those of the bundled theories. A `mediates`
+  or `moderates` proposition naming an undeclared construct is now
+  refused, as a causal one was, and so is a cycle that one of them
+  closes. In the stereotype-threat app example, domain identification
+  moderates test performance, so the function gives three more
+  statements and widens the conditioning sets of two others. The
+  `causal_dag` view of
+  [`tf_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_diagram.md)
+  exports the same graph, with `a <-> b` for an association, and the
+  nomological net draws an association without arrowheads.
+
+- The documentation no longer says that a cyclic theory implies nothing
+  testable or that dagitty rejects its `causal_dag` export. dagitty
+  accepts the export but reads it by d-separation, which a model with
+  feedback is guaranteed to satisfy only in special cases, a linear
+  model among them (Bongers et al., 2021).
+  [`?tf_implications`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md),
+  the Developing and testing article and the README warn that a
+  conditional implication tested on fallible measures is rejected too
+  often, and point to latent-variable tests.
+
+- [`tf_implications()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md)
+  gains `cycles = "sigma"`, which derives the independencies a cyclic
+  theory implies by sigma-separation (Bongers et al., 2021), valid when
+  each feedback loop has a unique equilibrium. The record then names the
+  criterion `"sigma"`, says whether the graph is acyclic and lists the
+  feedback loops. The bundled panic network implies that arousal and
+  avoidance are independent given perceived threat. The default still
+  refuses a cyclic graph, and its message names the option. A golden
+  file of the sigma record for each bundled theory joins the parity
+  check.
+
+- The `causal_dag` view of
+  [`tf_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_diagram.md)
+  quotes a construct id that dagitty or Graphviz would otherwise split
+  or misread, such as `self-efficacy`, `1arousal` or `a.b`, and stops on
+  the ids `node` and `graph`, which dagitty reserves. dagitty read
+  `self-efficacy -> task-persistence -> outcome` as five nodes and
+  implied eight independencies where
+  [`tf_implications()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md)
+  gives one.
+  [`tf_compile_sem()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_compile_sem.md)
+  renames construct ids and indicator names that lavaan would refuse or
+  misread, such as `c-arousal`, `1arousal`, `NA`, `efa` or
+  `7_point_likert_rating`, with a comment recording each renaming.
+  lavaan read `c-arousal =~ q1` as a latent variable named `arousal`. A
+  comment writes a control character or a character outside the Basic
+  Multilingual Plane as `<U+XXXX>`, because lavaan could otherwise read
+  part of a comment as a model line.
+  [`tf_compile_sem()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_compile_sem.md)
+  also refuses a name collision it used to write without a word, between
+  two constructs, two indicators of one construct or a construct and an
+  indicator. The bundled theories are unaffected. lavaan joins Suggests
+  for a test that parses the renamed syntax with
+  [`lavaan::lavaanify()`](https://rdrr.io/pkg/lavaan/man/model.syntax.html).
+
+- [`tf_compile_sem()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_compile_sem.md)
+  writes the covariances the theory fixes at zero, which
+  [`lavaan::sem()`](https://rdrr.io/pkg/lavaan/man/sem.html) would
+  otherwise free, so a fitted model can refute the implications the
+  theory makes. Two constructs that are both exogenous or both terminal,
+  with no association between them, are unrelated by the theory’s
+  account, and
+  [`lavaan::sem()`](https://rdrr.io/pkg/lavaan/man/sem.html) frees their
+  covariance by default. In the bundled modality-switching theory, those
+  are two of the six independencies
+  [`tf_implications()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md)
+  derives. The syntax now ends with
+  `c_sensorimotor_experience ~~ 0*c_lexical_familiarity` and
+  `c_switch_cost ~~ 0*c_conceptual_access`, and the model’s degrees of
+  freedom rise from 59 to 61. A pair with a moderator keeps lavaan’s
+  defaults, and deleting the block restores them all. Once a covariance
+  line names an observed exogenous variable, lavaan treats it as random
+  and fixes at zero each of its covariances left unwritten. The block
+  therefore writes those of an observed moderator as free. A moderation
+  used to lose the moderator’s main effect, and
+  [`tf_compile_sem()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_compile_sem.md)
+  now writes it, with a comment on the product term to add by hand. It
+  also cautions that each feedback loop may not be identified, lists the
+  constructs with a single indicator and names
+  [`lavaan::sem()`](https://rdrr.io/pkg/lavaan/man/sem.html) as the
+  target. The four bundled `sem.lavaan` files change.
+
+- The Developing and testing article demonstrates
+  [`tf_compile_sem()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_compile_sem.md)
+  on the modality-switching theory and no longer says that the panic
+  network’s syntax can be passed directly to
+  [`lavaan::sem()`](https://rdrr.io/pkg/lavaan/man/sem.html): its
+  feedback loop leaves the model unidentified.
+  [`?tf_compile_sem`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_compile_sem.md)
+  says that the syntax is a starting point for a fit. Indicator names
+  must match columns of the data, a single-indicator construct is
+  treated as measured without error, and manipulations and categorical
+  predictors with more than two levels have to be re-specified by hand.
+
+## theoryforge 0.6.0
+
+CRAN release: 2026-09-01
+
+- New
+  [`tf_implications()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md)
+  derives the testable implications of a theory’s causal subgraph. It
+  reads the causal propositions as a directed graph, checks that the
+  graph is acyclic, and returns the basis set of implied conditional
+  independencies: one claim per pair of constructs with no causal
+  relation between them, conditioned on the parents of both, in the
+  notation dagitty prints. That set is the shortest complete statement
+  of what a causal theory forbids in data, so it is what a study can be
+  designed to refute. The package cited the derivability of those
+  implications in its own checklist and derived none of them. A cyclic
+  graph has no basis set and is refused with the cycle named, which is
+  what happens to the bundled panic-network example and its amended
+  version. A theory with no causal relations comes back with an empty
+  set and no error. The Python twin gains `theory.implications()`,
+  returning the same records in the same order. The derived sets were
+  checked against `dagitty` and `ggm`, which sit in Suggests for that
+  purpose and whose tests skip when they are absent.
+
+- A fourth example theory ships with the package,
+  `modality-switching.theory.yaml`, and it is the worked example for
+  [`tf_implications()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md).
+  Both panic-network fixtures are cyclic, so until now every bundled
+  theory showed only what the function refuses. This one states the
+  modality-switching effect in grounded conceptual processing:
+  sensorimotor experience with a concept drives activation of the
+  modality-specific perceptual system, which raises the cost of
+  switching modality between consecutive trials and eases conceptual
+  access, as lexical familiarity with the word form does too. Five
+  constructs and four causal propositions give an acyclic graph with a
+  fork and a collider in it, and a basis set of six conditional
+  independencies, confirmed against `dagitty` and `ggm`. The panic
+  fixtures stay as they are: a feedback loop is legitimate theory, and
+  the refusal is worth seeing as well, so the Developing and testing
+  article now shows both outcomes.
+
+- New
+  [`tf_example_names()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_example_names.md)
+  and
+  [`tf_example_path()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_example_path.md)
+  reach the theories and the literature corpus bundled with the package,
+  mirroring `example_names()` and `example_path()` in the Python twin,
+  so the README quick start runs straight after
+  `remotes::install_github()` with no clone.
+
+- [`tf_validate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_validate.md)
+  refuses an unrecognised top-level field. A misspelt collection key
+  such as `predicitions:` was dropped without a word, taking its whole
+  collection with it and moving the aggregate score and the gate. The
+  schema’s `additionalProperties` was set to match, so a third-party
+  validator agrees.
+
+- Four further refusals replace a silently wrong answer.
+  [`tf_read()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_read.md)
+  and
+  [`tf_read_corpus()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_read_corpus.md)
+  no longer accept a top-level YAML sequence of mappings, a shape that
+  used to read as a document with every collection empty.
+  [`tf_simulate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_simulate.md)
+  refuses duplicate construct ids, which produced two different but
+  equally plausible trajectories from one file.
+  [`tf_check()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_check.md)
+  refuses a non-numeric prediction severity, where it used to coerce
+  one, and `tf_validate(full = TRUE)` reports the same file as invalid,
+  so the scorer and the validator agree about it.
+  [`tf_embedding_redundancy()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_embedding_redundancy.md)
+  refuses a pair of unequal-length vectors, naming the constructs and
+  the lengths, where it used to recycle the shorter one.
+
+- An enum field written as a YAML sequence, such as
+  `theory_form: [network]`, is now refused. `%in%` unboxed the
+  one-element list, so the file validated in R and was refused in
+  Python.
+
+- [`tf_check()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_check.md)
+  and
+  [`tf_dossier()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_dossier.md)
+  record `checklist_version`, the version of the checklist whose weights
+  and thresholds produced every number in the report, so two reports
+  written against different checklist revisions are no longer silently
+  comparable.
+  [`tf_simulate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_simulate.md)
+  echoes back `k`, `damping` and `init` alongside `dt` and `steps`, so a
+  recorded trajectory can be reproduced from what the record itself
+  reports.
+
+- The causal-testability criterion now describes what it computes. It
+  asserted acyclicity and never checked it. The criterion and the
+  methodology article now state that the export is emitted as written,
+  that it is not verified acyclic, and that the shipped panic-network
+  example is in fact cyclic. No score, gate or status changed. The check
+  the criterion once implied now lives in
+  [`tf_implications()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md),
+  and it can refuse a graph outright instead of quietly rescoring it.
+
+- Every file the package writes goes through one LF-only, UTF-8 writer,
+  so the R half no longer emits CRLF where the Python half emits LF.
+  [`tf_write()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_write.md)
+  forces UTF-8 as its sibling writers already did, and a failed
+  `quarto render` no longer returns its output path as though it had
+  succeeded.
+
+- The network adapters carry the same 30-second timeout as their Python
+  counterparts, and both languages reject a `per_page` outside
+  OpenAlex’s documented 1-200 range before making a request.
+
+- Every vignette now turns console colour off and fixes the console
+  width while it renders. pkgdown passes the calling terminal’s colour
+  support into its build subprocess, and the Get started vignette’s
+  failure path therefore published the
+  [`tf_validate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_validate.md)
+  error with its bold and yellow escape sequences showing as literal
+  text around the words Error and the exclamation mark.
+
+- `inst/WORDLIST` is read at last: `spelling` joins Suggests and a
+  `tests/spelling.R` runs the check under `R CMD check`.
+
+## theoryforge 0.5.0
+
+- The `development_roadmap` view is rebuilt around a theory hub carrying
+  the title, the aggregate score and the gate. Items are ordered
+  blockers first and then by weight, each labelled with its ordinal, the
+  checklist criterion and whether it blocks the gate, with visible edges
+  down the blockers and the advisory items set three abreast.
+- The three SVG chart views (`venn`, `rigour`, `severity`) now declare a
+  `width` and a `height` alongside their `viewBox`, so each renders at
+  its natural size wherever it is embedded. Without an intrinsic size a
+  chart was stretched to the width of its container, and since the three
+  views have different natural widths the same declared 13px label came
+  out at a different size in each one.
+- The `venn` discs take the construct-border teal for their outline in
+  place of the former navy, which fell below the 3:1 contrast floor for
+  graphical objects on a dark page and left the figure close to
+  invisible under the dark theme.
+- The bundled `panic-network` fixtures give the three constructs
+  distinct boundary conditions, so the `venn` view drawn from them shows
+  where construct scopes diverge, where it used to put a zero in six of
+  its seven regions.
+- All of the above are mirrored byte for byte in the Python twin.
+- Documentation: the Get started vignette shows what
+  [`tf_validate()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_validate.md)
+  returns and demonstrates the failure path, and the development article
+  runs
+  [`tf_osf_push()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_osf_push.md)
+  in its default dry-run mode, where it was previously withheld.
+
+## theoryforge 0.4.0
+
+- The DOT diagram views are redesigned for content and legibility. Every
+  view opens with a shared Meridian style prelude (Helvetica type,
+  role-coloured rounded nodes); labels wrap so nodes stay narrow;
+  workflow and pipeline nodes carry the id together with the relation or
+  type, where a bare word stood; the development roadmap stacks its
+  items in a single column; and the theme landscape colours themes by
+  status. Every view fits a documentation column. The intermediate
+  representation stays byte-identical to the Python twin’s.
+
+## theoryforge 0.3.0
+
+- New
+  [`tf_render_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_render_diagram.md)
+  renders the digraph views without leaving R: a DiagrammeR widget for
+  the viewer and R Markdown, or a standalone SVG string with
+  `as = "svg"`. It accepts a theory or a raw DOT string, so
+  [`tf_lit_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_lit_diagram.md)
+  output renders the same way; the three SVG chart views pass through
+  unchanged, and `causal_dag` is refused with a pointer to dagitty. The
+  rendering packages (`DiagrammeR`, `DiagrammeRsvg`, `htmltools`) are in
+  Suggests, so the deterministic core stays dependency-free, and
+  rendering sits outside the cross-language parity contract. The
+  articles now show each digraph rendered beneath its intermediate
+  representation.
+
+## theoryforge 0.2.0
+
+- The severity chart is re-laid out: bars start just past the longest
+  row label and each value trails its own bar. The diagram intermediate
+  representation for `tf_diagram(type = "severity")` changes
+  accordingly, and it stays byte-identical to the Python twin’s.
+- Documentation: the articles now show the `provenance`,
+  `development_roadmap`, `pipeline` and `co_citation` views, the
+  embedding-redundancy screen, `tf_validate(full = TRUE)` and the
+  remaining build verbs, and a new section covers rendering and
+  depositing.
+
+## theoryforge 0.1.0
+
+First public release. The package provides a reproducible workflow for
+building, developing and testing scientific theories, with behaviour
+pinned by a shared specification
+([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md))
+so the R and Python twins return identical verdicts and byte-identical
+diagram intermediate representations.
+
+- Core: theory-object input, output and structural validation; a 12-item
+  rigour checklist with a weighted aggregate score and a blocker gate;
+  diagram intermediate representations (nomological net, provenance,
+  causal DAG); and a deterministic lexical construct-redundancy screen.
+  Where the schema expects an array of strings, a nonempty scalar string
+  is read as a singleton list (API_SPEC.md section 4), so natural YAML
+  such as `derives_from: p1` yields the same rigour verdict and gate as
+  the Python twin; an empty or whitespace-only scalar counts as absent.
+- Workflow modes: a builder API with auto-logged provenance (BUILDING);
+  an operationalised severity rubric and preregistration export
+  (TESTING); and a Lakatosian progressive-versus-degenerating amendment
+  appraisal (DEVELOPMENT).
+- Literature layer: a deterministic bibliometric mapping (`tf_litmap`,
+  `tf_landscape`, `tf_lit_diagram`), a parity-exempt OpenAlex corpus
+  adapter, and a deterministic, dependency-free check for DOIs not yet
+  cited by a theory (`tf_new_evidence_dois`), for use with a search from
+  any source, including the companion `scopusflow` package.
+  [`tf_lit_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_lit_diagram.md)
+  lists the valid types in its unknown-type error, matching
+  [`tf_diagram()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_diagram.md).
+- Testing and review: lavaan model-syntax compilation (`tf_compile_sem`)
+  and a reviewer-facing audit dossier (`tf_dossier`).
+- Simulation, reporting and deposit: a deterministic dynamical-system
+  runner (`tf_simulate`), a Quarto report wrapper (`tf_render_report`),
+  an opt-in embedding redundancy screen (`tf_embedding_redundancy`), and
+  an OSF deposit adapter (`tf_osf_push`, dry-run by default).
+  [`tf_osf_push()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_osf_push.md)
+  percent-encodes the filename component of the upload URL, keeping the
+  dry-run request identical to the Python twin’s.
+- Cross-language determinism: the literature layer and the amendment
+  appraisal sort with radix (codepoint) ordering regardless of locale,
+  matching the Python twin for mixed-case keywords and ids.
+- Metadata: `citation("theoryforge")` and the About article read the
+  package version from the package metadata.

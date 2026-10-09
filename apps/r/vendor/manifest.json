@@ -1,0 +1,113 @@
+{
+  "pkgVersion": "0.6.0",
+  "rFiles": [
+    "R/core.R",
+    "R/develop.R",
+    "R/diagram.R",
+    "R/dossier.R",
+    "R/embedding.R",
+    "R/examples.R",
+    "R/graph.R",
+    "R/implications.R",
+    "R/lit.R",
+    "R/osf.R",
+    "R/prereg.R",
+    "R/redundancy.R",
+    "R/relations.R",
+    "R/render.R",
+    "R/report_render.R",
+    "R/resources.R",
+    "R/rigor.R",
+    "R/scoring.R",
+    "R/sem.R",
+    "R/simulate.R",
+    "R/text.R",
+    "R/theoryforge-package.R",
+    "R/utils.R"
+  ],
+  "schema": {
+    "theory": "schema/theory.schema.json",
+    "checklist": "schema/rigor_checklist.yaml",
+    "fold": "schema/fold.json"
+  },
+  "examples": [
+    {
+      "name": "Panic disorder network (developing)",
+      "path": "fixtures/panic-network.theory.yaml",
+      "kind": "theory",
+      "desc": "A well-developed network theory of panic, three constructs in a feedback loop. Passes the full rigour checklist.",
+      "shipped": true
+    },
+    {
+      "name": "Panic network, amended v2 (testing)",
+      "path": "fixtures/panic-network-2026-v2.theory.yaml",
+      "kind": "theory",
+      "desc": "An amended version of the panic theory at the testing stage, with a fourth prediction and test outcomes.",
+      "shipped": true
+    },
+    {
+      "name": "Self-determination theory (developing)",
+      "path": "fixtures/self-determination.theory.yaml",
+      "kind": "theory",
+      "desc": "Three basic needs driving intrinsic motivation. A solid theory with one precision warning.",
+      "shipped": false
+    },
+    {
+      "name": "Effort-recovery regulation (developing)",
+      "path": "fixtures/effort-recovery.theory.yaml",
+      "kind": "theory",
+      "desc": "A negative feedback loop: fatigue overshoots its resting level of zero while recovery peaks, a damped oscillation that keeps the curves distinct. Lower damping to 0.1 and raise steps to 150 to see it cycle.",
+      "shipped": false
+    },
+    {
+      "name": "Happy vowel, Manchester English (testing)",
+      "path": "fixtures/happy-vowel-manchester.theory.yaml",
+      "kind": "theory",
+      "desc": "Turton & Baranowski (2026), a real sociolinguistic study: a stable vocalic variable, socially stratified yet with linguistic constraints that hold independently of social class and ethnicity.",
+      "shipped": false
+    },
+    {
+      "name": "Cognitive dissonance (testing)",
+      "path": "fixtures/cognitive-dissonance.theory.yaml",
+      "kind": "theory",
+      "desc": "Festinger & Carlsmith (1959): a smaller incentive for a counter-attitudinal act produces more attitude change, the reverse of what reinforcement theory predicts.",
+      "shipped": false
+    },
+    {
+      "name": "Stereotype threat (testing)",
+      "path": "fixtures/stereotype-threat.theory.yaml",
+      "kind": "theory",
+      "desc": "Steele & Aronson (1995): framing a test as diagnostic of ability depresses performance for a negatively stereotyped group, but not under a non-diagnostic frame.",
+      "shipped": false
+    },
+    {
+      "name": "Theory of planned behaviour (developing)",
+      "path": "fixtures/planned-behaviour.theory.yaml",
+      "kind": "theory",
+      "desc": "Ajzen (1991): attitude, subjective norm and perceived behavioural control predict intention, which predicts behaviour, extending the theory of reasoned action.",
+      "shipped": false
+    },
+    {
+      "name": "Deliberately weak theory (building)",
+      "path": "fixtures/weak-theory.theory.yaml",
+      "kind": "theory",
+      "desc": "An underspecified theory kept as a worked example of what the checklist catches. Its gate is blocked.",
+      "shipped": true
+    },
+    {
+      "name": "Modality switching (developing)",
+      "path": "fixtures/modality-switching.theory.yaml",
+      "kind": "theory",
+      "desc": "An acyclic theory of grounded conceptual processing. Implied independencies derives six statements from it, among them the independence its fourth prediction tests.",
+      "shipped": true
+    }
+  ],
+  "corpora": [
+    {
+      "name": "Panic literature corpus (demo)",
+      "path": "fixtures/panic-corpus.yaml",
+      "desc": "",
+      "shipped": true
+    }
+  ]
+}

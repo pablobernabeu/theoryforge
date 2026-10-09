@@ -1,0 +1,503 @@
+# Methodological foundations
+
+## Why theoryforge
+
+Psychology and the social sciences accumulate findings far faster than
+they build theories that explain them. Constructs proliferate and blur
+into one another (the jingle-jangle problem), predictions stay vague and
+directional where they ought to commit, auxiliary assumptions accrete to
+shield a theory from the tests it should face, and a revision is rarely
+judged by whether it adds testable content or merely deflects
+refutation. Eronen and Bringmann (2021) call this the theory crisis.
+
+theoryforge treats a theory as a structured, versioned object and makes
+the specification of these properties checkable, where prose left it to
+the reader’s judgement. It scores the theory against twelve structural
+criteria drawn from the methodology literature, screens its constructs
+for redundancy, grades how risky each prediction’s claim is,
+distinguishes progressive from degenerating amendments in Lakatos’s
+sense, and renders the structure so it can be read and tested. Every
+value it reports is produced by a fixed, documented rule, with no model
+and no randomness, and the R and Python implementations return identical
+verdicts and byte-identical diagram intermediate representations, so a
+verdict is reproducible and can be audited against the specification.
+See [Scope and limits](#scope-and-limits) below for what this checking
+does and does not establish.
+
+Each item in the rigour checklist follows from a result in the
+methodology literature, and the package records the supporting work next
+to the check (the `citation` field of the report). The supporting works
+are listed in APA style below.
+
+## Grounding for each rigour check
+
+The twelve checks are set out below with the criterion each one applies
+and the methodological work that motivates it. The name in brackets is
+the identifier the check carries in the report, and the supporting works
+are given in full in the references at the foot of the page.
+
+| Rigour check | Criterion | Supporting work |
+|----|----|----|
+| Falsifiability (`falsifiability`) | At least one prediction forbids an observation | Popper (1959), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
+| Predictive precision (`precision`) | Predictions are point/interval, not merely directional | [Meehl (1967)](https://doi.org/10.1086/288135), [Meehl (1990a)](https://doi.org/10.1207/s15327965pli0102_1) |
+| Prediction severity (`risk_severity`) | Mean prediction severity (declared, else the claim-form rubric) at or above threshold | Popper (1959), [Meehl (1967)](https://doi.org/10.1086/288135), [Meehl (1990b)](https://doi.org/10.2466/pr0.1990.66.1.195) |
+| Parsimony (`parsimony`) | No auxiliary assumption added in response to an anomaly lacks independent corroboration | [Lakatos (1970)](https://doi.org/10.1017/cbo9781139171434.009), [Meehl (1990a)](https://doi.org/10.1207/s15327965pli0102_1) |
+| Construct non-redundancy (`non_redundancy`) | No pair of construct definitions is a near-duplicate or contained in the other (lexical screen) | Kelley (1927), [Le et al. (2010)](https://doi.org/10.1016/j.obhdp.2010.02.003), [Lawson & Robins (2021)](https://doi.org/10.1177/10888683211047101) |
+| Construct clarity (`construct_clarity`) | Every construct has definition + measurement + boundary conditions | [Suddaby (2010)](https://doi.org/10.5465/amr.35.3.zok346), [Cronbach & Meehl (1955)](https://doi.org/10.1037/h0040957), [Flake & Fried (2020)](https://doi.org/10.1177/2515245920952393) |
+| Scope and boundary conditions (`scope`) | Boundary conditions explicitly stated | [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
+| Mechanism (`logical_why`) | Each proposition states a mechanism, not just a correlation | [Sutton & Staw (1995)](https://doi.org/10.2307/2393788), [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371) |
+| Causal testability (`causal_testability`) | At least one proposition states a causal relation | [Textor et al. (2016)](https://doi.org/10.1093/ije/dyw341), [Eronen & Bringmann (2021)](https://doi.org/10.1177/1745691620970586) |
+| Diagnosticity (`diagnosticity`) | At least one prediction names a registered alternative it is declared to discriminate from (declared, not verified) | [Platt (1964)](https://doi.org/10.1126/science.146.3642.347), [Fiedler (2017)](https://doi.org/10.1177/1745691616654458) |
+| Formalisation (`formalisation`) | A formal model of a recognised type (ode, abm, network, sem) is declared | [Robinaugh et al. (2021)](https://doi.org/10.1177/1745691620974697), [Guest & Martin (2021)](https://doi.org/10.1177/1745691620970585) |
+| Derivation chain (`derivation_chain`) | Every prediction cites at least one proposition, and every cited id is a declared proposition (reference check only) | [Scheel et al. (2021)](https://doi.org/10.1177/1745691620966795), [Szollosi et al. (2020)](https://doi.org/10.1016/j.tics.2019.11.009) |
+
+## How the rigour score is computed
+
+Each of the twelve items returns a status (`pass`, `warn` or `fail`) and
+a score between 0 and 1. Present-or-absent items score 1 or 0. Items
+that measure a proportion (for example, the share of constructs that
+carry a definition, a measurement and boundary conditions) score that
+proportion. An item can therefore pass with a score below 1: predictive
+precision passes from a share of 0.5, and diagnosticity once a single
+prediction qualifies. An item with nothing to assess has the status
+`n/a` and no score. That is the case for construct non-redundancy when
+the theory has fewer than two constructs, for the derivation chain when
+it has no predictions and for parsimony when no auxiliary assumption
+answers an anomaly.
+
+Five default thresholds come from the checklist file. Predictive
+precision passes at a share of 0.5 and prediction severity at a mean of
+0.5. The redundancy screen flags a pair of definitions at a Jaccard
+similarity of 0.85, or at an overlap coefficient of 0.85 when both hold
+at least three tokens. The optional embedding screen flags a pair at a
+cosine of 0.85.
+
+The headline number, the aggregate score, is the weighted mean of the
+applicable items’ scores, scaled to a 0 to 100 range. The weights are
+fixed in the checklist file. Falsifiability carries the most weight
+(0.15) and formalisation the least (0.05). The report also gives the
+coverage, the share of the checklist’s weight that was applicable: 0.92
+when parsimony alone has nothing to assess. Leaving such an item out
+keeps a theory from scoring for what it lacks. When the three items
+scored 1 with nothing to assess, an empty theory scored 26 and adding a
+prediction lowered its score. The aggregate is compensatory: a high
+score on one item offsets a low score on another, and a failed blocker
+counts like any other item. A blocked theory can therefore outscore one
+whose gate passes, and the score is best read together with the gate and
+the item table.
+
+The gate is the one-word verdict. Two items are blockers: falsifiability
+and the derivation chain. If either blocker fails, the gate is
+`blocked`. A theory at the `draft` maturity stage is always `advisory`,
+so the blockers inform without gating early work. Otherwise the gate is
+`pass`.
+
+Each item is scored as follows.
+
+- Falsifiability passes if at least one prediction is point, interval or
+  directional, that is, a claim that forbids some observation.
+- Predictive precision is the share of predictions that are point or
+  interval, and passes at 0.5 or above.
+- Prediction severity averages one value per prediction, its declared
+  `severity` where it has one and otherwise the computed severity of the
+  [`tf_severity()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_severity.md)
+  rubric, and passes at 0.5 or above. With no predictions, it warns with
+  a score of 0. A declared value counts as given, and the dossier prints
+  it beside the rubric’s value, with a note when it exceeds that value
+  by more than 0.2. The rubric’s value reads the same type label as
+  predictive precision and the same named rival as diagnosticity, so a
+  prediction that declares no severity is credited for those features
+  twice. The item grades claims before any data: the severity of a test
+  in Mayo’s (2018) sense depends on the design and the data, which no
+  item reads.
+- Parsimony assesses only the auxiliary assumptions added in response to
+  an anomaly, those whose `added_for` names the prediction they answer.
+  It fails if any of them is ad hoc, that is, if no prediction it
+  protects other than that anomaly is corroborated (Lakatos, 1970), and
+  passes otherwise. With no such assumption, it is `n/a`. Core
+  assumptions do not count against a theory, since every derivation
+  relies on auxiliaries (Meehl, 1990a) and declaring them makes the
+  theory’s protective belt visible. With no prior version to compare,
+  every prediction an assumption protects counts as support, so the
+  amendment appraisal is the stricter check, since it counts only the
+  content an amended version adds.
+- Construct non-redundancy passes when the redundancy screen flags no
+  pair of construct definitions, and warns with a score of 0 otherwise.
+  The screen flags near-duplicate definitions and a definition contained
+  in another, as described below. With fewer than two constructs, it is
+  `n/a`.
+- Construct clarity is the share of constructs that carry a definition,
+  a measurement and boundary conditions, and passes only at 1.
+- Scope passes when boundary conditions are stated, either for the
+  theory or on every construct.
+- Mechanism is the share of propositions whose statement names a
+  mechanism, a bare correlation being no help, and passes only at 1.
+- Causal testability passes if at least one proposition states a causal
+  relation, that is, one of the five directed relations: increases,
+  decreases, causes, mediates or moderates. The item checks that such a
+  relation is present and nothing more. The `causal_dag` export, which
+  takes the five directed relations as arrows and an association between
+  two of their constructs as a bidirected edge, is not checked for
+  acyclicity: a theory whose causal relations form a feedback loop, as
+  the panic-network example does, is emitted as written. dagitty accepts
+  such a graph but reads it by d-separation, which a model with feedback
+  is guaranteed to satisfy only in special cases, a linear model among
+  them (Bongers et al., 2021). Reading the graph for the conditional
+  independencies it implies is the job of
+  [`tf_implications()`](https://pablobernabeu.github.io/theoryforge/r/reference/tf_implications.md),
+  which checks for acyclicity and by default refuses a cyclic graph.
+  With the sigma option it reads a cyclic graph by sigma-separation,
+  whose statements hold when each feedback loop has a unique equilibrium
+  (Bongers et al., 2021), and it then derives one statement for the
+  panic-network example. The shipped modality-switching example is
+  acyclic and gets the same statements either way.
+- Diagnosticity is the share of predictions that name a registered
+  alternative they are declared to discriminate from, and passes once at
+  least one does. The alternative is declared, not verified. The theory
+  records nothing the rival predicts, so no function checks that the
+  prediction would tell the two apart, and the 0.1 bonus that the
+  severity rubric gives such a prediction rests on the same declaration.
+- Formalisation passes if the theory declares a formal model of a
+  recognised type, `ode`, `abm`, `network` or `sem`. Any other type,
+  `none` included, does not count.
+- Derivation chain is the share of predictions that cite at least one
+  proposition and cite only declared propositions, and passes only at 1.
+  Otherwise, it fails. It checks references only, so it does not show
+  that a prediction follows from what it cites. With no predictions, it
+  is `n/a`.
+
+## Scope and limits
+
+The checklist is a structural and lexical screen, not a substantive
+review. Each item asks whether a required property is present in the
+theory object, such as a boundary-conditions field or a mechanism
+string, or what share of a collection exhibits it. The non-redundancy
+screen additionally measures the lexical overlap between construct
+definitions. Being lexical, it cannot detect empirical redundancy: two
+constructs that correlate almost perfectly once measurement error is
+corrected for may be defined in different words (Le et al., 2010), and
+telling them apart needs data, as in Rönkkö and Cho’s (2022) guideline
+for assessing discriminant validity. No item reads or judges the content
+of a definition, a mechanism or a boundary condition. A theory can score
+highly by being completely and precisely specified while resting on a
+false premise, and can score poorly for being under-specified while
+resting on a sound one. The aggregate score indexes how completely a
+theory is specified against the checklist. It says nothing about whether
+the theory is true or well-reasoned.
+
+The weights that combine the twelve items into the aggregate score, and
+the five numeric thresholds (the two redundancy thresholds, the
+embedding threshold, the minimum precision share and the minimum mean
+severity), are the package’s own defaults. They are not derived from an
+external validation study. They are fixed in the shipped checklist file,
+and every report records that file’s version as `checklist_version`, so
+scores stay comparable across theories. The package offers no option to
+substitute other weights or thresholds. A field with different norms can
+recombine the per-item scores the report lists, but the result is not
+comparable with the default aggregate. The gate reflects only two of the
+twelve items, falsifiability and the derivation chain. A theory can show
+`gate: pass` while several other items are `warn` or `fail`, so the gate
+reports a minimal precondition for testing and the item table carries
+the rest. Read the two together with the aggregate score.
+
+## How the other outputs are computed
+
+Every prediction declares one of four types, and both the rigour
+checklist and the severity rubric read that label. An existence
+prediction asserts that an effect or relation exists, without a
+direction. A directional prediction asserts a sign or an order, which
+covers comparisons, interactions, the invariance of a direction across
+groups and claims that an effect occurs only when a condition holds. An
+interval prediction asserts that a quantity lies in a stated range, the
+range the theory permits. A point prediction asserts one value, with the
+tolerance that measurement requires. Its width is measurement tolerance,
+not latitude the theory allows, and that is what separates it from an
+interval. The labels are self-declared, and no function checks a
+statement against its type.
+
+The severity rubric ranks the form of each prediction’s claim before any
+data. It gives each prediction a base risk fixed by its type: existence
+0.1, directional 0.4, interval 0.7 and point 0.9. The order follows
+Popper’s (1959, sections 31–33) comparison of falsifiability: of two
+nested claims about one quantity, the one that forbids more is the more
+falsifiable. The reported risk score is this base. The computed severity
+then adjusts it. A merely directional prediction is discounted by 25 per
+cent, following Meehl’s (1967, 1990b) argument that a bare sign risks
+little because almost everything in psychology correlates a little. A
+prediction that names a registered alternative in its `diagnostic_vs`
+field, declaring that it would discriminate between the theories, earns
+a bonus of 0.1. The declaration is not verified, since nothing in the
+theory records what the rival predicts. The computed severity is the
+discounted base plus the bonus, capped at 1. The four base values, the
+discount and the bonus are the package’s conventions, and neither Popper
+nor Meehl gives them. The .25 and .30 that Meehl (1990b) mentions are
+sizes of those ambient correlations, a different quantity from the
+discount. Because the rubric reads only the declared type and the named
+alternatives, it says nothing about how severely a claim has been
+tested, which depends on the design and the data.
+
+The construct redundancy screen reduces each construct definition to a
+set of content tokens. The text is first folded by a fixed table that
+both twins share. Accented Latin letters go to their ASCII base (`é` to
+`e`, `ß` to `ss`), Greek and Cyrillic letters to small unaccented ones,
+and ASCII letters are lowercased. The text is then split on anything
+that is not a letter, mark or digit in any script, and tokens shorter
+than three characters or in a small English stop-word list are dropped.
+Other scripts are compared as written, so case, accents and the Unicode
+normalisation form count there, and text written without spaces, such as
+Chinese, forms one token per run. The similarity of two constructs is
+the Jaccard index of their token sets, the size of the intersection
+divided by the size of the union, and their overlap is the overlap
+coefficient, the size of the intersection divided by the size of the
+smaller set. The screen reports every construct pair with both values.
+It flags a pair for review when the similarity reaches 0.85, which marks
+a near-duplicate, or when both definitions hold at least three tokens
+and the overlap reaches 0.85, which marks one definition contained in
+the other. The two motivation constructs of the weak example are such a
+pair: one definition adds “towards goals” to the other, so their
+similarity is 0.8 and their overlap 1. This is a deliberately simple
+lexical screen, and its two thresholds are default working values. An
+optional embedding-based screen is available for a semantic comparison.
+It has a cosine threshold of its own, since how high a cosine runs
+depends on the embedding model.
+
+The amendment appraisal compares an amended theory with a prior version
+by what the two claim, not by the identifiers of their predictions.
+Lakatos (1970, p. 118) calls a problemshift progressive when the new
+theory predicts a fact its predecessor did not and some of that excess
+content is corroborated, and degenerating when it is not. The appraisal
+turns this into rules. A prediction that changed only its identifier,
+with the same statement and type, is reported as renamed and is not new.
+A new prediction derived only from propositions the prior already held,
+with the same endpoints and relation, articulates old content and is
+reported as such. A new auxiliary assumption is new content, so a
+prediction it protects is not an articulation. A prediction is
+corroborated when at least one test outcome passes it and none fails it,
+so a failed replication leaves it mixed. An assumption added in response
+to an anomaly names the prediction it answers in its `added_for`. It is
+ad hoc unless a prediction it protects that is new in this version,
+other than the anomaly, is corroborated, since accommodating the anomaly
+is no independent support. The verdict is progressive when a
+corroborated new prediction adds content, no assumption is ad hoc and no
+corroborated prediction was dropped. It is degenerating when an
+assumption is ad hoc and no corroborated prediction adds content.
+Lakatos’s scheme is a dichotomy, and neutral is theoryforge’s label for
+an amendment that meets neither of these two rules. The lists returned
+tell its cases apart. An amendment may add no predictions, only ones not
+yet tested (in `new_predictions` but not `corroborated_new`) or only
+articulations of old content (`articulated`). It may also set a
+corroborated advance against an ad hoc assumption or a dropped
+corroboration (`ad_hoc_assumptions`, `dropped_corroborated`). Dropped
+predictions that were never tested (`content_lost`) and new failures of
+retained ones (`new_anomalies`) are reported without changing the
+verdict. The appraisal reads a test outcome’s `registered` only to
+report which corroborations were preregistered
+(`corroborated_new_registered`). It reads no date, no `severity_at_test`
+and no `version` field, so which version is the prior is the caller’s
+responsibility.
+
+The theory landscape sets the theory against a literature corpus and
+labels each theme by how many of the theory’s accounts address it,
+counting the focal theory and its registered alternatives. An account
+addresses a theme when a word of its construct labels, or of an
+alternative’s label and key constructs, appears among the theme’s
+keywords, and the result lists the words that matched. Three kinds of
+word never match. Words carried by more than a set share of the records,
+half by default, belong to the whole field. Words of the theory’s title
+name the phenomenon that every account explains, so a construct word
+that also appears in the title does not match. Words such as theory,
+model and account name a kind of account. A theme that no account
+touches is under-theorised, one that a single account touches is
+covered, and one that two or more touch is crowded. The labels count the
+registered accounts only, so an under-theorised theme may be addressed
+by an account the theory does not register. A crowded theme calls for
+predictions that discriminate between its accounts, and does not show
+that any of them is redundant. The themes are the connected components
+of the keyword co-occurrence graph. On a real corpus, a few keywords
+carried by most records join nearly every keyword into one component,
+and the package warns when one theme holds more than half the linked
+keywords. The simple-centres method of co-word analysis (Coulter et al.,
+1998; Cobo et al., 2011) bounds each theme instead. It weights each pair
+of keywords by its equivalence index and grows each theme from its
+strongest link to at most ten keywords. Each theme is then placed in the
+strategic diagram by its centrality and density (Callon et al., 1991),
+split at their medians.
+
+The simulation makes each construct a state variable, and each directed
+proposition contributes a signed coupling between two states, positive
+for increases, causes and mediates and negative for decreases, scaled by
+the coupling gain. Moderates and associates couple nothing, and the
+`functional_form` field is not read. Every state also decays towards
+zero at the damping rate, and all states start from a common initial
+value, so constructs with the same incoming couplings follow the same
+trajectory. The trajectory is the sequence of state vectors. It is a
+deliberately transparent linear system, meant to expose the qualitative
+dynamics a network of propositions implies. Fitting data is not what it
+is for. A linear system has one equilibrium, or a continuum of them when
+its matrix is singular. It never has two separate ones, so it cannot
+show the bistability that formal models of panic disorder rely on
+(Robinaugh et al., 2024). In a network without directed cycles, every
+eigenvalue of the system equals minus the damping rate. Such a theory
+decays at that rate in the long run, but not in its transients: at the
+default gain and damping, the last construct of a five-construct chain
+rises to 5.77 times its initial value before it decays. The regime of a
+theory with feedback loops is set by the coupling gain against the
+damping. The record lists the propositions that couple nothing and any
+pair of constructs carrying couplings of both signs, which offset each
+other.
+
+Two methods propagate the system. The exact method multiplies the state
+at every step by the matrix exponential of the system matrix times the
+step size, which it computes by scaling and squaring a Taylor polynomial
+(Moler & Van Loan, 2003). Each row is then the solution of the linear
+system at its time, whatever the step size. The Euler method, the
+default for this release, takes fixed explicit steps. Its step is stable
+only when `|1 + dt·λ| < 1` for every eigenvalue `λ` of the coupling
+matrix minus the damping. In a network without directed cycles, once the
+step size times the damping exceeds 2, the states explode with
+alternating sign although the system they approximate decays. Raising
+the damping therefore does not cure a divergence and can cause one. A
+smaller step size cures it, as does a smaller coupling gain when the
+network’s own feedback outgrows the damping. Euler steps also inflate a
+sustained oscillation into growth, so a run warns when its trajectory
+departs from the exact one by more than 5 per cent. The default will
+change to the exact method in the next minor release. A run whose values
+grow beyond what can be rounded stops with a message naming the step and
+the construct.
+
+## References
+
+Bacharach, S. B. (1989). Organizational theories: Some criteria for
+evaluation. *The Academy of Management Review*, *14*(4), 496–515.
+<https://doi.org/10.5465/amr.1989.4308374>
+
+Bongers, S., Forré, P., Peters, J., & Mooij, J. M. (2021). Foundations
+of structural causal models with cycles and latent variables. *The
+Annals of Statistics*, *49*(5), 2885–2915.
+<https://doi.org/10.1214/21-AOS2064>
+
+Callon, M., Courtial, J. P., & Laville, F. (1991). Co-word analysis as a
+tool for describing the network of interactions between basic and
+technological research: The case of polymer chemistry. *Scientometrics*,
+*22*(1), 155–205. <https://doi.org/10.1007/BF02019280>
+
+Cobo, M. J., López-Herrera, A. G., Herrera-Viedma, E., & Herrera, F.
+(2011). An approach for detecting, quantifying, and visualizing the
+evolution of a research field: A practical application to the Fuzzy Sets
+Theory field. *Journal of Informetrics*, *5*(1), 146–166.
+<https://doi.org/10.1016/j.joi.2010.10.002>
+
+Coulter, N., Monarch, I., & Konda, S. (1998). Software engineering as
+seen through its research literature: A study in co-word analysis.
+*Journal of the American Society for Information Science*, *49*(13),
+1206–1223.
+[](https://doi.org/10.1002/(SICI)1097-4571(1998)49:13%3C1206::AID-ASI7%3E3.0.CO;2-F)<https://doi.org/10.1002/(SICI)1097-4571(1998)49:13%3C1206>::AID-ASI7\>3.0.CO;2-F
+
+Cronbach, L. J., & Meehl, P. E. (1955). Construct validity in
+psychological tests. *Psychological Bulletin*, *52*(4), 281–302.
+<https://doi.org/10.1037/h0040957>
+
+Eronen, M. I., & Bringmann, L. F. (2021). The theory crisis in
+psychology: How to move forward. *Perspectives on Psychological
+Science*, *16*(4), 779–788. <https://doi.org/10.1177/1745691620970586>
+
+Fiedler, K. (2017). What constitutes strong psychological science? The
+(neglected) role of diagnosticity and a priori theorizing. *Perspectives
+on Psychological Science*, *12*(1), 46–61.
+<https://doi.org/10.1177/1745691616654458>
+
+Flake, J. K., & Fried, E. I. (2020). Measurement schmeasurement:
+Questionable measurement practices and how to avoid them. *Advances in
+Methods and Practices in Psychological Science*, *3*(4), 456–465.
+<https://doi.org/10.1177/2515245920952393>
+
+Guest, O., & Martin, A. E. (2021). How computational modeling can force
+theory building in psychological science. *Perspectives on Psychological
+Science*, *16*(4), 789–802. <https://doi.org/10.1177/1745691620970585>
+
+Kelley, T. L. (1927). *Interpretation of educational measurements*.
+World Book Company.
+
+Lakatos, I. (1970). Falsification and the methodology of scientific
+research programmes. In I. Lakatos & A. Musgrave (Eds.), *Criticism and
+the growth of knowledge* (pp. 91–196). Cambridge University Press.
+<https://doi.org/10.1017/cbo9781139171434.009>
+
+Lawson, K. M., & Robins, R. W. (2021). Sibling constructs: What are
+they, why do they matter, and how should you handle them? *Personality
+and Social Psychology Review*, *25*(4), 344–366.
+<https://doi.org/10.1177/10888683211047101>
+
+Le, H., Schmidt, F. L., Harter, J. K., & Lauver, K. J. (2010). The
+problem of empirical redundancy of constructs in organizational
+research: An empirical investigation. *Organizational Behavior and Human
+Decision Processes*, *112*(2), 112–125.
+<https://doi.org/10.1016/j.obhdp.2010.02.003>
+
+Mayo, D. G. (2018). *Statistical inference as severe testing: How to get
+beyond the statistics wars*. Cambridge University Press.
+<https://doi.org/10.1017/9781107286184>
+
+Meehl, P. E. (1967). Theory-testing in psychology and physics: A
+methodological paradox. *Philosophy of Science*, *34*(2), 103–115.
+<https://doi.org/10.1086/288135>
+
+Meehl, P. E. (1990a). Appraising and amending theories: The strategy of
+Lakatosian defense and two principles that warrant it. *Psychological
+Inquiry*, *1*(2), 108–141. <https://doi.org/10.1207/s15327965pli0102_1>
+
+Meehl, P. E. (1990b). Why summaries of research on psychological
+theories are often uninterpretable. *Psychological Reports*, *66*(1),
+195–244. <https://doi.org/10.2466/pr0.1990.66.1.195>
+
+Moler, C., & Van Loan, C. (2003). Nineteen dubious ways to compute the
+exponential of a matrix, twenty-five years later. *SIAM Review*,
+*45*(1), 3–49. <https://doi.org/10.1137/S00361445024180>
+
+Platt, J. R. (1964). Strong inference. *Science*, *146*(3642), 347–353.
+<https://doi.org/10.1126/science.146.3642.347>
+
+Popper, K. R. (1959). *The logic of scientific discovery*. Hutchinson.
+
+Robinaugh, D. J., Haslbeck, J. M. B., Ryan, O., Fried, E. I., & Waldorp,
+L. J. (2021). Invisible hands and fine calipers: A call to use formal
+theory as a toolkit for theory construction. *Perspectives on
+Psychological Science*, *16*(4), 725–743.
+<https://doi.org/10.1177/1745691620974697>
+
+Robinaugh, D. J., Haslbeck, J. M. B., Waldorp, L. J., Kossakowski, J.
+J., Fried, E. I., Millner, A. J., McNally, R. J., Ryan, O., de Ron, J.,
+van der Maas, H. L. J., van Nes, E. H., Scheffer, M., Kendler, K. S., &
+Borsboom, D. (2024). Advancing the network theory of mental disorders: A
+computational model of panic disorder. *Psychological Review*, *131*(6),
+1482–1508. <https://doi.org/10.1037/rev0000515>
+
+Rönkkö, M., & Cho, E. (2022). An updated guideline for assessing
+discriminant validity. *Organizational Research Methods*, *25*(1), 6–47.
+<https://doi.org/10.1177/1094428120968614>
+
+Scheel, A. M., Tiokhin, L., Isager, P. M., & Lakens, D. (2021). Why
+hypothesis testers should spend less time testing hypotheses.
+*Perspectives on Psychological Science*, *16*(4), 744–755.
+<https://doi.org/10.1177/1745691620966795>
+
+Suddaby, R. (2010). Editor’s comments: Construct clarity in theories of
+management and organization. *Academy of Management Review*, *35*(3),
+346–357. <https://doi.org/10.5465/amr.35.3.zok346>
+
+Sutton, R. I., & Staw, B. M. (1995). What theory is not. *Administrative
+Science Quarterly*, *40*(3), 371–384. <https://doi.org/10.2307/2393788>
+
+Szollosi, A., Kellen, D., Navarro, D. J., Shiffrin, R., van Rooij, I.,
+Van Zandt, T., & Donkin, C. (2020). Is preregistration worthwhile?
+*Trends in Cognitive Sciences*, *24*(2), 94–95.
+<https://doi.org/10.1016/j.tics.2019.11.009>
+
+Textor, J., van der Zander, B., Gilthorpe, M. S., Liśkiewicz, M., &
+Ellison, G. T. H. (2016). Robust causal inference using directed acyclic
+graphs: The R package ‘dagitty’. *International Journal of
+Epidemiology*, *45*(6), 1887–1894. <https://doi.org/10.1093/ije/dyw341>
+
+Whetten, D. A. (1989). What constitutes a theoretical contribution? *The
+Academy of Management Review*, *14*(4), 490–495.
+<https://doi.org/10.5465/amr.1989.4308371>
