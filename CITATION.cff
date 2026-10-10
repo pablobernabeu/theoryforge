@@ -9,8 +9,22 @@ authors:
     orcid: "https://orcid.org/0000-0003-1083-2460"
     email: pcbernabeu@gmail.com
 version: "0.6.0"
-date-released: "2026-08-21"
+# The R and Python packages share this version. The date is the day 0.6.0 first
+# became public, on PyPI. CRAN published the R package on 2026-09-01.
+date-released: "2026-08-27"
+# This file describes both packages, so its DOI is the Zenodo concept DOI, which
+# archives every GitHub release of the repository and resolves to the latest.
 doi: "10.5281/zenodo.21229964"
+# Both DOIs, since doi holds one. The R package's own citation, in
+# citation("theoryforge") and on its website, gives the DOI CRAN assigned to it,
+# which names the R package alone.
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.21229964"
+    description: "Every GitHub release of the repository, with both packages, archived on Zenodo."
+  - type: doi
+    value: "10.32614/CRAN.package.theoryforge"
+    description: "The R package on CRAN, across all its versions."
 license: MIT
 repository-code: "https://github.com/pablobernabeu/theoryforge"
 url: "https://pablobernabeu.github.io/theoryforge/"

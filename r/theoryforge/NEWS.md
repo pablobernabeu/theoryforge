@@ -1,5 +1,16 @@
 # theoryforge (development version)
 
+* `citation("theoryforge")` and the website give the DOI that CRAN assigned to
+  the package, 10.32614/CRAN.package.theoryforge, in place of the Zenodo concept
+  DOI. It names the R package across all its versions, and it is the DOI that
+  the CRAN page and the citation R generates for a CRAN package already gave, so
+  the R package no longer circulates under two. Zenodo still archives every
+  GitHub release of the repository, which carries the Python twin as well.
+  `CITATION.cff` describes both packages, so it keeps the Zenodo DOI and now
+  lists the CRAN DOI beside it. Its release date is now the day 0.6.0 first
+  became public, when the Python package was published on 2026-08-27, where it
+  gave a date on which no release of 0.6.0 appeared.
+
 * The literature article's recipe for turning a scopusflow corpus into a
   theoryforge corpus keys cited works by Scopus identifier, folds DOI and
   keyword case and writes a missing year as null. The earlier recipe split one

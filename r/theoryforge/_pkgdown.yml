@@ -77,12 +77,15 @@ home:
         title: Community
         text: >
           [Contributing guide](CONTRIBUTING.html)
+      # The DOI is the one CRAN assigned, which names the R package across its
+      # versions. It is set as text, as lexsync's site sets it, so that it can
+      # wrap in the narrow sidebar: the <wbr> allows a break after the slash.
       cite:
         title: Citation
         text: |
           [How to cite theoryforge](articles/about.html)
 
-          [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
+          DOI [10.32614/<wbr>CRAN.package.theoryforge](https://doi.org/10.32614/CRAN.package.theoryforge)
 
 navbar:
   structure:

@@ -166,11 +166,14 @@ python scripts/parity_check.py
 Please cite theoryforge if it contributes to work you publish. The About page on each
 documentation site carries the citation and a BibTeX entry, for
 [R](https://pablobernabeu.github.io/theoryforge/r/articles/about.html) and for
-[Python](https://pablobernabeu.github.io/theoryforge/python/about/). The repository also ships
-[`CITATION.cff`](CITATION.cff), which drives GitHub's "Cite this repository" button. Releases
-are archived on Zenodo under the concept DOI
-[10.5281/zenodo.21229964](https://doi.org/10.5281/zenodo.21229964), which always resolves to
-the latest version, so a citation stays current without naming one.
+[Python](https://pablobernabeu.github.io/theoryforge/python/about/). The one for the R package
+gives the DOI that CRAN assigned on publication,
+[10.32614/CRAN.package.theoryforge](https://doi.org/10.32614/CRAN.package.theoryforge), which
+covers every version of the R package. The one for the Python package gives the concept DOI of
+the Zenodo archive, which holds every GitHub release of both packages,
+[10.5281/zenodo.21229964](https://doi.org/10.5281/zenodo.21229964). The repository also ships
+[`CITATION.cff`](CITATION.cff), which records both DOIs and drives GitHub's "Cite this
+repository" button.
 
 ## Licence
 
