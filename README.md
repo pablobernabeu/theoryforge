@@ -171,9 +171,10 @@ gives the DOI that CRAN assigned on publication,
 [10.32614/CRAN.package.theoryforge](https://doi.org/10.32614/CRAN.package.theoryforge), which
 covers every version of the R package. The one for the Python package gives the concept DOI of
 the Zenodo archive, which holds every GitHub release of both packages,
-[10.5281/zenodo.21229964](https://doi.org/10.5281/zenodo.21229964). The repository also ships
-[`CITATION.cff`](CITATION.cff), which records both DOIs and drives GitHub's "Cite this
-repository" button.
+[10.5281/zenodo.21229964](https://doi.org/10.5281/zenodo.21229964), since PyPI assigns no DOI.
+The repository also ships [`CITATION.cff`](CITATION.cff), which drives GitHub's "Cite this
+repository" button. It describes both packages, so it gives the Zenodo DOI, which favours
+neither, and lists each package's identifiers.
 
 ## Licence
 

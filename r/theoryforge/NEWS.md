@@ -6,8 +6,9 @@
   the CRAN page and the citation R generates for a CRAN package already gave, so
   the R package no longer circulates under two. Zenodo still archives every
   GitHub release of the repository, which carries the Python twin as well.
-  `CITATION.cff` describes both packages, so it keeps the Zenodo DOI and now
-  lists the CRAN DOI beside it. Its release date is now the day 0.6.0 first
+  `CITATION.cff` describes both packages, so it keeps the Zenodo DOI, which
+  favours neither, and now lists each package's identifiers, marked with the
+  package they name. Its release date is now the day 0.6.0 first
   became public, when the Python package was published on 2026-08-27, where it
   gave a date on which no release of 0.6.0 appeared.
 
