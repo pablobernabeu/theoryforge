@@ -1,16 +1,19 @@
 # theoryforge (development version)
 
 * `citation("theoryforge")` and the website give the DOI that CRAN assigned to
-  the package, 10.32614/CRAN.package.theoryforge, in place of the Zenodo concept
-  DOI. It names the R package across all its versions, and it is the DOI that
-  the CRAN page and the citation R generates for a CRAN package already gave, so
-  the R package no longer circulates under two. Zenodo still archives every
-  GitHub release of the repository, which carries the Python twin as well.
-  `CITATION.cff` describes both packages, so it keeps the Zenodo DOI, which
-  favours neither, and now lists each package's identifiers, marked with the
-  package they name. Its release date is now the day 0.6.0 first
-  became public, when the Python package was published on 2026-08-27, where it
-  gave a date on which no release of 0.6.0 appeared.
+  the package, <https://doi.org/10.32614/CRAN.package.theoryforge>, in place of
+  the Zenodo concept DOI. It names the R package across all its versions, and it
+  is the DOI that the CRAN page and the citation R generates for a CRAN package
+  already gave, so the R package no longer circulates under two. Zenodo still
+  archives every GitHub release of the repository, which carries the Python twin
+  as well. `CITATION.cff` describes both packages, so it keeps the Zenodo DOI,
+  which favours neither, and now lists each package's identifiers, marked with
+  the package they name. Its release date is now the day 0.6.0 first became
+  public, when the Python package was published on 2026-08-27, where it gave a
+  date on which no release of 0.6.0 appeared. The CRAN DOI and the Zenodo DOI
+  are shown as full links on the website and in the README. The README gains a
+  badge for the DOI CRAN assigned, for GitHub and CRAN, which the home page
+  leaves out of its sidebar, where the DOI is already given under Citation.
 
 * The literature article's recipe for turning a scopusflow corpus into a
   theoryforge corpus keys cited works by Scopus identifier, folds DOI and

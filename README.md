@@ -7,7 +7,7 @@
 [![PyPI](https://img.shields.io/pypi/v/theoryforge)](https://pypi.org/project/theoryforge/)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
+[![DOI 10.5281/zenodo.21229964](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
 <!-- badges: end -->
 
 Systematic theory development: twin, feature-parity R and Python packages for a
@@ -168,10 +168,10 @@ documentation site carries the citation and a BibTeX entry, for
 [R](https://pablobernabeu.github.io/theoryforge/r/articles/about.html) and for
 [Python](https://pablobernabeu.github.io/theoryforge/python/about/). The one for the R package
 gives the DOI that CRAN assigned on publication,
-[10.32614/CRAN.package.theoryforge](https://doi.org/10.32614/CRAN.package.theoryforge), which
+<https://doi.org/10.32614/CRAN.package.theoryforge>, which
 covers every version of the R package. The one for the Python package gives the concept DOI of
 the Zenodo archive, which holds every GitHub release of both packages,
-[10.5281/zenodo.21229964](https://doi.org/10.5281/zenodo.21229964), since PyPI assigns no DOI.
+<https://doi.org/10.5281/zenodo.21229964>, since PyPI assigns no DOI.
 The repository also ships [`CITATION.cff`](CITATION.cff), which drives GitHub's "Cite this
 repository" button. It describes both packages, so it gives the Zenodo DOI, which favours
 neither, and lists each package's identifiers.

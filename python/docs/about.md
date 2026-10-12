@@ -32,7 +32,7 @@ bibtex = "\n".join(
         "  year   = {2026},",
         f"  note   = {{Python package version {version}}},",
         f"  doi    = {{{doi}}},",
-        f"  url    = {{https://doi.org/{doi}}},",
+        "  url    = {https://pypi.org/project/theoryforge/},",
         "}",
     ]
 )
@@ -83,9 +83,9 @@ text is reproduced on this site's [licence page](licence.md).
 ## Versioning and archival
 
 Releases are tagged on [GitHub](https://github.com/pablobernabeu/theoryforge/releases) and
-archived on [Zenodo](https://doi.org/10.5281/zenodo.21229964). The concept DOI,
-10.5281/zenodo.21229964, always resolves to the latest version, so a citation stays current
-without naming a version. The [changelog](changelog.md) records what changed in each release.
+archived on Zenodo. The concept DOI, <https://doi.org/10.5281/zenodo.21229964>, always resolves
+to the latest version, so a citation stays current without naming a version. The
+[changelog](changelog.md) records what changed in each release.
 
 ## Contributing and support
 

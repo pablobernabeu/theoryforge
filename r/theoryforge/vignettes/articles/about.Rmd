@@ -84,14 +84,13 @@ text is reproduced on this site's [licence page](../LICENSE.html).
 
 ## Versioning and archival
 
-CRAN assigned the package the DOI
-[10.32614/CRAN.package.theoryforge](https://doi.org/10.32614/CRAN.package.theoryforge) on
+CRAN assigned the package the DOI <https://doi.org/10.32614/CRAN.package.theoryforge> on
 publication. It names the R package across all its versions, so the version in the citation
 identifies the release used. Releases of the repository, which carry the Python twin as well,
 are tagged on [GitHub](https://github.com/pablobernabeu/theoryforge/releases) and archived on
-[Zenodo](https://doi.org/10.5281/zenodo.21229964), where the concept DOI,
-10.5281/zenodo.21229964, resolves to the latest archived release and each release has a DOI of
-its own. The [changelog](../news/index.html) records what changed in each release.
+Zenodo, where the concept DOI, <https://doi.org/10.5281/zenodo.21229964>, resolves to the
+latest archived release and each release has a DOI of its own. The
+[changelog](../news/index.html) records what changed in each release.
 
 ## Contributing and support
 

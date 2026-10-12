@@ -50,4 +50,6 @@ theoryforge is written and maintained by
 [Pablo Bernabeu](https://pablobernabeu.github.io). The R and
 Python packages share one specification and are released under the MIT licence.
 
-Archived on Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
+If theoryforge contributes to published work, please [cite it](about.md#citing-theoryforge).
+Its citation gives the concept DOI <https://doi.org/10.5281/zenodo.21229964>, which resolves to
+the latest release archived on Zenodo.

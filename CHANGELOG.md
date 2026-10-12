@@ -465,6 +465,13 @@ version and a single behavioural contract
   next minor release. Pass `method="euler"` to keep the current trajectories.
 
 ### Documentation
+- The CRAN DOI and the Zenodo DOI are shown as full links on the two sites and in the
+  READMEs. The Python home page gives the Zenodo concept DOI,
+  <https://doi.org/10.5281/zenodo.21229964>, in place of the Zenodo badge, and the About
+  pages no longer hang the DOI's link on the word Zenodo. The Python BibTeX entry's `url`
+  gives the PyPI page, so a style that prints both fields no longer shows the DOI twice.
+  The R package's README gains a badge for the DOI CRAN assigned, which the R home page
+  leaves out of its sidebar, where the DOI is already given under Citation.
 - Both methodology pages, the docstring and the R help page state what the simulation
   leaves out: one gain for every coupling, `causes` and `mediates` taken as positive,
   `moderates` and `associates` coupling nothing, `functional_form` not read and a common

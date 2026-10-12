@@ -6,7 +6,7 @@
 [![PyPI](https://img.shields.io/pypi/v/theoryforge)](https://pypi.org/project/theoryforge/)
 [![Python versions](https://img.shields.io/pypi/pyversions/theoryforge)](https://pypi.org/project/theoryforge/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
+[![DOI 10.5281/zenodo.21229964](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
 <!-- badges: end -->
 
 Systematic theory development: a rigorous, reproducible workflow for building, developing and
@@ -144,7 +144,9 @@ adds an opt-in, embedder-dependent screen, and `osf_push` deposits to OSF, dry-r
 Please cite theoryforge if it contributes to work you publish. The
 [About page](https://pablobernabeu.github.io/theoryforge/python/about/) carries the citation
 with a BibTeX entry, and a short note on the developer. The repository also ships
-`CITATION.cff`, which drives GitHub's "Cite this repository" button.
+`CITATION.cff`, which drives GitHub's "Cite this repository" button. The citation gives the
+concept DOI of the Zenodo archive, which holds every GitHub release of both packages,
+<https://doi.org/10.5281/zenodo.21229964>, since PyPI assigns no DOI.
 
 ## Licence
 

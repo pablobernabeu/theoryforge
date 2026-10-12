@@ -5,6 +5,7 @@
 [![CI](https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml/badge.svg)](https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/license/MIT)
+[![DOI 10.32614/CRAN.package.theoryforge](https://img.shields.io/badge/DOI-10.32614%2FCRAN.package.theoryforge-blue.svg)](https://doi.org/10.32614/CRAN.package.theoryforge)
 <!-- badges: end -->
 
 Systematic theory development: a rigorous, reproducible workflow for building, developing and
@@ -85,6 +86,9 @@ exactly how every reported value is computed, see
 ```r
 citation("theoryforge")
 ```
+
+The DOI that CRAN assigned to the package is
+<https://doi.org/10.32614/CRAN.package.theoryforge>, and it covers every version.
 
 The [About page](https://pablobernabeu.github.io/theoryforge/r/articles/about.html) carries the
 same citation with a BibTeX entry, and a short note on the developer. The repository also ships
