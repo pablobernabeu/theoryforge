@@ -111,6 +111,25 @@ jobs:
           assert tf.tokens("Émotion") == {"emotion"}
           print("packaged schema:", sorted(p.name for p in files("theoryforge").joinpath("schema").iterdir()))
           PY
+      # python/README.md is the page PyPI shows, so its quick start is the first
+      # code a new user runs, straight after pip install and with no clone. Its
+      # first python block runs here as written, from outside the checkout with
+      # the installed wheel, so a read from a path into the repository fails.
+      - name: Run the README's quick start against the installed wheel
+        run: |
+          python - python/README.md "$RUNNER_TEMP/readme_quick_start.py" <<'PY'
+          import re
+          import sys
+          with open(sys.argv[1], encoding="utf-8") as fh:
+              text = fh.read()
+          blocks = re.findall(r"^```python[ \t]*\n(.*?)^```", text, flags=re.S | re.M)
+          if not blocks:
+              sys.exit(f"{sys.argv[1]} has no python block")
+          with open(sys.argv[2], "w", encoding="utf-8") as fh:
+              fh.write(blocks[0])
+          PY
+          cd "$RUNNER_TEMP"
+          "$RUNNER_TEMP/wheel-venv/bin/python" readme_quick_start.py
 
   # The floor in pyproject is a promise to anyone resolving against an older
   # stack, and nothing tested it. A failure here means the floor needs raising

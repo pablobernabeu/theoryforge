@@ -557,6 +557,18 @@ version and a single behavioural contract
   fits as it stands. A single-indicator construct is treated as measured without error,
   and manipulations and categorical predictors with more than two levels have to be
   re-specified by hand.
+- The README no longer says that construct non-redundancy is checked against the field, and
+  the API page no longer says that the redundancy screen compares constructs against it. The
+  screen compares the definitions within one theory. The README now says that the packages
+  map a theory and its registered alternatives onto the themes of a literature corpus.
+- The quick start on the PyPI page needed a clone of the repository. It now reads the
+  bundled examples through `example_path()`, so it runs straight after `pip install`, and
+  CI runs it against the installed wheel from outside the repository. The page's logo has
+  an absolute address, since PyPI showed the relative one as a broken image.
+- The 0.6.0 entry gave 2026-08-21, a day on which no release appeared, and is now dated
+  2026-08-27, the day 0.6.0 was released on GitHub and PyPI. It also records that CRAN
+  published the R package's 0.6.0 on 2026-09-01. The 0.1.0 entry no longer calls 0.1.0 a
+  CRAN release, since the R package first reached CRAN with 0.6.0.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and
@@ -609,7 +621,9 @@ version and a single behavioural contract
   definition contained in another and a theory whose only relation is `mediates`.
 
 
-## [0.6.0] - 2026-08-21
+## [0.6.0] - 2026-08-27
+
+The R package reached CRAN with this version (published 2026-09-01).
 
 ### Fixed
 - The two engines wrote different bytes on Windows. Every file the package writes now
@@ -838,7 +852,8 @@ the tests and the specification (`API_SPEC.md`) are updated with them.
 ## [0.1.0] - 2026-07-10
 
 This is the first public release: a rigorous, reproducible workflow for building, developing and
-testing scientific theories, delivered as feature-parity R (CRAN) and Python (PyPI) packages.
+testing scientific theories, delivered as feature-parity R and Python (PyPI) packages. The R
+package reached CRAN with 0.6.0.
 
 ### Core (P0)
 - `theory.schema.json` + `rigor_checklist.yaml` as the shared, versioned source of truth,

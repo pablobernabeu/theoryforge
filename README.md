@@ -13,8 +13,8 @@
 Systematic theory development: twin, feature-parity R and Python packages for a
 rigorous, reproducible workflow of building, developing and testing scientific theories. A
 theory is treated as a versioned, machine-checkable object. The packages scaffold those three
-modes, apply a theory-rigour checklist, auto-generate diagrams and connect to the bibliometric
-literature so that construct non-redundancy is checked against the actual field.
+modes, apply a theory-rigour checklist, auto-generate diagrams and map a theory and its
+registered alternatives onto the themes of a literature corpus.
 
 ## Documentation
 

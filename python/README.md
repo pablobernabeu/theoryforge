@@ -1,4 +1,4 @@
-# theoryforge (Python) <img src="docs/assets/logo.png" align="right" height="138" alt="theoryforge hex logo" />
+# theoryforge (Python) <img src="https://raw.githubusercontent.com/pablobernabeu/theoryforge/main/python/docs/assets/logo.png" align="right" height="138" alt="theoryforge hex logo" />
 
 <!-- badges: start -->
 [![CI](https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml/badge.svg)](https://github.com/pablobernabeu/theoryforge/actions/workflows/ci.yml)
@@ -54,14 +54,14 @@ pip install -e ".[dev]"
 
 ## Quick start
 
-The example theories live in `fixtures/` at the root of the repository, so run
-the lines below from a clone, with `python/` as the working directory.
+The package ships the example theories and corpora, and `example_path()` gives the path
+of each, so the lines below run straight after `pip install`.
 
 ```python
 import theoryforge as tf
 
 # read + check an existing theory
-t = tf.read("../fixtures/panic-network.theory.yaml")
+t = tf.read(tf.example_path("panic-network.theory.yaml"))
 t.validate()                       # required fields and enums of the schema
 print(t.report("json"))            # 12-item rigour checklist + gate
 print(t.diagram("nomological_net"))# Graphviz DOT
@@ -82,8 +82,8 @@ b.validate(full=True)              # also every type, unique ids and every cross
 
 # DEVELOP: appraise an amendment by content, as progressive, degenerating or neutral.
 # v2 adds a proposition and a prediction derived from it, which a registered test corroborates.
-v1 = tf.read("../fixtures/panic-network.theory.yaml")
-v2 = tf.read("../fixtures/panic-network-2026-v2.theory.yaml")
+v1 = tf.read(tf.example_path("panic-network.theory.yaml"))
+v2 = tf.read(tf.example_path("panic-network-2026-v2.theory.yaml"))
 print(v2.appraise_amendment(v1))   # -> {'verdict': 'progressive', ...}
 
 # TEST: the pre-data severity rubric + a preregistration document
@@ -91,15 +91,14 @@ t.severity()                       # per-prediction risk + computed severity
 print(t.preregister())             # markdown prereg
 
 # LITERATURE: map the field, then position the theory against it
-corpus = tf.read_corpus("../fixtures/panic-corpus.yaml")
+corpus = tf.read_corpus(tf.example_path("panic-corpus.yaml"))
 tf.litmap(corpus)                  # keyword co-occurrence, themes, co-citation
 t.landscape(corpus)                # -> each theme under_theorised, covered or crowded, with matched words
 # tf.fetch_corpus("panic disorder theory")  # optional OpenAlex fetch (network call)
 ```
 
-The `../fixtures/*.yaml` files referenced above are sample theories that live in the
-[project repository](https://github.com/pablobernabeu/theoryforge). Adjust the paths to
-your own theory files when running the examples.
+`example_names()` lists the bundled files, and a theory of your own is read the same way,
+from the path of its YAML or JSON file.
 
 ## Test
 

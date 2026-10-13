@@ -48,8 +48,8 @@ was made of.
 
 ## Redundancy
 
-Screen a theory's constructs for lexical redundancy against each other and
-against the field, deterministically, with an opt-in embedding variant.
+Screen the definitions of a theory's constructs for lexical redundancy,
+deterministically, with an opt-in embedding variant.
 
 ::: theoryforge.tokens
 
