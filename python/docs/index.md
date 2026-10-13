@@ -36,11 +36,11 @@ pip install theoryforge
 ```python
 import theoryforge as tf
 
-t = tf.read("panic-network.theory.yaml")
+t = tf.read(tf.example_path("panic-network.theory.yaml"))
 t.check()                       # 12-item rigour checklist + gate
 t.severity()                    # pre-data severity rubric of claim form
 t.preregister()                 # preregistration document
-corpus = tf.read_corpus("panic-corpus.yaml")
+corpus = tf.read_corpus(tf.example_path("panic-corpus.yaml"))
 t.landscape(corpus)             # themes by how many registered accounts address them
 ```
 

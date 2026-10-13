@@ -10,19 +10,6 @@ article_path <- function() {
   testthat::test_path("..", "..", "vignettes", "articles", "literature.Rmd")
 }
 
-# The lines of one knitr chunk, found by its label.
-chunk_code <- function(path, label) {
-  lines <- readLines(path, encoding = "UTF-8", warn = FALSE)
-  start <- grep(sprintf("^```\\{r %s[,}]", label), lines)
-  if (length(start) != 1L) {
-    stop(sprintf("expected one `%s` chunk in %s, found %d",
-                 label, basename(path), length(start)), call. = FALSE)
-  }
-  fences <- grep("^```\\s*$", lines)
-  end <- fences[fences > start][1L]
-  lines[(start + 1L):(end - 1L)]
-}
-
 # Three citing records cite the same two works. The first work's DOI arrives
 # upper-case, lower-case and not at all; keywords differ only in case and in
 # surrounding space; the third record has no year. The empty data frame and

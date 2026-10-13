@@ -1,9 +1,9 @@
 """Access to the example theories shipped inside the package.
 
-The R twin reaches the same files through ``system.file("fixtures", ...)``, so a
-reader who installed only one half still has something to run. The files are
-copies of ``fixtures/*.yaml`` at the repository root, written by
-``scripts/gen_golden.py`` and gated in CI, so they cannot drift.
+The R twin reaches the same files through ``tf_example_path()`` and
+``tf_example_names()``, so a reader who installed only one half still has
+something to run. The files are copies of ``fixtures/*.yaml`` at the repository
+root, written by ``scripts/gen_golden.py`` and gated in CI, so they cannot drift.
 """
 from __future__ import annotations
 

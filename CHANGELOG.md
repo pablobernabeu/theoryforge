@@ -612,6 +612,22 @@ version and a single behavioural contract
   PRP-QUANT asks for (Bosnjak et al., 2022). The article called it suitable for deposit
   and the document a registry would receive. The `preregister()` and `dossier()`
   docstrings, the R help pages and both pages describe the new lines and sections.
+- Every example on the Python site runs as shown, the diagrams are rendered at build
+  time (two pasted figures had drifted from their code) and the methodology table quotes
+  the checklist itself. The workflow and literature guides now read the bundled examples
+  through `example_path()`. Their visible code read a `fixtures` directory that a hidden
+  block found in a clone of the repository, so a reader's copy failed with a `NameError`.
+  The home page read its examples from the working directory. The eight Graphviz
+  figures are drawn by `render_diagram()` when the site is built, so the docs workflow
+  installs Graphviz and the render extra. The pasted context figure lacked two of the
+  panic network's five scope conditions, and the development roadmap still showed the
+  score, numbering and criteria of an earlier checklist. Both methodology pages read the
+  criterion column of their table from the checklist the package ships, and a check that
+  the checklist gains without a name on the page stops the build. The docstring of
+  `theoryforge.examples` and the getting-started page name `tf_example_path()` and
+  `tf_example_names()` as the R counterparts, and CONTRIBUTING says that a local docs
+  build needs the Graphviz binaries. A test runs each guide's visible code from an empty
+  directory.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and

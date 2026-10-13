@@ -107,10 +107,12 @@ markdown_extensions:
         - .
         - ..
 
-# Build with:  pip install -e .[docs] && mkdocs build
+# Build with:  pip install -e ".[docs,render]" && mkdocs build
 # (the docs extra carries mkdocs-material, mkdocstrings[python] and
 # markdown-exec, and the editable install lets markdown-exec's example blocks
-# import theoryforge itself)
+# import theoryforge itself). The diagrams are drawn when the site is built,
+# through the render extra, so a local build also needs the Graphviz binaries
+# on the PATH, which the docs workflow installs with apt.
 
 # The released version shown beside the title in the header (updated on release).
 extra:

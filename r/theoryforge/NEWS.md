@@ -446,6 +446,11 @@
   edge, and when a prediction has several outcomes, each label carries the
   outcome's date. A prediction tested once is drawn as before.
 
+* When the site is built, the methodology article reads the criterion column
+  of its table of rigour checks from the checklist the package ships, so the
+  table follows the checklist. A check that the checklist gains without a name
+  in the article stops the build, and a test evaluates the chunk.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

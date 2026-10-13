@@ -79,9 +79,16 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install Graphviz
+        # The guides draw their diagrams when the site is built, through
+        # render_diagram() and the render extra's graphviz library, which runs
+        # Graphviz's dot. Without it, the figure blocks fail and the strict build
+        # stops.
+        run: sudo apt-get update && sudo apt-get install -y graphviz
+
       - name: Build mkdocs site
         run: |
-          python -m pip install --quiet -e ./python "mkdocs-material" "mkdocstrings[python]" "markdown-exec"
+          python -m pip install --quiet -e "./python[docs,render]"
           cd python && mkdocs build --strict -d ../site/python
 
       - name: Write landing page

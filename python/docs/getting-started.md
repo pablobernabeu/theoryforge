@@ -12,7 +12,7 @@ pip install theoryforge
 
 ## Sample theories
 
-The package ships a few example theories, so nothing needs downloading. `tf.example_path(name)` returns the path of one of them, and `tf.example_names()` lists what is available; the R twin reaches the same files through `system.file("fixtures", ...)`. Point the path at a theory file of your own whenever you prefer. Every result shown on this page is produced by running the code when the page is built.
+The package ships a few example theories, so nothing needs downloading. `tf.example_path(name)` returns the path of one of them, and `tf.example_names()` lists what is available. The R twin offers the same two functions as `tf_example_path()` and `tf_example_names()`. Point the path at a theory file of your own whenever you prefer. Every result shown on this page is produced by running the code when the page is built.
 
 ## A first session
 
@@ -67,53 +67,13 @@ print(t.diagram("causal_dag"))
 
 With the optional render extra (`pip install theoryforge[render]`), `render_diagram(t, "nomological_net")` wraps the DOT in a `graphviz.Source` that displays inline in a notebook. The `causal_dag` view is the one exception, since dagitty syntax renders in a dagitty tool rather than Graphviz. Rendered, the nomological-net DOT printed above reads as the figure below.
 
-<div class="tf-figure tf-diagram"><svg width="446pt" height="69pt"
- viewBox="0.00 0.00 445.97 69.20" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(14.4 54.8)">
-<title>nomological_net</title>
-<!-- c_arousal -->
-<g id="node1" class="node">
-<title>c_arousal</title>
-<path fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" d="M76.2612,-40.602C76.2612,-40.602 11.9128,-40.602 11.9128,-40.602 5.9128,-40.602 -.0872,-34.602 -.0872,-28.602 -.0872,-28.602 -.0872,-11.798 -.0872,-11.798 -.0872,-5.798 5.9128,.202 11.9128,.202 11.9128,.202 76.2612,.202 76.2612,.202 82.2612,.202 88.2612,-5.798 88.2612,-11.798 88.2612,-11.798 88.2612,-28.602 88.2612,-28.602 88.2612,-34.602 82.2612,-40.602 76.2612,-40.602"/>
-<text text-anchor="middle" x="44.087" y="-23.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Physiological</text>
-<text text-anchor="middle" x="44.087" y="-10.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">arousal</text>
-</g>
-<!-- c_perceived_threat -->
-<g id="node2" class="node">
-<title>c_perceived_threat</title>
-<path fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" d="M255.0714,-38.2C255.0714,-38.2 174.9202,-38.2 174.9202,-38.2 168.9202,-38.2 162.9202,-32.2 162.9202,-26.2 162.9202,-26.2 162.9202,-14.2 162.9202,-14.2 162.9202,-8.2 168.9202,-2.2 174.9202,-2.2 174.9202,-2.2 255.0714,-2.2 255.0714,-2.2 261.0714,-2.2 267.0714,-8.2 267.0714,-14.2 267.0714,-14.2 267.0714,-26.2 267.0714,-26.2 267.0714,-32.2 261.0714,-38.2 255.0714,-38.2"/>
-<text text-anchor="middle" x="214.9958" y="-16.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Perceived threat</text>
-</g>
-<!-- c_arousal&#45;&gt;c_perceived_threat -->
-<g id="edge1" class="edge">
-<title>c_arousal&#45;&gt;c_perceived_threat</title>
-<path fill="none" stroke="#7b909f" d="M88.5451,-20.2C109.0718,-20.2 133.7345,-20.2 155.8073,-20.2"/>
-<polygon fill="#7b909f" stroke="#7b909f" points="155.8743,-22.6501 162.8743,-20.2 155.8742,-17.7501 155.8743,-22.6501"/>
-<text text-anchor="middle" x="125.566" y="-23.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">increases</text>
-</g>
-<!-- c_perceived_threat&#45;&gt;c_arousal -->
-<g id="edge3" class="edge">
-<title>c_perceived_threat&#45;&gt;c_arousal</title>
-<path fill="none" stroke="#7b909f" d="M162.8635,-5.8055C157.5243,-4.7435 152.1542,-3.8393 146.958,-3.2 128.0852,-.8779 123.0087,-.5869 104.174,-3.2 101.2746,-3.6023 98.3185,-4.1088 95.3497,-4.6931"/>
-<polygon fill="#7b909f" stroke="#7b909f" points="94.7481,-2.3164 88.4207,-6.1851 95.7796,-7.1066 94.7481,-2.3164"/>
-<text text-anchor="middle" x="125.566" y="-6.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">causes</text>
-</g>
-<!-- c_avoidance -->
-<g id="node3" class="node">
-<title>c_avoidance</title>
-<path fill="#e4f1f1" stroke="#1e7b7b" stroke-width="1.1" d="M405.3454,-40.602C405.3454,-40.602 353.6411,-40.602 353.6411,-40.602 347.6411,-40.602 341.6411,-34.602 341.6411,-28.602 341.6411,-28.602 341.6411,-11.798 341.6411,-11.798 341.6411,-5.798 347.6411,.202 353.6411,.202 353.6411,.202 405.3454,.202 405.3454,.202 411.3454,.202 417.3454,-5.798 417.3454,-11.798 417.3454,-11.798 417.3454,-28.602 417.3454,-28.602 417.3454,-34.602 411.3454,-40.602 405.3454,-40.602"/>
-<text text-anchor="middle" x="379.4932" y="-23.5" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">Avoidance</text>
-<text text-anchor="middle" x="379.4932" y="-10.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#12283a">behaviour</text>
-</g>
-<!-- c_perceived_threat&#45;&gt;c_avoidance -->
-<g id="edge2" class="edge">
-<title>c_perceived_threat&#45;&gt;c_avoidance</title>
-<path fill="none" stroke="#7b909f" d="M267.0438,-20.2C288.6829,-20.2 313.5608,-20.2 334.4062,-20.2"/>
-<polygon fill="#7b909f" stroke="#7b909f" points="334.5994,-22.6501 341.5993,-20.2 334.5993,-17.7501 334.5994,-22.6501"/>
-<text text-anchor="middle" x="304.4256" y="-23.2" font-family="Helvetica,sans-Serif" font-size="10.00" fill="#0f6e6e">increases</text>
-</g>
-</g>
-</svg></div>
+```python exec="1" html="1" session="getting-started"
+# Graphviz draws this figure from the DOT above when the page is built, so it
+# always matches the code. The XML header before <svg> is dropped, since the
+# figure goes into the page's HTML.
+svg = tf.render_diagram(t, "nomological_net").pipe(format="svg", encoding="utf-8")
+print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
+```
 
 Run the lexical redundancy screen. This returns every construct pair with two measures of the words their definitions share, the Jaccard similarity and the overlap coefficient, and an `ok`/`review` flag. A pair is marked `review` when the definitions are near duplicates or one is contained in the other, which suggests jingle-jangle redundancy.
 

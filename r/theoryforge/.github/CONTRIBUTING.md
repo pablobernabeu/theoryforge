@@ -29,13 +29,18 @@ devtools::check("r/theoryforge")      # a full R CMD check
 The Python package:
 
 ```bash
-pip install -e "./python[dev,docs]"
+pip install -e "./python[dev,docs,render]"
 cd python
 pytest                 # run the test suite
 ruff check             # lint
 mypy src               # type-check
 mkdocs build --strict  # build the docs
 ```
+
+The documentation build draws the diagrams with Graphviz, so it also needs the
+Graphviz binaries on the PATH. Install them with your system's package manager,
+for example `sudo apt-get install graphviz` or `brew install graphviz`, or from
+<https://graphviz.org/download/>.
 
 ## Conventions
 

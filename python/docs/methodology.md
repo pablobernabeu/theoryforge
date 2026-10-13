@@ -16,22 +16,94 @@ below.
 The twelve checks are set out below with the criterion each one applies and the
 methodological work that motivates it. The name in brackets is the identifier the check
 carries in the report, and the supporting works are given in full in the references at
-the foot of the page.
+the foot of the page. The criteria are quoted from the checklist file the package ships,
+read when this page is built.
 
-| Rigour check | Criterion | Supporting work |
-|---|---|---|
-| Falsifiability (`falsifiability`) | At least one prediction forbids an observation | Popper (1959), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
-| Predictive precision (`precision`) | Predictions are point/interval, not merely directional | [Meehl (1967)](https://doi.org/10.1086/288135), [Meehl (1990a)](https://doi.org/10.1207/s15327965pli0102_1) |
-| Prediction severity (`risk_severity`) | Mean prediction severity (declared, else the claim-form rubric) at or above threshold | Popper (1959), [Meehl (1967)](https://doi.org/10.1086/288135), [Meehl (1990b)](https://doi.org/10.2466/pr0.1990.66.1.195) |
-| Parsimony (`parsimony`) | No auxiliary assumption added in response to an anomaly lacks independent corroboration | [Lakatos (1970)](https://doi.org/10.1017/cbo9781139171434.009), [Meehl (1990a)](https://doi.org/10.1207/s15327965pli0102_1) |
-| Construct non-redundancy (`non_redundancy`) | No pair of construct definitions is a near-duplicate or contained in the other (lexical screen) | Kelley (1927), [Le et al. (2010)](https://doi.org/10.1016/j.obhdp.2010.02.003), [Lawson & Robins (2021)](https://doi.org/10.1177/10888683211047101) |
-| Construct clarity (`construct_clarity`) | Every construct has definition + measurement + boundary conditions | [Suddaby (2010)](https://doi.org/10.5465/amr.35.3.zok346), [Cronbach & Meehl (1955)](https://doi.org/10.1037/h0040957), [Flake & Fried (2020)](https://doi.org/10.1177/2515245920952393) |
-| Scope and boundary conditions (`scope`) | Boundary conditions explicitly stated | [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374) |
-| Mechanism (`logical_why`) | Each proposition states a mechanism, not just a correlation | [Sutton & Staw (1995)](https://doi.org/10.2307/2393788), [Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371) |
-| Causal testability (`causal_testability`) | At least one proposition states a causal relation | [Textor et al. (2016)](https://doi.org/10.1093/ije/dyw341), [Eronen & Bringmann (2021)](https://doi.org/10.1177/1745691620970586) |
-| Diagnosticity (`diagnosticity`) | At least one prediction names a registered alternative it is declared to discriminate from (declared, not verified) | [Platt (1964)](https://doi.org/10.1126/science.146.3642.347), [Fiedler (2017)](https://doi.org/10.1177/1745691616654458) |
-| Formalisation (`formalisation`) | A formal model of a recognised type (ode, abm, network, sem) is declared | [Robinaugh et al. (2021)](https://doi.org/10.1177/1745691620974697), [Guest & Martin (2021)](https://doi.org/10.1177/1745691620970585) |
-| Derivation chain (`derivation_chain`) | Every prediction cites at least one proposition, and every cited id is a declared proposition (reference check only) | [Scheel et al. (2021)](https://doi.org/10.1177/1745691620966795), [Szollosi et al. (2020)](https://doi.org/10.1016/j.tics.2019.11.009) |
+```python exec="1"
+# The criterion column comes from the shipped checklist, so the table changes with
+# it. The names and the supporting works are kept here, keyed by the identifier of
+# each check, and a check that the checklist gains or drops stops the build until
+# this table is brought up to date.
+from theoryforge._resources import checklist
+
+CHECKS = {
+    "falsifiability": (
+        "Falsifiability",
+        "Popper (1959), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374)",
+    ),
+    "precision": (
+        "Predictive precision",
+        "[Meehl (1967)](https://doi.org/10.1086/288135), "
+        "[Meehl (1990a)](https://doi.org/10.1207/s15327965pli0102_1)",
+    ),
+    "risk_severity": (
+        "Prediction severity",
+        "Popper (1959), [Meehl (1967)](https://doi.org/10.1086/288135), "
+        "[Meehl (1990b)](https://doi.org/10.2466/pr0.1990.66.1.195)",
+    ),
+    "parsimony": (
+        "Parsimony",
+        "[Lakatos (1970)](https://doi.org/10.1017/cbo9781139171434.009), "
+        "[Meehl (1990a)](https://doi.org/10.1207/s15327965pli0102_1)",
+    ),
+    "non_redundancy": (
+        "Construct non-redundancy",
+        "Kelley (1927), [Le et al. (2010)](https://doi.org/10.1016/j.obhdp.2010.02.003), "
+        "[Lawson & Robins (2021)](https://doi.org/10.1177/10888683211047101)",
+    ),
+    "construct_clarity": (
+        "Construct clarity",
+        "[Suddaby (2010)](https://doi.org/10.5465/amr.35.3.zok346), "
+        "[Cronbach & Meehl (1955)](https://doi.org/10.1037/h0040957), "
+        "[Flake & Fried (2020)](https://doi.org/10.1177/2515245920952393)",
+    ),
+    "scope": (
+        "Scope and boundary conditions",
+        "[Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371), "
+        "[Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374)",
+    ),
+    "logical_why": (
+        "Mechanism",
+        "[Sutton & Staw (1995)](https://doi.org/10.2307/2393788), "
+        "[Whetten (1989)](https://doi.org/10.5465/amr.1989.4308371)",
+    ),
+    "causal_testability": (
+        "Causal testability",
+        "[Textor et al. (2016)](https://doi.org/10.1093/ije/dyw341), "
+        "[Eronen & Bringmann (2021)](https://doi.org/10.1177/1745691620970586)",
+    ),
+    "diagnosticity": (
+        "Diagnosticity",
+        "[Platt (1964)](https://doi.org/10.1126/science.146.3642.347), "
+        "[Fiedler (2017)](https://doi.org/10.1177/1745691616654458)",
+    ),
+    "formalisation": (
+        "Formalisation",
+        "[Robinaugh et al. (2021)](https://doi.org/10.1177/1745691620974697), "
+        "[Guest & Martin (2021)](https://doi.org/10.1177/1745691620970585)",
+    ),
+    "derivation_chain": (
+        "Derivation chain",
+        "[Scheel et al. (2021)](https://doi.org/10.1177/1745691620966795), "
+        "[Szollosi et al. (2020)](https://doi.org/10.1016/j.tics.2019.11.009)",
+    ),
+}
+
+items = checklist()["items"]
+ids = [item["id"] for item in items]
+unnamed = [i for i in ids if i not in CHECKS]
+dropped = [i for i in CHECKS if i not in ids]
+if unnamed or dropped:
+    raise RuntimeError(
+        "the table of rigour checks does not match the checklist: "
+        f"no name for {unnamed}, no check for {dropped}"
+    )
+print("| Rigour check | Criterion | Supporting work |")
+print("|---|---|---|")
+for item in items:
+    name, works = CHECKS[item["id"]]
+    print(f"| {name} (`{item['id']}`) | {item['criterion']} | {works} |")
+```
 
 ## How the rigour score is computed
 
