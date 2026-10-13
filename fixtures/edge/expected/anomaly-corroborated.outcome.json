@@ -132,5 +132,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: An assumption corroborated beyond its anomaly\n\n- Theory ID: edge-anomaly-corroborated\n- Schema version: 1.0\n- Maturity: testing\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [directional] Threat arousal rises with arousal. (derives from: p1)\n2. [point] Threat arousal peaks one second after arousal. (derives from: p1)\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.9, risk 0.9\n"
+  "preregister": "# Preregistration: An assumption corroborated beyond its anomaly\n\n- Theory ID: edge-anomaly-corroborated\n- Schema version: 1.0\n- Maturity: testing\n- Derivation references resolve: yes\n\n## Hypotheses\n1. [directional] Threat arousal rises with arousal. (derives from: p1)\n   - Auxiliary assumptions: x1 (added for h1)\n   - Test record: already tested: failed\n2. [point] Threat arousal peaks one second after arousal. (derives from: p1)\n   - Auxiliary assumptions: x1 (added for h1)\n   - Test record: already tested: passed\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.9, risk 0.9\n"
 }

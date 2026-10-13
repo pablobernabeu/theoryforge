@@ -15,9 +15,9 @@ trailing newline).
 }
 \description{
 Assembles a reviewer-facing audit bundle: the header, the rigour-checklist
-table, the severity list, the provenance list, and the appended
-preregistration document. The output is deterministic, so the same theory
-always yields the same dossier.
+table, the severity list, the test record, the evidence, the provenance list
+and the appended preregistration document. The output is deterministic, so
+the same theory always yields the same dossier.
 }
 \details{
 The header gives the checklist version, the aggregate score, the checklist
@@ -25,7 +25,10 @@ coverage, the gate and the blockers that failed. The rigour table prints
 \code{n/a} for an item with nothing to assess. The severity list gives each
 prediction's claim-form rubric values and, when the prediction declares a
 severity, that value too, with a note when it exceeds the rubric by more
-than 0.2.
+than 0.2. The test record lists every test outcome in file order, with what
+it found and the observation, date and registration it records. The
+evidence lists the prediction each entry supports, its direction and its
+DOI. The implied independencies appear once, in the preregistration.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

@@ -123,5 +123,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Predictions written as a mapping\n\n- Theory ID: edge-mapping-collection\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: no\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
+  "preregister": "# Preregistration: Predictions written as a mapping\n\n- Theory ID: edge-mapping-collection\n- Schema version: 1.0\n- Maturity: building\n- Derivation references resolve: not applicable (no predictions)\n\n## Hypotheses\n_No predictions specified._\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
 }

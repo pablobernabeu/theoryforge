@@ -132,5 +132,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Mechanisms written as whitespace\n\n- Theory ID: edge-nbsp-mechanism\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [directional] Gamma rises with Alpha. (derives from: p1, p2)\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
+  "preregister": "# Preregistration: Mechanisms written as whitespace\n\n- Theory ID: edge-nbsp-mechanism\n- Schema version: 1.0\n- Maturity: building\n- Derivation references resolve: yes\n\n## Hypotheses\n1. [directional] Gamma rises with Alpha. (derives from: p1, p2)\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
 }

@@ -357,14 +357,26 @@ built on the measurement model that `compile_sem()` writes
 
 ### Preregistration
 
-`preregister()` renders a Markdown preregistration document. It lists the
-hypotheses with their derivations and a severity line for each prediction.
+`preregister()` renders the hypotheses section of a preregistration as
+Markdown. Each prediction is listed with its claim type and derivation, the
+auxiliary assumptions that protect it, the registered rivals it discriminates
+and its test record. A hypothesis that a recorded outcome has already tested is
+therefore marked as such. The header gives the theory's version, when it has
+one, and says whether every prediction cites declared propositions, a check of
+references that does not show that a prediction follows from them. A section
+lists the conditional independencies that the causal graph implies, or says why
+there are none, and a severity line for each prediction closes the document.
 Called without an argument it returns the text.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
 text = t.preregister()
 print(text)
 ```
+
+The theory file holds no study design, sampling plan, analysis plan or
+inference criteria, so a registry needs more than this section. A template such
+as PRP-QUANT sets out the rest
+([Bosnjak et al., 2022](https://doi.org/10.1037/amp0000879)).
 
 Passing a path writes the document to disk as well as returning it.
 
@@ -375,11 +387,11 @@ t.preregister("panic-prereg.md")
 ### Audit bundle
 
 `dossier()` assembles a single Markdown document for reviewers. It composes
-the rigour checklist, the severity table, the provenance log and the
-preregistration into one artefact. The output is deterministic, so it can be
-committed or attached to a submission. The bundle opens with the header and the
-rigour checklist, and the severity table, provenance log and preregistration
-follow.
+the rigour checklist, the severity table, the test record, the evidence, the
+provenance log and the preregistration into one artefact. The output is
+deterministic, so it can be committed or attached to a submission. The bundle
+opens with the header and the rigour checklist, and the severity table, test
+record, evidence, provenance log and preregistration follow.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
 print(t.dossier())
@@ -743,8 +755,9 @@ print(t.diagram("context"))
 </g>
 </svg></div>
 
-The `pipeline` view links each prediction to its recorded test outcome, so
-predictions still awaiting a test are visible as loose ends.
+The `pipeline` view links each prediction to its recorded test outcomes, one
+node for each. Predictions still awaiting a test are visible as loose ends, and
+a failed replication stands beside the pass it followed.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
 print(t.diagram("pipeline"))

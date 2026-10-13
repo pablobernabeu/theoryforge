@@ -152,20 +152,32 @@ built on the measurement model that `tf_compile_sem()` writes
 
 ## Preregistration
 
-`tf_preregister()` renders a preregistration document as a single markdown
-string. It records the predictions, each with its claim type and derivation,
-plus the severity values, in a fixed order, so the output is stable across
-runs and suitable for deposit. Because the string is markdown, it renders
-below as the document a registry would receive.
+`tf_preregister()` renders the hypotheses section of a preregistration as a
+single markdown string. Each prediction is listed with its claim type and
+derivation, the auxiliary assumptions that protect it, the registered rivals it
+discriminates and its test record. The header gives the theory's version, when
+it has one, and says whether every prediction cites declared propositions, a
+check of references that does not show that a prediction follows from them. A
+section lists the conditional independencies that the causal graph implies, or
+says why there are none, and the severity values close the document. The output
+is the same on every run, and because it is markdown, it renders below.
 
 ```{r prereg, results = "asis"}
 prereg <- tf_preregister(theory)
 cat(prereg)
 ```
 
+The first prediction has already passed a registered test, and the document
+marks it as tested where it would otherwise read as a hypothesis still to be
+tested. The feedback loop leaves the implied independencies underived by
+default, and the document gives the reason. The theory file holds no study
+design, sampling plan, analysis plan or inference criteria, so a registry
+needs more than this section. A template such as PRP-QUANT sets out the rest
+([Bosnjak et al., 2022](https://doi.org/10.1037/amp0000879)).
+
 Passing a `path` writes the same markdown to disk with LF line endings, which
-is convenient when the document is committed to a repository or uploaded to a
-registry.
+is convenient when the document is committed to a repository or completed for
+a registry.
 
 ```{r prereg-write}
 prereg_path <- tempfile(fileext = ".md")
@@ -247,18 +259,19 @@ installed.
 
 `tf_dossier()` assembles a single markdown document for a reviewer or editor.
 It collects the header, the rigour-checklist table, the severity list, the
-provenance trail and the preregistration into one bundle, so a reader can
-follow the theory from its claims through to its planned tests in one place.
-The opening of the bundle, through the rigour-checklist table, renders below.
+test record, the evidence, the provenance trail and the preregistration into
+one bundle. A reader can then follow the theory from its claims through to the
+tests it has met and those it still faces in one place. The opening of the
+bundle, through the rigour-checklist table, renders below.
 
 ```{r dossier, results = "asis"}
 dossier <- tf_dossier(theory)
 cat(strsplit(dossier, "\n## Severity", fixed = TRUE)[[1]][1])
 ```
 
-The severity list, the provenance trail and the preregistration follow in the
-full document, which is deterministic, so the same theory always produces the
-same dossier.
+The severity list, the test record, the evidence, the provenance trail and the
+preregistration follow in the full document, which is deterministic, so the
+same theory always produces the same dossier.
 
 ## Rendering and depositing
 
@@ -344,8 +357,9 @@ cat(
 )
 ```
 
-The `pipeline` view links each prediction to its recorded test outcome, so
-predictions still awaiting a test are visible as loose ends.
+The `pipeline` view links each prediction to its recorded test outcomes, one
+node for each. Predictions still awaiting a test are visible as loose ends, and
+a failed replication stands beside the pass it followed.
 
 ```{r pipeline}
 cat(tf_diagram(theory, "pipeline"))

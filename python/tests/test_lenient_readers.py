@@ -303,10 +303,12 @@ predictions:
 """
     t = _read(tmp_path, text)
     prereg = t.preregister()
-    assert "None" not in prereg
+    # The word opens the placeholder of an empty independencies section, which
+    # is the one place it may appear.
+    assert "None" not in prereg.replace("\n_None: ", "\n")
     assert prereg.startswith("# Preregistration: \n")
     assert "1. []  (derives from: p1)" in prereg
-    assert "None" not in t.dossier()
+    assert "None" not in t.dossier().replace("\n_None: ", "\n")
     assert t.severity()[0]["type"] == ""
     assert "None" not in t.diagram("context")
     assert t.render_report(tmp_path / "r.qmd")

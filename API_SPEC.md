@@ -346,19 +346,36 @@ The order of the four types (§4) follows Popper's (1959, §§31–33) compariso
 # Preregistration: <title>
 
 - Theory ID: <id>
+- Version: <version.id> (parent <version.parent_id>)
 - Schema version: <schema_version>
 - Maturity: <maturity>
-- Derivation chain verified: <yes|no>   (yes iff rigour item derivation_chain status == "pass")
+- Derivation references resolve: <yes|no|not applicable (no predictions)>
 
 ## Hypotheses
 1. [<type>] <statement> (derives from: <derives_from joined by ", ", or "—" if none>)
+   - Auxiliary assumptions: <id> (core), <id> (added for <added_for>)
+   - Rivals it discriminates: <alternative ids joined by ", ">
+   - Test record: <untested, or "already tested: " and one entry per outcome joined by "; ">
 2. ...
+
+## Implied conditional independencies (derived from the causal graph, not predictions)
+- `<statement>`
+...
 
 ## Severity (pre-data rubric of claim form)
 - <prediction_id>: severity <computed_severity>, risk <risk_score>
 ...
 ```
-(Hypotheses numbered in file order starting at 1; Severity lines in file order using §9 values. If there are no predictions, write `_No predictions specified._` under each section heading instead of a list. A theory without predictions has the derivation_chain status `n/a` (§4), so its derivation line reads `no`.)
+The document is the hypotheses section of a preregistration. The study design, the sampling plan, the analysis plan and the inference criteria that a template such as PRP-QUANT asks for (Bosnjak et al., 2022) are the author's to add. Every value is read through the accessors of §3, "Reading a theory": ids, statements, `added_for`, `date`, `registered` and the two version fields through `text`, `derives_from`, `diagnostic_vs` and `protects` through `str_list`, and `type` and `maturity` through `enum`.
+
+- **Header.** The version line is written only when `version.id` is a nonempty string, and its parenthesis only when `version.parent_id` is one too. The derivation line reads the status of the checklist's derivation_chain item (§4): `yes` for `pass`, `no` for `fail` and `not applicable (no predictions)` for `n/a`, the status of a theory without predictions. The item checks references only, so the line claims no verified derivation.
+- **Hypotheses.** Numbered in file order from 1. The lines under a hypothesis are indented by the width of its number plus two, three spaces up to the ninth, since Markdown nests a line under a numbered item only at that indent. `Auxiliary assumptions` is written when some assumption's `protects` holds the prediction's id, and lists each such assumption in file order, as `<id> (core)` when its `added_for` is not a nonempty string and `<id> (added for <added_for>)` otherwise. `Rivals it discriminates` is written when some entry of `diagnostic_vs` is the id of a registered alternative, and lists those entries once each, in their order. `Test record` is always written. It is `untested` when no test outcome has a `prediction_id` that is the string of the prediction's id, the matching rule of §10, and otherwise `already tested: ` followed by one entry per such outcome, in file order, joined by `; `. An entry is the result, `passed` for `passed: true`, `failed` for `passed: false` and `no result recorded` when `passed` is absent or null, followed by the outcome's `date` and `registered`, those that are nonempty strings, in parentheses and joined by `, `. The registration is written `registered <registered>`, since a bare value could be read as a second date, and the parenthesis is left out when neither is given. A non-boolean `passed` never reaches this point, because `check()` refuses it first (§4).
+- **Implied conditional independencies.** The statements of `implications(theory)` with its default `cycles="refuse"` (§27), in its order, each as a code span, since Markdown reads the underscores of ` _||_ ` as emphasis around the two bars. When there is no statement, one line in italics says why: `_Not derived: <message>._` when `implications` refuses the theory, with the refusal's text (a feedback loop, a repeated construct id or a directed relation naming an undeclared construct), `_None: the theory states no directed relation between constructs._` when its graph has no vertices, `_None: no set of constructs separates any pair the theory leaves unjoined._` when `inseparable` is not empty, and `_None: every pair of constructs in the causal graph is adjacent._` otherwise. The two panic-network fixtures read `_Not derived: implications requires an acyclic causal graph; cycle found: c_arousal -> c_perceived_threat -> c_arousal; set cycles to 'sigma' to derive sigma-separation statements._`, `weak-demo` reads the line for no directed relation, and `modality-switching` lists its six statements.
+- **Severity.** Lines in file order using §9 values.
+
+If there are no predictions, write `_No predictions specified._` under the Hypotheses and Severity headings instead of a list.
+
+Bosnjak, M., Fiebach, C. J., Mellor, D., Mueller, S., O'Connor, D. B., Oswald, F. L., & Sokol, R. I. (2022). A template for preregistration of quantitative research in psychology: Report of the joint psychological societies preregistration task force. *American Psychologist*, *77*(4), 602–615. https://doi.org/10.1037/amp0000879
 
 Format severity/risk with `fmt(x)`: render to 3 decimals, strip trailing zeros and keep at least one decimal, so `1.0 -> "1.0"`, `0.9 -> "0.9"`, `0.667 -> "0.667"`. (R: `sub("\\.$", ".0", sub("0+$", "", sprintf("%.3f", x)))`.)
 
@@ -385,10 +402,11 @@ A row holding a single item emits `  { rank=same; "<row 1>"; }` instead. When al
 <prelude, rankdir=LR>
   "<pred.id>" [label="<pred.id>
 <pred.type>", <fill(prediction)>];
-  "result_<to.prediction_id>" [label="<passed|failed>", <fill(passed|failed)>];
-  "<to.prediction_id>" -> "result_<to.prediction_id>";
+  "result_<node>" [label="<passed|failed>", <fill(passed|failed)>];
+  "<to.prediction_id>" -> "result_<node>";
 }
 ```
+`<node>` is the outcome's `prediction_id` for the first outcome of that id in file order, and `<prediction_id>#<k>` for its k-th outcome from the second on. A replication thus has a node and an edge of its own. Graphviz merges a node declared twice, so the figure showed only the last result, and a passed replication hid an earlier failure. `#` lies outside the ids the shipped theories use, so a name cannot meet a sibling prediction such as `h1_2`, as a `_2` suffix would. When one `prediction_id` has several outcomes, each of their labels gains a last line holding the outcome's `date` (escaped), when that is a nonempty string, so that the outcomes can be told apart. The label of a prediction tested once is unchanged.
 
 **context** (DOT). A `theory` hub (ellipse, labelled by title); each construct (file order) as a node with a `theory -> <c.id>` edge; each top-level `boundary_conditions` entry (file order) as a `scope<i>` note node with a dotted `scope<i> -> theory` edge labelled `holds within`; each alternative (file order) as a dashed node with a dashed `theory -> <alt.id>` edge labelled `contrasts with`:
 ```
@@ -405,8 +423,8 @@ A row holding a single item emits `  { rank=same; "<row 1>"; }` instead. When al
 
 **workflow** (DOT). Four ordered subgraph clusters then the edges. Every cluster opens with `label`, `style="rounded"`, `color="#C4D1D9"`, `fontcolor="#5B7285"`. Clusters: `cluster_build` (constructs, `"<c.id>"` labelled `wrap(c.label, 16)`, construct fill), `cluster_relate` (`"prop_<p.id>"` labelled `<p.id>
 <relation>`, proposition fill), `cluster_predict` (`"pred_<pred.id>"` labelled `<pred.id>
-<type>`, prediction fill), `cluster_test` (`"outcome_<prediction_id>"` labelled `<prediction_id>
-<passed|failed>`, passed/failed fill). Edges, in order: for each proposition `"<from>" -> "prop_<p.id>"`; for each prediction and each of its `derives_from` entries `"prop_<src>" -> "pred_<pred.id>"`; for each test_outcome `"pred_<pid>" -> "outcome_<pid>"`.
+<type>`, prediction fill), `cluster_test` (`"outcome_<node>"` labelled `<prediction_id>
+<passed|failed>`, passed/failed fill, with `<node>` and the date line as in the pipeline view). Edges, in order: for each proposition `"<from>" -> "prop_<p.id>"`; for each prediction and each of its `derives_from` entries `"prop_<src>" -> "pred_<pred.id>"`; for each test_outcome `"pred_<pid>" -> "outcome_<node>"`.
 
 **SVG root element (venn, rigour, severity).** All three chart views open with the same root, `<svg xmlns="http://www.w3.org/2000/svg" width="W" height="H" viewBox="0 0 W H" font-family="sans-serif" font-size="13">`, where `W` and `H` are the view's own natural dimensions given below. The width and height attributes are part of the contract rather than decoration. A viewBox on its own leaves the image with no intrinsic size, so an embedding page scales it to fill the container, and because the three views have different natural widths the same declared 13px type then renders at a different size in each of them. Stating both attributes holds the scale at 1 wherever the SVG is embedded, which is what the rendered Graphviz views already do.
 
@@ -632,6 +650,14 @@ Numbers use `fmt()` (§11), which writes a null, the score of an `n/a` item, as 
 
 - <pid>: severity <fmt(computed_severity)>, risk <fmt(risk_score)>[, declared <fmt(severity)>[ (declared exceeds the rubric by more than 0.2)]]   # per prediction, file order; else "_No predictions specified._"
 
+## Test record
+
+- <prediction_id>: <result>[; observed: <observed>][; date: <date>][; registered: <registered>]   # per test outcome, file order; else "_No test outcomes recorded._"
+
+## Evidence
+
+- supports <supports>: <direction>[; doi: <source_doi>]  # per evidence entry, file order; else "_No evidence recorded._"
+
 ## Provenance
 
 <i>. <action>: <detail>                                  # 1-based; "<i>. <action>" if detail empty; else "_No provenance recorded._"
@@ -642,6 +668,8 @@ Numbers use `fmt()` (§11), which writes a null, the score of an `n/a` item, as 
 (The final `## Preregistration` heading and blank line are the last two list entries; the joined block ends with `\n`, then `preregister(theory)` is appended verbatim.)
 
 A severity line gains `, declared <fmt(severity)>` when the prediction declares a `severity`, and then the note ` (declared exceeds the rubric by more than 0.2)` when `rnd(severity - computed_severity, 3) > 0.2`, with the 0.2 written by `fmt`. The checklist uses the declared value (§4, item 3), and the note shows a reader where it outruns the claim's form. It changes no status. The severity lines of the appended preregistration keep the format of §11.
+
+The test record lists every test outcome, whatever prediction it names. `<result>` is the one of §11 (`passed`, `failed` or `no result recorded`), and each bracketed field is written when it is a nonempty string, read through `text`. In the evidence, `direction` is read through `enum`, so a value outside `corroborates`, `refutes` and `mixed` prints as nothing, and the DOI is written when `source_doi` is a nonempty string. The implied independencies are part of the appended preregistration (§11), so the dossier gives them once.
 
 ## 21. Additional golden artefacts (per theory)
 

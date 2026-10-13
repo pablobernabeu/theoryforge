@@ -129,5 +129,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Collection entries written as bare strings\n\n- Theory ID: edge-scalar-entries\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: no\n\n## Hypotheses\n1. []  (derives from: \u2014)\n\n## Severity (pre-data rubric of claim form)\n- : severity 0.0, risk 0.0\n"
+  "preregister": "# Preregistration: Collection entries written as bare strings\n\n- Theory ID: edge-scalar-entries\n- Schema version: 1.0\n- Maturity: building\n- Derivation references resolve: no\n\n## Hypotheses\n1. []  (derives from: \u2014)\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: the theory states no directed relation between constructs._\n\n## Severity (pre-data rubric of claim form)\n- : severity 0.0, risk 0.0\n"
 }

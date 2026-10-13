@@ -29,6 +29,14 @@
 
 - w1: severity 0.1, risk 0.1, declared 0.2
 
+## Test record
+
+_No test outcomes recorded._
+
+## Evidence
+
+_No evidence recorded._
+
 ## Provenance
 
 _No provenance recorded._
@@ -40,10 +48,14 @@ _No provenance recorded._
 - Theory ID: weak-demo
 - Schema version: 1.0
 - Maturity: building
-- Derivation chain verified: no
+- Derivation references resolve: no
 
 ## Hypotheses
 1. [existence] Motivated people exist. (derives from: —)
+   - Test record: untested
+
+## Implied conditional independencies (derived from the causal graph, not predictions)
+_None: the theory states no directed relation between constructs._
 
 ## Severity (pre-data rubric of claim form)
 - w1: severity 0.1, risk 0.1

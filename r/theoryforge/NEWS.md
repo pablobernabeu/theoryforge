@@ -314,7 +314,7 @@
   value exceeds the rubric's by more than 0.2. `tf_report(format = "html")`
   prints `n/a` for such an item, the development roadmap leaves it out and the
   rigour grid shows it in grey. The preregistration of a theory without
-  predictions now reads `Derivation chain verified: no`, where it said `yes`.
+  predictions no longer reads `Derivation chain verified: yes`.
 
 * `tf_embedding_redundancy()` takes its default threshold from the checklist's
   new `embedding_similarity_max`, 0.85 as before, since how high a cosine runs
@@ -415,6 +415,36 @@
   single-indicator construct is treated as measured without error, and
   manipulations and categorical predictors with more than two levels have to
   be re-specified by hand.
+
+* `tf_preregister()` no longer says that a derivation chain was verified. The
+  check behind the line only finds that each prediction cites declared
+  propositions, so the line now reads `Derivation references resolve`, with
+  `yes`, `no` or `not applicable (no predictions)`. Each hypothesis lists the
+  auxiliary assumptions that protect it, the registered rivals it
+  discriminates and its test record, so a hypothesis that a recorded outcome
+  has already tested is marked as such, with each outcome's result, date and
+  registration. Both corroborated hypotheses of the amended panic example used
+  to read as hypotheses still to be tested. The header gives the version and
+  its parent, and a new section lists the conditional independencies that
+  `tf_implications()` derives with its default settings, or says why there are
+  none. The Developing and testing article calls the output the hypotheses
+  section of a preregistration, to be completed with the design, sampling
+  plan, analysis plan and inference criteria (Bosnjak et al., 2022), where it
+  called it suitable for deposit. The four `prereg.md` and four `dossier.md`
+  golden files change.
+
+* `tf_dossier()` adds a test record, which lists every test outcome with what
+  it found and the observation, date and registration it records. It also adds
+  the evidence, with the prediction each entry supports, its direction and its
+  DOI. The implied independencies appear once, in the appended preregistration.
+
+* The `pipeline` and `workflow` views of `tf_diagram()` show every outcome of a
+  replicated prediction. The outcomes of one prediction were declared as one
+  node, which Graphviz merged, so the figure showed only the last result and a
+  passed replication hid an earlier failure. The second and later outcomes are
+  now `result_<id>#<k>` (`outcome_<id>#<k>` in the workflow), each with its own
+  edge, and when a prediction has several outcomes, each label carries the
+  outcome's date. A prediction tested once is drawn as before.
 
 # theoryforge 0.6.0
 

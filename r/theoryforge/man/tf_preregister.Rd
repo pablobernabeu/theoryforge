@@ -2,7 +2,7 @@
 % Please edit documentation in R/prereg.R
 \name{tf_preregister}
 \alias{tf_preregister}
-\title{Render a preregistration document}
+\title{Render the hypotheses section of a preregistration}
 \usage{
 tf_preregister(theory, path = NULL)
 }
@@ -19,8 +19,39 @@ The preregistration markdown as a single string.
 Produces a deterministic preregistration markdown string for a theory and,
 if \code{path} is given, writes it (LF, single trailing newline).
 }
+\details{
+The header gives the theory id, the version when it has an id (with its
+parent, when one is named), the schema version, the maturity and whether
+every prediction's derivation references resolve: \code{yes}, \code{no} or
+\code{not applicable (no predictions)}. The derivation line reports the
+checklist's reference check, which does not show that a prediction follows
+from the propositions it cites.
+
+Each hypothesis is listed in file order with its claim type, statement and
+derivation, followed by the auxiliary assumptions that protect it
+(\code{core} or \verb{added for <id>}), the registered rivals it discriminates and its
+test record. A hypothesis that a recorded outcome has already tested reads
+\verb{already tested: passed (<date>, registered <where>)}, one entry per
+outcome, and any other reads \code{untested}. A section then lists the
+conditional independencies that \code{\link[=tf_implications]{tf_implications()}} derives from the causal
+graph with its default settings, which are claims the theory makes without
+stating them, or says why there are none. The claim-form severity rubric
+closes the document.
+
+The document is the part of a preregistration that the theory file holds. It
+is to be completed with the study design, the sampling plan, the analysis
+plan and the inference criteria, the sections that a template such as
+PRP-QUANT asks for (Bosnjak et al., 2022).
+}
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_prediction("h1", "Effect is exactly 0.30.", "point")
 cat(tf_preregister(theory))
+}
+\references{
+Bosnjak, M., Fiebach, C. J., Mellor, D., Mueller, S., O'Connor, D. B.,
+Oswald, F. L., & Sokol, R. I. (2022). A template for preregistration of
+quantitative research in psychology: Report of the joint psychological
+societies preregistration task force. \emph{American Psychologist}, 77(4),
+602-615. \doi{10.1037/amp0000879}
 }

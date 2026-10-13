@@ -128,5 +128,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Optional fields of the wrong type\n\n- Theory ID: edge-gaps-types\n- Schema version: 1.0\n- Maturity: testing\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [point] Beta rises with Alpha. (derives from: p1)\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 1.0, risk 0.9\n"
+  "preregister": "# Preregistration: Optional fields of the wrong type\n\n- Theory ID: edge-gaps-types\n- Schema version: 1.0\n- Maturity: testing\n- Derivation references resolve: yes\n\n## Hypotheses\n1. [point] Beta rises with Alpha. (derives from: p1)\n   - Rivals it discriminates: rival\n   - Test record: already tested: passed\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 1.0, risk 0.9\n"
 }

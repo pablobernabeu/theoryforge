@@ -246,7 +246,7 @@ test_that("null entries of a string array are ignored", {
   expect_true(grepl("1. [directional] Beta rises with Alpha. (derives from: —)", text,
                     fixed = TRUE))
   expect_true(grepl("3. [point] Beta is exactly one. (derives from: p1)", text, fixed = TRUE))
-  expect_true(grepl("Derivation chain verified: no", text, fixed = TRUE))
+  expect_true(grepl("Derivation references resolve: no", text, fixed = TRUE))
 })
 
 test_that("a single valid entry beside a null passes the derivation check", {

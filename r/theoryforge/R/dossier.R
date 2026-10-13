@@ -1,7 +1,7 @@
 #' Assemble a reviewer-facing audit bundle as a single Markdown document.
 #'
-#' Composes the rigour report, severity table, provenance and preregistration
-#' document into one deterministic bundle.
+#' Composes the rigour report, severity table, test record, evidence,
+#' provenance and preregistration document into one deterministic bundle.
 #' @name dossier
 #' @keywords internal
 NULL
@@ -13,16 +13,19 @@ NULL
 #' Render a theory audit dossier (Markdown)
 #'
 #' Assembles a reviewer-facing audit bundle: the header, the rigour-checklist
-#' table, the severity list, the provenance list, and the appended
-#' preregistration document. The output is deterministic, so the same theory
-#' always yields the same dossier.
+#' table, the severity list, the test record, the evidence, the provenance list
+#' and the appended preregistration document. The output is deterministic, so
+#' the same theory always yields the same dossier.
 #'
 #' The header gives the checklist version, the aggregate score, the checklist
 #' coverage, the gate and the blockers that failed. The rigour table prints
 #' \code{n/a} for an item with nothing to assess. The severity list gives each
 #' prediction's claim-form rubric values and, when the prediction declares a
 #' severity, that value too, with a note when it exceeds the rubric by more
-#' than 0.2.
+#' than 0.2. The test record lists every test outcome in file order, with what
+#' it found and the observation, date and registration it records. The
+#' evidence lists the prediction each entry supports, its direction and its
+#' DOI. The implied independencies appear once, in the preregistration.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @return The dossier Markdown as a single string (LF line endings, single
@@ -95,6 +98,37 @@ tf_dossier <- function(theory) {
                          .tf_fmt(.tf_DECLARED_MARGIN), ")")
         }
       }
+      lines <- c(lines, line)
+    }
+  }
+
+  # Every outcome, in file order, with the fields it records (API_SPEC.md
+  # section 20). tf_check() above has refused a passed that is not a logical.
+  lines <- c(lines, "", "## Test record", "")
+  tos <- .tf_list(T, "test_outcomes")
+  if (length(tos) == 0L) {
+    lines <- c(lines, "_No test outcomes recorded._")
+  } else {
+    for (t in tos) {
+      line <- paste0("- ", .tf_str(t, "prediction_id"), ": ", .tf_outcome_result(t))
+      for (key in c("observed", "date", "registered")) {
+        value <- .tf_str(t, key)
+        if (.tf_ne_str(value)) line <- paste0(line, "; ", key, ": ", value)
+      }
+      lines <- c(lines, line)
+    }
+  }
+
+  lines <- c(lines, "", "## Evidence", "")
+  evidence <- .tf_list(T, "evidence")
+  if (length(evidence) == 0L) {
+    lines <- c(lines, "_No evidence recorded._")
+  } else {
+    for (e in evidence) {
+      line <- paste0("- supports ", .tf_str(e, "supports"), ": ",
+                     .tf_enum_str(e, "direction", .tf_EVIDENCE_DIRECTION))
+      doi <- .tf_str(e, "source_doi")
+      if (.tf_ne_str(doi)) line <- paste0(line, "; doi: ", doi)
       lines <- c(lines, line)
     }
   }

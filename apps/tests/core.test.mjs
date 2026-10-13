@@ -412,6 +412,46 @@ test("whole-number parameters are rounded before they are run", async () => {
   assert.equal(lastCall(rt).params.min_link, 2);
 });
 
+// ---- CS21: the test record ------------------------------------------------
+
+test("the preregistration is a hypotheses section to complete, and its reading counts the tested ones", async () => {
+  // The guide called the output ready to timestamp before data collection,
+  // and the reading said it preregistered every hypothesis, those a test had
+  // already met included.
+  const text = (records) => "# Preregistration: T\n\n## Hypotheses\n" +
+    records.map((r, i) => (i + 1) + ". [point] Claim. (derives from: p1)\n   - Test record: " + r + "\n").join("") +
+    "\n## Severity (pre-data rubric of claim form)\n";
+  const cases = [
+    [["untested", "untested"], "The document lists 2 hypotheses, none of them tested yet."],
+    [["already tested: passed (2026-05-01, registered osf.io/abcde)", "untested"],
+      "The document lists 2 hypotheses, of which one has already been tested."],
+    [["already tested: passed", "already tested: failed"], "The document lists 2 hypotheses, all of them already tested."],
+    [[], "The theory states no prediction, so the document lists no hypothesis."],
+  ];
+  for (const [records, reading] of cases) {
+    const { ctx, $ } = await boot({}, lineageRuntime({ preregister: { text: text(records) } }));
+    await opButton(ctx, "preregister").click();
+    assert.match($("#opHelp").textContent, /hypotheses section of a preregistration/);
+    await $("#runBtn").click();
+    const about = $("#output .ri-about").textContent;
+    assert.match(about, /design, sampling plan, analysis plan and inference criteria/);
+    assert.doesNotMatch(about, /ready to timestamp/);
+    assert.equal($("#output .ri-interp").textContent, reading);
+  }
+});
+
+test("the pipeline's reading gives each recorded outcome a node of its own", async () => {
+  // The diagram now draws every outcome of a replicated prediction, where the
+  // reading spoke of one outcome per prediction. An SVG answer needs no
+  // Graphviz, so the reading can be checked here.
+  const { ctx, $ } = await boot({}, lineageRuntime({ diagram: { ir: "<svg></svg>" } }));
+  await opButton(ctx, "diagram").click();
+  await choose($("#param-type"), "pipeline");
+  await $("#runBtn").click();
+  assert.equal($("#output .ri-interp").textContent,
+    "Each prediction linked to its recorded test outcomes, one node for each.");
+});
+
 test("the code panel says the code reproduces the result with the installed package", async () => {
   const { $ } = await boot();
   assert.equal($("#codePanel .note").textContent, "Paste into Python to reproduce this result with the installed package.");

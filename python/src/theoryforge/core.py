@@ -634,7 +634,8 @@ class Theory:
         return _implications(self.data, cycles=cycles)
 
     def preregister(self, path=None) -> str:
-        """Render a preregistration document (and write it if a path is given)."""
+        """Render the hypotheses section of a preregistration, writing it to ``path``
+        when one is given (see :func:`theoryforge.preregister`)."""
         return _preregister(self.data, path)
 
     def landscape(self, corpus, min_link: int = 2, max_token_share: float = 0.5,
@@ -659,7 +660,8 @@ class Theory:
         return _compile_sem(self.data)
 
     def dossier(self) -> str:
-        """A reviewer-facing audit bundle of rigour report, severity, provenance, and preregistration."""
+        """A reviewer-facing audit bundle of the rigour report, severity, test record, evidence,
+        provenance and preregistration (see :func:`theoryforge.dossier.dossier`)."""
         return _dossier(self.data)
 
     def simulate(self, steps: int = 10, dt: float = 0.1, k: float = 1.0,

@@ -40,6 +40,13 @@ double-quoted, with a double quote inside it escaped by a backslash, so
 \code{self-efficacy} stays one node where dagitty used to read two. The view
 stops when it would write the id \code{node} or \code{graph}, which dagitty
 refuses even quoted.
+
+The pipeline and workflow views give every test outcome a node of its own.
+The first outcome of a prediction is \verb{result_<id>} (\verb{outcome_<id>} in the
+workflow) and each later one \verb{result_<id>#<k>}, where \verb{<k>} counts the
+prediction's outcomes in file order, so a failed replication is not merged
+into an earlier pass. When a prediction has several outcomes, each label
+also carries the outcome's date.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

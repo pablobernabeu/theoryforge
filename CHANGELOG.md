@@ -294,6 +294,28 @@ version and a single behavioural contract
   zero, and the header names `lavaan::sem()` as the target. API_SPEC section 19 states
   the rules. The four `sem.lavaan` goldens change, and so does the `compile_sem` entry of
   every edge-case record that holds one.
+- `preregister()` no longer says that a derivation chain was verified. The checklist item
+  behind the line only checks that each prediction cites declared propositions, so
+  "Shoe size predicts vocabulary." citing a proposition about arousal read as verified.
+  The line now reads `Derivation references resolve: yes`, `no` or `not applicable (no
+  predictions)`. A hypothesis that a recorded outcome had already tested was listed as a
+  fresh hypothesis, as both corroborated predictions of the amended panic example were.
+  It is now marked `already tested`, with each outcome's result, date and registration.
+- The `pipeline` and `workflow` diagrams declared every outcome of a prediction as one
+  node, which Graphviz merged, so the figure showed only the last result and a passed
+  replication hid an earlier failure. Each outcome now has a node and an edge of its own.
+  The k-th outcome of a prediction, from the second on, is `result_<id>#<k>`
+  (`outcome_<id>#<k>` in the workflow), a name that no sibling id such as `h1_2` can
+  produce, as a `_2` suffix could. When a prediction has several outcomes, each label
+  carries the outcome's date. A prediction tested once is drawn as before, so no diagram
+  golden changes. API_SPEC section 12 states the rule.
+- Apps: the preregistration's guide called the output ready to timestamp before data
+  collection, and its reading said that the document preregistered every hypothesis,
+  those already tested included. The guide now calls it the hypotheses section of a
+  preregistration, to be completed with the design, sampling plan, analysis plan and
+  inference criteria (Bosnjak et al., 2022). The reading counts the hypotheses already
+  tested, and the dossier's help and guide name the test record and the evidence. The
+  pipeline diagram's reading says that each recorded outcome has a node of its own.
 
 ### Changed
 - R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new
@@ -385,12 +407,27 @@ version and a single behavioural contract
   rubric's value, with a note when the declared value exceeds the rubric's by more than
   0.2. `report(format="html")` prints `n/a` for such an item, the development roadmap
   leaves it out and the rigour grid shows it in grey. The preregistration of a theory
-  without predictions now reads `Derivation chain verified: no`, where it said `yes`.
+  without predictions no longer reads `Derivation chain verified: yes`.
   The apps show `n/a` and the coverage, count the items with nothing to assess and show
   the overlap of each construct pair.
 - `embedding_redundancy()` takes its default threshold from the checklist's new
   `embedding_similarity_max`, 0.85 as before, since how high a cosine runs depends on the
   embedding model.
+- The preregistration reports what the theory records about each hypothesis and what its
+  causal graph implies. The header gives the version, with its parent when one is named.
+  Under each hypothesis come the auxiliary assumptions that protect it, each `core` or
+  `added for <id>`, the registered rivals it discriminates and its test record, indented
+  by the width of its number so that Markdown nests them. A new section lists the
+  conditional independencies that `implications()` derives with its default settings,
+  each as a code span so that Markdown keeps the `_||_` notation. When there are none,
+  one line gives the reason: the refusal's text, no directed relation, no set of
+  constructs that separates a pair the theory leaves unjoined or every pair adjacent.
+  Before the provenance, `dossier()` adds a test record, which lists every outcome with
+  its result, observation, date and registration. It also adds the evidence, with what
+  each entry supports, its direction and its DOI. The independencies appear once in the
+  dossier, in the appended preregistration. API_SPEC sections 11 and 20 pin the format.
+  The four `prereg.md` and four `dossier.md` goldens and their R copies change, and so
+  does the `preregister` entry of every edge-case record that holds one.
 
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`
@@ -569,6 +606,12 @@ version and a single behavioural contract
   2026-08-27, the day 0.6.0 was released on GitHub and PyPI. It also records that CRAN
   published the R package's 0.6.0 on 2026-09-01. The 0.1.0 entry no longer calls 0.1.0 a
   CRAN release, since the R package first reached CRAN with 0.6.0.
+- The R article on developing and testing a theory and the Python workflow page call the
+  preregistration the hypotheses section of a preregistration, to be completed with the
+  design, sampling plan, analysis plan and inference criteria that a template such as
+  PRP-QUANT asks for (Bosnjak et al., 2022). The article called it suitable for deposit
+  and the document a registry would receive. The `preregister()` and `dossier()`
+  docstrings, the R help pages and both pages describe the new lines and sections.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and

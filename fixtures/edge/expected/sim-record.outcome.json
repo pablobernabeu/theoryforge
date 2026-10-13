@@ -126,5 +126,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Offsetting couplings and propositions that couple nothing\n\n- Theory ID: edge-sim-record\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: no\n\n## Hypotheses\n_No predictions specified._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
+  "preregister": "# Preregistration: Offsetting couplings and propositions that couple nothing\n\n- Theory ID: edge-sim-record\n- Schema version: 1.0\n- Maturity: building\n- Derivation references resolve: not applicable (no predictions)\n\n## Hypotheses\n_No predictions specified._\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_Not derived: implications requires causal propositions between declared constructs; proposition 'p5' refers to unknown construct 'z'._\n\n## Severity (pre-data rubric of claim form)\n_No predictions specified._\n"
 }

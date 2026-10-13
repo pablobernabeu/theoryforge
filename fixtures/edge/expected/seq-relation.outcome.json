@@ -137,5 +137,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: A relation and a type written as sequences\n\n- Theory ID: edge-seq-relation\n- Schema version: 1.0\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [] Gamma rises with Alpha. (derives from: p1, p2)\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.0, risk 0.0\n"
+  "preregister": "# Preregistration: A relation and a type written as sequences\n\n- Theory ID: edge-seq-relation\n- Schema version: 1.0\n- Maturity: building\n- Derivation references resolve: yes\n\n## Hypotheses\n1. [] Gamma rises with Alpha. (derives from: p1, p2)\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.0, risk 0.0\n"
 }

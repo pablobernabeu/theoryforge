@@ -1,14 +1,15 @@
 """Assemble a reviewer-facing audit bundle as a single Markdown document.
 
-Composes the deterministic outputs (rigour report, severity table, provenance and the
-preregistration document), so the bundle is itself deterministic.
+Composes the deterministic outputs (rigour report, severity table, test record,
+evidence, provenance and the preregistration document), so the bundle is itself
+deterministic.
 """
 from __future__ import annotations
 
-from ._access import field, items, text
+from ._access import EVIDENCE_DIRECTION, enum, field, items, ne_str, text
 from ._num import rnd
 from ._text import trim
-from .prereg import _fmt
+from .prereg import _fmt, _outcome_result
 from .prereg import preregister as _preregister
 from .rigor import check as _check
 from .scoring import severity as _severity
@@ -26,7 +27,11 @@ def dossier(T) -> str:
     ``n/a`` for an item with nothing to assess. The severity list gives each
     prediction's claim-form rubric values and, when the prediction declares a
     severity, that value too, with a note when it exceeds the rubric by more
-    than 0.2. The provenance and the preregistration follow.
+    than 0.2. The test record lists every test outcome in file order, with what
+    it found and the observation, date and registration it records. The
+    evidence lists the prediction each entry supports, its direction and its
+    DOI. The provenance and the preregistration follow, and the implied
+    independencies appear once, in the preregistration.
     """
     data = T.data if hasattr(T, "data") else T
     rep = _check(data)
@@ -70,6 +75,34 @@ def dossier(T) -> str:
                 line += f", declared {_fmt(declared)}"
                 if rnd(declared - s["computed_severity"], 3) > DECLARED_MARGIN:
                     line += f" (declared exceeds the rubric by more than {_fmt(DECLARED_MARGIN)})"
+            lines.append(line)
+
+    # Every outcome, in file order, with the fields it records (API_SPEC.md
+    # section 20). check() above has refused a passed that is not a boolean.
+    lines += ["", "## Test record", ""]
+    tos = items(data, "test_outcomes")
+    if not tos:
+        lines.append("_No test outcomes recorded._")
+    else:
+        for t in tos:
+            line = f"- {text(field(t, 'prediction_id'))}: {_outcome_result(t)}"
+            for key in ("observed", "date", "registered"):
+                value = text(field(t, key))
+                if ne_str(value):
+                    line += f"; {key}: {value}"
+            lines.append(line)
+
+    lines += ["", "## Evidence", ""]
+    evidence = items(data, "evidence")
+    if not evidence:
+        lines.append("_No evidence recorded._")
+    else:
+        for e in evidence:
+            direction = enum(field(e, "direction"), EVIDENCE_DIRECTION) or ""
+            line = f"- supports {text(field(e, 'supports'))}: {direction}"
+            doi = text(field(e, "source_doi"))
+            if ne_str(doi):
+                line += f"; doi: {doi}"
             lines.append(line)
 
     lines += ["", "## Provenance", ""]

@@ -130,5 +130,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Maturity written as a sequence\n\n- Theory ID: edge-seq-maturity\n- Schema version: 1.0\n- Maturity: \n- Derivation chain verified: no\n\n## Hypotheses\n1. [directional] Beta rises with Alpha. (derives from: \u2014)\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
+  "preregister": "# Preregistration: Maturity written as a sequence\n\n- Theory ID: edge-seq-maturity\n- Schema version: 1.0\n- Maturity: \n- Derivation references resolve: no\n\n## Hypotheses\n1. [directional] Beta rises with Alpha. (derives from: \u2014)\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
 }

@@ -4,7 +4,7 @@
 \alias{dossier}
 \title{Assemble a reviewer-facing audit bundle as a single Markdown document.}
 \description{
-Composes the rigour report, severity table, provenance and preregistration
-document into one deterministic bundle.
+Composes the rigour report, severity table, test record, evidence,
+provenance and preregistration document into one deterministic bundle.
 }
 \keyword{internal}

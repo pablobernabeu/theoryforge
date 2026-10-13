@@ -128,5 +128,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: A schema version written as a word\n\n- Theory ID: edge-schema-version-one\n- Schema version: one\n- Maturity: building\n- Derivation chain verified: yes\n\n## Hypotheses\n1. [directional] Beta rises with Alpha. (derives from: p1)\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
+  "preregister": "# Preregistration: A schema version written as a word\n\n- Theory ID: edge-schema-version-one\n- Schema version: one\n- Maturity: building\n- Derivation references resolve: yes\n\n## Hypotheses\n1. [directional] Beta rises with Alpha. (derives from: p1)\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
 }

@@ -43,10 +43,10 @@
       help: "Derives the conditional independencies that the theory's causal graph implies, the claims data can refute. Only constructs that a directed relation (increases, decreases, causes, mediates or moderates) names enter the graph, and an association joins two of them as covariance the theory leaves unexplained. A missing edge is read as no direct effect, so the statements hold only if the graph omits no common cause of two of its constructs. A feedback loop is refused unless cycles is set to sigma, whose statements hold only when every loop has a unique equilibrium.",
       params: [{ id: "cycles", label: "cycles", type: "select", default: "refuse", options: ["refuse", "sigma"] }],
     },
-    { id: "preregister", label: "Preregistration", desc: "Preregistration document",
-      help: "Generates a preregistration document in Markdown: hypotheses numbered in file order with their derivation, and the per-prediction severity." },
+    { id: "preregister", label: "Preregistration", desc: "Hypotheses for a preregistration",
+      help: "Generates the hypotheses section of a preregistration in Markdown. Each hypothesis is listed in file order with its derivation, the auxiliary assumptions that protect it, the rivals it discriminates and its test record. The conditional independencies the causal graph implies and the per-prediction severity follow." },
     { id: "dossier", label: "Audit dossier", desc: "Reviewer-facing bundle",
-      help: "Assembles a reviewer-facing audit bundle in Markdown: the rigour report, severity, provenance and the preregistration in one document." },
+      help: "Assembles a reviewer-facing audit bundle in Markdown: the rigour report, severity, test record, evidence, provenance and the preregistration in one document." },
     {
       id: "simulate", label: "Simulation", desc: "Dynamical-system trajectory",
       help: "Treats each construct as a state variable and each directed proposition as a signed coupling, then propagates the linear system and plots the trajectory. The exact method computes the solution at each step from the matrix exponential, whatever dt is. The Euler method takes fixed explicit steps, which drift from the solution when dt is large against the network's rates.",
@@ -383,8 +383,8 @@
     appraise: "An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added and no corroborated prediction dropped. It is degenerating when it adds an ad hoc assumption and no corroborated new content, and neutral otherwise. A prediction is corroborated when some test passes it and none fails it, and an assumption added for an anomaly is ad hoc unless new content it protects is corroborated. A prediction that only changed its id is a rename, and one derived only from the prior's own propositions is an articulation, so neither counts as new content. The verdict and its components appear below.",
     sem: "The constructs become a measurement model and the propositions a structural model, in lavaan syntax for lavaan::sem(). A closing block fixes at zero the covariances the theory rules out, which lavaan would otherwise free, and comments flag single indicators, moderations and feedback loops. The syntax is a starting point for an SEM fit: rename indicators to your columns and check identification.",
     implications: "Each statement says that two constructs are independent once the constructs after the bar are held fixed, a claim data can refute, for instance by a partial correlation in a linear model. The statements follow from the edges the theory leaves out, so each omission is read as a claim. A conditional statement tested on observed scores is rejected too often when the constructs held fixed are measured with error. A latent-variable model, such as one built on the SEM operation's measurement model, takes that error into account. A pair that no set of constructs separates is listed apart, since the theory implies no independence for it.",
-    preregister: "The preregistration lists each hypothesis with its derivation and severity, in file order, ready to timestamp before data collection.",
-    dossier: "The dossier gathers the rigour report, severity, provenance and preregistration into one reviewer-facing document.",
+    preregister: "The document is the hypotheses section of a preregistration. Each hypothesis is listed in file order with its derivation, the auxiliary assumptions that protect it, the rivals it discriminates and its test record. A hypothesis that has already been tested is marked as such. The implied independencies follow, then the severity of each claim's form. Before data collection, complete it with the design, sampling plan, analysis plan and inference criteria that a preregistration template such as PRP-QUANT asks for (Bosnjak et al., 2022).",
+    dossier: "The dossier gathers the rigour report, severity, test record, evidence, provenance and preregistration into one reviewer-facing document.",
     simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, causes, mediates) or down (decreases) in proportion to another, with one gain k for every coupling, and every construct decays towards zero at the damping rate. Moderates and associates couple nothing. All constructs start from the same value. The chart traces the values from the initial state, and the table below holds the numbers.",
     litmap: "The bundled corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked. A theme is a connected group of keywords, which separates this small designed corpus into four. On a real corpus, nearly every keyword joins one group, and the package warns that such themes are not informative.",
     landscape: "The theory and its rivals are placed against the corpus themes by the words a theme's keywords share with the theory's construct labels, or with a rival's label and key constructs. Words of the theory's title, words most records carry and words such as theory or model do not count. Under-theorised fronts are themes that none of the registered accounts addresses. Crowded themes are addressed by two or more of them and call for predictions that discriminate between the accounts.",
@@ -474,8 +474,19 @@
       }
       return txt;
     }
-    if (opId === "preregister") { const k = c.predictions || 0; return "The document preregisters " + k + (k === 1 ? " hypothesis." : " hypotheses."); }
-    if (opId === "dossier") return "The dossier bundles the rigour report, severity, provenance and preregistration for " + (S.title || S.id || "this theory") + ".";
+    if (opId === "preregister") {
+      // Every hypothesis has one test-record line (API_SPEC section 11), so both
+      // counts are read from the document shown.
+      const doc = String(raw.text || "");
+      const k = (doc.match(/^ +- Test record: /gm) || []).length;
+      const m = (doc.match(/^ +- Test record: already tested:/gm) || []).length;
+      if (!k) return "The theory states no prediction, so the document lists no hypothesis.";
+      const listed = "The document lists " + k + (k === 1 ? " hypothesis" : " hypotheses");
+      if (!m) return listed + (k === 1 ? ", not tested yet." : ", none of them tested yet.");
+      if (m === k) return listed + (k === 1 ? ", already tested." : ", all of them already tested.");
+      return listed + ", of which " + (m === 1 ? "one has" : m + " have") + " already been tested.";
+    }
+    if (opId === "dossier") return "The dossier bundles the rigour report, severity, test record, evidence, provenance and preregistration for " + (S.title || S.id || "this theory") + ".";
     if (opId === "diagram") {
       const t = String(params.type || "");
       const name = t.replace(/_/g, " ");
@@ -484,7 +495,7 @@
         severity: "Severity bars for the theory's " + plural(c.predictions || 0, "prediction") + ".",
         venn: "Overlap of the boundary conditions declared on the theory's constructs (up to three).",
         provenance: "The recorded build steps in order.",
-        pipeline: "Each prediction linked to its recorded test outcome.",
+        pipeline: "Each prediction linked to its recorded test outcomes, one node for each.",
         development_roadmap: "The checklist items that fail or warn, in the order to address them.",
       };
       return byType[t] || ("A " + name + " diagram built from " + plural(c.constructs || 0, "construct") + " and " + plural(c.propositions || 0, "proposition") + ".");

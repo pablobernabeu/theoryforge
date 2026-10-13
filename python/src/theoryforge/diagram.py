@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import re
 
-from ._access import PRED_TYPE, RELATION, enum, field, items, str_list, text
+from ._access import PRED_TYPE, RELATION, enum, field, items, ne_str, str_list, text
 from ._relations import BIDIRECTED, DIRECTED
 from ._text import ascii_lower, trim
 
@@ -243,16 +243,42 @@ def _development_roadmap(T: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _outcome_nodes(T: dict) -> list[tuple[str, str, str, str]]:
+    """Each test outcome as ``(prediction id, node, role, date)``, in file order.
+
+    The k-th outcome of one prediction, from the second on, takes the node
+    suffix ``#<k>``. A replication thus gets a node and an edge of its own,
+    where Graphviz merged it into the first and showed only the last result. ``#``
+    lies outside the ids the shipped theories use, so the suffix cannot meet a
+    sibling prediction such as ``h1_2``, as ``_2`` would. When a prediction has
+    several outcomes, each carries its date, when it has one, so that they can
+    be told apart (API_SPEC.md section 12).
+    """
+    tos = items(T, "test_outcomes")
+    pids = [_t(t, "prediction_id") for t in tos]
+    out = []
+    for i, t in enumerate(tos):
+        pid = pids[i]
+        k = pids[: i + 1].count(pid)
+        date = _t(t, "date")
+        out.append((
+            pid,
+            pid if k == 1 else f"{pid}#{k}",
+            "passed" if field(t, "passed") is True else "failed",
+            date if pids.count(pid) > 1 and ne_str(date) else "",
+        ))
+    return out
+
+
 def _pipeline(T: dict) -> str:
     lines = _prelude("pipeline", "LR")
     for p in items(T, "predictions"):
         pid = _esc(_t(p, "id"))
         lines.append(f'  "{pid}" [label="{pid}\\n{_esc(_ptype(p))}", {_fill("prediction")}];')
-    for t in items(T, "test_outcomes"):
-        pid = _t(t, "prediction_id")
-        rid = f"result_{pid}"
-        role = "passed" if field(t, "passed") is True else "failed"
-        lines.append(f'  "{_esc(rid)}" [label="{role}", {_fill(role)}];')
+    for pid, node, role, date in _outcome_nodes(T):
+        rid = f"result_{node}"
+        label = role + (f"\\n{_esc(date)}" if date else "")
+        lines.append(f'  "{_esc(rid)}" [label="{label}", {_fill(role)}];')
         lines.append(f'  "{_esc(pid)}" -> "{_esc(rid)}";')
     lines.append("}")
     return "\n".join(lines) + "\n"
@@ -304,19 +330,18 @@ def _workflow(T: dict) -> str:
         lines.append(f'    "pred_{pid}" [label="{pid}\\n{_esc(_ptype(p))}", {_fill("prediction")}];')
     lines.append("  }")
     _cluster(lines, "test", "testing")
-    for t in items(T, "test_outcomes"):
-        pid = _esc(_t(t, "prediction_id"))
-        role = "passed" if field(t, "passed") is True else "failed"
-        lines.append(f'    "outcome_{pid}" [label="{pid}\\n{role}", {_fill(role)}];')
+    outcomes = _outcome_nodes(T)
+    for pid, node, role, date in outcomes:
+        label = f"{_esc(pid)}\\n{role}" + (f"\\n{_esc(date)}" if date else "")
+        lines.append(f'    "outcome_{_esc(node)}" [label="{label}", {_fill(role)}];')
     lines.append("  }")
     for p in items(T, "propositions"):
         lines.append(f'  "{_esc(_t(p, "from"))}" -> "prop_{_esc(_t(p, "id"))}";')
     for pred in items(T, "predictions"):
         for src in str_list(field(pred, "derives_from")):
             lines.append(f'  "prop_{_esc(src)}" -> "pred_{_esc(_t(pred, "id"))}";')
-    for t in items(T, "test_outcomes"):
-        pid = _esc(_t(t, "prediction_id"))
-        lines.append(f'  "pred_{pid}" -> "outcome_{pid}";')
+    for pid, node, _role, _date in outcomes:
+        lines.append(f'  "pred_{_esc(pid)}" -> "outcome_{_esc(node)}";')
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -456,6 +481,13 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
     ``subgraph`` and ``strict``, in any case. Any other id is double-quoted,
     with a double quote inside it escaped by a backslash, so ``self-efficacy``
     stays one node where dagitty used to read two.
+
+    The pipeline and workflow views give every test outcome a node of its own.
+    The first outcome of a prediction is ``result_<id>`` (``outcome_<id>`` in
+    the workflow) and each later one ``result_<id>#<k>``, where ``<k>`` counts
+    the prediction's outcomes in file order, so a failed replication is not
+    merged into an earlier pass. When a prediction has several outcomes, each
+    label also carries the outcome's date.
 
     Raises:
         ValueError: for an unknown ``type``, and for a causal DAG that would

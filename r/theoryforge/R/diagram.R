@@ -292,6 +292,33 @@ NULL
   paste0(paste(lines, collapse = "\n"), "\n")
 }
 
+# Each test outcome as list(pid, node, role, date), in file order. The k-th
+# outcome of one prediction, from the second on, takes the node suffix "#<k>".
+# A replication thus gets a node and an edge of its own, where Graphviz merged
+# it into the first and showed only the last result. "#" lies outside the ids
+# the shipped theories use, so the suffix cannot meet a sibling prediction such
+# as h1_2, as "_2" would. When a prediction has several outcomes, each carries
+# its date, when it has one, so that they can be told apart (API_SPEC.md
+# section 12).
+.tf_outcome_nodes <- function(T) {
+  tos <- .tf_list(T, "test_outcomes")
+  pids <- vapply(tos, function(t) .tf_str(t, "prediction_id"), character(1))
+  out <- vector("list", length(tos))
+  for (i in seq_along(tos)) {
+    t <- tos[[i]]
+    pid <- pids[[i]]
+    k <- sum(pids[seq_len(i)] == pid)
+    date <- .tf_str(t, "date")
+    out[[i]] <- list(
+      pid = pid,
+      node = if (k == 1L) pid else paste0(pid, "#", k),
+      role = if (isTRUE(.tf_get(t, "passed"))) "passed" else "failed",
+      date = if (sum(pids == pid) > 1L && .tf_ne_str(date)) date else ""
+    )
+  }
+  out
+}
+
 .tf_pipeline <- function(T) {
   lines <- .tf_prelude("pipeline", "LR")
   for (p in .tf_list(T, "predictions")) {
@@ -299,12 +326,11 @@ NULL
                               .tf_esc(.tf_str(p, "id")), .tf_esc(.tf_str(p, "id")),
                               .tf_esc(.tf_ptype(p)), .tf_fill("prediction")))
   }
-  for (t in .tf_list(T, "test_outcomes")) {
-    pid <- .tf_str(t, "prediction_id")
-    rid <- paste0("result_", pid)
-    role <- if (isTRUE(.tf_get(t, "passed"))) "passed" else "failed"
-    lines <- c(lines, sprintf('  "%s" [label="%s", %s];', .tf_esc(rid), role, .tf_fill(role)))
-    lines <- c(lines, sprintf('  "%s" -> "%s";', .tf_esc(pid), .tf_esc(rid)))
+  for (o in .tf_outcome_nodes(T)) {
+    rid <- paste0("result_", o$node)
+    label <- paste0(o$role, if (nzchar(o$date)) paste0("\\n", .tf_esc(o$date)))
+    lines <- c(lines, sprintf('  "%s" [label="%s", %s];', .tf_esc(rid), label, .tf_fill(o$role)))
+    lines <- c(lines, sprintf('  "%s" -> "%s";', .tf_esc(o$pid), .tf_esc(rid)))
   }
   lines <- c(lines, "}")
   paste0(paste(lines, collapse = "\n"), "\n")
@@ -364,11 +390,12 @@ NULL
                               .tf_esc(.tf_ptype(p)), .tf_fill("prediction")))
   }
   lines <- c(lines, "  }", .tf_cluster_open("test", "testing"))
-  for (t in .tf_list(T, "test_outcomes")) {
-    pid <- .tf_esc(.tf_str(t, "prediction_id"))
-    role <- if (isTRUE(.tf_get(t, "passed"))) "passed" else "failed"
-    lines <- c(lines, sprintf('    "outcome_%s" [label="%s\\n%s", %s];',
-                              pid, pid, role, .tf_fill(role)))
+  outcomes <- .tf_outcome_nodes(T)
+  for (o in outcomes) {
+    label <- paste0(.tf_esc(o$pid), "\\n", o$role,
+                    if (nzchar(o$date)) paste0("\\n", .tf_esc(o$date)))
+    lines <- c(lines, sprintf('    "outcome_%s" [label="%s", %s];',
+                              .tf_esc(o$node), label, .tf_fill(o$role)))
   }
   lines <- c(lines, "  }")
   for (p in .tf_list(T, "propositions")) {
@@ -379,9 +406,8 @@ NULL
       lines <- c(lines, sprintf('  "prop_%s" -> "pred_%s";', .tf_esc(src), .tf_esc(.tf_str(pred, "id"))))
     }
   }
-  for (t in .tf_list(T, "test_outcomes")) {
-    pid <- .tf_esc(.tf_str(t, "prediction_id"))
-    lines <- c(lines, sprintf('  "pred_%s" -> "outcome_%s";', pid, pid))
+  for (o in outcomes) {
+    lines <- c(lines, sprintf('  "pred_%s" -> "outcome_%s";', .tf_esc(o$pid), .tf_esc(o$node)))
   }
   lines <- c(lines, "}")
   paste0(paste(lines, collapse = "\n"), "\n")
@@ -535,6 +561,13 @@ NULL
 #' \code{self-efficacy} stays one node where dagitty used to read two. The view
 #' stops when it would write the id \code{node} or \code{graph}, which dagitty
 #' refuses even quoted.
+#'
+#' The pipeline and workflow views give every test outcome a node of its own.
+#' The first outcome of a prediction is `result_<id>` (`outcome_<id>` in the
+#' workflow) and each later one `result_<id>#<k>`, where `<k>` counts the
+#' prediction's outcomes in file order, so a failed replication is not merged
+#' into an earlier pass. When a prediction has several outcomes, each label
+#' also carries the outcome's date.
 #'
 #' @param theory A theory object (named list).
 #' @param type One of \code{"nomological_net"} (default), \code{"provenance"},
