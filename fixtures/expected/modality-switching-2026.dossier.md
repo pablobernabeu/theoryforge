@@ -34,7 +34,7 @@
 
 ## Test record
 
-_No test outcomes recorded._
+- pred2: passed; observed: Illustrative values, not a reported result: switch cost 41 ms (SE 6 ms).; post-data severity 0.999 for [20.0, 60.0]
 
 ## Evidence
 
@@ -62,7 +62,7 @@ _No test outcomes recorded._
    - Test record: untested
 2. [interval] In that design the switch cost lies between 20 and 60 ms, averaged over items and participants. (derives from: p1, p2)
    - Auxiliary assumptions: aux1 (core)
-   - Test record: untested
+   - Test record: already tested: passed
 3. [point] Concurrent dynamic visual noise removes the advantage of visual properties over auditory properties in semantic categorisation, leaving a difference of zero under load in the same participants who show the advantage without it. (derives from: p3)
    - Auxiliary assumptions: aux1 (core)
    - Rivals it discriminates: alt_grounding_by_interaction

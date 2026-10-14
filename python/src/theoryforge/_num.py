@@ -22,3 +22,20 @@ def rnd(x: float, n: int) -> float:
     # negative value that rounds to zero never prints as -0.0 (API_SPEC.md
     # section 3).
     return r + 0.0
+
+
+def number(v) -> float | None:
+    """``v`` as a float when it is a number other than NaN, and None otherwise.
+
+    A boolean is not a number, as R's ``is.numeric()`` agrees. An integer too
+    large for a float reads as the infinity of its sign, because R's reader
+    holds an unquoted integer of 400 digits as ``Inf`` (API_SPEC.md section 3),
+    and ``float()`` would raise OverflowError on it.
+    """
+    if isinstance(v, bool) or not isinstance(v, (int, float)):
+        return None
+    try:
+        x = float(v)
+    except OverflowError:
+        x = math.inf if v > 0 else -math.inf
+    return None if math.isnan(x) else x

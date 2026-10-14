@@ -1,0 +1,11 @@
+[
+  {
+    "prediction_id": "pred2",
+    "outcome": 0,
+    "lower": 20.0,
+    "upper": 60.0,
+    "estimate": 41.0,
+    "se": 6.0,
+    "severity": 0.999
+  }
+]

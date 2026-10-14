@@ -93,3 +93,182 @@ tf_severity <- function(theory) {
     stringsAsFactors = FALSE
   )
 }
+
+.tf_PDS_REFUSAL <- "post_data_severity requires "
+
+# `v` as a double when it is a single number other than NaN, and NULL
+# otherwise. A logical is not a number. The Python twin's _num.number() reads an
+# integer too large for a float as an infinity, as R's reader holds it.
+.tf_number <- function(v) {
+  if (is.numeric(v) && length(v) == 1L && !is.na(v)) as.numeric(v) else NULL
+}
+
+.tf_finite <- function(x) {
+  if (!is.null(x) && is.finite(x)) x else NULL
+}
+
+# The post-data severity of test outcome `t`, at 1-based position `i`, as
+# list(row = <list>) when it is computed, list(error = <message>) when the
+# outcome or its prediction's bounds are refused, and list() when there is
+# nothing to compute: the outcome records neither an estimate nor a standard
+# error, or names no prediction with bounds. A prediction's bounds are read
+# only here, for an outcome whose data passed. The Python twin's _outcome_row()
+# makes the same checks in the same order.
+.tf_outcome_severity <- function(t, i, preds) {
+  est_raw <- .tf_get(t, "estimate")
+  se_raw <- .tf_get(t, "se")
+  est_absent <- .tf_absent(est_raw)
+  se_absent <- .tf_absent(se_raw)
+  if (est_absent && se_absent) return(list())
+  where <- sprintf("; test_outcome[%d]", i - 1L)
+  if (est_absent || se_absent) {
+    return(list(error = paste0(.tf_PDS_REFUSAL, "both estimate and se", where)))
+  }
+  se <- .tf_number(se_raw)
+  if (is.null(se) || !is.finite(se) || se <= 0) {
+    return(list(error = paste0(.tf_PDS_REFUSAL, "a finite se greater than 0", where)))
+  }
+  est <- .tf_number(est_raw)
+  if (is.null(est) || !is.finite(est)) {
+    return(list(error = paste0(.tf_PDS_REFUSAL, "a finite estimate", where)))
+  }
+
+  # The matching rule of the amendment appraisal (API_SPEC.md section 10): the
+  # outcome's prediction_id must be a string, and the first prediction with
+  # that id in file order is the one tested.
+  pid <- .tf_get(t, "prediction_id")
+  if (!.tf_is_string(pid)) return(list())
+  pred <- NULL
+  for (p in preds) {
+    if (identical(.tf_str(p, "id"), pid)) {
+      pred <- p
+      break
+    }
+  }
+  bounds <- .tf_get(pred, "bounds")
+  if (.tf_absent(bounds)) return(list())
+  where <- sprintf("; prediction '%s'", pid)
+  shape <- paste0(.tf_PDS_REFUSAL, "bounds with numeric or null lower and upper", where)
+  # An empty list() stands for an empty mapping, as {} and [] both read.
+  if (!is.list(bounds) || (length(bounds) > 0L && !.tf_is_mapping(bounds))) {
+    return(list(error = shape))
+  }
+  lo_raw <- .tf_get(bounds, "lower")
+  up_raw <- .tf_get(bounds, "upper")
+  lo <- .tf_number(lo_raw)
+  up <- .tf_number(up_raw)
+  # A bound that is present and not a number would otherwise read as open and
+  # turn a two-sided claim into a one-sided one.
+  if ((!.tf_absent(lo_raw) && is.null(lo)) || (!.tf_absent(up_raw) && is.null(up))) {
+    return(list(error = shape))
+  }
+  lower <- .tf_finite(lo)
+  upper <- .tf_finite(up)
+  if (is.null(lower) && is.null(upper)) {
+    return(list(error = paste0(.tf_PDS_REFUSAL, "at least one finite bound", where)))
+  }
+  if (!is.null(lo) && !is.null(up) && lo > up) {
+    return(list(error = paste0(.tf_PDS_REFUSAL, "lower <= upper", where)))
+  }
+
+  z <- c(if (!is.null(lower)) (est - lower) / se, if (!is.null(upper)) (upper - est) / se)
+  list(row = list(
+    prediction_id = pid, outcome = i - 1L,
+    lower = if (is.null(lower)) NA_real_ else lower,
+    upper = if (is.null(upper)) NA_real_ else upper,
+    estimate = est, se = se, severity = .tf_rnd(min(stats::pnorm(z)), 3)
+  ))
+}
+
+# .tf_outcome_severity() for every test outcome, in file order.
+# tf_post_data_severity() stops at the first refusal, and tf_dossier() gives the
+# rows it can compute without stopping.
+.tf_outcome_severities <- function(theory) {
+  preds <- .tf_list(theory, "predictions")
+  tos <- .tf_list(theory, "test_outcomes")
+  lapply(seq_along(tos), function(i) .tf_outcome_severity(tos[[i]], i, preds))
+}
+
+#' Post-data severity of each bounded prediction
+#'
+#' How severely each bounded claim passed its test, from the test outcome's
+#' estimate and standard error.
+#'
+#' A prediction states the region its claim allows in \code{bounds}, a mapping
+#' of \code{lower} and \code{upper}, either of which may be null (or infinite)
+#' for an open side. A test outcome records the \code{estimate} it observed and
+#' its standard error \code{se}. For an outcome with both, whose prediction
+#' declares bounds, the severity with which the claim passed is the smallest of
+#' \eqn{\Phi((estimate - lower) / se)}{Phi((estimate - lower) / se)} and
+#' \eqn{\Phi((upper - estimate) / se)}{Phi((upper - estimate) / se)} over the
+#' finite bounds, rounded to three decimals (Mayo & Spanos, 2006, 2011). It is
+#' the probability that the test would have given a result less in accord with
+#' the claim, had the claim been false at the bound. A one-sided claim, such as
+#' an effect above a smallest effect of interest, is a lower bound with the
+#' upper one open.
+#'
+#' The computation is a normal approximation to the sampling distribution of
+#' the estimate. With two finite bounds, the value equals 1 minus the p value of
+#' the two one-sided tests (TOST) of equivalence. A point claim with lower equal
+#' to upper can pass with a severity of at most 0.5, so it needs a tolerance
+#' around its value. Unlike [tf_severity()], which grades the form of a claim
+#' before any data, this value depends on the design and the data. The rigour
+#' checklist does not read it. [tf_dossier()] gives each value in its test
+#' record.
+#'
+#' The function stops at the first outcome, in file order, that cannot be
+#' read, with the Python twin's text:
+#' `post_data_severity requires both estimate and se; test_outcome[<i>]`,
+#' `... requires a finite se greater than 0; ...` and
+#' `... requires a finite estimate; ...`, and for its prediction's bounds
+#' `... requires bounds with numeric or null lower and upper; prediction '<id>'`,
+#' `... requires at least one finite bound; ...` and
+#' `... requires lower <= upper; ...`. [tf_validate()] with `full = TRUE`
+#' reports each of these.
+#'
+#' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @return A \code{data.frame} with one row per test outcome, in file order,
+#'   that carries both an estimate and a standard error and whose prediction
+#'   declares bounds. Its columns are \code{prediction_id}, \code{outcome} (the
+#'   outcome's 0-based index among the test outcomes), \code{lower} and
+#'   \code{upper} (\code{NA} for an open bound), \code{estimate}, \code{se} and
+#'   \code{severity}.
+#' @references
+#' Mayo, D. G., & Spanos, A. (2006). Severe testing as a basic concept in a
+#'   Neyman-Pearson philosophy of induction. \emph{The British Journal for the
+#'   Philosophy of Science}, 57(2), 323-357. \doi{10.1093/bjps/axl003}
+#'
+#' Mayo, D. G., & Spanos, A. (2011). Error statistics. In P. S. Bandyopadhyay &
+#'   M. R. Forster (Eds.), \emph{Philosophy of statistics} (pp. 153-198).
+#'   Elsevier. \doi{10.1016/B978-0-444-51862-0.50005-8}
+#' @examples
+#' theory <- tf_read(tf_example_path("modality-switching.theory.yaml"))
+#' tf_post_data_severity(theory)
+#'
+#' # A claim that |r| <= .10, tested with an estimate of 0 and a standard error
+#' # of .10, passes with a severity of .841.
+#' theory$predictions[[4]]$bounds <- list(lower = -0.10, upper = 0.10)
+#' theory$test_outcomes <- list(list(prediction_id = "pred4", passed = TRUE,
+#'                                   estimate = 0, se = 0.10))
+#' tf_post_data_severity(theory)
+#' @export
+tf_post_data_severity <- function(theory) {
+  rows <- list()
+  for (res in .tf_outcome_severities(theory)) {
+    if (!is.null(res$error)) stop(res$error, call. = FALSE)
+    if (!is.null(res$row)) rows[[length(rows) + 1L]] <- res$row
+  }
+  column <- function(key, empty) {
+    if (length(rows) == 0L) empty else unlist(lapply(rows, `[[`, key), use.names = FALSE)
+  }
+  data.frame(
+    prediction_id = column("prediction_id", character(0)),
+    outcome = column("outcome", integer(0)),
+    lower = column("lower", numeric(0)),
+    upper = column("upper", numeric(0)),
+    estimate = column("estimate", numeric(0)),
+    se = column("se", numeric(0)),
+    severity = column("severity", numeric(0)),
+    stringsAsFactors = FALSE
+  )
+}

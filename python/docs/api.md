@@ -38,13 +38,15 @@ through `tf_example_names()` and `tf_example_path()`.
 ## Rigour
 
 Score a theory against the versioned rigour checklist, and report what the score
-was made of.
+was made of and how severely each bounded prediction passed its test.
 
 ::: theoryforge.check
 
 ::: theoryforge.report
 
 ::: theoryforge.severity
+
+::: theoryforge.post_data_severity
 
 ## Redundancy
 

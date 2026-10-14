@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from copy import deepcopy
 from pathlib import Path
@@ -19,6 +20,7 @@ from ._access import ne_str as _nonempty_str
 from ._io import write_lf as _write_lf
 from ._load import dump_yaml as _dump_yaml
 from ._load import load_document as _load_document
+from ._num import number as _number
 from ._text import trim as _trim
 from .develop import appraise_amendment as _appraise_amendment
 from .diagram import diagram as _diagram
@@ -33,6 +35,7 @@ from .redundancy import redundancy_check as _redundancy_check
 from .report_render import render_report as _render_report
 from .rigor import check as _check
 from .rigor import report as _report
+from .scoring import post_data_severity as _post_data_severity
 from .scoring import severity as _severity
 from .sem import compile_sem as _compile_sem
 from .simulate import simulate as _simulate
@@ -141,6 +144,53 @@ def _not_a_mapping(v) -> bool:
     return not isinstance(v, dict) and not (isinstance(v, list) and not v)
 
 
+_BOUND_KEYS = ("lower", "upper")
+
+
+def _bounds(v, name: str) -> list[str]:
+    """A prediction's ``bounds``: a mapping of ``lower`` and ``upper``, each a number or null.
+
+    An infinite bound is open, as a null one is, so at least one bound must be
+    finite, and a lower bound above the upper one states no region. These are
+    the conditions ``post_data_severity()`` refuses, so a theory that passes
+    full validation is never refused there. The block is closed, since a
+    misspelt ``uper`` would leave the upper bound open and make a two-sided
+    claim one-sided.
+    """
+    if v is None:
+        return []
+    shape = f"{name} must be a mapping with numeric or null lower and upper"
+    if _not_a_mapping(v):
+        return [shape]
+    v = v if isinstance(v, dict) else {}
+    msgs = [f"{name} has unknown field: {key}" for key in v if key not in _BOUND_KEYS]
+    raw = [v.get(key) for key in _BOUND_KEYS]
+    nums = [_number(b) for b in raw]
+    if any(b is not None and x is None for b, x in zip(raw, nums, strict=True)):
+        return [*msgs, shape]
+    if not any(x is not None and math.isfinite(x) for x in nums):
+        msgs.append(f"{name} needs at least one finite bound")
+    lo, up = nums
+    if lo is not None and up is not None and lo > up:
+        msgs.append(f"{name} lower exceeds upper")
+    return msgs
+
+
+def _estimate_and_se(t, prefix: str) -> list[str]:
+    """A test outcome's ``estimate`` and ``se``, which ``post_data_severity()`` reads together."""
+    est, se = _field(t, "estimate"), _field(t, "se")
+    msgs = []
+    x = _number(est)
+    if est is not None and (x is None or not math.isfinite(x)):
+        msgs.append(f"{prefix} estimate must be a finite number")
+    x = _number(se)
+    if se is not None and (x is None or not math.isfinite(x) or x <= 0):
+        msgs.append(f"{prefix} se must be a finite number greater than 0")
+    if (est is None) != (se is None):
+        msgs.append(f"{prefix} estimate and se must be given together")
+    return msgs
+
+
 def _string_array(v, name: str, known=None, kind: str = "") -> list[str]:
     """A field the schema types as an array of strings.
 
@@ -212,8 +262,9 @@ class Theory:
         alternatives, evidence and test outcomes, a boolean ``passed``, the
         evidence direction and formal-model type enums, the version block and
         the ``schema_version`` pattern. It also covers numbers within [0, 1]
-        where the schema asks for them and the type of every other field and of
-        every entry of a string array.
+        where the schema asks for them, a prediction's ``bounds``, a test
+        outcome's ``estimate`` and ``se``, and the type of every other field and
+        of every entry of a string array.
 
         CI compares the result with a JSON Schema 2020-12 validator. Besides the
         ids and references, which the schema cannot express, the pass is
@@ -422,10 +473,12 @@ class Theory:
         errors += _string_array(d.get("boundary_conditions"), "boundary_conditions")
         for i, p in enumerate(preds):
             errors += _unit_number(_field(p, "risk_score"), f"prediction[{i}] risk_score")
+            errors += _bounds(_field(p, "bounds"), f"prediction[{i}] bounds")
         for i, e in enumerate(evs):
             errors += _optional_text(_field(e, "source_doi"), f"evidence[{i}] source_doi", nullable=True)
         for i, t in enumerate(tos):
             errors += _optional_text(_field(t, "observed"), f"test_outcome[{i}] observed")
+            errors += _estimate_and_se(t, f"test_outcome[{i}]")
         for i, a in enumerate(alts):
             errors += _string_array(_field(a, "key_constructs"), f"alternative[{i}] key_constructs")
             errors += _optional_text(_field(a, "source_doi"), f"alternative[{i}] source_doi",
@@ -613,6 +666,13 @@ class Theory:
     def severity(self) -> list[dict]:
         """Per-prediction risk and computed severity from the claim-form riskiness rubric."""
         return _severity(self.data)
+
+    def post_data_severity(self) -> list[dict]:
+        """How severely each bounded prediction passed its test, from the outcome's estimate and SE.
+
+        See :func:`theoryforge.post_data_severity` for the rule and its refusals.
+        """
+        return _post_data_severity(self.data)
 
     def appraise_amendment(self, prior) -> dict:
         """Appraise this theory, by content, as an amendment of a prior version.

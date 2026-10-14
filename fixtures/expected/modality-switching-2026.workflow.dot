@@ -38,6 +38,7 @@ digraph workflow {
     style="rounded";
     color="#C4D1D9";
     fontcolor="#5B7285";
+    "outcome_pred2" [label="pred2\npassed", fillcolor="#E5F2E7", color="#3E7A46"];
   }
   "c_sensorimotor_experience" -> "prop_p1";
   "c_modality_activation" -> "prop_p2";
@@ -50,4 +51,5 @@ digraph workflow {
   "prop_p3" -> "pred_pred3";
   "prop_p1" -> "pred_pred4";
   "prop_p4" -> "pred_pred4";
+  "pred_pred2" -> "outcome_pred2";
 }

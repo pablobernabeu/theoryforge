@@ -97,7 +97,16 @@
             "maximum": 1,
             "description": "A declared pre-data severity of the claim, from 0 to 1. The checklist's risk_severity item reads it, and uses the claim-form rubric of severity() for a prediction that declares none."
           },
-          "diagnostic_vs": { "type": "array", "items": { "type": "string" } }
+          "diagnostic_vs": { "type": "array", "items": { "type": "string" } },
+          "bounds": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lower": { "type": ["number", "null"] },
+              "upper": { "type": ["number", "null"] }
+            },
+            "description": "The region of the quantity the claim allows. A null or infinite bound is open, so a one-sided claim leaves one side null. post_data_severity() reads it with each test outcome's estimate and se. Full validation also requires at least one finite bound and lower not above upper."
+          }
         }
       }
     },
@@ -157,8 +166,18 @@
             "type": ["string", "null"],
             "description": "Where the test was preregistered, such as an OSF registration. The amendment appraisal reads it only to report which corroborations were preregistered, and no verdict depends on it."
           },
-          "date": { "type": ["string", "null"] }
-        }
+          "date": { "type": ["string", "null"] },
+          "estimate": {
+            "type": "number",
+            "description": "The estimate the test observed, on the scale of its prediction's bounds. Full validation also requires a finite value."
+          },
+          "se": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "The standard error of the estimate. Full validation also requires a finite value."
+          }
+        },
+        "dependentRequired": { "estimate": ["se"], "se": ["estimate"] }
       }
     },
     "alternatives": {

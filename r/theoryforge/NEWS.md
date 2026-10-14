@@ -451,6 +451,20 @@
   table follows the checklist. A check that the checklist gains without a name
   in the article stops the build, and a test evaluates the chunk.
 
+* New `tf_post_data_severity()` computes how severely a bounded prediction
+  passed its test, from the outcome's estimate and standard error (Mayo &
+  Spanos, 2006), using new optional `bounds` on predictions and `estimate` and
+  `se` on test outcomes. It complements the pre-data rubric and does not enter
+  the checklist. The value is the smaller of `pnorm((estimate - lower) / se)`
+  and `pnorm((upper - estimate) / se)` over the finite bounds, so a one-sided
+  claim leaves one bound open, and with two finite bounds it equals 1 minus the
+  p value of the two one-sided tests of equivalence. `tf_validate(full = TRUE)`
+  checks the new fields, and `tf_dossier()` gives each value it can compute in
+  its test record. The modality-switching example gives its interval
+  prediction `pred2` bounds of 20 and 60 ms and records one outcome whose values
+  are labelled as illustrative, so its preregistration, dossier and pipeline
+  and workflow diagrams now show a passed test.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

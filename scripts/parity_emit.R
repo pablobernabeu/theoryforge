@@ -5,8 +5,9 @@
 # Usage: Rscript scripts/parity_emit.R <mode> <src_dir> <out_dir> [<pkg_dir>]
 #
 #   golden    the golden set: the per-theory artefacts of every
-#             <src_dir>/*.theory.yaml, the amendment appraisal, the DOI screen
-#             and the literature artefacts (src_dir is fixtures/)
+#             <src_dir>/*.theory.yaml, the amendment appraisal, the post-data
+#             severity, the DOI screen and the literature artefacts (src_dir
+#             is fixtures/)
 #   theories  the per-theory artefacts only, for every <src_dir>/*.theory.yaml
 #             (parity_check.py runs it on apps/examples/)
 #   edge      one outcome record per <src_dir>/*.theory.yaml|json and
@@ -175,6 +176,13 @@ suppressWarnings(suppressMessages({
       ap <- tf_appraise_amendment(v2, v1)
       write_raw(paste0(jsonlite::toJSON(ap, auto_unbox = TRUE, pretty = TRUE), "\n"),
                 file.path(out_dir, "panic-network-2026-v2.appraisal.json"))
+
+      # post-data severity for the fixture whose test outcome records an
+      # estimate and a standard error. An open bound is NA, written as null.
+      pds <- tf_post_data_severity(tf_read(file.path(fixtures_dir, "modality-switching.theory.yaml")))
+      write_raw(paste0(jsonlite::toJSON(pds, dataframe = "rows", auto_unbox = TRUE, na = "null",
+                                        digits = NA, pretty = TRUE), "\n"),
+                file.path(out_dir, "modality-switching-2026.post_data_severity.json"))
 
       # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
       # existing evidence and alternatives (two already cited, two new, one duplicate)

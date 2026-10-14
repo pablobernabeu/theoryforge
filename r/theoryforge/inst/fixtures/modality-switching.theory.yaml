@@ -79,6 +79,7 @@ predictions:
     risk_score: 0.7
     severity: 0.6
     diagnostic_vs: []
+    bounds: {lower: 20, upper: 60}
   - id: pred3
     derives_from: [p3]
     statement: "Concurrent dynamic visual noise removes the advantage of visual properties over auditory properties in semantic categorisation, leaving a difference of zero under load in the same participants who show the advantage without it."
@@ -108,6 +109,16 @@ evidence:
   - supports: pred1
     source_doi: "10.1111/1467-9280.t01-1-01429"
     direction: "corroborates"
+
+# The values of this outcome are made up to show post_data_severity(), as its
+# observed text says. They are not a published estimate.
+test_outcomes:
+  - prediction_id: pred2
+    observed: "Illustrative values, not a reported result: switch cost 41 ms (SE 6 ms)."
+    passed: true
+    estimate: 41
+    se: 6
+    registered: null
 
 alternatives:
   - id: alt_grounding_by_interaction

@@ -12,11 +12,19 @@ from ._text import trim
 from .prereg import _fmt, _outcome_result
 from .prereg import preregister as _preregister
 from .rigor import check as _check
+from .scoring import outcome_rows as _outcome_rows
 from .scoring import severity as _severity
 
 # A declared severity further above the claim-form rubric than this is noted
 # beside it (API_SPEC.md section 20). The note changes no status.
 DECLARED_MARGIN = 0.2
+
+
+def _post_data(row: dict) -> str:
+    """The post-data severity note of a test-record line, an open bound written as an infinity."""
+    lower = "-inf" if row["lower"] is None else _fmt(row["lower"])
+    upper = "inf" if row["upper"] is None else _fmt(row["upper"])
+    return f"; post-data severity {_fmt(row['severity'])} for [{lower}, {upper}]"
 
 
 def dossier(T) -> str:
@@ -28,7 +36,9 @@ def dossier(T) -> str:
     prediction's claim-form rubric values and, when the prediction declares a
     severity, that value too, with a note when it exceeds the rubric by more
     than 0.2. The test record lists every test outcome in file order, with what
-    it found and the observation, date and registration it records. The
+    it found and the observation, date and registration it records, and with
+    the post-data severity of ``post_data_severity()`` where it can be
+    computed, an open bound written as ``-inf`` or ``inf``. The
     evidence lists the prediction each entry supports, its direction and its
     DOI. The provenance and the preregistration follow, and the implied
     independencies appear once, in the preregistration.
@@ -79,17 +89,21 @@ def dossier(T) -> str:
 
     # Every outcome, in file order, with the fields it records (API_SPEC.md
     # section 20). check() above has refused a passed that is not a boolean.
+    # An outcome whose post-data severity can be computed gives it last, and
+    # one that post_data_severity() would refuse is listed without it.
     lines += ["", "## Test record", ""]
     tos = items(data, "test_outcomes")
     if not tos:
         lines.append("_No test outcomes recorded._")
     else:
-        for t in tos:
+        for t, (row, _) in zip(tos, _outcome_rows(data), strict=True):
             line = f"- {text(field(t, 'prediction_id'))}: {_outcome_result(t)}"
             for key in ("observed", "date", "registered"):
                 value = text(field(t, key))
                 if ne_str(value):
                     line += f"; {key}: {value}"
+            if row is not None:
+                line += _post_data(row)
             lines.append(line)
 
     lines += ["", "## Evidence", ""]

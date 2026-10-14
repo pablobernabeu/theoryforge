@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Generate golden outputs from the Python reference implementation.
 
-Writes every parity artefact named in API_SPEC.md sections 13, 17, 21, 22 and
-27 into ``fixtures/expected/``. Listing the artefact types here as well would only
+Writes every parity artefact named in API_SPEC.md sections 13, 17, 21, 22, 27
+and 29 into ``fixtures/expected/``. Listing the artefact types here as well would only
 give them a second place to drift from; the spec is the list.
 
 Also mirrors the fixture inputs, the golden tree and the two schema files
@@ -269,6 +269,12 @@ def main() -> int:
         (json.dumps(v2.appraise_amendment(v1), indent=2) + "\n").encode("utf-8")
     )
     written.append("panic-network-2026-v2.appraisal.json")
+
+    # Post-data severity (API_SPEC.md section 29), for the one fixture whose
+    # test outcome records an estimate and a standard error.
+    written.append(_write_json(
+        "modality-switching-2026.post_data_severity.json",
+        tf.read(FIXTURES / "modality-switching.theory.yaml").post_data_severity()))
 
     # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
     # existing evidence and alternatives (two already cited, two new, one duplicate)

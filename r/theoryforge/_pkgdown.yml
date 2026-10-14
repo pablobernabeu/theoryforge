@@ -175,11 +175,14 @@ reference:
   - tf_add_assumption
   - tf_set_formal_model
 - title: Rigour
-  desc: Score a theory against the versioned rigour checklist.
+  desc: >
+    Score a theory against the versioned rigour checklist, and report how
+    severely each bounded prediction passed its test.
   contents:
   - tf_check
   - tf_report
   - tf_severity
+  - tf_post_data_severity
 - title: Redundancy
   desc: Deterministic lexical redundancy screen.
   contents:

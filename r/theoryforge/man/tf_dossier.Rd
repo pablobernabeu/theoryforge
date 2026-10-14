@@ -26,7 +26,9 @@ coverage, the gate and the blockers that failed. The rigour table prints
 prediction's claim-form rubric values and, when the prediction declares a
 severity, that value too, with a note when it exceeds the rubric by more
 than 0.2. The test record lists every test outcome in file order, with what
-it found and the observation, date and registration it records. The
+it found and the observation, date and registration it records, and with
+the post-data severity of \code{\link[=tf_post_data_severity]{tf_post_data_severity()}} where it can be
+computed, an open bound written as \code{-inf} or \code{inf}. The
 evidence lists the prediction each entry supports, its direction and its
 DOI. The implied independencies appear once, in the preregistration.
 }

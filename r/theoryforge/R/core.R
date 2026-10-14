@@ -72,8 +72,9 @@ tf_read <- function(path) {
 #' evidence and test outcomes, a logical \code{passed}, the evidence direction
 #' and formal-model type enums, the version block and the
 #' \code{schema_version} pattern. It also covers numbers within \[0, 1\] where
-#' the schema asks for them and the type of every other field and of every
-#' entry of a string array.
+#' the schema asks for them, a prediction's \code{bounds}, a test outcome's
+#' \code{estimate} and \code{se}, and the type of every other field and of
+#' every entry of a string array.
 #'
 #' The Python twin's test suite compares the result with a JSON Schema 2020-12
 #' validator. Besides the ids and references, which the schema cannot express,
@@ -364,8 +365,10 @@ tf_validate <- function(theory, full = FALSE) {
     }
     errors <- c(errors, .tf_string_array(.tf_get(d, "boundary_conditions"), "boundary_conditions"))
     for (i in seq_along(preds)) {
-      errors <- c(errors, .tf_unit_number(.tf_get(preds[[i]], "risk_score"),
-                                          sprintf("prediction[%d] risk_score", i - 1L)))
+      errors <- c(errors,
+                  .tf_unit_number(.tf_get(preds[[i]], "risk_score"),
+                                  sprintf("prediction[%d] risk_score", i - 1L)),
+                  .tf_bounds(.tf_get(preds[[i]], "bounds"), sprintf("prediction[%d] bounds", i - 1L)))
     }
     for (i in seq_along(evs)) {
       errors <- c(errors, .tf_optional_text(.tf_get(evs[[i]], "source_doi"),
@@ -373,8 +376,10 @@ tf_validate <- function(theory, full = FALSE) {
                                             nullable = TRUE))
     }
     for (i in seq_along(tos)) {
-      errors <- c(errors, .tf_optional_text(.tf_get(tos[[i]], "observed"),
-                                            sprintf("test_outcome[%d] observed", i - 1L)))
+      prefix <- sprintf("test_outcome[%d]", i - 1L)
+      errors <- c(errors,
+                  .tf_optional_text(.tf_get(tos[[i]], "observed"), paste(prefix, "observed")),
+                  .tf_estimate_and_se(tos[[i]], prefix))
     }
     for (i in seq_along(alts)) {
       prefix <- sprintf("alternative[%d]", i - 1L)
@@ -468,6 +473,56 @@ tf_validate <- function(theory, full = FALSE) {
 .tf_not_a_mapping <- function(v) {
   if (is.list(v)) return(length(v) > 0L && !.tf_is_mapping(v))
   is.null(v) || length(v) > 0L
+}
+
+# A prediction's bounds: a mapping of lower and upper, each a number or null. An
+# infinite bound is open, as a null one is, so at least one bound must be
+# finite, and a lower bound above the upper one states no region. These are the
+# conditions tf_post_data_severity() refuses, so a theory that passes full
+# validation is never refused there. The block is closed, since a misspelt
+# `uper` would leave the upper bound open and make a two-sided claim one-sided.
+.tf_bounds <- function(v, name) {
+  if (.tf_absent(v)) return(character(0))
+  shape <- paste(name, "must be a mapping with numeric or null lower and upper")
+  if (.tf_not_a_mapping(v)) return(shape)
+  out <- character(0)
+  for (key in names(v)) {
+    if (!(key %in% c("lower", "upper"))) {
+      out <- c(out, sprintf("%s has unknown field: %s", name, key))
+    }
+  }
+  raw <- list(.tf_get(v, "lower"), .tf_get(v, "upper"))
+  nums <- lapply(raw, .tf_number)
+  for (k in 1:2) {
+    if (!.tf_absent(raw[[k]]) && is.null(nums[[k]])) return(c(out, shape))
+  }
+  if (!any(vapply(nums, function(x) !is.null(x) && is.finite(x), logical(1)))) {
+    out <- c(out, paste(name, "needs at least one finite bound"))
+  }
+  if (!is.null(nums[[1]]) && !is.null(nums[[2]]) && nums[[1]] > nums[[2]]) {
+    out <- c(out, paste(name, "lower exceeds upper"))
+  }
+  out
+}
+
+# A test outcome's estimate and se, which tf_post_data_severity() reads
+# together.
+.tf_estimate_and_se <- function(t, prefix) {
+  est <- .tf_get(t, "estimate")
+  se <- .tf_get(t, "se")
+  out <- character(0)
+  x <- .tf_number(est)
+  if (!.tf_absent(est) && (is.null(x) || !is.finite(x))) {
+    out <- c(out, paste(prefix, "estimate must be a finite number"))
+  }
+  x <- .tf_number(se)
+  if (!.tf_absent(se) && (is.null(x) || !is.finite(x) || x <= 0)) {
+    out <- c(out, paste(prefix, "se must be a finite number greater than 0"))
+  }
+  if (.tf_absent(est) != .tf_absent(se)) {
+    out <- c(out, paste(prefix, "estimate and se must be given together"))
+  }
+  out
 }
 
 # A field the schema types as an array of strings. Each entry must be a nonempty

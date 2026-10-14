@@ -496,6 +496,20 @@ version and a single behavioural contract
   other value of `cycles` raises `implications requires cycles to be 'refuse' or
   'sigma'`. Four goldens, `<id>.implications.json`, hold the sigma record of each
   fixture, and API_SPEC section 27 pins the acyclification and the order of the loops.
+- `post_data_severity()` (also `Theory.post_data_severity()`) computes how severely a
+  bounded prediction passed its test, from the outcome's estimate and standard error
+  (Mayo & Spanos, 2006), using new optional `bounds` on predictions and `estimate` and
+  `se` on test outcomes. It complements the pre-data rubric and does not enter the
+  checklist. The value is the smaller of `Phi((estimate - lower) / se)` and
+  `Phi((upper - estimate) / se)` over the finite bounds, so a one-sided claim leaves one
+  bound open, and with two finite bounds it equals 1 minus the p value of the two
+  one-sided tests of equivalence. `validate(full=True)` checks the new fields, and
+  `dossier()` gives each value it can compute in its test record. The modality-switching
+  example gives its interval prediction `pred2` bounds of 20 and 60 ms and records one
+  outcome whose values are labelled as illustrative, so its preregistration, dossier and
+  pipeline and workflow diagrams now show a passed test. API_SPEC section 29 pins the
+  rule and its refusals, and a new golden, `modality-switching-2026.post_data_severity.json`,
+  holds the example's record.
 
 ### Deprecated
 - `simulate()`'s default `method="euler"`. The default will change to `"exact"` in the

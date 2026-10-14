@@ -29,7 +29,7 @@ from .redundancy import jaccard, redundancy_check, tokens
 from .render import render_diagram
 from .report_render import render_report
 from .rigor import check, report
-from .scoring import severity
+from .scoring import post_data_severity, severity
 from .sem import compile_sem
 from .simulate import simulate
 
@@ -52,6 +52,7 @@ __all__ = [
     "tokens",
     "jaccard",
     "severity",
+    "post_data_severity",
     "appraise_amendment",
     "implications",
     "preregister",
