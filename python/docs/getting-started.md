@@ -65,7 +65,7 @@ The `causal_dag` type returns dagitty syntax instead, for causal-inference tooli
 print(t.diagram("causal_dag"))
 ```
 
-With the optional render extra (`pip install theoryforge[render]`), `render_diagram(t, "nomological_net")` wraps the DOT in a `graphviz.Source` that displays inline in a notebook. The `causal_dag` view is the one exception, since dagitty syntax renders in a dagitty tool rather than Graphviz. Rendered, the nomological-net DOT printed above reads as the figure below.
+With the optional render extra (`pip install "theoryforge[render]"`), `render_diagram(t, "nomological_net")` wraps the DOT in a `graphviz.Source` that displays inline in a notebook. The `causal_dag` view is the one exception, since dagitty syntax renders in a dagitty tool rather than Graphviz. Rendered, the nomological-net DOT printed above reads as the figure below.
 
 ```python exec="1" html="1" session="getting-started"
 # Graphviz draws this figure from the DOT above when the page is built, so it

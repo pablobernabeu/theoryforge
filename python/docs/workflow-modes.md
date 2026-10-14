@@ -466,7 +466,7 @@ predictions, to the recorded test outcomes.
 print(t.diagram("workflow"))
 ```
 
-With the optional render extra (`pip install theoryforge[render]`), the same
+With the optional render extra (`pip install "theoryforge[render]"`), the same
 view renders without leaving Python: `render_diagram(t, "workflow")` wraps the
 DOT in a `graphviz.Source`, which displays inline in a notebook and writes
 image files through its `render` method. Rendered, the workflow view reads as

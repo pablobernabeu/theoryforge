@@ -326,6 +326,15 @@ version and a single behavioural contract
   inference criteria (Bosnjak et al., 2022). The reading counts the hypotheses already
   tested, and the dossier's help and guide name the test record and the evidence. The
   pipeline diagram's reading says that each recorded outcome has a node of its own.
+- Python: two guides, the docstrings of `theoryforge.render` and the error that
+  `render_diagram()` raises without graphviz gave the render extra's install command
+  without quotes. In zsh, the default shell on macOS, the brackets are a filename pattern,
+  so the pasted command stopped with "no matches found" before pip ran. The extra is now
+  double-quoted, `pip install "theoryforge[render]"` as in the README, and the command
+  pastes into zsh, bash, fish, PowerShell and cmd alike. A test fails on an extra outside
+  double quotes in the README, the guides or the sources. It also fails on a `pip install`
+  line in a shell block that ends in a `#` comment, since an interactive zsh passes the
+  comment on to pip.
 
 ### Changed
 - R's `tf_litmap()` and `tf_landscape()` count pairs in linear time. R matched every new

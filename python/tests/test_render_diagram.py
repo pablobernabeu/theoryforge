@@ -68,5 +68,7 @@ def test_missing_graphviz_is_reported_with_install_guidance(monkeypatch):
         return real_import(name, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "__import__", no_graphviz)
-    with pytest.raises(ImportError, match=r"theoryforge\[render\]"):
+    # The command is quoted, so it pastes into zsh, which reads unquoted brackets as a
+    # filename pattern (see test_install_lines.py).
+    with pytest.raises(ImportError, match=r'pip install "theoryforge\[render\]"'):
         render_diagram(demo_theory(), "workflow")

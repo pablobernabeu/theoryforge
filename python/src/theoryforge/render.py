@@ -3,7 +3,7 @@
 The IR itself (:func:`theoryforge.diagram.diagram`) stays dependency-free and
 byte-identical to the R twin; rendering is a language-native convenience layered
 on top, so it sits outside the cross-language parity contract and its dependency
-is an extra (``pip install theoryforge[render]``). The R twin offers the same
+is an extra (``pip install "theoryforge[render]"``). The R twin offers the same
 convenience through the DiagrammeR package (``tf_render_diagram()``).
 """
 
@@ -35,7 +35,7 @@ def render_diagram(x, type: str = "nomological_net"):
     DOT string, ``render_diagram`` wraps it in a ``graphviz.Source``, which
     displays inline in Jupyter and renders to a file with its ``render`` method.
     Requires the optional `graphviz <https://pypi.org/project/graphviz/>`_
-    library (``pip install theoryforge[render]``) and, to write image files, the
+    library (``pip install "theoryforge[render]"``) and, to write image files, the
     Graphviz system binaries.
 
     The three chart views (``venn``, ``rigour`` and ``severity``) are already
@@ -85,9 +85,11 @@ def render_diagram(x, type: str = "nomological_net"):
     try:
         import graphviz
     except ImportError as err:
+        # Unquoted, the brackets are a filename pattern to zsh, and cmd passes single
+        # quotes on to pip, so the extra is double-quoted.
         raise ImportError(
             "render_diagram() needs the optional 'graphviz' library; install it "
-            "with pip install theoryforge[render], or use diagram() and render "
+            'with pip install "theoryforge[render]", or use diagram() and render '
             "the DOT string with any Graphviz tool."
         ) from err
     return graphviz.Source(ir)
