@@ -5,7 +5,11 @@
  * and fold-table caches, so the real package functions run unmodified and
  * entirely client-side.
  */
-import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+// webR 0.6.0 runs R 4.6.0. The release is pinned, as Pyodide's is in
+// py-runtime.js, because the "latest" address serves webR's development build,
+// which can change the R under the app with nothing changed here. The two
+// engines are updated together and on purpose (apps/README.md, "Runtimes").
+import { WebR } from "https://webr.r-wasm.org/v0.6.0/webr.mjs";
 
 const DIAG_SVG = new Set(window.TF.DIAG_SVG);
 
@@ -191,6 +195,12 @@ const RT = {
 
     onProgress("Installing R dependencies (jsonlite, yaml)…");
     await webR.installPackages(["jsonlite", "yaml"]);
+    // repo.r-wasm.org serves its current builds of the two, which are not
+    // pinned, so the console records the versions this session installed.
+    try {
+      console.info("theoryforge R app: " + await webR.evalRString(
+        'paste(vapply(c("jsonlite", "yaml"), function(p) paste(p, format(packageVersion(p))), ""), collapse = ", ")'));
+    } catch (e) { /* a missing record never stops the app */ }
 
     onProgress("Vendoring the theoryforge R source into the browser…");
     await this._mkdirp(["/tf", "/tf/R", "/tf/schema", "/tf/fixtures"]);

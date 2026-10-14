@@ -1,0 +1,29 @@
+{
+  "description": "The operations scripts/app_smoke.py and scripts/app_smoke.R run on every app example: each operation in apps/shared/app-core.js at the defaults the UI gives it, then once for each other option of a select parameter. The appraisal's prior is chosen by the scripts, as the UI chooses it. apps/tests/smoke.test.mjs fails when this list and the UI's operations differ.",
+  "cases": [
+    { "op": "check", "params": {} },
+    { "op": "validate", "params": {} },
+    { "op": "diagram", "params": { "type": "nomological_net" } },
+    { "op": "diagram", "params": { "type": "context" } },
+    { "op": "diagram", "params": { "type": "workflow" } },
+    { "op": "diagram", "params": { "type": "causal_dag" } },
+    { "op": "diagram", "params": { "type": "provenance" } },
+    { "op": "diagram", "params": { "type": "development_roadmap" } },
+    { "op": "diagram", "params": { "type": "pipeline" } },
+    { "op": "diagram", "params": { "type": "venn" } },
+    { "op": "diagram", "params": { "type": "rigour" } },
+    { "op": "diagram", "params": { "type": "severity" } },
+    { "op": "severity", "params": {} },
+    { "op": "redundancy", "params": {} },
+    { "op": "appraise", "params": {} },
+    { "op": "sem", "params": {} },
+    { "op": "implications", "params": { "cycles": "refuse" } },
+    { "op": "implications", "params": { "cycles": "sigma" } },
+    { "op": "preregister", "params": {} },
+    { "op": "dossier", "params": {} },
+    { "op": "simulate", "params": { "method": "exact", "steps": 30, "dt": 0.1, "k": 1, "damping": 0.5, "init": 1 } },
+    { "op": "simulate", "params": { "method": "euler", "steps": 30, "dt": 0.1, "k": 1, "damping": 0.5, "init": 1 } },
+    { "op": "litmap", "params": { "min_link": 2 } },
+    { "op": "landscape", "params": { "min_link": 2 } }
+  ]
+}

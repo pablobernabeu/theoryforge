@@ -212,6 +212,26 @@ test("py/py-runtime.js: every file the Python code writes is opened as UTF-8", a
   }
 });
 
+// webR's "latest" address serves its main-branch build, so a new webR reached
+// the live app with nothing changed here. Both engines load a fixed release,
+// and the apps' README names the releases the runtimes load.
+test("both runtimes load a pinned engine release, which the apps' README names", () => {
+  const src = (f) => readFileSync(path.join(here, "..", f), "utf8");
+  const r = src("r/r-runtime.js"), py = src("py/py-runtime.js");
+  for (const f of ["r/r-runtime.js", "py/py-runtime.js", "shared/app-core.js"]) {
+    assert.doesNotMatch(src(f), /\/latest\//, `${f} loads a moving "latest" address`);
+  }
+  const webr = r.match(/^import \{ WebR \} from "https:\/\/webr\.r-wasm\.org\/v(\d+\.\d+\.\d+)\/webr\.mjs";$/m);
+  assert.ok(webr, "r-runtime.js imports webR from a versioned address");
+  assert.equal(webr[1], "0.6.0");
+  const pyodide = [...py.matchAll(/cdn\.jsdelivr\.net\/pyodide\/v(\d+\.\d+\.\d+)\/full\//g)].map((m) => m[1]);
+  assert.deepEqual(pyodide, ["0.27.7", "0.27.7"], "the module and its index URL name one Pyodide release");
+  // A line break may fall anywhere a space does.
+  const readme = readFileSync(path.join(here, "..", "README.md"), "utf8").replace(/\s+/g, " ");
+  assert.match(readme, new RegExp(`webR ${webr[1].replace(/\./g, "\\.")} \\(R \\d`));
+  assert.match(readme, new RegExp(`Pyodide ${pyodide[0].replace(/\./g, "\\.")} \\(Python \\d`));
+});
+
 test("r/r-runtime.js: the simulate comment lists every element of the record", () => {
   const { RT } = withStubEngine("r/r-runtime.js", []);
   const code = RT.code("simulate", { steps: 30, dt: 0.1, k: 1, damping: 0.5, init: 1, method: "exact" });

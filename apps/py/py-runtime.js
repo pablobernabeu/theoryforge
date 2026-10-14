@@ -4,6 +4,9 @@
  * the in-browser filesystem, imports it, and runs the real package functions
  * entirely client-side. importlib.resources resolves the bundled schema/.
  */
+// Pyodide 0.27.7 runs Python 3.12.7 and ships PyYAML 6.0.2. The release is
+// pinned, as webR's is in r-runtime.js, and the two engines are updated
+// together and on purpose (apps/README.md, "Runtimes").
 import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.mjs";
 
 const PYODIDE_INDEX = "https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";

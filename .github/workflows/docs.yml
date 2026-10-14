@@ -110,6 +110,15 @@ jobs:
           mkdir -p site/apps
           cp -r apps/r apps/py apps/shared site/apps/
 
+      - name: Run the staged apps' glue on every example and operation
+        # This workflow deploys without waiting for ci.yml, so the check that
+        # the apps run has to stop the deployment here. The scripts read the
+        # staged copy, the files GitHub Pages will serve, and keep the glue out
+        # of reach of the theoryforge installed above.
+        run: |
+          python scripts/app_smoke.py site/apps
+          Rscript scripts/app_smoke.R site/apps
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453  # v4.1.0
         with:

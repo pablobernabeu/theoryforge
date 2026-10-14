@@ -682,6 +682,9 @@ version and a single behavioural contract
   count in the score, and only the gate is advisory. The `theory_form` description says
   that the checklist applies the same twelve items to every form. API_SPEC no longer lists
   implemented functions as stubs, and its diagram section names all ten types.
+- Apps: the apps' README records the pinned webR and Pyodide versions and notes that the
+  R app's jsonlite and yaml are not pinned. The R app's browser console records the
+  versions each session installs.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and
@@ -737,6 +740,17 @@ version and a single behavioural contract
   keyword as an annotation. `tests/test_schema_document.py` and its R twin check that
   every key of the schemas the packages ship is a JSON Schema keyword, and hold the three
   rewritten descriptions to the behaviour they describe.
+- Apps: no CI job ran the glue code each app runs in its engine, so a renamed internal or
+  a file left out of a manifest would have broken the deployed app alone.
+  `scripts/app_smoke.py` and `scripts/app_smoke.R` copy the files each manifest lists into
+  a temporary directory and run the glue there with only the packages the browser has,
+  PyYAML in Python and jsonlite and yaml in R, out of reach of an installed theoryforge.
+  Each calls every operation on every example, once for each option of a select
+  parameter, and checks that an invalid theory is reported as invalid. The CI apps job
+  runs both, and the docs workflow runs them on the staged site before it deploys. A Node
+  test fails when `scripts/app_smoke_cases.json` and the operations the apps offer differ.
+  The R app loads webR 0.6.0, pinned as Pyodide 0.27.7 is. It loaded the `latest`
+  address, which serves webR's development build.
 
 
 ## [0.6.0] - 2026-08-27

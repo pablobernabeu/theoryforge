@@ -16,6 +16,17 @@ visualisation (SVG and PNG) and the R or Python code needed to reproduce it.
 language runtime (`r-runtime.js`, `py-runtime.js`) boots the engine, vendors the
 package source, runs operations and emits the reproducible code snippets.
 
+## Runtimes
+
+The R app loads webR 0.6.0 (R 4.6.0) and the Python app loads Pyodide 0.27.7
+(Python 3.12.7, with PyYAML 6.0.2). Both releases are pinned in the runtimes, and the
+two engines are updated together and deliberately, since a new engine can change the
+version of the language the package runs under. The R app installs jsonlite and yaml
+from repo.r-wasm.org when it loads. These two are not pinned: each session gets the
+builds the repository serves that day, and the browser console records their
+versions. The Graphviz renderer, `@hpcc-js/wasm-graphviz` 1.22.2, is pinned in
+`shared/app-core.js`.
+
 ## Build and run locally
 
 The apps fetch the live package source from a `vendor/` directory that
@@ -52,9 +63,26 @@ node --test apps/tests/*.test.mjs   # from the repository root
 The glue code each runtime runs in its engine is tested in the package suites
 (`python/tests/test_app_glue.py`, `r/theoryforge/tests/testthat/test-app-glue.R`).
 
+Two scripts run that glue on exactly the files the browser receives, once
+`node apps/build.mjs` has written them:
+
+```bash
+python scripts/app_smoke.py   # from the repository root
+Rscript scripts/app_smoke.R
+```
+
+Each script copies the files its manifest lists into a temporary directory and runs
+the glue there. The Python glue runs under CPython with PyYAML alone, and the R glue
+in a fresh R whose library holds jsonlite and yaml alone. An installed theoryforge
+therefore cannot stand in for a file the app does not fetch. Each script runs every
+operation on every example, with the operations listed in
+`scripts/app_smoke_cases.json`, and checks that an invalid theory is reported as
+invalid. The CI apps job runs both scripts.
+
 ## Deploy
 
-The `docs` GitHub Actions workflow runs `node build.mjs` and copies `apps/` into
-`site/apps/`, so the apps are published alongside the documentation on GitHub
-Pages. The first load of each app downloads its WebAssembly engine (~20 s). After
-that it is cached by the browser.
+The `docs` GitHub Actions workflow runs `node build.mjs`, copies `apps/` into
+`site/apps/` and runs the two smoke scripts on that copy. It then deploys the site,
+so the apps are published alongside the documentation on GitHub Pages. The first load
+of each app downloads its WebAssembly engine (~20 s). After that it is cached by the
+browser.

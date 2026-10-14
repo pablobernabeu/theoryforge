@@ -372,6 +372,31 @@ jobs:
       # 404 pages under a stub DOM (apps/tests/dom.mjs), with no dependency.
       - name: App and site tests
         run: node --test apps/tests/*.test.mjs
+      # The glue each runtime runs in its engine (APP_PY and BOOT_R), run on
+      # the files the manifests list. The browser has PyYAML for Python and
+      # jsonlite and yaml for R, and no theoryforge installed. Python 3.12 and
+      # PyYAML 6.0.2 are what Pyodide 0.27.7 ships. The scripts copy those
+      # packages into a private tree and run the glue there, so whatever else
+      # these steps install stays out of reach.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: pip install "PyYAML==6.0.2"
+      - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
+        with:
+          r-version: "release"
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
+        with:
+          packages: |
+            any::jsonlite
+            any::yaml
+          dependencies: '"hard"'
+      - name: Run the apps' glue on every example and operation
+        run: |
+          python scripts/app_smoke.py
+          Rscript scripts/app_smoke.R
 
   parity:
     name: Cross-language parity
