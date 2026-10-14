@@ -75,7 +75,9 @@ exact one by more than 5 per cent of \code{max(1, |exact|)} at any step. The
 default will change to \code{"exact"} in the next minor release.
 
 When a state grows so large that a million times it is not a finite number,
-the function stops with a message naming the step and the state.
+the function stops with a message naming the step and the state. The initial
+state is tested as step 0, so an \code{init} beyond about 1.8e302 in absolute
+value stops there.
 
 The model is deliberately simple: one gain \code{k} for every coupling,
 \code{causes} and \code{mediates} taken as positive, \code{moderates} and

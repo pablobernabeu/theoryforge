@@ -447,12 +447,16 @@ NULL
 
 # Deterministic, cross-platform half-away-from-zero rounding (API_SPEC.md
 # section 3). Mirrors the Python `rnd` byte-for-byte. The `+1e-6` bias is far
-# larger than cross-platform ULP jitter yet far smaller than the rounding grid,
-# so results are identical on every platform. Vectorised in x (sign/floor/abs).
+# larger than cross-platform ULP jitter in the checklist's scores yet far
+# smaller than the rounding grid. It is absorbed once abs(x) * 10^n reaches
+# 2^34, so larger values round alike in the twins only because both compute
+# the same double. Vectorised in x (sign/floor/abs).
 # Do not replace with base round(), which is banker's rounding and diverges
 # across platforms at exact decimal half-boundaries. The final `+ 0` turns the
 # negative zero that sign(x) gives a small negative x into +0, so jsonlite and
-# the dossier never print -0 where Python prints 0.0. NaN and Inf pass through.
+# the dossier never print -0 where Python prints 0.0. NaN and Inf pass through,
+# and a finite x whose scaled value overflows becomes Inf of its sign, which
+# the Python twin reproduces with an explicit guard.
 .tf_rnd <- function(x, n) {
   s <- 10^n
   sign(x) * floor(abs(x) * s + 0.5 + 1e-6) / s + 0

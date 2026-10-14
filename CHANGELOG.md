@@ -88,6 +88,16 @@ version and a single behavioural contract
   page and both methodology pages state the step condition: in a network without feedback
   loops, the explicit step explodes once `dt*damping` exceeds 2, so raising the damping is
   no remedy.
+- `simulate()` checks the initial state for divergence too. An `init` of 1e303 is finite,
+  but a million times it is not, so the rounding of row 0 raised OverflowError, while R
+  wrote a row of Inf or stopped at step 1 and blamed `dt` or `k`. Both twins now stop with
+  `simulate diverged at step 0: state '<id>' is not finite; reduce init`. The internal
+  `rnd()`, used for every number theoryforge emits, is defined for every double as in R:
+  a finite value too large to scale gives an infinity of its sign, where it raised
+  OverflowError, and NaN gives NaN, where it raised ValueError. No value in range changes.
+  API_SPEC section 3 now requires every floating-point sum to be a left fold in file order
+  and corrects its account of the rounding bias, which stops absorbing last-bit
+  differences once a value reaches about 1.7e4.
 - Text is normalised identically in both twins. Both trim one set of Unicode whitespace
   characters, lowercase ASCII letters only and fold accented Latin letters through a
   fixed table (`schema/fold.json`), so `naïve` no longer vanishes from a definition and

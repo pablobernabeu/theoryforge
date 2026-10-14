@@ -48,7 +48,9 @@ NULL
 #' default will change to \code{"exact"} in the next minor release.
 #'
 #' When a state grows so large that a million times it is not a finite number,
-#' the function stops with a message naming the step and the state.
+#' the function stops with a message naming the step and the state. The initial
+#' state is tested as step 0, so an \code{init} beyond about 1.8e302 in absolute
+#' value stops there.
 #'
 #' The model is deliberately simple: one gain \code{k} for every coupling,
 #' \code{causes} and \code{mediates} taken as positive, \code{moderates} and
@@ -174,6 +176,9 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
   }
 
   X <- rep(as.numeric(init), n)
+  # Row 0 is tested as every update is. A finite init can be too large to
+  # round (about 1.8e302 or more), and only init shapes this row.
+  .tf_sim_check_finite(X, states, 0L, "reduce init")
   Y <- X # the exact state the Euler run is compared with
   departed <- FALSE
   traj <- vector("list", steps + 1L)
@@ -195,15 +200,7 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
           X[i] <- X[i] + dt * dX[i]
         }
       }
-      # Rounding scales by 10^6, and Python's rounding raises OverflowError
-      # once that product leaves the double range, a few steps before the
-      # state itself does. Both twins stop at the same step for that reason.
-      for (i in seq_len(n)) {
-        if (!is.finite(X[i] * 1e6)) {
-          stop("simulate diverged at step ", s, ": state '", states[[i]],
-               "' is not finite; ", remedy, call. = FALSE)
-        }
-      }
+      .tf_sim_check_finite(X, states, s, remedy)
       if (method == "euler" && !departed) {
         Y <- .tf_sim_apply(E, Y)
         for (i in seq_len(n)) {
@@ -240,6 +237,20 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
     }
   }
   out
+}
+
+# Stops the run at the first state, in file order, that cannot be rounded, as
+# the Python twin's _check_finite(). Rounding scales by 10^6, so the scaled
+# value is tested: a state can stay finite for a few steps after that product
+# overflows, and .tf_rnd() would then write Inf into the trajectory.
+.tf_sim_check_finite <- function(X, states, step, remedy) {
+  for (i in seq_along(X)) {
+    if (!is.finite(X[i] * 1e6)) {
+      stop("simulate diverged at step ", step, ": state '", states[[i]],
+           "' is not finite; ", remedy, call. = FALSE)
+    }
+  }
+  invisible(NULL)
 }
 
 # E times X, each sum a left-to-right loop, as the Python twin's _apply().

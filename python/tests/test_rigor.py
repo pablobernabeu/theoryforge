@@ -161,6 +161,25 @@ def test_rnd_never_returns_negative_zero():
         assert math.copysign(1.0, rnd(x, 3)) == 1.0
 
 
+def test_rnd_is_defined_for_every_double():
+    # API_SPEC section 3 defines rnd for every double, as R computes it. A
+    # finite value whose scaled form leaves the double range raised
+    # OverflowError where R returned an infinity, and NaN raised ValueError
+    # where R returned NaN. The R suite asserts the same values.
+    import sys
+
+    from theoryforge._num import rnd
+
+    assert rnd(1e303, 6) == math.inf
+    assert rnd(-1e303, 6) == -math.inf
+    assert rnd(sys.float_info.max, 3) == math.inf
+    assert rnd(math.inf, 6) == math.inf
+    assert rnd(-math.inf, 1) == -math.inf
+    assert math.isnan(rnd(math.nan, 6))
+    # A value whose scaled form stays finite rounds as before.
+    assert rnd(1e300, 6) == 1e300
+
+
 def test_report_json_roundtrips(panic_path):
     import json
     r = tf.read(panic_path).report(format="json")

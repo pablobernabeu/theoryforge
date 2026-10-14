@@ -116,6 +116,20 @@ def _propagator(J: list, dt: float) -> list:
     return E
 
 
+def _check_finite(X: list, states: list, step: int, remedy: str) -> None:
+    """Stop the run at the first state, in file order, that cannot be rounded.
+
+    rnd() scales by 10^6, so the scaled value is tested. A state can stay finite
+    for a few steps after that product overflows, and rnd() would then write an
+    infinity into the trajectory, as R's rounding does.
+    """
+    for i, x in enumerate(X):
+        if not math.isfinite(x * 1e6):
+            raise ValueError(
+                f"simulate diverged at step {step}: state '{states[i]}' is not finite; "
+                + remedy)
+
+
 def _apply(E: list, X: list) -> list:
     """E times X, each sum a left-to-right loop as R adds."""
     n = len(X)
@@ -158,7 +172,8 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     ``k``, ``damping`` and ``init`` finite numbers, and ``method`` one of "euler"
     and "exact". Anything else raises ValueError. When a state grows so large that
     a million times it is not a finite double, the run stops with ValueError naming
-    the step and the state.
+    the step and the state. The initial state is tested as step 0, so an ``init``
+    beyond about 1.8e302 in absolute value stops there.
 
     The model is deliberately simple: one gain ``k`` for every coupling, ``causes``
     and ``mediates`` taken as positive, ``moderates`` and ``associates`` coupling
@@ -213,6 +228,9 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
               else "reduce dt or k")
 
     X = [float(init)] * n
+    # Row 0 is tested as every update is. A finite init can be too large to
+    # round (about 1.8e302 or more), and only init shapes this row.
+    _check_finite(X, states, 0, "reduce init")
     Y = list(X)  # the exact state the Euler run is compared with
     departed = False
     traj = [[rnd(x, 6) for x in X]]
@@ -230,14 +248,7 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
                     acc = acc + A[i][j] * X[j]
                 dX.append(acc - damping * X[i])
             X = [X[i] + dt * dX[i] for i in range(n)]
-        # rnd() scales by 10^6, so test the scaled value: a state can stay
-        # finite for a few more steps after that product overflows, and rnd()
-        # would raise OverflowError where R carries Inf and NaN.
-        for i, x in enumerate(X):
-            if not math.isfinite(x * 1e6):
-                raise ValueError(
-                    f"simulate diverged at step {step}: state '{states[i]}' is not finite; "
-                    + remedy)
+        _check_finite(X, states, step, remedy)
         if method == "euler" and not departed:
             Y = _apply(E, Y)
             for i in range(n):

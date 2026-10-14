@@ -190,6 +190,22 @@ test_that(".tf_rnd never returns a negative zero", {
   expect_identical(theoryforge:::.tf_rnd(-Inf, 3), -Inf)
 })
 
+test_that(".tf_rnd is defined for every double, as the Python twin's rnd()", {
+  # A finite value whose scaled form leaves the double range rounds to an
+  # infinity of its sign, where Python raised OverflowError, and NaN stays
+  # NaN, where Python raised ValueError (API_SPEC section 3). The Python suite
+  # asserts the same values.
+  rnd <- theoryforge:::.tf_rnd
+  expect_identical(rnd(1e303, 6), Inf)
+  expect_identical(rnd(-1e303, 6), -Inf)
+  expect_identical(rnd(.Machine$double.xmax, 3), Inf)
+  expect_identical(rnd(Inf, 6), Inf)
+  expect_identical(rnd(-Inf, 1), -Inf)
+  expect_true(is.nan(rnd(NaN, 6)))
+  # A value whose scaled form stays finite rounds as before.
+  expect_identical(rnd(1e300, 6), 1e300)
+})
+
 test_that("tf_report returns valid JSON", {
   out <- tf_report(tf_read(tf_fixture_path("panic-network.theory.yaml")), "json")
   expect_true(jsonlite::validate(out))

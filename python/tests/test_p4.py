@@ -94,12 +94,33 @@ def test_simulate_stops_with_the_step_and_state_where_it_diverges(panic_path):
     assert len(r["trajectory"]) == 228
 
 
+@pytest.mark.parametrize("method", ["euler", "exact"])
+@pytest.mark.parametrize("steps", [0, 10])
+def test_simulate_checks_the_initial_state_for_divergence(panic_path, method, steps):
+    # An init of 1e303 is finite and passes the knob checks, but a million
+    # times it is not, so rnd() raised OverflowError on row 0, while R wrote a
+    # row of Inf with steps = 0 and otherwise stopped at step 1, blaming dt or
+    # k. Both twins now test row 0 as they test every update, and name the
+    # only knob that shapes it. The R suite asserts the same message.
+    t = tf.read(panic_path)
+    for init in (1e303, -1e303):
+        with pytest.raises(ValueError) as exc:
+            t.simulate(steps=steps, init=init, method=method)
+        assert str(exc.value) == (
+            "simulate diverged at step 0: state 'c_arousal' is not finite; reduce init"
+        )
+    # An init whose scaled form stays finite runs as before.
+    assert t.simulate(steps=0, init=1e300, method=method)["trajectory"] == [[1e300] * 3]
+
+
 def test_simulate_sums_each_product_left_to_right():
     # CPython 3.12+'s sum() compensates rounding error, while R adds the
     # products left to right, so in fast-growing regimes the twins drifted
     # apart beyond the 1e-9 parity tolerance (421 of this run's values). R and
-    # a left fold give -69972264.681408 here, compensated sum() ...409. The R
-    # suite asserts the same value with expect_identical().
+    # a left fold give -69972264.681408 here, compensated sum() ...409, so the
+    # value is compared exactly, on every Python version CI runs. The method
+    # is named so that the test keeps checking the Euler sums once the default
+    # changes. The R suite asserts the same value with expect_identical().
     t = tf.new_theory("fb", "Feedback")
     for c in "abcde":
         t.add_construct(c, c.upper(), "d")
@@ -110,7 +131,7 @@ def test_simulate_sums_each_product_left_to_right():
     for i, (f, to, rel) in enumerate(edges, 1):
         t.add_proposition(f"p{i}", f, to, rel)
     with pytest.warns(UserWarning, match="depart from the exact solution"):
-        r = t.simulate(steps=500, k=1, dt=0.1)
+        r = t.simulate(steps=500, k=1, dt=0.1, method="euler")
     assert r["trajectory"][341][3] == -69972264.681408
 
 

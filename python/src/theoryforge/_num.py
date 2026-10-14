@@ -2,10 +2,12 @@
 
 Python's built-in ``round`` uses round-half-to-even on the exact double, whose result can
 differ across platforms for values that sit on an exact decimal half-boundary (e.g. 0.6125).
-``rnd`` rounds half away from zero using pure floor arithmetic with a tiny bias (1e-6) that is
-far larger than any cross-platform unit-in-the-last-place jitter (~1e-13 at these magnitudes)
-yet far smaller than the rounding grid, so the result is identical on every platform and matches
-the R implementation byte-for-byte.
+``rnd`` rounds half away from zero using pure floor arithmetic with a tiny bias (1e-6), far
+smaller than the rounding grid, and matches the R implementation byte-for-byte. For the
+checklist's scores, the bias is far larger than any cross-platform jitter in the last place.
+It is absorbed once |x| * 10^n reaches 2^34 (|x| about 1.7e4 at n = 6), where adding 1e-6 no
+longer changes the double. Larger values, such as the states of a growing simulation,
+therefore round alike in the twins only because both compute the same double.
 """
 from __future__ import annotations
 
@@ -14,6 +16,15 @@ import math
 
 def rnd(x: float, n: int) -> float:
     s = 10 ** n
+    # Defined for every double, as R's `sign(x) * floor(abs(x) * s + ...) / s`
+    # computes it: NaN stays NaN, and a value whose scaled form is not finite
+    # (an infinity, or a finite |x| above about 1.8e302 at n = 6) becomes an
+    # infinity of its sign. math.floor() would raise ValueError and
+    # OverflowError there.
+    if math.isnan(x):
+        return math.nan
+    if not math.isfinite(abs(x) * s + 0.5 + 1e-6):
+        return math.copysign(math.inf, x)
     if x >= 0:
         r = math.floor(x * s + 0.5 + 1e-6) / s
     else:

@@ -107,11 +107,33 @@ test_that("tf_simulate stops with the step and state where it diverges", {
   expect_true(all(is.finite(unlist(sim$trajectory))))
 })
 
+test_that("tf_simulate checks the initial state for divergence too", {
+  # An init of 1e303 is finite and passes the knob checks, but a million times
+  # it is not. R wrote a row of Inf with steps = 0 and otherwise stopped at
+  # step 1, blaming dt or k, while Python's rounding raised OverflowError on
+  # row 0. Both twins now test row 0 as they test every update, and name the
+  # only knob that shapes it. The Python suite asserts the same message.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  msg <- "simulate diverged at step 0: state 'c_arousal' is not finite; reduce init"
+  for (method in c("euler", "exact")) {
+    for (steps in c(0, 10)) {
+      for (init in c(1e303, -1e303)) {
+        expect_error(tf_simulate(theory, steps = steps, init = init, method = method),
+                     msg, fixed = TRUE, info = paste(method, steps, init))
+      }
+    }
+    # An init whose scaled form stays finite runs as before.
+    expect_identical(tf_simulate(theory, steps = 0, init = 1e300, method = method)$trajectory,
+                     list(rep(1e300, 3)))
+  }
+})
+
 test_that("tf_simulate sums each product left to right, as Python does", {
   # CPython 3.12+'s sum() compensated rounding error where R added left to
   # right, so in fast-growing regimes the twins drifted apart beyond the 1e-9
   # parity tolerance. Python now uses the same loop, and its suite asserts the
-  # same value.
+  # same value with ==. The method is named so that the test keeps checking
+  # the Euler sums once the default changes.
   theory <- tf_theory("fb", "Feedback")
   for (c in c("a", "b", "c", "d", "e")) {
     theory <- tf_add_construct(theory, c, toupper(c), "d")
@@ -125,7 +147,8 @@ test_that("tf_simulate sums each product left to right, as Python does", {
     e <- edges[[i]]
     theory <- tf_add_proposition(theory, paste0("p", i), e[[1]], e[[2]], e[[3]])
   }
-  expect_warning(sim <- tf_simulate(theory, steps = 500, k = 1, dt = 0.1),
+  expect_warning(sim <- tf_simulate(theory, steps = 500, k = 1, dt = 0.1,
+                                    method = "euler"),
                  "depart from the exact solution", fixed = TRUE)
   expect_identical(sim$trajectory[[342L]][[4L]], -69972264.681408)
 })
