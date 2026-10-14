@@ -451,6 +451,11 @@ version and a single behavioural contract
   rule, the edge case `corpus-doi-case` pins it in both twins, and the `corpus-mixed-ids`
   edge record now labels its DOI in lower case. The goldens are unchanged, since no
   reference in the golden corpora is a DOI.
+- Python packaging: the build backend is no longer held below hatchling 1.32, whose
+  metadata version twine now accepts. The wheel's core metadata moves from version 2.4 to
+  2.5, and the sdist and the wheel hold the same files as before. The licence was already
+  declared once, as the SPDX expression `MIT`, without the licence classifier that PEP 639
+  deprecates. A test in the Python suite now fails if the cap or such a classifier returns.
 
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`
