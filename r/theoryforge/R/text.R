@@ -4,7 +4,7 @@
 #' R's trimws() and Python's str.strip() trim different characters, and
 #' Python's str.lower() turns the Turkish dotted capital I into two code points
 #' where tolower() gives one, while ?tolower calls tolower() platform-dependent.
-#' These helpers pin one reading (API_SPEC.md sections 3, 6, 10, 18 and 19),
+#' These helpers pin one reading (API_SPEC.md sections 3, 6, 10, 14, 18 and 19),
 #' and the Python twin's _text.py mirrors each of them. The file is ASCII, as
 #' CRAN asks, so every other character is written as an escape.
 #'
@@ -62,27 +62,53 @@ NULL
 .tf_DOI_PREFIXES <- c("https://doi.org/", "http://doi.org/", "https://dx.doi.org/",
                       "http://dx.doi.org/", "doi:")
 
-# The form two DOIs are compared in (API_SPEC.md section 18): trimmed and
-# lowercased (ASCII letters only, as the DOI Handbook prescribes), with every
-# percent escape of a printable ASCII character decoded, then the first run that
-# looks like a DOI, less any trailing full stops, commas or semicolons. Text with
-# no such run keeps the 0.6.0 rule: one known prefix is removed and the rest
-# trimmed again. Mirrors Python's _text.normalise_doi.
+# Each element of `x` trimmed, lowercased (ASCII letters only) and with every
+# percent escape of a printable ASCII character decoded, in that order. Mirrors
+# Python's _text._prepared.
+.tf_doi_prepared <- function(x) {
+  d <- .tf_ascii_lower(.tf_trim(x))
+  m <- gregexpr("%[0-9a-f]{2}", d, perl = TRUE)
+  esc <- regmatches(d, m)
+  has <- lengths(esc) > 0L
+  if (any(has)) {
+    esc[has] <- lapply(esc[has], function(e) {
+      v <- strtoi(substring(e, 2L), 16L)
+      printable <- v >= 0x21 & v <= 0x7E
+      e[printable] <- vapply(v[printable], intToUtf8, character(1))
+      e
+    })
+    regmatches(d, m) <- esc
+  }
+  d
+}
+
+# The DOI in each element of `x`, a character vector without NA, in the form
+# .tf_normalize_doi() gives it. That is the first run of the prepared text that
+# looks like a DOI, less any trailing full stops, commas or semicolons.
+# tf_litmap() keys a reference by it (API_SPEC.md section 14). The prefix rule
+# of .tf_normalize_doi() is left out, so text without such a run gives NA. The
+# function is vectorised, as a corpus holds thousands of references. Mirrors
+# Python's _text.find_doi.
+.tf_find_doi <- function(x) {
+  out <- rep(NA_character_, length(x))
+  if (length(x) == 0L) return(out)
+  d <- .tf_doi_prepared(x)
+  pos <- regexpr(.tf_DOI_PATTERN, d, perl = TRUE)
+  hit <- pos > 0L
+  out[hit] <- sub("[.,;]+$", "", regmatches(d, pos), perl = TRUE)
+  out
+}
+
+# The form two DOIs are compared in (API_SPEC.md section 18): the DOI that
+# .tf_find_doi() finds in the text. Text with no such run keeps the 0.6.0 rule:
+# trimmed, lowercased and percent-decoded, it loses a known prefix, if it has
+# one, and is trimmed again. Mirrors Python's _text.normalise_doi.
 .tf_normalize_doi <- function(doi) {
   if (is.null(doi) || length(doi) == 0L || is.na(doi)) doi <- ""
-  d <- .tf_ascii_lower(.tf_trim(as.character(doi)))
-  m <- gregexpr("%[0-9a-f]{2}", d, perl = TRUE)
-  esc <- regmatches(d, m)[[1L]]
-  if (length(esc) > 0L) {
-    v <- strtoi(substring(esc, 2L), 16L)
-    printable <- v >= 0x21 & v <= 0x7E
-    esc[printable] <- vapply(v[printable], intToUtf8, character(1))
-    regmatches(d, m) <- list(esc)
-  }
-  pos <- regexpr(.tf_DOI_PATTERN, d, perl = TRUE)
-  if (pos > 0L) {
-    return(sub("[.,;]+$", "", regmatches(d, pos), perl = TRUE))
-  }
+  doi <- as.character(doi)
+  found <- .tf_find_doi(doi)
+  if (!is.na(found)) return(found)
+  d <- .tf_doi_prepared(doi)
   for (prefix in .tf_DOI_PREFIXES) {
     if (startsWith(d, prefix)) {
       return(.tf_trim(substr(d, nchar(prefix) + 1L, nchar(d))))

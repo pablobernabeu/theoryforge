@@ -1,0 +1,14 @@
+# One DOI written three ways in two records: upper-case, with a doi: prefix
+# and as a resolver URL. Keyed as written, it made three nodes and no
+# co-citation edge. Keyed by the DOI, it is one node, which the OpenAlex id
+# beside it meets in both records. The id keeps its capital W.
+schema_version: "1.0"
+id: corpus-doi-case
+records:
+  - id: w1
+    references: ["10.1016/J.BRAT.2015.10.002", W2045435533]
+  - id: w2
+    references:
+      - "doi:10.1016/j.brat.2015.10.002"
+      - "https://doi.org/10.1016/j.brat.2015.10.002"
+      - W2045435533

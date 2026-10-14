@@ -58,6 +58,14 @@ it exactly. A logical, a fraction or a nested value is refused: an unquoted
 \code{NO} (nitric oxide) or \code{on} in YAML is read as a logical, so quote
 it.
 
+A reference that holds a DOI is keyed by the DOI, lower-cased and without
+its resolver prefix, as \code{\link[=tf_new_evidence_dois]{tf_new_evidence_dois()}} compares DOIs. One work
+cited as \code{10.1016/J.BRAT.2015.10.002} in one record and as
+\code{https://doi.org/10.1016/j.brat.2015.10.002} in another is therefore
+one node, labelled \code{10.1016/j.brat.2015.10.002}. Any other reference,
+such as a Scopus or OpenAlex identifier, is compared exactly as written, and
+so is every keyword.
+
 Co-citation maps of real corpora are large. 200 OpenAlex records give about
 11,000 reference pairs that share two or more citing records, so
 \code{min_cocitation} can be set above \code{min_link}, and

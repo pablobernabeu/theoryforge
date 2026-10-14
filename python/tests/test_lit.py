@@ -269,6 +269,94 @@ def test_the_largest_exact_integer_is_kept():
     assert lm["co_citation"] == [{"a": "9007199254740991", "b": "a", "count": 2}]
 
 
+# -- references keyed by their DOI (API_SPEC.md section 14) -------------------
+# The R suite runs the same cases and expects the same results.
+
+def _cited(*reference_lists):
+    """A corpus with one record citing each list of references."""
+    records = [{"id": f"w{i}", "references": list(refs)} for i, refs in enumerate(reference_lists)]
+    return {"schema_version": "1.0", "id": "c", "records": records}
+
+
+def test_one_doi_written_three_ways_is_one_co_citation_node():
+    # DOI names are case-insensitive under ASCII case folding (DOI Handbook,
+    # section 2.4), and a resolver prefix is not part of the name. Keyed as
+    # written, the DOI made three nodes and no pair reached a count of 2.
+    lm = tf.litmap(_cited(
+        ["10.1016/J.BRAT.2015.10.002", "W2045435533"],
+        ["doi:10.1016/j.brat.2015.10.002", "https://doi.org/10.1016/j.brat.2015.10.002",
+         "W2045435533"],
+    ))
+    assert lm["co_citation"] == [
+        {"a": "10.1016/j.brat.2015.10.002", "b": "W2045435533", "count": 2}]
+
+
+@pytest.mark.parametrize("spelling", [
+    "DOI 10.1016/J.BRAT.2015.10.002",
+    "https://dx.doi.org/10.1016%2Fj.brat.2015.10.002",
+    "info:doi/10.1016/j.brat.2015.10.002",
+    "10.1016/j.brat.2015.10.002.",
+    " 10.1016/j.brat.2015.10.002 ",
+])
+def test_every_spelling_the_doi_normaliser_reads_keys_one_work(spelling):
+    lm = tf.litmap(_cited(["10.1016/j.brat.2015.10.002", "x"], [spelling, "x"]))
+    assert lm["co_citation"] == [{"a": "10.1016/j.brat.2015.10.002", "b": "x", "count": 2}]
+
+
+@pytest.mark.parametrize("ref", [
+    "scopus:85012345678",
+    "https://openalex.org/W2045435533",
+    "Clark1986",
+    " barlow2002 ",
+    # 10.1 has too few digits for a DOI, and the prefix rule the DOI
+    # normaliser falls back on is not applied to a reference.
+    "DOI:10.1/X",
+    "doi:Not-A-DOI",
+])
+def test_a_reference_without_a_doi_is_kept_as_written(ref):
+    lm = tf.litmap(_cited([ref, "~"], [ref, "~"]))
+    assert lm["co_citation"] == [{"a": ref, "b": "~", "count": 2}]
+
+
+@one_theme
+def test_keywords_are_not_keyed_by_doi():
+    lm = tf.litmap(_two("keywords", ["10.1016/J.BRAT.2015.10.002", "Panic"]))
+    assert lm["keywords"] == ["10.1016/J.BRAT.2015.10.002", "Panic"]
+
+
+def _corpus_schema() -> dict:
+    import json
+    from importlib.resources import files
+
+    return json.loads((files("theoryforge") / "schema" / "corpus.schema.json")
+                      .read_text(encoding="utf-8"))
+
+
+def test_the_corpus_schema_ships_in_the_package():
+    schema = _corpus_schema()
+    assert schema["title"] == "theoryforge literature corpus"
+    assert schema["required"] == ["schema_version", "id", "records"]
+    # scopusflow's corpus writer adds a provenance block at the top level.
+    assert schema["additionalProperties"] is True
+
+
+def test_the_shipped_corpora_and_a_provenance_block_validate(fixtures_dir):
+    jsonschema = pytest.importorskip("jsonschema")
+    if not hasattr(jsonschema, "Draft202012Validator"):
+        pytest.skip("Draft 2020-12 needs jsonschema 4.0 or later")
+    validator = jsonschema.Draft202012Validator(_corpus_schema())
+    for name in ("panic-corpus.yaml", OPENALEX):
+        validator.validate(tf.read_corpus(fixtures_dir / name))
+    written = _cited(["scopus:84900000001", "10.1016/j.brat.2015.10.002"],
+                     ["scopus:84900000001", "10.1016/j.brat.2015.10.002"])
+    written["provenance"] = {"source": "Scopus via scopusflow", "query": "TITLE-ABS-KEY(panic)",
+                             "retrieved_at": "2026-10-14T12:00:00Z", "n_records": 2,
+                             "n_references_dropped": 0, "n_records_without_keywords": 2}
+    validator.validate(written)
+    assert tf.litmap(written)["co_citation"] == [
+        {"a": "10.1016/j.brat.2015.10.002", "b": "scopus:84900000001", "count": 2}]
+
+
 def test_landscape_does_not_count_co_citation(fixtures_dir, panic_path, monkeypatch):
     from theoryforge import lit
 

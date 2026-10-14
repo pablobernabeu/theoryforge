@@ -19,7 +19,7 @@ from urllib.parse import urlencode
 from ._access import field, items, ne_str, str_list, text
 from ._load import load_document
 from ._num import rnd
-from ._text import normalise_doi
+from ._text import find_doi, normalise_doi
 from .redundancy import tokens
 
 DEFAULT_MIN_LINK = 2
@@ -145,6 +145,20 @@ def _records(corpus) -> list[tuple[list[str], list[str]]]:
             raise ValueError(f"invalid corpus: record[{i}] is not a mapping")
         out.append((_values(r, i, "keywords"), _values(r, i, "references")))
     return out
+
+
+def _reference_key(ref: str) -> str:
+    """The node a reference counts as in the co-citation map (API_SPEC.md section 14).
+
+    A reference that holds a DOI is keyed by the DOI as ``normalise_doi`` gives
+    it, so that ``10.1016/J.BRAT...``, ``doi:10.1016/j.brat...`` and
+    ``https://doi.org/10.1016/j.brat...`` are one work: DOI names are
+    case-insensitive under ASCII case folding (DOI Handbook, section 2.4). Any
+    other reference, a Scopus or OpenAlex identifier or a fixture key, is kept
+    exactly as written.
+    """
+    found = find_doi(ref)
+    return ref if found is None else found
 
 
 def _pair_counts(values: list[list[str]]) -> dict:
@@ -342,7 +356,8 @@ def _litmap(corpus, s: dict, co_citation: bool = True, records: list | None = No
         "themes": themes,
     }
     if co_citation:
-        out["co_citation"] = _edges(_pair_counts([refs for _, refs in records]), s["min_cocitation"])
+        keyed = [[_reference_key(r) for r in refs] for _, refs in records]
+        out["co_citation"] = _edges(_pair_counts(keyed), s["min_cocitation"])
     if s["method"] == "simple_centres":
         out["method"] = s["method"]
         out["parameters"] = {k: s[k] for k in ("min_link", "min_cocitation", "min_theme_size",
@@ -385,6 +400,14 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
     is often wanted. Both must be positive integers. The corpus is checked as
     API_SPEC.md section 14 describes: integer entries become decimal strings,
     and booleans, fractions and nested values are refused.
+
+    A reference that holds a DOI is keyed by the DOI, lower-cased and without
+    its resolver prefix, as ``new_evidence_dois`` compares DOIs. One work cited
+    as ``10.1016/J.BRAT.2015.10.002`` in one record and as
+    ``https://doi.org/10.1016/j.brat.2015.10.002`` in another is therefore one
+    node, labelled ``10.1016/j.brat.2015.10.002``. Any other reference, such as
+    a Scopus or OpenAlex identifier, is compared exactly as written, and so is
+    every keyword.
 
     ``method`` chooses how keywords are grouped into themes. With
     ``"components"``, the default, a theme is a connected component of the

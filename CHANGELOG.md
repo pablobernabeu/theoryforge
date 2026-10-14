@@ -438,6 +438,19 @@ version and a single behavioural contract
   dossier, in the appended preregistration. API_SPEC sections 11 and 20 pin the format.
   The four `prereg.md` and four `dossier.md` goldens and their R copies change, and so
   does the `preregister` entry of every edge-case record that holds one.
+- `litmap()` keys a reference that holds a DOI by the DOI, lower-cased and without its
+  resolver prefix, as `new_evidence_dois()` compares DOIs. One cited work written as
+  `10.1016/J.BRAT.2015.10.002`, `doi:10.1016/j.brat.2015.10.002` and
+  `https://doi.org/10.1016/j.brat.2015.10.002` is therefore one node of the co-citation
+  map, where it made three, and co-citation labels of DOI-keyed corpora are now lower-case
+  DOIs. Other references, such as Scopus and OpenAlex identifiers, and all keywords are
+  compared as written, as before. `landscape()` reads no references, so its results are
+  unchanged. The corpus schema now ships with the package, at
+  `importlib.resources.files("theoryforge") / "schema" / "corpus.schema.json"`, and
+  `scripts/gen_golden.py` writes both packages' copies. API_SPEC section 14 states the
+  rule, the edge case `corpus-doi-case` pins it in both twins, and the `corpus-mixed-ids`
+  edge record now labels its DOI in lower case. The goldens are unchanged, since no
+  reference in the golden corpora is a DOI.
 
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`

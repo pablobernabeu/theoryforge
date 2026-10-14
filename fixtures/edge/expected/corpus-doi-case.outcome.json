@@ -1,0 +1,16 @@
+{
+  "read": "ok",
+  "litmap": {
+    "n_records": 2,
+    "keywords": [],
+    "keyword_cooccurrence": [],
+    "themes": [],
+    "co_citation": [
+      {
+        "a": "10.1016/j.brat.2015.10.002",
+        "b": "W2045435533",
+        "count": 2
+      }
+    ]
+  }
+}

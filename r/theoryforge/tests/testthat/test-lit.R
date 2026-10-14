@@ -346,6 +346,88 @@ test_that("an integer too large to hold exactly is refused", {
   expect_identical(edge_strings(lm$co_citation), "9007199254740991|a|2")
 })
 
+# -- references keyed by their DOI (API_SPEC.md section 14) -------------------
+# test_lit.py runs the same cases and expects the same results.
+
+# A corpus with one record citing each vector of references.
+cited <- function(...) {
+  refs <- list(...)
+  records <- lapply(seq_along(refs), function(i) {
+    list(id = paste0("w", i - 1L), references = as.list(refs[[i]]))
+  })
+  list(schema_version = "1.0", id = "c", records = records)
+}
+
+test_that("one DOI written three ways is one co-citation node", {
+  # DOI names are case-insensitive under ASCII case folding (DOI Handbook,
+  # section 2.4), and a resolver prefix is not part of the name. Keyed as
+  # written, the DOI made three nodes and no pair reached a count of 2.
+  lm <- tf_litmap(cited(
+    c("10.1016/J.BRAT.2015.10.002", "W2045435533"),
+    c("doi:10.1016/j.brat.2015.10.002", "https://doi.org/10.1016/j.brat.2015.10.002",
+      "W2045435533")
+  ))
+  expect_identical(edge_strings(lm$co_citation), "10.1016/j.brat.2015.10.002|W2045435533|2")
+})
+
+test_that("every spelling the DOI normaliser reads keys one work", {
+  spellings <- c(
+    "DOI 10.1016/J.BRAT.2015.10.002",
+    "https://dx.doi.org/10.1016%2Fj.brat.2015.10.002",
+    "info:doi/10.1016/j.brat.2015.10.002",
+    "10.1016/j.brat.2015.10.002.",
+    " 10.1016/j.brat.2015.10.002 "
+  )
+  for (spelling in spellings) {
+    lm <- tf_litmap(cited(c("10.1016/j.brat.2015.10.002", "x"), c(spelling, "x")))
+    expect_identical(edge_strings(lm$co_citation), "10.1016/j.brat.2015.10.002|x|2",
+                     info = spelling)
+  }
+})
+
+test_that("a reference without a DOI is kept as written", {
+  refs <- c(
+    "scopus:85012345678",
+    "https://openalex.org/W2045435533",
+    "Clark1986",
+    " barlow2002 ",
+    # 10.1 has too few digits for a DOI, and the prefix rule the DOI
+    # normaliser falls back on is not applied to a reference.
+    "DOI:10.1/X",
+    "doi:Not-A-DOI"
+  )
+  for (ref in refs) {
+    lm <- tf_litmap(cited(c(ref, "~"), c(ref, "~")))
+    expect_identical(edge_strings(lm$co_citation), paste0(ref, "|~|2"), info = ref)
+  }
+})
+
+test_that("keywords are not keyed by DOI", {
+  lm <- one_theme(tf_litmap(two_records("keywords",
+                                        list("10.1016/J.BRAT.2015.10.002", "Panic"))))
+  expect_identical(unlist(lm$keywords), c("10.1016/J.BRAT.2015.10.002", "Panic"))
+})
+
+test_that("the corpus schema ships in the package", {
+  path <- system.file("schema", "corpus.schema.json", package = "theoryforge")
+  expect_true(nzchar(path))
+  schema <- jsonlite::fromJSON(path, simplifyVector = FALSE)
+  expect_identical(schema$title, "theoryforge literature corpus")
+  expect_identical(unlist(schema$required), c("schema_version", "id", "records"))
+  # scopusflow's corpus writer adds a provenance block at the top level.
+  expect_true(schema$additionalProperties)
+})
+
+test_that("a corpus with a provenance block maps as one without", {
+  written <- cited(c("scopus:84900000001", "10.1016/j.brat.2015.10.002"),
+                   c("scopus:84900000001", "10.1016/j.brat.2015.10.002"))
+  written$provenance <- list(source = "Scopus via scopusflow", query = "TITLE-ABS-KEY(panic)",
+                             retrieved_at = "2026-10-14T12:00:00Z", n_records = 2L,
+                             n_references_dropped = 0L, n_records_without_keywords = 2L)
+  expect_identical(edge_strings(tf_litmap(written)$co_citation),
+                   "10.1016/j.brat.2015.10.002|scopus:84900000001|2")
+})
+
 test_that("pair counting matches a direct count on random corpora", {
   # A slow, obviously correct count: one environment entry per pair.
   direct <- function(values, min_link) {

@@ -161,6 +161,24 @@ tf_read_corpus <- function(path) {
   })
 }
 
+# The nodes the references of each record count as in the co-citation map
+# (API_SPEC.md section 14), as Python lit._reference_key. A reference that holds
+# a DOI is keyed by the DOI as .tf_normalize_doi() gives it, so that
+# 10.1016/J.BRAT..., doi:10.1016/j.brat... and https://doi.org/10.1016/j.brat...
+# are one work: DOI names are case-insensitive under ASCII case folding (DOI
+# Handbook, section 2.4). Any other reference, a Scopus or OpenAlex identifier
+# or a fixture key, is kept exactly as written. Every reference of the corpus is
+# keyed in one vectorised call.
+.tf_reference_keys <- function(references) {
+  flat <- unlist(references, use.names = FALSE)
+  if (length(flat) == 0L) return(references)
+  found <- .tf_find_doi(flat)
+  doi <- !is.na(found)
+  flat[doi] <- found[doi]
+  unname(split(flat, factor(rep.int(seq_along(references), lengths(references)),
+                            levels = seq_along(references))))
+}
+
 # Count every unordered pair (a < b) of each record's sorted unique values.
 # Pairs are generated a record at a time, keyed once and counted once at the
 # end, which is linear in the number of pairs. Matching each new key against
@@ -423,7 +441,7 @@ tf_read_corpus <- function(path) {
     themes = themes
   )
   if (co_citation) {
-    references <- lapply(records, `[[`, "references")
+    references <- .tf_reference_keys(lapply(records, `[[`, "references"))
     out$co_citation <- .tf_edges(.tf_pair_counts(references), s$min_cocitation)
   }
   if (simple) {
@@ -467,6 +485,14 @@ tf_read_corpus <- function(path) {
 #' it exactly. A logical, a fraction or a nested value is refused: an unquoted
 #' \code{NO} (nitric oxide) or \code{on} in YAML is read as a logical, so quote
 #' it.
+#'
+#' A reference that holds a DOI is keyed by the DOI, lower-cased and without
+#' its resolver prefix, as [tf_new_evidence_dois()] compares DOIs. One work
+#' cited as \code{10.1016/J.BRAT.2015.10.002} in one record and as
+#' \code{https://doi.org/10.1016/j.brat.2015.10.002} in another is therefore
+#' one node, labelled \code{10.1016/j.brat.2015.10.002}. Any other reference,
+#' such as a Scopus or OpenAlex identifier, is compared exactly as written, and
+#' so is every keyword.
 #'
 #' Co-citation maps of real corpora are large. 200 OpenAlex records give about
 #' 11,000 reference pairs that share two or more citing records, so

@@ -92,7 +92,7 @@ fixtures and scripts that keep them in step.
 
 | Path | Contents |
 |---|---|
-| [`schema/`](schema/) | `theory.schema.json` (source of truth) + `rigor_checklist.yaml` + `fold.json` (the text fold table) |
+| [`schema/`](schema/) | `theory.schema.json` (source of truth) + `rigor_checklist.yaml` + `fold.json` (the text fold table) + `corpus.schema.json` (the literature corpus) |
 | [`fixtures/`](fixtures/) | canonical theory objects + golden outputs |
 | [`API_SPEC.md`](API_SPEC.md) | the parity contract (exact algorithms and IR formats) |
 | [`python/`](python/) | Python package |

@@ -465,6 +465,18 @@
   are labelled as illustrative, so its preregistration, dossier and pipeline
   and workflow diagrams now show a passed test.
 
+* `tf_litmap()` keys a reference that holds a DOI by the DOI, lower-cased and
+  without its resolver prefix, as `tf_new_evidence_dois()` compares DOIs. One
+  cited work written as `10.1016/J.BRAT.2015.10.002`,
+  `doi:10.1016/j.brat.2015.10.002` and
+  `https://doi.org/10.1016/j.brat.2015.10.002` is therefore one node of the
+  co-citation map, where it made three, and co-citation labels of DOI-keyed
+  corpora are now lower-case DOIs. Other references, such as Scopus and
+  OpenAlex identifiers, and all keywords are compared as written, as before.
+  `tf_landscape()` reads no references, so its results are unchanged. The
+  corpus schema now ships with the package, at
+  `system.file("schema", "corpus.schema.json", package = "theoryforge")`.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

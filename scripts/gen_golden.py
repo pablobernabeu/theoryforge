@@ -5,10 +5,11 @@ Writes every parity artefact named in API_SPEC.md sections 13, 17, 21, 22, 27
 and 29 into ``fixtures/expected/``. Listing the artefact types here as well would only
 give them a second place to drift from; the spec is the list.
 
-Also mirrors the fixture inputs, the golden tree and the two schema files
-(``schema/theory.schema.json`` and ``schema/rigor_checklist.yaml``) into the
-copies each package ships, so that every duplicate in the repository has exactly
-one writer. CI runs this script and fails on any resulting change.
+Also mirrors the fixture inputs, the golden tree and the files of ``schema/``
+(``theory.schema.json``, ``rigor_checklist.yaml``, ``fold.json`` and
+``corpus.schema.json``) into the copies each package ships, so that every
+duplicate in the repository has exactly one writer. CI runs this script and
+fails on any resulting change.
 
 Finally, it records the outcome of every edge-case theory and corpus in
 ``fixtures/edge/`` (deliberately malformed or awkward inputs) as
@@ -50,9 +51,11 @@ R_INPUTS = ROOT / "r" / "theoryforge" / "inst" / "fixtures"
 PY_INPUTS = ROOT / "python" / "src" / "theoryforge" / "fixtures"
 # Each package reads its own copy of the schema and checklist, because neither
 # the CRAN tarball nor the sdist can reach the repository root. The webR app
-# vendors the R package's copy (apps/build.mjs).
+# vendors the R package's copy (apps/build.mjs). Neither package reads the
+# corpus schema itself. It ships so that a user who installed only the package
+# can check a corpus file against it.
 SCHEMA = ROOT / "schema"
-SCHEMA_FILES = ("theory.schema.json", "rigor_checklist.yaml", "fold.json")
+SCHEMA_FILES = ("theory.schema.json", "rigor_checklist.yaml", "fold.json", "corpus.schema.json")
 SCHEMA_COPIES = (ROOT / "r" / "theoryforge" / "inst" / "schema",
                  ROOT / "python" / "src" / "theoryforge" / "schema")
 EDGE = FIXTURES / "edge"
@@ -242,7 +245,7 @@ def _write_json(name: str, obj) -> str:
 
 
 def mirror_schema(src: Path, dests) -> None:
-    """Copy the schema and checklist from ``src`` into each directory in ``dests``."""
+    """Copy each file of ``SCHEMA_FILES`` from ``src`` into each directory in ``dests``."""
     for dest in dests:
         dest.mkdir(parents=True, exist_ok=True)
         for name in SCHEMA_FILES:
@@ -250,7 +253,7 @@ def mirror_schema(src: Path, dests) -> None:
 
 
 def main() -> int:
-    # Mirror the schema, checklist and fold table into each package's shipped
+    # Mirror the schemas, checklist and fold table into each package's shipped
     # copy first: the package reads its own copy, so the goldens below must be
     # computed from the files this run ships, not from the previous run's.
     mirror_schema(SCHEMA, SCHEMA_COPIES)

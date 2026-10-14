@@ -1,4 +1,4 @@
-"""Text normalisation shared by every consumer (API_SPEC.md sections 3, 6, 10, 18 and 19).
+"""Text normalisation shared by every consumer (API_SPEC.md sections 3, 6, 10, 14, 18 and 19).
 
 The two languages disagree on what whitespace is and on how to lowercase:
 Python's ``str.strip()`` and R's ``trimws()`` trim different characters, and
@@ -60,20 +60,37 @@ def _pct(m: re.Match) -> str:
     return chr(v) if 0x21 <= v <= 0x7E else m.group(0)
 
 
+def _prepared(s: str) -> str:
+    """``s`` trimmed, lowercased (ASCII only) and percent-decoded, in that order."""
+    return _PCT.sub(_pct, ascii_lower(trim(s)))
+
+
+def find_doi(s: str) -> str | None:
+    """The DOI in ``s`` in the form ``normalise_doi`` gives it, or None when there is none.
+
+    ``s`` is trimmed and lowercased (ASCII only, as the DOI Handbook
+    prescribes), with every percent escape of a printable ASCII character
+    decoded. The result is the first run that looks like a DOI, less any
+    trailing full stops, commas or semicolons. litmap keys a reference by it
+    (API_SPEC.md section 14), and since the prefix rule of ``normalise_doi`` is
+    left out, text without such a run gives None.
+    """
+    m = _DOI.search(_prepared(s))
+    return m.group(0).rstrip(".,;") if m else None
+
+
 def normalise_doi(doi) -> str:
     """The form two DOIs are compared in (API_SPEC.md section 18).
 
-    Trimmed and lowercased (ASCII only, as the DOI Handbook prescribes), with
-    every percent escape of a printable ASCII character decoded, then the first
-    run that looks like a DOI, less any trailing full stops, commas or
-    semicolons. Text with no such run keeps the 0.6.0 rule: one known prefix is
-    removed and the rest trimmed again.
+    The DOI that ``find_doi`` finds in the text. Text with no such run keeps the
+    0.6.0 rule: trimmed, lowercased and percent-decoded, it loses a known
+    prefix, if it has one, and is trimmed again.
     """
-    d = ascii_lower(trim(str(doi or "")))
-    d = _PCT.sub(_pct, d)
-    m = _DOI.search(d)
-    if m:
-        return m.group(0).rstrip(".,;")
+    text = str(doi or "")
+    found = find_doi(text)
+    if found is not None:
+        return found
+    d = _prepared(text)
     for prefix in _DOI_PREFIXES:
         if d.startswith(prefix):
             return trim(d[len(prefix):])

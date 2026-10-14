@@ -53,6 +53,16 @@ list among the values. They also stop on an integer of 2^53 or more, since R
 cannot hold one exactly. YAML reads an unquoted `NO` (nitric oxide), `yes`,
 `on` or `off` as a boolean, so quote such a keyword.
 
+A reference that holds a DOI is keyed by the DOI, lower-cased and without its
+resolver prefix, because DOI names ignore the case of ASCII letters (DOI
+Handbook, section 2.4). `10.1016/J.BRAT.2015.10.002` in one record and
+`https://doi.org/10.1016/j.brat.2015.10.002` in another therefore cite one
+work, which the co-citation map labels `10.1016/j.brat.2015.10.002`. Other
+references, such as Scopus or OpenAlex identifiers, are compared exactly as
+written, and so are keywords. The package ships the corpus format as a JSON
+Schema, `corpus.schema.json`, at
+`importlib.resources.files("theoryforge") / "schema" / "corpus.schema.json"`.
+
 Read it with `tf.read_corpus`, which accepts YAML or JSON and returns a
 plain dictionary. The examples below read the sample corpus and theory that
 ship with the package through `tf.example_path()`, as on the
@@ -501,17 +511,19 @@ records = fetch_plan(
 frame = corpus(records)
 ```
 
-`litmap` compares references and keywords as exact strings, so the conversion
-has to give each cited work one spelling across the whole corpus. Scopus gives
-a cited work's DOI in one record, in different capitals in another and not at
-all in a third, so a key built from the DOI splits one work into several nodes
-and the co-citation map comes out empty. Author keywords keep their authors'
-capitals, which splits the keyword themes in the same way. The adapter below
-therefore keys each cited work by its Scopus identifier, as `scopus:<id>`. A
-reference that carries only a DOI borrows the identifier of another reference
-with the same DOI anywhere in the corpus, and is keyed as `doi:<doi>`, with
-the DOI lower-cased and any resolver prefix removed, when no such reference
-exists. References with neither are dropped. Keywords are trimmed and
+`litmap` folds the case of a DOI and drops its resolver prefix, but it compares
+every other reference and every keyword as an exact string. The conversion
+therefore has to give each cited work one key across the whole corpus. Scopus
+gives a cited work's DOI in one record and not at all in another. A key built
+from the DOI where there is one, and from the Scopus identifier otherwise,
+splits one work into two nodes, and the co-citation map loses its edges. Author
+keywords keep their authors' capitals, which splits the keyword themes in the
+same way. The adapter below therefore keys each cited work by its Scopus
+identifier, as `scopus:<id>`. A reference that carries only a DOI borrows the
+identifier of another reference with the same DOI anywhere in the corpus, and
+is keyed as `doi:<doi>`, with the DOI lower-cased and any resolver prefix
+removed, when no such reference exists. `litmap` labels such a work with the
+bare DOI. References with neither are dropped. Keywords are trimmed and
 lower-cased, and a missing year is written as `null`. The year is converted
 to a plain `int` because a fresh fetch leaves `pd.NA` for a missing year and
 a resumed checkpoint holds nullable `Int64` years, and the `json` module
