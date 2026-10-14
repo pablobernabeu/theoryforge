@@ -80,6 +80,18 @@ predictions:
     severity: 0.6
     diagnostic_vs: []
     bounds: {lower: 20, upper: 60}
+    # A sampling plan made up to show the preregistration's section, as its
+    # justification says. It is not a published design.
+    test:
+      n_planned: 48
+      unit: "participants"
+      alpha: 0.05
+      sided: "two"
+      sesoi: 20
+      sesoi_scale: "ms"
+      power: 0.9
+      method: "simulation"
+      justification: "Illustrative values."
   - id: pred3
     derives_from: [p3]
     statement: "Concurrent dynamic visual noise removes the advantage of visual properties over auditory properties in semantic categorisation, leaving a difference of zero under load in the same participants who show the advantage without it."

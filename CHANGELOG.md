@@ -533,6 +533,13 @@ version and a single behavioural contract
   pipeline and workflow diagrams now show a passed test. API_SPEC section 29 pins the
   rule and its refusals, and a new golden, `modality-switching-2026.post_data_severity.json`,
   holds the example's record.
+- Predictions accept an optional `test` block recording the planned sample size, alpha,
+  smallest effect of interest and power, and `preregister()` lists it in a Sampling plan
+  section. The block is recorded, not scored: power does not change a prediction's
+  severity. `add_prediction()` gains `test`, and `validate(full=True)` checks the block.
+  The modality-switching example records a plan for `pred2` whose values are labelled as
+  illustrative, so its preregistration and dossier gain the section. A theory without a
+  plan gives the same document as before. API_SPEC section 30 pins the block and the line.
 
 ### Deprecated
 - `simulate()`'s default `method="euler"`. The default will change to `"exact"` in the

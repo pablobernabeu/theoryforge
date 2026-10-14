@@ -72,6 +72,12 @@
    - Rivals it discriminates: alt_symbol_interdependency
    - Test record: untested
 
+## Sampling plan (author-recorded; not scored)
+- pred1: no sampling plan stated
+- pred2: n = 48 participants; alpha 0.05, two-sided; smallest effect of interest 20 ms; power 0.9 (simulation). Illustrative values.
+- pred3: no sampling plan stated
+- pred4: no sampling plan stated
+
 ## Implied conditional independencies (derived from the causal graph, not predictions)
 - `c_sensorimotor_experience _||_ c_switch_cost | c_modality_activation`
 - `c_sensorimotor_experience _||_ c_conceptual_access | c_modality_activation, c_lexical_familiarity`

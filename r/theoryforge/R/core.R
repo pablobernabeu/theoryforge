@@ -72,9 +72,9 @@ tf_read <- function(path) {
 #' evidence and test outcomes, a logical \code{passed}, the evidence direction
 #' and formal-model type enums, the version block and the
 #' \code{schema_version} pattern. It also covers numbers within \[0, 1\] where
-#' the schema asks for them, a prediction's \code{bounds}, a test outcome's
-#' \code{estimate} and \code{se}, and the type of every other field and of
-#' every entry of a string array.
+#' the schema asks for them, a prediction's \code{bounds} and \code{test}
+#' block, a test outcome's \code{estimate} and \code{se}, and the type of every
+#' other field and of every entry of a string array.
 #'
 #' The Python twin's test suite compares the result with a JSON Schema 2020-12
 #' validator. Besides the ids and references, which the schema cannot express,
@@ -368,7 +368,8 @@ tf_validate <- function(theory, full = FALSE) {
       errors <- c(errors,
                   .tf_unit_number(.tf_get(preds[[i]], "risk_score"),
                                   sprintf("prediction[%d] risk_score", i - 1L)),
-                  .tf_bounds(.tf_get(preds[[i]], "bounds"), sprintf("prediction[%d] bounds", i - 1L)))
+                  .tf_bounds(.tf_get(preds[[i]], "bounds"), sprintf("prediction[%d] bounds", i - 1L)),
+                  .tf_test_plan(.tf_get(preds[[i]], "test"), sprintf("prediction[%d] test", i - 1L)))
     }
     for (i in seq_along(evs)) {
       errors <- c(errors, .tf_optional_text(.tf_get(evs[[i]], "source_doi"),
@@ -451,10 +452,13 @@ tf_validate <- function(theory, full = FALSE) {
   if (nullable) paste(name, "must be a string or null") else .tf_not_string(name, v)
 }
 
+# Whether `v` is a single number within [0, 1]. A logical is not a number.
+.tf_is_unit_number <- function(v) {
+  is.numeric(v) && length(v) == 1L && !is.na(v) && v >= 0 && v <= 1
+}
+
 .tf_unit_number <- function(v, name) {
-  if (.tf_absent(v) || (is.numeric(v) && length(v) == 1L && !is.na(v) && v >= 0 && v <= 1)) {
-    return(character(0))
-  }
+  if (.tf_absent(v) || .tf_is_unit_number(v)) return(character(0))
   paste(name, "must be a number between 0 and 1")
 }
 
@@ -501,6 +505,68 @@ tf_validate <- function(theory, full = FALSE) {
   }
   if (!is.null(nums[[1]]) && !is.null(nums[[2]]) && nums[[1]] > nums[[2]]) {
     out <- c(out, paste(name, "lower exceeds upper"))
+  }
+  out
+}
+
+.tf_TEST_KEYS <- c("n_planned", "unit", "alpha", "sided", "sesoi", "sesoi_scale", "power",
+                   "decision_probability", "power_lo", "power_hi", "method", "design_ref",
+                   "justification")
+.tf_SIDED <- c("two", "one")
+
+# Whether `v` is a finite whole number of at least 1, as n_planned must be. A
+# double such as 48 counts, as JSON Schema's integer type allows, and an integer
+# too large for a double, which the reader holds as Inf, does not.
+.tf_whole_count <- function(v) {
+  x <- .tf_number(v)
+  !is.null(x) && is.finite(x) && x == floor(x) && x >= 1
+}
+
+# A prediction's test block, the sampling plan tf_preregister() lists. The block
+# is closed, as bounds is, since a misspelt key would drop a value from the plan
+# without a word. power_lo and power_hi come as a pair, because the
+# preregistration writes the interval only whole.
+.tf_test_plan <- function(v, name) {
+  if (.tf_absent(v)) return(character(0))
+  if (.tf_not_a_mapping(v)) return(paste(name, "must be a mapping"))
+  out <- character(0)
+  for (key in names(v)) {
+    if (!(key %in% .tf_TEST_KEYS)) {
+      out <- c(out, sprintf("%s has unknown field: %s", name, key))
+    }
+  }
+  n <- .tf_get(v, "n_planned")
+  if (!.tf_absent(n) && !.tf_whole_count(n)) {
+    out <- c(out, paste(name, "n_planned must be a whole number of at least 1"))
+  }
+  out <- c(out, .tf_optional_text(.tf_get(v, "unit"), paste(name, "unit")))
+  a <- .tf_get(v, "alpha")
+  x <- .tf_number(a)
+  if (!.tf_absent(a) && !(!is.null(x) && x > 0 && x < 1)) {
+    out <- c(out, paste(name, "alpha must be a number between 0 and 1"))
+  }
+  sided <- .tf_get(v, "sided")
+  if (!.tf_absent(sided) && is.null(.tf_enum(sided, .tf_SIDED))) {
+    out <- c(out, sprintf("%s sided must be one of: %s", name, paste(.tf_SIDED, collapse = ", ")))
+  }
+  s <- .tf_get(v, "sesoi")
+  x <- .tf_number(s)
+  if (!.tf_absent(s) && (is.null(x) || !is.finite(x))) {
+    out <- c(out, paste(name, "sesoi must be a finite number"))
+  }
+  out <- c(out, .tf_optional_text(.tf_get(v, "sesoi_scale"), paste(name, "sesoi_scale")))
+  for (key in c("power", "decision_probability", "power_lo", "power_hi")) {
+    out <- c(out, .tf_unit_number(.tf_get(v, key), paste(name, key)))
+  }
+  lo <- .tf_get(v, "power_lo")
+  hi <- .tf_get(v, "power_hi")
+  if (.tf_absent(lo) != .tf_absent(hi)) {
+    out <- c(out, paste(name, "power_lo and power_hi must be given together"))
+  } else if (.tf_is_unit_number(lo) && .tf_is_unit_number(hi) && lo > hi) {
+    out <- c(out, paste(name, "power_lo exceeds power_hi"))
+  }
+  for (key in c("method", "design_ref", "justification")) {
+    out <- c(out, .tf_optional_text(.tf_get(v, key), paste(name, key)))
   }
   out
 }
@@ -705,18 +771,37 @@ tf_add_proposition <- function(theory, id, from, to, relation, mechanism = NULL)
 #'   when given. The checklist's risk_severity item reads it, and reads the
 #'   claim-form rubric's value ([tf_severity()]) for a prediction that declares
 #'   none. [tf_dossier()] sets the two side by side.
+#' @param test Optional sampling plan for testing the prediction, a named list
+#'   of any of \code{n_planned}, \code{unit}, \code{alpha}, \code{sided}
+#'   (\code{"two"} or \code{"one"}), \code{sesoi} and \code{sesoi_scale} (the
+#'   smallest effect of interest and its scale), \code{power} or
+#'   \code{decision_probability} with an optional \code{power_lo} and
+#'   \code{power_hi}, \code{method}, \code{design_ref} and
+#'   \code{justification} (API_SPEC.md section 30). It is stored only when
+#'   given. [tf_preregister()] lists it after the hypotheses, and nothing
+#'   scores it.
 #' @return The (mutated) theory object.
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_prediction("h1", "Arousal precedes threat appraisal.", "directional")
+#'
+#' # A prediction with the sampling plan of its test.
+#' tf_theory("demo-1", "A demonstration theory") |>
+#'   tf_add_prediction("h1", "The switch cost lies between 20 and 60 ms.", "interval",
+#'                     test = list(n_planned = 48, unit = "participants", alpha = 0.05,
+#'                                 sided = "two", power = 0.9))
 #' @export
 tf_add_prediction <- function(theory, id, statement, type,
                               derives_from = NULL, diagnostic_vs = NULL,
-                              severity = NULL) {
+                              severity = NULL, test = NULL) {
   p_item <- list(id = id, statement = statement, type = type)
   if (!is.null(derives_from)) p_item$derives_from <- as.list(derives_from)
   if (!is.null(diagnostic_vs)) p_item$diagnostic_vs <- as.list(diagnostic_vs)
   if (!is.null(severity)) p_item$severity <- severity
+  # A named numeric vector becomes the mapping it names. A vector that mixes
+  # numbers and text has already turned its numbers into text, which
+  # tf_validate(full = TRUE) then reports.
+  if (!is.null(test)) p_item$test <- if (is.list(test)) test else as.list(test)
   theory <- .tf_coll_append(theory, "predictions", p_item)
   .tf_provenance_append(theory, "tf_add_prediction", id)
 }

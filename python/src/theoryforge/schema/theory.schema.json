@@ -106,6 +106,27 @@
               "upper": { "type": ["number", "null"] }
             },
             "description": "The region of the quantity the claim allows. A null or infinite bound is open, so a one-sided claim leaves one side null. post_data_severity() reads it with each test outcome's estimate and se. Full validation also requires at least one finite bound and lower not above upper."
+          },
+          "test": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "n_planned": { "type": "integer", "minimum": 1 },
+              "unit": { "type": "string", "description": "What n_planned counts, such as participants or items." },
+              "alpha": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 },
+              "sided": { "type": "string", "enum": ["two", "one"] },
+              "sesoi": { "type": "number", "description": "The smallest effect of interest. Full validation also requires a finite value." },
+              "sesoi_scale": { "type": "string", "description": "The scale of sesoi, such as ms or Cohen's d." },
+              "power": { "type": "number", "minimum": 0, "maximum": 1 },
+              "decision_probability": { "type": "number", "minimum": 0, "maximum": 1, "description": "The planned probability of a decision other than power, such as that of an interval estimate falling outside a region of practical equivalence." },
+              "power_lo": { "type": "number", "minimum": 0, "maximum": 1, "description": "The lower end of an interval around the stated power or decision probability, such as the Wilson interval of a simulated power. Full validation also requires power_lo not above power_hi." },
+              "power_hi": { "type": "number", "minimum": 0, "maximum": 1, "description": "The upper end of that interval." },
+              "method": { "type": "string", "description": "How the power or decision probability was obtained, such as simulation or an analytic formula." },
+              "design_ref": { "type": "string", "description": "A file, DOI or URL of the design analysis, such as a pilotr specification or power report." },
+              "justification": { "type": "string" }
+            },
+            "dependentRequired": { "power_lo": ["power_hi"], "power_hi": ["power_lo"] },
+            "description": "The sampling plan for testing the prediction, which a Stage 1 Registered Report states for each hypothesis. It is recorded, not scored: power does not raise the severity of a claim (Meehl, 1967), though it decides how informative a failed test is (Lakens, 2022). preregister() lists it after the hypotheses, and no other function reads it. The interval a claim allows belongs in bounds."
           }
         }
       }

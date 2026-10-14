@@ -22,6 +22,85 @@ NULL
 .tf_IMPLIED_HEADING <- paste0("## Implied conditional independencies (derived from the causal ",
                               "graph, not predictions)")
 
+.tf_PLAN_HEADING <- "## Sampling plan (author-recorded; not scored)"
+
+# A recorded value as the sampling plan writes it, with up to 15 significant
+# digits. The plan repeats what the author recorded, so it does not round to the
+# three decimals of .tf_fmt(), which would write an alpha of 0.0001 as 0.0.
+# Python's format(x, ".15g") gives the same text, an exponent such as 5e-08
+# included.
+.tf_plan_number <- function(x) sprintf("%.15g", as.numeric(x))
+
+# The sampling plan that prediction `p` states, or NULL when it states none. The
+# test block is read leniently (API_SPEC.md section 30). A number that full
+# validation would refuse reads as absent, text is read through .tf_text() and
+# sided through .tf_enum(). A qualifier is written only beside the value it
+# qualifies: the unit with n_planned, the scale with sesoi, and the interval and
+# method with the power or decision probability.
+.tf_plan <- function(p) {
+  block <- .tf_get(p, "test")
+  if (!.tf_is_mapping(block)) return(NULL)
+  num <- function(key, ok) {
+    x <- .tf_number(.tf_get(block, key))
+    if (!is.null(x) && ok(x)) x else NULL
+  }
+  txt <- function(key) {
+    s <- .tf_str(block, key)
+    if (.tf_ne_str(s)) s else ""
+  }
+  unit_interval <- function(x) x >= 0 && x <= 1
+
+  clauses <- character(0)
+  n <- num("n_planned", function(x) is.finite(x) && x == floor(x) && x >= 1)
+  if (!is.null(n)) {
+    unit <- txt("unit")
+    clauses <- c(clauses, paste0("n = ", .tf_plan_number(n), if (nzchar(unit)) paste0(" ", unit)))
+  }
+  alpha <- num("alpha", function(x) x > 0 && x < 1)
+  sided <- .tf_enum(.tf_get(block, "sided"), .tf_SIDED)
+  level <- c(if (!is.null(alpha)) paste0("alpha ", .tf_plan_number(alpha)),
+             if (!is.null(sided)) paste0(sided, "-sided"))
+  if (length(level) > 0L) clauses <- c(clauses, paste(level, collapse = ", "))
+  sesoi <- num("sesoi", is.finite)
+  if (!is.null(sesoi)) {
+    scale <- txt("sesoi_scale")
+    clauses <- c(clauses, paste0("smallest effect of interest ", .tf_plan_number(sesoi),
+                                 if (nzchar(scale)) paste0(" ", scale)))
+  }
+  power <- num("power", unit_interval)
+  decision <- num("decision_probability", unit_interval)
+  prob <- c(if (!is.null(power)) paste0("power ", .tf_plan_number(power)),
+            if (!is.null(decision)) paste0("decision probability ", .tf_plan_number(decision)))
+  if (length(prob) > 0L) {
+    part <- paste(prob, collapse = ", ")
+    lo <- num("power_lo", unit_interval)
+    hi <- num("power_hi", unit_interval)
+    if (!is.null(lo) && !is.null(hi) && lo <= hi) {
+      part <- paste0(part, " [", .tf_plan_number(lo), ", ", .tf_plan_number(hi), "]")
+    }
+    method <- txt("method")
+    clauses <- c(clauses, paste0(part, if (nzchar(method)) paste0(" (", method, ")")))
+  }
+  design <- txt("design_ref")
+  if (nzchar(design)) clauses <- c(clauses, paste0("design: ", design))
+  justification <- txt("justification")
+  if (length(clauses) == 0L) return(if (nzchar(justification)) justification else NULL)
+  line <- paste(clauses, collapse = "; ")
+  if (nzchar(justification)) paste0(line, ". ", justification) else line
+}
+
+# The lines of the sampling-plan section, or none when no prediction states a
+# plan, so a theory without a plan renders as it did before the section existed
+# (API_SPEC.md section 30).
+.tf_sampling_plan <- function(preds) {
+  plans <- lapply(preds, .tf_plan)
+  if (all(vapply(plans, is.null, logical(1)))) return(character(0))
+  ids <- vapply(preds, function(p) .tf_str(p, "id"), character(1))
+  stated <- vapply(plans, function(x) if (is.null(x)) "no sampling plan stated" else x,
+                   character(1))
+  c("", .tf_PLAN_HEADING, paste0("- ", ids, ": ", stated))
+}
+
 # What a test outcome found: "passed", "failed" or "no result recorded".
 # tf_check() has refused a passed that is present and not a logical, so what is
 # left is TRUE, FALSE or absent.
@@ -116,16 +195,27 @@ NULL
 #' (`core` or `added for <id>`), the registered rivals it discriminates and its
 #' test record. A hypothesis that a recorded outcome has already tested reads
 #' `already tested: passed (<date>, registered <where>)`, one entry per
-#' outcome, and any other reads `untested`. A section then lists the
-#' conditional independencies that [tf_implications()] derives from the causal
-#' graph with its default settings, which are claims the theory makes without
-#' stating them, or says why there are none. The claim-form severity rubric
-#' closes the document.
+#' outcome, and any other reads `untested`.
+#'
+#' When at least one prediction states a sampling plan in its \code{test}
+#' block, a section headed `Sampling plan (author-recorded; not scored)`
+#' follows, with one line per prediction in file order. A line gives what is
+#' recorded of the planned sample, alpha and sidedness, smallest effect of
+#' interest, power or decision probability, design analysis and justification.
+#' A prediction without a plan reads `no sampling plan stated`. Nothing scores
+#' the plan: power does not raise a claim's severity (Meehl, 1967), though it
+#' decides how informative a failed test is (Lakens, 2022). A theory without a
+#' plan has no such section.
+#'
+#' A section then lists the conditional independencies that
+#' [tf_implications()] derives from the causal graph with its default
+#' settings, which are claims the theory makes without stating them, or says
+#' why there are none. The claim-form severity rubric closes the document.
 #'
 #' The document is the part of a preregistration that the theory file holds. It
-#' is to be completed with the study design, the sampling plan, the analysis
-#' plan and the inference criteria, the sections that a template such as
-#' PRP-QUANT asks for (Bosnjak et al., 2022).
+#' is to be completed with the study design, the analysis plan, the inference
+#' criteria and whatever the sampling plan leaves out, the sections that a
+#' template such as PRP-QUANT asks for (Bosnjak et al., 2022).
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param path Optional destination path; when given, the markdown is written
@@ -137,6 +227,13 @@ NULL
 #'   quantitative research in psychology: Report of the joint psychological
 #'   societies preregistration task force. \emph{American Psychologist}, 77(4),
 #'   602-615. \doi{10.1037/amp0000879}
+#'
+#' Lakens, D. (2022). Sample size justification. \emph{Collabra: Psychology},
+#'   8(1), Article 33267. \doi{10.1525/collabra.33267}
+#'
+#' Meehl, P. E. (1967). Theory-testing in psychology and physics: A
+#'   methodological paradox. \emph{Philosophy of Science}, 34(2), 103-115.
+#'   \doi{10.1086/288135}
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_prediction("h1", "Effect is exactly 0.30.", "point")
@@ -195,6 +292,7 @@ tf_preregister <- function(theory, path = NULL) {
       }
       lines <- c(lines, paste0(pad, "- Test record: ", .tf_test_record(pid, tos)))
     }
+    lines <- c(lines, .tf_sampling_plan(preds))
   }
 
   lines <- c(lines, "", .tf_IMPLIED_HEADING, .tf_implied_lines(T))

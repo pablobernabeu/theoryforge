@@ -477,6 +477,15 @@
   corpus schema now ships with the package, at
   `system.file("schema", "corpus.schema.json", package = "theoryforge")`.
 
+* Predictions accept an optional `test` block recording the planned sample
+  size, alpha, smallest effect of interest and power, and `tf_preregister()`
+  lists it in a Sampling plan section. The block is recorded, not scored:
+  power does not change a prediction's severity. `tf_add_prediction()` gains
+  `test`, and `tf_validate(full = TRUE)` checks the block. The
+  modality-switching example records a plan for `pred2` whose values are
+  labelled as illustrative, so its preregistration and dossier gain the
+  section. A theory without a plan gives the same document as before.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

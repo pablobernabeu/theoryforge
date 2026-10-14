@@ -32,16 +32,27 @@ derivation, followed by the auxiliary assumptions that protect it
 (\code{core} or \verb{added for <id>}), the registered rivals it discriminates and its
 test record. A hypothesis that a recorded outcome has already tested reads
 \verb{already tested: passed (<date>, registered <where>)}, one entry per
-outcome, and any other reads \code{untested}. A section then lists the
-conditional independencies that \code{\link[=tf_implications]{tf_implications()}} derives from the causal
-graph with its default settings, which are claims the theory makes without
-stating them, or says why there are none. The claim-form severity rubric
-closes the document.
+outcome, and any other reads \code{untested}.
+
+When at least one prediction states a sampling plan in its \code{test}
+block, a section headed \verb{Sampling plan (author-recorded; not scored)}
+follows, with one line per prediction in file order. A line gives what is
+recorded of the planned sample, alpha and sidedness, smallest effect of
+interest, power or decision probability, design analysis and justification.
+A prediction without a plan reads \verb{no sampling plan stated}. Nothing scores
+the plan: power does not raise a claim's severity (Meehl, 1967), though it
+decides how informative a failed test is (Lakens, 2022). A theory without a
+plan has no such section.
+
+A section then lists the conditional independencies that
+\code{\link[=tf_implications]{tf_implications()}} derives from the causal graph with its default
+settings, which are claims the theory makes without stating them, or says
+why there are none. The claim-form severity rubric closes the document.
 
 The document is the part of a preregistration that the theory file holds. It
-is to be completed with the study design, the sampling plan, the analysis
-plan and the inference criteria, the sections that a template such as
-PRP-QUANT asks for (Bosnjak et al., 2022).
+is to be completed with the study design, the analysis plan, the inference
+criteria and whatever the sampling plan leaves out, the sections that a
+template such as PRP-QUANT asks for (Bosnjak et al., 2022).
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
@@ -54,4 +65,11 @@ Oswald, F. L., & Sokol, R. I. (2022). A template for preregistration of
 quantitative research in psychology: Report of the joint psychological
 societies preregistration task force. \emph{American Psychologist}, 77(4),
 602-615. \doi{10.1037/amp0000879}
+
+Lakens, D. (2022). Sample size justification. \emph{Collabra: Psychology},
+8(1), Article 33267. \doi{10.1525/collabra.33267}
+
+Meehl, P. E. (1967). Theory-testing in psychology and physics: A
+methodological paradox. \emph{Philosophy of Science}, 34(2), 103-115.
+\doi{10.1086/288135}
 }

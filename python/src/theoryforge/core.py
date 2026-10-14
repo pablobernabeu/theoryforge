@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
 
@@ -176,6 +177,64 @@ def _bounds(v, name: str) -> list[str]:
     return msgs
 
 
+_TEST_KEYS = ("n_planned", "unit", "alpha", "sided", "sesoi", "sesoi_scale", "power",
+              "decision_probability", "power_lo", "power_hi", "method", "design_ref",
+              "justification")
+_SIDED = ("two", "one")
+
+
+def _whole_count(v) -> bool:
+    """Whether ``v`` is a finite whole number of at least 1, as ``n_planned`` must be.
+
+    A float such as 48.0 counts, as JSON Schema's integer type allows and as R
+    holds a number it builds in memory. An integer too large for a float reads
+    as an infinity (API_SPEC.md section 2, item 14), so it does not count.
+    """
+    x = _number(v)
+    return x is not None and math.isfinite(x) and x == math.floor(x) and x >= 1
+
+
+def _test_plan(v, name: str) -> list[str]:
+    """A prediction's ``test`` block, the sampling plan the preregistration lists.
+
+    The block is closed, as ``bounds`` is, since a misspelt key would drop a
+    value from the plan without a word. ``power_lo`` and ``power_hi`` come as a
+    pair, because the preregistration writes the interval only whole.
+    """
+    if v is None:
+        return []
+    if _not_a_mapping(v):
+        return [f"{name} must be a mapping"]
+    v = v if isinstance(v, dict) else {}
+    msgs = [f"{name} has unknown field: {key}" for key in v if key not in _TEST_KEYS]
+    n = v.get("n_planned")
+    if n is not None and not _whole_count(n):
+        msgs.append(f"{name} n_planned must be a whole number of at least 1")
+    msgs += _optional_text(v.get("unit"), f"{name} unit")
+    a = v.get("alpha")
+    x = _number(a)
+    if a is not None and not (x is not None and 0 < x < 1):
+        msgs.append(f"{name} alpha must be a number between 0 and 1")
+    sided = v.get("sided")
+    if sided is not None and not (isinstance(sided, str) and sided in _SIDED):
+        msgs.append(f"{name} sided must be one of: {', '.join(_SIDED)}")
+    s = v.get("sesoi")
+    x = _number(s)
+    if s is not None and (x is None or not math.isfinite(x)):
+        msgs.append(f"{name} sesoi must be a finite number")
+    msgs += _optional_text(v.get("sesoi_scale"), f"{name} sesoi_scale")
+    for key in ("power", "decision_probability", "power_lo", "power_hi"):
+        msgs += _unit_number(v.get(key), f"{name} {key}")
+    lo, hi = v.get("power_lo"), v.get("power_hi")
+    if (lo is None) != (hi is None):
+        msgs.append(f"{name} power_lo and power_hi must be given together")
+    elif _is_unit_number(lo) and _is_unit_number(hi) and lo > hi:
+        msgs.append(f"{name} power_lo exceeds power_hi")
+    for key in ("method", "design_ref", "justification"):
+        msgs += _optional_text(v.get(key), f"{name} {key}")
+    return msgs
+
+
 def _estimate_and_se(t, prefix: str) -> list[str]:
     """A test outcome's ``estimate`` and ``se``, which ``post_data_severity()`` reads together."""
     est, se = _field(t, "estimate"), _field(t, "se")
@@ -262,9 +321,9 @@ class Theory:
         alternatives, evidence and test outcomes, a boolean ``passed``, the
         evidence direction and formal-model type enums, the version block and
         the ``schema_version`` pattern. It also covers numbers within [0, 1]
-        where the schema asks for them, a prediction's ``bounds``, a test
-        outcome's ``estimate`` and ``se``, and the type of every other field and
-        of every entry of a string array.
+        where the schema asks for them, a prediction's ``bounds`` and ``test``
+        block, a test outcome's ``estimate`` and ``se``, and the type of every
+        other field and of every entry of a string array.
 
         CI compares the result with a JSON Schema 2020-12 validator. Besides the
         ids and references, which the schema cannot express, the pass is
@@ -474,6 +533,7 @@ class Theory:
         for i, p in enumerate(preds):
             errors += _unit_number(_field(p, "risk_score"), f"prediction[{i}] risk_score")
             errors += _bounds(_field(p, "bounds"), f"prediction[{i}] bounds")
+            errors += _test_plan(_field(p, "test"), f"prediction[{i}] test")
         for i, e in enumerate(evs):
             errors += _optional_text(_field(e, "source_doi"), f"evidence[{i}] source_doi", nullable=True)
         for i, t in enumerate(tos):
@@ -580,7 +640,7 @@ class Theory:
         return self._add("propositions", p, "tf_add_proposition", id)
 
     def add_prediction(self, id, statement, type, derives_from=None, diagnostic_vs=None,
-                       severity=None):
+                       severity=None, test=None):
         """Append a prediction and log the step in the provenance.
 
         ``id`` identifies the prediction and ``statement`` gives the claim in
@@ -599,8 +659,16 @@ class Theory:
         would discriminate from. ``severity`` is a declared pre-data severity
         from 0 to 1, stored only when given. The checklist's risk_severity item
         reads it, and reads the claim-form rubric's value for a prediction that
-        declares none. The dossier sets the two side by side. The theory is
-        returned, so that builder calls chain.
+        declares none. The dossier sets the two side by side.
+
+        ``test`` is the sampling plan for testing the prediction, a mapping of
+        any of ``n_planned``, ``unit``, ``alpha``, ``sided`` (``"two"`` or
+        ``"one"``), ``sesoi`` and ``sesoi_scale`` (the smallest effect of
+        interest and its scale), ``power`` or ``decision_probability`` with an
+        optional ``power_lo`` and ``power_hi``, ``method``, ``design_ref`` and
+        ``justification`` (API_SPEC.md section 30). It is stored, as a copy,
+        only when given. ``preregister()`` lists it after the hypotheses, and
+        nothing scores it. The theory is returned, so that builder calls chain.
         """
         p = {"id": id, "statement": statement, "type": type}
         if derives_from is not None:
@@ -609,6 +677,10 @@ class Theory:
             p["diagnostic_vs"] = _as_str_list(diagnostic_vs)
         if severity is not None:
             p["severity"] = severity
+        if test is not None:
+            # A copy, so that a later change to the caller's mapping leaves the
+            # theory as it was, as R's builder leaves it.
+            p["test"] = dict(test) if isinstance(test, Mapping) else test
         return self._add("predictions", p, "tf_add_prediction", id)
 
     def add_alternative(self, id, label, key_constructs=None):

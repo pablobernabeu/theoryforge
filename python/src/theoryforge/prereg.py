@@ -1,8 +1,11 @@
 """Preregistration document export. Deterministic markdown output."""
 from __future__ import annotations
 
+import math
+
 from ._access import MATURITY, PRED_TYPE, enum, field, items, ne_str, str_list, text
 from ._io import write_lf as _write_lf
+from ._num import number as _number
 from .implications import implications as _implications
 from .rigor import check as _check
 from .scoring import severity as _severity
@@ -14,6 +17,9 @@ from .scoring import severity as _severity
 _RESOLVE = {"pass": "yes", "fail": "no", "n/a": "not applicable (no predictions)"}
 
 _IMPLIED_HEADING = "## Implied conditional independencies (derived from the causal graph, not predictions)"
+
+_PLAN_HEADING = "## Sampling plan (author-recorded; not scored)"
+_SIDED = ("two", "one")
 
 
 def _fmt(x) -> str:
@@ -85,6 +91,93 @@ def _test_record(pid: str, tos: list) -> str:
     return "already tested: " + "; ".join(done) if done else "untested"
 
 
+def _plan_number(x: float) -> str:
+    """A recorded value as the sampling plan writes it, with up to 15 significant digits.
+
+    The plan repeats what the author recorded, so it does not round to the three
+    decimals of ``_fmt``, which would write an alpha of 0.0001 as 0.0. R's
+    ``sprintf("%.15g")`` gives the same text, an exponent such as ``5e-08``
+    included.
+    """
+    return format(x, ".15g")
+
+
+def _plan(p) -> str | None:
+    """The sampling plan that prediction ``p`` states, or None when it states none.
+
+    The ``test`` block is read leniently (API_SPEC.md section 30). A number that
+    full validation would refuse reads as absent, text is read through
+    ``text`` and ``sided`` through ``enum``. A qualifier is written only beside
+    the value it qualifies: the unit with ``n_planned``, the scale with
+    ``sesoi``, and the interval and method with the power or decision
+    probability.
+    """
+    block = field(p, "test")
+    if not isinstance(block, dict):
+        return None
+
+    def num(key: str, ok) -> float | None:
+        x = _number(block.get(key))
+        return x if x is not None and ok(x) else None
+
+    def txt(key: str) -> str:
+        s = text(block.get(key))
+        return s if ne_str(s) else ""
+
+    def unit_interval(x: float) -> bool:
+        return 0 <= x <= 1
+
+    clauses = []
+    n = num("n_planned", lambda x: math.isfinite(x) and x == math.floor(x) and x >= 1)
+    if n is not None:
+        unit = txt("unit")
+        clauses.append(f"n = {_plan_number(n)}" + (f" {unit}" if unit else ""))
+    alpha = num("alpha", lambda x: 0 < x < 1)
+    sided = enum(block.get("sided"), _SIDED)
+    level = ([f"alpha {_plan_number(alpha)}"] if alpha is not None else []) + \
+        ([f"{sided}-sided"] if sided else [])
+    if level:
+        clauses.append(", ".join(level))
+    sesoi = num("sesoi", math.isfinite)
+    if sesoi is not None:
+        scale = txt("sesoi_scale")
+        clauses.append(f"smallest effect of interest {_plan_number(sesoi)}"
+                       + (f" {scale}" if scale else ""))
+    power = num("power", unit_interval)
+    decision = num("decision_probability", unit_interval)
+    prob = ([f"power {_plan_number(power)}"] if power is not None else []) + \
+        ([f"decision probability {_plan_number(decision)}"] if decision is not None else [])
+    if prob:
+        part = ", ".join(prob)
+        lo, hi = num("power_lo", unit_interval), num("power_hi", unit_interval)
+        if lo is not None and hi is not None and lo <= hi:
+            part += f" [{_plan_number(lo)}, {_plan_number(hi)}]"
+        method = txt("method")
+        clauses.append(part + (f" ({method})" if method else ""))
+    design = txt("design_ref")
+    if design:
+        clauses.append(f"design: {design}")
+    justification = txt("justification")
+    if not clauses:
+        return justification or None
+    line = "; ".join(clauses)
+    return f"{line}. {justification}" if justification else line
+
+
+def _sampling_plan(preds: list) -> list[str]:
+    """The lines of the sampling-plan section, or none when no prediction states a plan.
+
+    A theory without a plan therefore renders as it did before the section
+    existed (API_SPEC.md section 30).
+    """
+    plans = [(text(field(p, "id")), _plan(p)) for p in preds]
+    if all(plan is None for _, plan in plans):
+        return []
+    return ["", _PLAN_HEADING,
+            *(f"- {pid}: {plan if plan is not None else 'no sampling plan stated'}"
+              for pid, plan in plans)]
+
+
 def _implied(data: dict) -> list[str]:
     """The lines of the implied-independencies section (API_SPEC.md section 11)."""
     try:
@@ -120,16 +213,27 @@ def preregister(T, path=None) -> str:
     or ``added for <id>``), the registered rivals it discriminates and its test
     record. A hypothesis that a recorded outcome has already tested reads
     ``already tested: passed (<date>, registered <where>)``, one entry per
-    outcome, and any other reads ``untested``. A section then lists the
-    conditional independencies that ``implications()`` derives from the causal
-    graph with its default settings, which are claims the theory makes without
-    stating them, or says why there are none. The claim-form severity rubric
-    closes the document.
+    outcome, and any other reads ``untested``.
+
+    When at least one prediction states a sampling plan in its ``test`` block,
+    a section headed ``Sampling plan (author-recorded; not scored)`` follows,
+    with one line per prediction in file order. A line gives what is recorded
+    of the planned sample, alpha and sidedness, smallest effect of interest,
+    power or decision probability, design analysis and justification. A
+    prediction without a plan reads ``no sampling plan stated``. Nothing
+    scores the plan: power does not raise a claim's severity (Meehl, 1967),
+    though it decides how informative a failed test is (Lakens, 2022). A theory
+    without a plan has no such section.
+
+    A section then lists the conditional independencies that
+    ``implications()`` derives from the causal graph with its default
+    settings, which are claims the theory makes without stating them, or says
+    why there are none. The claim-form severity rubric closes the document.
 
     The document is the part of a preregistration that the theory file holds.
-    It is to be completed with the study design, the sampling plan, the
-    analysis plan and the inference criteria, the sections that a template such
-    as PRP-QUANT asks for (Bosnjak et al., 2022).
+    It is to be completed with the study design, the analysis plan, the
+    inference criteria and whatever the sampling plan leaves out, the sections
+    that a template such as PRP-QUANT asks for (Bosnjak et al., 2022).
 
     References:
         Bosnjak, M., Fiebach, C. J., Mellor, D., Mueller, S., O'Connor, D. B.,
@@ -137,6 +241,13 @@ def preregister(T, path=None) -> str:
         quantitative research in psychology: Report of the joint psychological
         societies preregistration task force. American Psychologist, 77(4),
         602-615. https://doi.org/10.1037/amp0000879
+
+        Lakens, D. (2022). Sample size justification. Collabra: Psychology,
+        8(1), Article 33267. https://doi.org/10.1525/collabra.33267
+
+        Meehl, P. E. (1967). Theory-testing in psychology and physics: A
+        methodological paradox. Philosophy of Science, 34(2), 103-115.
+        https://doi.org/10.1086/288135
     """
     data = T.data if hasattr(T, "data") else T
     rep = _check(data)
@@ -178,6 +289,7 @@ def preregister(T, path=None) -> str:
             if rivals:
                 lines.append(f"{pad}- Rivals it discriminates: {', '.join(rivals)}")
             lines.append(f"{pad}- Test record: {_test_record(pid, tos)}")
+        lines += _sampling_plan(preds)
 
     lines += ["", _IMPLIED_HEADING, *_implied(data)]
 

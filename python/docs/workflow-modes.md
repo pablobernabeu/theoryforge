@@ -356,7 +356,10 @@ text = t.preregister()
 print(text)
 ```
 
-The theory file holds no study design, sampling plan, analysis plan or
+A prediction can record the sampling plan of its test, the planned sample,
+alpha, smallest effect of interest and power, in a `test` block. The document
+then lists the plans in a section of their own after the hypotheses, and this
+theory records none. The theory file holds no study design, analysis plan or
 inference criteria, so a registry needs more than this section. A template such
 as PRP-QUANT sets out the rest
 ([Bosnjak et al., 2022](https://doi.org/10.1037/amp0000879)).

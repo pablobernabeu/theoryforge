@@ -11,7 +11,8 @@ tf_add_prediction(
   type,
   derives_from = NULL,
   diagnostic_vs = NULL,
-  severity = NULL
+  severity = NULL,
+  test = NULL
 )
 }
 \arguments{
@@ -38,6 +39,16 @@ statement.}
 when given. The checklist's risk_severity item reads it, and reads the
 claim-form rubric's value (\code{\link[=tf_severity]{tf_severity()}}) for a prediction that declares
 none. \code{\link[=tf_dossier]{tf_dossier()}} sets the two side by side.}
+
+\item{test}{Optional sampling plan for testing the prediction, a named list
+of any of \code{n_planned}, \code{unit}, \code{alpha}, \code{sided}
+(\code{"two"} or \code{"one"}), \code{sesoi} and \code{sesoi_scale} (the
+smallest effect of interest and its scale), \code{power} or
+\code{decision_probability} with an optional \code{power_lo} and
+\code{power_hi}, \code{method}, \code{design_ref} and
+\code{justification} (API_SPEC.md section 30). It is stored only when
+given. \code{\link[=tf_preregister]{tf_preregister()}} lists it after the hypotheses, and nothing
+scores it.}
 }
 \value{
 The (mutated) theory object.
@@ -48,4 +59,10 @@ Appends a prediction and a provenance entry, returning the mutated theory.
 \examples{
 tf_theory("demo-1", "A demonstration theory") |>
   tf_add_prediction("h1", "Arousal precedes threat appraisal.", "directional")
+
+# A prediction with the sampling plan of its test.
+tf_theory("demo-1", "A demonstration theory") |>
+  tf_add_prediction("h1", "The switch cost lies between 20 and 60 ms.", "interval",
+                    test = list(n_planned = 48, unit = "participants", alpha = 0.05,
+                                sided = "two", power = 0.9))
 }

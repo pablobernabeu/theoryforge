@@ -38,9 +38,9 @@ the schema. That covers the required fields of assumptions, alternatives,
 evidence and test outcomes, a logical \code{passed}, the evidence direction
 and formal-model type enums, the version block and the
 \code{schema_version} pattern. It also covers numbers within [0, 1] where
-the schema asks for them, a prediction's \code{bounds}, a test outcome's
-\code{estimate} and \code{se}, and the type of every other field and of
-every entry of a string array.
+the schema asks for them, a prediction's \code{bounds} and \code{test}
+block, a test outcome's \code{estimate} and \code{se}, and the type of every
+other field and of every entry of a string array.
 
 The Python twin's test suite compares the result with a JSON Schema 2020-12
 validator. Besides the ids and references, which the schema cannot express,
