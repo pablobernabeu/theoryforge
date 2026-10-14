@@ -486,6 +486,18 @@
   labelled as illustrative, so its preregistration and dossier gain the
   section. A theory without a plan gives the same document as before.
 
+* The theory schema the package ships, at
+  `system.file("schema", "theory.schema.json", package = "theoryforge")`,
+  compiles under strict JSON Schema validators such as Ajv. Its note on the
+  closed top level was a `comment` keyword, which JSON Schema does not define,
+  and is now a `$comment`. Three descriptions promised behaviour the package
+  lacks and now describe what it does. `tf_validate()` requires
+  `schema_version` and `tf_validate(full = TRUE)` checks its pattern, but no
+  function gates loading on the version. At `draft` maturity the gate is
+  advisory, while failed blocker items are still reported as `fail` and still
+  count in the aggregate score. The checklist applies the same twelve items to
+  every `theory_form`.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

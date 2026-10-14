@@ -5,12 +5,12 @@
   "description": "Language-agnostic source of truth for a theory as a versioned, machine-checkable object. Authored as YAML, validated against this JSON Schema, read/written identically by the R and Python packages.",
   "type": "object",
   "required": ["schema_version", "id", "title", "maturity"],
-  "comment": "Closed at the top level: a misspelt collection key (predicitions) would otherwise be accepted while silently dropping the collection and changing every downstream verdict. Item objects stay open so individual entries can carry extra metadata.",
+  "$comment": "Closed at the top level: a misspelt collection key (predicitions) would otherwise be accepted while silently dropping the collection and changing every downstream verdict. Item objects stay open so individual entries can carry extra metadata.",
   "additionalProperties": false,
   "properties": {
     "schema_version": {
       "type": "string",
-      "description": "Semantic version of this schema. The major version gates loading.",
+      "description": "major.minor version of the theory schema. validate() requires it and validate(full) checks its pattern, but neither package gates loading on the version.",
       "pattern": "^[0-9]+\\.[0-9]+$"
     },
     "id": { "type": "string", "minLength": 1 },
@@ -18,13 +18,13 @@
     "maturity": {
       "type": "string",
       "enum": ["draft", "building", "developing", "testing"],
-      "description": "When set to draft, the theory is treated as interim and advisory, so blocker checks are downgraded to warnings and partial theories are scaffolded rather than penalized."
+      "description": "At draft maturity the gate is advisory: failed blocker items are still reported as fail and still count in the aggregate score, but the gate never reads blocked."
     },
     "theory_form": {
       "type": "string",
       "enum": ["variance", "network", "typology", "process"],
       "default": "network",
-      "description": "Selects the schema/checklist profile. v1.0 fully supports variance/network; typology/process are partial."
+      "description": "Declared form of the theory, validated against the enum. No score depends on it: the checklist applies the same twelve items to every form."
     },
     "version": {
       "type": "object",

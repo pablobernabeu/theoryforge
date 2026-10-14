@@ -357,6 +357,17 @@ jobs:
           node apps/build.mjs
           node -e "const m=require('./apps/r/vendor/manifest.json'); if(!m.rFiles.length||!m.examples.length) throw new Error('empty R manifest')"
           node -e "const m=require('./apps/py/vendor/manifest.json'); if(!m.pyFiles.length||!m.examples.length) throw new Error('empty Python manifest')"
+      # Ajv's default strict mode refuses to compile a schema holding a keyword
+      # that JSON Schema does not define. python-jsonschema accepts such a
+      # keyword as an annotation, so only a strict validator catches it. The
+      # corpus schema's year admits three types, and strict mode warns about
+      # that unless union types are allowed. ajv-cli bundles no formats and
+      # strict mode refuses an unknown one, so the corpus schema's date-time
+      # format is left as the annotation JSON Schema 2020-12 makes it by default.
+      - name: The schemas compile under Ajv's strict mode
+        run: |
+          npx --yes ajv-cli@5.0.0 compile --spec=draft2020 -s schema/theory.schema.json
+          npx --yes ajv-cli@5.0.0 compile --spec=draft2020 --allow-union-types --validate-formats=false -s schema/corpus.schema.json
       # The UI core, both runtimes, the vendor build and the site's landing and
       # 404 pages under a stub DOM (apps/tests/dom.mjs), with no dependency.
       - name: App and site tests

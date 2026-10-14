@@ -672,6 +672,16 @@ version and a single behavioural contract
   `tf_example_names()` as the R counterparts, and CONTRIBUTING says that a local docs
   build needs the Graphviz binaries. A test runs each guide's visible code from an empty
   directory.
+- The schema compiles under strict JSON Schema validators and no longer promises version
+  gating, draft-stage downgrades or form profiles that the packages do not implement. Its
+  note on the closed top level was a `comment` keyword, which JSON Schema does not define
+  and Ajv's default strict mode refuses, and is now a `$comment`. The `schema_version`
+  description says that `validate()` requires the field and `validate(full=True)` checks
+  its pattern, and that neither package gates loading on it. The `maturity` description
+  says that at draft maturity failed blockers are still reported as failing and still
+  count in the score, and only the gate is advisory. The `theory_form` description says
+  that the checklist applies the same twelve items to every form. API_SPEC no longer lists
+  implemented functions as stubs, and its diagram section names all ten types.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and
@@ -722,6 +732,11 @@ version and a single behavioural contract
   reads the redundancy screen's own flags. The edge-case records gain the report's
   `coverage`, and a new edge case covers an assumption corroborated beyond its anomaly, a
   definition contained in another and a theory whose only relation is `mediates`.
+- CI's apps job compiles both schemas with Ajv in its default strict mode (ajv-cli
+  5.0.0), which python-jsonschema cannot stand in for, since it accepts an unknown
+  keyword as an annotation. `tests/test_schema_document.py` and its R twin check that
+  every key of the schemas the packages ship is a JSON Schema keyword, and hold the three
+  rewritten descriptions to the behaviour they describe.
 
 
 ## [0.6.0] - 2026-08-27

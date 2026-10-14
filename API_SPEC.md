@@ -1,4 +1,4 @@
-# theoryforge: API and parity specification (v0.6.0, P0)
+# theoryforge: API and parity specification (v0.6.0)
 
 This document is the contract that keeps the R and Python packages behaviourally identical.
 Both implementations MUST follow the algorithms below exactly. CI diffs their outputs against it.
@@ -36,9 +36,8 @@ Each package ships a committed copy of `schema/theory.schema.json`, `schema/rigo
 | Render report | `tf_report(theory, format="json")` → string | `theory.report(format="json")` → str |
 | Redundancy screen | `tf_redundancy_check(theory)` → df | `theory.redundancy_check()` → list[dict] |
 | Diagram IR | `tf_diagram(theory, type, engine="graphviz")` → string | `theory.diagram(type, engine="graphviz")` → str |
-| **P0 stubs** (signal "not implemented") | `tf_litmap`, `tf_landscape`, `tf_preregister`, `tf_appraise_amendment` | `theory.litmap`, `theory.landscape`, `theory.preregister`, `theory.appraise_amendment` |
 
-The two implementations use the same verbs, the same argument names and the same artefacts. Stubs MUST raise a clear "not implemented in P0" error rather than returning incorrect data.
+The two implementations use the same verbs, the same argument names and the same artefacts. Parts B to I add the rest of the mirrored API.
 
 **Validation (`validate`).** Both languages collect every problem and raise once with the prefix `invalid theory object: ` followed by the messages joined by `; `, in the order fixed below. The default pass checks structure, starting with the required top-level fields `schema_version`, `id`, `title` and `maturity`, then the `maturity` enum and, when that key is present, the `theory_form` enum. Unknown top-level fields come next, then each collection that is not a list. Last come the required fields of each construct (`id`, `label`, `definition`), proposition (`id`, `from`, `to`, `relation`) and prediction (`id`, `statement`, `type`), entry by entry. A nonempty string outside its enum adds `proposition[i] relation '<v>' not allowed` or `prediction[i] type '<v>' not allowed` after the entry's fields.
 
@@ -188,7 +187,7 @@ The null score of an `n/a` item is written as JSON `null` in both languages (R's
 
 ## 5. Diagram IR (byte-identical across languages)
 
-`tf_diagram(theory, type)` / `theory.diagram(type)` supports `type ∈ {nomological_net, provenance, causal_dag}` in P0.
+`tf_diagram(theory, type)` / `theory.diagram(type)` supports ten types. This section specifies `nomological_net`, `provenance` and `causal_dag`, and §12 the other seven.
 
 Every DOT view opens with a shared, byte-identical style prelude (the Meridian
 palette and Helvetica type, so a renderer needs no styling of its own):
@@ -299,7 +298,7 @@ P1 implements the three modes as full features. New public API (mirrored):
 | Amendment appraisal | `tf_appraise_amendment(theory, prior)` → list | `theory.appraise_amendment(prior)` → dict |
 | Preregistration doc | `tf_preregister(theory, path=NULL)` → string | `theory.preregister(path=None)` → str |
 
-**Remaining P0 stubs (still raise "not implemented"):** `tf_litmap`/`litmap`, `tf_landscape`/`landscape` (the P2 bibliometric layer).
+Historical note: in phase P1, `tf_litmap`/`litmap` and `tf_landscape`/`landscape` were still stubs that raised "not implemented". Part C implements them.
 
 ## 8. Builder & provenance
 
@@ -469,7 +468,7 @@ New API (mirrored):
 | OpenAlex fetch (assistive) | `tf_fetch_corpus(query, ...)` | `theoryforge.fetch_corpus(query, ...)` |
 | New-DOI check | `tf_new_evidence_dois(theory, candidate_dois)` | `theory.new_evidence_dois(candidate_dois)` / `theoryforge.new_evidence_dois(theory, candidate_dois)` |
 
-**Remaining stub (raises "not implemented"):** `compile_sem` / `tf_compile_sem` (P3 SEM/lavaan compilation). `litmap`/`landscape` are now real.
+Historical note: in phase P2, `compile_sem` / `tf_compile_sem` was still a stub that raised "not implemented". Part D implements it (§19).
 
 ## 14. litmap(corpus, min_link=2, method="components", min_cocitation=None, min_theme_size=2, max_theme_size=10, max_df=1.0): deterministic
 
@@ -589,7 +588,7 @@ Golden artefact: `panic-network-2026.new_evidence_dois.json` (semantic), from th
 
 # Part D: SEM compilation and the audit dossier (P3)
 
-New API (mirrored): `tf_compile_sem(theory)` / `theory.compile_sem()`; `tf_dossier(theory)` / `theory.dossier()`. **Remaining stub:** `osf_push` / `tf_osf_push` (OSF deposit; network/credentials; future).
+New API (mirrored): `tf_compile_sem(theory)` / `theory.compile_sem()`; `tf_dossier(theory)` / `theory.dossier()`. Historical note: in phase P3, `osf_push` / `tf_osf_push` was still a stub. Part E implements it (§25).
 
 ## 19. compile_sem(theory) → lavaan model syntax (deterministic, byte-identical)
 
