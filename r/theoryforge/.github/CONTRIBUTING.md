@@ -44,7 +44,12 @@ for example `sudo apt-get install graphviz` or `brew install graphviz`, or from
 
 ## Conventions
 
-British spelling throughout. The two implementations are kept in lockstep through
+British spelling throughout. In the R package, `devtools::check()` and CI run a
+spelling test that stops on any word found neither in the British English
+dictionary nor in `r/theoryforge/inst/WORDLIST`, and
+`spelling::spell_check_package("r/theoryforge")` lists those words. Correct a
+misspelling where it occurs, and add a name or a term of art to the word list.
+The two implementations are kept in lockstep through
 the shared `API_SPEC.md`, and `scripts/parity_check.py` compares their output and
 must stay green. Diagrams are emitted as byte-identical intermediate
 representations, so changes there are checked against the golden fixtures.

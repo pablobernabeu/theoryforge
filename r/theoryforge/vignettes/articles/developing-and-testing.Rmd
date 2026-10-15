@@ -393,9 +393,9 @@ cat(
 )
 ```
 
-The `venn` view takes each construct's boundary conditions as a set and returns
-an SVG showing where those scopes coincide and where they part company, with
-each region labelled by the number of conditions in it. It renders inline
+The `venn` view takes the boundary conditions of each construct as a set and
+returns an SVG showing where those scopes coincide and where they part company,
+with each region labelled by the number of conditions in it. It renders inline
 because the output is a self-contained image.
 
 ```{r venn, results = "asis"}

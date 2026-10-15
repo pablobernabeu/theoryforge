@@ -765,6 +765,13 @@ version and a single behavioural contract
   test fails when `scripts/app_smoke_cases.json` and the operations the apps offer differ.
   The R app loads webR 0.6.0, pinned as Pyodide 0.27.7 is. It loaded the `latest`
   address, which serves webR's development build.
+- The R package's spelling test fails a check run with `NOT_CRAN` set, as in
+  `devtools::check()` and on every CI leg, when a word is in neither the British English
+  dictionary nor `inst/WORDLIST`. It used to list such words and carry on, so every R
+  check on CI ended with a NOTE that left the run green and would have hidden a new one.
+  CRAN and a plain `R CMD check` still skip the test. The word list gains the 47 words
+  that had slipped past it, none of them a misspelling, and the contributing guide says
+  how the test is run and what to do when it stops.
 
 
 ## [0.6.0] - 2026-08-27

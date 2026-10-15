@@ -498,6 +498,16 @@
   count in the aggregate score. The checklist applies the same twelve items to
   every `theory_form`.
 
+* The spelling test now fails a check run with `NOT_CRAN` set, as in
+  `devtools::check()` and on GitHub Actions, when the documentation uses a word
+  that neither the British English dictionary nor `inst/WORDLIST` knows. It
+  used to list such words and carry on, so every check on GitHub Actions ended
+  with a NOTE that left the run green and would have hidden a new one. CRAN and
+  a plain `R CMD check` still skip the test. The word list gains the 47 words
+  that had slipped past it, none of them a misspelling. The help for
+  `tf_implications()` now sets a view name as code, and a sentence of the
+  development article no longer uses a possessive the checker cannot read.
+
 # theoryforge 0.6.0
 
 * New `tf_implications()` derives the testable implications of a theory's causal

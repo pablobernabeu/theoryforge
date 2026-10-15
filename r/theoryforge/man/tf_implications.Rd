@@ -96,7 +96,7 @@ posits alternative stable states, such as a bistable network, has more than
 one equilibrium and violates the assumption, and its sigma statements are
 not guaranteed. On an acyclic graph, the two options give the same
 statements. Applying d-separation to a cyclic graph, as dagitty does with
-the causal_dag export, is valid only in special cases such as a linear
+the \code{causal_dag} export, is valid only in special cases such as a linear
 model.
 }
 
