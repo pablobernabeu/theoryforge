@@ -1,0 +1,2147 @@
+# A frozen OpenAlex corpus: the first 150 works, by relevance, that OpenAlex
+# returned for the search "panic disorder" on 2026-10-01 (UTC).
+#
+# OpenAlex releases its data under CC0 1.0, and this file is offered under CC0
+# 1.0 too: no rights reserved.
+#
+# Made by replaying one saved OpenAlex response (per-page 200, saved at the time
+# in source.retrieved) through theoryforge's fetch_corpus, so each record is
+# what the OpenAlex adapter makes of a work. The references were dropped to keep
+# the file small. The keywords are OpenAlex's model-generated keywords of that
+# date, and they change over time. The file is frozen so that the goldens built
+# on it (fixtures/expected/openalex-panic-2026.*) stay fixed.
+schema_version: '1.0'
+id: openalex-panic-2026
+source:
+  service: OpenAlex
+  endpoint: https://api.openalex.org/works
+  query: panic disorder
+  retrieved: '2026-10-01T23:29:27Z'
+  total_count: 186875
+  n_records: 150
+  per_page: 200
+  sort: relevance_score:desc
+records:
+- id: https://openalex.org/W2102290181
+  doi: https://doi.org/10.1176/appi.ajp.157.4.493
+  title: Neuroanatomical Hypothesis of Panic Disorder, Revised
+  year: 2000
+  keywords:
+  - panic disorder
+  - fear network
+  - amygdala
+  - hippocampus
+  - medial prefrontal cortex
+  - fear conditioning
+  - avoidance
+  - serotonin
+  - anxiolytics
+  - cognitive behavioral therapy
+  - heritability
+  - childhood stress
+  - contextual fear
+  - neurobiology of fear
+- id: https://openalex.org/W2139596642
+  doi: https://doi.org/10.1176/ajp.154.11.1571
+  title: Multicenter Collaborative Panic Disorder Severity Scale
+  year: 1997
+  keywords:
+  - panic disorder
+  - disease severity assessment
+  - Panic Disorder Severity Scale
+  - rating scale development
+  - inter-rater reliability
+  - internal consistency
+  - convergent validity
+  - discriminant validity
+  - sensitivity to change
+  - two-factor model
+- id: https://openalex.org/W2038542395
+  doi: https://doi.org/10.1016/s0006-3223(02)01475-0
+  title: Anxiety sensitivity and panic disorder
+  year: 2002
+  keywords:
+  - anxiety sensitivity
+  - panic disorder
+  - Anxiety Sensitivity Index
+  - panic attacks
+  - risk factors
+  - cognitive behavioral therapy
+  - imipramine
+  - relapse prevention
+  - bodily sensations
+- id: https://openalex.org/W2168373965
+  doi: https://doi.org/10.1037/0033-295x.108.1.4
+  title: A modern learning theory perspective on the etiology of panic disorder.
+  year: 2001
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - etiology
+  - classical conditioning
+  - emotional learning
+  - associative learning
+  - conditioned anxiety
+  - interoceptive cues
+  - catastrophic misinterpretation
+  - somatic sensation
+  - vulnerability factors
+- id: https://openalex.org/W2049465598
+  doi: https://doi.org/10.1016/s0005-7894(89)80073-5
+  title: Behavioral treatment of panic disorder
+  year: 1989
+  keywords:
+  - panic disorder
+  - behavior therapy
+  - cognitive therapy
+  - relaxation training
+  - agoraphobic avoidance
+  - generalized anxiety disorder
+  - treatment outcomes
+  - treatment discontinuation
+  - panic attacks
+- id: https://openalex.org/W2019284559
+  doi: https://doi.org/10.1001/jama.283.19.2529
+  title: Cognitive-Behavioral Therapy, Imipramine, or Their Combination for Panic
+    Disorder
+  year: 2000
+  keywords:
+  - panic disorder
+  - cognitive behavioral therapy
+  - imipramine
+  - tricyclic antidepressants
+  - combined psychotherapy and pharmacotherapy
+  - treatment response
+  - maintenance therapy
+  - placebo response
+  - treatment efficacy comparison
+  - Panic Disorder Severity Scale
+  - Clinical Global Impression Scale
+  - anxiety disorder treatment
+  - relapse prevention
+- id: https://openalex.org/W2129336638
+  doi: https://doi.org/10.1001/archpsyc.63.4.415
+  title: The Epidemiology of Panic Attacks, Panic Disorder, and Agoraphobia in the
+    National Comorbidity Survey Replication
+  year: 2006
+  keywords:
+  - panic attacks
+  - panic disorder
+  - agoraphobia
+  - prevalence
+  - comorbidities
+  - disorder severity
+  - treatment utilization
+  - role impairment
+  - National Comorbidity Survey Replication
+  - DSM-IV
+- id: https://openalex.org/W1984967391
+  doi: https://doi.org/10.1001/archpsyc.1983.01790090027004
+  title: A Family Study of Panic Disorder
+  year: 1983
+  keywords:
+  - panic disorder
+  - familial aggregation
+  - first-degree relatives
+  - genetic transmission
+  - sex differences
+  - generalized anxiety disorder
+  - polygenic inheritance
+  - major gene model
+  - psychiatric comorbidity
+- id: https://openalex.org/W2016967827
+  doi: https://doi.org/10.1001/archpsyc.1989.01810110026004
+  title: Quality of Life in Panic Disorder
+  year: 1989
+  keywords:
+  - panic disorder
+  - quality of life
+  - social consequences
+  - health effects
+  - major depressive disorder
+  - comorbidities
+  - alcohol abuse
+  - drug abuse
+  - suicide attempts
+  - marital functioning
+  - health care utilization
+  - Epidemiologic Catchment Area study
+- id: https://openalex.org/W2327846371
+  doi: https://doi.org/10.1056/nejm198911023211801
+  title: Suicidal Ideation and Suicide Attempts in Panic Disorder and Attacks
+  year: 1989
+  keywords:
+  - panic disorder
+  - panic attacks
+  - suicidal ideation
+  - suicide attempts
+  - suicide risk
+  - psychiatric comorbidity
+  - major depressive disorder
+  - alcohol and drug abuse
+  - emergency department screening
+- id: https://openalex.org/W2120055641
+  doi: https://doi.org/10.1176/appi.ajp.2009.09030410
+  title: Overgeneralization of Conditioned Fear as a Pathogenic Marker of Panic Disorder
+  year: 2009
+  keywords:
+  - panic disorder
+  - fear conditioning
+  - classical conditioning
+  - fear generalization
+  - startle response
+  - fear potentiation
+  - panic attacks
+- id: https://openalex.org/W156306960
+  doi: https://doi.org/10.1176/ajp.146.2.148
+  title: A neuroanatomical hypothesis for panic disorder
+  year: 1989
+  keywords:
+  - panic disorder
+  - neuroanatomical model
+  - anxiety disorders
+  - panic attacks
+  - anticipatory anxiety
+  - phobic avoidance
+  - brainstem
+  - limbic system
+  - prefrontal cortex
+- id: https://openalex.org/W2416624752
+  doi: https://doi.org/10.1176/ajp.151.3.413
+  title: Panic and panic disorder in the United States
+  year: 1994
+  keywords:
+  - panic disorder
+  - panic attacks
+  - agoraphobia
+  - prevalence
+  - sociodemographic correlates
+  - sex differences
+  - educational attainment
+  - age distribution
+  - comorbidities
+  - DSM-III-R criteria
+  - National Comorbidity Survey
+  - United States
+- id: https://openalex.org/W2118225566
+  doi: https://doi.org/10.1176/appi.ajp.162.6.1179
+  title: 'Influence of Psychiatric Comorbidity on Recovery and Recurrence in Generalized
+    Anxiety Disorder, Social Phobia, and Panic Disorder: A 12-Year Prospective Study'
+  year: 2005
+  keywords:
+  - psychiatric comorbidity
+  - generalized anxiety disorder
+  - social anxiety disorder
+  - panic disorder
+  - agoraphobia
+  - major depressive disorder
+  - substance use disorders
+  - alcoholism
+  - long-term clinical course
+  - recovery
+  - recurrence
+- id: https://openalex.org/W2116861918
+  doi: https://doi.org/10.1001/archpsyc.1997.01830160021003
+  title: The Cross-national Epidemiology of Panic Disorder
+  year: 1997
+  keywords:
+  - panic disorder
+  - lifetime prevalence
+  - age of onset
+  - sex differences
+  - agoraphobia
+  - major depressive disorder
+  - psychiatric comorbidity
+  - Taiwan
+- id: https://openalex.org/W2088303692
+  doi: https://doi.org/10.1192/bjp.164.6.759
+  title: A Comparison of Cognitive Therapy, Applied Relaxation and Imipramine in the
+    Treatment of Panic Disorder
+  year: 1994
+  keywords:
+  - panic disorder
+  - cognitive therapy
+  - applied relaxation
+  - imipramine
+  - treatment comparison
+  - relapse
+  - predictors of treatment outcome
+  - psychotherapy versus pharmacotherapy
+- id: https://openalex.org/W2109158525
+  doi: https://doi.org/10.1001/archpsyc.1983.01790090017002
+  title: Panic Disorder and Major Depression
+  year: 1983
+  keywords:
+  - panic disorder
+  - major depressive disorder
+  - anxiety disorders
+  - agoraphobia
+  - generalized anxiety disorder
+  - family studies
+  - first-degree relatives
+  - comorbidities
+  - phobia
+  - alcoholism
+  - genetic risk
+- id: https://openalex.org/W2029139248
+  doi: https://doi.org/10.1001/archpsyc.1982.04290060051010
+  title: Excess Mortality in Panic Disorder
+  year: 1982
+  keywords:
+  - panic disorder
+  - excess mortality
+  - suicide
+  - alcoholism
+  - secondary depression
+  - neurosis
+  - long-term follow-up
+  - sex differences
+- id: https://openalex.org/W2068629053
+  doi: https://doi.org/10.1001/archpsyc.1988.01800290027004
+  title: 'Alprazolam in Panic Disorder and Agoraphobia: Results From a Multicenter
+    Trial'
+  year: 1988
+  keywords:
+  - alprazolam
+  - panic disorder
+  - agoraphobia
+  - benzodiazepines
+  - panic attacks
+  - phobic fear
+  - avoidance behavior
+  - anxiety
+  - secondary disabilities
+  - drug efficacy
+  - tolerability
+- id: https://openalex.org/W2042061501
+  doi: https://doi.org/10.1001/archpsyc.1985.01790260027003
+  title: Increased Anxiogenic Effects of Caffeine in Panic Disorders
+  year: 1985
+  keywords:
+  - caffeine
+  - panic disorder
+  - agoraphobia
+  - anxiogenic effects
+  - adenosine receptor antagonism
+  - plasma cortisol
+  - MHPG
+  - somatic anxiety
+  - anxiety disorders
+- id: https://openalex.org/W2082099784
+  doi: https://doi.org/10.1001/archpsyc.1988.01800250035006
+  title: Ventilatory Physiology of Patients With Panic Disorder
+  year: 1988
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - panic attacks
+  - ventilatory response
+  - carbon dioxide inhalation
+  - hyperventilation
+  - sodium lactate infusion
+  - norepinephrine
+  - diastolic blood pressure
+  - anxiety disorders
+- id: https://openalex.org/W2100773442
+  doi: https://doi.org/10.1192/bjp.162.6.776
+  title: Alprazolam and Exposure Alone and Combined in Panic Disorder with Agoraphobia
+  year: 1993
+  keywords:
+  - alprazolam
+  - panic disorder with agoraphobia
+  - exposure therapy
+  - relaxation training
+  - combined psychotherapy and pharmacotherapy
+  - relapse after drug withdrawal
+  - placebo response
+  - maintenance of treatment gains
+  - benzodiazepines
+- id: https://openalex.org/W2018932036
+  doi: https://doi.org/10.1016/0272-7358(95)00048-8
+  title: A meta-analysis of treatment outcome for panic disorder
+  year: 1995
+  keywords:
+  - panic disorder
+  - cognitive behavioral therapy
+  - pharmacotherapy
+  - antidepressants
+  - benzodiazepines
+  - imipramine
+  - interoceptive exposure
+  - cognitive restructuring
+  - treatment outcomes
+  - attrition
+  - cost-effectiveness
+  - maintenance of treatment gains
+- id: https://openalex.org/W2125420771
+  doi: https://doi.org/10.1093/hmg/8.4.621
+  title: Excess of High Activity Monoamine Oxidase A Gene Promoter Alleles in Female
+    Patients with Panic Disorder
+  year: 1999
+  keywords:
+  - panic disorder
+  - monoamine oxidase A
+  - MAOA gene
+  - promoter polymorphism
+  - repeat polymorphism
+  - genetic association
+  - female patients
+  - monoamine oxidase A inhibitors
+  - risk factors
+  - sex differences
+- id: https://openalex.org/W4211156221
+  doi: https://doi.org/10.1016/s0140-6736(06)69418-x
+  title: Panic disorder
+  year: 2006
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - comorbidities
+  - quality of life
+  - economic burden
+  - health care utilization
+  - smoking
+  - asthma
+  - genetic susceptibility
+  - early life experience
+  - pathophysiology
+  - pharmacotherapy
+  - cognitive behavioral therapy
+  - treatment dissemination
+- id: https://openalex.org/W2116867632
+  doi: https://doi.org/10.1002/da.10049
+  title: Reliability of the self-report version of the panic disorder severity scale
+  year: 2002
+  keywords:
+  - Panic Disorder Severity Scale
+  - self-report questionnaire
+  - panic disorder
+  - symptom severity assessment
+  - test-retest reliability
+  - internal consistency
+  - cognitive behavioral therapy
+  - treatment response
+  - psychiatric outpatients
+- id: https://openalex.org/W2088829089
+  doi: https://doi.org/10.1037/0033-2909.108.3.403
+  title: 'Psychological approaches to panic disorder: A review.'
+  year: 1990
+  keywords:
+  - panic disorder
+  - fear of fear
+  - interoceptive conditioning
+  - catastrophic misinterpretation
+  - anxiety sensitivity
+  - expectancy
+  - perceived controllability
+  - information processing biases
+  - bodily sensations
+- id: https://openalex.org/W2019683883
+  doi: https://doi.org/10.1001/archpsyc.1991.01810310021005
+  title: Enhanced Sensitivity to Cholecystokinin Tetrapeptide in Panic Disorder
+  year: 1991
+  keywords:
+  - CCK-4
+  - panic disorder
+  - panic attacks
+  - individual sensitivity
+  - placebo response
+  - neuroendocrine peptides
+- id: https://openalex.org/W1990337568
+  doi: https://doi.org/10.1001/archpsyc.1986.01800030037004
+  title: Relationship Between Panic Disorder and Agoraphobia
+  year: 1986
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - familial aggregation
+  - relatives of patients
+  - alcohol-related disorders
+  - mood disorders
+  - secondary depression
+  - disease onset
+  - symptom severity
+  - prognosis
+  - anxiety disorders
+- id: https://openalex.org/W1792501514
+  doi: https://doi.org/10.1176/ajp.141.7.857
+  title: Response to hyperventilation in a group of patients with panic disorder
+  year: 1984
+  keywords:
+  - panic disorder
+  - hyperventilation
+  - panic attacks
+  - locus coeruleus
+  - sodium lactate infusion
+  - carbon dioxide inhalation
+  - anxiety
+- id: https://openalex.org/W2062072236
+  doi: https://doi.org/10.1037//0022-006x.65.2.203
+  title: Misinterpretation of body sensations in panic disorder.
+  year: 1997
+  keywords:
+  - panic disorder
+  - anxiety disorders
+  - treatment outcome assessment
+  - test-retest reliability
+- id: https://openalex.org/W2157543356
+  doi: https://doi.org/10.1016/s0022-3956(01)00028-0
+  title: 'Reliability and validity of the Panic Disorder Severity Scale: replication
+    and extension'
+  year: 2001
+  keywords:
+  - Panic Disorder Severity Scale
+  - panic disorder
+  - agoraphobia
+  - severity rating
+  - psychometric properties
+  - reliability
+  - validity
+  - factor structure
+  - cut-off values
+  - diagnostic screening
+  - DSM-IV
+- id: https://openalex.org/W1994145951
+  doi: https://doi.org/10.1001/archpsyc.1984.01790230015002
+  title: Major Depression in Patients With Agoraphobia and Panic Disorder
+  year: 1984
+  keywords:
+  - major depressive disorder
+  - agoraphobia
+  - panic disorder
+  - endogenous depression
+  - secondary depression
+  - primary depression
+  - comorbidities
+  - anxiety levels
+- id: https://openalex.org/W2045028586
+  doi: https://doi.org/10.1037//0021-843x.101.3.371
+  title: Increased cardiac awareness in panic disorder.
+  year: 1992
+  keywords:
+  - panic disorder
+  - heartbeat perception
+  - interoception
+  - panic attacks
+  - generalized anxiety disorder
+  - specific phobia
+  - depression
+  - time interval estimation
+- id: https://openalex.org/W2114634718
+  doi: https://doi.org/10.1001/archpsyc.55.8.715
+  title: Decreased Brain GABAA-Benzodiazepine Receptor Binding in Panic Disorder
+  year: 1998
+  keywords:
+  - panic disorder
+  - GABAA receptor
+  - flumazenil
+  - brain receptor binding
+  - anxiety
+  - orbitofrontal cortex
+  - insula
+  - sex differences
+  - medication-free patients
+- id: https://openalex.org/W2083724376
+  doi: https://doi.org/10.1001/archpsyc.1986.01800110028005
+  title: Abnormal Regulation of Noradrenergic Function in Panic Disorders
+  year: 1986
+  keywords:
+  - panic disorder
+  - noradrenergic function
+  - clonidine
+  - alpha-2 adrenergic agonists
+  - MHPG
+  - agoraphobia
+  - panic attacks
+  - blood pressure
+  - growth hormone
+  - sleepiness
+  - yohimbine
+  - autonomic regulation
+- id: https://openalex.org/W1896744728
+  doi: null
+  title: 'Antidepressants in panic disorder: clinical and preclinical mechanisms.'
+  year: 1998
+  keywords:
+  - panic disorder
+  - antidepressants
+  - serotonin
+  - serotonergic dysfunction
+  - selective serotonin reuptake inhibitors
+  - pathogenesis
+- id: https://openalex.org/W2468365491
+  doi: https://doi.org/10.1177/070674379003500115
+  title: Cholecystokinin-Tetrapeptide Induces Panic Attacks in Patients with Panic
+    Disorder
+  year: 1990
+  keywords:
+  - CCK-4
+  - panic attacks
+  - panic disorder
+  - placebo
+  - anxiety disorders
+- id: https://openalex.org/W619943204
+  doi: null
+  title: 'Panic Disorder: A Critical Analysis'
+  year: 1994
+  keywords:
+  - panic disorder
+  - anxiety disorders
+  - panic attacks
+- id: https://openalex.org/W2039980780
+  doi: https://doi.org/10.1001/archpsyc.1990.01810210013002
+  title: Panic Disorder, Comorbidity, and Suicide Attempts
+  year: 1990
+  keywords:
+  - panic disorder
+  - suicide attempts
+  - psychiatric comorbidity
+  - major depressive disorder
+  - Epidemiologic Catchment Area study
+  - psychiatric epidemiology
+- id: https://openalex.org/W2081042060
+  doi: https://doi.org/10.1016/0002-9343(84)90443-1
+  title: Panic disorder and somatization
+  year: 1984
+  keywords:
+  - panic disorder
+  - somatization
+  - somatic symptoms
+  - misdiagnosis
+  - cardiac symptoms
+  - chest pain
+  - gastrointestinal symptoms
+  - epigastric distress
+  - neurological symptoms
+  - headache
+  - hypertension
+  - peptic ulcer
+  - depression
+  - alcoholism
+  - psychiatric consultation
+- id: https://openalex.org/W2039300800
+  doi: https://doi.org/10.1038/310683a0
+  title: A focal brain abnormality in panic disorder, a severe form of anxiety
+  year: 1984
+  keywords:
+  - panic disorder
+  - cerebral blood flow
+  - hemispheric lateralization
+  - parahippocampal gyrus
+  - anxiety attacks
+  - positron emission tomography
+- id: https://openalex.org/W2063163312
+  doi: https://doi.org/10.1001/archpsyc.1990.01810210017003
+  title: Outcome of Panic Disorder
+  year: 1990
+  keywords:
+  - panic disorder
+  - long-term outcomes
+  - social maladjustment
+  - phobic avoidance
+  - major depressive disorder
+  - personality disorders
+  - comorbidities
+  - chronicity
+  - naturalistic follow-up
+  - prognostic factors
+- id: https://openalex.org/W2024630458
+  doi: https://doi.org/10.1097/wnn.0b013e3181b7eabc
+  title: 'Nomophobia: The Mobile Phone in Panic Disorder With Agoraphobia'
+  year: 2010
+  keywords:
+  - nomophobia
+  - mobile phone dependence
+  - panic disorder
+  - agoraphobia
+  - technology dependence
+  - cognitive behavioral therapy
+  - pharmacotherapy
+- id: https://openalex.org/W2120370473
+  doi: https://doi.org/10.1016/j.euroneuro.2005.04.006
+  title: The epidemiology of panic disorder and agoraphobia in Europe
+  year: 2005
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - prevalence
+  - epidemiology
+  - anxiety disorders
+  - comorbidities
+  - panic attacks
+  - underdiagnosis
+  - undertreatment
+  - health care utilization
+  - disability
+  - sex differences
+  - age of onset
+  - Europe
+- id: https://openalex.org/W2116637069
+  doi: https://doi.org/10.1176/ajp.2007.164.2.265
+  title: A Randomized Controlled Clinical Trial of Psychoanalytic Psychotherapy for
+    Panic Disorder
+  year: 2007
+  keywords:
+  - panic disorder
+  - psychoanalytic psychotherapy
+  - psychodynamic psychotherapy
+  - treatment efficacy
+  - panic symptoms
+  - psychosocial functioning
+  - treatment response
+- id: https://openalex.org/W2037613802
+  doi: https://doi.org/10.1016/0005-7967(90)90160-k
+  title: Selective processing of threat cues in panic disorder
+  year: 1990
+  keywords:
+  - panic disorder
+  - attentional bias
+  - threat processing
+  - Stroop interference
+  - habituation
+  - anxiety disorders
+- id: https://openalex.org/W2093404642
+  doi: https://doi.org/10.1016/0005-7967(93)90026-q
+  title: Group cognitive-behavioral treatment of panic disorder
+  year: 1993
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - interoceptive exposure
+  - diaphragmatic breathing
+  - cognitive therapy
+  - fear of fear
+  - treatment efficacy
+  - recovery
+- id: https://openalex.org/W2406909777
+  doi: https://doi.org/10.1176/ajp.143.4.469
+  title: The application of positron emission tomography to the study of panic disorder
+  year: 1986
+  keywords:
+  - panic disorder
+  - cerebral oxygen consumption
+  - hemispheric lateralization
+  - hyperventilation
+  - cerebral blood volume
+- id: https://openalex.org/W2102435252
+  doi: https://doi.org/10.1176/ajp.155.5.603
+  title: Comparison of Aerobic Exercise, Clomipramine, and Placebo in the Treatment
+    of Panic Disorder
+  year: 1998
+  keywords:
+  - panic disorder
+  - aerobic exercise
+  - clomipramine
+  - agoraphobia
+  - running
+  - exercise therapy
+  - antidepressant efficacy
+  - depressive symptoms
+  - anxiety symptoms
+  - treatment discontinuation
+- id: https://openalex.org/W2397525421
+  doi: https://doi.org/10.1176/ajp.150.8.1149
+  title: Carbon dioxide hypersensitivity, hyperventilation, and panic disorder
+  year: 1993
+  keywords:
+  - panic disorder
+  - hyperventilation
+  - respiratory control
+  - misattribution
+  - loss of control
+  - breathing retraining
+  - desensitization
+  - somatic symptoms
+- id: https://openalex.org/W1990788335
+  doi: https://doi.org/10.1097/00004850-199506000-00003
+  title: Assessing the efficacy of treatments for panic disorder and agoraphobia.
+    II. The Panic and Agoraphobia Scale
+  year: 1995
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - disease severity assessment
+  - rating scales
+  - observer ratings
+  - self-ratings
+  - phobic avoidance
+  - anticipatory anxiety
+  - panic attacks
+  - somatic symptoms
+  - quality of life
+  - inter-rater reliability
+  - factor structure
+  - drug efficacy evaluation
+- id: https://openalex.org/W2070362655
+  doi: https://doi.org/10.1002/da.20564
+  title: Broad spectrum of cytokine abnormalities in panic disorder and posttraumatic
+    stress disorder
+  year: 2009
+  keywords:
+  - panic disorder
+  - post-traumatic stress disorder
+  - inflammatory cytokines
+  - chemokines
+  - systemic inflammation
+  - anxiety disorders
+  - interleukin-6
+  - interleukin-1
+  - MCP-1
+  - MIP-1α
+  - eotaxin
+  - GM-CSF
+  - interferon-alpha
+  - serum cytokine levels
+- id: https://openalex.org/W2093840588
+  doi: https://doi.org/10.1007/bf00788510
+  title: 'Assessing impairment in patients with panic disorder: the Sheehan Disability
+    Scale'
+  year: 1992
+  keywords:
+  - Sheehan Disability Scale
+  - panic disorder
+  - functional disability
+  - disability assessment
+  - psychometric properties
+  - reliability
+  - construct validity
+  - criterion validity
+  - DSM-III-R
+  - symptom severity
+- id: https://openalex.org/W1696425859
+  doi: https://doi.org/10.1016/s0022-3999(03)00072-2
+  title: Detecting panic disorder in medical and psychosomatic outpatients
+  year: 2003
+  keywords:
+  - panic disorder
+  - screening questionnaire
+  - Patient Health Questionnaire
+  - Hospital Anxiety and Depression Scale
+  - physician diagnosis
+  - psychosomatic outpatients
+  - medical outpatients
+  - diagnostic accuracy
+  - evaluation algorithm
+  - questionnaire acceptability
+- id: https://openalex.org/W4249551756
+  doi: https://doi.org/10.1037/0022-006x.65.2.203
+  title: Misinterpretation of body sensations in panic disorder.
+  year: 1997
+  keywords:
+  - panic disorder
+  - bodily sensations
+  - misinterpretation
+  - somatic symptoms
+  - hypervigilance
+- id: https://openalex.org/W1718879924
+  doi: https://doi.org/10.1176/ajp.150.4.600
+  title: Quality of life and psychiatric morbidity in panic disorder and generalized
+    anxiety disorder
+  year: 1993
+  keywords:
+  - panic disorder
+  - generalized anxiety disorder
+  - quality of life
+  - psychiatric morbidity
+  - comorbidities
+  - major depressive disorder
+  - disease classification
+  - alcohol abuse
+  - suicide attempts
+  - age of onset
+  - emotional well-being
+- id: https://openalex.org/W2080423729
+  doi: https://doi.org/10.1016/0165-1781(87)90001-1
+  title: CO2 vulnerability in panic disorder
+  year: 1987
+  keywords:
+  - panic disorder
+  - carbon dioxide inhalation
+  - CO2 challenge
+  - panic attacks
+  - autonomic symptoms
+  - subjective anxiety
+  - hyperventilation
+- id: https://openalex.org/W1994035044
+  doi: https://doi.org/10.1016/s0005-7894(04)80018-2
+  title: The effects of acceptance versus suppression of emotion on subjective and
+    psychophysiological response to carbon dioxide challenge in patients with panic
+    disorder
+  year: 2004
+  keywords:
+  - panic disorder
+  - emotional acceptance
+  - emotional suppression
+  - emotion regulation
+  - carbon dioxide challenge
+  - anxiety
+  - avoidance
+  - psychophysiological responses
+  - cognitive-behavioral intervention
+- id: https://openalex.org/W2082083676
+  doi: https://doi.org/10.1001/archpsyc.62.8.922
+  title: Disorder-Specific Neuroanatomical Correlates of Attentional Bias in Obsessive-compulsive
+    Disorder, Panic Disorder, and Hypochondriasis
+  year: 2005
+  keywords:
+  - attentional bias
+  - obsessive-compulsive disorder
+  - panic disorder
+  - health anxiety
+  - anxiety disorders
+  - emotional interference
+  - cognitive interference
+  - Stroop task
+  - amygdala
+  - hippocampus
+  - limbic system
+  - distractibility
+  - disease specificity
+  - cerebral blood flow
+- id: https://openalex.org/W2012696546
+  doi: https://doi.org/10.1016/j.jbtep.2005.07.001
+  title: Efficacy of internet therapy for panic disorder
+  year: 2005
+  keywords:
+  - panic disorder
+  - internet-based cognitive behavioral therapy
+  - agoraphobia
+  - telephone contact
+  - general practitioner visits
+  - physical health
+  - maintenance of treatment effects
+  - negative affect
+- id: https://openalex.org/W2035633504
+  doi: https://doi.org/10.1097/00004714-200008000-00011
+  title: Placebo-Controlled Study of Gabapentin Treatment of Panic Disorder
+  year: 2000
+  keywords:
+  - gabapentin
+  - panic disorder
+  - anxiolytic effects
+  - treatment efficacy
+  - drug safety
+  - adverse events
+  - sex differences in treatment response
+  - sleepiness
+- id: https://openalex.org/W647830493
+  doi: https://doi.org/10.1515/9780804771115
+  title: Culture and Panic Disorder
+  year: 2020
+  keywords:
+  - panic disorder
+  - culture
+  - cross-cultural psychiatry
+  - history of psychiatry
+  - history of science
+  - anthropology of mental illness
+  - sociology of mental illness
+- id: https://openalex.org/W2024379900
+  doi: https://doi.org/10.1523/jneurosci.4921-03.2004
+  title: 'Reduced Serotonin Type 1AReceptor Binding in Panic Disorder: Figure 1.'
+  year: 2004
+  keywords:
+  - panic disorder
+  - radioligand binding
+  - volume of distribution
+  - anterior cingulate cortex
+  - posterior cingulate cortex
+  - raphe nuclei
+  - chronic anxiety
+  - receptor binding imaging
+- id: https://openalex.org/W2041207469
+  doi: https://doi.org/10.1016/j.janxdis.2009.07.011
+  title: Quality of life impairment in generalized anxiety disorder, social phobia,
+    and panic disorder
+  year: 2009
+  keywords:
+  - quality of life
+  - generalized anxiety disorder
+  - social anxiety disorder
+  - panic disorder
+  - anxiety disorders
+  - comorbid depression
+  - symptom severity
+  - subjective well-being
+- id: https://openalex.org/W2139582153
+  doi: https://doi.org/10.1001/archpsyc.1988.01800290083010
+  title: Behavioral Inhibition in Children of Parents With Panic Disorder and Agoraphobia
+  year: 1988
+  keywords:
+  - behavioral inhibition
+  - panic disorder
+  - agoraphobia
+  - major depressive disorder
+  - comorbidities
+  - temperament
+  - offspring risk
+  - early childhood development
+- id: https://openalex.org/W2076521240
+  doi: https://doi.org/10.1001/archpsyc.1994.03950050006001
+  title: Standardized Assessment for Panic Disorder Research
+  year: 1994
+  keywords:
+  - panic disorder
+  - standardized assessment
+  - assessment battery
+  - research comparability
+  - psychosocial interventions
+  - biological evaluation
+  - treatment outcome measures
+- id: https://openalex.org/W1989347009
+  doi: https://doi.org/10.1016/j.brat.2004.10.002
+  title: 'Treatment of panic disorder: live therapy vs. self-help via the Internet'
+  year: 2004
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - cognitive behavioral therapy
+  - online therapy
+  - treatment efficacy
+  - long-term follow-up
+- id: https://openalex.org/W2036772741
+  doi: https://doi.org/10.1097/psy.0b013e31815a8f6b
+  title: Autonomic and Respiratory Characteristics of Posttraumatic Stress Disorder
+    and Panic Disorder
+  year: 2007
+  keywords:
+  - post-traumatic stress disorder
+  - panic disorder
+  - autonomic dysfunction
+  - respiratory abnormalities
+  - hypocapnia
+  - hyperarousal
+  - sympathetic activation
+  - respiratory sinus arrhythmia
+  - electrodermal activity
+  - heart rate
+  - end-tidal carbon dioxide
+  - sighing
+  - threat of shock
+  - differential diagnosis
+  - endophenotypes
+  - anxiety disorders
+  - heart rate variability
+- id: https://openalex.org/W2031893564
+  doi: https://doi.org/10.1037/0022-006x.61.2.317
+  title: A meta-analysis of treatments for panic disorder.
+  year: 1993
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - psychological intervention
+  - pharmacotherapy
+  - antidepressants
+  - cognitive restructuring
+  - exposure therapy
+  - floods
+  - relaxation training
+  - treatment outcomes
+  - placebo comparison
+- id: https://openalex.org/W2122910511
+  doi: https://doi.org/10.1016/s0005-7894(05)80330-2
+  title: 'Panic disorder in association with relaxation induced anxiety: An attentional
+    training approach to treatment'
+  year: 1990
+  keywords:
+  - panic disorder
+  - attention training
+  - autogenic training
+  - self-focus
+  - tension reduction
+  - panic attacks
+  - anxiety levels
+- id: https://openalex.org/W4234796490
+  doi: https://doi.org/10.1037/0022-006x.67.4.583
+  title: 'Brief cognitive therapy for panic disorder: A randomized controlled trial.'
+  year: 1999
+  keywords:
+  - panic disorder
+  - cognitive therapy
+  - self-instructional module
+  - treatment duration
+  - cost-effectiveness
+  - booster sessions
+  - maintenance of treatment effects
+  - treatment expectations
+- id: https://openalex.org/W1981998100
+  doi: https://doi.org/10.1016/s0022-3999(97)00203-1
+  title: Neurobiology of panic disorder
+  year: 1998
+  keywords:
+  - panic disorder
+  - neurobiology
+  - sodium lactate
+  - carbon dioxide challenge
+  - caffeine
+  - yohimbine
+  - serotonin
+  - cholecystokinin
+  - neurotransmitters
+  - neuromodulators
+  - etiology
+  - anxiolytics
+- id: https://openalex.org/W2060217149
+  doi: https://doi.org/10.1001/archpsyc.1989.01810020080013
+  title: Electroencephalographic Sleep in Panic Disorder
+  year: 1989
+  keywords:
+  - panic disorder
+  - sleep disorders
+  - sleep latency
+  - sleep efficiency
+  - REM latency
+  - NREM sleep
+  - delta sleep
+- id: https://openalex.org/W2029358245
+  doi: https://doi.org/10.1016/s0006-3223(98)00300-x
+  title: Brain circuits in panic disorder
+  year: 1998
+  keywords:
+  - panic disorder
+  - fear circuitry
+  - pathophysiology
+  - serotonin
+  - norepinephrine
+  - GABA
+  - corticotropin-releasing factor
+  - prefrontal cortex
+  - amygdala
+  - cortical inhibition
+  - limbic system
+  - panic anxiety
+  - neuroimaging
+  - challenge studies
+  - brainstem dysfunction
+- id: https://openalex.org/W2091373414
+  doi: https://doi.org/10.1037/0022-006x.58.1.77
+  title: A comparison of alprazolam and behavior therapy in treatment of panic disorder.
+  year: 1990
+  keywords:
+  - panic disorder
+  - alprazolam
+  - behavior therapy
+  - benzodiazepines
+  - generalized anxiety disorder
+  - treatment outcome comparison
+  - placebo comparison
+  - waitlist control
+  - treatment integration
+- id: https://openalex.org/W2034843517
+  doi: https://doi.org/10.1037//0022-006x.65.2.214
+  title: 'Body vigilance in panic disorder: Evaluating attention to bodily perturbations.'
+  year: 1997
+  keywords:
+  - body vigilance
+  - panic disorder
+  - anxiety sensitivity
+  - bodily sensations
+  - social anxiety disorder
+  - cognitive behavioral therapy
+  - treatment response prediction
+- id: https://openalex.org/W4213305133
+  doi: https://doi.org/10.1037/0021-843x.101.3.371
+  title: Increased cardiac awareness in panic disorder.
+  year: 1992
+  keywords:
+  - panic disorder
+  - heart rate
+  - autonomic arousal
+  - panic attacks
+- id: https://openalex.org/W2170766273
+  doi: https://doi.org/10.1016/j.cpr.2009.08.011
+  title: 'Psychological treatment of panic disorder with or without agoraphobia: A
+    meta-analysis'
+  year: 2009
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - psychological intervention
+  - exposure therapy
+  - cognitive therapy
+  - relaxation training
+  - breathing retraining
+  - homework
+  - follow-up care
+  - comorbidities
+  - treatment efficacy
+- id: https://openalex.org/W2090987510
+  doi: https://doi.org/10.1016/j.jad.2005.05.003
+  title: A meta-analysis of the efficacy of psycho- and pharmacotherapy in panic disorder
+    with and without agoraphobia
+  year: 2005
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - cognitive behavioral therapy
+  - psychotherapy
+  - pharmacotherapy
+  - antidepressants
+  - placebo response
+  - depressive symptoms
+  - treatment efficacy
+  - publication bias
+  - combination therapy
+- id: https://openalex.org/W4212958695
+  doi: https://doi.org/10.5860/choice.32-5936
+  title: 'Panic disorder: a critical analysis'
+  year: 1995
+  keywords:
+  - panic disorder
+  - anxiety disorders
+  - panic attacks
+  - psychiatric diagnosis
+- id: https://openalex.org/W2013146721
+  doi: https://doi.org/10.1016/j.janxdis.2008.01.008
+  title: Is internet-based CBT for panic disorder and agoraphobia as effective as
+    face-to-face CBT?
+  year: 2008
+  keywords:
+  - internet-based CBT
+  - panic disorder
+  - agoraphobia
+  - treatment effectiveness
+  - treatment credibility
+  - treatment satisfaction
+  - quality of life
+  - depression
+  - anxiety
+  - stress
+  - medication adherence
+- id: https://openalex.org/W1529195928
+  doi: https://doi.org/10.1176/ajp.141.4.572
+  title: A comparison of panic disorder and generalized anxiety disorder
+  year: 1984
+  keywords:
+  - panic disorder
+  - generalized anxiety disorder
+  - symptom profiles
+  - age of onset
+  - clinical course
+  - outcomes
+  - autonomic symptoms
+  - personality traits
+  - diagnostic validity
+  - family studies
+- id: https://openalex.org/W2248815355
+  doi: https://doi.org/10.1093/oxfordjournals.aje.a114201
+  title: THE EPIDEMIOLOGY OF PANIC ATTACKS AND PANIC DISORDER RESULTS OF THREE COMMUNITY
+    SURVEYS
+  year: 1985
+  keywords:
+  - panic attacks
+  - panic disorder
+  - prevalence
+  - age of onset
+  - community survey
+  - Diagnostic Interview Schedule
+  - symptom profiles
+  - demographic factors
+  - anxiety disorders
+- id: https://openalex.org/W2086465348
+  doi: https://doi.org/10.1001/archpsyc.1993.01820220017003
+  title: The Relationship Between Panic Disorder and Major Depression
+  year: 1993
+  keywords:
+  - panic disorder
+  - major depressive disorder
+  - comorbidities
+  - familial aggregation
+  - genetic transmission
+  - late-onset depression
+  - family studies
+- id: https://openalex.org/W1993787017
+  doi: https://doi.org/10.1089/153056204773644535
+  title: Delivering Cognitive-Behavior Therapy for Panic Disorder with Agoraphobia
+    in Videoconference
+  year: 2004
+  keywords:
+  - cognitive behavioral therapy
+  - panic disorder with agoraphobia
+  - telemedicine
+  - face-to-face psychotherapy
+  - treatment accessibility
+  - therapeutic relationship
+  - treatment effectiveness
+  - follow-up outcomes
+- id: https://openalex.org/W2083320272
+  doi: https://doi.org/10.1212/wnl.56.3.350
+  title: Headache types and panic disorder
+  year: 2001
+  keywords:
+  - panic disorder
+  - migraine
+  - severe headache
+  - comorbidities
+  - bidirectional relationship
+  - headache prevalence
+- id: https://openalex.org/W2034359560
+  doi: https://doi.org/10.1016/0165-1781(89)90210-2
+  title: Fenfluramine provocation of anxiety in patients with panic disorder
+  year: 1989
+  keywords:
+  - fenfluramine
+  - panic disorder
+  - anxiety
+  - major depressive disorder
+  - prolactin
+  - cortisol
+  - placebo response
+  - women
+  - panic attacks
+- id: https://openalex.org/W2156254681
+  doi: https://doi.org/10.1001/archpsyc.62.3.290
+  title: A Randomized Effectiveness Trial of Cognitive-Behavioral Therapy and Medication
+    for Primary Care Panic Disorder
+  year: 2005
+  keywords:
+  - panic disorder
+  - cognitive behavioral therapy
+  - pharmacotherapy
+  - collaborative care
+  - primary care
+  - combined psychotherapy and pharmacotherapy
+  - anxiety sensitivity
+  - anticipatory anxiety
+  - agoraphobia
+  - remission
+- id: https://openalex.org/W2397840290
+  doi: null
+  title: Diagnosis and management of generalized anxiety disorder and panic disorder
+    in adults.
+  year: 2015
+  keywords:
+  - generalized anxiety disorder
+  - panic disorder
+  - diagnosis
+  - differential diagnosis
+  - misdiagnosis
+  - screening tool
+  - GAD-7
+  - selective serotonin reuptake inhibitors
+  - cognitive behavioral therapy
+  - benzodiazepines
+  - physical activity
+  - complementary therapy
+  - serotonin syndrome
+  - antidepressant tapering
+  - relapse prevention
+  - comorbidities
+- id: https://openalex.org/W2036336555
+  doi: https://doi.org/10.4088/jcp.v67n0305
+  title: The Epidemiology of DSM-IV Panic Disorder and Agoraphobia in the United States
+  year: 2006
+  keywords:
+  - panic disorder
+  - agoraphobia
+  - panic disorder with agoraphobia
+  - prevalence
+  - comorbidities
+  - treatment seeking
+  - sociodemographic risk factors
+  - NESARC
+- id: https://openalex.org/W1841707297
+  doi: https://doi.org/10.1176/ajp.154.11.1557
+  title: 'Respiratory Psychophysiology of Panic Disorder: Three Respiratory Challenges
+    in 98 Subjects'
+  year: 1997
+  keywords:
+  - panic disorder
+  - hypercapnia
+  - hyperventilation
+  - end-tidal carbon dioxide
+  - respiratory rate
+  - tidal volume
+  - minute ventilation
+  - panic attacks
+- id: https://openalex.org/W2054395037
+  doi: https://doi.org/10.4088/jcp.v60n0713
+  title: Panic Disorder in the Primary Care Setting
+  year: 1999
+  keywords:
+  - panic disorder
+  - primary care
+  - health care utilization
+  - psychiatric comorbidity
+  - disability
+  - emergency department visits
+  - psychotropic drugs
+  - cognitive behavioral therapy
+  - treatment adequacy
+  - usual care
+- id: https://openalex.org/W2036967865
+  doi: https://doi.org/10.1093/clipsy.10.1.29
+  title: Panic disorder and smoking.
+  year: 2003
+  keywords:
+  - panic disorder
+  - smoking
+  - co-occurring disorders
+  - tobacco use
+  - anxiety disorders
+  - health care costs
+  - smoking cessation
+  - therapeutic implications
+  - conceptual model
+- id: https://openalex.org/W2064286008
+  doi: https://doi.org/10.1016/s0005-7967(98)00153-3
+  title: An experimental investigation of the role of safety-seeking behaviours in
+    the maintenance of panic disorder with agoraphobia
+  year: 1999
+  keywords:
+  - safety-seeking behavior
+  - panic disorder with agoraphobia
+  - anxiety maintenance
+  - exposure therapy
+  - anxiety reduction
+- id: https://openalex.org/W1975272251
+  doi: https://doi.org/10.1016/s0005-7894(05)80367-3
+  title: 'Behavioral treatment of panic disorder: A two-year follow-up'
+  year: 1991
+  keywords:
+  - panic disorder
+  - cognitive behavioral therapy
+  - cognitive restructuring
+  - progressive muscle relaxation
+  - long-term follow-up
+  - maintenance therapy
+  - agoraphobic avoidance
+  - panic attacks
+  - psychopathology
+- id: https://openalex.org/W2013504006
+  doi: https://doi.org/10.1001/archpsyc.1983.01790220057009
+  title: Increased Sensitivity to Caffeine in Patients With Panic Disorders
+  year: 1984
+  keywords:
+  - caffeine sensitivity
+  - panic disorder
+  - caffeine consumption
+  - anxiety
+  - depression
+  - coffee consumption
+  - caffeine side effects
+  - self-rated anxiety
+- id: https://openalex.org/W180685252
+  doi: https://doi.org/10.1176/ajp.146.5.622
+  title: Recent life events and panic disorder
+  year: 1989
+  keywords:
+  - panic disorder
+  - life events
+  - loss events
+  - psychosocial stressors
+- id: https://openalex.org/W2413224554
+  doi: null
+  title: Noradrenergic function in panic disorder.
+  year: 1990
+  keywords:
+  - panic disorder
+  - panic attacks
+  - noradrenergic function
+  - sympathetic nervous system
+  - misdiagnosis
+  - emergency department
+  - first-degree family history
+  - comorbidities
+  - alcohol and drug abuse
+- id: https://openalex.org/W2443232192
+  doi: https://doi.org/10.1176/ajp.151.4.547
+  title: Anxiogenic effects of CO2 and hyperventilation in patients with panic disorder
+  year: 1994
+  keywords:
+  - panic disorder
+  - carbon dioxide inhalation
+  - hyperventilation
+  - anxiogenic effects
+  - panic attacks
+  - CO2 sensitivity
+  - diagnostic validity
+- id: https://openalex.org/W2146190387
+  doi: https://doi.org/10.1001/archpsyc.1984.01790140077009
+  title: Diazepam and Propranolol in Panic Disorder and Agoraphobia
+  year: 1984
+  keywords:
+  - diazepam
+  - propranolol
+  - panic disorder
+  - agoraphobia
+  - benzodiazepines
+  - beta-blockers
+  - panic attacks
+  - phobic symptoms
+- id: https://openalex.org/W2100676571
+  doi: https://doi.org/10.1176/appi.ajp.2007.07101581
+  title: Increased Anxiety During Anticipation of Unpredictable But Not Predictable
+    Aversive Stimuli as a Psychophysiologic Marker of Panic Disorder
+  year: 2008
+  keywords:
+  - panic disorder
+  - anticipatory anxiety
+  - unpredictability
+  - aversive stimuli
+  - fear-potentiated startle
+  - startle potentiation
+  - threat cues
+- id: https://openalex.org/W2030115166
+  doi: https://doi.org/10.1001/archpsyc.1988.01800290053007
+  title: Secondary Depression in Panic Disorder and Agoraphobia
+  year: 1988
+  keywords:
+  - secondary depression
+  - panic disorder
+  - agoraphobia
+  - major depressive episode
+  - alprazolam
+  - phobic avoidance
+  - anxiety
+  - disease duration
+  - treatment outcomes
+  - benzodiazepines
+- id: https://openalex.org/W1981713460
+  doi: https://doi.org/10.1016/s0005-7894(01)80017-4
+  title: Prevention of panic disorder
+  year: 2001
+  keywords:
+  - panic disorder
+  - prevention
+  - anxiety sensitivity
+  - panic attacks
+  - social avoidance
+  - prevention workshops
+  - early intervention
+- id: https://openalex.org/W2063366161
+  doi: https://doi.org/10.1097/00004714-199002000-00002
+  title: Is Buspirone Effective for Panic Disorder?
+  year: 1990
+  keywords:
+  - buspirone
+  - panic disorder
+  - imipramine
+  - anxiolytic efficacy
+  - adverse effects
+  - placebo comparison
+  - antidepressants
+- id: https://openalex.org/W2022045428
+  doi: https://doi.org/10.1016/j.resp.2008.07.011
+  title: Panic disorder and control of breathing
+  year: 2008
+  keywords:
+  - panic disorder
+  - panic attacks
+  - respiratory control
+  - hyperventilation
+  - carbon dioxide sensitivity
+  - respiratory hypersensitivity
+  - fear network
+  - amygdala
+  - hippocampus
+  - medial prefrontal cortex
+  - anxiety disorders
+  - respiratory symptoms
+- id: https://openalex.org/W2054228887
+  doi: https://doi.org/10.1016/s0005-7894(01)80045-9
+  title: 'Further tests of a cognitive model of generalized anxiety disorder: Metacognitions
+    and worry in GAD, panic disorder, social phobia, depression, and nonpatients'
+  year: 2001
+  keywords:
+  - generalized anxiety disorder
+  - metacognition
+  - meta-worry
+  - pathological worry
+  - panic disorder
+  - social anxiety disorder
+  - major depressive disorder
+  - cognitive therapy
+- id: https://openalex.org/W2159262881
+  doi: https://doi.org/10.1002/da.20654
+  title: 'Panic disorder: a review of DSM-IV panic disorder and proposals for DSM-V'
+  year: 2010
+  keywords:
+  - panic disorder
+  - panic attacks
+  - diagnostic criteria
+  - DSM-V
+  - DSM-IV
+  - cultural validity
+  - anxiety disorders
+- id: https://openalex.org/W2057929474
+  doi: https://doi.org/10.1001/archpsyc.1993.01820130046008
+  title: A Comparison of Fluvoxamine, Cognitive Therapy, and Placebo in the Treatment
+    of Panic Disorder
+  year: 1993
+  keywords:
+  - panic disorder
+  - fluvoxamine
+  - cognitive therapy
+  - placebo
+  - selective serotonin reuptake inhibitors
+  - outpatients
+  - treatment efficacy
+  - treatment tolerability
+  - panic attacks
+- id: https://openalex.org/W2010561328
+  doi: https://doi.org/10.1002/da.10106
+  title: 'Chronicity, relapse, and illness?course of panic disorder, social phobia,
+    and generalized anxiety disorder: Findings in men and women from 8 years of follow-up'
+  year: 2003
+  keywords:
+  - panic disorder
+  - social anxiety disorder
+  - generalized anxiety disorder
+  - panic disorder with agoraphobia
+  - sex differences
+  - clinical course
+  - relapse
+  - remission
+  - chronicity
+  - long-term follow-up
+- id: https://openalex.org/W2050586615
+  doi: https://doi.org/10.1017/s003329170002849x
+  title: 'Panic disorder in women: a population-based twin study'
+  year: 1993
+  keywords:
+  - panic disorder
+  - women
+  - heritability
+  - familial aggregation
+  - twin studies
+  - genetic transmission
+  - multifactorial threshold model
+  - DSM-III-R diagnosis
+  - diagnostic algorithm
+  - population-based sample
+- id: https://openalex.org/W2037092319
+  doi: https://doi.org/10.1016/s0006-3223(00)01000-3
+  title: Physiologic instability in panic disorder and generalized anxiety disorder
+  year: 2001
+  keywords:
+  - panic disorder
+  - generalized anxiety disorder
+  - respiration
+  - tidal volume variability
+  - electrodermal activity
+  - sighs
+  - end-tidal PCO2
+  - respiratory rate
+  - cardiovascular reactivity
+  - somatic symptoms
+  - dyspnea
+- id: https://openalex.org/W2401841982
+  doi: null
+  title: Efficacy studies of alprazolam in panic disorder.
+  year: 1998
+  keywords:
+  - alprazolam
+  - panic disorder
+  - drug efficacy
+  - exposure therapy
+  - relapse after treatment discontinuation
+  - maintenance therapy
+  - benzodiazepines
+- id: https://openalex.org/W103965615
+  doi: https://doi.org/10.1176/ajp.150.10.1485
+  title: 'Discontinuation of benzodiazepine treatment: efficacy of cognitive- behavioral
+    therapy for patients with panic disorder'
+  year: 1993
+  keywords:
+  - benzodiazepine discontinuation
+  - panic disorder
+  - cognitive behavioral therapy
+  - benzodiazepine tapering
+  - alprazolam
+  - clonazepam
+  - benzodiazepine dependence
+  - relapse prevention
+- id: https://openalex.org/W2408799696
+  doi: https://doi.org/10.1176/ajp.150.4.658
+  title: Alexithymia and anxiety sensitivity in panic disorder and obsessive- compulsive
+    disorder
+  year: 1993
+  keywords:
+  - alexithymia
+  - anxiety sensitivity
+  - panic disorder
+  - obsessive-compulsive disorder
+  - Toronto Alexithymia Scale
+  - Anxiety Sensitivity Index
+  - emotional awareness
+  - physiological symptoms
+- id: https://openalex.org/W2030392869
+  doi: https://doi.org/10.1016/0006-3223(94)90040-x
+  title: Baseline and fear-potentiated startle in panic disorder patients
+  year: 1994
+  keywords:
+  - panic disorder
+  - fear-potentiated startle
+  - acoustic startle response
+  - anticipatory anxiety
+  - eyeblink response
+  - age differences
+  - contextual effects
+  - threat anticipation
+- id: https://openalex.org/W1982852718
+  doi: https://doi.org/10.1007/bf00216062
+  title: Neuroendocrine evidence for serotonin receptor hypersensitivity in panic
+    disorder
+  year: 1988
+  keywords:
+  - panic disorder
+  - serotonin receptors
+  - m-chlorophenylpiperazine
+  - cortisol secretion
+  - neuroendocrine response
+  - major depressive disorder
+  - anxiety
+- id: https://openalex.org/W2029062483
+  doi: https://doi.org/10.1016/0278-5846(85)90178-2
+  title: 'Longitudinal course of panic disorder: Clinical and biological considerations'
+  year: 1985
+  keywords:
+  - panic disorder
+  - longitudinal course
+  - panic attacks
+  - generalized anxiety disorder
+  - agoraphobia
+  - depression
+  - tricyclic antidepressants
+  - primary depression
+- id: https://openalex.org/W2116041659
+  doi: https://doi.org/10.1037//0022-006x.67.4.583
+  title: 'Brief cognitive therapy for panic disorder: A randomized controlled trial.'
+  year: 1999
+  keywords:
+  - panic disorder
+  - cognitive therapy
+  - self-instructional module
+  - treatment duration
+  - cost-effectiveness
+  - booster sessions
+  - maintenance of treatment effects
+  - treatment expectations
+- id: https://openalex.org/W1980478798
+  doi: https://doi.org/10.1016/0301-0511(95)05153-8
+  title: How good are patients with panic disorder at perceiving their heartbeats?
+  year: 1996
+  keywords:
+  - panic disorder
+  - heartbeat perception
+  - cardiac neurosis
+  - agoraphobic avoidance
+  - attentional bias
+  - heart rate
+  - anxiety maintenance
+  - bodily sensations
+  - ambulatory monitoring
+- id: https://openalex.org/W1965927906
+  doi: https://doi.org/10.1001/archpsyc.55.11.1010
+  title: Sertraline in the Treatment of Panic Disorder
+  year: 1998
+  keywords:
+  - sertraline
+  - panic disorder
+  - agoraphobia
+  - selective serotonin reuptake inhibitors
+  - treatment efficacy
+  - drug safety
+  - adverse events
+  - quality of life
+- id: https://openalex.org/W2154015533
+  doi: https://doi.org/10.2174/1745017901410010028
+  title: '“Nomophobia”: Impact of Cell Phone Use Interfering with Symptoms and Emotions
+    of Individuals with Panic Disorder Compared with a Control Group'
+  year: 2014
+  keywords:
+  - nomophobia
+  - mobile phone use
+  - panic disorder
+  - agoraphobia
+  - anxiety
+  - emotional symptoms
+  - somatic symptoms
+  - fear
+  - smartphone addiction
+  - tachycardia
+  - respiratory alterations
+- id: https://openalex.org/W2043889644
+  doi: https://doi.org/10.1111/j.1600-0447.1992.tb03266.x
+  title: 'Noradrenergic neuronal dysregulation in panic disorder: the effects of intravenous
+    yohimbine and clonidine in panic disorder patients'
+  year: 1992
+  keywords:
+  - panic disorder
+  - noradrenergic dysfunction
+  - yohimbine
+  - clonidine
+  - growth hormone response
+  - panic attacks
+  - anxiety
+  - fear
+  - cardiovascular effects
+  - autonomic nervous system
+- id: https://openalex.org/W2191950930
+  doi: https://doi.org/10.1192/bjp.149.5.631
+  title: Reduction in Hypochondriasis with Treatment of Panic Disorder
+  year: 1986
+  keywords:
+  - health anxiety
+  - panic disorder
+  - agoraphobia
+  - disease conviction
+  - treatment response
+  - medical resource utilization
+- id: https://openalex.org/W1706017187
+  doi: https://doi.org/10.1176/ajp.150.6.859
+  title: A psychodynamic model of panic disorder
+  year: 1993
+  keywords:
+  - panic disorder
+  - psychodynamic model
+  - parental criticism
+  - object relations
+  - low self-esteem
+  - marital conflict
+  - temperament
+- id: https://openalex.org/W2112256560
+  doi: https://doi.org/10.1176/appi.ajp.158.1.49
+  title: Patterns of Psychopathology and Dysfunction in High-Risk Children of Parents
+    With Panic Disorder and Major Depression
+  year: 2001
+  keywords:
+  - panic disorder
+  - major depressive disorder
+  - familial risk
+  - agoraphobia
+  - social anxiety disorder
+  - separation anxiety disorder
+  - disruptive behavior disorders
+  - social functioning
+  - anxiety disorders
+  - comorbidities
+  - vulnerable children
+- id: https://openalex.org/W1912892478
+  doi: https://doi.org/10.1176/ajp.147.11.1504
+  title: 'Panic disorder and cardiovascular/cerebrovascular problems: results from
+    a community survey'
+  year: 1990
+  keywords:
+  - panic disorder
+  - stroke
+  - cardiovascular disease
+  - cerebrovascular disease
+  - mortality risk
+  - psychiatric comorbidity
+  - community survey
+- id: https://openalex.org/W2081073617
+  doi: https://doi.org/10.1016/s0005-7894(01)80019-8
+  title: 'Treatment of panic disorder via the internet: A randomized trial of a self-help
+    program'
+  year: 2001
+  keywords:
+  - panic disorder
+  - internet-delivered treatment
+  - self-help programs
+  - psychoeducation
+  - breathing retraining
+  - cognitive restructuring
+  - interoceptive exposure
+  - in vivo exposure
+  - relapse prevention
+  - waitlist control
+- id: https://openalex.org/W2406545678
+  doi: null
+  title: Pivotal studies of clonazepam in panic disorder.
+  year: 1998
+  keywords:
+  - clonazepam
+  - panic disorder
+  - benzodiazepines
+  - outcome measures
+  - drug discontinuation
+  - withdrawal symptoms
+  - drug efficacy
+- id: https://openalex.org/W2049489184
+  doi: https://doi.org/10.1192/bjp.167.3.374
+  title: Paroxetine in the Treatment of Panic Disorder a Randomised, Double-Blind,
+    Placebo-Controlled Study
+  year: 1995
+  keywords:
+  - paroxetine
+  - panic disorder
+  - cognitive therapy
+  - panic attacks
+  - selective serotonin reuptake inhibitors
+  - antidepressant efficacy
+  - drug tolerability
+  - placebo comparison
+- id: https://openalex.org/W2042167308
+  doi: https://doi.org/10.1097/00004714-199004000-00007
+  title: Fluoxetine in Panic Disorder
+  year: 1990
+  keywords:
+  - fluoxetine
+  - panic disorder
+  - agoraphobia
+  - selective serotonin reuptake inhibitors
+  - adverse effects
+  - treatment tolerability
+  - panic attacks
+- id: https://openalex.org/W2044420664
+  doi: https://doi.org/10.1001/archpsyc.1990.01810180034006
+  title: Reduced Benzodiazepine Sensitivity in Panic Disorder
+  year: 1990
+  keywords:
+  - panic disorder
+  - diazepam
+  - benzodiazepine sensitivity
+  - saccades
+  - eye velocity
+  - sedation
+  - memory
+  - brainstem
+- id: https://openalex.org/W1985867301
+  doi: https://doi.org/10.1016/s0165-1781(00)00195-5
+  title: 'Autonomic dysregulation in panic disorder and in post-traumatic stress disorder:
+    application of power spectrum analysis of heart rate variability at rest and in
+    response to recollection of trauma or panic attacks'
+  year: 2000
+  keywords:
+  - panic disorder
+  - post-traumatic stress disorder
+  - heart rate variability
+  - autonomic dysfunction
+  - power spectrum analysis
+  - sympathetic activity
+  - parasympathetic activity
+  - panic attacks
+  - psychological stress response
+- id: https://openalex.org/W2020054387
+  doi: https://doi.org/10.1001/archpsyc.56.1.78
+  title: Frontal Brain Asymmetry as a Biological Substrate of Emotions in Patients
+    With Panic Disorders
+  year: 1999
+  keywords:
+  - panic disorder
+  - alpha power
+  - negative emotions
+  - emotional valence
+  - spontaneous EEG
+- id: https://openalex.org/W2071586792
+  doi: https://doi.org/10.1016/j.biopsych.2009.07.036
+  title: Efficacy of D-Cycloserine for Enhancing Response to Cognitive-Behavior Therapy
+    for Panic Disorder
+  year: 2009
+  keywords:
+  - D-cycloserine
+  - panic disorder
+  - cognitive behavioral therapy
+  - augmentation therapy
+  - interoceptive exposure
+  - agoraphobia
+  - fear extinction
+- id: https://openalex.org/W2042791643
+  doi: https://doi.org/10.1192/bjp.173.1.54
+  title: Sertraline in the treatment of panic disorder
+  year: 1998
+  keywords:
+  - sertraline
+  - panic disorder
+  - selective serotonin reuptake inhibitors
+  - placebo comparison
+  - panic attacks
+  - dose-response relationship
+  - adverse events
+  - xerostomia
+  - ejaculatory dysfunction
+  - anxiety treatment
+- id: https://openalex.org/W2105957748
+  doi: https://doi.org/10.1002/da.20220
+  title: 'HPA axis activity in patients with panic disorder: review and synthesis
+    of four studies'
+  year: 2006
+  keywords:
+  - panic disorder
+  - hypothalamic-pituitary-adrenal axis
+  - HPA axis dysregulation
+  - cortisol
+  - ACTH
+  - pentagastrin
+  - perceived control
+  - social support
+  - sleep disruption
+  - diurnal cortisol rhythm
+  - contextual cues
+- id: https://openalex.org/W2027993054
+  doi: https://doi.org/10.1037/0021-843x.116.3.612
+  title: 'Fear conditioning in panic disorder: Enhanced resistance to extinction.'
+  year: 2007
+  keywords:
+  - panic disorder
+  - fear conditioning
+  - extinction
+  - conditioned response acquisition
+  - skin conductance response
+  - aversive stimuli
+  - stimulus valence
+  - differential conditioning
+- id: https://openalex.org/W2468119980
+  doi: null
+  title: 'The epidemiology of anxiety and panic disorders: an update.'
+  year: 1986
+  keywords:
+  - anxiety disorders
+  - panic disorder
+  - agoraphobia
+  - generalized anxiety disorder
+  - prevalence
+  - comorbidities
+  - mood disorders
+  - risk factors
+  - family history
+  - twin studies
+  - genetic etiology
+  - case finding
+  - family psychiatry
+- id: https://openalex.org/W2104218743
+  doi: https://doi.org/10.1192/bjp.163.2.201
+  title: Subtyping of Panic Disorder by Symptom Profile
+  year: 1993
+  keywords:
+  - panic disorder
+  - subtyping
+  - symptom profiles
+  - respiratory symptoms
+  - imipramine
+  - alprazolam
+  - treatment outcomes
+  - psychopathology
+- id: https://openalex.org/W1983160636
+  doi: https://doi.org/10.1016/s0893-133x(99)00036-6
+  title: Serotonin and Drug-Induced Therapeutic Responses in Major Depression, Obsessive–Compulsive
+    and Panic Disorders
+  year: 1999
+  keywords:
+  - serotonin
+  - antidepressants
+  - major depressive disorder
+  - obsessive-compulsive disorder
+  - panic disorder
+  - serotonergic neurotransmission
+  - antidepressant mechanism
+  - pindolol
+  - rapid-acting antidepressants
+- id: https://openalex.org/W4246140805
+  doi: https://doi.org/10.1037/0022-006x.65.2.214
+  title: 'Body vigilance in panic disorder: Evaluating attention to bodily perturbations.'
+  year: 1997
+  keywords:
+  - panic disorder
+  - body vigilance
+  - somatic symptoms
+  - interoceptive attention
+  - hypervigilance
+- id: https://openalex.org/W2022082295
+  doi: https://doi.org/10.4088/jcp.v64n1107
+  title: Escitalopram in the Treatment of Panic Disorder
+  year: 2003
+  keywords:
+  - escitalopram
+  - panic disorder
+  - citalopram
+  - selective serotonin reuptake inhibitors
+  - agoraphobia
+  - antidepressant efficacy
+  - drug safety and tolerability
+  - outpatients
+- id: https://openalex.org/W1968935828
+  doi: https://doi.org/10.1016/0005-7967(88)90138-6
+  title: 'Panic disorder: A product of classical conditioning'
+  year: 1988
+  keywords:
+  - panic disorder
+  - panic attacks
+  - classical conditioning
+  - hyperventilation
+  - anxiety
+  - endogenous stimuli
+  - conditioned anxiety
+- id: https://openalex.org/W2002414484
+  doi: https://doi.org/10.1016/s0005-7967(98)00184-3
+  title: 'Heartbeat perception in panic disorder: a reanalysis'
+  year: 2000
+  keywords:
+  - panic disorder
+  - heartbeat perception
+  - anxiety sensitivity
+  - anxiety disorders
+  - depression
+  - palpitations
+  - schema theory
+  - information processing
+- id: https://openalex.org/W160321931
+  doi: https://doi.org/10.1176/ajp.149.6.778
+  title: A crossover study of focused cognitive therapy for panic disorder
+  year: 1992
+  keywords:
+  - panic disorder
+  - supportive therapy
+  - client-centered therapy
+  - crossover design
+  - panic attacks
+  - general anxiety
+  - depression
+  - long-term treatment outcomes
+  - non-pharmacological treatment
+- id: https://openalex.org/W2086201863
+  doi: https://doi.org/10.1192/bjp.170.6.549
+  title: The effect of Citalopram in panic disorder
+  year: 1997
+  keywords:
+  - citalopram
+  - panic disorder
+  - clomipramine
+  - serotonin reuptake inhibitors
+  - agoraphobia
+  - dose-response relationship
+  - placebo comparison
+  - risk-benefit ratio
+  - panic attacks
+- id: https://openalex.org/W5442471
+  doi: https://doi.org/10.1176/ajp.143.7.896
+  title: The corticotropin-releasing hormone stimulation test in patients with panic
+    disorder
+  year: 1986
+  keywords:
+  - panic disorder
+  - corticotropin-releasing hormone stimulation test
+  - ACTH response
+  - cortisol response
+  - hypercortisolism
+  - hypothalamic-pituitary-adrenal axis
+  - depression
+- id: https://openalex.org/W2055705239
+  doi: https://doi.org/10.1016/0146-6402(93)90002-j
+  title: Panic disorder and hypochondriasis
+  year: 1993
+  keywords:
+  - panic disorder
+  - health anxiety
+  - catastrophic misinterpretation
+  - bodily sensations
+  - anxiety
+  - safety-seeking behavior
+  - comorbidities
+  - therapeutic implications
+- id: https://openalex.org/W2162349120
+  doi: https://doi.org/10.1017/s1352465801001138
+  title: A BRIEF INTERNET-BASED TREATMENT FOR PANIC DISORDER
+  year: 2001
+  keywords:
+  - panic disorder
+  - online intervention
+  - self-monitoring
+  - anxiety sensitivity
+  - body vigilance
+  - self-efficacy
+  - negative affect
+  - depressive affect
+  - treatment efficacy

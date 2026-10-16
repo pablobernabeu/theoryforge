@@ -1,0 +1,77 @@
+# theoryforge rigour checklist. Shared, versioned specification.
+# Both the R and Python packages read this file. The scoring algorithm is pinned
+# in API_SPEC.md so that the two implementations produce identical verdicts.
+# Every report records schema_version as checklist_version, since the weights and
+# thresholds below produce every number in it.
+schema_version: "2.0"
+
+# The package's defaults, fixed for reproducibility and not derived from a
+# validation study.
+thresholds:
+  redundancy_similarity_max: 0.85   # Jaccard similarity at which the lexical screen flags a pair
+  redundancy_overlap_max: 0.85      # overlap coefficient at which it flags a pair whose definitions both have 3+ tokens
+  embedding_similarity_max: 0.85    # cosine at which the opt-in embedding screen flags a pair (model-specific)
+  min_precision_share: 0.5          # share of point/interval predictions for item 'precision' to pass
+  min_severity: 0.5                 # mean severity for item 'risk_severity' to pass
+
+items:
+  - id: falsifiability
+    criterion: "At least one prediction forbids an observation"
+    weight: 0.15
+    severity_if_fail: blocker
+    citation: "Popper (1959); Bacharach (1989)"
+  - id: precision
+    criterion: "Predictions are point/interval, not merely directional"
+    weight: 0.10
+    severity_if_fail: warning
+    citation: "Meehl (1967, 1990)"
+  - id: risk_severity
+    criterion: "Mean prediction severity (declared, else the claim-form rubric) at or above threshold"
+    weight: 0.10
+    severity_if_fail: warning
+    citation: "Popper (1959); Meehl (1967, 1990)"
+  - id: parsimony
+    criterion: "No auxiliary assumption added in response to an anomaly lacks independent corroboration"
+    weight: 0.08
+    severity_if_fail: warning
+    citation: "Lakatos (1970); Meehl (1990)"
+  - id: non_redundancy
+    criterion: "No pair of construct definitions is a near-duplicate or contained in the other (lexical screen)"
+    weight: 0.10
+    severity_if_fail: warning
+    citation: "Kelley (1927); Le et al. (2010); Lawson & Robins (2021)"
+  - id: construct_clarity
+    criterion: "Every construct has definition + measurement + boundary conditions"
+    weight: 0.08
+    severity_if_fail: warning
+    citation: "Suddaby (2010); Cronbach & Meehl (1955); Flake & Fried (2020)"
+  - id: scope
+    criterion: "Boundary conditions explicitly stated"
+    weight: 0.06
+    severity_if_fail: warning
+    citation: "Whetten (1989); Bacharach (1989)"
+  - id: logical_why
+    criterion: "Each proposition states a mechanism, not just a correlation"
+    weight: 0.08
+    severity_if_fail: warning
+    citation: "Sutton & Staw (1995); Whetten (1989)"
+  - id: causal_testability
+    criterion: "At least one proposition states a causal relation"
+    weight: 0.06
+    severity_if_fail: warning
+    citation: "Textor et al. (2016); Eronen & Bringmann (2021)"
+  - id: diagnosticity
+    criterion: "At least one prediction names a registered alternative it is declared to discriminate from (declared, not verified)"
+    weight: 0.06
+    severity_if_fail: warning
+    citation: "Platt (1964); Fiedler (2017)"
+  - id: formalisation
+    criterion: "A formal model of a recognised type (ode, abm, network, sem) is declared"
+    weight: 0.05
+    severity_if_fail: warning
+    citation: "Robinaugh et al. (2021); Guest & Martin (2021)"
+  - id: derivation_chain
+    criterion: "Every prediction cites at least one proposition, and every cited id is a declared proposition (reference check only)"
+    weight: 0.08
+    severity_if_fail: blocker
+    citation: "Scheel et al. (2021); Szollosi et al. (2020)"

@@ -1,0 +1,68 @@
+"""Opt-in embedding-based construct-redundancy screen.
+
+Results depend on a user-supplied embedding function whose outputs are not deterministic
+across model versions or SDKs. This screen is the assistive counterpart to the
+deterministic lexical screen in `redundancy.py`.
+"""
+from __future__ import annotations
+
+import math
+from collections.abc import Callable, Sequence
+
+from . import _resources
+from ._access import field, items, text
+from ._num import rnd
+
+
+def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
+    # The caller enforces equal lengths; strict guards that invariant rather
+    # than letting a mismatch silently truncate the sum.
+    num = sum(x * y for x, y in zip(a, b, strict=True))
+    da = math.sqrt(sum(x * x for x in a))
+    db = math.sqrt(sum(y * y for y in b))
+    if da == 0 or db == 0:
+        return 0.0
+    return num / (da * db)
+
+
+def embedding_redundancy(T, embedder: Callable[[str], Sequence[float]],
+                         threshold: float | None = None) -> list[dict]:
+    """Pairwise cosine similarity of embedded construct definitions.
+
+    `embedder` maps a definition string to a numeric vector; the vectors of every compared
+    pair must be of equal, nonzero length, or the pair is refused. Returns one record per
+    unordered construct pair, sorted by descending similarity then (a, b), with a
+    `review`/`ok` flag.
+
+    `threshold` defaults to the checklist's `embedding_similarity_max` (0.85). How high
+    a cosine two unrelated definitions reach depends on the embedding model, so a
+    threshold suited to one model may flag everything or nothing under another, and
+    the value is best set for the model in use.
+    """
+    T = T.data if hasattr(T, "data") else T
+    if threshold is None:
+        threshold = _resources.checklist()["thresholds"]["embedding_similarity_max"]
+    cons = items(T, "constructs")
+    vecs = [(text(field(c, "id")), embedder(text(field(c, "definition")))) for c in cons]
+    rows: list[dict] = []
+    for i in range(len(vecs)):
+        for j in range(i + 1, len(vecs)):
+            # Unequal or empty vectors have no defensible cosine, and the two
+            # engines read them differently by accident (R recycled the
+            # shorter vector, Python truncated the longer), so the same
+            # embedder produced two confident, different similarities. Refuse
+            # instead of picking a reading.
+            la, lb = len(vecs[i][1]), len(vecs[j][1])
+            if la == 0 or lb == 0 or la != lb:
+                raise ValueError(
+                    "embedding_redundancy requires equal-length nonempty embedding vectors; "
+                    f"constructs {vecs[i][0] or ''} and {vecs[j][0] or ''} "
+                    f"have lengths {la} and {lb}"
+                )
+            sim = rnd(_cosine(vecs[i][1], vecs[j][1]), 6)
+            rows.append({
+                "a": vecs[i][0], "b": vecs[j][0],
+                "cosine": sim, "flag": "review" if sim >= threshold else "ok",
+            })
+    rows.sort(key=lambda r: (-r["cosine"], r["a"], r["b"]))
+    return rows
