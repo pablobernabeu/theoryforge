@@ -7,7 +7,7 @@ output: rmarkdown::html_vignette
 
 If you use the R package in your work, please cite it:
 
-<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic theory development</em> (R package version `r utils::packageVersion("theoryforge")`). <a href="https://doi.org/10.32614/CRAN.package.theoryforge">https://doi.org/10.32614/CRAN.package.theoryforge</a></p>
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic theory development</em> (R package version `r utils::packageVersion("theoryforge")`). Comprehensive R Archive Network (CRAN). <a href="https://doi.org/10.32614/CRAN.package.theoryforge">https://doi.org/10.32614/CRAN.package.theoryforge</a></p>
 
 ```{r bibtex-entry, echo = FALSE, results = "asis"}
 # Build the BibTeX entry from the installed version so it never drifts, then
@@ -21,6 +21,7 @@ bib <- paste(
   "  title  = {{theoryforge}: Systematic theory development},",
   "  author = {Pablo Bernabeu},",
   "  year   = {2026},",
+  "  publisher = {Comprehensive R Archive Network (CRAN)},",
   sprintf("  note   = {R package version %s},", ver),
   "  doi    = {10.32614/CRAN.package.theoryforge},",
   "  url    = {https://CRAN.R-project.org/package=theoryforge},",

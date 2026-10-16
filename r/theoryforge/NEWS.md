@@ -1,5 +1,11 @@
 # theoryforge (development version)
 
+* `citation("theoryforge")` and the About page name the package's publisher, in
+  full: "Comprehensive R Archive Network (CRAN)" stands before the DOI in the
+  reference, and the BibTeX entry gives it as `publisher`. The reference named
+  no publisher before. Every reference across the package family and the
+  author's website now names CRAN in the same words.
+
 * `citation("theoryforge")` and the website give the DOI that CRAN assigned to
   the package, <https://doi.org/10.32614/CRAN.package.theoryforge>, in place of
   the Zenodo concept DOI. It names the R package across all its versions, and it
