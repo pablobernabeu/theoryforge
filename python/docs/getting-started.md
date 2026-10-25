@@ -16,7 +16,7 @@ The package ships a few example theories, so nothing needs downloading. `tf.exam
 
 ## A first session
 
-Import the package and read a theory from a YAML file. Adjust the path to the file on your own machine.
+Import the package, list the packaged examples and read the panic-network theory from its YAML file.
 
 ```python exec="1" source="material-block" result="text" session="getting-started"
 import theoryforge as tf
@@ -28,7 +28,7 @@ print(tf.example_names())
 t = tf.read(tf.example_path("panic-network.theory.yaml"))
 ```
 
-Validate the theory. With no arguments this checks the required fields and enum membership, returning `True` on success and raising `ValueError` with a list of problems otherwise. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection, that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id, and that assumption, test-outcome and evidence entries reference declared predictions. The full pass then checks the rest of the schema, such as the evidence directions, a boolean `passed` on each test outcome and the type of every other field.
+Validate the theory. With no arguments this checks the structure: the required fields and enum membership, that every top-level field is one the schema defines (a misspelt key such as `prediction:` is refused) and that each collection is a list. It returns `True` on success and raises `ValueError` with a list of problems otherwise. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection, that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id, and that assumption, test-outcome and evidence entries reference declared predictions. The full pass then checks the rest of the schema, such as the evidence directions, a boolean `passed` on each test outcome and the type of every other field.
 
 ```python exec="1" source="material-block" session="getting-started"
 t.validate()

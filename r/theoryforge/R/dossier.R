@@ -37,6 +37,10 @@ NULL
 #' evidence lists the prediction each entry supports, its direction and its
 #' DOI. The implied independencies appear once, in the preregistration.
 #'
+#' It stops, as [tf_check()] does, when a test outcome's \code{passed} is
+#' present and not \code{TRUE} or \code{FALSE}, or when a prediction's
+#' \code{severity} is not a finite number from 0 to 1.
+#'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @return The dossier Markdown as a single string (LF line endings, single
 #'   trailing newline).

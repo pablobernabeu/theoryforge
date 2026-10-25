@@ -28,7 +28,10 @@ when \code{dry_run = FALSE}. An empty string counts as absent.}
 \item{dry_run}{When \code{TRUE} (default), return the planned request without
 sending it.}
 
-\item{base_url}{OSF storage base URL; override to target a non-default host.}
+\item{base_url}{OSF storage base URL, by default
+\code{"https://files.osf.io/v1/resources/"}; override to target a
+non-default host. The node id is appended to it directly, so it must end
+in a slash.}
 
 \item{overwrite}{When \code{TRUE}, add a new version of an existing file of
 the same name instead of failing with HTTP 409. Default \code{FALSE}.}
@@ -47,7 +50,11 @@ Builds (and optionally sends) a request to upload \code{tf_dossier(theory)} to
 OSF storage. With \code{dry_run = TRUE} (the default) the planned request is
 returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 both \code{token} and \code{node} (the OSF project id) and performs an
-authenticated \code{PUT}. The live path is network- and credential-dependent.
+authenticated \code{PUT} through the suggested \pkg{curl} package, which must
+be installed. Each request is abandoned after 30 seconds. The live path is
+network- and credential-dependent. The dossier is built first, so the
+function stops when \code{\link[=tf_check]{tf_check()}} refuses the theory, with
+\code{dry_run = TRUE} as well.
 }
 \details{
 OSF storage refuses to create a file whose name already exists in the

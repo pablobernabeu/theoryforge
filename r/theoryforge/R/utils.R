@@ -47,10 +47,12 @@ NULL
   if (length(v) >= 2L) as.list(v) else list()
 }
 
-# The 0.6.0 reading of a list-valued field, kept where nothing may be dropped:
-# the builders append to whatever a collection holds, and tf_fetch_corpus()
-# reads the OpenAlex response with it. Corpus records have their own value rules
-# (.tf_records() in lit.R, API_SPEC.md section 14).
+# A list-valued field read without dropping anything: a list as it is, any
+# other value as the list of its elements and NULL as an empty list. It is used
+# where nothing may be dropped: the builders append to whatever a collection
+# holds, and tf_fetch_corpus() reads the OpenAlex response with it. Corpus
+# records have their own value rules (.tf_records() in lit.R, API_SPEC.md
+# section 14).
 .tf_as_list <- function(d, key) {
   v <- d[[key]]
   if (is.null(v)) return(list())
@@ -86,9 +88,9 @@ NULL
 }
 
 # `v` when it is one of the `allowed` strings, otherwise NULL (absent). Used for
-# type, relation, maturity and formal_model$type wherever they are read, so a
-# value outside the enum, a sequence included, takes part in no verdict and
-# prints as nothing.
+# type, relation, maturity and formal_model$type wherever they are read, and for
+# an evidence entry's direction and a test block's sided, so a value outside the
+# enum, a sequence included, takes part in no verdict and prints as nothing.
 .tf_enum <- function(v, allowed) {
   if (is.character(v) && length(v) == 1L && !is.na(v) && v %in% allowed) v else NULL
 }
@@ -213,8 +215,8 @@ NULL
 
 # The text of a file as UTF-8. The bytes are read whole, so no connection warns
 # about a missing final newline or re-encodes for the session locale. A UTF-8
-# byte-order mark is dropped, as Python's "utf-8-sig" codec drops it. jsonlite
-# warned about one, and Python's json module refused one.
+# byte-order mark is dropped, as Python's "utf-8-sig" codec drops it, since
+# jsonlite warns about one and Python's json module refuses one.
 .tf_read_text <- function(path) {
   con <- file(path, open = "rb")
   on.exit(close(con))

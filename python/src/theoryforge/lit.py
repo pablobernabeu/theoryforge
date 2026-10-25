@@ -43,7 +43,9 @@ def read_corpus(path) -> dict:
 
     The file is read by the rules ``read`` follows, which are the R twin's
     (API_SPEC.md section 3), so an unquoted keyword such as ``y`` or ``n`` stays a
-    string and a repeated key is refused.
+    string and a repeated key is refused. A document that is not a mapping raises
+    ``ValueError("Corpus data must be a mapping")``. The records themselves are checked
+    by ``litmap()`` and ``landscape()``.
     """
     data = load_document(path)
     if not isinstance(data, dict):
@@ -153,9 +155,10 @@ def _reference_key(ref: str) -> str:
     A reference that holds a DOI is keyed by the DOI as ``normalise_doi`` gives
     it, so that ``10.1016/J.BRAT...``, ``doi:10.1016/j.brat...`` and
     ``https://doi.org/10.1016/j.brat...`` are one work: DOI names are
-    case-insensitive under ASCII case folding (DOI Handbook, section 2.4). Any
-    other reference, a Scopus or OpenAlex identifier or a fixture key, is kept
-    exactly as written.
+    case-insensitive under ASCII case folding (DOI Handbook, 'Case Insensitivity
+    of the DOI Name', https://www.doi.org/doi-handbook/HTML/case-insensitivity.html).
+    Any other reference, a Scopus or OpenAlex identifier or a fixture key, is
+    kept exactly as written.
     """
     found = find_doi(ref)
     return ref if found is None else found
@@ -393,13 +396,14 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
            max_theme_size: int = 10, max_df: float = 1.0) -> dict:
     """Keyword co-occurrence, themes and co-citation, all deterministic.
 
-    ``min_link`` is the smallest count a keyword pair needs to be an edge, and
-    ``min_cocitation`` the same for a reference pair (``min_link`` when None).
-    Co-citation maps of real corpora are large: 200 OpenAlex records give about
-    11,000 reference pairs at a threshold of 2, so a higher ``min_cocitation``
-    is often wanted. Both must be positive integers. The corpus is checked as
-    API_SPEC.md section 14 describes: integer entries become decimal strings,
-    and booleans, fractions and nested values are refused.
+    ``min_link``, 2 by default, is the smallest count a keyword pair needs to be
+    an edge, and ``min_cocitation`` the same for a reference pair (``min_link``
+    when None). Co-citation maps of real corpora are large: 200 OpenAlex records
+    give about 11,000 reference pairs at a threshold of 2, so a higher
+    ``min_cocitation`` is often wanted. Both must be positive integers. The
+    corpus is checked as API_SPEC.md section 14 describes: integer entries
+    become decimal strings, and booleans, fractions and nested values are
+    refused.
 
     A reference that holds a DOI is keyed by the DOI, lower-cased and without
     its resolver prefix, as ``new_evidence_dois`` compares DOIs. One work cited
@@ -442,11 +446,20 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
     1. They are checked with either method, although only simple centres reads
     them.
 
+    Returns:
+        A dict with ``n_records``, ``keywords`` (every keyword, sorted),
+            ``keyword_cooccurrence`` (edges ``{a, b, count}`` sorted by ``(a, b)``),
+            ``themes`` (each ``{id, keywords, size}``, ordered by its smallest
+            keyword) and ``co_citation`` (edges as for keywords), followed by the
+            keys that ``"simple_centres"`` adds, as described above.
+
     References: Callon, Courtial and Laville (1991), Scientometrics 22,
     155-205, https://doi.org/10.1007/BF02019280. Coulter, Monarch and Konda
     (1998), Journal of the American Society for Information Science 49,
-    1206-1223. Cobo, López-Herrera, Herrera-Viedma and Herrera (2011), Journal
-    of Informetrics 5, 146-166, https://doi.org/10.1016/j.joi.2010.10.002.
+    1206-1223,
+    https://doi.org/10.1002/(SICI)1097-4571(1998)49:13%3C1206::AID-ASI7%3E3.0.CO;2-F.
+    Cobo, López-Herrera, Herrera-Viedma and Herrera (2011), Journal of
+    Informetrics 5, 146-166, https://doi.org/10.1016/j.joi.2010.10.002.
     """
     s = _settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, max_df)
     out = _litmap(corpus, s)
@@ -491,16 +504,27 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
     focal theory and its registered alternatives) addresses it, ``covered``
     when one does and ``crowded`` when two or more do. A crowded theme calls for
     predictions that discriminate between the accounts, and is not a finding of
-    redundancy. The two lists keep their 0.6.0 keys, ``under_theorised_fronts``
-    and ``redundancy_risk``.
+    redundancy. ``under_theorised_fronts`` lists the ids of the under-theorised
+    themes, and ``redundancy_risk``, despite its name, the ids of the crowded
+    ones.
 
-    ``min_link`` must be a positive integer, ``max_token_share`` a number
-    from 0 to 1 and ``method`` one of litmap's, checked in that order and
-    before the corpus (API_SPEC.md section 15). The themes are litmap's, built
-    by ``method`` with litmap's other defaults. With ``"components"``, the same
-    warning is given when one theme holds most of the linked keywords. With
-    ``"simple_centres"``, the record gains ``method`` after ``theory_id`` and
-    each theme its ``centrality``, ``density`` and ``quadrant``.
+    ``min_link`` (2 by default) must be a positive integer, ``max_token_share``
+    (0.5 by default) a number from 0 to 1 and ``method`` one of litmap's,
+    checked in that order and before the corpus (API_SPEC.md section 15). The
+    themes are litmap's, built by ``method`` with litmap's other defaults. With
+    ``"components"``, the same warning is given when one theme holds most of the
+    linked keywords. With ``"simple_centres"``, the record gains ``method``
+    after ``theory_id`` and each theme its ``centrality``, ``density`` and
+    ``quadrant``.
+
+    Returns:
+        A dict with ``theory_id``, ``max_token_share`` (the value used),
+            ``field_tokens``, ``phenomenon_tokens``, ``themes``,
+            ``under_theorised_fronts`` and ``redundancy_risk``. Each theme holds
+            ``id``, ``keywords``, ``alternatives`` (the ids of the alternatives that
+            address it), ``focal``, ``status``, ``focal_terms`` and
+            ``alternative_terms``, the last a list of ``{id, terms}`` in the order
+            of ``alternatives``.
     """
     T = theory.data if hasattr(theory, "data") else theory
     min_link = _positive_int(min_link, "min_link")
@@ -615,11 +639,23 @@ def _strongest(edges: list[dict], max_edges: int) -> list[dict]:
 
 
 def lit_diagram(obj: dict, type: str = "keyword_cooccurrence", max_edges: int | None = None) -> str:
-    """DOT for the literature layer. type in {keyword_cooccurrence, co_citation, theme_landscape}.
+    """DOT for the literature layer.
 
-    ``max_edges`` caps a keyword_cooccurrence or co_citation diagram at that
-    many edges, the highest counts first and ties broken by (a, b); only their
-    endpoints are drawn. None draws every edge, and theme_landscape ignores it.
+    ``obj`` is a ``litmap()`` result for ``"keyword_cooccurrence"`` (the
+    default) and ``"co_citation"``, and a ``landscape()`` result for
+    ``"theme_landscape"``. A record without the edge list asked for gives a
+    graph with no nodes. ``max_edges`` caps a keyword_cooccurrence or
+    co_citation diagram at that many edges, the highest counts first and ties
+    broken by (a, b); only their endpoints are drawn. None draws every edge,
+    and theme_landscape ignores it.
+
+    Returns:
+        A single DOT string ending in a newline: an undirected graph for the
+            two network views and a digraph for the theme landscape.
+
+    Raises:
+        ValueError: for an unknown ``type``, and when ``max_edges`` is not a
+            positive integer.
     """
     if max_edges is not None:
         max_edges = _positive_int(max_edges, "max_edges")
@@ -819,18 +855,22 @@ def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None,
 
     This adapter is assistive. It depends on a live external service whose
     results change over time, so it sits outside the package's deterministic
-    core. Each work is mapped to ``{id, doi, title, year, keywords, references}``,
-    with the DOI as OpenAlex gives it and the top five concepts standing in for
-    keywords when a work has none.
+    core. The result is a corpus, ``{schema_version: "1.0", id:
+    "openalex:<query>", source, records}``. Each work is mapped to ``{id, doi,
+    title, year, keywords, references}``, with the DOI as OpenAlex gives it and
+    the top five concepts standing in for keywords when a work has none.
 
     OpenAlex returns the works that match a search in pages of ``per_page``,
     ranked by relevance, and a search usually matches far more works than one
     page holds. ``per_page`` may be 1 to 200, but OpenAlex supports pages of up
     to 100 and has deprecated larger ones. A ``max_records`` above ``per_page``
     pages on through OpenAlex's cursor until that many works are collected or
-    the results run out. By default it equals ``per_page``, so one request is
-    made. Each page is one request and costs USD 0.001. OpenAlex allows USD 0.10
-    a day without a key, about 100 pages, and USD 1 with a free key.
+    the results run out. Paging needs an API key: without one, OpenAlex serves
+    the first page and refuses the next with HTTP 401, so the call raises and
+    keeps none of the works already fetched. By default, ``max_records``
+    equals ``per_page``, so one request is made, which works without a key.
+    Each page is one request and costs USD 0.001. OpenAlex allows USD 0.10 a
+    day without a key, about 100 one-page searches, and USD 1 with a free key.
 
     ``api_key`` defaults to the ``OPENALEX_API_KEY`` environment variable, and
     ``""`` sends no key. The key is sent only in an ``Authorization: Bearer``
@@ -838,10 +878,23 @@ def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None,
     still sent, but OpenAlex now ignores it, since API keys replaced the polite
     pool it once selected.
 
+    The arguments are checked before any request. ValueError is raised when
+    ``per_page`` is not an int from 1 to 200 (``per_page must be between 1 and
+    200``) and when ``max_records`` is not a positive whole number
+    (``max_records must be a positive integer``). The key is trimmed of the
+    spaces, tabs and line breaks around it, and ValueError is also raised when
+    ``api_key``, or the ``OPENALEX_API_KEY`` value, is not a string or, once
+    trimmed, holds a character outside visible ASCII.
+
     When OpenAlex refuses a request, as it does with HTTP 429 once the budget is
-    spent, ``OpenAlexHTTPError`` (a ``urllib.error.HTTPError``) is raised with
-    the status and OpenAlex's own message, and the request is not retried. A
-    response without a ``results`` list raises ValueError.
+    spent and with HTTP 401 when a later page is asked for without a key,
+    ``theoryforge.lit.OpenAlexHTTPError`` (a ``urllib.error.HTTPError``)
+    is raised with the status and OpenAlex's own message, and the request is not
+    retried. A response without a ``results`` list raises ValueError. A request
+    is abandoned after 30 seconds without progress. A failure to connect,
+    including a connection that times out, raises ``urllib.error.URLError``, and
+    a reply that stalls raises ``TimeoutError``. Neither is an
+    ``OpenAlexHTTPError``.
 
     The corpus records where, when and how it was fetched in ``source``. It
     gives the service, endpoint and query and the UTC time of retrieval
@@ -866,9 +919,10 @@ def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None,
         params["mailto"] = mailto
 
     # Cursor paging, which OpenAlex serves for a search with no cap on the
-    # number of results: "*" asks for the first page, and each page names the
-    # cursor of the next. The run ends with enough works, an empty page or no
-    # cursor (API_SPEC.md section 17).
+    # number of results, and past the first page only to a request with an API
+    # key (HTTP 401 without one): "*" asks for the first page, and each page
+    # names the cursor of the next. The run ends with enough works, an empty
+    # page or no cursor (API_SPEC.md section 17).
     retrieved = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     page = _openalex_page({**params, "cursor": "*"}, headers, key)
     total_count = _whole_number(_meta(page).get("count"))

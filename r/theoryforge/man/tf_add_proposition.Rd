@@ -10,7 +10,12 @@ tf_add_proposition(theory, id, from, to, relation, mechanism = NULL)
 \item{theory}{A theory object (named list).}
 
 \item{id, from, to, relation}{Proposition fields. \code{from} is the source
-construct id (named \code{from} to match the schema field).}
+construct id (named \code{from} to match the schema field). \code{relation}
+is one of the directed relations \code{"increases"}, \code{"decreases"},
+\code{"causes"}, \code{"mediates"} (one link of a mediated path) and
+\code{"moderates"} (\code{from} modifies the effect of other causes on
+\code{to}), or \code{"associates"}, covariance between \code{from} and
+\code{to} that the theory leaves unexplained.}
 
 \item{mechanism}{Optional mechanism string.}
 }

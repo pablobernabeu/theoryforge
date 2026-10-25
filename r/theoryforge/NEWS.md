@@ -1,5 +1,69 @@
 # theoryforge (development version)
 
+* The help pages give what they left out or misstated. `?tf_diagram` names the
+  six DOT views, the three SVG views and the later outcome nodes of the
+  `workflow` view. It says that the `venn` view draws only the first three
+  constructs and the `severity` view the claim-form riskiness of
+  `tf_severity()`. `?tf_render_diagram` says that a chart view is returned as a
+  browsable HTML object and which suggested package each path needs.
+  `?tf_osf_push` and `?tf_fetch_corpus` say that a live upload, and OpenAlex's
+  own error message, need the curl package and that every request is abandoned
+  after 30 seconds, and `?tf_osf_push` gives the default `base_url`.
+  `?tf_theory`, `?tf_add_proposition` and `?tf_set_formal_model` list the
+  allowed values of `maturity`, `theory_form`, `relation` and the formal-model
+  `type`. `?tf_check` gives the values of `gate` and the fields of each item,
+  `?tf_appraise_amendment` the assumption classes, the `independent` records
+  and the order of the result, `?tf_litmap` the shape of each element and
+  `?tf_landscape` which list holds the under-theorised themes and which the
+  crowded ones. `?tf_read` and `?tf_example_path` name the errors they raise,
+  and `?tf_write` no longer says that every written theory validates.
+
+* The Get started article introduces `tf_add_alternative()`, and its example
+  assumption uses `protects` where it set `added_for`, which is for an
+  assumption added to answer an anomaly. The Developing and testing article
+  says that the `venn` view draws the first three constructs and that a live
+  OSF deposit needs the curl package. The methodology article describes the
+  mechanism item as the share of propositions whose `mechanism` field is filled
+  in, where it spoke of a statement that names a mechanism. The About page says
+  that `citation("theoryforge")` leaves the BibTeX key empty. The reference
+  index describes the packaged corpora, the pre-data rubric and the embedding
+  screen, and the package description names the implications, amendment,
+  preregistration, SEM, simulation and literature functions. The README no
+  longer says that every operation of the web app exports a visualisation.
+
+* `?tf_dossier`, `?tf_preregister`, `?tf_report`, `?tf_render_report`,
+  `?tf_osf_push` and `?tf_diagram`, for the two views that score the
+  checklist, say that they stop on a theory that `tf_check()` refuses, and
+  `?tf_report` that it stops for an unknown format. `?tf_read_corpus` names
+  its error for a document that is not a mapping, and `?tf_fetch_corpus` says
+  how its arguments are checked before any request. The methodology article
+  says that `tf_embedding_redundancy()` takes a threshold of its own, where it
+  said that no threshold could be changed.
+
+* `?tf_fetch_corpus` and the literature article say that paging past the first
+  page needs an OpenAlex API key. Without one, OpenAlex serves the first page
+  and refuses the next with HTTP 401, so the article's example, which asks for
+  400 records, needs one. Both put the keyless budget at about 100 one-page
+  searches, where they said about 100 pages. `?tf_fetch_corpus` says that a
+  work without keywords falls back to its first five concepts, and the article
+  that OpenAlex's own error message needs the curl package.
+
+* `?tf_validate` says that the full pass is stricter than the schema in three
+  ways, the third being the finite bounds, estimates, standard errors and
+  test-block numbers it checks, and that a `NULL` `theory_form` is refused
+  rather than read as absent. The schema says that full validation checks a
+  prediction's `test` block and that the dossier shows it, where it said that
+  no function but `tf_preregister()` read it. It also says that the checklist's
+  parsimony item clears an assumption added for an anomaly with any
+  corroborated prediction it protects, where it said that only one new in an
+  amended version could.
+
+* The literature article links the works whose co-word algorithm and measures
+  it applies, and cites the DOI Handbook's page on case insensitivity, where it
+  gave a section number that the current handbook does not have. `?tf_litmap`
+  gives the DOI of Coulter et al. (1998), and `?tf_appraise_amendment` names
+  the editors of Lakatos (1970).
+
 * `citation("theoryforge")` and the About page name the package's publisher, in
   full: "Comprehensive R Archive Network (CRAN)" stands before the DOI in the
   reference, and the BibTeX entry gives it as `publisher`. The reference named
@@ -16,10 +80,11 @@
   which favours neither, and now lists each package's identifiers, marked with
   the package they name. Its release date is now the day 0.6.0 first became
   public, when the Python package was published on 2026-08-27, where it gave a
-  date on which no release of 0.6.0 appeared. The CRAN DOI and the Zenodo DOI
-  are shown as full links on the website and in the README. The README gains a
-  badge for the DOI CRAN assigned, for GitHub and CRAN, which the home page
-  leaves out of its sidebar, where the DOI is already given under Citation.
+  date on which no release of 0.6.0 appeared. The CRAN DOI is shown as a full
+  link on the website and in the README, and the About page gives the Zenodo
+  concept DOI as a full link as well. The README gains a badge for the DOI CRAN
+  assigned, for GitHub and CRAN, which the home page leaves out of its sidebar,
+  where the DOI is already given under Citation.
 
 * The literature article's recipe for turning a scopusflow corpus into a
   theoryforge corpus keys cited works by Scopus identifier, folds DOI and
@@ -177,11 +242,9 @@
   gives bounded themes with centrality, density and a strategic-diagram
   quadrant on real corpora. `tf_litmap()` also gains `min_theme_size`,
   `max_theme_size` and `max_df`, which excludes keywords shared by most
-  records. `method` is the third argument of `tf_litmap()`, so a
-  `min_cocitation` given by position must now be named. Components remain the
-  default for this release, and the giant-theme warning names the new method.
-  The default is planned to become `"simple_centres"` in the next minor
-  release.
+  records. Components remain the default for this release, and the giant-theme
+  warning names the new method. The default is planned to become
+  `"simple_centres"` in the next minor release.
 
 * A frozen OpenAlex corpus of 150 works on panic disorder,
   `openalex-panic-2026.corpus.yaml`, ships with the package beside the example
@@ -264,8 +327,7 @@
   `underived`, `corroborated_new_registered`, `renamed`, `dropped`,
   `dropped_corroborated`, `content_lost`, `new_anomalies` and `assumptions`.
   The amended panic example now adds a proposition, so its verdict remains
-  progressive for a reason the appraisal can see, and its aggregate score moves
-  from 87.1 to 87.7.
+  progressive for a reason the appraisal can see.
 
 * `?tf_add_assumption` and the schema define `added_for` as the id of the
   prediction whose anomaly an assumption answers, where the help page called it
@@ -311,8 +373,10 @@
   rubric where none is declared, and `tf_add_prediction()` gains `severity`.
   Causal testability counts every directed relation, `mediates` and
   `moderates` included. Most well-specified theories score a few points higher
-  (the bundled panic example moves from 84.8 to 87.3) and the weak example
-  lower (from 12.0 to 2.2).
+  (the bundled panic example moves from 84.8 to 87.3, the modality-switching
+  example from 85.1 to 89.8 and the amended panic example, with the
+  proposition it now adds, from 87.1 to 89.8) and the weak example lower
+  (from 12.0 to 2.2).
 
 * `tf_dossier()` gives the checklist coverage, names the blockers that failed,
   prints `n/a` for an item with nothing to assess and sets a prediction's
@@ -364,8 +428,9 @@
   export but reads it by d-separation, which a model with feedback is
   guaranteed to satisfy only in special cases, a linear model among them
   (Bongers et al., 2021). `?tf_implications`, the Developing and testing
-  article and the README warn that a conditional implication tested on
-  fallible measures is rejected too often, and point to latent-variable tests.
+  article and the repository's README warn that a conditional implication
+  tested on fallible measures is rejected too often, and point to
+  latent-variable tests.
 
 * `tf_implications()` gains `cycles = "sigma"`, which derives the
   independencies a cyclic theory implies by sigma-separation (Bongers et al.,

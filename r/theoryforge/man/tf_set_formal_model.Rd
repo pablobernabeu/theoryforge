@@ -9,7 +9,9 @@ tf_set_formal_model(theory, type, spec_ref = NULL)
 \arguments{
 \item{theory}{A theory object (named list).}
 
-\item{type}{Formal-model type (e.g. \code{"ode"}).}
+\item{type}{Formal-model type, one of \code{"ode"}, \code{"abm"},
+\code{"network"}, \code{"sem"} or \code{"none"}. Any but \code{"none"}
+passes the checklist's formalisation item.}
 
 \item{spec_ref}{Optional reference to the model specification.}
 }

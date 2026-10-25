@@ -82,9 +82,9 @@ def find_doi(s: str) -> str | None:
 def normalise_doi(doi) -> str:
     """The form two DOIs are compared in (API_SPEC.md section 18).
 
-    The DOI that ``find_doi`` finds in the text. Text with no such run keeps the
-    0.6.0 rule: trimmed, lowercased and percent-decoded, it loses a known
-    prefix, if it has one, and is trimmed again.
+    The DOI that ``find_doi`` finds in the text. Text with no such run is
+    trimmed, lowercased and percent-decoded, loses a known prefix, if it has
+    one, and is trimmed again.
     """
     text = str(doi or "")
     found = find_doi(text)

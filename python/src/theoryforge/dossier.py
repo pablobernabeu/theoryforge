@@ -42,6 +42,12 @@ def dossier(T) -> str:
     evidence lists the prediction each entry supports, its direction and its
     DOI. The provenance and the preregistration follow, and the implied
     independencies appear once, in the preregistration.
+
+    Raises:
+        ValueError: when ``check()`` refuses the theory, because a test
+            outcome's ``passed`` is present and not a boolean or a prediction's
+            ``severity`` is not a finite number within [0, 1]. The message
+            begins ``check requires``.
     """
     data = T.data if hasattr(T, "data") else T
     rep = _check(data)

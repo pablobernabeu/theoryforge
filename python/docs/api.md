@@ -3,8 +3,13 @@
 Every public function and the `Theory` class, in the groups the [R package's
 reference index](https://pablobernabeu.github.io/theoryforge/r/reference/) uses
 and in the same order, so a name is found in the same place on either site. The
-R package prefixes each name with `tf_`, so `check()` here is `tf_check()`
-there.
+R package prefixes each function's name with `tf_`, so `check()` here is
+`tf_check()` there. The exception is `new_theory()`, which is `tf_theory()` in
+R. `validate()`, `set_formal_model()` and the `add_*()` builders, which are
+methods of `Theory` here, are functions in R: `tf_validate()`,
+`tf_set_formal_model()` and `tf_add_*()`. The entries below cite sections of
+[API_SPEC.md](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md),
+the specification both packages implement.
 
 The four functions whose name matches their module (`diagram`, `dossier`,
 `implications`, `simulate`) are documented by their canonical path, so that the
@@ -12,14 +17,10 @@ function rather than the module is shown.
 
 ## Core IO
 
-Read, validate and write theory objects. `Theory` is also the builder: adding a
-construct, a proposition or a prediction, and logging the provenance of each,
-are methods on the class here, where the R package exposes them as `tf_add_*`
-functions.
+Read, validate and write theory objects. `Theory` is also the builder, and its
+builder methods are documented with the class.
 
 ::: theoryforge.Theory
-
-::: theoryforge.new_theory
 
 ::: theoryforge.read
 
@@ -34,6 +35,17 @@ through `tf_example_names()` and `tf_example_path()`.
 ::: theoryforge.example_names
 
 ::: theoryforge.example_path
+
+## Builder (BUILDING mode)
+
+Construct a theory incrementally with provenance tracking. `new_theory()` starts
+a theory. The `Theory` methods `add_construct()`, `add_proposition()`,
+`add_prediction()`, `add_alternative()`, `add_assumption()` and
+`set_formal_model()`, documented with the class under Core IO, each add to the
+theory in place, log the step in the provenance and return the theory, so that
+calls chain. The R builders return a modified copy instead.
+
+::: theoryforge.new_theory
 
 ## Rigour
 
@@ -120,5 +132,7 @@ yet cite.
 ::: theoryforge.landscape
 
 ::: theoryforge.fetch_corpus
+
+::: theoryforge.lit.OpenAlexHTTPError
 
 ::: theoryforge.new_evidence_dois

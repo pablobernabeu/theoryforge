@@ -32,7 +32,8 @@ Writes a standalone Quarto report to \code{path} (forced to a \code{.qmd}
 suffix): a YAML header (\code{title}, \code{format}) followed by the
 deterministic \code{tf_dossier(theory)} body. Returns the written path. When
 \code{render = TRUE}, invokes \code{quarto render}, which requires a Quarto
-installation, and stops if that render fails.
+installation, and stops if that render fails. It stops before writing
+anything when \code{\link[=tf_check]{tf_check()}} refuses the theory.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

@@ -6,16 +6,13 @@ If you use the Python package in your work, please cite it:
 
 ````python exec="1"
 # The reference, the BibTeX entry and the download link are all written from
-# one string at build time, so the version can no longer drift between them. It
-# comes from theoryforge.__version__, which reads the installed distribution's
-# metadata, the same source the rest of the site trusts. The version was
-# previously typed out three times on this page, and a hand-maintained copy of
-# the entry shipped beside the site as theoryforge.bib. The download link is now
-# a self-contained data URI carrying exactly the string the fenced block shows,
-# so the two cannot disagree and no file has to be shipped alongside the site.
+# one string at build time, so the version cannot drift between them. It comes
+# from theoryforge.__version__, which reads the installed distribution's
+# metadata. The download link is a self-contained data URI carrying exactly the
+# string the fenced block shows, so no file has to be shipped beside the site.
 #
 # Two further copies of the version are out of reach here, because neither file
-# can execute code, and both still have to be bumped by hand on release: the
+# can execute code, and both have to be bumped by hand on release: the
 # extra.version chip in mkdocs.yml, and the version field of CITATION.cff.
 from urllib.parse import quote
 

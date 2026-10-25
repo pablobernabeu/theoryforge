@@ -280,7 +280,8 @@ def _cited(*reference_lists):
 
 def test_one_doi_written_three_ways_is_one_co_citation_node():
     # DOI names are case-insensitive under ASCII case folding (DOI Handbook,
-    # section 2.4), and a resolver prefix is not part of the name. Keyed as
+    # 'Case Insensitivity of the DOI Name'), and a resolver prefix is not part
+    # of the name. Keyed as
     # written, the DOI made three nodes and no pair reached a count of 2.
     lm = tf.litmap(_cited(
         ["10.1016/J.BRAT.2015.10.002", "W2045435533"],

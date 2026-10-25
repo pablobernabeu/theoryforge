@@ -42,6 +42,11 @@ def tokens(s: str) -> set[str]:
 
 
 def jaccard(a: set[str], b: set[str]) -> float:
+    """Jaccard similarity of two token sets, such as two results of ``tokens()``.
+
+    The size of the intersection divided by the size of the union, rounded to
+    3 decimals, or 0.0 when both sets are empty.
+    """
     if not a and not b:
         return 0.0
     inter = len(a & b)

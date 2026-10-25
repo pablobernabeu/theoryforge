@@ -37,8 +37,13 @@ The three theme settings are checked with either method, although only
 \code{"simple_centres"} reads them.}
 }
 \value{
-A named list with elements \code{n_records}, \code{keywords},
-\code{keyword_cooccurrence}, \code{themes}, and \code{co_citation}. With
+A named list with elements \code{n_records}, \code{keywords} (the
+distinct keywords, sorted), \code{keyword_cooccurrence} (one
+\code{list(a, b, count)} per kept pair, \code{a} sorting before \code{b},
+in \code{(a, b)} order), \code{themes} (one \code{list(id, keywords, size)}
+per theme, numbered \code{theme_1}, \code{theme_2}, ... in the order of
+their first keyword) and \code{co_citation} (as
+\code{keyword_cooccurrence}, over the reference keys). With
 \code{"simple_centres"}, each theme also holds \code{centrality},
 \code{density} and \code{quadrant}, and the list ends with
 \code{method}, \code{parameters} (the five settings used) and
@@ -123,6 +128,7 @@ technological research: The case of polymer chemistry. \emph{Scientometrics,
 Coulter, N., Monarch, I., & Konda, S. (1998). Software engineering as seen
 through its research literature: A study in co-word analysis. \emph{Journal
 of the American Society for Information Science, 49}(13), 1206-1223.
+\doi{10.1002/(SICI)1097-4571(1998)49:13<1206::AID-ASI7>3.0.CO;2-F}
 
 Cobo, M. J., López-Herrera, A. G., Herrera-Viedma, E., & Herrera, F.
 (2011). An approach for detecting, quantifying, and visualizing the

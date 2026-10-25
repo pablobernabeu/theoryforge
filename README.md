@@ -39,9 +39,14 @@ under [`apps/`](apps/).
 
 Both packages cover the full theory lifecycle and offer the same operations. The names used
 below are the Python ones, and the R package prefixes each with `tf_`, so `litmap()` there is
-`tf_litmap()`. What differs between them is only how an operation is reached: where Python
-calls a method on a theory object, as in `theory.report()`, R calls a function on it, as in
-`tf_report(theory)`.
+`tf_litmap()`. Where Python calls a method on a theory object, as in `theory.report()`, R
+calls a function on it, as in `tf_report(theory)`. A few names differ: Python's `new_theory()`
+is `tf_theory()` in R, and Python's `add_proposition()` takes `frm` where R's takes `from`, a
+reserved word in Python. Most of Python's module-level functions that take a theory, such as
+`theoryforge.implications()`, name it `T` where R names it `theory`, so a call written for both
+languages passes the theory by position. Python's builders change the theory in place and
+return it, where R's return a modified copy, so a Python amendment that must leave its prior
+intact starts from `prior.copy()`, a method R does not need.
 
 The deterministic core comprises theory-object I/O and validation, the 12-item rigour
 checklist, ten diagram exporters and a lexical redundancy screen. The validation is built in,
@@ -49,7 +54,9 @@ and `validate(full=True)` checks the schema's required fields, types and enums a
 cross-reference. CI checks it against a JSON Schema 2020-12 validator. The three workflow modes
 sit on the same object. BUILDING is a builder API with auto-logged provenance,
 DEVELOPMENT is the Lakatosian progressive/degenerating appraisal of an amendment, and TESTING is
-the severity rubric, a pre-data ranking of claim form, with its preregistration export.
+the severity rubric, a pre-data ranking of claim form, with its preregistration export,
+together with `post_data_severity`, which computes how severely a bounded prediction passed its
+test from the estimate and standard error its test outcome records.
 
 A bibliometric layer connects a theory to its field. `litmap` derives keyword co-occurrence,
 connected-component themes and co-citation, and warns when one theme holds most of the linked
@@ -78,11 +85,19 @@ embedder-dependent screen, and `osf_push` deposits to OSF, dry-run by default.
 
 Cross-language parity is enforced over every golden artefact that `scripts/gen_golden.py`
 writes. The diagrams, preregistration, lavaan and dossier outputs are byte-identical, and the
-rigour, severity, appraisal, litmap, landscape, simulate, implications and new-evidence-DOI
-JSON outputs are semantically equal. Running `python scripts/parity_check.py` reports
-`PARITY OK`, and the pytest and testthat suites are green. Reproduce the whole verification with
+rigour, severity, post-data severity, appraisal, litmap, landscape, simulate, implications and
+new-evidence-DOI JSON outputs, like the outcome records of the edge cases in `fixtures/edge/`,
+are semantically equal. Running `python scripts/parity_check.py` reports
+`PARITY OK`, and the pytest and testthat suites are green. Reproduce the core verification (the
+golden-file check, ruff and mypy over `python/src`, both test suites, the parity check and
+`R CMD check --as-cran`) with
 [`scripts/reproduce_all.ps1`](https://github.com/pablobernabeu/theoryforge/blob/main/scripts/reproduce_all.ps1)
 (or [`scripts/reproduce_all.sh`](https://github.com/pablobernabeu/theoryforge/blob/main/scripts/reproduce_all.sh)).
+CI also runs pytest on Python 3.10 to 3.14, lints the Python tests and `scripts/`, checks that
+the schema copies and `NAMESPACE` are up to date, builds the Python distributions and tests the
+installed wheel, runs the tests at the declared minimum versions of Python's dependencies and
+of R, runs `R CMD check` in six configurations, compiles the schemas under Ajv's strict mode
+and builds and tests the apps.
 The [changelog](CHANGELOG.md) records what each release changed.
 
 ## Layout
@@ -98,7 +113,7 @@ fixtures and scripts that keep them in step.
 | [`python/`](python/) | Python package |
 | [`r/theoryforge/`](r/theoryforge/) | R package |
 | [`apps/`](apps/) | the two client-side web apps (webR and Pyodide) |
-| [`scripts/`](scripts/) | golden-file generator + parity checker |
+| [`scripts/`](scripts/) | golden-file and fold-table generators, parity checker and its R emitter, app smoke tests, reproduction scripts |
 
 ## Installation
 
@@ -145,8 +160,8 @@ arousal and avoidance are independent given perceived threat. One is a theory of
 switching in grounded conceptual processing, acyclic, from which `implications` derives a
 basis set of six conditional independencies. The last is a deliberately underspecified
 theory, kept as a worked example of what the rigour checklist catches. `tf_example_names()` in R and `example_names()` in Python
-list all four, together with the demonstration literature corpus, and the originals sit in
-[`fixtures/`](fixtures/).
+list all four, together with the two literature corpora (the small demonstration corpus and the
+frozen OpenAlex corpus), and the originals sit in [`fixtures/`](fixtures/).
 
 ## Develop and test
 

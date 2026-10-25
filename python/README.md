@@ -21,8 +21,8 @@ The rendered documentation site, with the API reference and worked guides, is at
 The [interactive web app](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this
 package in your browser via [Pyodide](https://pyodide.org/), with nothing to install. You can
 load a theory and run the operations it offers, from the rigour checklist through to the
-literature map, then export the visualisation (SVG/PNG) together with the Python code that
-reproduces it.
+literature map, then get the Python code that reproduces each result, with each figure
+exportable as SVG or PNG.
 
 ## Installation
 
@@ -117,7 +117,8 @@ required fields, types and enums and every cross-reference. CI checks it against
 2020-12 validator. The three workflow modes sit on the same object. BUILDING is a builder API
 that logs its own provenance, DEVELOPMENT is the Lakatosian appraisal of an amendment, and
 TESTING is the severity rubric, a pre-data ranking of claim form, with its preregistration
-export.
+export, together with `post_data_severity`, which computes how severely a bounded prediction
+passed its test from the estimate and standard error its test outcome records.
 
 The literature layer starts from `read_corpus`. `litmap` derives keyword co-occurrence,
 deterministic connected-component themes and co-citation, and warns when one theme holds most of
@@ -149,7 +150,7 @@ concept DOI of the Zenodo archive, which holds every GitHub release of both pack
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/pablobernabeu/theoryforge/blob/main/python/LICENSE).
 
 ## Contributing
 
@@ -159,6 +160,6 @@ describes the development setup and the conventions the package follows, and eve
 part is asked to honour the [Code of
 Conduct](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CODE_OF_CONDUCT.md).
 
-Continuous integration lints, type-checks and tests the package on every push, and the
-cross-language parity check compares its output against the R twin on every fixture, so a
-change that breaks parity is caught before it lands.
+Continuous integration lints, type-checks and tests the package on every push to `main`
+and on every pull request, and the cross-language parity check compares its output against
+the R twin on every fixture, so a change that breaks parity is caught before it lands.

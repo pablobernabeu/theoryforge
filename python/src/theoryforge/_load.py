@@ -1,13 +1,14 @@
 """Reading and writing theory and corpus files by the rules the R twin follows.
 
 The R twin reads YAML with the yaml package and JSON with jsonlite. PyYAML's
-defaults gave a different theory from the same file. An unquoted date became a
-``datetime.date``, which ``write`` could not then put in JSON. ``1:30`` became the
-integer 90 and ``1_000`` became 1000. A repeated key silently kept its last value
-where R refuses the file, and a byte-order mark broke JSON. API_SPEC.md section 3
-("Reading and writing files") pins the rules both twins follow, with a table of the
-scalars that once diverged. This module is the Python half, and ``utils.R``
-(``.tf_read_yaml``, ``.tf_read_json``) the R half.
+defaults would read the same file differently: an unquoted date becomes a
+``datetime.date``, which ``json`` cannot write, ``1:30`` the integer 90 and
+``1_000`` the integer 1000, and a repeated key silently keeps its last value
+where R refuses the file. Python's ``json`` module also refuses text that begins
+with a byte-order mark. API_SPEC.md section 3 ("Reading and writing files") pins
+the rules both twins follow, with a table of how each plain scalar is read. This
+module is the Python half, and ``utils.R`` (``.tf_read_yaml``, ``.tf_read_json``)
+the R half.
 """
 from __future__ import annotations
 
@@ -57,9 +58,10 @@ class _StrictLoader(yaml.SafeLoader):
 
         The mapping keeps its own keys first, in their order. It then gains each
         merged key it lacks, earlier merges first, so its own key always wins and so
-        does the first of two merges. PyYAML put the merged keys first and let a
-        later ``<<`` override an earlier one. The twins then held different key
-        orders and, for a repeated ``<<``, different values.
+        does the first of two merges. PyYAML's SafeLoader puts the merged keys
+        first and lets a later ``<<`` override an earlier one, which would give
+        the twins different key orders and, for a repeated ``<<``, different
+        values.
         """
         if not any(key_node.tag == _MERGE for key_node, _ in node.value):
             return
@@ -181,11 +183,11 @@ class _Dumper(yaml.SafeDumper):
 
     SafeDumper already quotes what PyYAML would resolve to a number, boolean, null
     or date. Four more resolvers make it quote ``y``, ``Y``, ``n`` and ``N``, which
-    theoryforge 0.6.0 in R reads as logicals. They also cover a signed leading dot
-    (``-.5``), which both readers now take for a number, R's missing-value forms
+    theoryforge 0.6.0 in R reads as logicals, and a signed leading dot (``-.5``),
+    which both readers take for a number. They also quote R's missing-value forms
     (``.na``, ``.na.real``, ``.na.integer``, ``.na.character``) and text that R's
     yaml package takes for a number although it has a comma or no digit
-    (``1,000``, ``.``). theoryforge 0.6.0 in R reads all of these as ``NA``.
+    (``1,000``, ``.``), all of which theoryforge 0.6.0 in R reads as ``NA``.
     """
 
 

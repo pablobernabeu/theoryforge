@@ -58,11 +58,11 @@ def _ptype(p) -> str | None:
 def _refuse_non_boolean_outcomes(T, caller: str) -> None:
     """Refuse a test outcome whose ``passed`` is present and not a boolean.
 
-    A quoted ``"true"`` read as a failure in both engines. The prediction then
-    counted as uncorroborated and an assumption added for it as ad hoc, so an
-    amendment that should be progressive came out degenerating. A missing or
-    null ``passed`` still reads as not passed (API_SPEC.md section 4). The
-    first offending outcome in file order is named.
+    A quoted ``"true"`` is not a pass, so the prediction would count as
+    uncorroborated and an assumption that protects it as ad hoc, and an
+    amendment that should be progressive would come out degenerating. A missing
+    or null ``passed`` reads as not passed (API_SPEC.md section 4). The first
+    offending outcome in file order is named.
     """
     for t in items(T, "test_outcomes"):
         passed = field(t, "passed")
@@ -98,19 +98,15 @@ def _check_items(T: dict, thr: dict) -> dict:
 
     # 3 risk_severity
     # Every prediction counts, with its declared severity when it has one and
-    # the claim-form rubric's computed_severity otherwise. Skipping undeclared
-    # predictions scored a theory built without severities 0.0 however risky
-    # its claims, and let one declared value stand for a list of undeclared
-    # claims.
-    # A non-numeric severity has no defensible mean, and the two engines read
-    # one differently by accident (R's as.numeric() coerced quoted numbers and
-    # scored, Python crashed mid-sum), so the same file produced a verdict in
-    # one language and a raw TypeError in the other. Refuse instead of
-    # coercing; validate(full=True) reports the same file as invalid. An
-    # infinity has no mean either, and a finite value outside [0, 1] would put
-    # the score outside the checklist's scale (a severity of 7 could lift the
-    # aggregate above 100). The status compares the rounded mean with the threshold, so the
-    # last bit of the sum cannot decide it.
+    # the claim-form rubric's computed_severity otherwise, so a theory without
+    # declared severities is scored on its claims, and one declared value
+    # cannot stand for a list of undeclared claims. A non-numeric severity has
+    # no defensible mean, so it is refused rather than coerced, as in R, and
+    # validate(full=True) reports the same file as invalid. An infinity has no
+    # mean either, and a finite value outside [0, 1] would put the score outside
+    # the checklist's scale (a severity of 7 could lift the aggregate above
+    # 100). The status compares the rounded mean with the threshold, so the last
+    # bit of the sum cannot decide it.
     sevs = []
     for p, r in zip(preds, _rubric(T), strict=True):
         s = field(p, "severity")
@@ -144,7 +140,7 @@ def _check_items(T: dict, thr: dict) -> dict:
     # appraise_amendment(), which counts only the content an amendment adds, is
     # the authoritative check. Core assumptions are not counted: every
     # derivation uses auxiliaries (Meehl, 1990a), and a ratio of assumptions to
-    # propositions penalised declaring them.
+    # propositions would penalise declaring them.
     defensive = [x for x in aux if ne_str(text(field(x, "added_for")))]
     if not defensive:
         out["parsimony"] = ("n/a", None)
@@ -155,10 +151,9 @@ def _check_items(T: dict, thr: dict) -> dict:
         out["parsimony"] = ("fail", 0.0) if ad_hoc else ("pass", 1.0)
 
     # 5 non_redundancy
-    # The item follows the redundancy screen's flags (API_SPEC.md section 6).
-    # Scoring 1 - max Jaccard docked points for vocabulary that sibling
-    # constructs share, and the Jaccard ceiling alone missed a definition
-    # contained in another.
+    # The item follows the redundancy screen's flags (API_SPEC.md section 6): a
+    # near-duplicate pair or a definition contained in another, not vocabulary
+    # that sibling constructs merely share.
     if len(cons) < 2:
         out["non_redundancy"] = ("n/a", None)
     else:
@@ -212,8 +207,8 @@ def _check_items(T: dict, thr: dict) -> dict:
     out["formalisation"] = ("pass", 1.0) if fm_type in _FORMAL else ("warn", 0.0)
 
     # 12 derivation_chain
-    # With no prediction there is no derivation to check, which used to pass at
-    # 1.0 and lift the empty theory's score.
+    # With no prediction there is no derivation to check, and a pass would lift
+    # the empty theory's score.
     if not preds:
         out["derivation_chain"] = ("n/a", None)
     else:
@@ -238,6 +233,17 @@ def check(T) -> dict:
     applicable items' scores, times 100, and ``coverage`` is the share of the
     checklist's weight that was applicable (API_SPEC.md section 4).
 
+    Returns:
+        A dict with the keys ``theory_id``, ``schema_version`` (the theory's),
+            ``checklist_version`` (the rigour checklist's, whose weights and
+            thresholds produced every number), ``maturity``, ``aggregate_score``,
+            ``coverage``, ``gate``, ``n_blockers_failed`` and ``items``, in that
+            order. ``gate`` is ``advisory`` at ``draft`` maturity, and otherwise
+            ``blocked`` when a blocker item (falsifiability or derivation_chain)
+            fails and ``pass`` when none does. ``items`` holds one ``{id, status,
+            score, weight, severity_if_fail, citation}`` record per checklist item,
+            in checklist order.
+
     Raises:
         ValueError: a test outcome's ``passed`` is present and not a boolean,
             or a prediction's ``severity`` is not a finite number or lies
@@ -257,8 +263,9 @@ def check(T) -> dict:
     for spec_item in spec["items"]:
         iid = spec_item["id"]
         status, score = results[iid]
-        # An item with nothing to assess is in neither sum. It used to score
-        # 1.0, so the empty theory scored 26 and outscored a weak but real one.
+        # An item with nothing to assess is in neither sum. Scored 1.0, the three
+        # such items would give the empty theory 26 and let it outscore a weak
+        # but real one.
         if score is not None:
             weighted += spec_item["weight"] * score
             applicable += spec_item["weight"]
@@ -273,10 +280,11 @@ def check(T) -> dict:
             "citation": spec_item["citation"],
         })
 
-    # Nulls, numbers and sequences in these fields read as "" (API_SPEC.md
-    # section 3, "Reading a theory"), and a maturity outside its enum is
-    # absent. The report is compared across the twins, so the value printed
-    # here must be one both engines can produce.
+    # Nulls, numbers, booleans and mappings in these fields read as "", and so
+    # does a sequence unless its first element is a string, in which case it
+    # reads as that element (API_SPEC.md section 3, "Reading a theory"). A
+    # maturity outside its enum is absent. The report is compared across the
+    # twins, so the value printed here must be one both engines can produce.
     maturity = enum(T.get("maturity"), MATURITY) or ""
     if maturity == "draft":
         gate = "advisory"
@@ -301,9 +309,14 @@ def check(T) -> dict:
 
 
 def report(T, format: str = "json") -> str:
-    """Render the rigour report. format in {'json', 'html'}.
+    """Render the rigour report of ``check()`` as a string.
 
-    The HTML fragment escapes every value it interpolates.
+    ``format="json"`` (the default) gives the report as indented JSON, and
+    ``format="html"`` an HTML fragment that escapes every value it interpolates.
+
+    Raises:
+        ValueError: for any other ``format``, and when ``check()`` refuses the
+            theory.
     """
     rep = check(T)  # check() unwraps Theory -> mapping
     if format == "json":

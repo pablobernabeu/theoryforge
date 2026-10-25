@@ -1,4 +1,12 @@
-# Reproduce the full theoryforge verification on Windows (PowerShell 7+).
+# Reproduce the core theoryforge verification on Windows (PowerShell 7+): the
+# golden-file check, ruff and mypy over python/src, the pytest and testthat
+# suites, the parity check and R CMD check --as-cran. CI also runs pytest on
+# Python 3.10 to 3.14, lints the Python tests and scripts/, checks that the
+# schema copies and NAMESPACE are up to date, builds the Python distributions
+# and tests the installed wheel, runs the tests at the declared minimum
+# versions of Python's dependencies and of R, runs R CMD check in six
+# configurations, compiles the schemas under Ajv's strict mode and builds and
+# tests the apps.
 # Runs from the repository root: pwsh scripts/reproduce_all.ps1
 $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
@@ -13,9 +21,11 @@ python -m pip install -e "$root/python" --quiet
 
 Write-Output "== golden files are up to date =="
 # Regenerating is how the goldens are checked, not a licence to move them: if
-# the run changes anything the script has verified nothing, so it stops. All
-# three trees the generator writes are inspected: the root goldens and the
-# copies each package ships.
+# the run changes anything the script has verified nothing, so it stops. The
+# root goldens and edge-case records, the R package's copy of the goldens and
+# the example theories and corpora each package ships are inspected. The
+# generator also writes each package's copy of schema/, which CI checks and
+# this script does not.
 python "$root/scripts/gen_golden.py" | Out-Null
 $stale = git -C "$root" status --porcelain -- fixtures r/theoryforge/inst/fixtures python/src/theoryforge/fixtures
 if ($stale) {
@@ -25,8 +35,6 @@ if ($stale) {
 
 Write-Output "== Python: ruff + mypy + pytest =="
 python -m ruff check "$root/python/src"
-# A hard gate, matching CI and reproduce_all.sh; this step was missing here, so
-# the Windows path was quieter than the other two.
 python -m mypy "$root/python/src/theoryforge" --ignore-missing-imports
 python -m pytest "$root/python" -q
 

@@ -10,7 +10,7 @@
 // them onto Bootstrap's own --bs-* variables so the existing components inherit
 // them, and restyles a few surfaces (navbar, hero, cards, footer). It does not
 // remove or rename any pkgdown structure. The twin mkdocs site carries the same
-// tokens in docs/stylesheets/brand.css.
+// tokens in python/docs/stylesheets/brand.css.
 //
 // Per-package accent: override --brand-primary / --brand-primary-ink below (for
 // example depictr's blue) to retune the family without touching the layout.
@@ -122,13 +122,10 @@ h3 { font-size: 1.25rem; margin-top: 1.8rem; }
 // long, and from 1400px up it adds a 5rem gutter in front of the table of
 // contents. Neither the cap nor the gutter narrows the surrounding .row, so the
 // two columns sit flush against its left edge and every pixel they do not use
-// piles up on the right. Measured on an article page at a 1920px viewport, the
-// content began 292.5px from the left edge and ended 402.5px from the right.
-// pkgdown compensates only between 1200px and 1399px, where its own stylesheet
-// sets justify-content: space-evenly; above and below that band the page is
-// visibly off-centre. Pages with no table of contents are further out still,
-// because the empty three-column slot is never reclaimed: the article index
-// measured 300px against 820px at the same viewport.
+// piles up on the right. pkgdown compensates only between 1200px and 1399px,
+// where its own stylesheet sets justify-content: space-evenly; above and below
+// that band the page is visibly off-centre. Pages with no table of contents are
+// further out still, because the empty three-column slot is never reclaimed.
 //
 // Fill the container instead, which is already centred. Where a table of
 // contents is present the spare width goes into the middle gutter, so the two
@@ -186,11 +183,10 @@ h3 { font-size: 1.25rem; margin-top: 1.8rem; }
 .navbar .navbar-nav .nav-item:has(.fa-play) { margin-right: .9rem; }
 
 // The icons in the navbar — the App link's play triangle, the GitHub mark, the
-// light switch — take their colour from the link that carries them. Pinned to a
-// fixed white, as they were, each icon ignored every state its own label
-// answered: the play triangle stayed white beside an amber label, and neither
-// the GitHub mark nor the light switch brightened under the pointer or under
-// keyboard focus.
+// light switch — take their colour from the link that carries them, so each
+// follows every state its own label answers. A fixed white would leave the play
+// triangle white beside an amber label, and the GitHub mark and the light
+// switch unchanged under the pointer and under keyboard focus.
 .navbar .navbar-nav .nav-link .fa { color: inherit; }
 
 // Bootstrap swaps the browser's focus outline for a soft glow in the theme
@@ -206,13 +202,13 @@ h3 { font-size: 1.25rem; margin-top: 1.8rem; }
 }
 
 // The search box sits inside the navy band in both modes, so it is dressed for
-// that ground rather than left to Bootstrap's form colours. Setting only its
-// text colour, as this file used to, left the field on `.form-control`'s own
-// ground, and that ground follows the page: navy in dark mode but warm paper in
-// light. In light mode the result was white text on near-white paper, about
-// 1.03:1, so the grey placeholder showed but whatever you typed was invisible.
-// Ground, border, placeholder, focus ring and the browser's own clear button
-// are now set together, so the field reads the same either way.
+// that ground rather than left to Bootstrap's form colours. `.form-control`'s
+// own ground follows the page, navy in dark mode but warm paper in light, so a
+// field given only a white text colour would show white text on near-white
+// paper in light mode, about 1.03:1: the grey placeholder would show but
+// whatever you typed would be invisible. Ground, border, placeholder, focus
+// ring and the browser's own clear button are set together, so the field reads
+// the same either way.
 .navbar #search-input {
   background-color: rgba(255, 255, 255, .12);
   // .40 rather than a fainter hairline: composited over the navy band that
@@ -244,7 +240,7 @@ h3 { font-size: 1.25rem; margin-top: 1.8rem; }
 
 // The results panel is a fixed 320px dropped from the LEFT edge of a field that
 // sits near the right of the navbar, so on any window narrower than about
-// 1300px it hangs off the side of the page — and the footer's full-bleed band
+// 1300px it hangs off the side of the page — and the footer section's backstop
 // sets `body { overflow-x: hidden }`, so the overhang is clipped rather than
 // scrollable and the end of every result is simply cut off. Anchoring it to the
 // field's right edge keeps it on the page; the cap covers the narrow window
@@ -289,11 +285,10 @@ h3 { font-size: 1.25rem; margin-top: 1.8rem; }
 .template-home .page-header h1 { font-size: 2.9rem; margin-bottom: .2rem; }
 
 // The lead paragraph (first paragraph after the title) set larger and calmer,
-// which is how the mkdocs twin sets its tagline. pkgdown 2.x wraps the whole
-// README in a `div.section.level1`, so neither of the first two selectors
-// reaches that paragraph any more and the lead had quietly gone back to body
-// text; the third reaches through the wrapper. The first two are kept for the
-// older builds that put the paragraph directly in the column.
+// which is how the mkdocs twin sets its tagline. pkgdown wraps a README that
+// opens with a level-one heading, as this one does, in a `div.section.level1`,
+// which the third selector reaches through. The first two match a lead
+// paragraph that sits directly in the column.
 .template-home main > .row > .col-md-9 > p:first-of-type,
 .template-home :is(.contents, main) > p:first-of-type,
 .template-home :is(.contents, main) > .section.level1 > p:first-of-type {
@@ -304,10 +299,10 @@ h3 { font-size: 1.25rem; margin-top: 1.8rem; }
 
 // Badges row. pkgdown caps the width of an image inside `main` but not of one
 // inside the sidebar, which is where the home page's status badges live, so
-// between the md and lg breakpoints the widest of them ran past the right edge
-// of a column only 156px wide. The footer's full-bleed band sets
-// `body { overflow-x: hidden }`, so the overhang was clipped rather than merely
-// off-screen: there was no way to scroll to it.
+// between the md and lg breakpoints the widest of them would run past the right
+// edge of a column only 156px wide. The footer section's backstop sets
+// `body { overflow-x: hidden }`, so the overhang would be clipped rather than
+// merely off-screen, with no way to scroll to it.
 .template-home :is(.contents, main) .badge,
 .template-home img[src*="badge"],
 aside img[src*="badge"] {
@@ -508,10 +503,9 @@ div.sourceCode { display: flow-root; }
 //
 // The block need not carry `.sourceCode` either. A fence written with no
 // language still goes through downlit, which emits the same `fu`/`va`/`op`
-// spans but leaves the `<pre>` bare, so such a block took the output ground set
-// further down (raised navy) while its tokens kept pkgdown's light palette:
-// measured 1.43:1 for a variable and 2.05:1 for a function call on lexsync,
-// scopusflow and theoryforge. `:not(.sourceCode)` carries the same weight as
+// spans but leaves the `<pre>` bare, so such a block takes the output ground set
+// further down (raised navy), against which pkgdown's light palette falls far
+// below a readable contrast. `:not(.sourceCode)` carries the same weight as
 // `.sourceCode`, so both halves outrank pkgdown in both themes.
 pre.sourceCode code,
 pre:not(.sourceCode) code,
@@ -623,9 +617,9 @@ table.table thead th code {
   --bs-btn-hover-border-color: var(--brand-primary-ink);
   --bs-btn-active-bg: var(--brand-primary-ink);
 }
-// Outline buttons (About page's Copy and Download .bib controls) take their
-// colour from --bs-primary, too dark on the navy dark-mode page; use the light
-// teal so the control stays legible.
+// The outline button (the About page's Download .bib link) takes its colour
+// from --bs-primary, too dark on the navy dark-mode page; use the light teal so
+// the control stays legible.
 [data-bs-theme="dark"] .btn-outline-primary {
   --bs-btn-color: var(--brand-teal-light);
   --bs-btn-border-color: var(--brand-teal-light);
@@ -640,9 +634,9 @@ a { text-underline-offset: .15em; }
 // Buttons and heading anchors are excluded. A button already answers the
 // pointer by filling in, and an underline inside one reads as a mistake;
 // Bootstrap says as much with `.btn { text-decoration: none }`, but that sits
-// at specificity (0,1,0) and this selector at (0,2,1) outranked it, so the
-// About page's Copy and Download .bib controls grew an underline under the
-// pointer. A heading anchor holds no text to underline.
+// at specificity (0,1,0), and the content selector without these exclusions,
+// at (0,2,1), would outrank it, giving the About page's Download .bib link an
+// underline under the pointer. A heading anchor holds no text to underline.
 :is(.contents, main) a:hover:not(.btn):not(.anchor),
 :is(#pkgdown-sidebar, aside) a:hover:not(.btn):not(.anchor) { text-decoration: underline; }
 
@@ -663,10 +657,10 @@ footer {
   // escaping pkgdown's centred container, and the two footer sentences
   // read as left-aligned rows.
   display: block;
-  // 100vw counts the scrollbar, so the band came out fifteen pixels wider than
-  // the viewport and hung seven past each edge. extra.js measures the scrollbar
+  // 100vw counts the scrollbar, so a band sized from it alone would be wider
+  // than the viewport by the scrollbar's width. extra.js measures the scrollbar
   // and publishes it as --scrollbar-width, which takes those pixels back; where
-  // the script has not run the fallback is the old 100vw, so the band is never
+  // the script has not run, the fallback is plain 100vw, so the band is never
   // narrower than the window.
   width: calc(100vw - var(--scrollbar-width, 0px));
   margin-left: calc(50% - (100vw - var(--scrollbar-width, 0px)) / 2);
@@ -676,13 +670,12 @@ footer {
   color: rgba(255, 255, 255, .78);
 }
 
-// A backstop, not the fix. The footer used to overshoot by the scrollbar width
-// and this clipped it, at the cost of eight pixels of phantom horizontal scroll
-// on every page and of a clip that hid anything else that overflowed — which is
-// how a clipped search panel and a badge running out of its column both went
-// unnoticed. The band is measured properly now; this stays only so that a page
-// content never grows a horizontal scrollbar, wide code blocks and tables having
-// their own.
+// A backstop, not the fix: the footer band is sized to the viewport above. This
+// keeps page content from ever growing a horizontal scrollbar, wide code blocks
+// and tables having their own, and clips the band's overshoot where extra.js has
+// not run and its width falls back to plain 100vw. It also clips anything else
+// that overflows, so an overhang it hides, such as a search panel or a badge
+// running out of its column, has to be fixed where it arises.
 body { overflow-x: hidden; }
 
 // pkgdown's own stylesheet floats the two blocks side by side; both read
@@ -718,11 +711,10 @@ footer :not(pre) > code { background: rgba(255, 255, 255, .10); color: #E7EDF0; 
 // scope, the rigour status grid, the severity bars) and the rendered Graphviz
 // views. Every one of them declares its own width and height, so each is left
 // at its natural size and its declared type renders at the size the emitter
-// asked for. An earlier version of this rule instead stretched each chart to a
-// common 440px cap, which scaled the three chart views by three different
-// factors, the views having different natural widths, so one identical 13px
-// label came out at 12.4px in one figure and 17.9px in another. A chart wider
-// than the column still shrinks to fit rather than forcing a scrollbar.
+// asked for. Stretching the charts to a common width would scale the three
+// chart views by different factors, their natural widths differing, so one
+// label size would render differently in each figure. A chart wider than the
+// column still shrinks to fit rather than forcing a scrollbar.
 // ---------------------------------------------------------------------------
 .tf-figure { margin: 1.25rem 0; }
 .tf-figure svg {
@@ -734,16 +726,18 @@ footer :not(pre) > code { background: rgba(255, 255, 255, .10); color: #E7EDF0; 
 }
 // The chart views carry no text fills of their own, so they take the page
 // colour; rendered Graphviz diagrams DO carry explicit fills (including
-// white on the navy theory/focal hubs), so they are excluded here and no
-// rule below may override their text.
+// white on the navy theory, roadmap and focal hubs), so they are excluded here
+// and no rule below may override their text.
 .tf-figure:not(.tf-diagram) svg text { fill: currentColor; }
 
-// Rendered Graphviz diagrams (tf_render_diagram output) carry their own white
-// canvas and ink-on-white text fills, so they must NOT inherit the
-// currentColor text rule above: in dark mode that would paint light text on
-// the white canvas. Present them as a rounded white card; the sizing above
-// already leaves them at Graphviz's natural dimensions, so a four-node graph
-// stays small and its type stays at the legible default.
+// Rendered Graphviz diagrams (tf_render_diagram output) carry their own text
+// fills, dark inside the light node fills and on the canvas, white on the navy
+// hubs, over a transparent canvas (the DOT views set bgcolor="transparent").
+// They must NOT inherit the currentColor text rule above: in dark mode that
+// would paint light text on the light node fills and on the white card below.
+// Present them as a rounded white card; the sizing above already leaves them at
+// Graphviz's natural dimensions, so a four-node graph stays small and its type
+// stays at the legible default.
 .tf-figure.tf-diagram { overflow-x: auto; }
 .tf-figure.tf-diagram svg {
   background: #fff;
@@ -751,10 +745,10 @@ footer :not(pre) > code { background: rgba(255, 255, 255, .10); color: #E7EDF0; 
   padding: 10px;
   border: 1px solid rgba(14, 34, 51, .12);
 }
-// The canvas has to stay light for the ink-on-white fills to read, but pure
-// white against the dark page glares, so on the dark theme it settles to a
-// soft off-white. Every node fill in the palette is lighter than this, so the
-// nodes still lift off the canvas.
+// The card has to stay light for the dark text to read, but pure white
+// against the dark page glares, so on the dark theme it settles to a soft
+// off-white. Every light node fill in the palette is lighter than this, and the
+// navy hubs far darker, so the nodes still lift off the canvas.
 [data-bs-theme="dark"] .tf-figure.tf-diagram svg {
   background: #DDE4EA;
   border-color: rgba(255, 255, 255, .16);
@@ -842,10 +836,12 @@ table.table::-webkit-scrollbar-corner { background: transparent; }
 // only works if the first line of each entry is the one at the left margin.
 // That is the APA convention and it is what a reader of this field expects.
 //
-// Two shapes are covered: a vignette's own `## References` section, where the
-// entries are the paragraphs following that heading, and the standalone
-// References article, whose entries are wrapped in a `.references` div because
-// there is no heading to anchor to.
+// Two shapes are covered: a vignette's own `## References` section (here, the
+// Methodological foundations article's), where the entries are the paragraphs
+// following that heading, and a standalone References article whose entries
+// are wrapped in a `.references` div because there is no heading to anchor to.
+// theoryforge has no such article. The second selector serves the family's
+// sites that do.
 :is(.contents, main) {
   h2#references ~ p,
   .references p {

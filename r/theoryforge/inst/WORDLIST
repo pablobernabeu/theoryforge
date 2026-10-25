@@ -27,6 +27,7 @@ defense
 derivability
 diagnosticity
 DiagrammeR
+DiagrammeRsvg
 dict
 DOIs
 enum
@@ -36,8 +37,10 @@ Forré
 Graphviz
 Harter
 Herrera
+htmltools
 htmlwidget
 httr
+ids
 independencies
 Informetrics
 Jaccard

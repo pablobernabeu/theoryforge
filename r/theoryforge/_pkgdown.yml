@@ -36,11 +36,9 @@ authors:
 # authors.html) with one that points at the About page, where the tailored
 # citation lives. Dropping the built-in "citation" from the structure and
 # supplying a custom "cite" component is more reliable than trying to override
-# the built-in in place. The sidebar used to carry a second link, to a BibTeX
-# file shipped as pkgdown/assets/theoryforge.bib, whose version string was
-# maintained by hand and so was bound to drift. The About page now builds its
-# entry from the installed version and offers it as a self-contained download,
-# which leaves nothing for a shipped file to add.
+# the built-in in place. The About page builds its BibTeX entry from the
+# installed version, so the entry cannot drift from the release, and offers it
+# as a self-contained download, so the site ships no BibTeX file of its own.
 footer:
   structure:
     left: [developed_by]
@@ -158,9 +156,9 @@ reference:
   - tf_write
 - title: Packaged examples
   desc: >
-    Example theories shipped inside the package, so that nothing has to be
-    downloaded to follow the documentation. The Python twin reaches the same
-    files through example_names() and example_path().
+    Example theories and literature corpora shipped inside the package, so
+    that nothing has to be downloaded to follow the documentation. The Python
+    twin reaches the same files through example_names() and example_path().
   contents:
   - tf_example_names
   - tf_example_path
@@ -176,15 +174,16 @@ reference:
   - tf_set_formal_model
 - title: Rigour
   desc: >
-    Score a theory against the versioned rigour checklist, and report how
-    severely each bounded prediction passed its test.
+    Score a theory against the versioned rigour checklist. Grade the form of
+    each prediction's claim before any data, and report how severely each
+    bounded prediction passed its test.
   contents:
   - tf_check
   - tf_report
   - tf_severity
   - tf_post_data_severity
 - title: Redundancy
-  desc: Deterministic lexical redundancy screen.
+  desc: The deterministic lexical redundancy screen and an opt-in embedding screen.
   contents:
   - tf_tokens
   - tf_jaccard

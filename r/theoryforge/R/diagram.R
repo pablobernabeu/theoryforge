@@ -294,12 +294,12 @@ NULL
 
 # Each test outcome as list(pid, node, role, date), in file order. The k-th
 # outcome of one prediction, from the second on, takes the node suffix "#<k>".
-# A replication thus gets a node and an edge of its own, where Graphviz merged
-# it into the first and showed only the last result. "#" lies outside the ids
-# the shipped theories use, so the suffix cannot meet a sibling prediction such
-# as h1_2, as "_2" would. When a prediction has several outcomes, each carries
-# its date, when it has one, so that they can be told apart (API_SPEC.md
-# section 12).
+# A replication thus gets a node and an edge of its own, which Graphviz would
+# otherwise merge into the first, showing only the last result. "#" lies
+# outside the ids the shipped theories use, so the suffix cannot meet a sibling
+# prediction such as h1_2, as "_2" would. When a prediction has several
+# outcomes, each carries its date, when it has one, so that they can be told
+# apart (API_SPEC.md section 12).
 .tf_outcome_nodes <- function(T) {
   tos <- .tf_list(T, "test_outcomes")
   pids <- vapply(tos, function(t) .tf_str(t, "prediction_id"), character(1))
@@ -417,7 +417,7 @@ NULL
 # viewBox on its own leaves the image with no intrinsic size, so a browser
 # resolves `width: auto` to the full width of the container and scales the
 # declared 13px type by whatever factor that implies. The three chart views
-# declare different viewBox widths, so the same label then rendered at a
+# declare different viewBox widths, so the same label would render at a
 # different size in each figure. Stating width and height gives each view its
 # natural size wherever it is embedded, which is what the rendered Graphviz
 # views already do, and leaves the stylesheet free to shrink a wide chart on a
@@ -431,10 +431,9 @@ NULL
 # The outline carries the set structure, so it is drawn in the teal already used
 # for construct borders elsewhere in the palette. That colour clears the 3:1
 # contrast floor for graphical objects (WCAG 1.4.11) against both the light
-# paper and the dark page, whereas the former navy outline fell below it on a
-# dark background and took the whole figure with it. The translucent fill is
-# decorative reinforcement only: no opacity composites to a readable ratio on a
-# dark page, which is why the boundary has to do the work.
+# paper and the dark page. The translucent fill is decorative reinforcement
+# only: no opacity composites to a readable ratio on a dark page, which is why
+# the boundary has to do the work.
 .tf_vcircle <- function(cx, cy, r) {
   sprintf('  <circle cx="%d" cy="%d" r="%d" fill="#4e79a7" fill-opacity="0.35" stroke="#1e7b7b"/>', cx, cy, r)
 }
@@ -549,8 +548,9 @@ NULL
 #'
 #' Produces a deterministic diagram IR string for the requested type. The
 #' \code{engine} argument is accepted but has no effect, because the IR is
-#' engine independent (Graphviz DOT for the two digraphs, dagitty syntax for
-#' the causal DAG).
+#' engine independent (Graphviz DOT for the six digraph views, dagitty syntax
+#' for the causal DAG and SVG for the \code{venn}, \code{rigour} and
+#' \code{severity} views).
 #'
 #' The causal DAG is read by \pkg{dagitty} and drawn by the apps with Graphviz.
 #' It writes a construct id bare only when the id is made of ASCII letters,
@@ -558,29 +558,37 @@ NULL
 #' The keywords are \code{node}, \code{edge}, \code{graph}, \code{digraph},
 #' \code{subgraph} and \code{strict}, in any case. Any other id is
 #' double-quoted, with a double quote inside it escaped by a backslash, so
-#' \code{self-efficacy} stays one node where dagitty used to read two. The view
-#' stops when it would write the id \code{node} or \code{graph}, which dagitty
-#' refuses even quoted.
+#' \code{self-efficacy} stays one node, which dagitty would otherwise read as
+#' two. The view stops when it would write the id \code{node} or \code{graph},
+#' which dagitty refuses even quoted.
 #'
 #' The pipeline and workflow views give every test outcome a node of its own.
 #' The first outcome of a prediction is `result_<id>` (`outcome_<id>` in the
-#' workflow) and each later one `result_<id>#<k>`, where `<k>` counts the
-#' prediction's outcomes in file order, so a failed replication is not merged
-#' into an earlier pass. When a prediction has several outcomes, each label
-#' also carries the outcome's date.
+#' workflow) and each later one `result_<id>#<k>` (`outcome_<id>#<k>`), where
+#' `<k>` counts the prediction's outcomes in file order, so a failed
+#' replication is not merged into an earlier pass. When a prediction has
+#' several outcomes, each label also carries the outcome's date.
+#'
+#' The \code{development_roadmap} and \code{rigour} views score the checklist,
+#' so they stop, as [tf_check()] does, when a test outcome's \code{passed} is
+#' present and not \code{TRUE} or \code{FALSE}, or when a prediction's
+#' \code{severity} is not a finite number from 0 to 1.
 #'
 #' @param theory A theory object (named list).
 #' @param type One of \code{"nomological_net"} (default), \code{"provenance"},
 #'   \code{"causal_dag"}, \code{"development_roadmap"}, \code{"pipeline"},
 #'   \code{"context"} (the theory, its scope, and its rivals),
 #'   \code{"workflow"} (the building-to-testing pipeline), \code{"venn"}
-#'   (construct scope overlap, as an SVG), \code{"rigour"} (the checklist as a
-#'   status grid, as an SVG), or \code{"severity"} (per-prediction severity
-#'   bars, as an SVG).
+#'   (the scope overlap of the first three constructs in file order, each
+#'   taken as the set of its boundary conditions, as an SVG), \code{"rigour"}
+#'   (the checklist as a status grid, as an SVG), or \code{"severity"} (the
+#'   claim-form riskiness of each prediction, the \code{computed_severity} of
+#'   [tf_severity()], as bars in an SVG).
 #' @param engine Rendering engine label, accepted but unused (default
 #'   \code{"graphviz"}).
-#' @return A single string ending in a newline. Graphviz DOT for the digraphs,
-#'   dagitty syntax for the causal DAG, and SVG for the Venn.
+#' @return A single string ending in a newline: Graphviz DOT for the digraphs,
+#'   dagitty syntax for the causal DAG, and SVG for the \code{venn},
+#'   \code{rigour} and \code{severity} views.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>

@@ -126,7 +126,7 @@
               "justification": { "type": "string" }
             },
             "dependentRequired": { "power_lo": ["power_hi"], "power_hi": ["power_lo"] },
-            "description": "The sampling plan for testing the prediction, which a Stage 1 Registered Report states for each hypothesis. It is recorded, not scored: power does not raise the severity of a claim (Meehl, 1967), though it decides how informative a failed test is (Lakens, 2022). preregister() lists it after the hypotheses, and no other function reads it. The interval a claim allows belongs in bounds."
+            "description": "The sampling plan for testing the prediction, which a Stage 1 Registered Report states for each hypothesis. It is recorded, not scored: power does not raise the severity of a claim (Meehl, 1967), though it decides how informative a failed test is (Lakens, 2022). preregister() lists it after the hypotheses, and so does the preregistration that dossier() appends. Full validation checks its fields, and no checklist item, threshold or severity reads it. The interval a claim allows belongs in bounds."
           }
         }
       }
@@ -143,12 +143,12 @@
           "statement": { "type": "string" },
           "added_for": {
             "type": ["string", "null"],
-            "description": "A null value marks a core assumption. Otherwise, it is the id of the prediction whose anomaly the assumption was added to answer. The amendment appraisal counts such an assumption as ad hoc unless one of the predictions it protects is new in the amended version, differs from this one and is corroborated."
+            "description": "A null value marks a core assumption. Otherwise, it is the id of the prediction whose anomaly the assumption was added to answer, and the assumption is ad hoc unless a prediction it protects, other than this one, is corroborated. The checklist's parsimony item fails on an ad hoc assumption and counts every prediction the assumption protects. The amendment appraisal counts only the predictions new in the amended version."
           },
           "protects": {
             "type": "array",
             "items": { "type": "string" },
-            "description": "The ids of the predictions the assumption shields from refutation. Only a prediction new in an amended version, other than added_for, can clear an assumption added for an anomaly."
+            "description": "The ids of the predictions the assumption shields from refutation. The preregistration lists the assumption under each of them. For an assumption added for an anomaly, a corroborated prediction among them other than added_for clears it: any such prediction in the checklist's parsimony item, and only one new in the amended version in the amendment appraisal."
           }
         }
       }

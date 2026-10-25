@@ -53,6 +53,10 @@ The document is the part of a preregistration that the theory file holds. It
 is to be completed with the study design, the analysis plan, the inference
 criteria and whatever the sampling plan leaves out, the sections that a
 template such as PRP-QUANT asks for (Bosnjak et al., 2022).
+
+It stops, as \code{\link[=tf_check]{tf_check()}} does, when a test outcome's \code{passed} is
+present and not \code{TRUE} or \code{FALSE}, or when a prediction's
+\code{severity} is not a finite number from 0 to 1, and then writes nothing.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

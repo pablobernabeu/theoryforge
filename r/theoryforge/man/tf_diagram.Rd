@@ -13,22 +13,26 @@ tf_diagram(theory, type = "nomological_net", engine = "graphviz")
 \code{"causal_dag"}, \code{"development_roadmap"}, \code{"pipeline"},
 \code{"context"} (the theory, its scope, and its rivals),
 \code{"workflow"} (the building-to-testing pipeline), \code{"venn"}
-(construct scope overlap, as an SVG), \code{"rigour"} (the checklist as a
-status grid, as an SVG), or \code{"severity"} (per-prediction severity
-bars, as an SVG).}
+(the scope overlap of the first three constructs in file order, each
+taken as the set of its boundary conditions, as an SVG), \code{"rigour"}
+(the checklist as a status grid, as an SVG), or \code{"severity"} (the
+claim-form riskiness of each prediction, the \code{computed_severity} of
+\code{\link[=tf_severity]{tf_severity()}}, as bars in an SVG).}
 
 \item{engine}{Rendering engine label, accepted but unused (default
 \code{"graphviz"}).}
 }
 \value{
-A single string ending in a newline. Graphviz DOT for the digraphs,
-dagitty syntax for the causal DAG, and SVG for the Venn.
+A single string ending in a newline: Graphviz DOT for the digraphs,
+dagitty syntax for the causal DAG, and SVG for the \code{venn},
+\code{rigour} and \code{severity} views.
 }
 \description{
 Produces a deterministic diagram IR string for the requested type. The
 \code{engine} argument is accepted but has no effect, because the IR is
-engine independent (Graphviz DOT for the two digraphs, dagitty syntax for
-the causal DAG).
+engine independent (Graphviz DOT for the six digraph views, dagitty syntax
+for the causal DAG and SVG for the \code{venn}, \code{rigour} and
+\code{severity} views).
 }
 \details{
 The causal DAG is read by \pkg{dagitty} and drawn by the apps with Graphviz.
@@ -37,16 +41,21 @@ digits and underscores, does not begin with a digit and is not a DOT keyword.
 The keywords are \code{node}, \code{edge}, \code{graph}, \code{digraph},
 \code{subgraph} and \code{strict}, in any case. Any other id is
 double-quoted, with a double quote inside it escaped by a backslash, so
-\code{self-efficacy} stays one node where dagitty used to read two. The view
-stops when it would write the id \code{node} or \code{graph}, which dagitty
-refuses even quoted.
+\code{self-efficacy} stays one node, which dagitty would otherwise read as
+two. The view stops when it would write the id \code{node} or \code{graph},
+which dagitty refuses even quoted.
 
 The pipeline and workflow views give every test outcome a node of its own.
 The first outcome of a prediction is \verb{result_<id>} (\verb{outcome_<id>} in the
-workflow) and each later one \verb{result_<id>#<k>}, where \verb{<k>} counts the
-prediction's outcomes in file order, so a failed replication is not merged
-into an earlier pass. When a prediction has several outcomes, each label
-also carries the outcome's date.
+workflow) and each later one \verb{result_<id>#<k>} (\verb{outcome_<id>#<k>}), where
+\verb{<k>} counts the prediction's outcomes in file order, so a failed
+replication is not merged into an earlier pass. When a prediction has
+several outcomes, each label also carries the outcome's date.
+
+The \code{development_roadmap} and \code{rigour} views score the checklist,
+so they stop, as \code{\link[=tf_check]{tf_check()}} does, when a test outcome's \code{passed} is
+present and not \code{TRUE} or \code{FALSE}, or when a prediction's
+\code{severity} is not a finite number from 0 to 1.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

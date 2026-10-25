@@ -28,7 +28,9 @@ dates, while \code{yes}, \code{no}, \code{true}, \code{false}, \code{on} and
 comma (\code{1,000}). An integer too large for an R integer is read as a
 double. A merge key (\code{<<}) lets the mapping's own keys win. A key
 repeated in any mapping, in YAML or JSON, stops with
-\code{(<path>) Duplicate map key: '<key>'}.
+\code{(<path>) Duplicate map key: '<key>'}. A document that is not a
+mapping, such as a sequence or an empty YAML file, stops with
+\code{Theory data must be a mapping}.
 }
 \examples{
 # Round-trip a theory through a temporary file.

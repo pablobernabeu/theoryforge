@@ -185,10 +185,10 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     T = T.data if hasattr(T, "data") else T
     states = [text(field(c, "id")) for c in items(T, "constructs")]
     n = len(states)
-    # Duplicate construct ids have no defensible reading here, and the two
-    # engines resolved them differently by accident (a dict comprehension keeps
-    # the last index, R's `[[` on a named vector the first), so the same file
-    # produced two plausible trajectories. Refuse instead of picking a winner.
+    # Duplicate construct ids have no defensible reading here: a dict
+    # comprehension keeps the last index and R's `[[` on a named vector the
+    # first, so the two engines would give two plausible trajectories for the
+    # same file. Refuse instead of picking a winner.
     # Constructs without ids share no id: no proposition can name them, so
     # each is a state with no couplings.
     seen: set = set()

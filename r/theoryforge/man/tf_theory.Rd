@@ -11,9 +11,13 @@ tf_theory(id, title, maturity = "building", theory_form = "network")
 
 \item{title}{Human-readable title.}
 
-\item{maturity}{Maturity stage (default \code{"building"}).}
+\item{maturity}{Maturity stage, one of \code{"draft"}, \code{"building"}
+(the default), \code{"developing"} or \code{"testing"}. At \code{"draft"},
+the gate of \code{\link[=tf_check]{tf_check()}} is advisory.}
 
-\item{theory_form}{Theory form (default \code{"network"}).}
+\item{theory_form}{Theory form, one of \code{"variance"}, \code{"network"}
+(the default), \code{"typology"} or \code{"process"}. No score depends on
+it.}
 }
 \value{
 A theory object (named list).
@@ -21,6 +25,12 @@ A theory object (named list).
 \description{
 Seeds \code{schema_version = "1.0"} and a first provenance entry
 \code{{step:"1", action:"tf_theory", detail:<id>}}.
+}
+\details{
+The builders do not check field values. \code{\link[=tf_validate]{tf_validate()}} reports a value
+outside its enum, except that it checks the formal-model type, an evidence
+entry's \code{direction} and a \code{test} block's \code{sided} only with
+\code{full = TRUE}.
 }
 \examples{
 tf_theory("demo-1", "A demonstration theory")

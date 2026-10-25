@@ -135,18 +135,35 @@ def osf_push(T, token: str | None = None, node: str | None = None,
 
     With ``dry_run=True`` (default) the planned request is returned and nothing is sent. A live
     upload (``dry_run=False``) requires both ``token`` and ``node`` (the OSF project id). An
-    empty ``node`` or ``filename`` counts as absent.
+    empty ``node`` or ``filename`` counts as absent. ``filename`` defaults to
+    ``<id>.dossier.md``, with ``theory`` in place of a missing or empty id. ``base_url`` is the
+    OSF storage endpoint, ``https://files.osf.io/v1/resources/`` by default. The node id is
+    appended to it directly, so an override must end in a slash. A request is abandoned after
+    30 seconds without progress.
 
     OSF storage refuses to create a file whose name already exists in the project folder
     (HTTP 409), so depositing the same theory twice under the default filename fails. Pass a
     version-specific ``filename``, or ``overwrite=True`` to add a new version of the existing
     file: the folder is listed first and the dossier is sent to that file's upload link, the
     WaterButler route that records a new OSF version. When the folder holds no file of that
-    name, ``overwrite=True`` creates it as usual. The dry run then also returns the
-    ``lookup`` request.
+    name, ``overwrite=True`` creates it as usual.
 
-    Raises :class:`OSFUploadError`, a subclass of ``urllib.error.HTTPError``, when OSF answers
-    with a status outside 2xx, so a refused upload is never returned as a completed one.
+    Returns:
+        With ``dry_run=True``, ``{dry_run: True, request: {method, url, filename,
+            content_bytes}, note}``, where ``content_bytes`` is the dossier's size in UTF-8 bytes.
+            When ``overwrite=True``, a ``lookup: {method: "GET", url}`` entry comes before
+            ``note``. Both ``url`` values are None when ``node`` is absent. With ``dry_run=False``,
+            ``{dry_run: False, status, filename}`` for the completed upload, where ``status`` is
+            the HTTP status OSF answered with.
+
+    Raises:
+        OSFUploadError: a subclass of ``urllib.error.HTTPError``, when OSF answers the upload
+            or the folder listing with a status outside 2xx, so a refused upload is never
+            returned as a completed one.
+        ValueError: when ``overwrite`` is not a bool or a live push lacks ``token`` or
+            ``node``, when ``check()`` refuses the theory (the dossier is built first, so with
+            ``dry_run=True`` as well) and when the folder listing that ``overwrite=True`` reads
+            cannot be read or lists the file without an upload link.
     """
     if not isinstance(overwrite, bool):
         raise ValueError("overwrite must be True or False")

@@ -85,7 +85,10 @@ not latitude the theory allows. The label is self-declared, and no function
 checks it against the statement.
 
 The provenance log is held under `t.data["provenance"]`. Each entry records
-the action and the identifier it affected.
+its step number, the action and the identifier it affected (the model type,
+for `set_formal_model()`). The action is the name of the R twin's function,
+`tf_theory` for `new_theory()` and `tf_add_construct` for `add_construct()`, so
+a log reads the same whichever language built the theory.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
 for step in t.data["provenance"]:
@@ -94,8 +97,10 @@ for step in t.data["provenance"]:
 
 Once the object is assembled, `t.validate()` confirms it satisfies the
 schema's required fields, returning `True` silently, and `t.report()` returns
-the rigour checklist. The report opens with the aggregate score and the gate,
-then gives one entry per checklist item.
+the rigour checklist. The report opens with the theory's id, its schema and
+checklist versions and its maturity, then gives the aggregate score, the
+checklist coverage, the gate and the number of blockers that failed, and ends
+with one entry per checklist item.
 
 ```python exec="1" source="material-block" result="json" session="workflow-modes"
 t.validate()

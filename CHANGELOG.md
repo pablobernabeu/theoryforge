@@ -83,11 +83,11 @@ version and a single behavioural contract
   and integral floats for `steps` and refuses bools, as R refuses logicals. Python's
   products are summed left to right as in R: the builtin `sum()` compensates rounding error
   from Python 3.12, which moved fast-growing trajectories apart beyond the parity tolerance.
-  The apps show the message where they showed a raw error or a "diverged" note, and pass
-  `steps` as entered instead of truncating it. API_SPEC section 22, the docstring, the help
-  page and both methodology pages state the step condition: in a network without feedback
-  loops, the explicit step explodes once `dt*damping` exceeds 2, so raising the damping is
-  no remedy.
+  The apps show the message where they showed a raw error or a "diverged" note, and round
+  a fractional `steps` to the whole number its field then shows, where they truncated it.
+  API_SPEC section 22, the docstring, the help page and both methodology pages state the
+  step condition: in a network without feedback loops, the explicit step explodes once
+  `dt*damping` exceeds 2, so raising the damping is no remedy.
 - `simulate()` checks the initial state for divergence too. An `init` of 1e303 is finite,
   but a million times it is not, so the rounding of row 0 raised OverflowError, while R
   wrote a row of Inf or stopped at step 1 and blamed `dt` or `k`. Both twins now stop with
@@ -246,9 +246,9 @@ version and a single behavioural contract
   19 state the rules. The bundled theories and the goldens are unchanged.
 - Apps: the amendment appraisal gave every theory the first example, version 1 of the
   panic network, as its prior by default, and 0.6.0 reported three unrelated app examples
-  as progressive amendments of it. Predictions are matched by id, so a version of another
-  theory gives a meaningless verdict. The prior now defaults to the version the loaded
-  theory declares as its parent, when exactly one version listed is that parent. A
+  as progressive amendments of it. A version of another theory gives a meaningless verdict.
+  The prior now defaults to the version the loaded theory declares as its parent, when
+  exactly one version listed is that parent. A
   declared parent has the theory's `parent_id` as its version id, and the theory's id
   begins with its id. Otherwise, no prior is chosen and Run waits for one, and the note
   under the selector says whether the theory names a parent at all. A prior that is not
@@ -280,8 +280,7 @@ version and a single behavioural contract
   fail. The effort-recovery example promised oscillating trajectories that its default
   run does not show. It now says what the run shows, fatigue overshooting its resting
   level of zero while recovery peaks. It also names the settings that make the loop cycle.
-- Apps: the number fields passed a fractional `steps` to the package, which refuses it.
-  The glue truncated a fractional `min_link`, while the code showed the fraction.
+- Apps: the glue truncated a fractional `min_link`, while the code showed the fraction.
   Whole-number parameters are now rounded, and each field shows the value a run uses.
 - `compile_sem()` wrote a model that `lavaan::sem()` does not read as the theory's own,
   so a fit could not refute some of the implications the theory makes. Two constructs
@@ -470,8 +469,8 @@ version and a single behavioural contract
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`
   now refuses to compare a theory with itself, which the in-place builders made easy to
   do by accident and which always returned `neutral`.
-- `litmap(corpus, min_link=2, min_cocitation=None)` thresholds the co-citation map on its
-  own (by default at `min_link`), and `lit_diagram(obj, type, max_edges=None)` draws only
+- `litmap()` gains `min_cocitation`, which thresholds the co-citation map on its own (by
+  default at `min_link`), and `lit_diagram(obj, type, max_edges=None)` draws only
   the `max_edges` strongest edges of a keyword or co-citation diagram, ties broken by
   `(a, b)`, with only their endpoints as nodes. Co-citation maps of real corpora run to
   thousands of edges: 200 OpenAlex records give 11,211 at a threshold of 2, against 616
@@ -504,8 +503,8 @@ version and a single behavioural contract
   components give one theme. `litmap()` also gains `min_theme_size`, `max_theme_size` and
   `max_df`, which excludes keywords shared by most records and reports them as
   `field_terms`. The full signature is `litmap(corpus, min_link=2, method="components",
-  min_cocitation=None, min_theme_size=2, max_theme_size=10, max_df=1.0)`, so a
-  `min_cocitation` passed by position must now be named. API_SPEC section 14 pins every
+  min_cocitation=None, min_theme_size=2, max_theme_size=10, max_df=1.0)`, so pass
+  `min_cocitation` by name. API_SPEC section 14 pins every
   rule, tie-break and summation order, and both twins give the same floats. Components
   remain the default for this release, the components record is unchanged and the
   giant-theme warning now names the new method. The default is planned to become
@@ -699,6 +698,133 @@ version and a single behavioural contract
 - Apps: the apps' README records the pinned webR and Pyodide versions and notes that the
   R app's jsonlite and yaml are not pinned. The R app's browser console records the
   versions each session installs.
+- The reference documentation gives what it left out or misstated. In R, `tf_diagram()`
+  names its six DOT views and three SVG views and says that the `venn` view draws only the
+  first three constructs and the `severity` view the claim-form riskiness of
+  `tf_severity()`. `tf_render_diagram()` says that a chart view is returned as a browsable
+  HTML object and which suggested package each path needs. `tf_osf_push()` and
+  `tf_fetch_corpus()` say that a live upload, and OpenAlex's own error message, need the
+  curl package and that every request is abandoned after 30 seconds, and `tf_osf_push()`
+  gives the default `base_url`. The builders list the allowed values of `maturity`,
+  `theory_form`, `relation` and the formal-model `type`, `tf_check()` gives the values of
+  `gate` and the fields of each item and `tf_litmap()` the shape of each element.
+  `tf_read()` and `tf_example_path()` name the errors they raise, and `tf_write()` no
+  longer says that every written theory validates. In both languages, the diagram
+  reference names the later outcome nodes of the `workflow` view and the landscape
+  reference says which list holds the under-theorised themes and which the crowded ones.
+  The amendment appraisal documents its assumption classes, its `independent` records and
+  the order of its result.
+- The R Get started article introduces `tf_add_alternative()`, and its example assumption
+  uses `protects` where it set `added_for`, which is for an assumption added to answer an
+  anomaly. The R article on developing and testing a theory says that the `venn` view
+  draws the first three constructs and that a live OSF deposit needs the curl package.
+  Both methodology pages describe the mechanism item as the share of propositions whose
+  `mechanism` field is filled in, where they spoke of a statement that names a mechanism.
+  The R About page says that `citation("theoryforge")` leaves the BibTeX key empty. The R
+  reference index describes the packaged corpora, the pre-data rubric and the embedding
+  screen, and the R package's DESCRIPTION names its implications, amendment,
+  preregistration, SEM, simulation and literature functions. Both copies of CONTRIBUTING
+  say that `scripts/gen_golden.py` regenerates the golden outputs and the copies each
+  package ships, and that only the originals are edited by hand.
+- Python: the API reference documents the builder methods. `add_construct()`,
+  `add_proposition()`, `add_alternative()` and `set_formal_model()` had no docstring, nor
+  had the `check()`, `report()` and `redundancy_check()` methods, so the reference left
+  them out. It gains the Builder group of the R reference index and an entry for
+  `theoryforge.lit.OpenAlexHTTPError`, which `fetch_corpus()` raises and the package does
+  not export, and it says that `new_theory()` is `tf_theory()` in R. `new_theory()` lists
+  the allowed values of `maturity` and `theory_form`, and `check()` names the keys it
+  returns and the values of `gate`. `diagram()` describes its ten types. `jaccard()`,
+  `embedding_redundancy()`, `litmap()`, `landscape()`, `lit_diagram()`, `fetch_corpus()`,
+  `osf_push()` and `render_report()` say what they take and return, and all but
+  `jaccard()`, `litmap()` and `landscape()` what they raise. The parameters of
+  `render_diagram()` and the cross-references of the `Theory` methods no longer print as
+  raw markup, and `Theory.write()` no longer says that its files read back as the same
+  theory in theoryforge 0.6.0 for R.
+- In both languages, the help for the dossier, the preregistration, the rigour report,
+  the Quarto report, the OSF deposit and the two diagram views that score the checklist
+  says that they stop on a theory that `check()` refuses, and the rigour report says that
+  it stops for an unknown format. The corpus reader names its error for a document that
+  is not a mapping, and the `fetch_corpus` reference says how its arguments are checked
+  before any request. Both methodology pages say that `embedding_redundancy()` takes a
+  threshold of its own, where they said that no threshold could be changed.
+- Python: the literature guide names `new_evidence_dois()` among the layer's functions,
+  gives `OpenAlexHTTPError` its import path and tells the reader to install scopusflow
+  under its published name, `pip install scopusflow`. Get started no longer asks the
+  reader to adjust the path of a packaged example, and says that the default validation
+  also refuses an unknown top-level field and a collection that is not a list. The
+  workflow guide gives the order of the report's keys and says that each provenance entry
+  names the R function of its step.
+- The `fetch_corpus` documentation in both languages, both literature guides and API_SPEC
+  section 17 say that paging past the first page needs an OpenAlex API key. Without one,
+  OpenAlex serves the first page and refuses the next with HTTP 401, so the guides'
+  example, which asks for 400 records, needs one. The `fetch_corpus` documentation and the
+  guides put the keyless budget at about 100 one-page searches, where they said about 100
+  pages. The R help page says that a work without keywords falls back to its first five
+  concepts, and the R literature article says that OpenAlex's own error message needs the
+  curl package.
+- The help for `validate` in both languages says that the full pass is stricter than the
+  schema in three ways, the third being the finite bounds, estimates, standard errors and
+  test-block numbers it checks, and that a null `theory_form` is refused rather than read
+  as absent. The schema says that full validation checks a prediction's `test` block and
+  that the dossier shows it, where it said that no function but `preregister()` read it.
+  It also says that the checklist's parsimony item clears an assumption added for an
+  anomaly with any corroborated prediction it protects, where it said that only one new
+  in an amended version could.
+- API_SPEC states the current rules where it narrated earlier versions and development
+  phases, and gives what it left out or misstated. It gives the defaults of `type` in
+  `diagram` and `lit_diagram`, the formats `report` accepts, `tokens` and `jaccard` among
+  the mirrored functions, `new` as the name of the amended theory's argument, what the
+  `path` of `preregister` does and the per-theory goldens. It gives the messages of the
+  two enum checks, the choice between `a` and `an` in the builders' `TypeError` message,
+  the rubric's base of 0.0 for a type outside its enum, the label line breaks as the
+  literal backslash-n the views write, the result labels, scope numbering and cluster
+  labels of section 12, the five-concept fallback of `fetch_corpus`, the vertices of the
+  SEM graph, the escaping of the HTML report, the value types of Python's post-data
+  severity records and the curl package that a live OSF upload needs in R. It narrows what
+  it said of an out-of-enum relation, which the nomological net and workflow views still
+  draw, of the Latin letters the fold covers and of a theory id held in a sequence, and
+  says that the litmap golden of a real corpus holds no warning. It points to the worked
+  example of `new_evidence_dois` and to the sections that specify the diagram IRs. It
+  gives full references for Lakatos (1970), Mayo (1991), Meehl (1990a) and VanderWeele and
+  Robins (2007). Its layout names the repository, the corpora, the apps and their smoke
+  scripts.
+- The README lists both packaged corpora among the examples, introduces
+  `post_data_severity`, counts post-data severity and the edge-case records among the
+  outputs that parity compares and describes everything in `scripts/`. It says which names
+  differ between the twins, `new_theory()` against `tf_theory()` and `frm` against `from`,
+  and that Python's builders change a theory in place. The Python package's README
+  introduces `post_data_severity` too.
+- Apps: the help of the amendment appraisal says that predictions are matched by statement
+  and type when an id has changed, where it said that they were matched by id alone. The
+  apps' README and help, the landing page, both package READMEs and the Python site's home
+  page no longer say that every operation exports a visualisation. The help of the
+  redundancy screen gives the overlap coefficient beside the Jaccard index and the rule by
+  which each flags a pair, and the preregistration's help and guide describe its sampling
+  plan section. The panic example's description puts arousal and perceived threat in the
+  feedback loop, where it put all three constructs in it, and says that every applicable
+  checklist item passes.
+- The security policy, both copies of CONTRIBUTING and the bug report and pull request
+  templates name the OpenAlex API key that `fetch_corpus()` reads from `OPENALEX_API_KEY`
+  by default, beside the OSF token. CONTRIBUTING also gives the commands for the parity
+  check, the app tests and the app smoke scripts, and says that CI runs on pushes to
+  `main` and on pull requests, where it said on every push. Its install line pins roxygen2
+  to the release CI uses, and its lint command, like the pull request template's, covers
+  `scripts/` as CI's does.
+- The literature pages link the works whose co-word algorithm and measures they apply,
+  and cite the DOI Handbook's page on case insensitivity, where they gave a section
+  number that the current handbook does not have. The `litmap` reference gives the DOI of
+  Coulter et al. (1998), and the amendment appraisal's reference names the editors of
+  Lakatos (1970).
+- API_SPEC's title names the development version that follows 0.6.0, where it named 0.6.0.
+  API_SPEC says that Python's constructor is `new_theory()` where R's is `tf_theory()` and
+  that Python's proposition builder takes `frm` where R's takes `from`, and API_SPEC and
+  the README say that most of Python's module-level functions name the theory `T`, where R
+  names it `theory`, so a call written for both languages passes the theory by position.
+  API_SPEC section 4 says that the construct clarity and mechanism items count a
+  definition or a mechanism only when it is a nonempty string, so a sequence such as
+  `mechanism: [because]` does not count. The README says what `scripts/reproduce_all`
+  checks, where it said that the scripts reproduce the whole verification, and names the
+  checks that only CI runs.
 
 ### Internal
 - Python's two copies of the nonempty-string test (`core._nonempty_str` and

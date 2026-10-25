@@ -46,17 +46,27 @@ def appraise_amendment(new, prior) -> dict:
     tell its cases apart.
 
     Returns:
-        A dict whose keys follow API_SPEC.md section 10, with ``verdict``
-        first and the four keys of 0.6.0 before the rest. ``new_predictions``,
-        ``corroborated_new``, ``ad_hoc_assumptions``, ``articulated``,
-        ``underived``, ``corroborated_new_registered``, ``dropped``,
-        ``dropped_corroborated``, ``content_lost`` and ``new_anomalies`` are
-        sorted id lists. ``renamed`` holds ``{prior, new}`` pairs sorted by
-        ``new``, and ``assumptions`` one ``{id, added_for, class,
-        independent}`` record per new assumption added for an anomaly, in
-        file order. Only ``corroborated_new_registered`` reads ``registered``,
-        and no date is read, so which version is the prior is the caller's
-        responsibility.
+        A dict whose keys follow API_SPEC.md section 10, in the order
+            ``verdict``, ``new_predictions``, ``corroborated_new``,
+            ``ad_hoc_assumptions``, ``articulated``, ``underived``,
+            ``corroborated_new_registered``, ``renamed``, ``dropped``,
+            ``dropped_corroborated``, ``content_lost``, ``new_anomalies`` and
+            ``assumptions``. ``new_predictions``, ``corroborated_new``,
+            ``ad_hoc_assumptions``, ``articulated``, ``underived``,
+            ``corroborated_new_registered``, ``dropped``, ``dropped_corroborated``,
+            ``content_lost`` and ``new_anomalies`` are sorted id lists.
+            ``renamed`` holds ``{prior, new}`` pairs sorted by ``new``, and
+            ``assumptions`` one ``{id, added_for, class, independent}`` record per
+            new assumption added for an anomaly, in file order. ``independent``
+            lists, each as ``{id, status}`` and in the order of ``protects``, the
+            distinct predictions the assumption protects that are new in this
+            version and differ from ``added_for``, with their status in ``new``
+            (``corroborated``, ``refuted``, ``mixed`` or ``untested``). ``class``
+            is ``ad_hoc1`` when there are none, ``ad_hoc2`` when none is
+            corroborated and ``independently_corroborated`` otherwise, and
+            ``ad_hoc_assumptions`` holds the ids of the first two classes. Only
+            ``corroborated_new_registered`` reads ``registered``, and no date is
+            read, so which version is the prior is the caller's responsibility.
 
     Raises:
         ValueError: ``new`` and ``prior`` are the same object. The builders
@@ -65,14 +75,14 @@ def appraise_amendment(new, prior) -> dict:
             amendment with ``prior.copy()``. Two distinct objects with equal
             content are appraised as usual.
         ValueError: a test outcome's ``passed`` is present and not a boolean,
-            in ``new`` (checked first) or in ``prior``. A quoted ``"true"``
-            read as a failure and could turn a progressive amendment into a
+            in ``new`` (checked first) or in ``prior``. Read as not passed, a
+            quoted ``"true"`` could turn a progressive amendment into a
             degenerating one.
 
     References:
         Lakatos, I. (1970). Falsification and the methodology of scientific
-        research programmes. In Criticism and the growth of knowledge
-        (pp. 91-196). Cambridge University Press.
+        research programmes. In I. Lakatos & A. Musgrave (Eds.), Criticism and
+        the growth of knowledge (pp. 91-196). Cambridge University Press.
         https://doi.org/10.1017/cbo9781139171434.009
         Meehl, P. E. (1990a). Appraising and amending theories: The strategy of
         Lakatosian defense and two principles that warrant it. Psychological

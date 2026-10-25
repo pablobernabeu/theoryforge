@@ -78,13 +78,17 @@ broken$predictions[[1]]$derives_from <- "p_missing"
 tf_validate(broken, full = TRUE)
 ```
 
-The building vocabulary has two further verbs. `tf_add_assumption()` records an
-auxiliary assumption, and `tf_set_formal_model()` attaches a formal-model
+The building vocabulary has three further verbs. `tf_add_alternative()`
+registers a rival account, which a prediction can name in its `diagnostic_vs`
+to declare that it discriminates between the two. `tf_add_assumption()` records
+an auxiliary assumption, and `tf_set_formal_model()` attaches a formal-model
 reference. Applied to a copy of the theory, they leave the original untouched.
 
 ```{r build-more}
 extended <- theory |>
-  tf_add_assumption("a1", "Arousal is measured at rest.", added_for = "h1") |>
+  tf_add_alternative("alt_cognitive", "Cognitive model of panic",
+                     key_constructs = "catastrophic misinterpretation") |>
+  tf_add_assumption("a1", "Arousal is measured at rest.", protects = "h1") |>
   tf_set_formal_model("sem", spec_ref = "panic-sem.lavaan")
 ```
 

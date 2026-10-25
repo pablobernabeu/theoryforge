@@ -103,10 +103,10 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
   cons <- .tf_list(T, "constructs")
   states <- vapply(cons, function(c) .tf_str(c, "id"), character(1))
   n <- length(states)
-  # Duplicate construct ids have no defensible reading here, and the two engines
-  # resolved them differently by accident (`[[` on a named vector takes the
-  # first index, Python's dict comprehension the last), so the same file
-  # produced two plausible trajectories. Refuse instead of picking a winner.
+  # Duplicate construct ids have no defensible reading here: `[[` on a named
+  # vector takes the first index and Python's dict comprehension the last, so
+  # the two engines would give two plausible trajectories for the same file.
+  # Refuse instead of picking a winner.
   # Constructs without ids share no id: no proposition can name them, so each
   # is a state with no couplings.
   seen <- character(0)

@@ -270,8 +270,8 @@ table.grid .grow { white-space: normal; width: 100%; }
 table.grid td.kvk { color: var(--ink-soft); }
 table.grid tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--ink) 4%, transparent); }
 table.grid tbody tr:hover td { background: color-mix(in srgb, var(--accent) 9%, transparent); }
-/* Solid, theme-independent pills so the pass/warn/fail verdicts meet WCAG
-   contrast (≈4.5:1) regardless of the surrounding panel tint. */
+/* Solid, theme-independent pills so the pass/warn/fail verdicts meet WCAG AA
+   text contrast (at least 4.5:1) regardless of the surrounding panel tint. */
 .pill { padding: 2px 9px; border-radius: 999px; font-size: .74rem; font-weight: 700; white-space: nowrap; }
 .pill.pass, .pill.ok, .pill.covered, .pill.progressive { background: #2e7d46; color: #ffffff; }
 .pill.warn, .pill.advisory, .pill.review, .pill.neutral, .pill.crowded { background: #e8a33d; color: #3a2600; }

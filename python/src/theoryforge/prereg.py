@@ -167,8 +167,8 @@ def _plan(p) -> str | None:
 def _sampling_plan(preds: list) -> list[str]:
     """The lines of the sampling-plan section, or none when no prediction states a plan.
 
-    A theory without a plan therefore renders as it did before the section
-    existed (API_SPEC.md section 30).
+    A theory without a plan therefore has no such section (API_SPEC.md section
+    30).
     """
     plans = [(text(field(p, "id")), _plan(p)) for p in preds]
     if all(plan is None for _, plan in plans):
@@ -234,6 +234,12 @@ def preregister(T, path=None) -> str:
     It is to be completed with the study design, the analysis plan, the
     inference criteria and whatever the sampling plan leaves out, the sections
     that a template such as PRP-QUANT asks for (Bosnjak et al., 2022).
+
+    Raises:
+        ValueError: when ``check()`` refuses the theory, because a test
+            outcome's ``passed`` is present and not a boolean or a prediction's
+            ``severity`` is not a finite number within [0, 1]. The message
+            begins ``check requires``, and nothing is written.
 
     References:
         Bosnjak, M., Fiebach, C. J., Mellor, D., Mueller, S., O'Connor, D. B.,

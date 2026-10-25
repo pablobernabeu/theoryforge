@@ -5,17 +5,21 @@ Tokens (API_SPEC.md section 6) and SEM variable names (section 19) are compared
 after this fold, so the table has to be identical in R and Python and must not
 depend on either runtime's Unicode tables. It is generated here once, from
 Python's ``unicodedata``, and committed. ``scripts/gen_golden.py`` mirrors it
-into both packages, and ``tests/test_text_normalisation.py`` fails when the
-committed file differs from what this script writes.
+into both packages, and ``python/tests/test_text_normalisation.py`` fails when
+the committed file differs from what this script writes.
 
 The table maps single characters to their folded text:
 
-* Latin letters go to ASCII with their case kept. A precomposed letter whose
-  canonical decomposition is a base letter followed by combining marks in
-  U+0300-036F goes to the fold of its base (``É`` to ``E``, ``Ǣ`` to ``AE``).
-  The Latin-1 Supplement and Latin Extended-A letters that have no such
-  decomposition are spelt out in ``LATIN_EXTRA`` (``ß`` to ``ss``, ``ø`` to
-  ``o``, ``ł`` to ``l`` and so on), following the usual ASCII transliteration.
+* Latin letters the table covers keep their case and go to ASCII, apart from
+  ``Ǯ`` and ``ǯ``, which go to the ezh ``Ʒ`` and ``ʒ``.
+  A precomposed letter of ``LATIN_BLOCKS`` whose canonical decomposition is a
+  base letter followed by combining marks in U+0300-036F goes to the fold of
+  its base (``É`` to ``E``, ``Ǣ`` to ``AE``). The Latin-1 Supplement letters
+  from U+00C0 and the Latin Extended-A letters that have no such
+  decomposition, and the capital sharp s ``ẞ``, are spelt out in
+  ``LATIN_EXTRA`` (``ß`` to ``ss``, ``ø`` to ``o``, ``ł`` to ``l`` and so on),
+  following the usual ASCII transliteration. Any other Latin letter, such as
+  ``ª``, or ``ƒ`` and ``ǝ`` of Latin Extended-B, is kept as it is.
 * Greek and Cyrillic letters go to their small base letter: a capital to its
   small letter where the case mapping is one code point to one, final sigma to
   sigma, and a precomposed letter as above to the small form of its base

@@ -14,11 +14,11 @@ R package (`r/theoryforge/`):
 Python package (`python/`):
 
 - [ ] `pytest` passes, and new behaviour has tests.
-- [ ] `ruff check` and `mypy src` are clean.
+- [ ] `ruff check . ../scripts` and `mypy src` (both run from `python/`) are clean.
 - [ ] The docs build (`mkdocs build --strict`).
 
 Both:
 
 - [ ] Behaviour changes land in both implementations and the parity check passes.
 - [ ] Documentation and `NEWS.md` / `CHANGELOG.md` are updated where relevant.
-- [ ] No secret (an OSF token) appears anywhere in the diff.
+- [ ] No secret (an OSF token or an OpenAlex API key) appears anywhere in the diff.

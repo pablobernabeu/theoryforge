@@ -163,11 +163,11 @@ test("a failed restore of an example falls back to the first example and says so
   assert.match($("#summaryWrap").textContent, /Title a\.theory\.yaml/);
 });
 
-// ---- CS28: honest operations and text ------------------------------------
+// ---- honest operations and text ------------------------------------------
 
-// Examples with the lineage the real ones carry. Every theory but the amended
-// panic network is version v1 with no parent, and the amended one names v1 of
-// the panic network as its parent.
+// Examples with the lineage the real ones carry. The amended panic network
+// names v1 of the panic network as its parent, the weak theory records no
+// version, and every other example is version v1 with no parent.
 const LINEAGE = [
   { name: "Panic network", path: "fixtures/panic-network.theory.yaml", desc: "",
     lineage: { id: "panic-network-2026", title: "Panic", version: { id: "v1", parent_id: "" } } },
@@ -412,7 +412,7 @@ test("whole-number parameters are rounded before they are run", async () => {
   assert.equal(lastCall(rt).params.min_link, 2);
 });
 
-// ---- CS21: the test record ------------------------------------------------
+// ---- the test record ------------------------------------------------------
 
 test("the preregistration is a hypotheses section to complete, and its reading counts the tested ones", async () => {
   // The guide called the output ready to timestamp before data collection,

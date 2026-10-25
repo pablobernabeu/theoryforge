@@ -21,8 +21,20 @@ A named list whose first element, \code{verdict}, is one of
 \code{renamed} is a list of \code{list(prior, new)} pairs sorted by
 \code{new}, and \code{assumptions} holds one
 \code{list(id, added_for, class, independent)} per new assumption added
-for an anomaly, in file order. The four elements of earlier versions come
-first, in their old order.
+for an anomaly, in file order. \code{independent} lists, each as
+\code{list(id, status)} and in the order of \code{protects}, the distinct
+predictions the assumption protects that are new in this version and
+differ from \code{added_for}, with their status in \code{new}
+(\code{"corroborated"}, \code{"refuted"}, \code{"mixed"} or
+\code{"untested"}). \code{class} is \code{"ad_hoc1"} when there are none,
+\code{"ad_hoc2"} when none is corroborated and
+\code{"independently_corroborated"} otherwise, and
+\code{ad_hoc_assumptions} holds the ids of the first two classes. The
+elements come in the order \code{verdict}, \code{new_predictions},
+\code{corroborated_new}, \code{ad_hoc_assumptions}, \code{articulated},
+\code{underived}, \code{corroborated_new_registered}, \code{renamed},
+\code{dropped}, \code{dropped_corroborated}, \code{content_lost},
+\code{new_anomalies} and \code{assumptions}.
 }
 \description{
 Compares an amended theory \code{new} with its \code{prior} version by
@@ -52,8 +64,8 @@ version is the prior is the caller's responsibility.
 
 A test outcome whose \code{passed} is present and not \code{TRUE} or
 \code{FALSE}, in \code{new} (checked first) or in \code{prior}, is refused
-with the message the Python twin raises. A quoted \code{"true"} read as a
-failure and could turn a progressive amendment into a degenerating one.
+with the message the Python twin raises. Read as not passed, a quoted
+\code{"true"} could turn a progressive amendment into a degenerating one.
 }
 \examples{
 prior <- tf_theory("demo-1", "A demonstration theory") |>
@@ -72,8 +84,9 @@ tf_appraise_amendment(new, prior)$verdict
 }
 \references{
 Lakatos, I. (1970). Falsification and the methodology of scientific research
-programmes. In \emph{Criticism and the growth of knowledge} (pp. 91-196).
-Cambridge University Press. \doi{10.1017/cbo9781139171434.009}
+programmes. In I. Lakatos & A. Musgrave (Eds.), \emph{Criticism and the
+growth of knowledge} (pp. 91-196). Cambridge University Press.
+\doi{10.1017/cbo9781139171434.009}
 
 Meehl, P. E. (1990a). Appraising and amending theories: The strategy of
 Lakatosian defense and two principles that warrant it. \emph{Psychological

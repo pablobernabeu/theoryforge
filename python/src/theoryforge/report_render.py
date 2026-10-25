@@ -23,9 +23,8 @@ def _yaml_dq(s: str) -> str:
     (API_SPEC.md section 23): backslash and double quote are escaped, newline and
     tab become \\n and \\t, every other C0 control, DEL and the C1 controls
     become \\xNN, and the noncharacters U+FFFE and U+FFFF become \\uFFFE and
-    \\uFFFF, since YAML forbids all of these raw in a stream. The 0.6.0 header
-    left backslashes alone, so "A\\B" was a parse error and "\\emph" read as an
-    escape.
+    \\uFFFF, since YAML forbids all of these raw in a stream. Unescaped, "A\\B"
+    would be a parse error and "\\emph" an escape sequence.
     """
     out = []
     for ch in s:
@@ -44,11 +43,22 @@ def _yaml_dq(s: str) -> str:
 def render_report(T, path, title: str | None = None, render: bool = False, to: str = "html") -> str:
     """Write a Quarto report for the theory; render it with Quarto when ``render=True``.
 
+    The report is a YAML header (``title`` and ``format``) followed by the ``dossier()`` body.
+    A ``path`` without the suffix ``.qmd`` (in any letter case) has its last suffix replaced by
+    ``.qmd``, or ``.qmd`` added when it has none, so ``report.md`` is written as ``report.qmd``.
+    ``to`` is the Quarto output format, ``"html"`` by default, written into the header and
+    passed to ``quarto render --to``.
+
     ``title`` defaults to ``"theoryforge report: <title-or-id>"``, also when empty. It is
     written as a YAML double-quoted scalar with backslashes, double quotes and control
     characters escaped, so a YAML parser reads back exactly the string passed. Quarto then
     reads the title as Markdown, so raw TeX such as ``\\emph{}`` is dropped from HTML output
     and ``$\\alpha$`` becomes mathematics.
+
+    When ``check()`` refuses the theory, ``ValueError`` is raised before anything is written.
+    With ``render=True``, the ``quarto`` command must be on the PATH. A failed render raises
+    ``subprocess.CalledProcessError`` and a missing Quarto ``FileNotFoundError``, after the
+    ``.qmd`` has been written.
 
     Returns the path of the written `.qmd`.
     """

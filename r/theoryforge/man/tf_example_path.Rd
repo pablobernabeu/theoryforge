@@ -11,7 +11,9 @@ tf_example_path(name)
 \code{\link[=tf_example_names]{tf_example_names()}}.}
 }
 \value{
-The path to the installed file.
+The path to the installed file. A \code{name} that matches no
+installed file stops with an error that lists the names
+\code{\link[=tf_example_names]{tf_example_names()}} returns.
 }
 \description{
 Path to a packaged example file

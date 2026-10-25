@@ -90,8 +90,8 @@ NULL
 }
 
 # The lines of the sampling-plan section, or none when no prediction states a
-# plan, so a theory without a plan renders as it did before the section existed
-# (API_SPEC.md section 30).
+# plan, so a theory without a plan has no such section (API_SPEC.md section
+# 30).
 .tf_sampling_plan <- function(preds) {
   plans <- lapply(preds, .tf_plan)
   if (all(vapply(plans, is.null, logical(1)))) return(character(0))
@@ -216,6 +216,10 @@ NULL
 #' is to be completed with the study design, the analysis plan, the inference
 #' criteria and whatever the sampling plan leaves out, the sections that a
 #' template such as PRP-QUANT asks for (Bosnjak et al., 2022).
+#'
+#' It stops, as [tf_check()] does, when a test outcome's \code{passed} is
+#' present and not \code{TRUE} or \code{FALSE}, or when a prediction's
+#' \code{severity} is not a finite number from 0 to 1, and then writes nothing.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param path Optional destination path; when given, the markdown is written

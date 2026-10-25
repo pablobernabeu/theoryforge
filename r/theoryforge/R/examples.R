@@ -34,7 +34,9 @@ tf_example_names <- function() {
 #'
 #' @param name File name, e.g. \code{"panic-network.theory.yaml"}. See
 #'   [tf_example_names()].
-#' @return The path to the installed file.
+#' @return The path to the installed file. A \code{name} that matches no
+#'   installed file stops with an error that lists the names
+#'   [tf_example_names()] returns.
 #' @examples
 #' tf_read(tf_example_path("panic-network.theory.yaml"))$id
 #' @export

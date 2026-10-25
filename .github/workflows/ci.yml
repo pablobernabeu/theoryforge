@@ -34,9 +34,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install
         run: pip install -e "python[dev]" build twine pytest-cov
-      # python and scripts, not python/src alone: naming the source directory
-      # left both the test suite and the two harnesses in scripts/ -- the golden
-      # generator and the parity checker -- linted by nothing. python/dist and
+      # python and scripts, not python/src alone, so the test suite and the
+      # Python scripts in scripts/ (the golden and fold-table generators, the
+      # parity checker and the app smoke script) are linted too. python/dist and
       # python/site are build output and gitignored, so ruff skips them without
       # needing an exclude, and apps/py/vendor is ignored for the same reason.
       # scripts/ is covered by the root ruff.toml, which extends the package
@@ -72,7 +72,7 @@ jobs:
   # missing packaged file is masked by the source tree sitting next to it.
   # theoryforge ships schema/ inside the package, so this job proves the built
   # wheel carries it: install into a bare environment, leave the repository, and
-  # run the two calls that resolve the packaged resources. Listing the directory
+  # run the three calls that resolve the packaged resources. Listing the directory
   # would not do; a wheel that shipped theory.schema.json and dropped
   # rigor_checklist.yaml would pass that and then fail on the first check().
   wheel:
@@ -145,11 +145,13 @@ jobs:
       - name: Install the declared floors, then the package without resolution
         run: |
           python -m pip install --upgrade pip
-          # Every floor pyproject declares, pinned: PyYAML from `dependencies`,
-          # pytest and jsonschema from the `dev` extra and graphviz from
-          # `render`. Installing the latest pytest here would assert
-          # `pytest>=7.0` and never exercise it, and leaving graphviz out leaves
-          # render_diagram untested at any version.
+          # Every floor that pyproject declares for the package and its tests,
+          # pinned: PyYAML from `dependencies`, pytest and jsonschema from the
+          # `dev` extra and graphviz from `render`. The `docs` extra's floors
+          # (mkdocs-material, mkdocstrings, markdown-exec) are not pinned here.
+          # Installing the latest pytest here would assert `pytest>=7.0` and
+          # never exercise it, and leaving graphviz out leaves render_diagram
+          # untested at any version.
           pip install "PyYAML==6.0.*" "pytest==7.0.*" "jsonschema==4.0.*" "graphviz==0.20.*"
           pip install -e python --no-deps
       - name: Tests
@@ -161,11 +163,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The six configurations the rest of the family checks, mirroring what
-        # CRAN itself runs: all three operating systems on the released R, plus
-        # R-devel on Linux and on Windows and oldrel-1 on Linux. Windows on
-        # R-devel is the combination win-builder checks, so running it here
-        # gives that signal on every push rather than by email after an upload.
+        # Six configurations, mirroring what CRAN itself runs: all three
+        # operating systems on the released R, plus R-devel on Linux and on
+        # Windows and oldrel-1 on Linux. Windows on R-devel is the combination
+        # win-builder checks, so running it here gives that signal on every
+        # push rather than by email after an upload.
         config:
           - {os: macos-latest,   r: 'release'}
           - {os: windows-latest, r: 'release'}
@@ -417,10 +419,10 @@ jobs:
             any::jsonlite
             any::pkgload
           working-directory: r/theoryforge
-      # The R package is loaded from r/theoryforge by the emitter rather than
-      # taken off the library path, so this job no longer depends on having
-      # installed it first: it reports on the tree being reviewed either way.
-      # The distribution itself is covered by the six R CMD check cells above.
+      # The emitter loads the R package from r/theoryforge rather than from the
+      # library path, so the job reports on the tree being reviewed without
+      # installing it. The distribution itself is covered by the six R CMD
+      # check cells above.
       - name: Install the Python package
         run: pip install -e python
       - name: Check R == Python on every fixture
