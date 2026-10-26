@@ -1,5 +1,18 @@
 # theoryforge (development version)
 
+* The rigour checklist's citations distinguish Meehl's two articles of 1990,
+  as the methodology article does. The `precision` item now cites
+  `Meehl (1967, 1990a)`, `risk_severity` cites
+  `Popper (1959); Meehl (1967, 1990b)` and `parsimony` cites
+  `Lakatos (1970); Meehl (1990a)`. In 0.6.0, they cited `Meehl (1967, 1990)`,
+  `Mayo (2018); Meehl (1990)` and `Forster & Sober (1994); Lakatos (1970)`.
+  Meehl (1990a) is "Appraising and amending theories" in Psychological
+  Inquiry, and Meehl (1990b) is "Why summaries of research on psychological
+  theories are often uninterpretable" in Psychological Reports. The `citation`
+  that `tf_check()` and `tf_report()` give for these items changes with them.
+  No score, status or gate changes, and the checklist keeps version 2.0, since
+  its weights and thresholds are unchanged.
+
 * The help pages give what they left out or misstated. `?tf_diagram` names the
   six DOT views, the three SVG views and the later outcome nodes of the
   `workflow` view. It says that the `venn` view draws only the first three

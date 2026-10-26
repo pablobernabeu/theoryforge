@@ -48,8 +48,11 @@ test_that("the checklist is version 2.0 with five default thresholds", {
   items <- stats::setNames(spec$items, c2_ids)
   expect_identical(items$risk_severity$criterion,
                    "Mean prediction severity (declared, else the claim-form rubric) at or above threshold")
-  expect_identical(items$risk_severity$citation, "Popper (1959); Meehl (1967, 1990)")
-  expect_identical(items$parsimony$citation, "Lakatos (1970); Meehl (1990)")
+  # Meehl (1990a) is the Psychological Inquiry article, Meehl (1990b) the
+  # Psychological Reports one, as in the methodology article.
+  expect_identical(items$precision$citation, "Meehl (1967, 1990a)")
+  expect_identical(items$risk_severity$citation, "Popper (1959); Meehl (1967, 1990b)")
+  expect_identical(items$parsimony$citation, "Lakatos (1970); Meehl (1990a)")
   expect_identical(items$derivation_chain$criterion, paste(
     "Every prediction cites at least one proposition, and every cited id is a declared",
     "proposition (reference check only)"))
@@ -178,7 +181,7 @@ c2_defended <- function(protects, outcomes) {
 
 test_that("parsimony is not applicable without an assumption added for an anomaly", {
   # The ratio of assumptions to propositions penalised declaring core
-  # assumptions, which every derivation uses (Meehl, 1990).
+  # assumptions, which every derivation uses (Meehl, 1990a).
   core <- list(list(id = "a1", statement = "Self-report tracks arousal.", added_for = NULL),
                list(id = "a2", statement = "A blank added_for names no anomaly.",
                     added_for = " "))

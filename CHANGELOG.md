@@ -464,6 +464,17 @@ version and a single behavioural contract
   2.5, and the sdist and the wheel hold the same files as before. The licence was already
   declared once, as the SPDX expression `MIT`, without the licence classifier that PEP 639
   deprecates. A test in the Python suite now fails if the cap or such a classifier returns.
+- The rigour checklist's citations distinguish Meehl's two articles of 1990, as the
+  methodology pages do. `precision` now cites `Meehl (1967, 1990a)`, `risk_severity` cites
+  `Popper (1959); Meehl (1967, 1990b)` and `parsimony` cites `Lakatos (1970); Meehl (1990a)`.
+  In 0.6.0, they cited `Meehl (1967, 1990)`, `Mayo (2018); Meehl (1990)` and
+  `Forster & Sober (1994); Lakatos (1970)`. Meehl (1990a) is "Appraising and amending
+  theories" in Psychological Inquiry, and Meehl (1990b) is "Why summaries of research on
+  psychological theories are often uninterpretable" in Psychological Reports. The
+  `citation` field of these three items changes in every report, JSON and HTML alike, and
+  so do the report goldens of the four fixtures and the example report in API_SPEC
+  section 4. No score, status or gate changes, and the checklist keeps version 2.0, since
+  its weights and thresholds are unchanged.
 
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend. `appraise_amendment()`

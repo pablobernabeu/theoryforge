@@ -185,7 +185,7 @@ Each item returns `{id, status ∈ {pass,warn,fail,n/a}, score, weight, severity
   "theory_id": "...", "schema_version": "1.0", "checklist_version": "2.0", "maturity": "...",
   "aggregate_score": 0.0, "coverage": 0.92, "gate": "pass", "n_blockers_failed": 0,
   "items": [ {"id":"falsifiability","status":"pass","score":1.0,"weight":0.15,"severity_if_fail":"blocker","citation":"Popper (1959); Bacharach (1989)"},
-             {"id":"parsimony","status":"n/a","score":null,"weight":0.08,"severity_if_fail":"warning","citation":"Lakatos (1970); Meehl (1990)"} ]
+             {"id":"parsimony","status":"n/a","score":null,"weight":0.08,"severity_if_fail":"warning","citation":"Lakatos (1970); Meehl (1990a)"} ]
 }
 ```
 
