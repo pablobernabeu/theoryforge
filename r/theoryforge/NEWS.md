@@ -316,6 +316,9 @@
 * `tf_osf_push()` encodes in full a `filename` that holds a `%XX` sequence,
   which it left unencoded, treats an empty `node` as absent and uses the default
   for an empty `filename`.
+* `citation("theoryforge")` gives the DOI that CRAN registered,
+  <https://doi.org/10.32614/CRAN.package.theoryforge>, where it gave the Zenodo
+  concept DOI, <https://doi.org/10.5281/zenodo.21229964>.
 
 ## New features
 
