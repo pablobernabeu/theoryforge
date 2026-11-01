@@ -194,6 +194,22 @@ jobs:
           working-directory: r/theoryforge
           args: 'c("--no-manual", "--as-cran")'
           error-on: '"warning"'
+      # CRAN's r-devel-linux-x86_64-debian-clang flavour runs its checks in a
+      # Latin-9 locale (en_US.iso885915), and every leg above runs in UTF-8.
+      # There a string not marked as UTF-8 is read as Latin-9, which no UTF-8
+      # leg can show, so the Linux R-devel leg runs the tests once more in that
+      # locale, with NOT_CRAN unset, as CRAN runs them. The first line of the R
+      # code stops the step if the locale did not take.
+      - name: Tests in a Latin-9 locale, as on CRAN's Debian clang flavour
+        if: runner.os == 'Linux' && matrix.config.r == 'devel'
+        shell: bash
+        run: |
+          sudo localedef -i en_US -f ISO-8859-15 en_US.iso885915
+          env -u NOT_CRAN LANG=en_US.iso885915 LC_ALL=en_US.iso885915 Rscript -e '
+            stopifnot(identical(l10n_info()$codeset, "ISO-8859-15"))
+            pkgload::load_all("r/theoryforge", quiet = TRUE)
+            invisible(testthat::test_dir("r/theoryforge/tests/testthat", stop_on_failure = TRUE))
+          '
 
   # DESCRIPTION declares `R (>= 4.1.0)` — the version that introduced the native
   # `|>` pipe the examples use — but the matrix above runs release, devel and
