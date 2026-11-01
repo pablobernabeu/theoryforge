@@ -279,8 +279,8 @@ version and a single behavioural contract
   `filename`.
 - Python's `render_diagram()` error gives the install command as
   `pip install "theoryforge[render]"`, which zsh refused without the quotes.
-- In R, `simulate()` trajectories and `embedding_redundancy()` cosines hold 0 where they
-  held a negative zero, which jsonlite wrote as `-0`.
+- R's `tf_simulate()` trajectories and `tf_embedding_redundancy()` cosines hold 0 where
+  they held a negative zero, which jsonlite wrote as `-0`.
 
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend, since Python's builders
