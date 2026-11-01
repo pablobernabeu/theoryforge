@@ -1,4 +1,4 @@
-# theoryforge (development version)
+# theoryforge 0.7.0
 
 ## Upgrading from the previous release (0.6.0)
 

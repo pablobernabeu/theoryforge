@@ -27,7 +27,9 @@ test_that("tf_preregister writes the file when a path is given", {
   txt <- tf_preregister(theory, p)
   raw <- readBin(p, "raw", n = file.info(p)$size)
   expect_false(any(raw == as.raw(13L)))  # LF only
-  expect_identical(rawToChar(raw), txt)
+  # Bytes against bytes, so the check holds in a session whose charset is not
+  # UTF-8.
+  expect_identical(raw, charToRaw(enc2utf8(txt)))
 })
 
 test_that("the derivation line reflects the rigour item status", {
