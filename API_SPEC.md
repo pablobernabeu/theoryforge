@@ -1,4 +1,4 @@
-# theoryforge: API and parity specification (development version after 0.6.0)
+# theoryforge: API and parity specification (v0.7.0)
 
 This document is the contract that keeps the R and Python packages behaviourally identical.
 Both implementations MUST follow the algorithms below exactly. CI diffs their outputs against it.
