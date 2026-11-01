@@ -32,6 +32,7 @@ dict
 DOIs
 enum
 Eronen
+FFFF
 Fiebach
 Forré
 Graphviz
@@ -42,6 +43,7 @@ htmlwidget
 httr
 ids
 independencies
+Inf
 Informetrics
 Jaccard
 Konda
@@ -85,6 +87,7 @@ PRP
 PubMed
 px
 QUANT
+R's
 rescoring
 Robinaugh
 Rönkkö
@@ -111,6 +114,7 @@ Tokenization
 Tokenize
 TOST
 underived
+unencoded
 uninterpretable
 unjoined
 vendored
