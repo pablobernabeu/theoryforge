@@ -1,8 +1,10 @@
 // A small stand-in for the browser DOM, enough to run apps/shared/app-core.js
 // and the site pages' theme scripts under Node's test runner without a browser
-// or a dependency. It models elements, text, attributes, classes and the simple
-// selectors the app uses (#id, .class, tag, lists and descendants). It does not
-// parse HTML: innerHTML is kept as a string and counts as text.
+// or a dependency. It models elements, text, attributes, classes and simple
+// selectors (#id, .class, tag, compounds of these, lists and descendants). An
+// attribute selector or pseudo-class, such as those in the query the modal's
+// focus trap runs on Tab, throws. It does not parse HTML: innerHTML is kept as
+// a string and counts as text.
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 

@@ -22,7 +22,7 @@
       "score": 0.667,
       "weight": 0.1,
       "severity_if_fail": "warning",
-      "citation": "Meehl (1967, 1990)"
+      "citation": "Meehl (1967, 1990a)"
     },
     {
       "id": "risk_severity",
@@ -30,7 +30,7 @@
       "score": 0.567,
       "weight": 0.1,
       "severity_if_fail": "warning",
-      "citation": "Popper (1959); Meehl (1967, 1990)"
+      "citation": "Popper (1959); Meehl (1967, 1990b)"
     },
     {
       "id": "parsimony",
@@ -38,7 +38,7 @@
       "score": null,
       "weight": 0.08,
       "severity_if_fail": "warning",
-      "citation": "Lakatos (1970); Meehl (1990)"
+      "citation": "Lakatos (1970); Meehl (1990a)"
     },
     {
       "id": "non_redundancy",

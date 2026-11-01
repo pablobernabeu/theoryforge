@@ -39,7 +39,7 @@ const LOGO = path.join(repo, "r", "theoryforge", "man", "figures", "logo.svg");
 // parenthetical in each name is that theory's own `maturity` field.
 const EXAMPLES = [
   { name: "Panic disorder network (developing)", file: "panic-network.theory.yaml", src: FIXTURES,
-    desc: "A well-developed network theory of panic, three constructs in a feedback loop. Passes the full rigour checklist." },
+    desc: "A well-developed network theory of panic: arousal and perceived threat form a feedback loop that drives avoidance. Every applicable rigour checklist item passes." },
   { name: "Panic network, amended v2 (testing)", file: "panic-network-2026-v2.theory.yaml", src: FIXTURES,
     desc: "An amended version of the panic theory at the testing stage, with a fourth prediction and test outcomes." },
   { name: "Self-determination theory (developing)", file: "self-determination.theory.yaml", src: APP_EXAMPLES,
@@ -54,9 +54,9 @@ const EXAMPLES = [
     desc: "Steele & Aronson (1995): framing a test as diagnostic of ability depresses performance for a negatively stereotyped group, but not under a non-diagnostic frame." },
   { name: "Theory of planned behaviour (developing)", file: "planned-behaviour.theory.yaml", src: APP_EXAMPLES,
     desc: "Ajzen (1991): attitude, subjective norm and perceived behavioural control predict intention, which predicts behaviour, extending the theory of reasoned action." },
-  // The fixture's maturity field reads "building". At draft maturity the
-  // checklist runs in advisory mode and the gate can never be blocked, which is
-  // the one thing this example exists to show.
+  // The fixture's maturity field reads "building", not "draft": at draft
+  // maturity the checklist runs in advisory mode and the gate can never be
+  // blocked, and a blocked gate is the one thing this example exists to show.
   { name: "Deliberately weak theory (building)", file: "weak-theory.theory.yaml", src: FIXTURES,
     desc: "An underspecified theory kept as a worked example of what the checklist catches. Its gate is blocked." },
   // Appended, so the examples before it keep their places in the list.

@@ -31,33 +31,32 @@ class SVGString(str):
 def render_diagram(x, type: str = "nomological_net"):
     """Render a digraph view without leaving Python.
 
-    Where :func:`theoryforge.diagram.diagram` returns the deterministic Graphviz
-    DOT string, ``render_diagram`` wraps it in a ``graphviz.Source``, which
-    displays inline in Jupyter and renders to a file with its ``render`` method.
-    Requires the optional `graphviz <https://pypi.org/project/graphviz/>`_
-    library (``pip install "theoryforge[render]"``) and, to write image files, the
+    Where ``diagram()`` returns the deterministic Graphviz DOT string,
+    ``render_diagram`` wraps it in a ``graphviz.Source``, which displays inline
+    in Jupyter and renders to a file with its ``render`` method. Requires the
+    optional [graphviz](https://pypi.org/project/graphviz/) library
+    (``pip install "theoryforge[render]"``) and, to write image files, the
     Graphviz system binaries.
 
     The three chart views (``venn``, ``rigour`` and ``severity``) are already
-    SVG, so they come back as an :class:`SVGString`, which also displays inline
-    in Jupyter. The ``causal_dag`` view emits dagitty syntax rather than DOT, so
-    it is not rendered here; paste it into a dagitty tool instead.
+    SVG, so they come back as an ``SVGString``, a ``str`` subclass that also
+    displays inline in Jupyter and needs no graphviz library. The ``causal_dag``
+    view emits dagitty syntax rather than DOT, so it is not rendered here; paste
+    it into a dagitty tool instead.
 
-    Parameters
-    ----------
-    x:
-        A :class:`~theoryforge.core.Theory`, a parsed theory mapping, or a
-        diagram IR string from ``diagram()`` or ``lit_diagram()``, so literature
-        diagrams render the same way.
-    type:
-        The diagram type, as in ``diagram()``. Ignored when ``x`` is already an
-        IR string.
+    ``x`` is a ``Theory``, a parsed theory mapping, or a diagram IR string from
+    ``diagram()`` or ``lit_diagram()``, so literature diagrams render the same
+    way. ``type`` is the diagram type, as in ``diagram()``, and is ignored when
+    ``x`` is already an IR string. The result is a ``graphviz.Source`` for the
+    digraph views, or an ``SVGString`` for the chart views.
 
-    Returns
-    -------
-    graphviz.Source or SVGString
-        A ``graphviz.Source`` for the digraph views; an :class:`SVGString` for
-        the chart views.
+    Raises:
+        ValueError: for an unknown ``type``, and for the ``causal_dag`` view or
+            a dagitty string, which is not DOT.
+        ValueError: in the ``development_roadmap`` and ``rigour`` views, when
+            ``check()`` refuses the theory, as ``diagram()`` does.
+        ImportError: when a DOT diagram is to be rendered and the graphviz
+            library is not installed.
     """
     if isinstance(x, str):
         ir = x

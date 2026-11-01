@@ -3,7 +3,7 @@
 
 Four phases, each run through ``scripts/parity_emit.R``:
 
-  golden     R's artefacts for fixtures/*.theory.yaml and the corpus, against the
+  golden     R's artefacts for fixtures/*.theory.yaml and the corpora, against the
              Python-generated goldens in fixtures/expected/.
   edge       R's outcome records for the malformed or awkward theories and corpora
              in fixtures/edge/, against the Python records in fixtures/edge/expected/.
@@ -222,7 +222,10 @@ def schema_validator():
     """A validator for schema/theory.schema.json, or None when jsonschema is not installed.
 
     The schema declares draft 2020-12. jsonschema releases before 4.0 lack that
-    draft, and draft 7 shares every keyword the schema uses, so it stands in there.
+    draft, so draft 7 stands in there. Draft 7 does not define
+    ``dependentRequired``, which the schema uses to pair ``power_lo`` with
+    ``power_hi`` and ``estimate`` with ``se``, so under such a release those pairs
+    go unchecked.
     """
     try:
         import jsonschema

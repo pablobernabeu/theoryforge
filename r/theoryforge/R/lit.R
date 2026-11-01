@@ -23,7 +23,8 @@ NULL
   .tf_lit_esc_all(.tf_lit_text(s))
 }
 
-# A label value as one string, NULL and NA read as "" (Python's `s or ""`).
+# A label value as one string, NULL and NA read as "" (Python's
+# `s if s is not None else ""`).
 .tf_lit_text <- function(s) {
   if (is.null(s) || length(s) == 0L) return("")
   s <- s[[1L]]
@@ -42,7 +43,9 @@ NULL
 #' list. The format is chosen by the file extension (\code{.json} -> JSON,
 #' otherwise YAML). The file is read by the rules [tf_read()] follows, which
 #' are the Python twin's, so an unquoted keyword such as \code{y} or \code{n}
-#' stays a string and a repeated key is refused.
+#' stays a string and a repeated key is refused. A document that is not a
+#' mapping stops with \code{Corpus data must be a mapping}. The records
+#' themselves are checked by [tf_litmap()] and [tf_landscape()].
 #'
 #' @param path Path to a \code{.yaml}/\code{.yml} or \code{.json} corpus file.
 #' @return A named list holding the parsed corpus object.
@@ -68,8 +71,7 @@ tf_read_corpus <- function(path) {
 
 # `value` as an integer when it is one integral number of at least 1, as the
 # Python twin's _positive_int accepts it. A logical, a string, NA and a vector
-# of two values are refused, where they were truncated, recycled or read as an
-# empty map (API_SPEC.md section 14).
+# of two values are refused (API_SPEC.md section 14).
 .tf_positive_int <- function(value, name) {
   ok <- is.numeric(value) && length(value) == 1L && is.finite(value) &&
     value == trunc(value) && value >= 1
@@ -166,9 +168,10 @@ tf_read_corpus <- function(path) {
 # a DOI is keyed by the DOI as .tf_normalize_doi() gives it, so that
 # 10.1016/J.BRAT..., doi:10.1016/j.brat... and https://doi.org/10.1016/j.brat...
 # are one work: DOI names are case-insensitive under ASCII case folding (DOI
-# Handbook, section 2.4). Any other reference, a Scopus or OpenAlex identifier
-# or a fixture key, is kept exactly as written. Every reference of the corpus is
-# keyed in one vectorised call.
+# Handbook, 'Case Insensitivity of the DOI Name',
+# https://www.doi.org/doi-handbook/HTML/case-insensitivity.html). Any other
+# reference, a Scopus or OpenAlex identifier or a fixture key, is kept exactly
+# as written. Every reference of the corpus is keyed in one vectorised call.
 .tf_reference_keys <- function(references) {
   flat <- unlist(references, use.names = FALSE)
   if (length(flat) == 0L) return(references)
@@ -182,9 +185,9 @@ tf_read_corpus <- function(path) {
 # Count every unordered pair (a < b) of each record's sorted unique values.
 # Pairs are generated a record at a time, keyed once and counted once at the
 # end, which is linear in the number of pairs. Matching each new key against
-# the keys seen so far, as this did, made the count quadratic: a record with 300
-# references took about a minute and a fetched corpus hours. The order of the
-# result is irrelevant, since .tf_edges() sorts it.
+# the keys seen so far would make the count quadratic: a record with 300
+# references would take about a minute and a fetched corpus hours. The order of
+# the result is irrelevant, since .tf_edges() sorts it.
 .tf_pair_counts <- function(values) {
   a_all <- vector("list", length(values))
   b_all <- vector("list", length(values))
@@ -193,8 +196,8 @@ tf_read_corpus <- function(path) {
     n <- length(vals)
     if (n < 2L) next
     # The pairs (i, j), i < j, in the order utils::combn(n, 2) lists them.
-    # combn() builds them one at a time in R code, which made it most of the
-    # cost of a record with hundreds of references.
+    # combn() builds them one at a time in R code, which would make it most of
+    # the cost of a record with hundreds of references.
     a_all[[r]] <- vals[rep.int(seq_len(n - 1L), (n - 1L):1L)]
     b_all[[r]] <- vals[sequence((n - 1L):1L, from = 2:n)]
   }
@@ -539,8 +542,13 @@ tf_read_corpus <- function(path) {
 #'   is a field term, left out of the map and listed in \code{field_terms}.
 #'   The three theme settings are checked with either method, although only
 #'   \code{"simple_centres"} reads them.
-#' @return A named list with elements \code{n_records}, \code{keywords},
-#'   \code{keyword_cooccurrence}, \code{themes}, and \code{co_citation}. With
+#' @return A named list with elements \code{n_records}, \code{keywords} (the
+#'   distinct keywords, sorted), \code{keyword_cooccurrence} (one
+#'   \code{list(a, b, count)} per kept pair, \code{a} sorting before \code{b},
+#'   in \code{(a, b)} order), \code{themes} (one \code{list(id, keywords, size)}
+#'   per theme, numbered \code{theme_1}, \code{theme_2}, ... in the order of
+#'   their first keyword) and \code{co_citation} (as
+#'   \code{keyword_cooccurrence}, over the reference keys). With
 #'   \code{"simple_centres"}, each theme also holds \code{centrality},
 #'   \code{density} and \code{quadrant}, and the list ends with
 #'   \code{method}, \code{parameters} (the five settings used) and
@@ -554,6 +562,7 @@ tf_read_corpus <- function(path) {
 #' Coulter, N., Monarch, I., & Konda, S. (1998). Software engineering as seen
 #' through its research literature: A study in co-word analysis. \emph{Journal
 #' of the American Society for Information Science, 49}(13), 1206-1223.
+#' \doi{10.1002/(SICI)1097-4571(1998)49:13<1206::AID-ASI7>3.0.CO;2-F}
 #'
 #' Cobo, M. J., López-Herrera, A. G., Herrera-Viedma, E., & Herrera, F.
 #' (2011). An approach for detecting, quantifying, and visualizing the
@@ -625,8 +634,8 @@ tf_litmap <- function(corpus, min_link = 2, method = "components", min_cocitatio
 #' of accounts the theory does not register, \code{"covered"} when one does and
 #' \code{"crowded"} when two or more do. A crowded theme calls for predictions
 #' that discriminate between the accounts, and is not a finding of redundancy.
-#' The two lists keep their 0.6.0 names, \code{under_theorised_fronts} and
-#' \code{redundancy_risk}.
+#' \code{under_theorised_fronts} lists the ids of the under-theorised themes,
+#' and \code{redundancy_risk}, despite its name, the ids of the crowded ones.
 #'
 #' The arguments are checked in the order \code{min_link},
 #' \code{max_token_share}, \code{method}, then the corpus, with the Python
@@ -748,9 +757,9 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5,
 # Undirected diagram (keyword_cooccurrence / co_citation). Nodes = endpoints
 # appearing in the edge list (sorted), edges in list order; edge label = integer
 # count rendered with as.character(as.integer(.)).
-# The lines are built as whole vectors: appending one line at a time copied the
-# vector on every edge, which on a co-citation map of 200,000 edges took
-# minutes.
+# The lines are built as whole vectors, since appending one line at a time
+# copies the vector on every edge, which on a co-citation map of 200,000 edges
+# takes minutes.
 .tf_lit_undirected <- function(name, edges) {
   # Nodes are sorted as written and escaped afterwards, as in Python.
   raw <- function(key) {
@@ -940,18 +949,30 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #' it depends on a live external service whose results change over time, so it
 #' sits outside the package's deterministic core. Each work is mapped to
 #' \code{{id, doi, title, year, keywords, references}}, with the DOI as OpenAlex
-#' gives it (keywords falls back to the top concepts when no keywords are
-#' present).
+#' gives it (keywords falls back to the first five concepts when no keywords
+#' are present).
 #'
 #' OpenAlex returns the works that match a search in pages of \code{per_page},
 #' ranked by relevance, and a search usually matches far more works than one
 #' page holds. A \code{max_records} above \code{per_page} pages on through
 #' OpenAlex's cursor until that many works are collected or the results run
-#' out. Each page is one request and costs USD 0.001. OpenAlex allows USD 0.10
-#' a day without a key, about 100 pages, and USD 1 with a free key. When
+#' out. Paging needs an API key: without one, OpenAlex serves the first page
+#' and refuses the next with HTTP 401, so the function stops and keeps none of
+#' the works already fetched. By default, \code{max_records} equals
+#' \code{per_page}, so one request is made, which works without a key. Each
+#' page is one request and costs USD 0.001. OpenAlex allows USD 0.10 a day
+#' without a key, about 100 one-page searches, and USD 1 with a free key. When
 #' OpenAlex refuses a request, as it does with HTTP 429 once the budget is
-#' spent, the function stops with the status and OpenAlex's own message, and
-#' the request is not retried.
+#' spent and with HTTP 401 when a later page is asked for without a key, the
+#' function stops with the status and, when the suggested \pkg{curl} package
+#' is installed, OpenAlex's own message. The request is not retried. Every
+#' request is abandoned after 30 seconds.
+#'
+#' The arguments are checked before any request. \code{per_page} must be a
+#' whole number from 1 to 200 and \code{max_records} a positive whole number,
+#' and \code{api_key}, unless \code{NULL}, must be a single string that holds
+#' only visible ASCII characters once the spaces, tabs and line breaks around it
+#' are trimmed.
 #'
 #' The corpus records where, when and how it was fetched in \code{source}. It
 #' gives the service, endpoint and query and the UTC time of retrieval
@@ -1010,9 +1031,10 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL,
   if (!is.null(mailto)) params[["mailto"]] <- mailto
 
   # Cursor paging, which OpenAlex serves for a search with no cap on the
-  # number of results: "*" asks for the first page, and each page names the
-  # cursor of the next. The run ends with enough works, an empty page or no
-  # cursor (API_SPEC.md section 17).
+  # number of results, and past the first page only to a request with an API
+  # key (HTTP 401 without one): "*" asks for the first page, and each page
+  # names the cursor of the next. The run ends with enough works, an empty page
+  # or no cursor (API_SPEC.md section 17).
   retrieved <- format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
   page <- .tf_openalex_page(c(params, cursor = "*"), headers, key)
   total_count <- .tf_whole_number(.tf_get(page$meta, "count"))

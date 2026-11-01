@@ -283,6 +283,13 @@ class Theory:
     optional collections by treating them as empty. The builder methods
     (``add_*`` and ``set_formal_model``) change the theory in place and return
     it, so calls chain. ``copy()`` gives an independent copy to amend.
+
+    ``Theory(data)`` takes the parsed theory as a dict and raises TypeError for
+    anything else. The builders check none of the values they are given, so a
+    value the schema refuses is reported by ``validate(full=True)``. Each
+    builder raises TypeError, and changes nothing, when the theory holds a
+    value other than a list or null under ``provenance`` or under the
+    collection it appends to.
     """
 
     def __init__(self, data: dict):
@@ -293,10 +300,12 @@ class Theory:
     # -- convenience accessors -------------------------------------------------
     @property
     def id(self) -> str:
+        """The theory's ``id`` as stored, or ``""`` when the field is absent."""
         return self.data.get("id", "")
 
     @property
     def maturity(self) -> str:
+        """The theory's ``maturity`` as stored, or ``""`` when the field is absent."""
         return self.data.get("maturity", "")
 
     def _list(self, key: str) -> list:
@@ -327,11 +336,16 @@ class Theory:
 
         CI compares the result with a JSON Schema 2020-12 validator. Besides the
         ids and references, which the schema cannot express, the pass is
-        stricter in two ways, since a blank string counts as missing and an
-        entry of a string array must be a nonempty string. It is more lenient
+        stricter in three ways. A blank required string counts as missing, an
+        entry of a string array must be a nonempty string and a prediction's
+        ``bounds`` must hold a finite bound with ``lower`` not above ``upper``,
+        while a test outcome's ``estimate`` and ``se`` and a ``test`` block's
+        ``sesoi`` must be finite, that block's ``n_planned`` within the range of
+        a double and its ``power_lo`` not above ``power_hi``. It is more lenient
         in three ways, which API_SPEC.md section 2 documents. A null optional
-        field is absent and a single string stands for a one-element array of
-        strings. An empty sequence and an empty mapping stand for each other.
+        field other than ``theory_form`` is absent and a single string stands
+        for a one-element array of strings. An empty sequence and an empty
+        mapping stand for each other.
 
         Returns:
             True when the theory passes.
@@ -351,8 +365,8 @@ class Theory:
         # on an unhashable value, which would abandon the collected errors and
         # report something the contract never promised. The string test also
         # keeps the twins level: R's `%in%` coerces a one-element list to its
-        # element, so `theory_form: [network]` used to validate there and be
-        # refused here.
+        # element, so `theory_form: [network]` would otherwise validate there
+        # and be refused here.
         mat = d.get("maturity")
         if not (_nonempty_str(mat) and mat in _MATURITY):
             errors.append(f"maturity must be one of {', '.join(sorted(_MATURITY))}")
@@ -489,8 +503,9 @@ class Theory:
                                      nullable=True)
             errors += _optional_text(_field(t, "date"), f"test_outcome[{i}] date", nullable=True)
 
-        # 11: the formal model. A type outside the enum earned the formalisation
-        # point in 0.6.0, and reads as absent since (API_SPEC.md section 3).
+        # 11: the formal model. A type outside the enum is refused here, and
+        # check() reads it as absent (API_SPEC.md section 3), so it earns no
+        # formalisation point.
         fm = d.get("formal_model")
         if fm is not None and _not_a_mapping(fm):
             errors.append("formal_model must be a mapping")
@@ -556,9 +571,9 @@ class Theory:
 
         The file is UTF-8 with LF line endings and ends with a newline. YAML keeps
         the theory's key order and quotes every string a reader could take for
-        something else, ``y``, ``Y``, ``n`` and ``N`` included. The file therefore
-        reads back as the same theory in both twins, and in theoryforge 0.6.0 for R
-        (API_SPEC.md section 3, "Reading and writing files").
+        something else, ``y``, ``Y``, ``n`` and ``N`` included, which theoryforge
+        0.6.0 for R reads as logicals. The file therefore reads back as the same
+        theory in both twins (API_SPEC.md section 3, "Reading and writing files").
         """
         path = Path(path)
         if path.suffix.lower() == ".json":
@@ -626,6 +641,19 @@ class Theory:
         return self
 
     def add_construct(self, id, label, definition, measurement=None, boundary_conditions=None):
+        """Append a construct and log the step in the provenance.
+
+        ``id`` identifies the construct, ``label`` names it and ``definition``
+        states what it is. ``measurement`` lists the indicators that measure it
+        and ``boundary_conditions`` the conditions under which it is claimed to
+        hold. Each is a list of strings or a single string, which is stored as a
+        one-element list, and each is stored only when given. The theory is
+        changed in place and returned, so that builder calls chain.
+
+        Raises:
+            TypeError: when the theory holds a value other than a list or null
+                under ``constructs`` or ``provenance``. Nothing is added then.
+        """
         c = {"id": id, "label": label, "definition": definition}
         if measurement is not None:
             c["measurement"] = _as_str_list(measurement)
@@ -634,6 +662,19 @@ class Theory:
         return self._add("constructs", c, "tf_add_construct", id)
 
     def add_proposition(self, id, frm, to, relation, mechanism=None):
+        """Append a proposition and log the step in the provenance.
+
+        ``frm`` and ``to`` are the ids of the constructs it relates. ``frm`` is
+        stored as the schema's ``from`` field, since ``from`` is a reserved word
+        in Python. ``relation`` is one of ``increases``, ``decreases``,
+        ``causes``, ``mediates``, ``moderates`` or ``associates``. ``mechanism``
+        states why the relation holds and is stored only when given. The theory
+        is changed in place and returned, so that builder calls chain.
+
+        Raises:
+            TypeError: when the theory holds a value other than a list or null
+                under ``propositions`` or ``provenance``. Nothing is added then.
+        """
         p = {"id": id, "from": frm, "to": to, "relation": relation}
         if mechanism is not None:
             p["mechanism"] = mechanism
@@ -684,6 +725,19 @@ class Theory:
         return self._add("predictions", p, "tf_add_prediction", id)
 
     def add_alternative(self, id, label, key_constructs=None):
+        """Append a registered alternative account and log the step in the provenance.
+
+        ``label`` names the rival account. ``key_constructs`` names its key
+        constructs, as a list of strings or a single string, and is stored only
+        when given. A prediction names the alternative's ``id`` in its
+        ``diagnostic_vs``, and ``landscape()`` matches the label and key
+        constructs against the literature's themes. The theory is changed in
+        place and returned, so that builder calls chain.
+
+        Raises:
+            TypeError: when the theory holds a value other than a list or null
+                under ``alternatives`` or ``provenance``. Nothing is added then.
+        """
         a = {"id": id, "label": label}
         if key_constructs is not None:
             a["key_constructs"] = _as_str_list(key_constructs)
@@ -706,6 +760,18 @@ class Theory:
         return self._add("auxiliary_assumptions", a, "tf_add_assumption", id)
 
     def set_formal_model(self, type, spec_ref=None):
+        """Declare the theory's formal model and log the step in the provenance.
+
+        ``type`` is one of ``ode``, ``abm``, ``network``, ``sem`` or ``none``,
+        and the checklist's formalisation item passes for each of them except
+        ``none``. ``spec_ref`` points to the model's specification and is stored
+        as null when not given. A formal model declared earlier is replaced. The
+        theory is changed in place and returned, so that builder calls chain.
+
+        Raises:
+            TypeError: when the theory holds a value other than a list or null
+                under ``provenance``. The formal model is left as it was then.
+        """
         # The log is checked first, as in _add, so a refused call leaves the
         # formal model as it was.
         self._coll("provenance")
@@ -715,23 +781,27 @@ class Theory:
 
     # -- mirrored public API --------------------------------------------------
     def check(self) -> dict:
+        """The rigour report as a dict (see ``theoryforge.check``)."""
         return _check(self.data)
 
     def report(self, format: str = "json") -> str:
+        """The rigour report as a ``"json"`` or ``"html"`` string (see ``theoryforge.report``)."""
         return _report(self.data, format=format)
 
     def redundancy_check(self) -> list[dict]:
+        """The lexical redundancy screen of the construct definitions (see
+        ``theoryforge.redundancy_check``)."""
         return _redundancy_check(self.data)
 
     def diagram(self, type: str = "nomological_net", engine: str = "graphviz") -> str:
         """Return the diagram IR for ``type`` (one of nomological_net, provenance,
         causal_dag, development_roadmap, pipeline, context, workflow, venn, rigour,
-        severity); see :func:`theoryforge.diagram.diagram`."""
+        severity); see ``theoryforge.diagram.diagram``."""
         return _diagram(self.data, type=type, engine=engine)
 
     def render_diagram(self, type: str = "nomological_net"):
-        """Render a digraph view via the optional ``graphviz`` library; see
-        :func:`theoryforge.render.render_diagram`."""
+        """Render a digraph view through the optional ``graphviz`` library, or return a
+        chart view as SVG (see ``theoryforge.render_diagram``)."""
         from .render import render_diagram as _render_diagram
         return _render_diagram(self.data, type=type)
 
@@ -742,7 +812,7 @@ class Theory:
     def post_data_severity(self) -> list[dict]:
         """How severely each bounded prediction passed its test, from the outcome's estimate and SE.
 
-        See :func:`theoryforge.post_data_severity` for the rule and its refusals.
+        See ``theoryforge.post_data_severity`` for the rule and its refusals.
         """
         return _post_data_severity(self.data)
 
@@ -752,7 +822,7 @@ class Theory:
         The verdict is progressive, degenerating or neutral, with the evidence
         behind it. Passing this theory itself as the prior raises ValueError,
         so begin an amendment with ``prior.copy()`` (see
-        :func:`theoryforge.appraise_amendment`).
+        ``theoryforge.appraise_amendment``).
         """
         return _appraise_amendment(self.data, prior)
 
@@ -761,20 +831,20 @@ class Theory:
 
         ``cycles="sigma"`` reads a graph with feedback loops by
         sigma-separation, which the default refuses. See
-        :func:`theoryforge.implications`.
+        ``theoryforge.implications``.
         """
         return _implications(self.data, cycles=cycles)
 
     def preregister(self, path=None) -> str:
         """Render the hypotheses section of a preregistration, writing it to ``path``
-        when one is given (see :func:`theoryforge.preregister`)."""
+        when one is given (see ``theoryforge.preregister``)."""
         return _preregister(self.data, path)
 
     def landscape(self, corpus, min_link: int = 2, max_token_share: float = 0.5,
                   method: str = "components") -> dict:
         """Map this theory and its alternatives onto a literature corpus's themes.
 
-        See :func:`theoryforge.landscape` for the matching rules, statuses and methods.
+        See ``theoryforge.landscape`` for the matching rules, statuses and methods.
         """
         return _landscape(self.data, corpus, min_link=min_link, max_token_share=max_token_share,
                           method=method)
@@ -786,14 +856,14 @@ class Theory:
     def compile_sem(self) -> str:
         """Compile constructs and propositions to lavaan model syntax.
 
-        See :func:`theoryforge.compile_sem` for how names are written and when
+        See ``theoryforge.compile_sem`` for how names are written and when
         a collision is refused.
         """
         return _compile_sem(self.data)
 
     def dossier(self) -> str:
         """A reviewer-facing audit bundle of the rigour report, severity, test record, evidence,
-        provenance and preregistration (see :func:`theoryforge.dossier.dossier`)."""
+        provenance and preregistration (see ``theoryforge.dossier.dossier``)."""
         return _dossier(self.data)
 
     def simulate(self, steps: int = 10, dt: float = 0.1, k: float = 1.0,
@@ -807,7 +877,8 @@ class Theory:
         return _embedding_redundancy(self.data, embedder, threshold=threshold)
 
     def render_report(self, path, title=None, render: bool = False, to: str = "html") -> str:
-        """Write (and optionally render) a Quarto report of the audit dossier."""
+        """Write (and optionally render) a Quarto report of the audit dossier (see
+        ``theoryforge.render_report``)."""
         return _render_report(self.data, path, title=title, render=render, to=to)
 
     def osf_push(self, token=None, node=None, filename=None, dry_run: bool = True,
@@ -842,12 +913,25 @@ def read(path) -> Theory:
 
 
 def write(theory: Theory, path) -> None:
-    """Write a theory object to YAML or JSON (chosen by file extension)."""
+    """Write a ``Theory`` to ``path``, as JSON when the suffix is ``.json`` and as YAML otherwise.
+
+    See ``Theory.write()`` for the encoding and quoting rules.
+    """
     theory.write(path)
 
 
 def new_theory(id: str, title: str, maturity: str = "building", theory_form: str = "network") -> Theory:
-    """Start a new, empty theory object (BUILDING mode entry point)."""
+    """Start a new theory object (BUILDING mode entry point).
+
+    The theory holds ``schema_version`` ``"1.0"``, ``id``, ``title``,
+    ``maturity`` and ``theory_form``, with no constructs yet, and its provenance
+    log records the step as ``tf_theory``. ``maturity`` is one of ``draft``,
+    ``building``, ``developing`` or ``testing``, and at ``draft`` the
+    checklist's gate is ``advisory``. ``theory_form`` is one of ``variance``,
+    ``network``, ``typology`` or ``process``, and no score depends on it.
+    Neither value is checked here, and ``validate()`` raises ``ValueError`` for
+    one outside the schema. The R twin's ``tf_theory()`` builds the same object.
+    """
     t = Theory({
         "schema_version": "1.0",
         "id": id,

@@ -31,6 +31,10 @@ the post-data severity of \code{\link[=tf_post_data_severity]{tf_post_data_sever
 computed, an open bound written as \code{-inf} or \code{inf}. The
 evidence lists the prediction each entry supports, its direction and its
 DOI. The implied independencies appear once, in the preregistration.
+
+It stops, as \code{\link[=tf_check]{tf_check()}} does, when a test outcome's \code{passed} is
+present and not \code{TRUE} or \code{FALSE}, or when a prediction's
+\code{severity} is not a finite number from 0 to 1.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

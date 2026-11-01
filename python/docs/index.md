@@ -10,7 +10,8 @@ The package scaffolds the three workflow modes (building, development and testin
 theory against a 12-item structural rigour checklist drawn from the methodology literature, generates
 diagrams and positions the theory within the bibliometric literature. This is the Python twin
 of [the R package](https://pablobernabeu.github.io/theoryforge/r/) of the same name, and the
-two return identical results (see the [API reference](api.md) for the shared specification
+two return identical results (see the
+[shared specification](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)
 behind that guarantee).
 
 For the fuller rationale, what each rigour check establishes, and exactly how every reported
@@ -22,8 +23,8 @@ walkthrough, see [Get started](getting-started.md). The repository
 !!! tip "Try it in your browser (no install)"
     The [interactive web app](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this
     package entirely client-side via [Pyodide](https://pyodide.org/). Load a theory, run any of
-    the operations it offers, from the rigour checklist through to the literature map, and
-    export both the visualisation (SVG/PNG) and the Python code to reproduce it.
+    the operations it offers, from the rigour checklist through to the literature map, and get
+    the Python code that reproduces each result, with each figure exportable as SVG or PNG.
 
 ## Install
 

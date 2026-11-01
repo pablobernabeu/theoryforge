@@ -26,9 +26,9 @@ null, which reads back as \code{NULL} in R and \code{None} in Python. Every
 field the schema types as an array of strings (\code{derives_from},
 \code{diagnostic_vs}, \code{protects}, \code{measurement},
 \code{boundary_conditions}, \code{key_constructs}) is written as an array,
-even when the theory holds it as a single string. A written theory therefore
-validates against the package's own schema and reads back the same in R and
-in Python (API_SPEC.md section 3).
+even when the theory holds it as a single string. A theory that validates
+against the package's own schema therefore still validates once written, and
+it reads back the same in R and in Python (API_SPEC.md section 3).
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory")

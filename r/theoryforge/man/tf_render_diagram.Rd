@@ -14,12 +14,13 @@ same way.}
 \item{type}{The diagram type, as in \code{\link[=tf_diagram]{tf_diagram()}}. Ignored when \code{x} is
 already an IR string.}
 
-\item{as}{Either \code{"widget"} (default), an htmlwidget for the viewer and for
+\item{as}{Either \code{"widget"} (default), for display in the viewer and in
 R Markdown, or \code{"svg"}, a standalone SVG string.}
 }
 \value{
-An htmlwidget when \code{as = "widget"}; a single SVG string when
-\code{as = "svg"}.
+With \code{as = "widget"}, an htmlwidget for a DOT view, or a browsable
+htmltools HTML object for the \code{venn}, \code{rigour} and \code{severity} views. With
+\code{as = "svg"}, a single SVG string.
 }
 \description{
 Renders a digraph view of a theory without leaving R. Where \code{\link[=tf_diagram]{tf_diagram()}}
@@ -34,6 +35,11 @@ they are returned as-is under \code{as = "svg"} and wrapped for display under
 \code{as = "widget"}. The \code{causal_dag} view emits dagitty syntax rather than DOT,
 so it is not rendered here; paste it into a dagitty tool or the dagitty R
 package instead.
+
+The DOT views need the suggested DiagrammeR package, and \code{as = "svg"}
+also needs DiagrammeRsvg. The chart views need neither, but showing one
+under \code{as = "widget"} needs htmltools. A missing package stops with a
+message naming it.
 }
 \examples{
 \dontshow{if (requireNamespace("DiagrammeR", quietly = TRUE)) withAutoprint(\{ # examplesIf}

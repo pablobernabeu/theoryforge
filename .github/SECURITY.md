@@ -10,9 +10,13 @@ keep you informed as the issue is investigated and resolved.
 
 ## A note on credentials
 
-theoryforge never stores your credentials. Depositing to OSF is the only step
-that needs one: the OSF personal access token is passed explicitly to
-`tf_osf_push()` (R) or `osf_push()` (Python) for a live upload, is never read
-from disk or written anywhere, and the deposit is never performed automatically.
-Keep the token in your own environment and never paste it into an issue, a pull
-request or a discussion.
+theoryforge never stores your credentials, and no step that uses one runs
+automatically. A live deposit to OSF needs an OSF personal access token, which
+is passed explicitly to `tf_osf_push()` (R) or `osf_push()` (Python) and is
+never read from disk or the environment. A fetch from OpenAlex with
+`tf_fetch_corpus()` (R) or `fetch_corpus()` (Python) can send an OpenAlex API
+key, which is passed as `api_key` or read by default from the
+`OPENALEX_API_KEY` environment variable. Each is sent only in an
+`Authorization: Bearer` header that no redirect carries to another server, and
+neither is written anywhere. Keep tokens and keys in your own environment and
+never paste one into an issue, a pull request or a discussion.

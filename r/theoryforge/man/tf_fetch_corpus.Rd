@@ -40,19 +40,31 @@ Assistive helper that builds a corpus by querying the OpenAlex works API
 it depends on a live external service whose results change over time, so it
 sits outside the package's deterministic core. Each work is mapped to
 \code{{id, doi, title, year, keywords, references}}, with the DOI as OpenAlex
-gives it (keywords falls back to the top concepts when no keywords are
-present).
+gives it (keywords falls back to the first five concepts when no keywords
+are present).
 }
 \details{
 OpenAlex returns the works that match a search in pages of \code{per_page},
 ranked by relevance, and a search usually matches far more works than one
 page holds. A \code{max_records} above \code{per_page} pages on through
 OpenAlex's cursor until that many works are collected or the results run
-out. Each page is one request and costs USD 0.001. OpenAlex allows USD 0.10
-a day without a key, about 100 pages, and USD 1 with a free key. When
+out. Paging needs an API key: without one, OpenAlex serves the first page
+and refuses the next with HTTP 401, so the function stops and keeps none of
+the works already fetched. By default, \code{max_records} equals
+\code{per_page}, so one request is made, which works without a key. Each
+page is one request and costs USD 0.001. OpenAlex allows USD 0.10 a day
+without a key, about 100 one-page searches, and USD 1 with a free key. When
 OpenAlex refuses a request, as it does with HTTP 429 once the budget is
-spent, the function stops with the status and OpenAlex's own message, and
-the request is not retried.
+spent and with HTTP 401 when a later page is asked for without a key, the
+function stops with the status and, when the suggested \pkg{curl} package
+is installed, OpenAlex's own message. The request is not retried. Every
+request is abandoned after 30 seconds.
+
+The arguments are checked before any request. \code{per_page} must be a
+whole number from 1 to 200 and \code{max_records} a positive whole number,
+and \code{api_key}, unless \code{NULL}, must be a single string that holds
+only visible ASCII characters once the spaces, tabs and line breaks around it
+are trimmed.
 
 The corpus records where, when and how it was fetched in \code{source}. It
 gives the service, endpoint and query and the UTC time of retrieval

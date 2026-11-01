@@ -58,7 +58,9 @@ a fraction or nested list among the values. They also stop on an integer of
 
 A reference that holds a DOI is keyed by the DOI, lower-cased and without its
 resolver prefix, because DOI names ignore the case of ASCII letters (DOI
-Handbook, section 2.4). `10.1016/J.BRAT.2015.10.002` in one record and
+Handbook, [Case Insensitivity of the DOI
+Name](https://www.doi.org/doi-handbook/HTML/case-insensitivity.html)).
+`10.1016/J.BRAT.2015.10.002` in one record and
 `https://doi.org/10.1016/j.brat.2015.10.002` in another therefore cite one
 work, which the co-citation map labels `10.1016/j.brat.2015.10.002`. Other
 references, such as Scopus or OpenAlex identifiers, are compared exactly as
@@ -137,7 +139,9 @@ tf_litmap(corpus, min_link = 2, min_cocitation = 3)$co_citation
 
 `method = "simple_centres"` groups keywords as co-word analysis does, by the
 simple-centres algorithm of Coulter et al. (1998) as Cobo et al. (2011)
-describe it. Each pair of linked keywords is weighted by its equivalence index:
+describe it (both are listed in full among the [references of the methodology
+page](methodology.html#references)). Each pair of linked keywords is weighted
+by its equivalence index:
 the square of the number of records holding both, divided by the product of the
 numbers holding each. Two keywords that always occur together score 1. A
 keyword that most records carry scores little with the rarer keywords it meets,
@@ -173,8 +177,10 @@ for (theme in sc$themes[1:6]) {
 }
 ```
 
-Each simple-centres theme also carries the two measures of Callon et al.
-(1991), scaled as Cobo et al. (2011) scale them. Centrality is ten times the
+Each simple-centres theme also carries the two measures of
+[Callon et al. (1991)](https://doi.org/10.1007/BF02019280), scaled as
+[Cobo et al. (2011)](https://doi.org/10.1016/j.joi.2010.10.002) scale them.
+Centrality is ten times the
 summed index of the theme's links to the keywords of other themes, and says how
 strongly the theme is tied to the rest of the field. Density is 100 times the summed
 index of its internal links, divided by its size, and says how strongly the
@@ -242,7 +248,7 @@ for (theme in landscape$themes) {
 Two summaries draw out the practical reading. The under-theorised fronts are
 themes that none of the registered accounts addresses, which says nothing of
 accounts the theory does not register. The crowded themes, listed under the key
-`redundancy_risk` that 0.6.0 gave them, are addressed by two or more accounts,
+`redundancy_risk` despite its name, are addressed by two or more accounts,
 so they call for predictions that discriminate between those accounts. They do
 not show that any account is redundant.
 
@@ -341,6 +347,8 @@ changes over time, so it sits outside the deterministic core of the package.
 The call is shown here but not run.
 
 ```{r fetch, eval = FALSE}
+# Paging past the first page needs an OpenAlex API key, read here from the
+# OPENALEX_API_KEY environment variable.
 fetched <- tf_fetch_corpus("panic disorder interoception",
                            per_page = 100,
                            max_records = 400)
@@ -352,20 +360,24 @@ fetched_map <- tf_litmap(fetched)
 ```
 
 OpenAlex answers requests without a key within a budget of USD 0.10 a day. A
-search page costs USD 0.001, so the budget covers about 100 pages. A free API
-key raises the budget to USD 1 a day. Store the key in the `OPENALEX_API_KEY`
+search page costs USD 0.001, so the budget covers about 100 searches of one
+page each. Without a key, OpenAlex serves only the first page of a search and
+refuses the next with HTTP 401, so a `max_records` above `per_page` needs a
+key. A free API key raises the budget to USD 1 a day. Store the key in the `OPENALEX_API_KEY`
 environment variable, for example in `.Renviron`, and `tf_fetch_corpus()`
 sends it in a request header, never in the URL or the corpus. The `mailto`
 argument is still accepted, but OpenAlex now ignores it. When OpenAlex refuses
-a request, typically with HTTP 429 once the budget is spent, the function
-stops with the status and OpenAlex's message. It used to return an empty
-corpus, which read as a literature with no themes.
+a request, typically with HTTP 429 once the budget is spent, or HTTP 401 when
+a later page is asked for without a key, the function stops with the status
+and, when the curl package is installed, OpenAlex's message, so a refused
+request cannot pass for a literature with no themes.
 
 Each request returns one page of works, ranked by relevance, from a result set
 that is usually far larger: a search for panic disorder matched about 187,000
 works in October 2026. OpenAlex supports pages of up to 100 works and has
 deprecated larger ones, although it still accepts 200. `max_records` pages on
-through OpenAlex's cursor until that many works are collected, and
+through OpenAlex's cursor, with an API key, until that many works are
+collected, and
 `fetched$source` records the query, the UTC time of retrieval, the number of
 works that matched and the number kept. That record matters because the
 keywords change. Since late September 2026, OpenAlex has written each work's
@@ -541,8 +553,9 @@ written as `null`.
 
 ```{r scopus-adapter}
 scopus_corpus_to_tf <- function(sc, id) {
-  # DOIs are case-insensitive over ASCII letters only (DOI Handbook, 2.4), so
-  # the fold leaves every other character alone.
+  # DOIs are case-insensitive over ASCII letters only (DOI Handbook, 'Case
+  # Insensitivity of the DOI Name'), so the fold leaves every other character
+  # alone.
   fold_doi <- function(doi) {
     doi <- chartr(paste(LETTERS, collapse = ""), paste(letters, collapse = ""),
                   trimws(doi))

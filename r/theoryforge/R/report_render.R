@@ -14,7 +14,8 @@ NULL
 #' suffix): a YAML header (\code{title}, \code{format}) followed by the
 #' deterministic \code{tf_dossier(theory)} body. Returns the written path. When
 #' \code{render = TRUE}, invokes \code{quarto render}, which requires a Quarto
-#' installation, and stops if that render fails.
+#' installation, and stops if that render fails. It stops before writing
+#' anything when [tf_check()] refuses the theory.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @param path Destination path; any extension is replaced with \code{.qmd}.
@@ -70,8 +71,8 @@ tf_render_report <- function(theory, path, title = NULL, render = FALSE, to = "h
 # section 23). Backslash and double quote are escaped, newline and tab become
 # \n and \t, every other C0 control, DEL and the C1 controls become \xNN, and
 # the noncharacters U+FFFE and U+FFFF become \uFFFE and \uFFFF, since YAML
-# forbids all of these raw in a stream. The 0.6.0 header left backslashes
-# alone, so "A\B" was a parse error and "\emph" read as an escape sequence.
+# forbids all of these raw in a stream. Unescaped, "A\B" would be a parse error
+# and "\emph" an escape sequence.
 .tf_yaml_dq <- function(s) {
   cp <- utf8ToInt(enc2utf8(s))
   out <- vapply(cp, function(c) {

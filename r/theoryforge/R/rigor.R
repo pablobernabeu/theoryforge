@@ -22,11 +22,11 @@ NULL
 }
 
 # Refuse a test outcome whose `passed` is present and not a logical. A quoted
-# "true" read as a failure in both engines. The prediction then counted as
-# uncorroborated and an assumption added for it as ad hoc, so an amendment that
-# should be progressive came out degenerating. A missing or NULL `passed`, or a
-# single NA, still reads as not passed (API_SPEC.md section 4). The first
-# offending outcome in file order is named, as the Python twin names it.
+# "true" is not a pass, so the prediction would count as uncorroborated and an
+# assumption that protects it as ad hoc, and an amendment that should be
+# progressive would come out degenerating. A missing or NULL `passed`, or a
+# single NA, reads as not passed (API_SPEC.md section 4). The first offending
+# outcome in file order is named, as the Python twin names it.
 .tf_refuse_non_boolean_outcomes <- function(theory, caller) {
   for (t in .tf_list(theory, "test_outcomes")) {
     passed <- .tf_get(t, "passed")
@@ -72,18 +72,15 @@ NULL
 
   # 3 risk_severity
   # Every prediction counts, with its declared severity when it has one and the
-  # claim-form rubric's computed_severity otherwise. Skipping undeclared
-  # predictions scored a theory built without severities 0.0 however risky its
-  # claims, and let one declared value stand for a list of undeclared claims.
-  # A non-numeric severity has no defensible mean, and the two engines read
-  # one differently by accident (as.numeric() coerced quoted numbers and
-  # scored, Python crashed mid-sum), so the same file produced a verdict in
-  # one language and a raw TypeError in the other. Refuse instead of
-  # coercing; tf_validate(full = TRUE) reports the same file as invalid. An
-  # infinity has no mean either, and a finite value outside [0, 1] would put
-  # the score outside the checklist's scale (a severity of 7 could lift the
-  # aggregate above 100). The status compares the rounded mean with the threshold, so the last
-  # bit of the sum cannot decide it.
+  # claim-form rubric's computed_severity otherwise, so a theory without
+  # declared severities is scored on its claims, and one declared value cannot
+  # stand for a list of undeclared claims. A non-numeric severity has no
+  # defensible mean, so it is refused rather than coerced, with the Python
+  # twin's message, and tf_validate(full = TRUE) reports the same file as
+  # invalid. An infinity has no mean either, and a finite value outside [0, 1]
+  # would put the score outside the checklist's scale (a severity of 7 could
+  # lift the aggregate above 100). The status compares the rounded mean with
+  # the threshold, so the last bit of the sum cannot decide it.
   rubric <- tf_severity(T)$computed_severity
   sevs <- numeric(0)
   for (i in seq_along(preds)) {
@@ -121,7 +118,7 @@ NULL
   # tf_appraise_amendment(), which counts only the content an amendment adds,
   # is the authoritative check. Core assumptions are not counted: every
   # derivation uses auxiliaries (Meehl, 1990a), and a ratio of assumptions to
-  # propositions penalised declaring them.
+  # propositions would penalise declaring them.
   defensive <- Filter(function(x) .tf_ne_str(.tf_str(x, "added_for")), aux)
   if (length(defensive) == 0L) {
     out$parsimony <- item("n/a", NULL)
@@ -134,10 +131,9 @@ NULL
   }
 
   # 5 non_redundancy
-  # The item follows the redundancy screen's flags (API_SPEC.md section 6).
-  # Scoring 1 - max Jaccard docked points for vocabulary that sibling
-  # constructs share, and the Jaccard ceiling alone missed a definition
-  # contained in another.
+  # The item follows the redundancy screen's flags (API_SPEC.md section 6): a
+  # near-duplicate pair or a definition contained in another, not vocabulary
+  # that sibling constructs merely share.
   if (length(cons) < 2L) {
     out$non_redundancy <- item("n/a", NULL)
   } else {
@@ -198,8 +194,8 @@ NULL
   out$formalisation <- if (fm_type %in% .tf_FORMAL) item("pass", 1.0) else item("warn", 0.0)
 
   # 12 derivation_chain
-  # With no prediction there is no derivation to check, which used to pass at
-  # 1.0 and lift the empty theory's score.
+  # With no prediction there is no derivation to check, and a pass would lift
+  # the empty theory's score.
   if (length(preds) == 0L) {
     out$derivation_chain <- item("n/a", NULL)
   } else {
@@ -231,17 +227,23 @@ NULL
 #' them would be defensible. One is a test outcome whose \code{passed} is
 #' present and not \code{TRUE} or \code{FALSE}, such as the quoted string
 #' \code{"true"}. The other is a prediction \code{severity} that is present and
-#' not a number. Both stop with the message the Python twin raises, and
-#' [tf_validate()] with \code{full = TRUE} reports both.
+#' not a finite number from 0 to 1. Both stop with the message the Python twin
+#' raises, and [tf_validate()] with \code{full = TRUE} reports both.
 #'
 #' @param theory A theory object (named list), e.g. from [tf_read()].
 #' @return A named list with elements \code{theory_id}, \code{schema_version}
 #'   (the theory's), \code{checklist_version} (the rigour checklist's, which is
 #'   what the weights and thresholds came from), \code{maturity},
-#'   \code{aggregate_score}, \code{coverage}, \code{gate},
-#'   \code{n_blockers_failed}, and \code{items} (a list of per-item lists). An
-#'   error is raised for a prediction severity that is not a finite number or
-#'   is below 0 or above 1.
+#'   \code{aggregate_score} (0 to 100, to one decimal), \code{coverage},
+#'   \code{gate}, \code{n_blockers_failed} and \code{items}. \code{gate} is
+#'   \code{"advisory"} at \code{draft} maturity, and otherwise \code{"blocked"}
+#'   when an item whose \code{severity_if_fail} is \code{"blocker"}
+#'   (falsifiability or derivation_chain) fails and \code{"pass"} when none
+#'   does. \code{items} holds one list per checklist item, in checklist order,
+#'   with \code{id}, \code{status}, \code{score}, \code{weight},
+#'   \code{severity_if_fail} (\code{"blocker"} or \code{"warning"}) and
+#'   \code{citation}. An error is raised for a prediction severity that is not
+#'   a finite number or is below 0 or above 1.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
@@ -270,8 +272,9 @@ tf_check <- function(theory) {
     res <- results[[iid]]
     status <- res$status
     score <- res$score
-    # An item with nothing to assess is in neither sum. It used to score 1.0,
-    # so the empty theory scored 26 and outscored a weak but real one.
+    # An item with nothing to assess is in neither sum. Scored 1.0, the three
+    # such items would give the empty theory 26 and let it outscore a weak but
+    # real one.
     if (!is.null(score)) {
       weighted <- weighted + spec_item$weight * score
       applicable <- applicable + spec_item$weight
@@ -319,7 +322,8 @@ tf_check <- function(theory) {
 #'
 #' Renders the result of [tf_check()] as a string. \code{format = "json"}
 #' returns valid, pretty-printed JSON; \code{format = "html"} returns an HTML
-#' fragment in which every interpolated value is escaped.
+#' fragment in which every interpolated value is escaped. Any other
+#' \code{format} stops, and so does a theory that [tf_check()] refuses.
 #'
 #' @param theory A theory object (named list).
 #' @param format One of \code{"json"} (default) or \code{"html"}.

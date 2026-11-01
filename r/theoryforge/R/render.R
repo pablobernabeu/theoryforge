@@ -23,15 +23,21 @@
 #' so it is not rendered here; paste it into a dagitty tool or the dagitty R
 #' package instead.
 #'
+#' The DOT views need the suggested DiagrammeR package, and `as = "svg"`
+#' also needs DiagrammeRsvg. The chart views need neither, but showing one
+#' under `as = "widget"` needs htmltools. A missing package stops with a
+#' message naming it.
+#'
 #' @param x A theory object (named list), or a diagram IR string from
 #'   [tf_diagram()] or [tf_lit_diagram()], so literature diagrams render the
 #'   same way.
 #' @param type The diagram type, as in [tf_diagram()]. Ignored when `x` is
 #'   already an IR string.
-#' @param as Either `"widget"` (default), an htmlwidget for the viewer and for
+#' @param as Either `"widget"` (default), for display in the viewer and in
 #'   R Markdown, or `"svg"`, a standalone SVG string.
-#' @return An htmlwidget when `as = "widget"`; a single SVG string when
-#'   `as = "svg"`.
+#' @return With `as = "widget"`, an htmlwidget for a DOT view, or a browsable
+#'   htmltools HTML object for the `venn`, `rigour` and `severity` views. With
+#'   `as = "svg"`, a single SVG string.
 #' @seealso [tf_diagram()] for the intermediate representation itself, which
 #'   needs no optional packages and stays byte-identical across the R and
 #'   Python implementations.

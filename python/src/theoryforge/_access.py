@@ -47,10 +47,10 @@ def text(v) -> str:
     """A value read as text.
 
     A string is returned as it is, and a nonempty sequence whose first element
-    is a string gives that element, as R's reader did for a one-element
-    sequence. Anything else reads as the empty string: null, a number and a
-    boolean included, because R holds ``1.0`` as the number 1 and ``Yes`` as
-    TRUE, and no reading of either can give back what the file says.
+    is a string gives that element, as R's ``.tf_text`` does. Anything else
+    reads as the empty string: null, a number and a boolean included, because
+    R holds ``1.0`` as the number 1 and ``Yes`` as TRUE, and no reading of
+    either can give back what the file says.
     """
     if isinstance(v, str):
         return v
@@ -63,7 +63,8 @@ def enum(v, allowed) -> str | None:
     """``v`` when it is one of the ``allowed`` strings, otherwise None (absent).
 
     Used for ``type``, ``relation``, ``maturity`` and ``formal_model.type``
-    wherever they are read, so a value outside the enum, a sequence included,
+    wherever they are read, and for an evidence entry's ``direction`` and a
+    test block's ``sided``, so a value outside the enum, a sequence included,
     takes part in no verdict and prints as nothing.
     """
     return v if isinstance(v, str) and v in allowed else None
@@ -73,12 +74,9 @@ def str_list(v) -> list[str]:
     """A string array: its nonempty string entries, in order.
 
     A nonempty scalar string is a one-element array (``derives_from: p1``), a
-    reading both languages keep as a convenience for hand-written YAML. R's
-    reader once collapsed a one-element sequence to a string, so the two forms
-    could not be told apart there, but it now returns every sequence as a list.
-    An entry that is not a nonempty string, such as the null in ``[p1, ~]`` or
-    the inner list in ``[[adults]]``, is ignored, and any other value reads as
-    empty.
+    reading both languages keep as a convenience for hand-written YAML. An entry
+    that is not a nonempty string, such as the null in ``[p1, ~]`` or the inner
+    list in ``[[adults]]``, is ignored, and any other value reads as empty.
     """
     if isinstance(v, list):
         return [x for x in v if ne_str(x)]

@@ -100,9 +100,9 @@ NULL
 }
 
 # The form two DOIs are compared in (API_SPEC.md section 18): the DOI that
-# .tf_find_doi() finds in the text. Text with no such run keeps the 0.6.0 rule:
-# trimmed, lowercased and percent-decoded, it loses a known prefix, if it has
-# one, and is trimmed again. Mirrors Python's _text.normalise_doi.
+# .tf_find_doi() finds in the text. Text with no such run is trimmed,
+# lowercased and percent-decoded, loses a known prefix, if it has one, and is
+# trimmed again. Mirrors Python's _text.normalise_doi.
 .tf_normalize_doi <- function(doi) {
   if (is.null(doi) || length(doi) == 0L || is.na(doi)) doi <- ""
   doi <- as.character(doi)

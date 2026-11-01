@@ -248,11 +248,11 @@ def _outcome_nodes(T: dict) -> list[tuple[str, str, str, str]]:
 
     The k-th outcome of one prediction, from the second on, takes the node
     suffix ``#<k>``. A replication thus gets a node and an edge of its own,
-    where Graphviz merged it into the first and showed only the last result. ``#``
-    lies outside the ids the shipped theories use, so the suffix cannot meet a
-    sibling prediction such as ``h1_2``, as ``_2`` would. When a prediction has
-    several outcomes, each carries its date, when it has one, so that they can
-    be told apart (API_SPEC.md section 12).
+    which Graphviz would otherwise merge into the first, showing only the last
+    result. ``#`` lies outside the ids the shipped theories use, so the suffix
+    cannot meet a sibling prediction such as ``h1_2``, as ``_2`` would. When a
+    prediction has several outcomes, each carries its date, when it has one, so
+    that they can be told apart (API_SPEC.md section 12).
     """
     tos = items(T, "test_outcomes")
     pids = [_t(t, "prediction_id") for t in tos]
@@ -350,10 +350,9 @@ def _circle(cx: int, cy: int, r: int) -> str:
     # The outline carries the set structure, so it is drawn in the teal already
     # used for construct borders elsewhere in the palette. That colour clears the
     # 3:1 contrast floor for graphical objects (WCAG 1.4.11) against both the
-    # light paper and the dark page, whereas the former navy outline fell below
-    # it on a dark background and took the whole figure with it. The translucent
-    # fill is decorative reinforcement only: no opacity composites to a readable
-    # ratio on a dark page, which is why the boundary has to do the work.
+    # light paper and the dark page. The translucent fill is decorative
+    # reinforcement only: no opacity composites to a readable ratio on a dark
+    # page, which is why the boundary has to do the work.
     return (f'  <circle cx="{cx}" cy="{cy}" r="{r}" '
             'fill="#4e79a7" fill-opacity="0.35" stroke="#1e7b7b"/>')
 
@@ -364,7 +363,7 @@ def _svg_open(width: int, height: int) -> str:
     A viewBox on its own leaves the image with no intrinsic size, so a browser
     resolves ``width: auto`` to the full width of the container and scales the
     declared 13px type by whatever factor that implies. The three chart views
-    declare different viewBox widths, so the same label then rendered at a
+    declare different viewBox widths, so the same label would render at a
     different size in each figure. Stating width and height gives each view its
     natural size wherever it is embedded, which is what the rendered Graphviz
     views already do, and leaves the stylesheet free to shrink a wide chart on a
@@ -470,6 +469,20 @@ def _severity_chart(T: dict) -> str:
 def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") -> str:
     """Return the diagram IR string for the requested type.
 
+    ``T`` is a ``Theory`` or a parsed theory mapping. ``type`` is one of
+    ``nomological_net`` (the default, the constructs and the propositions
+    between them, an association drawn without arrowheads), ``provenance``
+    (the build log as a chain of steps), ``causal_dag`` (the graph
+    ``implications()`` reads), ``development_roadmap`` (the checklist items
+    that fail or warn, blockers and heavier checks first, under a hub giving
+    the theory's title, score and gate), ``pipeline`` (each prediction linked
+    to a node per recorded test outcome), ``context`` (the theory, its scope
+    and its rivals), ``workflow`` (the building-to-testing pipeline), ``venn``
+    (the scope overlap of the first three constructs, each taken as the set of
+    its boundary conditions), ``rigour`` (the checklist as a status grid) or
+    ``severity`` (the claim-form riskiness of each prediction, the
+    ``computed_severity`` of ``severity()``, as bars).
+
     ``engine`` is accepted but has no effect, because the IR is engine-independent
     (DOT for the digraphs, dagitty syntax for the causal DAG, and SVG for the Venn,
     the rigour grid and the severity chart).
@@ -480,19 +493,24 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
     keyword. The keywords are ``node``, ``edge``, ``graph``, ``digraph``,
     ``subgraph`` and ``strict``, in any case. Any other id is double-quoted,
     with a double quote inside it escaped by a backslash, so ``self-efficacy``
-    stays one node where dagitty used to read two.
+    stays one node, which dagitty would otherwise read as two.
 
     The pipeline and workflow views give every test outcome a node of its own.
     The first outcome of a prediction is ``result_<id>`` (``outcome_<id>`` in
-    the workflow) and each later one ``result_<id>#<k>``, where ``<k>`` counts
-    the prediction's outcomes in file order, so a failed replication is not
-    merged into an earlier pass. When a prediction has several outcomes, each
-    label also carries the outcome's date.
+    the workflow) and each later one ``result_<id>#<k>``
+    (``outcome_<id>#<k>``), where ``<k>`` counts the prediction's outcomes in
+    file order, so a failed replication is not merged into an earlier pass.
+    When a prediction has several outcomes, each label also carries the
+    outcome's date.
 
     Raises:
         ValueError: for an unknown ``type``, and for a causal DAG that would
             write the id ``node`` or ``graph``, which dagitty refuses even
             quoted.
+        ValueError: in the ``development_roadmap`` and ``rigour`` views, which
+            score the checklist, when ``check()`` refuses the theory, because a
+            test outcome's ``passed`` is present and not a boolean or a
+            prediction's ``severity`` is not a finite number within [0, 1].
     """
     T = T.data if hasattr(T, "data") else T
     if type == "nomological_net":

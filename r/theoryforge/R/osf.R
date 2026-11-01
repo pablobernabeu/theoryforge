@@ -16,7 +16,11 @@ NULL
 #' OSF storage. With \code{dry_run = TRUE} (the default) the planned request is
 #' returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 #' both \code{token} and \code{node} (the OSF project id) and performs an
-#' authenticated \code{PUT}. The live path is network- and credential-dependent.
+#' authenticated \code{PUT} through the suggested \pkg{curl} package, which must
+#' be installed. Each request is abandoned after 30 seconds. The live path is
+#' network- and credential-dependent. The dossier is built first, so the
+#' function stops when [tf_check()] refuses the theory, with
+#' \code{dry_run = TRUE} as well.
 #'
 #' OSF storage refuses to create a file whose name already exists in the
 #' project folder (HTTP 409), so depositing the same theory twice under the
@@ -34,7 +38,10 @@ NULL
 #'   (also when \code{NULL} or empty).
 #' @param dry_run When \code{TRUE} (default), return the planned request without
 #'   sending it.
-#' @param base_url OSF storage base URL; override to target a non-default host.
+#' @param base_url OSF storage base URL, by default
+#'   \code{"https://files.osf.io/v1/resources/"}; override to target a
+#'   non-default host. The node id is appended to it directly, so it must end
+#'   in a slash.
 #' @param overwrite When \code{TRUE}, add a new version of an existing file of
 #'   the same name instead of failing with HTTP 409. Default \code{FALSE}.
 #' @return When \code{dry_run = TRUE}, a list \code{list(dry_run = TRUE,
@@ -124,7 +131,7 @@ tf_osf_push <- function(theory, token = NULL, node = NULL,
 }
 
 # Does an HTTP status mean success? urlopen raises on anything outside 2xx, so
-# R refuses the same set (an HTTP 501 was returned as a completed upload).
+# R refuses the same set, and a 409 or a 501 is never reported as an upload.
 .tf_osf_ok <- function(status) {
   is.numeric(status) && length(status) == 1L && !is.na(status) &&
     status >= 200 && status < 300

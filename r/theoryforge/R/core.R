@@ -32,7 +32,9 @@ NULL
 #' comma (\code{1,000}). An integer too large for an R integer is read as a
 #' double. A merge key (\code{<<}) lets the mapping's own keys win. A key
 #' repeated in any mapping, in YAML or JSON, stops with
-#' \code{(<path>) Duplicate map key: '<key>'}.
+#' \code{(<path>) Duplicate map key: '<key>'}. A document that is not a
+#' mapping, such as a sequence or an empty YAML file, stops with
+#' \code{Theory data must be a mapping}.
 #'
 #' @param path Path to a \code{.yaml}/\code{.yml} or \code{.json} file.
 #' @return A named list holding the parsed theory object.
@@ -78,13 +80,18 @@ tf_read <- function(path) {
 #'
 #' The Python twin's test suite compares the result with a JSON Schema 2020-12
 #' validator. Besides the ids and references, which the schema cannot express,
-#' the pass is stricter in two ways, since a blank string counts as missing and
-#' an entry of a string array must be a nonempty string. It is more lenient in
-#' three ways, which API_SPEC.md section 2 documents. A \code{NULL}
-#' optional field is absent and a single string stands for a one-element array
-#' of strings. An empty \code{list()} stands for an empty mapping as well as an
-#' empty sequence. A single \code{NA}, which [tf_write()] writes as null, reads
-#' as absent.
+#' the pass is stricter in three ways. A blank required string counts as
+#' missing, an entry of a string array must be a nonempty string and a
+#' prediction's \code{bounds} must hold a finite bound with \code{lower} not
+#' above \code{upper}, while a test outcome's \code{estimate} and \code{se}
+#' and a \code{test} block's \code{sesoi} must be finite, that block's
+#' \code{n_planned} within the range of a double and its \code{power_lo} not
+#' above \code{power_hi}. It is more lenient in three ways, which API_SPEC.md
+#' section 2 documents. A \code{NULL} optional field other than
+#' \code{theory_form} is absent, as is a single \code{NA}, which [tf_write()]
+#' writes as null. A single string stands for a one-element array of strings.
+#' An empty \code{list()} stands for an empty mapping as well as an empty
+#' sequence.
 #'
 #' Both passes are deterministic, and the Python twin's
 #' \code{Theory.validate()} reports the same problems in the same order with
@@ -118,9 +125,9 @@ tf_validate <- function(theory, full = FALSE) {
   }
   # Each enum test asks for a nonempty scalar string before asking about
   # membership. `%in%` coerces its left operand, so a one-element YAML sequence
-  # such as `theory_form: [network]` used to match the enum and validate here
-  # while the Python twin refused it as a non-string. Requiring the string first
-  # keeps the two engines level on input that is mistyped rather than misspelt.
+  # such as `theory_form: [network]` would otherwise match the enum, where the
+  # Python twin refuses it as a non-string. Requiring the string first keeps
+  # the two engines level on input that is mistyped rather than misspelt.
   mat <- .tf_get(d, "maturity")
   if (!(.tf_ne_str(mat) && mat %in% .tf_MATURITY)) {
     errors <- c(errors, sprintf("maturity must be one of %s",
@@ -262,9 +269,10 @@ tf_validate <- function(theory, full = FALSE) {
       }
     }
 
-    # 8: the required fields of the other collections. A quoted "true" in passed
-    # read as a failure and turned a progressive amendment into a degenerating
-    # one, so passed must be a logical.
+    # 8: the required fields of the other collections. passed is required and
+    # must be true or false, as the schema has it. A quoted "true" is not a
+    # pass, and tf_check() and tf_appraise_amendment() refuse a passed that is
+    # present and not a logical (.tf_refuse_non_boolean_outcomes() in rigor.R).
     for (i in seq_along(auxs)) {
       errors <- c(errors, .tf_required_fields(auxs[[i]], sprintf("assumption[%d]", i - 1L),
                                               c("id", "statement")))
@@ -306,8 +314,9 @@ tf_validate <- function(theory, full = FALSE) {
                   .tf_optional_text(.tf_get(t_i, "date"), paste(prefix, "date"), nullable = TRUE))
     }
 
-    # 11: the formal model. A type outside the enum earned the formalisation
-    # point in 0.6.0, and reads as absent since (API_SPEC.md section 3).
+    # 11: the formal model. A type outside the enum reads as absent wherever
+    # the theory is read (API_SPEC.md section 3), so it earns no formalisation
+    # point.
     fm <- .tf_get(d, "formal_model")
     if (!.tf_absent(fm) && .tf_not_a_mapping(fm)) {
       errors <- c(errors, "formal_model must be a mapping")
@@ -634,9 +643,9 @@ tf_validate <- function(theory, full = FALSE) {
 #' field the schema types as an array of strings (\code{derives_from},
 #' \code{diagnostic_vs}, \code{protects}, \code{measurement},
 #' \code{boundary_conditions}, \code{key_constructs}) is written as an array,
-#' even when the theory holds it as a single string. A written theory therefore
-#' validates against the package's own schema and reads back the same in R and
-#' in Python (API_SPEC.md section 3).
+#' even when the theory holds it as a single string. A theory that validates
+#' against the package's own schema therefore still validates once written, and
+#' it reads back the same in R and in Python (API_SPEC.md section 3).
 #'
 #' @param theory A theory object (named list).
 #' @param path Destination path.
@@ -650,7 +659,7 @@ tf_write <- function(theory, path) {
   ext <- tolower(tools::file_ext(path))
   if (identical(ext, "json")) {
     # digits = NA keeps 15 significant digits. jsonlite's default rounds to four
-    # decimal places, which turned a severity of 0.49996 into 0.5.
+    # decimal places, which would write a severity of 0.49996 as 0.5.
     text <- jsonlite::toJSON(theory, pretty = TRUE, auto_unbox = TRUE, null = "null", digits = NA)
     text <- paste0(as.character(text), "\n")
   } else {
@@ -688,10 +697,19 @@ tf_write <- function(theory, path) {
 #' Seeds \code{schema_version = "1.0"} and a first provenance entry
 #' \code{{step:"1", action:"tf_theory", detail:<id>}}.
 #'
+#' The builders do not check field values. [tf_validate()] reports a value
+#' outside its enum, except that it checks the formal-model type, an evidence
+#' entry's \code{direction} and a \code{test} block's \code{sided} only with
+#' \code{full = TRUE}.
+#'
 #' @param id Theory id.
 #' @param title Human-readable title.
-#' @param maturity Maturity stage (default \code{"building"}).
-#' @param theory_form Theory form (default \code{"network"}).
+#' @param maturity Maturity stage, one of \code{"draft"}, \code{"building"}
+#'   (the default), \code{"developing"} or \code{"testing"}. At \code{"draft"},
+#'   the gate of [tf_check()] is advisory.
+#' @param theory_form Theory form, one of \code{"variance"}, \code{"network"}
+#'   (the default), \code{"typology"} or \code{"process"}. No score depends on
+#'   it.
 #' @return A theory object (named list).
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory")
@@ -733,7 +751,12 @@ tf_add_construct <- function(theory, id, label, definition,
 #'
 #' @param theory A theory object (named list).
 #' @param id,from,to,relation Proposition fields. \code{from} is the source
-#'   construct id (named \code{from} to match the schema field).
+#'   construct id (named \code{from} to match the schema field). \code{relation}
+#'   is one of the directed relations \code{"increases"}, \code{"decreases"},
+#'   \code{"causes"}, \code{"mediates"} (one link of a mediated path) and
+#'   \code{"moderates"} (\code{from} modifies the effect of other causes on
+#'   \code{to}), or \code{"associates"}, covariance between \code{from} and
+#'   \code{to} that the theory leaves unexplained.
 #' @param mechanism Optional mechanism string.
 #' @return The (mutated) theory object.
 #' @examples
@@ -850,7 +873,9 @@ tf_add_assumption <- function(theory, id, statement, added_for = NULL, protects 
 #' Set the formal model (BUILDING mode)
 #'
 #' @param theory A theory object (named list).
-#' @param type Formal-model type (e.g. \code{"ode"}).
+#' @param type Formal-model type, one of \code{"ode"}, \code{"abm"},
+#'   \code{"network"}, \code{"sem"} or \code{"none"}. Any but \code{"none"}
+#'   passes the checklist's formalisation item.
 #' @param spec_ref Optional reference to the model specification.
 #' @return The (mutated) theory object.
 #' @examples

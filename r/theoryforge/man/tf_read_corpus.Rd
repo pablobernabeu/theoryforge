@@ -17,7 +17,9 @@ Reads a corpus object (\code{{schema_version, id, records}}) into a named
 list. The format is chosen by the file extension (\code{.json} -> JSON,
 otherwise YAML). The file is read by the rules \code{\link[=tf_read]{tf_read()}} follows, which
 are the Python twin's, so an unquoted keyword such as \code{y} or \code{n}
-stays a string and a repeated key is refused.
+stays a string and a repeated key is refused. A document that is not a
+mapping stops with \code{Corpus data must be a mapping}. The records
+themselves are checked by \code{\link[=tf_litmap]{tf_litmap()}} and \code{\link[=tf_landscape]{tf_landscape()}}.
 }
 \examples{
 corpus <- list(

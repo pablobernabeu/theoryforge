@@ -4,8 +4,10 @@ Two browser apps that put a graphical interface on the twin packages. They run t
 real package code entirely client-side: the R app via
 [webR](https://docs.r-wasm.org/webr/latest/) and the Python app via
 [Pyodide](https://pyodide.org/). Nothing is sent to a server, and the results are
-identical to running the package locally. Every operation can export its
-visualisation (SVG and PNG) and the R or Python code needed to reproduce it.
+identical to running the package locally. Every operation shows the R or Python
+code that reproduces its result, and each figure exports as SVG and PNG. Most
+results also download as JSON or as text (the diagram source, lavaan syntax,
+implied independencies, preregistration and dossier).
 
 | App | Engine | Lives at (deployed) |
 |---|---|---|

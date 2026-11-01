@@ -44,13 +44,18 @@ other field and of every entry of a string array.
 
 The Python twin's test suite compares the result with a JSON Schema 2020-12
 validator. Besides the ids and references, which the schema cannot express,
-the pass is stricter in two ways, since a blank string counts as missing and
-an entry of a string array must be a nonempty string. It is more lenient in
-three ways, which API_SPEC.md section 2 documents. A \code{NULL}
-optional field is absent and a single string stands for a one-element array
-of strings. An empty \code{list()} stands for an empty mapping as well as an
-empty sequence. A single \code{NA}, which \code{\link[=tf_write]{tf_write()}} writes as null, reads
-as absent.
+the pass is stricter in three ways. A blank required string counts as
+missing, an entry of a string array must be a nonempty string and a
+prediction's \code{bounds} must hold a finite bound with \code{lower} not
+above \code{upper}, while a test outcome's \code{estimate} and \code{se}
+and a \code{test} block's \code{sesoi} must be finite, that block's
+\code{n_planned} within the range of a double and its \code{power_lo} not
+above \code{power_hi}. It is more lenient in three ways, which API_SPEC.md
+section 2 documents. A \code{NULL} optional field other than
+\code{theory_form} is absent, as is a single \code{NA}, which \code{\link[=tf_write]{tf_write()}}
+writes as null. A single string stands for a one-element array of strings.
+An empty \code{list()} stands for an empty mapping as well as an empty
+sequence.
 
 Both passes are deterministic, and the Python twin's
 \code{Theory.validate()} reports the same problems in the same order with

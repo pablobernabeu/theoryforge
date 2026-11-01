@@ -7,7 +7,11 @@ Description: Provides a rigorous, reproducible workflow for building,
     developing and testing scientific theories represented as versioned,
     machine-checkable objects. Functions read and validate theory objects,
     score them against a versioned rigour checklist, screen constructs for
-    lexical redundancy, and emit byte-identical diagram intermediate
+    redundancy, derive the conditional independencies a causal theory
+    implies, appraise amendments as progressive, degenerating or neutral,
+    write preregistration and audit documents, compile 'lavaan' model
+    syntax, simulate the construct network, map a theory onto the themes of
+    a literature corpus, and emit byte-identical diagram intermediate
     representations. The package is the feature-parity twin of a 'Python'
     package of the same name, with behaviour pinned by a shared
     specification so the two implementations produce identical verdicts.

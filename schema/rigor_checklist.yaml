@@ -24,17 +24,17 @@ items:
     criterion: "Predictions are point/interval, not merely directional"
     weight: 0.10
     severity_if_fail: warning
-    citation: "Meehl (1967, 1990)"
+    citation: "Meehl (1967, 1990a)"
   - id: risk_severity
     criterion: "Mean prediction severity (declared, else the claim-form rubric) at or above threshold"
     weight: 0.10
     severity_if_fail: warning
-    citation: "Popper (1959); Meehl (1967, 1990)"
+    citation: "Popper (1959); Meehl (1967, 1990b)"
   - id: parsimony
     criterion: "No auxiliary assumption added in response to an anomaly lacks independent corroboration"
     weight: 0.08
     severity_if_fail: warning
-    citation: "Lakatos (1970); Meehl (1990)"
+    citation: "Lakatos (1970); Meehl (1990a)"
   - id: non_redundancy
     criterion: "No pair of construct definitions is a near-duplicate or contained in the other (lexical screen)"
     weight: 0.10

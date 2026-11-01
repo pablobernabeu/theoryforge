@@ -13,10 +13,16 @@ tf_check(theory)
 A named list with elements \code{theory_id}, \code{schema_version}
 (the theory's), \code{checklist_version} (the rigour checklist's, which is
 what the weights and thresholds came from), \code{maturity},
-\code{aggregate_score}, \code{coverage}, \code{gate},
-\code{n_blockers_failed}, and \code{items} (a list of per-item lists). An
-error is raised for a prediction severity that is not a finite number or
-is below 0 or above 1.
+\code{aggregate_score} (0 to 100, to one decimal), \code{coverage},
+\code{gate}, \code{n_blockers_failed} and \code{items}. \code{gate} is
+\code{"advisory"} at \code{draft} maturity, and otherwise \code{"blocked"}
+when an item whose \code{severity_if_fail} is \code{"blocker"}
+(falsifiability or derivation_chain) fails and \code{"pass"} when none
+does. \code{items} holds one list per checklist item, in checklist order,
+with \code{id}, \code{status}, \code{score}, \code{weight},
+\code{severity_if_fail} (\code{"blocker"} or \code{"warning"}) and
+\code{citation}. An error is raised for a prediction severity that is not
+a finite number or is below 0 or above 1.
 }
 \description{
 Runs the full rigour checklist (12 items) over a theory object and returns a
@@ -35,8 +41,8 @@ Two values are refused before anything is scored, since no score built on
 them would be defensible. One is a test outcome whose \code{passed} is
 present and not \code{TRUE} or \code{FALSE}, such as the quoted string
 \code{"true"}. The other is a prediction \code{severity} that is present and
-not a number. Both stop with the message the Python twin raises, and
-\code{\link[=tf_validate]{tf_validate()}} with \code{full = TRUE} reports both.
+not a finite number from 0 to 1. Both stop with the message the Python twin
+raises, and \code{\link[=tf_validate]{tf_validate()}} with \code{full = TRUE} reports both.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

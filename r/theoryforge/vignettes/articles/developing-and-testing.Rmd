@@ -302,8 +302,8 @@ str(tf_osf_push(theory, node = "ab12c"))
 The returned request records the method, the destination URL, the filename the
 deposit would create and the size of the dossier in bytes, so the step can be
 checked before anything leaves the machine. A live deposit needs
-`dry_run = FALSE` together with a token and the node id, and that is the only
-path that touches the network.
+`dry_run = FALSE` together with a token, the node id and the curl package, and
+that is the only path that touches the network.
 
 ```{r osf-live, eval = FALSE}
 tf_osf_push(
@@ -393,8 +393,9 @@ cat(
 )
 ```
 
-The `venn` view takes the boundary conditions of each construct as a set and
-returns an SVG showing where those scopes coincide and where they part company,
+The `venn` view takes the boundary conditions of each of the first three
+constructs, in file order, as a set and returns an SVG showing where those
+scopes coincide and where they part company,
 with each region labelled by the number of conditions in it. It renders inline
 because the output is a self-contained image.
 

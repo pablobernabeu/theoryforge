@@ -12,9 +12,10 @@ article_path <- function() {
 
 # Three citing records cite the same two works. The first work's DOI arrives
 # upper-case, lower-case and not at all; keywords differ only in case and in
-# surrounding space; the third record has no year. The empty data frame and
-# the NULL entry stand for a record without resolvable references and a failed
-# lookup, both of which scopus_corpus() can return.
+# surrounding space; the third record has no year. The empty data frame stands
+# for a record without resolvable references or a failed lookup, both of which
+# scopus_corpus() returns as a zero-row data frame, and the NULL entry for a
+# record read from a checkpoint written without a references column.
 scopus_stand_in <- function() {
   refs <- function(id, doi) {
     data.frame(position = as.character(seq_along(id)), id = id, doi = doi,

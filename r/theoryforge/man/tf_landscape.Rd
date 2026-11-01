@@ -61,8 +61,8 @@ registered alternatives, that address a theme. A theme is
 of accounts the theory does not register, \code{"covered"} when one does and
 \code{"crowded"} when two or more do. A crowded theme calls for predictions
 that discriminate between the accounts, and is not a finding of redundancy.
-The two lists keep their 0.6.0 names, \code{under_theorised_fronts} and
-\code{redundancy_risk}.
+\code{under_theorised_fronts} lists the ids of the under-theorised themes,
+and \code{redundancy_risk}, despite its name, the ids of the crowded ones.
 
 The arguments are checked in the order \code{min_link},
 \code{max_token_share}, \code{method}, then the corpus, with the Python

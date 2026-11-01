@@ -29,10 +29,12 @@ def embedding_redundancy(T, embedder: Callable[[str], Sequence[float]],
                          threshold: float | None = None) -> list[dict]:
     """Pairwise cosine similarity of embedded construct definitions.
 
-    `embedder` maps a definition string to a numeric vector; the vectors of every compared
-    pair must be of equal, nonzero length, or the pair is refused. Returns one record per
-    unordered construct pair, sorted by descending similarity then (a, b), with a
-    `review`/`ok` flag.
+    `embedder` is called once per construct, in the order of the theory's constructs, with its
+    definition string, and must return a numeric vector. The vectors of every compared pair
+    must be of equal, nonzero length, or a ValueError names the pair. Returns one record per
+    unordered construct pair, `{a, b, cosine, flag}`, sorted by descending `cosine` then
+    (a, b). `cosine` is rounded to 6 decimals, and `flag` is `review` when it reaches
+    `threshold` and `ok` otherwise.
 
     `threshold` defaults to the checklist's `embedding_similarity_max` (0.85). How high
     a cosine two unrelated definitions reach depends on the embedding model, so a
@@ -47,11 +49,11 @@ def embedding_redundancy(T, embedder: Callable[[str], Sequence[float]],
     rows: list[dict] = []
     for i in range(len(vecs)):
         for j in range(i + 1, len(vecs)):
-            # Unequal or empty vectors have no defensible cosine, and the two
-            # engines read them differently by accident (R recycled the
-            # shorter vector, Python truncated the longer), so the same
-            # embedder produced two confident, different similarities. Refuse
-            # instead of picking a reading.
+            # Unequal or empty vectors have no defensible cosine: R's
+            # sum(a * b) would recycle the shorter vector and a plain zip()
+            # truncate the longer, so the same embedder could give two
+            # confident, different similarities. Refuse instead of picking a
+            # reading.
             la, lb = len(vecs[i][1]), len(vecs[j][1])
             if la == 0 or lb == 0 or la != lb:
                 raise ValueError(

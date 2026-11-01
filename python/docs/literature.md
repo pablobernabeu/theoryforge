@@ -12,9 +12,10 @@ This layer comprises four entry points. `tf.read_corpus` loads a corpus
 from disk. `tf.litmap` summarises the corpus through keyword
 co-occurrence, themes and co-citation. `Theory.landscape` positions a
 theory and its registered alternatives against those themes. `tf.lit_diagram`
-exports any of these structures as Graphviz DOT. A fifth function,
-`tf.fetch_corpus`, builds a corpus from the OpenAlex API. It is optional and
-network-dependent, and is described at the end.
+exports any of these structures as Graphviz DOT. Two further functions are
+described towards the end. `tf.fetch_corpus` builds a corpus from the OpenAlex
+API, and is optional and network-dependent. `tf.new_evidence_dois` checks a
+list of candidate DOIs against the sources a theory already cites.
 
 ## Reading a corpus
 
@@ -55,7 +56,9 @@ cannot hold one exactly. YAML reads an unquoted `NO` (nitric oxide), `yes`,
 
 A reference that holds a DOI is keyed by the DOI, lower-cased and without its
 resolver prefix, because DOI names ignore the case of ASCII letters (DOI
-Handbook, section 2.4). `10.1016/J.BRAT.2015.10.002` in one record and
+Handbook, [Case Insensitivity of the DOI
+Name](https://www.doi.org/doi-handbook/HTML/case-insensitivity.html)).
+`10.1016/J.BRAT.2015.10.002` in one record and
 `https://doi.org/10.1016/j.brat.2015.10.002` in another therefore cite one
 work, which the co-citation map labels `10.1016/j.brat.2015.10.002`. Other
 references, such as Scopus or OpenAlex identifiers, are compared exactly as
@@ -160,7 +163,9 @@ print("co-citation edges at min_cocitation=3:", m_cited["co_citation"])
 
 `method="simple_centres"` groups keywords as co-word analysis does, by the
 simple-centres algorithm of Coulter et al. (1998) as Cobo et al. (2011)
-describe it. Each pair of linked keywords is weighted by its equivalence
+describe it (both are listed in full among the [references of the methodology
+page](methodology.md#references)). Each pair of linked keywords is weighted
+by its equivalence
 index: the square of the number of records holding both, divided by the
 product of the numbers holding each. Two keywords that always occur together
 score 1. A keyword that most records carry scores little with the rarer
@@ -196,8 +201,10 @@ for theme in sc["themes"][:6]:
           "|", ", ".join(theme["keywords"][:4]))
 ```
 
-Each simple-centres theme also carries the two measures of Callon et al.
-(1991), scaled as Cobo et al. (2011) scale them. Centrality is ten times the
+Each simple-centres theme also carries the two measures of
+[Callon et al. (1991)](https://doi.org/10.1007/BF02019280), scaled as
+[Cobo et al. (2011)](https://doi.org/10.1016/j.joi.2010.10.002) scale them.
+Centrality is ten times the
 summed index of the theme's links to the keywords of other themes, and says
 how strongly the theme is tied to the rest of the field. Density is 100 times the
 summed index of its internal links, divided by its size, and says how strongly
@@ -251,8 +258,9 @@ entry per alternative. The statuses count the registered
 accounts only. An under-theorised theme is one that none of them addresses, so
 an account the theory does not register may still address it. A crowded theme
 calls for predictions that discriminate between its accounts, and does not
-show that any of them is redundant. The two lists keep the keys they had in
-0.6.0, `under_theorised_fronts` and `redundancy_risk`.
+show that any of them is redundant. `under_theorised_fronts` lists the ids of
+the under-theorised themes, and `redundancy_risk`, despite its name, the ids of
+the crowded ones.
 
 The same function is available at module level as `tf.landscape(theory,
 corpus)`, which is convenient when the theory is held as a plain dictionary
@@ -354,6 +362,8 @@ package. Use it to assemble a starting corpus, then save the result and work
 from the saved file so that later analysis stays reproducible.
 
 ```python
+# Paging past the first page needs an OpenAlex API key, read here from the
+# OPENALEX_API_KEY environment variable.
 corpus = tf.fetch_corpus(
     "panic disorder theory",
     per_page=100,
@@ -363,20 +373,24 @@ print(corpus["source"])  # the query, when it ran, how many works matched and we
 ```
 
 OpenAlex answers requests without a key within a budget of USD 0.10 a day. A
-search page costs USD 0.001, so the budget covers about 100 pages. A free API
-key raises the budget to USD 1 a day. Store the key in the `OPENALEX_API_KEY`
+search page costs USD 0.001, so the budget covers about 100 searches of one
+page each. Without a key, OpenAlex serves only the first page of a search and
+refuses the next with HTTP 401, so a `max_records` above `per_page` needs a
+key. A free API key raises the budget to USD 1 a day. Store the key in the `OPENALEX_API_KEY`
 environment variable, or pass it as `api_key`, and `fetch_corpus` sends it in
 a request header, never in the URL or the corpus. The `mailto` argument is
 still accepted, but OpenAlex now ignores it. When OpenAlex refuses a request,
-typically with HTTP 429 once the budget is spent, `fetch_corpus` raises
-`OpenAlexHTTPError`, a subclass of `urllib.error.HTTPError`, with the status
-and OpenAlex's message.
+typically with HTTP 429 once the budget is spent, or HTTP 401 when a later
+page is asked for without a key, `fetch_corpus` raises
+`theoryforge.lit.OpenAlexHTTPError`, a subclass of `urllib.error.HTTPError`,
+with the status and OpenAlex's message.
 
 Each request returns one page of works, ranked by relevance, from a result set
 that is usually far larger: a search for panic disorder matched about 187,000
 works in October 2026. OpenAlex supports pages of up to 100 works and has
 deprecated larger ones, although it still accepts 200. `max_records` pages on
-through OpenAlex's cursor until that many works are collected, and
+through OpenAlex's cursor, with an API key, until that many works are
+collected, and
 `corpus["source"]` records the query, the UTC time of retrieval, the number of
 works that matched and the number kept. That record matters because the
 keywords change. Since late September 2026, OpenAlex has written each work's
@@ -430,8 +444,9 @@ Search API. It is a natural source of candidate DOIs: `fetch_plan` retrieves
 records for a search plan, and `extract_dois` reduces them to a plain list of
 DOIs, which is exactly the input `new_evidence_dois` expects.
 `scopusflow-py` is not a dependency of `theoryforge`, so the snippet below is
-illustrative rather than a tested example. Install `scopusflow-py`, and
-configure `pybliometrics` with a Scopus API key, to run it.
+illustrative rather than a tested example. To run it, install the package
+with `pip install scopusflow`, the name it is published and imported under,
+and configure `pybliometrics` with a Scopus API key.
 
 ```python
 from scopusflow import scopus_query, SearchPlan, fetch_plan, extract_dois
@@ -535,8 +550,9 @@ import string
 
 import pandas as pd
 
-# DOIs are case-insensitive over ASCII letters only (DOI Handbook, 2.4), so
-# the fold leaves every other character alone.
+# DOIs are case-insensitive over ASCII letters only (DOI Handbook, 'Case
+# Insensitivity of the DOI Name'), so the fold leaves every other character
+# alone.
 _ASCII_LOWER = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
 _DOI_RESOLVER = ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/",
                  "http://dx.doi.org/", "doi:")

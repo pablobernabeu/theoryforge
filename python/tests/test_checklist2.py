@@ -55,8 +55,11 @@ def test_the_checklist_is_version_2_with_five_default_thresholds():
     items = {it["id"]: it for it in spec["items"]}
     assert items["risk_severity"]["criterion"] == (
         "Mean prediction severity (declared, else the claim-form rubric) at or above threshold")
-    assert items["risk_severity"]["citation"] == "Popper (1959); Meehl (1967, 1990)"
-    assert items["parsimony"]["citation"] == "Lakatos (1970); Meehl (1990)"
+    # Meehl (1990a) is the Psychological Inquiry article, Meehl (1990b) the
+    # Psychological Reports one, as on the methodology page.
+    assert items["precision"]["citation"] == "Meehl (1967, 1990a)"
+    assert items["risk_severity"]["citation"] == "Popper (1959); Meehl (1967, 1990b)"
+    assert items["parsimony"]["citation"] == "Lakatos (1970); Meehl (1990a)"
     assert items["derivation_chain"]["criterion"] == (
         "Every prediction cites at least one proposition, and every cited id is a declared "
         "proposition (reference check only)")
@@ -167,7 +170,7 @@ def _defended(protects, outcomes):
 
 def test_parsimony_is_not_applicable_without_an_assumption_added_for_an_anomaly():
     # The ratio of assumptions to propositions penalised declaring core
-    # assumptions, which every derivation uses (Meehl, 1990).
+    # assumptions, which every derivation uses (Meehl, 1990a).
     core = [{"id": "a1", "statement": "Self-report tracks arousal.", "added_for": None},
             {"id": "a2", "statement": "A blank added_for names no anomaly.", "added_for": " "}]
     assert _item(_bare(auxiliary_assumptions=core), "parsimony") == ("n/a", None)

@@ -360,7 +360,8 @@ cited <- function(...) {
 
 test_that("one DOI written three ways is one co-citation node", {
   # DOI names are case-insensitive under ASCII case folding (DOI Handbook,
-  # section 2.4), and a resolver prefix is not part of the name. Keyed as
+  # 'Case Insensitivity of the DOI Name'), and a resolver prefix is not part
+  # of the name. Keyed as
   # written, the DOI made three nodes and no pair reached a count of 2.
   lm <- tf_litmap(cited(
     c("10.1016/J.BRAT.2015.10.002", "W2045435533"),

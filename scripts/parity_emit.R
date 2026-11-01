@@ -30,23 +30,14 @@ suppressWarnings(suppressMessages({
 
   if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 
-  # The source tree wins over an installed copy whenever there is one to load.
-  #
-  # This used to be the other way round, and it made the gate test the wrong
-  # thing. Any machine with theoryforge installed had its parity checked against
-  # that copy rather than against the working tree, silently: the two share a
-  # version number long after their contents diverge, so nothing announced it.
-  # Locally that showed up as sixteen false failures for fields the working tree
-  # had gained and the installed copy lacked. The dangerous direction is the
-  # other one: an installed copy that happens to satisfy the comparison while
-  # the tree it is standing in for does not, which is a green parity check over
-  # code nobody ran.
-  #
-  # CI was right only by accident of ordering: it runs R CMD INSTALL on this very
-  # directory immediately beforehand, so its installed copy was the working tree.
-  # It no longer has to be, and the R distribution itself is covered by six
-  # R CMD check cells elsewhere in this workflow; what this gate is for is
-  # whether the two languages agree on the code in the repository.
+  # The source tree wins over an installed copy whenever there is one to load,
+  # so the parity check reports on the code in the repository and not on
+  # whatever version of theoryforge is installed: the two can share a version
+  # number while their contents differ, and an installed copy could pass the
+  # comparison while the tree it stands in for fails it. An installed copy is
+  # used only when pkgload or the source tree is missing, and the line printed
+  # at the end names which was loaded. The R distribution itself is covered by
+  # the R CMD check jobs of .github/workflows/ci.yml.
   loaded_from <- NULL
   if (dir.exists(pkg_dir) && requireNamespace("pkgload", quietly = TRUE)) {
     pkgload::load_all(pkg_dir, quiet = TRUE)
@@ -185,7 +176,7 @@ suppressWarnings(suppressMessages({
                 file.path(out_dir, "modality-switching-2026.post_data_severity.json"))
 
       # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
-      # existing evidence and alternatives (two already cited, two new, one duplicate)
+      # existing evidence and alternatives (three already cited, two new, one duplicate)
       new_evidence_candidates <- c(
         "10.1016/j.brat.2015.10.002",
         "https://doi.org/10.1016/0005-7967(86)90011-2",

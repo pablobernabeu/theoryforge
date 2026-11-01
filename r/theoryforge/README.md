@@ -20,7 +20,7 @@ Run the package in your browser, with no installation, using the
 [interactive web app](https://pablobernabeu.github.io/theoryforge/apps/r/). It executes the real
 package client-side via [webR](https://docs.r-wasm.org/webr/latest/), so you can load a theory
 and run the operations it offers, from the rigour checklist through to the literature map,
-then export the visualisation (SVG/PNG) together with the R code that reproduces it.
+then get the R code that reproduces each result, with each figure exportable as SVG or PNG.
 
 ## Installation
 
@@ -96,7 +96,7 @@ same citation with a BibTeX entry, and a short note on the developer. The reposi
 
 ## Licence
 
-MIT. See [`LICENSE`](LICENSE).
+MIT. See the [full licence text](https://pablobernabeu.github.io/theoryforge/r/LICENSE.html).
 
 ## Contributing
 

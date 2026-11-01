@@ -14,7 +14,7 @@ R (`r/theoryforge/`), Python (`python/`), or both.
 
 **Reproducible example**
 A small, self-contained example helps a great deal. Never paste a secret (an OSF
-token) into an issue; replace it with a placeholder.
+token or an OpenAlex API key) into an issue; replace it with a placeholder.
 
 ```
 # your example here (R reprex or Python snippet)

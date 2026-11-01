@@ -30,10 +30,10 @@
     { id: "severity", label: "Severity rubric", desc: "Per-prediction risk & severity",
       help: "Applies the severity rubric, a pre-data ranking of claim form, to every prediction, returning its risk score (the riskiness of the claim form) and computed severity (with the directional discount and the diagnostic bonus)." },
     { id: "redundancy", label: "Redundancy screen", desc: "Lexical overlap of constructs",
-      help: "Compares every pair of construct definitions by token-set Jaccard overlap and flags pairs above the redundancy threshold for review." },
+      help: "Compares every pair of construct definitions by the Jaccard index and the overlap coefficient of their word sets. A pair is flagged for review when its Jaccard index reaches the checklist's similarity threshold, a near-duplicate, or when both definitions hold at least three content words and their overlap coefficient reaches the overlap threshold, one definition contained in the other." },
     {
       id: "appraise", label: "Appraise amendment", desc: "Progressive vs degenerating", needsPrior: true,
-      help: "Compares what the current theory, treated as the amendment, claims with what a prior version claims, and classifies the change as progressive or degenerating (Lakatos, 1970). Neutral is theoryforge's label for an amendment that meets neither rule. The prior defaults to the version the theory declares as its parent, an example whose version id is the theory's parent_id and whose id the theory's id begins with. Choose another below or upload one. Predictions are matched by id, so a version of another theory gives a meaningless verdict.",
+      help: "Compares what the current theory, treated as the amendment, claims with what a prior version claims, and classifies the change as progressive or degenerating (Lakatos, 1970). Neutral is theoryforge's label for an amendment that meets neither rule. The prior defaults to the version the theory declares as its parent, an example whose version id is the theory's parent_id and whose id the theory's id begins with. Choose another below or upload one. Predictions are matched by id, or by statement and type when an id has changed, so a version of another theory gives a meaningless verdict.",
       params: [{ id: "prior", label: "Prior version", type: "theory" }],
     },
     { id: "sem", label: "SEM (lavaan)", desc: "Compile to lavaan model syntax",
@@ -44,7 +44,7 @@
       params: [{ id: "cycles", label: "cycles", type: "select", default: "refuse", options: ["refuse", "sigma"] }],
     },
     { id: "preregister", label: "Preregistration", desc: "Hypotheses for a preregistration",
-      help: "Generates the hypotheses section of a preregistration in Markdown. Each hypothesis is listed in file order with its derivation, the auxiliary assumptions that protect it, the rivals it discriminates and its test record. The conditional independencies the causal graph implies and the per-prediction severity follow." },
+      help: "Generates the hypotheses section of a preregistration in Markdown. Each hypothesis is listed in file order with its derivation, the auxiliary assumptions that protect it, the rivals it discriminates and its test record. When some prediction records a sampling plan in its test block, a sampling plan section follows, with one line per prediction. The conditional independencies the causal graph implies and the per-prediction severity come last." },
     { id: "dossier", label: "Audit dossier", desc: "Reviewer-facing bundle",
       help: "Assembles a reviewer-facing audit bundle in Markdown: the rigour report, severity, test record, evidence, provenance and the preregistration in one document." },
     {
@@ -383,7 +383,7 @@
     appraise: "An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added and no corroborated prediction dropped. It is degenerating when it adds an ad hoc assumption and no corroborated new content, and neutral otherwise. A prediction is corroborated when some test passes it and none fails it, and an assumption added for an anomaly is ad hoc unless new content it protects is corroborated. A prediction that only changed its id is a rename, and one derived only from the prior's own propositions is an articulation, so neither counts as new content. The verdict and its components appear below.",
     sem: "The constructs become a measurement model and the propositions a structural model, in lavaan syntax for lavaan::sem(). A closing block fixes at zero the covariances the theory rules out, which lavaan would otherwise free, and comments flag single indicators, moderations and feedback loops. The syntax is a starting point for an SEM fit: rename indicators to your columns and check identification.",
     implications: "Each statement says that two constructs are independent once the constructs after the bar are held fixed, a claim data can refute, for instance by a partial correlation in a linear model. The statements follow from the edges the theory leaves out, so each omission is read as a claim. A conditional statement tested on observed scores is rejected too often when the constructs held fixed are measured with error. A latent-variable model, such as one built on the SEM operation's measurement model, takes that error into account. A pair that no set of constructs separates is listed apart, since the theory implies no independence for it.",
-    preregister: "The document is the hypotheses section of a preregistration. Each hypothesis is listed in file order with its derivation, the auxiliary assumptions that protect it, the rivals it discriminates and its test record. A hypothesis that has already been tested is marked as such. The implied independencies follow, then the severity of each claim's form. Before data collection, complete it with the design, sampling plan, analysis plan and inference criteria that a preregistration template such as PRP-QUANT asks for (Bosnjak et al., 2022).",
+    preregister: "The document is the hypotheses section of a preregistration. Each hypothesis is listed in file order with its derivation, the auxiliary assumptions that protect it, the rivals it discriminates and its test record. A hypothesis that has already been tested is marked as such. When some prediction records a sampling plan, the plans are listed after the hypotheses, one line per prediction. The implied independencies follow, then the severity of each claim's form. Before data collection, complete it with the design, sampling plan, analysis plan and inference criteria that a preregistration template such as PRP-QUANT asks for (Bosnjak et al., 2022), as far as the document leaves them out.",
     dossier: "The dossier gathers the rigour report, severity, test record, evidence, provenance and preregistration into one reviewer-facing document.",
     simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, causes, mediates) or down (decreases) in proportion to another, with one gain k for every coupling, and every construct decays towards zero at the damping rate. Moderates and associates couple nothing. All constructs start from the same value. The chart traces the values from the initial state, and the table below holds the numbers.",
     litmap: "The bundled corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked. A theme is a connected group of keywords, which separates this small designed corpus into four. On a real corpus, nearly every keyword joins one group, and the package warns that such themes are not informative.",
@@ -732,7 +732,7 @@
   // parent. The runtimes read each example's lineage at start-up, and each
   // load reports the theory's version.
   const UPLOADED_PRIOR = "upload";
-  const PRIOR_CAUTION = "This version is not the declared parent of the loaded theory. Predictions are matched by id, so a version of another theory can make the verdict meaningless.";
+  const PRIOR_CAUTION = "This version is not the declared parent of the loaded theory. Predictions are matched by id, or by statement and type when an id has changed, so a version of another theory can make the verdict meaningless.";
   function isDeclaredParent(theory, cand) {
     const tv = (theory && theory.version) || {}, cv = (cand && cand.version) || {};
     const tid = theory && theory.id, cid = cand && cand.id;
@@ -828,7 +828,7 @@
         li("Pick an example theory, or upload your own YAML / JSON. Use “View source” to inspect the input."),
         li("Choose an operation, then adjust any parameters."),
         li("Press Run. Results appear on the right; every figure sits on a white panel."),
-        li("Export the visualisation (SVG / PNG) and the " + RT.langLabel + " code that reproduces it."),
+        li("Export the figures (SVG / PNG), the text and JSON results and the " + RT.langLabel + " code that reproduces them."),
       ]),
       el("p", { class: "note" }, "Your theory, operation and last result are remembered, so a page refresh restores the session."),
       el("h4", null, "Operations"),

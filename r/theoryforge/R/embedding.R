@@ -69,11 +69,10 @@ tf_embedding_redundancy <- function(theory, embedder, threshold = NULL) {
   if (n >= 2L) {
     for (i in seq_len(n - 1L)) {
       for (j in (i + 1L):n) {
-        # Unequal or empty vectors have no defensible cosine, and the two
-        # engines read them differently by accident (R recycled the shorter
-        # vector, Python truncated the longer), so the same embedder produced
-        # two confident, different similarities. Refuse instead of picking a
-        # reading.
+        # Unequal or empty vectors have no defensible cosine: R's sum(a * b)
+        # would recycle the shorter vector and a plain Python zip() truncate
+        # the longer, so the same embedder could give two confident, different
+        # similarities. Refuse instead of picking a reading.
         la <- length(vecs[[i]])
         lb <- length(vecs[[j]])
         if (la == 0L || lb == 0L || la != lb) {
