@@ -13,13 +13,18 @@ package also requires yaml 2.3.8 or later. NEWS.md lists each of these changes
 under 'Upgrading from the previous release (0.6.0)', in three parts: 'Changed
 results', 'Changed interface' and 'Changed output'.
 
+In a Latin-9 locale, as on r-devel-linux-x86_64-debian-clang, three tests of
+0.6.0 fail, because they compare the package's UTF-8 output with text read in
+the session's charset. The output itself is correct. The tests of 0.7.0 mark
+that text as UTF-8 and pass in that locale.
+
 ## R CMD check results
 
 0 errors | 0 warnings | 0 notes
 
 ## Test environments
 
-GitHub Actions, run 41321427808 on 2026-11-01, at commit e6c8a2b, which holds
+GitHub Actions, run 41331654729 on 2026-11-01, at commit 7870d1b, which holds
 the package as submitted. Each leg built the tarball and ran
 `R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
 which r-lib/actions turns off. Each leg ended with 'Status: OK':
@@ -37,11 +42,16 @@ and no warnings. 20 tests skip everywhere because they read repository files
 that are not in the built package: the apps, the shared schema folder and two
 articles that .Rbuildignore excludes.
 
-The same run tested the package on R 4.1.3, the oldest version that
-DESCRIPTION allows, under ubuntu-latest with only the packages in Imports,
-testthat and pkgload installed. There the test suite passed, and the 15 tests
-that need a suggested package (curl, dagitty, DiagrammeR, ggm or lavaan)
-skipped.
+On the Ubuntu R-devel leg the same run also ran the test suite on the
+package source in the en_US.iso885915 locale (session charset ISO-8859-15),
+with NOT_CRAN unset, as r-devel-linux-x86_64-debian-clang does. It passed with
+no failures and no warnings.
+
+The same run tested the package on R 4.1.3, the last release of R 4.1, the
+oldest series that DESCRIPTION's 'R (>= 4.1.0)' allows, under ubuntu-latest
+with only the packages in Imports, testthat and pkgload installed. There the
+test suite passed, and the 15 tests that need a suggested package (curl,
+dagitty, DiagrammeR, ggm or lavaan) skipped.
 
 ## Notes
 
