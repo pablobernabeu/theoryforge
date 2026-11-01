@@ -101,7 +101,8 @@ version and a single behavioural contract
 - A mapping in a text field reads as `""`, where R read its first value and Python printed
   the mapping, so in R `from: {a: c1}` no longer makes an edge.
 - Python reads a text field written as a sequence as its first string, as R does, where it
-  printed the list, so `from: [c1]` now makes an edge.
+  printed the list or, in `implications()` and `simulate()`, raised an error, so
+  `from: [c1]` now links the declared construct `c1`.
 - In R, a string array written as a mapping, such as `measurement: {a: x}`, reads as empty,
   where its values counted.
 - A `relation`, `type`, `maturity` or formal-model `type` outside its allowed values reads
@@ -119,8 +120,7 @@ version and a single behavioural contract
   credits it and `validate()` accepts it in a required field.
 - `check()` decides each threshold item from its rounded score and sums severities in plain
   double precision, where R's extended accumulator and Python 3.12's compensated sum let a
-  borderline mean severity pass on one platform or Python version and warn on another. R no
-  longer prints a rounded `-0.0`.
+  borderline mean severity pass on one platform or Python version and warn on another.
 - Python's `simulate()` sums the terms of each step in plain double precision, as R does,
   where the compensated `sum()` of Python 3.12 and later moved fast-growing trajectories
   away from R's.
@@ -133,10 +133,10 @@ version and a single behavioural contract
 - `new_evidence_dois()` recognises DOIs written as `doi: 10...`, `DOI 10...`,
   `doi.org/10...`, `https://www.doi.org/10...` or percent-encoded and ignores a trailing
   full stop, comma or semicolon, so fewer candidates count as new.
-- Three bundled example theories change, and so do their scores and documents. The panic
-  predictions state their `point` values and tolerances, the amended panic example adds a
-  proposition and the modality-switching example records bounds, an outcome and a sampling
-  plan for `pred2`.
+- Three bundled example theories change, and so do their documents, their diagrams and the
+  amended example's simulation and lavaan syntax. The panic predictions state their `point`
+  values and tolerances, the amended panic example adds a proposition and the
+  modality-switching example records bounds, an outcome and a sampling plan for `pred2`.
 - `example_names()` also returns `openalex-panic-2026.corpus.yaml`, second in the list, so
   the names after it move one place.
 - The apps' amendment appraisal defaults to the version the loaded theory names as its
@@ -157,13 +157,14 @@ version and a single behavioural contract
   and reports a string-array entry that is not a nonempty string, where it checked part of
   the schema, so a theory that passed can fail.
 - `validate()` refuses a collection written as a single value or a mapping with
-  `<key> must be a list`, where it accepted both, except that R refused a single value for
-  constructs, propositions or predictions with missing-field messages.
+  `<key> must be a list`, where it accepted both, except that R already refused a single
+  value, or a single entry written as a mapping, for constructs, propositions or
+  predictions.
 - `check()` and `appraise_amendment()` refuse a `passed` other than `true`, `false`, null
   or, in R, `NA`, where `passed: "true"` read as a failure.
 - `check()` refuses a prediction severity that is infinite or outside [0, 1], where one
   above 1 inflated the aggregate, beyond 100 for a severity of 7, a negative one lowered it
-  and an infinite one gave `Inf` in R and OverflowError in Python.
+  and an infinite one made it infinite in R and raised OverflowError in Python.
 - `preregister()`, `dossier()`, `report()`, `render_report()`, `osf_push()`, dry runs
   included, and the `rigour` and `development_roadmap` views of `diagram()` stop when
   `check()` refuses a severity or `passed`, where they returned output or, for an infinite
@@ -242,7 +243,7 @@ version and a single behavioural contract
 - In R, `citation("theoryforge")` names the Comprehensive R Archive Network (CRAN) as
   publisher and gives the DOI CRAN assigned,
   <https://doi.org/10.32614/CRAN.package.theoryforge>, where it gave the Zenodo concept
-  DOI.
+  DOI, <https://doi.org/10.5281/zenodo.21229964>.
 - `report(format="html")` escapes every value it writes, where markup in a theory id or
   another field, such as `a<b&c`, reached the HTML raw.
 - `render_report()` keeps double quotes and backslashes in `title`, where quotes became
@@ -278,6 +279,8 @@ version and a single behavioural contract
   `filename`.
 - Python's `render_diagram()` error gives the install command as
   `pip install "theoryforge[render]"`, which zsh refused without the quotes.
+- In R, `simulate()` trajectories and `embedding_redundancy()` cosines hold 0 where they
+  held a negative zero, which jsonlite wrote as `-0`.
 
 ### Added
 - `Theory.copy()` returns an independent copy of a theory to amend, since Python's builders

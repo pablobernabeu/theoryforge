@@ -135,8 +135,7 @@
 
 * `tf_check()` decides each threshold item from its rounded score and sums
   severities in plain double precision, where R's extended accumulator let a
-  borderline mean severity pass on one platform and warn on another. It no
-  longer prints a rounded `-0.0`.
+  borderline mean severity pass on one platform and warn on another.
 
 * `tf_litmap()` keys a reference that holds a DOI by the DOI, lower-cased and
   without its resolver prefix, so spellings of one DOI make one co-citation
@@ -149,10 +148,11 @@
   `doi.org/10...`, `https://www.doi.org/10...` or percent-encoded and ignores a
   trailing full stop, comma or semicolon, so fewer candidates count as new.
 
-* Three bundled example theories change, and so do their scores and documents.
-  The panic predictions state their `point` values and tolerances, the amended
-  panic example adds a proposition and the modality-switching example records
-  bounds, an outcome and a sampling plan for `pred2`.
+* Three bundled example theories change, and so do their documents, their
+  diagrams and the amended example's simulation and lavaan syntax. The panic
+  predictions state their `point` values and tolerances, the amended panic
+  example adds a proposition and the modality-switching example records bounds,
+  an outcome and a sampling plan for `pred2`.
 
 * `tf_example_names()` also returns `openalex-panic-2026.corpus.yaml`, second
   in the list, so the names after it move one place.
@@ -166,16 +166,16 @@
   where it checked part of the schema, so a theory that passed can fail.
 
 * `tf_validate()` refuses a collection written as a single value or a mapping
-  with `<key> must be a list`, where it accepted both, except that it refused a
-  single value for constructs, propositions or predictions with missing-field
-  messages.
+  with `<key> must be a list`, where it accepted both, except that it already
+  refused a single value, or a single entry written as a mapping, for
+  constructs, propositions or predictions.
 
 * `tf_check()` and `tf_appraise_amendment()` refuse a `passed` other than
   `TRUE`, `FALSE`, `NA` or null, where `passed: "true"` read as a failure.
 
 * `tf_check()` refuses a prediction severity that is infinite or outside
   [0, 1], where one above 1 inflated the aggregate, beyond 100 for a severity
-  of 7, a negative one lowered it and an infinite one gave `Inf`.
+  of 7, a negative one lowered it and an infinite one made it infinite.
 
 * `tf_preregister()`, `tf_dossier()`, `tf_report()`, `tf_render_report()`,
   `tf_osf_push()`, dry runs included, and the `rigour` and
@@ -275,7 +275,7 @@
 * `citation("theoryforge")` names the Comprehensive R Archive Network (CRAN) as
   publisher and gives the DOI CRAN assigned,
   <https://doi.org/10.32614/CRAN.package.theoryforge>, where it gave the Zenodo
-  concept DOI.
+  concept DOI, <https://doi.org/10.5281/zenodo.21229964>.
 
 * `tf_report(format = "html")` escapes every value it writes, where markup in a
   theory id or another field, such as `a<b&c`, reached the HTML raw.
@@ -316,9 +316,9 @@
 * `tf_osf_push()` encodes in full a `filename` that holds a `%XX` sequence,
   which it left unencoded, treats an empty `node` as absent and uses the default
   for an empty `filename`.
-* `citation("theoryforge")` gives the DOI that CRAN registered,
-  <https://doi.org/10.32614/CRAN.package.theoryforge>, where it gave the Zenodo
-  concept DOI, <https://doi.org/10.5281/zenodo.21229964>.
+
+* `tf_simulate()` trajectories and `tf_embedding_redundancy()` cosines hold 0
+  where they held a negative zero, which jsonlite wrote as `-0`.
 
 ## New features
 
@@ -460,8 +460,8 @@
   where it called it suitable for deposit.
 
 * `?tf_diagram` and the Developing and testing article say that the `venn` view
-  draws only the first three constructs, where the article said it took the
-  boundary conditions of each construct.
+  draws only the first three constructs, where the article said it took each
+  construct's boundary conditions.
 
 * `?tf_render_diagram` says that, with `as = "widget"`, the `venn`, `rigour`
   and `severity` views are returned as a browsable HTML object, where it called
