@@ -19,15 +19,13 @@ results', 'Changed interface' and 'Changed output'.
 
 ## Test environments
 
-GitHub Actions, run 41310433036 on 2026-11-01, at commit 2e4d0d6 on the main
-branch. The package built from that commit differs from this submission only
-in the version number and the first heading of NEWS.md. Each leg built the
-tarball and ran `R CMD check --as-cran --no-manual` on it, without the CRAN
-incoming checks, which r-lib/actions turns off. Each leg ended with
-'Status: OK':
+GitHub Actions, run 41321427808 on 2026-11-01, at commit e6c8a2b, which holds
+the package as submitted. Each leg built the tarball and ran
+`R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
+which r-lib/actions turns off. Each leg ended with 'Status: OK':
 
 * ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.6.2
-* ubuntu-latest (Ubuntu 24.04.5 LTS), R-devel (2026-10-31 r90820)
+* ubuntu-latest (Ubuntu 24.04.5 LTS), R-devel (2026-10-30 r90805)
 * ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.5.3
 * windows-latest (Windows Server 2025, x86_64-w64-mingw32), R 4.6.2
 * windows-latest (Windows Server 2025, x86_64-w64-mingw32), R-devel
