@@ -1,7 +1,7 @@
 # theoryforge interactive apps
 
-Two browser apps that put a graphical interface on the twin packages. They run the
-real package code entirely client-side: the R app via
+Two browser apps put a graphical interface on the twin packages. They run the
+package code entirely client-side: the R app via
 [webR](https://docs.r-wasm.org/webr/latest/) and the Python app via
 [Pyodide](https://pyodide.org/). Nothing is sent to a server, and the results are
 identical to running the package locally. Every operation shows the R or Python
@@ -9,14 +9,14 @@ code that reproduces its result, and each figure exports as SVG and PNG. Most
 results also download as JSON or as text (the diagram source, lavaan syntax,
 implied independencies, preregistration and dossier).
 
-| App | Engine | Lives at (deployed) |
+| App | Engine | Deployed at |
 |---|---|---|
 | `r/`  | webR (WebAssembly R)      | `…/theoryforge/apps/r/`  |
 | `py/` | Pyodide (WebAssembly Py)  | `…/theoryforge/apps/py/` |
 
 `shared/` holds the language-agnostic UI core, styles and favicon. A small
-language runtime (`r-runtime.js`, `py-runtime.js`) boots the engine, vendors the
-package source, runs operations and emits the reproducible code snippets.
+language runtime (`r-runtime.js`, `py-runtime.js`) starts the engine, loads the
+package source into it, runs operations and generates the reproducible code snippets.
 
 ## Runtimes
 
@@ -31,8 +31,8 @@ versions. The Graphviz renderer, `@hpcc-js/wasm-graphviz` 1.22.2, is pinned in
 
 ## Build and run locally
 
-The apps fetch the live package source from a `vendor/` directory that
-`build.mjs` assembles (git-ignored; rebuilt in CI on every deploy):
+The apps fetch the live package source from a `vendor/` directory that `build.mjs`
+assembles. The directory is git-ignored and is rebuilt in CI on every deploy.
 
 ```bash
 cd apps
@@ -48,15 +48,17 @@ storage when it is available and run without it when the browser blocks it.
 
 The amendment appraisal defaults to the version the loaded theory declares as its
 parent and otherwise waits for a prior to be chosen or uploaded. The runtimes read
-each example's version record when the app starts. `build.mjs` marks in each manifest
-the files that package ships. The reproducible code reads those through
-`example_path()` and asks for any other file to be saved beside the script first.
+each example's version record when the app starts.
+
+`build.mjs` marks in each manifest the files that the corresponding package includes.
+The reproducible code reads those through `example_path()` and asks for any other
+file to be saved beside the script first.
 
 ## Test
 
 `apps/tests/` holds tests for the UI core, the two runtimes, `build.mjs` and the site's
-landing and 404 pages. They run under Node's own test runner with a small stand-in for
-the browser DOM (`tests/dom.mjs`), so they need no browser and no dependency:
+landing and 404 pages. They run under Node's built-in test runner with a small stand-in
+for the browser DOM (`tests/dom.mjs`), so they need no browser and no dependency:
 
 ```bash
 node --test apps/tests/*.test.mjs   # from the repository root
@@ -76,7 +78,7 @@ Rscript scripts/app_smoke.R
 Each script copies the files its manifest lists into a temporary directory and runs
 the glue there. The Python glue runs under CPython with PyYAML alone, and the R glue
 in a fresh R whose library holds jsonlite and yaml alone. An installed theoryforge
-therefore cannot stand in for a file the app does not fetch. Each script runs every
+therefore cannot supply a file the app does not fetch. Each script runs every
 operation on every example, with the operations listed in
 `scripts/app_smoke_cases.json`, and checks that an invalid theory is reported as
 invalid. The CI apps job runs both scripts.
@@ -84,7 +86,7 @@ invalid. The CI apps job runs both scripts.
 ## Deploy
 
 The `docs` GitHub Actions workflow runs `node build.mjs`, copies `apps/` into
-`site/apps/` and runs the two smoke scripts on that copy. It then deploys the site,
-so the apps are published alongside the documentation on GitHub Pages. The first load
-of each app downloads its WebAssembly engine (~20 s). After that it is cached by the
-browser.
+`site/apps/` and runs the two smoke scripts on that copy. It then deploys the site to
+GitHub Pages, where the apps are published alongside the documentation. The first load
+of each app downloads its WebAssembly engine, which takes about 20 s, and the browser
+then caches the engine.

@@ -1,12 +1,11 @@
 # The literature layer
 
-A theory does not stand on its own. Before claiming that a construct or
-proposition adds something new, an author needs a view of the field it
-enters: which questions are already crowded, which fronts are thin, and
-where the proposed theory overlaps with existing accounts. The literature
-layer in `theoryforge` provides that view from a corpus of records, using
-deterministic computations so that the same corpus always yields the same
-map.
+Before claiming that a construct or proposition adds something new, an author
+needs a view of the field that their theory enters: which questions are already
+crowded, which fronts are thin and where the proposed theory overlaps with
+existing accounts. The literature layer in `theoryforge` provides that view
+from a corpus of records. Its computations are deterministic, so the same
+corpus always yields the same map.
 
 This layer comprises four entry points. `tf.read_corpus` loads a corpus
 from disk. `tf.litmap` summarises the corpus through keyword
@@ -21,12 +20,11 @@ list of candidate DOIs against the sources a theory already cites.
 
 A corpus is a mapping with a `records` list. Each record may carry an `id`,
 a `title`, a `year`, a list of `keywords` and a list of `references`. The
-keyword and reference lists drive the analysis. Other fields are carried
-through but not required. A small corpus stored as YAML looks like this. The
-examples on this page all read the bundled fixture
-[`fixtures/panic-corpus.yaml`](https://github.com/pablobernabeu/theoryforge/blob/main/fixtures/panic-corpus.yaml),
-of which the first and the third of its eight records appear below, so the
-counts in the output are those of the whole file rather than of this excerpt.
+analysis uses the keyword and reference lists, and other fields are carried
+through but not required. The examples on this page all read the bundled fixture
+[`fixtures/panic-corpus.yaml`](https://github.com/pablobernabeu/theoryforge/blob/main/fixtures/panic-corpus.yaml).
+The YAML excerpt below shows the first and the third of its eight records, and
+the counts in the output are those of the whole file.
 
 ```yaml
 schema_version: "1.0"
@@ -62,13 +60,13 @@ Name](https://www.doi.org/doi-handbook/HTML/case-insensitivity.html)).
 `https://doi.org/10.1016/j.brat.2015.10.002` in another therefore cite one
 work, which the co-citation map labels `10.1016/j.brat.2015.10.002`. Other
 references, such as Scopus or OpenAlex identifiers, are compared exactly as
-written, and so are keywords. The package ships the corpus format as a JSON
+written, and so are keywords. The package provides the corpus format as a JSON
 Schema, `corpus.schema.json`, at
 `importlib.resources.files("theoryforge") / "schema" / "corpus.schema.json"`.
 
-Read it with `tf.read_corpus`, which accepts YAML or JSON and returns a
-plain dictionary. The examples below read the sample corpus and theory that
-ship with the package through `tf.example_path()`, as on the
+Read a corpus with `tf.read_corpus`, which accepts YAML or JSON and returns a
+plain dictionary. The examples below read the corpus and theory fixtures
+bundled with the package through `tf.example_path()`, as on the
 [Get started](getting-started.md) page, so they run as shown after
 `pip install theoryforge`. Every result shown, the figures included, is
 produced when this page is built.
@@ -83,7 +81,7 @@ corpus = tf.read_corpus(tf.example_path("panic-corpus.yaml"))
 
 `tf.litmap` reduces a corpus to a set of deterministic summaries. It counts
 how often pairs of keywords appear together across records, retains the
-pairs that meet a minimum link count, and groups the resulting keyword
+pairs that meet a minimum link count and groups the resulting keyword
 network into themes by connected component. It applies the same procedure
 to the `references` field to produce a co-citation network.
 
@@ -98,8 +96,8 @@ print("co-citation:", m["co_citation"])
 ```
 
 Each theme is a dictionary with an `id` (for example `theme_1`), the sorted
-`keywords` it contains, and its `size`. Themes are ordered by their smallest
-keyword, so the output is stable across runs.
+`keywords` it contains and its `size`. Themes are ordered by their smallest
+keyword.
 
 Connected components suit this fixture, built to fall into four separate
 themes. On a real corpus, a few keywords that most records carry, such
@@ -129,12 +127,12 @@ print(caught[0].message)
 
 The threshold for retaining an edge defaults to two co-occurrences. A pair
 of keywords or references that appear together only once is dropped, which
-keeps incidental overlaps out of the map. Raise it to keep only the strongest
-links, or lower it to admit sparser ones. This fixture corpus is deliberately
-regular, with every keyword pair appearing in exactly two records, so lowering
-the threshold admits nothing further and raising it past two clears the keyword
-map altogether. The co-citation counts do vary, which is where the threshold
-has something to select on.
+keeps incidental pairings out of the map. Raise the threshold to keep only the
+strongest links, or lower it to admit sparser ones. The fixture corpus is built
+to be regular, with every keyword pair appearing in exactly two records.
+Lowering the threshold therefore admits nothing further, and raising it past
+two clears the keyword map. The co-citation counts vary, and the threshold
+selects among them.
 
 ```python exec="1" source="material-block" result="text" session="literature"
 m_sparse = tf.litmap(corpus, min_link=1)   # keep single co-occurrences
@@ -163,28 +161,28 @@ print("co-citation edges at min_cocitation=3:", m_cited["co_citation"])
 
 `method="simple_centres"` groups keywords as co-word analysis does, by the
 simple-centres algorithm of Coulter et al. (1998) as Cobo et al. (2011)
-describe it (both are listed in full among the [references of the methodology
-page](methodology.md#references)). Each pair of linked keywords is weighted
-by its equivalence
-index: the square of the number of records holding both, divided by the
-product of the numbers holding each. Two keywords that always occur together
-score 1. A keyword that most records carry scores little with the rarer
-keywords it meets, because the index cannot exceed the ratio of the smaller
-record count to the larger. With the cap on a theme's size, this keeps a few
-such keywords from pulling the map into one theme. The strongest link between
-two keywords not yet in a theme starts one. The theme then takes the free
-keyword most strongly linked to any of its members, one at a time, until it
-holds `max_theme_size` keywords, ten by default, or has no free neighbour.
-A keyword whose links all reach keywords already in themes joins none, and on
-the real corpus below about two in five linked keywords end up in no theme.
-Themes smaller than `min_theme_size`, two by default, are dropped. `max_df`
-leaves out the keywords held by more than that share of the records and lists
-them as `field_terms`. At its default of 1, it leaves out none.
+describe it. Both are listed in full among the [references of the methodology
+page](methodology.md#references). Each pair of linked keywords is weighted by
+its equivalence index: the square of the number of records holding both,
+divided by the product of the numbers holding each. Two keywords that always
+occur together score 1. A keyword that most records carry scores little with
+the rarer keywords it meets, because the index cannot exceed the ratio of the
+smaller record count to the larger. With the cap on a theme's size, this keeps
+a few such keywords from merging the map into one theme.
+
+The strongest link between two keywords not yet in a theme starts one. The
+theme then takes the free keyword most strongly linked to any of its members,
+one at a time, until it holds `max_theme_size` keywords, ten by default, or has
+no free neighbour. A keyword whose links all reach keywords already in themes
+joins none. On the real corpus below, about two in five linked keywords end up
+in no theme. Themes smaller than `min_theme_size`, two by default, are dropped.
+`max_df` leaves out the keywords held by more than that share of the records
+and lists them as `field_terms`. At its default of 1, it leaves out none.
 
 On the designed fixture, simple centres find the same four themes as
-components. The package also ships a real corpus, frozen so that its results
+components. The package also includes a real corpus, frozen so that its results
 stay fixed. It holds the 150 works that OpenAlex ranked first for the search
-"panic disorder" on 1 October 2026, with OpenAlex's keywords of that date and
+'panic disorder' on 1 October 2026, with OpenAlex's keywords of that date and
 without their references. Components put every linked keyword of it in one
 theme, while simple centres give bounded ones.
 
@@ -212,7 +210,7 @@ the theme holds together. Splitting each measure at its median places the
 theme in one quadrant of the strategic diagram. Motor themes are both central
 and dense, basic themes central but not dense, niche themes dense but
 peripheral, and the rest `emerging_or_declining`. Telling an emerging theme
-from a declining one needs corpora from more than one period. The record also
+from a declining one needs corpora from more than one period. The result also
 gains `method`, the five `parameters` used and `field_terms`.
 
 Components remain the default for this release, and the default is planned to
@@ -228,14 +226,13 @@ never match. Field tokens, the words most of the corpus shares, are those in
 the keywords of more than `max_token_share` of the records, half by default.
 Phenomenon tokens are the words of the theory's title, which names the
 phenomenon that the focal theory and its rivals all explain. A construct word
-that also appears in the title is one of them, so give the theory a title that
-names its phenomenon. The third kind is a fixed list of words that name a kind
-of account: theory, model, account, hypothesis, framework and approach, with
-their plurals. One shared word is enough for a match.
-
-A theme that none of the registered accounts addresses is under-theorised, one
-that a single account addresses is covered, and one that two or more address
-is crowded.
+that also appears in the title is a phenomenon token too, so give the theory a
+title that names its phenomenon. The third kind is a fixed list of words that
+name a kind of account: theory, model, account, hypothesis, framework and
+approach, with their plurals. One shared word is enough for a match. A theme
+that none of the registered accounts addresses is under-theorised, one that a
+single account addresses is covered and one that two or more address is
+crowded.
 
 ```python exec="1" source="material-block" result="text" session="literature"
 t = tf.read(tf.example_path("panic-network.theory.yaml"))
@@ -251,27 +248,26 @@ print("crowded themes:", ls["redundancy_risk"])
 ```
 
 Each entry in `ls["themes"]` reports the theme `id`, its `keywords`, the
-`alternatives` that map onto it, whether the focal theory is `focal` on it,
-a `status` of `under_theorised`, `covered` or `crowded`, and the words behind
-each match, in `focal_terms` and in `alternative_terms`, one `{id, terms}`
-entry per alternative. The statuses count the registered
-accounts only. An under-theorised theme is one that none of them addresses, so
-an account the theory does not register may still address it. A crowded theme
-calls for predictions that discriminate between its accounts, and does not
-show that any of them is redundant. `under_theorised_fronts` lists the ids of
-the under-theorised themes, and `redundancy_risk`, despite its name, the ids of
-the crowded ones.
+`alternatives` that map onto it, whether the focal theory is `focal` on it and
+a `status` of `under_theorised`, `covered` or `crowded`. The words behind each
+match are in `focal_terms` and in `alternative_terms`, which holds one
+`{id, terms}` entry per alternative.
+
+The statuses count the registered accounts only, so an account the theory does
+not register may still address an under-theorised theme. A crowded theme calls
+for predictions that discriminate between its accounts, and does not show that
+any of them is redundant. `under_theorised_fronts` lists the ids of the
+under-theorised themes, and `redundancy_risk`, despite its name, the ids of the
+crowded ones.
 
 The same function is available at module level as `tf.landscape(theory,
-corpus)`, which is convenient when the theory is held as a plain dictionary
-rather than a `Theory` object. The `min_link` argument is passed through to
-the underlying `litmap` call, which skips the co-citation count because the
-landscape does not use it. `max_token_share` sets the share of records above
-which a word counts as a field token. `method` chooses how `litmap` builds the
-themes. With `"simple_centres"`, the record gains `method` after `theory_id`,
-and each theme keeps its `centrality`, `density` and `quadrant`. A front that
-none of the accounts addresses can then be read with its place in the
-strategic diagram.
+corpus)`, which also accepts a theory held as a plain dictionary. The
+`min_link` argument is passed through to the underlying `litmap` call, which
+skips the co-citation count. `method` chooses how `litmap` builds the themes.
+With `"simple_centres"`, the result gains `method` after `theory_id`, and each
+theme keeps its `centrality`, `density` and `quadrant`. A front that none of
+the accounts addresses can then be read with its place in the strategic
+diagram.
 
 ```python exec="1" source="material-block" result="text" session="literature"
 ls = tf.landscape(t, corpus, min_link=2, max_token_share=0.5)
@@ -299,9 +295,8 @@ pairs, each edge labelled with the number of records in which the pair appears.
 print(tf.lit_diagram(m, type="keyword_cooccurrence"))
 ```
 
-Passed to Graphviz, that text reads as the figure below. The four themes are
-visible as four disconnected pairs, which is why this corpus breaks into four
-entirely separate components.
+Passed to Graphviz, that text gives the figure below, in which the four themes
+appear as four disconnected pairs.
 
 ```python exec="1" html="1" session="literature"
 # Graphviz draws this figure from the DOT above when the page is built, so it
@@ -312,15 +307,15 @@ svg = tf.render_diagram(dot).pipe(format="svg", encoding="utf-8")
 print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
 ```
 
-The co-citation view has the same shape, drawn over pairs of cited works rather
-than pairs of keywords. At the default threshold this corpus retains only two
-disjoint pairs, so the text carries the whole picture and no figure is needed.
+The co-citation view has the same shape, drawn over pairs of cited works. At
+the default threshold, this corpus retains only two disjoint pairs, so the text
+shows the whole graph and no figure is needed.
 
 ```python exec="1" source="material-block" result="text" session="literature"
 print(tf.lit_diagram(m, type="co_citation"))
 ```
 
-On a real corpus that diagram can run to thousands of edges and a megabyte of
+On a real corpus, that diagram can run to thousands of edges and a megabyte of
 DOT, which Graphviz cannot lay out legibly. `max_edges` keeps the strongest
 edges, the highest counts first with ties going to the pair that sorts first,
 and draws only their endpoints. It applies to both network views.
@@ -329,10 +324,9 @@ and draws only their endpoints. It applies to both network views.
 print(tf.lit_diagram(m, type="co_citation", max_edges=1))
 ```
 
-The theme landscape is a directed graph instead. It links the focal theory and
-its registered alternatives to the themes each of them addresses, and labels
-every theme node with its status, so one figure carries what the prose above
-described a piece at a time.
+The theme landscape is a directed graph. It links the focal theory and its
+registered alternatives to the themes each of them addresses and labels every
+theme node with its status.
 
 ```python exec="1" source="material-block" result="text" session="literature"
 print(tf.lit_diagram(ls, type="theme_landscape"))
@@ -355,11 +349,11 @@ Path("keywords.dot").write_text(tf.lit_diagram(m), encoding="utf-8")
 
 ## Fetching a corpus from OpenAlex
 
-`tf.fetch_corpus` builds a corpus by querying the OpenAlex API. It is an
-optional convenience adapter. Because it depends on a network service whose
-results change over time, it sits outside the deterministic core of the
-package. Use it to assemble a starting corpus, then save the result and work
-from the saved file so that later analysis stays reproducible.
+`tf.fetch_corpus`, an optional convenience adapter, builds a corpus by querying
+the OpenAlex API. Because it depends on a network service whose results change
+over time, it sits outside the deterministic core of the package. Use it to
+assemble a starting corpus, then save the result and work from the saved file
+so that later analysis stays reproducible.
 
 ```python
 # Paging past the first page needs an OpenAlex API key, read here from the
@@ -374,23 +368,24 @@ print(corpus["source"])  # the query, when it ran, how many works matched and we
 
 OpenAlex answers requests without a key within a budget of USD 0.10 a day. A
 search page costs USD 0.001, so the budget covers about 100 searches of one
-page each. Without a key, OpenAlex serves only the first page of a search and
-refuses the next with HTTP 401, so a `max_records` above `per_page` needs a
-key. A free API key raises the budget to USD 1 a day. Store the key in the `OPENALEX_API_KEY`
-environment variable, or pass it as `api_key`, and `fetch_corpus` sends it in
-a request header, never in the URL or the corpus. The `mailto` argument is
-still accepted, but OpenAlex now ignores it. When OpenAlex refuses a request,
-typically with HTTP 429 once the budget is spent, or HTTP 401 when a later
-page is asked for without a key, `fetch_corpus` raises
-`theoryforge.lit.OpenAlexHTTPError`, a subclass of `urllib.error.HTTPError`,
-with the status and OpenAlex's message.
+page each. A free API key raises the budget to USD 1 a day. Store the key in
+the `OPENALEX_API_KEY` environment variable, or pass it as `api_key`, and
+`fetch_corpus` sends it in a request header, never in the URL or the corpus.
+The `mailto` argument is still accepted, but OpenAlex now ignores it.
+
+Without a key, OpenAlex serves only the first page of a search and rejects a
+request for the next with HTTP 401, so a `max_records` above `per_page` needs a
+key. The other usual rejection is HTTP 429, sent once the budget is spent. On
+any rejection, `fetch_corpus` raises `theoryforge.lit.OpenAlexHTTPError`, a
+subclass of `urllib.error.HTTPError`, with the status and OpenAlex's message.
 
 Each request returns one page of works, ranked by relevance, from a result set
-that is usually far larger: a search for panic disorder matched about 187,000
+that is usually far larger. A search for panic disorder matched about 187,000
 works in October 2026. OpenAlex supports pages of up to 100 works and has
 deprecated larger ones, although it still accepts 200. `max_records` pages on
 through OpenAlex's cursor, with an API key, until that many works are
-collected, and
+collected.
+
 `corpus["source"]` records the query, the UTC time of retrieval, the number of
 works that matched and the number kept. That record matters because the
 keywords change. Since late September 2026, OpenAlex has written each work's
@@ -398,20 +393,18 @@ keywords with a language model that reads its title, abstract and venue. It
 merges and splits that vocabulary over time, so the same works fetched a week
 apart can carry different keywords. Works left without keywords fall back to
 their concepts, a deprecated vocabulary whose capitalised names do not match
-the lower-case keywords. Each record also keeps the work's DOI as OpenAlex
-gives it.
+the lower-case keywords. Each corpus record also keeps the work's DOI as
+OpenAlex gives it.
 
-The returned mapping has the same shape as a corpus read from disk, so it
-flows straight into `litmap` and `landscape`. Supplying a corpus file remains
-the recommended path for any analysis that needs to be repeated exactly.
+The returned mapping has the same shape as a corpus read from disk and can be
+passed to `litmap` and `landscape` without further change.
 
 ## Tracking new evidence with an external search
 
-Locating a corpus is only one use of a literature search. A second, recurring
-need is narrower: checking whether a search has turned up any source the
-theory does not already cite. `new_evidence_dois` answers that question
-deterministically, from a theory and a plain list of candidate DOIs,
-regardless of where the DOIs came from.
+Locating a corpus is only one use of a literature search. A narrower, recurring
+use is to check whether a search has turned up any source the theory does not
+already cite. `new_evidence_dois` makes that check deterministically, from
+a theory and a plain list of candidate DOIs.
 
 The panic theory read further up this page records one DOI as evidence and one
 for each of its two registered alternatives, and a DOI cited as an alternative
@@ -430,23 +423,24 @@ print(t.new_evidence_dois(candidates))
 ```
 
 The comparison is on a normalised form of each DOI, the DOI itself found
-wherever it sits in the text, lowercased and percent-decoded. A plain DOI, a
+wherever it sits in the text, lower-cased and percent-decoded. A plain DOI, a
 resolvable URL and the forms `doi: 10...` and `DOI 10...` for the same work are
-therefore recognised as the same source, and a trailing full stop is ignored. The function takes no
-network dependency itself: the search is left entirely to whichever tool
-supplies the candidate list.
+therefore recognised as the same source, and a trailing full stop is ignored.
+The function itself has no network dependency, and the search is left to
+whichever tool supplies the candidate list.
 
 ### Combining it with scopusflow-py
 
 [`scopusflow-py`](https://pablobernabeu.github.io/scopusflow-py/) is a
 companion package, by the same author, for querying the Elsevier Scopus
-Search API. It is a natural source of candidate DOIs: `fetch_plan` retrieves
+Search API, and it can supply the candidate DOIs. `fetch_plan` retrieves
 records for a search plan, and `extract_dois` reduces them to a plain list of
-DOIs, which is exactly the input `new_evidence_dois` expects.
+DOIs, the input that `new_evidence_dois` expects.
+
 `scopusflow-py` is not a dependency of `theoryforge`, so the snippet below is
-illustrative rather than a tested example. To run it, install the package
-with `pip install scopusflow`, the name it is published and imported under,
-and configure `pybliometrics` with a Scopus API key.
+illustrative and is not a tested example. To run it, install the package with
+`pip install scopusflow`, the name it is published and imported under, and
+configure `pybliometrics` with a Scopus API key.
 
 ```python
 from scopusflow import scopus_query, SearchPlan, fetch_plan, extract_dois
@@ -459,7 +453,7 @@ candidates = extract_dois(records)
 t.new_evidence_dois(candidates)
 ```
 
-`diff_dois` extends this to tracking a search over time: it compares an
+`diff_dois` extends this to tracking a search over time. It compares an
 earlier and a later retrieval and returns a frame of DOIs marked `added`,
 `removed` or `unchanged`. Re-running a saved plan and passing the `added` DOIs
 into `new_evidence_dois` gives a routine for revisiting a theory's evidence
@@ -504,11 +498,10 @@ per row) and `references` (one DataFrame of cited works per row, with `id`,
 `fetch_corpus` (OpenAlex) stays the built-in default because OpenAlex is free
 and answers modest use without a key, so the literature layer works with no
 setup. Scopus needs an institutional subscription and an API key, so
-`scopusflow-py` is an opt-in source rather than a dependency. The two packages
-exchange plain data, a DOI list or a corpus written to a file, with no
-coupling in either direction. That keeps theoryforge dependency-light and
-usable straight after install, and lets a reader reach for whichever index
-they have access to.
+`scopusflow-py` is an opt-in source. The two packages exchange plain data, a
+DOI list or a corpus written to a file, and neither depends on the other. This
+keeps the dependencies of `theoryforge` few and lets a reader use whichever
+index they have access to.
 
 The corpus format expects a top-level `{schema_version, id, records}` mapping
 and, within each record, `references` as a flat list of id strings, whereas
@@ -527,22 +520,24 @@ frame = corpus(records)
 ```
 
 `litmap` folds the case of a DOI and drops its resolver prefix, but it compares
-every other reference and every keyword as an exact string. The conversion
-therefore has to give each cited work one key across the whole corpus. Scopus
-gives a cited work's DOI in one record and not at all in another. A key built
-from the DOI where there is one, and from the Scopus identifier otherwise,
-splits one work into two nodes, and the co-citation map loses its edges. Author
-keywords keep their authors' capitals, which splits the keyword themes in the
-same way. The adapter below therefore keys each cited work by its Scopus
-identifier, as `scopus:<id>`. A reference that carries only a DOI borrows the
-identifier of another reference with the same DOI anywhere in the corpus, and
-is keyed as `doi:<doi>`, with the DOI lower-cased and any resolver prefix
-removed, when no such reference exists. `litmap` labels such a work with the
-bare DOI. References with neither are dropped. Keywords are trimmed and
-lower-cased, and a missing year is written as `null`. The year is converted
-to a plain `int` because a fresh fetch leaves `pd.NA` for a missing year and
-a resumed checkpoint holds nullable `Int64` years, and the `json` module
-writes neither.
+every other reference and every keyword as an exact string. When the frame is
+converted to the corpus format, each cited work therefore needs one key across
+the whole corpus. Scopus gives a cited work's DOI in one record and not at all
+in another. A key built from the DOI where there is one, and from the Scopus
+identifier otherwise, splits one work into two nodes, and the co-citation map
+loses its edges. Author keywords keep their authors' capitals, which splits
+the keyword themes in the same way.
+
+The adapter below therefore keys each cited work by its Scopus identifier, as
+`scopus:<id>`. A reference that carries only a DOI borrows the identifier of
+another reference with the same DOI anywhere in the corpus. When the corpus
+holds no such reference, the DOI-only reference is keyed as `doi:<doi>`, with
+the DOI lower-cased and any resolver prefix removed, and `litmap` labels the
+work with the bare DOI. References with neither are dropped. Keywords are
+trimmed and lower-cased, and a missing year is written as `null`. A fresh fetch
+leaves `pd.NA` for a missing year and a resumed checkpoint holds nullable
+`Int64` years. The `json` module writes neither, so the year is converted to a
+plain `int`.
 
 <!-- scopus-adapter -->
 ```python
@@ -617,9 +612,9 @@ def scopus_corpus_to_tf(frame, corpus_id):
     return {"schema_version": "1.0", "id": corpus_id, "records": records}
 ```
 
-Write the result with `allow_nan=False`, which stops the write at any stray
-missing value, since the `NaN` that `json` would otherwise write is not valid
-JSON. Then read it back with `read_corpus`:
+By default, `json` writes a stray missing value as `NaN`, which is not valid
+JSON. Write the result with `allow_nan=False`, which stops the write at any
+such value, then read it back with `read_corpus`:
 
 ```python
 # illustrative: continues from the fetch above

@@ -1,6 +1,6 @@
 # Get started
 
-This guide walks through installing the Python package and running a first session against an existing theory file.
+This guide shows how to install the Python package and run a first session against an existing theory file. Every result shown on this page is produced by running the code when the page is built.
 
 ## Installation
 
@@ -12,11 +12,11 @@ pip install theoryforge
 
 ## Sample theories
 
-The package ships a few example theories, so nothing needs downloading. `tf.example_path(name)` returns the path of one of them, and `tf.example_names()` lists what is available. The R twin offers the same two functions as `tf_example_path()` and `tf_example_names()`. Point the path at a theory file of your own whenever you prefer. Every result shown on this page is produced by running the code when the page is built.
+The package includes a few example theories, so nothing needs downloading. `tf.example_path(name)` returns the path of one of them, and `tf.example_names()` lists what is available. The R twin offers the same two functions as `tf_example_path()` and `tf_example_names()`. You can use the path of a theory file of your own in place of an example path.
 
 ## A first session
 
-Import the package, list the packaged examples and read the panic-network theory from its YAML file.
+Import the package, list the example theories and read the panic-network theory from its YAML file.
 
 ```python exec="1" source="material-block" result="text" session="getting-started"
 import theoryforge as tf
@@ -28,20 +28,20 @@ print(tf.example_names())
 t = tf.read(tf.example_path("panic-network.theory.yaml"))
 ```
 
-Validate the theory. With no arguments this checks the structure: the required fields and enum membership, that every top-level field is one the schema defines (a misspelt key such as `prediction:` is refused) and that each collection is a list. It returns `True` on success and raises `ValueError` with a list of problems otherwise. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection, that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id, and that assumption, test-outcome and evidence entries reference declared predictions. The full pass then checks the rest of the schema, such as the evidence directions, a boolean `passed` on each test outcome and the type of every other field.
+Validate the theory. `validate()` returns `True` on success and otherwise raises `ValueError` with a list of problems. With no arguments, it checks the structure: the required fields and enum membership, that every top-level field is one the schema defines and that each collection is a list. A misspelt key such as `prediction:` is reported as an unknown top-level field. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection and that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id. The full pass also checks that assumption, test-outcome and evidence entries reference declared predictions. It then checks the rest of the schema, such as the evidence directions, a boolean `passed` on each test outcome and the type of every other field.
 
 ```python exec="1" source="material-block" session="getting-started"
 t.validate()
 t.validate(full=True)   # also ids, cross-references and the rest of the schema
 ```
 
-Produce the rigour report. The `"json"` format returns the 12-item rigour checklist together with the overall gate. `t.check()` returns the same information as a plain Python dictionary, and `t.report(format=...)` renders it as a string, in `"json"` or `"html"`.
+Produce the rigour report. `t.report(format=...)` renders it as a string, in `"json"` or `"html"`, and `t.check()` returns the same information as a plain Python dictionary. The `"json"` format gives the 12-item rigour checklist together with the overall gate.
 
 ```python exec="1" source="material-block" result="json" session="getting-started"
 print(t.report("json"))
 ```
 
-Working from the dictionary that `t.check()` returns, individual results are easy to read off, including each checklist item in order.
+Individual results, including each checklist item in order, can be read from the dictionary that `t.check()` returns.
 
 ```python exec="1" source="material-block" result="text" session="getting-started"
 report = t.check()
@@ -59,13 +59,13 @@ Export a diagram. The digraph types, such as `nomological_net`, return Graphviz 
 print(t.diagram("nomological_net"))
 ```
 
-The `causal_dag` type returns dagitty syntax instead, for causal-inference tooling. It carries the same edges as the DOT above, without the presentation attributes. To read that subgraph rather than export it, `implications()` checks it for acyclicity and returns the conditional independencies it entails, which [Workflow modes](workflow-modes.md#what-the-causal-graph-commits-you-to) works through.
+The `causal_dag` type returns dagitty syntax instead, for causal-inference tools. It contains the same edges as the DOT above, without the presentation attributes. Within Python, `implications()` checks the causal DAG for acyclicity and returns the conditional independencies it entails, which [Workflow modes](workflow-modes.md#what-the-causal-graph-commits-you-to) works through.
 
 ```python exec="1" source="material-block" result="text" session="getting-started"
 print(t.diagram("causal_dag"))
 ```
 
-With the optional render extra (`pip install "theoryforge[render]"`), `render_diagram(t, "nomological_net")` wraps the DOT in a `graphviz.Source` that displays inline in a notebook. The `causal_dag` view is the one exception, since dagitty syntax renders in a dagitty tool rather than Graphviz. Rendered, the nomological-net DOT printed above reads as the figure below.
+With the optional render extra (`pip install "theoryforge[render]"`), `render_diagram(t, "nomological_net")` wraps the DOT in a `graphviz.Source` that displays inline in a notebook. The causal DAG is the one view that `render_diagram()` does not render, since dagitty syntax needs a dagitty tool rather than Graphviz. The figure below is drawn from the nomological-net DOT printed above.
 
 ```python exec="1" html="1" session="getting-started"
 # Graphviz draws this figure from the DOT above when the page is built, so it
@@ -75,7 +75,7 @@ svg = tf.render_diagram(t, "nomological_net").pipe(format="svg", encoding="utf-8
 print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
 ```
 
-Run the lexical redundancy screen. This returns every construct pair with two measures of the words their definitions share, the Jaccard similarity and the overlap coefficient, and an `ok`/`review` flag. A pair is marked `review` when the definitions are near duplicates or one is contained in the other, which suggests jingle-jangle redundancy.
+Run the lexical redundancy screen. This returns every construct pair with an `ok`/`review` flag and two measures of the words their definitions share, the Jaccard similarity and the overlap coefficient. A pair is marked `review` when the definitions are near duplicates or one is contained in the other, which suggests jingle-jangle redundancy.
 
 ```python exec="1" source="material-block" result="text" session="getting-started"
 for pair in t.redundancy_check():
@@ -92,4 +92,4 @@ reloaded.id == t.id                    # True
 
 ## Next steps
 
-The same `Theory` object supports the building, development and testing modes (`severity()`, `appraise_amendment()`, `preregister()`) and the literature layer (`read_corpus`, `litmap`, `landscape`). See the [API reference](api.md) for the full function list.
+The same `Theory` object supports the BUILDING, DEVELOPMENT and TESTING modes (`severity()`, `appraise_amendment()`, `preregister()`) and the literature layer (`read_corpus`, `litmap`, `landscape`). The [API reference](api.md) lists every function.

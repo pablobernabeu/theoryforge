@@ -70,14 +70,13 @@ theoryforge is developed and maintained by
 [Pablo Bernabeu](https://pablobernabeu.github.io), a researcher in the
 Department of Education at the University of Oxford. His work spans cognitive psychology and
 neuroscience, linguistics, education and digital technologies, and research methods and open
-science, with hands-on experience in behavioural and EEG experiments, corpus analysis,
+science. He has hands-on experience in behavioural and EEG experiments, corpus analysis,
 computational modelling and statistics. He develops open, reproducible research software in R
 and Python, and is a Fellow of the Software Sustainability Institute. His
 [ORCID record](https://orcid.org/0000-0003-1083-2460) lists his other work.
 
-This R package has a feature-parity twin written in Python. Its documentation lives at the
-[theoryforge (Python) site](https://pablobernabeu.github.io/theoryforge/python/), keeping a
-theory development workflow legible across both languages.
+This R package has a feature-parity twin written in Python, which is documented on the
+[theoryforge (Python) site](https://pablobernabeu.github.io/theoryforge/python/).
 
 ## Licence
 
@@ -89,10 +88,10 @@ text is reproduced on this site's [licence page](../LICENSE.html).
 
 CRAN assigned the package the DOI <https://doi.org/10.32614/CRAN.package.theoryforge> on
 publication. It names the R package across all its versions, so the version in the citation
-identifies the release used. Releases of the repository, which carry the Python twin as well,
+identifies the release used. Releases of the repository, which also include the Python twin,
 are tagged on [GitHub](https://github.com/pablobernabeu/theoryforge/releases) and archived on
-Zenodo, where the concept DOI, <https://doi.org/10.5281/zenodo.21229964>, resolves to the
-latest archived release and each release has a DOI of its own. The
+Zenodo, which gives each release a DOI of its own. The concept DOI,
+<https://doi.org/10.5281/zenodo.21229964>, resolves to the latest archived release. The
 [changelog](../news/index.html) records what changed in each release.
 
 ## Contributing and support

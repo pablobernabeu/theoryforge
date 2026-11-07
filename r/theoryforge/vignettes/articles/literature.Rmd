@@ -19,11 +19,11 @@ has_diagram <- requireNamespace("DiagrammeR", quietly = TRUE) &&
 
 A theory is rarely built in isolation. It sits within a field that already has
 crowded areas, sparse areas and recurring sets of references. The literature
-layer of `theoryforge` gives a deterministic, machine-checkable account of that
-field, so the placement of a theory within it can be argued from evidence
-rather than from impression. This article reads a small corpus, computes a
-bibliometric map, positions a theory against the map, and emits a diagram. The
-analysis functions are deterministic and require no optional dependency.
+layer of `theoryforge` gives a machine-checkable account of that field, so that
+the placement of a theory within it can be argued from evidence. This article
+reads a small corpus, computes a bibliometric map, positions a theory against
+the map and emits a diagram. The analysis functions are deterministic and
+require no optional dependency.
 
 ```{r setup}
 library(theoryforge)
@@ -31,11 +31,11 @@ library(theoryforge)
 
 ## Reading a corpus
 
-A corpus is a simple object of the form `{schema_version, id, records}`, where
-each record carries an `id` and may carry `title`, `year`, `keywords` and
-`references`. The package ships a small fixture corpus around panic and anxiety
-research. The format is chosen by file extension, so the same reader handles
-YAML and JSON.
+A corpus is an object of the form `{schema_version, id, records}`, where each
+record carries an `id` and may carry `title`, `year`, `keywords` and
+`references`. The package includes a small fixture corpus around panic and
+anxiety research. `tf_read_corpus()` handles YAML and JSON and chooses the
+format by file extension.
 
 ```{r read-corpus}
 corpus_path <- system.file("fixtures/panic-corpus.yaml",
@@ -64,7 +64,7 @@ Name](https://www.doi.org/doi-handbook/HTML/case-insensitivity.html)).
 `https://doi.org/10.1016/j.brat.2015.10.002` in another therefore cite one
 work, which the co-citation map labels `10.1016/j.brat.2015.10.002`. Other
 references, such as Scopus or OpenAlex identifiers, are compared exactly as
-written, and so are keywords. The package ships the corpus format as a JSON
+written, and so are keywords. The package provides the corpus format as a JSON
 Schema, `corpus.schema.json`, at
 `system.file("schema", "corpus.schema.json", package = "theoryforge")`.
 
@@ -72,10 +72,10 @@ Schema, `corpus.schema.json`, at
 
 `tf_litmap()` computes three things from the records. It counts keyword
 co-occurrence within records, groups co-occurring keywords into thematic
-components, and counts reference co-citation. An edge is kept only when its
+components and counts reference co-citation. An edge is kept only when its
 co-occurrence count reaches `min_link` (default `2`), which suppresses incidental
 pairings. Records are read in file order and every result is sorted, so the map
-is fully deterministic.
+is deterministic.
 
 ```{r litmap}
 lm <- tf_litmap(corpus, min_link = 2)
@@ -87,7 +87,7 @@ lm$keyword_cooccurrence[[1]]        # first kept co-occurrence edge
 
 The thematic components are the connected groups of co-occurring keywords. The
 fixture is constructed so that the threshold-two graph breaks into four
-entirely separate themes.
+separate themes.
 
 ```{r themes}
 for (theme in lm$themes) {
@@ -96,14 +96,14 @@ for (theme in lm$themes) {
 }
 ```
 
-Connected components suit this fixture, built to fall into separate themes. On
-a real corpus, a few keywords that most records carry, such as the name of the
-field, link nearly every keyword to every other, so a single component holds the
-map. Seven OpenAlex corpora of 100 to 600 records each gave a largest theme
-holding at least 98.8 per cent of the linked keywords. When one theme holds more
-than half of them, `tf_litmap()` warns that the themes, and any landscape built
-on them, are not informative. The map itself is returned unchanged. Below, one
-keyword shared by two pairs joins them into one theme.
+Connected components suit a fixture built this way. On a real corpus, a few
+keywords that most records carry, such as the name of the field, link nearly
+every keyword to every other, so a single component holds the map. Seven
+OpenAlex corpora of 100 to 600 records each gave a largest theme holding at
+least 98.8 per cent of the linked keywords. When one theme holds more than half
+of them, `tf_litmap()` warns that the themes, and any landscape built on them,
+are not informative. The map itself is returned unchanged. Below, one keyword
+shared by two pairs joins them into one theme.
 
 ```{r hub-warning}
 hub <- list(schema_version = "1.0", id = "hub", records = list(
@@ -139,28 +139,28 @@ tf_litmap(corpus, min_link = 2, min_cocitation = 3)$co_citation
 
 `method = "simple_centres"` groups keywords as co-word analysis does, by the
 simple-centres algorithm of Coulter et al. (1998) as Cobo et al. (2011)
-describe it (both are listed in full among the [references of the methodology
-page](methodology.html#references)). Each pair of linked keywords is weighted
-by its equivalence index:
-the square of the number of records holding both, divided by the product of the
-numbers holding each. Two keywords that always occur together score 1. A
-keyword that most records carry scores little with the rarer keywords it meets,
-because the index cannot exceed the ratio of the smaller record count to the
-larger. With the cap on a theme's size, this keeps a few such keywords from
-pulling the map into one theme. The strongest link between two keywords not yet
-in a theme starts one. The theme then takes the free keyword most strongly linked
-to any of its members, one at a time, until it holds `max_theme_size` keywords,
-ten by default, or has no free neighbour. A keyword whose links all reach
-keywords already in themes joins none, and on the real corpus below about two in
-five linked keywords end up in no theme. Themes smaller than `min_theme_size`,
-two by default, are dropped. `max_df` leaves out the keywords held by more than
-that share of the records and lists them as `field_terms`. At its default of 1,
-it leaves out none.
+describe it. Both are listed in full among the [references of the methodology
+page](methodology.html#references). Each pair of linked keywords is weighted by
+its equivalence index: the square of the number of records holding both,
+divided by the product of the numbers holding each. Two keywords that always
+occur together score 1. A keyword that most records carry scores little with
+the rarer keywords it meets, because the index cannot exceed the ratio of the
+smaller record count to the larger. With the cap on a theme's size, this keeps
+a few such keywords from merging the map into one theme.
+
+The strongest link between two keywords not yet in a theme starts one. The
+theme then takes the free keyword most strongly linked to any of its members,
+one at a time, until it holds `max_theme_size` keywords, ten by default, or has
+no free neighbour. A keyword whose links all reach keywords already in themes
+joins none. On the real corpus below, about two in five linked keywords end up
+in no theme. Themes smaller than `min_theme_size`, two by default, are dropped.
+`max_df` leaves out the keywords held by more than that share of the records
+and lists them as `field_terms`. At its default of 1, it leaves out none.
 
 On the designed fixture, simple centres find the same four themes as
-components. The package also ships a real corpus, frozen so that its results
+components. The package also includes a real corpus, frozen so that its results
 stay fixed. It holds the 150 works that OpenAlex ranked first for the search
-"panic disorder" on 1 October 2026, with OpenAlex's keywords of that date and
+'panic disorder' on 1 October 2026, with OpenAlex's keywords of that date and
 without their references. Components put every linked keyword of it in one
 theme, while simple centres give bounded ones.
 
@@ -197,25 +197,26 @@ become simple centres in the next minor release.
 ## Positioning a theory against the field
 
 `tf_landscape()` maps a theory's focal constructs and its registered
-alternatives onto the themes from `tf_litmap()`, skipping the co-citation count,
-which it does not use. A theme is tagged `"under_theorised"` when neither the
-focal theory nor any alternative touches it, `"covered"` when exactly one does, and `"crowded"` when two or more do. Matching
-is by shared words between the theme keywords and the construct labels, or the
-label and key constructs of an alternative, and the result names the words
-behind every match. Three kinds of word never match. Field tokens, the words
-most of the corpus shares, are those in the keywords of more than
-`max_token_share` of the records, half by default. Phenomenon tokens are the
-words of the theory's title, which names the phenomenon that the focal theory
-and its rivals all explain. A construct word that also appears in the title
-does not match either. The third kind is a fixed list of words that name a kind
-of account: theory, model, account, hypothesis, framework and approach, with
-their plurals. One shared word is enough for a match.
+alternatives onto the themes from `tf_litmap()` and skips the co-citation
+count. A theme is matched by the words its keywords share with the focal
+theory's construct labels, or with the label and key constructs of a
+registered alternative, and the result names those words. Three kinds of word
+never match. Field tokens, the words most of the corpus shares, are those in
+the keywords of more than `max_token_share` of the records, half by default.
+Phenomenon tokens are the words of the theory's title, which names the
+phenomenon that the focal theory and its rivals all explain. A construct word
+that also appears in the title is a phenomenon token too. The third kind is a
+fixed list of words that name a kind of account: theory, model, account,
+hypothesis, framework and approach, with their plurals. One shared word is
+enough for a match. A theme is tagged `"under_theorised"` when neither the
+focal theory nor any alternative addresses it, `"covered"` when exactly one
+does and `"crowded"` when two or more do.
 
-We build a small theory of panic attacks whose constructs speak to arousal and
-to appraisal, and register one alternative that also speaks to appraisal. The
+We build a small theory of panic attacks whose constructs concern arousal and
+appraisal, and register one alternative that also concerns appraisal. The
 title names the phenomenon, so its words are set aside and the construct labels
 decide the matches. This leaves the arousal theme covered, the appraisal theme
-crowded and the remaining themes untouched.
+crowded and the remaining themes under-theorised.
 
 ```{r theory}
 theory <- tf_theory("panic-appraisal", "A theory of panic attacks") |>
@@ -231,9 +232,9 @@ landscape$theory_id
 unlist(landscape$phenomenon_tokens)
 ```
 
-Each theme in the result records which alternatives land on it, whether the
-focal theory lands on it, the resulting status and the words behind each match,
-in `focal_terms` and in `alternative_terms`.
+Each theme in the result records which alternatives map onto it, whether the
+focal theory maps onto it, the resulting status and the words behind each
+match, in `focal_terms` and in `alternative_terms`.
 
 ```{r landscape-themes}
 words <- function(x) if (length(x) > 0L) paste(unlist(x), collapse = ", ") else "none"
@@ -245,22 +246,23 @@ for (theme in landscape$themes) {
 }
 ```
 
-Two summaries draw out the practical reading. The under-theorised fronts are
-themes that none of the registered accounts addresses, which says nothing of
-accounts the theory does not register. The crowded themes, listed under the key
-`redundancy_risk` despite its name, are addressed by two or more accounts,
-so they call for predictions that discriminate between those accounts. They do
-not show that any account is redundant.
+The statuses count the registered accounts only, so an account the theory does
+not register may still address an under-theorised theme. A crowded theme calls
+for predictions that discriminate between its accounts, and does not show that
+any of them is redundant. `under_theorised_fronts` lists the ids of the
+under-theorised themes, and `redundancy_risk`, despite its name, the ids of the
+crowded ones.
 
 ```{r landscape-summary}
 unlist(landscape$under_theorised_fronts)
 unlist(landscape$redundancy_risk)
 ```
 
-`method` chooses how `tf_litmap()` builds the themes. With
-`"simple_centres"`, the result gains `method` after `theory_id`, and each theme
-keeps its `centrality`, `density` and `quadrant`. A front that none of the
-accounts addresses can then be read with its place in the strategic diagram.
+The `method` argument of `tf_landscape()` chooses how `tf_litmap()` builds the
+themes. With `"simple_centres"`, the result gains `method` after `theory_id`,
+and each theme keeps its `centrality`, `density` and `quadrant`. A front that
+none of the accounts addresses can then be read with its place in the
+strategic diagram.
 
 ```{r landscape-simple-centres}
 real <- tf_landscape(theory, openalex, method = "simple_centres")
@@ -295,8 +297,8 @@ cat('<div class="tf-figure tf-diagram">',
     sep = "")
 ```
 
-The co-citation map links the references that the corpus cites together, so
-tightly co-cited work stands out as the intellectual base the field shares.
+The co-citation map links the references that the corpus cites together.
+Tightly co-cited work appears in it as the intellectual base the field shares.
 
 ```{r diagram-cocitation}
 cat(tf_lit_diagram(lm, type = "co_citation"))
@@ -312,7 +314,7 @@ cat('<div class="tf-figure tf-diagram">',
     sep = "")
 ```
 
-On a real corpus that diagram can run to thousands of edges and a megabyte of
+On a real corpus, that diagram can run to thousands of edges and a megabyte of
 DOT, which Graphviz cannot lay out legibly. `max_edges` keeps the strongest
 edges, the highest counts first with ties going to the pair that sorts first,
 and draws only their endpoints. It applies to both network views.
@@ -322,7 +324,8 @@ cat(tf_lit_diagram(lm, type = "co_citation", max_edges = 1))
 ```
 
 The theme landscape diagram is produced from the `tf_landscape()` result rather
-than from the map, since it carries the focal theory and the alternatives.
+than from the map, since that result carries the focal theory and the
+alternatives.
 
 ```{r diagram-landscape}
 cat(tf_lit_diagram(landscape, type = "theme_landscape"))
@@ -341,10 +344,12 @@ cat('<div class="tf-figure tf-diagram">',
 ## Fetching a corpus from OpenAlex
 
 The corpus above was read from a file. A corpus can also be assembled from the
-OpenAlex works API with `tf_fetch_corpus()`. This adapter is assistive. It
-makes a live network call and its result depends on an external service that
-changes over time, so it sits outside the deterministic core of the package.
-The call is shown here but not run.
+OpenAlex works API with `tf_fetch_corpus()`, an assistive adapter. It makes a
+live network call and its result depends on an external service that changes
+over time, so it sits outside the deterministic core of the package.
+The recommended pattern is to fetch once, write the result to disk and then
+work from the saved file so that later analyses remain reproducible. The call
+is shown here but not run.
 
 ```{r fetch, eval = FALSE}
 # Paging past the first page needs an OpenAlex API key, read here from the
@@ -361,23 +366,25 @@ fetched_map <- tf_litmap(fetched)
 
 OpenAlex answers requests without a key within a budget of USD 0.10 a day. A
 search page costs USD 0.001, so the budget covers about 100 searches of one
-page each. Without a key, OpenAlex serves only the first page of a search and
-refuses the next with HTTP 401, so a `max_records` above `per_page` needs a
-key. A free API key raises the budget to USD 1 a day. Store the key in the `OPENALEX_API_KEY`
-environment variable, for example in `.Renviron`, and `tf_fetch_corpus()`
-sends it in a request header, never in the URL or the corpus. The `mailto`
-argument is still accepted, but OpenAlex now ignores it. When OpenAlex refuses
-a request, typically with HTTP 429 once the budget is spent, or HTTP 401 when
-a later page is asked for without a key, the function stops with the status
-and, when the curl package is installed, OpenAlex's message, so a refused
-request cannot pass for a literature with no themes.
+page each. A free API key raises the budget to USD 1 a day. Store the key in
+the `OPENALEX_API_KEY` environment variable, for example in `.Renviron`, and
+`tf_fetch_corpus()` sends it in a request header, never in the URL or the
+corpus. The `mailto` argument is still accepted, but OpenAlex now ignores it.
+
+Without a key, OpenAlex serves only the first page of a search and rejects a
+request for the next with HTTP 401, so a `max_records` above `per_page` needs a
+key. The other usual rejection is HTTP 429, sent once the budget is spent. On
+any rejection, the function stops with the status and, when the curl package is
+installed, OpenAlex's message. A rejected request therefore cannot pass for a
+literature with no themes.
 
 Each request returns one page of works, ranked by relevance, from a result set
-that is usually far larger: a search for panic disorder matched about 187,000
+that is usually far larger. A search for panic disorder matched about 187,000
 works in October 2026. OpenAlex supports pages of up to 100 works and has
 deprecated larger ones, although it still accepts 200. `max_records` pages on
 through OpenAlex's cursor, with an API key, until that many works are
-collected, and
+collected.
+
 `fetched$source` records the query, the UTC time of retrieval, the number of
 works that matched and the number kept. That record matters because the
 keywords change. Since late September 2026, OpenAlex has written each work's
@@ -385,13 +392,13 @@ keywords with a language model that reads its title, abstract and venue. It
 merges and splits that vocabulary over time, so the same works fetched a week
 apart can carry different keywords. Works left without keywords fall back to
 their concepts, a deprecated vocabulary whose capitalised names do not match
-the lower-case keywords. Each record also keeps the work's DOI as OpenAlex
-gives it. The example writes the corpus with `null = "null"`, because
+the lower-case keywords. Each corpus record also keeps the work's DOI as
+OpenAlex gives it. The example writes the corpus with `null = "null"`, because
 `jsonlite` would otherwise write a missing DOI or count as an empty object,
 which the corpus schema does not allow.
 
-Once fetched, the corpus object has the same shape as a file-read corpus, so it
-flows into `tf_litmap()`, `tf_landscape()` and `tf_lit_diagram()` without any
+Once fetched, the corpus object has the same shape as a file-read corpus and
+can be passed to `tf_litmap()`, `tf_landscape()` and `tf_lit_diagram()` without
 further change. The file-read `corpus` used throughout this article shows that
 shape.
 
@@ -399,16 +406,12 @@ shape.
 str(corpus, max.level = 2, list.len = 4)
 ```
 
-The recommended pattern is to fetch once, write the result to disk, and then
-work from the saved file so that later analyses remain reproducible.
-
 ## Tracking new evidence with an external search
 
-Locating a corpus is only one use of a literature search. A second, recurring
-need is narrower: checking whether a search has turned up any source the
-theory does not already cite. `tf_new_evidence_dois()` answers that question
-deterministically, from a theory object and a plain vector of candidate DOIs,
-regardless of where the DOIs came from.
+Locating a corpus is only one use of a literature search. A narrower, recurring
+use is to check whether a search has turned up any source the theory does not
+already cite. `tf_new_evidence_dois()` makes that check deterministically,
+from a theory object and a plain vector of candidate DOIs.
 
 The bundled panic theory records one DOI as evidence and one for each of its
 two registered alternatives, and a DOI cited as an alternative counts as cited
@@ -430,23 +433,23 @@ tf_new_evidence_dois(panic, candidates)
 ```
 
 The comparison is on a normalised form of each DOI, the DOI itself found
-wherever it sits in the text, lowercased and percent-decoded. A plain DOI, a
+wherever it sits in the text, lower-cased and percent-decoded. A plain DOI, a
 resolvable URL and the forms `doi: 10...` and `DOI 10...` for the same work are
-therefore recognised as the same source, and a trailing full stop is ignored. The function takes no
-network dependency itself: the search is left entirely to whichever tool
-supplies the candidate list.
+therefore recognised as the same source, and a trailing full stop is ignored.
+The function itself has no network dependency, and the search is left to
+whichever tool supplies the candidate list.
 
 ### Combining it with scopusflow
 
 [`scopusflow`](https://pablobernabeu.github.io/scopusflow/) is a companion R
-package, by the same author, for querying the Elsevier Scopus Search API. It
-is a natural source of candidate DOIs: `scopus_fetch()` retrieves records for
-a query, and `scopus_extract_dois()` reduces them to a plain DOI vector, which
-is exactly the input `tf_new_evidence_dois()` expects.
+package, by the same author, for querying the Elsevier Scopus Search API, and
+it can supply the candidate DOIs. `scopus_fetch()` retrieves records for a
+query, and `scopus_extract_dois()` reduces them to a plain DOI vector, the input
+that `tf_new_evidence_dois()` expects.
 
 `scopusflow` is not a dependency of `theoryforge`, so the snippet below is
-illustrative rather than executed by this vignette. Install `scopusflow` and
-supply a Scopus API key (see its `scopus_has_key()`) to run it.
+illustrative and is not run by this vignette. Install `scopusflow` and supply a
+Scopus API key (see its `scopus_has_key()`) to run it.
 
 ```r
 library(scopusflow)
@@ -458,9 +461,9 @@ candidates <- scopus_extract_dois(records)
 tf_new_evidence_dois(panic, candidates)
 ```
 
-`scopus_diff_dois()` extends this to tracking a search over time: it compares
-an earlier and a later retrieval (either `scopus_records` objects or DOI
-vectors) and reports which DOIs were added, removed or unchanged. Re-running a
+`scopus_diff_dois()` extends this to tracking a search over time. It compares
+an earlier and a later retrieval, either `scopus_records` objects or DOI
+vectors, and reports which DOIs were added, removed or unchanged. Re-running a
 saved query and passing the `"added"` DOIs into `tf_new_evidence_dois()` gives
 a routine for revisiting a theory's evidence base as the literature grows.
 
@@ -473,8 +476,8 @@ added <- diff$doi[diff$status == "added"]
 tf_new_evidence_dois(panic, added)
 ```
 
-The hand-off itself needs nothing from `scopusflow`: `scopus_diff_dois()`
-returns one row per DOI with its status, which we reproduce here so the last
+The last step needs nothing from `scopusflow`. `scopus_diff_dois()` returns one
+row per DOI with its status, and we reproduce such a table here so that the
 step runs. Only the newly added DOI comes back as new evidence.
 
 ```{r diff-standin}
@@ -517,11 +520,10 @@ cited works per record, with `id`, `doi`, `title` and other fields).
 `tf_fetch_corpus()` (OpenAlex) stays the built-in default because OpenAlex is
 free and answers modest use without a key, so the literature layer works with
 no setup. Scopus needs an institutional subscription and an API key, so
-`scopusflow` is an opt-in source rather than a dependency. The two packages
-exchange plain data, a DOI vector or a corpus written to a file, with no
-coupling in either direction. That keeps theoryforge dependency-light and
-usable straight after install, and lets a reader reach for whichever index
-they have access to.
+`scopusflow` is an opt-in source. The two packages exchange plain data, a DOI
+vector or a corpus written to a file, and neither depends on the other. This
+keeps the dependencies of `theoryforge` few and lets a reader use whichever
+index they have access to.
 
 The corpus format expects a top-level `{schema_version, id, records}` mapping
 and, within each record, `references` as a flat list of id strings, whereas
@@ -536,20 +538,21 @@ sc   <- scopusflow::scopus_corpus(recs)
 ```
 
 `tf_litmap()` folds the case of a DOI and drops its resolver prefix, but it
-compares every other reference and every keyword as an exact string. The
-conversion therefore has to give each cited work one key across the whole
-corpus. Scopus gives a cited work's DOI in one record and not at all in
-another. A key built from the DOI where there is one, and from the Scopus
-identifier otherwise, splits one work into two nodes, and the co-citation map
-loses its edges. Author keywords keep their authors' capitals, which splits
-the keyword themes in the same way. The adapter below therefore keys each
-cited work by its Scopus identifier, as `scopus:<id>`. A reference that
-carries only a DOI borrows the identifier of another reference with the same
-DOI anywhere in the corpus, and is keyed as `doi:<doi>`, with the DOI
-lower-cased and any resolver prefix removed, when no such reference exists.
-`tf_litmap()` labels such a work with the bare DOI. References with neither
-are dropped. Keywords are trimmed and lower-cased, and a missing year is
-written as `null`.
+compares every other reference and every keyword as an exact string. When the
+tibble is converted to the corpus format, each cited work therefore needs one
+key across the whole corpus. Scopus gives a cited work's DOI in one record and
+not at all in another. A key built from the DOI where there is one, and from
+the Scopus identifier otherwise, splits one work into two nodes, and the
+co-citation map loses its edges. Author keywords keep their authors' capitals,
+which splits the keyword themes in the same way.
+
+The adapter below therefore keys each cited work by its Scopus identifier, as
+`scopus:<id>`. A reference that carries only a DOI borrows the identifier of
+another reference with the same DOI anywhere in the corpus. When the corpus
+holds no such reference, the DOI-only reference is keyed as `doi:<doi>`, with
+the DOI lower-cased and any resolver prefix removed, and `tf_litmap()` labels
+the work with the bare DOI. References with neither are dropped. Keywords are
+trimmed and lower-cased, and a missing year is written as `null`.
 
 ```{r scopus-adapter}
 scopus_corpus_to_tf <- function(sc, id) {
@@ -602,10 +605,11 @@ scopus_corpus_to_tf <- function(sc, id) {
 }
 ```
 
-Write the result with `null = "null"` and `na = "null"`, so that a missing year
-reaches the file as `null` (by default `jsonlite` writes the string `"NA"`), then
-read it back with `tf_read_corpus()`. `I()` in the adapter keeps a one-element keyword or
-reference list an array under `auto_unbox = TRUE`.
+By default, `jsonlite` writes a missing year as the string `"NA"`. Write the
+result with `null = "null"` and `na = "null"` so that a missing year reaches the
+file as `null`, then read it back with `tf_read_corpus()`. `I()` in the adapter
+keeps a one-element keyword or reference list an array under
+`auto_unbox = TRUE`.
 
 ```r
 # illustrative: continues from the fetch above

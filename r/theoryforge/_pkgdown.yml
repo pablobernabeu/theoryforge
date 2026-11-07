@@ -156,7 +156,7 @@ reference:
   - tf_write
 - title: Packaged examples
   desc: >
-    Example theories and literature corpora shipped inside the package, so
+    Example theories and literature corpora included in the package, so
     that nothing has to be downloaded to follow the documentation. The Python
     twin reaches the same files through example_names() and example_path().
   contents:
