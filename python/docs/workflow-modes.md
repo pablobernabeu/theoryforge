@@ -15,8 +15,8 @@ demonstrated below.
 Throughout, the package is imported as `tf`. The examples read the theories
 included with it through `tf.example_path()`, as on the
 [Get started](getting-started.md) page, so the code runs as shown after
-`pip install theoryforge`. Every result and figure shown below is produced when
-this page is built.
+`pip install theoryforge`. Every printed result and figure below is produced
+when this page is built.
 
 ```python exec="1" source="material-block" session="workflow-modes"
 import theoryforge as tf
@@ -212,7 +212,8 @@ deciding which version is the prior is the caller's responsibility.
 
 TESTING prepares a theory for empirical evaluation. It scores how risky each
 prediction is, derives what the causal graph forbids in data, exports a
-preregistration document and assembles a reviewer-facing audit bundle.
+preregistration document, assembles a reviewer-facing audit bundle and
+compiles a measurement model for lavaan.
 
 ### Severity
 
@@ -395,7 +396,12 @@ print(t.dossier())
 
 `compile_sem()` translates the structural content into lavaan model syntax.
 Constructs with measurement indicators become a latent measurement model
-with `=~`, and directed propositions become structural paths with `~`.
+with `=~`, directed propositions become structural paths with `~` and
+associations become covariances with `~~`. A block at the end fixes at zero
+each covariance between two constructs that are both exogenous or both
+terminal, unless an association joins them or either is a moderator. Deleting
+the block restores lavaan's defaults. The theory built above has no such pair,
+so its syntax has no block.
 
 ```python exec="1" source="material-block" result="text" session="workflow-modes"
 print(t.compile_sem())

@@ -1,6 +1,6 @@
 # Get started
 
-This guide shows how to install the Python package and run a first session against an existing theory file. Every result shown on this page is produced by running the code when the page is built.
+This guide shows how to install the Python package and run a first session against an existing theory file. Every printed result on this page is produced by running the code when the page is built.
 
 ## Installation
 
@@ -16,7 +16,7 @@ The package includes a few example theories, so nothing needs downloading. `tf.e
 
 ## A first session
 
-Import the package, list the example theories and read the panic-network theory from its YAML file.
+Import the package, list the packaged examples and read the panic-network theory from its YAML file.
 
 ```python exec="1" source="material-block" result="text" session="getting-started"
 import theoryforge as tf
@@ -59,7 +59,7 @@ Export a diagram. The digraph types, such as `nomological_net`, return Graphviz 
 print(t.diagram("nomological_net"))
 ```
 
-The `causal_dag` type returns dagitty syntax instead, for causal-inference tools. It contains the same edges as the DOT above, without the presentation attributes. Within Python, `implications()` checks the causal DAG for acyclicity and returns the conditional independencies it entails, which [Workflow modes](workflow-modes.md#what-the-causal-graph-commits-you-to) works through.
+The `causal_dag` type returns dagitty syntax instead, for causal-inference tools. It contains the same directed edges as the DOT above, without the presentation attributes. An association is kept only between two constructs that each appear in a directed relation. Within Python, `implications()` checks the causal DAG for acyclicity and returns the conditional independencies it entails, which [Workflow modes](workflow-modes.md#what-the-causal-graph-commits-you-to) works through. The panic-network graph has a cycle, so `implications()` raises `ValueError` on it unless you pass `cycles="sigma"`.
 
 ```python exec="1" source="material-block" result="text" session="getting-started"
 print(t.diagram("causal_dag"))
@@ -92,4 +92,4 @@ reloaded.id == t.id                    # True
 
 ## Next steps
 
-The same `Theory` object supports the BUILDING, DEVELOPMENT and TESTING modes (`severity()`, `appraise_amendment()`, `preregister()`) and the literature layer (`read_corpus`, `litmap`, `landscape`). The [API reference](api.md) lists every function.
+The same `Theory` object supports the BUILDING, DEVELOPMENT and TESTING modes (`severity()`, `appraise_amendment()`, `preregister()`) and the literature layer (`landscape()`, `new_evidence_dois()`). The module-level functions `tf.read_corpus()` and `tf.litmap()` read and map a literature corpus. The [API reference](api.md) lists every function.

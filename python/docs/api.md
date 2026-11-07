@@ -30,9 +30,9 @@ builder methods are documented with the class.
 
 ## Packaged examples
 
-Example theories included in the package, so that nothing has to be downloaded
-to follow the documentation. The R twin provides the same files through
-`tf_example_names()` and `tf_example_path()`.
+Example theories and literature corpora included in the package, so that
+nothing has to be downloaded to follow the documentation. The R twin provides
+the same files through `tf_example_names()` and `tf_example_path()`.
 
 ::: theoryforge.example_names
 

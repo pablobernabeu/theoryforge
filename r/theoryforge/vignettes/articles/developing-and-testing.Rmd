@@ -23,9 +23,13 @@ article continues the workflow into development and testing. It shows how to
 grade the riskiness of each prediction's claim, derive what the causal graph
 forbids in data, export a preregistration, appraise an amendment in Lakatosian
 terms, compile a measurement model for `lavaan` and assemble a reviewer-facing
-audit bundle. The worked example reads the panic-network fixture included with
-the package, and two sections also use the modality-switching fixture, so every
-chunk runs with only `theoryforge` loaded.
+audit bundle. The worked example reads the panic-network fixture, and later
+sections also read the modality-switching fixture, the 2026 revision of the
+panic network and the weak-theory fixture. All four are included with the
+package, so every chunk that the page runs needs only `theoryforge`, apart from
+the five that render a diagram with `tf_render_diagram()`. Those also need the
+optional DiagrammeR and DiagrammeRsvg packages, and the page skips them when
+either is missing.
 
 ```{r read}
 theory <- tf_read(
@@ -168,9 +172,9 @@ prereg <- tf_preregister(theory)
 cat(prereg)
 ```
 
-The document marks the first prediction as tested because it has already
-passed a registered test. It also states that the feedback loop leaves the
-implied independencies underived by default.
+The document marks the first prediction as tested and gives the date and
+registration of the test it passed. It also states that the feedback loop
+leaves the implied independencies underived by default.
 
 A prediction can record the sampling plan of its test, the planned sample,
 alpha, smallest effect of interest and power, in a `test` block. The document

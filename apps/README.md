@@ -85,8 +85,8 @@ invalid. The CI apps job runs both scripts.
 
 ## Deploy
 
-The `docs` GitHub Actions workflow runs `node build.mjs`, copies `apps/` into
-`site/apps/` and runs the two smoke scripts on that copy. It then deploys the site to
-GitHub Pages, where the apps are published alongside the documentation. The first load
-of each app downloads its WebAssembly engine, which takes about 20 s, and the browser
-then caches the engine.
+The `docs` GitHub Actions workflow runs `node build.mjs`, copies `r/`, `py/` and
+`shared/` into `site/apps/` and runs the two smoke scripts on that copy. It then
+deploys the site to GitHub Pages, where the apps are published alongside the
+documentation. The first load of each app downloads its WebAssembly engine, which
+takes about 20 s, and the browser then caches the engine.

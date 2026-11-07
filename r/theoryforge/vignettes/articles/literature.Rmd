@@ -52,9 +52,10 @@ Scopus id, is read as its decimal string, so `12345678` and `"12345678"` name
 the same work in R and in Python. `tf_litmap()` and `tf_landscape()` check the
 corpus before counting anything, and a message names the record at fault. They
 stop on a missing or misspelt `records` key, a record that is not a mapping and
-a fraction or nested list among the values. They also stop on an integer of
-2^53 or more, since R cannot hold one exactly. YAML reads an unquoted `NO`
-(nitric oxide), `yes`, `on` or `off` as a logical, so quote such a keyword.
+a fraction or nested list among the values. They also stop on an integer of 2^53
+or more in absolute value, since R cannot hold every such integer exactly. YAML
+reads an unquoted `NO` (nitric oxide), `yes`, `on` or `off` as a logical, so
+quote such a keyword.
 
 A reference that holds a DOI is keyed by the DOI, lower-cased and without its
 resolver prefix, because DOI names ignore the case of ASCII letters (DOI
@@ -96,9 +97,9 @@ for (theme in lm$themes) {
 }
 ```
 
-Connected components suit a fixture built this way. On a real corpus, a few
-keywords that most records carry, such as the name of the field, link nearly
-every keyword to every other, so a single component holds the map. Seven
+Connected components suit a fixture built this way. On a real corpus, one or a
+few keywords that most records carry, such as the name of the field, link
+nearly every keyword to every other, so a single component holds the map. Seven
 OpenAlex corpora of 100 to 600 records each gave a largest theme holding at
 least 98.8 per cent of the linked keywords. When one theme holds more than half
 of them, `tf_litmap()` warns that the themes, and any landscape built on them,
@@ -116,9 +117,9 @@ hub_map <- tf_litmap(hub)
 length(hub_map$themes)
 ```
 
-Co-citation is computed the same way over the `references` field. Two cited
-sources are linked when at least `min_link` records in the corpus cite them
-together.
+Co-citation is computed the same way over the `references` field. By default,
+two cited sources are linked when at least `min_link` records in the corpus
+cite them together.
 
 ```{r cocitation}
 lm$co_citation

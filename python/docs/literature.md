@@ -18,10 +18,11 @@ list of candidate DOIs against the sources a theory already cites.
 
 ## Reading a corpus
 
-A corpus is a mapping with a `records` list. Each record may carry an `id`,
-a `title`, a `year`, a list of `keywords` and a list of `references`. The
-analysis uses the keyword and reference lists, and other fields are carried
-through but not required. The examples on this page all read the bundled fixture
+A corpus is a mapping of the form `{schema_version, id, records}`, where
+`records` is a list. Each record carries an `id` and may carry a `title`, a
+`year`, a list of `keywords` and a list of `references`. The analysis uses the
+keyword and reference lists, and other fields are carried through but not
+checked. The examples on this page all read the bundled fixture
 [`fixtures/panic-corpus.yaml`](https://github.com/pablobernabeu/theoryforge/blob/main/fixtures/panic-corpus.yaml).
 The YAML excerpt below shows the first and the third of its eight records, and
 the counts in the output are those of the whole file.
@@ -48,9 +49,10 @@ Scopus id, is read as its decimal string, so `12345678` and `"12345678"` name
 the same work. `litmap` and `landscape` check the corpus before counting
 anything, and a message names the record at fault. They stop on a missing or
 misspelt `records` key, a record that is not a mapping and a fraction or nested
-list among the values. They also stop on an integer of 2^53 or more, since R
-cannot hold one exactly. YAML reads an unquoted `NO` (nitric oxide), `yes`,
-`on` or `off` as a boolean, so quote such a keyword.
+list among the values. They also stop on an integer of 2^53 or more in absolute
+value, since the R twin cannot hold every such integer exactly. YAML reads an
+unquoted `NO` (nitric oxide), `yes`, `on` or `off` as a boolean, so quote such a
+keyword.
 
 A reference that holds a DOI is keyed by the DOI, lower-cased and without its
 resolver prefix, because DOI names ignore the case of ASCII letters (DOI
@@ -68,7 +70,7 @@ Read a corpus with `tf.read_corpus`, which accepts YAML or JSON and returns a
 plain dictionary. The examples below read the corpus and theory fixtures
 bundled with the package through `tf.example_path()`, as on the
 [Get started](getting-started.md) page, so they run as shown after
-`pip install theoryforge`. Every result shown, the figures included, is
+`pip install theoryforge`. Every printed result shown, the figures included, is
 produced when this page is built.
 
 ```python exec="1" source="material-block" session="literature"
@@ -100,7 +102,7 @@ Each theme is a dictionary with an `id` (for example `theme_1`), the sorted
 keyword.
 
 Connected components suit this fixture, built to fall into four separate
-themes. On a real corpus, a few keywords that most records carry, such
+themes. On a real corpus, one or a few keywords that most records carry, such
 as the name of the field, link nearly every keyword to every other, so a single
 component holds the map. Seven OpenAlex corpora of 100 to 600 records each gave
 a largest theme holding at least 98.8 per cent of the linked keywords. When one
@@ -251,7 +253,7 @@ Each entry in `ls["themes"]` reports the theme `id`, its `keywords`, the
 `alternatives` that map onto it, whether the focal theory is `focal` on it and
 a `status` of `under_theorised`, `covered` or `crowded`. The words behind each
 match are in `focal_terms` and in `alternative_terms`, which holds one
-`{id, terms}` entry per alternative.
+`{id, terms}` entry per alternative that maps onto the theme.
 
 The statuses count the registered accounts only, so an account the theory does
 not register may still address an under-theorised theme. A crowded theme calls
@@ -261,7 +263,7 @@ under-theorised themes, and `redundancy_risk`, despite its name, the ids of the
 crowded ones.
 
 The same function is available at module level as `tf.landscape(theory,
-corpus)`, which also accepts a theory held as a plain dictionary. The
+corpus)`, where `theory` may be a `Theory` object or a plain dictionary. The
 `min_link` argument is passed through to the underlying `litmap` call, which
 skips the co-citation count. `method` chooses how `litmap` builds the themes.
 With `"simple_centres"`, the result gains `method` after `theory_id`, and each

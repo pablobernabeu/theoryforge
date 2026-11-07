@@ -108,5 +108,5 @@ Conduct](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CODE_OF_
 
 Continuous integration runs `R CMD check --as-cran` in six configurations, covering the
 released R on macOS, Windows and Ubuntu, R-devel on Windows and Ubuntu, and oldrel-1 on Ubuntu.
-A further job runs the suite on the declared R 4.1 minimum. The Python suite and the
-cross-language parity check run alongside these R jobs.
+A further job runs the suite on the declared R 4.1 minimum. Continuous integration also runs
+the Python suite and, once that suite and the six checks pass, the cross-language parity check.

@@ -1,10 +1,10 @@
 """Deterministic dynamical-system runner derived from a theory's network.
 
-Each construct is a state variable, and each directed proposition contributes a signed linear
-coupling term. The system dX/dt = (A - damping*I) X is propagated either with fixed-step
-(Euler) updates or exactly, with the matrix exponential of (A - damping*I)*dt. Both are fully
-deterministic and computed with explicit loops in a fixed order, so the R twin gives the same
-bits.
+Each construct is a state variable, and each proposition whose relation is ``increases``,
+``decreases``, ``causes`` or ``mediates`` contributes a signed linear coupling term. The system
+dX/dt = (A - damping*I) X is propagated either with fixed-step (Euler) updates or exactly, with
+the matrix exponential of (A - damping*I)*dt. Both are fully deterministic and computed with
+explicit loops in a fixed order, so the R twin gives the same bits.
 """
 from __future__ import annotations
 

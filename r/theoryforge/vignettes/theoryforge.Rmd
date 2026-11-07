@@ -186,7 +186,7 @@ cat(tf_diagram(theory, type = "causal_dag"))
 The DOT strings render with any Graphviz tool. In R, `tf_render_diagram()`
 returns them as a DiagrammeR widget for the viewer and for R Markdown, or as a
 standalone SVG string with `as = "svg"`. The packages it uses are optional and
-listed in Suggests, so the deterministic core stays dependency-free. The figure
+listed in Suggests, so the rest of the package works without them. The figure
 below is drawn from the nomological-net DOT printed above.
 
 ```{r diagram-render, results = "asis", eval = has_diagram}
@@ -202,7 +202,7 @@ The causal DAG is the one view that `tf_render_diagram()` does not render, since
 it is written in dagitty syntax. Paste it into a dagitty tool such as
 [dagitty.net](https://dagitty.net) instead. Within R, `tf_implications()` checks
 the causal DAG for acyclicity and returns the conditional independencies it
-entails, which the article 'Developing and testing' works through.
+entails, which the article 'Developing and testing a theory' works through.
 
 ## Simulation
 

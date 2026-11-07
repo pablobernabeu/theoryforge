@@ -4,9 +4,10 @@
 \alias{simulate}
 \title{Deterministic dynamical-system runner derived from a theory network.}
 \description{
-Each construct is a state variable; each directed proposition contributes a
-signed linear coupling term. The system is propagated either with fixed-step
-(Euler) updates or exactly, with the matrix exponential of the coupling
-matrix, so the trajectory is fully deterministic.
+Each construct is a state variable, and each proposition whose relation is
+\code{increases}, \code{decreases}, \code{causes} or \code{mediates}
+contributes a signed linear coupling term. The system is propagated either
+with fixed-step (Euler) updates or exactly, with the matrix exponential of
+the coupling matrix, so the trajectory is fully deterministic.
 }
 \keyword{internal}
