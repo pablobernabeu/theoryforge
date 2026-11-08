@@ -83,8 +83,8 @@ def _share(value, name: str) -> float:
 
 
 # R holds a number read from a file as a double, which is exact for integers
-# below 2^53. A larger one cannot be written back as the same decimal string in
-# both twins, so it is refused (API_SPEC.md section 14).
+# below 2^53 in absolute value. Not every larger one can be written back as the
+# same decimal string in both twins, so all are refused (API_SPEC.md section 14).
 _EXACT_LIMIT = 2 ** 53
 
 _NOT_STRINGS = ("invalid corpus: record[{i}] {field} must be strings "
@@ -415,11 +415,11 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
 
     ``method`` chooses how keywords are grouped into themes. With
     ``"components"``, the default, a theme is a connected component of the
-    keyword map, and on a real corpus a few keywords shared by most records
-    join nearly every keyword into one. When the largest theme holds more than
-    half the linked keywords, a UserWarning says so: such themes, and any
-    landscape built on them, do not describe the field. The result is returned
-    unchanged.
+    keyword map, and on a real corpus one or a few keywords shared by most
+    records join nearly every keyword into one. When the largest theme holds
+    more than half the linked keywords, a UserWarning says so: such themes, and
+    any landscape built on them, do not describe the field. The result is
+    returned unchanged.
 
     ``"simple_centres"`` is the co-word clustering of Coulter et al. (1998) and
     Cobo et al. (2011). Each link is weighted by the equivalence index

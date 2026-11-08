@@ -22,10 +22,9 @@ has_diagram <- requireNamespace("DiagrammeR", quietly = TRUE) &&
 ```
 
 `theoryforge` treats a scientific theory as a versioned, machine-checkable
-object. This vignette walks through the core loop of building a theory,
-checking its rigour and diagramming it (see the
-[package overview](https://pablobernabeu.github.io/theoryforge/r/) for the
-R/Python parity guarantee).
+object. This vignette shows how to build a theory, check its rigour and
+diagram it. The [package overview](https://pablobernabeu.github.io/theoryforge/r/)
+describes the R/Python parity guarantee.
 
 ```{r setup}
 library(theoryforge)
@@ -34,8 +33,8 @@ library(theoryforge)
 ## Building a theory
 
 A theory is built incrementally with the BUILDING-mode verbs. Each verb appends
-to the theory and records a provenance entry, and each returns the theory, so
-the steps compose with the native pipe.
+to the theory, records a provenance entry and returns the theory, so the steps
+compose with the native pipe.
 
 ```{r build}
 theory <- tf_theory("panic-network", "A network theory of panic") |>
@@ -59,18 +58,18 @@ isTRUE(tf_validate(theory)) # structural checks: required fields and enums
 isTRUE(tf_validate(theory, full = TRUE))
 ```
 
-`tf_validate()` returns `TRUE` invisibly on success and stops with a message
-listing every problem otherwise, which is why the calls above are wrapped in
-`isTRUE()` to show the result. With `full = TRUE` it additionally checks
-referential integrity, that ids are unique and every cross-reference points to a
-declared id. It then checks the rest of the schema, such as the evidence
-directions, a logical `passed` on each test outcome and the type of every other
-field. It does not require any optional dependency.
+`tf_validate()` returns `TRUE` invisibly on success and otherwise stops with a
+message listing every problem. The calls above wrap it in `isTRUE()` to show the
+result. With `full = TRUE`, it additionally checks referential integrity: that
+ids are unique and that every cross-reference points to a declared id. It then
+checks the rest of the schema, such as the evidence directions, a logical
+`passed` on each test outcome and the type of every other field. It does not
+require any optional dependency.
 
-The failure path is the more informative one. Pointing a prediction at a
-proposition that was never declared leaves the structural pass untouched, since
-every required field is still present and well formed, so only `full = TRUE`
-reports the problem.
+A failed validation shows what the full pass adds. A prediction pointing at a
+proposition that was never declared still passes the structural checks, since
+every required field is present and well formed. Only `full = TRUE` reports the
+problem.
 
 ```{r validate-failure, error = TRUE}
 broken <- theory
@@ -78,11 +77,12 @@ broken$predictions[[1]]$derives_from <- "p_missing"
 tf_validate(broken, full = TRUE)
 ```
 
-The building vocabulary has three further verbs. `tf_add_alternative()`
-registers a rival account, which a prediction can name in its `diagnostic_vs`
-to declare that it discriminates between the two. `tf_add_assumption()` records
-an auxiliary assumption, and `tf_set_formal_model()` attaches a formal-model
-reference. Applied to a copy of the theory, they leave the original untouched.
+BUILDING mode has three further verbs. `tf_add_alternative()` registers a rival
+account, which a prediction can name in its `diagnostic_vs` to declare that it
+discriminates between the two. `tf_add_assumption()` records an auxiliary
+assumption, and `tf_set_formal_model()` attaches a formal-model reference.
+Because each verb returns a modified copy, assigning the result to a new object
+leaves the original theory untouched.
 
 ```{r build-more}
 extended <- theory |>
@@ -92,15 +92,15 @@ extended <- theory |>
   tf_set_formal_model("sem", spec_ref = "panic-sem.lavaan")
 ```
 
-Every verb appends a provenance entry, recording the step, the action and its
-detail, so the record of how a theory was built travels with the object.
+The provenance entries are stored in the theory object and make up the record
+of how it was built. Each entry records the step, the action and its detail.
 
 ```{r provenance-entries}
 do.call(rbind, lapply(extended$provenance, as.data.frame))
 ```
 
 A theory can be written to and read back from disk. The format follows the file
-extension (`.json` for JSON, otherwise YAML).
+extension, `.json` for JSON and otherwise YAML.
 
 ```{r io}
 path <- tempfile(fileext = ".yaml")
@@ -111,8 +111,8 @@ identical(roundtrip$id, theory$id)
 
 ## Checking rigour
 
-`tf_check()` runs the 12-item rigour checklist defined in the vendored
-`rigor_checklist.yaml`.
+`tf_check()` runs the 12-item rigour checklist defined in the copy of
+`rigor_checklist.yaml` included in the package.
 
 ```{r check}
 report <- tf_check(theory)
@@ -129,17 +129,18 @@ report$items[[1]]$score   # numeric in [0, 1]
 
 An item with nothing to assess, such as the redundancy screen of a theory with
 a single construct, has the status `"n/a"` and a `NULL` score. It is left out
-of the aggregate, the weighted mean of the applicable items, and
-`report$coverage` gives their share of the checklist's weight.
+of the aggregate score, which is the weighted mean of the applicable items.
+`report$coverage` gives the applicable items' share of the checklist's weight.
 
-Render it as JSON (valid, pretty-printed) or as an HTML fragment. The JSON
-string is an artefact in its own right, shown here verbatim:
+`tf_report()` renders the report as valid, pretty-printed JSON or as an HTML
+fragment. The JSON string is shown here verbatim.
 
 ```{r report-json}
 cat(tf_report(theory, format = "json"))
 ```
 
-The HTML fragment drops straight into a page and renders as a real table:
+The HTML fragment can be inserted directly into a page, where it renders as a
+table.
 
 ```{r report-html, results = "asis"}
 cat(tf_report(theory, format = "html"))
@@ -159,8 +160,8 @@ tf_redundancy_check(theory)
 The lexical screen is deterministic but shallow. When a semantic comparison is
 wanted, `tf_embedding_redundancy()` takes any embedder that maps a definition to
 a numeric vector and reports the cosine similarity of each construct pair. It
-needs no optional dependency, since the embedder is supplied by the caller. A
-toy bag-of-words embedder stands in for a real language model here.
+needs no optional dependency, since the embedder is supplied by the caller.
+Here, a toy bag-of-words embedder stands in for a language model.
 
 ```{r embedding-redundancy}
 vocab <- c("bodily", "activation", "appraised", "danger", "salience")
@@ -182,11 +183,11 @@ cat(tf_diagram(theory, type = "nomological_net"))
 cat(tf_diagram(theory, type = "causal_dag"))
 ```
 
-The DOT strings render with any Graphviz tool, and `tf_render_diagram()` does
-this without leaving R: it returns a DiagrammeR widget for the viewer and for
-R Markdown, or a standalone SVG string with `as = "svg"`. The packages it uses
-are optional, in Suggests, so the deterministic core stays dependency-free.
-Rendered, the nomological net above reads as a figure.
+The DOT strings render with any Graphviz tool. In R, `tf_render_diagram()`
+returns them as a DiagrammeR widget for the viewer and for R Markdown, or as a
+standalone SVG string with `as = "svg"`. The packages it uses are optional and
+listed in Suggests, so the rest of the package works without them. The figure
+below is drawn from the nomological-net DOT printed above.
 
 ```{r diagram-render, results = "asis", eval = has_diagram}
 cat(
@@ -197,18 +198,17 @@ cat(
 )
 ```
 
-The causal DAG is the one view this does not cover, since it emits dagitty
-syntax rather than DOT. Paste it into a dagitty tool such as
-[dagitty.net](https://dagitty.net) instead. `tf_implications()` reads the same
-subgraph without leaving R, checking it for acyclicity and returning the
-conditional independencies it entails, which the Developing and testing article
-works through.
+The causal DAG is the one view that `tf_render_diagram()` does not render, since
+it is written in dagitty syntax. Paste it into a dagitty tool such as
+[dagitty.net](https://dagitty.net) instead. Within R, `tf_implications()` checks
+the causal DAG for acyclicity and returns the conditional independencies it
+entails, which the article 'Developing and testing a theory' works through.
 
 ## Simulation
 
 `tf_simulate()` treats each construct as a state variable and integrates the
 signed proposition network as a linear dynamical system. The trajectory is
-deterministic:
+deterministic.
 
 ```{r simulate}
 sim <- tf_simulate(theory, steps = 5)
@@ -217,16 +217,16 @@ unlist(sim$trajectory[[1]]) # the common initial state
 unlist(sim$trajectory[[6]]) # after five Euler steps
 ```
 
-The two states separate immediately: arousal, which receives no incoming
-coupling, decays under the damping term, while perceived threat is pushed up
-by the positive coupling from arousal before the decay eventually takes over.
+The two states separate immediately. Arousal, which receives no incoming
+coupling, decays under the damping term. Perceived threat is pushed up by the
+positive coupling from arousal before the decay eventually takes over.
 
 The default `method = "euler"` takes fixed explicit steps, which stay close to
 the solution only while `dt` is small against the network's rates. The function
-warns when they depart from it by more than 5 per cent.
-`method = "exact"` propagates the system with its matrix exponential, so each
-row is the solution at its time whatever `dt` is. It will become the default in
-the next minor release:
+warns when the Euler trajectory departs from the exact solution by more than 5
+per cent. `method = "exact"` propagates the system with its matrix exponential,
+so each row is the solution at its time for any `dt`. It will become the default
+in the next minor release.
 
 ```{r simulate-exact}
 exact <- tf_simulate(theory, steps = 5, method = "exact")

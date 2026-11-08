@@ -1,9 +1,10 @@
 #' Deterministic dynamical-system runner derived from a theory network.
 #'
-#' Each construct is a state variable; each directed proposition contributes a
-#' signed linear coupling term. The system is propagated either with fixed-step
-#' (Euler) updates or exactly, with the matrix exponential of the coupling
-#' matrix, so the trajectory is fully deterministic.
+#' Each construct is a state variable, and each proposition whose relation is
+#' \code{increases}, \code{decreases}, \code{causes} or \code{mediates}
+#' contributes a signed linear coupling term. The system is propagated either
+#' with fixed-step (Euler) updates or exactly, with the matrix exponential of
+#' the coupling matrix, so the trajectory is fully deterministic.
 #' @name simulate
 #' @keywords internal
 NULL
@@ -23,14 +24,15 @@ NULL
 
 #' Simulate a theory's construct network as a linear dynamical system
 #'
-#' Treats each construct (in file order) as a state variable and each directed
-#' proposition as a signed linear coupling term, then propagates
-#' \code{dX/dt = A X - damping * X} either with fixed-step (Euler) updates or
-#' exactly, with the matrix exponential of \code{(A - damping * I) * dt}. The
-#' result is fully deterministic. Construct ids must be unique; duplicates are
-#' refused rather than resolved to an arbitrary state slot. A construct without
-#' an id is a state with no couplings, and two of them do not count as
-#' duplicates.
+#' Treats each construct (in file order) as a state variable and each
+#' proposition whose relation is \code{increases}, \code{decreases},
+#' \code{causes} or \code{mediates} as a signed linear coupling term, then
+#' propagates \code{dX/dt = A X - damping * X} either with fixed-step (Euler)
+#' updates or exactly, with the matrix exponential of
+#' \code{(A - damping * I) * dt}. The result is fully deterministic. Construct
+#' ids must be unique; duplicates are refused rather than resolved to an
+#' arbitrary state slot. A construct without an id is a state with no couplings,
+#' and two of them do not count as duplicates.
 #'
 #' With \code{method = "exact"} each step multiplies the state by the matrix
 #' exponential, computed by scaling and squaring a degree-18 Taylor polynomial

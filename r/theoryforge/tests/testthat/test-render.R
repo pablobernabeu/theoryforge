@@ -29,17 +29,21 @@ test_that("tf_render_report forces a .qmd suffix and escapes quotes in the title
 # title, so the two twins write one YAML header.
 test_that("tf_render_report escapes the title as a YAML double-quoted scalar", {
   theory <- tf_theory("t", "T")
-  # R refuses Unicode and octal escapes in one literal, hence the paste0().
+  # R refuses Unicode and octal escapes in one literal, hence the paste0(). The
+  # é and U+0085 come from intToUtf8(), since R's parser garbles them, written
+  # as one literal, in a Latin-9 session.
   title <- paste0("Effects of A\\B on \"C\": \\emph{fluency}, $\\alpha$\nline\ttwo\001\177",
-                  "é\u0085")
+                  intToUtf8(c(0xE9L, 0x85L)))
   out <- tf_render_report(theory, tempfile(fileext = ".qmd"), title = title)
   lines <- strsplit(readChar(out, file.info(out)$size, useBytes = TRUE), "\n", fixed = TRUE)[[1L]]
+  # The file is UTF-8 whatever the session's charset, and yaml.load() reads an
+  # unmarked string in that charset.
+  Encoding(lines) <- "UTF-8"
   expected <- paste0(
     'title: "Effects of A\\\\B on \\"C\\": \\\\emph{fluency}, $\\\\alpha$',
     '\\nline\\ttwo\\x01\\x7Fé\\x85"'
   )
   got <- lines[[2L]]
-  Encoding(got) <- "UTF-8"
   expect_identical(got, enc2utf8(expected))
   # A YAML parser reads back exactly the title that was passed.
   header <- yaml::yaml.load(paste(lines[2:3], collapse = "\n"))

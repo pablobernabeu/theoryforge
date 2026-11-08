@@ -91,9 +91,9 @@ tf_read_corpus <- function(path) {
   as.numeric(value)
 }
 
-# R holds a number read from a file as a double, exact for integers below 2^53.
-# A larger one cannot be written as the same decimal string in both twins, so
-# it is refused (API_SPEC.md section 14).
+# R holds a number read from a file as a double, exact for integers below 2^53
+# in absolute value. Not every larger one can be written as the same decimal
+# string in both twins, so all are refused (API_SPEC.md section 14).
 .tf_EXACT_LIMIT <- 2^53
 
 .tf_not_strings <- function(i, field) {
@@ -485,9 +485,9 @@ tf_read_corpus <- function(path) {
 #' an empty corpus). A keyword or reference that is an integer becomes its
 #' decimal string, so an unquoted PubMed or Scopus id keys the same work in
 #' both languages; one of \eqn{2^{53}} or more is refused, since R cannot hold
-#' it exactly. A logical, a fraction or a nested value is refused: an unquoted
-#' \code{NO} (nitric oxide) or \code{on} in YAML is read as a logical, so quote
-#' it.
+#' every such integer exactly. A logical, a fraction or a nested value is
+#' refused: an unquoted \code{NO} (nitric oxide) or \code{on} in YAML is read
+#' as a logical, so quote it.
 #'
 #' A reference that holds a DOI is keyed by the DOI, lower-cased and without
 #' its resolver prefix, as [tf_new_evidence_dois()] compares DOIs. One work
@@ -504,10 +504,11 @@ tf_read_corpus <- function(path) {
 #'
 #' \code{method} chooses how keywords are grouped into themes. With
 #' \code{"components"}, the default, a theme is a connected component of the
-#' keyword map, and on a real corpus a few keywords shared by most records join
-#' nearly every keyword into one. When the largest theme holds more than half
-#' the linked keywords, a warning says so: such themes, and any landscape built
-#' on them, do not describe the field. The result is returned unchanged.
+#' keyword map, and on a real corpus one or a few keywords shared by most
+#' records join nearly every keyword into one. When the largest theme holds more
+#' than half the linked keywords, a warning says so: such themes, and any
+#' landscape built on them, do not describe the field. The result is returned
+#' unchanged.
 #'
 #' \code{"simple_centres"} is the co-word clustering of Coulter et al. (1998)
 #' and Cobo et al. (2011). Each link is weighted by the equivalence index

@@ -49,14 +49,15 @@ endpoint that is not a declared construct), and \code{opposed} the
 each other. Invalid knobs are refused with the Python twin's messages.
 }
 \description{
-Treats each construct (in file order) as a state variable and each directed
-proposition as a signed linear coupling term, then propagates
-\code{dX/dt = A X - damping * X} either with fixed-step (Euler) updates or
-exactly, with the matrix exponential of \code{(A - damping * I) * dt}. The
-result is fully deterministic. Construct ids must be unique; duplicates are
-refused rather than resolved to an arbitrary state slot. A construct without
-an id is a state with no couplings, and two of them do not count as
-duplicates.
+Treats each construct (in file order) as a state variable and each
+proposition whose relation is \code{increases}, \code{decreases},
+\code{causes} or \code{mediates} as a signed linear coupling term, then
+propagates \code{dX/dt = A X - damping * X} either with fixed-step (Euler)
+updates or exactly, with the matrix exponential of
+\code{(A - damping * I) * dt}. The result is fully deterministic. Construct
+ids must be unique; duplicates are refused rather than resolved to an
+arbitrary state slot. A construct without an id is a state with no couplings,
+and two of them do not count as duplicates.
 }
 \details{
 With \code{method = "exact"} each step multiplies the state by the matrix
