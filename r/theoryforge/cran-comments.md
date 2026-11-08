@@ -24,18 +24,18 @@ that text as UTF-8 and pass in that locale.
 
 ## Test environments
 
-GitHub Actions, run 41331654729 on 2026-11-01, at commit 7870d1b, which holds
+GitHub Actions, run 42427184819 on 2026-11-07, at commit 3fb3366, which holds
 the package as submitted. Each leg built the tarball and ran
 `R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
 which r-lib/actions turns off. Each leg ended with 'Status: OK':
 
 * ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.6.2
-* ubuntu-latest (Ubuntu 24.04.5 LTS), R-devel (2026-10-30 r90805)
+* ubuntu-latest (Ubuntu 24.04.5 LTS), R-devel (2026-11-06 r90845)
 * ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.5.3
 * windows-latest (Windows Server 2025, x86_64-w64-mingw32), R 4.6.2
 * windows-latest (Windows Server 2025, x86_64-w64-mingw32), R-devel
-  (2026-10-31 r90820 ucrt)
-* macos-latest (macOS 26.6.2, aarch64-apple-darwin23), R 4.6.2
+  (2026-11-06 r90845 ucrt)
+* macos-latest (macOS 26.7.2, aarch64-apple-darwin23), R 4.6.2
 
 The test suite passed in every leg, with 3635 expectations met, no failures
 and no warnings. 20 tests skip everywhere because they read repository files
