@@ -2,7 +2,8 @@
 // blocked storage, failed uploads and restores, the validity chip and how a
 // change of theory or a failed operation is reported. The later tests cover the
 // appraisal's prior, the implied-independencies operation, the saved example,
-// the checklist's wording and whole-number parameters.
+// the checklist's wording, whole-number parameters, the help's list of
+// operations and the page title.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
@@ -455,4 +456,17 @@ test("the pipeline's reading gives each recorded outcome a node of its own", asy
 test("the code panel says the code reproduces the result with the installed package", async () => {
   const { $ } = await boot();
   assert.equal($("#codePanel .note").textContent, "Paste into Python to reproduce this result with the installed package.");
+});
+
+test("the help lists each operation as 'Label: description' and the title names the language", async () => {
+  const { ctx, $ } = await boot();
+  assert.equal(ctx.document.title, "theoryforge (Python): interactive app");
+  await $("#helpBtn").click();
+  const items = ctx.document.querySelectorAll("#tfModal ul.help-ops li");
+  assert.ok(items.length > 0, "the help lists the operations");
+  for (const li of items) {
+    assert.match(li.textContent, /^[^:]+: \S/);
+    assert.equal(li.querySelector("b"), null, "no label is set in bold");
+  }
+  assert.match(items[0].textContent, /^Rigour checklist: Scores the theory against the 12-item rigour checklist/);
 });
