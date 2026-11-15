@@ -13,10 +13,11 @@ package also requires yaml 2.3.8 or later. NEWS.md lists each of these changes
 under 'Upgrading from the previous release (0.6.0)', in three parts: 'Changed
 results', 'Changed interface' and 'Changed output'.
 
-In a Latin-9 locale, as on r-devel-linux-x86_64-debian-clang, three tests of
-0.6.0 fail, because they compare the package's UTF-8 output with text read in
-the session's charset. The output itself is correct. The tests of 0.7.0 mark
-that text as UTF-8 and pass in that locale.
+In a Latin-9 locale (en_US.iso885915), with NOT_CRAN unset, three tests of
+0.6.0 fail in a local R CMD check under R 4.3.3, because they compare the
+package's UTF-8 output with text read in the session's charset. The output
+itself is correct. The tests of 0.7.0 mark that text as UTF-8 and pass in that
+locale.
 
 ## R CMD check results
 
@@ -24,17 +25,17 @@ that text as UTF-8 and pass in that locale.
 
 ## Test environments
 
-GitHub Actions, run 42427184819 on 2026-11-07, at commit 3fb3366, which holds
+GitHub Actions, run 43715512528 on 2026-11-15, at commit 283399c, which holds
 the package as submitted. Each leg built the tarball and ran
 `R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
 which r-lib/actions turns off. Each leg ended with 'Status: OK':
 
-* ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.6.2
-* ubuntu-latest (Ubuntu 24.04.5 LTS), R-devel (2026-11-06 r90845)
-* ubuntu-latest (Ubuntu 24.04.5 LTS), R 4.5.3
+* ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.6.2
+* ubuntu-latest (Ubuntu 26.04.1 LTS), R-devel (2026-11-14 r90890)
+* ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.5.3
 * windows-latest (Windows Server 2025, x86_64-w64-mingw32), R 4.6.2
 * windows-latest (Windows Server 2025, x86_64-w64-mingw32), R-devel
-  (2026-11-06 r90845 ucrt)
+  (2026-11-14 r90890 ucrt)
 * macos-latest (macOS 26.7.2, aarch64-apple-darwin23), R 4.6.2
 
 The test suite passed in every leg, with 3635 expectations met, no failures
@@ -42,10 +43,9 @@ and no warnings. 20 tests skip everywhere because they read repository files
 that are not in the built package: the apps, the shared schema folder and two
 articles that .Rbuildignore excludes.
 
-On the Ubuntu R-devel leg the same run also ran the test suite on the
+On the Ubuntu R-devel leg, the same run also ran the test suite on the
 package source in the en_US.iso885915 locale (session charset ISO-8859-15),
-with NOT_CRAN unset, as r-devel-linux-x86_64-debian-clang does. It passed with
-no failures and no warnings.
+with NOT_CRAN unset. It passed with no failures and no warnings.
 
 The same run tested the package on R 4.1.3, the last release of R 4.1, the
 oldest series that DESCRIPTION's 'R (>= 4.1.0)' allows, under ubuntu-latest
