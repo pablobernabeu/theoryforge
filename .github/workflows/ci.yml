@@ -211,13 +211,14 @@ jobs:
           working-directory: r/theoryforge
           args: 'c("--no-manual", "--as-cran")'
           error-on: '"warning"'
-      # CRAN's r-devel-linux-x86_64-debian-clang flavour runs its checks in a
-      # Latin-9 locale (en_US.iso885915), and every leg above runs in UTF-8.
-      # There a string not marked as UTF-8 is read as Latin-9, which no UTF-8
-      # leg can show, so the Linux R-devel leg runs the tests once more in that
-      # locale, with NOT_CRAN unset, as CRAN runs them. The first line of the R
-      # code stops the step if the locale did not take.
-      - name: Tests in a Latin-9 locale, as on CRAN's Debian clang flavour
+      # Every leg above runs in UTF-8. In a Latin-9 locale (en_US.iso885915), a
+      # string not marked as UTF-8 is read as Latin-9, which no UTF-8 leg can
+      # show, so the Linux R-devel leg runs the tests once more in that locale,
+      # with NOT_CRAN unset, as CRAN runs them. Posts to R-package-devel in 2019
+      # report this charset for CRAN's r-devel-linux-x86_64-debian-clang
+      # flavour. The first line of the R code stops the step if the locale did
+      # not take.
+      - name: Tests in a Latin-9 locale (en_US.iso885915)
         if: runner.os == 'Linux' && matrix.config.r == 'devel'
         shell: bash
         run: |
