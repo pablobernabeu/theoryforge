@@ -1,4 +1,4 @@
-"""Development mode: the amendment appraisal (API_SPEC.md section 10).
+"""Development mode: the amendment appraisal.
 
 Lakatos (1970, p. 118) calls a problemshift progressive when the new theory
 predicts a fact its predecessor did not and some of that excess content is
@@ -26,7 +26,7 @@ def _registered_pass(t, pid: str) -> bool:
 
 
 def appraise_amendment(new, prior) -> dict:
-    """Appraise an amendment as progressive, degenerating, or neutral relative to a prior version.
+    """Appraise an amendment as progressive, degenerating or neutral relative to a prior version.
 
     The two versions are compared by content. A new prediction whose statement
     and type match a prediction the amendment dropped is that prediction
@@ -46,7 +46,7 @@ def appraise_amendment(new, prior) -> dict:
     tell its cases apart.
 
     Returns:
-        A dict whose keys follow API_SPEC.md section 10, in the order
+        A dict whose keys come in the order
             ``verdict``, ``new_predictions``, ``corroborated_new``,
             ``ad_hoc_assumptions``, ``articulated``, ``underived``,
             ``corroborated_new_registered``, ``renamed``, ``dropped``,

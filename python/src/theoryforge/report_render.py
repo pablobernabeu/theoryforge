@@ -1,8 +1,8 @@
 """Render a theory's audit dossier as a standalone Quarto report.
 
-Writes a `.qmd` (a YAML header plus the deterministic dossier body) and can optionally invoke
-Quarto to render it. The report content is the deterministic `dossier` output, and only the
-rendering step is environment-dependent.
+Writes a ``.qmd`` (a YAML header plus the deterministic dossier body) and can optionally
+invoke Quarto to render it. The report content is the deterministic ``dossier`` output, and
+only the rendering step depends on the environment.
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def _yaml_dq(s: str) -> str:
 
 
 def render_report(T, path, title: str | None = None, render: bool = False, to: str = "html") -> str:
-    """Write a Quarto report for the theory; render it with Quarto when ``render=True``.
+    """Write a Quarto report for the theory, and render it with Quarto when ``render=True``.
 
     The report is a YAML header (``title`` and ``format``) followed by the ``dossier()`` body.
     A ``path`` without the suffix ``.qmd`` (in any letter case) has its last suffix replaced by
@@ -60,7 +60,7 @@ def render_report(T, path, title: str | None = None, render: bool = False, to: s
     ``subprocess.CalledProcessError`` and a missing Quarto ``FileNotFoundError``, after the
     ``.qmd`` has been written.
 
-    Returns the path of the written `.qmd`.
+    Returns the path of the written ``.qmd``.
     """
     data = T.data if hasattr(T, "data") else T
     # Fall back to the id when the title is empty as well as absent (matches R's nzchar fallback).

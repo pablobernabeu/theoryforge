@@ -22,13 +22,13 @@ _CONFLICT_HINT = ("; a file of that name already exists in this project: pass a 
 
 
 class OSFUploadError(urllib.error.HTTPError):
-    """OSF storage refused a request (API_SPEC.md section 25).
+    """OSF storage refused a request.
 
     A subclass of ``urllib.error.HTTPError``, so a handler written for the error
     that ``urlopen`` raises still catches it, with the same ``code``, headers and
-    readable body. Its ``str()`` is the message the R twin stops with:
-    ``OSF upload failed with HTTP <code>``, with a hint on adding a version for a
-    409, or ``OSF folder listing failed with HTTP <code>`` for the lookup that
+    readable body. Its ``str()`` is ``OSF upload failed with HTTP <code>``, with
+    a hint on adding a version for a 409, or
+    ``OSF folder listing failed with HTTP <code>`` for the lookup that
     ``overwrite=True`` makes first.
     """
 
@@ -133,7 +133,7 @@ def osf_push(T, token: str | None = None, node: str | None = None,
              base_url: str = _DEFAULT_BASE, overwrite: bool = False) -> dict:
     """Deposit the theory's dossier on OSF.
 
-    With ``dry_run=True`` (default) the planned request is returned and nothing is sent. A live
+    With ``dry_run=True`` (default), the planned request is returned and nothing is sent. A live
     upload (``dry_run=False``) requires both ``token`` and ``node`` (the OSF project id). An
     empty ``node`` or ``filename`` counts as absent. ``filename`` defaults to
     ``<id>.dossier.md``, with ``theory`` in place of a missing or empty id. ``base_url`` is the

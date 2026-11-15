@@ -484,7 +484,7 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
     ``computed_severity`` of ``severity()``, as bars).
 
     ``engine`` is accepted but has no effect, because the IR is engine-independent
-    (DOT for the digraphs, dagitty syntax for the causal DAG, and SVG for the Venn,
+    (DOT for the digraphs, dagitty syntax for the causal DAG and SVG for the Venn,
     the rigour grid and the severity chart).
 
     The causal DAG is read by dagitty and drawn by the apps with Graphviz. It

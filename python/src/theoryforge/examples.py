@@ -1,9 +1,7 @@
-"""Access to the example theories shipped inside the package.
+"""Access to the example theories and corpora installed with the package.
 
-The R twin provides the same files through ``tf_example_path()`` and
-``tf_example_names()``, so a reader who installed only one half still has
-something to run. The files are copies of ``fixtures/*.yaml`` at the repository
-root, written by ``scripts/gen_golden.py`` and gated in CI, so they cannot drift.
+The R package offers the same files through ``tf_example_path()`` and
+``tf_example_names()``.
 """
 from __future__ import annotations
 
@@ -14,8 +12,7 @@ from pathlib import Path
 def example_names() -> list[str]:
     """The names of the example theory and corpus files, sorted.
 
-    Only the ``.yaml`` files the package ships are listed, as the R twin's
-    ``tf_example_names()`` lists them.
+    Only the ``.yaml`` files the package ships are listed.
     """
     # Only .yaml entries count, matching R's list.files(pattern = "\\.yaml$").
     # Listing the directory wholesale would let anything else that lands beside
@@ -26,7 +23,7 @@ def example_names() -> list[str]:
 
 
 def example_path(name: str) -> Path:
-    """Filesystem path of a packaged example, e.g. ``panic-network.theory.yaml``.
+    """Filesystem path of a packaged example, such as ``panic-network.theory.yaml``.
 
     Raises ``FileNotFoundError`` naming the available files when ``name`` is not
     one of them.

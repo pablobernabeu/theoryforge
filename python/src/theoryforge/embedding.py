@@ -2,7 +2,7 @@
 
 Results depend on a user-supplied embedding function whose outputs are not deterministic
 across model versions or SDKs. This screen is the assistive counterpart to the
-deterministic lexical screen in `redundancy.py`.
+deterministic lexical screen of ``redundancy_check()``.
 """
 from __future__ import annotations
 
@@ -29,14 +29,14 @@ def embedding_redundancy(T, embedder: Callable[[str], Sequence[float]],
                          threshold: float | None = None) -> list[dict]:
     """Pairwise cosine similarity of embedded construct definitions.
 
-    `embedder` is called once per construct, in the order of the theory's constructs, with its
-    definition string, and must return a numeric vector. The vectors of every compared pair
-    must be of equal, nonzero length, or a ValueError names the pair. Returns one record per
-    unordered construct pair, `{a, b, cosine, flag}`, sorted by descending `cosine` then
-    (a, b). `cosine` is rounded to 6 decimals, and `flag` is `review` when it reaches
-    `threshold` and `ok` otherwise.
+    ``embedder`` is called once per construct, in the order of the theory's constructs, with
+    its definition string, and must return a numeric vector. The vectors of every compared
+    pair must be of equal, nonzero length, or a ValueError names the pair. Returns one record
+    per unordered construct pair, ``{a, b, cosine, flag}``, sorted by descending ``cosine``
+    then (a, b). ``cosine`` is rounded to 6 decimals, and ``flag`` is ``review`` when it
+    reaches ``threshold`` and ``ok`` otherwise.
 
-    `threshold` defaults to the checklist's `embedding_similarity_max` (0.85). How high
+    ``threshold`` defaults to the checklist's ``embedding_similarity_max`` (0.85). How high
     a cosine two unrelated definitions reach depends on the embedding model, so a
     threshold suited to one model may flag everything or nothing under another, and
     the value is best set for the model in use.

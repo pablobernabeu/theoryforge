@@ -1,4 +1,4 @@
-"""The theory-rigour checklist engine. Scores a theory against the vendored 12-item checklist."""
+"""The theory-rigour checklist engine. Scores a theory against the 12-item checklist it ships."""
 from __future__ import annotations
 
 import json
@@ -231,7 +231,7 @@ def check(T) -> dict:
     theory with one construct, has the status ``n/a`` and the score None, and
     is left out of the aggregate. The aggregate is the weighted mean of the
     applicable items' scores, times 100, and ``coverage`` is the share of the
-    checklist's weight that was applicable (API_SPEC.md section 4).
+    checklist's weight that was applicable.
 
     Returns:
         A dict with the keys ``theory_id``, ``schema_version`` (the theory's),
@@ -247,8 +247,7 @@ def check(T) -> dict:
     Raises:
         ValueError: a test outcome's ``passed`` is present and not a boolean,
             or a prediction's ``severity`` is not a finite number or lies
-            outside [0, 1] (API_SPEC.md section 4, item 3).
-            ``validate(full=True)`` reports both.
+            outside [0, 1]. ``validate(full=True)`` reports both.
     """
     T = T.data if hasattr(T, "data") else T
     _refuse_non_boolean_outcomes(T, "check")
