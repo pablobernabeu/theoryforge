@@ -11,10 +11,11 @@ the same name offers a counterpart of every exported function. Both follow
 one public specification
 (\href{https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md}{API_SPEC.md}),
 so they produce the same verdicts and the same diagram intermediate
-representations. The exceptions are the helpers that depend on a network
-service or a user-supplied embedder (\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}, \code{\link[=tf_osf_push]{tf_osf_push()}}
-and \code{\link[=tf_embedding_redundancy]{tf_embedding_redundancy()}}) and the diagram renderer
-(\code{\link[=tf_render_diagram]{tf_render_diagram()}}), whose pages describe them.
+representations. The helpers that depend on a network service or a
+user-supplied embedder (\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}, \code{\link[=tf_osf_push]{tf_osf_push()}} and
+\code{\link[=tf_embedding_redundancy]{tf_embedding_redundancy()}}) and the diagram renderer
+(\code{\link[=tf_render_diagram]{tf_render_diagram()}}) have counterparts there too, but their results can
+differ between the two packages. Their pages describe what each depends on.
 }
 \details{
 The main functions are \code{\link[=tf_read]{tf_read()}}, \code{\link[=tf_validate]{tf_validate()}}, \code{\link[=tf_write]{tf_write()}},

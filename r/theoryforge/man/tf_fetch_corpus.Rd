@@ -37,8 +37,8 @@ A corpus object (named list) with \code{schema_version}, \code{id},
 \description{
 Assistive helper that builds a corpus by querying the OpenAlex works API
 (\code{https://api.openalex.org/works?search=...}). This is a network call
-to a live service whose results change over time, so, unlike the rest of
-the package, it is not deterministic. Each work is mapped to
+to a live service whose results change over time, so it is not part of the
+package's deterministic core. Each work is mapped to
 \code{{id, doi, title, year, keywords, references}}, with the DOI as OpenAlex
 gives it (keywords falls back to the first five concepts when no keywords
 are present).

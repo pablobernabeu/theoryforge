@@ -36,7 +36,7 @@ NULL
 #' mapping, such as a sequence or an empty YAML file, stops with
 #' \code{Theory data must be a mapping}.
 #'
-#' @param path Path to a \code{.yaml}/\code{.yml} or \code{.json} file.
+#' @param path Path to a \code{.yaml}, \code{.yml} or \code{.json} file.
 #' @return A named list holding the parsed theory object.
 #' @examples
 #' # Round-trip a theory through a temporary file.

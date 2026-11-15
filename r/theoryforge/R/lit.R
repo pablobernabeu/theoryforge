@@ -47,7 +47,7 @@ NULL
 #' mapping stops with \code{Corpus data must be a mapping}. The records
 #' themselves are checked by [tf_litmap()] and [tf_landscape()].
 #'
-#' @param path Path to a \code{.yaml}/\code{.yml} or \code{.json} corpus file.
+#' @param path Path to a \code{.yaml}, \code{.yml} or \code{.json} corpus file.
 #' @return A named list holding the parsed corpus object.
 #' @examples
 #' corpus <- list(
@@ -950,8 +950,8 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #'
 #' Assistive helper that builds a corpus by querying the OpenAlex works API
 #' (\code{https://api.openalex.org/works?search=...}). This is a network call
-#' to a live service whose results change over time, so, unlike the rest of
-#' the package, it is not deterministic. Each work is mapped to
+#' to a live service whose results change over time, so it is not part of the
+#' package's deterministic core. Each work is mapped to
 #' \code{{id, doi, title, year, keywords, references}}, with the DOI as OpenAlex
 #' gives it (keywords falls back to the first five concepts when no keywords
 #' are present).

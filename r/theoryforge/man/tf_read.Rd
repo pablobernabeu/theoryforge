@@ -7,7 +7,7 @@
 tf_read(path)
 }
 \arguments{
-\item{path}{Path to a \code{.yaml}/\code{.yml} or \code{.json} file.}
+\item{path}{Path to a \code{.yaml}, \code{.yml} or \code{.json} file.}
 }
 \value{
 A named list holding the parsed theory object.

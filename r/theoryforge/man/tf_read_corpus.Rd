@@ -7,7 +7,7 @@
 tf_read_corpus(path)
 }
 \arguments{
-\item{path}{Path to a \code{.yaml}/\code{.yml} or \code{.json} corpus file.}
+\item{path}{Path to a \code{.yaml}, \code{.yml} or \code{.json} corpus file.}
 }
 \value{
 A named list holding the parsed corpus object.

@@ -13,8 +13,8 @@ Description: Provides a reproducible workflow for building,
     syntax, simulate the construct network, map a theory onto the themes of
     a literature corpus and write diagram intermediate representations. A
     'Python' package of the same name offers the same functions. Both follow
-    one specification, so they produce the same verdicts and the same
-    diagrams.
+    one specification, so they produce the same verdicts and the same diagram
+    intermediate representations.
 License: MIT + file LICENSE
 URL: https://github.com/pablobernabeu/theoryforge, https://pablobernabeu.github.io/theoryforge/r/
 BugReports: https://github.com/pablobernabeu/theoryforge/issues
