@@ -25,7 +25,7 @@ locale.
 
 ## Test environments
 
-GitHub Actions, run 43715512528 on 2026-11-15, at commit 283399c, which holds
+GitHub Actions, run 43732962955 on 2026-11-15, at commit 88b5f08, which holds
 the package as submitted. Each leg built the tarball and ran
 `R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
 which r-lib/actions turns off. Each leg ended with 'Status: OK':
