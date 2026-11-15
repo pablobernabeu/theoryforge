@@ -8,6 +8,6 @@ Each construct is a state variable, and each proposition whose relation is
 \code{increases}, \code{decreases}, \code{causes} or \code{mediates}
 contributes a signed linear coupling term. The system is propagated either
 with fixed-step (Euler) updates or exactly, with the matrix exponential of
-the coupling matrix, so the trajectory is fully deterministic.
+the coupling matrix, so the trajectory is deterministic.
 }
 \keyword{internal}

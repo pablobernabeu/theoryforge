@@ -15,7 +15,8 @@ tf_litmap(
 )
 }
 \arguments{
-\item{corpus}{A corpus object (named list), e.g. from \code{\link[=tf_read_corpus]{tf_read_corpus()}}.}
+\item{corpus}{A corpus object (named list), such as one from
+\code{\link[=tf_read_corpus]{tf_read_corpus()}}.}
 
 \item{min_link}{Minimum co-occurrence count for a keyword pair to be kept
 (default \code{2}). A positive integer.}
@@ -27,8 +28,9 @@ tf_litmap(
 
 \item{min_theme_size, max_theme_size}{The smallest theme kept (default
 \code{2}) and the largest a theme may grow (default \code{10}) with
-\code{"simple_centres"}. A positive integer, and an integer of at least 2
-no smaller than \code{min_theme_size}.}
+\code{"simple_centres"}. \code{min_theme_size} is a positive integer and
+\code{max_theme_size} an integer of at least 2 no smaller than
+\code{min_theme_size}.}
 
 \item{max_df}{A number from 0 to 1 (default \code{1}). With
 \code{"simple_centres"}, a keyword in more than this share of the records
@@ -50,16 +52,16 @@ their first keyword) and \code{co_citation} (as
 \code{field_terms}.
 }
 \description{
-Computes keyword co-occurrence, thematic components, and reference
-co-citation for a corpus. Records iterate in file order.
+Computes keyword co-occurrence, thematic components and reference
+co-citation for a corpus. Records are read in file order.
 }
 \details{
-The corpus is checked before anything is counted, with the Python twin's
-messages. It must hold a \code{records} list of mappings (an empty list is
-an empty corpus). A keyword or reference that is an integer becomes its
-decimal string, so an unquoted PubMed or Scopus id keys the same work in
-both languages; one of \eqn{2^{53}} or more is refused, since R cannot hold
-every such integer exactly. A logical, a fraction or a nested value is
+The corpus is checked before anything is counted. It must hold a
+\code{records} list of mappings (an empty list is an empty corpus). A
+keyword or reference that is an integer becomes its decimal string, so an
+unquoted PubMed or Scopus id keys the same work in R and in Python. One of
+\eqn{2^{53}} or more is refused, since R cannot hold every such integer
+exactly. A logical, a fraction or a nested value is
 refused: an unquoted \code{NO} (nitric oxide) or \code{on} in YAML is read
 as a logical, so quote it.
 

@@ -7,7 +7,7 @@
 tf_new_evidence_dois(theory, candidate_dois)
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
 \item{candidate_dois}{Character vector of DOIs to check.}
 }
@@ -19,15 +19,16 @@ deduplicated and sorted.
 Compares each DOI in \code{candidate_dois} against the theory's
 \code{evidence[].source_doi} and \code{alternatives[].source_doi} fields, by
 normalised form, so a fresh literature search, for example via OpenAlex,
-Scopus, or any other source, can be checked against what the theory already
-engages with. The normalised form is the DOI itself, trimmed, lowercased
+Scopus or any other source, can be checked against what the theory already
+engages with. The normalised form is the DOI itself, trimmed, lower-cased
 (ASCII letters only) and percent-decoded, wherever it sits in the text, so
 \code{doi: 10...}, \code{DOI 10...}, \code{doi.org/10...},
 \code{https://www.doi.org/10...} and a URL with \code{\%2F} all match the
 bare DOI, and trailing full stops, commas and semicolons are dropped.
 Returns the qualifying DOIs in their original form, deduplicated and sorted
-by normalised form. Deterministic and takes no network dependency:
-the search itself is left to whichever literature tool the caller prefers.
+by normalised form. The function is deterministic and makes no network
+call. The search itself is left to whichever literature tool the caller
+prefers.
 }
 \examples{
 # The bundled panic theory cites one DOI as evidence and one for each of its

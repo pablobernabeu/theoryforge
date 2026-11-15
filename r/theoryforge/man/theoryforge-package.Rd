@@ -6,21 +6,19 @@
 \alias{theoryforge-package}
 \title{theoryforge: systematic theory development}
 \description{
-The feature-parity twin of the
-\href{https://pablobernabeu.github.io/theoryforge/python/}{Python package} of the
-same name. Every exported function has an identically behaving counterpart
-there, pinned by the shared public specification
+A \href{https://pablobernabeu.github.io/theoryforge/python/}{Python package} of
+the same name offers a counterpart of every exported function. Both follow
+one public specification
 (\href{https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md}{API_SPEC.md}),
-so the two implementations produce identical verdicts and byte-identical
-diagram intermediate representations. The only exceptions are the assistive
-helpers that depend on a network service or a user-supplied embedder
-(\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}, \code{\link[=tf_osf_push]{tf_osf_push()}} and \code{\link[=tf_embedding_redundancy]{tf_embedding_redundancy()}}) and
-the language-native diagram renderer (\code{\link[=tf_render_diagram]{tf_render_diagram()}}), which are
-documented as such on their own pages.
+so they produce the same verdicts and the same diagram intermediate
+representations. The exceptions are the helpers that depend on a network
+service or a user-supplied embedder (\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}, \code{\link[=tf_osf_push]{tf_osf_push()}}
+and \code{\link[=tf_embedding_redundancy]{tf_embedding_redundancy()}}) and the diagram renderer
+(\code{\link[=tf_render_diagram]{tf_render_diagram()}}), whose pages describe them.
 }
 \details{
-Key entry points: \code{\link[=tf_read]{tf_read()}}, \code{\link[=tf_validate]{tf_validate()}}, \code{\link[=tf_write]{tf_write()}}, \code{\link[=tf_check]{tf_check()}},
-\code{\link[=tf_report]{tf_report()}}, \code{\link[=tf_redundancy_check]{tf_redundancy_check()}}, and \code{\link[=tf_diagram]{tf_diagram()}}.
+The main functions are \code{\link[=tf_read]{tf_read()}}, \code{\link[=tf_validate]{tf_validate()}}, \code{\link[=tf_write]{tf_write()}},
+\code{\link[=tf_check]{tf_check()}}, \code{\link[=tf_report]{tf_report()}}, \code{\link[=tf_redundancy_check]{tf_redundancy_check()}} and \code{\link[=tf_diagram]{tf_diagram()}}.
 }
 \seealso{
 Useful links:

@@ -7,16 +7,16 @@
 tf_preregister(theory, path = NULL)
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
-\item{path}{Optional destination path; when given, the markdown is written
-with LF line endings.}
+\item{path}{Optional destination path. When it is given, the Markdown is
+written with LF line endings.}
 }
 \value{
-The preregistration markdown as a single string.
+The preregistration Markdown as a single string.
 }
 \description{
-Produces a deterministic preregistration markdown string for a theory and,
+Produces a deterministic preregistration Markdown string for a theory and,
 if \code{path} is given, writes it (LF, single trailing newline).
 }
 \details{

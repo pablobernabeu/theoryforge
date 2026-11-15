@@ -29,9 +29,9 @@ interactions, the invariance of a direction across groups and claims that
 an effect occurs only when a condition holds. \code{"interval"} asserts
 that a quantity lies in a stated range, the range the theory permits.
 \code{"point"} asserts one value, with the tolerance that measurement
-requires. That width is measurement tolerance, not latitude the theory
-allows. The label is self-declared, and no function checks it against the
-statement.}
+requires. The tolerance comes from measurement, and the theory itself
+permits only the one value. The label is self-declared, and no function
+checks it against the statement.}
 
 \item{derives_from, diagnostic_vs}{Optional character vectors.}
 
@@ -46,9 +46,8 @@ of any of \code{n_planned}, \code{unit}, \code{alpha}, \code{sided}
 smallest effect of interest and its scale), \code{power} or
 \code{decision_probability} with an optional \code{power_lo} and
 \code{power_hi}, \code{method}, \code{design_ref} and
-\code{justification} (API_SPEC.md section 30). It is stored only when
-given. \code{\link[=tf_preregister]{tf_preregister()}} lists it after the hypotheses, and nothing
-scores it.}
+\code{justification}. It is stored only when given. \code{\link[=tf_preregister]{tf_preregister()}}
+lists it after the hypotheses, and nothing scores it.}
 }
 \value{
 The (mutated) theory object.

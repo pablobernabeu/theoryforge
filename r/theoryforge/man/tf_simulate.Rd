@@ -15,7 +15,7 @@ tf_simulate(
 )
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
 \item{steps}{Number of steps, a whole number of at least 0 (default
 \code{10}).}
@@ -39,28 +39,28 @@ tf_simulate(
 A named list
 \code{list(states, dt, steps, k, damping, init, method, ignored, opposed,
   trajectory)}, where \code{states} are the construct ids in file order and
-\code{trajectory} is a list of \code{steps + 1} numeric vectors (row 0 =
-initial state), every value rounded to 6 decimals. The knobs and the method
-are echoed back as given, because the trajectory cannot be reproduced
-without them. \code{ignored} lists the ids of the propositions that couple
-nothing (moderates, associates, a relation outside the schema's set, or an
-endpoint that is not a declared construct), and \code{opposed} the
-\code{c(from, to)} pairs that carry couplings of both signs, which offset
-each other. Invalid knobs are refused with the Python twin's messages.
+\code{trajectory} is a list of \code{steps + 1} numeric vectors (row 0 is
+the initial state), every value rounded to 6 decimals. The settings and
+the method are returned as given, because the trajectory cannot be
+reproduced without them. \code{ignored} lists the ids of the propositions
+that couple nothing (moderates, associates, a relation outside the schema's
+set or an endpoint that is not a declared construct), and \code{opposed}
+the \code{c(from, to)} pairs that carry couplings of both signs, which
+offset each other. An invalid setting is refused with an error.
 }
 \description{
 Treats each construct (in file order) as a state variable and each
 proposition whose relation is \code{increases}, \code{decreases},
-\code{causes} or \code{mediates} as a signed linear coupling term, then
+\code{causes} or \code{mediates} as a signed linear coupling term. It then
 propagates \code{dX/dt = A X - damping * X} either with fixed-step (Euler)
 updates or exactly, with the matrix exponential of
-\code{(A - damping * I) * dt}. The result is fully deterministic. Construct
-ids must be unique; duplicates are refused rather than resolved to an
-arbitrary state slot. A construct without an id is a state with no couplings,
-and two of them do not count as duplicates.
+\code{(A - damping * I) * dt}. The result is deterministic. Construct ids
+must be unique, and duplicates are refused rather than assigned to an
+arbitrary state. A construct without an id is a state with no couplings, and
+two of them do not count as duplicates.
 }
 \details{
-With \code{method = "exact"} each step multiplies the state by the matrix
+With \code{method = "exact"}, each step multiplies the state by the matrix
 exponential, computed by scaling and squaring a degree-18 Taylor polynomial
 (Moler and Van Loan, 2003, method 3), so the trajectory is the solution of
 the linear system at times \code{0, dt, 2 * dt, ...} whatever \code{dt} is.
@@ -68,10 +68,10 @@ the linear system at times \code{0, dt, 2 * dt, ...} whatever \code{dt} is.
 With \code{method = "euler"}, the default for this release, the explicit
 step is stable only when \eqn{|1 + dt \lambda| < 1} for every eigenvalue
 \eqn{\lambda} of \code{A - damping * I}. A theory that decays at rate
-\code{damping} therefore explodes with alternating sign once
-\code{dt * damping} exceeds 2, and the steps inflate a sustained oscillation
+\code{damping} therefore grows without bound, alternating in sign, once
+\code{dt * damping} exceeds 2, and the steps turn a sustained oscillation
 into growth. Raising \code{damping} can cause a divergence as well as fail
-to cure one. The function warns when the Euler trajectory departs from the
+to stop one. The function warns when the Euler trajectory departs from the
 exact one by more than 5 per cent of \code{max(1, |exact|)} at any step. The
 default will change to \code{"exact"} in the next minor release.
 

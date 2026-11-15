@@ -1,8 +1,8 @@
-#' Bibliometric / literature layer.
+#' Bibliometric literature layer.
 #'
-#' The analysis (litmap, landscape, diagrams) is fully deterministic given a
-#' corpus. The OpenAlex fetch adapter ([tf_fetch_corpus()]) is the assistive
-#' layer, whose results depend on a live network service.
+#' The analysis (the literature map, the landscape and their diagrams) is
+#' deterministic for a given corpus. Only the OpenAlex fetch,
+#' [tf_fetch_corpus()], depends on a live network service.
 #' @name lit
 #' @keywords internal
 NULL
@@ -40,10 +40,10 @@ NULL
 #' Read a literature corpus from a YAML or JSON file
 #'
 #' Reads a corpus object (\code{{schema_version, id, records}}) into a named
-#' list. The format is chosen by the file extension (\code{.json} -> JSON,
-#' otherwise YAML). The file is read by the rules [tf_read()] follows, which
-#' are the Python twin's, so an unquoted keyword such as \code{y} or \code{n}
-#' stays a string and a repeated key is refused. A document that is not a
+#' list. The file extension sets the format: JSON for \code{.json} and YAML
+#' otherwise. The file is read by the rules that [tf_read()] follows, so an
+#' unquoted keyword such as \code{y} or \code{n} stays a string and a repeated
+#' key is refused. A document that is not a
 #' mapping stops with \code{Corpus data must be a mapping}. The records
 #' themselves are checked by [tf_litmap()] and [tf_landscape()].
 #'
@@ -477,15 +477,15 @@ tf_read_corpus <- function(path) {
 
 #' Bibliometric map of a literature corpus (deterministic)
 #'
-#' Computes keyword co-occurrence, thematic components, and reference
-#' co-citation for a corpus. Records iterate in file order.
+#' Computes keyword co-occurrence, thematic components and reference
+#' co-citation for a corpus. Records are read in file order.
 #'
-#' The corpus is checked before anything is counted, with the Python twin's
-#' messages. It must hold a \code{records} list of mappings (an empty list is
-#' an empty corpus). A keyword or reference that is an integer becomes its
-#' decimal string, so an unquoted PubMed or Scopus id keys the same work in
-#' both languages; one of \eqn{2^{53}} or more is refused, since R cannot hold
-#' every such integer exactly. A logical, a fraction or a nested value is
+#' The corpus is checked before anything is counted. It must hold a
+#' \code{records} list of mappings (an empty list is an empty corpus). A
+#' keyword or reference that is an integer becomes its decimal string, so an
+#' unquoted PubMed or Scopus id keys the same work in R and in Python. One of
+#' \eqn{2^{53}} or more is refused, since R cannot hold every such integer
+#' exactly. A logical, a fraction or a nested value is
 #' refused: an unquoted \code{NO} (nitric oxide) or \code{on} in YAML is read
 #' as a logical, so quote it.
 #'
@@ -528,7 +528,8 @@ tf_read_corpus <- function(path) {
 #' (both low). On real corpora, this gives bounded themes where components give
 #' one. Components remain the default for this release.
 #'
-#' @param corpus A corpus object (named list), e.g. from [tf_read_corpus()].
+#' @param corpus A corpus object (named list), such as one from
+#'   [tf_read_corpus()].
 #' @param min_link Minimum co-occurrence count for a keyword pair to be kept
 #'   (default \code{2}). A positive integer.
 #' @param method \code{"components"} (the default) or \code{"simple_centres"}.
@@ -536,8 +537,9 @@ tf_read_corpus <- function(path) {
 #'   \code{co_citation}. \code{NULL} (the default) uses \code{min_link}.
 #' @param min_theme_size,max_theme_size The smallest theme kept (default
 #'   \code{2}) and the largest a theme may grow (default \code{10}) with
-#'   \code{"simple_centres"}. A positive integer, and an integer of at least 2
-#'   no smaller than \code{min_theme_size}.
+#'   \code{"simple_centres"}. \code{min_theme_size} is a positive integer and
+#'   \code{max_theme_size} an integer of at least 2 no smaller than
+#'   \code{min_theme_size}.
 #' @param max_df A number from 0 to 1 (default \code{1}). With
 #'   \code{"simple_centres"}, a keyword in more than this share of the records
 #'   is a field term, left out of the map and listed in \code{field_terms}.
@@ -615,7 +617,7 @@ tf_litmap <- function(corpus, min_link = 2, method = "components", min_cocitatio
 #'
 #' Maps a theory's focal constructs and its registered alternatives onto the
 #' thematic structure of a corpus (computed by [tf_litmap()]). Each theme is
-#' tagged \code{"under_theorised"}, \code{"covered"}, or \code{"crowded"}.
+#' tagged \code{"under_theorised"}, \code{"covered"} or \code{"crowded"}.
 #'
 #' A theme is matched by the words its keywords share with the focal theory's
 #' construct labels, or with an alternative's label and key constructs, and
@@ -639,16 +641,16 @@ tf_litmap <- function(corpus, min_link = 2, method = "components", min_cocitatio
 #' and \code{redundancy_risk}, despite its name, the ids of the crowded ones.
 #'
 #' The arguments are checked in the order \code{min_link},
-#' \code{max_token_share}, \code{method}, then the corpus, with the Python
-#' twin's messages. The themes are those of [tf_litmap()], built by
-#' \code{method} with its other defaults. With \code{"components"},
+#' \code{max_token_share}, \code{method}, then the corpus. The themes are
+#' those of [tf_litmap()], built by \code{method} with its other defaults. With \code{"components"},
 #' \code{tf_landscape()} gives the warning of [tf_litmap()] when one theme
 #' holds most of the linked keywords. With \code{"simple_centres"}, the result
 #' gains \code{method} after \code{theory_id}, and each theme its
 #' \code{centrality}, \code{density} and \code{quadrant}.
 #'
-#' @param theory A theory object (named list), e.g. from \code{tf_read()}.
-#' @param corpus A corpus object (named list), e.g. from [tf_read_corpus()].
+#' @param theory A theory object (named list), such as one from [tf_read()].
+#' @param corpus A corpus object (named list), such as one from
+#'   [tf_read_corpus()].
 #' @param min_link Minimum co-occurrence count passed to [tf_litmap()]
 #'   (default \code{2}). The co-citation map, which the landscape does not
 #'   use, is not computed.
@@ -843,11 +845,11 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5,
 #'
 #' Produces a deterministic DOT string for the literature layer.
 #'
-#' @param obj A [tf_litmap()] result (for \code{"keyword_cooccurrence"} /
+#' @param obj A [tf_litmap()] result (for \code{"keyword_cooccurrence"} or
 #'   \code{"co_citation"}) or a [tf_landscape()] result (for
 #'   \code{"theme_landscape"}).
 #' @param type One of \code{"keyword_cooccurrence"} (default),
-#'   \code{"co_citation"}, or \code{"theme_landscape"}.
+#'   \code{"co_citation"} or \code{"theme_landscape"}.
 #' @param max_edges A positive integer that caps a
 #'   \code{"keyword_cooccurrence"} or \code{"co_citation"} diagram at that many
 #'   edges: the highest counts are kept, ties going to the earlier pair in
@@ -895,17 +897,18 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence", max_edges = NULL)
 #' Compares each DOI in \code{candidate_dois} against the theory's
 #' \code{evidence[].source_doi} and \code{alternatives[].source_doi} fields, by
 #' normalised form, so a fresh literature search, for example via OpenAlex,
-#' Scopus, or any other source, can be checked against what the theory already
-#' engages with. The normalised form is the DOI itself, trimmed, lowercased
+#' Scopus or any other source, can be checked against what the theory already
+#' engages with. The normalised form is the DOI itself, trimmed, lower-cased
 #' (ASCII letters only) and percent-decoded, wherever it sits in the text, so
 #' \code{doi: 10...}, \code{DOI 10...}, \code{doi.org/10...},
 #' \code{https://www.doi.org/10...} and a URL with \code{\%2F} all match the
 #' bare DOI, and trailing full stops, commas and semicolons are dropped.
 #' Returns the qualifying DOIs in their original form, deduplicated and sorted
-#' by normalised form. Deterministic and takes no network dependency:
-#' the search itself is left to whichever literature tool the caller prefers.
+#' by normalised form. The function is deterministic and makes no network
+#' call. The search itself is left to whichever literature tool the caller
+#' prefers.
 #'
-#' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param candidate_dois Character vector of DOIs to check.
 #' @return A character vector of the candidate DOIs not already cited,
 #'   deduplicated and sorted.
@@ -946,9 +949,9 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #' Build a corpus from the OpenAlex API (network call)
 #'
 #' Assistive helper that builds a corpus by querying the OpenAlex works API
-#' (\code{https://api.openalex.org/works?search=...}). This is a network call:
-#' it depends on a live external service whose results change over time, so it
-#' sits outside the package's deterministic core. Each work is mapped to
+#' (\code{https://api.openalex.org/works?search=...}). This is a network call
+#' to a live service whose results change over time, so, unlike the rest of
+#' the package, it is not deterministic. Each work is mapped to
 #' \code{{id, doi, title, year, keywords, references}}, with the DOI as OpenAlex
 #' gives it (keywords falls back to the first five concepts when no keywords
 #' are present).

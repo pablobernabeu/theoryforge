@@ -2,10 +2,10 @@
 % Please edit documentation in R/lit.R
 \name{lit}
 \alias{lit}
-\title{Bibliometric / literature layer.}
+\title{Bibliometric literature layer.}
 \description{
-The analysis (litmap, landscape, diagrams) is fully deterministic given a
-corpus. The OpenAlex fetch adapter (\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}) is the assistive
-layer, whose results depend on a live network service.
+The analysis (the literature map, the landscape and their diagrams) is
+deterministic for a given corpus. Only the OpenAlex fetch,
+\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}, depends on a live network service.
 }
 \keyword{internal}

@@ -7,7 +7,7 @@
 tf_check(theory)
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 }
 \value{
 A named list with elements \code{theory_id}, \code{schema_version}
@@ -41,8 +41,8 @@ Two values are refused before anything is scored, since no score built on
 them would be defensible. One is a test outcome whose \code{passed} is
 present and not \code{TRUE} or \code{FALSE}, such as the quoted string
 \code{"true"}. The other is a prediction \code{severity} that is present and
-not a finite number from 0 to 1. Both stop with the message the Python twin
-raises, and \code{\link[=tf_validate]{tf_validate()}} with \code{full = TRUE} reports both.
+not a finite number from 0 to 1. Both stop with an error, and
+\code{\link[=tf_validate]{tf_validate()}} with \code{full = TRUE} reports both.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

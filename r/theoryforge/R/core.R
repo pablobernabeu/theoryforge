@@ -1,4 +1,4 @@
-#' Read, validate, and write theory objects.
+#' Read, validate and write theory objects.
 #'
 #' @name core
 #' @keywords internal
@@ -21,10 +21,10 @@ NULL
 #' Reads a theory object authored as YAML (or JSON, chosen by file extension)
 #' into a named list.
 #'
-#' The file is read exactly as the Python twin's \code{theoryforge.read()}
-#' reads it (API_SPEC.md section 3). The text is UTF-8, and a byte-order mark
-#' is ignored. A YAML or JSON sequence is always a list, even with one element,
-#' so \code{maturity: [draft]} is refused by [tf_validate()] as it is in Python.
+#' The file is read as the Python package's \code{theoryforge.read()} reads
+#' it. The text is UTF-8, and a byte-order mark is ignored. A YAML or JSON
+#' sequence is always a list, even with one element, so [tf_validate()] refuses
+#' \code{maturity: [draft]}.
 #' Unquoted \code{y}, \code{Y}, \code{n} and \code{N} stay strings, as do
 #' dates, while \code{yes}, \code{no}, \code{true}, \code{false}, \code{on} and
 #' \code{off} are logicals. Integers are decimal, octal or hexadecimal only, so
@@ -66,41 +66,40 @@ tf_read <- function(path) {
 #' A field that is absent, \code{NULL} or blank is reported as missing, and one
 #' that holds another type as such (\code{id must be a string}).
 #'
-#' With \code{full = TRUE} it also checks that every id is unique within its
-#' collection and that every cross-reference (proposition endpoints,
-#' prediction derivations and diagnostics, and assumption, evidence and
-#' test-outcome targets) points to a declared id. It then checks the rest of
-#' the schema. That covers the required fields of assumptions, alternatives,
-#' evidence and test outcomes, a logical \code{passed}, the evidence direction
-#' and formal-model type enums, the version block and the
-#' \code{schema_version} pattern. It also covers numbers within \[0, 1\] where
+#' With \code{full = TRUE}, it also checks that every id is unique within its
+#' collection and that every cross-reference points to a declared id. The
+#' cross-references are the endpoints of a proposition, the derivations and
+#' diagnostics of a prediction and the target of an assumption, an evidence
+#' entry or a test outcome. It then checks the rest of the schema. That covers
+#' the required fields of assumptions, alternatives, evidence and test
+#' outcomes, a logical \code{passed}, the evidence direction and formal-model
+#' type enums, the version block and the \code{schema_version} pattern. It also covers numbers within \[0, 1\] where
 #' the schema asks for them, a prediction's \code{bounds} and \code{test}
-#' block, a test outcome's \code{estimate} and \code{se}, and the type of every
-#' other field and of every entry of a string array.
+#' block and a test outcome's \code{estimate} and \code{se}. Last, it checks
+#' the type of every other field and of every entry of a string array.
 #'
-#' The Python twin's test suite compares the result with a JSON Schema 2020-12
-#' validator. Besides the ids and references, which the schema cannot express,
-#' the pass is stricter in three ways. A blank required string counts as
-#' missing, an entry of a string array must be a nonempty string and a
-#' prediction's \code{bounds} must hold a finite bound with \code{lower} not
-#' above \code{upper}, while a test outcome's \code{estimate} and \code{se}
-#' and a \code{test} block's \code{sesoi} must be finite, that block's
-#' \code{n_planned} within the range of a double and its \code{power_lo} not
-#' above \code{power_hi}. It is more lenient in three ways, which API_SPEC.md
-#' section 2 documents. A \code{NULL} optional field other than
+#' Besides the ids and references, which the schema cannot express, the full
+#' check is stricter than a JSON Schema 2020-12 validator in three ways. A
+#' blank required string counts as missing. An entry of a string array must be
+#' a nonempty string. A prediction's \code{bounds} must hold a finite bound
+#' with \code{lower} not above \code{upper}, a test outcome's \code{estimate}
+#' and \code{se} and a \code{test} block's \code{sesoi} must be finite, that
+#' block's \code{n_planned} must lie within the range of a double and its
+#' \code{power_lo} must not be above \code{power_hi}. The full check is more
+#' lenient in three ways. A \code{NULL} optional field other than
 #' \code{theory_form} is absent, as is a single \code{NA}, which [tf_write()]
 #' writes as null. A single string stands for a one-element array of strings.
 #' An empty \code{list()} stands for an empty mapping as well as an empty
 #' sequence.
 #'
-#' Both passes are deterministic, and the Python twin's
+#' Both checks are deterministic, and the Python package's
 #' \code{Theory.validate()} reports the same problems in the same order with
 #' the same text.
 #'
-#' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param full When \code{TRUE}, also check ids, cross-references and the rest
 #'   of the schema.
-#' @return \code{TRUE} (invisibly) on success; otherwise stops with
+#' @return \code{TRUE} (invisibly) on success. Otherwise, it stops with
 #'   \code{"invalid theory object: "} followed by every problem found, joined
 #'   by \code{"; "}.
 #' @examples
@@ -633,9 +632,9 @@ tf_validate <- function(theory, full = FALSE) {
 
 #' Write a theory object to YAML or JSON
 #'
-#' Serialises a theory object to disk. The format is chosen by the file
-#' extension (\code{.json} -> JSON, otherwise YAML). Files are UTF-8 with LF
-#' line endings.
+#' Serialises a theory object to disk. The file extension sets the format:
+#' JSON for \code{.json} and YAML otherwise. Files are UTF-8 with LF line
+#' endings.
 #'
 #' Numbers keep 15 significant digits in both formats, logicals are written as
 #' \code{true} and \code{false}, and a missing value (\code{NA}) is written as
@@ -645,7 +644,7 @@ tf_validate <- function(theory, full = FALSE) {
 #' \code{boundary_conditions}, \code{key_constructs}) is written as an array,
 #' even when the theory holds it as a single string. A theory that validates
 #' against the package's own schema therefore still validates once written, and
-#' it reads back the same in R and in Python (API_SPEC.md section 3).
+#' it reads back the same in R and in Python.
 #'
 #' @param theory A theory object (named list).
 #' @param path Destination path.
@@ -786,9 +785,9 @@ tf_add_proposition <- function(theory, id, from, to, relation, mechanism = NULL)
 #'   an effect occurs only when a condition holds. \code{"interval"} asserts
 #'   that a quantity lies in a stated range, the range the theory permits.
 #'   \code{"point"} asserts one value, with the tolerance that measurement
-#'   requires. That width is measurement tolerance, not latitude the theory
-#'   allows. The label is self-declared, and no function checks it against the
-#'   statement.
+#'   requires. The tolerance comes from measurement, and the theory itself
+#'   permits only the one value. The label is self-declared, and no function
+#'   checks it against the statement.
 #' @param derives_from,diagnostic_vs Optional character vectors.
 #' @param severity Optional declared pre-data severity from 0 to 1, stored only
 #'   when given. The checklist's risk_severity item reads it, and reads the
@@ -800,9 +799,8 @@ tf_add_proposition <- function(theory, id, from, to, relation, mechanism = NULL)
 #'   smallest effect of interest and its scale), \code{power} or
 #'   \code{decision_probability} with an optional \code{power_lo} and
 #'   \code{power_hi}, \code{method}, \code{design_ref} and
-#'   \code{justification} (API_SPEC.md section 30). It is stored only when
-#'   given. [tf_preregister()] lists it after the hypotheses, and nothing
-#'   scores it.
+#'   \code{justification}. It is stored only when given. [tf_preregister()]
+#'   lists it after the hypotheses, and nothing scores it.
 #' @return The (mutated) theory object.
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory") |>

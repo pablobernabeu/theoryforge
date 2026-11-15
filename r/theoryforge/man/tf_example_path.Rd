@@ -7,7 +7,7 @@
 tf_example_path(name)
 }
 \arguments{
-\item{name}{File name, e.g. \code{"panic-network.theory.yaml"}. See
+\item{name}{File name, for example \code{"panic-network.theory.yaml"}. See
 \code{\link[=tf_example_names]{tf_example_names()}}.}
 }
 \value{

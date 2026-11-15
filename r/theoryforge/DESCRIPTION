@@ -11,10 +11,10 @@ Description: Provides a reproducible workflow for building,
     implies, appraise amendments as progressive, degenerating or neutral,
     write preregistration and audit documents, compile 'lavaan' model
     syntax, simulate the construct network, map a theory onto the themes of
-    a literature corpus, and emit byte-identical diagram intermediate
-    representations. The package is the feature-parity twin of a 'Python'
-    package of the same name. Both implementations follow a shared
-    specification, so they produce identical verdicts.
+    a literature corpus and write diagram intermediate representations. A
+    'Python' package of the same name offers the same functions. Both follow
+    one specification, so they produce the same verdicts and the same
+    diagrams.
 License: MIT + file LICENSE
 URL: https://github.com/pablobernabeu/theoryforge, https://pablobernabeu.github.io/theoryforge/r/
 BugReports: https://github.com/pablobernabeu/theoryforge/issues

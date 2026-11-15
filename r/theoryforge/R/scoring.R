@@ -37,10 +37,10 @@ NULL
 #' rubric does not read. A prediction scores the same however it is tested, and
 #' a failed test leaves the value where it was.
 #'
-#' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @param theory A theory object (named list), such as one from [tf_read()].
 #' @return A \code{data.frame} with columns \code{prediction_id}, \code{type},
-#'   \code{risk_score}, \code{computed_severity}, one row per prediction in
-#'   file order.
+#'   \code{risk_score} and \code{computed_severity}, with one row per
+#'   prediction in file order.
 #' @references
 #' Meehl, P. E. (1967). Theory-testing in psychology and physics: A
 #'   methodological paradox. \emph{Philosophy of Science}, 34(2), 103-115.
@@ -217,7 +217,7 @@ tf_severity <- function(theory) {
 #' record.
 #'
 #' The function stops at the first outcome, in file order, that cannot be
-#' read, with the Python twin's text:
+#' read, with one of these messages:
 #' `post_data_severity requires both estimate and se; test_outcome[<i>]`,
 #' `... requires a finite se greater than 0; ...` and
 #' `... requires a finite estimate; ...`, and for its prediction's bounds
@@ -226,7 +226,7 @@ tf_severity <- function(theory) {
 #' `... requires lower <= upper; ...`. [tf_validate()] with `full = TRUE`
 #' reports each of these.
 #'
-#' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @param theory A theory object (named list), such as one from [tf_read()].
 #' @return A \code{data.frame} with one row per test outcome, in file order,
 #'   that carries both an estimate and a standard error and whose prediction
 #'   declares bounds. Its columns are \code{prediction_id}, \code{outcome} (the

@@ -2,8 +2,8 @@
 % Please edit documentation in R/core.R
 \name{core}
 \alias{core}
-\title{Read, validate, and write theory objects.}
+\title{Read, validate and write theory objects.}
 \description{
-Read, validate, and write theory objects.
+Read, validate and write theory objects.
 }
 \keyword{internal}

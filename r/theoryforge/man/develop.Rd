@@ -4,7 +4,7 @@
 \alias{develop}
 \title{Development mode: amendment appraisal.}
 \description{
-Operationalises the Lakatosian progressive-vs-degenerating distinction
-(Lakatos, 1970; Meehl, 1990a).
+Operationalises the Lakatosian distinction between progressive and
+degenerating amendments (Lakatos, 1970; Meehl, 1990a).
 }
 \keyword{internal}

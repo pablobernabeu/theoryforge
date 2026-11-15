@@ -6,7 +6,7 @@
 \description{
 Writes a \code{.qmd} (a YAML header plus the deterministic dossier body) and
 can optionally invoke Quarto to render it. The report content is the
-deterministic \code{tf_dossier} output, and only the rendering step is
-environment-dependent.
+deterministic \code{tf_dossier} output, and only the rendering step depends
+on the environment.
 }
 \keyword{internal}
