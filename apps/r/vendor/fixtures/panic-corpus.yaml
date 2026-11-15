@@ -1,0 +1,46 @@
+# A small, deterministic literature corpus around panic/anxiety theories.
+# Designed so the (threshold = 2) co-occurrence graph yields four clean themes:
+#   cognitive (appraisal), physiological (arousal), behavioural (avoidance), genetic.
+schema_version: "1.0"
+id: "panic-corpus-demo"
+records:
+  - id: r1
+    title: "Interoceptive accuracy and panic"
+    year: 2018
+    keywords: ["arousal", "interoception"]
+    references: ["clark1986", "barlow2002"]
+  - id: r2
+    title: "Heartbeat perception in panic disorder"
+    year: 2019
+    keywords: ["arousal", "interoception"]
+    references: ["clark1986", "barlow2002"]
+  - id: r3
+    title: "Catastrophic cognitions in panic"
+    year: 2017
+    keywords: ["appraisal", "catastrophic misinterpretation"]
+    references: ["clark1986", "barlow2002"]
+  - id: r4
+    title: "Misappraisal and panic escalation"
+    year: 2020
+    keywords: ["appraisal", "catastrophic misinterpretation"]
+    references: ["bouton2001", "craske2008"]
+  - id: r5
+    title: "Exposure and avoidance reduction"
+    year: 2021
+    keywords: ["avoidance", "exposure"]
+    references: ["bouton2001", "craske2008"]
+  - id: r6
+    title: "Avoidance learning in anxiety"
+    year: 2016
+    keywords: ["avoidance", "exposure"]
+    references: []
+  - id: r7
+    title: "Twin studies of panic risk"
+    year: 2015
+    keywords: ["genetics", "heritability"]
+    references: []
+  - id: r8
+    title: "Heritability of anxiety sensitivity"
+    year: 2014
+    keywords: ["genetics", "heritability"]
+    references: []
