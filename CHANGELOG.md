@@ -321,6 +321,10 @@ version and a single behavioural contract
   writes a large map in one pass. In both twins, `landscape()` skips the co-citation map it
   does not use. Results are unchanged.
 - In R, a live `tf_osf_push()` deposit uses the curl package in place of httr.
+- The Python package's classifiers add Python 3.15, on which its tests now run, and
+  `Typing :: Typed`, since it ships `py.typed`.
+- The `docs` extra requires markdown-exec 1.12.3 or later, whose `source="block"` option the
+  guides use.
 - The apps validate each theory in full as it loads and show the result on the theory card.
 - The apps mark an item with nothing to assess as `n/a`, show the coverage and the overlap
   of each construct pair, draw an association as a dashed line with an arrowhead at each

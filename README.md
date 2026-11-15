@@ -96,8 +96,9 @@ the pytest and testthat suites pass.
 or [`scripts/reproduce_all.sh`](https://github.com/pablobernabeu/theoryforge/blob/main/scripts/reproduce_all.sh)
 reproduces the core verification: the golden-file check, ruff and mypy over `python/src`, both
 test suites, the parity check and `R CMD check --as-cran`. CI also runs pytest on Python 3.10
-to 3.14, lints the Python tests and `scripts/`, and checks that the schema copies and
-`NAMESPACE` are up to date. It builds the Python distributions and tests the installed wheel,
+to 3.15 on Linux and on Python 3.13 on Windows and macOS, lints the Python tests and
+`scripts/`, and checks that the schema copies, `NAMESPACE` and the help pages in `man/` are
+up to date. It builds the Python distributions and tests the installed wheel,
 runs the tests at the declared minimum versions of Python's dependencies and of R, and runs
 `R CMD check` in six configurations. It also compiles the schemas under Ajv's strict mode and
 builds and tests the apps.
