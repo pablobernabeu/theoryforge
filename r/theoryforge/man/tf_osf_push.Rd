@@ -15,23 +15,22 @@ tf_osf_push(
 )
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
 \item{token}{OSF personal access token (required when \code{dry_run = FALSE}).}
 
-\item{node}{OSF project (node) id; used to build the upload URL and required
+\item{node}{OSF project (node) id, used to build the upload URL and required
 when \code{dry_run = FALSE}. An empty string counts as absent.}
 
-\item{filename}{Destination filename; defaults to \code{<id>.dossier.md}
-(also when \code{NULL} or empty).}
+\item{filename}{Destination filename. It defaults to \code{<id>.dossier.md},
+also when \code{NULL} or empty.}
 
 \item{dry_run}{When \code{TRUE} (default), return the planned request without
 sending it.}
 
 \item{base_url}{OSF storage base URL, by default
-\code{"https://files.osf.io/v1/resources/"}; override to target a
-non-default host. The node id is appended to it directly, so it must end
-in a slash.}
+\code{"https://files.osf.io/v1/resources/"}. Change it to reach another
+host. The node id is appended to it directly, so it must end in a slash.}
 
 \item{overwrite}{When \code{TRUE}, add a new version of an existing file of
 the same name instead of failing with HTTP 409. Default \code{FALSE}.}
@@ -47,12 +46,12 @@ is never returned as a completed one.
 }
 \description{
 Builds (and optionally sends) a request to upload \code{tf_dossier(theory)} to
-OSF storage. With \code{dry_run = TRUE} (the default) the planned request is
-returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
+OSF storage. With \code{dry_run = TRUE} (the default), the planned request
+is returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 both \code{token} and \code{node} (the OSF project id) and performs an
 authenticated \code{PUT} through the suggested \pkg{curl} package, which must
-be installed. Each request is abandoned after 30 seconds. The live path is
-network- and credential-dependent. The dossier is built first, so the
+be installed. Each request is abandoned after 30 seconds. The dossier is
+built first, so the
 function stops when \code{\link[=tf_check]{tf_check()}} refuses the theory, with
 \code{dry_run = TRUE} as well.
 }

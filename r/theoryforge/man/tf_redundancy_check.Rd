@@ -11,7 +11,7 @@ tf_redundancy_check(theory)
 }
 \value{
 A data frame with columns \code{a}, \code{b}, \code{similarity},
-\code{overlap}, \code{flag}.
+\code{overlap} and \code{flag}.
 }
 \description{
 Compares the definitions of every unordered pair of constructs and returns

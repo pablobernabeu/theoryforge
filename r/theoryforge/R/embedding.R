@@ -32,14 +32,14 @@ NULL
 #' [tf_redundancy_check()], and its results are only as reproducible as the
 #' supplied \code{embedder}.
 #'
-#' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param embedder A function mapping a definition string to a numeric vector.
-#' @param threshold Cosine threshold for the \code{"review"} flag; defaults to
-#'   the checklist's \code{embedding_similarity_max} (0.85). How high a cosine
+#' @param threshold Cosine threshold for the \code{"review"} flag. It defaults
+#'   to the checklist's \code{embedding_similarity_max} (0.85). How high a cosine
 #'   two unrelated definitions reach depends on the embedding model, so a
 #'   threshold suited to one model may flag everything or nothing under
 #'   another, and the value is best set for the model in use.
-#' @return A data frame with columns \code{a}, \code{b}, \code{cosine},
+#' @return A data frame with columns \code{a}, \code{b}, \code{cosine} and
 #'   \code{flag}.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>

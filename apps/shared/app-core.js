@@ -49,7 +49,7 @@
       help: "Assembles a reviewer-facing audit bundle in Markdown: the rigour report, severity, test record, evidence, provenance and the preregistration in one document." },
     {
       id: "simulate", label: "Simulation", desc: "Dynamical-system trajectory",
-      help: "Treats each construct as a state variable and each directed proposition as a signed coupling, then propagates the linear system and plots the trajectory. The exact method computes the solution at each step from the matrix exponential, whatever dt is. The Euler method takes fixed explicit steps, which drift from the solution when dt is large against the network's rates.",
+      help: "Treats each construct as a state variable and each proposition whose relation is increases, decreases, causes or mediates as a signed coupling, then propagates the linear system and plots the trajectory. The exact method computes the solution at each step from the matrix exponential, whatever dt is. The Euler method takes fixed explicit steps, which drift from the solution when dt is large against the network's rates.",
       params: [
         { id: "method", label: "method", type: "select", default: "exact", options: ["exact", "euler"] },
         { id: "steps", label: "steps", type: "number", default: 30, min: 1, max: 500, step: 1 },
@@ -833,7 +833,7 @@
       el("p", { class: "note" }, "Your theory, operation and last result are remembered, so a page refresh restores the session."),
       el("h4", null, "Operations"),
       el("ul", { class: "help-ops" }, OPS.map((op) =>
-        el("li", null, [el("b", null, op.label), document.createTextNode(" — " + (op.help || op.desc))]))),
+        el("li", null, op.label + ": " + (op.help || op.desc)))),
       el("p", { class: "note" }, "The literature operations use a bundled demonstration corpus."),
       el("p", { class: "note" }, "The package's network and credentialed adapters are intentionally not offered here. " +
         "The OpenAlex corpus fetch, the embedding-based redundancy screen and the OSF deposit each need a live connection, " +
@@ -1320,7 +1320,7 @@
     document.documentElement.style.setProperty("--accent", RT.accent);
     if (RT.accentInk) document.documentElement.style.setProperty("--accent-ink", RT.accentInk);
     initTheme();
-    document.title = "theoryforge (" + RT.langLabel + ") — interactive app";
+    document.title = "theoryforge (" + RT.langLabel + "): interactive app";
     document.body.append(bootOverlay());
     const blog = $("#blog");
     const onProgress = (m) => { if (blog) blog.textContent = m; };

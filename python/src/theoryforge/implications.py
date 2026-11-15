@@ -1,12 +1,12 @@
 """Testable implications derived from the graph a theory's propositions state.
 
-Every proposition is read through the relation table (API_SPEC.md section 28).
-The directed relations (``increases``, ``decreases``, ``causes``, ``mediates``
-and ``moderates``) are edges from -> to, and ``associates`` is a bidirected
-edge, covariance the theory leaves unexplained, as a latent common cause of the
-two constructs would. Each pair of constructs that no edge joins is
-independent given some set of other constructs whenever a set m-separates the
-pair (Richardson, 2003), and those statements are what data can refute. A graph
+Every proposition is read through the package's relation table. The directed
+relations (``increases``, ``decreases``, ``causes``, ``mediates`` and
+``moderates``) are edges from ``from`` to ``to``, and ``associates`` is a
+bidirected edge, covariance the theory leaves unexplained, as a latent common
+cause of the two constructs would. Each pair of constructs that no edge joins
+is independent given some set of other constructs whenever a set m-separates
+the pair (Richardson, 2003), and those statements are what data can refute. A graph
 of directed edges alone is a DAG, where m-separation is d-separation and the
 statements are the basis set of Pearl (1988) and Shipley (2000). A graph with
 feedback loops is refused by default, or read by sigma-separation on request
@@ -32,8 +32,8 @@ def _statement(a: str, b: str, given: list[str]) -> str:
 def implications(T, cycles: str = "refuse") -> dict:
     """Conditional independencies implied by the graph a theory's propositions state.
 
-    Reads every proposition through the relation table (API_SPEC.md section
-    28). A directed relation (``increases``, ``decreases``, ``causes``,
+    Reads every proposition through the package's relation table. A directed
+    relation (``increases``, ``decreases``, ``causes``,
     ``mediates`` or ``moderates``) is an edge from ``from`` to ``to``, and
     ``associates`` is a bidirected edge, covariance the theory leaves
     unexplained. The constructs that a directed relation names are the
@@ -89,7 +89,7 @@ def implications(T, cycles: str = "refuse") -> dict:
     statement}``, where ``statement`` renders the claim in the notation
     dagitty prints, ``a _||_ b | z1, z2``, and each entry of ``inseparable``
     is ``{a, b}``. Pairs come in construct file order, as do the members of
-    ``given``, so the two engines return the same records in the same order.
+    ``given``, so R and Python return the same records in the same order.
 
     The statements concern constructs, and a study measures them with error.
     Error in a conditioning construct leaves part of the dependence that

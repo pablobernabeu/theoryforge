@@ -1,9 +1,9 @@
 Package: theoryforge
 Title: Systematic Theory Development
-Version: 0.6.0
+Version: 0.7.0
 Authors@R:
     person(given = "Pablo", family = "Bernabeu", role = c("aut", "cre"), email = "pcbernabeu@gmail.com", comment = c(ORCID = "0000-0003-1083-2460"))
-Description: Provides a rigorous, reproducible workflow for building,
+Description: Provides a reproducible workflow for building,
     developing and testing scientific theories represented as versioned,
     machine-checkable objects. Functions read and validate theory objects,
     score them against a versioned rigour checklist, screen constructs for
@@ -11,10 +11,10 @@ Description: Provides a rigorous, reproducible workflow for building,
     implies, appraise amendments as progressive, degenerating or neutral,
     write preregistration and audit documents, compile 'lavaan' model
     syntax, simulate the construct network, map a theory onto the themes of
-    a literature corpus, and emit byte-identical diagram intermediate
-    representations. The package is the feature-parity twin of a 'Python'
-    package of the same name, with behaviour pinned by a shared
-    specification so the two implementations produce identical verdicts.
+    a literature corpus and write diagram intermediate representations. A
+    'Python' package of the same name offers the same functions. Both follow
+    one specification, so they produce the same verdicts and the same diagram
+    intermediate representations.
 License: MIT + file LICENSE
 URL: https://github.com/pablobernabeu/theoryforge, https://pablobernabeu.github.io/theoryforge/r/
 BugReports: https://github.com/pablobernabeu/theoryforge/issues

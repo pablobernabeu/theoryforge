@@ -1,10 +1,8 @@
 #' Access to the example theories shipped inside the package.
 #'
-#' Thin wrappers over \code{system.file()}, so that the two twins name the
-#' examples the same way: the Python package exposes \code{example_path()} and
-#' \code{example_names()} over the same files. The copies under
-#' \code{inst/fixtures/} are written by \code{scripts/gen_golden.py} and gated in
-#' CI, so they cannot drift from the originals at the repository root.
+#' Functions that find the example files installed with the package, through
+#' \code{system.file()}. The Python package offers the same files through
+#' \code{example_path()} and \code{example_names()}.
 #' @name examples
 #' @keywords internal
 NULL
@@ -14,11 +12,10 @@ NULL
 #' The bundled set is four example theories and two literature corpora, which
 #' [tf_read_corpus()] reads. \code{panic-corpus.yaml} is a small corpus designed
 #' to fall into four themes, and \code{openalex-panic-2026.corpus.yaml} holds
-#' 150 works fetched from OpenAlex and frozen.
+#' 150 works fetched from OpenAlex and saved.
 #'
 #' @return A sorted character vector of the \code{.yaml} file names. The Python
-#'   twin's \code{example_names()} applies the same extension filter, so the two
-#'   list the same set.
+#'   package's \code{example_names()} lists the same files.
 #' @examples
 #' tf_example_names()
 #' @export
@@ -32,7 +29,7 @@ tf_example_names <- function() {
 
 #' Path to a packaged example file
 #'
-#' @param name File name, e.g. \code{"panic-network.theory.yaml"}. See
+#' @param name File name, for example \code{"panic-network.theory.yaml"}. See
 #'   [tf_example_names()].
 #' @return The path to the installed file. A \code{name} that matches no
 #'   installed file stops with an error that lists the names

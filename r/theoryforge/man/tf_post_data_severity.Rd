@@ -7,7 +7,7 @@
 tf_post_data_severity(theory)
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 }
 \value{
 A \code{data.frame} with one row per test outcome, in file order,
@@ -45,7 +45,7 @@ checklist does not read it. \code{\link[=tf_dossier]{tf_dossier()}} gives each v
 record.
 
 The function stops at the first outcome, in file order, that cannot be
-read, with the Python twin's text:
+read, with one of these messages:
 \verb{post_data_severity requires both estimate and se; test_outcome[<i>]},
 \verb{... requires a finite se greater than 0; ...} and
 \verb{... requires a finite estimate; ...}, and for its prediction's bounds

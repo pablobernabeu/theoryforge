@@ -4,6 +4,6 @@
 \alias{rigor}
 \title{The theory-rigour checklist engine.}
 \description{
-Scores a theory against the vendored 12-item checklist.
+Scores a theory against the 12-item checklist installed with the package.
 }
 \keyword{internal}

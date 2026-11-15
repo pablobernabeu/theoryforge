@@ -7,12 +7,12 @@
 tf_lit_diagram(obj, type = "keyword_cooccurrence", max_edges = NULL)
 }
 \arguments{
-\item{obj}{A \code{\link[=tf_litmap]{tf_litmap()}} result (for \code{"keyword_cooccurrence"} /
+\item{obj}{A \code{\link[=tf_litmap]{tf_litmap()}} result (for \code{"keyword_cooccurrence"} or
 \code{"co_citation"}) or a \code{\link[=tf_landscape]{tf_landscape()}} result (for
 \code{"theme_landscape"}).}
 
 \item{type}{One of \code{"keyword_cooccurrence"} (default),
-\code{"co_citation"}, or \code{"theme_landscape"}.}
+\code{"co_citation"} or \code{"theme_landscape"}.}
 
 \item{max_edges}{A positive integer that caps a
 \code{"keyword_cooccurrence"} or \code{"co_citation"} diagram at that many

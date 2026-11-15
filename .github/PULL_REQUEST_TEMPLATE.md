@@ -1,9 +1,10 @@
 <!-- Thank you for contributing to theoryforge. -->
 
-**What does this change do?**
+### What does this change do?
+
 A short description, and a link to the issue it addresses if there is one.
 
-**Checklist**
+### Checklist
 
 R package (`r/theoryforge/`):
 
@@ -19,6 +20,6 @@ Python package (`python/`):
 
 Both:
 
-- [ ] Behaviour changes land in both implementations and the parity check passes.
+- [ ] Behaviour changes are made in both implementations and the parity check passes.
 - [ ] Documentation and `NEWS.md` / `CHANGELOG.md` are updated where relevant.
-- [ ] No secret (an OSF token or an OpenAlex API key) appears anywhere in the diff.
+- [ ] No secret, such as an OSF token or an OpenAlex API key, appears anywhere in the diff.

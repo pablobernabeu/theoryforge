@@ -7,13 +7,13 @@
 tf_validate(theory, full = FALSE)
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
 \item{full}{When \code{TRUE}, also check ids, cross-references and the rest
 of the schema.}
 }
 \value{
-\code{TRUE} (invisibly) on success; otherwise stops with
+\code{TRUE} (invisibly) on success. Otherwise, it stops with
 \code{"invalid theory object: "} followed by every problem found, joined
 by \code{"; "}.
 }
@@ -30,34 +30,33 @@ proposition and prediction. It also checks that every collection is a list.
 A field that is absent, \code{NULL} or blank is reported as missing, and one
 that holds another type as such (\code{id must be a string}).
 
-With \code{full = TRUE} it also checks that every id is unique within its
-collection and that every cross-reference (proposition endpoints,
-prediction derivations and diagnostics, and assumption, evidence and
-test-outcome targets) points to a declared id. It then checks the rest of
-the schema. That covers the required fields of assumptions, alternatives,
-evidence and test outcomes, a logical \code{passed}, the evidence direction
-and formal-model type enums, the version block and the
-\code{schema_version} pattern. It also covers numbers within [0, 1] where
+With \code{full = TRUE}, it also checks that every id is unique within its
+collection and that every cross-reference points to a declared id. The
+cross-references are the endpoints of a proposition, the derivations and
+diagnostics of a prediction and the target of an assumption, an evidence
+entry or a test outcome. It then checks the rest of the schema. That covers
+the required fields of assumptions, alternatives, evidence and test
+outcomes, a logical \code{passed}, the evidence direction and formal-model
+type enums, the version block and the \code{schema_version} pattern. It also covers numbers within [0, 1] where
 the schema asks for them, a prediction's \code{bounds} and \code{test}
-block, a test outcome's \code{estimate} and \code{se}, and the type of every
-other field and of every entry of a string array.
+block and a test outcome's \code{estimate} and \code{se}. Last, it checks
+the type of every other field and of every entry of a string array.
 
-The Python twin's test suite compares the result with a JSON Schema 2020-12
-validator. Besides the ids and references, which the schema cannot express,
-the pass is stricter in three ways. A blank required string counts as
-missing, an entry of a string array must be a nonempty string and a
-prediction's \code{bounds} must hold a finite bound with \code{lower} not
-above \code{upper}, while a test outcome's \code{estimate} and \code{se}
-and a \code{test} block's \code{sesoi} must be finite, that block's
-\code{n_planned} within the range of a double and its \code{power_lo} not
-above \code{power_hi}. It is more lenient in three ways, which API_SPEC.md
-section 2 documents. A \code{NULL} optional field other than
+Besides the ids and references, which the schema cannot express, the full
+check is stricter than a JSON Schema 2020-12 validator in three ways. A
+blank required string counts as missing. An entry of a string array must be
+a nonempty string. A prediction's \code{bounds} must hold a finite bound
+with \code{lower} not above \code{upper}, a test outcome's \code{estimate}
+and \code{se} and a \code{test} block's \code{sesoi} must be finite, that
+block's \code{n_planned} must lie within the range of a double and its
+\code{power_lo} must not be above \code{power_hi}. The full check is more
+lenient in three ways. A \code{NULL} optional field other than
 \code{theory_form} is absent, as is a single \code{NA}, which \code{\link[=tf_write]{tf_write()}}
 writes as null. A single string stands for a one-element array of strings.
 An empty \code{list()} stands for an empty mapping as well as an empty
 sequence.
 
-Both passes are deterministic, and the Python twin's
+Both checks are deterministic, and the Python package's
 \code{Theory.validate()} reports the same problems in the same order with
 the same text.
 }

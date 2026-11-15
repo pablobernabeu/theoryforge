@@ -7,7 +7,7 @@
 tf_dossier(theory)
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 }
 \value{
 The dossier Markdown as a single string (LF line endings, single

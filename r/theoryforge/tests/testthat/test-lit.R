@@ -444,7 +444,9 @@ test_that("pair counting matches a direct count on random corpora", {
         counts[[key]] <- (if (is.null(counts[[key]])) 0L else counts[[key]]) + 1L
       }
     }
-    keys <- sort(ls(counts, sorted = FALSE), method = "radix")
+    # ls() gives the names in the session's charset, which the radix sort
+    # refuses for 'été' in a Latin-9 session, so they go back to UTF-8 first.
+    keys <- sort(enc2utf8(ls(counts, sorted = FALSE)), method = "radix")
     keys <- keys[vapply(keys, function(k) counts[[k]] >= min_link, logical(1))]
     vapply(keys, function(k) paste(sub("\001", "|", k, fixed = TRUE), counts[[k]], sep = "|"),
            character(1), USE.NAMES = FALSE)

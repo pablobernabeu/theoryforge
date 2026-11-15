@@ -62,14 +62,13 @@ theoryforge is developed and maintained by
 [Pablo Bernabeu](https://pablobernabeu.github.io), a researcher in the
 Department of Education at the University of Oxford. His work spans cognitive psychology and
 neuroscience, linguistics, education and digital technologies, and research methods and open
-science, with hands-on experience in behavioural and EEG experiments, corpus analysis,
+science. He has hands-on experience in behavioural and EEG experiments, corpus analysis,
 computational modelling and statistics. He develops open, reproducible research software in R
 and Python, and is a Fellow of the Software Sustainability Institute. His
 [ORCID record](https://orcid.org/0000-0003-1083-2460) lists his other work.
 
-This Python package has a feature-parity twin written in R. Its documentation lives at the
-[theoryforge (R) site](https://pablobernabeu.github.io/theoryforge/r/), keeping a theory
-development workflow legible across both languages.
+This Python package has a feature-parity twin written in R, which is documented on the
+[theoryforge (R) site](https://pablobernabeu.github.io/theoryforge/r/).
 
 ## Licence
 
@@ -80,8 +79,8 @@ text is reproduced on this site's [licence page](licence.md).
 ## Versioning and archival
 
 Releases are tagged on [GitHub](https://github.com/pablobernabeu/theoryforge/releases) and
-archived on Zenodo. The concept DOI, <https://doi.org/10.5281/zenodo.21229964>, always resolves
-to the latest version, so a citation stays current without naming a version. The
+archived on Zenodo. The concept DOI, <https://doi.org/10.5281/zenodo.21229964>, resolves to
+the latest archived release, so a citation stays current without naming a version. The
 [changelog](changelog.md) records what changed in each release.
 
 ## Contributing and support

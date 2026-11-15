@@ -41,6 +41,11 @@ tf_expected_path <- function(...) {
 }
 
 # Read a file as raw bytes -> string, exactly as the golden comparison requires.
+# The goldens are UTF-8, and the string is marked so. Unmarked, it would be read
+# in the session's charset, and in a Latin-9 session, as on CRAN's Debian clang
+# flavour, it would no longer equal the package's UTF-8 output.
 tf_read_golden <- function(f) {
-  readChar(f, file.info(f)$size, useBytes = TRUE)
+  text <- readChar(f, file.info(f)$size, useBytes = TRUE)
+  Encoding(text) <- "UTF-8"
+  text
 }

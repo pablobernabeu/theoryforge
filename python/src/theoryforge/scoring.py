@@ -195,7 +195,7 @@ def post_data_severity(T) -> list[dict]:
 
     Raises:
         ValueError: for the first outcome, in file order, that cannot be read,
-            with the R twin's text: ``post_data_severity requires both estimate
+            with one of these messages: ``post_data_severity requires both estimate
             and se; test_outcome[<i>]``, ``... requires a finite se greater than
             0; ...``, ``... requires a finite estimate; ...``, and for its
             prediction's bounds ``... requires bounds with numeric or null lower

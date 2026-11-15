@@ -1,7 +1,7 @@
 #' Development mode: amendment appraisal.
 #'
-#' Operationalises the Lakatosian progressive-vs-degenerating distinction
-#' (Lakatos, 1970; Meehl, 1990a).
+#' Operationalises the Lakatosian distinction between progressive and
+#' degenerating amendments (Lakatos, 1970; Meehl, 1990a).
 #' @name develop
 #' @keywords internal
 NULL
@@ -74,7 +74,7 @@ NULL
          USE.NAMES = FALSE)
 }
 
-#' Appraise an amendment as progressive, degenerating, or neutral
+#' Appraise an amendment as progressive, degenerating or neutral
 #'
 #' Compares an amended theory \code{new} with its \code{prior} version by
 #' content, not by prediction ids, and returns a Lakatosian verdict with the
@@ -101,9 +101,9 @@ NULL
 #' version is the prior is the caller's responsibility.
 #'
 #' A test outcome whose \code{passed} is present and not \code{TRUE} or
-#' \code{FALSE}, in \code{new} (checked first) or in \code{prior}, is refused
-#' with the message the Python twin raises. Read as not passed, a quoted
-#' \code{"true"} could turn a progressive amendment into a degenerating one.
+#' \code{FALSE}, in \code{new} (checked first) or in \code{prior}, is
+#' refused. Read as not passed, a quoted \code{"true"} could turn a progressive
+#' amendment into a degenerating one.
 #'
 #' @param new The amended theory object (named list).
 #' @param prior The prior theory object (named list).

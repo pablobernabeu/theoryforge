@@ -20,7 +20,7 @@
 #' The three chart views (`venn`, `rigour` and `severity`) are already SVG, so
 #' they are returned as-is under `as = "svg"` and wrapped for display under
 #' `as = "widget"`. The `causal_dag` view emits dagitty syntax rather than DOT,
-#' so it is not rendered here; paste it into a dagitty tool or the dagitty R
+#' so it is not rendered here. Paste it into a dagitty tool or the dagitty R
 #' package instead.
 #'
 #' The DOT views need the suggested DiagrammeR package, and `as = "svg"`
@@ -39,8 +39,7 @@
 #'   htmltools HTML object for the `venn`, `rigour` and `severity` views. With
 #'   `as = "svg"`, a single SVG string.
 #' @seealso [tf_diagram()] for the intermediate representation itself, which
-#'   needs no optional packages and stays byte-identical across the R and
-#'   Python implementations.
+#'   needs no optional packages and is identical in R and in Python.
 #' @examplesIf requireNamespace("DiagrammeR", quietly = TRUE)
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>

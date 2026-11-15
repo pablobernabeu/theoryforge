@@ -1,10 +1,10 @@
 """Deterministic dynamical-system runner derived from a theory's network.
 
-Each construct is a state variable, and each directed proposition contributes a signed linear
-coupling term. The system dX/dt = (A - damping*I) X is propagated either with fixed-step
-(Euler) updates or exactly, with the matrix exponential of (A - damping*I)*dt. Both are fully
-deterministic and computed with explicit loops in a fixed order, so the R twin gives the same
-bits.
+Each construct is a state variable, and each proposition whose relation is ``increases``,
+``decreases``, ``causes`` or ``mediates`` contributes a signed linear coupling term. The system
+dX/dt = (A - damping*I) X is propagated either with fixed-step (Euler) updates or exactly, with
+the matrix exponential of (A - damping*I)*dt. Both are deterministic and computed with
+explicit loops in a fixed order, so the R package gives the same values to the last bit.
 """
 from __future__ import annotations
 
@@ -148,10 +148,10 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
 
     Returns {states, dt, steps, k, damping, init, method, ignored, opposed,
     trajectory}, where trajectory[t] is the state vector at time t*dt (t = 0..steps),
-    each value rounded to 6 decimals. The knobs and the method are echoed back as
+    each value rounded to 6 decimals. The settings and the method are returned as
     given, because the trajectory cannot be reproduced without them. ``ignored``
     lists the ids of the propositions that couple nothing (moderates, associates, a
-    relation outside the schema's set, or an endpoint that is not a declared
+    relation outside the schema's set or an endpoint that is not a declared
     construct), and ``opposed`` the ``[from, to]`` pairs that carry couplings of
     both signs, which offset each other. Construct ids must be unique. A construct
     without an id is a state with no couplings, and two of them do not count as
@@ -162,15 +162,15 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     linear system at those times whatever ``dt`` is. ``method = "euler"`` (the
     default for this release) takes fixed explicit steps, which are stable only
     when |1 + dt*lambda| < 1 for every eigenvalue lambda of A - damping*I. A theory
-    that decays at rate ``damping`` therefore explodes with alternating sign once
-    dt*damping exceeds 2, and the steps inflate a sustained oscillation into
-    growth. The Euler run warns (UserWarning) when it departs from the exact
+    that decays at rate ``damping`` therefore grows without bound, alternating in
+    sign, once dt*damping exceeds 2, and the steps turn a sustained oscillation
+    into growth. The Euler run warns (UserWarning) when it departs from the exact
     solution by more than 5 per cent of max(1, |exact|) at any step. The default
     will change to ``"exact"`` in the next minor release.
 
-    ``steps`` must be a whole number of at least 0, ``dt`` a finite number above 0,
-    ``k``, ``damping`` and ``init`` finite numbers, and ``method`` one of "euler"
-    and "exact". Anything else raises ValueError. When a state grows so large that
+    ``steps`` must be a whole number of at least 0 and ``dt`` a finite number
+    above 0. ``k``, ``damping`` and ``init`` must be finite numbers, and ``method``
+    one of "euler" and "exact". Anything else raises ValueError. When a state grows so large that
     a million times it is not a finite double, the run stops with ValueError naming
     the step and the state. The initial state is tested as step 0, so an ``init``
     beyond about 1.8e302 in absolute value stops there.

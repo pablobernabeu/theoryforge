@@ -7,12 +7,12 @@
 tf_severity(theory)
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 }
 \value{
 A \code{data.frame} with columns \code{prediction_id}, \code{type},
-\code{risk_score}, \code{computed_severity}, one row per prediction in
-file order.
+\code{risk_score} and \code{computed_severity}, with one row per
+prediction in file order.
 }
 \description{
 A pre-data rubric of the form of each prediction's claim. \code{risk_score}

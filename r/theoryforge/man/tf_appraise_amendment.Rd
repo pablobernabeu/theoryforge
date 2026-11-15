@@ -2,7 +2,7 @@
 % Please edit documentation in R/develop.R
 \name{tf_appraise_amendment}
 \alias{tf_appraise_amendment}
-\title{Appraise an amendment as progressive, degenerating, or neutral}
+\title{Appraise an amendment as progressive, degenerating or neutral}
 \usage{
 tf_appraise_amendment(new, prior)
 }
@@ -63,9 +63,9 @@ vectors returned tell its cases apart. Only
 version is the prior is the caller's responsibility.
 
 A test outcome whose \code{passed} is present and not \code{TRUE} or
-\code{FALSE}, in \code{new} (checked first) or in \code{prior}, is refused
-with the message the Python twin raises. Read as not passed, a quoted
-\code{"true"} could turn a progressive amendment into a degenerating one.
+\code{FALSE}, in \code{new} (checked first) or in \code{prior}, is
+refused. Read as not passed, a quoted \code{"true"} could turn a progressive
+amendment into a degenerating one.
 }
 \examples{
 prior <- tf_theory("demo-1", "A demonstration theory") |>

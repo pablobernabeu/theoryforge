@@ -4,10 +4,8 @@
 \alias{examples}
 \title{Access to the example theories shipped inside the package.}
 \description{
-Thin wrappers over \code{system.file()}, so that the two twins name the
-examples the same way: the Python package exposes \code{example_path()} and
-\code{example_names()} over the same files. The copies under
-\code{inst/fixtures/} are written by \code{scripts/gen_golden.py} and gated in
-CI, so they cannot drift from the originals at the repository root.
+Functions that find the example files installed with the package, through
+\code{system.file()}. The Python package offers the same files through
+\code{example_path()} and \code{example_names()}.
 }
 \keyword{internal}

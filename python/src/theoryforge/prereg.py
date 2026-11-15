@@ -1,4 +1,4 @@
-"""Preregistration document export. Deterministic markdown output."""
+"""Preregistration document export. Deterministic Markdown output."""
 from __future__ import annotations
 
 import math

@@ -7,7 +7,7 @@
 tf_implications(theory, cycles = "refuse")
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
 \item{cycles}{What to do with a graph whose directed edges form a cycle:
 \code{"refuse"} (the default) stops with an error, and \code{"sigma"}
@@ -36,8 +36,8 @@ claim as \code{a _||_ b | z1, z2}, and each entry of \code{inseparable} is
 \code{given}.
 }
 \description{
-Reads every proposition through the relation table (API_SPEC.md section
-28). A directed relation (\code{"increases"}, \code{"decreases"},
+Reads every proposition through the package's relation table. A directed
+relation (\code{"increases"}, \code{"decreases"},
 \code{"causes"}, \code{"mediates"} or \code{"moderates"}) is an edge from
 \code{from} to \code{to}, and \code{"associates"} is a bidirected edge,
 covariance the theory leaves unexplained, as a latent common cause of the two
@@ -109,8 +109,7 @@ directed relation naming an undeclared construct would shrink the graph and
 so imply independencies the theory never claimed. With
 \code{cycles = "refuse"}, the default, a cycle among the directed edges is
 refused too, and the message names a cycle that was found and the
-\code{"sigma"} option. The Python twin raises \code{ValueError} in the same
-cases, with the same message text.
+\code{"sigma"} option.
 }
 
 \examples{
