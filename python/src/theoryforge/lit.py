@@ -851,12 +851,12 @@ def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None,
                  api_key: str | None = None, max_records: int | None = None) -> dict:
     """Build a corpus from the OpenAlex API (network call).
 
-    It depends on a live external service whose results change over time, so,
-    unlike the rest of the package, it is not deterministic. The result is a
-    corpus, ``{schema_version: "1.0", id:
-    "openalex:<query>", source, records}``. Each work is mapped to ``{id, doi,
-    title, year, keywords, references}``, with the DOI as OpenAlex gives it and
-    the top five concepts standing in for keywords when a work has none.
+    It depends on a live external service whose results change over time, so it
+    is not part of the package's deterministic core. The result is a corpus,
+    ``{schema_version: "1.0", id: "openalex:<query>", source, records}``. Each
+    work is mapped to ``{id, doi, title, year, keywords, references}``, with the
+    DOI as OpenAlex gives it and the top five concepts standing in for keywords
+    when a work has none.
 
     OpenAlex returns the works that match a search in pages of ``per_page``,
     ranked by relevance, and a search usually matches far more works than one
