@@ -18,32 +18,32 @@ The package includes a few example theories, so nothing needs downloading. `tf.e
 
 Import the package, list the packaged examples and read the panic-network theory from its YAML file.
 
-```python exec="1" source="material-block" result="text" session="getting-started"
+```python exec="1" source="block" result="text" session="getting-started"
 import theoryforge as tf
 
 print(tf.example_names())
 ```
 
-```python exec="1" source="material-block" session="getting-started"
+```python exec="1" source="block" session="getting-started"
 t = tf.read(tf.example_path("panic-network.theory.yaml"))
 ```
 
 Validate the theory. `validate()` returns `True` on success and otherwise raises `ValueError` with a list of problems. With no arguments, it checks the structure: the required fields and enum membership, that every top-level field is one the schema defines and that each collection is a list. A misspelt key such as `prediction:` is reported as an unknown top-level field. Pass `full=True` to additionally check referential integrity: that ids are unique within each collection and that every cross-reference between constructs, propositions, predictions and alternatives points to a declared id. The full pass also checks that assumption, test-outcome and evidence entries reference declared predictions. It then checks the rest of the schema, such as the evidence directions, a boolean `passed` on each test outcome and the type of every other field.
 
-```python exec="1" source="material-block" session="getting-started"
+```python exec="1" source="block" session="getting-started"
 t.validate()
 t.validate(full=True)   # also ids, cross-references and the rest of the schema
 ```
 
 Produce the rigour report. `t.report(format=...)` renders it as a string, in `"json"` or `"html"`, and `t.check()` returns the same information as a plain Python dictionary. The `"json"` format gives the 12-item rigour checklist together with the overall gate.
 
-```python exec="1" source="material-block" result="json" session="getting-started"
+```python exec="1" source="block" result="json" session="getting-started"
 print(t.report("json"))
 ```
 
 Individual results, including each checklist item in order, can be read from the dictionary that `t.check()` returns.
 
-```python exec="1" source="material-block" result="text" session="getting-started"
+```python exec="1" source="block" result="text" session="getting-started"
 report = t.check()
 
 print(report["aggregate_score"])
@@ -55,13 +55,13 @@ print(report["items"][0]["status"])
 
 Export a diagram. The digraph types, such as `nomological_net`, return Graphviz DOT, which you can render with Graphviz or inspect directly.
 
-```python exec="1" source="material-block" result="text" session="getting-started"
+```python exec="1" source="block" result="text" session="getting-started"
 print(t.diagram("nomological_net"))
 ```
 
 The `causal_dag` type returns dagitty syntax instead, for causal-inference tools. It contains the same directed edges as the DOT above, without the presentation attributes. An association is kept only between two constructs that each appear in a directed relation. Within Python, `implications()` checks the causal DAG for acyclicity and returns the conditional independencies it entails, which [Workflow modes](workflow-modes.md#what-the-causal-graph-commits-you-to) works through. The panic-network graph has a cycle, so `implications()` raises `ValueError` on it unless you pass `cycles="sigma"`.
 
-```python exec="1" source="material-block" result="text" session="getting-started"
+```python exec="1" source="block" result="text" session="getting-started"
 print(t.diagram("causal_dag"))
 ```
 
@@ -77,7 +77,7 @@ print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
 
 Run the lexical redundancy screen. This returns every construct pair with an `ok`/`review` flag and two measures of the words their definitions share, the Jaccard similarity and the overlap coefficient. A pair is marked `review` when the definitions are near duplicates or one is contained in the other, which suggests jingle-jangle redundancy.
 
-```python exec="1" source="material-block" result="text" session="getting-started"
+```python exec="1" source="block" result="text" session="getting-started"
 for pair in t.redundancy_check():
     print(pair["a"], pair["b"], pair["similarity"], pair["overlap"], pair["flag"])
 ```

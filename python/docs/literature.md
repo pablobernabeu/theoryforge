@@ -73,7 +73,7 @@ bundled with the package through `tf.example_path()`, as on the
 `pip install theoryforge`. Every printed result shown, the figures included, is
 produced when this page is built.
 
-```python exec="1" source="material-block" session="literature"
+```python exec="1" source="block" session="literature"
 import theoryforge as tf
 
 corpus = tf.read_corpus(tf.example_path("panic-corpus.yaml"))
@@ -87,7 +87,7 @@ pairs that meet a minimum link count and groups the resulting keyword
 network into themes by connected component. It applies the same procedure
 to the `references` field to produce a co-citation network.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 m = tf.litmap(corpus)
 
 print("records read:", m["n_records"])
@@ -110,7 +110,7 @@ theme holds more than half of them, `litmap` warns that the themes, and any
 landscape built on them, are not informative. The map itself is returned
 unchanged. Below, one keyword shared by two pairs joins them into one theme.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 import warnings
 
 hub = {"schema_version": "1.0", "id": "hub", "records": [
@@ -136,7 +136,7 @@ Lowering the threshold therefore admits nothing further, and raising it past
 two clears the keyword map. The co-citation counts vary, and the threshold
 selects among them.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 m_sparse = tf.litmap(corpus, min_link=1)   # keep single co-occurrences
 m_strict = tf.litmap(corpus, min_link=3)   # keep only frequent pairs
 
@@ -152,7 +152,7 @@ threshold of two, most of them with a count of exactly two, against 616
 keyword edges. `min_cocitation` sets the co-citation threshold on its own,
 leaving `min_link` to the keywords. It defaults to `min_link`.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 m_cited = tf.litmap(corpus, min_link=2, min_cocitation=3)
 
 print("keyword edges:", len(m_cited["keyword_cooccurrence"]))
@@ -188,7 +188,7 @@ stay fixed. It holds the 150 works that OpenAlex ranked first for the search
 without their references. Components put every linked keyword of it in one
 theme, while simple centres give bounded ones.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 openalex = tf.read_corpus(tf.example_path("openalex-panic-2026.corpus.yaml"))
 with warnings.catch_warnings(record=True):
     warnings.simplefilter("always")
@@ -236,7 +236,7 @@ that none of the registered accounts addresses is under-theorised, one that a
 single account addresses is covered and one that two or more address is
 crowded.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 t = tf.read(tf.example_path("panic-network.theory.yaml"))
 ls = t.landscape(corpus)
 
@@ -271,7 +271,7 @@ theme keeps its `centrality`, `density` and `quadrant`. A front that none of
 the accounts addresses can then be read with its place in the strategic
 diagram.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 ls = tf.landscape(t, corpus, min_link=2, max_token_share=0.5)
 
 real = t.landscape(openalex, method="simple_centres")
@@ -285,7 +285,7 @@ for theme in real["themes"][:6]:
 accepts the output of `litmap` for the two network views, and the output of
 `landscape` for the theme map. The default `type` is `keyword_cooccurrence`.
 
-```python exec="1" source="material-block" session="literature"
+```python exec="1" source="block" session="literature"
 m = tf.litmap(corpus)
 ls = t.landscape(corpus)
 ```
@@ -293,7 +293,7 @@ ls = t.landscape(corpus)
 The keyword co-occurrence view is an undirected graph over the retained keyword
 pairs, each edge labelled with the number of records in which the pair appears.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 print(tf.lit_diagram(m, type="keyword_cooccurrence"))
 ```
 
@@ -313,7 +313,7 @@ The co-citation view has the same shape, drawn over pairs of cited works. At
 the default threshold, this corpus retains only two disjoint pairs, so the text
 shows the whole graph and no figure is needed.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 print(tf.lit_diagram(m, type="co_citation"))
 ```
 
@@ -322,7 +322,7 @@ DOT, which Graphviz cannot lay out legibly. `max_edges` keeps the strongest
 edges, the highest counts first with ties going to the pair that sorts first,
 and draws only their endpoints. It applies to both network views.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 print(tf.lit_diagram(m, type="co_citation", max_edges=1))
 ```
 
@@ -330,7 +330,7 @@ The theme landscape is a directed graph. It links the focal theory and its
 registered alternatives to the themes each of them addresses and labels every
 theme node with its status.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 print(tf.lit_diagram(ls, type="theme_landscape"))
 ```
 
@@ -413,7 +413,7 @@ for each of its two registered alternatives, and a DOI cited as an alternative
 counts as cited just as an evidence DOI does. Those are the sources the
 candidate list below is checked against.
 
-```python exec="1" source="material-block" result="text" session="literature"
+```python exec="1" source="block" result="text" session="literature"
 candidates = [
     "10.1016/j.brat.2015.10.002",                    # already cited as evidence
     # already cited as an alternative, in URL form

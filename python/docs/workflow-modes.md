@@ -18,7 +18,7 @@ included with it through `tf.example_path()`, as on the
 `pip install theoryforge`. Every printed result and figure below is produced
 when this page is built.
 
-```python exec="1" source="material-block" session="workflow-modes"
+```python exec="1" source="block" session="workflow-modes"
 import theoryforge as tf
 ```
 
@@ -30,7 +30,7 @@ predictions. Each method changes the theory in place and returns it, so calls
 chain. Every addition is recorded in a provenance log, a step-by-step account
 of how the theory was assembled.
 
-```python exec="1" source="material-block" session="workflow-modes"
+```python exec="1" source="block" session="workflow-modes"
 t = (
     tf.new_theory("panic_demo", "A demonstration theory of panic")
       .add_construct(
@@ -92,7 +92,7 @@ for `set_formal_model()`. The action is the name of the R twin's function,
 `tf_theory` for `new_theory()` and `tf_add_construct` for `add_construct()`, so
 a log reads the same whichever language built the theory.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 for step in t.data["provenance"]:
     print(step["step"], step["action"], step["detail"])
 ```
@@ -104,7 +104,7 @@ checklist versions and its maturity. It then gives the aggregate score, the
 checklist coverage, the gate and the number of blockers that failed, and ends
 with one entry per checklist item.
 
-```python exec="1" source="material-block" result="json" session="workflow-modes"
+```python exec="1" source="block" result="json" session="workflow-modes"
 t.validate()
 print(t.report("json"))
 ```
@@ -118,7 +118,7 @@ theory holds. `tf.Theory(dict(t.data))` copies only the top-level mapping, so
 the two objects would go on sharing their constructs, propositions and
 predictions.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 amended = t.copy().add_prediction(
     "pred2",
     "the standardised effect of arousal lies between 0.2 and 0.4",
@@ -145,7 +145,7 @@ amendment begins from `copy()`. Given the same object twice, the call raises a
 `ValueError` that points to `copy()`, because a theory compared with itself can
 only come out `neutral`.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 v1 = tf.read(tf.example_path("panic-network.theory.yaml"))
 v2 = tf.read(tf.example_path("panic-network-2026-v2.theory.yaml"))
 
@@ -221,7 +221,7 @@ compiles a measurement model for lavaan.
 base risk implied by the prediction type and the computed severity after the
 rubric's adjustments.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 for s in t.severity():
     print(s["prediction_id"], s["risk_score"], s["computed_severity"])
 ```
@@ -271,7 +271,7 @@ perceived threat to arousal, closing the feedback loop the theory is about, and
 `implications()` raises a `ValueError` on a graph with a cycle unless the call
 specifies how to read it.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 panic = tf.read(tf.example_path("panic-network.theory.yaml"))
 
 try:
@@ -289,7 +289,7 @@ unique equilibrium is sigma-separation
 ([Bongers et al., 2021](https://doi.org/10.1214/21-AOS2064)), and
 `cycles="sigma"` applies it.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 implied = panic.implications(cycles="sigma")
 print(implied["feedback"])
 for i in implied["implications"]:
@@ -313,7 +313,7 @@ activation both raises the cost of switching modality between consecutive
 trials and eases conceptual access, which lexical familiarity with the word
 form eases as well.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 switching = tf.read(tf.example_path("modality-switching.theory.yaml"))
 
 implied = switching.implications()
@@ -362,7 +362,7 @@ lists the conditional independencies that the causal graph implies, or says why
 there are none, and a severity line for each prediction closes the document.
 Called without an argument, `preregister()` returns the text.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 text = t.preregister()
 print(text)
 ```
@@ -388,7 +388,7 @@ opens with the header and the rigour-checklist table, followed by the severity
 list, the test record, the evidence, the provenance log and the preregistration.
 The output is deterministic, so it can be committed or attached to a submission.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 print(t.dossier())
 ```
 
@@ -403,7 +403,7 @@ terminal, unless an association joins them or either is a moderator. Deleting
 the block restores lavaan's defaults. The theory built above has no such pair,
 so its syntax has no block.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 print(t.compile_sem())
 ```
 
@@ -428,7 +428,7 @@ offline and without a token. Only the dossier, the machine-checkable bundle a
 reviewer needs, is uploaded. The report written above stays on your own
 computer.
 
-```python exec="1" source="material-block" result="json" session="workflow-modes"
+```python exec="1" source="block" result="json" session="workflow-modes"
 import json
 
 print(json.dumps(t.osf_push(node="ab12c"), indent=2))
@@ -466,14 +466,14 @@ SVG and render inline. These examples use the panic-network fixture, which
 records the test outcomes and scope conditions that several of the views below
 draw on.
 
-```python exec="1" source="material-block" session="workflow-modes"
+```python exec="1" source="block" session="workflow-modes"
 t = tf.read(tf.example_path("panic-network.theory.yaml"))
 ```
 
 The `workflow` view traces the lifecycle from constructs, through propositions and
 predictions, to the recorded test outcomes.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 print(t.diagram("workflow"))
 ```
 
@@ -493,7 +493,7 @@ print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
 The `context` view places the theory among the scope conditions under which it is
 claimed to hold and the registered rivals it is meant to outpredict.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 print(t.diagram("context"))
 ```
 
@@ -506,7 +506,7 @@ The `pipeline` view links each prediction to its recorded test outcomes, one
 node for each. A prediction still awaiting a test has no outcome node, and a
 failed replication appears beside the pass it followed.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 print(t.diagram("pipeline"))
 ```
 
@@ -518,7 +518,7 @@ print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
 The `provenance` view draws the theory's provenance log as a digraph. The log is
 held in the theory object and records how the theory reached its current state.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 print(t.diagram("provenance"))
 ```
 
@@ -567,7 +567,7 @@ advisory. The hub names the theory and its current standing. The panic network
 passes every check, so its roadmap reduces to that hub and an `all checks pass`
 node. The weak-theory fixture shows the worklist in full.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 weak = tf.read(tf.example_path("weak-theory.theory.yaml"))
 print(weak.diagram("development_roadmap"))
 ```
@@ -595,7 +595,7 @@ negative coupling breaks the symmetry between the states, and the loop it closes
 makes the network oscillate. The run covers 20 time units in steps of 0.5 and
 prints the state every two time units.
 
-```python exec="1" source="material-block" result="text" session="workflow-modes"
+```python exec="1" source="block" result="text" session="workflow-modes"
 s = (
     tf.new_theory("regulation_demo", "Arousal regulated by avoidance")
       .add_construct("arousal", "Physiological arousal", "bodily activation")

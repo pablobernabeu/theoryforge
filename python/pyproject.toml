@@ -34,7 +34,7 @@ dev = ["pytest>=7.0", "ruff", "mypy", "jsonschema>=4"]
 # needs the Graphviz system binaries.
 render = ["graphviz>=0.20"]
 # The documentation site; markdown-exec runs the example blocks at build time.
-docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.24", "markdown-exec>=1.8"]
+docs = ["mkdocs-material>=9.5", "mkdocstrings[python]>=0.24", "markdown-exec>=1.12.3"]
 
 [project.urls]
 Homepage = "https://github.com/pablobernabeu/theoryforge"
