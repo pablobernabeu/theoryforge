@@ -345,8 +345,11 @@ a chain whose two paths have standardised coefficients of .5, with the middle
 construct measured at a reliability of .8. A partial-correlation test at the 5
 per cent level then rejects the true claim in about 14, 29 and 51 per cent of
 studies of 200, 500 and 1,000 observations. Five of the six claims above are
-conditional. They are better tested in a latent-variable model, such as one
-built on the measurement model that `compile_sem()` writes
+conditional. They are better tested in a latent-variable model, which takes the
+measurement error into account
+([Westfall & Yarkoni, 2016](https://doi.org/10.1371/journal.pone.0152719)). The
+measurement model that `compile_sem()` writes is one starting point, and each
+implied independence can be tested in it separately
 ([Thoemmes et al., 2018](https://doi.org/10.1037/met0000147)).
 
 ### Preregistration

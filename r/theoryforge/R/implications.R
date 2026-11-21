@@ -54,8 +54,10 @@ NULL
 #' .8. A partial-correlation test at the 5 per cent level then rejects the true
 #' statement in about 14, 29 and 51 per cent of studies of 200, 500 and 1,000
 #' observations. Conditional statements are better tested with latent-variable
-#' models, such as one built on the measurement model that [tf_compile_sem()]
-#' writes (Thoemmes et al., 2018).
+#' models, which take the measurement error into account (Westfall & Yarkoni,
+#' 2016). The measurement model that [tf_compile_sem()] writes is one starting
+#' point, and each statement can be tested in it separately (Thoemmes et al.,
+#' 2018).
 #'
 #' @section Feedback loops:
 #' With \code{cycles = "sigma"}, a graph whose directed edges form a cycle is
@@ -129,8 +131,8 @@ NULL
 #'   \doi{10.1214/aos/1031689015}
 #'
 #' Shipley, B. (2000). A new inferential test for path models based on directed
-#'   acyclic graphs. \emph{Structural Equation Modeling}, 7(2), 206-218.
-#'   \doi{10.1207/S15328007SEM0702_4}
+#'   acyclic graphs. \emph{Structural Equation Modeling: A Multidisciplinary
+#'   Journal}, 7(2), 206-218. \doi{10.1207/S15328007SEM0702_4}
 #'
 #' Thoemmes, F., Rosseel, Y., & Textor, J. (2018). Local fit evaluation of
 #'   structural equation models using graphical criteria. \emph{Psychological

@@ -60,7 +60,7 @@ quote such a keyword.
 A reference that holds a DOI is keyed by the DOI, lower-cased and without its
 resolver prefix, because DOI names ignore the case of ASCII letters (DOI
 Handbook, [Case Insensitivity of the DOI
-Name](https://www.doi.org/doi-handbook/HTML/case-insensitivity.html)).
+Name](https://www.doi.org/doi-handbook/DOIHandbook_2025.pdf)).
 `10.1016/J.BRAT.2015.10.002` in one record and
 `https://doi.org/10.1016/j.brat.2015.10.002` in another therefore cite one
 work, which the co-citation map labels `10.1016/j.brat.2015.10.002`. Other

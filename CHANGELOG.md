@@ -451,6 +451,9 @@ version and a single behavioural contract
 - The apps' checklist guide says that the gate is advisory at draft maturity whatever
   fails, where it said that an advisory gate meant a theory usable with the noted gaps. The
   effort-recovery example describes the trajectories its default run shows.
+- Citations were checked against their published records, and the DOI Handbook link, the
+  journal name in the reference to Shipley (2000) and the attributions to Thoemmes et al.
+  (2018) and Eronen and Bringmann (2021) were corrected.
 
 
 ## [0.6.0] - 2026-08-27

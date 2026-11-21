@@ -169,7 +169,7 @@ tf_read_corpus <- function(path) {
 # 10.1016/J.BRAT..., doi:10.1016/j.brat... and https://doi.org/10.1016/j.brat...
 # are one work: DOI names are case-insensitive under ASCII case folding (DOI
 # Handbook, 'Case Insensitivity of the DOI Name',
-# https://www.doi.org/doi-handbook/HTML/case-insensitivity.html). Any other
+# https://www.doi.org/doi-handbook/DOIHandbook_2025.pdf). Any other
 # reference, a Scopus or OpenAlex identifier or a fixture key, is kept exactly
 # as written. Every reference of the corpus is keyed in one vectorised call.
 .tf_reference_keys <- function(references) {
