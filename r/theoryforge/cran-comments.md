@@ -25,17 +25,17 @@ locale.
 
 ## Test environments
 
-GitHub Actions, run 43732962955 on 2026-11-15, at commit 88b5f08, which holds
+GitHub Actions, run 44941094268 on 2026-11-21, at commit 743e9e6, which holds
 the package as submitted. Each leg built the tarball and ran
 `R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
 which r-lib/actions turns off. Each leg ended with 'Status: OK':
 
 * ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.6.2
-* ubuntu-latest (Ubuntu 26.04.1 LTS), R-devel (2026-11-14 r90890)
+* ubuntu-latest (Ubuntu 26.04.1 LTS), R-devel (2026-11-20 r90953)
 * ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.5.3
 * windows-latest (Windows Server 2025, x86_64-w64-mingw32), R 4.6.2
 * windows-latest (Windows Server 2025, x86_64-w64-mingw32), R-devel
-  (2026-11-14 r90890 ucrt)
+  (2026-11-17 r90926 ucrt)
 * macos-latest (macOS 26.7.2, aarch64-apple-darwin23), R 4.6.2
 
 The test suite passed in every leg, with 3635 expectations met, no failures
