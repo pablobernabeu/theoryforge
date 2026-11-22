@@ -7,14 +7,14 @@
 tf_tokens(s)
 }
 \arguments{
-\item{s}{A single string (or \code{NULL}, treated as "").}
+\item{s}{A single string (or \code{NULL}, treated as \code{""}).}
 }
 \value{
 A character vector of unique tokens (possibly empty).
 }
 \description{
 Folds the text through the package's fold table (accented Latin letters to
-ASCII, Greek and Cyrillic letters to small unaccented ones) and lowercases
+ASCII, Greek and Cyrillic letters to small unaccented ones) and lower-cases
 ASCII letters, then takes every maximal run of letters, marks and digits in
 any script (Unicode general categories L, M and N) as a token. Tokens
 shorter than 3 code points and the canonical English stopwords are dropped,

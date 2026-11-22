@@ -1,4 +1,4 @@
-# theoryforge (development version)
+# theoryforge 0.7.0
 
 ## Upgrading from the previous release (0.6.0)
 
@@ -469,6 +469,10 @@
 
 * The theory schema no longer promises version gating, draft-stage downgrades or
   form profiles, which the package does not implement.
+
+* Citations were checked against their published records, and the DOI Handbook
+  link, the journal name in the reference to Shipley (2000) and the attributions
+  to Thoemmes et al. (2018) and Eronen and Bringmann (2021) were corrected.
 
 # theoryforge 0.6.0
 

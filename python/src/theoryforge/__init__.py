@@ -1,15 +1,14 @@
 """theoryforge: systematic theory development.
 
-A rigorous, reproducible workflow for building, developing and testing scientific
-theories. This is the feature-parity twin of the R package of the same name
-(https://pablobernabeu.github.io/theoryforge/r/). Every public function has an
-identically behaving counterpart there, pinned by the shared public specification
-(https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md), so the two
-implementations produce identical verdicts and byte-identical diagram intermediate
-representations. The only exceptions are the assistive helpers that depend on a
-network service or a user-supplied embedder (``fetch_corpus``, ``osf_push`` and
-``embedding_redundancy``) and the language-native diagram renderer
-(``render_diagram``), which are documented as such.
+A reproducible workflow for building, developing and testing scientific theories.
+An R package of the same name (https://pablobernabeu.github.io/theoryforge/r/)
+offers a counterpart of every public function. Both follow one public specification
+(https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md), so they produce
+the same verdicts and the same diagram intermediate representations. The helpers
+that depend on a network service or a user-supplied embedder (``fetch_corpus``,
+``osf_push`` and ``embedding_redundancy``) and the diagram renderer
+(``render_diagram``) have counterparts there too, but their results can differ
+between the two packages. Their documentation describes what each depends on.
 """
 from __future__ import annotations
 

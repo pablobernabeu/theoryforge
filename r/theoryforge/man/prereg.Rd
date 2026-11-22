@@ -4,6 +4,6 @@
 \alias{prereg}
 \title{Preregistration document export.}
 \description{
-Deterministic markdown output.
+Deterministic Markdown output.
 }
 \keyword{internal}

@@ -9,20 +9,19 @@
 [![DOI 10.5281/zenodo.21229964](https://zenodo.org/badge/DOI/10.5281/zenodo.21229964.svg)](https://doi.org/10.5281/zenodo.21229964)
 <!-- badges: end -->
 
-Systematic theory development: a rigorous, reproducible workflow for building, developing and
-testing scientific theories. This is the feature-parity twin of
-[the R package](https://pablobernabeu.github.io/theoryforge/r/) of the same name, which offers
-the same workflow in R. The two produce identical verdicts and byte-identical diagram
-intermediate representations.
+Systematic theory development: a reproducible workflow for building, developing and testing
+scientific theories. This is the feature-parity twin of
+[the R package](https://pablobernabeu.github.io/theoryforge/r/) of the same name. The two
+produce identical verdicts and byte-identical diagram intermediate representations.
 
 The rendered documentation site, with the API reference and worked guides, is at
 <https://pablobernabeu.github.io/theoryforge/python/>.
 
 The [interactive web app](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this
 package in your browser via [Pyodide](https://pyodide.org/), with nothing to install. You can
-load a theory and run the operations it offers, from the rigour checklist through to the
-literature map, then get the Python code that reproduces each result, with each figure
-exportable as SVG or PNG.
+load a theory and run the operations the app offers, from the rigour checklist through to the
+literature map, and then get the Python code that reproduces each result. Each figure can be
+exported as SVG or PNG.
 
 ## Installation
 
@@ -32,8 +31,8 @@ The package is on [PyPI](https://pypi.org/project/theoryforge/):
 pip install theoryforge
 ```
 
-The optional render extra adds native diagram rendering (`render_diagram()`,
-which wraps the DOT views in a `graphviz.Source`):
+The optional render extra adds native diagram rendering through `render_diagram()`,
+which wraps the DOT views in a `graphviz.Source`:
 
 ```bash
 pip install "theoryforge[render]"
@@ -54,7 +53,7 @@ pip install -e ".[dev]"
 
 ## Quick start
 
-The package ships the example theories and corpora, and `example_path()` gives the path
+The package includes the example theories and corpora, and `example_path()` gives the path
 of each, so the lines below run straight after `pip install`.
 
 ```python
@@ -114,11 +113,13 @@ The deterministic core covers theory-object I/O and validation, the 12-item rigo
 with its weighted aggregate score and blocker gate, ten diagram exporters and a lexical
 redundancy screen. The validation is built in, and `validate(full=True)` checks the schema's
 required fields, types and enums and every cross-reference. CI checks it against a JSON Schema
-2020-12 validator. The three workflow modes sit on the same object. BUILDING is a builder API
-that logs its own provenance, DEVELOPMENT is the Lakatosian appraisal of an amendment, and
-TESTING is the severity rubric, a pre-data ranking of claim form, with its preregistration
-export, together with `post_data_severity`, which computes how severely a bounded prediction
-passed its test from the estimate and standard error its test outcome records.
+2020-12 validator.
+
+The three workflow modes operate on the same object. BUILDING is a builder API that logs its
+own provenance. DEVELOPMENT is the Lakatosian appraisal of an amendment. TESTING is the
+severity rubric, a pre-data ranking of claim form, with its preregistration export. It also
+includes `post_data_severity`, which computes how severely a bounded prediction passed its test
+from the estimate and standard error recorded in its test outcome.
 
 The literature layer starts from `read_corpus`. `litmap` derives keyword co-occurrence,
 deterministic connected-component themes and co-citation, and warns when one theme holds most of
@@ -129,24 +130,24 @@ maps a theory and its alternatives onto those themes, names the words behind eac
 marks each theme under-theorised, covered or crowded by how many of the registered accounts
 address it.
 `lit_diagram` draws the co-occurrence, co-citation and theme-landscape views. Where a network
-connection is available, the `fetch_corpus` OpenAlex adapter retrieves a corpus, and
+connection is available, the `fetch_corpus` OpenAlex adapter retrieves a corpus.
 `new_evidence_dois` checks deterministically which candidate DOIs, from any search tool, a
 theory does not yet cite.
 
 Beyond the modes, `compile_sem` translates constructs and propositions to lavaan model syntax,
-and `dossier` assembles a reviewer-facing audit bundle. Simulation and the outward-facing
-adapters round the package out. `simulate` runs the construct network as a deterministic
-dynamical system, `render_report` wraps the dossier in a Quarto report, `embedding_redundancy`
-adds an opt-in, embedder-dependent screen, and `osf_push` deposits to OSF, dry-run by default.
+and `dossier` assembles a reviewer-facing audit bundle. `simulate` runs the construct network
+as a deterministic dynamical system, `render_report` wraps the dossier in a Quarto report,
+`embedding_redundancy` adds an opt-in, embedder-dependent screen, and `osf_push` deposits to
+OSF, dry-run by default.
 
 ## Citation
 
 Please cite theoryforge if it contributes to work you publish. The
 [About page](https://pablobernabeu.github.io/theoryforge/python/about/) carries the citation
-with a BibTeX entry, and a short note on the developer. The repository also ships
-`CITATION.cff`, which drives GitHub's "Cite this repository" button. The citation gives the
-concept DOI of the Zenodo archive, which holds every GitHub release of both packages,
-<https://doi.org/10.5281/zenodo.21229964>, since PyPI assigns no DOI.
+with a BibTeX entry, and a short note on the developer. The citation gives the concept DOI of
+the Zenodo archive, <https://doi.org/10.5281/zenodo.21229964>, since PyPI assigns no DOI. The
+archive holds every GitHub release of both packages. The repository also includes
+`CITATION.cff`, which GitHub uses for its 'Cite this repository' button.
 
 ## Licence
 
@@ -162,4 +163,4 @@ Conduct](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CODE_OF_
 
 Continuous integration lints, type-checks and tests the package on every push to `main`
 and on every pull request, and the cross-language parity check compares its output against
-the R twin on every fixture, so a change that breaks parity is caught before it lands.
+the R twin on every fixture.

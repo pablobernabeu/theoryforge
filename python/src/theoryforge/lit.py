@@ -1,8 +1,8 @@
-"""Bibliometric / literature layer.
+"""Bibliometric literature layer.
 
-The analysis (litmap, landscape, diagrams) is fully deterministic given a corpus. The
-OpenAlex fetch adapter (fetch_corpus) is the assistive layer, whose results depend on a
-live network service.
+The analysis (the literature map, the landscape and their diagrams) is deterministic for
+a given corpus. Only the OpenAlex fetch, ``fetch_corpus()``, depends on a live network
+service.
 """
 from __future__ import annotations
 
@@ -41,9 +41,8 @@ def _esc(s) -> str:
 def read_corpus(path) -> dict:
     """Read a literature corpus from YAML or JSON (JSON when the suffix is ``.json``).
 
-    The file is read by the rules ``read`` follows, which are the R twin's
-    (API_SPEC.md section 3), so an unquoted keyword such as ``y`` or ``n`` stays a
-    string and a repeated key is refused. A document that is not a mapping raises
+    The file is read by the rules that ``read`` follows, so an unquoted keyword such
+    as ``y`` or ``n`` stays a string and a repeated key is refused. A document that is not a mapping raises
     ``ValueError("Corpus data must be a mapping")``. The records themselves are checked
     by ``litmap()`` and ``landscape()``.
     """
@@ -83,8 +82,8 @@ def _share(value, name: str) -> float:
 
 
 # R holds a number read from a file as a double, which is exact for integers
-# below 2^53. A larger one cannot be written back as the same decimal string in
-# both twins, so it is refused (API_SPEC.md section 14).
+# below 2^53 in absolute value. Not every larger one can be written back as the
+# same decimal string in both twins, so all are refused (API_SPEC.md section 14).
 _EXACT_LIMIT = 2 ** 53
 
 _NOT_STRINGS = ("invalid corpus: record[{i}] {field} must be strings "
@@ -156,7 +155,7 @@ def _reference_key(ref: str) -> str:
     it, so that ``10.1016/J.BRAT...``, ``doi:10.1016/j.brat...`` and
     ``https://doi.org/10.1016/j.brat...`` are one work: DOI names are
     case-insensitive under ASCII case folding (DOI Handbook, 'Case Insensitivity
-    of the DOI Name', https://www.doi.org/doi-handbook/HTML/case-insensitivity.html).
+    of the DOI Name', https://www.doi.org/doi-handbook/DOIHandbook_2025.pdf).
     Any other reference, a Scopus or OpenAlex identifier or a fixture key, is
     kept exactly as written.
     """
@@ -401,9 +400,8 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
     when None). Co-citation maps of real corpora are large: 200 OpenAlex records
     give about 11,000 reference pairs at a threshold of 2, so a higher
     ``min_cocitation`` is often wanted. Both must be positive integers. The
-    corpus is checked as API_SPEC.md section 14 describes: integer entries
-    become decimal strings, and booleans, fractions and nested values are
-    refused.
+    corpus is checked before anything is counted: integer entries become
+    decimal strings, and booleans, fractions and nested values are refused.
 
     A reference that holds a DOI is keyed by the DOI, lower-cased and without
     its resolver prefix, as ``new_evidence_dois`` compares DOIs. One work cited
@@ -415,11 +413,11 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
 
     ``method`` chooses how keywords are grouped into themes. With
     ``"components"``, the default, a theme is a connected component of the
-    keyword map, and on a real corpus a few keywords shared by most records
-    join nearly every keyword into one. When the largest theme holds more than
-    half the linked keywords, a UserWarning says so: such themes, and any
-    landscape built on them, do not describe the field. The result is returned
-    unchanged.
+    keyword map, and on a real corpus one or a few keywords shared by most
+    records join nearly every keyword into one. When the largest theme holds
+    more than half the linked keywords, a UserWarning says so: such themes, and
+    any landscape built on them, do not describe the field. The result is
+    returned unchanged.
 
     ``"simple_centres"`` is the co-word clustering of Coulter et al. (1998) and
     Cobo et al. (2011). Each link is weighted by the equivalence index
@@ -434,15 +432,16 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
     ``field_terms``. Each theme gains its centrality (ten times the summed
     index of its links to the keywords of other themes) and its density (100
     times the summed index of its internal links, over its size), the measures
-    of Callon et al. (1991) as Cobo et al. (2011) scale them. It also gains its quadrant in the
-    strategic diagram, split here at the median of each: ``motor`` (both high),
+    of Callon et al. (1991) as Cobo et al. (2011) scale them. It also gains its
+    quadrant in the strategic diagram, split here at the median of each:
+    ``motor`` (both high),
     ``basic`` (central but not dense), ``niche`` (dense but not central) or
     ``emerging_or_declining`` (both low). The record gains ``method``,
     ``parameters`` (the five settings used) and ``field_terms``. Components
     remain the default for this release.
 
     ``min_theme_size`` must be a positive integer, ``max_theme_size`` an
-    integer of at least 2 no smaller than it, and ``max_df`` a number from 0 to
+    integer of at least 2 no smaller than it and ``max_df`` a number from 0 to
     1. They are checked with either method, although only simple centres reads
     them.
 
@@ -489,7 +488,7 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
 
     A theme is matched by the words its keywords share with the focal theory's
     construct labels, or with an alternative's label and key constructs, and
-    every match reports those words (``focal_terms``, ``alternative_terms``).
+    every match reports those words (``focal_terms`` and ``alternative_terms``).
     Three kinds of word never match. Field tokens, the words most of the corpus
     shares, are those in the keywords of more than ``max_token_share`` of the
     records. Phenomenon tokens are the words of the theory's title, which names
@@ -510,7 +509,7 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
 
     ``min_link`` (2 by default) must be a positive integer, ``max_token_share``
     (0.5 by default) a number from 0 to 1 and ``method`` one of litmap's,
-    checked in that order and before the corpus (API_SPEC.md section 15). The
+    checked in that order and before the corpus. The
     themes are litmap's, built by ``method`` with litmap's other defaults. With
     ``"components"``, the same warning is given when one theme holds most of the
     linked keywords. With ``"simple_centres"``, the record gains ``method``
@@ -642,11 +641,11 @@ def lit_diagram(obj: dict, type: str = "keyword_cooccurrence", max_edges: int | 
     """DOT for the literature layer.
 
     ``obj`` is a ``litmap()`` result for ``"keyword_cooccurrence"`` (the
-    default) and ``"co_citation"``, and a ``landscape()`` result for
+    default) or ``"co_citation"``, and a ``landscape()`` result for
     ``"theme_landscape"``. A record without the edge list asked for gives a
     graph with no nodes. ``max_edges`` caps a keyword_cooccurrence or
     co_citation diagram at that many edges, the highest counts first and ties
-    broken by (a, b); only their endpoints are drawn. None draws every edge,
+    broken by (a, b). Only their endpoints are drawn. None draws every edge,
     and theme_landscape ignores it.
 
     Returns:
@@ -673,17 +672,17 @@ def lit_diagram(obj: dict, type: str = "keyword_cooccurrence", max_edges: int | 
 
 
 def new_evidence_dois(theory, candidate_dois: list) -> list:
-    """DOIs in `candidate_dois` not already cited by the theory's evidence or alternatives.
+    """DOIs in ``candidate_dois`` not already cited by the theory's evidence or alternatives.
 
     Compares by normalised form, so a fresh literature search, for example via OpenAlex,
-    Scopus, or any other source, can be checked against what the theory already engages
-    with. The normalised form is the DOI itself, trimmed, lowercased (ASCII letters only)
-    and percent-decoded, wherever it sits in the text, so `doi: 10...`, `DOI 10...`,
-    `doi.org/10...`, `https://www.doi.org/10...` and a URL with `%2F` all match the bare
-    DOI, and trailing full stops, commas and semicolons are dropped. Returns the
-    qualifying DOIs in their original form, deduplicated and sorted by normalised form.
-    Deterministic and takes no network dependency: the search itself is left to
-    whichever literature tool the caller prefers.
+    Scopus or any other source, can be checked against what the theory already engages
+    with. The normalised form is the DOI itself, trimmed, lower-cased (ASCII letters
+    only) and percent-decoded, wherever it sits in the text, so ``doi: 10...``,
+    ``DOI 10...``, ``doi.org/10...``, ``https://www.doi.org/10...`` and a URL with
+    ``%2F`` all match the bare DOI, and trailing full stops, commas and semicolons are
+    dropped. Returns the qualifying DOIs in their original form, deduplicated and sorted
+    by normalised form. The function is deterministic and makes no network call. The
+    search itself is left to whichever literature tool the caller prefers.
     """
     T = theory.data if hasattr(theory, "data") else theory
     known = set()
@@ -716,13 +715,12 @@ _KEY_MESSAGE = "api_key must be a string of visible ASCII characters"
 
 
 class OpenAlexHTTPError(urllib.error.HTTPError):
-    """OpenAlex refused a request (API_SPEC.md section 17).
+    """OpenAlex refused a request.
 
     A subclass of ``urllib.error.HTTPError``, so a handler written for the error
     that ``urlopen`` raises still catches it, with the same ``code``, headers and
-    readable body. Its ``str()`` is the message the R twin stops with:
-    ``OpenAlex request failed with HTTP <code>``, followed by ``: <message>``
-    when the body is a JSON object that carries one.
+    readable body. Its ``str()`` is ``OpenAlex request failed with HTTP <code>``,
+    followed by ``: <message>`` when the body is a JSON object that carries one.
     """
 
     def __init__(self, url: str, code: int, message: str, hdrs, body: bytes):
@@ -853,12 +851,12 @@ def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None,
                  api_key: str | None = None, max_records: int | None = None) -> dict:
     """Build a corpus from the OpenAlex API (network call).
 
-    This adapter is assistive. It depends on a live external service whose
-    results change over time, so it sits outside the package's deterministic
-    core. The result is a corpus, ``{schema_version: "1.0", id:
-    "openalex:<query>", source, records}``. Each work is mapped to ``{id, doi,
-    title, year, keywords, references}``, with the DOI as OpenAlex gives it and
-    the top five concepts standing in for keywords when a work has none.
+    It depends on a live external service whose results change over time, so it
+    is not part of the package's deterministic core. The result is a corpus,
+    ``{schema_version: "1.0", id: "openalex:<query>", source, records}``. Each
+    work is mapped to ``{id, doi, title, year, keywords, references}``, with the
+    DOI as OpenAlex gives it and the top five concepts standing in for keywords
+    when a work has none.
 
     OpenAlex returns the works that match a search in pages of ``per_page``,
     ranked by relevance, and a search usually matches far more works than one

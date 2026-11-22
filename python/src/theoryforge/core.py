@@ -1,4 +1,4 @@
-"""The Theory object, with read, validate, write, and the public methods."""
+"""The Theory object, with read, validate, write and the public methods."""
 from __future__ import annotations
 
 import json
@@ -279,8 +279,8 @@ def _string_array(v, name: str, known=None, kind: str = "") -> list[str]:
 class Theory:
     """A theory as a versioned, machine-checkable object.
 
-    Wraps the parsed mapping (``self.data``); all accessors tolerate missing
-    optional collections by treating them as empty. The builder methods
+    Wraps the parsed mapping (``self.data``). Every accessor treats a missing
+    optional collection as empty. The builder methods
     (``add_*`` and ``set_formal_model``) change the theory in place and return
     it, so calls chain. ``copy()`` gives an independent copy to amend.
 
@@ -322,38 +322,39 @@ class Theory:
         that is absent, null or blank is reported as missing, and one that holds
         another type as such (``id must be a string``).
 
-        With ``full=True`` it also checks that every id is unique within its
-        collection and that every cross-reference (proposition endpoints,
-        prediction derivations and diagnostics, assumption, evidence and
-        test-outcome targets) points to a declared id. It then checks the rest
-        of the schema. That covers the required fields of assumptions,
-        alternatives, evidence and test outcomes, a boolean ``passed``, the
-        evidence direction and formal-model type enums, the version block and
-        the ``schema_version`` pattern. It also covers numbers within [0, 1]
-        where the schema asks for them, a prediction's ``bounds`` and ``test``
-        block, a test outcome's ``estimate`` and ``se``, and the type of every
-        other field and of every entry of a string array.
+        With ``full=True``, it also checks that every id is unique within its
+        collection and that every cross-reference points to a declared id. The
+        cross-references are the endpoints of a proposition, the derivations
+        and diagnostics of a prediction and the target of an assumption, an
+        evidence entry or a test outcome. It then checks the rest of the schema.
+        That covers the required fields of assumptions, alternatives, evidence
+        and test outcomes, a boolean ``passed``, the evidence direction and
+        formal-model type enums, the version block and the ``schema_version``
+        pattern. It also covers numbers within [0, 1] where the schema asks for
+        them, a prediction's ``bounds`` and ``test`` block and a test outcome's
+        ``estimate`` and ``se``. Last, it checks the type of every other field
+        and of every entry of a string array.
 
-        CI compares the result with a JSON Schema 2020-12 validator. Besides the
-        ids and references, which the schema cannot express, the pass is
-        stricter in three ways. A blank required string counts as missing, an
-        entry of a string array must be a nonempty string and a prediction's
-        ``bounds`` must hold a finite bound with ``lower`` not above ``upper``,
-        while a test outcome's ``estimate`` and ``se`` and a ``test`` block's
-        ``sesoi`` must be finite, that block's ``n_planned`` within the range of
-        a double and its ``power_lo`` not above ``power_hi``. It is more lenient
-        in three ways, which API_SPEC.md section 2 documents. A null optional
-        field other than ``theory_form`` is absent and a single string stands
-        for a one-element array of strings. An empty sequence and an empty
-        mapping stand for each other.
+        Besides the ids and references, which the schema cannot express, the
+        full check is stricter than a JSON Schema 2020-12 validator in three
+        ways. A blank required string counts as missing. An entry of a string
+        array must be a nonempty string. A prediction's ``bounds`` must hold a
+        finite bound with ``lower`` not above ``upper``, a test outcome's
+        ``estimate`` and ``se`` and a ``test`` block's ``sesoi`` must be
+        finite, that block's ``n_planned`` must lie within the range of a double
+        and its ``power_lo`` must not be above ``power_hi``. The full check is
+        more lenient in three ways. A null optional field other than
+        ``theory_form`` is absent. A single string stands for a one-element
+        array of strings. An empty sequence and an empty mapping stand for each
+        other.
 
         Returns:
             True when the theory passes.
 
         Raises:
             ValueError: ``"invalid theory object: "`` followed by every problem
-                found, joined by ``"; "``, in the order API_SPEC.md section 2
-                fixes. The R twin's ``tf_validate()`` gives the same message.
+                found, joined by ``"; "``, in a fixed order. The R package's
+                ``tf_validate()`` gives the same message.
         """
         errors: list[str] = []
         d = self.data
@@ -573,7 +574,7 @@ class Theory:
         the theory's key order and quotes every string a reader could take for
         something else, ``y``, ``Y``, ``n`` and ``N`` included, which theoryforge
         0.6.0 for R reads as logicals. The file therefore reads back as the same
-        theory in both twins (API_SPEC.md section 3, "Reading and writing files").
+        theory in R and in Python.
         """
         path = Path(path)
         if path.suffix.lower() == ".json":
@@ -691,9 +692,10 @@ class Theory:
         interactions, the invariance of a direction across groups and claims that
         an effect occurs only when a condition holds. ``interval`` asserts that a
         quantity lies in a stated range, the range the theory permits. ``point``
-        asserts one value, with the tolerance that measurement requires. That
-        width is measurement tolerance, not latitude the theory allows. The label
-        is self-declared, and no function checks it against the statement.
+        asserts one value, with the tolerance that measurement requires. The
+        tolerance comes from measurement, and the theory itself permits only the
+        one value. The label is self-declared, and no function checks it against
+        the statement.
 
         ``derives_from`` holds the ids of the propositions the prediction derives
         from, and ``diagnostic_vs`` the ids of the registered alternatives it
@@ -707,9 +709,9 @@ class Theory:
         ``"one"``), ``sesoi`` and ``sesoi_scale`` (the smallest effect of
         interest and its scale), ``power`` or ``decision_probability`` with an
         optional ``power_lo`` and ``power_hi``, ``method``, ``design_ref`` and
-        ``justification`` (API_SPEC.md section 30). It is stored, as a copy,
-        only when given. ``preregister()`` lists it after the hypotheses, and
-        nothing scores it. The theory is returned, so that builder calls chain.
+        ``justification``. It is stored, as a copy, only when given.
+        ``preregister()`` lists it after the hypotheses, and nothing scores it.
+        The theory is returned, so that builder calls chain.
         """
         p = {"id": id, "statement": statement, "type": type}
         if derives_from is not None:
@@ -794,9 +796,12 @@ class Theory:
         return _redundancy_check(self.data)
 
     def diagram(self, type: str = "nomological_net", engine: str = "graphviz") -> str:
-        """Return the diagram IR for ``type`` (one of nomological_net, provenance,
-        causal_dag, development_roadmap, pipeline, context, workflow, venn, rigour,
-        severity); see ``theoryforge.diagram.diagram``."""
+        """Return the diagram IR for ``type``.
+
+        ``type`` is one of nomological_net, provenance, causal_dag,
+        development_roadmap, pipeline, context, workflow, venn, rigour or
+        severity. See ``theoryforge.diagram.diagram``.
+        """
         return _diagram(self.data, type=type, engine=engine)
 
     def render_diagram(self, type: str = "nomological_net"):
@@ -850,7 +855,7 @@ class Theory:
                           method=method)
 
     def new_evidence_dois(self, candidate_dois: list) -> list:
-        """DOIs in `candidate_dois` not already cited by this theory's evidence or alternatives."""
+        """DOIs in ``candidate_dois`` not already cited by this theory's evidence or alternatives."""
         return _new_evidence_dois(self.data, candidate_dois)
 
     def compile_sem(self) -> str:
@@ -873,7 +878,7 @@ class Theory:
                          method=method)
 
     def embedding_redundancy(self, embedder, threshold=None) -> list[dict]:
-        """An opt-in embedding-based redundancy screen; results depend on the supplied embedder."""
+        """An opt-in embedding-based redundancy screen, whose results depend on the supplied embedder."""
         return _embedding_redundancy(self.data, embedder, threshold=threshold)
 
     def render_report(self, path, title=None, render: bool = False, to: str = "html") -> str:
@@ -883,7 +888,7 @@ class Theory:
 
     def osf_push(self, token=None, node=None, filename=None, dry_run: bool = True,
                  base_url: str | None = None, overwrite: bool = False) -> dict:
-        """Deposit the dossier on OSF (dry-run by default). A live push needs a token and node.
+        """Deposit the dossier on OSF (a dry run by default). A live push needs a token and a node.
 
         ``overwrite=True`` adds a new version of an existing file of the same name.
         """
@@ -898,10 +903,10 @@ class Theory:
 def read(path) -> Theory:
     """Read a theory object from a YAML or JSON file (JSON when the suffix is ``.json``).
 
-    The file is read exactly as the R twin's ``tf_read()`` reads it (API_SPEC.md
-    section 3, "Reading and writing files"). A byte-order mark is ignored. Dates
-    and ``y``, ``Y``, ``n`` and ``N`` stay strings, and integers are decimal, octal
-    or hexadecimal only, so ``1:30`` and ``1_000`` are strings too. A merge key
+    The file is read as the R package's ``tf_read()`` reads it. A byte-order
+    mark is ignored. Dates and ``y``, ``Y``, ``n`` and ``N`` stay strings, and
+    integers are decimal, octal or hexadecimal only, so ``1:30`` and ``1_000``
+    are strings too. A merge key
     lets the mapping's own keys win. A repeated key anywhere raises
     ``ValueError("(<path>) Duplicate map key: '<key>'")``, and a document that is
     not a mapping raises ``ValueError("Theory data must be a mapping")``.
@@ -930,7 +935,7 @@ def new_theory(id: str, title: str, maturity: str = "building", theory_form: str
     checklist's gate is ``advisory``. ``theory_form`` is one of ``variance``,
     ``network``, ``typology`` or ``process``, and no score depends on it.
     Neither value is checked here, and ``validate()`` raises ``ValueError`` for
-    one outside the schema. The R twin's ``tf_theory()`` builds the same object.
+    one outside the schema.
     """
     t = Theory({
         "schema_version": "1.0",

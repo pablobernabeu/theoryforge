@@ -7,15 +7,15 @@
 tf_render_report(theory, path, title = NULL, render = FALSE, to = "html")
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{\link[=tf_read]{tf_read()}}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
-\item{path}{Destination path; any extension is replaced with \code{.qmd}.}
+\item{path}{Destination path. Any extension is replaced with \code{.qmd}.}
 
-\item{title}{Optional report title; defaults to
+\item{title}{Optional report title. It defaults to
 \code{"theoryforge report: <title-or-id>"}, also when \code{NULL},
-\code{NA} or empty. It is written as a YAML double-quoted scalar with backslashes,
-double quotes and control characters escaped, so a YAML parser reads back
-exactly the string passed. Quarto then reads the title as Markdown, so
+\code{NA} or empty. It is written as a YAML double-quoted scalar with
+backslashes, double quotes and control characters escaped, so a YAML
+parser reads back exactly the string passed. Quarto then reads the title as Markdown, so
 raw TeX such as \verb{\\emph\{\}} is dropped from HTML output and \verb{$\\alpha$}
 becomes mathematics.}
 

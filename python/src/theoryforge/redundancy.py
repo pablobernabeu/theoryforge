@@ -1,7 +1,7 @@
 """Deterministic lexical redundancy screen, the default.
 
-Embedding-based similarity (embedding_redundancy) is an opt-in, embedder-dependent
-enhancement.
+Embedding-based similarity, ``embedding_redundancy()``, is an opt-in screen whose
+results depend on the embedder.
 """
 from __future__ import annotations
 
@@ -19,10 +19,10 @@ STOPWORDS = {
 
 
 def tokens(s: str) -> set[str]:
-    """Tokenise a string into a set of content tokens (API_SPEC.md section 6).
+    """Tokenise a string into a set of content tokens.
 
     The text is folded through ``schema/fold.json`` (accented Latin letters to
-    ASCII, Greek and Cyrillic to small unaccented letters) and lowercased in
+    ASCII, Greek and Cyrillic to small unaccented letters) and lower-cased in
     ASCII. A token is a maximal run of letters, marks and digits in any script
     (Unicode general categories L, M and N). Tokens shorter than three code
     points and English stopwords are dropped.

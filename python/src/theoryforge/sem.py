@@ -3,7 +3,7 @@
 The output is deterministic. Constructs with measurement indicators become a latent
 measurement model (=~), and directed propositions become structural paths (~).
 Every name takes a form that lavaan reads as written, and the syntax fixes at zero
-the covariances the theory rules out (API_SPEC.md section 19).
+the covariances the theory rules out.
 """
 from __future__ import annotations
 
@@ -295,8 +295,8 @@ def compile_sem(T) -> str:
     ``to ~ from``, unless a path relation already writes that line. A comment
     follows on the product term, which has to be added by hand:
     ``to ~ x:from`` for an observed predictor ``x``, and ``lavaan::sam()`` or
-    the modsem package when the variables are latent. The output is the same
-    in the R twin, byte for byte.
+    the modsem package when the variables are latent. The R package's
+    ``tf_compile_sem()`` writes the same syntax, byte for byte.
 
     The propositions form the graph that ``implications()`` reads. Two of its
     constructs that are both exogenous, with no proposition pointing into
@@ -342,13 +342,12 @@ def compile_sem(T) -> str:
     or its own keyword ``efa``, are renamed. A comment after the header
     records each renaming
     (``# renamed for lavaan: 'self-efficacy' -> self_efficacy``). An indicator
-    is its measurement entry folded and lowercased, with each run of other
+    is its measurement entry folded and lower-cased, with each run of other
     characters made one underscore. ``i_`` goes in front when the result
     would still be refused, so ``7-point Likert rating`` gives
     ``i_7_point_likert_rating``. A comment writes each control character of
     an id, and each character outside the Basic Multilingual Plane, as
     ``<U+XXXX>``, so that it stays one line that lavaan reads as a comment.
-    API_SPEC.md section 19 states the rules.
 
     Raises:
         ValueError: when two different ids would share a name, since lavaan

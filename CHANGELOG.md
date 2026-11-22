@@ -12,7 +12,7 @@ version and a single behavioural contract
 -->
 
 
-## [Unreleased]
+## [0.7.0] - 2026-11-22
 
 ### Upgrading from 0.6.0
 #### Changed results
@@ -321,6 +321,10 @@ version and a single behavioural contract
   writes a large map in one pass. In both twins, `landscape()` skips the co-citation map it
   does not use. Results are unchanged.
 - In R, a live `tf_osf_push()` deposit uses the curl package in place of httr.
+- The Python package's classifiers add Python 3.15, on which its tests now run, and
+  `Typing :: Typed`, since it ships `py.typed`.
+- The `docs` extra requires markdown-exec 1.12.3 or later, whose `source="block"` option the
+  guides use.
 - The apps validate each theory in full as it loads and show the result on the theory card.
 - The apps mark an item with nothing to assess as `n/a`, show the coverage and the overlap
   of each construct pair, draw an association as a dashed line with an arrowhead at each
@@ -447,6 +451,9 @@ version and a single behavioural contract
 - The apps' checklist guide says that the gate is advisory at draft maturity whatever
   fails, where it said that an advisory gate meant a theory usable with the noted gaps. The
   effort-recovery example describes the trajectories its default run shows.
+- Citations were checked against their published records, and the DOI Handbook link, the
+  journal name in the reference to Shipley (2000) and the attributions to Thoemmes et al.
+  (2018) and Eronen and Bringmann (2021) were corrected.
 
 
 ## [0.6.0] - 2026-08-27
@@ -734,7 +741,8 @@ package reached CRAN with 0.6.0.
 - A live OSF upload requires the user's own token. `osf_push` ships with a dry-run default.
 - Richer (nonlinear / agent-based) computational-model runners, and built-in embedding-model integrations beyond the pluggable `embedding_redundancy` interface.
 
-[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.3.0...v0.4.0

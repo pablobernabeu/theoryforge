@@ -41,7 +41,7 @@ NULL
 #' present and not \code{TRUE} or \code{FALSE}, or when a prediction's
 #' \code{severity} is not a finite number from 0 to 1.
 #'
-#' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @param theory A theory object (named list), such as one from [tf_read()].
 #' @return The dossier Markdown as a single string (LF line endings, single
 #'   trailing newline).
 #' @examples

@@ -2,8 +2,8 @@
 #'
 #' Writes a \code{.qmd} (a YAML header plus the deterministic dossier body) and
 #' can optionally invoke Quarto to render it. The report content is the
-#' deterministic \code{tf_dossier} output, and only the rendering step is
-#' environment-dependent.
+#' deterministic \code{tf_dossier} output, and only the rendering step depends
+#' on the environment.
 #' @name report_render
 #' @keywords internal
 NULL
@@ -17,13 +17,13 @@ NULL
 #' installation, and stops if that render fails. It stops before writing
 #' anything when [tf_check()] refuses the theory.
 #'
-#' @param theory A theory object (named list), e.g. from [tf_read()].
-#' @param path Destination path; any extension is replaced with \code{.qmd}.
-#' @param title Optional report title; defaults to
+#' @param theory A theory object (named list), such as one from [tf_read()].
+#' @param path Destination path. Any extension is replaced with \code{.qmd}.
+#' @param title Optional report title. It defaults to
 #'   \code{"theoryforge report: <title-or-id>"}, also when \code{NULL},
-#'   \code{NA} or empty. It is written as a YAML double-quoted scalar with backslashes,
-#'   double quotes and control characters escaped, so a YAML parser reads back
-#'   exactly the string passed. Quarto then reads the title as Markdown, so
+#'   \code{NA} or empty. It is written as a YAML double-quoted scalar with
+#'   backslashes, double quotes and control characters escaped, so a YAML
+#'   parser reads back exactly the string passed. Quarto then reads the title as Markdown, so
 #'   raw TeX such as `\emph{}` is dropped from HTML output and `$\alpha$`
 #'   becomes mathematics.
 #' @param render When \code{TRUE}, run \code{quarto render} on the written file

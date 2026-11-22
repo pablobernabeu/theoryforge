@@ -1,10 +1,10 @@
 """Native rendering of the diagram intermediate representations.
 
-The IR itself (:func:`theoryforge.diagram.diagram`) stays dependency-free and
-byte-identical to the R twin; rendering is a language-native convenience layered
-on top, so it sits outside the cross-language parity contract and its dependency
-is an extra (``pip install "theoryforge[render]"``). The R twin offers the same
-convenience through the DiagrammeR package (``tf_render_diagram()``).
+The IR itself, from :func:`theoryforge.diagram.diagram`, needs no dependency and
+is identical in R and in Python. Rendering it uses a library of each language, so
+its output can differ from R's, and its dependency is an extra
+(``pip install "theoryforge[render]"``). The R package renders through the
+DiagrammeR package, with ``tf_render_diagram()``.
 """
 
 from __future__ import annotations
@@ -19,9 +19,9 @@ _SVG_TYPES = ("venn", "rigour", "severity")
 class SVGString(str):
     """An SVG document as a plain string that displays itself in notebooks.
 
-    The chart views (``venn``, ``rigour``, ``severity``) are emitted directly as
-    SVG, so no rendering engine is involved; this subclass only adds the
-    ``_repr_svg_`` hook Jupyter uses to draw it inline.
+    The chart views (``venn``, ``rigour`` and ``severity``) are emitted directly
+    as SVG, so no rendering engine is involved. This subclass only adds the
+    ``_repr_svg_`` hook that Jupyter uses to draw it inline.
     """
 
     def _repr_svg_(self) -> str:  # pragma: no cover - notebook display hook
@@ -41,10 +41,10 @@ def render_diagram(x, type: str = "nomological_net"):
     The three chart views (``venn``, ``rigour`` and ``severity``) are already
     SVG, so they come back as an ``SVGString``, a ``str`` subclass that also
     displays inline in Jupyter and needs no graphviz library. The ``causal_dag``
-    view emits dagitty syntax rather than DOT, so it is not rendered here; paste
+    view emits dagitty syntax rather than DOT, so it is not rendered here. Paste
     it into a dagitty tool instead.
 
-    ``x`` is a ``Theory``, a parsed theory mapping, or a diagram IR string from
+    ``x`` is a ``Theory``, a parsed theory mapping or a diagram IR string from
     ``diagram()`` or ``lit_diagram()``, so literature diagrams render the same
     way. ``type`` is the diagram type, as in ``diagram()``, and is ignored when
     ``x`` is already an IR string. The result is a ``graphviz.Source`` for the

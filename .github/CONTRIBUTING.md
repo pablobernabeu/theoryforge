@@ -3,21 +3,22 @@
 Thank you for considering a contribution. Issues and pull requests are both
 welcome, whether they fix a bug, improve the documentation or add a feature.
 
-theoryforge ships as twin packages, R and Python, from this one repository. The R
-package lives in `r/theoryforge/` and the Python package in `python/`. The two
-are pinned to a shared specification (`API_SPEC.md`) so that they return identical
-verdicts and byte-identical diagram intermediate representations, so a change to
-behaviour usually needs to land in both, with the parity check kept green.
+theoryforge is released as twin packages, R and Python, from this one repository.
+The R package is in `r/theoryforge/` and the Python package in `python/`. The two
+follow a shared specification, `API_SPEC.md`, so that they return identical
+verdicts and byte-identical diagram intermediate representations. A change to
+behaviour therefore usually needs to be made in both, with the parity check still
+passing.
 
 ## Reporting a problem or suggesting a feature
 
 Please open an issue at <https://github.com/pablobernabeu/theoryforge/issues>. A
 small reproducible example helps a great deal. Never paste a secret, such as an
-OSF token or an OpenAlex API key, into an issue; replace it with a placeholder.
+OSF token or an OpenAlex API key, into an issue. Replace it with a placeholder.
 
 ## Setting up for development
 
-Working from a clone of the repository, the R package:
+Working from a clone of the repository, set up the R package with:
 
 ```r
 # roxygen2 at the version DESCRIPTION records, which CI pins
@@ -27,7 +28,7 @@ devtools::test("r/theoryforge")       # run the test suite
 devtools::check("r/theoryforge")      # a full R CMD check
 ```
 
-The Python package:
+Set up the Python package with:
 
 ```bash
 pip install -e "./python[dev,docs,render]"
@@ -64,38 +65,41 @@ fails when the two differ.
 
 ## Conventions
 
-British spelling throughout. In the R package, `devtools::check()` and CI run a
-spelling test that stops on any word found neither in the British English
+Use British spelling throughout. In the R package, `devtools::check()` and CI run
+a spelling test that stops on any word found neither in the British English
 dictionary nor in `r/theoryforge/inst/WORDLIST`, and
 `spelling::spell_check_package("r/theoryforge")` lists those words. Correct a
 misspelling where it occurs, and add a name or a term of art to the word list.
-The two implementations are kept in lockstep through
-the shared `API_SPEC.md`, and `scripts/parity_check.py` compares their output and
-must stay green. Diagrams are emitted as byte-identical intermediate
-representations, so changes there are checked against the golden fixtures.
+
+`scripts/parity_check.py` compares the output of the two implementations and must
+keep passing. Diagrams are emitted as byte-identical intermediate
+representations, so changes there are checked against the golden outputs.
 The golden outputs, which cover every parity artefact and not only the
 diagrams, are written by the Python implementation. After a change that alters
 any output, or an edit to a file in `fixtures/` or `schema/`, run
 `python scripts/gen_golden.py` from the repository root, with the Python
-package installed as above, and commit what it writes. The script also writes
-the copies that the packages ship, so edit the originals in `fixtures/` and
-`schema/`, never the copies. Both packages ship the example theories and
-corpora and the files of `schema/`, under `r/theoryforge/inst/` and
-`python/src/theoryforge/`, and the R package also ships the golden outputs.
-The fold table `schema/fold.json` is itself written by
-`scripts/gen_fold_table.py`. CI fails when any of these files is stale.
-theoryforge never stores credentials: an OSF deposit takes the token as an
+package installed as above, and commit what it writes.
+
+Both packages include the example theories and corpora and the files of
+`schema/`, under `r/theoryforge/inst/` and `python/src/theoryforge/`, and the R
+package also includes the golden outputs. `scripts/gen_golden.py` writes these
+copies too, so edit the originals in `fixtures/` and `schema/`, never the
+copies. The fold table `schema/fold.json` is itself written by
+`scripts/gen_fold_table.py`. CI fails when the golden outputs, any of these
+copies or the fold table is stale.
+
+theoryforge never stores credentials. An OSF deposit takes the token as an
 explicit argument to `tf_osf_push()` (R) or `osf_push()` (Python) and is never
-performed automatically, and an OpenAlex fetch reads its optional API key from
-the `api_key` argument or the `OPENALEX_API_KEY` environment variable.
+performed automatically. An OpenAlex fetch reads its optional API key from the
+`api_key` argument or the `OPENALEX_API_KEY` environment variable.
 
 ## Submitting a pull request
 
-Base your work on `main`, keep the change focused, and add or update tests and
+Base your work on `main`, keep the change focused and add or update tests and
 documentation alongside the code. Continuous integration runs the R and Python
 suites, the apps' tests, the golden-file check and the parity check on every
 push to `main` and on every pull request.
 
-By contributing you agree that your contribution is licensed under the same MIT
+By contributing, you agree that your contribution is licensed under the same MIT
 licence as the package, and that you will follow the
 [Code of Conduct](CODE_OF_CONDUCT.md).

@@ -13,8 +13,8 @@ tf_jaccard(a, b)
 A numeric similarity in \code{[0, 1]}.
 }
 \description{
-Returns 0.0 if both sets are empty, otherwise the size of the intersection
-divided by the size of the union, rounded to 3 decimals.
+Returns 0.0 if both sets are empty and otherwise the size of the
+intersection divided by the size of the union, rounded to 3 decimals.
 }
 \examples{
 tf_jaccard(tf_tokens("arousal threat response"),

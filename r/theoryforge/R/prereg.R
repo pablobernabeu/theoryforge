@@ -1,6 +1,6 @@
 #' Preregistration document export.
 #'
-#' Deterministic markdown output.
+#' Deterministic Markdown output.
 #' @name prereg
 #' @keywords internal
 NULL
@@ -180,7 +180,7 @@ NULL
 
 #' Render the hypotheses section of a preregistration
 #'
-#' Produces a deterministic preregistration markdown string for a theory and,
+#' Produces a deterministic preregistration Markdown string for a theory and,
 #' if \code{path} is given, writes it (LF, single trailing newline).
 #'
 #' The header gives the theory id, the version when it has an id (with its
@@ -221,10 +221,10 @@ NULL
 #' present and not \code{TRUE} or \code{FALSE}, or when a prediction's
 #' \code{severity} is not a finite number from 0 to 1, and then writes nothing.
 #'
-#' @param theory A theory object (named list), e.g. from [tf_read()].
-#' @param path Optional destination path; when given, the markdown is written
-#'   with LF line endings.
-#' @return The preregistration markdown as a single string.
+#' @param theory A theory object (named list), such as one from [tf_read()].
+#' @param path Optional destination path. When it is given, the Markdown is
+#'   written with LF line endings.
+#' @return The preregistration Markdown as a single string.
 #' @references
 #' Bosnjak, M., Fiebach, C. J., Mellor, D., Mueller, S., O'Connor, D. B.,
 #'   Oswald, F. L., & Sokol, R. I. (2022). A template for preregistration of

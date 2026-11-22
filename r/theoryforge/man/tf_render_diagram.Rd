@@ -33,7 +33,7 @@ a standalone SVG string, ready to embed in a page or save to a file.
 The three chart views (\code{venn}, \code{rigour} and \code{severity}) are already SVG, so
 they are returned as-is under \code{as = "svg"} and wrapped for display under
 \code{as = "widget"}. The \code{causal_dag} view emits dagitty syntax rather than DOT,
-so it is not rendered here; paste it into a dagitty tool or the dagitty R
+so it is not rendered here. Paste it into a dagitty tool or the dagitty R
 package instead.
 
 The DOT views need the suggested DiagrammeR package, and \code{as = "svg"}
@@ -52,6 +52,5 @@ tf_render_diagram(theory, "nomological_net")
 }
 \seealso{
 \code{\link[=tf_diagram]{tf_diagram()}} for the intermediate representation itself, which
-needs no optional packages and stays byte-identical across the R and
-Python implementations.
+needs no optional packages and is identical in R and in Python.
 }

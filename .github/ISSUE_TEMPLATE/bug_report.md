@@ -6,21 +6,25 @@ labels: bug
 assignees: ''
 ---
 
-**Describe the bug**
+### Describe the bug
+
 A clear description of what went wrong and what you expected instead.
 
-**Which package?**
-R (`r/theoryforge/`), Python (`python/`), or both.
+### Which package?
 
-**Reproducible example**
-A small, self-contained example helps a great deal. Never paste a secret (an OSF
-token or an OpenAlex API key) into an issue; replace it with a placeholder.
+R (`r/theoryforge/`), Python (`python/`) or both.
+
+### Reproducible example
+
+A small, self-contained example helps a great deal. Never paste a secret, such as
+an OSF token or an OpenAlex API key, into an issue. Replace it with a placeholder.
 
 ```
 # your example here (R reprex or Python snippet)
 ```
 
-**Environment**
+### Environment
+
 <details>
 
 ```
@@ -30,5 +34,6 @@ token or an OpenAlex API key) into an issue; replace it with a placeholder.
 
 </details>
 
-**Anything else**
+### Anything else
+
 Any other context that might help.

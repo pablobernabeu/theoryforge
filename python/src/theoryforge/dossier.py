@@ -28,7 +28,7 @@ def _post_data(row: dict) -> str:
 
 
 def dossier(T) -> str:
-    """A reviewer-facing audit bundle in Markdown (API_SPEC.md section 20).
+    """A reviewer-facing audit bundle in Markdown.
 
     The header gives the checklist version, the aggregate score, the checklist
     coverage, the gate and the blockers that failed. The rigour table prints

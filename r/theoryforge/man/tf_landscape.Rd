@@ -13,9 +13,10 @@ tf_landscape(
 )
 }
 \arguments{
-\item{theory}{A theory object (named list), e.g. from \code{tf_read()}.}
+\item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
-\item{corpus}{A corpus object (named list), e.g. from \code{\link[=tf_read_corpus]{tf_read_corpus()}}.}
+\item{corpus}{A corpus object (named list), such as one from
+\code{\link[=tf_read_corpus]{tf_read_corpus()}}.}
 
 \item{min_link}{Minimum co-occurrence count passed to \code{\link[=tf_litmap]{tf_litmap()}}
 (default \code{2}). The co-citation map, which the landscape does not
@@ -40,7 +41,7 @@ order of \code{alternatives}.
 \description{
 Maps a theory's focal constructs and its registered alternatives onto the
 thematic structure of a corpus (computed by \code{\link[=tf_litmap]{tf_litmap()}}). Each theme is
-tagged \code{"under_theorised"}, \code{"covered"}, or \code{"crowded"}.
+tagged \code{"under_theorised"}, \code{"covered"} or \code{"crowded"}.
 }
 \details{
 A theme is matched by the words its keywords share with the focal theory's
@@ -65,9 +66,8 @@ that discriminate between the accounts, and is not a finding of redundancy.
 and \code{redundancy_risk}, despite its name, the ids of the crowded ones.
 
 The arguments are checked in the order \code{min_link},
-\code{max_token_share}, \code{method}, then the corpus, with the Python
-twin's messages. The themes are those of \code{\link[=tf_litmap]{tf_litmap()}}, built by
-\code{method} with its other defaults. With \code{"components"},
+\code{max_token_share}, \code{method}, then the corpus. The themes are
+those of \code{\link[=tf_litmap]{tf_litmap()}}, built by \code{method} with its other defaults. With \code{"components"},
 \code{tf_landscape()} gives the warning of \code{\link[=tf_litmap]{tf_litmap()}} when one theme
 holds most of the linked keywords. With \code{"simple_centres"}, the result
 gains \code{method} after \code{theory_id}, and each theme its

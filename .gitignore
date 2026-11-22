@@ -6,6 +6,9 @@
 *.Rcheck/
 *.tar.gz
 r/theoryforge/man/*.Rd.bak
+# Written by devtools::submit_cran() and revdepcheck::revdep_check()
+r/theoryforge/CRAN-SUBMISSION
+r/theoryforge/revdep/
 
 # Python
 __pycache__/

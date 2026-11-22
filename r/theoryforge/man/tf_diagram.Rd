@@ -11,11 +11,11 @@ tf_diagram(theory, type = "nomological_net", engine = "graphviz")
 
 \item{type}{One of \code{"nomological_net"} (default), \code{"provenance"},
 \code{"causal_dag"}, \code{"development_roadmap"}, \code{"pipeline"},
-\code{"context"} (the theory, its scope, and its rivals),
+\code{"context"} (the theory, its scope and its rivals),
 \code{"workflow"} (the building-to-testing pipeline), \code{"venn"}
 (the scope overlap of the first three constructs in file order, each
 taken as the set of its boundary conditions, as an SVG), \code{"rigour"}
-(the checklist as a status grid, as an SVG), or \code{"severity"} (the
+(the checklist as a status grid, as an SVG) or \code{"severity"} (the
 claim-form riskiness of each prediction, the \code{computed_severity} of
 \code{\link[=tf_severity]{tf_severity()}}, as bars in an SVG).}
 
@@ -24,7 +24,7 @@ claim-form riskiness of each prediction, the \code{computed_severity} of
 }
 \value{
 A single string ending in a newline: Graphviz DOT for the digraphs,
-dagitty syntax for the causal DAG, and SVG for the \code{venn},
+dagitty syntax for the causal DAG and SVG for the \code{venn},
 \code{rigour} and \code{severity} views.
 }
 \description{

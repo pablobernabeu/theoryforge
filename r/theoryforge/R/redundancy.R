@@ -13,7 +13,7 @@ NULL
 #' Tokenise a string into a set of content tokens
 #'
 #' Folds the text through the package's fold table (accented Latin letters to
-#' ASCII, Greek and Cyrillic letters to small unaccented ones) and lowercases
+#' ASCII, Greek and Cyrillic letters to small unaccented ones) and lower-cases
 #' ASCII letters, then takes every maximal run of letters, marks and digits in
 #' any script (Unicode general categories L, M and N) as a token. Tokens
 #' shorter than 3 code points and the canonical English stopwords are dropped,
@@ -21,7 +21,7 @@ NULL
 #' are compared as written, and text written without spaces, such as Chinese,
 #' gives one token per run.
 #'
-#' @param s A single string (or \code{NULL}, treated as "").
+#' @param s A single string (or \code{NULL}, treated as \code{""}).
 #' @return A character vector of unique tokens (possibly empty).
 #' @examples
 #' tf_tokens("The physiological arousal response to a threat")
@@ -44,8 +44,8 @@ tf_tokens <- function(s) {
 
 #' Jaccard similarity of two token sets
 #'
-#' Returns 0.0 if both sets are empty, otherwise the size of the intersection
-#' divided by the size of the union, rounded to 3 decimals.
+#' Returns 0.0 if both sets are empty and otherwise the size of the
+#' intersection divided by the size of the union, rounded to 3 decimals.
 #'
 #' @param a,b Character vectors of tokens (treated as sets).
 #' @return A numeric similarity in \code{[0, 1]}.
@@ -130,7 +130,7 @@ tf_jaccard <- function(a, b) {
 #'
 #' @param theory A theory object (named list).
 #' @return A data frame with columns \code{a}, \code{b}, \code{similarity},
-#'   \code{overlap}, \code{flag}.
+#'   \code{overlap} and \code{flag}.
 #' @references
 #' Le, H., Schmidt, F. L., Harter, J. K., & Lauver, K. J. (2010). The problem of
 #'   empirical redundancy of constructs in organizational research: An empirical

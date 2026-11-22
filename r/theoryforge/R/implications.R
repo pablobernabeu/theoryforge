@@ -19,8 +19,8 @@ NULL
 
 #' Derive a theory's implied conditional independencies
 #'
-#' Reads every proposition through the relation table (API_SPEC.md section
-#' 28). A directed relation (\code{"increases"}, \code{"decreases"},
+#' Reads every proposition through the package's relation table. A directed
+#' relation (\code{"increases"}, \code{"decreases"},
 #' \code{"causes"}, \code{"mediates"} or \code{"moderates"}) is an edge from
 #' \code{from} to \code{to}, and \code{"associates"} is a bidirected edge,
 #' covariance the theory leaves unexplained, as a latent common cause of the two
@@ -54,8 +54,10 @@ NULL
 #' .8. A partial-correlation test at the 5 per cent level then rejects the true
 #' statement in about 14, 29 and 51 per cent of studies of 200, 500 and 1,000
 #' observations. Conditional statements are better tested with latent-variable
-#' models, such as one built on the measurement model that [tf_compile_sem()]
-#' writes (Thoemmes et al., 2018).
+#' models, which take the measurement error into account (Westfall & Yarkoni,
+#' 2016). The measurement model that [tf_compile_sem()] writes is one starting
+#' point, and each statement can be tested in it separately (Thoemmes et al.,
+#' 2018).
 #'
 #' @section Feedback loops:
 #' With \code{cycles = "sigma"}, a graph whose directed edges form a cycle is
@@ -86,10 +88,9 @@ NULL
 #' so imply independencies the theory never claimed. With
 #' \code{cycles = "refuse"}, the default, a cycle among the directed edges is
 #' refused too, and the message names a cycle that was found and the
-#' \code{"sigma"} option. The Python twin raises \code{ValueError} in the same
-#' cases, with the same message text.
+#' \code{"sigma"} option.
 #'
-#' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param cycles What to do with a graph whose directed edges form a cycle:
 #'   \code{"refuse"} (the default) stops with an error, and \code{"sigma"}
 #'   derives the statements by sigma-separation (see the section on feedback
@@ -130,8 +131,8 @@ NULL
 #'   \doi{10.1214/aos/1031689015}
 #'
 #' Shipley, B. (2000). A new inferential test for path models based on directed
-#'   acyclic graphs. \emph{Structural Equation Modeling}, 7(2), 206-218.
-#'   \doi{10.1207/S15328007SEM0702_4}
+#'   acyclic graphs. \emph{Structural Equation Modeling: A Multidisciplinary
+#'   Journal}, 7(2), 206-218. \doi{10.1207/S15328007SEM0702_4}
 #'
 #' Thoemmes, F., Rosseel, Y., & Textor, J. (2018). Local fit evaluation of
 #'   structural equation models using graphical criteria. \emph{Psychological

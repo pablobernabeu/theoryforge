@@ -17,37 +17,53 @@ permissions:
 
 jobs:
   python:
-    name: Python ${{ matrix.python-version }}
-    runs-on: ubuntu-latest
+    name: Python ${{ matrix.python-version }}${{ matrix.os != 'ubuntu-latest' && format(' ({0})', matrix.os) || '' }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
       matrix:
-        # requires-python is >=3.10 and the classifiers advertise 3.10 to 3.14,
-        # so the full advertised range is tested rather than 3.11 alone. The
-        # parity and apps jobs stay on a single pinned version because they test
-        # cross-language agreement and the app bundle, not Python compatibility.
-        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+        # requires-python is >=3.10, so every Python release from 3.10 to the
+        # newest is tested on Linux, and one release on Windows and on macOS.
+        # The 3.13 cell on Linux also installs the optional packages that some
+        # tests need: numpy and scipy for the check of method = "exact" against
+        # scipy.linalg.expm, and graphviz for render_diagram(). Elsewhere those
+        # tests skip. The parity and apps jobs stay on a single version, because
+        # they test agreement across the languages and the app bundle.
+        os: [ubuntu-latest]
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14', '3.15']
+        include:
+          - {os: ubuntu-latest, python-version: '3.13', optional: 'numpy scipy graphviz'}
+          - {os: windows-latest, python-version: '3.13'}
+          - {os: macos-latest, python-version: '3.13'}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install
-        run: pip install -e "python[dev]" build twine pytest-cov
+        run: pip install -e "python[dev]" build twine pytest-cov ${{ matrix.optional }}
       # python and scripts, not python/src alone, so the test suite and the
       # Python scripts in scripts/ (the golden and fold-table generators, the
       # parity checker and the app smoke script) are linted too. python/dist and
       # python/site are build output and gitignored, so ruff skips them without
       # needing an exclude, and apps/py/vendor is ignored for the same reason.
       # scripts/ is covered by the root ruff.toml, which extends the package
-      # settings so both trees are held to one rule set.
+      # settings so both trees are held to one rule set. The lint, the type
+      # check, the golden files and the build give the same result on every
+      # operating system, so they run on Linux only.
       - name: Lint (ruff)
+        if: runner.os == 'Linux'
         run: ruff check python scripts
       - name: Types (mypy)
+        if: runner.os == 'Linux'
         run: mypy python/src/theoryforge --ignore-missing-imports
       - name: Tests
         run: pytest python -q --cov=theoryforge --cov-report=term-missing
       - name: Golden files are up to date
+        if: runner.os == 'Linux'
         run: |
           python scripts/gen_golden.py
           # git diff ignores untracked files, so a golden the generator newly
@@ -63,7 +79,8 @@ jobs:
             echo "::error::golden files are stale; run scripts/gen_golden.py and commit the result"
             exit 1
           fi
-      - name: Build + twine check
+      - name: Build and twine check
+        if: runner.os == 'Linux'
         run: |
           python -m build python
           twine check python/dist/*
@@ -194,13 +211,29 @@ jobs:
           working-directory: r/theoryforge
           args: 'c("--no-manual", "--as-cran")'
           error-on: '"warning"'
+      # Every leg above runs in UTF-8. In a Latin-9 locale (en_US.iso885915), a
+      # string not marked as UTF-8 is read as Latin-9, which no UTF-8 leg can
+      # show, so the Linux R-devel leg runs the tests once more in that locale,
+      # with NOT_CRAN unset, as CRAN runs them. Posts to R-package-devel in 2019
+      # report this charset for CRAN's r-devel-linux-x86_64-debian-clang
+      # flavour. The first line of the R code stops the step if the locale did
+      # not take.
+      - name: Tests in a Latin-9 locale (en_US.iso885915)
+        if: runner.os == 'Linux' && matrix.config.r == 'devel'
+        shell: bash
+        run: |
+          sudo localedef -i en_US -f ISO-8859-15 en_US.iso885915
+          env -u NOT_CRAN LANG=en_US.iso885915 LC_ALL=en_US.iso885915 Rscript -e '
+            stopifnot(identical(l10n_info()$codeset, "ISO-8859-15"))
+            pkgload::load_all("r/theoryforge", quiet = TRUE)
+            invisible(testthat::test_dir("r/theoryforge/tests/testthat", stop_on_failure = TRUE))
+          '
 
-  # DESCRIPTION declares `R (>= 4.1.0)` — the version that introduced the native
-  # `|>` pipe the examples use — but the matrix above runs release, devel and
-  # oldrel-1, all well above it, so the floor itself was an untested claim. This
-  # runs the test suite on 4.1 exactly. It is deliberately not a second
-  # `--as-cran` check: the claim being tested is "the code runs on the oldest R
-  # we promise", not "the package passes CRAN's checks on an unsupported R".
+  # DESCRIPTION declares `R (>= 4.1.0)`, the version that introduced the native
+  # `|>` pipe the examples use, and the matrix above runs release, devel and
+  # oldrel-1, all well above it. This job runs the test suite on 4.1 itself. It
+  # is not a second `--as-cran` check: it tests that the code runs on the oldest
+  # R the package supports, not that the package passes CRAN's checks there.
   r-minimum:
     name: R (declared minimum, 4.1)
     runs-on: ubuntu-latest
@@ -255,7 +288,7 @@ jobs:
           cat(sprintf("Test coverage: %s%%\n", pct))
           summary <- Sys.getenv("GITHUB_STEP_SUMMARY")
           if (nzchar(summary)) {
-            cat(sprintf("## Test coverage: **%s%%**\n", pct),
+            cat(sprintf("## Test coverage: %s%%\n", pct),
                 file = summary, append = TRUE)
           }
           if (pct < 80) {
@@ -264,18 +297,18 @@ jobs:
 
   # testthat runs inside the package namespace, where an unexported function is
   # still visible, so no R test can notice that an @export tag never reached
-  # NAMESPACE; a sibling package lost two exports exactly that way. The other
+  # NAMESPACE. A sibling package lost two exports exactly that way. The other
   # end of the failure is quieter still: roxygenise() skips a NAMESPACE whose
   # generated-by header has been removed rather than rewriting it, so the file
   # silently stops tracking the source while CONTRIBUTING goes on saying that
-  # document() maintains it. Regenerating on a clean checkout and diffing is the
-  # only check that sees either case.
-  #
-  # NAMESPACE alone is gated. Rd formatting shifts between roxygen2 releases, so
-  # extending this to man/ would turn the job red on an upgrade that changed no
-  # source at all.
+  # document() maintains it. The help pages in man/ are generated from the
+  # roxygen comments too, and CRAN builds its manual from the committed files,
+  # so a comment edited without document() never reaches the user.
+  # Regenerating both on a clean checkout and diffing is the only check that
+  # sees these cases. roxygen2 is pinned to the version DESCRIPTION records, so
+  # a new roxygen2 release cannot change the result.
   r-namespace:
-    name: R NAMESPACE is up to date
+    name: R NAMESPACE and man/ are up to date
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -286,13 +319,13 @@ jobs:
       # roxygenise() loads the package before it can read the tags, so the
       # package's own dependencies have to be installed here. roxygen2 itself is
       # pinned to the version DESCRIPTION records: an unpinned upgrade that
-      # rewrote the file in a new style would fail this job with nothing in the
+      # rewrote the files in a new style would fail this job with nothing in the
       # repository changed.
       - uses: r-lib/actions/setup-r-dependencies@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
         with:
           extra-packages: roxygen2@8.0.0
           working-directory: r/theoryforge
-      - name: Regenerate NAMESPACE from the roxygen tags
+      - name: Regenerate NAMESPACE and man/ from the roxygen comments
         shell: Rscript {0}
         run: |
           installed <- as.character(packageVersion("roxygen2"))
@@ -332,11 +365,15 @@ jobs:
             ))
             quit(status = 1)
           }
-          roxygen2::roxygenise("r/theoryforge", roclets = "namespace")
-      - name: NAMESPACE matches the roxygen @export tags
+          roxygen2::roxygenise("r/theoryforge", roclets = c("namespace", "rd"))
+      # git diff leaves out new files, so a help page that roxygenise() newly
+      # writes is first marked as intended for addition. The diff, printed in
+      # the log, is the change that devtools::document() makes.
+      - name: NAMESPACE and man/ match the roxygen comments
         run: |
-          if ! git diff --exit-code -- r/theoryforge/NAMESPACE; then
-            echo '::error file=r/theoryforge/NAMESPACE::r/theoryforge/NAMESPACE is stale: it does not match the @export tags in r/theoryforge/R. Run devtools::document("r/theoryforge") and commit the regenerated NAMESPACE. The diff above is the change that command makes.'
+          git add --intent-to-add -- r/theoryforge/man
+          if ! git diff --exit-code -- r/theoryforge/NAMESPACE r/theoryforge/man; then
+            echo '::error::r/theoryforge/NAMESPACE or r/theoryforge/man is stale: it does not match the roxygen comments in r/theoryforge/R. Run devtools::document("r/theoryforge") and commit the result. The diff above is the change that command makes.'
             exit 1
           fi
 

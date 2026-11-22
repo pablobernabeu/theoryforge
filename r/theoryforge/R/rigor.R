@@ -1,6 +1,6 @@
 #' The theory-rigour checklist engine.
 #'
-#' Scores a theory against the vendored 12-item checklist.
+#' Scores a theory against the 12-item checklist installed with the package.
 #' @name rigor
 #' @keywords internal
 NULL
@@ -227,10 +227,10 @@ NULL
 #' them would be defensible. One is a test outcome whose \code{passed} is
 #' present and not \code{TRUE} or \code{FALSE}, such as the quoted string
 #' \code{"true"}. The other is a prediction \code{severity} that is present and
-#' not a finite number from 0 to 1. Both stop with the message the Python twin
-#' raises, and [tf_validate()] with \code{full = TRUE} reports both.
+#' not a finite number from 0 to 1. Both stop with an error, and
+#' [tf_validate()] with \code{full = TRUE} reports both.
 #'
-#' @param theory A theory object (named list), e.g. from [tf_read()].
+#' @param theory A theory object (named list), such as one from [tf_read()].
 #' @return A named list with elements \code{theory_id}, \code{schema_version}
 #'   (the theory's), \code{checklist_version} (the rigour checklist's, which is
 #'   what the weights and thresholds came from), \code{maturity},
@@ -321,7 +321,7 @@ tf_check <- function(theory) {
 #' Render the rigour report as a string
 #'
 #' Renders the result of [tf_check()] as a string. \code{format = "json"}
-#' returns valid, pretty-printed JSON; \code{format = "html"} returns an HTML
+#' returns valid, pretty-printed JSON. \code{format = "html"} returns an HTML
 #' fragment in which every interpolated value is escaped. Any other
 #' \code{format} stops, and so does a theory that [tf_check()] refuses.
 #'
