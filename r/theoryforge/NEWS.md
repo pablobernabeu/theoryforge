@@ -1,3 +1,14 @@
+# theoryforge (development version)
+
+## Documentation
+
+* `?tf_dossier` calls the appended output of `tf_preregister()` the hypotheses
+  section of a preregistration, as the rest of the 0.7.0 documentation does,
+  where it still called it a preregistration document.
+
+* The methodology article links the DOI of Coulter et al. (1998) in full, where
+  the site cut the link short at the DOI's angle bracket.
+
 # theoryforge 0.7.0
 
 ## Upgrading from the previous release (0.6.0)

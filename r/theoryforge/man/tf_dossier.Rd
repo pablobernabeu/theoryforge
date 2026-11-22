@@ -16,8 +16,8 @@ trailing newline).
 \description{
 Assembles a reviewer-facing audit bundle: the header, the rigour-checklist
 table, the severity list, the test record, the evidence, the provenance list
-and the appended preregistration document. The output is deterministic, so
-the same theory always yields the same dossier.
+and, appended, the hypotheses section of a preregistration. The output is
+deterministic, so the same theory always yields the same dossier.
 }
 \details{
 The header gives the checklist version, the aggregate score, the checklist

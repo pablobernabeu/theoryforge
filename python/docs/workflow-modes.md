@@ -211,9 +211,9 @@ deciding which version is the prior is the caller's responsibility.
 ## TESTING
 
 TESTING prepares a theory for empirical evaluation. It scores how risky each
-prediction is, derives what the causal graph forbids in data, exports a
-preregistration document, assembles a reviewer-facing audit bundle and
-compiles a measurement model for lavaan.
+prediction is, derives what the causal graph forbids in data, writes the
+hypotheses section of a preregistration, assembles a reviewer-facing audit
+bundle and compiles a measurement model for lavaan.
 
 ### Severity
 

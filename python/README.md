@@ -85,9 +85,9 @@ v1 = tf.read(tf.example_path("panic-network.theory.yaml"))
 v2 = tf.read(tf.example_path("panic-network-2026-v2.theory.yaml"))
 print(v2.appraise_amendment(v1))   # -> {'verdict': 'progressive', ...}
 
-# TEST: the pre-data severity rubric + a preregistration document
+# TEST: the pre-data severity rubric + the hypotheses section of a preregistration
 t.severity()                       # per-prediction risk + computed severity
-print(t.preregister())             # markdown prereg
+print(t.preregister())             # hypotheses section, in Markdown
 
 # LITERATURE: map the field, then position the theory against it
 corpus = tf.read_corpus(tf.example_path("panic-corpus.yaml"))

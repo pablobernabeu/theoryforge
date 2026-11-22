@@ -41,7 +41,7 @@ import theoryforge as tf
 t = tf.read(tf.example_path("panic-network.theory.yaml"))
 t.check()                       # 12-item rigour checklist + gate
 t.severity()                    # pre-data severity rubric of claim form
-t.preregister()                 # preregistration document
+t.preregister()                 # hypotheses section of a preregistration
 corpus = tf.read_corpus(tf.example_path("panic-corpus.yaml"))
 t.landscape(corpus)             # themes by how many registered accounts address them
 ```
