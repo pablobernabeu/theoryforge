@@ -12,7 +12,7 @@ version and a single behavioural contract
 -->
 
 
-## [Unreleased]
+## [0.7.0] - 2026-11-22
 
 ### Upgrading from 0.6.0
 #### Changed results
@@ -741,7 +741,8 @@ package reached CRAN with 0.6.0.
 - A live OSF upload requires the user's own token. `osf_push` ships with a dry-run default.
 - Richer (nonlinear / agent-based) computational-model runners, and built-in embedding-model integrations beyond the pluggable `embedding_redundancy` interface.
 
-[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.3.0...v0.4.0
