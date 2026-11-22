@@ -336,7 +336,7 @@ const RT = {
       case "implications":
         return `${head}\n\n# A refusal raises ValueError with the message the app shows.\nimplied = theory.implications(cycles="${p.cycles || "refuse"}")\nfor s in implied["implications"]:\n    print(s["statement"])`;
       case "preregister":
-        return `${head}\n\nprint(theory.preregister())       # preregistration document (Markdown)`;
+        return `${head}\n\nprint(theory.preregister())       # hypotheses section of a preregistration (Markdown)`;
       case "dossier":
         return `${head}\n\nprint(theory.dossier())           # reviewer-facing audit bundle (Markdown)`;
       case "simulate":

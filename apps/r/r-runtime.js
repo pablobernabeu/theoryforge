@@ -354,7 +354,7 @@ const RT = {
       case "implications":
         return `${head}\n\n# A refusal stops with the message the app shows.\nimplied <- tf_implications(theory, cycles = "${p.cycles || "refuse"}")\nvapply(implied$implications, function(s) s$statement, character(1))`;
       case "preregister":
-        return `${head}\n\ncat(tf_preregister(theory))       # preregistration document (Markdown)`;
+        return `${head}\n\ncat(tf_preregister(theory))       # hypotheses section of a preregistration (Markdown)`;
       case "dossier":
         return `${head}\n\ncat(tf_dossier(theory))           # reviewer-facing audit bundle (Markdown)`;
       case "simulate":

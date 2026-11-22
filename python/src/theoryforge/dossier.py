@@ -1,8 +1,8 @@
 """Assemble a reviewer-facing audit bundle as a single Markdown document.
 
 Composes the deterministic outputs (rigour report, severity table, test record,
-evidence, provenance and the preregistration document), so the bundle is itself
-deterministic.
+evidence, provenance and the hypotheses section of a preregistration), so the
+bundle is itself deterministic.
 """
 from __future__ import annotations
 

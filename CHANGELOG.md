@@ -12,6 +12,16 @@ version and a single behavioural contract
 -->
 
 
+## [Unreleased]
+
+### Documentation
+- R's `?tf_dossier`, the Python dossier module, the Python README, home page and workflow
+  page and the code the apps show for `preregister()` call its output the hypotheses
+  section of a preregistration, as the rest of the 0.7.0 documentation does, where they
+  still called it a preregistration document.
+- The R methodology article links the DOI of Coulter et al. (1998) in full, where the site
+  cut the link short at the DOI's angle bracket.
+
 ## [0.7.0] - 2026-11-22
 
 ### Upgrading from 0.6.0

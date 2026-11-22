@@ -1,7 +1,8 @@
 #' Assemble a reviewer-facing audit bundle as a single Markdown document.
 #'
 #' Composes the rigour report, severity table, test record, evidence,
-#' provenance and preregistration document into one deterministic bundle.
+#' provenance and the hypotheses section of a preregistration into one
+#' deterministic bundle.
 #' @name dossier
 #' @keywords internal
 NULL
@@ -22,8 +23,8 @@ NULL
 #'
 #' Assembles a reviewer-facing audit bundle: the header, the rigour-checklist
 #' table, the severity list, the test record, the evidence, the provenance list
-#' and the appended preregistration document. The output is deterministic, so
-#' the same theory always yields the same dossier.
+#' and, appended, the hypotheses section of a preregistration. The output is
+#' deterministic, so the same theory always yields the same dossier.
 #'
 #' The header gives the checklist version, the aggregate score, the checklist
 #' coverage, the gate and the blockers that failed. The rigour table prints
