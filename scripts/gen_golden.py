@@ -35,11 +35,11 @@ import theoryforge as tf  # noqa: E402
 
 FIXTURES = ROOT / "fixtures"
 EXPECTED = FIXTURES / "expected"
-# The R package ships its own copy of the golden tree, and the two harnesses
-# read different ones: testthat prefers the installed copy, scripts/parity_check
-# reads the root copy. A desync would silently split the two gates onto
-# different reference data, so this script owns both.
-R_EXPECTED = ROOT / "r" / "theoryforge" / "inst" / "fixtures" / "expected"
+# The R package's tests read their own copy of the golden tree, which R CMD
+# check carries with the tests, while scripts/parity_check reads the root copy.
+# A desync would silently split the two gates onto different reference data,
+# so this script owns both.
+R_EXPECTED = ROOT / "r" / "theoryforge" / "tests" / "testthat" / "goldens"
 # Both packages ship the example theories and corpora so that a reader who
 # installed only the package still has something to run: R reaches them with
 # system.file(), Python with theoryforge.example_path(). Neither copy is edited

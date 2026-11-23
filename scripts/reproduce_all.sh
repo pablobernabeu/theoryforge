@@ -15,7 +15,8 @@ echo "== golden files and package copies are up to date =="
 # the run changes anything, the script has verified nothing, so it stops.
 python "$ROOT/scripts/gen_golden.py" > /dev/null
 stale="$(git -C "$ROOT" status --porcelain -- fixtures r/theoryforge/inst/fixtures \
-  python/src/theoryforge/fixtures r/theoryforge/inst/schema python/src/theoryforge/schema)"
+  r/theoryforge/tests/testthat/goldens python/src/theoryforge/fixtures \
+  r/theoryforge/inst/schema python/src/theoryforge/schema)"
 if [ -n "$stale" ]; then
   echo "$stale"
   echo "golden files changed; commit them if the change was intended" >&2

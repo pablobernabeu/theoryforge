@@ -38,7 +38,10 @@ tf_example_names <- function() {
 #' tf_read(tf_example_path("panic-network.theory.yaml"))$id
 #' @export
 tf_example_path <- function(name) {
-  path <- system.file("fixtures", name, package = "theoryforge")
+  # Only a listed name is looked up, so that no other file or folder of the
+  # installed package can be reached through this function.
+  listed <- is.character(name) && length(name) == 1L && name %in% tf_example_names()
+  path <- if (listed) system.file("fixtures", name, package = "theoryforge") else ""
   if (!nzchar(path)) {
     stop("no packaged example named '", name, "'; available: ",
          paste(tf_example_names(), collapse = ", "), call. = FALSE)

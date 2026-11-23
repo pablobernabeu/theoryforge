@@ -22,7 +22,8 @@ Write-Output "== golden files and package copies are up to date =="
 # the run changes anything, the script has verified nothing, so it stops.
 python "$root/scripts/gen_golden.py" | Out-Null
 $stale = git -C "$root" status --porcelain -- fixtures r/theoryforge/inst/fixtures `
-  python/src/theoryforge/fixtures r/theoryforge/inst/schema python/src/theoryforge/schema
+  r/theoryforge/tests/testthat/goldens python/src/theoryforge/fixtures `
+  r/theoryforge/inst/schema python/src/theoryforge/schema
 if ($stale) {
   $stale | Write-Output
   throw "golden files changed; commit them if the change was intended"

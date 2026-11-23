@@ -29,8 +29,10 @@ def example_path(name: str) -> Path:
     Raises ``FileNotFoundError`` naming the available files when ``name`` is not
     one of them.
     """
-    resource = files("theoryforge") / "fixtures" / name
-    if not resource.is_file():
+    # Only a listed name is looked up, so that no other file of the installed
+    # package can be reached through this function.
+    resource = files("theoryforge") / "fixtures" / str(name)
+    if name not in example_names() or not resource.is_file():
         raise FileNotFoundError(f"no packaged example named {name!r}; available: {example_names()}")
     # An installed wheel is a directory on disk, so as_file() yields the file
     # itself and the path stays valid. From a zipped installation it would
