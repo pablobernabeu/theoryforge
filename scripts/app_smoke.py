@@ -196,7 +196,9 @@ def child(plan_path: Path) -> int:
             continue
         edited = call(label, app.edit, str(written), json.dumps(["yaml", "json"]))
         if isinstance(edited, dict):
-            want(label, edited.get("hash") == summary.get("hash") and edited.get("validation") == summary.get("validation"),
+            same = (edited.get("hash") == summary.get("hash")
+                    and edited.get("validation") == summary.get("validation"))
+            want(label, same,
                  "the theory read back differs from the theory loaded")
             want(label, set(edited.get("texts", {})) == {"yaml", "json"}, "the writer's texts are missing")
 

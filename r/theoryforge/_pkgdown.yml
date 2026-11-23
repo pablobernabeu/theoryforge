@@ -105,7 +105,8 @@ navbar:
     # is still built and reached via its own top-level navbar item. Ordered to
     # follow the workflow arc: continue the Get Started (BUILD) walkthrough
     # into development and testing, then the additive literature layer, then
-    # the methodological rationale behind all the checks.
+    # the methodological rationale behind all the checks and the neighbouring
+    # tools.
     #
     # Relative, as on every other site in the family. pkgdown DOES depth-adjust a
     # navbar href -- it renders `../articles/x.html` on a page under reference/ and
@@ -121,8 +122,12 @@ navbar:
         href: articles/developing-and-testing.html
       - text: Literature layer
         href: articles/literature.html
+      - text: Browser apps
+        href: articles/app.html
       - text: Methodological foundations
         href: articles/methodology.html
+      - text: Related tools
+        href: articles/related-tools.html
     about:
       text: About
       href: articles/about.html
@@ -131,7 +136,7 @@ navbar:
 # the articles index page. About stays internal (off the index and the menu),
 # reached solely through its own navbar item, so it is not listed twice.
 #
-# Each entry carries the articles/ prefix because these four vignettes live in
+# Each entry carries the articles/ prefix because these five vignettes live in
 # vignettes/articles/, and pkgdown names a topic by its path below vignettes/.
 # The prefixed name matches the topic directly; the bare slug does not, and
 # pkgdown then falls through to evaluating it as tidyselect code, where
@@ -142,18 +147,24 @@ articles:
   contents:
   - articles/developing-and-testing
   - articles/literature
+  - articles/app
   - articles/methodology
+  - articles/related-tools
 - title: internal
   contents:
   - articles/about
 
 reference:
 - title: Core IO
-  desc: Read, validate and write theory objects.
+  desc: >
+    Read, validate and write theory objects, give the content hash that
+    identifies a version, and read a causal diagram written for DAGitty.
   contents:
   - tf_read
   - tf_validate
   - tf_write
+  - tf_content_hash
+  - tf_read_dagitty
 - title: Packaged examples
   desc: >
     Example theories and literature corpora included in the package, so
@@ -162,15 +173,18 @@ reference:
   contents:
   - tf_example_names
   - tf_example_path
-- title: Builder (BUILDING mode)
-  desc: Construct a theory incrementally with provenance tracking.
+- title: Building
+  desc: Build a theory step by step, each step recorded in its provenance.
   contents:
   - tf_theory
   - tf_add_construct
   - tf_add_proposition
   - tf_add_prediction
+  - tf_add_phenomenon
   - tf_add_alternative
   - tf_add_assumption
+  - tf_add_evidence
+  - tf_add_test_outcome
   - tf_set_formal_model
 - title: Rigour
   desc: >
@@ -195,16 +209,23 @@ reference:
   - tf_diagram
   - tf_lit_diagram
   - tf_render_diagram
-- title: Develop
-  desc: Lakatosian amendment appraisal.
+- title: Developing
+  desc: Appraise an amendment against the version it replaces.
   contents:
   - tf_appraise_amendment
-- title: Testing and review
+- title: The causal reading
   desc: >
-    The conditional independencies a causal theory commits to, preregistration,
-    SEM compilation and the audit dossier.
+    What the causal graph a theory states implies and entails, the directions
+    observational data cannot test, and what would tell the theory from a
+    rival.
   contents:
   - tf_implications
+  - tf_entailments
+  - tf_equivalent_models
+  - tf_discriminate
+- title: Testing and review
+  desc: Preregistration, SEM compilation and the audit dossier.
+  contents:
   - tf_preregister
   - tf_compile_sem
   - tf_dossier

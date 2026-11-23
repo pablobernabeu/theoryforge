@@ -1,0 +1,84 @@
+# Browser apps
+
+Two apps put a graphical interface on the packages. The
+[Python app](https://pablobernabeu.github.io/theoryforge/apps/py/) runs this package through
+[Pyodide](https://pyodide.org/), a build of Python for the browser, and the
+[R app](https://pablobernabeu.github.io/theoryforge/apps/r/) runs the R package through
+[webR](https://docs.r-wasm.org/webr/latest/). Each app loads the package's own source into
+the browser and runs it there, so its results are those of the package, and nothing about a
+theory is sent to a server. The first visit downloads the language engine, which takes a
+while, and the browser keeps it for later visits.
+
+## What the apps do
+
+A theory comes from the list of examples, from a YAML or JSON file uploaded from your
+computer or from the editor. A card beside it shows whether the package finds it valid, its
+rigour score and gate, the number of its constructs, propositions and predictions, and its
+content hash. You choose an operation, set its parameters and run it, and the result appears
+with a note on what it shows. Figures can be saved as SVG or PNG, text and JSON results as
+files, and the preregistration and the dossier are shown as formatted pages with their
+Markdown a click away.
+
+The operations are grouped by purpose. Assess holds the rigour checklist, the full
+validation, the claim-form rubric, post-data severity and the redundancy screen. Derive holds
+the implied conditional independencies, what the causal graph entails, the equivalent models
+and the lavaan syntax. Compare sets the theory against a rival, which is either an
+alternative that states its own propositions or a theory you upload, and appraises an
+amendment against a prior version, by default the version the theory names as its parent.
+Document draws the ten diagram views and writes the preregistration and the audit dossier.
+Simulate propagates the construct network from one value for every construct or from an
+impulse in one of them. Literature maps the small demonstration corpus, the frozen OpenAlex
+corpus of works on panic disorder or a corpus you upload, and builds the theory's landscape
+on it. [Workflow modes](workflow-modes.md) and the [literature
+layer](literature.md) explain what each function computes.
+
+## The theory editor
+
+The editor shows the theory as forms, one card for each construct, proposition, phenomenon,
+prediction, assumption, alternative, evidence entry and test outcome, beside a source pane
+that holds the same theory as YAML or JSON. Either side can be edited. Each change is read by
+the package's reader, validated in full and scored with the checklist, so the problems shown
+beside the fields and the score above them are the package's own. A change in the forms
+rewrites the source in the package's layout, which keeps no comments. New theory starts from
+an empty template, and the version fields offer to record the current content hash.
+
+Import DAGitty takes model code copied from [dagitty.net](https://dagitty.net) or from the
+dagitty R package and reads it with `read_dagitty()`, as
+[Workflow modes](workflow-modes.md#starting-from-a-dagitty-diagram) describes. Each variable
+becomes a construct and each edge a proposition, and the import window shows the Python code that
+makes the same theory. The imported theory replaces the one in the editor and needs a
+definition for each construct before it validates.
+
+## Saving a theory and reproducing a result
+
+Save YAML in the editor writes the theory with the package's writer, so the file reads back
+as the same theory, with the same content hash, in Python and in R. Below each result, the
+code panel gives the Python code that reproduces it with the installed package, with buttons
+to copy it or download it as a script. The code reads an example theory through
+`example_path()`, and for any other theory it reads a file that you save beside the script
+first, under the name the code gives. To reproduce a result on a theory you edited, save it
+with Save YAML, download the script into the same folder and run it there after
+`pip install theoryforge`.
+
+## Sharing a view
+
+Copy link writes the theory and the chosen operation into the part of the address after `#`,
+which browsers do not send to the server. An example travels as its name and any other
+theory as its text, compressed. Links are kept below 16,000 characters so that mail and chat
+programs pass them on whole, and a larger theory is better sent as a file. A prior version,
+rival or corpus that you uploaded is not carried by the link. The apps keep the session and
+the colour theme in the browser's storage where the browser allows it, and run without it
+where it does not.
+
+## Limits
+
+The apps fetch no research data over the network. The literature operations read the corpora
+listed above, so `fetch_corpus()` is not offered: run it in the package and upload the file
+it writes. Three other functions stay in the installed package. The embedding screen needs
+an embedding model, and rendering a report with `render_report()` needs Quarto. The OSF
+deposit needs a personal access token, which a web page should not hold. Each engine is a
+fixed release, so the package runs under the language version that release provides, which
+can differ from yours. The R app also downloads the jsonlite and yaml packages from the webR
+package repository when it starts. The repository's
+[apps/README.md](https://github.com/pablobernabeu/theoryforge/blob/main/apps/README.md)
+gives the engine versions and how the apps are built and tested.

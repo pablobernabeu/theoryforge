@@ -63,7 +63,9 @@ nav:
   - Guides:
       - Workflow modes: workflow-modes.md
       - Literature layer: literature.md
+      - Browser apps: app.md
       - Methodological foundations: methodology.md
+      - Related tools: related-tools.md
   - Changelog: changelog.md
   - About: about.md
 

@@ -56,11 +56,11 @@ value, since the R twin cannot hold every such integer exactly. YAML reads an
 unquoted `NO` (nitric oxide), `yes`, `on` or `off` as a boolean, so quote such a
 keyword.
 
-A reference that holds a DOI is keyed by the DOI, lower-cased and without its
-resolver prefix, because DOI names ignore the case of ASCII letters (DOI
-Handbook, [Case Insensitivity of the DOI
-Name](https://www.doi.org/doi-handbook/DOIHandbook_2025.pdf)).
-`10.1016/J.BRAT.2015.10.002` in one record and
+A reference that holds a DOI is keyed by the DOI, with its ASCII letters
+lower-cased and its resolver prefix removed, because the DOI system does not
+distinguish the case of a DOI name, and doi.org resolves an upper-case and a
+lower-case form of one DOI to the same work. `10.1016/J.BRAT.2015.10.002` in one
+record and
 `https://doi.org/10.1016/j.brat.2015.10.002` in another therefore cite one
 work, which the co-citation map labels `10.1016/j.brat.2015.10.002`. Other
 references, such as Scopus or OpenAlex identifiers, are compared exactly as
@@ -106,10 +106,9 @@ keyword.
 Connected components suit this fixture, built to fall into four separate
 themes. On a real corpus, one or a few keywords that most records carry, such
 as the name of the field, link nearly every keyword to every other, so a single
-component holds the map. Seven OpenAlex corpora of 100 to 600 records each gave
-a largest theme holding at least 98.8 per cent of the linked keywords. When the
-map links ten or more keywords and one theme holds more than half of them,
-`litmap` warns that the themes, and any landscape built on them, are not
+component holds the map, as the OpenAlex corpus [below](#themes-by-simple-centres)
+shows. When the map links ten or more keywords and one theme holds more than half
+of them, `litmap` warns that the themes, and any landscape built on them, are not
 informative. A smaller map, such as a single pair, can be one theme
 legitimately and gives no warning. The map itself is returned unchanged.
 Below, one keyword that every record carries joins nine others into one theme.
@@ -149,12 +148,12 @@ print("keyword edges at min_link=3:", len(m_strict["keyword_cooccurrence"]))
 print("co-citation edges at min_link=3:", m_strict["co_citation"])
 ```
 
-Co-citation maps of real corpora are far larger than keyword maps, because
-each record cites dozens of works and every pair of them counts. 200 OpenAlex
-records on panic disorder give 11,211 co-citation edges at the default
-threshold of two, most of them with a count of exactly two, against 616
-keyword edges. `min_cocitation` sets the co-citation threshold on its own,
-leaving `min_link` to the keywords. It defaults to `min_link`.
+Each record counts every pair of the works it cites, so a record that cites 40
+works adds 780 co-citation pairs, where one with five keywords adds ten keyword
+pairs. A threshold that suits the keywords can therefore leave many more
+co-citation edges than keyword edges. `min_cocitation` sets the co-citation
+threshold on its own, leaving `min_link` to the keywords. It defaults to
+`min_link`.
 
 ```python exec="1" source="block" result="text" session="literature"
 m_cited = tf.litmap(corpus, min_link=2, min_cocitation=3)
@@ -180,8 +179,8 @@ The strongest link between two keywords not yet in a theme starts one. The
 theme then takes the free keyword most strongly linked to any of its members,
 one at a time, until it holds `max_theme_size` keywords, ten by default, or has
 no free neighbour. A keyword whose links all reach keywords already in themes
-joins none. On the real corpus below, about two in five linked keywords end up
-in no theme. Themes smaller than `min_theme_size`, two by default, are dropped.
+joins none, and on the real corpus below many linked keywords end up in no
+theme. Themes smaller than `min_theme_size`, two by default, are dropped.
 `max_df` leaves out the keywords held by more than that share of the records
 and lists them as `field_terms`. At its default of 1, it leaves out none.
 `min_df` leaves out the keywords held by fewer than that many records, without
@@ -201,10 +200,15 @@ theme, while simple centres give bounded ones.
 openalex = tf.read_corpus(tf.example_path("openalex-panic-2026.corpus.yaml"))
 with warnings.catch_warnings(record=True):
     warnings.simplefilter("always")
-    print("components:", [t["size"] for t in tf.litmap(openalex)["themes"]])
+    components = tf.litmap(openalex)
+edges = components["keyword_cooccurrence"]
+linked = {keyword for edge in edges for keyword in (edge["a"], edge["b"])}
+print("keyword edges:", len(edges), "linked keywords:", len(linked))
+print("components:", [t["size"] for t in components["themes"]])
 
 sc = tf.litmap(openalex, method="simple_centres")
 print("simple centres:", [t["size"] for t in sc["themes"]])
+print("linked keywords in no theme:", len(linked) - sum(t["size"] for t in sc["themes"]))
 for theme in sc["themes"][:6]:
     print(theme["id"], theme["quadrant"], theme["centrality"], theme["density"],
           "|", ", ".join(theme["keywords"][:4]))
@@ -229,8 +233,7 @@ another, are such a case. Telling an emerging theme from a declining one needs
 corpora from more than one period. The result also gains `method`, the six
 `parameters` used and `field_terms`.
 
-Components remain the default for this release, and the default is planned to
-become simple centres in the next minor release.
+Components are the default.
 
 ## Positioning a theory against the field
 
@@ -333,10 +336,10 @@ shows the whole graph and no figure is needed.
 print(tf.lit_diagram(m, type="co_citation"))
 ```
 
-On a real corpus, that diagram can run to thousands of edges and a megabyte of
-DOT, which Graphviz cannot lay out legibly. `max_edges` keeps the strongest
-edges, the highest counts first with ties going to the pair that sorts first,
-and draws only their endpoints. It applies to both network views.
+A co-citation map of a real corpus can hold more edges than Graphviz can lay out
+legibly. `max_edges` keeps the strongest edges, the highest counts first with
+ties going to the pair that sorts first, and draws only their endpoints. It
+applies to both network views.
 
 ```python exec="1" source="block" result="text" session="literature"
 print(tf.lit_diagram(m, type="co_citation", max_edges=1))
@@ -388,11 +391,10 @@ search page costs USD 0.001, so the budget covers about 100 searches of one
 page each. A free API key raises the budget to USD 1 a day. Store the key in
 the `OPENALEX_API_KEY` environment variable, or pass it as `api_key`, and
 `fetch_corpus` sends it in a request header, never in the URL or the corpus.
-The `mailto` argument is still accepted, but OpenAlex now ignores it.
+The `mailto` argument is accepted, and OpenAlex ignores it.
 
 Each request returns one page of works, ranked by relevance, from a result set
-that is usually far larger. A search for panic disorder matched about 187,000
-works in October 2026. OpenAlex supports pages of up to 100 works and has
+that is usually far larger. OpenAlex supports pages of up to 100 works and has
 deprecated larger ones, although it still accepts 200. `max_records` pages on
 until that many works are collected. OpenAlex serves the first 10,000 results
 of a search by page number, without a key, and `fetch_corpus` asks for pages
@@ -408,8 +410,14 @@ fetched)`. A work whose title is null is kept without a `title`, since the
 corpus schema types a title as a string.
 
 `corpus["source"]` records the query, the UTC time of retrieval, the number of
-works that matched and the number kept. That record matters because the
-keywords change. Since late September 2026, OpenAlex has written each work's
+works that matched and the number kept. The frozen corpus read above keeps the
+record of the search it came from.
+
+```python exec="1" source="block" result="text" session="literature"
+print(openalex["source"])
+```
+
+That record matters because the keywords change. Since late September 2026, OpenAlex has written each work's
 keywords with a language model that reads its title, abstract and venue. It
 merges and splits that vocabulary over time, so the same works fetched a week
 apart can carry different keywords. Works left without keywords fall back to
@@ -572,9 +580,8 @@ import string
 
 import pandas as pd
 
-# DOIs are case-insensitive over ASCII letters only (DOI Handbook, 'Case
-# Insensitivity of the DOI Name'), so the fold leaves every other character
-# alone.
+# The package folds the case of the ASCII letters of a DOI and leaves every
+# other character alone, and so does this fold.
 _ASCII_LOWER = str.maketrans(string.ascii_uppercase, string.ascii_lowercase)
 _DOI_RESOLVER = ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/",
                  "http://dx.doi.org/", "doi:")

@@ -4,113 +4,241 @@ All notable changes to theoryforge (the R and Python twin packages) are document
 The format follows [Keep a Changelog](https://keepachangelog.com/). The two packages share a
 version and a single behavioural contract
 ([`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md)).
+Functions are named as in Python. The R names add the prefix `tf_`, and the R package's
+[NEWS](https://pablobernabeu.github.io/theoryforge/r/news/index.html) records the changes
+that concern it alone.
 
 <!--
-  The link to the specification is absolute rather than repository-relative because this
-  file is also included verbatim on the Python documentation site, where a relative path
-  would point at a page that does not exist there.
+  The links to the specification and the R news are absolute rather than repository-relative
+  because this file is also included verbatim on the Python documentation site, where a
+  relative path would point at a page that does not exist there.
 -->
 
 
 ## [Unreleased]
 
+### Added
+- Added `entailments()`, which reads each claim of a prediction or phenomenon (an effect or
+  an association between two constructs, with its sign) against the causal graph of the
+  propositions. It says whether the graph entails the claim, contradicts it or leaves it
+  open, and it names the propositions the verdict rests on. For an effect in a graph without
+  a feedback loop, it says whether adjusting for some of the theory's constructs identifies
+  the effect from observational data and gives a smallest such set.
+- Added `discriminate()`, which sets the theory against a rival, either an alternative that
+  states its own propositions or another theory, and lists the claims, conditional
+  independencies and signs of effects and associations on which the two causal graphs
+  differ.
+- Added `equivalent_models()`, which lists the directed relations that point the same way in
+  every Markov-equivalent graph and those that some equivalent graph reverses. No
+  observational study can test the direction of the second kind.
+- Added `content_hash()`, the SHA-256 digest of the theory's canonical form, so that two
+  files with the same content have the same hash whatever their layout, key order or format.
+  The preregistration and the dossier give it, and `validate(full=True)` checks a hash
+  recorded in `version.content_hash`.
+- Added `read_dagitty()`, which makes a theory of DAGitty model code. Each variable becomes
+  a construct, `->` a proposition with the relation asked for (`causes`, `increases` or
+  `decreases`) and `<->` an association. A variable marked `latent` keeps the mark as
+  `x_latent: true`, which the `causal_dag` view writes back. The reader refuses an
+  undirected edge and a selected variable, and the constructs need definitions before the
+  theory validates.
+- Added the builders `add_phenomenon()`, `add_evidence()` and `add_test_outcome()`.
+  `add_prediction()` gained `bounds` and `claim`, `add_alternative()` gained `source_doi`
+  and `propositions`, and `add_proposition()` gained `functional_form`.
+- Added theory schema 1.1, which `new_theory()` writes. It has a `phenomena` collection, a
+  `claim` field for predictions and phenomena and a `propositions` field that states a
+  rival's own propositions over the theory's constructs. Any entry may carry metadata under
+  keys that begin with `x_`. A file of schema 1.0 reads as before.
+- `validate(full=True)` gained checks of claims, phenomena and rivals' propositions.
+- `implications()` gained `given="minimal"`, which prunes each conditioning set until no
+  construct can be dropped from it. The record gained `conditioning`.
+- `preregister()` and `dossier()` gained `cycles`, so that a theory with a feedback loop can
+  be preregistered with its independencies read by sigma-separation.
+- `litmap()` gained `min_df`, the fewest records a keyword must be in to enter the
+  simple-centres map, so that rare keywords cannot seed a theme. Its default of 1 leaves the
+  map as it was, and `parameters` records it.
+- `simulate()` began accepting `init` as a mapping from construct ids to starting values,
+  the other constructs starting from 0, so that the response to a change in one construct
+  can be traced. The record gained `initial_state` and `assumed_positive`, which lists the
+  `causes` and `mediates` propositions that the simulation couples positively although their
+  relation states no sign.
+- The checklist report gained `aggregate_range`, the lowest and highest aggregate score
+  under other weightings: equal weights and each applicable item's weight halved or doubled
+  in turn.
+- The browser apps gained a theory editor, which shows a theory as forms beside its YAML or
+  JSON source and validates and scores each edit with the package. It starts a theory from
+  an empty template or from an example, saves it with the package's writer and imports
+  DAGitty code through `read_dagitty()`.
+- The apps gained operations for post-data severity, the entailments, the equivalent models,
+  the comparison with a rival and a simulation from an impulse in one construct. The
+  literature operations read the demonstration corpus, the frozen OpenAlex corpus or an
+  uploaded one, with the method, `min_df` and `max_df` of `litmap()`. The preregistration
+  and the dossier are shown formatted, and a link carries the theory and the chosen
+  operation.
+
 ### Changed
-- The `pipeline` and `workflow` views of `diagram()` label an outcome whose `passed` is
-  absent, null or not a boolean `no result recorded` and fill it grey, as the
-  preregistration and the dossier describe it, where they labelled it `failed` and filled
-  it red.
-- The `workflow` view adds a dashed edge from each proposition to the construct it acts
-  on, so that every outcome construct is joined to the graph and a feedback loop shows.
-- The `pipeline` view lists the predictions from the top down in file order, where
-  Graphviz stacked them from the bottom up.
-- The `nomological_net` view labels each edge with the proposition's id and its relation,
-  as in `p1: increases`, so that the propositions a hypothesis derives from can be found
-  on the figure.
-- The `venn` view wraps each construct name onto lines of at most 18 characters, where
-  long names ran into each other and off the canvas, and its title says when only the
-  first three of a theory's constructs are drawn.
-
-### Deprecated
-- The `engine` argument of `diagram()` has no effect and will be removed in the next
-  minor release. Passing it gives a warning (Python: `FutureWarning`).
-
-### Fixed
-- R's `tf_diagram()` keeps every space at the end of a label, title, scope condition or
-  provenance detail, where it dropped one and so wrote different DOT from Python's.
+- The causal_testability item of the checklist cites Rohrer (2018), on stating causal
+  assumptions in a graph, in place of the paper that describes the dagitty software.
+- The theory argument of Python's functions was renamed from `T` to `theory`, its name in R,
+  so that a call that names its arguments reads the same in both languages. `T` is
+  deprecated (below).
+- The panic network and the modality-switching theory moved to schema 1.1, and every point
+  or interval prediction of the panic network and its amended version gained bounds.
+- The panic network gained `pred_indep`, which states the independence of arousal and
+  avoidance given perceived threat that its causal graph implies, and a test outcome that
+  refutes it. Its amended version, which adds a path from arousal to avoidance, thus gives
+  up an independence that a test refuted.
+- The evidence for `pred1` was changed to Ströhle et al. (1998), in which sodium lactate
+  raised heart rate in patients with panic disorder, in place of an unrelated study. The
+  panic network's test outcomes were marked as illustrative.
+- The modality-switching theory gained claims, a phenomenon and propositions for its two
+  rivals. Five of the apps' six examples gained claims, and two of them gained rivals'
+  propositions.
+- `example_path()` began refusing a name that `example_names()` does not list.
+- The `nomological_net` view began labelling each edge with the proposition's id and
+  relation, as in `p1: increases`, so that the propositions a hypothesis derives from can be
+  found on the figure.
+- The `causal_dag` view began writing an association between two constructs that no directed
+  relation names and marking a construct with `x_latent: true` as `[latent]`.
+- In the `pipeline` and `workflow` views, an outcome whose `passed` is absent, null or not a
+  boolean changed from `failed` in red to `no result recorded` in grey, as the
+  preregistration and the dossier describe it.
+- The `workflow` view gained a dashed edge from each proposition to the construct it acts
+  on, so that every outcome construct is joined to the graph and a feedback loop shows. The
+  `pipeline` view began listing the predictions from the top down in file order.
+- The `venn` view began wrapping each construct name onto lines of at most 18 characters,
+  and its title began saying when only the first three of a theory's constructs are drawn.
+- `compile_sem()` began labelling every regression `b_<from>_<to>`, giving as a comment the
+  sign of each `increases` or `decreases` proposition and defining with `:=` the total
+  effect that each effect claim concerns, except on a graph with a feedback loop. A note
+  after the structural model names each feedback loop and each pair of constructs joined by
+  both a path and a covariance. When there is none, it says that the paths are generically
+  identified, given a measurement model that identifies the constructs (Brito & Pearl,
+  2002).
+- `compile_sem()` began leaving out a relation from a construct to itself, with a comment
+  that names the proposition, and writing a path that two propositions state only once,
+  since lavaan refuses a repeated line.
+- `preregister()` gained a Theory section before the hypotheses, with the constructs,
+  propositions, phenomena, auxiliary assumptions, rivals and scope. Its header gained the
+  content hash and the formal model, and each hypothesis gained the region its bounds allow,
+  the graph's verdict on its claim, the adjustment set for an observational test and how
+  each rival it names reads the claim.
+- `dossier()` gained the content hash, the range of the aggregate score, each checklist
+  item's criterion and sections on the claims, the equivalent models and the rivals. It
+  embeds the preregistration without that document's severity section and writes a post-data
+  severity that rounds to 1 or 0 as `> 0.999` or `< 0.001`.
+- `embedding_redundancy()` began refusing a threshold outside -1 to 1 and an embedding
+  vector that holds a value that is not a finite number or holds only zeros. A zero vector,
+  which has no direction to compare, gave a cosine of 0.
+- `tokens()` began refusing a value that is neither a string nor `None` with a `TypeError`,
+  and `jaccard()` began reading lists and tuples as sets.
+- A builder that refuses a value other than a list where its collection belongs began naming
+  the kind of value, as in `the theory holds a mapping there`, in place of the Python type.
+  The builders began replacing NumPy scalars and tuples by Python values and lists before
+  storing an entry, and reading an empty mapping as an empty collection, as R does.
+- The source distribution was cut to the package and its metadata, since the tests and the
+  documentation read files at the root of the repository, which an sdist cannot hold.
+- The apps moved to webR 0.6.1 and to Pyodide 314.0.8, which runs Python 3.14.2.
 
 ### Changed results
-- With `method="simple_centres"`, a theme is high on centrality or density only when its
-  value lies above the median, where a value at the median counted as high, and `quadrant`
-  is null when every theme has the same value of either measure. A theme with centrality 0
-  was central, `motor` or `basic`, when the median centrality was 0, and is now never
-  central. The four unlinked themes of the demo corpus have no quadrant, and two themes of
-  the frozen OpenAlex corpus move, one from `basic` to `emerging_or_declining` and one from
-  `motor` to `basic`.
-- `landscape()` counts an alternative id that the theory repeats as one account, where two
-  entries with one id made a theme crowded.
-- `litmap()` and `landscape()` give the giant-theme warning only for a map of ten or more
-  linked keywords, so a corpus whose only link is one pair no longer warns.
-- The DOI normaliser makes a double slash after the prefix single, as in
+- `check()` moved to rigour checklist 3.0, which changes four items (below), so scores and
+  statuses can change.
+- Precision began counting a point or interval prediction only when its bounds give a finite
+  lower and upper end.
+- Non-redundancy stopped passing while a construct has no definition, and it began reading
+  the redundancy screen's two new reasons (below).
+- Diagnosticity stopped counting a rival named in `diagnostic_vs` when the rival states
+  propositions and its graph gives the prediction's claim the same verdict as the theory's.
+- Derivation chain stopped counting a prediction as derived when the causal graph
+  contradicts its claim or leaves it open.
+- The bundled panic network's score moved from 87.3 to 88.0 and the modality-switching
+  theory's from 89.8 to 87.1. The amended panic network (89.8) and the underspecified
+  example (2.2) kept theirs. Read from the 0.7.0 example files, checklist 3.0 alone gives
+  the panic network 80.1, since none of its point or interval predictions stated bounds.
+- `redundancy_check()` began flagging two constructs with one label and a construct whose
+  measures are all listed for another, and it gained a column, `reason`, that says why each
+  pair was flagged.
+- `implications()` began reading a construct that only associations relate to others as a
+  vertex, so a theory with such a construct implies more statements. The record for the
+  underspecified example gained its two constructs and one bidirected edge.
+- `implications()` began refusing an association that names an undeclared construct, as it
+  refused such a directed relation.
+- `appraise_amendment()` stopped calling an amendment progressive when it loses content,
+  that is when it drops or weakens an untested prediction or gives up an implied
+  independence that no failed prediction contradicted. It began calling an amendment
+  degenerating when it weakens a refuted prediction and none of its new predictions is
+  corroborated.
+- In `appraise_amendment()`, a new prediction began counting as old content when the prior's
+  graph already entails its claim or its `derives_from` names a proposition the new version
+  lacks. An assumption without `added_for` that protects a failed prediction began counting
+  as an answer to that failure. The record gained `theoretically_progressive`,
+  `empirically_progressive`, `revised`, `weakened_refuted`, `unresolved` and the comparison
+  of implied independencies.
+- Read from the 0.7.0 example files, the shipped amendment came out neutral, since it gives
+  up an independence that no test had refuted. The revised examples record that refutation,
+  and the amendment is progressive.
+- `validate(full=True)` began reporting an unknown field in any entry, naming the field it
+  most resembles, and bounds that do not fit the prediction's type or its claim's sign. A
+  file that validated under 0.7.0 can fail.
+- `compile_sem()` began holding at zero the covariances of a construct that only
+  associations relate to others, which `lavaan::sem()` would free between exogenous latent
+  variables.
+- With `method="simple_centres"`, a theme became high on centrality or density only when its
+  value lies above the median, and `quadrant` became null when every theme has the same
+  value of either measure. A value at the median had counted as high. The four unlinked
+  themes of the demo corpus lost their quadrant, and two themes of the frozen OpenAlex
+  corpus moved, one from `basic` to `emerging_or_declining` and one from `motor` to `basic`.
+- `landscape()` began counting an alternative id that the theory repeats as one account, so
+  two entries with one id no longer make a theme crowded.
+- `litmap()` and `landscape()` began giving the giant-theme warning only for a map of ten or
+  more linked keywords, so a corpus whose only link is one pair no longer warns.
+- The DOI normaliser began making a double slash after the prefix single, as in
   `10.1037//0033-2909.99.1.20`, which doi.org redirects to the DOI with one slash.
   `new_evidence_dois()` and the co-citation map of `litmap()` read the two forms as one
   work.
-- `new_evidence_dois()` skips a candidate that is not a string or holds only whitespace.
-  Python returned the float NaN that pandas gives a missing DOI as a new DOI. Python also
-  reads a single string as one candidate, as R does, where it read each of its characters.
-- `fetch_corpus()` asks for pages by number, which OpenAlex serves without a key, while the
-  pages it needs lie within the first 10,000 results, and pages through a cursor, which needs
-  a key past the first page, only beyond them. A `max_records` above `per_page` needed a key.
-- `fetch_corpus()` leaves out a null title, which made the record fail
-  `corpus.schema.json`, and asks OpenAlex with `select=` for only the fields a record maps.
+- `new_evidence_dois()` began skipping a candidate that is not a string or holds only
+  whitespace, such as the NaN that pandas gives a missing DOI, which it had returned as a
+  new DOI. A single string became one candidate. It had read each character of a single
+  string as a candidate.
+- `fetch_corpus()` began asking OpenAlex for pages by number, which need no key, when the
+  records asked for lie within the first 10,000 results. It used a cursor, which needs a key
+  after the first page, so a `max_records` above `per_page` needed a key. A request beyond
+  the first 10,000 results still uses a cursor.
+- `fetch_corpus()` began leaving out a null title, which made the record fail
+  `corpus.schema.json`, and asking OpenAlex only for the fields a record maps.
 
-### Added
-- `litmap()` gains `min_df`, the fewest records a keyword must be in to enter the
-  simple-centres map, so that rare keywords cannot seed a theme. Its default of 1 leaves the
-  map as it was, and `parameters` records it.
+### Deprecated
+- Naming the theory argument `T`, as in `check(T=theory)`, gives a `FutureWarning` and will
+  stop working in the next minor release. Name it `theory` or pass the theory by position.
+- The `engine` argument of `diagram()` has no effect and will be removed in the next minor
+  release. Passing it gives a `FutureWarning`.
 
 ### Fixed
-- `fetch_corpus()` refuses a `query` that is not a single string with a character left after
-  trimming, with `query must be a non-empty string`, where Python searched for `None` and R
-  sent an empty search. Python accepts an integral float `per_page`, as R does, and R no
-  longer sends `mailto=` with an empty `mailto`, as Python does not.
-- When a page after the first fails, the message of `fetch_corpus()` ends with the number of
-  records fetched before it.
-- R's `tf_new_evidence_dois()` normalises its candidates in one vectorised call, where it
-  grew its vectors and searched them one candidate at a time.
-
-- `compile_sem()` labels every regression `b_<from>_<to>`, with a numbered suffix when
-  another name holds the label, lists the sign each `increases` and `decreases`
-  proposition states as an inequality on its label, and defines with `:=` the effect that
-  each effect claim of a prediction or phenomenon is about, as the sum over the directed
-  paths of the products of their labels. No effect is defined on a graph with a feedback
-  loop or over more than 100 paths.
-- `compile_sem()` leaves out a relation from a construct to itself, which it wrote as
-  `y ~ y`, with a comment that names the proposition, and writes a pair that two path
-  relations state once, where lavaan refused the second line.
-- `compile_sem()` adds a note on identification after the structural model. Paths that
-  form no loop and no bow are generically identified once the measurement model
-  identifies the constructs (Brito & Pearl, 2002), and each bow is named otherwise.
-- `simulate()` takes the signs from the relation table. It still couples `causes` and
-  `mediates` positively, and its record lists them under `assumed_positive`. The record
-  also gains `initial_state`.
-- `simulate()` accepts `init` as a mapping from construct ids to starting values, the
-  other constructs starting from 0, so that the response to one perturbed construct can
-  be traced. It refuses an unknown construct id, and an invalid `init` now gives
-  `simulate requires init to be a finite number or a mapping from construct ids to
-  finite numbers`.
+- The YAML reader began naming a key that YAML reads as a boolean, a number or a date by
+  its text, as R's reader does, so `yes:` and `1:` are two keys where they were one, and a
+  repeated boolean key is reported as `TRUE`.
+- `fetch_corpus()` searched for `None` when `query` was `None`. It now refuses a `query`
+  that is not a single string with a character left after trimming, with
+  `query must be a non-empty string`. It also accepts a `per_page` given as a whole-numbered
+  float, as R does.
+- When a page after the first failed, the message of `fetch_corpus()` did not say how many
+  records had been fetched. It now ends with that number.
 
 ### Documentation
-- The landscape's documentation, in both packages, the specification, both literature guides
-  and the apps, says that its statuses count accounts that share a word with a theme and
-  what such a match does not establish. The guides no longer say that the layer shows which
-  questions are crowded, nor contrast capitalised concepts with lower-case keywords, since
-  OpenAlex keywords include capitalised names.
-- R's `?tf_dossier`, the Python dossier module, the Python README, home page and workflow
-  page and the code the apps show for `preregister()` call its output the hypotheses
-  section of a preregistration, as the rest of the 0.7.0 documentation does, where they
-  still called it a preregistration document.
-- The R methodology article links the DOI of Coulter et al. (1998) in full, where the site
-  cut the link short at the DOI's angle bracket.
+- The documentation of `landscape()`, the specification, both literature guides and the apps
+  were revised to say that its statuses count the accounts that share a word with a theme,
+  and what such a match does not establish.
+- The READMEs were rewritten to open with the problem the package addresses, and the guides
+  to follow a theory from building to testing. Each documentation site gained a page on the
+  browser apps and one on related tools, which says what neighbouring packages do and how a
+  theory moves between them and theoryforge.
+- The methodology page was reorganised by subject, with a section for each group of
+  checklist items and sections on the causal reading of claims, equivalent models and
+  rivals, the content hash and the DAGitty reader. The values it quotes are computed from
+  the package when the site is built.
+- The specification gained descriptions of the causal reading of claims, the content hash
+  and the DAGitty reader. It says that the normal approximation of `post_data_severity()`
+  overstates the severity in small samples, and that `severity()` grades the form of a claim
+  and says nothing of how severe a test was.
 
 ## [0.7.0] - 2026-11-22
 

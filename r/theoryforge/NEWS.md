@@ -1,133 +1,304 @@
 # theoryforge (development version)
 
-## Changed output
+The repository's [changelog](https://github.com/pablobernabeu/theoryforge/blob/main/CHANGELOG.md)
+records the same changes with the Python names. The notes below use the R names and
+add the changes that concern the R package alone.
 
-* The `pipeline` and `workflow` views of `tf_diagram()` label an outcome whose
-  `passed` is absent, null or not `TRUE` or `FALSE` `no result recorded` and
-  fill it grey, as the preregistration and the dossier describe it, where they
-  labelled it `failed` and filled it red.
+## Added
 
-* The `workflow` view adds a dashed edge from each proposition to the construct
-  it acts on, so that every outcome construct is joined to the graph and a
-  feedback loop shows.
+* Added `tf_entailments()`, which reads each claim of a prediction or phenomenon (an
+  effect or an association between two constructs, with its sign) against the causal
+  graph of the propositions. It says whether the graph entails the claim,
+  contradicts it or leaves it open, and it names the propositions the verdict rests
+  on. For an effect in a graph without a feedback loop, it says whether adjusting
+  for some of the theory's constructs identifies the effect from observational data
+  and gives a smallest such set.
 
-* The `pipeline` view lists the predictions from the top down in file order,
-  where Graphviz stacked them from the bottom up.
+* Added `tf_discriminate()`, which sets the theory against a rival, either an
+  alternative that states its own propositions or another theory, and lists the
+  claims, conditional independencies and signs of effects and associations on which
+  the two causal graphs differ.
 
-* The `nomological_net` view labels each edge with the proposition's id and its
-  relation, as in `p1: increases`, so that the propositions a hypothesis
-  derives from can be found on the figure.
+* Added `tf_equivalent_models()`, which lists the directed relations that point the
+  same way in every Markov-equivalent graph and those that some equivalent graph
+  reverses. No observational study can test the direction of the second kind.
 
-* The `venn` view wraps each construct name onto lines of at most 18
-  characters, where long names ran into each other and off the canvas, and its
-  title says when only the first three of a theory's constructs are drawn.
+* Added `tf_content_hash()`, the SHA-256 digest of the theory's canonical form, so
+  that two files with the same content have the same hash whatever their layout, key
+  order or format. The preregistration and the dossier give it, and
+  `tf_validate(full = TRUE)` checks a hash recorded in `version$content_hash`. R
+  computes the digest itself, since base R has no SHA-256 before R 4.5.
+
+* Added `tf_read_dagitty()`, which makes a theory of DAGitty model code, such as the
+  text that `dagitty::dagitty()` prints. Each variable becomes a construct, `->` a
+  proposition with the relation asked for (`"causes"`, `"increases"` or
+  `"decreases"`) and `<->` an association. A variable marked `latent` keeps the mark
+  as `x_latent: true`, which the `causal_dag` view of `tf_diagram()` writes back.
+  The reader refuses an undirected edge and a selected variable, and the constructs
+  need definitions before the theory validates.
+
+* Added the builders `tf_add_phenomenon()`, `tf_add_evidence()` and
+  `tf_add_test_outcome()`. `tf_add_prediction()` gained `bounds` and `claim`,
+  `tf_add_alternative()` gained `source_doi` and `propositions`, and
+  `tf_add_proposition()` gained `functional_form`.
+
+* Added theory schema 1.1, which `tf_theory()` writes. It has a `phenomena`
+  collection, a `claim` field for predictions and phenomena and a `propositions`
+  field that states a rival's own propositions over the theory's constructs. Any
+  entry may carry metadata under keys that begin with `x_`. A file of schema 1.0
+  reads as before.
+
+* `tf_validate(full = TRUE)` gained checks of claims, phenomena and rivals'
+  propositions.
+
+* `tf_implications()` gained `given = "minimal"`, which prunes each conditioning set
+  until no construct can be dropped from it. The record gained `conditioning`.
+
+* `tf_preregister()` and `tf_dossier()` gained `cycles`, so that a theory with a
+  feedback loop can be preregistered with its independencies read by
+  sigma-separation.
+
+* `tf_litmap()` gained `min_df`, the fewest records a keyword must be in to enter
+  the simple-centres map, so that rare keywords cannot seed a theme. Its default of
+  1 leaves the map as it was, and `parameters` records it.
+
+* `tf_simulate()` began accepting `init` as a named numeric vector or named list of
+  starting values, the other constructs starting from 0, so that the response to a
+  change in one construct can be traced. The record gained `initial_state` and
+  `assumed_positive`, which lists the `causes` and `mediates` propositions that the
+  simulation couples positively although their relation states no sign.
+
+* The checklist report gained `aggregate_range`, the lowest and highest aggregate
+  score under other weightings: equal weights and each applicable item's weight
+  halved or doubled in turn.
+
+* The browser apps gained a theory editor, which shows a theory as forms beside its
+  YAML or JSON source and validates and scores each edit with the package. It starts
+  a theory from an empty template or from an example, saves it with `tf_write()` and
+  imports DAGitty code through `tf_read_dagitty()`. The apps also gained operations
+  for post-data severity, the entailments, the equivalent models, the comparison
+  with a rival and a simulation from an impulse in one construct, a choice of corpus
+  for the literature operations and a link that carries the theory and the chosen
+  operation.
+
+## Changed
+
+* The causal_testability item of the checklist cites Rohrer (2018), on stating causal
+  assumptions in a graph, in place of the paper that describes the dagitty software.
+
+* The example theories and corpora moved to `extdata/`, the R convention for example
+  data, and the golden test files are no longer installed. Code that reached an
+  example through `system.file("fixtures", ...)` should call `tf_example_path()`,
+  which began refusing a name that `tf_example_names()` does not list.
+
+* The panic network and the modality-switching theory moved to schema 1.1, and every
+  point or interval prediction of the panic network and its amended version gained
+  bounds.
+
+* The panic network gained `pred_indep`, which states the independence of arousal
+  and avoidance given perceived threat that its causal graph implies, and a test
+  outcome that refutes it. Its amended version, which adds a path from arousal to
+  avoidance, thus gives up an independence that a test refuted.
+
+* The evidence for `pred1` was changed to Ströhle et al. (1998), in which sodium
+  lactate raised heart rate in patients with panic disorder, in place of an
+  unrelated study. The panic network's test outcomes were marked as illustrative.
+
+* The modality-switching theory gained claims, a phenomenon and propositions for its
+  two rivals.
+
+* The `nomological_net` view of `tf_diagram()` began labelling each edge with the
+  proposition's id and relation, as in `p1: increases`, so that the propositions a
+  hypothesis derives from can be found on the figure.
+
+* The `causal_dag` view began writing an association between two constructs that no
+  directed relation names and marking a construct with `x_latent: true` as
+  `[latent]`.
+
+* In the `pipeline` and `workflow` views, an outcome whose `passed` is absent,
+  `NULL` or not `TRUE` or `FALSE` changed from `failed` in red to
+  `no result recorded` in grey, as the preregistration and the dossier describe it.
+
+* The `workflow` view gained a dashed edge from each proposition to the construct it
+  acts on, so that every outcome construct is joined to the graph and a feedback
+  loop shows. The `pipeline` view began listing the predictions from the top down in
+  file order.
+
+* The `venn` view began wrapping each construct name onto lines of at most 18
+  characters, and its title began saying when only the first three of a theory's
+  constructs are drawn.
+
+* `tf_compile_sem()` began labelling every regression `b_<from>_<to>`, giving as a
+  comment the sign of each `increases` or `decreases` proposition and defining with
+  `:=` the total effect that each effect claim concerns, except on a graph with a
+  feedback loop. A note after the structural model names each feedback loop and each
+  pair of constructs joined by both a path and a covariance. When there is none, it
+  says that the paths are generically identified, given a measurement model that
+  identifies the constructs (Brito & Pearl, 2002).
+
+* `tf_compile_sem()` began leaving out a relation from a construct to itself, with a
+  comment that names the proposition, and writing a path that two propositions state
+  only once, since lavaan refuses a repeated line.
+
+* `tf_preregister()` gained a Theory section before the hypotheses, with the
+  constructs, propositions, phenomena, auxiliary assumptions, rivals and scope. Its
+  header gained the content hash and the formal model, and each hypothesis gained
+  the region its bounds allow, the graph's verdict on its claim, the adjustment set
+  for an observational test and how each rival it names reads the claim.
+
+* `tf_dossier()` gained the content hash, the range of the aggregate score, each
+  checklist item's criterion and sections on the claims, the equivalent models and
+  the rivals. It embeds the preregistration without that document's severity section
+  and writes a post-data severity that rounds to 1 or 0 as `> 0.999` or `< 0.001`.
+
+* `tf_embedding_redundancy()` began refusing a threshold outside -1 to 1 and an
+  embedding vector that holds a value that is not a finite number or holds only
+  zeros. A zero vector, which has no direction to compare, gave a cosine of 0.
+
+* `tf_tokens()` began refusing a value that is not a single string, `NULL` or `NA`,
+  with `tokens requires a string`. It read the first element of a vector or list.
+
+* A builder that finds a value other than a list where its collection belongs began
+  refusing it with
+  `cannot add to '<key>': the theory holds <what> there, not a list` and leaving the
+  theory unchanged, as the Python builders do. A file with, for example,
+  `constructs: abc` gave such a value, and the builder appended to it.
+
+* The apps moved to webR 0.6.1, which runs R 4.6.0.
+
+## Changed results
+
+* `tf_check()` moved to rigour checklist 3.0, which changes four items (below), so
+  scores and statuses can change.
+
+* Precision began counting a point or interval prediction only when its bounds give
+  a finite lower and upper end.
+
+* Non-redundancy stopped passing while a construct has no definition, and it began
+  reading the redundancy screen's two new reasons (below).
+
+* Diagnosticity stopped counting a rival named in `diagnostic_vs` when the rival
+  states propositions and its graph gives the prediction's claim the same verdict as
+  the theory's.
+
+* Derivation chain stopped counting a prediction as derived when the causal graph
+  contradicts its claim or leaves it open.
+
+* The bundled panic network's score moved from 87.3 to 88.0 and the
+  modality-switching theory's from 89.8 to 87.1. The amended panic network (89.8)
+  and the underspecified example (2.2) kept theirs. Read from the 0.7.0 example
+  files, checklist 3.0 alone gives the panic network 80.1, since none of its point
+  or interval predictions stated bounds.
+
+* `tf_redundancy_check()` began flagging two constructs with one label and a
+  construct whose measures are all listed for another, and it gained a column,
+  `reason`, that says why each pair was flagged.
+
+* `tf_implications()` began reading a construct that only associations relate to
+  others as a vertex, so a theory with such a construct implies more statements. The
+  record for the underspecified example gained its two constructs and one bidirected
+  edge.
+
+* `tf_implications()` began refusing an association that names an undeclared
+  construct, as it refused such a directed relation.
+
+* `tf_appraise_amendment()` stopped calling an amendment progressive when it loses
+  content, that is when it drops or weakens an untested prediction or gives up an
+  implied independence that no failed prediction contradicted. It began calling an
+  amendment degenerating when it weakens a refuted prediction and none of its new
+  predictions is corroborated.
+
+* In `tf_appraise_amendment()`, a new prediction began counting as old content when
+  the prior's graph already entails its claim or its `derives_from` names a
+  proposition the new version lacks. An assumption without `added_for` that protects
+  a failed prediction began counting as an answer to that failure. The record gained
+  `theoretically_progressive`, `empirically_progressive`, `revised`,
+  `weakened_refuted`, `unresolved` and the comparison of implied independencies.
+
+* Read from the 0.7.0 example files, the shipped amendment came out neutral, since
+  it gives up an independence that no test had refuted. The revised examples record
+  that refutation, and the amendment is progressive.
+
+* `tf_validate(full = TRUE)` began reporting an unknown field in any entry, naming
+  the field it most resembles, and bounds that do not fit the prediction's type or
+  its claim's sign. A file that validated under 0.7.0 can fail.
+
+* `tf_compile_sem()` began holding at zero the covariances of a construct that only
+  associations relate to others, which `lavaan::sem()` would free between exogenous
+  latent variables.
+
+* With `method = "simple_centres"`, a theme became high on centrality or density
+  only when its value lies above the median, and `quadrant` became `NA` when every
+  theme has the same value of either measure. A value at the median had counted as
+  high. The four unlinked themes of the demo corpus lost their quadrant, and two
+  themes of the frozen OpenAlex corpus moved, one from `"basic"` to
+  `"emerging_or_declining"` and one from `"motor"` to `"basic"`.
+
+* `tf_landscape()` began counting an alternative id that the theory repeats as one
+  account, so two entries with one id no longer make a theme crowded.
+
+* `tf_litmap()` and `tf_landscape()` began giving the giant-theme warning only for a
+  map of ten or more linked keywords, so a corpus whose only link is one pair no
+  longer warns.
+
+* The DOI normaliser began making a double slash after the prefix single, as in
+  `10.1037//0033-2909.99.1.20`, which doi.org redirects to the DOI with one slash.
+  `tf_new_evidence_dois()` and the co-citation map of `tf_litmap()` read the two
+  forms as one work.
+
+* `tf_new_evidence_dois()` began skipping a candidate that is not a string or holds
+  only whitespace, as it skipped `NA`.
+
+* `tf_fetch_corpus()` began asking OpenAlex for pages by number, which need no key,
+  when the records asked for lie within the first 10,000 results. It used a cursor,
+  which needs a key after the first page, so a `max_records` above `per_page` needed
+  a key. A request beyond the first 10,000 results still uses a cursor.
+
+* `tf_fetch_corpus()` began leaving out a null title, which made the record fail
+  `corpus.schema.json`, and asking OpenAlex only for the fields a record maps.
 
 ## Deprecated
 
-* The `engine` argument of `tf_diagram()` has no effect and will be removed in
-  the next minor release. Passing it gives a warning.
+* The `engine` argument of `tf_diagram()` has no effect and will be removed in the
+  next minor release. Passing it gives a warning.
 
-## Fixes
+## Fixed
 
-* `tf_diagram()` keeps every space at the end of a label, title, scope
-  condition or provenance detail, where it dropped one and so wrote different
-  DOT from the Python package.
+* `tf_diagram()` dropped one space at the end of a label, title, scope condition or
+  provenance detail, and so wrote different DOT from the Python package. It now
+  keeps every such space.
 
-## Changed results
+* `tf_render_report()` kept an extension that held a character other than a letter
+  or a digit, writing `report.my-ext` as `report.my-ext.qmd`. Given a path with a
+  folder, it wrote a file name that begins with a dot, such as `out/.hidden`, as
+  `out/.qmd`. It now replaces any extension by `.qmd` and keeps a name that begins
+  with a dot whole, as the Python package does.
 
-* With `method = "simple_centres"`, a theme is high on centrality or density
-  only when its value lies above the median, where a value at the median
-  counted as high, and `quadrant` is `NA` when every theme has the same value
-  of either measure. A theme with centrality 0 was central, `"motor"` or
-  `"basic"`, when the median centrality was 0, and is now never central. The
-  four unlinked themes of the demo corpus have no quadrant, and two themes of
-  the frozen OpenAlex corpus move.
-
-* `tf_landscape()` counts an alternative id that the theory repeats as one
-  account, where two entries with one id made a theme crowded.
-
-* `tf_litmap()` and `tf_landscape()` give the giant-theme warning only for a
-  map of ten or more linked keywords, so a corpus whose only link is one pair
-  no longer warns.
-
-* The DOI normaliser makes a double slash after the prefix single, as in
-  `10.1037//0033-2909.99.1.20`, which doi.org redirects to the DOI with one
-  slash. `tf_new_evidence_dois()` and the co-citation map of `tf_litmap()` read
-  the two forms as one work.
-
-* `tf_new_evidence_dois()` skips a candidate that is not a string or holds
-  only whitespace, as it skipped `NA`.
-
-* `tf_fetch_corpus()` asks for pages by number, which OpenAlex serves without a
-  key, while the pages it needs lie within the first 10,000 results, and pages
-  through a cursor, which needs a key past the first page, only beyond them. A
-  `max_records` above `per_page` needed a key.
-
-* `tf_fetch_corpus()` leaves out a null title, which made the record fail
-  `corpus.schema.json`, and asks OpenAlex with `select=` for only the fields a
-  record maps.
-
-## New features
-
-* `tf_litmap()` gains `min_df`, the fewest records a keyword must be in to
-  enter the simple-centres map, so that rare keywords cannot seed a theme. Its
-  default of 1 leaves the map as it was, and `parameters` records it.
-
-## Fixes
-
-* `tf_fetch_corpus()` refuses a `query` that is not a single string with a
-  character left after trimming, with `query must be a non-empty string`, where
-  it sent an empty search. It no longer sends `mailto=` with an empty
-  `mailto`. When a page after the first fails, the message ends with the
-  number of records fetched before it.
-
-* `tf_new_evidence_dois()` normalises its candidates in one vectorised call,
-  where it grew its vectors and searched them one candidate at a time.
-
-## Changed results
-
-* `tf_compile_sem()` labels every regression `b_<from>_<to>`, with a numbered
-  suffix when another name holds the label, lists the sign each `increases` and
-  `decreases` proposition states as an inequality on its label, and defines
-  with `:=` the effect that each effect claim of a prediction or phenomenon is
-  about, as the sum over the directed paths of the products of their labels.
-  No effect is defined on a graph with a feedback loop or over more than 100
-  paths.
-
-* `tf_compile_sem()` leaves out a relation from a construct to itself, which it
-  wrote as `y ~ y`, with a comment that names the proposition, and writes a
-  pair that two path relations state once, where lavaan refused the second
-  line.
-
-* `tf_compile_sem()` adds a note on identification after the structural model.
-  Paths that form no loop and no bow are generically identified once the
-  measurement model identifies the constructs (Brito & Pearl, 2002), and each
-  bow is named otherwise.
-
-* `tf_simulate()` takes the signs from the relation table. It still couples
-  `causes` and `mediates` positively, and its record lists them under
-  `assumed_positive`. The record also gains `initial_state`.
-
-* `tf_simulate()` accepts `init` as a named numeric vector or named list of
-  starting values, the other constructs starting from 0, so that the response
-  to one perturbed construct can be traced. It refuses an unknown construct
-  id, and an invalid `init` now gives `simulate requires init to be a finite
-  number or a mapping from construct ids to finite numbers`.
+* `tf_fetch_corpus()` sent a search with no terms when `query` was `NULL`, empty or
+  blank. It now refuses a `query` that is not a single string with a character left
+  after trimming, with `query must be a non-empty string`. It no longer sends
+  `mailto=` when `mailto` is empty, and when a page after the first fails, the
+  message ends with the number of records fetched before it.
 
 ## Documentation
 
-* The documentation of `tf_landscape()`, the literature article and the apps
-  say that its statuses count accounts that share a word with a theme and what
-  such a match does not establish. The article no longer calls the layer a
-  machine-checkable account of the field, nor contrasts capitalised concepts
-  with lower-case keywords, since OpenAlex keywords include capitalised names.
+* `?theoryforge` was rewritten to describe the workflow, from building a theory to
+  testing it and setting it against the literature, and to list the functions for
+  each stage.
 
-* `?tf_dossier` calls the appended output of `tf_preregister()` the hypotheses
-  section of a preregistration, as the rest of the 0.7.0 documentation does,
-  where it still called it a preregistration document.
+* The documentation of `tf_landscape()`, the literature article and the apps were
+  revised to say that its statuses count the accounts that share a word with a
+  theme, and what such a match does not establish.
 
-* The methodology article links the DOI of Coulter et al. (1998) in full, where
-  the site cut the link short at the DOI's angle bracket.
+* The README was rewritten to open with the problem the package addresses, and the
+  articles to follow a theory from building to testing. The site gained an article
+  on the browser apps and one on related tools, which says what neighbouring
+  packages do and how a theory moves between them and theoryforge.
+
+* The methodology article was reorganised by subject, with a section for each group
+  of checklist items and sections on the causal reading of claims, equivalent models
+  and rivals, the content hash and the DAGitty reader. The values it quotes are
+  computed from the package when the site is built.
 
 # theoryforge 0.7.0
 

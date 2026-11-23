@@ -186,7 +186,8 @@ def test_the_new_operations_give_what_the_package_gives(app, modality_path):
     assert _run(app, "equivalent") == {"result": _plain(t.equivalent_models())}
     assert _run(app, "post_severity") == {"result": _plain(t.post_data_severity())}
     rival = "alt_symbol_interdependency"
-    assert _run(app, "discriminate", rival=rival, cycles="sigma") == {"result": _plain(t.discriminate(rival, cycles="sigma"))}
+    want = {"result": _plain(t.discriminate(rival, cycles="sigma"))}
+    assert _run(app, "discriminate", rival=rival, cycles="sigma") == want
     assert _run(app, "preregister", cycles="sigma")["text"] == tf.preregister(t, cycles="sigma")
     assert _run(app, "dossier", cycles="refuse")["hash"] == t.content_hash()
 
@@ -238,7 +239,8 @@ def test_the_literature_map_takes_its_method_and_an_uploaded_corpus(app, panic_p
     land = _run(app, "landscape", corpus="upload", method="simple_centres", min_link=2)
     assert land["result"]["method"] == "simple_centres"
     # Settings the package refuses are its answer.
-    assert _run(app, "litmap", corpus="upload", method="simple_centres", min_link=2, min_df=0, max_df=1)["ok"] is False
+    res = _run(app, "litmap", corpus="upload", method="simple_centres", min_link=2, min_df=0, max_df=1)
+    assert res["ok"] is False
 
 
 def test_the_dagitty_import_passes_on_the_settings_the_user_gives(app, tmp_path, monkeypatch):
@@ -248,7 +250,8 @@ def test_the_dagitty_import_passes_on_the_settings_the_user_gives(app, tmp_path,
 
     def reader(text, **kw):
         seen.update(text=text, kw=kw)
-        t = tf.new_theory(kw.get("id", "dagitty-import"), kw.get("title", "Causal diagram imported from DAGitty"),
+        t = tf.new_theory(kw.get("id", "dagitty-import"),
+                          kw.get("title", "Causal diagram imported from DAGitty"),
                           maturity="draft")
         return t.add_construct("a", "a", "").add_construct("b", "b", "").add_proposition(
             "p1", "a", "b", kw.get("relation", "causes"))
@@ -256,7 +259,8 @@ def test_the_dagitty_import_passes_on_the_settings_the_user_gives(app, tmp_path,
     monkeypatch.setattr(tf, "read_dagitty", reader, raising=False)
     assert app.can_import_dagitty() is True
     model = _write(tmp_path, "model.txt", "dag { a -> b }\n")
-    out = json.loads(app.import_dagitty(model, json.dumps({"id": "mine", "title": "", "relation": "increases", "formats": ["yaml"]})))
+    settings = {"id": "mine", "title": "", "relation": "increases", "formats": ["yaml"]}
+    out = json.loads(app.import_dagitty(model, json.dumps(settings)))
     assert seen == {"text": "dag { a -> b }\n", "kw": {"id": "mine", "relation": "increases"}}
     assert out["id"] == "mine" and out["counts"]["propositions"] == 1
     assert "relation: increases" in out["texts"]["yaml"]

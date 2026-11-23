@@ -57,8 +57,10 @@ constructs (Richardson & Spirtes, 2002, Theorem 4.2), so the theory implies
 no independence for it, and it is listed under \code{inseparable}. These are
 the conditional independencies the causal graph implies, each one a claim
 that data could refute. When every relation is directed and the graph is
-acyclic, they are the basis set of Pearl (1988) and Shipley (2000), from
-which every other independence the graph implies follows.
+acyclic, they are the basis set of Pearl (1988) and Shipley (2000). When the
+model holds, their tests are independent of each other, and when the
+distribution has the property called composition, as a multivariate normal
+one does, they imply every other independence the graph implies.
 }
 \details{
 \code{given = "minimal"} then drops each construct from the conditioning

@@ -1,34 +1,27 @@
 # Workflow modes
 
-theoryforge organises work into three modes: BUILDING, DEVELOPMENT and
-TESTING. A theory is a single versioned object that moves through these
-modes as it matures. Each mode is a set of methods on the `Theory` object, so
-a theory built with the BUILDING methods can be appraised under DEVELOPMENT and
-then carried into TESTING without conversion.
-
-This page assumes you have already read a theory as in
-[Get started](getting-started.md). See
-[Methodological foundations](methodology.md) for the rationale and the exact
-computation behind the rigour checklist, severity and amendment-appraisal rules
-demonstrated below.
-
-Throughout, the package is imported as `tf`. The examples read the theories
-included with it through `tf.example_path()`, as on the
-[Get started](getting-started.md) page, so the code runs as shown after
-`pip install theoryforge`. Every printed result and figure below is produced
-when this page is built.
+A theory's `maturity` field records its stage as `building`, `developing` or `testing`, or
+as `draft`, which makes the rigour checklist's gate advisory. Each stage has its own set of
+methods on the `Theory` object, so a theory built with the builders can be appraised as it
+develops and tested without conversion. This page follows the three stages with the example
+theories that ship with the package, read through `tf.example_path()` as on
+[Get started](getting-started.md), so the code runs as shown after
+`pip install theoryforge`. Every printed result and figure is produced when the page is
+built. [Methodological foundations](methodology.md) gives the rationale and the
+computation behind the checks shown here.
 
 ```python exec="1" source="block" session="workflow-modes"
 import theoryforge as tf
 ```
 
-## BUILDING
+## Building
 
-BUILDING assembles a theory from scratch. `tf.new_theory()` returns an empty
-`Theory`, and the `add_*` methods append constructs, propositions and
-predictions. Each method changes the theory in place and returns it, so calls
-chain. Every addition is recorded in a provenance log, a step-by-step account
-of how the theory was assembled.
+### Assembling a theory step by step
+
+`tf.new_theory()` returns an empty `Theory`, and the `add_*` methods append constructs,
+propositions, predictions, phenomena, alternatives, assumptions, evidence and test outcomes.
+Each method changes the theory in place and returns it, so calls chain, and each records a
+step in the theory's provenance log.
 
 ```python exec="1" source="block" session="workflow-modes"
 t = (
@@ -62,61 +55,44 @@ t = (
 )
 ```
 
-The positional arguments follow the schema.
-`add_construct(id, label, definition)` takes optional `measurement` and
-`boundary_conditions`, each a list or a single string.
-`add_proposition(id, frm, to, relation)` takes an optional `mechanism`. Its
-`relation` is one of `increases`, `decreases`, `moderates`, `mediates`,
-`causes` or `associates`, and `frm` stands in for the schema's `from` field,
-since `from` is a reserved word in Python.
-`add_prediction(id, statement, type)` takes optional `derives_from` and
-`diagnostic_vs`, each a list or a single string, and its `type` is one of
-`point`, `interval`, `directional` or `existence`. A single string is stored as
-a one-element list, so `derives_from="p1"` means `["p1"]`, as it does in R. The
-same holds for `key_constructs` in `add_alternative()` and `protects` in
-`add_assumption()`.
+The positional arguments follow the schema. `add_construct(id, label, definition)` takes
+optional `measurement` and `boundary_conditions`. `add_proposition(id, frm, to, relation)`
+takes an optional `mechanism`, and `frm` stands in for the schema's `from`, a reserved word
+in Python. The relation is one of `increases`, `decreases`, `moderates`, `mediates`, `causes`
+or `associates`. `add_prediction(id, statement, type)` takes optional `derives_from`,
+`diagnostic_vs`, `bounds` and `claim`. A single string given where a list is expected is
+stored as a one-element list, so `derives_from="p1"` means `["p1"]`.
 
-The `type` names the form of the claim. An `existence` prediction asserts that
-an effect or relation exists, without a direction. A `directional` one asserts
-a sign or an order, which covers comparisons, interactions, the invariance of a
-direction across groups and claims that an effect occurs only when a condition
-holds. An `interval` prediction asserts that a quantity lies in a stated range,
-the range the theory permits. A `point` prediction asserts one value, with the
-tolerance that measurement requires. Its width is measurement tolerance, not
-latitude the theory allows. The label is self-declared, and no function checks
-it against the statement.
+The `type` of a prediction names the form of its claim. An `existence` prediction asserts
+that an effect or relation exists, without a direction. A `directional` one asserts a sign
+or an order. An `interval` prediction asserts that a quantity lies in a stated range, and a
+`point` prediction asserts one value, with the tolerance that measurement requires.
+`bounds: {lower, upper}` states the region, and the full validation checks that it fits the
+type. The type is declared by the author, and no function checks it against the statement.
 
-The provenance log is held under `t.data["provenance"]`. Each entry records
-its step number, the action and the identifier it affected, or the model type
-for `set_formal_model()`. The action is the name of the R twin's function,
-`tf_theory` for `new_theory()` and `tf_add_construct` for `add_construct()`, so
-a log reads the same whichever language built the theory.
+The provenance log records each step's number, the action and the identifier it affected.
+The action is named after the R function, `tf_theory` for `new_theory()`, so that a log reads
+the same in either language.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 for step in t.data["provenance"]:
     print(step["step"], step["action"], step["detail"])
 ```
 
-Once the object is assembled, `t.validate()` confirms it satisfies the
-schema's required fields, returning `True` silently, and `t.report()` returns
-the rigour checklist. The report opens with the theory's id, its schema and
-checklist versions and its maturity. It then gives the aggregate score, the
-checklist coverage, the gate and the number of blockers that failed, and ends
-with one entry per checklist item.
+The checklist shows what the theory still lacks. Its one prediction gives a direction
+without a range, one construct has no stated scope, no prediction names a rival and no
+formal model is declared.
 
-```python exec="1" source="block" result="json" session="workflow-modes"
-t.validate()
-print(t.report("json"))
+```python exec="1" source="block" result="text" session="workflow-modes"
+report = t.check()
+print(report["aggregate_score"], report["aggregate_range"], report["gate"])
+print([item["id"] for item in report["items"] if item["status"] == "warn"])
 ```
 
-Because the methods change the theory in place, assigning the result to a new
-name does not keep a second version. After `v2 = v1.add_prediction(...)`, the
-names `v2` and `v1` refer to one object. The R builders return a modified copy,
-so the same line in R leaves `v1` as it was. To amend a theory and keep the
-version it started from, begin with `copy()`, which copies every collection the
-theory holds. `tf.Theory(dict(t.data))` copies only the top-level mapping, so
-the two objects would go on sharing their constructs, propositions and
-predictions.
+Because the builders change the theory in place, `v2 = v1.add_prediction(...)` leaves `v1`
+and `v2` naming one object, whereas the R builders return a modified copy. To amend a theory
+and keep the version it started from, begin with `copy()`, which copies every collection the
+theory holds.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 amended = t.copy().add_prediction(
@@ -124,490 +100,521 @@ amended = t.copy().add_prediction(
     "the standardised effect of arousal lies between 0.2 and 0.4",
     "interval",
     derives_from="p1",
+    bounds={"lower": 0.2, "upper": 0.4},
 )
 print([p["id"] for p in t.data["predictions"]])
 print([p["id"] for p in amended.data["predictions"]])
 ```
 
-## DEVELOPMENT
+### Starting from a DAGitty diagram
 
-DEVELOPMENT compares two versions of a theory and judges whether an
-amendment is an improvement. The appraisal operationalises the Lakatosian
-distinction between progressive and degenerating problem shifts. An
-amendment is progressive when it adds content its prior version lacked and a
-test corroborates a prediction derived from that content, with no ad hoc
-assumption added, no corroborated prediction dropped and no unrefuted content
-lost. The two versions are compared by what they claim, not by the ids of their
-predictions.
+Many causal theories are first drawn as a diagram in [DAGitty](https://dagitty.net)
+([Textor et al., 2016](https://doi.org/10.1093/ije/dyw341)). `tf.read_dagitty()` reads its
+model code and returns a theory with one construct for each variable and one proposition
+for each edge. An arrow becomes `causes`, or `increases` or `decreases` when `relation` says
+so, and `<->` becomes `associates`. The theory has the maturity `draft`, and it is not valid
+until every construct has a definition, which a diagram cannot supply.
 
-Call `appraise_amendment` on the newer version, passing the prior version as
-the argument. The two versions must be distinct objects, as they are when the
-amendment begins from `copy()`. Given the same object twice, the call raises a
-`ValueError` that points to `copy()`, because a theory compared with itself can
-only come out `neutral`.
+FAIR theory specifies a theory as a findable, accessible, interoperable and reusable digital
+object in a public archive
+([Van Lissa et al., 2026](https://doi.org/10.1177/17456916251401850)). Its worked example of
+self-determination theory, in the theorytools package
+([Van Lissa, 2025](https://doi.org/10.32614/CRAN.package.theorytools)), keeps the diagram in
+a DAGitty file and the construct definitions in a CSV table beside it. The example below
+imports the modality-switching graph in that form. The two files are written out as text so
+that the code runs as shown, and in practice each would be read from its file.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+import csv
+import io
+
+dagitty_file = """dag {
+  sensorimotor_experience -> modality_activation
+  modality_activation -> switch_cost
+  modality_activation -> conceptual_access
+  lexical_familiarity -> conceptual_access
+}"""
+definitions_file = """Concept,Synonym,Definition,Operationalization
+Sensorimotor experience,,Perceptual and motor engagement with the referent of a concept.,Perceptual strength ratings
+Modality activation,,Recruitment of one modality's perceptual system while a word is understood.,Interference from a concurrent load
+Switch cost,,The extra time taken when consecutive trials address different modalities.,Switch-minus-repeat response time
+Conceptual access,,The speed with which the meaning of a word becomes available.,Semantic categorisation latency
+"""
+
+imported = tf.read_dagitty(
+    dagitty_file,
+    id="modality-switching-fair",
+    title="Modality switching in grounded conceptual processing",
+    relation="increases",
+)
+rows = csv.DictReader(io.StringIO(definitions_file))
+definitions = {row["Concept"].strip().lower().replace(" ", "_"): row for row in rows}
+for construct in imported.data["constructs"]:
+    row = definitions.get(construct["id"])
+    if row is not None:
+        construct["label"] = row["Concept"].strip()
+        construct["definition"] = row["Definition"].strip()
+
+print([c["id"] for c in imported.data["constructs"] if not c["definition"]])
+```
+
+The table names its concepts in words, and the diagram in identifiers, so each concept is
+matched to a construct by its name lower-cased with spaces replaced by underscores. One
+construct, lexical familiarity, has no row in the table and is listed above. The
+operationalisation column is left out, because it describes measures in prose, whereas a
+construct's `measurement` lists indicator names that the lavaan syntax uses as columns of
+the data. The merge edits the theory's data directly, so the provenance log records the
+import and not the definitions.
+
+With the missing definition added, the theory validates in full. Its gate is advisory,
+since its maturity is `draft`, and the checklist reports what the diagram could not supply:
+a prediction that forbids some result, measures, scope conditions and mechanisms.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+familiarity = next(c for c in imported.data["constructs"] if c["id"] == "lexical_familiarity")
+familiarity["definition"] = "How well established the form of a word is for a reader."
+print(imported.validate(full=True))
+
+report = imported.check()
+print(report["gate"])
+print([f'{item["id"]} {item["status"]}' for item in report["items"] if item["status"] != "pass"])
+print(imported.implications()["n_implications"], imported.equivalent_models()["n_reversible"])
+```
+
+The graph alone already commits the imported theory to the conditional independencies and
+the untestable directions described under [Testing](#testing), which match those of the
+full modality-switching theory, since the two share a graph. The `causal_dag` view writes a
+theory back in DAGitty's syntax, keeping its directed edges, its associations and any
+variable marked as latent.
+
+## Developing
+
+A theory changes as it meets data, and the question is whether a change strengthens it.
+`appraise_amendment()` compares two versions and classifies the change as progressive or
+degenerating, in the sense of Lakatos's methodology of research programmes. Call it on the
+newer version and pass the prior version. The two must be distinct objects, as they are when
+the amendment starts from `copy()`.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 v1 = tf.read(tf.example_path("panic-network.theory.yaml"))
 v2 = tf.read(tf.example_path("panic-network-2026-v2.theory.yaml"))
 
 result = v2.appraise_amendment(v1)
-print(result["verdict"])
+for key in ("verdict", "new_predictions", "corroborated_new", "dropped",
+            "ad_hoc_assumptions", "content_lost", "implications_lost",
+            "implications_lost_unrefuted"):
+    print(key, result[key])
 ```
 
-The v1 fixture implies that arousal and avoidance are independent given
-perceived threat and states that independence as `pred_indep`, which a test
-refuted. The v2 fixture drops `pred_indep`, adds proposition `p4`, a direct
-path from arousal to avoidance, and derives from it a new prediction, `pred4`,
-that a registered test corroborates. The return value is a dictionary that
-gives the verdict and the evidence behind it.
+The first version implies that arousal and avoidance are independent given perceived threat
+and states that independence as `pred_indep`, which a test refuted. The second drops
+`pred_indep`, adds a direct path from arousal to avoidance and derives from it a new
+prediction that a registered test corroborates. It gives up one implied independence, the
+refuted one, so no unrefuted content is lost.
 
-```python
-{
-    # 'progressive', 'degenerating', or 'neutral'
-    "verdict": "progressive",
-    "new_predictions": ["pred4"],      # in v2 but not in v1, renames excepted
-    # of those, the ones some test passes and none fails
-    "corroborated_new": ["pred4"],
-    # new assumptions added for an anomaly that nothing new corroborates
-    "ad_hoc_assumptions": [],
-    # new predictions derived only from v1's propositions, or whose claim
-    # v1's causal graph entails
-    "articulated": [],
-    "underived": [],        # new predictions derived from no proposition
-    # corroborated new predictions whose passing test was preregistered
-    "corroborated_new_registered": ["pred4"],
-    "renamed": [],          # {"prior": ..., "new": ...}: one claim under a new id
-    "dropped": ["pred_indep"],   # predictions of v1 that v2 no longer holds
-    "dropped_corroborated": [],  # of those, the ones v1 had corroborated
-    # untested predictions of v1 that v2 drops or weakens
-    "content_lost": [],
-    "new_anomalies": [],    # retained predictions that now fail a test
-    # one record per new assumption added for an anomaly, with its class
-    "assumptions": [],
-    "theoretically_progressive": True,  # some new prediction adds content
-    "empirically_progressive": True,    # and one of those is corroborated
-    # retained predictions whose content changed: {"id": ..., "change": ...}
-    "revised": [],
-    "weakened_refuted": [],  # weakened predictions that had failed in v1
-    "unresolved": [],        # new predictions citing a missing proposition
-    "implications_compared": True,
-    # independencies v1's causal graph implies and v2's does not
-    "implications_lost": ["c_arousal _||_ c_avoidance | c_perceived_threat"],
-    # of those, the ones no failed prediction of v1 contradicts
-    "implications_lost_unrefuted": [],
-    "implications_gained": [],  # independencies only v2 implies
-}
+The verdict is `progressive` when a corroborated new prediction adds content, no content is
+lost, no ad hoc assumption is added, no corroborated prediction is dropped and no failed
+prediction is weakened. It is `degenerating` when an ad hoc assumption is added or a failed
+prediction is weakened and no corroborated new prediction adds content. Any other
+combination is `neutral`, theoryforge's label for an amendment that meets neither rule.
+A new prediction adds no content when it derives from no proposition or only articulates
+what the prior version already held, and a prediction under a new id with the same
+statement and type is reported as `renamed`. An assumption added for an anomaly is ad hoc
+unless a new prediction it protects, other than that anomaly, is corroborated. The
+appraisal reads no dates, so deciding which version is the prior is the caller's
+responsibility. The returned dictionary holds further fields, listed in the
+[API reference](api.md#theoryforge.appraise_amendment), and
+[Methodological foundations](methodology.md) gives the full rule.
+
+## Testing
+
+Testing starts from what the theory commits itself to. The testing sections read the
+modality-switching theory, whose causal graph is acyclic. Three of its four predictions and
+its one phenomenon state machine-readable claims, and its two rivals state propositions of
+their own. Where a feedback loop matters, the sections read the panic-network theory
+instead.
+
+```python exec="1" source="block" session="workflow-modes"
+switching = tf.read(tf.example_path("modality-switching.theory.yaml"))
 ```
 
-The appraisal applies the following rule to the content of both versions and
-the recorded test outcomes.
+### The claim-form rubric
 
-- `progressive`: a corroborated new prediction adds content, no content is
-  lost, no ad hoc assumption was added, no corroborated prediction was dropped
-  and no prediction that failed in v1 was weakened.
-- `degenerating`: an ad hoc assumption was added or a failed prediction was
-  weakened, and no corroborated new prediction adds content.
-- `neutral`: any other combination. Lakatos's scheme has only the two
-  verdicts above, and `neutral` is theoryforge's label for an amendment that
-  meets neither.
-
-A new prediction adds content unless it derives from no proposition at all,
-cites an id that names no proposition, or is an articulation. An articulation
-derives only from propositions that v1 already held with the same endpoints
-and relation, with no new assumption protecting it, or states a claim that
-v1's causal graph already entails. A prediction under a new id that makes the
-same claim as a dropped one, with the same statement and type, is that
-prediction renamed and is not new. A prediction counts as corroborated when at
-least one entry under `test_outcomes` passes it and none fails it.
-
-A prediction that v2 keeps is compared with its v1 form. It is weakened when
-its type ranks lower (existence, directional, interval, point), its bounds
-allow a wider region, or its claim is dropped or gives up a fixed sign for
-`nonzero`, and nothing in it is stronger. Content is lost when v2 drops or
-weakens an untested prediction, or gives up an implied independence that no
-failed prediction of v1 contradicts. Lakatos (1970, p. 118) considers series
-in which each theory has at least as much content as the unrefuted content of
-its predecessor, so lost content blocks a progressive verdict.
-
-`added_for` holds the id of the prediction whose anomaly an assumption
-answers. When it is empty, an assumption that protects a prediction that
-failed in v1 is taken to answer the first such prediction, and its record
-says so with `added_for_inferred`. A new assumption added for an anomaly
-counts as ad hoc unless one of the predictions it protects is new in this
-version, is not that anomaly and is corroborated. Re-analysing the anomalous
-prediction until it passes therefore does not stop the assumption counting as
-ad hoc. The appraisal reads `registered` only for
-`corroborated_new_registered`. It reads no date, so deciding which version is
-the prior is the caller's responsibility.
-
-## TESTING
-
-TESTING prepares a theory for empirical evaluation. It scores how risky each
-prediction is, derives what the causal graph forbids in data, writes the
-hypotheses section of a preregistration, assembles a reviewer-facing audit
-bundle and compiles a measurement model for lavaan.
-
-### Severity
-
-`severity()` returns one entry per prediction, in file order, giving the
-base risk implied by the prediction type and the computed severity after the
-rubric's adjustments.
+`severity()` grades each prediction before any data, by the form of its claim. The base risk
+rises with the strength of the claim, from `existence` to `point`. A directional prediction
+is discounted for the correlations a field shows anyway, and a prediction that names a
+registered rival in `diagnostic_vs` gains a small bonus.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
-for s in t.severity():
-    print(s["prediction_id"], s["risk_score"], s["computed_severity"])
+for s in switching.severity():
+    print(s["prediction_id"], s["type"], s["risk_score"], s["computed_severity"])
 ```
 
-Each entry has the shape below.
+The values, the discount and the bonus are the package's conventions. The rubric reads only
+the declared type and the named rivals, so it ranks claims by their form and says nothing
+about how severely a claim has been tested, which depends on the design and the data.
+[Post-data severity](#post-data-severity) reads the data.
 
-```python
-{
-    "prediction_id": "pred1",
-    "type": "directional",
-    "risk_score": 0.4,            # base risk from the prediction type
-    # after the directional discount and any diagnostic bonus
-    "computed_severity": 0.3,
-}
+### What the causal graph implies
+
+A causal theory commits itself to claims it never states, because its propositions together
+form a graph, and the graph implies conditional independencies. `implications()` derives
+them. Each directed relation is an arrow, and an association is a bidirected edge, covariance
+the theory leaves unexplained. Every pair of constructs with no edge between them yields one
+statement when some set of other constructs separates them, usually the parents of both.
+When every relation is directed, these statements are the basis set, from which every other
+independence the graph implies follows.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+implied = switching.implications()
+for i in implied["implications"]:
+    print(i["statement"])
 ```
 
-Base risk rises with the strength of the claim: `existence` 0.1,
-`directional` 0.4, `interval` 0.7, `point` 0.9. Directional predictions
-carry a discount for the ambient correlations expected in the field. A
-prediction that discriminates the theory from a named rival, through its
-`diagnostic_vs` field, earns a small severity bonus. The values, the discount
-and the bonus are the package's conventions. The rubric reads only the
-declared type and the named rivals, never the statement or the data. It
-therefore ranks claims by their form and says nothing about how severely a
-claim has been tested, which depends on the design and the data.
+Switch cost and conceptual access are the two children of a fork at modality activation, so
+the theory says that their correlation is due to that shared cause and vanishes once it is
+held fixed. Sensorimotor experience and lexical familiarity meet only at the collider at
+conceptual access, so the theory says they are unrelated with nothing held fixed. The first
+statement is not among the theory's predictions, whereas the second is stated as `pred4`.
+Evidence against either would count against the theory.
 
-### What the causal graph commits you to
+The basis set conditions on the parents of both constructs, which can be more than a single
+test needs. `given="minimal"` prunes each conditioning set until none of its members can be
+dropped.
 
-Severity scores the predictions a theory states. A causal theory also commits
-itself to claims it never states, because the propositions taken together are a
-graph, and the graph implies a set of conditional independencies.
-`implications()` derives them. Each directed relation (increases, decreases,
-causes, mediates and moderates) is an arrow, and an association is a
-bidirected edge, covariance the theory leaves unexplained. Every pair of
-constructs with no edge between them yields one claim when some set of other
-constructs separates them, usually the parents of both. When every relation is
-directed, those claims are the basis set, from which every other independence
-the graph implies follows. Each claim is something a study can be designed to
-look for and fail to find. An association can leave a pair that no set
-separates, and `implications()` lists such a pair under `inseparable`, since
-the theory then implies no independence for it.
+```python exec="1" source="block" result="text" session="workflow-modes"
+for i in switching.implications(given="minimal")["implications"]:
+    print(i["statement"])
+```
 
-The demonstration theory built above has a single proposition and so no
-non-adjacent pair. The panic-network fixture has three, but `implications()`
-derives no statements from it by default. Its third proposition returns from
-perceived threat to arousal, closing the feedback loop the theory is about, and
-`implications()` raises a `ValueError` on a graph with a cycle unless the call
-specifies how to read it.
+A minimal set holds fewer constructs, and that matters because the constructs are measured
+with error. Error in a conditioning construct leaves part of the dependence that holding it
+fixed should remove, so a conditional statement tested on observed scores is rejected too
+often, and more often the larger the sample
+([Westfall & Yarkoni, 2016](https://doi.org/10.1371/journal.pone.0152719)). Take a chain
+whose two paths have standardised coefficients of .5, with the middle construct measured at
+a reliability of .8. The block below computes the partial correlation of the two ends given
+the observed middle and the rate at which a test at the 5 per cent level rejects the true
+statement.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+from math import atanh, erfc, sqrt
+
+r_observed = 0.5 * sqrt(0.8)                       # each end with the observed middle
+partial = (0.5 * 0.5 - r_observed**2) / (1 - r_observed**2)
+for n in (200, 500, 1000):
+    z = atanh(partial) * sqrt(n - 4)
+    rejected = 0.5 * erfc((1.96 - z) / sqrt(2)) + 0.5 * erfc((1.96 + z) / sqrt(2))
+    print(n, round(partial, 4), round(rejected, 2))
+```
+
+The minimal statements suit tests of single pairs. They are no longer a basis set, so their
+tests are not to be combined into one test of the model, as the tests of a basis set can be.
+A conditional statement is better tested in a latent-variable model, which takes the
+measurement error into account, and each statement can be tested in such a model separately
+([Thoemmes et al., 2018](https://doi.org/10.1037/met0000147)).
+
+A graph with a feedback loop is refused by default. The panic-network theory has a loop
+between arousal and perceived threat.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 panic = tf.read(tf.example_path("panic-network.theory.yaml"))
 
 try:
     panic.implications()
-except ValueError as exc:
-    print(exc)
+except ValueError as problem:
+    print(problem)
+
+looped = panic.implications(cycles="sigma")
+print(looped["feedback"], [i["statement"] for i in looped["implications"]])
 ```
 
-The error message names the cycle and the option for reading such a graph. A
-cyclic graph does imply conditional independencies, and dagitty accepts the
-`causal_dag` export of one. dagitty reads it by d-separation, though, which a
-model with feedback is guaranteed to satisfy only in special cases, a linear
-model among them. The criterion that holds whenever each feedback loop has a
-unique equilibrium is sigma-separation
-([Bongers et al., 2021](https://doi.org/10.1214/21-AOS2064)), and
-`cycles="sigma"` applies it.
+The d-separation criterion, which dagitty applies to any graph, is guaranteed to hold in a
+model with feedback only in special cases, a linear model among them. Sigma-separation holds
+whenever each feedback loop settles into a unique equilibrium
+([Bongers et al., 2021](https://doi.org/10.1214/21-AOS2064)), and `cycles="sigma"` applies
+it. A theory that posits alternative stable states, such as a calm state and a panic state
+that each sustain themselves, violates that assumption, and its statements are then not
+guaranteed.
+
+### What the causal graph entails
+
+A prediction or a phenomenon can state its claim in machine-readable form, as the effect of
+one construct on another or the association between two, with a sign.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
-implied = panic.implications(cycles="sigma")
-print(implied["feedback"])
-for i in implied["implications"]:
-    print(i["statement"])
+print(switching.data["predictions"][0]["claim"])
 ```
 
-The loop between arousal and perceived threat is the one feedback loop.
-Holding perceived threat fixed cuts the only way out of the loop towards
-avoidance. The theory therefore implies that arousal and avoidance are
-independent given perceived threat, a claim it never states and a study could
-refute. The claim rests on an assumption the graph cannot check, that for given
-inputs the loop settles into a single equilibrium. A network theory that posits
-alternative stable states, such as a calm state and a panic state that each
-sustain themselves, violates the assumption, and the claim is then not
-guaranteed. `simulate()`, described below, runs the loop over time.
-
-A second fixture is a theory of modality switching in grounded conceptual
-processing, and its causal graph is acyclic. Sensorimotor experience with a
-concept drives activation of the modality-specific perceptual system. That
-activation both raises the cost of switching modality between consecutive
-trials and eases conceptual access, which lexical familiarity with the word
-form eases as well.
+`entailments()` reads each claim against the graph. The signs of the routes between the two
+constructs decide whether the graph entails the claim, contradicts it or leaves it
+undetermined, and `via` names the propositions the verdict rests on. For an effect claim on
+an acyclic graph, `adjustment` gives a smallest set of constructs whose adjustment would
+identify the effect in observational data, here the empty set.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
-switching = tf.read(tf.example_path("modality-switching.theory.yaml"))
-
-implied = switching.implications()
-print(implied["n_edges"], implied["n_implications"])
-for i in implied["implications"]:
-    print(i["statement"])
+entailed = switching.entailments()
+for c in entailed["claims"]:
+    print(c["id"], c["kind"], c["sign"], c["verdict"], c["via"], c["adjustment"])
+print(entailed["counts"])
 ```
 
-Five constructs and four causal propositions leave six non-adjacent pairs, and
-so six claims, each written in the notation dagitty prints. Switch cost and ease
-of conceptual access are the two children of a fork at modality activation, so
-the theory says the correlation between them is entirely due to that shared
-cause and vanishes once it is held fixed. Sensorimotor experience and lexical
-familiarity meet only at the collider at conceptual access, and the theory says
-they are unrelated to each other with nothing held fixed. An account deriving
-perceptual knowledge from distributional word statistics would deny this claim.
-Neither claim appears among the theory's own predictions, and evidence against
-either could refute the theory. A version of the theory that granted
-sensorimotor experience and lexical familiarity some covariance would state it
-with `associates`, and the claim that the two are unrelated would then be
-withdrawn.
+The derived signs hold in a linear model with the theory's graph, or at least in one in
+which each relation acts in one direction throughout, and in which no common cause of two
+constructs is left out unless an association stands for it. The function shows what the
+propositions commit the theory to and does not show whether a claim holds in data. The
+checklist's derivation-chain item counts a prediction whose claim the graph contradicts or
+leaves open as not derived from the propositions it cites.
 
-The claims concern constructs, and a study observes them through fallible
-measures. Error in a conditioning construct leaves part of the dependence that
-holding it fixed should remove. A conditional claim tested on observed scores is
-therefore rejected too often, and more often the larger the sample
-([Westfall & Yarkoni, 2016](https://doi.org/10.1371/journal.pone.0152719)). Take
-a chain whose two paths have standardised coefficients of .5, with the middle
-construct measured at a reliability of .8. A partial-correlation test at the 5
-per cent level then rejects the true claim in about 14, 29 and 51 per cent of
-studies of 200, 500 and 1,000 observations. Five of the six claims above are
-conditional. They are better tested in a latent-variable model, which takes the
-measurement error into account
-([Westfall & Yarkoni, 2016](https://doi.org/10.1371/journal.pone.0152719)). The
-measurement model that `compile_sem()` writes is one starting point, and each
-implied independence can be tested in it separately
-([Thoemmes et al., 2018](https://doi.org/10.1037/met0000147)).
+### Equivalent models
+
+Graphs that imply the same conditional independencies are Markov equivalent, and no
+observational study can tell them apart
+([Andersson et al., 1997](https://doi.org/10.1214/aos/1031833662)). In structural
+equation modelling, this is the problem of equivalent models
+([MacCallum et al., 1993](https://doi.org/10.1037/0033-2909.114.1.185)).
+`equivalent_models()` marks each directed edge as compelled, pointing the same way in every
+equivalent graph, or reversible.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+equivalent = switching.equivalent_models()
+print(equivalent["v_structures"])
+for edge in equivalent["edges"]:
+    print(edge["propositions"], edge["from"], "->", edge["to"], edge["status"])
+```
+
+The collider at conceptual access compels the two edges into it. The other two edges are
+reversible, so no observational study can tell whether sensorimotor experience drives
+modality activation or the reverse. Testing such a direction needs an intervention, a
+temporal order or another assumption. The rule covers acyclic graphs of directed relations,
+so for a theory with a feedback loop or an association the record says why it was not
+computed.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+print(panic.equivalent_models()["reason"])
+```
+
+### Comparing the theory with a rival
+
+A registered alternative can state its own propositions over the theory's constructs, under
+`alternatives[].propositions`. In grounding by interaction, perceptual activation follows
+access to the concept instead of feeding it.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+rival = switching.data["alternatives"][0]
+for p in rival["propositions"]:
+    print(p["id"], p["from"], p["relation"], p["to"])
+```
+
+`discriminate()` sets the two graphs side by side. It lists the claims of the theory on which
+the two graphs give opposite verdicts, the independencies one graph implies and the other
+does not, and the effects and associations whose sign differs between them. Each of these
+is a result that could tell the two accounts apart.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+compared = switching.discriminate("alt_grounding_by_interaction")
+print(compared["markov_equivalent"], compared["counts"])
+for c in compared["claims"]:
+    print(c["id"], c["theory"], c["rival"], c["discriminates"])
+for record in compared["independencies"]:
+    print(record["implied_by"], record["statement"])
+```
+
+The rival can also be a theory of its own, a `Theory` or a mapping, whose constructs are
+matched to the theory's by id. The comparison reads only the propositions each account
+states and does not say which account the data favour. The checklist's diagnosticity item
+reads the same verdicts: a prediction that names a rival in `diagnostic_vs` counts only when
+the rival's own graph does not give its claim the same verdict.
 
 ### Preregistration
 
-`preregister()` renders the hypotheses section of a preregistration as
-Markdown. Each prediction is listed with its claim type and derivation, the
-auxiliary assumptions that protect it, the registered rivals it discriminates
-and its test record. A hypothesis that a recorded outcome has already tested is
-therefore marked as such. The header gives the theory's version, when it has
-one, and says whether every prediction cites declared propositions, a check of
-references that does not show that a prediction follows from them. A section
-lists the conditional independencies that the causal graph implies, or says why
-there are none, and a severity line for each prediction closes the document.
-Called without an argument, `preregister()` returns the text.
+`preregister()` writes the theory and hypotheses sections of a preregistration as Markdown.
+Its header gives the theory's version and content hash. Each hypothesis is listed with its
+type, its derivation, its claim and what the graph says of it, the adjustment an
+observational test would need, the auxiliary assumptions that protect it, the rivals it
+discriminates and its test record. The hypotheses section of the modality-switching theory
+reads as follows.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
-text = t.preregister()
-print(text)
+text = switching.preregister()
+print(text[text.index("## Hypotheses"):text.index("## Sampling plan")])
 ```
 
-A prediction can record the sampling plan of its test, the planned sample,
-alpha, smallest effect of interest and power, in a `test` block. The document
-then lists the plans in a section of their own after the hypotheses, and this
-theory records none. The theory file holds no study design, analysis plan or
-inference criteria, so a registry needs more than this section. A template such
-as PRP-QUANT sets out the rest
-([Bosnjak et al., 2022](https://doi.org/10.1037/amp0000879)).
+A sampling plan section, the implied conditional independencies and a severity line for
+each prediction follow. A registry also needs the study design, the analysis plan and the
+inference criteria, which a theory file does not hold, and a template such as PRP-QUANT
+sets them out ([Bosnjak et al., 2022](https://doi.org/10.1037/amp0000879)). Passing a path,
+as in `switching.preregister("prereg.md")`, also writes the document to disk.
 
-Passing a path writes the document to disk as well as returning it.
+### Post-data severity
 
-```python
-t.preregister("panic-prereg.md")
-```
+A prediction with `bounds` states the region of a quantity its claim allows, and a test
+outcome can record the estimate the test observed and its standard error.
+`post_data_severity()` computes, for each such outcome, how severely the claim passed: the
+probability that the test would have given a result less in accord with the claim, had the
+quantity been at the nearer bound ([Mayo & Spanos, 2006](https://doi.org/10.1093/bjps/axl003)).
+For a claim with two bounds, it takes the smaller of the two one-sided values, the package's
+own extension, which equals 1 minus the p value of the two one-sided tests of equivalence.
 
-### Audit bundle
-
-`dossier()` assembles a single Markdown document for a reviewer or editor. It
-opens with the header and the rigour-checklist table, followed by the severity
-list, the test record, the evidence, the provenance log and the preregistration.
-The output is deterministic, so it can be committed or attached to a submission.
+The theory's interval prediction for the switch cost records one outcome, with illustrative
+values. A second outcome is added below, as a replication whose estimate falls above the
+region.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
-print(t.dossier())
+replicated = switching.copy().add_test_outcome(
+    "pred2",
+    True,
+    estimate=63,
+    se=6,
+    observed="Illustrative values: switch cost 63 ms (SE 6 ms).",
+)
+for row in replicated.post_data_severity():
+    print(row["outcome"], row["lower"], row["upper"], row["estimate"], row["se"], row["severity"])
+```
+
+The audit dossier writes each value beside its outcome in its test record. It writes a
+value that rounds to 1 as `> 0.999` and one that rounds to 0 as `< 0.001`, since a test
+cannot give certainty, and it marks an outcome recorded as passed whose estimate lies
+outside the region.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+dossier = replicated.dossier()
+print(dossier[dossier.index("## Test record"):dossier.index("## Evidence")])
+```
+
+The computation uses a normal approximation and treats the standard error as known, so it
+overstates the severity of an estimate inside the region when the standard error comes from
+a small sample. A high value does not show that the claim is true, and the rigour checklist
+does not read it.
+
+### The audit dossier
+
+`dossier()` assembles one Markdown document for a reviewer or an editor. Its header gives the
+content hash, the checklist version, the aggregate score with its range and the gate.
+Sections on the checklist, the severities, the test record, the evidence, the claims and the
+causal graph, the equivalent models, the rivals and the provenance follow, and the
+preregistration closes it. The same theory always gives the same dossier, so it can be
+committed or attached to a submission.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+dossier = switching.dossier()
+print(dossier[:dossier.index("## Rigour checklist")])
+print([line for line in dossier.splitlines() if line.startswith("## ")])
 ```
 
 ### Compiling a measurement model
 
-`compile_sem()` translates the structural content into lavaan model syntax.
-Constructs with measurement indicators become a latent measurement model
-with `=~`, directed propositions become labelled structural paths with `~` and
-associations become covariances with `~~`. Comments then say whether the paths
-are identified and list the sign each `increases` or `decreases` proposition
-states, and each effect a prediction claims becomes a defined parameter with
-`:=`, which lavaan estimates. A block at the end fixes at zero
-each covariance between two constructs that are both exogenous or both
-terminal, unless an association joins them or either is a moderator. Deleting
-the block restores lavaan's defaults. The theory built above has no such pair,
-so its syntax has no block.
+`compile_sem()` writes lavaan model syntax for `lavaan::sem()`. Constructs with indicators
+become latent variables with `=~`, directed propositions labelled paths with `~` and
+associations covariances with `~~`. Comments say whether the paths are identified and list
+the sign each `increases` or `decreases` proposition states, and the effect each claim is
+about is defined with `:=`, so that lavaan estimates the quantity the claim concerns.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
-print(t.compile_sem())
+print(switching.compile_sem())
 ```
+
+The last block fixes at zero the covariance of the two exogenous constructs and the residual
+covariance of the two terminal ones, which two of the implied independencies require.
+`lavaan::sem()` frees them by default, so a fit with its defaults could not refute either
+statement. Deleting the block restores lavaan's defaults. The indicator names are the
+measurement entries made safe for lavaan and must match columns of the data. A construct
+with a single indicator is treated as measured without error, and a feedback loop makes the
+model non-recursive, which may leave it unidentified, so the syntax is a starting point for
+a fit.
 
 ## Rendering and depositing
 
-`render_report()` writes the dossier as a Quarto source document, ready to
-render to HTML or PDF. With `render=False`, which is the default, it writes the
-`.qmd` without calling Quarto. It returns the path of the file it wrote.
+`render_report()` writes the dossier as a Quarto source document, ready to render to HTML or
+PDF. With `render=False`, the default, it writes the `.qmd` without calling Quarto, and it
+returns the path of the file it wrote.
 
 ```python
-# illustrative: this call and the live deposit at the end of the section are
-# shown rather than run when the page is built. Writing the report puts a file
-# on disk, rendering it to HTML or PDF needs a Quarto installation, and a live
-# deposit needs a token and network access.
-report_path = t.render_report("panic-demo.qmd")
+# Shown and not run when the page is built: it writes a file, and rendering
+# needs a Quarto installation.
+report_path = switching.render_report("modality-switching.qmd")
 ```
 
-`osf_push()` deposits the audit dossier on an Open Science Framework node, as
-`<id>.dossier.md`. It defaults to `dry_run=True`, which assembles the request and
-returns it without sending anything, so the planned deposit can be inspected
-offline and without a token. Only the dossier, the machine-checkable bundle a
-reviewer needs, is uploaded. The report written above stays on your own
-computer.
+`osf_push()` deposits the dossier on an Open Science Framework node, as `<id>.dossier.md`.
+It defaults to `dry_run=True`, which assembles the request and returns it without sending
+anything, so the planned deposit can be inspected offline and without a token.
 
 ```python exec="1" source="block" result="json" session="workflow-modes"
 import json
 
-print(json.dumps(t.osf_push(node="ab12c"), indent=2))
+print(json.dumps(switching.osf_push(node="ab12c"), indent=2))
 ```
 
-The returned request records the method, the destination URL, the filename the
-deposit would create and the size of the dossier in bytes. Only a live deposit
-uses the network. It needs `dry_run=False` together with a token and the node
-id.
+A live deposit needs `dry_run=False`, a personal access token and the node id. OSF refuses a
+second file with the same name, which `osf_push()` raises as `OSFUploadError` with HTTP 409.
+Pass a filename that names the version, or `overwrite=True` to send the dossier to the
+existing file as a new OSF version.
 
 ```python
 import os
 
-t.osf_push(
-    node="ab12c",
-    token=os.environ["OSF_PAT"],
-    dry_run=False,
-)
+switching.osf_push(node="ab12c", token=os.environ["OSF_PAT"], dry_run=False)
 ```
-
-OSF does not create a file whose name already exists in the project, so
-depositing the same theory a second time raises `OSFUploadError` with HTTP 409.
-Either pass a filename that names the version, or add `overwrite=True`, which
-lists the project folder first and sends the dossier to the existing file as a
-new OSF version. For any other HTTP status outside the range 200–299,
-`osf_push()` also raises `OSFUploadError`, a subclass of
-`urllib.error.HTTPError`, so a returned value always describes an upload that
-OSF accepted.
 
 ## Visualising the theory
 
-`diagram()` exports several views of the same object. The graph views return
-Graphviz DOT or dagitty text, and three further views are returned directly as
-SVG and render inline. These examples use the panic-network fixture, which
-records the test outcomes and scope conditions that several of the views below
-draw on.
-
-```python exec="1" source="block" session="workflow-modes"
-t = tf.read(tf.example_path("panic-network.theory.yaml"))
-```
-
-The `workflow` view traces the lifecycle from constructs, through propositions and
-predictions, to the recorded test outcomes.
-
-```python exec="1" source="block" result="text" session="workflow-modes"
-print(t.diagram("workflow"))
-```
-
-With the optional render extra (`pip install "theoryforge[render]"`), the same
-view renders in Python. `render_diagram(t, "workflow")` wraps the DOT in a
-`graphviz.Source`, which displays inline in a notebook and writes image files
-through its `render` method. Rendered, the workflow view reads as a figure.
+`diagram()` returns ten views of a theory. Seven are graphs written in Graphviz DOT, or for
+the `causal_dag` view in DAGitty's syntax, and three are SVG images. The
+[Get started](getting-started.md#drawing-the-theory) page shows the nomological network and
+the causal graph. The views below draw the panic-network theory, which records test outcomes
+and scope conditions, and each is drawn with `render_diagram()`, as in
+`tf.render_diagram(panic, "workflow")`, which needs the render extra. The `workflow` view
+traces the theory from its constructs through its propositions and predictions to the
+recorded test outcomes.
 
 ```python exec="1" html="1" session="workflow-modes"
-# Graphviz draws this figure from the DOT above when the page is built, so it
-# always matches the code. The XML header before <svg> is dropped, since the
-# figure goes into the page's HTML.
-svg = tf.render_diagram(t, "workflow").pipe(format="svg", encoding="utf-8")
+# Graphviz draws each figure from the DOT the view returns when the page is
+# built, so it always matches the code. The XML header before <svg> is dropped,
+# since the figure goes into the page's HTML.
+svg = tf.render_diagram(panic, "workflow").pipe(format="svg", encoding="utf-8")
 print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
 ```
 
-The `context` view places the theory among the scope conditions under which it is
-claimed to hold and the registered rivals it is meant to outpredict.
-
-```python exec="1" source="block" result="text" session="workflow-modes"
-print(t.diagram("context"))
-```
+The `context` view places the theory among its scope conditions and the rivals it is meant
+to outpredict.
 
 ```python exec="1" html="1" session="workflow-modes"
-svg = tf.render_diagram(t, "context").pipe(format="svg", encoding="utf-8")
+svg = tf.render_diagram(panic, "context").pipe(format="svg", encoding="utf-8")
 print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
 ```
 
-The `pipeline` view links each prediction to its recorded test outcomes, one
-node for each. A prediction still awaiting a test has no outcome node, and a
-failed replication appears beside the pass it followed.
-
-```python exec="1" source="block" result="text" session="workflow-modes"
-print(t.diagram("pipeline"))
-```
+The `pipeline` view links each prediction to its test outcomes, one node for each, so a
+failed replication appears beside the pass it followed. The `provenance` view draws the
+provenance log.
 
 ```python exec="1" html="1" session="workflow-modes"
-svg = tf.render_diagram(t, "pipeline").pipe(format="svg", encoding="utf-8")
+svg = tf.render_diagram(panic, "pipeline").pipe(format="svg", encoding="utf-8")
 print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
 ```
 
-The `provenance` view draws the theory's provenance log as a digraph. The log is
-held in the theory object and records how the theory reached its current state.
-
-```python exec="1" source="block" result="text" session="workflow-modes"
-print(t.diagram("provenance"))
-```
-
-```python exec="1" html="1" session="workflow-modes"
-svg = tf.render_diagram(t, "provenance").pipe(format="svg", encoding="utf-8")
-print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
-```
-
-The `venn` view takes each construct's boundary conditions as a set and draws the
-first three of them as overlapping discs. The figure shows where construct
-scopes coincide and where they differ, and each region is labelled with the
-number of conditions that fall in it.
+The `venn`, `rigour` and `severity` views are returned as SVG. The `venn` view draws the
+boundary conditions of the first three constructs as overlapping sets, the `rigour` view the
+checklist as a grid of statuses and the `severity` view one bar per prediction.
 
 ```python
-print(t.diagram("venn"))      # construct scope overlap
-print(t.diagram("rigour"))    # the rigour checklist as a status grid
-print(t.diagram("severity"))  # per-prediction severity bars
+print(panic.diagram("venn"))      # where the scopes of the constructs overlap
+print(panic.diagram("rigour"))    # the checklist as a status grid
+print(panic.diagram("severity"))  # the claim-form rubric, one bar per prediction
 ```
 
 ```python exec="1" html="1" session="workflow-modes"
-# These three views are emitted as SVG by the library itself, so the figures on
-# this page are produced when it is built and cannot drift from the calls above.
-print('<div class="tf-figure">' + t.diagram("venn") + "</div>")
+# These views are SVG written by the package itself.
+print('<div class="tf-figure">' + panic.diagram("rigour") + "</div>")
 ```
 
-The `rigour` view draws the checklist as a status grid, colouring each item by its
-result and reporting the aggregate score and the gate.
+The `development_roadmap` view turns the checklist into a worklist. It keeps the items that
+fail or warn and orders them as the work should be done: the items that block the gate
+first, heaviest first, then the advisory ones. The weak theory of the
+[home page](index.md#a-worked-result) gives the full list.
 
-```python exec="1" html="1" session="workflow-modes"
-print('<div class="tf-figure">' + t.diagram("rigour") + "</div>")
-```
-
-The `severity` view draws one bar per prediction, scaled by its computed
-severity.
-
-```python exec="1" html="1" session="workflow-modes"
-print('<div class="tf-figure">' + t.diagram("severity") + "</div>")
-```
-
-The `development_roadmap` view turns the same checklist into a worklist by
-keeping only the items that still fail or warn, and it orders that worklist the
-way the work should be done. Items that block the gate come first, heaviest
-check first, and the advisory items follow. Each step shows its number, the
-criterion it is measured against and whether missing it blocks the gate or is
-advisory. The hub names the theory and its current standing. The panic network
-passes every check, so its roadmap reduces to that hub and an `all checks pass`
-node. The weak-theory fixture shows the worklist in full.
-
-```python exec="1" source="block" result="text" session="workflow-modes"
+```python exec="1" source="block" session="workflow-modes"
 weak = tf.read(tf.example_path("weak-theory.theory.yaml"))
-print(weak.diagram("development_roadmap"))
+roadmap = weak.diagram("development_roadmap")   # Graphviz DOT, drawn below
 ```
 
 ```python exec="1" html="1" session="workflow-modes"
@@ -615,77 +622,47 @@ svg = tf.render_diagram(weak, "development_roadmap").pipe(format="svg", encoding
 print('<div class="tf-figure tf-diagram">' + svg[svg.index("<svg"):] + "</div>")
 ```
 
-Together with the `nomological_net` and `causal_dag` views shown in
-[Get started](getting-started.md), these complete the set of diagram types
-that `diagram()` exports, each documented in the
-[API reference](api.md#theoryforge.diagram.diagram).
+The [API reference](api.md#theoryforge.diagram.diagram) documents each view.
 
 ## Simulation
 
-`simulate()` treats each construct as a state variable and propagates the signed
-proposition network as a linear dynamical system. With `method="exact"`, each
-row is computed with the matrix exponential and is the solution of that system
-at its time, for any step size. The trajectory is deterministic.
+`simulate()` treats each construct as a state variable and propagates the signed network of
+propositions as a linear dynamical system. `increases` couples positively and `decreases`
+negatively. `causes` and `mediates` state no sign, so they are coupled positively by an
+assumption the record lists under `assumed_positive`, and `moderates` and `associates` are
+not coupled. With `method="exact"`, each row is the solution of the system at its time,
+computed with the matrix exponential, whatever the step size.
 
-The example below adds a regulating edge to the panic structure: arousal raises
-threat, threat raises avoidance, and avoidance in turn *decreases* arousal. The
-negative coupling breaks the symmetry between the states, and the loop it closes
-makes the network oscillate. The run covers 20 time units in steps of 0.5 and
-prints the state every two time units.
+The example closes a loop in which avoidance lowers arousal. The run covers 20 time units in
+steps of 0.5 and prints the state every two time units.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 s = (
     tf.new_theory("regulation_demo", "Arousal regulated by avoidance")
       .add_construct("arousal", "Physiological arousal", "bodily activation")
       .add_construct("threat", "Perceived threat", "appraised danger")
-      .add_construct(
-          "avoidance",
-          "Avoidance behaviour",
-          "protective withdrawal"
-      )
+      .add_construct("avoidance", "Avoidance behaviour", "protective withdrawal")
       .add_proposition("p1", "arousal", "threat", "increases")
       .add_proposition("p2", "threat", "avoidance", "increases")
       .add_proposition("p3", "avoidance", "arousal", "decreases")
 )
 
 sim = s.simulate(steps=40, dt=0.5, method="exact")
-
-print(sim["states"])           # construct ids, in file order
-
-for t, row in enumerate(sim["trajectory"]):
-    if t % 4 == 0:             # every two time units
-        print(t * sim["dt"], row)
+print(sim["states"])
+for step, row in enumerate(sim["trajectory"]):
+    if step % 4 == 0:
+        print(step * sim["dt"], row)
 ```
 
-Arousal falls first, pushed down by the negative coupling from avoidance.
-Threat follows it down about a time unit later and avoidance later still, and
-by time 6 arousal has climbed back above its starting value. The three
-constructs keep cycling with a period of about 7.3 time units, and the swings
-neither grow nor fade. At the default gain of 1 and damping of 0.5, the
-oscillating part of the loop is exactly undamped, while the rest of the
-initial state decays at rate 1.5.
+Arousal falls first, pushed down by avoidance. Threat and avoidance rise briefly and then
+follow it down, each later than the one before, and arousal later climbs back above its
+starting value. The three constructs keep cycling, and at the default gain of 1 and damping
+of 0.5 the swings neither grow nor fade.
 
-The default method for this release, `method="euler"`, takes fixed explicit
-steps, and they inflate this oscillation. At `dt=0.1`, each step multiplies its
-amplitude by about 1.0037, so after 500 steps the swings are more than six
-times the exact ones. `simulate()` issues a UserWarning when an Euler trajectory
-departs from the exact one by more than 5 per cent, and the default will change
-to `"exact"` in the next minor release.
-
-The returned record names the method and lists the propositions that couple
-nothing (`ignored`, here none), those coupled positively without a stated sign
-(`assumed_positive`, the `causes` and `mediates` propositions, here none) and
-the pairs whose increases and decreases offset each other (`opposed`).
-
-`steps` must be a whole number of at least 0, `dt` a finite number above 0,
-`k` and `damping` finite numbers, `init` a finite number or a mapping from
-construct ids to finite numbers, and `method` either `"euler"` or `"exact"`.
-A mapping such as `init={"arousal": 1}` starts the constructs it leaves out
-from 0, which traces the response to an impulse in arousal. Anything else raises ValueError with the message the R twin gives.
-A run whose states grow too large to round stops with a ValueError naming the
-step and the construct. The explicit Euler step is stable only when `dt` times
-the damping stays below 2 in a network without feedback loops, so a larger
-`damping` can cause a divergence. A smaller `dt` is the remedy, or a smaller
-`k` when the loops themselves outgrow the damping (see
-[Methodology](methodology.md)). The exact method has no step-size limit, and a
-run with it diverges only when the system itself grows.
+The default `method="euler"` takes fixed explicit steps, which stay close to the solution
+only while `dt` is small against the network's rates. On this loop, they inflate the
+oscillation, and `simulate()` warns when an Euler trajectory departs from the exact one by
+more than 5 per cent. `init` sets the starting values, one number for every construct or a
+mapping such as `{"arousal": 1}`, which starts the constructs it leaves out at 0 and so
+traces the response to an impulse. The trajectory follows from the linear system that the
+propositions define, and no data enter it.
