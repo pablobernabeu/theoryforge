@@ -3,10 +3,10 @@
 ## Tests
 
 * A test of the severity mean failed on R built without long double, the
-  configuration of CRAN's noLD check. It compared the mean with the constant
-  0.49999999999999994, which such a build reads as 0.5, while the mean itself
-  was correct. The test now writes the constant as 0.5 - 2^-54. No result of
-  the package changes.
+  configuration of the `noLD` check on CRAN. It compared the mean with the
+  constant 0.49999999999999994, which such a build reads as 0.5, while the mean
+  itself was correct. The test now writes the constant as 0.5 - 2^-54. No result
+  of the package changes.
 
 ## Documentation
 
