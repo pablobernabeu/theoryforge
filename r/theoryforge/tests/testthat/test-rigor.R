@@ -135,9 +135,12 @@ with_severities <- function(...) {
 test_that("the severity mean is a left fold", {
   # R's sum() uses an extended accumulator on x86_64 and CPython 3.12+ sum()
   # compensates, so either gives 0.5 here where a plain left-to-right sum, as
-  # on Apple Silicon R or Python 3.11, gives 0.49999999999999994. The twins
-  # agree only if both fold left in file order (API_SPEC section 4).
-  expect_identical(theoryforge:::.tf_mean(c(0.6, 0.7, 0.2)), 0.49999999999999994)
+  # on Apple Silicon R or Python 3.11, gives the double just below 0.5. The
+  # twins agree only if both fold left in file order (API_SPEC section 4).
+  # That double is written as 0.5 - 2^-54, which R computes exactly on every
+  # build. R built without long double reads the literal 0.49999999999999994
+  # as 0.5, since it accumulates the digits in a double.
+  expect_identical(theoryforge:::.tf_mean(c(0.6, 0.7, 0.2)), 0.5 - 2^-54)
 })
 
 test_that("the risk_severity status comes from the rounded mean", {

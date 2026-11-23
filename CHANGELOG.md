@@ -14,6 +14,12 @@ version and a single behavioural contract
 
 ## [Unreleased]
 
+### Tests
+- A test of the R package's severity mean failed on R built without long double, the
+  configuration of CRAN's noLD check. It compared the mean with the constant
+  0.49999999999999994, which such a build reads as 0.5, while the mean itself was correct.
+  The test now writes the constant as 0.5 - 2^-54. No result of either package changes.
+
 ### Documentation
 - R's `?tf_dossier`, the Python dossier module, the Python README, home page and workflow
   page and the code the apps show for `preregister()` call its output the hypotheses
