@@ -135,7 +135,7 @@ def test_package_schema_copies_match_the_root():
 
 
 OUTCOME_KEYS = ["read", "validate", "validate_full", "check", "severity", "implications",
-                "compile_sem", "simulate", "preregister"]
+                "entailments", "equivalent_models", "compile_sem", "simulate", "preregister"]
 
 
 def test_edge_outcome_records_each_call_in_order(golden, tmp_path):
@@ -292,7 +292,7 @@ def test_roundtrip_expects_r_to_box_a_single_value_and_python_to_keep_it(parity,
     # API_SPEC section 3: R writes a single value in a field the schema types as
     # an array of strings as a one-element array, and Python writes it as held.
     paths = parity.string_array_paths(parity.load_schema())
-    assert len(paths) == 7
+    assert len(paths) == 9
     assert ("predictions", "[]", "derives_from") in paths and ("boundary_conditions",) in paths
     # As R's .tf_box_path() does: "[]" visits a mapping's entries too, null stays null.
     assert parity.as_r_writes({"constructs": {"a": {"measurement": "m"}}, "boundary_conditions": None},

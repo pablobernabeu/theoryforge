@@ -179,11 +179,20 @@ NULL
   out$causal_testability <- if (n_causal >= 1L) item("pass", 1.0) else item("warn", 0.0)
 
   # 10 diagnosticity
+  # A named rival counts unless its stated propositions give the prediction's
+  # claim the same verdict as the theory's do, which shows the declaration
+  # false (API_SPEC.md section 4).
+  verdicts <- .tf_prediction_verdicts(T)
+  discriminates <- function(v, d) {
+    if (is.null(v) || v$theory == "not_evaluated" || is.null(v$rivals[[d]])) return(TRUE)
+    v$rivals[[d]] != v$theory
+  }
   if (length(preds) == 0L) {
     out$diagnosticity <- item("warn", 0.0)
   } else {
-    n_diag <- sum(vapply(preds, function(p) {
-      any(.tf_str_list(.tf_get(p, "diagnostic_vs")) %in% alt_ids)
+    n_diag <- sum(vapply(seq_along(preds), function(i) {
+      named <- .tf_str_list(.tf_get(preds[[i]], "diagnostic_vs"))
+      any(vapply(named, function(d) d %in% alt_ids && discriminates(verdicts[[i]], d), logical(1)))
     }, logical(1)))
     out$diagnosticity <- item(if (n_diag >= 1L) "pass" else "warn",
                               .tf_rnd(n_diag / length(preds), 3))
@@ -199,9 +208,13 @@ NULL
   if (length(preds) == 0L) {
     out$derivation_chain <- item("n/a", NULL)
   } else {
-    n_valid <- sum(vapply(preds, function(p) {
-      df <- .tf_str_list(.tf_get(p, "derives_from"))
-      length(df) > 0L && all(df %in% prop_ids)
+    # A claim the causal graph contradicts or leaves open does not follow from
+    # the propositions, whatever the prediction cites.
+    n_valid <- sum(vapply(seq_along(preds), function(i) {
+      df <- .tf_str_list(.tf_get(preds[[i]], "derives_from"))
+      v <- verdicts[[i]]
+      length(df) > 0L && all(df %in% prop_ids) &&
+        (is.null(v) || !(v$theory %in% c("contradicted", "undetermined")))
     }, logical(1)))
     frac <- n_valid / length(preds)
     out$derivation_chain <- item(if (frac == 1.0) "pass" else "fail", .tf_rnd(frac, 3))

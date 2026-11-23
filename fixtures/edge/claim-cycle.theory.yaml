@@ -1,0 +1,18 @@
+# A feedback loop leaves every claim unread under cycles = "refuse", which the
+# checklist and the preregistration use, so the references alone decide the
+# derivation chain.
+schema_version: "1.1"
+id: "claim-cycle"
+title: "Claims on a feedback loop"
+maturity: "developing"
+constructs:
+  - {id: c1, label: "First", definition: "The first construct."}
+  - {id: c2, label: "Second", definition: "The second construct."}
+  - {id: c3, label: "Third", definition: "The third construct."}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: "It does."}
+  - {id: p2, from: c2, to: c1, relation: increases, mechanism: "It does."}
+  - {id: p3, from: c2, to: c3, relation: decreases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "c1 lowers c3.", type: directional, derives_from: [p1, p3], claim: {kind: effect, x: c1, y: c3, sign: negative}}
+  - {id: h2, statement: "c1 raises c3.", type: directional, derives_from: [p1, p3], claim: {kind: effect, x: c1, y: c3, sign: positive}}

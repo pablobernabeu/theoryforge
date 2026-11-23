@@ -83,6 +83,22 @@ suppressWarnings(suppressMessages({
     write_raw(paste0(jsonlite::toJSON(tf_implications(t, cycles = "sigma"), auto_unbox = TRUE,
                                       pretty = TRUE), "\n"),
               file.path(out_dir, paste0(id, ".implications.json")))
+    rivals <- character(0)
+    for (a in t$alternatives) {
+      if (is.list(a) && length(a$propositions) > 0L && is.character(a$id) && nzchar(a$id)) {
+        rivals <- c(rivals, a$id)
+      }
+    }
+    causal <- list(
+      entailments = tf_entailments(t, cycles = "sigma"),
+      equivalent_models = tf_equivalent_models(t),
+      discriminate = lapply(rivals, function(r) tf_discriminate(t, r, cycles = "sigma"))
+    )
+    for (name in names(causal)) {
+      write_raw(paste0(jsonlite::toJSON(causal[[name]], auto_unbox = TRUE, null = "null",
+                                        na = "null", pretty = TRUE), "\n"),
+                file.path(out_dir, paste0(id, ".", name, ".json")))
+    }
   }
 
   # The message of a condition as an edge outcome records it: a leading
@@ -115,6 +131,8 @@ suppressWarnings(suppressMessages({
       check = attempt(check_summary(tf_check(t))),
       severity = attempt(tf_severity(t)),
       implications = attempt(tf_implications(t)),
+      entailments = attempt(tf_entailments(t)),
+      equivalent_models = attempt(tf_equivalent_models(t)),
       compile_sem = attempt(tf_compile_sem(t)),
       simulate = attempt(tf_simulate(t, steps = 3)),
       preregister = attempt(tf_preregister(t))

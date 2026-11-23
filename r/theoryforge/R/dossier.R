@@ -14,8 +14,10 @@ NULL
 # The post-data severity note of a test-record line, an open bound written as
 # an infinity.
 .tf_post_data_note <- function(row) {
-  lower <- if (is.na(row$lower)) "-inf" else .tf_fmt(row$lower)
-  upper <- if (is.na(row$upper)) "inf" else .tf_fmt(row$upper)
+  # The bounds are written as recorded, with up to 15 significant digits, so a
+  # small bound is not rounded to zero.
+  lower <- if (is.na(row$lower)) "-inf" else .tf_plan_number(row$lower)
+  upper <- if (is.na(row$upper)) "inf" else .tf_plan_number(row$upper)
   sprintf("; post-data severity %s for [%s, %s]", .tf_fmt(row$severity), lower, upper)
 }
 
@@ -43,6 +45,8 @@ NULL
 #' \code{severity} is not a finite number from 0 to 1.
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
+#' @param cycles \code{"refuse"} (the default) or \code{"sigma"}, passed to
+#'   [tf_entailments()], [tf_discriminate()] and [tf_preregister()].
 #' @return The dossier Markdown as a single string (LF line endings, single
 #'   trailing newline).
 #' @examples
@@ -54,9 +58,12 @@ NULL
 #'   tf_add_prediction("h1", "Effect is exactly 0.30.", "point")
 #' cat(tf_dossier(theory))
 #' @export
-tf_dossier <- function(theory) {
+tf_dossier <- function(theory, cycles = "refuse") {
+  .tf_check_cycles(cycles, "dossier")
   T <- theory
   rep <- tf_check(T)
+  criteria <- vapply(tf_checklist()$items, function(it) it$criterion, character(1))
+  names(criteria) <- vapply(tf_checklist()$items, function(it) it$id, character(1))
   failed <- character(0)
   for (it in rep$items) {
     if (identical(it$severity_if_fail, "blocker") && identical(it$status, "fail")) {
@@ -69,9 +76,10 @@ tf_dossier <- function(theory) {
     "0"
   }
   lines <- c(
-    sprintf("# theoryforge dossier: %s", .tf_str(T, "title")),
+    sprintf("# theoryforge dossier: %s", .tf_flat(.tf_str(T, "title"))),
     "",
     sprintf("- Theory ID: %s", .tf_str(T, "id")),
+    sprintf("- Content hash: %s", tf_content_hash(T)),
     sprintf("- Maturity: %s", rep$maturity),
     # The score is only interpretable against the checklist that produced it,
     # so a reviewer reading the bundle can see which one that was.
@@ -84,12 +92,13 @@ tf_dossier <- function(theory) {
     "",
     "## Rigour checklist",
     "",
-    "| item | status | score | weight |",
-    "| --- | --- | --- | --- |"
+    "| item | criterion | status | score | weight |",
+    "| --- | --- | --- | --- | --- |"
   )
   for (it in rep$items) {
-    lines <- c(lines, sprintf("| %s | %s | %s | %s |",
-                              it$id, it$status, .tf_fmt(it$score), .tf_fmt(it$weight)))
+    criterion <- if (it$id %in% names(criteria)) criteria[[it$id]] else ""
+    lines <- c(lines, sprintf("| %s | %s | %s | %s | %s |", it$id, criterion,
+                              it$status, .tf_fmt(it$score), .tf_fmt(it$weight)))
   }
 
   lines <- c(lines, "", "## Severity (pre-data rubric of claim form)", "")
@@ -131,7 +140,7 @@ tf_dossier <- function(theory) {
       t <- tos[[i]]
       line <- paste0("- ", .tf_str(t, "prediction_id"), ": ", .tf_outcome_result(t))
       for (key in c("observed", "date", "registered")) {
-        value <- .tf_str(t, key)
+        value <- .tf_flat(.tf_str(t, key))
         if (.tf_ne_str(value)) line <- paste0(line, "; ", key, ": ", value)
       }
       row <- sevs[[i]]$row
@@ -154,6 +163,10 @@ tf_dossier <- function(theory) {
     }
   }
 
+  lines <- c(lines, "", "## Claims and the causal graph", "", .tf_claims_section(T, cycles))
+  lines <- c(lines, "", "## Equivalent models", "", .tf_equivalence_section(T))
+  lines <- c(lines, "", "## Rivals", "", .tf_rivals_section(T, cycles))
+
   lines <- c(lines, "", "## Provenance", "")
   prov <- .tf_list(T, "provenance")
   if (length(prov) == 0L) {
@@ -161,8 +174,8 @@ tf_dossier <- function(theory) {
   } else {
     for (i in seq_along(prov)) {
       s <- prov[[i]]
-      action <- .tf_str(s, "action")
-      detail <- .tf_str(s, "detail")
+      action <- .tf_flat(.tf_str(s, "action"))
+      detail <- .tf_flat(.tf_str(s, "detail"))
       lines <- c(lines, if (nzchar(.tf_trim(detail))) {
         sprintf("%d. %s: %s", i, action, detail)
       } else {
@@ -171,6 +184,70 @@ tf_dossier <- function(theory) {
     }
   }
 
-  lines <- c(lines, "", "## Preregistration", "")
-  paste0(paste(lines, collapse = "\n"), "\n", tf_preregister(T))
+  # The preregistration is a document of its own, so its headings move one level
+  # down to sit under this section. Its severity list is left out, since the
+  # dossier gives it above with the declared values.
+  prereg <- .tf_document_lines(T, cycles, embedded = TRUE)
+  prereg <- ifelse(startsWith(prereg, "#"), paste0("#", prereg), prereg)
+  lines <- c(lines, "", "## Preregistration", "", prereg)
+  paste0(paste(lines, collapse = "\n"), "\n")
+}
+
+# What the causal graph says of each claim (API_SPEC.md section 20).
+.tf_claims_section <- function(T, cycles) {
+  recs <- tryCatch(tf_entailments(T, cycles = cycles)$claims, error = function(e) e)
+  if (inherits(recs, "error")) return(paste0("_Not read: ", conditionMessage(recs), "._"))
+  if (length(recs) == 0L) return("_No prediction or phenomenon states a claim._")
+  vapply(recs, function(r) paste0("- ", r$id, " (", r$source, "): ", .tf_claim_line(r)), "")
+}
+
+# Which causal directions an equivalent model reverses (API_SPEC.md section 20).
+.tf_equivalence_section <- function(T) {
+  eq <- tryCatch(tf_equivalent_models(T), error = function(e) e)
+  if (inherits(eq, "error")) return(paste0("_Not read: ", conditionMessage(eq), "._"))
+  if (identical(eq$reason, "feedback_loop")) {
+    return("_Not determined: the causal graph has a feedback loop._")
+  }
+  if (identical(eq$reason, "associations")) {
+    return(paste0("_Not determined: the theory states associations, and the rule covers ",
+                  "graphs of directed relations alone._"))
+  }
+  if (length(eq$edges) == 0L) {
+    return("_None: the theory states no directed relation between constructs._")
+  }
+  word <- c(compelled = "fixed in every equivalent model",
+            reversible = "reversed in some equivalent model")
+  vapply(eq$edges, function(e) {
+    sprintf("- %s: %s -> %s (%s)", paste(unlist(e$propositions), collapse = ", "),
+            e$from, e$to, word[[e$status]])
+  }, "")
+}
+
+# How the theory compares with each rival that states propositions (API_SPEC.md
+# section 20).
+.tf_rivals_section <- function(T, cycles) {
+  out <- character(0)
+  for (a in .tf_list(T, "alternatives")) {
+    aid <- .tf_str(a, "id")
+    if (!(.tf_ne_str(aid) && length(.tf_list(a, "propositions")) > 0L)) next
+    d <- tryCatch(tf_discriminate(T, aid, cycles = cycles), error = function(e) e)
+    if (inherits(d, "error")) {
+      out <- c(out, paste0("- ", aid, ": not compared: ", conditionMessage(d)))
+      next
+    }
+    if (!d$evaluated) {
+      out <- c(out, paste0("- ", aid, ": not compared, since a causal graph has a feedback loop"))
+      next
+    }
+    found <- vapply(Filter(function(c) isTRUE(c$discriminates), d$claims), function(c) c$id, "")
+    n <- d$counts
+    line <- paste0("- ", aid, ": claims it discriminates: ",
+                   if (length(found)) paste(found, collapse = ", ") else "none",
+                   "; independencies one implies and the other does not: ", n$independencies,
+                   "; decisive differences in sign: ", n$decisive_effects, " effects, ",
+                   n$decisive_associations, " associations")
+    if (isTRUE(d$markov_equivalent)) line <- paste0(line, "; Markov equivalent to the theory")
+    out <- c(out, line)
+  }
+  if (length(out) == 0L) "_No alternative states propositions._" else out
 }

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import math
+import numbers
 import re
 from collections.abc import Mapping
 from copy import deepcopy
@@ -18,6 +19,7 @@ from ._access import RELATION as _RELATION
 from ._access import field as _field
 from ._access import items as _items
 from ._access import ne_str as _nonempty_str
+from ._access import str_list as _str_list
 from ._io import write_lf as _write_lf
 from ._load import dump_yaml as _dump_yaml
 from ._load import load_document as _load_document
@@ -27,6 +29,10 @@ from .develop import appraise_amendment as _appraise_amendment
 from .diagram import diagram as _diagram
 from .dossier import dossier as _dossier
 from .embedding import embedding_redundancy as _embedding_redundancy
+from .entailment import discriminate as _discriminate
+from .entailment import entailments as _entailments
+from .entailment import equivalent_models as _equivalent_models
+from .hashing import content_hash as _content_hash
 from .implications import implications as _implications
 from .lit import landscape as _landscape
 from .lit import new_evidence_dois as _new_evidence_dois
@@ -54,6 +60,9 @@ def _as_str_list(v) -> list:
     """
     if isinstance(v, str):
         return [v]
+    # A mapping gives its values, as R stores the values of a named vector.
+    if isinstance(v, Mapping):
+        return list(v.values())
     # Only iter() is guarded. A TypeError raised while a generator runs is the
     # caller's error and propagates. Catching it too would store the generator
     # itself as the one element.
@@ -72,7 +81,10 @@ def _as_str_list(v) -> list:
 # The collections of the schema, in the order validate() reports one that is
 # not a list.
 _COLLECTIONS = ("constructs", "propositions", "predictions", "auxiliary_assumptions",
-                "alternatives", "evidence", "test_outcomes", "provenance")
+                "alternatives", "evidence", "test_outcomes", "provenance", "phenomena")
+_CLAIM_KEYS = ("kind", "x", "y", "given", "sign")
+_CLAIM_KIND = frozenset({"effect", "association"})
+_CLAIM_SIGN = frozenset({"positive", "negative", "zero", "nonzero"})
 _VERSION_KEYS = ("id", "parent_id", "content_hash")
 _SCHEMA_VERSION = re.compile(r"[0-9]+\.[0-9]+")
 
@@ -274,6 +286,42 @@ def _string_array(v, name: str, known=None, kind: str = "") -> list[str]:
         elif known is not None and entry not in known:
             msgs.append(f"{name} '{entry}' is not a known {kind}")
     return msgs
+
+
+def _claim(v, name: str, construct_ids: set) -> list[str]:
+    """The problems of a prediction's or a phenomenon's ``claim`` (API_SPEC.md section 2, item 15).
+
+    An absent claim, or an empty one, is no claim.
+    """
+    if v is None or (isinstance(v, (dict, list)) and not v):
+        return []
+    if _not_a_mapping(v):
+        return [f"{name} must be a mapping"]
+    if not isinstance(v, dict):
+        return []
+    errors = [f"{name} has unknown field: {key}" for key in v if key not in _CLAIM_KEYS]
+    errors += _required_fields(v, name, ("kind", "x", "y", "sign"))
+    kind, sign = v.get("kind"), v.get("sign")
+    if _nonempty_str(kind) and kind not in _CLAIM_KIND:
+        errors.append(f"{name} kind '{kind}' not allowed")
+    if _nonempty_str(sign) and sign not in _CLAIM_SIGN:
+        errors.append(f"{name} sign '{sign}' not allowed")
+    x, y = v.get("x"), v.get("y")
+    for end, val in (("x", x), ("y", y)):
+        if _nonempty_str(val) and val not in construct_ids:
+            errors.append(f"{name} {end} '{val}' is not a known construct")
+    if _nonempty_str(x) and x == y:
+        errors.append(f"{name} x and y must differ")
+    errors += _string_array(v.get("given"), f"{name} given", construct_ids, "construct")
+    given = _str_list(v.get("given"))
+    if given:
+        if (_nonempty_str(x) and x in given) or (_nonempty_str(y) and y in given):
+            errors.append(f"{name} given must not include x or y")
+        if kind == "effect":
+            errors.append(f"{name} given applies only to an association")
+        elif sign in ("positive", "negative"):
+            errors.append(f"{name} sign must be zero or nonzero when given is not empty")
+    return errors
 
 
 class Theory:
@@ -529,6 +577,9 @@ class Theory:
             errors += _optional_text(ver.get("id"), "version id")
             errors += _optional_text(ver.get("parent_id"), "version parent_id", nullable=True)
             errors += _optional_text(ver.get("content_hash"), "version content_hash", nullable=True)
+            recorded = ver.get("content_hash")
+            if _nonempty_str(recorded) and recorded != _content_hash(d):
+                errors.append("version content_hash does not match the theory's content")
 
         # 13: the schema_version pattern. fullmatch, because "$" in a Python
         # pattern also matches before a final newline.
@@ -565,6 +616,43 @@ class Theory:
                 continue
             for name in ("step", "action", "detail"):
                 errors += _optional_text(_field(step, name), f"provenance[{i}] {name}")
+
+        # 15: the claims of predictions and phenomena, and the propositions of
+        # rival accounts, which entailments() and discriminate() read.
+        phens = self._list("phenomena")
+        dups(phens, "phenomenon")
+        for i, ph in enumerate(phens):
+            errors += _required_fields(ph, f"phenomenon[{i}]", ("id", "statement"))
+            errors += _optional_text(_field(ph, "source_doi"), f"phenomenon[{i}] source_doi",
+                                     nullable=True)
+        for i, p in enumerate(preds):
+            errors += _claim(_field(p, "claim"), f"prediction[{i}] claim", construct_ids)
+        for i, ph in enumerate(phens):
+            errors += _claim(_field(ph, "claim"), f"phenomenon[{i}] claim", construct_ids)
+        for i, a in enumerate(alts):
+            rival = _field(a, "propositions")
+            if _not_a_list(rival):
+                errors.append(f"alternative[{i}] propositions must be a list")
+                continue
+            if not isinstance(rival, list):
+                continue
+            seen: set = set()
+            for j, p in enumerate(rival):
+                name = f"alternative[{i}] proposition[{j}]"
+                errors += _required_fields(p, name, ("id", "from", "to", "relation"))
+                rel = _field(p, "relation")
+                if _nonempty_str(rel) and rel not in _RELATION:
+                    errors.append(f"{name} relation '{rel}' not allowed")
+                pid = _field(p, "id")
+                if _nonempty_str(pid):
+                    if pid in seen:
+                        errors.append(f"alternative[{i}] duplicate proposition id: {pid}")
+                    seen.add(pid)
+                for end in ("from", "to"):
+                    val = _field(p, end)
+                    if _nonempty_str(val) and val not in construct_ids:
+                        errors.append(f"{name} {end} '{val}' is not a known construct")
+                errors += _optional_text(_field(p, "mechanism"), f"{name} mechanism")
 
     # -- serialisation ---------------------------------------------------------
     def write(self, path) -> None:
@@ -615,12 +703,11 @@ class Theory:
         if v is None:
             return []
         if not isinstance(v, list):
-            kind = type(v).__name__
-            # "an int" and "an OrderedDict", but "a UUID": a type name that
-            # opens with a u is read with a consonant sound.
-            article = "an" if kind[:1].lower() in "aeio" else "a"
-            raise TypeError(
-                f"cannot add to '{key}': the theory holds {article} {kind} there, not a list")
+            # Described in words both languages can give (API_SPEC.md section 8).
+            what = ("a mapping" if isinstance(v, Mapping) else "a string" if isinstance(v, str)
+                    else "a boolean" if isinstance(v, bool)
+                    else "a number" if isinstance(v, numbers.Real) else "a value that is not a list")
+            raise TypeError(f"cannot add to '{key}': the theory holds {what} there, not a list")
         return v
 
     def _provenance(self, action: str, detail: str) -> None:
@@ -662,15 +749,16 @@ class Theory:
             c["boundary_conditions"] = _as_str_list(boundary_conditions)
         return self._add("constructs", c, "tf_add_construct", id)
 
-    def add_proposition(self, id, frm, to, relation, mechanism=None):
+    def add_proposition(self, id, frm, to, relation, mechanism=None, functional_form=None):
         """Append a proposition and log the step in the provenance.
 
         ``frm`` and ``to`` are the ids of the constructs it relates. ``frm`` is
         stored as the schema's ``from`` field, since ``from`` is a reserved word
         in Python. ``relation`` is one of ``increases``, ``decreases``,
         ``causes``, ``mediates``, ``moderates`` or ``associates``. ``mechanism``
-        states why the relation holds and is stored only when given. The theory
-        is changed in place and returned, so that builder calls chain.
+        states why the relation holds, and ``functional_form`` describes its
+        shape. Each is stored only when given. The theory is changed in place
+        and returned, so that builder calls chain.
 
         Raises:
             TypeError: when the theory holds a value other than a list or null
@@ -679,10 +767,12 @@ class Theory:
         p = {"id": id, "from": frm, "to": to, "relation": relation}
         if mechanism is not None:
             p["mechanism"] = mechanism
+        if functional_form is not None:
+            p["functional_form"] = functional_form
         return self._add("propositions", p, "tf_add_proposition", id)
 
     def add_prediction(self, id, statement, type, derives_from=None, diagnostic_vs=None,
-                       severity=None, test=None):
+                       severity=None, test=None, bounds=None, claim=None):
         """Append a prediction and log the step in the provenance.
 
         ``id`` identifies the prediction and ``statement`` gives the claim in
@@ -711,7 +801,16 @@ class Theory:
         optional ``power_lo`` and ``power_hi``, ``method``, ``design_ref`` and
         ``justification``. It is stored, as a copy, only when given.
         ``preregister()`` lists it after the hypotheses, and nothing scores it.
-        The theory is returned, so that builder calls chain.
+
+        ``bounds`` is the region of the quantity the claim allows, a mapping of
+        ``lower`` and ``upper``, either of which may be None for an open side.
+        ``post_data_severity()`` reads it with each test outcome. ``claim`` is
+        the claim in machine-readable form, a mapping of ``kind``
+        (``"effect"`` or ``"association"``), the construct ids ``x`` and ``y``,
+        an optional ``given`` and ``sign`` (``"positive"``, ``"negative"``,
+        ``"zero"`` or ``"nonzero"``), which ``entailments()`` reads against the
+        causal graph. Each is stored, as a copy, only when given. The theory is
+        returned, so that builder calls chain.
         """
         p = {"id": id, "statement": statement, "type": type}
         if derives_from is not None:
@@ -724,17 +823,25 @@ class Theory:
             # A copy, so that a later change to the caller's mapping leaves the
             # theory as it was, as R's builder leaves it.
             p["test"] = dict(test) if isinstance(test, Mapping) else test
+        if bounds is not None:
+            p["bounds"] = dict(bounds) if isinstance(bounds, Mapping) else bounds
+        if claim is not None:
+            p["claim"] = deepcopy(dict(claim)) if isinstance(claim, Mapping) else claim
         return self._add("predictions", p, "tf_add_prediction", id)
 
-    def add_alternative(self, id, label, key_constructs=None):
+    def add_alternative(self, id, label, key_constructs=None, source_doi=None, propositions=None):
         """Append a registered alternative account and log the step in the provenance.
 
         ``label`` names the rival account. ``key_constructs`` names its key
-        constructs, as a list of strings or a single string, and is stored only
-        when given. A prediction names the alternative's ``id`` in its
-        ``diagnostic_vs``, and ``landscape()`` matches the label and key
-        constructs against the literature's themes. The theory is changed in
-        place and returned, so that builder calls chain.
+        constructs, as a list of strings or a single string, and ``source_doi``
+        the work that states it. ``propositions`` lists the rival's own
+        propositions over the theory's constructs, each a mapping with ``id``,
+        ``from``, ``to`` and ``relation``, which ``discriminate()`` sets against
+        the theory's. Each is stored only when given. A prediction names the
+        alternative's ``id`` in its ``diagnostic_vs``, and ``landscape()``
+        matches the label and key constructs against the literature's themes.
+        The theory is changed in place and returned, so that builder calls
+        chain.
 
         Raises:
             TypeError: when the theory holds a value other than a list or null
@@ -743,7 +850,70 @@ class Theory:
         a = {"id": id, "label": label}
         if key_constructs is not None:
             a["key_constructs"] = _as_str_list(key_constructs)
+        if source_doi is not None:
+            a["source_doi"] = source_doi
+        if propositions is not None:
+            a["propositions"] = deepcopy(list(propositions))
         return self._add("alternatives", a, "tf_add_alternative", id)
+
+    def add_phenomenon(self, id, statement, claim=None, source_doi=None):
+        """Append a phenomenon the theory sets out to explain and log the step in the provenance.
+
+        A phenomenon is a robust empirical regularity, stated in words in
+        ``statement``. ``claim`` states it in machine-readable form, as for a
+        prediction, and ``entailments()`` reports whether the causal graph
+        entails it. ``source_doi`` names the work that establishes it. Each is
+        stored only when given. The theory is changed in place and returned, so
+        that builder calls chain.
+
+        Raises:
+            TypeError: when the theory holds a value other than a list or null
+                under ``phenomena`` or ``provenance``. Nothing is added then.
+        """
+        ph = {"id": id, "statement": statement}
+        if claim is not None:
+            ph["claim"] = deepcopy(dict(claim)) if isinstance(claim, Mapping) else claim
+        if source_doi is not None:
+            ph["source_doi"] = source_doi
+        return self._add("phenomena", ph, "tf_add_phenomenon", id)
+
+    def add_evidence(self, supports, direction, source_doi=None):
+        """Record published evidence on a prediction and log the step in the provenance.
+
+        ``supports`` is the prediction's id and ``direction`` one of
+        ``corroborates``, ``refutes`` or ``mixed``. ``source_doi`` names the
+        work and is stored as null when not given. The theory is changed in
+        place and returned, so that builder calls chain.
+
+        Raises:
+            TypeError: when the theory holds a value other than a list or null
+                under ``evidence`` or ``provenance``. Nothing is added then.
+        """
+        e = {"supports": supports, "source_doi": source_doi, "direction": direction}
+        return self._add("evidence", e, "tf_add_evidence", supports)
+
+    def add_test_outcome(self, prediction_id, passed, observed=None, estimate=None, se=None,
+                         registered=None, date=None):
+        """Record the outcome of a test of a prediction and log the step in the provenance.
+
+        ``passed`` is True or False. ``observed`` describes the result in
+        words. ``estimate`` and ``se`` are the estimate the test gave and its
+        standard error, which ``post_data_severity()`` reads with the
+        prediction's ``bounds``, and they are given together. ``registered``
+        names the preregistration of the test and ``date`` its date. Each
+        optional field is stored only when given. The theory is changed in place
+        and returned, so that builder calls chain.
+
+        Raises:
+            TypeError: when the theory holds a value other than a list or null
+                under ``test_outcomes`` or ``provenance``. Nothing is added then.
+        """
+        t = {"prediction_id": prediction_id, "passed": passed}
+        for key, val in (("observed", observed), ("estimate", estimate), ("se", se),
+                         ("registered", registered), ("date", date)):
+            if val is not None:
+                t[key] = val
+        return self._add("test_outcomes", t, "tf_add_test_outcome", prediction_id)
 
     def add_assumption(self, id, statement, added_for=None, protects=None):
         """Append an auxiliary assumption and log the step in the provenance.
@@ -840,6 +1010,24 @@ class Theory:
         """
         return _implications(self.data, cycles=cycles)
 
+    def content_hash(self) -> str:
+        """The SHA-256 digest of the theory's canonical form (see ``theoryforge.content_hash``)."""
+        return _content_hash(self.data)
+
+    def entailments(self, cycles: str = "refuse") -> dict:
+        """Whether the causal graph entails each claim of the predictions and phenomena
+        (see ``theoryforge.entailments``)."""
+        return _entailments(self.data, cycles=cycles)
+
+    def equivalent_models(self) -> dict:
+        """Which causal directions observational data can and cannot test (see
+        ``theoryforge.equivalent_models``)."""
+        return _equivalent_models(self.data)
+
+    def discriminate(self, rival, cycles: str = "refuse") -> dict:
+        """What would tell this theory apart from a rival (see ``theoryforge.discriminate``)."""
+        return _discriminate(self.data, rival, cycles=cycles)
+
     def preregister(self, path=None) -> str:
         """Render the hypotheses section of a preregistration, writing it to ``path``
         when one is given (see ``theoryforge.preregister``)."""
@@ -926,9 +1114,9 @@ def write(theory: Theory, path) -> None:
 
 
 def new_theory(id: str, title: str, maturity: str = "building", theory_form: str = "network") -> Theory:
-    """Start a new theory object (BUILDING mode entry point).
+    """Start a new theory object.
 
-    The theory holds ``schema_version`` ``"1.0"``, ``id``, ``title``,
+    The theory holds ``schema_version`` ``"1.1"``, ``id``, ``title``,
     ``maturity`` and ``theory_form``, with no constructs yet, and its provenance
     log records the step as ``tf_theory``. ``maturity`` is one of ``draft``,
     ``building``, ``developing`` or ``testing``, and at ``draft`` the
@@ -938,7 +1126,7 @@ def new_theory(id: str, title: str, maturity: str = "building", theory_form: str
     one outside the schema.
     """
     t = Theory({
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "id": id,
         "title": title,
         "maturity": maturity,

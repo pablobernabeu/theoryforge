@@ -2,24 +2,61 @@
 from __future__ import annotations
 
 import math
+import re
 
-from ._access import MATURITY, PRED_TYPE, enum, field, items, ne_str, str_list, text
+from ._access import (
+    FORMAL_MODEL_TYPE,
+    MATURITY,
+    PRED_TYPE,
+    RELATION,
+    enum,
+    field,
+    items,
+    ne_str,
+    str_list,
+    text,
+)
 from ._io import write_lf as _write_lf
 from ._num import number as _number
+from .entailment import check_cycles, claim_line, prediction_verdicts, read_claim
+from .entailment import entailments as _entailments
+from .hashing import content_hash
 from .implications import implications as _implications
 from .rigor import check as _check
 from .scoring import severity as _severity
 
 # What the derivation line reports for each status of the checklist's
-# derivation_chain item (API_SPEC.md section 11). The item checks only that
-# every prediction cites declared propositions, so the line says whether those
-# references resolve.
+# derivation_chain item (API_SPEC.md section 11): whether every prediction
+# cites declared propositions and, where it states a claim, whether the causal
+# graph entails it.
 _RESOLVE = {"pass": "yes", "fail": "no", "n/a": "not applicable (no predictions)"}
+
+# How a rival's own propositions read a prediction's claim, beside the rival's id.
+_RIVAL_READS = {"entailed": "its propositions entail the claim too",
+                "contradicted": "its propositions contradict the claim",
+                "undetermined": "its propositions leave the claim open"}
 
 _IMPLIED_HEADING = "## Implied conditional independencies (derived from the causal graph, not predictions)"
 
 _PLAN_HEADING = "## Sampling plan (author-recorded; not scored)"
 _SIDED = ("two", "one")
+
+
+# A line break inside a value would end the Markdown list item it is written
+# into, so every run of them, with the spaces and tabs around it, becomes one
+# space (API_SPEC.md section 11).
+_BREAKS = re.compile(r"[ \t]*[\r\n]+[ \t]*")
+
+
+def flat(s: str) -> str:
+    """A text value written on one line."""
+    return _BREAKS.sub(" ", s)
+
+
+def _sentence(s: str) -> str:
+    """``s`` ending in a full stop, a question mark or an exclamation mark."""
+    s = s.rstrip(" ")
+    return s if s.endswith((".", "?", "!")) else s + "."
 
 
 def _fmt(x) -> str:
@@ -44,6 +81,117 @@ def _outcome_result(t) -> str:
     if passed is False:
         return "failed"
     return "no result recorded"
+
+
+def _region(p) -> str | None:
+    """The region a prediction's ``bounds`` allow, as an interval, or None.
+
+    An absent, infinite or null bound is open. A region that full validation
+    would refuse, with no finite bound or a lower bound above the upper one, is
+    not written.
+    """
+    b = field(p, "bounds")
+    if not isinstance(b, dict):
+        return None
+    lo, hi = _number(b.get("lower")), _number(b.get("upper"))
+    lo = lo if lo is not None and math.isfinite(lo) else None
+    hi = hi if hi is not None and math.isfinite(hi) else None
+    if (lo is None and hi is None) or (lo is not None and hi is not None and lo > hi):
+        return None
+    left = "(-inf" if lo is None else f"[{_plan_number(lo)}"
+    right = "inf)" if hi is None else f"{_plan_number(hi)}]"
+    return f"{left}, {right}"
+
+
+def _theory_section(data: dict, cycles: str) -> list[str]:
+    """The constructs, propositions, phenomena, assumptions, rivals and scope, in words."""
+    out = ["", "## Theory", "", "### Constructs"]
+    cons = items(data, "constructs")
+    if not cons:
+        out.append("_No constructs specified._")
+    for c in cons:
+        label, definition = flat(text(field(c, "label"))), flat(text(field(c, "definition")))
+        line = f"- {text(field(c, 'id'))}" + (f" ({label})" if ne_str(label) else "") + ": "
+        line += _sentence(definition) if ne_str(definition) else "No definition stated."
+        measures = [flat(m) for m in str_list(field(c, "measurement"))]
+        if measures:
+            line += f" Measures: {'; '.join(measures)}."
+        scope = [flat(b) for b in str_list(field(c, "boundary_conditions"))]
+        if scope:
+            line += f" Boundary conditions: {'; '.join(scope)}."
+        out.append(line)
+    out += ["", "### Propositions"]
+    props = items(data, "propositions")
+    if not props:
+        out.append("_No propositions specified._")
+    for p in props:
+        rel = enum(field(p, "relation"), RELATION)
+        frm, to = text(field(p, "from")), text(field(p, "to"))
+        line = f"- {text(field(p, 'id'))}: " + (f"{frm} {rel} {to}." if rel
+                                              else f"{frm} and {to}, with no relation stated.")
+        mechanism = flat(text(field(p, "mechanism")))
+        if ne_str(mechanism):
+            line += f" Mechanism: {_sentence(mechanism)}"
+        out.append(line)
+    phenomena = items(data, "phenomena")
+    if phenomena:
+        out += ["", "### Phenomena to explain"]
+        claims = _phenomenon_claims(data, cycles)
+        for ph, claim in zip(phenomena, claims, strict=True):
+            doi = text(field(ph, "source_doi"))
+            out.append(f"- {text(field(ph, 'id'))}: {flat(text(field(ph, 'statement')))}"
+                       + (f" (doi: {doi})" if ne_str(doi) else ""))
+            if claim is not None:
+                out.append(f"  - Claim: {claim}")
+    aux = items(data, "auxiliary_assumptions")
+    if aux:
+        out += ["", "### Auxiliary assumptions"]
+        for a in aux:
+            added = text(field(a, "added_for"))
+            kind = f"added for {added}" if ne_str(added) else "core"
+            out.append(f"- {text(field(a, 'id'))} ({kind}): {flat(text(field(a, 'statement')))}")
+    alts = items(data, "alternatives")
+    if alts:
+        out += ["", "### Rival accounts"]
+        for a in alts:
+            doi = text(field(a, "source_doi"))
+            out.append(f"- {text(field(a, 'id'))}: {flat(text(field(a, 'label')))}"
+                       + (f" (doi: {doi})" if ne_str(doi) else ""))
+    scope = [flat(b) for b in str_list(data.get("boundary_conditions"))]
+    if scope:
+        out += ["", "### Scope", *(f"- {b}" for b in scope)]
+    return out
+
+
+def _phenomenon_claims(data: dict, cycles: str) -> list[str | None]:
+    """The claim line of each phenomenon in file order, or None for one without a claim."""
+    try:
+        recs = iter([r for r in _entailments(data, cycles=cycles)["claims"]
+                     if r["source"] == "phenomenon"])
+        refused = False
+    except ValueError:
+        recs, refused = iter([]), True
+    out: list[str | None] = []
+    for ph in items(data, "phenomena"):
+        c = read_claim(field(ph, "claim"))
+        if c is None:
+            out.append(None)
+        elif refused:
+            basis = "graph_refused" if c["ok"] else "malformed_claim"
+            out.append(claim_line({**c, "verdict": "not_evaluated", "basis": basis, "via": []}))
+        else:
+            out.append(claim_line(next(recs)))
+    return out
+
+
+def _formal_model_line(data: dict) -> list[str]:
+    """The formal-model line, when the theory declares a model of a schema type."""
+    fm = data.get("formal_model")
+    kind = enum(field(fm, "type"), FORMAL_MODEL_TYPE)
+    if kind is None:
+        return []
+    ref = flat(text(field(fm, "spec_ref")))
+    return [f"- Formal model: {kind}" + (f" ({ref})" if ne_str(ref) else "")]
 
 
 def _version_line(data: dict) -> list[str]:
@@ -121,7 +269,7 @@ def _plan(p) -> str | None:
         return x if x is not None and ok(x) else None
 
     def txt(key: str) -> str:
-        s = text(block.get(key))
+        s = flat(text(block.get(key)))
         return s if ne_str(s) else ""
 
     def unit_interval(x: float) -> bool:
@@ -178,42 +326,100 @@ def _sampling_plan(preds: list) -> list[str]:
               for pid, plan in plans)]
 
 
-def _implied(data: dict) -> list[str]:
+_CYCLE = "implications requires an acyclic causal graph; cycle found: "
+
+
+def _implied(data: dict, cycles: str) -> list[str]:
     """The lines of the implied-independencies section (API_SPEC.md section 11)."""
     try:
-        imp = _implications(data)
+        imp = _implications(data, cycles=cycles)
     except ValueError as err:
         # A refusal: a feedback loop under the default, a repeated construct id
-        # or a directed relation naming an undeclared construct. The reason is
-        # what the section reports.
-        return [f"_Not derived: {err}._"]
+        # or a relation naming an undeclared construct. A loop is described for
+        # a reader, and any other reason is reported as it is.
+        msg = str(err)
+        if msg.startswith(_CYCLE):
+            loop = msg[len(_CYCLE):].split(";", 1)[0]
+            return [f"_Not derived: the causal graph has a feedback loop, {loop}. With "
+                    "cycles = 'sigma', the statements are read by sigma-separation and hold if "
+                    "each loop settles to a unique equilibrium._"]
+        return [f"_Not derived: {msg}._"]
+    note = ([] if imp["acyclic"] else
+            ["_Read by sigma-separation, since the causal graph has a feedback loop: each "
+             "statement holds if every loop settles to a unique equilibrium._"])
     if imp["implications"]:
         # A code span keeps dagitty's notation whole, since Markdown reads the
         # underscores of " _||_ " as emphasis around the two bars.
-        return [f"- `{i['statement']}`" for i in imp["implications"]]
+        return note + [f"- `{i['statement']}`" for i in imp["implications"]]
     if not imp["constructs"]:
         return ["_None: the theory states no directed relation between constructs._"]
     if imp["inseparable"]:
-        return ["_None: no set of constructs separates any pair the theory leaves unjoined._"]
-    return ["_None: every pair of constructs in the causal graph is adjacent._"]
+        return note + ["_None: no set of constructs separates any pair the theory leaves unjoined._"]
+    return note + ["_None: every pair of constructs in the causal graph is adjacent._"]
 
 
-def preregister(T, path=None) -> str:
-    """Render the hypotheses section of a preregistration, writing it to ``path`` when one is given.
+def _adjustment_line(rec: dict) -> str | None:
+    """What an observational test of an effect claim must adjust for, or None."""
+    if rec.get("identified") is None:
+        return None
+    if not rec["identified"]:
+        return "none suffices"
+    return ", ".join(rec["adjustment"]) or "none needed"
+
+
+def _claim_lines(data: dict, cycles: str) -> tuple[list[tuple[str, str | None] | None],
+                                                   list[dict | None]]:
+    """For each prediction in file order, its claim and adjustment lines and its rivals' verdicts.
+
+    A prediction that states no claim gets None (API_SPEC.md section 11).
+    """
+    verdicts = prediction_verdicts(data, cycles=cycles)
+    try:
+        recs = iter([r for r in _entailments(data, cycles=cycles)["claims"]
+                     if r["source"] == "prediction"])
+        refused = False
+    except ValueError:
+        recs, refused = iter([]), True
+    lines: list[tuple[str, str | None] | None] = []
+    for p in items(data, "predictions"):
+        c = read_claim(field(p, "claim"))
+        if c is None:
+            lines.append(None)
+        elif refused:
+            basis = "graph_refused" if c["ok"] else "malformed_claim"
+            lines.append((claim_line({**c, "verdict": "not_evaluated", "basis": basis, "via": []}), None))
+        else:
+            rec = next(recs)
+            lines.append((claim_line(rec), _adjustment_line(rec)))
+    return lines, verdicts
+
+
+def preregister(T, path=None, cycles: str = "refuse") -> str:
+    """Render the theory and hypotheses sections of a preregistration, written to ``path`` if given.
 
     The header gives the theory id, the version when it has an id (with its
-    parent, when one is named), the schema version, the maturity and whether
-    every prediction's derivation references resolve: ``yes``, ``no`` or ``not
-    applicable (no predictions)``. The derivation line reports the checklist's
-    reference check, which does not show that a prediction follows from the
-    propositions it cites.
+    parent, when one is named), the schema version, the maturity, the formal
+    model when one is declared and the checklist's derivation check: ``yes``
+    when every prediction cites declared propositions and the causal graph
+    entails every claim it states, ``no`` otherwise and ``not applicable (no
+    predictions)``.
 
-    Each hypothesis is listed in file order with its claim type, statement and
-    derivation, followed by the auxiliary assumptions that protect it (``core``
-    or ``added for <id>``), the registered rivals it discriminates and its test
-    record. A hypothesis that a recorded outcome has already tested reads
-    ``already tested: passed (<date>, registered <where>)``, one entry per
-    outcome, and any other reads ``untested``.
+    A theory section follows, so that the document can be read without the
+    theory file: each construct with its label, definition, measures and
+    boundary conditions, each proposition with its relation and mechanism, and,
+    when the theory has them, the phenomena it sets out to explain with what
+    the causal graph says of their claims, the auxiliary assumptions, the rival
+    accounts and the scope.
+
+    Each hypothesis is then listed in file order with its claim type,
+    statement, prediction id and derivation, followed by the region its bounds
+    allow, its claim and what the causal graph says of it, what an
+    observational test of an effect claim must adjust for, the auxiliary
+    assumptions that protect it (``core`` or ``added for <id>``), the
+    registered rivals it discriminates, with how each rival's own propositions
+    read the claim, and its test record. A hypothesis that a recorded outcome
+    has already tested reads ``already tested: passed (<date>, registered
+    <where>)``, one entry per outcome, and any other reads ``untested``.
 
     When at least one prediction states a sampling plan in its ``test`` block,
     a section headed ``Sampling plan (author-recorded; not scored)`` follows,
@@ -226,9 +432,13 @@ def preregister(T, path=None) -> str:
     without a plan has no such section.
 
     A section then lists the conditional independencies that
-    ``implications()`` derives from the causal graph with its default
-    settings, which are claims the theory makes without stating them, or says
-    why there are none. The claim-form severity rubric closes the document.
+    ``implications()`` derives from the causal graph, which are claims the
+    theory makes without stating them, or says why there are none. ``cycles``
+    is passed to it and to ``entailments()``: under the default, a graph with a
+    feedback loop is not read, and with ``"sigma"`` it is read by
+    sigma-separation. The claim-form severity rubric closes the document.
+    Values are written on one line, so a line break inside a statement cannot
+    end the list item it belongs to.
 
     The document is the part of a preregistration that the theory file holds.
     It is to be completed with the study design, the analysis plan, the
@@ -236,8 +446,9 @@ def preregister(T, path=None) -> str:
     that a template such as PRP-QUANT asks for (Bosnjak et al., 2022).
 
     Raises:
-        ValueError: when ``check()`` refuses the theory, because a test
-            outcome's ``passed`` is present and not a boolean or a prediction's
+        ValueError: when ``cycles`` is not ``"refuse"`` or ``"sigma"``, and
+            when ``check()`` refuses the theory, because a test outcome's
+            ``passed`` is present and not a boolean or a prediction's
             ``severity`` is not a finite number within [0, 1]. The message
             begins ``check requires``, and nothing is written.
 
@@ -255,19 +466,32 @@ def preregister(T, path=None) -> str:
         methodological paradox. Philosophy of Science, 34(2), 103-115.
         https://doi.org/10.1086/288135
     """
+    check_cycles(cycles, "preregister")
     data = T.data if hasattr(T, "data") else T
+    doc = "\n".join(document_lines(data, cycles)) + "\n"
+    if path is not None:
+        _write_lf(path, doc)
+    return doc
+
+
+def document_lines(data: dict, cycles: str, embedded: bool = False) -> list[str]:
+    """The lines of the preregistration. ``embedded`` leaves out the severity
+    section, which the dossier gives with the declared values beside it."""
     rep = _check(data)
     deriv = next((it for it in rep["items"] if it["id"] == "derivation_chain"), None)
     resolve = _RESOLVE[deriv["status"]] if deriv else "no"
 
     lines = [
-        f"# Preregistration: {text(data.get('title'))}",
+        f"# Preregistration: {flat(text(data.get('title')))}",
         "",
         f"- Theory ID: {text(data.get('id'))}",
         *_version_line(data),
         f"- Schema version: {text(data.get('schema_version'))}",
+        f"- Content hash: {content_hash(data)}",
         f"- Maturity: {enum(data.get('maturity'), MATURITY) or ''}",
-        f"- Derivation references resolve: {resolve}",
+        *_formal_model_line(data),
+        f"- Derivations check: {resolve}",
+        *_theory_section(data, cycles),
         "",
         "## Hypotheses",
     ]
@@ -278,26 +502,44 @@ def preregister(T, path=None) -> str:
         aux = items(data, "auxiliary_assumptions")
         tos = items(data, "test_outcomes")
         alt_ids = {text(field(a, "id")) for a in items(data, "alternatives")}
+        claims, verdicts = _claim_lines(data, cycles)
         for i, p in enumerate(preds, start=1):
             df = str_list(field(p, "derives_from"))
             df_txt = ", ".join(df) if df else "—"
             ptype = enum(field(p, "type"), PRED_TYPE) or ""
-            lines.append(f"{i}. [{ptype}] {text(field(p, 'statement'))} (derives from: {df_txt})")
+            pid = text(field(p, "id"))
+            ref = f"{pid}; " if ne_str(pid) else ""
+            lines.append(f"{i}. [{ptype}] {flat(text(field(p, 'statement')))} "
+                         f"({ref}derives from: {df_txt})")
             # Markdown nests a line under a numbered item only when it is
             # indented by the width of the number, its full stop and the space.
             pad = " " * (len(str(i)) + 2)
-            pid = text(field(p, "id"))
+            region = _region(p)
+            if region is not None:
+                lines.append(f"{pad}- Region the claim allows: {region}")
+            stated = claims[i - 1]
+            if stated is not None:
+                claim, adjust = stated
+                lines.append(f"{pad}- Claim: {claim}")
+                if adjust is not None:
+                    lines.append(f"{pad}- Adjustment for an observational test: {adjust}")
             assumptions = _auxiliaries(pid, aux)
             if assumptions:
                 lines.append(f"{pad}- Auxiliary assumptions: {', '.join(assumptions)}")
             named = str_list(field(p, "diagnostic_vs"))
             rivals = list(dict.fromkeys(d for d in named if d in alt_ids))
             if rivals:
-                lines.append(f"{pad}- Rivals it discriminates: {', '.join(rivals)}")
+                verdict = verdicts[i - 1]
+                reads = verdict["rivals"] if verdict is not None else {}
+                shown = [f"{d} ({_RIVAL_READS[reads[d]]})" if reads.get(d) in _RIVAL_READS else d
+                         for d in rivals]
+                lines.append(f"{pad}- Rivals it discriminates: {', '.join(shown)}")
             lines.append(f"{pad}- Test record: {_test_record(pid, tos)}")
         lines += _sampling_plan(preds)
 
-    lines += ["", _IMPLIED_HEADING, *_implied(data)]
+    lines += ["", _IMPLIED_HEADING, *_implied(data, cycles)]
+    if embedded:
+        return lines
 
     # The values grade the form of each claim before any data (API_SPEC section
     # 9). They say nothing of how severely a claim is tested, and the heading
@@ -311,7 +553,4 @@ def preregister(T, path=None) -> str:
             pid, cs, rk = s["prediction_id"], _fmt(s["computed_severity"]), _fmt(s["risk_score"])
             lines.append(f"- {pid}: severity {cs}, risk {rk}")
 
-    doc = "\n".join(lines) + "\n"
-    if path is not None:
-        _write_lf(path, doc)
-    return doc
+    return lines

@@ -67,7 +67,8 @@ test_that("every consumer reads entries that are not mappings", {
   expect_true(grepl("1. []  (derives from: —)", tf_preregister(t), fixed = TRUE))
   expect_true(startsWith(tf_dossier(t), "# theoryforge dossier: T\n"))
   expect_true(endsWith(tf_compile_sem(t), "# Structural model\narousal ~~ threat\n"))
-  expect_identical(tf_implications(t)$n_implications, 0L)
+  # The association names constructs without ids, which no relation can name.
+  expect_error(tf_implications(t), "requires associations between declared constructs", fixed = TRUE)
   sim <- tf_simulate(t, steps = 2)
   expect_identical(sim$states, list("", ""))
   expect_length(sim$trajectory, 3L)
@@ -243,10 +244,10 @@ test_that("null entries of a string array are ignored", {
   expect_identical(deriv$status, "fail")
   expect_identical(deriv$score, 0.333)
   text <- tf_preregister(t)
-  expect_true(grepl("1. [directional] Beta rises with Alpha. (derives from: —)", text,
+  expect_true(grepl("1. [directional] Beta rises with Alpha. (h1; derives from: —)", text,
                     fixed = TRUE))
-  expect_true(grepl("3. [point] Beta is exactly one. (derives from: p1)", text, fixed = TRUE))
-  expect_true(grepl("Derivation references resolve: no", text, fixed = TRUE))
+  expect_true(grepl("3. [point] Beta is exactly one. (h3; derives from: p1)", text, fixed = TRUE))
+  expect_true(grepl("Derivations check: no", text, fixed = TRUE))
 })
 
 test_that("a single valid entry beside a null passes the derivation check", {
@@ -298,7 +299,7 @@ test_that("null text fields print as empty strings", {
 '))
   prereg <- tf_preregister(t)
   expect_true(startsWith(prereg, "# Preregistration: \n"))
-  expect_true(grepl("1. []  (derives from: p1)", prereg, fixed = TRUE))
+  expect_true(grepl("1. []  (h1; derives from: p1)", prereg, fixed = TRUE))
   expect_identical(tf_severity(t)$type, "")
 })
 

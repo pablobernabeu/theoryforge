@@ -6,11 +6,13 @@ bundle is itself deterministic.
 """
 from __future__ import annotations
 
+from . import _resources
 from ._access import EVIDENCE_DIRECTION, enum, field, items, ne_str, text
 from ._num import rnd
 from ._text import trim
-from .prereg import _fmt, _outcome_result
-from .prereg import preregister as _preregister
+from .entailment import check_cycles, claim_line, discriminate, entailments, equivalent_models
+from .hashing import content_hash
+from .prereg import _fmt, _outcome_result, _plan_number, document_lines, flat
 from .rigor import check as _check
 from .scoring import outcome_rows as _outcome_rows
 from .scoring import severity as _severity
@@ -21,13 +23,74 @@ DECLARED_MARGIN = 0.2
 
 
 def _post_data(row: dict) -> str:
-    """The post-data severity note of a test-record line, an open bound written as an infinity."""
-    lower = "-inf" if row["lower"] is None else _fmt(row["lower"])
-    upper = "inf" if row["upper"] is None else _fmt(row["upper"])
+    """The post-data severity note of a test-record line, an open bound written as an infinity.
+
+    The bounds are written as recorded, with up to 15 significant digits, so a
+    small bound is not rounded to zero.
+    """
+    lower = "-inf" if row["lower"] is None else _plan_number(row["lower"])
+    upper = "inf" if row["upper"] is None else _plan_number(row["upper"])
     return f"; post-data severity {_fmt(row['severity'])} for [{lower}, {upper}]"
 
 
-def dossier(T) -> str:
+def _claims_section(data: dict, cycles: str) -> list[str]:
+    """What the causal graph says of each claim (API_SPEC.md section 20)."""
+    try:
+        recs = entailments(data, cycles=cycles)["claims"]
+    except ValueError as err:
+        return [f"_Not read: {err}._"]
+    if not recs:
+        return ["_No prediction or phenomenon states a claim._"]
+    return [f"- {r['id']} ({r['source']}): {claim_line(r)}" for r in recs]
+
+
+def _equivalence_section(data: dict) -> list[str]:
+    """Which causal directions an equivalent model reverses (API_SPEC.md section 20)."""
+    try:
+        eq = equivalent_models(data)
+    except ValueError as err:
+        return [f"_Not read: {err}._"]
+    if eq["reason"] == "feedback_loop":
+        return ["_Not determined: the causal graph has a feedback loop._"]
+    if eq["reason"] == "associations":
+        return ["_Not determined: the theory states associations, and the rule covers "
+                "graphs of directed relations alone._"]
+    if not eq["edges"]:
+        return ["_None: the theory states no directed relation between constructs._"]
+    word = {"compelled": "fixed in every equivalent model",
+            "reversible": "reversed in some equivalent model"}
+    return [f"- {', '.join(e['propositions'])}: {e['from']} -> {e['to']} ({word[e['status']]})"
+            for e in eq["edges"]]
+
+
+def _rivals_section(data: dict, cycles: str) -> list[str]:
+    """How the theory compares with each rival that states propositions (API_SPEC.md section 20)."""
+    out = []
+    for a in items(data, "alternatives"):
+        aid = text(field(a, "id"))
+        if not (ne_str(aid) and items(a, "propositions")):
+            continue
+        try:
+            d = discriminate(data, aid, cycles=cycles)
+        except ValueError as err:
+            out.append(f"- {aid}: not compared: {err}")
+            continue
+        if not d["evaluated"]:
+            out.append(f"- {aid}: not compared, since a causal graph has a feedback loop")
+            continue
+        found = [c["id"] for c in d["claims"] if c["discriminates"]]
+        n = d["counts"]
+        line = (f"- {aid}: claims it discriminates: {', '.join(found) if found else 'none'}; "
+                f"independencies one implies and the other does not: {n['independencies']}; "
+                f"decisive differences in sign: {n['decisive_effects']} effects, "
+                f"{n['decisive_associations']} associations")
+        if d["markov_equivalent"]:
+            line += "; Markov equivalent to the theory"
+        out.append(line)
+    return out or ["_No alternative states propositions._"]
+
+
+def dossier(T, cycles: str = "refuse") -> str:
     """A reviewer-facing audit bundle in Markdown.
 
     The header gives the checklist version, the aggregate score, the checklist
@@ -49,15 +112,18 @@ def dossier(T) -> str:
             ``severity`` is not a finite number within [0, 1]. The message
             begins ``check requires``.
     """
+    check_cycles(cycles, "dossier")
     data = T.data if hasattr(T, "data") else T
     rep = _check(data)
+    criteria = {it["id"]: it["criterion"] for it in _resources.checklist()["items"]}
     failed = [it["id"] for it in rep["items"]
               if it["severity_if_fail"] == "blocker" and it["status"] == "fail"]
     blockers = f"{rep['n_blockers_failed']} ({', '.join(failed)})" if failed else "0"
     lines = [
-        f"# theoryforge dossier: {text(data.get('title'))}",
+        f"# theoryforge dossier: {flat(text(data.get('title')))}",
         "",
         f"- Theory ID: {text(data.get('id'))}",
+        f"- Content hash: {content_hash(data)}",
         f"- Maturity: {rep['maturity']}",
         # The score is only interpretable against the checklist that produced
         # it, so a reviewer reading the bundle can see which one that was.
@@ -70,11 +136,12 @@ def dossier(T) -> str:
         "",
         "## Rigour checklist",
         "",
-        "| item | status | score | weight |",
-        "| --- | --- | --- | --- |",
+        "| item | criterion | status | score | weight |",
+        "| --- | --- | --- | --- | --- |",
     ]
     for it in rep["items"]:
-        lines.append(f"| {it['id']} | {it['status']} | {_fmt(it['score'])} | {_fmt(it['weight'])} |")
+        lines.append(f"| {it['id']} | {criteria.get(it['id'], '')} | {it['status']} | "
+                     f"{_fmt(it['score'])} | {_fmt(it['weight'])} |")
 
     lines += ["", "## Severity (pre-data rubric of claim form)", ""]
     sev = _severity(data)
@@ -105,7 +172,7 @@ def dossier(T) -> str:
         for t, (row, _) in zip(tos, _outcome_rows(data), strict=True):
             line = f"- {text(field(t, 'prediction_id'))}: {_outcome_result(t)}"
             for key in ("observed", "date", "registered"):
-                value = text(field(t, key))
+                value = flat(text(field(t, key)))
                 if ne_str(value):
                     line += f"; {key}: {value}"
             if row is not None:
@@ -125,15 +192,24 @@ def dossier(T) -> str:
                 line += f"; doi: {doi}"
             lines.append(line)
 
+    lines += ["", "## Claims and the causal graph", "", *_claims_section(data, cycles)]
+    lines += ["", "## Equivalent models", "", *_equivalence_section(data)]
+    lines += ["", "## Rivals", "", *_rivals_section(data, cycles)]
+
     lines += ["", "## Provenance", ""]
     prov = items(data, "provenance")
     if not prov:
         lines.append("_No provenance recorded._")
     else:
         for i, s in enumerate(prov, start=1):
-            action = text(field(s, "action"))
-            detail = text(field(s, "detail"))
+            action = flat(text(field(s, "action")))
+            detail = flat(text(field(s, "detail")))
             lines.append(f"{i}. {action}: {detail}" if trim(detail) else f"{i}. {action}")
 
-    lines += ["", "## Preregistration", ""]
-    return "\n".join(lines) + "\n" + _preregister(data)
+    # The preregistration is a document of its own, so its headings move one
+    # level down to sit under this section. Its severity list is left out, since
+    # the dossier gives it above with the declared values.
+    prereg = ["#" + line if line.startswith("#") else line
+              for line in document_lines(data, cycles, embedded=True)]
+    lines += ["", "## Preregistration", "", *prereg]
+    return "\n".join(lines) + "\n"

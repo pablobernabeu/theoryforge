@@ -45,7 +45,7 @@ def _item(t, iid):
 
 def test_the_checklist_is_version_2_with_five_default_thresholds():
     spec = _resources.checklist()
-    assert spec["schema_version"] == "2.0"
+    assert spec["schema_version"] == "2.1"
     # parsimony_ratio_max is gone: parsimony no longer counts assumptions.
     assert spec["thresholds"] == {
         "redundancy_similarity_max": 0.85, "redundancy_overlap_max": 0.85,
@@ -61,8 +61,8 @@ def test_the_checklist_is_version_2_with_five_default_thresholds():
     assert items["risk_severity"]["citation"] == "Popper (1959); Meehl (1967, 1990b)"
     assert items["parsimony"]["citation"] == "Lakatos (1970); Meehl (1990a)"
     assert items["derivation_chain"]["criterion"] == (
-        "Every prediction cites at least one proposition, and every cited id is a declared "
-        "proposition (reference check only)")
+        "Every prediction cites declared propositions, and the causal graph entails the claim "
+        "it states, if any")
 
 
 def test_the_report_gives_coverage_after_the_aggregate(panic_path):
@@ -70,7 +70,7 @@ def test_the_report_gives_coverage_after_the_aggregate(panic_path):
     assert list(r) == ["theory_id", "schema_version", "checklist_version", "maturity",
                        "aggregate_score", "coverage", "gate", "n_blockers_failed", "items"]
     # parsimony has nothing to assess, and the other eleven items weigh 0.92.
-    assert (r["checklist_version"], r["aggregate_score"], r["coverage"]) == ("2.0", 87.3, 0.92)
+    assert (r["checklist_version"], r["aggregate_score"], r["coverage"]) == ("2.1", 87.3, 0.92)
     assert (_items(r)["parsimony"]["status"], _items(r)["parsimony"]["score"]) == ("n/a", None)
 
 
@@ -136,8 +136,8 @@ def test_a_declared_severity_counts_and_the_dossier_sets_it_beside_the_rubric():
     # 0.5 exceeds the directional rubric value, 0.3, by exactly 0.2: no note.
     assert "- h2: severity 0.3, risk 0.4, declared 0.5\n" in d
     assert "- h3: severity 0.9, risk 0.9\n" in d
-    # The preregistration appended to the dossier keeps its own lines.
-    assert "\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.1, risk 0.1\n" in d
+    # The preregistration appended to the dossier leaves its own severity list out.
+    assert "\n### Severity" not in d
 
 
 def test_add_prediction_stores_a_severity_only_when_given():
@@ -278,8 +278,10 @@ def test_the_dossier_gives_coverage_and_names_the_failed_blockers(weak_path):
     d = tf.read(weak_path).dossier()
     assert ("- Aggregate rigour score: 2.2/100\n- Checklist coverage: 0.92\n- Gate: blocked\n"
             "- Blockers failed: 2 (falsifiability, derivation_chain)\n") in d
-    assert "| parsimony | n/a | n/a | 0.08 |\n" in d
-    assert "| non_redundancy | warn | 0.0 | 0.1 |\n" in d
+    assert "| parsimony | No auxiliary assumption added in response to an anomaly lacks independent " \
+        "corroboration | n/a | n/a | 0.08 |\n" in d
+    assert "| non_redundancy | No pair of construct definitions is a near-duplicate or contained in " \
+        "the other (lexical screen) | warn | 0.0 | 0.1 |\n" in d
 
 
 def test_the_views_and_the_html_report_show_not_applicable_items(weak_path):

@@ -1,0 +1,13 @@
+{
+  "theory_id": "weak-demo",
+  "computed": false,
+  "reason": "associations",
+  "constructs": [
+    "k_motivation",
+    "k_drive"
+  ],
+  "v_structures": [],
+  "edges": [],
+  "n_compelled": 0,
+  "n_reversible": 0
+}

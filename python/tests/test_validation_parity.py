@@ -387,9 +387,20 @@ def test_full_validation_checks_the_formal_model(value, expected):
         assert _full_error(t) == "invalid theory object: " + expected
 
 
+def test_a_recorded_content_hash_must_match_the_content():
+    t = _consistent()
+    t.data["version"] = {"id": "v2", "parent_id": "v1", "content_hash": None}
+    t.data["version"]["content_hash"] = t.content_hash()
+    assert t.validate(full=True) is True
+    t.data["title"] += " revised"
+    assert _full_error(t) == ("invalid theory object: version content_hash does not match the "
+                              "theory's content")
+
+
 @pytest.mark.parametrize(("value", "expected"), [
     ({"id": "v1", "parent_id": None, "content_hash": None}, None),
-    ({"id": "v2", "parent_id": "v1", "content_hash": "sha256:00"}, None),
+    ({"id": "v2", "parent_id": "v1", "content_hash": "sha256:00"},
+     "version content_hash does not match the theory's content"),
     ({}, None),
     ([], None),
     (None, None),

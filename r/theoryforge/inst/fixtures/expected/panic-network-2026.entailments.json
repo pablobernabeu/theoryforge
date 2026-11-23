@@ -1,0 +1,18 @@
+{
+  "theory_id": "panic-network-2026",
+  "criterion": "sigma",
+  "acyclic": false,
+  "feedback": [
+    [
+      "c_arousal",
+      "c_perceived_threat"
+    ]
+  ],
+  "claims": [],
+  "counts": {
+    "entailed": 0,
+    "contradicted": 0,
+    "undetermined": 0,
+    "not_evaluated": 0
+  }
+}

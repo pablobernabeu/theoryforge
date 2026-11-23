@@ -14,9 +14,9 @@ feedback loops is refused by default, or read by sigma-separation on request
 """
 from __future__ import annotations
 
-from ._access import RELATION, enum, field, items, text
+from ._access import text
+from ._causal import causal_graph
 from ._graph import acyclify, first_cycle, m_separated, reach, strong_components
-from ._relations import BIDIRECTED, DIRECTED
 
 # The values of the ``cycles`` option, the default first.
 CYCLES = ("refuse", "sigma")
@@ -187,64 +187,9 @@ def implications(T, cycles: str = "refuse") -> dict:
         raise ValueError("implications requires cycles to be 'refuse' or 'sigma'")
     T = T.data if hasattr(T, "data") else T
 
-    declared: list[str] = []
-    position: dict[str, int] = {}
-    for c in items(T, "constructs"):
-        cid = text(field(c, "id"))
-        # A construct without an id cannot be the endpoint of a proposition, so
-        # it takes no part in the graph, and two of them do not share an id.
-        if cid == "":
-            continue
-        # Two constructs sharing an id give the same node two sets of parents,
-        # and nothing in the maths says which one a proposition meant.
-        if cid in position:
-            raise ValueError(
-                f"implications requires unique construct ids; duplicate construct id: {cid}")
-        position[cid] = len(declared)
-        declared.append(cid)
-
-    edges: list[tuple[int, int]] = []
-    associations: list[tuple[str, str]] = []
-    for p in items(T, "propositions"):
-        rel = enum(field(p, "relation"), RELATION)
-        frm, to = text(field(p, "from")), text(field(p, "to"))
-        if rel in BIDIRECTED:
-            associations.append((frm, to))
-            continue
-        if rel not in DIRECTED:
-            continue
-        pid = text(field(p, "id"))
-        # Dropping an edge whose endpoint was never declared would shrink the
-        # graph and so add independencies the theory does not imply, which is a
-        # confidently wrong answer rather than a missing one.
-        for endpoint in (frm, to):
-            if endpoint not in position:
-                raise ValueError(
-                    "implications requires causal propositions between declared constructs; "
-                    f"proposition '{pid}' refers to unknown construct '{endpoint}'")
-        e = (position[frm], position[to])
-        if e not in edges:
-            edges.append(e)
-
-    used = sorted({i for e in edges for i in e})
-    nodes = [declared[i] for i in used]
+    g = causal_graph(T, "implications")
+    nodes, directed, bidirected = g["nodes"], g["directed"], g["bidirected"]
     k = len(nodes)
-    rank = {i: r for r, i in enumerate(used)}
-    directed = [[False] * k for _ in range(k)]
-    for u, v in edges:
-        directed[rank[u]][rank[v]] = True
-    # An association is an edge only between two vertices. A construct that
-    # only associations name is a collider on every path through it, so it
-    # closes them all and leaving it out changes no statement about the others.
-    vertex = {cid: r for r, cid in enumerate(nodes)}
-    bidirected = [[False] * k for _ in range(k)]
-    n_bidirected = 0
-    for frm, to in associations:
-        a, b = vertex.get(frm), vertex.get(to)
-        if a is None or b is None or a == b or bidirected[a][b]:
-            continue
-        bidirected[a][b] = bidirected[b][a] = True
-        n_bidirected += 1
 
     # The pairs are those the theory leaves unjoined. Under "sigma", the
     # acyclification below can join more of them, and those are then separated
@@ -302,8 +247,8 @@ def implications(T, cycles: str = "refuse") -> dict:
         "criterion": criterion,
         "acyclic": not feedback,
         "constructs": nodes,
-        "n_edges": len(edges),
-        "n_bidirected": n_bidirected,
+        "n_edges": g["n_edges"],
+        "n_bidirected": g["n_bidirected"],
         "feedback": feedback,
         "implications": out,
         "n_implications": len(out),

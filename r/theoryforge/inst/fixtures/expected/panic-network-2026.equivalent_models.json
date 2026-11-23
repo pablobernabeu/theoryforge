@@ -1,0 +1,14 @@
+{
+  "theory_id": "panic-network-2026",
+  "computed": false,
+  "reason": "feedback_loop",
+  "constructs": [
+    "c_arousal",
+    "c_perceived_threat",
+    "c_avoidance"
+  ],
+  "v_structures": [],
+  "edges": [],
+  "n_compelled": 0,
+  "n_reversible": 0
+}

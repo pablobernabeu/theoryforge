@@ -2,7 +2,7 @@
 """Generate golden outputs from the Python reference implementation.
 
 Writes every parity artefact named in API_SPEC.md sections 7, 13, 17, 18, 21,
-22, 27 and 29 into ``fixtures/expected/``. Listing the artefact types here as well would only
+22, 27, 29 and 31 to 33 into ``fixtures/expected/``. Listing the artefact types here as well would only
 give them a second place to drift from; the spec is the list.
 
 Also mirrors the fixture inputs, the golden tree and the files of ``schema/``
@@ -111,6 +111,15 @@ def emit_theory(t: tf.Theory, out_dir: Path) -> list[str]:
     (out_dir / f"{tid}.implications.json").write_bytes(
         (json.dumps(t.implications(cycles="sigma"), indent=2) + "\n").encode("utf-8"))
     written.append(f"{tid}.implications.json")
+    # The causal reading of Part J, also under sigma-separation, and one
+    # comparison per alternative that states propositions.
+    rivals = [a["id"] for a in t.data.get("alternatives") or []
+              if isinstance(a, dict) and isinstance(a.get("id"), str) and a["id"] and a.get("propositions")]
+    for name, obj in (("entailments", t.entailments(cycles="sigma")),
+                      ("equivalent_models", t.equivalent_models()),
+                      ("discriminate", [t.discriminate(r, cycles="sigma") for r in rivals])):
+        (out_dir / f"{tid}.{name}.json").write_bytes((json.dumps(obj, indent=2) + "\n").encode("utf-8"))
+        written.append(f"{tid}.{name}.json")
     return written
 
 
@@ -165,6 +174,8 @@ def edge_outcome(path: Path) -> dict:
         "check": _attempt(lambda: _check_summary(t.check())),
         "severity": _attempt(t.severity),
         "implications": _attempt(t.implications),
+        "entailments": _attempt(t.entailments),
+        "equivalent_models": _attempt(t.equivalent_models),
         "compile_sem": _attempt(t.compile_sem),
         "simulate": _attempt(lambda: t.simulate(steps=3)),
         "preregister": _attempt(t.preregister),

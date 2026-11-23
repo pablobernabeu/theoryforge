@@ -1,8 +1,9 @@
 # theoryforge dossier: An underspecified motivation theory
 
 - Theory ID: weak-demo
+- Content hash: sha256:efcf38ef21fc18fdcc50718943ff878fc53151ab45e744e7271abc31e643f86e
 - Maturity: building
-- Checklist version: 2.0
+- Checklist version: 2.1
 - Aggregate rigour score: 2.2/100
 - Checklist coverage: 0.92
 - Gate: blocked
@@ -10,20 +11,20 @@
 
 ## Rigour checklist
 
-| item | status | score | weight |
-| --- | --- | --- | --- |
-| falsifiability | fail | 0.0 | 0.15 |
-| precision | warn | 0.0 | 0.1 |
-| risk_severity | warn | 0.2 | 0.1 |
-| parsimony | n/a | n/a | 0.08 |
-| non_redundancy | warn | 0.0 | 0.1 |
-| construct_clarity | warn | 0.0 | 0.08 |
-| scope | warn | 0.0 | 0.06 |
-| logical_why | warn | 0.0 | 0.08 |
-| causal_testability | warn | 0.0 | 0.06 |
-| diagnosticity | warn | 0.0 | 0.06 |
-| formalisation | warn | 0.0 | 0.05 |
-| derivation_chain | fail | 0.0 | 0.08 |
+| item | criterion | status | score | weight |
+| --- | --- | --- | --- | --- |
+| falsifiability | At least one prediction forbids an observation | fail | 0.0 | 0.15 |
+| precision | Predictions are point/interval, not merely directional | warn | 0.0 | 0.1 |
+| risk_severity | Mean prediction severity (declared, else the claim-form rubric) at or above threshold | warn | 0.2 | 0.1 |
+| parsimony | No auxiliary assumption added in response to an anomaly lacks independent corroboration | n/a | n/a | 0.08 |
+| non_redundancy | No pair of construct definitions is a near-duplicate or contained in the other (lexical screen) | warn | 0.0 | 0.1 |
+| construct_clarity | Every construct has definition + measurement + boundary conditions | warn | 0.0 | 0.08 |
+| scope | Boundary conditions explicitly stated | warn | 0.0 | 0.06 |
+| logical_why | Each proposition states a mechanism, not just a correlation | warn | 0.0 | 0.08 |
+| causal_testability | At least one proposition states a causal relation | warn | 0.0 | 0.06 |
+| diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, or verified where the claim and the rival's propositions are stated) | warn | 0.0 | 0.06 |
+| formalisation | A formal model of a recognised type (ode, abm, network, sem) is declared | warn | 0.0 | 0.05 |
+| derivation_chain | Every prediction cites declared propositions, and the causal graph entails the claim it states, if any | fail | 0.0 | 0.08 |
 
 ## Severity (pre-data rubric of claim form)
 
@@ -37,25 +38,45 @@ _No test outcomes recorded._
 
 _No evidence recorded._
 
+## Claims and the causal graph
+
+_No prediction or phenomenon states a claim._
+
+## Equivalent models
+
+_Not determined: the theory states associations, and the rule covers graphs of directed relations alone._
+
+## Rivals
+
+_No alternative states propositions._
+
 ## Provenance
 
 _No provenance recorded._
 
 ## Preregistration
 
-# Preregistration: An underspecified motivation theory
+## Preregistration: An underspecified motivation theory
 
 - Theory ID: weak-demo
 - Schema version: 1.0
+- Content hash: sha256:efcf38ef21fc18fdcc50718943ff878fc53151ab45e744e7271abc31e643f86e
 - Maturity: building
-- Derivation references resolve: no
+- Formal model: none
+- Derivations check: no
 
-## Hypotheses
-1. [existence] Motivated people exist. (derives from: —)
+### Theory
+
+#### Constructs
+- k_motivation (Motivation): A person's internal drive to act.
+- k_drive (Drive): A person's internal drive to act towards goals.
+
+#### Propositions
+- q1: k_motivation associates k_drive.
+
+### Hypotheses
+1. [existence] Motivated people exist. (w1; derives from: —)
    - Test record: untested
 
-## Implied conditional independencies (derived from the causal graph, not predictions)
-_None: the theory states no directed relation between constructs._
-
-## Severity (pre-data rubric of claim form)
-- w1: severity 0.1, risk 0.1
+### Implied conditional independencies (derived from the causal graph, not predictions)
+_None: every pair of constructs in the causal graph is adjacent._

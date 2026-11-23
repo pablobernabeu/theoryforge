@@ -36,7 +36,7 @@ c2_item <- function(theory, id) {
 
 test_that("the checklist is version 2.0 with five default thresholds", {
   spec <- theoryforge:::tf_checklist()
-  expect_identical(spec$schema_version, "2.0")
+  expect_identical(spec$schema_version, "2.1")
   # parsimony_ratio_max is gone: parsimony no longer counts assumptions.
   thr <- spec$thresholds
   expect_identical(sort(names(thr)),
@@ -54,8 +54,8 @@ test_that("the checklist is version 2.0 with five default thresholds", {
   expect_identical(items$risk_severity$citation, "Popper (1959); Meehl (1967, 1990b)")
   expect_identical(items$parsimony$citation, "Lakatos (1970); Meehl (1990a)")
   expect_identical(items$derivation_chain$criterion, paste(
-    "Every prediction cites at least one proposition, and every cited id is a declared",
-    "proposition (reference check only)"))
+    "Every prediction cites declared propositions, and the causal graph entails the claim",
+    "it states, if any"))
 })
 
 test_that("the report gives coverage after the aggregate", {
@@ -64,7 +64,7 @@ test_that("the report gives coverage after the aggregate", {
                                  "maturity", "aggregate_score", "coverage", "gate",
                                  "n_blockers_failed", "items"))
   # parsimony has nothing to assess, and the other eleven items weigh 0.92.
-  expect_identical(rep$checklist_version, "2.0")
+  expect_identical(rep$checklist_version, "2.1")
   expect_equal(rep$aggregate_score, 87.3)
   expect_equal(rep$coverage, 0.92)
   parsimony <- rep$items[[4L]]
@@ -146,8 +146,9 @@ test_that("a declared severity counts and the dossier sets it beside the rubric"
   # 0.5 exceeds the directional rubric value, 0.3, by exactly 0.2: no note.
   expect_true(grepl("- h2: severity 0.3, risk 0.4, declared 0.5\n", d, fixed = TRUE))
   expect_true(grepl("- h3: severity 0.9, risk 0.9\n", d, fixed = TRUE))
-  # The preregistration appended to the dossier keeps its own lines.
-  expect_true(grepl("\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.1, risk 0.1\n",
+  # The preregistration appended to the dossier leaves its own severity list out.
+  expect_false(grepl("\n### Severity", d, fixed = TRUE))
+  expect_true(grepl("\n## Severity (pre-data rubric of claim form)\n\n- h1: severity 0.1, risk 0.1,",
                     d, fixed = TRUE))
 })
 
@@ -313,8 +314,11 @@ test_that("the dossier gives coverage and names the failed blockers", {
                            "- Gate: blocked\n",
                            "- Blockers failed: 2 (falsifiability, derivation_chain)\n"),
                     d, fixed = TRUE))
-  expect_true(grepl("| parsimony | n/a | n/a | 0.08 |\n", d, fixed = TRUE))
-  expect_true(grepl("| non_redundancy | warn | 0.0 | 0.1 |\n", d, fixed = TRUE))
+  expect_true(grepl(paste0("| parsimony | No auxiliary assumption added in response to an anomaly ",
+                           "lacks independent corroboration | n/a | n/a | 0.08 |\n"), d, fixed = TRUE))
+  expect_true(grepl(paste0("| non_redundancy | No pair of construct definitions is a near-duplicate ",
+                           "or contained in the other (lexical screen) | warn | 0.0 | 0.1 |\n"),
+                    d, fixed = TRUE))
 })
 
 test_that("the views and the HTML report show not-applicable items", {

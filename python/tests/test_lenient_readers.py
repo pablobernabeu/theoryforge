@@ -82,7 +82,9 @@ def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
     assert "1. []  (derives from: —)" in t.preregister()
     assert t.dossier().startswith("# theoryforge dossier: T\n")
     assert t.compile_sem().endswith("# Structural model\narousal ~~ threat\n")
-    assert t.implications()["n_implications"] == 0
+    # The association names constructs without ids, which no relation can name.
+    with pytest.raises(ValueError, match="requires associations between declared constructs"):
+        t.implications()
     sim = t.simulate(steps=2)
     assert sim["states"] == ["", ""]
     assert len(sim["trajectory"]) == 3
@@ -243,8 +245,8 @@ def test_null_entries_of_a_string_array_are_ignored(tmp_path):
     deriv = _item(t.check(), "derivation_chain")
     assert (deriv["status"], deriv["score"]) == ("fail", 0.333)
     text = t.preregister()  # raised "expected str instance, NoneType found"
-    assert "1. [directional] Beta rises with Alpha. (derives from: —)" in text
-    assert "3. [point] Beta is exactly one. (derives from: p1)" in text
+    assert "1. [directional] Beta rises with Alpha. (h1; derives from: —)" in text
+    assert "3. [point] Beta is exactly one. (h3; derives from: p1)" in text
     t.dossier()
     t.diagram("workflow")
 
@@ -307,7 +309,7 @@ predictions:
     # is the one place it may appear.
     assert "None" not in prereg.replace("\n_None: ", "\n")
     assert prereg.startswith("# Preregistration: \n")
-    assert "1. []  (derives from: p1)" in prereg
+    assert "1. []  (h1; derives from: p1)" in prereg
     assert "None" not in t.dossier().replace("\n_None: ", "\n")
     assert t.severity()[0]["type"] == ""
     assert "None" not in t.diagram("context")

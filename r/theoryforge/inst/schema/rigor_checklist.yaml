@@ -3,7 +3,7 @@
 # in API_SPEC.md so that the two implementations produce identical verdicts.
 # Every report records schema_version as checklist_version, since the weights and
 # thresholds below produce every number in it.
-schema_version: "2.0"
+schema_version: "2.1"
 
 # The package's defaults, fixed for reproducibility and not derived from a
 # validation study.
@@ -61,7 +61,7 @@ items:
     severity_if_fail: warning
     citation: "Textor et al. (2016); Eronen & Bringmann (2021)"
   - id: diagnosticity
-    criterion: "At least one prediction names a registered alternative it is declared to discriminate from (declared, not verified)"
+    criterion: "At least one prediction names a registered alternative it discriminates from (declared, or verified where the claim and the rival's propositions are stated)"
     weight: 0.06
     severity_if_fail: warning
     citation: "Platt (1964); Fiedler (2017)"
@@ -71,7 +71,7 @@ items:
     severity_if_fail: warning
     citation: "Robinaugh et al. (2021); Guest & Martin (2021)"
   - id: derivation_chain
-    criterion: "Every prediction cites at least one proposition, and every cited id is a declared proposition (reference check only)"
+    criterion: "Every prediction cites declared propositions, and the causal graph entails the claim it states, if any"
     weight: 0.08
     severity_if_fail: blocker
     citation: "Scheel et al. (2021); Szollosi et al. (2020)"

@@ -7,7 +7,8 @@ test_that("tf_dossier includes the expected header, table row, and prereg", {
                     out, fixed = TRUE))
   expect_true(grepl("- Aggregate rigour score: 87.3/100\n- Checklist coverage: 0.92\n",
                     out, fixed = TRUE))
-  expect_true(grepl("| falsifiability | pass | 1.0 | 0.15 |", out, fixed = TRUE))
+  expect_true(grepl("| falsifiability | At least one prediction forbids an observation | pass | 1.0 | 0.15 |",
+                    out, fixed = TRUE))
   expect_true(grepl("## Preregistration", out, fixed = TRUE))
   expect_true(grepl("# Preregistration: Network theory of panic disorder",
                     out, fixed = TRUE))
@@ -16,12 +17,14 @@ test_that("tf_dossier includes the expected header, table row, and prereg", {
 test_that("tf_dossier emits the table header and one row per checklist item", {
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   out <- tf_dossier(panic)
-  expect_true(grepl("| item | status | score | weight |", out, fixed = TRUE))
-  expect_true(grepl("| --- | --- | --- | --- |", out, fixed = TRUE))
+  expect_true(grepl("| item | criterion | status | score | weight |", out, fixed = TRUE))
+  expect_true(grepl("| --- | --- | --- | --- | --- |", out, fixed = TRUE))
   rep <- tf_check(panic)
+  criteria <- vapply(tf_checklist()$items, function(i) i$criterion, "")
+  names(criteria) <- vapply(tf_checklist()$items, function(i) i$id, "")
   for (it in rep$items) {
-    row <- sprintf("| %s | %s | %s | %s |",
-                   it$id, it$status,
+    row <- sprintf("| %s | %s | %s | %s | %s |",
+                   it$id, criteria[[it$id]], it$status,
                    theoryforge:::.tf_fmt(it$score),
                    theoryforge:::.tf_fmt(it$weight))
     expect_true(grepl(row, out, fixed = TRUE), info = it$id)
@@ -37,13 +40,15 @@ test_that("tf_dossier reflects severity and provenance placeholders", {
 })
 
 test_that("tf_dossier names the rubric for what it is", {
-  # Once in the dossier's own severity list and once in the preregistration
-  # appended to it.
+  # Once in the dossier's own severity list and once, a level down, in the
+  # preregistration appended to it.
   out <- tf_dossier(tf_read(tf_fixture_path("panic-network.theory.yaml")))
   heading <- "\n## Severity (pre-data rubric of claim form)\n"
-  expect_identical(lengths(regmatches(out, gregexpr(heading, out, fixed = TRUE))), 2L)
+  expect_identical(lengths(regmatches(out, gregexpr(heading, out, fixed = TRUE))), 1L)
+  # The embedded preregistration leaves its own severity list out.
+  expect_false(grepl("\n### Severity", out, fixed = TRUE))
   expect_false(grepl("\n## Severity\n", out, fixed = TRUE))
-  expect_true(grepl("- pred1: severity 1.0, risk 0.9\n", out, fixed = TRUE))
+  expect_true(grepl("- pred1: severity 1.0, risk 0.9", out, fixed = TRUE))
 })
 
 test_that("tf_dossier output ends with a single trailing newline (LF)", {

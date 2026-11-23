@@ -19,7 +19,9 @@ from .develop import appraise_amendment
 from .diagram import diagram
 from .dossier import dossier
 from .embedding import embedding_redundancy
+from .entailment import discriminate, entailments, equivalent_models
 from .examples import example_names, example_path
+from .hashing import content_hash
 from .implications import implications
 from .lit import fetch_corpus, landscape, lit_diagram, litmap, new_evidence_dois, read_corpus
 from .osf import OSFUploadError, osf_push
@@ -44,6 +46,7 @@ __all__ = [
     "read",
     "write",
     "new_theory",
+    "content_hash",
     "check",
     "report",
     "diagram",
@@ -54,6 +57,9 @@ __all__ = [
     "post_data_severity",
     "appraise_amendment",
     "implications",
+    "entailments",
+    "equivalent_models",
+    "discriminate",
     "preregister",
     "read_corpus",
     "litmap",

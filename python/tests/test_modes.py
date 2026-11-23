@@ -59,7 +59,7 @@ def test_appraisal_degenerating(fixtures_dir):
 def test_preregister_doc(panic_path):
     md = tf.read(panic_path).preregister()
     assert md.startswith("# Preregistration: Network theory of panic disorder\n")
-    assert "- Derivation references resolve: yes" in md
+    assert "- Derivations check: yes" in md
     assert "1. [point]" in md
     assert "- pred1: severity 1.0, risk 0.9" in md
     assert md.endswith("\n")

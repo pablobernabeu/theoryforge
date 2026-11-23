@@ -1,7 +1,7 @@
 {
   "theory_id": "weak-demo",
   "schema_version": "1.0",
-  "checklist_version": "2.0",
+  "checklist_version": "2.1",
   "maturity": "building",
   "aggregate_score": 2.2,
   "coverage": 0.92,

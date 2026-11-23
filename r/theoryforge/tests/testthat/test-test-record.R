@@ -13,51 +13,22 @@ tr_read <- function(text) {
 tr_implied <- paste0("## Implied conditional independencies (derived from the causal graph, ",
                      "not predictions)\n")
 
-tr_panic_v2_prereg <- paste0(
-  "# Preregistration: Network theory of panic disorder\n",
-  "\n",
-  "- Theory ID: panic-network-2026-v2\n",
-  "- Version: v2 (parent v1)\n",
-  "- Schema version: 1.0\n",
-  "- Maturity: testing\n",
-  "- Derivation references resolve: yes\n",
-  "\n",
-  "## Hypotheses\n",
-  "1. [point] An interoceptive challenge raises heart rate 20 beats per minute above baseline, ",
-  "within a measurement tolerance of 5, within 90 seconds. (derives from: p1, p3)\n",
-  "   - Auxiliary assumptions: aux1 (core)\n",
-  "   - Rivals it discriminates: alt_cognitive\n",
-  "   - Test record: already tested: passed (2026-05-01, registered osf.io/abcde)\n",
-  "2. [interval] Avoidance frequency falls within a 20-35% band after exposure therapy. ",
-  "(derives from: p2)\n",
-  "   - Test record: untested\n",
-  "3. [directional] Higher perceived threat is associated with more avoidance. ",
-  "(derives from: p2)\n",
-  "   - Test record: untested\n",
-  "4. [point] Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, ",
-  "within a tolerance of 5 percentage points, within two weeks. (derives from: p4)\n",
-  "   - Rivals it discriminates: alt_cognitive\n",
-  "   - Test record: already tested: passed (2026-06-10, registered osf.io/fghij)\n",
-  "\n",
-  tr_implied,
-  "_Not derived: implications requires an acyclic causal graph; cycle found: ",
-  "c_arousal -> c_perceived_threat -> c_arousal; set cycles to 'sigma' to derive ",
-  "sigma-separation statements._\n",
-  "\n",
-  "## Severity (pre-data rubric of claim form)\n",
-  "- pred1: severity 1.0, risk 0.9\n",
-  "- pred2: severity 0.7, risk 0.7\n",
-  "- pred3: severity 0.3, risk 0.4\n",
-  "- pred4: severity 1.0, risk 0.9\n"
-)
-
 tr_empty_prereg <- paste0(
   "# Preregistration: No predictions\n",
   "\n",
   "- Theory ID: nopred\n",
-  "- Schema version: 1.0\n",
+  "- Schema version: 1.1\n",
+  "- Content hash: %s\n",
   "- Maturity: building\n",
-  "- Derivation references resolve: not applicable (no predictions)\n",
+  "- Derivations check: not applicable (no predictions)\n",
+  "\n",
+  "## Theory\n",
+  "\n",
+  "### Constructs\n",
+  "_No constructs specified._\n",
+  "\n",
+  "### Propositions\n",
+  "_No propositions specified._\n",
   "\n",
   "## Hypotheses\n",
   "_No predictions specified._\n",
@@ -136,12 +107,12 @@ test_outcomes:
 
 tr_replicated_hypotheses <- paste0(
   "## Hypotheses\n",
-  "1. [directional] Upsilon rises with Zeta. (derives from: p1, p2)\n",
+  "1. [directional] Upsilon rises with Zeta. (h1; derives from: p1, p2)\n",
   "   - Auxiliary assumptions: a1 (core), x1 (added for h1)\n",
   "   - Rivals it discriminates: rival\n",
   "   - Test record: already tested: passed (2026-05-01, registered osf.io/abcde); ",
   "failed (2026-06-10)\n",
-  "2. [directional] Upsilon rises with Xi. (derives from: p2)\n",
+  "2. [directional] Upsilon rises with Xi. (h1_2; derives from: p2)\n",
   "   - Auxiliary assumptions: a1 (core)\n",
   "   - Test record: already tested: no result recorded\n",
   "\n",
@@ -158,20 +129,25 @@ test_that("the derivation line says whether the references resolve", {
   # propositions, so the line no longer says that a derivation was verified.
   panic <- tf_preregister(tf_read(tf_fixture_path("panic-network.theory.yaml")))
   weak <- tf_preregister(tf_read(tf_fixture_path("weak-theory.theory.yaml")))
-  expect_true(grepl("\n- Derivation references resolve: yes\n", panic, fixed = TRUE))
-  expect_true(grepl("\n- Derivation references resolve: no\n", weak, fixed = TRUE))
+  expect_true(grepl("\n- Derivations check: yes\n", panic, fixed = TRUE))
+  expect_true(grepl("\n- Derivations check: no\n", weak, fixed = TRUE))
   expect_false(grepl("Derivation chain verified", panic, fixed = TRUE))
 })
 
 test_that("an empty theory has no derivation to resolve", {
-  expect_identical(tf_preregister(tf_theory("nopred", "No predictions")), tr_empty_prereg)
+  t <- tf_theory("nopred", "No predictions")
+  expect_identical(tf_preregister(t), sprintf(tr_empty_prereg, tf_content_hash(t)))
 })
 
 test_that("the amended example states its version and its test record", {
   # Both hypotheses of v2 that a registered test corroborated are marked as
   # already tested, where they read as fresh hypotheses.
-  v2 <- tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml"))
-  expect_identical(tf_preregister(v2), tr_panic_v2_prereg)
+  v2 <- tf_preregister(tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml")))
+  expect_true(grepl("\n- Version: v2 (parent v1)\n", v2, fixed = TRUE))
+  expect_true(grepl("   - Test record: already tested: passed (2026-05-01, registered osf.io/abcde)\n",
+                    v2, fixed = TRUE))
+  expect_true(grepl("   - Test record: already tested: passed (2026-06-10, registered osf.io/fghij)\n",
+                    v2, fixed = TRUE))
 })
 
 test_that("the version line needs an id and names a parent only when there is one", {
@@ -206,9 +182,9 @@ test_that("a hypothesis numbered ten indents its lines under its number", {
     t <- tf_add_prediction(t, paste0("h", i), paste0("Claim ", i, "."), "directional")
   }
   text <- tf_preregister(t)
-  expect_true(grepl("\n9. [directional] Claim 9. (derives from: \u2014)\n   - Test record: untested\n",
+  expect_true(grepl("\n9. [directional] Claim 9. (h9; derives from: \u2014)\n   - Test record: untested\n",
                     text, fixed = TRUE))
-  expect_true(grepl(paste0("\n10. [directional] Claim 10. (derives from: \u2014)\n",
+  expect_true(grepl(paste0("\n10. [directional] Claim 10. (h10; derives from: \u2014)\n",
                            "    - Test record: untested\n"), text, fixed = TRUE))
 })
 
@@ -234,14 +210,18 @@ test_that("the implied independencies say why there are none", {
   panic <- tf_preregister(tf_read(tf_fixture_path("panic-network.theory.yaml")))
   expect_true(grepl(paste0(
     tr_implied,
-    "_Not derived: implications requires an acyclic causal graph; cycle found: ",
-    "c_arousal -> c_perceived_threat -> c_arousal; set cycles to 'sigma' to derive ",
-    "sigma-separation statements._\n"
+    "_Not derived: the causal graph has a feedback loop, c_arousal -> c_perceived_threat -> ",
+    "c_arousal. With cycles = 'sigma', the statements are read by sigma-separation and hold ",
+    "if each loop settles to a unique equilibrium._\n"
   ), panic, fixed = TRUE))
   weak <- tf_preregister(tf_read(tf_fixture_path("weak-theory.theory.yaml")))
   expect_true(grepl(paste0(tr_implied,
-                           "_None: the theory states no directed relation between constructs._\n"),
+                           "_None: every pair of constructs in the causal graph is adjacent._\n"),
                     weak, fixed = TRUE))
+  bare <- tf_preregister(tf_theory("bare", "No propositions"))
+  expect_true(grepl(paste0(tr_implied,
+                           "_None: the theory states no directed relation between constructs._\n"),
+                    bare, fixed = TRUE))
   pair <- tf_theory("pair", "Two constructs") |>
     tf_add_construct("a", "Alpha", "The first construct.") |>
     tf_add_construct("b", "Beta", "The second construct.") |>
@@ -284,7 +264,7 @@ test_that("the dossier adds the test record and the evidence", {
     "date: 2026-06-10; registered: osf.io/fghij\n",
     "\n## Evidence\n\n",
     "- supports pred4: corroborates; doi: 10.1000/example.v2\n",
-    "\n## Provenance\n"
+    "\n## Claims and the causal graph\n"
   ), d, fixed = TRUE))
   # The dossier embeds the preregistration, which holds the independencies, so
   # they appear once.
@@ -325,7 +305,7 @@ test_that("an evidence line gives a DOI only when there is one", {
   expect_true(grepl(paste0("\n## Evidence\n\n",
                            "- supports h1: refutes\n",
                            "- supports h1: ; doi: 10.1000/xyz\n",
-                           "\n## Provenance\n"), d, fixed = TRUE))
+                           "\n## Claims and the causal graph\n"), d, fixed = TRUE))
 })
 
 test_that("a replicated prediction has a node for each outcome", {

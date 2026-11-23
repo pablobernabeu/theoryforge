@@ -13,7 +13,7 @@ NULL
 # The collections of the schema, in the order tf_validate() reports one that is
 # not a list, and the keys of the closed version block.
 .tf_COLLECTIONS <- c("constructs", "propositions", "predictions", "auxiliary_assumptions",
-                     "alternatives", "evidence", "test_outcomes", "provenance")
+                     "alternatives", "evidence", "test_outcomes", "provenance", "phenomena")
 .tf_VERSION_KEYS <- c("id", "parent_id", "content_hash")
 
 #' Read a theory object from a YAML or JSON file
@@ -346,6 +346,10 @@ tf_validate <- function(theory, full = FALSE) {
                                     nullable = TRUE),
                   .tf_optional_text(.tf_get(ver, "content_hash"), "version content_hash",
                                     nullable = TRUE))
+      recorded <- .tf_get(ver, "content_hash")
+      if (.tf_ne_str(recorded) && !identical(recorded, tf_content_hash(d))) {
+        errors <- c(errors, "version content_hash does not match the theory's content")
+      }
     }
 
     # 13: the schema_version pattern. The default regex engine's "$" matches
@@ -407,6 +411,57 @@ tf_validate <- function(theory, full = FALSE) {
       }
       for (name in c("step", "action", "detail")) {
         errors <- c(errors, .tf_optional_text(.tf_get(steps[[i]], name), paste(prefix, name)))
+      }
+    }
+
+    # 15: the claims of predictions and phenomena, and the propositions of
+    # rival accounts, which tf_entailments() and tf_discriminate() read.
+    phens <- .tf_list(d, "phenomena")
+    dups(phens, "phenomenon")
+    for (i in seq_along(phens)) {
+      prefix <- sprintf("phenomenon[%d]", i - 1L)
+      errors <- c(errors, .tf_required_fields(phens[[i]], prefix, c("id", "statement")),
+                  .tf_optional_text(.tf_get(phens[[i]], "source_doi"), paste(prefix, "source_doi"),
+                                    nullable = TRUE))
+    }
+    for (i in seq_along(preds)) {
+      errors <- c(errors, .tf_claim(.tf_get(preds[[i]], "claim"),
+                                    sprintf("prediction[%d] claim", i - 1L), construct_ids))
+    }
+    for (i in seq_along(phens)) {
+      errors <- c(errors, .tf_claim(.tf_get(phens[[i]], "claim"),
+                                    sprintf("phenomenon[%d] claim", i - 1L), construct_ids))
+    }
+    for (i in seq_along(alts)) {
+      rival <- .tf_get(alts[[i]], "propositions")
+      if (.tf_not_a_list(rival)) {
+        errors <- c(errors, sprintf("alternative[%d] propositions must be a list", i - 1L))
+        next
+      }
+      if (!is.list(rival)) next
+      seen <- character(0)
+      for (j in seq_along(rival)) {
+        p <- rival[[j]]
+        name <- sprintf("alternative[%d] proposition[%d]", i - 1L, j - 1L)
+        errors <- c(errors, .tf_required_fields(p, name, c("id", "from", "to", "relation")))
+        rel <- .tf_get(p, "relation")
+        if (.tf_ne_str(rel) && !(rel %in% .tf_RELATION)) {
+          errors <- c(errors, sprintf("%s relation '%s' not allowed", name, rel))
+        }
+        pid <- .tf_get(p, "id")
+        if (.tf_ne_str(pid)) {
+          if (pid %in% seen) {
+            errors <- c(errors, sprintf("alternative[%d] duplicate proposition id: %s", i - 1L, pid))
+          }
+          seen <- c(seen, pid)
+        }
+        for (end in c("from", "to")) {
+          val <- .tf_get(p, end)
+          if (.tf_ne_str(val) && !(val %in% construct_ids)) {
+            errors <- c(errors, sprintf("%s %s '%s' is not a known construct", name, end, val))
+          }
+        }
+        errors <- c(errors, .tf_optional_text(.tf_get(p, "mechanism"), paste(name, "mechanism")))
       }
     }
   }
@@ -599,6 +654,51 @@ tf_validate <- function(theory, full = FALSE) {
   out
 }
 
+# The problems of a prediction's or a phenomenon's claim (API_SPEC.md section 2,
+# item 15). An absent claim, or an empty one, is no claim.
+.tf_claim <- function(v, name, construct_ids) {
+  if (.tf_absent(v)) return(character(0))
+  if (.tf_not_a_mapping(v)) return(paste(name, "must be a mapping"))
+  if (!is.list(v) || length(v) == 0L) return(character(0))
+  out <- character(0)
+  for (key in names(v)) {
+    if (!(key %in% c("kind", "x", "y", "given", "sign"))) {
+      out <- c(out, sprintf("%s has unknown field: %s", name, key))
+    }
+  }
+  out <- c(out, .tf_required_fields(v, name, c("kind", "x", "y", "sign")))
+  kind <- .tf_get(v, "kind")
+  sign <- .tf_get(v, "sign")
+  if (.tf_ne_str(kind) && !(kind %in% .tf_CLAIM_KINDS)) {
+    out <- c(out, sprintf("%s kind '%s' not allowed", name, kind))
+  }
+  if (.tf_ne_str(sign) && !(sign %in% .tf_CLAIM_SIGNS)) {
+    out <- c(out, sprintf("%s sign '%s' not allowed", name, sign))
+  }
+  x <- .tf_get(v, "x")
+  y <- .tf_get(v, "y")
+  for (end in c("x", "y")) {
+    val <- .tf_get(v, end)
+    if (.tf_ne_str(val) && !(val %in% construct_ids)) {
+      out <- c(out, sprintf("%s %s '%s' is not a known construct", name, end, val))
+    }
+  }
+  if (.tf_ne_str(x) && identical(x, y)) out <- c(out, paste(name, "x and y must differ"))
+  out <- c(out, .tf_string_array(.tf_get(v, "given"), paste(name, "given"), construct_ids, "construct"))
+  given <- .tf_str_list(.tf_get(v, "given"))
+  if (length(given) > 0L) {
+    if ((.tf_ne_str(x) && x %in% given) || (.tf_ne_str(y) && y %in% given)) {
+      out <- c(out, paste(name, "given must not include x or y"))
+    }
+    if (identical(kind, "effect")) {
+      out <- c(out, paste(name, "given applies only to an association"))
+    } else if (identical(sign, "positive") || identical(sign, "negative")) {
+      out <- c(out, paste(name, "sign must be zero or nonzero when given is not empty"))
+    }
+  }
+  out
+}
+
 # A field the schema types as an array of strings. Each entry must be a nonempty
 # string, as the readers ignore any other (API_SPEC.md section 4). A nonempty
 # string is a one-element array, and any other value that is not a list, a
@@ -676,24 +776,56 @@ tf_write <- function(theory, path) {
 # Append one provenance entry {step, action, detail} (API_SPEC.md section 8).
 # step = str(new length of provenance), 1-based.
 .tf_provenance_append <- function(theory, action, detail) {
-  prov <- .tf_as_list(theory, "provenance")
+  prov <- .tf_coll(theory, "provenance")
   step <- as.character(length(prov) + 1L)
   prov[[length(prov) + 1L]] <- list(step = step, action = action, detail = detail)
   theory$provenance <- prov
   theory
 }
 
-# Append `item` to the named collection (creating it lazily) and return theory.
-.tf_coll_append <- function(theory, key, item) {
-  coll <- .tf_as_list(theory, key)
-  coll[[length(coll) + 1L]] <- item
-  theory[[key]] <- coll
-  theory
+# The list a builder appends to under `key`. A missing or NULL key gives an
+# empty list, and a vector of two or more values, which only a theory built in
+# memory holds, the list of its elements. Any other value that is not a list is
+# refused with the message the Python builders give (API_SPEC.md section 8).
+.tf_coll <- function(theory, key) {
+  v <- theory[[key]]
+  if (is.null(v)) return(list())
+  if (is.list(v)) {
+    if (length(v) > 0L && .tf_is_mapping(v)) .tf_refuse_coll(key, "a mapping")
+    return(v)
+  }
+  if (length(v) >= 2L) return(as.list(v))
+  what <- if (is.character(v)) "a string" else if (is.logical(v)) "a boolean" else
+    if (is.numeric(v)) "a number" else "a value that is not a list"
+  .tf_refuse_coll(key, what)
 }
 
-#' Start a new, empty theory object (BUILDING mode entry point)
+.tf_refuse_coll <- function(key, what) {
+  stop(sprintf("cannot add to '%s': the theory holds %s there, not a list", key, what),
+       call. = FALSE)
+}
+
+# Append `item` to the collection under `key` and log the step. Both lists are
+# checked before anything is stored, so a refused call adds nothing.
+.tf_add <- function(theory, key, item, action, detail) {
+  coll <- .tf_coll(theory, key)
+  .tf_coll(theory, "provenance")
+  coll[[length(coll) + 1L]] <- item
+  theory[[key]] <- coll
+  .tf_provenance_append(theory, action, detail)
+}
+
+# A builder's string-array argument as the list the schema stores: its values,
+# in order and without names, so that a named vector gives its values and a
+# factor its labels, as the Python builders store a mapping's values.
+.tf_str_vec <- function(x) {
+  if (is.factor(x)) x <- as.character(x)
+  unname(as.list(x))
+}
+
+#' Start a new, empty theory object
 #'
-#' Seeds \code{schema_version = "1.0"} and a first provenance entry
+#' Seeds \code{schema_version = "1.1"} and a first provenance entry
 #' \code{{step:"1", action:"tf_theory", detail:<id>}}.
 #'
 #' The builders do not check field values. [tf_validate()] reports a value
@@ -715,7 +847,7 @@ tf_write <- function(theory, path) {
 #' @export
 tf_theory <- function(id, title, maturity = "building", theory_form = "network") {
   theory <- list(
-    schema_version = "1.0",
+    schema_version = "1.1",
     id = id,
     title = title,
     maturity = maturity,
@@ -724,14 +856,16 @@ tf_theory <- function(id, title, maturity = "building", theory_form = "network")
   .tf_provenance_append(theory, "tf_theory", id)
 }
 
-#' Add a construct to a theory (BUILDING mode)
+#' Add a construct to a theory
 #'
-#' Appends a construct and a provenance entry, returning the mutated theory.
+#' Appends a construct and a provenance entry. R does not change the theory in
+#' place, so assign the result.
 #'
 #' @param theory A theory object (named list).
 #' @param id,label,definition Construct fields.
-#' @param measurement,boundary_conditions Optional character vectors.
-#' @return The (mutated) theory object.
+#' @param measurement,boundary_conditions Optional character vectors, stored
+#'   without names.
+#' @return The theory with the construct added.
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Physiological arousal",
@@ -740,40 +874,40 @@ tf_theory <- function(id, title, maturity = "building", theory_form = "network")
 tf_add_construct <- function(theory, id, label, definition,
                              measurement = NULL, boundary_conditions = NULL) {
   c_item <- list(id = id, label = label, definition = definition)
-  if (!is.null(measurement)) c_item$measurement <- as.list(measurement)
-  if (!is.null(boundary_conditions)) c_item$boundary_conditions <- as.list(boundary_conditions)
-  theory <- .tf_coll_append(theory, "constructs", c_item)
-  .tf_provenance_append(theory, "tf_add_construct", id)
+  if (!is.null(measurement)) c_item$measurement <- .tf_str_vec(measurement)
+  if (!is.null(boundary_conditions)) c_item$boundary_conditions <- .tf_str_vec(boundary_conditions)
+  .tf_add(theory, "constructs", c_item, "tf_add_construct", id)
 }
 
-#' Add a proposition to a theory (BUILDING mode)
+#' Add a proposition to a theory
+#'
+#' Appends a proposition and a provenance entry. R does not change the theory
+#' in place, so assign the result.
 #'
 #' @param theory A theory object (named list).
-#' @param id,from,to,relation Proposition fields. \code{from} is the source
-#'   construct id (named \code{from} to match the schema field). \code{relation}
-#'   is one of the directed relations \code{"increases"}, \code{"decreases"},
-#'   \code{"causes"}, \code{"mediates"} (one link of a mediated path) and
-#'   \code{"moderates"} (\code{from} modifies the effect of other causes on
-#'   \code{to}), or \code{"associates"}, covariance between \code{from} and
-#'   \code{to} that the theory leaves unexplained.
-#' @param mechanism Optional mechanism string.
-#' @return The (mutated) theory object.
+#' @param id,from,to,relation Proposition fields. \code{relation} is one of
+#'   \code{"increases"}, \code{"decreases"}, \code{"causes"},
+#'   \code{"mediates"}, \code{"moderates"} or \code{"associates"}.
+#' @param mechanism Optional statement of why the relation holds.
+#' @param functional_form Optional description of the relation's shape.
+#' @return The theory with the proposition added.
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory") |>
-#'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
-#'   tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
-#'   tf_add_proposition("p1", "c_arousal", "c_threat", "increases")
+#'   tf_add_proposition("p1", "c_arousal", "c_threat", "increases",
+#'                      mechanism = "Bodily cues are read as danger.")
 #' @export
-tf_add_proposition <- function(theory, id, from, to, relation, mechanism = NULL) {
+tf_add_proposition <- function(theory, id, from, to, relation, mechanism = NULL,
+                               functional_form = NULL) {
   p_item <- list(id = id, from = from, to = to, relation = relation)
   if (!is.null(mechanism)) p_item$mechanism <- mechanism
-  theory <- .tf_coll_append(theory, "propositions", p_item)
-  .tf_provenance_append(theory, "tf_add_proposition", id)
+  if (!is.null(functional_form)) p_item$functional_form <- functional_form
+  .tf_add(theory, "propositions", p_item, "tf_add_proposition", id)
 }
 
-#' Add a prediction to a theory (BUILDING mode)
+#' Add a prediction to a theory
 #'
-#' Appends a prediction and a provenance entry, returning the mutated theory.
+#' Appends a prediction and a provenance entry. R does not change the theory in
+#' place, so assign the result.
 #'
 #' @param theory A theory object (named list).
 #' @param id The prediction's identifier.
@@ -786,101 +920,215 @@ tf_add_proposition <- function(theory, id, from, to, relation, mechanism = NULL)
 #'   that a quantity lies in a stated range, the range the theory permits.
 #'   \code{"point"} asserts one value, with the tolerance that measurement
 #'   requires. The tolerance comes from measurement, and the theory itself
-#'   permits only the one value. The label is self-declared, and no function
-#'   checks it against the statement.
-#' @param derives_from,diagnostic_vs Optional character vectors.
-#' @param severity Optional declared pre-data severity from 0 to 1, stored only
-#'   when given. The checklist's risk_severity item reads it, and reads the
-#'   claim-form rubric's value ([tf_severity()]) for a prediction that declares
-#'   none. [tf_dossier()] sets the two side by side.
+#'   permits only the one value.
+#' @param derives_from,diagnostic_vs Optional character vectors, stored without
+#'   names.
+#' @param severity Optional declared pre-data severity from 0 to 1. The
+#'   checklist's risk_severity item reads it, and reads the claim-form rubric's
+#'   value ([tf_severity()]) for a prediction that declares none.
 #' @param test Optional sampling plan for testing the prediction, a named list
 #'   of any of \code{n_planned}, \code{unit}, \code{alpha}, \code{sided}
 #'   (\code{"two"} or \code{"one"}), \code{sesoi} and \code{sesoi_scale} (the
 #'   smallest effect of interest and its scale), \code{power} or
 #'   \code{decision_probability} with an optional \code{power_lo} and
 #'   \code{power_hi}, \code{method}, \code{design_ref} and
-#'   \code{justification}. It is stored only when given. [tf_preregister()]
-#'   lists it after the hypotheses, and nothing scores it.
-#' @return The (mutated) theory object.
+#'   \code{justification}. [tf_preregister()] lists it after the hypotheses,
+#'   and nothing scores it.
+#' @param bounds Optional region of the quantity the claim allows, a named list
+#'   of \code{lower} and \code{upper}, either of which may be \code{NULL} for
+#'   an open side. [tf_post_data_severity()] reads it with each test outcome.
+#' @param claim Optional machine-readable claim, a named list of \code{kind}
+#'   (\code{"effect"} or \code{"association"}), the construct ids \code{x} and
+#'   \code{y}, an optional \code{given} and \code{sign} (\code{"positive"},
+#'   \code{"negative"}, \code{"zero"} or \code{"nonzero"}), which
+#'   [tf_entailments()] reads against the causal graph.
+#' @return The theory with the prediction added.
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory") |>
-#'   tf_add_prediction("h1", "Arousal precedes threat appraisal.", "directional")
+#'   tf_add_prediction("h1", "Arousal raises perceived threat.", "directional",
+#'                     claim = list(kind = "effect", x = "c_arousal", y = "c_threat",
+#'                                  sign = "positive"))
 #'
 #' # A prediction with the sampling plan of its test.
 #' tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_prediction("h1", "The switch cost lies between 20 and 60 ms.", "interval",
+#'                     bounds = list(lower = 20, upper = 60),
 #'                     test = list(n_planned = 48, unit = "participants", alpha = 0.05,
 #'                                 sided = "two", power = 0.9))
 #' @export
 tf_add_prediction <- function(theory, id, statement, type,
                               derives_from = NULL, diagnostic_vs = NULL,
-                              severity = NULL, test = NULL) {
+                              severity = NULL, test = NULL, bounds = NULL, claim = NULL) {
   p_item <- list(id = id, statement = statement, type = type)
-  if (!is.null(derives_from)) p_item$derives_from <- as.list(derives_from)
-  if (!is.null(diagnostic_vs)) p_item$diagnostic_vs <- as.list(diagnostic_vs)
+  if (!is.null(derives_from)) p_item$derives_from <- .tf_str_vec(derives_from)
+  if (!is.null(diagnostic_vs)) p_item$diagnostic_vs <- .tf_str_vec(diagnostic_vs)
   if (!is.null(severity)) p_item$severity <- severity
   # A named numeric vector becomes the mapping it names. A vector that mixes
   # numbers and text has already turned its numbers into text, which
   # tf_validate(full = TRUE) then reports.
   if (!is.null(test)) p_item$test <- if (is.list(test)) test else as.list(test)
-  theory <- .tf_coll_append(theory, "predictions", p_item)
-  .tf_provenance_append(theory, "tf_add_prediction", id)
+  if (!is.null(bounds)) p_item$bounds <- if (is.list(bounds)) bounds else as.list(bounds)
+  if (!is.null(claim)) {
+    claim <- if (is.list(claim)) claim else as.list(claim)
+    if (!is.null(claim$given)) claim$given <- .tf_str_vec(claim$given)
+    p_item$claim <- claim
+  }
+  .tf_add(theory, "predictions", p_item, "tf_add_prediction", id)
 }
 
-#' Add an alternative theory (BUILDING mode)
+#' Add an alternative theory
+#'
+#' Appends a registered alternative account and a provenance entry. R does not
+#' change the theory in place, so assign the result.
 #'
 #' @param theory A theory object (named list).
 #' @param id,label Alternative fields.
-#' @param key_constructs Optional character vector.
-#' @return The (mutated) theory object.
+#' @param key_constructs Optional character vector of the rival's key
+#'   constructs, which [tf_landscape()] matches against the literature.
+#' @param source_doi Optional DOI of the work that states the rival.
+#' @param propositions Optional list of the rival's own propositions over the
+#'   theory's constructs, each a named list with \code{id}, \code{from},
+#'   \code{to} and \code{relation}, which [tf_discriminate()] sets against the
+#'   theory's.
+#' @return The theory with the alternative added.
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_alternative("alt1", "Cognitive appraisal account",
-#'                      key_constructs = c("c_threat"))
+#'                      key_constructs = "appraisal",
+#'                      propositions = list(list(id = "r1", from = "c_threat",
+#'                                               to = "c_arousal", relation = "increases")))
 #' @export
-tf_add_alternative <- function(theory, id, label, key_constructs = NULL) {
+tf_add_alternative <- function(theory, id, label, key_constructs = NULL, source_doi = NULL,
+                               propositions = NULL) {
   a_item <- list(id = id, label = label)
-  if (!is.null(key_constructs)) a_item$key_constructs <- as.list(key_constructs)
-  theory <- .tf_coll_append(theory, "alternatives", a_item)
-  .tf_provenance_append(theory, "tf_add_alternative", id)
+  if (!is.null(key_constructs)) a_item$key_constructs <- .tf_str_vec(key_constructs)
+  if (!is.null(source_doi)) a_item$source_doi <- source_doi
+  if (!is.null(propositions)) a_item$propositions <- unname(as.list(propositions))
+  .tf_add(theory, "alternatives", a_item, "tf_add_alternative", id)
 }
 
-#' Add an auxiliary assumption (BUILDING mode)
+#' Add a phenomenon the theory sets out to explain
+#'
+#' Appends a phenomenon, a robust empirical regularity, and a provenance entry.
+#' R does not change the theory in place, so assign the result.
+#'
+#' @param theory A theory object (named list).
+#' @param id The phenomenon's identifier.
+#' @param statement The regularity in words.
+#' @param claim Optional machine-readable claim, as for [tf_add_prediction()],
+#'   which [tf_entailments()] reads against the causal graph.
+#' @param source_doi Optional DOI of the work that establishes it.
+#' @return The theory with the phenomenon added.
+#' @examples
+#' tf_theory("demo-1", "A demonstration theory") |>
+#'   tf_add_phenomenon("ph1", "Arousal and avoidance covary.",
+#'                     claim = list(kind = "association", x = "c_arousal",
+#'                                  y = "c_avoidance", sign = "positive"))
+#' @export
+tf_add_phenomenon <- function(theory, id, statement, claim = NULL, source_doi = NULL) {
+  ph <- list(id = id, statement = statement)
+  if (!is.null(claim)) {
+    claim <- if (is.list(claim)) claim else as.list(claim)
+    if (!is.null(claim$given)) claim$given <- .tf_str_vec(claim$given)
+    ph$claim <- claim
+  }
+  if (!is.null(source_doi)) ph$source_doi <- source_doi
+  .tf_add(theory, "phenomena", ph, "tf_add_phenomenon", id)
+}
+
+#' Add an auxiliary assumption
+#'
+#' Appends an auxiliary assumption and a provenance entry. R does not change
+#' the theory in place, so assign the result.
 #'
 #' @param theory A theory object (named list).
 #' @param id,statement Assumption fields.
 #' @param added_for Optional id of the prediction whose anomaly the assumption
 #'   was added to answer. Leave it \code{NULL} for a core assumption.
 #'   [tf_appraise_amendment()] counts an assumption added for an anomaly as ad
-#'   hoc unless a prediction it protects that is new in the amended version,
-#'   other than this one, is corroborated.
+#'   hoc unless a corroborated prediction it protects, new in the amended
+#'   version and other than the one named in \code{added_for}, exists.
 #' @param protects Optional character vector of the ids of the predictions the
 #'   assumption shields from refutation.
-#' @return The (mutated) theory object.
+#' @return The theory with the assumption added.
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_assumption("a1", "Measurement error is negligible.")
 #' @export
 tf_add_assumption <- function(theory, id, statement, added_for = NULL, protects = NULL) {
   a_item <- list(id = id, statement = statement, added_for = added_for)
-  if (!is.null(protects)) a_item$protects <- as.list(protects)
-  theory <- .tf_coll_append(theory, "auxiliary_assumptions", a_item)
-  .tf_provenance_append(theory, "tf_add_assumption", id)
+  if (!is.null(protects)) a_item$protects <- .tf_str_vec(protects)
+  .tf_add(theory, "auxiliary_assumptions", a_item, "tf_add_assumption", id)
 }
 
-#' Set the formal model (BUILDING mode)
+#' Record published evidence on a prediction
+#'
+#' Appends an evidence entry and a provenance entry. R does not change the
+#' theory in place, so assign the result.
+#'
+#' @param theory A theory object (named list).
+#' @param supports The id of the prediction the evidence bears on.
+#' @param direction One of \code{"corroborates"}, \code{"refutes"} or
+#'   \code{"mixed"}.
+#' @param source_doi Optional DOI of the work, stored as null when not given.
+#' @return The theory with the evidence added.
+#' @examples
+#' tf_theory("demo-1", "A demonstration theory") |>
+#'   tf_add_evidence("h1", "corroborates", source_doi = "10.1037/0033-295X.94.2.115")
+#' @export
+tf_add_evidence <- function(theory, supports, direction, source_doi = NULL) {
+  e <- list(supports = supports, source_doi = source_doi, direction = direction)
+  .tf_add(theory, "evidence", e, "tf_add_evidence", supports)
+}
+
+#' Record the outcome of a test of a prediction
+#'
+#' Appends a test outcome and a provenance entry. R does not change the theory
+#' in place, so assign the result.
+#'
+#' @param theory A theory object (named list).
+#' @param prediction_id The id of the prediction tested.
+#' @param passed \code{TRUE} or \code{FALSE}.
+#' @param observed Optional description of the result.
+#' @param estimate,se Optional estimate and standard error, given together,
+#'   which [tf_post_data_severity()] reads with the prediction's bounds.
+#' @param registered Optional reference to the preregistration of the test.
+#' @param date Optional date of the test.
+#' @return The theory with the outcome added.
+#' @examples
+#' tf_theory("demo-1", "A demonstration theory") |>
+#'   tf_add_test_outcome("h1", TRUE, observed = "switch cost 41 ms (SE 6)",
+#'                       estimate = 41, se = 6)
+#' @export
+tf_add_test_outcome <- function(theory, prediction_id, passed, observed = NULL, estimate = NULL,
+                                se = NULL, registered = NULL, date = NULL) {
+  t_item <- list(prediction_id = prediction_id, passed = passed)
+  if (!is.null(observed)) t_item$observed <- observed
+  if (!is.null(estimate)) t_item$estimate <- estimate
+  if (!is.null(se)) t_item$se <- se
+  if (!is.null(registered)) t_item$registered <- registered
+  if (!is.null(date)) t_item$date <- date
+  .tf_add(theory, "test_outcomes", t_item, "tf_add_test_outcome", prediction_id)
+}
+
+#' Set the formal model
+#'
+#' Declares the theory's formal model and adds a provenance entry. A formal
+#' model declared earlier is replaced. R does not change the theory in place,
+#' so assign the result.
 #'
 #' @param theory A theory object (named list).
 #' @param type Formal-model type, one of \code{"ode"}, \code{"abm"},
 #'   \code{"network"}, \code{"sem"} or \code{"none"}. Any but \code{"none"}
 #'   passes the checklist's formalisation item.
 #' @param spec_ref Optional reference to the model specification.
-#' @return The (mutated) theory object.
+#' @return The theory with the formal model set.
 #' @examples
 #' tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_set_formal_model("ode", spec_ref = "models/panic.ode")
 #' @export
 tf_set_formal_model <- function(theory, type, spec_ref = NULL) {
+  .tf_coll(theory, "provenance")
   theory$formal_model <- list(type = type, spec_ref = spec_ref)
   .tf_provenance_append(theory, "tf_set_formal_model", type)
 }

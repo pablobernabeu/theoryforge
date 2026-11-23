@@ -181,77 +181,11 @@ tf_implications <- function(theory, cycles = "refuse") {
     stop("implications requires cycles to be 'refuse' or 'sigma'", call. = FALSE)
   }
   T <- theory
-
-  declared <- character(0)
-  for (c in .tf_list(T, "constructs")) {
-    cid <- .tf_str(c, "id")
-    # A construct without an id cannot be the endpoint of a proposition, so it
-    # takes no part in the graph, and two of them do not share an id.
-    if (!nzchar(cid)) next
-    # Two constructs sharing an id give the same node two sets of parents, and
-    # nothing in the maths says which one a proposition meant.
-    if (cid %in% declared) {
-      stop("implications requires unique construct ids; duplicate construct id: ", cid,
-           call. = FALSE)
-    }
-    declared <- c(declared, cid)
-  }
-
-  edge_from <- integer(0)
-  edge_to <- integer(0)
-  assoc_from <- character(0)
-  assoc_to <- character(0)
-  for (p in .tf_list(T, "propositions")) {
-    rel <- .tf_enum_str(p, "relation", .tf_RELATION)
-    frm <- .tf_str(p, "from")
-    to <- .tf_str(p, "to")
-    if (rel %in% .tf_BIDIRECTED) {
-      assoc_from <- c(assoc_from, frm)
-      assoc_to <- c(assoc_to, to)
-      next
-    }
-    if (!(rel %in% .tf_DIRECTED)) next
-    pid <- .tf_str(p, "id")
-    # Dropping an edge whose endpoint was never declared would shrink the graph
-    # and so add independencies the theory does not imply, which is a
-    # confidently wrong answer rather than a missing one.
-    for (endpoint in c(frm, to)) {
-      if (is.na(match(endpoint, declared))) {
-        stop("implications requires causal propositions between declared constructs; ",
-             "proposition '", pid, "' refers to unknown construct '", endpoint, "'",
-             call. = FALSE)
-      }
-    }
-    u <- match(frm, declared)
-    v <- match(to, declared)
-    if (!any(edge_from == u & edge_to == v)) {
-      edge_from <- c(edge_from, u)
-      edge_to <- c(edge_to, v)
-    }
-  }
-
-  used <- sort(unique(c(edge_from, edge_to)))
-  nodes <- declared[used]
+  g <- .tf_causal_graph(T, "implications")
+  nodes <- g$nodes
+  directed <- g$directed
+  bidirected <- g$bidirected
   k <- length(nodes)
-  rank_of <- integer(length(declared))
-  rank_of[used] <- seq_along(used)
-  directed <- matrix(FALSE, nrow = k, ncol = k)
-  for (e in seq_along(edge_from)) {
-    directed[rank_of[[edge_from[[e]]]], rank_of[[edge_to[[e]]]]] <- TRUE
-  }
-  # An association is an edge only between two vertices. A construct that only
-  # associations name is a collider on every path through it, so it closes them
-  # all and leaving it out changes no statement about the others.
-  bidirected <- matrix(FALSE, nrow = k, ncol = k)
-  n_bidirected <- 0L
-  for (e in seq_along(assoc_from)) {
-    a <- match(assoc_from[[e]], nodes)
-    b <- match(assoc_to[[e]], nodes)
-    if (is.na(a) || is.na(b) || a == b || bidirected[a, b]) next
-    bidirected[a, b] <- TRUE
-    bidirected[b, a] <- TRUE
-    n_bidirected <- n_bidirected + 1L
-  }
 
   # The pairs are those the theory leaves unjoined. Under "sigma", the
   # acyclification below can join more of them, and those are then separated by
@@ -327,8 +261,8 @@ tf_implications <- function(theory, cycles = "refuse") {
     criterion = criterion,
     acyclic = length(feedback) == 0L,
     constructs = as.list(nodes),
-    n_edges = length(edge_from),
-    n_bidirected = n_bidirected,
+    n_edges = g$n_edges,
+    n_bidirected = g$n_bidirected,
     feedback = feedback,
     implications = impl,
     n_implications = length(impl),

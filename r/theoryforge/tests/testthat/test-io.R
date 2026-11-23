@@ -390,6 +390,7 @@ test_that("the string-array paths come from the schema", {
   expect_setequal(paths, c(
     "constructs/[]/measurement", "constructs/[]/boundary_conditions", "boundary_conditions",
     "predictions/[]/derives_from", "predictions/[]/diagnostic_vs",
-    "auxiliary_assumptions/[]/protects", "alternatives/[]/key_constructs"
+    "auxiliary_assumptions/[]/protects", "alternatives/[]/key_constructs",
+    "phenomena/[]/claim/given", "predictions/[]/claim/given"
   ))
 })

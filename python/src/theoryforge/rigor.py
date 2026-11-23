@@ -21,6 +21,7 @@ from ._num import rnd
 from ._relations import DIRECTED
 from ._status import classify_auxiliary
 from .diagram import _xml
+from .entailment import prediction_verdicts
 from .redundancy import _pairs
 from .scoring import severity as _rubric
 
@@ -193,12 +194,21 @@ def _check_items(T: dict, thr: dict) -> dict:
     out["causal_testability"] = ("pass", 1.0) if len(causal) >= 1 else ("warn", 0.0)
 
     # 10 diagnosticity
+    # A named rival counts unless its stated propositions give the prediction's
+    # claim the same verdict as the theory's do, which shows the declaration
+    # false (API_SPEC.md section 4).
+    verdicts = prediction_verdicts(T)
     if not preds:
         out["diagnosticity"] = ("warn", 0.0)
     else:
+        def discriminates(v, d: str) -> bool:
+            if v is None or v["theory"] == "not_evaluated" or d not in v["rivals"]:
+                return True
+            return v["rivals"][d] != v["theory"]
+
         diag = [
-            p for p in preds
-            if any(d in alt_ids for d in str_list(field(p, "diagnostic_vs")))
+            p for p, v in zip(preds, verdicts, strict=True)
+            if any(d in alt_ids and discriminates(v, d) for d in str_list(field(p, "diagnostic_vs")))
         ]
         out["diagnosticity"] = ("pass" if len(diag) >= 1 else "warn", rnd(len(diag) / len(preds), 3))
 
@@ -212,10 +222,13 @@ def _check_items(T: dict, thr: dict) -> dict:
     if not preds:
         out["derivation_chain"] = ("n/a", None)
     else:
+        # A claim the causal graph contradicts or leaves open does not follow
+        # from the propositions, whatever the prediction cites.
         valid = [
-            p for p in preds
+            p for p, v in zip(preds, verdicts, strict=True)
             if _ne_list(field(p, "derives_from"))
             and all(d in prop_ids for d in str_list(field(p, "derives_from")))
+            and (v is None or v["theory"] not in ("contradicted", "undetermined"))
         ]
         frac = len(valid) / len(preds)
         out["derivation_chain"] = ("pass" if frac == 1.0 else "fail", rnd(frac, 3))

@@ -70,6 +70,33 @@
       }
     },
     "boundary_conditions": { "type": "array", "items": { "type": "string" } },
+    "phenomena": {
+      "type": "array",
+      "description": "The robust empirical regularities the theory sets out to explain. entailments() reads each claim against the causal graph of the propositions.",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "statement": { "type": "string" },
+          "claim": {
+            "type": "object",
+            "required": ["kind", "x", "y", "sign"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "type": "string", "enum": ["effect", "association"], "description": "effect: the total effect of x on y, how y responds when x is set by intervention. association: the dependence between x and y, given the constructs in given." },
+              "x": { "type": "string" },
+              "y": { "type": "string" },
+              "given": { "type": "array", "items": { "type": "string" }, "description": "Constructs held fixed, for an association only." },
+              "sign": { "type": "string", "enum": ["positive", "negative", "zero", "nonzero"], "description": "A conditional association is zero or nonzero." }
+            },
+            "description": "The claim in machine-readable form, about two constructs, which entailments() reads against the causal graph of the propositions. Full validation also requires x and y to be two distinct declared constructs, and given to hold declared constructs other than those two."
+          },
+          "source_doi": { "type": ["string", "null"] }
+        }
+      }
+    },
     "predictions": {
       "type": "array",
       "items": {
@@ -106,6 +133,19 @@
               "upper": { "type": ["number", "null"] }
             },
             "description": "The region of the quantity the claim allows. A null or infinite bound is open, so a one-sided claim leaves one side null. post_data_severity() reads it with each test outcome's estimate and se. Full validation also requires at least one finite bound and lower not above upper."
+          },
+          "claim": {
+            "type": "object",
+            "required": ["kind", "x", "y", "sign"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "type": "string", "enum": ["effect", "association"], "description": "effect: the total effect of x on y, how y responds when x is set by intervention. association: the dependence between x and y, given the constructs in given." },
+              "x": { "type": "string" },
+              "y": { "type": "string" },
+              "given": { "type": "array", "items": { "type": "string" }, "description": "Constructs held fixed, for an association only." },
+              "sign": { "type": "string", "enum": ["positive", "negative", "zero", "nonzero"], "description": "A conditional association is zero or nonzero." }
+            },
+            "description": "The claim in machine-readable form, about two constructs, which entailments() reads against the causal graph of the propositions. Full validation also requires x and y to be two distinct declared constructs, and given to hold declared constructs other than those two."
           },
           "test": {
             "type": "object",
@@ -211,7 +251,27 @@
           "id": { "type": "string" },
           "label": { "type": "string" },
           "key_constructs": { "type": "array", "items": { "type": "string" } },
-          "source_doi": { "type": ["string", "null"] }
+          "source_doi": { "type": ["string", "null"] },
+          "propositions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "from", "to", "relation"],
+              "additionalProperties": true,
+              "properties": {
+                "id": { "type": "string" },
+                "from": { "type": "string" },
+                "to": { "type": "string" },
+                "relation": {
+                  "type": "string",
+                  "enum": ["increases", "decreases", "moderates", "mediates", "causes", "associates"]
+                },
+                "mechanism": { "type": "string", "description": "the logical 'why' (Sutton & Staw, 1995)" },
+                "functional_form": { "type": "string" }
+              }
+            },
+            "description": "The rival's own propositions over the theory's constructs, which discriminate() sets against the theory's. Full validation also requires each endpoint to be a declared construct."
+          }
         }
       }
     },

@@ -6,50 +6,22 @@ text, so the two twins are held to one wording.
 """
 import theoryforge as tf
 
-PANIC_V2_PREREG = """\
-# Preregistration: Network theory of panic disorder
-
-- Theory ID: panic-network-2026-v2
-- Version: v2 (parent v1)
-- Schema version: 1.0
-- Maturity: testing
-- Derivation references resolve: yes
-
-## Hypotheses
-1. [point] An interoceptive challenge raises heart rate 20 beats per minute above baseline, \
-within a measurement tolerance of 5, within 90 seconds. (derives from: p1, p3)
-   - Auxiliary assumptions: aux1 (core)
-   - Rivals it discriminates: alt_cognitive
-   - Test record: already tested: passed (2026-05-01, registered osf.io/abcde)
-2. [interval] Avoidance frequency falls within a 20-35% band after exposure therapy. \
-(derives from: p2)
-   - Test record: untested
-3. [directional] Higher perceived threat is associated with more avoidance. (derives from: p2)
-   - Test record: untested
-4. [point] Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, \
-within a tolerance of 5 percentage points, within two weeks. (derives from: p4)
-   - Rivals it discriminates: alt_cognitive
-   - Test record: already tested: passed (2026-06-10, registered osf.io/fghij)
-
-## Implied conditional independencies (derived from the causal graph, not predictions)
-_Not derived: implications requires an acyclic causal graph; cycle found: \
-c_arousal -> c_perceived_threat -> c_arousal; set cycles to 'sigma' to derive \
-sigma-separation statements._
-
-## Severity (pre-data rubric of claim form)
-- pred1: severity 1.0, risk 0.9
-- pred2: severity 0.7, risk 0.7
-- pred3: severity 0.3, risk 0.4
-- pred4: severity 1.0, risk 0.9
-"""
-
 EMPTY_PREREG = """\
 # Preregistration: No predictions
 
 - Theory ID: nopred
-- Schema version: 1.0
+- Schema version: 1.1
+- Content hash: {hash}
 - Maturity: building
-- Derivation references resolve: not applicable (no predictions)
+- Derivations check: not applicable (no predictions)
+
+## Theory
+
+### Constructs
+_No constructs specified._
+
+### Propositions
+_No propositions specified._
 
 ## Hypotheses
 _No predictions specified._
@@ -129,11 +101,11 @@ test_outcomes:
 
 REPLICATED_HYPOTHESES = """\
 ## Hypotheses
-1. [directional] Upsilon rises with Zeta. (derives from: p1, p2)
+1. [directional] Upsilon rises with Zeta. (h1; derives from: p1, p2)
    - Auxiliary assumptions: a1 (core), x1 (added for h1)
    - Rivals it discriminates: rival
    - Test record: already tested: passed (2026-05-01, registered osf.io/abcde); failed (2026-06-10)
-2. [directional] Upsilon rises with Xi. (derives from: p2)
+2. [directional] Upsilon rises with Xi. (h1_2; derives from: p2)
    - Auxiliary assumptions: a1 (core)
    - Test record: already tested: no result recorded
 
@@ -154,20 +126,23 @@ def test_the_derivation_line_says_whether_references_resolve(panic_path, weak_pa
     # The checklist item checks only that each prediction cites declared
     # propositions, so the line no longer says that a derivation was verified.
     panic = tf.read(panic_path).preregister()
-    assert "\n- Derivation references resolve: yes\n" in panic
-    assert "\n- Derivation references resolve: no\n" in tf.read(weak_path).preregister()
+    assert "\n- Derivations check: yes\n" in panic
+    assert "\n- Derivations check: no\n" in tf.read(weak_path).preregister()
     assert "Derivation chain verified" not in panic
 
 
 def test_an_empty_theory_has_no_derivation_to_resolve():
-    assert tf.new_theory("nopred", "No predictions").preregister() == EMPTY_PREREG
+    t = tf.new_theory("nopred", "No predictions")
+    assert t.preregister() == EMPTY_PREREG.format(hash=t.content_hash())
 
 
 def test_the_amended_example_states_its_version_and_test_record(fixtures_dir):
     # Both hypotheses of v2 that a registered test corroborated are marked as
     # already tested, where they read as fresh hypotheses.
-    v2 = tf.read(fixtures_dir / "panic-network-2026-v2.theory.yaml")
-    assert v2.preregister() == PANIC_V2_PREREG
+    v2 = tf.read(fixtures_dir / "panic-network-2026-v2.theory.yaml").preregister()
+    assert "\n- Version: v2 (parent v1)\n" in v2
+    assert "   - Test record: already tested: passed (2026-05-01, registered osf.io/abcde)\n" in v2
+    assert "   - Test record: already tested: passed (2026-06-10, registered osf.io/fghij)\n" in v2
 
 
 def test_the_version_line_needs_an_id_and_names_a_parent_only_when_there_is_one(
@@ -199,8 +174,8 @@ def test_a_hypothesis_numbered_ten_indents_its_lines_under_its_number():
     for i in range(1, 11):
         t.add_prediction(f"h{i}", f"Claim {i}.", "directional")
     text = t.preregister()
-    assert "\n9. [directional] Claim 9. (derives from: —)\n   - Test record: untested\n" in text
-    assert "\n10. [directional] Claim 10. (derives from: —)\n    - Test record: untested\n" in text
+    assert "\n9. [directional] Claim 9. (h9; derives from: —)\n   - Test record: untested\n" in text
+    assert "\n10. [directional] Claim 10. (h10; derives from: —)\n    - Test record: untested\n" in text
 
 
 def test_the_implied_independencies_are_listed_as_code(modality_path):
@@ -222,11 +197,13 @@ def test_the_implied_independencies_are_listed_as_code(modality_path):
 def test_the_implied_independencies_say_why_there_are_none(tmp_path, panic_path, weak_path):
     # The default refuses a cyclic graph, and the refusal is reported in place.
     assert IMPLIED + (
-        "_Not derived: implications requires an acyclic causal graph; cycle found: "
-        "c_arousal -> c_perceived_threat -> c_arousal; set cycles to 'sigma' to derive "
-        "sigma-separation statements._\n"
+        "_Not derived: the causal graph has a feedback loop, c_arousal -> c_perceived_threat -> "
+        "c_arousal. With cycles = 'sigma', the statements are read by sigma-separation and hold "
+        "if each loop settles to a unique equilibrium._\n"
     ) in tf.read(panic_path).preregister()
     assert IMPLIED + "_None: the theory states no directed relation between constructs._\n" in \
+        tf.new_theory("bare", "No propositions").preregister()
+    assert IMPLIED + "_None: every pair of constructs in the causal graph is adjacent._\n" in \
         tf.read(weak_path).preregister()
     pair = (tf.new_theory("pair", "Two constructs")
             .add_construct("a", "Alpha", "The first construct.")
@@ -267,7 +244,7 @@ def test_the_dossier_adds_the_test_record_and_the_evidence(fixtures_dir):
         "date: 2026-06-10; registered: osf.io/fghij\n"
         "\n## Evidence\n\n"
         "- supports pred4: corroborates; doi: 10.1000/example.v2\n"
-        "\n## Provenance\n"
+        "\n## Claims and the causal graph\n"
     ) in d
     # The dossier embeds the preregistration, which holds the independencies,
     # so they appear once.
@@ -308,7 +285,7 @@ def test_an_evidence_line_gives_a_doi_only_when_there_is_one(tmp_path):
     assert ("\n## Evidence\n\n"
             "- supports h1: refutes\n"
             "- supports h1: ; doi: 10.1000/xyz\n"
-            "\n## Provenance\n") in d
+            "\n## Claims and the causal graph\n") in d
 
 
 def test_a_replicated_prediction_has_a_node_for_each_outcome(tmp_path):

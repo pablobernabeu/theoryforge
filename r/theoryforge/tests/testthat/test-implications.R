@@ -211,16 +211,16 @@ test_that("the ancestors separate a pair that the parents do not", {
   expect_identical(res$inseparable, list(list(a = "m", b = "y")))
 })
 
-test_that("a construct touched only by associations is left out", {
-  # Every path through k arrives and leaves by an arrowhead, so k is a collider
-  # on each and, being no ancestor of anything, closes it. Leaving k out drops
-  # no statement about the other constructs, and silence about k is no claim
-  # that it is independent of anything (API_SPEC.md section 27).
-  res <- tf_implications(tf_relation_theory("silence", c("k", "x", "y"), list(
-    c("x", "causes", "y"), c("k", "associates", "x"), c("k", "associates", "y"))))
-  expect_equal(unlist(res$constructs), c("x", "y"))
-  expect_equal(res$n_bidirected, 0L)
-  expect_identical(res$implications, list())
+test_that("a construct touched only by associations is a vertex", {
+  # Read as a latent common cause, an association makes claims about k too:
+  # k and w are independent given x, since the path k <-> x -> w is open only
+  # through x. A construct that no proposition names stays out
+  # (API_SPEC.md section 27).
+  res <- tf_implications(tf_relation_theory("touched", c("k", "x", "w", "silent"), list(
+    c("x", "causes", "w"), c("k", "associates", "x"))))
+  expect_equal(unlist(res$constructs), c("k", "x", "w"))
+  expect_equal(res$n_bidirected, 1L)
+  expect_equal(vapply(res$implications, function(i) i$statement, ""), "k _||_ w | x")
   expect_identical(res$inseparable, list())
 })
 
@@ -232,26 +232,26 @@ test_that("a repeated association counts once and a self association not at all"
   expect_identical(res$implications, list())
 })
 
-test_that("an association with an undeclared endpoint adds nothing", {
-  # An association names no vertex unless a directed relation names both its
-  # constructs, so one with an undeclared endpoint is not an edge, as one with
-  # a construct touched only by associations is not. tf_validate() reports the
-  # reference.
-  res <- tf_implications(tf_relation_theory("loose", c("a", "b"), list(
-    c("a", "causes", "b"), c("a", "associates", "ghost"))))
-  expect_equal(unlist(res$constructs), c("a", "b"))
-  expect_equal(res$n_bidirected, 0L)
+test_that("an association with an undeclared endpoint is refused", {
+  # Dropping it would state an independence the theory denies, as dropping a
+  # directed relation would.
+  expect_error(
+    tf_implications(tf_relation_theory("loose", c("a", "b"), list(
+      c("a", "causes", "b"), c("a", "associates", "ghost")))),
+    paste0("implications requires associations between declared constructs; ",
+           "proposition 'p2' refers to unknown construct 'ghost'"),
+    fixed = TRUE)
 })
 
-test_that("tf_implications reports an empty basis set for a theory with no causal relations", {
-  # The weak example's one proposition is an association between two
-  # constructs that no directed relation names, so there is no vertex.
+test_that("a theory of one association implies nothing", {
+  # The weak example's one proposition is an association, which makes its two
+  # constructs vertices joined by an edge, so no pair is left unjoined.
   res <- tf_implications(tf_read(tf_fixture_path("weak-theory.theory.yaml")))
   expect_equal(res$theory_id, "weak-demo")
   expect_true(res$acyclic)
-  expect_equal(length(res$constructs), 0L)
+  expect_equal(unlist(res$constructs), c("k_motivation", "k_drive"))
   expect_equal(res$n_edges, 0L)
-  expect_equal(res$n_bidirected, 0L)
+  expect_equal(res$n_bidirected, 1L)
   expect_equal(res$implications, list())
   expect_equal(res$n_implications, 0L)
   expect_identical(res$inseparable, list())
@@ -912,7 +912,7 @@ test_that("every sigma statement and inseparable pair agrees with a brute-force 
     order <- sample(nodes)
     res <- tf_implications(tf_relation_theory("random", order, props[sample(length(props))]),
                            cycles = "sigma")
-    vertices <- order[order %in% as.vector(directed)]
+    vertices <- order[order %in% c(as.vector(directed), as.vector(bidirected))]
     expect_identical(unlist(res$constructs), vertices)
     if (!res$acyclic) cyclic <- cyclic + 1L
     separable <- character(0)
@@ -994,5 +994,5 @@ test_that("tf_implications reproduces the implications goldens", {
                    "c_arousal _||_ c_avoidance | c_perceived_threat")
   expect_identical(golden("panic-network-2026-v2")$implications, list())
   expect_length(golden("modality-switching-2026")$implications, 6L)
-  expect_identical(golden("weak-demo")$constructs, list())
+  expect_identical(unlist(golden("weak-demo")$constructs), c("k_motivation", "k_drive"))
 })

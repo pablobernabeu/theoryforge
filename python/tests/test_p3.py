@@ -23,16 +23,19 @@ def test_dossier(panic_path):
     d = tf.read(panic_path).dossier()
     assert d.startswith("# theoryforge dossier: Network theory of panic disorder")
     assert "- Aggregate rigour score: 87.3/100\n- Checklist coverage: 0.92\n" in d
-    assert "| item | status | score | weight |" in d
-    assert "| falsifiability | pass | 1.0 | 0.15 |" in d
+    assert "| item | criterion | status | score | weight |" in d
+    assert ("| falsifiability | At least one prediction forbids an observation | pass | 1.0 | "
+            "0.15 |") in d
     assert "## Preregistration" in d
     assert "# Preregistration: Network theory of panic disorder" in d
 
 
 def test_dossier_names_the_rubric_for_what_it_is(panic_path):
-    # Once in the dossier's own severity list and once in the preregistration
-    # appended to it.
+    # Once in the dossier's own severity list and once, a level down, in the
+    # preregistration appended to it.
     d = tf.read(panic_path).dossier()
-    assert d.count("\n## Severity (pre-data rubric of claim form)\n") == 2
+    assert d.count("\n## Severity (pre-data rubric of claim form)\n") == 1
+    # The embedded preregistration leaves its own severity list out.
+    assert "\n### Severity" not in d
     assert "\n## Severity\n" not in d
-    assert "- pred1: severity 1.0, risk 0.9\n" in d
+    assert "- pred1: severity 1.0, risk 0.9" in d

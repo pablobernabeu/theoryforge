@@ -368,10 +368,21 @@ test_that("full validation checks the formal model", {
   ))
 })
 
+test_that("a recorded content hash must match the content", {
+  t <- consistent_theory()
+  t$version <- list(id = "v2", parent_id = "v1", content_hash = NULL)
+  t$version$content_hash <- tf_content_hash(t)
+  expect_true(tf_validate(t, full = TRUE))
+  t$title <- paste(t$title, "revised")
+  expect_identical(full_error(t), paste0("invalid theory object: version content_hash does not ",
+                                         "match the theory's content"))
+})
+
 test_that("full validation checks the version block", {
   vp_cases("version", list(
     list(value = list(id = "v1", parent_id = NULL, content_hash = NULL), expected = NA),
-    list(value = list(id = "v2", parent_id = "v1", content_hash = "sha256:00"), expected = NA),
+    list(value = list(id = "v2", parent_id = "v1", content_hash = "sha256:00"),
+         expected = "version content_hash does not match the theory's content"),
     list(value = setNames(list(), character(0)), expected = NA),
     list(value = list(), expected = NA),
     list(value = NULL, expected = NA),

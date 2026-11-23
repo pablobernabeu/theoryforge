@@ -1,0 +1,85 @@
+{
+  "theory_id": "modality-switching-2026",
+  "criterion": "sigma",
+  "acyclic": true,
+  "feedback": [],
+  "claims": [
+    {
+      "source": "prediction",
+      "id": "pred1",
+      "kind": "effect",
+      "x": "c_modality_activation",
+      "y": "c_switch_cost",
+      "given": [],
+      "sign": "positive",
+      "derived": "positive",
+      "verdict": "entailed",
+      "basis": "paths_agree",
+      "faithfulness": false,
+      "via": [
+        "p2"
+      ],
+      "identified": true,
+      "adjustment": []
+    },
+    {
+      "source": "prediction",
+      "id": "pred3",
+      "kind": "effect",
+      "x": "c_modality_activation",
+      "y": "c_conceptual_access",
+      "given": [],
+      "sign": "positive",
+      "derived": "positive",
+      "verdict": "entailed",
+      "basis": "paths_agree",
+      "faithfulness": false,
+      "via": [
+        "p3"
+      ],
+      "identified": true,
+      "adjustment": []
+    },
+    {
+      "source": "prediction",
+      "id": "pred4",
+      "kind": "association",
+      "x": "c_sensorimotor_experience",
+      "y": "c_lexical_familiarity",
+      "given": [],
+      "sign": "zero",
+      "derived": "zero",
+      "verdict": "entailed",
+      "basis": "no_path",
+      "faithfulness": false,
+      "via": [],
+      "identified": null,
+      "adjustment": null
+    },
+    {
+      "source": "phenomenon",
+      "id": "ph1",
+      "kind": "association",
+      "x": "c_sensorimotor_experience",
+      "y": "c_conceptual_access",
+      "given": [],
+      "sign": "positive",
+      "derived": "positive",
+      "verdict": "entailed",
+      "basis": "paths_agree",
+      "faithfulness": false,
+      "via": [
+        "p1",
+        "p3"
+      ],
+      "identified": null,
+      "adjustment": null
+    }
+  ],
+  "counts": {
+    "entailed": 4,
+    "contradicted": 0,
+    "undetermined": 0,
+    "not_evaluated": 0
+  }
+}
