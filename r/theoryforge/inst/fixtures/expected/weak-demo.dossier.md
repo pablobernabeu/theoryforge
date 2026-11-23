@@ -3,8 +3,8 @@
 - Theory ID: weak-demo
 - Content hash: sha256:efcf38ef21fc18fdcc50718943ff878fc53151ab45e744e7271abc31e643f86e
 - Maturity: building
-- Checklist version: 2.1
-- Aggregate rigour score: 2.2/100
+- Checklist version: 3.0
+- Aggregate rigour score: 2.2/100 (1.1 to 3.9 under other weightings)
 - Checklist coverage: 0.92
 - Gate: blocked
 - Blockers failed: 2 (falsifiability, derivation_chain)
@@ -14,10 +14,10 @@
 | item | criterion | status | score | weight |
 | --- | --- | --- | --- | --- |
 | falsifiability | At least one prediction forbids an observation | fail | 0.0 | 0.15 |
-| precision | Predictions are point/interval, not merely directional | warn | 0.0 | 0.1 |
-| risk_severity | Mean prediction severity (declared, else the claim-form rubric) at or above threshold | warn | 0.2 | 0.1 |
-| parsimony | No auxiliary assumption added in response to an anomaly lacks independent corroboration | n/a | n/a | 0.08 |
-| non_redundancy | No pair of construct definitions is a near-duplicate or contained in the other (lexical screen) | warn | 0.0 | 0.1 |
+| precision | Predictions are point or interval claims whose bounds state the region, not merely directional | warn | 0.0 | 0.1 |
+| risk_severity | Mean prediction riskiness (declared severity, else the claim-form rubric) at or above threshold | warn | 0.2 | 0.1 |
+| parsimony | No auxiliary assumption that answers an anomaly (named in added_for, or a protected prediction a test failed) lacks independent corroboration | n/a | n/a | 0.08 |
+| non_redundancy | Every construct is defined, and no two have near-duplicate or contained definitions, one label or a shared measure (lexical screen) | warn | 0.0 | 0.1 |
 | construct_clarity | Every construct has definition + measurement + boundary conditions | warn | 0.0 | 0.08 |
 | scope | Boundary conditions explicitly stated | warn | 0.0 | 0.06 |
 | logical_why | Each proposition states a mechanism, not just a correlation | warn | 0.0 | 0.08 |

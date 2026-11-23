@@ -7,7 +7,7 @@
     "error": "invalid theory object: construct[0] missing/empty definition"
   },
   "check": {
-    "aggregate_score": 54.3,
+    "aggregate_score": 43.5,
     "coverage": 0.92,
     "gate": "pass",
     "n_blockers_failed": 0,
@@ -34,8 +34,8 @@
       },
       {
         "id": "non_redundancy",
-        "status": "pass",
-        "score": 1.0
+        "status": "warn",
+        "score": 0.0
       },
       {
         "id": "construct_clarity",
@@ -85,6 +85,7 @@
   "implications": {
     "theory_id": "edge-nbsp-definition",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "a",

@@ -253,10 +253,10 @@ def _quadrants(themes: list[dict]) -> None:
     """Place each theme in the strategic diagram of Cobo et al. (2011).
 
     Both axes are split at their median, the mean of the middle two values for
-    an even count, and a value is high only when it lies above the median. A
-    theme at the median is low, and so is one with centrality 0. When every
-    theme has the same value on an axis, a lone theme included, the axis cannot
-    be split and every quadrant is None.
+    an even count, and a value is high when it lies above the median, or at it
+    when the median is the highest value of the axis. A theme with centrality
+    0 is therefore low. When every theme has the same value on an axis, a lone
+    theme included, the axis cannot be split and every quadrant is None.
     """
     def median(values: list[float]) -> float:
         v = sorted(values)
@@ -271,9 +271,12 @@ def _quadrants(themes: list[dict]) -> None:
         for t in themes:
             t["quadrant"] = None
         return
-    c_med, d_med = median(cs), median(ds)
+    def high(v: float, values: list[float]) -> bool:
+        m = median(values)
+        return v > m or (v == m and m == max(values))
+
     for t in themes:
-        high_c, high_d = t["centrality"] > c_med, t["density"] > d_med
+        high_c, high_d = high(t["centrality"], cs), high(t["density"], ds)
         t["quadrant"] = ("motor" if high_d else "basic") if high_c else (
             "niche" if high_d else "emerging_or_declining")
 
@@ -457,7 +460,8 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
     times the summed index of its internal links, over its size), the measures
     of Callon et al. (1991) as Cobo et al. (2011) scale them. It also gains its
     quadrant in the strategic diagram, split here at the median of each
-    measure, a value counting as high only when it lies above the median:
+    measure, a value counting as high when it lies above the median, or at it
+    when the median is the measure's highest value:
     ``motor`` (both high), ``basic`` (central but not dense), ``niche`` (dense
     but not central) or ``emerging_or_declining`` (both low). A theme with
     centrality 0 is therefore never central. When all themes share one value

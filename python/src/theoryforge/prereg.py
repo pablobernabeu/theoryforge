@@ -16,6 +16,7 @@ from ._access import (
     str_list,
     text,
 )
+from ._compat import theory_keyword
 from ._io import write_lf as _write_lf
 from ._num import number as _number
 from .entailment import check_cycles, claim_line, prediction_verdicts, read_claim
@@ -394,7 +395,8 @@ def _claim_lines(data: dict, cycles: str) -> tuple[list[tuple[str, str | None] |
     return lines, verdicts
 
 
-def preregister(T, path=None, cycles: str = "refuse") -> str:
+@theory_keyword
+def preregister(theory, path=None, cycles: str = "refuse") -> str:
     """Render the theory and hypotheses sections of a preregistration, written to ``path`` if given.
 
     The header gives the theory id, the version when it has an id (with its
@@ -467,7 +469,7 @@ def preregister(T, path=None, cycles: str = "refuse") -> str:
         https://doi.org/10.1086/288135
     """
     check_cycles(cycles, "preregister")
-    data = T.data if hasattr(T, "data") else T
+    data = theory.data if hasattr(theory, "data") else theory
     doc = "\n".join(document_lines(data, cycles)) + "\n"
     if path is not None:
         _write_lf(path, doc)

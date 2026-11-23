@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 import theoryforge as tf
@@ -218,3 +220,19 @@ def test_render_report_writes_qmd(panic_path, tmp_path):
     assert text.startswith("---\ntitle:")
     assert "## Rigour checklist" in text
     assert "# Preregistration:" in text
+
+
+def test_embedding_redundancy_refuses_a_vector_without_a_direction_and_a_bad_threshold():
+    # A NaN gave a cosine of NaN flagged 'ok', and an all-zero vector a cosine
+    # of 0 for identical definitions. The R suite asserts the same messages.
+    t = tf.new_theory("t", "T")
+    t.add_construct("c1", "One", "one").add_construct("c2", "Two", "two")
+    for bad in ([math.nan, 1.0], [0.0, 0.0], [math.inf, 1.0], ["0.5", 1.0]):
+        vecs = {"one": [1.0, 1.0], "two": bad}
+        with pytest.raises(ValueError) as exc:
+            t.embedding_redundancy(lambda d, vecs=vecs: vecs[d])
+        assert str(exc.value) == ("embedding_redundancy requires finite, nonzero embedding "
+                                  "vectors; the vector of construct c2 is not")
+    for threshold in ("0.5", 1.5, math.nan):
+        with pytest.raises(ValueError, match="^embedding_redundancy requires a threshold from -1 to 1$"):
+            t.embedding_redundancy(lambda d: [1.0, 2.0], threshold=threshold)

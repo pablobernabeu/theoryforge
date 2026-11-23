@@ -460,7 +460,9 @@ jobs:
       # library path, so the job reports on the tree being reviewed without
       # installing it. The distribution itself is covered by the six R CMD
       # check cells above.
+      # The dev extra brings jsonschema, which the round-trip phase needs to
+      # check each rewritten file against the schema.
       - name: Install the Python package
-        run: pip install -e python
+        run: pip install -e "python[dev]"
       - name: Check R == Python on every fixture
         run: python scripts/parity_check.py

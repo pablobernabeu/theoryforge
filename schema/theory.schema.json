@@ -5,7 +5,7 @@
   "description": "Language-agnostic source of truth for a theory as a versioned, machine-checkable object. Authored as YAML, validated against this JSON Schema, read/written identically by the R and Python packages.",
   "type": "object",
   "required": ["schema_version", "id", "title", "maturity"],
-  "$comment": "Closed at the top level: a misspelt collection key (predicitions) would otherwise be accepted while silently dropping the collection and changing every downstream verdict. Item objects stay open so individual entries can carry extra metadata.",
+  "$comment": "Closed at the top level and in every entry: a misspelt key (predicitions, severty, derives_form) would otherwise be accepted while silently dropping what it holds and changing every downstream verdict. An entry may carry extra metadata under keys that begin with x_.",
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -40,7 +40,8 @@
       "items": {
         "type": "object",
         "required": ["id", "label", "definition"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "label": { "type": "string" },
@@ -55,7 +56,8 @@
       "items": {
         "type": "object",
         "required": ["id", "from", "to", "relation"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "from": { "type": "string" },
@@ -76,7 +78,8 @@
       "items": {
         "type": "object",
         "required": ["id", "statement"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "statement": { "type": "string" },
@@ -102,7 +105,8 @@
       "items": {
         "type": "object",
         "required": ["id", "statement", "type"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "derives_from": { "type": "array", "items": { "type": "string" } },
@@ -177,7 +181,8 @@
       "items": {
         "type": "object",
         "required": ["id", "statement"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "statement": { "type": "string" },
@@ -198,7 +203,8 @@
       "items": {
         "type": "object",
         "required": ["supports", "direction"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "supports": { "type": "string" },
           "source_doi": { "type": ["string", "null"] },
@@ -212,7 +218,8 @@
       "items": {
         "type": "object",
         "required": ["prediction_id", "passed"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "prediction_id": { "type": "string" },
           "observed": { "type": "string" },
@@ -246,7 +253,8 @@
       "items": {
         "type": "object",
         "required": ["id", "label"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "label": { "type": "string" },
@@ -257,7 +265,8 @@
             "items": {
               "type": "object",
               "required": ["id", "from", "to", "relation"],
-              "additionalProperties": true,
+              "additionalProperties": false,
+              "patternProperties": { "^x_": {} },
               "properties": {
                 "id": { "type": "string" },
                 "from": { "type": "string" },
@@ -277,7 +286,8 @@
     },
     "formal_model": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
+      "patternProperties": { "^x_": {} },
       "properties": {
         "type": { "type": "string", "enum": ["ode", "abm", "network", "sem", "none"] },
         "spec_ref": { "type": ["string", "null"] }
@@ -288,7 +298,8 @@
       "description": "Auto-logged build steps.",
       "items": {
         "type": "object",
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "step": { "type": "string" },
           "action": { "type": "string" },

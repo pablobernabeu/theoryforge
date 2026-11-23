@@ -166,8 +166,9 @@ tf_osf_push <- function(theory, token = NULL, node = NULL,
   NULL
 }
 
-# WaterButler updates a file with PUT <upload link>?kind=file. The link OSF
-# returns carries no query, but one that already names `kind` is kept as is.
+# WaterButler updates a file with PUT <upload link>?kind=file. Its upload link
+# already ends in ?kind=file, and is then kept as it is. The query is added only
+# to a link that lacks it.
 .tf_osf_update_url <- function(link) {
   if (grepl("[?&]kind=", link)) return(link)
   paste0(link, if (grepl("?", link, fixed = TRUE)) "&" else "?", "kind=file")

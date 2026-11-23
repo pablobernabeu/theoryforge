@@ -11,21 +11,32 @@ from collections.abc import Callable, Sequence
 
 from . import _resources
 from ._access import field, items, text
-from ._num import rnd
+from ._compat import theory_keyword
+from ._num import number, rnd
 
 
 def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
-    # The caller enforces equal lengths; strict guards that invariant rather
-    # than letting a mismatch silently truncate the sum.
+    # The caller enforces equal lengths and nonzero norms; strict guards the
+    # first rather than letting a mismatch silently truncate the sum.
     num = sum(x * y for x, y in zip(a, b, strict=True))
     da = math.sqrt(sum(x * x for x in a))
     db = math.sqrt(sum(y * y for y in b))
-    if da == 0 or db == 0:
-        return 0.0
     return num / (da * db)
 
 
-def embedding_redundancy(T, embedder: Callable[[str], Sequence[float]],
+def _usable(v) -> bool:
+    """Whether an embedding vector holds only finite numbers and has a nonzero norm.
+
+    An empty vector passes here and is refused with its pair's lengths.
+    """
+    xs = [number(x) for x in v]
+    if any(x is None or not math.isfinite(x) for x in xs):
+        return False
+    return not xs or any(x != 0 for x in xs)
+
+
+@theory_keyword
+def embedding_redundancy(theory, embedder: Callable[[str], Sequence[float]],
                          threshold: float | None = None) -> list[dict]:
     """Pairwise cosine similarity of embedded construct definitions.
 
@@ -40,12 +51,25 @@ def embedding_redundancy(T, embedder: Callable[[str], Sequence[float]],
     a cosine two unrelated definitions reach depends on the embedding model, so a
     threshold suited to one model may flag everything or nothing under another, and
     the value is best set for the model in use.
+
+    Raises:
+        ValueError: when ``threshold`` is not one number from -1 to 1, when a
+            vector holds a value that is not a finite number or is all zeros,
+            which has no direction to compare, naming the first such construct,
+            and when the vectors of a pair differ in length or are empty.
     """
-    T = T.data if hasattr(T, "data") else T
+    theory = theory.data if hasattr(theory, "data") else theory
     if threshold is None:
         threshold = _resources.checklist()["thresholds"]["embedding_similarity_max"]
-    cons = items(T, "constructs")
-    vecs = [(text(field(c, "id")), embedder(text(field(c, "definition")))) for c in cons]
+    x = number(threshold)
+    if x is None or not -1 <= x <= 1:
+        raise ValueError("embedding_redundancy requires a threshold from -1 to 1")
+    cons = items(theory, "constructs")
+    vecs = [(text(field(c, "id")), list(embedder(text(field(c, "definition"))))) for c in cons]
+    for cid, v in vecs:
+        if not _usable(v):
+            raise ValueError("embedding_redundancy requires finite, nonzero embedding vectors; "
+                             f"the vector of construct {cid} is not")
     rows: list[dict] = []
     for i in range(len(vecs)):
         for j in range(i + 1, len(vecs)):

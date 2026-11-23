@@ -12,7 +12,8 @@ between the two packages. Their documentation describes what each depends on.
 """
 from __future__ import annotations
 
-from importlib.metadata import PackageNotFoundError, version
+from importlib.metadata import PackageNotFoundError as _PackageNotFoundError
+from importlib.metadata import version as _version
 
 from .core import Theory, new_theory, read, write
 from .develop import appraise_amendment
@@ -37,8 +38,8 @@ from .simulate import simulate
 # The installed distribution's version (declared once, in pyproject.toml).
 # The fallback covers running from an uninstalled source tree.
 try:
-    __version__ = version("theoryforge")
-except PackageNotFoundError:  # pragma: no cover - uninstalled source tree
+    __version__ = _version("theoryforge")
+except _PackageNotFoundError:  # pragma: no cover - uninstalled source tree
     __version__ = "0+unknown"
 
 __all__ = [

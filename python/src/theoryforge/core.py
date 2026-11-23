@@ -16,14 +16,17 @@ from ._access import FORMAL_MODEL_TYPE as _FORMAL_MODEL_TYPE
 from ._access import MATURITY as _MATURITY
 from ._access import PRED_TYPE as _PRED_TYPE
 from ._access import RELATION as _RELATION
+from ._access import enum as _enum
 from ._access import field as _field
 from ._access import items as _items
 from ._access import ne_str as _nonempty_str
 from ._access import str_list as _str_list
+from ._access import text as _text
 from ._io import write_lf as _write_lf
 from ._load import dump_yaml as _dump_yaml
 from ._load import load_document as _load_document
 from ._num import number as _number
+from ._num import plain as _plain
 from ._text import trim as _trim
 from .develop import appraise_amendment as _appraise_amendment
 from .diagram import _warn_engine
@@ -129,13 +132,13 @@ def _optional_text(v, name: str, *, nullable: bool = False) -> list[str]:
 
 
 def _is_unit_number(v) -> bool:
-    """Whether ``v`` is a number within [0, 1]. A boolean is not a number.
+    """Whether ``v`` is a number within [0, 1]. A boolean and NaN are not numbers.
 
-    A comparison with NaN is false, so NaN needs no test of its own. A test with
-    ``math.isnan()`` would convert an integer to a float, which overflows beyond
-    about 1.8e308, as an unquoted integer of 400 digits in YAML does.
+    An integer too large for a float, as an unquoted integer of 400 digits in
+    YAML is, reads as an infinity and so lies outside the range.
     """
-    return isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= v <= 1
+    x = _number(v)
+    return x is not None and 0 <= x <= 1
 
 
 def _unit_number(v, name: str) -> list[str]:
@@ -188,6 +191,19 @@ def _bounds(v, name: str) -> list[str]:
     if lo is not None and up is not None and lo > up:
         msgs.append(f"{name} lower exceeds upper")
     return msgs
+
+
+def _bounds_region(v) -> tuple[float | None, float | None] | None:
+    """The finite ends of a valid ``bounds`` mapping, None for an open side.
+
+    Returns None when the bounds are absent or invalid.
+    """
+    if v is None or _bounds(v, "bounds"):
+        return None
+    v = v if isinstance(v, dict) else {}
+    ends = [_number(v.get(key)) for key in _BOUND_KEYS]
+    lo, up = (x if x is not None and math.isfinite(x) else None for x in ends)
+    return lo, up
 
 
 _TEST_KEYS = ("n_planned", "unit", "alpha", "sided", "sesoi", "sesoi_scale", "power",
@@ -325,6 +341,40 @@ def _claim(v, name: str, construct_ids: set) -> list[str]:
     return errors
 
 
+def _edit_distance(a: str, b: str) -> int:
+    """The Levenshtein distance between ``a`` and ``b``, as R's ``utils::adist()`` computes it."""
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, start=1):
+        cur = [i]
+        for j, cb in enumerate(b, start=1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def _unknown_fields(entry, name: str, known: list[str]) -> list[str]:
+    """``<name> has unknown field: <key>`` for each key of ``entry`` the schema does not list.
+
+    A key that begins with ``x_`` carries extension metadata and is allowed. The
+    message names the closest known field, within two edits, the first in
+    schema order on a tie.
+    """
+    if not isinstance(entry, dict):
+        return []
+    msgs = []
+    for key in entry:
+        key = str(key)
+        if key in known or key.startswith("x_"):
+            continue
+        msg = f"{name} has unknown field: {key}"
+        dist = [(_edit_distance(key, k), i) for i, k in enumerate(known)]
+        best = min(dist) if dist else None
+        if best is not None and best[0] <= 2:
+            msg += f" (did you mean {known[best[1]]}?)"
+        msgs.append(msg)
+    return msgs
+
+
 class Theory:
     """A theory as a versioned, machine-checkable object.
 
@@ -349,13 +399,13 @@ class Theory:
     # -- convenience accessors -------------------------------------------------
     @property
     def id(self) -> str:
-        """The theory's ``id`` as stored, or ``""`` when the field is absent."""
-        return self.data.get("id", "")
+        """The theory's ``id`` as every function reads it, ``""`` when absent or not text."""
+        return _text(self.data.get("id"))
 
     @property
     def maturity(self) -> str:
-        """The theory's ``maturity`` as stored, or ``""`` when the field is absent."""
-        return self.data.get("maturity", "")
+        """The theory's ``maturity`` as every function reads it, ``""`` when absent or not in its enum."""
+        return _enum(self.data.get("maturity"), _MATURITY) or ""
 
     def _list(self, key: str) -> list:
         return _items(self.data, key)
@@ -459,7 +509,7 @@ class Theory:
     def _full_errors(self, errors: list[str]) -> None:
         """Append the problems only ``validate(full=True)`` looks for.
 
-        Items 1 to 14 of API_SPEC.md section 2, in that order. The R twin's
+        Items 1 to 16 of API_SPEC.md section 2, in that order. The R twin's
         ``tf_validate()`` makes the same checks in the same order with the same
         message text.
         """
@@ -655,6 +705,66 @@ class Theory:
                         errors.append(f"{name} {end} '{val}' is not a known construct")
                 errors += _optional_text(_field(p, "mechanism"), f"{name} mechanism")
 
+        # 16: a claim's form against its bounds, and a recorded pass against
+        # its estimate, where those fields are themselves valid. A type the
+        # bounds contradict makes the riskiness rubric and the precision item
+        # read the wrong claim, and a pass with the estimate outside the region
+        # gives a post-data severity below 0.5 beside the word passed.
+        for i, p in enumerate(preds):
+            region = _bounds_region(_field(p, "bounds"))
+            ty = _field(p, "type")
+            if region is None or not isinstance(ty, str):
+                continue
+            lo, up = region
+            if ty in ("point", "interval") and (lo is None or up is None):
+                article = "an" if ty == "interval" else "a"
+                errors.append(f"prediction[{i}] is {article} {ty} claim, so its bounds need a "
+                              "finite lower and a finite upper")
+            elif ty == "directional" and lo is not None and up is not None:
+                errors.append(f"prediction[{i}] is a directional claim, so its bounds must leave "
+                              "one side open")
+            elif ty == "existence":
+                errors.append(f"prediction[{i}] is an existence claim, which bounds cannot state")
+        for i, t in enumerate(tos):
+            est = _number(_field(t, "estimate"))
+            pid = _field(t, "prediction_id")
+            if _field(t, "passed") is not True or est is None or not math.isfinite(est) \
+                    or not _nonempty_str(pid):
+                continue
+            pred = next((p for p in preds if _field(p, "id") == pid), None)
+            region = _bounds_region(_field(pred, "bounds"))
+            if region is None:
+                continue
+            lo, up = region
+            if (lo is not None and est < lo) or (up is not None and est > up):
+                errors.append(f"test_outcome[{i}] records a pass, but its estimate lies outside "
+                              f"the bounds of prediction '{pid}'")
+
+        # 17: the fields of each entry, which the schema closes as it closes the
+        # top level, since a misspelt severty or derives_form would drop what
+        # it holds without a word. Collections come in the schema's order.
+        props = _resources.theory_schema()["properties"]
+
+        def keys(node) -> list[str]:
+            return list(node.get("properties", {}))
+
+        entries = (("constructs", "construct"), ("propositions", "proposition"),
+                   ("phenomena", "phenomenon"), ("predictions", "prediction"),
+                   ("auxiliary_assumptions", "assumption"), ("evidence", "evidence"),
+                   ("test_outcomes", "test_outcome"), ("alternatives", "alternative"))
+        for key, kind in entries:
+            item = props[key]["items"]
+            for i, entry in enumerate(self._list(key)):
+                errors += _unknown_fields(entry, f"{kind}[{i}]", keys(item))
+                if key == "alternatives" and isinstance(_field(entry, "propositions"), list):
+                    rival = item["properties"]["propositions"]["items"]
+                    for j, p in enumerate(_field(entry, "propositions")):
+                        errors += _unknown_fields(p, f"alternative[{i}] proposition[{j}]",
+                                                  keys(rival))
+        errors += _unknown_fields(d.get("formal_model"), "formal_model", keys(props["formal_model"]))
+        for i, step in enumerate(self._list("provenance")):
+            errors += _unknown_fields(step, f"provenance[{i}]", keys(props["provenance"]["items"]))
+
     # -- serialisation ---------------------------------------------------------
     def write(self, path) -> None:
         """Write the theory to ``path`` as JSON (a ``.json`` suffix) or YAML (anything else).
@@ -666,10 +776,11 @@ class Theory:
         theory in R and in Python.
         """
         path = Path(path)
+        data = _plain(self.data)
         if path.suffix.lower() == ".json":
-            text = json.dumps(self.data, indent=2, ensure_ascii=False) + "\n"
+            text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
         else:
-            text = _dump_yaml(self.data)
+            text = _dump_yaml(data)
         _write_lf(path, text)
 
     # -- builder (BUILDING mode) ----------------------------------------------
@@ -724,7 +835,9 @@ class Theory:
         """
         coll = self._coll(key)
         self._coll("provenance")
-        coll.append(item)
+        # A NumPy scalar from an analysis would otherwise be stored as it is,
+        # and validation and writing would refuse it later.
+        coll.append(_plain(item))
         self.data[key] = coll
         self._provenance(action, detail)
         return self
@@ -1005,14 +1118,15 @@ class Theory:
         """
         return _appraise_amendment(self.data, prior)
 
-    def implications(self, cycles: str = "refuse") -> dict:
+    def implications(self, cycles: str = "refuse", given: str = "basis") -> dict:
         """The conditional independencies the theory's causal graph implies.
 
         ``cycles="sigma"`` reads a graph with feedback loops by
-        sigma-separation, which the default refuses. See
+        sigma-separation, which the default refuses, and ``given="minimal"``
+        prunes each conditioning set to a minimal one. See
         ``theoryforge.implications``.
         """
-        return _implications(self.data, cycles=cycles)
+        return _implications(self.data, cycles=cycles, given=given)
 
     def content_hash(self) -> str:
         """The SHA-256 digest of the theory's canonical form (see ``theoryforge.content_hash``)."""

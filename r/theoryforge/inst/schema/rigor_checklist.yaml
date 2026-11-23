@@ -3,7 +3,7 @@
 # in API_SPEC.md so that the two implementations produce identical verdicts.
 # Every report records schema_version as checklist_version, since the weights and
 # thresholds below produce every number in it.
-schema_version: "2.1"
+schema_version: "3.0"
 
 # The package's defaults, fixed for reproducibility and not derived from a
 # validation study.
@@ -11,7 +11,7 @@ thresholds:
   redundancy_similarity_max: 0.85   # Jaccard similarity at which the lexical screen flags a pair
   redundancy_overlap_max: 0.85      # overlap coefficient at which it flags a pair whose definitions both have 3+ tokens
   embedding_similarity_max: 0.85    # cosine at which the opt-in embedding screen flags a pair (model-specific)
-  min_precision_share: 0.5          # share of point/interval predictions for item 'precision' to pass
+  min_precision_share: 0.5          # share of bounded point/interval predictions for item 'precision' to pass
   min_severity: 0.5                 # mean severity for item 'risk_severity' to pass
 
 items:
@@ -21,22 +21,22 @@ items:
     severity_if_fail: blocker
     citation: "Popper (1959); Bacharach (1989)"
   - id: precision
-    criterion: "Predictions are point/interval, not merely directional"
+    criterion: "Predictions are point or interval claims whose bounds state the region, not merely directional"
     weight: 0.10
     severity_if_fail: warning
     citation: "Meehl (1967, 1990a)"
   - id: risk_severity
-    criterion: "Mean prediction severity (declared, else the claim-form rubric) at or above threshold"
+    criterion: "Mean prediction riskiness (declared severity, else the claim-form rubric) at or above threshold"
     weight: 0.10
     severity_if_fail: warning
     citation: "Popper (1959); Meehl (1967, 1990b)"
   - id: parsimony
-    criterion: "No auxiliary assumption added in response to an anomaly lacks independent corroboration"
+    criterion: "No auxiliary assumption that answers an anomaly (named in added_for, or a protected prediction a test failed) lacks independent corroboration"
     weight: 0.08
     severity_if_fail: warning
     citation: "Lakatos (1970); Meehl (1990a)"
   - id: non_redundancy
-    criterion: "No pair of construct definitions is a near-duplicate or contained in the other (lexical screen)"
+    criterion: "Every construct is defined, and no two have near-duplicate or contained definitions, one label or a shared measure (lexical screen)"
     weight: 0.10
     severity_if_fail: warning
     citation: "Kelley (1927); Le et al. (2010); Lawson & Robins (2021)"

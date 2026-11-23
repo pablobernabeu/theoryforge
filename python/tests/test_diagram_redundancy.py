@@ -207,3 +207,13 @@ def test_redundancy_flags_near_duplicates(weak_path):
     # The Jaccard similarity, 0.8, is under 0.85, but one definition is
     # contained in the other: the overlap coefficient is 1.
     assert (top["similarity"], top["overlap"], top["flag"]) == (0.8, 1.0, "review")
+
+
+def test_tokens_and_jaccard_take_the_inputs_r_takes():
+    # R's tf_tokens() refuses the same values with the same message, and
+    # tf_jaccard() reads any character vectors as sets.
+    assert tokens(None) == set()
+    for bad in (123, ["drive goals"], True):
+        with pytest.raises(TypeError, match="^tokens requires a string$"):
+            tokens(bad)
+    assert jaccard(["drive", "goal", "goal"], ("drive",)) == 0.5

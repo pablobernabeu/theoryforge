@@ -569,3 +569,20 @@ test_that("tf_appraise_amendment() refuses a non-logical passed in either theory
   expect_identical(ap$articulated, "h2")
   expect_identical(ap$verdict, "neutral")
 })
+
+test_that("full validation names unknown entry fields and the field they resemble", {
+  # test_schema_agreement.py asserts the same message for the same theory.
+  t <- tf_read(tf_fixture_path("modality-switching.theory.yaml"))
+  t$predictions[[1]]$severty <- 0.5
+  t$predictions[[1]]$derives_form <- list("p1")
+  t$constructs[[2]]$note <- "x"
+  t$constructs[[1]]$x_source <- "Item bank 3"
+  msg <- tryCatch({
+    tf_validate(t, full = TRUE)
+    ""
+  }, error = conditionMessage)
+  expect_identical(msg, paste0(
+    "invalid theory object: construct[1] has unknown field: note; ",
+    "prediction[0] has unknown field: severty (did you mean severity?); ",
+    "prediction[0] has unknown field: derives_form (did you mean derives_from?)"))
+})

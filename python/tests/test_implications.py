@@ -67,7 +67,8 @@ def app_example(name):
 
 def test_implications_of_a_mediated_chain():
     res = chain_theory().implications()
-    assert list(res) == ["theory_id", "criterion", "acyclic", "constructs", "n_edges",
+    assert list(res) == ["theory_id", "criterion", "conditioning", "acyclic", "constructs",
+                         "n_edges",
                          "n_bidirected", "feedback", "implications", "n_implications",
                          "inseparable"]
     assert res["theory_id"] == "mediation"
@@ -604,12 +605,14 @@ def test_sigma_derives_the_panic_network_statement(panic_path):
     # avoidance are independent given perceived threat (Bongers et al., 2021,
     # Theorem 6.3(2) and Proposition A.19).
     res = tf.read(panic_path).implications(cycles="sigma")
-    assert list(res) == ["theory_id", "criterion", "acyclic", "constructs", "n_edges",
+    assert list(res) == ["theory_id", "criterion", "conditioning", "acyclic", "constructs",
+                         "n_edges",
                          "n_bidirected", "feedback", "implications", "n_implications",
                          "inseparable"]
     assert res == {
         "theory_id": "panic-network-2026",
         "criterion": "sigma",
+        "conditioning": "basis",
         "acyclic": False,
         "constructs": ["c_arousal", "c_perceived_threat", "c_avoidance"],
         "n_edges": 3,
@@ -861,3 +864,27 @@ def test_implications_goldens_hold_the_planned_statements():
     assert statements(golden("panic-network-2026-v2")) == []
     assert len(golden("modality-switching-2026")["implications"]) == 6
     assert golden("weak-demo")["constructs"] == ["k_motivation", "k_drive"]
+
+
+def test_minimal_conditioning_drops_every_construct_the_separation_does_not_need():
+    # a -> m -> y with a second path a -> b -> y and b -> m: the basis set
+    # conditions a _||_ y on the parents of both, {m, b}, which is also minimal.
+    # Adding c -> y gives y a third parent that the pair does not need.
+    t = tf.new_theory("min", "Minimal sets")
+    for c in ("a", "b", "m", "c", "y"):
+        t.add_construct(c, c.upper(), "A construct.")
+    for i, (frm, to) in enumerate((("a", "m"), ("m", "y"), ("a", "b"), ("b", "y"),
+                                    ("b", "m"), ("c", "y"))):
+        t.add_proposition(f"p{i}", frm, to, "causes")
+    basis = {(r["a"], r["b"]): r["given"] for r in t.implications()["implications"]}
+    minimal = t.implications(given="minimal")
+    assert minimal["conditioning"] == "minimal"
+    pruned = {(r["a"], r["b"]): r["given"] for r in minimal["implications"]}
+    assert basis[("a", "y")] == ["b", "m", "c"]
+    assert pruned[("a", "y")] == ["b", "m"]
+    # Each pruned set is a subset of its basis set, and the pairs are the same.
+    assert pruned.keys() == basis.keys()
+    assert all(set(pruned[k]) <= set(basis[k]) for k in basis)
+    with pytest.raises(ValueError, match="^implications requires given to be 'basis' or 'minimal'$"):
+        t.implications(given="smallest")
+

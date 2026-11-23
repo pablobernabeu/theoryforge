@@ -3,7 +3,7 @@
 - Theory ID: panic-network-2026-v2
 - Version: v2 (parent v1)
 - Schema version: 1.0
-- Content hash: sha256:486b5a95b0fa635a7c4360b412a868f441191199b10ccea30089d9e13da69b10
+- Content hash: sha256:f3020cfac6b850fa660d6254c516ac3e8303bcb3207ec9ebd4f1a441cf942ee5
 - Maturity: testing
 - Formal model: ode (models/panic_ode.py)
 - Derivations check: yes
@@ -37,14 +37,17 @@
 
 ## Hypotheses
 1. [point] An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds. (pred1; derives from: p1, p3)
+   - Region the claim allows: [15, 25]
    - Auxiliary assumptions: aux1 (core)
    - Rivals it discriminates: alt_cognitive
    - Test record: already tested: passed (2026-05-01, registered osf.io/abcde)
 2. [interval] Avoidance frequency falls within a 20-35% band after exposure therapy. (pred2; derives from: p2)
+   - Region the claim allows: [20, 35]
    - Test record: untested
 3. [directional] Higher perceived threat is associated with more avoidance. (pred3; derives from: p2)
    - Test record: untested
 4. [point] Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks. (pred4; derives from: p4)
+   - Region the claim allows: [25, 35]
    - Rivals it discriminates: alt_cognitive
    - Test record: already tested: passed (2026-06-10, registered osf.io/fghij)
 

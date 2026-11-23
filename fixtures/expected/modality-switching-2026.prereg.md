@@ -3,7 +3,7 @@
 - Theory ID: modality-switching-2026
 - Version: v1
 - Schema version: 1.1
-- Content hash: sha256:ae0f5400b098dfc8c7590dd5e260af43c712d768add8d5fd5c6179404b125db1
+- Content hash: sha256:c8109f9b8b7ca5df9c28ea0b42d799a4e9e608cad9cb0641e6030f9cd7bbb630
 - Maturity: developing
 - Formal model: sem (models/modality_switching.lavaan)
 - Derivations check: yes
@@ -61,6 +61,7 @@
    - Rivals it discriminates: alt_grounding_by_interaction (its propositions contradict the claim)
    - Test record: untested
 4. [interval] Across a corpus of concrete nouns matched for length, modality-specific perceptual strength and lexical familiarity correlate no more strongly than 0.10 in absolute value. (pred4; derives from: p1, p4)
+   - Region the claim allows: [-0.1, 0.1]
    - Claim: c_sensorimotor_experience and c_lexical_familiarity are independent; entailed by the causal graph
    - Auxiliary assumptions: aux2 (core)
    - Rivals it discriminates: alt_symbol_interdependency (its propositions contradict the claim)

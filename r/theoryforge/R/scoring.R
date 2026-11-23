@@ -96,13 +96,6 @@ tf_severity <- function(theory) {
 
 .tf_PDS_REFUSAL <- "post_data_severity requires "
 
-# `v` as a double when it is a single number other than NaN, and NULL
-# otherwise. A logical is not a number. The Python twin's _num.number() reads an
-# integer too large for a float as an infinity, as R's reader holds it.
-.tf_number <- function(v) {
-  if (is.numeric(v) && length(v) == 1L && !is.na(v)) as.numeric(v) else NULL
-}
-
 .tf_finite <- function(x) {
   if (!is.null(x) && is.finite(x)) x else NULL
 }

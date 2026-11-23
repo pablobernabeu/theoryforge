@@ -155,7 +155,8 @@ LISTING = json.dumps({"data": [
     {"type": "files", "attributes": {"kind": "file", "name": "other.md"},
      "links": {"upload": "https://files.example/other"}},
     {"type": "files", "attributes": {"kind": "file", "name": "t.dossier.md"},
-     "links": {"upload": "https://files.example/v1/resources/abc12/providers/osfstorage/f1"}},
+     "links": {"upload":
+               "https://files.example/v1/resources/abc12/providers/osfstorage/f1?kind=file"}},
 ]}).encode("utf-8")
 
 
@@ -169,6 +170,13 @@ def test_overwrite_puts_a_new_version_to_the_existing_files_upload_link(transpor
     assert t.calls[0].data is None
     assert t.calls[1].full_url == (
         "https://files.example/v1/resources/abc12/providers/osfstorage/f1?kind=file")
+
+
+def test_an_upload_link_without_a_query_gains_kind_file():
+    from theoryforge.osf import _update_url
+    assert _update_url("https://files.example/f1") == "https://files.example/f1?kind=file"
+    assert _update_url("https://files.example/f1?x=1") == "https://files.example/f1?x=1&kind=file"
+    assert _update_url("https://files.example/f1?kind=file") == "https://files.example/f1?kind=file"
 
 
 def test_overwrite_creates_the_file_when_the_folder_has_none_of_that_name(transport):
@@ -229,3 +237,14 @@ def test_report_html_escapes_the_id_and_every_cell():
     assert "<h2>Rigour report: a&lt;b&amp;c</h2>" in html
     assert "a<b&c" not in html
     assert re.search(r"&(?!amp;|lt;|gt;|middot;)", html) is None
+
+
+QMD_PATHS = [("report.md", "report.qmd"), ("report", "report.qmd"), (".hidden", ".hidden.qmd"),
+             ("a.tar.gz", "a.tar.qmd"), ("d/x.QMD", "d/x.QMD"), ("d.v/report", "d.v/report.qmd"),
+             ("report.", "report.qmd"), ("report.my-file", "report.qmd")]
+
+
+def test_the_report_path_ends_in_qmd_by_the_rule_r_follows():
+    # test-render.R checks the same pairs against R's .tf_qmd_path().
+    from theoryforge.report_render import _qmd_path
+    assert [_qmd_path(p) for p, _ in QMD_PATHS] == [q for _, q in QMD_PATHS]

@@ -218,9 +218,9 @@ summed index of the theme's links to the keywords of other themes, and says
 how strongly the theme is tied to the rest of the field. Density is 100 times the
 summed index of its internal links, divided by its size, and says how strongly
 the theme holds together. Splitting each measure at its median places the
-theme in one quadrant of the strategic diagram, and a theme counts as high on
-a measure only when its value lies above the median. A theme at the median is
-low, and a theme with centrality 0 is never central. Motor themes are both
+theme in one quadrant of the strategic diagram. A theme counts as high on a
+measure when its value lies above the median, or at it when the median is the
+highest value, and a theme with centrality 0 is never central. Motor themes are both
 central and dense, basic themes central but not dense, niche themes dense but
 peripheral, and the rest `emerging_or_declining`. When every theme has the same
 centrality, or the same density, the median cannot split them, and the

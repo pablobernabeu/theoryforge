@@ -12,6 +12,7 @@ import urllib.error
 from urllib.parse import quote as _quote
 
 from ._access import text
+from ._compat import theory_keyword
 from .dossier import dossier as _dossier
 
 _DEFAULT_BASE = "https://files.osf.io/v1/resources/"
@@ -120,15 +121,16 @@ def _upload_link(body: bytes, fname: str) -> str | None:
 def _update_url(link: str) -> str:
     """WaterButler updates a file with ``PUT <upload link>?kind=file``.
 
-    The link OSF returns carries no query, but one that already names ``kind``
-    is kept as is.
+    WaterButler's upload link already ends in ``?kind=file``, and is then kept
+    as it is. The query is added only to a link that lacks it.
     """
     if "?kind=" in link or "&kind=" in link:
         return link
     return f"{link}{'&' if '?' in link else '?'}kind=file"
 
 
-def osf_push(T, token: str | None = None, node: str | None = None,
+@theory_keyword
+def osf_push(theory, token: str | None = None, node: str | None = None,
              filename: str | None = None, dry_run: bool = True,
              base_url: str = _DEFAULT_BASE, overwrite: bool = False) -> dict:
     """Deposit the theory's dossier on OSF.
@@ -167,7 +169,7 @@ def osf_push(T, token: str | None = None, node: str | None = None,
     """
     if not isinstance(overwrite, bool):
         raise ValueError("overwrite must be True or False")
-    data = T.data if hasattr(T, "data") else T
+    data = theory.data if hasattr(theory, "data") else theory
     # A null or empty id must not leak into the filename ('None.dossier.md' /
     # '.dossier.md'); fall back to 'theory' as the R twin's nzchar guard does.
     tid = text(data.get("id")) or "theory"

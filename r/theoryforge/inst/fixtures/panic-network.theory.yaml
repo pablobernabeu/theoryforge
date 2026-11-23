@@ -56,6 +56,7 @@ predictions:
     derives_from: [p1, p3]
     statement: "An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds."
     type: "point"
+    bounds: {lower: 15, upper: 25}
     risk_score: 0.8
     severity: 0.7
     diagnostic_vs: [alt_cognitive]
@@ -63,6 +64,7 @@ predictions:
     derives_from: [p2]
     statement: "Avoidance frequency falls within a 20-35% band after exposure therapy."
     type: "interval"
+    bounds: {lower: 20, upper: 35}
     risk_score: 0.6
     severity: 0.6
     diagnostic_vs: []
@@ -77,6 +79,7 @@ predictions:
     derives_from: [p1, p2, p3]
     statement: "Holding perceived threat constant, physiological arousal and avoidance correlate no more strongly than 0.10 in absolute value."
     type: "interval"
+    bounds: {lower: -0.10, upper: 0.10}
     diagnostic_vs: []
     claim: {kind: association, x: c_arousal, y: c_avoidance, given: [c_perceived_threat], sign: zero}
 

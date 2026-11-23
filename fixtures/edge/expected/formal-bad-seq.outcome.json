@@ -83,6 +83,7 @@
   "implications": {
     "theory_id": "edge-formal-bad-seq",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

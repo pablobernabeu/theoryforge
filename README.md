@@ -42,9 +42,7 @@ below are the Python ones, and the R package prefixes each with `tf_`, so `litma
 `tf_litmap()`. Where Python calls a method on a theory object, as in `theory.report()`, R
 calls a function on it, as in `tf_report(theory)`. A few names differ: Python's `new_theory()`
 is `tf_theory()` in R, and Python's `add_proposition()` takes `frm` where R's takes `from`, a
-reserved word in Python. Most of Python's module-level functions that take a theory, such as
-`theoryforge.implications()`, name it `T` where R names it `theory`, so a call written for both
-languages passes the theory by position. Python's builders change the theory in place and
+reserved word in Python. Python's builders change the theory in place and
 return it, where R's return a modified copy. A Python amendment that must leave its prior
 intact therefore starts from `prior.copy()`, a method R does not need.
 

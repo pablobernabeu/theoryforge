@@ -87,6 +87,7 @@
   "implications": {
     "theory_id": "edge-amend-weakened",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

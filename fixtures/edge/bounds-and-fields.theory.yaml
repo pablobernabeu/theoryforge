@@ -1,0 +1,37 @@
+# Edge case: full validation items 16 and 17. Claim forms that their bounds
+# contradict, a pass recorded with the estimate outside the bounds, and entry
+# fields the schema does not define, one misspelt and one an extension under x_.
+schema_version: "1.1"
+id: edge-bounds-and-fields
+title: Bounds that contradict claim forms, and unknown entry fields
+maturity: testing
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+    x_source: Item bank 3
+  - id: c2
+    label: Beta
+    definition: The second construct.
+    measurment: [Questionnaire]
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: Alpha raises Beta.}
+predictions:
+  - id: h1
+    statement: Beta lies near 5.
+    type: point
+    derives_from: [p1]
+    bounds: {lower: 4}
+  - id: h2
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+    bounds: {lower: 0, upper: 1}
+  - id: h3
+    statement: Beta lies between 20 and 60.
+    type: interval
+    derives_from: [p1]
+    bounds: {lower: 20, upper: 60}
+    severty: 0.7
+test_outcomes:
+  - {prediction_id: h3, passed: true, estimate: 61, se: 5}

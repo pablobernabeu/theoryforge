@@ -62,12 +62,14 @@ predictions:
     derives_from: [p1, p3]
     statement: "An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds."
     type: "point"
+    bounds: {lower: 15, upper: 25}
     severity: 0.7
     diagnostic_vs: [alt_cognitive]
   - id: pred2
     derives_from: [p2]
     statement: "Avoidance frequency falls within a 20-35% band after exposure therapy."
     type: "interval"
+    bounds: {lower: 20, upper: 35}
     severity: 0.6
     diagnostic_vs: []
   - id: pred3
@@ -80,6 +82,7 @@ predictions:
     derives_from: [p4]
     statement: "Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks."
     type: "point"
+    bounds: {lower: 25, upper: 35}
     severity: 0.75
     diagnostic_vs: [alt_cognitive]
 

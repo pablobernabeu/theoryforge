@@ -49,8 +49,8 @@ tf_app_example <- function(name) {
 
 test_that("tf_implications returns the basis set of a mediated chain", {
   res <- tf_implications(tf_chain_theory())
-  expect_named(res, c("theory_id", "criterion", "acyclic", "constructs", "n_edges",
-                      "n_bidirected", "feedback", "implications", "n_implications",
+  expect_named(res, c("theory_id", "criterion", "conditioning", "acyclic", "constructs",
+                      "n_edges", "n_bidirected", "feedback", "implications", "n_implications",
                       "inseparable"))
   expect_equal(res$theory_id, "mediation")
   expect_identical(res$criterion, "m")
@@ -765,6 +765,7 @@ test_that("sigma derives the panic network statement", {
   expect_identical(res, list(
     theory_id = "panic-network-2026",
     criterion = "sigma",
+    conditioning = "basis",
     acyclic = FALSE,
     constructs = list("c_arousal", "c_perceived_threat", "c_avoidance"),
     n_edges = 3L,
@@ -995,4 +996,30 @@ test_that("tf_implications reproduces the implications goldens", {
   expect_identical(golden("panic-network-2026-v2")$implications, list())
   expect_length(golden("modality-switching-2026")$implications, 6L)
   expect_identical(unlist(golden("weak-demo")$constructs), c("k_motivation", "k_drive"))
+})
+
+test_that("minimal conditioning drops every construct the separation does not need", {
+  # a -> m -> y with a second path a -> b -> y and b -> m, and c -> y giving y
+  # a third parent that the pair a, y does not need. The Python suite asserts
+  # the same sets.
+  t <- tf_theory("min", "Minimal sets")
+  for (cid in c("a", "b", "m", "c", "y")) t <- tf_add_construct(t, cid, toupper(cid), "A construct.")
+  edges <- list(c("a", "m"), c("m", "y"), c("a", "b"), c("b", "y"), c("b", "m"), c("c", "y"))
+  for (i in seq_along(edges)) {
+    t <- tf_add_proposition(t, paste0("p", i - 1L), edges[[i]][[1]], edges[[i]][[2]], "causes")
+  }
+  given_of <- function(res) {
+    stats::setNames(lapply(res$implications, function(r) unlist(r$given)),
+                    vapply(res$implications, function(r) paste(r$a, r$b), ""))
+  }
+  basis <- given_of(tf_implications(t))
+  res <- tf_implications(t, given = "minimal")
+  expect_identical(res$conditioning, "minimal")
+  pruned <- given_of(res)
+  expect_identical(basis[["a y"]], c("b", "m", "c"))
+  expect_identical(pruned[["a y"]], c("b", "m"))
+  expect_identical(names(pruned), names(basis))
+  expect_true(all(mapply(function(p, b) all(p %in% b), pruned, basis)))
+  expect_error(tf_implications(t, given = "smallest"),
+               "implications requires given to be 'basis' or 'minimal'", fixed = TRUE)
 })

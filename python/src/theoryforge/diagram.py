@@ -5,6 +5,7 @@ import re
 import warnings
 
 from ._access import PRED_TYPE, RELATION, enum, field, items, ne_str, str_list, text
+from ._compat import theory_keyword
 from ._relations import BIDIRECTED, DIRECTED
 from ._text import ascii_lower, trim, xml_escape
 
@@ -539,10 +540,11 @@ def _warn_engine(stacklevel: int) -> None:
                   "in the next minor release", FutureWarning, stacklevel=stacklevel + 1)
 
 
-def diagram(T: dict, type: str = "nomological_net", engine: str | None = None) -> str:
+@theory_keyword
+def diagram(theory: dict, type: str = "nomological_net", engine: str | None = None) -> str:
     """Return the diagram IR string for the requested type.
 
-    ``T`` is a ``Theory`` or a parsed theory mapping. ``type`` is one of
+    ``theory`` is a ``Theory`` or a parsed theory mapping. ``type`` is one of
     ``nomological_net`` (the default, the constructs and the propositions
     between them, each edge labelled with the proposition's id and relation
     and an association drawn without arrowheads), ``provenance``
@@ -596,26 +598,27 @@ def diagram(T: dict, type: str = "nomological_net", engine: str | None = None) -
             prediction's ``severity`` is not a finite number within [0, 1].
     """
     if engine is not None:
-        _warn_engine(stacklevel=2)
-    T = T.data if hasattr(T, "data") else T
+        # One frame more than the method's call, for the theory_keyword wrapper.
+        _warn_engine(stacklevel=3)
+    theory = theory.data if hasattr(theory, "data") else theory
     if type == "nomological_net":
-        return _nomological_net(T)
+        return _nomological_net(theory)
     if type == "provenance":
-        return _provenance(T)
+        return _provenance(theory)
     if type == "causal_dag":
-        return _causal_dag(T)
+        return _causal_dag(theory)
     if type == "development_roadmap":
-        return _development_roadmap(T)
+        return _development_roadmap(theory)
     if type == "pipeline":
-        return _pipeline(T)
+        return _pipeline(theory)
     if type == "context":
-        return _context(T)
+        return _context(theory)
     if type == "workflow":
-        return _workflow(T)
+        return _workflow(theory)
     if type == "venn":
-        return _venn(T)
+        return _venn(theory)
     if type == "rigour":
-        return _rigor(T)
+        return _rigor(theory)
     if type == "severity":
-        return _severity_chart(T)
+        return _severity_chart(theory)
     raise ValueError(f"unknown diagram type {type!r}; expected one of {_TYPES}")

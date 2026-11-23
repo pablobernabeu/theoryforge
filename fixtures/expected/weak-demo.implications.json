@@ -1,6 +1,7 @@
 {
   "theory_id": "weak-demo",
   "criterion": "sigma",
+  "conditioning": "basis",
   "acyclic": true,
   "constructs": [
     "k_motivation",

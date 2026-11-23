@@ -6,8 +6,9 @@ block from a directory outside the repository, as the CI wheel job does with the
 wheel. PyPI shows the page away from GitHub, so the logo needs an absolute address, and the
 changelog must date the release that CITATION.cff cites as CITATION.cff does. Those two
 files sit at the root of the repository, outside the Python project, so that test skips
-where they are absent. The last test reads pyproject.toml with tomllib, or on Python 3.10
-with tomli, which pytest itself requires there.
+where they are absent. One test reads pyproject.toml with tomllib, or on Python 3.10 with
+tomli, which pytest itself requires there, and the last checks that the five records of
+the version agree.
 """
 
 import re
@@ -88,3 +89,19 @@ def test_pyproject_has_no_obsolete_backend_cap_or_licence_classifier():
     # expression, so the licence is declared once.
     licence_classifiers = [c for c in project.get("classifiers", []) if c.startswith("License ::")]
     assert not licence_classifiers, f"licence classifiers beside license: {licence_classifiers}"
+
+
+def test_every_record_of_the_version_agrees():
+    # The version is written by hand in five places, and a release that bumps
+    # four of them would print the old one on a site or in a citation.
+    found = {
+        "pyproject.toml": re.search(r'^version = "([^"]+)"', _text(PYPROJECT), re.M),
+        "DESCRIPTION": re.search(r"^Version: (\S+)", _text(REPO / "r" / "theoryforge" / "DESCRIPTION"),
+                                 re.M),
+        "CITATION.cff": re.search(r'^version: "([^"]+)"', _text(CITATION), re.M),
+        "mkdocs.yml": re.search(r'^  version: "([^"]+)"', _text(PYTHON_DIR / "mkdocs.yml"), re.M),
+        "API_SPEC.md": re.search(r"^# .*\(v([^)]+)\)$", _text(REPO / "API_SPEC.md"), re.M),
+    }
+    assert all(found.values()), [name for name, m in found.items() if m is None]
+    versions = {name: m.group(1) for name, m in found.items()}
+    assert len(set(versions.values())) == 1, versions

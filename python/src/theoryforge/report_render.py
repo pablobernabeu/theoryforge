@@ -6,10 +6,11 @@ only the rendering step depends on the environment.
 """
 from __future__ import annotations
 
+import os
 import subprocess
-from pathlib import Path
 
 from ._access import text
+from ._compat import theory_keyword
 from ._io import write_lf as _write_lf
 from .dossier import dossier as _dossier
 
@@ -40,12 +41,31 @@ def _yaml_dq(s: str) -> str:
     return "".join(out)
 
 
-def render_report(T, path, title: str | None = None, render: bool = False, to: str = "html") -> str:
+def _qmd_path(path: str) -> str:
+    """``path`` with its file name ending in ``.qmd``, by the rule ``render_report()`` states.
+
+    Written out in full, rather than with ``Path.with_suffix``, so that R's twin
+    can follow the same rule character for character.
+    """
+    cut = max(path.rfind("/"), path.rfind("\\")) + 1
+    folder, name = path[:cut], path[cut:]
+    if name.lower().endswith(".qmd"):
+        return path
+    dot = name.rfind(".")
+    if dot > 0:
+        name = name[:dot]
+    return folder + name + ".qmd"
+
+
+@theory_keyword
+def render_report(theory, path, title: str | None = None, render: bool = False, to: str = "html") -> str:
     """Write a Quarto report for the theory, and render it with Quarto when ``render=True``.
 
     The report is a YAML header (``title`` and ``format``) followed by the ``dossier()`` body.
-    A ``path`` without the suffix ``.qmd`` (in any letter case) has its last suffix replaced by
-    ``.qmd``, or ``.qmd`` added when it has none, so ``report.md`` is written as ``report.qmd``.
+    A file name that does not end in ``.qmd`` (in any letter case) loses everything from its
+    last dot, unless the name begins with that dot, and gains ``.qmd``. So ``report.md`` is
+    written as ``report.qmd``, ``report`` and ``.hidden`` gain the suffix and ``a.tar.gz``
+    becomes ``a.tar.qmd``.
     ``to`` is the Quarto output format, ``"html"`` by default, written into the header and
     passed to ``quarto render --to``.
 
@@ -62,12 +82,10 @@ def render_report(T, path, title: str | None = None, render: bool = False, to: s
 
     Returns the path of the written ``.qmd``.
     """
-    data = T.data if hasattr(T, "data") else T
+    data = theory.data if hasattr(theory, "data") else theory
     # Fall back to the id when the title is empty as well as absent (matches R's nzchar fallback).
     title = title or f"theoryforge report: {text(data.get('title')) or text(data.get('id'))}"
-    path = Path(path)
-    if path.suffix.lower() != ".qmd":
-        path = path.with_suffix(".qmd")
+    path = _qmd_path(os.fspath(path))
     header = f'---\ntitle: "{_yaml_dq(title)}"\nformat: {to}\n---\n\n'
     _write_lf(path, header + _dossier(data))
     if render:

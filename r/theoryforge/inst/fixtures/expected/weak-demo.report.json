@@ -1,9 +1,13 @@
 {
   "theory_id": "weak-demo",
   "schema_version": "1.0",
-  "checklist_version": "2.1",
+  "checklist_version": "3.0",
   "maturity": "building",
   "aggregate_score": 2.2,
+  "aggregate_range": [
+    1.1,
+    3.9
+  ],
   "coverage": 0.92,
   "gate": "blocked",
   "n_blockers_failed": 2,

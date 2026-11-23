@@ -22,6 +22,7 @@ import itertools
 
 from ._access import enum, field, items, str_list, text
 from ._causal import causal_graph
+from ._compat import theory_keyword
 from ._graph import acyclify, m_separated, reach, strong_components
 
 KINDS = frozenset({"effect", "association"})
@@ -289,7 +290,8 @@ def _tally(records: list[dict], key: str) -> dict:
     return out
 
 
-def entailments(T, cycles: str = "refuse") -> dict:
+@theory_keyword
+def entailments(theory, cycles: str = "refuse") -> dict:
     """Whether the theory's causal graph entails each claim its predictions and phenomena state.
 
     A ``claim`` names two constructs, ``x`` and ``y``, and states a ``kind``
@@ -356,15 +358,15 @@ def entailments(T, cycles: str = "refuse") -> dict:
         https://doi.org/10.1214/aoms/1177732676
     """
     check_cycles(cycles, "entailments")
-    T = T.data if hasattr(T, "data") else T
-    g = _Graph(causal_graph(T, "entailments"), cycles, items(T, "propositions"))
+    theory = theory.data if hasattr(theory, "data") else theory
+    g = _Graph(causal_graph(theory, "entailments"), cycles, items(theory, "propositions"))
     records = []
-    for c in _claims(T):
+    for c in _claims(theory):
         rec = {k: c[k] for k in ("source", "id", "kind", "x", "y", "given", "sign")}
         rec.update(g.read(c))
         records.append(rec)
     return {
-        "theory_id": text(T.get("id")),
+        "theory_id": text(theory.get("id")),
         "criterion": "sigma" if cycles == "sigma" else "m",
         "acyclic": not g.feedback,
         "feedback": g.feedback,
@@ -495,7 +497,8 @@ def _compelled(directed: list[list[bool]], k: int) -> list[list[bool]]:
     return comp
 
 
-def equivalent_models(T) -> dict:
+@theory_keyword
+def equivalent_models(theory) -> dict:
     """Which causal directions of the theory observational data can and cannot test.
 
     Two causal graphs that imply the same conditional independencies are
@@ -540,14 +543,14 @@ def equivalent_models(T) -> dict:
         (Eds.), Proceedings of the Sixth Conference on Uncertainty in Artificial
         Intelligence (pp. 255-270). Elsevier.
     """
-    T = T.data if hasattr(T, "data") else T
-    g = causal_graph(T, "equivalent_models")
+    theory = theory.data if hasattr(theory, "data") else theory
+    g = causal_graph(theory, "equivalent_models")
     nodes, directed, k = g["nodes"], g["directed"], len(g["nodes"])
     r = reach(directed, k)
     cyclic = any(len(c) > 1 or directed[c[0]][c[0]] for c in strong_components(r))
     reason = "feedback_loop" if cyclic else "associations" if g["n_bidirected"] else None
     out = {
-        "theory_id": text(T.get("id")),
+        "theory_id": text(theory.get("id")),
         "computed": reason is None,
         "reason": reason,
         "constructs": nodes,
@@ -635,7 +638,8 @@ def _statement(a: str, b: str, given: list[str]) -> str:
     return f"{a} _||_ {b}" + (" | " + ", ".join(given) if given else "")
 
 
-def discriminate(T, rival, cycles: str = "refuse") -> dict:
+@theory_keyword
+def discriminate(theory, rival, cycles: str = "refuse") -> dict:
     """What would tell the theory apart from a rival account of the same constructs.
 
     ``rival`` is the id of one of the theory's alternatives that states
@@ -673,16 +677,16 @@ def discriminate(T, rival, cycles: str = "refuse") -> dict:
             ``implications()``.
     """
     check_cycles(cycles, "discriminate")
-    T = T.data if hasattr(T, "data") else T
-    focal = _Graph(causal_graph(T, "discriminate"), cycles, items(T, "propositions"))
+    theory = theory.data if hasattr(theory, "data") else theory
+    focal = _Graph(causal_graph(theory, "discriminate"), cycles, items(theory, "propositions"))
     if isinstance(rival, str):
-        alt = next((a for a in items(T, "alternatives") if text(field(a, "id")) == rival), None)
+        alt = next((a for a in items(theory, "alternatives") if text(field(a, "id")) == rival), None)
         if alt is None:
             raise ValueError(f"discriminate found no alternative '{rival}' in the theory")
         props = items(alt, "propositions")
         if not props:
             raise ValueError(f"discriminate requires alternative '{rival}' to state propositions")
-        other = _Graph(causal_graph(T, "discriminate", propositions=props), cycles, props)
+        other = _Graph(causal_graph(theory, "discriminate", propositions=props), cycles, props)
         rival_id = rival
     else:
         R = rival.data if hasattr(rival, "data") else rival
@@ -692,7 +696,7 @@ def discriminate(T, rival, cycles: str = "refuse") -> dict:
     shared = [c for c in focal.nodes if c in other.index]
     evaluated = focal.evaluable and other.evaluable
     claims: list[dict] = []
-    for c in _claims(T):
+    for c in _claims(theory):
         a, b = focal.read(c), other.read(c)
         claims.append({
             "source": c["source"], "id": c["id"], "theory": a["verdict"], "rival": b["verdict"],
@@ -732,7 +736,7 @@ def discriminate(T, rival, cycles: str = "refuse") -> dict:
         effects, associations = _sign_differences(shared, focal, other)
 
     return {
-        "theory_id": text(T.get("id")),
+        "theory_id": text(theory.get("id")),
         "rival_id": rival_id,
         "criterion": "sigma" if cycles == "sigma" else "m",
         "evaluated": evaluated,

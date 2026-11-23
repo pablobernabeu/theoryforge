@@ -1,13 +1,14 @@
-# Checklist 2.0 (API_SPEC.md section 4).
+# The rigour checklist (API_SPEC.md section 4).
 #
 # An item with nothing to assess is "n/a", with a NULL score, and is left out of
 # the aggregate, which is the weighted mean of the applicable items. The report
-# gains `coverage`, the share of checklist weight that was applicable.
-# Parsimony fails only an assumption added for an anomaly that has no
-# independent corroboration, non-redundancy follows the redundancy screen's
-# flags and mean severity counts every prediction, using the claim-form rubric
-# where none is declared. The Python suite (test_checklist2.py) builds the same
-# theories and asserts the same values.
+# gives `coverage`, the share of checklist weight that was applicable, and
+# `aggregate_range`, the aggregate under other weightings. Parsimony fails an
+# assumption that answers an anomaly without independent corroboration,
+# non-redundancy follows the redundancy screen's flags, precision counts bounded
+# point and interval claims and mean severity counts every prediction, using the
+# claim-form rubric where none is declared. The Python suite
+# (test_checklist2.py) builds the same theories and asserts the same values.
 
 c2_ids <- c("falsifiability", "precision", "risk_severity", "parsimony", "non_redundancy",
             "construct_clarity", "scope", "logical_why", "causal_testability",
@@ -34,9 +35,9 @@ c2_item <- function(theory, id) {
 
 # -- the checklist file and the report ----------------------------------------
 
-test_that("the checklist is version 2.0 with five default thresholds", {
+test_that("the checklist is version 3.0 with five default thresholds", {
   spec <- theoryforge:::tf_checklist()
-  expect_identical(spec$schema_version, "2.1")
+  expect_identical(spec$schema_version, "3.0")
   # parsimony_ratio_max is gone: parsimony no longer counts assumptions.
   thr <- spec$thresholds
   expect_identical(sort(names(thr)),
@@ -47,7 +48,8 @@ test_that("the checklist is version 2.0 with five default thresholds", {
   expect_identical(vapply(spec$items, function(it) it$id, character(1)), c2_ids)
   items <- stats::setNames(spec$items, c2_ids)
   expect_identical(items$risk_severity$criterion,
-                   "Mean prediction severity (declared, else the claim-form rubric) at or above threshold")
+                   paste("Mean prediction riskiness (declared severity, else the claim-form rubric)",
+                         "at or above threshold"))
   # Meehl (1990a) is the Psychological Inquiry article, Meehl (1990b) the
   # Psychological Reports one, as in the methodology article.
   expect_identical(items$precision$citation, "Meehl (1967, 1990a)")
@@ -61,10 +63,10 @@ test_that("the checklist is version 2.0 with five default thresholds", {
 test_that("the report gives coverage after the aggregate", {
   rep <- tf_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
   expect_identical(names(rep), c("theory_id", "schema_version", "checklist_version",
-                                 "maturity", "aggregate_score", "coverage", "gate",
-                                 "n_blockers_failed", "items"))
+                                 "maturity", "aggregate_score", "aggregate_range", "coverage",
+                                 "gate", "n_blockers_failed", "items"))
   # parsimony has nothing to assess, and the other eleven items weigh 0.92.
-  expect_identical(rep$checklist_version, "2.1")
+  expect_identical(rep$checklist_version, "3.0")
   expect_equal(rep$aggregate_score, 88.0)
   expect_equal(rep$coverage, 0.92)
   parsimony <- rep$items[[4L]]
@@ -220,7 +222,7 @@ test_that("the screen flags a definition contained in another", {
   t <- tf_read(tf_fixture_path("weak-theory.theory.yaml"))
   expect_identical(tf_redundancy_check(t), data.frame(
     a = "k_motivation", b = "k_drive", similarity = 0.8, overlap = 1.0, flag = "review",
-    stringsAsFactors = FALSE
+    reason = "contained", stringsAsFactors = FALSE
   ))
   expect_identical(c2_item(t, "non_redundancy"), list(status = "warn", score = 0.0))
 })
@@ -237,8 +239,9 @@ test_that("overlap counts only between definitions of three tokens or more", {
                    list(list(0.6, 1.0, "review"), list(status = "warn", score = 0.0)))
   expect_identical(c2_pair("Bodily arousal.", "Bodily arousal under threat in adults."),
                    list(list(0.4, 1.0, "ok"), list(status = "pass", score = 1.0)))
+  # A construct with no definition cannot be screened, so the item cannot pass.
   expect_identical(c2_pair("", "Bodily arousal response."),
-                   list(list(0.0, 0.0, "ok"), list(status = "pass", score = 1.0)))
+                   list(list(0.0, 0.0, "ok"), list(status = "warn", score = 0.0)))
 })
 
 test_that("non_redundancy is not applicable to one construct", {
@@ -312,14 +315,17 @@ test_that("tf_embedding_redundancy() defaults to its own threshold", {
 
 test_that("the dossier gives coverage and names the failed blockers", {
   d <- tf_dossier(tf_read(tf_fixture_path("weak-theory.theory.yaml")))
-  expect_true(grepl(paste0("- Aggregate rigour score: 2.2/100\n- Checklist coverage: 0.92\n",
+  expect_true(grepl(paste0("- Aggregate rigour score: 2.2/100 (1.1 to 3.9 under other weightings)\n",
+                           "- Checklist coverage: 0.92\n",
                            "- Gate: blocked\n",
                            "- Blockers failed: 2 (falsifiability, derivation_chain)\n"),
                     d, fixed = TRUE))
-  expect_true(grepl(paste0("| parsimony | No auxiliary assumption added in response to an anomaly ",
-                           "lacks independent corroboration | n/a | n/a | 0.08 |\n"), d, fixed = TRUE))
-  expect_true(grepl(paste0("| non_redundancy | No pair of construct definitions is a near-duplicate ",
-                           "or contained in the other (lexical screen) | warn | 0.0 | 0.1 |\n"),
+  expect_true(grepl(paste0("| parsimony | No auxiliary assumption that answers an anomaly (named in ",
+                           "added_for, or a protected prediction a test failed) lacks independent ",
+                           "corroboration | n/a | n/a | 0.08 |\n"), d, fixed = TRUE))
+  expect_true(grepl(paste0("| non_redundancy | Every construct is defined, and no two have ",
+                           "near-duplicate or contained definitions, one label or a shared measure ",
+                           "(lexical screen) | warn | 0.0 | 0.1 |\n"),
                     d, fixed = TRUE))
 })
 
@@ -335,4 +341,115 @@ test_that("the views and the HTML report show not-applicable items", {
   expect_true(grepl('<text x="320" y="144">n/a</text>', svg, fixed = TRUE))
   expect_true(grepl("<tr><td>parsimony</td><td>n/a</td><td>n/a</td>",
                     tf_report(t, "html"), fixed = TRUE))
+})
+
+
+# -- checklist 3.0 --------------------------------------------------------------
+
+c3_pred <- function(id, type, ...) {
+  list(id = id, statement = "s", type = type, derives_from = list("p1"), ...)
+}
+
+test_that("precision counts point and interval claims only with two finite bounds", {
+  t <- c2_bare(constructs = c2_two_constructs, propositions = c2_p1, predictions = list(
+    c3_pred("h1", "point"),
+    c3_pred("h2", "interval", bounds = list(lower = 20, upper = 60)),
+    c3_pred("h3", "point", bounds = list(lower = 5, upper = 5)),
+    c3_pred("h4", "directional", bounds = list(lower = 0))
+  ))
+  expect_identical(c2_item(t, "precision"), list(status = "pass", score = 0.5))
+  t$predictions[[3]]$bounds <- list(lower = 5)
+  expect_identical(c2_item(t, "precision"), list(status = "warn", score = 0.25))
+})
+
+test_that("parsimony assesses an assumption that shields a failed prediction", {
+  preds <- list(c3_pred("h1", "directional"), c3_pred("h2", "directional"))
+  aux <- list(list(id = "a1", statement = "Only in calm settings.", protects = list("h1", "h2")))
+  failed <- list(list(prediction_id = "h1", passed = FALSE))
+  t <- c2_bare(constructs = c2_two_constructs, propositions = c2_p1, predictions = preds,
+               auxiliary_assumptions = aux)
+  expect_identical(c2_item(t, "parsimony"), list(status = "n/a", score = NULL))
+  t$test_outcomes <- failed
+  expect_identical(c2_item(t, "parsimony"), list(status = "fail", score = 0.0))
+  # A corroborated prediction it also protects clears it, as a declared
+  # added_for would.
+  t$test_outcomes <- c(failed, list(list(prediction_id = "h2", passed = TRUE)))
+  expect_identical(c2_item(t, "parsimony"), list(status = "pass", score = 1.0))
+})
+
+test_that("the screen flags a shared label and a shared measure", {
+  t <- c2_bare(constructs = list(
+    list(id = "a", label = "Anxiety", definition = "Worry about future threat.",
+         measurement = list("GAD-7 total score")),
+    list(id = "b", label = " anxiety ", definition = "Bodily arousal under danger.",
+         measurement = list("gad-7  total score", "Heart rate")),
+    list(id = "c", label = "Fear", definition = "An urge to escape present danger.",
+         measurement = list("Heart rate"))
+  ))
+  df <- tf_redundancy_check(t)
+  df <- df[order(df$a, df$b), ]
+  expect_identical(paste(df$a, df$b), c("a b", "a c", "b c"))
+  expect_identical(df$flag, c("review", "ok", "review"))
+  expect_identical(df$reason, c("same label, shared measurement", "", "shared measurement"))
+  expect_identical(c2_item(t, "non_redundancy"), list(status = "warn", score = 0.0))
+})
+
+test_that("non_redundancy cannot pass while a definition is empty", {
+  defined <- c2_two_constructs
+  expect_identical(c2_item(c2_bare(constructs = defined), "non_redundancy"),
+                   list(status = "pass", score = 1.0))
+  defined[[2]]$definition <- "  "
+  expect_identical(c2_item(c2_bare(constructs = defined), "non_redundancy"),
+                   list(status = "warn", score = 0.0))
+})
+
+test_that("the aggregate range spans the alternative weightings", {
+  rep <- tf_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
+  expect_identical(rep$aggregate_range, c(84.2, 90.2))
+  expect_true(rep$aggregate_range[[1]] <= rep$aggregate_score &&
+                rep$aggregate_score <= rep$aggregate_range[[2]])
+  # When every applicable item has one score, no weighting can move it.
+  rep <- tf_check(c2_bare(constructs = c2_two_constructs[1]))
+  expect_identical(rep$aggregate_range, rep(rep$aggregate_score, 2))
+})
+
+test_that("a severity too large for a double is refused as non-numeric", {
+  t <- c2_bare(constructs = c2_two_constructs,
+               predictions = list(c3_pred("h1", "point", severity = Inf)))
+  expect_error(tf_check(t), paste0("check requires numeric prediction severities; ",
+                                   "non-numeric severity for prediction: h1"), fixed = TRUE)
+})
+
+test_that("full validation checks a claim form against its bounds and a pass against its estimate", {
+  t <- c2_bare(predictions = list(
+    list(id = "h1", statement = "s", type = "point", bounds = list(lower = 1)),
+    c3_pred("h2", "interval", bounds = list(upper = 2)),
+    c3_pred("h3", "directional", bounds = list(lower = 0, upper = 1)),
+    c3_pred("h4", "existence", bounds = list(lower = 0)),
+    c3_pred("h5", "interval", bounds = list(lower = 20, upper = 60)),
+    c3_pred("h6", "directional", bounds = list(lower = 0))
+  ), test_outcomes = list(
+    list(prediction_id = "h5", passed = TRUE, estimate = 61, se = 5),
+    list(prediction_id = "h5", passed = FALSE, estimate = 40, se = 50),
+    list(prediction_id = "h6", passed = TRUE, estimate = 0, se = 1)
+  ))
+  msg <- tryCatch({
+    tf_validate(t, full = TRUE)
+    ""
+  }, error = conditionMessage)
+  expect_true(endsWith(msg, paste0(
+    "prediction[0] is a point claim, so its bounds need a finite lower and a finite upper; ",
+    "prediction[1] is an interval claim, so its bounds need a finite lower and a finite upper; ",
+    "prediction[2] is a directional claim, so its bounds must leave one side open; ",
+    "prediction[3] is an existence claim, which bounds cannot state; ",
+    "test_outcome[0] records a pass, but its estimate lies outside the bounds of prediction ",
+    "'h5'")))
+})
+
+test_that("the dossier writes an extreme severity as a bound", {
+  t <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  t$test_outcomes <- list(list(prediction_id = "pred1", passed = TRUE, estimate = 20, se = 0.5))
+  expect_true(grepl("post-data severity > 0.999 for [15, 25]", tf_dossier(t), fixed = TRUE))
+  t$test_outcomes <- list(list(prediction_id = "pred1", passed = FALSE, estimate = 40, se = 1))
+  expect_true(grepl("post-data severity < 0.001 for [15, 25]", tf_dossier(t), fixed = TRUE))
 })

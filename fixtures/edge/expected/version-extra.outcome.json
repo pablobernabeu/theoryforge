@@ -83,6 +83,7 @@
   "implications": {
     "theory_id": "edge-version-extra",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

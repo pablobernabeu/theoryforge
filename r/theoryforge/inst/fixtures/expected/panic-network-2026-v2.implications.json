@@ -1,6 +1,7 @@
 {
   "theory_id": "panic-network-2026-v2",
   "criterion": "sigma",
+  "conditioning": "basis",
   "acyclic": false,
   "constructs": [
     "c_arousal",

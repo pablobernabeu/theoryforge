@@ -321,10 +321,11 @@ tf_read_corpus <- function(path) {
 }
 
 # Each theme placed in the strategic diagram of Cobo et al. (2011), as Python
-# lit._quadrants. Both axes are split at their median, and a value is high only
-# when it lies above the median, so a theme at the median is low, and so is
-# one with centrality 0. When every theme has the same value on an axis, a lone
-# theme included, the axis cannot be split and every quadrant is NA.
+# lit._quadrants. Both axes are split at their median, and a value is high when
+# it lies above the median, or at it when the median is the highest value of the
+# axis, so a theme with centrality 0 is low. When every theme has the same value
+# on an axis, a lone theme included, the axis cannot be split and every
+# quadrant is NA.
 .tf_quadrants <- function(themes) {
   if (length(themes) == 0L) return(themes)
   cs <- vapply(themes, function(th) th$centrality, numeric(1))
@@ -332,8 +333,12 @@ tf_read_corpus <- function(path) {
   quadrant <- if (min(cs) == max(cs) || min(ds) == max(ds)) {
     rep(NA_character_, length(themes))
   } else {
-    high_c <- cs > .tf_median(cs)
-    high_d <- ds > .tf_median(ds)
+    high <- function(values) {
+      m <- .tf_median(values)
+      values > m | (values == m & m == max(values))
+    }
+    high_c <- high(cs)
+    high_d <- high(ds)
     ifelse(high_c, ifelse(high_d, "motor", "basic"),
            ifelse(high_d, "niche", "emerging_or_declining"))
   }
@@ -542,7 +547,8 @@ tf_read_corpus <- function(path) {
 #' summed index of its internal links, over its size), the measures
 #' of Callon et al. (1991) as Cobo et al. (2011) scale them. It also gains its
 #' quadrant in the strategic diagram, split here at the median of each
-#' measure, a value counting as high only when it lies above the median:
+#' measure, a value counting as high when it lies above the median, or at it
+#' when the median is the measure's highest value:
 #' \code{"motor"} (both high), \code{"basic"} (central but not dense),
 #' \code{"niche"} (dense but not central) or \code{"emerging_or_declining"}
 #' (both low). A theme with centrality 0 is therefore never central. When all

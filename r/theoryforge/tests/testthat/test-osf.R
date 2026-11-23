@@ -168,7 +168,8 @@ osf_listing <- paste0(
   '{"type": "files", "attributes": {"kind": "file", "name": "other.md"},',
   ' "links": {"upload": "https://files.example/other"}},',
   '{"type": "files", "attributes": {"kind": "file", "name": "t.dossier.md"},',
-  ' "links": {"upload": "https://files.example/v1/resources/abc12/providers/osfstorage/f1"}}',
+  ' "links": {"upload":',
+  ' "https://files.example/v1/resources/abc12/providers/osfstorage/f1?kind=file"}}',
   ']}'
 )
 
@@ -186,6 +187,15 @@ test_that("overwrite = TRUE puts a new version to the existing file's upload lin
   expect_identical(mock$calls[[2L]]$method, "PUT")
   expect_identical(mock$calls[[2L]]$url,
                    "https://files.example/v1/resources/abc12/providers/osfstorage/f1?kind=file")
+})
+
+test_that("an upload link without a query gains kind=file", {
+  expect_identical(.tf_osf_update_url("https://files.example/f1"),
+                   "https://files.example/f1?kind=file")
+  expect_identical(.tf_osf_update_url("https://files.example/f1?x=1"),
+                   "https://files.example/f1?x=1&kind=file")
+  expect_identical(.tf_osf_update_url("https://files.example/f1?kind=file"),
+                   "https://files.example/f1?kind=file")
 })
 
 test_that("overwrite = TRUE creates the file when the folder has none of that name", {

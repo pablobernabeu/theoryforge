@@ -81,6 +81,7 @@
   "implications": {
     "theory_id": "edge-bom-yaml",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

@@ -91,7 +91,7 @@ def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
         assert t.diagram(kind).endswith("\n")
     assert '"result_"' in t.diagram("pipeline")
     assert t.redundancy_check() == [{"a": "", "b": "", "similarity": 0.0, "overlap": 0.0,
-                                     "flag": "ok"}]
+                                     "flag": "ok", "reason": ""}]
     assert t.landscape(CORPUS)["theory_id"] == "t"
     assert t.new_evidence_dois(["10.1/x"]) == ["10.1/x"]
     assert t.osf_push()["request"]["filename"] == "t.dossier.md"

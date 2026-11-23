@@ -3,7 +3,7 @@
 - Theory ID: panic-network-2026
 - Version: v1
 - Schema version: 1.1
-- Content hash: sha256:baaf4a35b5a119634d9524c21ec32097e1c19e9f3299dfb6935e9a65e799f4a4
+- Content hash: sha256:4687e71fc5b8e34114d1266d204d8911b6641d152d94b0fa8bcff62cf0755e42
 - Maturity: developing
 - Formal model: ode (models/panic_ode.py)
 - Derivations check: yes
@@ -36,14 +36,17 @@
 
 ## Hypotheses
 1. [point] An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds. (pred1; derives from: p1, p3)
+   - Region the claim allows: [15, 25]
    - Auxiliary assumptions: aux1 (core)
    - Rivals it discriminates: alt_cognitive
    - Test record: already tested: passed (2026-05-01, registered osf.io/abcde)
 2. [interval] Avoidance frequency falls within a 20-35% band after exposure therapy. (pred2; derives from: p2)
+   - Region the claim allows: [20, 35]
    - Test record: untested
 3. [directional] Higher perceived threat is associated with more avoidance. (pred3; derives from: p2)
    - Test record: untested
 4. [interval] Holding perceived threat constant, physiological arousal and avoidance correlate no more strongly than 0.10 in absolute value. (pred_indep; derives from: p1, p2, p3)
+   - Region the claim allows: [-0.1, 0.1]
    - Claim: c_arousal and c_avoidance are independent given c_perceived_threat; not evaluated, since the causal graph has a feedback loop
    - Test record: already tested: failed (2026-05-20)
 

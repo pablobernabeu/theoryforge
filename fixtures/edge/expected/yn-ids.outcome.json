@@ -81,6 +81,7 @@
   "implications": {
     "theory_id": "edge-yn-ids",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "X",

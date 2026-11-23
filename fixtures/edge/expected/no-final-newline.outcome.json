@@ -81,6 +81,7 @@
   "implications": {
     "theory_id": "edge-no-final-newline",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

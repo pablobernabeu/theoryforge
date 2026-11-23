@@ -3,7 +3,7 @@
   "validate": true,
   "validate_full": true,
   "check": {
-    "aggregate_score": 63.8,
+    "aggregate_score": 56.5,
     "coverage": 0.92,
     "gate": "pass",
     "n_blockers_failed": 0,
@@ -15,8 +15,8 @@
       },
       {
         "id": "precision",
-        "status": "pass",
-        "score": 0.667
+        "status": "warn",
+        "score": 0.0
       },
       {
         "id": "risk_severity",
@@ -93,6 +93,7 @@
   "implications": {
     "theory_id": "edge-thresh",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

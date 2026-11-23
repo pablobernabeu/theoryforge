@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 
 from ._access import PRED_TYPE, enum, field, items, str_list, text
+from ._compat import theory_keyword
 from ._num import number, rnd
 
 # The base riskiness of each claim form. The order follows Popper's (1959,
@@ -28,7 +29,8 @@ BASE = {"existence": 0.1, "directional": 0.4, "interval": 0.7, "point": 0.9}
 CRUD = 0.25
 
 
-def severity(T) -> list[dict]:
+@theory_keyword
+def severity(theory) -> list[dict]:
     """Per-prediction claim-form riskiness, in file order.
 
     A pre-data rubric of the form of each prediction's claim. ``risk_score`` is
@@ -54,9 +56,9 @@ def severity(T) -> list[dict]:
         https://doi.org/10.2466/pr0.1990.66.1.195
         Popper, K. R. (1959). The logic of scientific discovery. Hutchinson.
     """
-    T = T.data if hasattr(T, "data") else T
-    preds = items(T, "predictions")
-    alt_ids = {text(field(a, "id")) for a in items(T, "alternatives")}
+    theory = theory.data if hasattr(theory, "data") else theory
+    preds = items(theory, "predictions")
+    alt_ids = {text(field(a, "id")) for a in items(theory, "alternatives")}
     out = []
     for p in preds:
         typ = enum(field(p, "type"), PRED_TYPE) or ""
@@ -163,7 +165,8 @@ def outcome_rows(T) -> list[tuple[dict | None, str | None]]:
     return [_outcome_row(t, i, preds) for i, t in enumerate(items(data, "test_outcomes"))]
 
 
-def post_data_severity(T) -> list[dict]:
+@theory_keyword
+def post_data_severity(theory) -> list[dict]:
     """How severely each bounded claim passed its test, from the outcome's estimate and SE.
 
     A prediction states the region its claim allows in ``bounds``, a mapping of
@@ -212,7 +215,7 @@ def post_data_severity(T) -> list[dict]:
         153-198). Elsevier. https://doi.org/10.1016/B978-0-444-51862-0.50005-8
     """
     rows = []
-    for row, refusal in outcome_rows(T):
+    for row, refusal in outcome_rows(theory):
         if refusal is not None:
             raise ValueError(refusal)
         if row is not None:

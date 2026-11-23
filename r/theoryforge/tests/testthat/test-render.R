@@ -115,3 +115,12 @@ test_that("causal_dag and unknown types are refused with guidance", {
   expect_error(tf_render_diagram(tf_diagram(th, "causal_dag")), "dagitty")
   expect_error(tf_render_diagram(th, "no_such_view"), "unknown diagram type")
 })
+
+test_that("the report path ends in .qmd by the rule Python follows", {
+  # test_osf_report.py checks the same pairs against Python's _qmd_path().
+  pairs <- c("report.md" = "report.qmd", "report" = "report.qmd", ".hidden" = ".hidden.qmd",
+             "a.tar.gz" = "a.tar.qmd", "d/x.QMD" = "d/x.QMD", "d.v/report" = "d.v/report.qmd",
+             "report." = "report.qmd", "report.my-file" = "report.qmd")
+  expect_identical(vapply(names(pairs), .tf_qmd_path, character(1), USE.NAMES = FALSE),
+                   unname(pairs))
+})

@@ -21,7 +21,8 @@ NULL
 #' are compared as written, and text written without spaces, such as Chinese,
 #' gives one token per run.
 #'
-#' @param s A single string (or \code{NULL}, treated as \code{""}).
+#' @param s A single string. \code{NULL} and \code{NA} read as \code{""}, and
+#'   anything else is refused.
 #' @return A character vector of unique tokens (possibly empty).
 #' @examples
 #' tf_tokens("The physiological arousal response to a threat")
@@ -30,11 +31,12 @@ NULL
 #' tf_tokens("naive emotion")
 #' @export
 tf_tokens <- function(s) {
-  if (is.null(s) || length(s) == 0L) {
+  if (is.null(s)) {
     s <- ""
-  } else {
-    s <- as.character(s[[1L]])
-    if (is.na(s)) s <- ""
+  } else if (!is.character(s) || length(s) != 1L) {
+    stop("tokens requires a string", call. = FALSE)
+  } else if (is.na(s)) {
+    s <- ""
   }
   s <- .tf_normalise_words(s)
   parts <- regmatches(s, gregexpr("[\\p{L}\\p{M}\\p{N}]+", s, perl = TRUE))[[1L]]
@@ -74,41 +76,65 @@ tf_jaccard <- function(a, b) {
   .tf_rnd(length(intersect(a, b)) / min(length(a), length(b)), 3)
 }
 
+# A label or measure as the screen compares it: folded, lower-cased and
+# squished.
+.tf_screen_name <- function(x) .tf_squish(.tf_normalise_words(.tf_text(x)))
+
 # The screen's record of every unordered construct pair, in construct order, as
-# a data frame. A pair is flagged "review" when its Jaccard similarity reaches
-# redundancy_similarity_max, a near-duplicate, or when both definitions hold at
+# a data frame. A pair is flagged "review" for any of four reasons, given in
+# this order in `reason`: a "near duplicate", when its Jaccard similarity
+# reaches redundancy_similarity_max; "contained", when both definitions hold at
 # least three tokens and their overlap coefficient reaches
-# redundancy_overlap_max, one definition contained in the other. The
-# checklist's non_redundancy item reads the same flags.
+# redundancy_overlap_max; "same label", when the two constructs carry one name;
+# and "shared measurement", when they list a measure in common, so that data
+# from it cannot tell them apart. The checklist's non_redundancy item reads the
+# same flags.
 .tf_redundancy_pairs <- function(theory, thr) {
   cons <- .tf_list(theory, "constructs")
   ids <- vapply(cons, function(c) .tf_str(c, "id"), character(1))
   toks <- lapply(cons, function(c) tf_tokens(.tf_str(c, "definition")))
+  labels <- vapply(cons, function(c) .tf_screen_name(.tf_get(c, "label")), character(1))
+  measures <- lapply(cons, function(c) {
+    m <- unique(vapply(.tf_str_list(.tf_get(c, "measurement")), .tf_screen_name, character(1)))
+    m[nzchar(m)]
+  })
 
   a <- character(0)
   b <- character(0)
   sim <- numeric(0)
   overlap <- numeric(0)
   flag <- character(0)
+  reason <- character(0)
   n <- length(cons)
   if (n >= 2L) {
     for (i in seq_len(n - 1L)) {
       for (j in (i + 1L):n) {
         s <- tf_jaccard(toks[[i]], toks[[j]])
         ov <- .tf_overlap(toks[[i]], toks[[j]])
-        contained <- length(toks[[i]]) >= .tf_MIN_OVERLAP_TOKENS &&
-          length(toks[[j]]) >= .tf_MIN_OVERLAP_TOKENS &&
-          ov >= thr$redundancy_overlap_max
+        why <- character(0)
+        if (s >= thr$redundancy_similarity_max) why <- c(why, "near duplicate")
+        if (length(toks[[i]]) >= .tf_MIN_OVERLAP_TOKENS &&
+            length(toks[[j]]) >= .tf_MIN_OVERLAP_TOKENS &&
+            ov >= thr$redundancy_overlap_max) {
+          why <- c(why, "contained")
+        }
+        if (nzchar(labels[[i]]) && identical(labels[[i]], labels[[j]])) {
+          why <- c(why, "same label")
+        }
+        if (length(intersect(measures[[i]], measures[[j]])) > 0L) {
+          why <- c(why, "shared measurement")
+        }
         a <- c(a, ids[[i]])
         b <- c(b, ids[[j]])
         sim <- c(sim, s)
         overlap <- c(overlap, ov)
-        flag <- c(flag, if (s >= thr$redundancy_similarity_max || contained) "review" else "ok")
+        flag <- c(flag, if (length(why)) "review" else "ok")
+        reason <- c(reason, paste(why, collapse = ", "))
       }
     }
   }
   data.frame(a = a, b = b, similarity = sim, overlap = overlap, flag = flag,
-             stringsAsFactors = FALSE)
+             reason = reason, stringsAsFactors = FALSE)
 }
 
 #' Pairwise lexical similarity of construct definitions
@@ -118,10 +144,15 @@ tf_jaccard <- function(a, b) {
 #' \code{(a, b)} ascending. \code{similarity} is the Jaccard index of the two
 #' definitions' token sets and \code{overlap} their overlap coefficient, the
 #' shared tokens over the tokens of the shorter definition. \code{flag} is
-#' \code{"review"} for a near-duplicate, a similarity at or above the
-#' checklist's \code{redundancy_similarity_max}, and for a definition contained
-#' in the other, an overlap at or above \code{redundancy_overlap_max} when both
-#' definitions hold at least three tokens. It is \code{"ok"} otherwise.
+#' \code{"review"}, and \code{reason} names why, in this order and separated
+#' by commas, for a \code{"near duplicate"} (a similarity at or above the
+#' checklist's \code{redundancy_similarity_max}), a definition
+#' \code{"contained"} in the other (an overlap at or above
+#' \code{redundancy_overlap_max} when both definitions hold at least three
+#' tokens), two constructs with the \code{"same label"} and two that list a
+#' measure in common (\code{"shared measurement"}). Labels and measures are
+#' compared after folding case, accents and whitespace. \code{flag} is
+#' \code{"ok"}, and \code{reason} empty, otherwise.
 #'
 #' The screen compares words, so it cannot detect empirical redundancy, two
 #' differently defined constructs that correlate almost perfectly once
@@ -130,7 +161,7 @@ tf_jaccard <- function(a, b) {
 #'
 #' @param theory A theory object (named list).
 #' @return A data frame with columns \code{a}, \code{b}, \code{similarity},
-#'   \code{overlap} and \code{flag}.
+#'   \code{overlap}, \code{flag} and \code{reason}.
 #' @references
 #' Le, H., Schmidt, F. L., Harter, J. K., & Lauver, K. J. (2010). The problem of
 #'   empirical redundancy of constructs in organizational research: An empirical

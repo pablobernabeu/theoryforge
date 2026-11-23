@@ -114,6 +114,7 @@ predictions:
     derives_from: [p1, p4]
     statement: "Across a corpus of concrete nouns matched for length, modality-specific perceptual strength and lexical familiarity correlate no more strongly than 0.10 in absolute value."
     type: "interval"
+    bounds: {lower: -0.10, upper: 0.10}
     risk_score: 0.7
     severity: 0.65
     diagnostic_vs: [alt_symbol_interdependency]

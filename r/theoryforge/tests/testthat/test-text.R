@@ -205,3 +205,14 @@ test_that("the DOI golden is unchanged by the longer candidate list", {
   golden <- jsonlite::fromJSON(tf_expected_path("panic-network-2026.new_evidence_dois.json"))
   expect_identical(tf_new_evidence_dois(theory, c(base, .doi_variants)), golden)
 })
+
+test_that("tf_tokens and tf_jaccard take the inputs Python takes", {
+  # Python's tokens() refuses the same values with the same message, and
+  # jaccard() reads any collections of strings as sets.
+  expect_identical(tf_tokens(NULL), character(0))
+  expect_identical(tf_tokens(NA_character_), character(0))
+  for (bad in list(123, list("drive goals"), TRUE, c("a", "b"))) {
+    expect_error(tf_tokens(bad), "tokens requires a string", fixed = TRUE)
+  }
+  expect_identical(tf_jaccard(c("drive", "goal", "goal"), "drive"), 0.5)
+})

@@ -5,9 +5,9 @@ digraph development_roadmap {
   "roadmap" [shape=ellipse, label="An underspecified\nmotivation theory\nscore 2.2, gate blocked", fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
   "falsifiability" [label="1. falsifiability\nAt least one\nprediction forbids an\nobservation\nblocks the gate", fillcolor="#F9E5E4", color="#B2453C"];
   "derivation_chain" [label="2. derivation_chain\nEvery prediction cites\ndeclared propositions,\nand the causal graph\nentails the claim it\nstates, if any\nblocks the gate", fillcolor="#F9E5E4", color="#B2453C"];
-  "precision" [label="3. precision\nPredictions are\npoint/interval, not\nmerely directional\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
-  "risk_severity" [label="4. risk_severity\nMean prediction\nseverity (declared,\nelse the claim-form\nrubric) at or above\nthreshold\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
-  "non_redundancy" [label="5. non_redundancy\nNo pair of construct\ndefinitions is a\nnear-duplicate or\ncontained in the other\n(lexical screen)\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "precision" [label="3. precision\nPredictions are point\nor interval claims\nwhose bounds state the\nregion, not merely\ndirectional\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "risk_severity" [label="4. risk_severity\nMean prediction\nriskiness (declared\nseverity, else the\nclaim-form rubric) at\nor above threshold\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
+  "non_redundancy" [label="5. non_redundancy\nEvery construct is\ndefined, and no two\nhave near-duplicate or\ncontained definitions,\none label or a shared\nmeasure (lexical\nscreen)\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
   "construct_clarity" [label="6. construct_clarity\nEvery construct has\ndefinition +\nmeasurement + boundary\nconditions\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
   "logical_why" [label="7. logical_why\nEach proposition\nstates a mechanism,\nnot just a correlation\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
   "scope" [label="8. scope\nBoundary conditions\nexplicitly stated\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];

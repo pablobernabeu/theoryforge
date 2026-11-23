@@ -16,10 +16,12 @@ from __future__ import annotations
 
 from ._access import text
 from ._causal import causal_graph
+from ._compat import theory_keyword
 from ._graph import acyclify, first_cycle, m_separated, reach, strong_components
 
-# The values of the ``cycles`` option, the default first.
+# The values of the ``cycles`` and ``given`` options, the default first.
 CYCLES = ("refuse", "sigma")
+GIVEN = ("basis", "minimal")
 
 
 def _statement(a: str, b: str, given: list[str]) -> str:
@@ -29,7 +31,8 @@ def _statement(a: str, b: str, given: list[str]) -> str:
     return f"{a} _||_ {b} | " + ", ".join(given)
 
 
-def implications(T, cycles: str = "refuse") -> dict:
+@theory_keyword
+def implications(theory, cycles: str = "refuse", given: str = "basis") -> dict:
     """Conditional independencies implied by the graph a theory's propositions state.
 
     Reads every proposition through the package's relation table. A directed
@@ -47,6 +50,16 @@ def implications(T, cycles: str = "refuse") -> dict:
     When every relation is directed and the graph is acyclic, the statements
     are the basis set of Pearl (1988) and Shipley (2000), from which every
     other independence the graph implies follows.
+
+    ``given="minimal"`` then drops each construct from the conditioning set,
+    in file order, whenever the rest still separate the pair, which leaves a
+    minimal separating set: no construct in it can be dropped. Every set tried
+    lies among the ancestors of the pair, where m-separation is separation in
+    an undirected graph that holding more constructs fixed cannot reopen
+    (Richardson, 2003), so one pass suffices. Fewer conditioning constructs
+    mean fewer measured with error, which matters for the reason given below.
+    The minimal set returned is one of possibly several, and the file order
+    of the constructs decides which.
 
     ``cycles`` says what to do with a graph whose directed edges form a cycle.
     The default, ``"refuse"``, raises an error that names a cycle found.
@@ -69,10 +82,11 @@ def implications(T, cycles: str = "refuse") -> dict:
     Applying d-separation to a cyclic graph, as dagitty does with the
     causal_dag export, is valid only in special cases such as a linear model.
 
-    Returns ``{theory_id, criterion, acyclic, constructs, n_edges,
-    n_bidirected, feedback, implications, n_implications, inseparable}``.
-    ``criterion`` names the separation criterion, ``"m"`` under ``"refuse"``
-    and ``"sigma"`` under ``"sigma"``. ``constructs`` lists the vertices in
+    Returns ``{theory_id, criterion, conditioning, acyclic, constructs,
+    n_edges, n_bidirected, feedback, implications, n_implications,
+    inseparable}``. ``criterion`` names the separation criterion, ``"m"`` under
+    ``"refuse"`` and ``"sigma"`` under ``"sigma"``, and ``conditioning`` the
+    value of ``given``. ``constructs`` lists the vertices in
     file order. Constructs that no directed relation names are left out,
     because silence about a construct is not a claim that it is independent of
     anything, and so are constructs without an id, which no proposition can
@@ -110,8 +124,9 @@ def implications(T, cycles: str = "refuse") -> dict:
     ``n_implications`` is 0.
 
     Raises:
-        ValueError: if ``cycles`` is not ``"refuse"`` or ``"sigma"``, which is
-            checked before the theory is read, if two constructs share an id
+        ValueError: if ``cycles`` is not ``"refuse"`` or ``"sigma"`` or
+            ``given`` is not ``"basis"`` or ``"minimal"``, which are checked
+            before the theory is read, if two constructs share an id
             or if a directed relation names a construct the theory has not
             declared. Under ``"refuse"`` it is also raised when the directed
             edges form a cycle, and the message then names a cycle found and
@@ -185,9 +200,11 @@ def implications(T, cycles: str = "refuse") -> dict:
     # as such whatever the theory holds.
     if not isinstance(cycles, str) or cycles not in CYCLES:
         raise ValueError("implications requires cycles to be 'refuse' or 'sigma'")
-    T = T.data if hasattr(T, "data") else T
+    if not isinstance(given, str) or given not in GIVEN:
+        raise ValueError("implications requires given to be 'basis' or 'minimal'")
+    theory = theory.data if hasattr(theory, "data") else theory
 
-    g = causal_graph(T, "implications")
+    g = causal_graph(theory, "implications")
     nodes, directed, bidirected = g["nodes"], g["directed"], g["bidirected"]
     k = len(nodes)
 
@@ -231,20 +248,26 @@ def implications(T, cycles: str = "refuse") -> dict:
             # every vertex on a path that connects the two is a collider and an
             # ancestor of one of them, an inducing path, so no set separates
             # the pair (API_SPEC.md section 27).
-            parents = [g for g in range(k) if directed[g][i] or directed[g][j]]
-            ancestors = [g for g in range(k) if (r[g][i] or r[g][j]) and g not in (i, j)]
-            given = next((s for s in (parents, ancestors)
-                          if m_separated(directed, bidirected, r, i, j, s)), None)
-            if given is None:
+            parents = [v for v in range(k) if directed[v][i] or directed[v][j]]
+            ancestors = [v for v in range(k) if (r[v][i] or r[v][j]) and v not in (i, j)]
+            sep = next((s for s in (parents, ancestors)
+                        if m_separated(directed, bidirected, r, i, j, s)), None)
+            if sep is None:
                 inseparable.append({"a": nodes[i], "b": nodes[j]})
                 continue
-            names = [nodes[g] for g in given]
+            if given == "minimal":
+                for v in list(sep):
+                    rest = [u for u in sep if u != v]
+                    if m_separated(directed, bidirected, r, i, j, rest):
+                        sep = rest
+            names = [nodes[v] for v in sep]
             out.append({"a": nodes[i], "b": nodes[j], "given": names,
                         "statement": _statement(nodes[i], nodes[j], names)})
 
     return {
-        "theory_id": text(T.get("id")),
+        "theory_id": text(theory.get("id")),
         "criterion": criterion,
+        "conditioning": given,
         "acyclic": not feedback,
         "constructs": nodes,
         "n_edges": g["n_edges"],

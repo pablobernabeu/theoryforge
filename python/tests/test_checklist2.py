@@ -1,13 +1,14 @@
-"""Checklist 2.0 (API_SPEC.md section 4).
+"""The rigour checklist (API_SPEC.md section 4).
 
 An item with nothing to assess is ``n/a``, with a null score, and is left out of
 the aggregate, which is the weighted mean of the applicable items. The report
-gains ``coverage``, the share of checklist weight that was applicable.
-Parsimony fails only an assumption added for an anomaly that has no independent
-corroboration, non-redundancy follows the redundancy screen's flags and mean
-severity counts every prediction, using the claim-form rubric where none is
-declared. The R suite (test-checklist2.R) builds the same theories and asserts
-the same values.
+gives ``coverage``, the share of checklist weight that was applicable, and
+``aggregate_range``, the aggregate under other weightings. Parsimony fails an
+assumption that answers an anomaly without independent corroboration,
+non-redundancy follows the redundancy screen's flags, precision counts bounded
+point and interval claims and mean severity counts every prediction, using the
+claim-form rubric where none is declared. The R suite (test-checklist2.R) builds
+the same theories and asserts the same values.
 """
 import copy
 
@@ -43,9 +44,9 @@ def _item(t, iid):
 
 # -- the checklist file and the report ----------------------------------------
 
-def test_the_checklist_is_version_2_with_five_default_thresholds():
+def test_the_checklist_is_version_3_with_five_default_thresholds():
     spec = _resources.checklist()
-    assert spec["schema_version"] == "2.1"
+    assert spec["schema_version"] == "3.0"
     # parsimony_ratio_max is gone: parsimony no longer counts assumptions.
     assert spec["thresholds"] == {
         "redundancy_similarity_max": 0.85, "redundancy_overlap_max": 0.85,
@@ -54,7 +55,8 @@ def test_the_checklist_is_version_2_with_five_default_thresholds():
     assert [it["id"] for it in spec["items"]] == ITEM_IDS
     items = {it["id"]: it for it in spec["items"]}
     assert items["risk_severity"]["criterion"] == (
-        "Mean prediction severity (declared, else the claim-form rubric) at or above threshold")
+        "Mean prediction riskiness (declared severity, else the claim-form rubric) at or above "
+        "threshold")
     # Meehl (1990a) is the Psychological Inquiry article, Meehl (1990b) the
     # Psychological Reports one, as on the methodology page.
     assert items["precision"]["citation"] == "Meehl (1967, 1990a)"
@@ -68,9 +70,10 @@ def test_the_checklist_is_version_2_with_five_default_thresholds():
 def test_the_report_gives_coverage_after_the_aggregate(panic_path):
     r = tf.read(panic_path).check()
     assert list(r) == ["theory_id", "schema_version", "checklist_version", "maturity",
-                       "aggregate_score", "coverage", "gate", "n_blockers_failed", "items"]
+                       "aggregate_score", "aggregate_range", "coverage", "gate",
+                       "n_blockers_failed", "items"]
     # parsimony has nothing to assess, and the other eleven items weigh 0.92.
-    assert (r["checklist_version"], r["aggregate_score"], r["coverage"]) == ("2.1", 88.0, 0.92)
+    assert (r["checklist_version"], r["aggregate_score"], r["coverage"]) == ("3.0", 88.0, 0.92)
     assert (_items(r)["parsimony"]["status"], _items(r)["parsimony"]["score"]) == ("n/a", None)
 
 
@@ -203,8 +206,8 @@ def test_the_screen_flags_a_definition_contained_in_another(weak_path):
     t = tf.read(weak_path)
     rows = t.redundancy_check()
     assert rows == [{"a": "k_motivation", "b": "k_drive", "similarity": 0.8, "overlap": 1.0,
-                     "flag": "review"}]
-    assert list(rows[0]) == ["a", "b", "similarity", "overlap", "flag"]
+                     "flag": "review", "reason": "contained"}]
+    assert list(rows[0]) == ["a", "b", "similarity", "overlap", "flag", "reason"]
     assert _item(t, "non_redundancy") == ("warn", 0.0)
 
 
@@ -220,7 +223,8 @@ def test_overlap_counts_only_between_definitions_of_three_tokens_or_more():
         (0.6, 1.0, "review"), ("warn", 0.0))
     assert _pair("Bodily arousal.", "Bodily arousal under threat in adults.") == (
         (0.4, 1.0, "ok"), ("pass", 1.0))
-    assert _pair("", "Bodily arousal response.") == ((0.0, 0.0, "ok"), ("pass", 1.0))
+    # A construct with no definition cannot be screened, so the item cannot pass.
+    assert _pair("", "Bodily arousal response.") == ((0.0, 0.0, "ok"), ("warn", 0.0))
 
 
 def test_non_redundancy_is_not_applicable_to_one_construct(panic_path):
@@ -277,12 +281,15 @@ def test_embedding_redundancy_defaults_to_its_own_threshold(monkeypatch):
 
 def test_the_dossier_gives_coverage_and_names_the_failed_blockers(weak_path):
     d = tf.read(weak_path).dossier()
-    assert ("- Aggregate rigour score: 2.2/100\n- Checklist coverage: 0.92\n- Gate: blocked\n"
+    assert ("- Aggregate rigour score: 2.2/100 (1.1 to 3.9 under other weightings)\n"
+            "- Checklist coverage: 0.92\n- Gate: blocked\n"
             "- Blockers failed: 2 (falsifiability, derivation_chain)\n") in d
-    assert "| parsimony | No auxiliary assumption added in response to an anomaly lacks independent " \
-        "corroboration | n/a | n/a | 0.08 |\n" in d
-    assert "| non_redundancy | No pair of construct definitions is a near-duplicate or contained in " \
-        "the other (lexical screen) | warn | 0.0 | 0.1 |\n" in d
+    assert "| parsimony | No auxiliary assumption that answers an anomaly (named in added_for, or " \
+        "a protected prediction a test failed) lacks independent corroboration | n/a | n/a | " \
+        "0.08 |\n" in d
+    assert "| non_redundancy | Every construct is defined, and no two have near-duplicate or " \
+        "contained definitions, one label or a shared measure (lexical screen) | warn | 0.0 | " \
+        "0.1 |\n" in d
 
 
 def test_the_views_and_the_html_report_show_not_applicable_items(weak_path):
@@ -295,3 +302,119 @@ def test_the_views_and_the_html_report_show_not_applicable_items(weak_path):
     assert '<rect x="20" y="132" width="16" height="16" rx="3" fill="#9e9e9e"/>' in svg
     assert '<text x="320" y="144">n/a</text>' in svg
     assert "<tr><td>parsimony</td><td>n/a</td><td>n/a</td>" in t.report(format="html")
+
+
+# -- checklist 3.0 --------------------------------------------------------------
+
+def _pred(pid, typ, **fields):
+    return {"id": pid, "statement": "s", "type": typ, "derives_from": ["p1"], **fields}
+
+
+def test_precision_counts_point_and_interval_claims_only_with_two_finite_bounds():
+    t = _bare(constructs=TWO_CONSTRUCTS, propositions=P1, predictions=[
+        _pred("h1", "point"),
+        _pred("h2", "interval", bounds={"lower": 20, "upper": 60}),
+        _pred("h3", "point", bounds={"lower": 5, "upper": 5}),
+        _pred("h4", "directional", bounds={"lower": 0}),
+    ])
+    assert _item(t, "precision") == ("pass", 0.5)
+    t.data["predictions"][2]["bounds"] = {"lower": 5}
+    assert _item(t, "precision") == ("warn", 0.25)
+
+
+def test_parsimony_assesses_an_assumption_that_shields_a_failed_prediction():
+    preds = [_pred("h1", "directional"), _pred("h2", "directional")]
+    aux = [{"id": "a1", "statement": "Only in calm settings.", "protects": ["h1", "h2"]}]
+    failed = [{"prediction_id": "h1", "passed": False}]
+    t = _bare(constructs=TWO_CONSTRUCTS, propositions=P1, predictions=preds,
+              auxiliary_assumptions=aux)
+    assert _item(t, "parsimony") == ("n/a", None)
+    t.data["test_outcomes"] = failed
+    assert _item(t, "parsimony") == ("fail", 0.0)
+    # A corroborated prediction it also protects clears it, as a declared
+    # added_for would.
+    t.data["test_outcomes"] = failed + [{"prediction_id": "h2", "passed": True}]
+    assert _item(t, "parsimony") == ("pass", 1.0)
+
+
+def test_the_screen_flags_a_shared_label_and_a_shared_measure():
+    t = _bare(constructs=[
+        {"id": "a", "label": "Anxiety", "definition": "Worry about future threat.",
+         "measurement": ["GAD-7 total score"]},
+        {"id": "b", "label": " anxiety ", "definition": "Bodily arousal under danger.",
+         "measurement": ["gad-7  total score", "Heart rate"]},
+        {"id": "c", "label": "Fear", "definition": "An urge to escape present danger.",
+         "measurement": ["Heart rate"]},
+    ])
+    rows = {(r["a"], r["b"]): (r["flag"], r["reason"]) for r in t.redundancy_check()}
+    assert rows == {("a", "b"): ("review", "same label, shared measurement"),
+                    ("a", "c"): ("ok", ""),
+                    ("b", "c"): ("review", "shared measurement")}
+    assert _item(t, "non_redundancy") == ("warn", 0.0)
+
+
+def test_non_redundancy_cannot_pass_while_a_definition_is_empty():
+    defined = copy.deepcopy(TWO_CONSTRUCTS)
+    assert _item(_bare(constructs=defined), "non_redundancy") == ("pass", 1.0)
+    defined[1]["definition"] = "  "
+    assert _item(_bare(constructs=defined), "non_redundancy") == ("warn", 0.0)
+
+
+def test_the_aggregate_range_spans_the_alternative_weightings(panic_path):
+    rep = tf.read(panic_path).check()
+    lo, hi = rep["aggregate_range"]
+    assert lo <= rep["aggregate_score"] <= hi
+    assert (lo, hi) == (84.2, 90.2)
+    applicable = [(it["weight"], it["score"]) for it in rep["items"] if it["score"] is not None]
+    equal = round(sum(x for _, x in applicable) / len(applicable) * 100, 1)
+    assert lo <= equal <= hi
+    # When every applicable item has one score, no weighting can move it.
+    t = _bare(constructs=TWO_CONSTRUCTS[:1])
+    rep = t.check()
+    assert rep["aggregate_range"] == [rep["aggregate_score"], rep["aggregate_score"]]
+
+
+def test_a_severity_too_large_for_a_double_is_refused_as_non_numeric():
+    t = _bare(constructs=TWO_CONSTRUCTS, predictions=[_pred("h1", "point", severity=10 ** 400)])
+    try:
+        t.check()
+    except ValueError as err:
+        assert str(err) == ("check requires numeric prediction severities; "
+                            "non-numeric severity for prediction: h1")
+    else:
+        raise AssertionError("check() accepted an infinite severity")
+
+
+def test_full_validation_checks_a_claim_form_against_its_bounds_and_a_pass_against_its_estimate():
+    t = _bare(predictions=[
+        _pred("h1", "point", bounds={"lower": 1}),
+        _pred("h2", "interval", bounds={"upper": 2}),
+        _pred("h3", "directional", bounds={"lower": 0, "upper": 1}),
+        _pred("h4", "existence", bounds={"lower": 0}),
+        _pred("h5", "interval", bounds={"lower": 20, "upper": 60}),
+        _pred("h6", "directional", bounds={"lower": 0}),
+    ], test_outcomes=[
+        {"prediction_id": "h5", "passed": True, "estimate": 61, "se": 5},
+        {"prediction_id": "h5", "passed": False, "estimate": 40, "se": 50},
+        {"prediction_id": "h6", "passed": True, "estimate": 0, "se": 1},
+    ])
+    del t.data["predictions"][0]["derives_from"]
+    try:
+        t.validate(full=True)
+    except ValueError as err:
+        msg = str(err)
+    assert msg.endswith(
+        "prediction[0] is a point claim, so its bounds need a finite lower and a finite upper; "
+        "prediction[1] is an interval claim, so its bounds need a finite lower and a finite upper; "
+        "prediction[2] is a directional claim, so its bounds must leave one side open; "
+        "prediction[3] is an existence claim, which bounds cannot state; "
+        "test_outcome[0] records a pass, but its estimate lies outside the bounds of prediction "
+        "'h5'")
+
+
+def test_the_dossier_writes_an_extreme_severity_as_a_bound(panic_path):
+    t = tf.read(panic_path)
+    t.data["test_outcomes"] = [{"prediction_id": "pred1", "passed": True, "estimate": 20, "se": 0.5}]
+    assert "post-data severity > 0.999 for [15, 25]" in t.dossier()
+    t.data["test_outcomes"] = [{"prediction_id": "pred1", "passed": False, "estimate": 40, "se": 1}]
+    assert "post-data severity < 0.001 for [15, 25]" in t.dossier()

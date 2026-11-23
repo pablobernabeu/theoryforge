@@ -15,7 +15,7 @@ test_that("tf_jaccard rounds to 3dp and handles empty sets", {
 test_that("tf_redundancy_check returns a sorted data.frame with expected columns", {
   df <- tf_redundancy_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
   expect_s3_class(df, "data.frame")
-  expect_identical(names(df), c("a", "b", "similarity", "overlap", "flag"))
+  expect_identical(names(df), c("a", "b", "similarity", "overlap", "flag", "reason"))
   # 3 constructs -> 3 unordered pairs
   expect_equal(nrow(df), 3L)
   # sorted by descending similarity

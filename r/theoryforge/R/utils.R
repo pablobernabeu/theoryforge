@@ -463,3 +463,10 @@ NULL
   s <- 10^n
   sign(x) * floor(abs(x) * s + 0.5 + 1e-6) / s + 0
 }
+
+# `v` as a double when it is a single number other than NaN, and NULL
+# otherwise. A logical is not a number. The Python twin's _num.number() reads an
+# integer too large for a float as an infinity, as R's reader holds it.
+.tf_number <- function(v) {
+  if (is.numeric(v) && length(v) == 1L && !is.na(v)) as.numeric(v) else NULL
+}

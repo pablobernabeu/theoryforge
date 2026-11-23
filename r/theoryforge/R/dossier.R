@@ -12,13 +12,18 @@ NULL
 .tf_DECLARED_MARGIN <- 0.2
 
 # The post-data severity note of a test-record line, an open bound written as
-# an infinity.
+# an infinity. A severity that rounds to 1 or 0 is written as "> 0.999" or
+# "< 0.001".
 .tf_post_data_note <- function(row) {
   # The bounds are written as recorded, with up to 15 significant digits, so a
   # small bound is not rounded to zero.
   lower <- if (is.na(row$lower)) "-inf" else .tf_plan_number(row$lower)
   upper <- if (is.na(row$upper)) "inf" else .tf_plan_number(row$upper)
-  sprintf("; post-data severity %s for [%s, %s]", .tf_fmt(row$severity), lower, upper)
+  # Rounded to three decimals, a severity of 0.9996 would read as 1, which no
+  # finite test can give.
+  sev <- row$severity
+  value <- if (sev == 1) "> 0.999" else if (sev == 0) "< 0.001" else .tf_fmt(sev)
+  sprintf("; post-data severity %s for [%s, %s]", value, lower, upper)
 }
 
 #' Render a theory audit dossier (Markdown)
@@ -84,7 +89,9 @@ tf_dossier <- function(theory, cycles = "refuse") {
     # The score is only interpretable against the checklist that produced it,
     # so a reviewer reading the bundle can see which one that was.
     sprintf("- Checklist version: %s", rep$checklist_version),
-    sprintf("- Aggregate rigour score: %s/100", .tf_fmt(rep$aggregate_score)),
+    sprintf("- Aggregate rigour score: %s/100 (%s to %s under other weightings)",
+            .tf_fmt(rep$aggregate_score), .tf_fmt(rep$aggregate_range[[1]]),
+            .tf_fmt(rep$aggregate_range[[2]])),
     # The share of the checklist's weight the aggregate is the mean over.
     sprintf("- Checklist coverage: %s", .tf_fmt(rep$coverage)),
     sprintf("- Gate: %s", rep$gate),
@@ -115,7 +122,7 @@ tf_dossier <- function(theory, cycles = "refuse") {
                       .tf_fmt(sev$computed_severity[i]),
                       .tf_fmt(sev$risk_score[i]))
       declared <- .tf_get(preds[[i]], "severity")
-      if (!is.null(declared)) {
+      if (!.tf_absent(declared)) {
         line <- paste0(line, ", declared ", .tf_fmt(declared))
         if (.tf_rnd(declared - sev$computed_severity[i], 3) > .tf_DECLARED_MARGIN) {
           line <- paste0(line, " (declared exceeds the rubric by more than ",

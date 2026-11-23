@@ -38,6 +38,30 @@ NULL
   }
 }
 
+# Whether a prediction's bounds state two finite numbers, a region a test can
+# miss.
+.tf_bounded <- function(p) {
+  b <- .tf_get(p, "bounds")
+  if (!.tf_is_mapping(b)) return(FALSE)
+  lo <- .tf_number(b$lower)
+  up <- .tf_number(b$upper)
+  !is.null(lo) && !is.null(up) && is.finite(lo) && is.finite(up)
+}
+
+# The anomaly an assumption answers, or NULL when it answers none: its
+# added_for when it names one, and otherwise the first prediction it protects
+# whose test outcomes include a failure (status refuted or mixed). An
+# assumption that shields a failed prediction is defensive whether or not its
+# author says so.
+.tf_defensive <- function(x, tos) {
+  declared <- .tf_str(x, "added_for")
+  if (.tf_ne_str(declared)) return(declared)
+  for (q in .tf_str_list(.tf_get(x, "protects"))) {
+    if (.tf_prediction_status(q, tos) %in% c("refuted", "mixed")) return(q)
+  }
+  NULL
+}
+
 # Compute (status, score) for each checklist item; returns a named list of
 # list(status, score) per item id. An item with nothing to assess is
 # list(status = "n/a", score = NULL).
@@ -61,10 +85,14 @@ NULL
   out$falsifiability <- if (n_forbidding >= 1L) item("pass", 1.0) else item("fail", 0.0)
 
   # 2 precision
+  # A point or interval claim counts when its bounds state the region, two
+  # finite numbers, so that the label can be checked against what the claim
+  # allows. A label alone states nothing a test could miss.
   if (length(preds) == 0L) {
     out$precision <- item("warn", 0.0)
   } else {
-    n_precise <- sum(vapply(preds, function(p) ptype(p) %in% .tf_PRECISE, logical(1)))
+    n_precise <- sum(vapply(preds, function(p) ptype(p) %in% .tf_PRECISE && .tf_bounded(p),
+                            logical(1)))
     share <- .tf_rnd(n_precise / length(preds), 3)
     out$precision <- item(if (share >= thr$min_precision_share) "pass" else "warn",
                           share)
@@ -85,12 +113,14 @@ NULL
   sevs <- numeric(0)
   for (i in seq_along(preds)) {
     p <- preds[[i]]
-    s <- .tf_get(p, "severity")
-    if (is.null(s)) {
+    raw <- .tf_get(p, "severity")
+    # A single NA is absent, as tf_write() writes it as null.
+    if (.tf_absent(raw)) {
       sevs <- c(sevs, rubric[[i]])
       next
     }
-    if (!is.numeric(s) || length(s) != 1L || !is.finite(s)) {
+    s <- .tf_number(raw)
+    if (is.null(s) || !is.finite(s)) {
       stop("check requires numeric prediction severities; ",
            "non-numeric severity for prediction: ", .tf_str(p, "id"),
            call. = FALSE)
@@ -100,7 +130,7 @@ NULL
            "out-of-range severity for prediction: ", .tf_str(p, "id"),
            call. = FALSE)
     }
-    sevs <- c(sevs, as.numeric(s))
+    sevs <- c(sevs, s)
   }
   if (length(sevs) == 0L) {
     out$risk_severity <- item("warn", 0.0)
@@ -110,35 +140,45 @@ NULL
   }
 
   # 4 parsimony
-  # Only an assumption added for an anomaly, one whose added_for names the
-  # prediction it answers, is assessed. It is ad hoc, and fails the item, when
-  # nothing it protects besides the anomaly is corroborated, by the rule of the
-  # amendment appraisal (.tf_classify_auxiliary() in develop.R). With no prior
-  # version to compare, every prediction it protects counts, so
-  # tf_appraise_amendment(), which counts only the content an amendment adds,
-  # is the authoritative check. Core assumptions are not counted: every
-  # derivation uses auxiliaries (Meehl, 1990a), and a ratio of assumptions to
-  # propositions would penalise declaring them.
-  defensive <- Filter(function(x) .tf_ne_str(.tf_str(x, "added_for")), aux)
-  if (length(defensive) == 0L) {
+  # An assumption is assessed when it answers an anomaly: one its added_for
+  # names, or else a protected prediction that a test outcome failed, so
+  # leaving added_for out cannot spare an assumption the test. It is ad hoc,
+  # and fails the item, when nothing it protects besides the anomaly is
+  # corroborated, by the rule of the amendment appraisal
+  # (.tf_classify_auxiliary() in develop.R). With no prior version to compare,
+  # every prediction it protects counts, so tf_appraise_amendment(), which
+  # counts only the content an amendment adds, is the authoritative check. Core
+  # assumptions are not counted: every derivation uses auxiliaries (Meehl,
+  # 1990a), and a ratio of assumptions to propositions would penalise declaring
+  # them.
+  anomalies <- lapply(aux, .tf_defensive, tos = tos)
+  assessed <- which(!vapply(anomalies, is.null, logical(1)))
+  if (length(assessed) == 0L) {
     out$parsimony <- item("n/a", NULL)
   } else {
-    ad_hoc <- vapply(defensive, function(x) {
+    ad_hoc <- vapply(assessed, function(k) {
+      x <- aux[[k]]
       protects <- .tf_str_list(.tf_get(x, "protects"))
-      !identical(.tf_classify_auxiliary(x, tos, protects)$class, "independently_corroborated")
+      !identical(.tf_classify_auxiliary(x, tos, protects, anomalies[[k]])$class,
+                 "independently_corroborated")
     }, logical(1))
     out$parsimony <- if (any(ad_hoc)) item("fail", 0.0) else item("pass", 1.0)
   }
 
   # 5 non_redundancy
   # The item follows the redundancy screen's flags (API_SPEC.md section 6): a
-  # near-duplicate pair or a definition contained in another, not vocabulary
-  # that sibling constructs merely share.
+  # near-duplicate pair, a definition contained in another, a shared label or a
+  # shared measure, not vocabulary that sibling constructs merely share. A
+  # construct whose definition holds no content word cannot be screened, so
+  # the item cannot pass while one exists, and deleting the definitions of a
+  # redundant pair cannot raise the score.
   if (length(cons) < 2L) {
     out$non_redundancy <- item("n/a", NULL)
   } else {
     flagged <- any(.tf_redundancy_pairs(T, thr)$flag == "review")
-    out$non_redundancy <- if (flagged) item("warn", 0.0) else item("pass", 1.0)
+    undefined <- any(vapply(cons, function(c) length(tf_tokens(.tf_str(c, "definition"))) == 0L,
+                            logical(1)))
+    out$non_redundancy <- if (flagged || undefined) item("warn", 0.0) else item("pass", 1.0)
   }
 
   # 6 construct_clarity
@@ -223,6 +263,35 @@ NULL
   out
 }
 
+# The weighted mean of the scores `x` under the weights `w`, times 100 and
+# rounded to 1 decimal. The sums are left folds in checklist order, as the
+# Python twin computes them, since sum() keeps an extended accumulator.
+.tf_weighted <- function(w, x) {
+  num <- 0.0
+  den <- 0.0
+  for (i in seq_along(w)) {
+    num <- num + w[[i]] * x[[i]]
+    den <- den + w[[i]]
+  }
+  .tf_rnd(num / den * 100, 1)
+}
+
+# The lowest and highest aggregate over the checklist's weights and 2k + 1
+# alternatives: equal weights and, for each of the k applicable items in turn,
+# its weight halved and its weight doubled. The weights are a convention, and
+# the range shows how far the aggregate depends on them.
+.tf_aggregate_range <- function(w, x) {
+  values <- c(.tf_weighted(w, x), .tf_weighted(rep(1, length(w)), x))
+  for (k in seq_along(w)) {
+    for (factor in c(0.5, 2)) {
+      wk <- w
+      wk[[k]] <- w[[k]] * factor
+      values <- c(values, .tf_weighted(wk, x))
+    }
+  }
+  c(min(values), max(values))
+}
+
 #' Compute the rigour checklist report
 #'
 #' Runs the full rigour checklist (12 items) over a theory object and returns a
@@ -232,7 +301,8 @@ NULL
 #' a score from 0 to 1. An item with nothing to assess has the status
 #' \code{"n/a"} and a \code{NULL} score: the redundancy screen with fewer than
 #' two constructs, the derivation chain with no prediction and parsimony when
-#' no auxiliary assumption was added in response to an anomaly. The aggregate
+#' no auxiliary assumption answers an anomaly, by naming it in
+#' \code{added_for} or by protecting a prediction that a test failed. The aggregate
 #' score is the weighted mean of the applicable items' scores, times 100, and
 #' \code{coverage} is the share of the checklist's weight that was applicable.
 #'
@@ -247,8 +317,11 @@ NULL
 #' @return A named list with elements \code{theory_id}, \code{schema_version}
 #'   (the theory's), \code{checklist_version} (the rigour checklist's, which is
 #'   what the weights and thresholds came from), \code{maturity},
-#'   \code{aggregate_score} (0 to 100, to one decimal), \code{coverage},
-#'   \code{gate}, \code{n_blockers_failed} and \code{items}. \code{gate} is
+#'   \code{aggregate_score} (0 to 100, to one decimal), \code{aggregate_range},
+#'   \code{coverage}, \code{gate}, \code{n_blockers_failed} and \code{items}.
+#'   \code{aggregate_range} holds the lowest and highest aggregate under the
+#'   checklist's weights, equal weights and each applicable item's weight
+#'   halved or doubled in turn, since the weights are a convention. \code{gate} is
 #'   \code{"advisory"} at \code{draft} maturity, and otherwise \code{"blocked"}
 #'   when an item whose \code{severity_if_fail} is \code{"blocker"}
 #'   (falsifiability or derivation_chain) fails and \code{"pass"} when none
@@ -276,9 +349,10 @@ tf_check <- function(theory) {
   results <- .tf_check_items(T, thr)
 
   items <- vector("list", length(spec$items))
-  weighted <- 0.0
   applicable <- 0.0
   n_blockers_failed <- 0L
+  w <- numeric(0)
+  x <- numeric(0)
   for (k in seq_along(spec$items)) {
     spec_item <- spec$items[[k]]
     iid <- spec_item$id
@@ -289,8 +363,9 @@ tf_check <- function(theory) {
     # such items would give the empty theory 26 and let it outscore a weak but
     # real one.
     if (!is.null(score)) {
-      weighted <- weighted + spec_item$weight * score
       applicable <- applicable + spec_item$weight
+      w <- c(w, spec_item$weight)
+      x <- c(x, score)
     }
     if (identical(spec_item$severity_if_fail, "blocker") && identical(status, "fail")) {
       n_blockers_failed <- n_blockers_failed + 1L
@@ -323,7 +398,8 @@ tf_check <- function(theory) {
     checklist_version = .tf_str(spec, "schema_version"),
     maturity = maturity,
     # Nine of the twelve items always apply, so `applicable` is at least 0.74.
-    aggregate_score = .tf_rnd(weighted / applicable * 100, 1),
+    aggregate_score = .tf_weighted(w, x),
+    aggregate_range = .tf_aggregate_range(w, x),
     coverage = .tf_rnd(applicable, 3),
     gate = gate,
     n_blockers_failed = n_blockers_failed,
@@ -366,8 +442,11 @@ tf_report <- function(theory, format = "json") {
     return(paste0(
       '<section class="theoryforge-report">\n',
       sprintf('  <h2>Rigour report: %s</h2>\n', .tf_xml(rep$theory_id)),
-      sprintf('  <p>Aggregate score: <strong>%s</strong> &middot; gate: <strong>%s</strong></p>\n',
-              .tf_xml(.tf_format_score_html(rep$aggregate_score)), .tf_xml(rep$gate)),
+      sprintf(paste0('  <p>Aggregate score: <strong>%s</strong> (%s to %s under other ',
+                     'weightings) &middot; gate: <strong>%s</strong></p>\n'),
+              .tf_xml(.tf_format_score_html(rep$aggregate_score)),
+              .tf_xml(.tf_format_score_html(rep$aggregate_range[[1]])),
+              .tf_xml(.tf_format_score_html(rep$aggregate_range[[2]])), .tf_xml(rep$gate)),
       '  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n',
       rows, '\n  </table>\n</section>\n'
     ))

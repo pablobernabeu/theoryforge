@@ -1,10 +1,10 @@
 # theoryforge dossier: Network theory of panic disorder
 
 - Theory ID: panic-network-2026
-- Content hash: sha256:baaf4a35b5a119634d9524c21ec32097e1c19e9f3299dfb6935e9a65e799f4a4
+- Content hash: sha256:4687e71fc5b8e34114d1266d204d8911b6641d152d94b0fa8bcff62cf0755e42
 - Maturity: developing
-- Checklist version: 2.1
-- Aggregate rigour score: 88.0/100
+- Checklist version: 3.0
+- Aggregate rigour score: 88.0/100 (84.2 to 90.2 under other weightings)
 - Checklist coverage: 0.92
 - Gate: pass
 - Blockers failed: 0
@@ -14,10 +14,10 @@
 | item | criterion | status | score | weight |
 | --- | --- | --- | --- | --- |
 | falsifiability | At least one prediction forbids an observation | pass | 1.0 | 0.15 |
-| precision | Predictions are point/interval, not merely directional | pass | 0.75 | 0.1 |
-| risk_severity | Mean prediction severity (declared, else the claim-form rubric) at or above threshold | pass | 0.6 | 0.1 |
-| parsimony | No auxiliary assumption added in response to an anomaly lacks independent corroboration | n/a | n/a | 0.08 |
-| non_redundancy | No pair of construct definitions is a near-duplicate or contained in the other (lexical screen) | pass | 1.0 | 0.1 |
+| precision | Predictions are point or interval claims whose bounds state the region, not merely directional | pass | 0.75 | 0.1 |
+| risk_severity | Mean prediction riskiness (declared severity, else the claim-form rubric) at or above threshold | pass | 0.6 | 0.1 |
+| parsimony | No auxiliary assumption that answers an anomaly (named in added_for, or a protected prediction a test failed) lacks independent corroboration | n/a | n/a | 0.08 |
+| non_redundancy | Every construct is defined, and no two have near-duplicate or contained definitions, one label or a shared measure (lexical screen) | pass | 1.0 | 0.1 |
 | construct_clarity | Every construct has definition + measurement + boundary conditions | pass | 1.0 | 0.08 |
 | scope | Boundary conditions explicitly stated | pass | 1.0 | 0.06 |
 | logical_why | Each proposition states a mechanism, not just a correlation | pass | 1.0 | 0.08 |
@@ -68,7 +68,7 @@ _No alternative states propositions._
 - Theory ID: panic-network-2026
 - Version: v1
 - Schema version: 1.1
-- Content hash: sha256:baaf4a35b5a119634d9524c21ec32097e1c19e9f3299dfb6935e9a65e799f4a4
+- Content hash: sha256:4687e71fc5b8e34114d1266d204d8911b6641d152d94b0fa8bcff62cf0755e42
 - Maturity: developing
 - Formal model: ode (models/panic_ode.py)
 - Derivations check: yes
@@ -101,14 +101,17 @@ _No alternative states propositions._
 
 ### Hypotheses
 1. [point] An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds. (pred1; derives from: p1, p3)
+   - Region the claim allows: [15, 25]
    - Auxiliary assumptions: aux1 (core)
    - Rivals it discriminates: alt_cognitive
    - Test record: already tested: passed (2026-05-01, registered osf.io/abcde)
 2. [interval] Avoidance frequency falls within a 20-35% band after exposure therapy. (pred2; derives from: p2)
+   - Region the claim allows: [20, 35]
    - Test record: untested
 3. [directional] Higher perceived threat is associated with more avoidance. (pred3; derives from: p2)
    - Test record: untested
 4. [interval] Holding perceived threat constant, physiological arousal and avoidance correlate no more strongly than 0.10 in absolute value. (pred_indep; derives from: p1, p2, p3)
+   - Region the claim allows: [-0.1, 0.1]
    - Claim: c_arousal and c_avoidance are independent given c_perceived_threat; not evaluated, since the causal graph has a feedback loop
    - Test record: already tested: failed (2026-05-20)
 

@@ -74,6 +74,7 @@
   "implications": {
     "theory_id": "edge-cjk-run",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [],
     "n_edges": 0,

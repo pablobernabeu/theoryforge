@@ -85,6 +85,7 @@
   "implications": {
     "theory_id": "",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

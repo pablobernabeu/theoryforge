@@ -1,10 +1,10 @@
 # theoryforge dossier: Modality switching in grounded conceptual processing
 
 - Theory ID: modality-switching-2026
-- Content hash: sha256:ae0f5400b098dfc8c7590dd5e260af43c712d768add8d5fd5c6179404b125db1
+- Content hash: sha256:c8109f9b8b7ca5df9c28ea0b42d799a4e9e608cad9cb0641e6030f9cd7bbb630
 - Maturity: developing
-- Checklist version: 2.1
-- Aggregate rigour score: 89.8/100
+- Checklist version: 3.0
+- Aggregate rigour score: 87.1/100 (83.5 to 89.2 under other weightings)
 - Checklist coverage: 0.92
 - Gate: pass
 - Blockers failed: 0
@@ -14,10 +14,10 @@
 | item | criterion | status | score | weight |
 | --- | --- | --- | --- | --- |
 | falsifiability | At least one prediction forbids an observation | pass | 1.0 | 0.15 |
-| precision | Predictions are point/interval, not merely directional | pass | 0.75 | 0.1 |
-| risk_severity | Mean prediction severity (declared, else the claim-form rubric) at or above threshold | pass | 0.613 | 0.1 |
-| parsimony | No auxiliary assumption added in response to an anomaly lacks independent corroboration | n/a | n/a | 0.08 |
-| non_redundancy | No pair of construct definitions is a near-duplicate or contained in the other (lexical screen) | pass | 1.0 | 0.1 |
+| precision | Predictions are point or interval claims whose bounds state the region, not merely directional | pass | 0.5 | 0.1 |
+| risk_severity | Mean prediction riskiness (declared severity, else the claim-form rubric) at or above threshold | pass | 0.613 | 0.1 |
+| parsimony | No auxiliary assumption that answers an anomaly (named in added_for, or a protected prediction a test failed) lacks independent corroboration | n/a | n/a | 0.08 |
+| non_redundancy | Every construct is defined, and no two have near-duplicate or contained definitions, one label or a shared measure (lexical screen) | pass | 1.0 | 0.1 |
 | construct_clarity | Every construct has definition + measurement + boundary conditions | pass | 1.0 | 0.08 |
 | scope | Boundary conditions explicitly stated | pass | 1.0 | 0.06 |
 | logical_why | Each proposition states a mechanism, not just a correlation | pass | 1.0 | 0.08 |
@@ -73,7 +73,7 @@
 - Theory ID: modality-switching-2026
 - Version: v1
 - Schema version: 1.1
-- Content hash: sha256:ae0f5400b098dfc8c7590dd5e260af43c712d768add8d5fd5c6179404b125db1
+- Content hash: sha256:c8109f9b8b7ca5df9c28ea0b42d799a4e9e608cad9cb0641e6030f9cd7bbb630
 - Maturity: developing
 - Formal model: sem (models/modality_switching.lavaan)
 - Derivations check: yes
@@ -131,6 +131,7 @@
    - Rivals it discriminates: alt_grounding_by_interaction (its propositions contradict the claim)
    - Test record: untested
 4. [interval] Across a corpus of concrete nouns matched for length, modality-specific perceptual strength and lexical familiarity correlate no more strongly than 0.10 in absolute value. (pred4; derives from: p1, p4)
+   - Region the claim allows: [-0.1, 0.1]
    - Claim: c_sensorimotor_experience and c_lexical_familiarity are independent; entailed by the causal graph
    - Auxiliary assumptions: aux2 (core)
    - Rivals it discriminates: alt_symbol_interdependency (its propositions contradict the claim)

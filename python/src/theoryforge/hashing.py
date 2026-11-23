@@ -9,6 +9,10 @@ from __future__ import annotations
 
 import hashlib
 import math
+import numbers
+
+from ._compat import theory_keyword
+from ._num import plain
 
 
 def _number(x) -> str:
@@ -18,8 +22,8 @@ def _number(x) -> str:
     asks. An integer beyond 2^53 is first read as the double nearest it, as R
     holds it.
     """
-    if isinstance(x, int) and abs(x) < 2 ** 53:
-        return str(x)
+    if isinstance(x, numbers.Integral) and abs(int(x)) < 2 ** 53:
+        return str(int(x))
     x = float(x)
     if math.isnan(x):
         return "NaN"
@@ -75,7 +79,7 @@ def canonical(v) -> str:
         return "null"
     if isinstance(v, bool):
         return "true" if v else "false"
-    if isinstance(v, (int, float)):
+    if isinstance(v, numbers.Real):
         return _number(v)
     if isinstance(v, str):
         return _string(v)
@@ -89,7 +93,8 @@ def canonical(v) -> str:
     raise TypeError(f"content_hash cannot write a value of type {type(v).__name__}")
 
 
-def content_hash(T) -> str:
+@theory_keyword
+def content_hash(theory) -> str:
     """The SHA-256 digest of the theory's canonical form, as ``sha256:<64 hex digits>``.
 
     The canonical form is the theory as JSON with every mapping's keys sorted
@@ -116,7 +121,7 @@ def content_hash(T) -> str:
         Scheme (JCS) (RFC 8785). RFC Editor.
         https://doi.org/10.17487/RFC8785
     """
-    data = T.data if hasattr(T, "data") else T
+    data = plain(theory.data if hasattr(theory, "data") else theory)
     if isinstance(data, dict) and isinstance(data.get("version"), dict):
         version = {k: v for k, v in data["version"].items() if k != "content_hash"}
         data = {**data, "version": version}

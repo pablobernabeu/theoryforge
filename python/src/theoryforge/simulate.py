@@ -16,6 +16,7 @@ import warnings
 from collections.abc import Mapping
 
 from ._access import RELATION, enum, field, items, text
+from ._compat import theory_keyword
 from ._num import rnd
 from ._relations import PATHS, RELATIONS
 
@@ -158,7 +159,8 @@ def _apply(E: list, X: list) -> list:
     return out
 
 
-def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
+@theory_keyword
+def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
              damping: float = 0.5, init: float | Mapping[str, float] = 1.0,
              method: str = "euler") -> dict:
     """Propagate the theory's construct network as a linear dynamical system.
@@ -215,8 +217,8 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     singular, and never two separate ones, so it cannot show bistability.
     """
     n_steps = _check_knobs(steps, dt, k, damping, init, method)
-    T = T.data if hasattr(T, "data") else T
-    states = [text(field(c, "id")) for c in items(T, "constructs")]
+    theory = theory.data if hasattr(theory, "data") else theory
+    states = [text(field(c, "id")) for c in items(theory, "constructs")]
     n = len(states)
     # Duplicate construct ids have no defensible reading here: a dict
     # comprehension keeps the last index and R's `[[` on a named vector the
@@ -243,7 +245,7 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     assumed: list = []
     # The signs each ordered pair carries, in the order the pairs first couple.
     pair_signs: dict = {}
-    for p in items(T, "propositions"):
+    for p in items(theory, "propositions"):
         f, t = text(field(p, "from")), text(field(p, "to"))
         rel = enum(field(p, "relation"), RELATION)
         if rel in PATHS and f in idx and t in idx:

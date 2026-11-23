@@ -18,6 +18,7 @@
   "implications": {
     "theory_id": "edge-sev-range-high",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

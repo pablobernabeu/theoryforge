@@ -5,7 +5,7 @@
     "error": "invalid theory object: prediction[0] derives_from entry 0 must be a nonempty string; prediction[1] derives_from entry 0 must be a nonempty string; prediction[2] derives_from entry 1 must be a nonempty string"
   },
   "check": {
-    "aggregate_score": 59.4,
+    "aggregate_score": 52.2,
     "coverage": 0.92,
     "gate": "blocked",
     "n_blockers_failed": 1,
@@ -17,8 +17,8 @@
       },
       {
         "id": "precision",
-        "status": "pass",
-        "score": 0.667
+        "status": "warn",
+        "score": 0.0
       },
       {
         "id": "risk_severity",
@@ -95,6 +95,7 @@
   "implications": {
     "theory_id": "edge-null-derives",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

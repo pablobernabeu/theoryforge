@@ -67,3 +67,21 @@ test_that("tf_embedding_redundancy respects a custom threshold", {
   expect_identical(df_low$flag[[1L]], "review")
   expect_identical(df_high$flag[[1L]], "ok")
 })
+
+test_that("tf_embedding_redundancy refuses a vector without a direction and a bad threshold", {
+  # A NaN stopped with a bare R error, and an all-zero vector gave a cosine of
+  # 0 for identical definitions. The Python suite asserts the same messages.
+  theory <- tf_theory("t", "T") |>
+    tf_add_construct("c1", "One", "one") |>
+    tf_add_construct("c2", "Two", "two")
+  for (bad in list(c(NaN, 1), c(0, 0), c(Inf, 1), c("0.5", "1"))) {
+    vecs <- list(one = c(1, 1), two = bad)
+    expect_error(tf_embedding_redundancy(theory, function(def) vecs[[def]]),
+                 paste0("embedding_redundancy requires finite, nonzero embedding vectors; ",
+                        "the vector of construct c2 is not"), fixed = TRUE)
+  }
+  for (threshold in list("0.5", 1.5, NaN)) {
+    expect_error(tf_embedding_redundancy(theory, function(def) c(1, 2), threshold = threshold),
+                 "embedding_redundancy requires a threshold from -1 to 1", fixed = TRUE)
+  }
+})

@@ -185,7 +185,7 @@ tf_validate <- function(theory, full = FALSE) {
     }
   }
 
-  # The full pass, items 1 to 14 of API_SPEC.md section 2. The Python twin's
+  # The full pass, items 1 to 16 of API_SPEC.md section 2. The Python twin's
   # Theory._full_errors makes the same checks in the same order with the same
   # message text.
   if (isTRUE(full)) {
@@ -261,8 +261,8 @@ tf_validate <- function(theory, full = FALSE) {
     # which rejects non-numeric severities.
     for (i in seq_along(preds)) {
       s <- .tf_get(preds[[i]], "severity")
-      if (is.null(s)) next
-      if (!is.numeric(s) || length(s) != 1L || is.na(s) || s < 0 || s > 1) {
+      if (.tf_absent(s)) next
+      if (!.tf_is_unit_number(s)) {
         errors <- c(errors,
                     sprintf("prediction[%d] severity must be a number between 0 and 1", i - 1L))
       }
@@ -464,6 +464,74 @@ tf_validate <- function(theory, full = FALSE) {
         errors <- c(errors, .tf_optional_text(.tf_get(p, "mechanism"), paste(name, "mechanism")))
       }
     }
+
+    # 16: a claim's form against its bounds, and a recorded pass against its
+    # estimate, where those fields are themselves valid. A type the bounds
+    # contradict makes the riskiness rubric and the precision item read the
+    # wrong claim, and a pass with the estimate outside the region gives a
+    # post-data severity below 0.5 beside the word passed.
+    for (i in seq_along(preds)) {
+      region <- .tf_bounds_region(.tf_get(preds[[i]], "bounds"))
+      ty <- .tf_get(preds[[i]], "type")
+      if (is.null(region) || !.tf_is_string(ty)) next
+      if (ty %in% c("point", "interval") && (is.null(region$lower) || is.null(region$upper))) {
+        article <- if (identical(ty, "interval")) "an" else "a"
+        errors <- c(errors, sprintf(paste0("prediction[%d] is %s %s claim, so its bounds need a ",
+                                           "finite lower and a finite upper"), i - 1L, article, ty))
+      } else if (identical(ty, "directional") && !is.null(region$lower) && !is.null(region$upper)) {
+        errors <- c(errors, sprintf(paste0("prediction[%d] is a directional claim, so its bounds ",
+                                           "must leave one side open"), i - 1L))
+      } else if (identical(ty, "existence")) {
+        errors <- c(errors, sprintf("prediction[%d] is an existence claim, which bounds cannot state",
+                                    i - 1L))
+      }
+    }
+    for (i in seq_along(tos)) {
+      t <- tos[[i]]
+      est <- .tf_number(.tf_get(t, "estimate"))
+      pid <- .tf_get(t, "prediction_id")
+      if (!isTRUE(.tf_get(t, "passed")) || is.null(est) || !is.finite(est) || !.tf_ne_str(pid)) next
+      hit <- Find(function(p) identical(.tf_get(p, "id"), pid), preds)
+      region <- .tf_bounds_region(.tf_get(hit, "bounds"))
+      if (is.null(region)) next
+      if ((!is.null(region$lower) && est < region$lower) ||
+          (!is.null(region$upper) && est > region$upper)) {
+        errors <- c(errors, sprintf(paste0("test_outcome[%d] records a pass, but its estimate lies ",
+                                           "outside the bounds of prediction '%s'"), i - 1L, pid))
+      }
+    }
+
+    # 17: the fields of each entry, which the schema closes as it closes the
+    # top level, since a misspelt severty or derives_form would drop what it
+    # holds without a word. Collections come in the schema's order.
+    props <- tf_theory_schema()$properties
+    keys <- function(node) names(node$properties)
+    entries <- c(constructs = "construct", propositions = "proposition",
+                 phenomena = "phenomenon", predictions = "prediction",
+                 auxiliary_assumptions = "assumption", evidence = "evidence",
+                 test_outcomes = "test_outcome", alternatives = "alternative")
+    for (key in names(entries)) {
+      item <- props[[key]]$items
+      coll <- .tf_list(d, key)
+      for (i in seq_along(coll)) {
+        errors <- c(errors, .tf_unknown_fields(coll[[i]], sprintf("%s[%d]", entries[[key]], i - 1L),
+                                               keys(item)))
+        rival <- if (key == "alternatives" && .tf_is_mapping(coll[[i]])) coll[[i]]$propositions
+        if (is.list(rival) && !.tf_is_mapping(rival)) {
+          for (j in seq_along(rival)) {
+            errors <- c(errors, .tf_unknown_fields(
+              rival[[j]], sprintf("alternative[%d] proposition[%d]", i - 1L, j - 1L),
+              keys(item$properties$propositions$items)))
+          }
+        }
+      }
+    }
+    errors <- c(errors, .tf_unknown_fields(d$formal_model, "formal_model", keys(props$formal_model)))
+    steps <- .tf_list(d, "provenance")
+    for (i in seq_along(steps)) {
+      errors <- c(errors, .tf_unknown_fields(steps[[i]], sprintf("provenance[%d]", i - 1L),
+                                             keys(props$provenance$items)))
+    }
   }
 
   if (length(errors) > 0L) {
@@ -570,6 +638,36 @@ tf_validate <- function(theory, full = FALSE) {
     out <- c(out, paste(name, "lower exceeds upper"))
   }
   out
+}
+
+# `<name> has unknown field: <key>` for each key of `entry` the schema does not
+# list. A key that begins with x_ carries extension metadata and is allowed. The
+# message names the closest known field, within two edits by utils::adist(),
+# the first in schema order on a tie, as the Python twin's _unknown_fields().
+.tf_unknown_fields <- function(entry, name, known) {
+  if (!.tf_is_mapping(entry)) return(character(0))
+  out <- character(0)
+  for (key in names(entry)) {
+    if (key %in% known || startsWith(key, "x_")) next
+    msg <- sprintf("%s has unknown field: %s", name, key)
+    if (length(known)) {
+      dist <- as.vector(utils::adist(key, known))
+      if (min(dist) <= 2) msg <- sprintf("%s (did you mean %s?)", msg, known[[which.min(dist)]])
+    }
+    out <- c(out, msg)
+  }
+  out
+}
+
+# The finite ends of a valid bounds mapping, as list(lower, upper) with NULL
+# for an open side, or NULL when the bounds are invalid or absent.
+.tf_bounds_region <- function(v) {
+  if (.tf_absent(v) || length(.tf_bounds(v, "bounds")) > 0L) return(NULL)
+  end <- function(key) {
+    x <- .tf_number(.tf_get(v, key))
+    if (!is.null(x) && is.finite(x)) x else NULL
+  }
+  list(lower = end("lower"), upper = end("upper"))
 }
 
 .tf_TEST_KEYS <- c("n_planned", "unit", "alpha", "sided", "sesoi", "sesoi_scale", "power",

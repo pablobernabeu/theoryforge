@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from . import _resources
 from ._access import EVIDENCE_DIRECTION, enum, field, items, ne_str, text
+from ._compat import theory_keyword
 from ._num import rnd
 from ._text import trim
 from .entailment import check_cycles, claim_line, discriminate, entailments, equivalent_models
@@ -26,11 +27,16 @@ def _post_data(row: dict) -> str:
     """The post-data severity note of a test-record line, an open bound written as an infinity.
 
     The bounds are written as recorded, with up to 15 significant digits, so a
-    small bound is not rounded to zero.
+    small bound is not rounded to zero. A severity that rounds to 1 or 0 is
+    written as ``> 0.999`` or ``< 0.001``.
     """
     lower = "-inf" if row["lower"] is None else _plan_number(row["lower"])
     upper = "inf" if row["upper"] is None else _plan_number(row["upper"])
-    return f"; post-data severity {_fmt(row['severity'])} for [{lower}, {upper}]"
+    # Rounded to three decimals, a severity of 0.9996 would read as 1, which
+    # no finite test can give.
+    sev = row["severity"]
+    value = "> 0.999" if sev == 1 else "< 0.001" if sev == 0 else _fmt(sev)
+    return f"; post-data severity {value} for [{lower}, {upper}]"
 
 
 def _claims_section(data: dict, cycles: str) -> list[str]:
@@ -90,7 +96,8 @@ def _rivals_section(data: dict, cycles: str) -> list[str]:
     return out or ["_No alternative states propositions._"]
 
 
-def dossier(T, cycles: str = "refuse") -> str:
+@theory_keyword
+def dossier(theory, cycles: str = "refuse") -> str:
     """A reviewer-facing audit bundle in Markdown.
 
     The header gives the checklist version, the aggregate score, the checklist
@@ -113,7 +120,7 @@ def dossier(T, cycles: str = "refuse") -> str:
             begins ``check requires``.
     """
     check_cycles(cycles, "dossier")
-    data = T.data if hasattr(T, "data") else T
+    data = theory.data if hasattr(theory, "data") else theory
     rep = _check(data)
     criteria = {it["id"]: it["criterion"] for it in _resources.checklist()["items"]}
     failed = [it["id"] for it in rep["items"]
@@ -128,7 +135,9 @@ def dossier(T, cycles: str = "refuse") -> str:
         # The score is only interpretable against the checklist that produced
         # it, so a reviewer reading the bundle can see which one that was.
         f"- Checklist version: {rep['checklist_version']}",
-        f"- Aggregate rigour score: {_fmt(rep['aggregate_score'])}/100",
+        f"- Aggregate rigour score: {_fmt(rep['aggregate_score'])}/100 "
+        f"({_fmt(rep['aggregate_range'][0])} to {_fmt(rep['aggregate_range'][1])} "
+        "under other weightings)",
         # The share of the checklist's weight the aggregate is the mean over.
         f"- Checklist coverage: {_fmt(rep['coverage'])}",
         f"- Gate: {rep['gate']}",

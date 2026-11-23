@@ -37,6 +37,16 @@ NULL
 #' acyclic, they are the basis set of Pearl (1988) and Shipley (2000), from
 #' which every other independence the graph implies follows.
 #'
+#' \code{given = "minimal"} then drops each construct from the conditioning
+#' set, in file order, whenever the rest still separate the pair, which leaves
+#' a minimal separating set: no construct in it can be dropped. Every set tried
+#' lies among the ancestors of the pair, where m-separation is separation in an
+#' undirected graph that holding more constructs fixed cannot reopen
+#' (Richardson, 2003), so one pass suffices. Fewer conditioning constructs mean
+#' fewer measured with error, which matters for the reason given below. The
+#' minimal set returned is one of possibly several, and the file order of the
+#' constructs decides which.
+#'
 #' Constructs that no directed relation names are left out, because silence
 #' about a construct is not a claim that it is independent of anything, and so
 #' are constructs without an id, which no proposition can name. A construct
@@ -82,7 +92,8 @@ NULL
 #'
 #' @section Refusals:
 #' The function stops in four cases. A value of \code{cycles} other than
-#' \code{"refuse"} or \code{"sigma"} is refused before the theory is read. Two
+#' \code{"refuse"} or \code{"sigma"}, or of \code{given} other than
+#' \code{"basis"} or \code{"minimal"}, is refused before the theory is read. Two
 #' constructs sharing an id would give one node two sets of parents, and a
 #' directed relation naming an undeclared construct would shrink the graph and
 #' so imply independencies the theory never claimed. With
@@ -95,11 +106,16 @@ NULL
 #'   \code{"refuse"} (the default) stops with an error, and \code{"sigma"}
 #'   derives the statements by sigma-separation (see the section on feedback
 #'   loops).
+#' @param given The conditioning sets: \code{"basis"} (the default), the
+#'   parents of the pair or else its other ancestors, or \code{"minimal"},
+#'   that set pruned to a minimal one.
 #' @return A named list
-#'   \code{list(theory_id, criterion, acyclic, constructs, n_edges,
-#'   n_bidirected, feedback, implications, n_implications, inseparable)}.
-#'   \code{criterion} names the separation criterion, \code{"m"} under
-#'   \code{cycles = "refuse"} and \code{"sigma"} under \code{cycles = "sigma"}.
+#'   \code{list(theory_id, criterion, conditioning, acyclic, constructs,
+#'   n_edges, n_bidirected, feedback, implications, n_implications,
+#'   inseparable)}. \code{criterion} names the separation criterion, \code{"m"}
+#'   under \code{cycles = "refuse"} and \code{"sigma"} under
+#'   \code{cycles = "sigma"}, and \code{conditioning} the value of
+#'   \code{given}.
 #'   \code{constructs} holds the vertices in file order. \code{n_edges} counts
 #'   the directed edges the theory states and \code{n_bidirected} the
 #'   bidirected ones, a pair stated twice counting once, before any
@@ -173,12 +189,16 @@ NULL
 #' lapply(implied$feedback, unlist)
 #' implied$implications[[1]]$statement
 #' @export
-tf_implications <- function(theory, cycles = "refuse") {
+tf_implications <- function(theory, cycles = "refuse", given = "basis") {
   # Checked before the theory is read, so that a mistyped option is reported as
   # such whatever the theory holds.
   if (!is.character(cycles) || length(cycles) != 1L || is.na(cycles) ||
       !(cycles %in% c("refuse", "sigma"))) {
     stop("implications requires cycles to be 'refuse' or 'sigma'", call. = FALSE)
+  }
+  if (!is.character(given) || length(given) != 1L || is.na(given) ||
+      !(given %in% c("basis", "minimal"))) {
+    stop("implications requires given to be 'basis' or 'minimal'", call. = FALSE)
   }
   T <- theory
   g <- .tf_causal_graph(T, "implications")
@@ -234,18 +254,24 @@ tf_implications <- function(theory, cycles = "refuse") {
         # section 27).
         parents <- which(directed[, i] | directed[, j])
         ancestors <- setdiff(which(reach[, i] | reach[, j]), c(i, j))
-        given <- NULL
+        sep <- NULL
         for (s in list(parents, ancestors)) {
           if (.tf_m_separated(directed, bidirected, reach, i, j, s)) {
-            given <- s
+            sep <- s
             break
           }
         }
-        if (is.null(given)) {
+        if (is.null(sep)) {
           inseparable[[length(inseparable) + 1L]] <- list(a = nodes[[i]], b = nodes[[j]])
           next
         }
-        names_given <- nodes[given]
+        if (given == "minimal") {
+          for (v in sep) {
+            rest <- sep[sep != v]
+            if (.tf_m_separated(directed, bidirected, reach, i, j, rest)) sep <- rest
+          }
+        }
+        names_given <- nodes[sep]
         impl[[length(impl) + 1L]] <- list(
           a = nodes[[i]],
           b = nodes[[j]],
@@ -259,6 +285,7 @@ tf_implications <- function(theory, cycles = "refuse") {
   list(
     theory_id = .tf_str(T, "id"),
     criterion = criterion,
+    conditioning = given,
     acyclic = length(feedback) == 0L,
     constructs = as.list(nodes),
     n_edges = g$n_edges,

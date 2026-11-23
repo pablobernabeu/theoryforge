@@ -74,6 +74,7 @@
   "implications": {
     "theory_id": "edge-cyrillic-redundant",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "a",

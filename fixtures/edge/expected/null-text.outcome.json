@@ -85,6 +85,7 @@
   "implications": {
     "theory_id": "edge-null-text",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

@@ -1,9 +1,13 @@
 {
   "theory_id": "modality-switching-2026",
   "schema_version": "1.1",
-  "checklist_version": "2.1",
+  "checklist_version": "3.0",
   "maturity": "developing",
-  "aggregate_score": 89.8,
+  "aggregate_score": 87.1,
+  "aggregate_range": [
+    83.5,
+    89.2
+  ],
   "coverage": 0.92,
   "gate": "pass",
   "n_blockers_failed": 0,
@@ -19,7 +23,7 @@
     {
       "id": "precision",
       "status": "pass",
-      "score": 0.75,
+      "score": 0.5,
       "weight": 0.1,
       "severity_if_fail": "warning",
       "citation": "Meehl (1967, 1990a)"

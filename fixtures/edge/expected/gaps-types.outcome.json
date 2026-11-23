@@ -5,7 +5,7 @@
     "error": "invalid theory object: prediction[0] derives_from entry 1 must be a nonempty string; prediction[0] diagnostic_vs entry 1 must be a nonempty string; assumption[0] protects entry 0 must be a nonempty string; assumption[0] added_for must be a string or null; test_outcome[0] severity_at_test must be a number between 0 and 1; test_outcome[0] registered must be a string or null; test_outcome[0] date must be a string or null; formal_model spec_ref must be a string or null; version id must be a string (quote the value in YAML); version parent_id must be a string or null; version content_hash must be a string or null; construct[0] measurement entry 1 must be a nonempty string; construct[0] boundary_conditions entry 0 must be a nonempty string; proposition[0] mechanism must be a string (quote the value in YAML); proposition[0] functional_form must be a string (quote the value in YAML); boundary_conditions entry 1 must be a nonempty string; prediction[0] risk_score must be a number between 0 and 1; evidence[0] source_doi must be a string or null; test_outcome[0] observed must be a string (quote the value in YAML); alternative[0] key_constructs entry 0 must be a nonempty string; alternative[0] source_doi must be a string or null; provenance[0] step must be a string (quote the value in YAML); provenance[1] must be a mapping"
   },
   "check": {
-    "aggregate_score": 82.6,
+    "aggregate_score": 71.7,
     "coverage": 0.92,
     "gate": "pass",
     "n_blockers_failed": 0,
@@ -17,8 +17,8 @@
       },
       {
         "id": "precision",
-        "status": "pass",
-        "score": 1.0
+        "status": "warn",
+        "score": 0.0
       },
       {
         "id": "risk_severity",
@@ -83,6 +83,7 @@
   "implications": {
     "theory_id": "edge-gaps-types",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",

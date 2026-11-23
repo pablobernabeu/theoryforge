@@ -17,12 +17,13 @@ from ._access import (
     str_list,
     text,
 )
-from ._num import rnd
+from ._compat import theory_keyword
+from ._num import number, rnd
 from ._relations import DIRECTED
-from ._status import classify_auxiliary
+from ._status import classify_auxiliary, prediction_status
 from ._text import xml_escape
 from .entailment import prediction_verdicts
-from .redundancy import _pairs
+from .redundancy import _pairs, tokens
 from .scoring import severity as _rubric
 
 _FORBIDDING = {"point", "interval", "directional"}
@@ -54,6 +55,32 @@ def _mean(xs):
 
 def _ptype(p) -> str | None:
     return enum(field(p, "type"), PRED_TYPE)
+
+
+def _bounded(p) -> bool:
+    """Whether a prediction's ``bounds`` state two finite numbers, a region a test can miss."""
+    b = field(p, "bounds")
+    if not isinstance(b, dict):
+        return False
+    lo, up = number(b.get("lower")), number(b.get("upper"))
+    return lo is not None and up is not None and math.isfinite(lo) and math.isfinite(up)
+
+
+def _defensive(x, tos) -> str | None:
+    """The anomaly an assumption answers, or None when it answers none.
+
+    The anomaly is the assumption's ``added_for`` when it names one, and
+    otherwise the first prediction it protects whose test outcomes include a
+    failure (status ``refuted`` or ``mixed``). An assumption that shields a
+    failed prediction is defensive whether or not its author says so.
+    """
+    declared = text(field(x, "added_for"))
+    if ne_str(declared):
+        return declared
+    for q in str_list(field(x, "protects")):
+        if prediction_status(q, tos) in ("refuted", "mixed"):
+            return q
+    return None
 
 
 def _refuse_non_boolean_outcomes(T, caller: str) -> None:
@@ -91,10 +118,14 @@ def _check_items(T: dict, thr: dict) -> dict:
     out["falsifiability"] = ("pass", 1.0) if len(forbidding) >= 1 else ("fail", 0.0)
 
     # 2 precision
+    # A point or interval claim counts when its bounds state the region, two
+    # finite numbers, so that the label can be checked against what the claim
+    # allows. A label alone states nothing a test could miss.
     if not preds:
         out["precision"] = ("warn", 0.0)
     else:
-        share = rnd(sum(1 for p in preds if _ptype(p) in _PRECISE) / len(preds), 3)
+        precise = sum(1 for p in preds if _ptype(p) in _PRECISE and _bounded(p))
+        share = rnd(precise / len(preds), 3)
         out["precision"] = ("pass" if share >= thr["min_precision_share"] else "warn", share)
 
     # 3 risk_severity
@@ -110,12 +141,14 @@ def _check_items(T: dict, thr: dict) -> dict:
     # bit of the sum cannot decide it.
     sevs = []
     for p, r in zip(preds, _rubric(T), strict=True):
-        s = field(p, "severity")
-        if s is None:
+        raw = field(p, "severity")
+        if raw is None:
             sevs.append(r["computed_severity"])
             continue
-        if (isinstance(s, bool) or not isinstance(s, (int, float))
-                or (isinstance(s, float) and not math.isfinite(s))):
+        # number() reads an integer too large for a double as an infinity, as R
+        # does, so the two refuse it with the same message.
+        s = number(raw)
+        if s is None or not math.isfinite(s):
             raise ValueError(
                 "check requires numeric prediction severities; "
                 f"non-numeric severity for prediction: {text(field(p, 'id'))}"
@@ -133,33 +166,39 @@ def _check_items(T: dict, thr: dict) -> dict:
         out["risk_severity"] = ("pass" if m >= thr["min_severity"] else "warn", m)
 
     # 4 parsimony
-    # Only an assumption added for an anomaly, one whose added_for names the
-    # prediction it answers, is assessed. It is ad hoc, and fails the item, when
-    # nothing it protects besides the anomaly is corroborated, by the rule of
-    # the amendment appraisal (_status.classify_auxiliary). With no prior
-    # version to compare, every prediction it protects counts, so
-    # appraise_amendment(), which counts only the content an amendment adds, is
-    # the authoritative check. Core assumptions are not counted: every
-    # derivation uses auxiliaries (Meehl, 1990a), and a ratio of assumptions to
-    # propositions would penalise declaring them.
-    defensive = [x for x in aux if ne_str(text(field(x, "added_for")))]
+    # An assumption is assessed when it answers an anomaly: one its added_for
+    # names, or else a protected prediction that a test outcome failed, so
+    # leaving added_for out cannot spare an assumption the test. It is ad hoc,
+    # and fails the item, when nothing it protects besides the anomaly is
+    # corroborated, by the rule of the amendment appraisal
+    # (_status.classify_auxiliary). With no prior version to compare, every
+    # prediction it protects counts, so appraise_amendment(), which counts only
+    # the content an amendment adds, is the authoritative check. Core
+    # assumptions are not counted: every derivation uses auxiliaries (Meehl,
+    # 1990a), and a ratio of assumptions to propositions would penalise
+    # declaring them.
+    defensive = [(x, a) for x in aux if (a := _defensive(x, tos)) is not None]
     if not defensive:
         out["parsimony"] = ("n/a", None)
     else:
-        ad_hoc = [x for x in defensive
-                  if classify_auxiliary(x, tos, str_list(field(x, "protects")))[0]
+        ad_hoc = [x for x, a in defensive
+                  if classify_auxiliary(x, tos, str_list(field(x, "protects")), a)[0]
                   != "independently_corroborated"]
         out["parsimony"] = ("fail", 0.0) if ad_hoc else ("pass", 1.0)
 
     # 5 non_redundancy
     # The item follows the redundancy screen's flags (API_SPEC.md section 6): a
-    # near-duplicate pair or a definition contained in another, not vocabulary
-    # that sibling constructs merely share.
+    # near-duplicate pair, a definition contained in another, a shared label or
+    # a shared measure, not vocabulary that sibling constructs merely share. A
+    # construct whose definition holds no content word cannot be screened, so
+    # the item cannot pass while one exists, and deleting the definitions of a
+    # redundant pair cannot raise the score.
     if len(cons) < 2:
         out["non_redundancy"] = ("n/a", None)
     else:
         flagged = any(r["flag"] == "review" for r in _pairs(T, thr))
-        out["non_redundancy"] = ("warn", 0.0) if flagged else ("pass", 1.0)
+        undefined = any(not tokens(text(field(c, "definition"))) for c in cons)
+        out["non_redundancy"] = ("warn", 0.0) if flagged or undefined else ("pass", 1.0)
 
     # 6 construct_clarity
     if not cons:
@@ -236,7 +275,36 @@ def _check_items(T: dict, thr: dict) -> dict:
     return out
 
 
-def check(T) -> dict:
+def _weighted(pairs: list[tuple[float, float]]) -> float:
+    """The weighted mean of ``(weight, score)`` pairs times 100, rounded to 1 decimal.
+
+    The sums are left folds in checklist order, as R's twin computes them.
+    """
+    num = 0.0
+    den = 0.0
+    for w, x in pairs:
+        num += w * x
+        den += w
+    return rnd(num / den * 100, 1)
+
+
+def _aggregate_range(scored: list[tuple[float, float]]) -> list[float]:
+    """The lowest and highest aggregate over the checklist's weights and 2k + 1 alternatives.
+
+    The alternatives are equal weights and, for each of the k applicable items
+    in turn, its weight halved and its weight doubled. The weights are a
+    convention, and the range shows how far the aggregate depends on them.
+    """
+    values = [_weighted(scored), _weighted([(1.0, x) for _, x in scored])]
+    for k in range(len(scored)):
+        for factor in (0.5, 2.0):
+            values.append(_weighted([(w * factor if i == k else w, x)
+                                     for i, (w, x) in enumerate(scored)]))
+    return [min(values), max(values)]
+
+
+@theory_keyword
+def check(theory) -> dict:
     """Compute the full rigour report (dict) for a Theory or theory mapping.
 
     Each item has a status (``pass``, ``warn`` or ``fail``) and a score in
@@ -250,28 +318,32 @@ def check(T) -> dict:
         A dict with the keys ``theory_id``, ``schema_version`` (the theory's),
             ``checklist_version`` (the rigour checklist's, whose weights and
             thresholds produced every number), ``maturity``, ``aggregate_score``,
-            ``coverage``, ``gate``, ``n_blockers_failed`` and ``items``, in that
-            order. ``gate`` is ``advisory`` at ``draft`` maturity, and otherwise
-            ``blocked`` when a blocker item (falsifiability or derivation_chain)
-            fails and ``pass`` when none does. ``items`` holds one ``{id, status,
-            score, weight, severity_if_fail, citation}`` record per checklist item,
-            in checklist order.
+            ``aggregate_range``, ``coverage``, ``gate``, ``n_blockers_failed`` and
+            ``items``, in that order. ``aggregate_range`` holds the lowest and
+            highest aggregate under the checklist's weights, equal weights and
+            each applicable item's weight halved or doubled in turn, since the
+            weights are a convention. ``gate`` is ``advisory`` at ``draft``
+            maturity, and otherwise ``blocked`` when a blocker item
+            (falsifiability or derivation_chain) fails and ``pass`` when none
+            does. ``items`` holds one ``{id, status, score, weight,
+            severity_if_fail, citation}`` record per checklist item, in checklist
+            order.
 
     Raises:
         ValueError: a test outcome's ``passed`` is present and not a boolean,
             or a prediction's ``severity`` is not a finite number or lies
             outside [0, 1]. ``validate(full=True)`` reports both.
     """
-    T = T.data if hasattr(T, "data") else T
-    _refuse_non_boolean_outcomes(T, "check")
+    theory = theory.data if hasattr(theory, "data") else theory
+    _refuse_non_boolean_outcomes(theory, "check")
     spec = _resources.checklist()
     thr = spec["thresholds"]
-    results = _check_items(T, thr)
+    results = _check_items(theory, thr)
 
     items = []
-    weighted = 0.0
     applicable = 0.0
     n_blockers_failed = 0
+    scored: list[tuple[float, float]] = []
     for spec_item in spec["items"]:
         iid = spec_item["id"]
         status, score = results[iid]
@@ -279,8 +351,8 @@ def check(T) -> dict:
         # such items would give the empty theory 26 and let it outscore a weak
         # but real one.
         if score is not None:
-            weighted += spec_item["weight"] * score
             applicable += spec_item["weight"]
+            scored.append((spec_item["weight"], score))
         if spec_item["severity_if_fail"] == "blocker" and status == "fail":
             n_blockers_failed += 1
         items.append({
@@ -297,22 +369,23 @@ def check(T) -> dict:
     # reads as that element (API_SPEC.md section 3, "Reading a theory"). A
     # maturity outside its enum is absent. The report is compared across the
     # twins, so the value printed here must be one both engines can produce.
-    maturity = enum(T.get("maturity"), MATURITY) or ""
+    maturity = enum(theory.get("maturity"), MATURITY) or ""
     if maturity == "draft":
         gate = "advisory"
     else:
         gate = "blocked" if n_blockers_failed > 0 else "pass"
 
     return {
-        "theory_id": text(T.get("id")),
-        "schema_version": text(T.get("schema_version")),
+        "theory_id": text(theory.get("id")),
+        "schema_version": text(theory.get("schema_version")),
         # Every number below comes from the checklist's weights and thresholds,
         # so two reports are only comparable if they were scored against the
         # same checklist. `schema_version` above is the theory's, not this.
         "checklist_version": spec.get("schema_version") or "",
         "maturity": maturity,
         # Nine of the twelve items always apply, so `applicable` is at least 0.74.
-        "aggregate_score": rnd(weighted / applicable * 100, 1),
+        "aggregate_score": _weighted(scored),
+        "aggregate_range": _aggregate_range(scored),
         "coverage": rnd(applicable, 3),
         "gate": gate,
         "n_blockers_failed": n_blockers_failed,
@@ -320,7 +393,8 @@ def check(T) -> dict:
     }
 
 
-def report(T, format: str = "json") -> str:
+@theory_keyword
+def report(theory, format: str = "json") -> str:
     """Render the rigour report of ``check()`` as a string.
 
     ``format="json"`` (the default) gives the report as indented JSON, and
@@ -330,7 +404,7 @@ def report(T, format: str = "json") -> str:
         ValueError: for any other ``format``, and when ``check()`` refuses the
             theory.
     """
-    rep = check(T)  # check() unwraps Theory -> mapping
+    rep = check(theory)  # check() unwraps Theory -> mapping
     if format == "json":
         return json.dumps(rep, indent=2, ensure_ascii=False)
     if format == "html":
@@ -345,7 +419,9 @@ def report(T, format: str = "json") -> str:
         return (
             f'<section class="theoryforge-report">\n'
             f'  <h2>Rigour report: {xml_escape(rep["theory_id"])}</h2>\n'
-            f'  <p>Aggregate score: <strong>{xml_escape(rep["aggregate_score"])}</strong> &middot; '
+            f'  <p>Aggregate score: <strong>{xml_escape(rep["aggregate_score"])}</strong> '
+            f'({xml_escape(rep["aggregate_range"][0])} to {xml_escape(rep["aggregate_range"][1])} '
+            f'under other weightings) &middot; '
             f'gate: <strong>{xml_escape(rep["gate"])}</strong></p>\n'
             f'  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n'
             f'{rows}\n  </table>\n</section>\n'

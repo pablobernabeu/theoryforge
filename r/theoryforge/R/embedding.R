@@ -8,17 +8,23 @@
 #' @keywords internal
 NULL
 
-# Cosine similarity of two numeric vectors; 0 when either has zero norm.
+# Cosine similarity of two numeric vectors. The caller enforces equal lengths
+# and nonzero norms.
 .tf_cosine <- function(a, b) {
   a <- as.numeric(a)
   b <- as.numeric(b)
-  num <- sum(a * b)
-  da <- sqrt(sum(a * a))
-  db <- sqrt(sum(b * b))
-  if (da == 0 || db == 0) {
-    return(0.0)
+  sum(a * b) / (sqrt(sum(a * a)) * sqrt(sum(b * b)))
+}
+
+# Whether an embedding vector holds only finite numbers and has a nonzero
+# norm. An empty vector passes here and is refused with its pair's lengths.
+.tf_usable_vector <- function(v) {
+  if (is.list(v)) {
+    if (!all(vapply(v, function(x) is.numeric(x) && length(x) == 1L, logical(1)))) return(FALSE)
+    v <- unlist(v)
   }
-  num / (da * db)
+  if (length(v) == 0L) return(TRUE)
+  is.numeric(v) && all(is.finite(v)) && any(v != 0)
 }
 
 #' Embedding-based pairwise construct-redundancy screen
@@ -26,7 +32,10 @@ NULL
 #' For every unordered pair of constructs, embeds each definition with the
 #' supplied \code{embedder} and computes the cosine similarity (rounded to 6
 #' decimals). The vectors of every compared pair must be of equal, nonzero
-#' length, or the pair is refused. Returns a data frame sorted by descending
+#' length, or the pair is refused. A vector that holds anything other than
+#' finite numbers, or only zeros, which have no direction to compare, is
+#' refused with the id of its construct, and so is a threshold outside -1 to 1.
+#' Returns a data frame sorted by descending
 #' cosine then \code{(a, b)}, flagging pairs at or above \code{threshold} for
 #' review. This assistive screen complements the deterministic lexical
 #' [tf_redundancy_check()], and its results are only as reproducible as the
@@ -58,9 +67,19 @@ tf_embedding_redundancy <- function(theory, embedder, threshold = NULL) {
   if (is.null(threshold)) {
     threshold <- tf_checklist()$thresholds$embedding_similarity_max
   }
+  x <- .tf_number(threshold)
+  if (is.null(x) || x < -1 || x > 1) {
+    stop("embedding_redundancy requires a threshold from -1 to 1", call. = FALSE)
+  }
   cons <- .tf_list(T, "constructs")
   ids <- vapply(cons, function(c) .tf_str(c, "id"), character(1))
   vecs <- lapply(cons, function(c) embedder(.tf_str(c, "definition")))
+  for (i in seq_along(vecs)) {
+    if (!.tf_usable_vector(vecs[[i]])) {
+      stop("embedding_redundancy requires finite, nonzero embedding vectors; ",
+           sprintf("the vector of construct %s is not", ids[[i]]), call. = FALSE)
+    }
+  }
 
   a <- character(0)
   b <- character(0)

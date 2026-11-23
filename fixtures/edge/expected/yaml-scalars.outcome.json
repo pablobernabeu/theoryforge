@@ -81,6 +81,7 @@
   "implications": {
     "theory_id": "edge-yaml-scalars",
     "criterion": "m",
+    "conditioning": "basis",
     "acyclic": true,
     "constructs": [
       "c1",
@@ -166,5 +167,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Item metadata written as awkward YAML scalars\n\n- Theory ID: edge-yaml-scalars\n- Schema version: 1.0\n- Content hash: sha256:c680860c7055c51fe920fd6aaeffc88e14d852fc690cafd68e8a33693c6cc7f8\n- Maturity: testing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- c1 (Alpha): The first construct.\n- c2 (Beta): The second construct.\n\n### Propositions\n- p1: c1 increases c2. Mechanism: Alpha drives Beta.\n\n## Hypotheses\n1. [directional] Beta rises with Alpha. (h1; derives from: p1)\n   - Test record: already tested: passed\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
+  "preregister": "# Preregistration: Item metadata written as awkward YAML scalars\n\n- Theory ID: edge-yaml-scalars\n- Schema version: 1.0\n- Content hash: sha256:1cc629a07758f8226cd9e20d001ab9fdbc74e1035e9ecf388cd712d4efe43677\n- Maturity: testing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- c1 (Alpha): The first construct.\n- c2 (Beta): The second construct.\n\n### Propositions\n- p1: c1 increases c2. Mechanism: Alpha drives Beta.\n\n## Hypotheses\n1. [directional] Beta rises with Alpha. (h1; derives from: p1)\n   - Test record: already tested: passed\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n"
 }

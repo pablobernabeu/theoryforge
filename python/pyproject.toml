@@ -45,6 +45,11 @@ Documentation = "https://pablobernabeu.github.io/theoryforge/python/"
 "R twin" = "https://pablobernabeu.github.io/theoryforge/r/"
 Issues = "https://github.com/pablobernabeu/theoryforge/issues"
 
+[tool.hatch.build.targets.sdist]
+# The tests and the documentation read files at the repository's root, which
+# an sdist cannot hold, so the sdist carries the package and its metadata only.
+exclude = ["tests", "docs", "overrides", "mkdocs.yml"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/theoryforge"]
 # Non-Python files inside the package dir (schema/*.json, *.yaml, py.typed) are

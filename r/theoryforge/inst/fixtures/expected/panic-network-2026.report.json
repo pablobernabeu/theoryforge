@@ -1,9 +1,13 @@
 {
   "theory_id": "panic-network-2026",
   "schema_version": "1.1",
-  "checklist_version": "2.1",
+  "checklist_version": "3.0",
   "maturity": "developing",
   "aggregate_score": 88.0,
+  "aggregate_range": [
+    84.2,
+    90.2
+  ],
   "coverage": 0.92,
   "gate": "pass",
   "n_blockers_failed": 0,
