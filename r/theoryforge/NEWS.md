@@ -300,6 +300,25 @@ add the changes that concern the R package alone.
   and rivals, the content hash and the DAGitty reader. The values it quotes are
   computed from the package when the site is built.
 
+# theoryforge 0.7.1
+
+## Tests
+
+* A test of the severity mean failed on R built without long double, the
+  configuration of CRAN's noLD check. It compared the mean with the constant
+  0.49999999999999994, which such a build reads as 0.5, while the mean itself
+  was correct. The test now writes the constant as 0.5 - 2^-54. No result of
+  the package changes.
+
+## Documentation
+
+* `?tf_dossier` calls the appended output of `tf_preregister()` the hypotheses
+  section of a preregistration, as the rest of the 0.7.0 documentation does,
+  where it still called it a preregistration document.
+
+* The methodology article links the DOI of Coulter et al. (1998) in full, where
+  the site cut the link short at the DOI's angle bracket.
+
 # theoryforge 0.7.0
 
 ## Upgrading from the previous release (0.6.0)

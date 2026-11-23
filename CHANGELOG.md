@@ -240,6 +240,22 @@ that concern it alone.
   overstates the severity in small samples, and that `severity()` grades the form of a claim
   and says nothing of how severe a test was.
 
+## [0.7.1]
+
+### Tests
+- A test of the R package's severity mean failed on R built without long double, the
+  configuration of CRAN's noLD check. It compared the mean with the constant
+  0.49999999999999994, which such a build reads as 0.5, while the mean itself was correct.
+  The test now writes the constant as 0.5 - 2^-54. No result of either package changes.
+
+### Documentation
+- R's `?tf_dossier`, the Python dossier module, the Python README, home page and workflow
+  page and the code the apps show for `preregister()` call its output the hypotheses
+  section of a preregistration, as the rest of the 0.7.0 documentation does, where they
+  still called it a preregistration document.
+- The R methodology article links the DOI of Coulter et al. (1998) in full, where the site
+  cut the link short at the DOI's angle bracket.
+
 ## [0.7.0] - 2026-11-22
 
 ### Upgrading from 0.6.0
