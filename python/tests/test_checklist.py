@@ -7,7 +7,7 @@ gives ``coverage``, the share of checklist weight that was applicable, and
 assumption that answers an anomaly without independent corroboration,
 non-redundancy follows the redundancy screen's flags, precision counts bounded
 point and interval claims and mean severity counts every prediction, using the
-claim-form rubric where none is declared. The R suite (test-checklist2.R) builds
+claim-form rubric where none is declared. The R suite (test-checklist.R) builds
 the same theories and asserts the same values.
 """
 import copy
@@ -433,3 +433,36 @@ def test_the_dossier_writes_an_extreme_severity_as_a_bound(panic_path):
     t.data["test_outcomes"] = [{"prediction_id": "pred1", "passed": True, "estimate": 26, "se": 2}]
     assert ("post-data severity 0.309 for [15, 25]; recorded as passed, with the estimate "
             "outside that region\n") in t.dossier()
+
+
+def test_equal_weights_can_set_the_end_of_the_aggregate_range():
+    # Two low-weight items that pass beside a heavy one that fails: equal
+    # weights give the highest aggregate, doubling the heavy weight the lowest.
+    from theoryforge.rigor import _aggregate_range
+    assert _aggregate_range([(0.15, 0.0), (0.05, 1.0), (0.05, 1.0)]) == [25.0, 66.7]
+
+
+def test_precision_does_not_count_an_infinite_bound():
+    t = _bare(constructs=TWO_CONSTRUCTS, propositions=P1,
+              predictions=[_pred("h1", "point", bounds={"lower": 0, "upper": float("inf")})])
+    assert _item(t, "precision") == ("warn", 0.0)
+
+
+def test_non_redundancy_reads_a_definition_of_stopwords_as_no_definition():
+    cons = copy.deepcopy(TWO_CONSTRUCTS)
+    cons[1]["definition"] = "The and of"
+    assert _item(_bare(constructs=cons), "non_redundancy") == ("warn", 0.0)
+
+
+def test_an_unknown_field_names_the_first_of_two_equally_close_fields():
+    # 'tyet' is two edits from both 'type' and 'test'; 'type' comes first in
+    # the schema. A bare 'x' and 'xnote' are not extensions, and a key three
+    # edits from every field gets no suggestion. The R suite asserts the same.
+    from theoryforge.core import _unknown_fields
+    known = ["id", "type", "test"]
+    assert _unknown_fields({"tyet": 1, "x": 1, "xnote": 1, "x_note": 1, "abcdef": 1}, "p", known) == [
+        "p has unknown field: tyet (did you mean type?)",
+        "p has unknown field: x (did you mean id?)",
+        "p has unknown field: xnote",
+        "p has unknown field: abcdef",
+    ]

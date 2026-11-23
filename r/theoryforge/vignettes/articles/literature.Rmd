@@ -442,8 +442,7 @@ just as an evidence DOI does. Those are the sources the candidate list below is
 checked against.
 
 ```{r new-evidence-basic}
-panic <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
-                             package = "theoryforge"))
+panic <- tf_read(tf_example_path("panic-network.theory.yaml"))
 
 candidates <- c(
   "10.1176/ajp.155.5.610",                        # already cited as evidence

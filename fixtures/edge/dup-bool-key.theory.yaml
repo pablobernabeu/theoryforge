@@ -1,0 +1,11 @@
+# Edge case: yes and true both read as the boolean key TRUE, a repeated key.
+schema_version: "1.1"
+id: k
+title: K
+maturity: draft
+constructs:
+  - id: a
+    label: A
+    definition: A thing.
+    yes: 1
+    true: 2

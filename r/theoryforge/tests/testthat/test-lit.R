@@ -1098,3 +1098,16 @@ test_that("tf_fetch_corpus rejects an out-of-range per_page", {
                  "per_page must be between 1 and 200", fixed = TRUE)
   }
 })
+
+test_that("a theme with no links is peripheral however many share its centrality", {
+  # The Python suite asserts the same quadrants.
+  kws <- c(rep(list(c("a", "b")), 4), rep(list(c("c", "d")), 4), rep(list(c("b", "c")), 2),
+           rep(list(c("e", "f")), 3))
+  corpus <- list(schema_version = "1.0", id = "c",
+                 records = lapply(seq_along(kws), function(i) list(id = paste0("w", i - 1L),
+                                                                   keywords = as.list(kws[[i]]))))
+  lm <- tf_litmap(corpus, method = "simple_centres", max_theme_size = 2)
+  expect_identical(vapply(lm$themes, function(t) paste(paste(unlist(t$keywords), collapse = " "),
+                                                       t$quadrant), ""),
+                   c("a b basic", "c d basic", "e f niche"))
+})

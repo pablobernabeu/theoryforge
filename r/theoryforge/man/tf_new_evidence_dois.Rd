@@ -37,8 +37,7 @@ whichever literature tool the caller prefers.
 \examples{
 # The bundled panic theory cites one DOI as evidence and one for each of its
 # two registered alternatives. All three count as already cited.
-theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
-                              package = "theoryforge"))
+theory <- tf_read(tf_example_path("panic-network.theory.yaml"))
 tf_new_evidence_dois(theory, c(
   "10.1176/ajp.155.5.610",                        # cited as evidence
   "https://doi.org/10.1016/0005-7967(86)90011-2", # an alternative, in URL form

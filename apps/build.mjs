@@ -23,7 +23,7 @@ const PY_SRC = path.join(repo, "python", "src", "theoryforge");
 // The examples the R package ships, which tf_example_path() resolves. buildPy
 // reads the Python package's own fixtures/, which tf.example_path() resolves.
 // scripts/gen_golden.py mirrors the root fixtures/ into both.
-const R_SHIPPED = path.join(repo, "r", "theoryforge", "inst", "fixtures");
+const R_SHIPPED = path.join(repo, "r", "theoryforge", "inst", "extdata");
 // The copy the R package ships, so the webR app scores with exactly the
 // checklist R reads. scripts/gen_golden.py writes it from the root schema/.
 const SCHEMA = path.join(repo, "r", "theoryforge", "inst", "schema");

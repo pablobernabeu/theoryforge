@@ -13,6 +13,7 @@ the R half.
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -52,6 +53,19 @@ class _StrictLoader(yaml.SafeLoader):
     def construct_document(self, node: Node) -> Any:
         _refuse_duplicate_keys(self, node)
         return super().construct_document(node)
+
+    def construct_mapping(self, node: MappingNode, deep: bool = False) -> dict:
+        """A mapping whose keys are the text R's yaml package names them by (``_key_text``).
+
+        Converting each key as it is read keeps ``yes:`` and ``1:`` apart, which
+        a Python dict would hold as the one key True == 1.
+        """
+        self.flatten_mapping(node)
+        mapping: dict = {}
+        for key_node, value_node in node.value:
+            key = _key_text(self.construct_object(key_node, deep=deep))
+            mapping[key] = self.construct_object(value_node, deep=deep)
+        return mapping
 
     def flatten_mapping(self, node: MappingNode) -> None:
         """Resolve merge keys (``<<``) as R's yaml package does with ``merge.precedence = "override"``.
@@ -111,6 +125,27 @@ _StrictLoader.add_implicit_resolver("tag:yaml.org,2002:int", _INT, list("-+01234
 _StrictLoader.add_implicit_resolver("tag:yaml.org,2002:float", _FLOAT, list("-+0123456789."))
 
 
+def _key_text(key: Any) -> str:
+    """A mapping key as the text R's yaml package names it.
+
+    R names every key by the text of its value: a boolean as ``TRUE`` or
+    ``FALSE``, a null as the empty string and a number as ``as.character()``
+    writes it, so ``yes:`` and ``1:`` are two different keys there, where
+    Python would hold them as True and 1, one key.
+    """
+    if isinstance(key, bool):
+        return "TRUE" if key else "FALSE"
+    if key is None:
+        return ""
+    if isinstance(key, float):
+        if math.isnan(key):
+            return "NaN"
+        if math.isinf(key):
+            return "Inf" if key > 0 else "-Inf"
+        return format(key, ".15g")
+    return str(key)
+
+
 def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
     """Raise ``_DuplicateKey`` for the first mapping, in the order mappings close, that repeats a key.
 
@@ -139,7 +174,7 @@ def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
                     continue
                 if key_node.tag == _VALUE:  # an explicit !!value key, which PyYAML reads as text
                     key_node.tag = "tag:yaml.org,2002:str"
-                key = loader.construct_object(key_node)
+                key = _key_text(loader.construct_object(key_node))
                 if key in seen:
                     raise _DuplicateKey(key)
                 seen.add(key)

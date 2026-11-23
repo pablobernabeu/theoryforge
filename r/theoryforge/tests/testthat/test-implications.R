@@ -1023,3 +1023,21 @@ test_that("minimal conditioning drops every construct the separation does not ne
   expect_error(tf_implications(t, given = "smallest"),
                "implications requires given to be 'basis' or 'minimal'", fixed = TRUE)
 })
+
+test_that("the file order decides which minimal set is returned", {
+  # a <- z <- w -> b: {z} and {w} each separate a and b. The pass tries the
+  # constructs in file order, so whichever comes first is dropped.
+  given_ab <- function(order) {
+    t <- tf_theory("o", "Order")
+    for (cid in order) t <- tf_add_construct(t, cid, toupper(cid), "A construct.")
+    t <- t |>
+      tf_add_proposition("p1", "z", "a", "causes") |>
+      tf_add_proposition("p2", "w", "z", "causes") |>
+      tf_add_proposition("p3", "w", "b", "causes")
+    imp <- tf_implications(t, given = "minimal")$implications
+    hit <- Filter(function(r) r$a == "a" && r$b == "b", imp)[[1]]
+    unlist(hit$given)
+  }
+  expect_identical(given_ab(c("a", "z", "w", "b")), "w")
+  expect_identical(given_ab(c("a", "w", "z", "b")), "z")
+})

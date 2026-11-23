@@ -61,8 +61,7 @@ Both checks are deterministic, and the Python package's
 the same text.
 }
 \examples{
-theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
-                              package = "theoryforge"))
+theory <- tf_read(tf_example_path("panic-network.theory.yaml"))
 isTRUE(tf_validate(theory))              # required fields and enums
 isTRUE(tf_validate(theory, full = TRUE)) # also ids, cross-references and the rest of the schema
 

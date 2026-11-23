@@ -39,7 +39,6 @@ corpus <- list(
 cat(tf_lit_diagram(tf_litmap(corpus), "keyword_cooccurrence"))
 
 # On a large map, draw only the strongest edges.
-fixture <- tf_read_corpus(system.file("fixtures", "panic-corpus.yaml",
-                                      package = "theoryforge"))
+fixture <- tf_read_corpus(tf_example_path("panic-corpus.yaml"))
 cat(tf_lit_diagram(tf_litmap(fixture), "co_citation", max_edges = 1))
 }

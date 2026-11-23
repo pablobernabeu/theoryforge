@@ -976,3 +976,14 @@ def test_fetch_corpus_falls_back_to_concepts_when_keyword_names_are_null(monkeyp
     monkeypatch.setattr("urllib.request.urlopen", lambda url, timeout: _Resp())
     corpus = tf.fetch_corpus("panic")
     assert corpus["records"][0]["keywords"] == ["panic", "arousal"]
+
+
+def test_a_theme_with_no_links_is_peripheral_however_many_share_its_centrality():
+    # Two linked themes and one isolated: the isolated theme's centrality, 0,
+    # is the lowest, so it is peripheral, and the two linked themes, whose
+    # centrality is both the median and the highest value, are central. The R
+    # suite asserts the same quadrants.
+    lm = _sc(_records(*([["a", "b"]] * 4 + [["c", "d"]] * 4 + [["b", "c"]] * 2
+                        + [["e", "f"]] * 3)), max_theme_size=2)
+    assert [(t["keywords"], t["quadrant"]) for t in lm["themes"]] == [
+        (["a", "b"], "basic"), (["c", "d"], "basic"), (["e", "f"], "niche")]

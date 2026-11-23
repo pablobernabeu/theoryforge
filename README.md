@@ -145,7 +145,7 @@ The R package includes the example theories, so this runs straight after install
 
 ```r
 library(theoryforge)
-t <- tf_read(system.file("fixtures", "panic-network.theory.yaml", package = "theoryforge"))
+t <- tf_read(tf_example_path("panic-network.theory.yaml"))
 cat(tf_report(t))
 ```
 

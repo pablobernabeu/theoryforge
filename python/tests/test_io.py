@@ -395,3 +395,27 @@ def test_written_json_ends_with_a_newline(panic_path, tmp_path):
     out = tmp_path / "p.theory.json"
     tf.read(panic_path).write(out)
     assert out.read_bytes().endswith(b"}\n")
+
+
+def test_example_path_reaches_only_the_listed_examples():
+    # A name that is not listed, a path into the package among them, is
+    # refused, as R's tf_example_path() refuses it.
+    for name in ("expected", "../schema/theory.schema.json", "", "../core.py"):
+        with pytest.raises(FileNotFoundError, match="no packaged example named"):
+            tf.example_path(name)
+
+
+def test_numpy_scalars_build_validate_write_and_hash_like_python_numbers(tmp_path):
+    np = pytest.importorskip("numpy")
+    t = tf.read(tf.example_path("panic-network.theory.yaml"))
+    t.add_construct("c_np", np.str_("NumPy"), "A construct built from NumPy values.",
+                    measurement=[np.str_("A scale")])
+    t.add_prediction("h_np", "A raises B.", "directional", derives_from="p1",
+                     severity=np.float32(0.75), bounds={"lower": np.int64(0)},
+                     test={"n_planned": np.int64(48), "power": np.float64(0.9)})
+    t.add_test_outcome("h_np", np.bool_(True), estimate=np.float64(0.3), se=np.float64(0.1))
+    assert t.validate(full=True)
+    for name in ("np.yaml", "np.json"):
+        t.write(tmp_path / name)
+        assert tf.read(tmp_path / name).content_hash() == t.content_hash()
+

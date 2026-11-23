@@ -21,7 +21,7 @@ Write-Output "== golden files and package copies are up to date =="
 # Regenerating is how the goldens are checked, not a licence to move them: if
 # the run changes anything, the script has verified nothing, so it stops.
 python "$root/scripts/gen_golden.py" | Out-Null
-$stale = git -C "$root" status --porcelain -- fixtures r/theoryforge/inst/fixtures `
+$stale = git -C "$root" status --porcelain -- fixtures r/theoryforge/inst/extdata `
   r/theoryforge/tests/testthat/goldens python/src/theoryforge/fixtures `
   r/theoryforge/inst/schema python/src/theoryforge/schema
 if ($stale) {

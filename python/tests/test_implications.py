@@ -888,3 +888,18 @@ def test_minimal_conditioning_drops_every_construct_the_separation_does_not_need
     with pytest.raises(ValueError, match="^implications requires given to be 'basis' or 'minimal'$"):
         t.implications(given="smallest")
 
+
+
+def test_the_file_order_decides_which_minimal_set_is_returned():
+    # a <- z <- w -> b: {z} and {w} each separate a and b. The pass tries the
+    # constructs in file order, so whichever comes first is dropped.
+    def theory(order):
+        t = tf.new_theory("o", "Order")
+        for c in order:
+            t.add_construct(c, c.upper(), "A construct.")
+        t.add_proposition("p1", "z", "a", "causes").add_proposition("p2", "w", "z", "causes")
+        t.add_proposition("p3", "w", "b", "causes")
+        return {(r["a"], r["b"]): r["given"] for r in t.implications(given="minimal")["implications"]}
+
+    assert theory(["a", "z", "w", "b"])[("a", "b")] == ["w"]
+    assert theory(["a", "w", "z", "b"])[("a", "b")] == ["z"]

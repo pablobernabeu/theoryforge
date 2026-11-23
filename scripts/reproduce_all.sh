@@ -14,7 +14,7 @@ echo "== golden files and package copies are up to date =="
 # Regenerating is how the goldens are checked, not a licence to move them: if
 # the run changes anything, the script has verified nothing, so it stops.
 python "$ROOT/scripts/gen_golden.py" > /dev/null
-stale="$(git -C "$ROOT" status --porcelain -- fixtures r/theoryforge/inst/fixtures \
+stale="$(git -C "$ROOT" status --porcelain -- fixtures r/theoryforge/inst/extdata \
   r/theoryforge/tests/testthat/goldens python/src/theoryforge/fixtures \
   r/theoryforge/inst/schema python/src/theoryforge/schema)"
 if [ -n "$stale" ]; then

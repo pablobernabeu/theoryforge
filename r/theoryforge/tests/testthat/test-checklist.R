@@ -8,25 +8,25 @@
 # non-redundancy follows the redundancy screen's flags, precision counts bounded
 # point and interval claims and mean severity counts every prediction, using the
 # claim-form rubric where none is declared. The Python suite
-# (test_checklist2.py) builds the same theories and asserts the same values.
+# (test_checklist.py) builds the same theories and asserts the same values.
 
-c2_ids <- c("falsifiability", "precision", "risk_severity", "parsimony", "non_redundancy",
+ck_ids <- c("falsifiability", "precision", "risk_severity", "parsimony", "non_redundancy",
             "construct_clarity", "scope", "logical_why", "causal_testability",
             "diagnosticity", "formalisation", "derivation_chain")
 
-c2_two_constructs <- list(
+ck_two_constructs <- list(
   list(id = "c1", label = "Alpha", definition = "The first construct."),
   list(id = "c2", label = "Beta", definition = "The second construct.")
 )
-c2_p1 <- list(list(id = "p1", from = "c1", to = "c2", relation = "increases",
+ck_p1 <- list(list(id = "p1", from = "c1", to = "c2", relation = "increases",
                    mechanism = "Alpha drives Beta."))
 
 # A theory holding the four required fields and the fields given.
-c2_bare <- function(...) {
+ck_bare <- function(...) {
   c(list(schema_version = "1.0", id = "t", title = "T", maturity = "building"), list(...))
 }
 
-c2_item <- function(theory, id) {
+ck_item <- function(theory, id) {
   for (it in tf_check(theory)$items) {
     if (identical(it$id, id)) return(list(status = it$status, score = it$score))
   }
@@ -45,8 +45,8 @@ test_that("the checklist is version 3.0 with five default thresholds", {
                           "embedding_similarity_max", "min_precision_share", "min_severity")))
   expect_identical(unlist(thr[sort(names(thr))], use.names = FALSE),
                    c(0.85, 0.5, 0.5, 0.85, 0.85))
-  expect_identical(vapply(spec$items, function(it) it$id, character(1)), c2_ids)
-  items <- stats::setNames(spec$items, c2_ids)
+  expect_identical(vapply(spec$items, function(it) it$id, character(1)), ck_ids)
+  items <- stats::setNames(spec$items, ck_ids)
   expect_identical(items$risk_severity$criterion,
                    paste("Mean prediction riskiness (declared severity, else the claim-form rubric)",
                          "at or above threshold"))
@@ -80,12 +80,12 @@ test_that("the report gives coverage after the aggregate", {
 test_that("the empty theory scores zero", {
   # It scored 26.0: parsimony, non_redundancy and derivation_chain each passed
   # at 1.0 with nothing to assess.
-  rep <- tf_check(c2_bare())
+  rep <- tf_check(ck_bare())
   expect_equal(rep$aggregate_score, 0.0)
   expect_equal(rep$coverage, 0.74)
   expect_identical(rep$gate, "blocked")
   for (id in c("parsimony", "non_redundancy", "derivation_chain")) {
-    expect_identical(c2_item(c2_bare(), id), list(status = "n/a", score = NULL), info = id)
+    expect_identical(ck_item(ck_bare(), id), list(status = "n/a", score = NULL), info = id)
   }
   statuses <- vapply(rep$items, function(it) it$status, character(1))
   expect_true(all(statuses %in% c("n/a", "warn", "fail")))
@@ -94,12 +94,12 @@ test_that("the empty theory scores zero", {
 test_that("one prediction never scores below the empty theory", {
   # The empty theory with one existence prediction scored 18.0, below the 26.0
   # of the empty theory, since the prediction made derivation_chain fail.
-  empty <- tf_check(c2_bare())$aggregate_score
+  empty <- tf_check(ck_bare())$aggregate_score
   for (type in c("existence", "directional", "interval", "point")) {
-    t <- c2_bare(predictions = list(list(id = "h1", statement = "S.", type = type)))
+    t <- ck_bare(predictions = list(list(id = "h1", statement = "S.", type = type)))
     expect_true(tf_check(t)$aggregate_score >= empty, info = type)
   }
-  rep <- tf_check(c2_bare(predictions = list(
+  rep <- tf_check(ck_bare(predictions = list(
     list(id = "h1", statement = "X exists.", type = "existence"))))
   expect_equal(rep$aggregate_score, 1.2)
   expect_equal(rep$coverage, 0.82)
@@ -118,30 +118,30 @@ test_that("mean severity counts every prediction", {
     tf_add_proposition("p1", "a", "c", "increases", mechanism = "a drives c") |>
     tf_add_prediction("h1", "C equals 3.", "point", derives_from = "p1") |>
     tf_add_prediction("h2", "C lies in [2, 4].", "interval", derives_from = "p1")
-  expect_identical(c2_item(b, "risk_severity"), list(status = "pass", score = 0.8))
+  expect_identical(ck_item(b, "risk_severity"), list(status = "pass", score = 0.8))
   # A declared value is used where one is given, the rubric elsewhere.
-  t <- c2_bare(predictions = list(
+  t <- ck_bare(predictions = list(
     list(id = "h1", statement = "C equals 3.", type = "point", severity = 0.3),
     list(id = "h2", statement = "C lies in [2, 4].", type = "interval")
   ))
-  expect_identical(c2_item(t, "risk_severity"), list(status = "pass", score = 0.5))
+  expect_identical(ck_item(t, "risk_severity"), list(status = "pass", score = 0.5))
   # Nine undeclared existence predictions no longer leave one declared at 0.9
   # to pass on its own.
   preds <- lapply(0:8, function(i) {
     list(id = paste0("e", i), statement = "X exists.", type = "existence")
   })
   preds[[10L]] <- list(id = "h1", statement = "X is 3.", type = "point", severity = 0.9)
-  expect_identical(c2_item(c2_bare(predictions = preds), "risk_severity"),
+  expect_identical(ck_item(ck_bare(predictions = preds), "risk_severity"),
                    list(status = "warn", score = 0.18))
 })
 
 test_that("a declared severity counts and the dossier sets it beside the rubric", {
-  t <- c2_bare(predictions = list(
+  t <- ck_bare(predictions = list(
     list(id = "h1", statement = "X exists.", type = "existence", severity = 0.95),
     list(id = "h2", statement = "X is positive.", type = "directional", severity = 0.5),
     list(id = "h3", statement = "X is 3.", type = "point")
   ))
-  expect_identical(c2_item(t, "risk_severity"), list(status = "pass", score = 0.783))
+  expect_identical(ck_item(t, "risk_severity"), list(status = "pass", score = 0.783))
   d <- tf_dossier(t)
   expect_true(grepl(paste0("- h1: severity 0.1, risk 0.1, declared 0.95 ",
                            "(declared exceeds the rubric by more than 0.2)\n"), d, fixed = TRUE))
@@ -161,15 +161,15 @@ test_that("tf_add_prediction() stores a severity only when given", {
   expect_identical(t$predictions[[1]],
                    list(id = "h1", statement = "C equals 3.", type = "point", severity = 0.95))
   expect_false("severity" %in% names(t$predictions[[2]]))
-  expect_identical(c2_item(t, "risk_severity"), list(status = "pass", score = 0.925))
+  expect_identical(ck_item(t, "risk_severity"), list(status = "pass", score = 0.925))
 })
 
 # -- parsimony: assumptions added for an anomaly ------------------------------
 
 # x1 answers the anomaly of h1, and may protect h2 as well.
-c2_defended <- function(protects, outcomes) {
-  c2_bare(
-    constructs = c2_two_constructs, propositions = c2_p1,
+ck_defended <- function(protects, outcomes) {
+  ck_bare(
+    constructs = ck_two_constructs, propositions = ck_p1,
     predictions = list(
       list(id = "h1", statement = "Beta rises with Alpha.", type = "directional",
            derives_from = list("p1")),
@@ -188,29 +188,29 @@ test_that("parsimony is not applicable without an assumption added for an anomal
   core <- list(list(id = "a1", statement = "Self-report tracks arousal.", added_for = NULL),
                list(id = "a2", statement = "A blank added_for names no anomaly.",
                     added_for = " "))
-  expect_identical(c2_item(c2_bare(auxiliary_assumptions = core), "parsimony"),
+  expect_identical(ck_item(ck_bare(auxiliary_assumptions = core), "parsimony"),
                    list(status = "n/a", score = NULL))
-  expect_identical(c2_item(c2_bare(), "parsimony"), list(status = "n/a", score = NULL))
+  expect_identical(ck_item(ck_bare(), "parsimony"), list(status = "n/a", score = NULL))
 })
 
 test_that("parsimony passes an independently corroborated assumption", {
-  t <- c2_defended(c("h1", "h2"), list(list(prediction_id = "h2", passed = TRUE)))
-  expect_identical(c2_item(t, "parsimony"), list(status = "pass", score = 1.0))
+  t <- ck_defended(c("h1", "h2"), list(list(prediction_id = "h2", passed = TRUE)))
+  expect_identical(ck_item(t, "parsimony"), list(status = "pass", score = 1.0))
 })
 
 test_that("parsimony fails an assumption supported only by its anomaly", {
   # A pass of h1, the prediction the assumption answers, used to clear it.
-  t <- c2_defended("h1", list(list(prediction_id = "h1", passed = TRUE)))
-  expect_identical(c2_item(t, "parsimony"), list(status = "fail", score = 0.0))
+  t <- ck_defended("h1", list(list(prediction_id = "h1", passed = TRUE)))
+  expect_identical(ck_item(t, "parsimony"), list(status = "fail", score = 0.0))
 })
 
 test_that("parsimony fails an assumption whose other support is not corroborated", {
   # A failed replication leaves h2 mixed, which used to count as a pass.
   mixed <- list(list(prediction_id = "h2", passed = TRUE),
                 list(prediction_id = "h2", passed = FALSE))
-  expect_identical(c2_item(c2_defended(c("h1", "h2"), mixed), "parsimony"),
+  expect_identical(ck_item(ck_defended(c("h1", "h2"), mixed), "parsimony"),
                    list(status = "fail", score = 0.0))
-  expect_identical(c2_item(c2_defended(c("h1", "h2"), list()), "parsimony"),
+  expect_identical(ck_item(ck_defended(c("h1", "h2"), list()), "parsimony"),
                    list(status = "fail", score = 0.0))
 })
 
@@ -224,32 +224,32 @@ test_that("the screen flags a definition contained in another", {
     a = "k_motivation", b = "k_drive", similarity = 0.8, overlap = 1.0, flag = "review",
     reason = "contained", stringsAsFactors = FALSE
   ))
-  expect_identical(c2_item(t, "non_redundancy"), list(status = "warn", score = 0.0))
+  expect_identical(ck_item(t, "non_redundancy"), list(status = "warn", score = 0.0))
 })
 
-c2_pair <- function(d1, d2) {
-  t <- c2_bare(constructs = list(list(id = "a", label = "A", definition = d1),
+ck_pair <- function(d1, d2) {
+  t <- ck_bare(constructs = list(list(id = "a", label = "A", definition = d1),
                                  list(id = "b", label = "B", definition = d2)))
   row <- tf_redundancy_check(t)
-  list(list(row$similarity, row$overlap, row$flag), c2_item(t, "non_redundancy"))
+  list(list(row$similarity, row$overlap, row$flag), ck_item(t, "non_redundancy"))
 }
 
 test_that("overlap counts only between definitions of three tokens or more", {
-  expect_identical(c2_pair("Bodily arousal response.", "Bodily arousal response under threat."),
+  expect_identical(ck_pair("Bodily arousal response.", "Bodily arousal response under threat."),
                    list(list(0.6, 1.0, "review"), list(status = "warn", score = 0.0)))
-  expect_identical(c2_pair("Bodily arousal.", "Bodily arousal under threat in adults."),
+  expect_identical(ck_pair("Bodily arousal.", "Bodily arousal under threat in adults."),
                    list(list(0.4, 1.0, "ok"), list(status = "pass", score = 1.0)))
   # A construct with no definition cannot be screened, so the item cannot pass.
-  expect_identical(c2_pair("", "Bodily arousal response."),
+  expect_identical(ck_pair("", "Bodily arousal response."),
                    list(list(0.0, 0.0, "ok"), list(status = "warn", score = 0.0)))
 })
 
 test_that("non_redundancy is not applicable to one construct", {
-  t <- c2_bare(constructs = c2_two_constructs[1L])
-  expect_identical(c2_item(t, "non_redundancy"), list(status = "n/a", score = NULL))
+  t <- ck_bare(constructs = ck_two_constructs[1L])
+  expect_identical(ck_item(t, "non_redundancy"), list(status = "n/a", score = NULL))
   # Shared vocabulary below the thresholds no longer costs points.
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
-  expect_identical(c2_item(panic, "non_redundancy"), list(status = "pass", score = 1.0))
+  expect_identical(ck_item(panic, "non_redundancy"), list(status = "pass", score = 1.0))
 })
 
 # -- causal_testability, formalisation and the relation table -----------------
@@ -258,9 +258,9 @@ test_that("causal_testability counts every directed relation", {
   cases <- c(mediates = "pass", moderates = "pass", causes = "pass", decreases = "pass",
              associates = "warn")
   for (rel in names(cases)) {
-    t <- c2_bare(constructs = c2_two_constructs,
+    t <- ck_bare(constructs = ck_two_constructs,
                  propositions = list(list(id = "p1", from = "c1", to = "c2", relation = rel)))
-    expect_identical(c2_item(t, "causal_testability")$status, cases[[rel]], info = rel)
+    expect_identical(ck_item(t, "causal_testability")$status, cases[[rel]], info = rel)
   }
 })
 
@@ -288,8 +288,8 @@ test_that("formalisation needs a recognised model type", {
                 list(list(type = ""), "warn"), list(list(), "warn"),
                 list(list(type = "abm"), "pass"), list(list(type = "sem"), "pass"))
   for (cs in cases) {
-    t <- c2_bare(formal_model = cs[[1]])
-    expect_identical(c2_item(t, "formalisation")$status, cs[[2]],
+    t <- ck_bare(formal_model = cs[[1]])
+    expect_identical(ck_item(t, "formalisation")$status, cs[[2]],
                      info = paste(unlist(cs[[1]]), collapse = ""))
   }
 })
@@ -304,7 +304,7 @@ test_that("tf_embedding_redundancy() defaults to its own threshold", {
   vectors <- list("The first construct." = c(1, 0), "The second construct." = c(0.6, 0.8))
   df <- tryCatch({
     assign("checklist", spec, envir = cache)
-    tf_embedding_redundancy(c2_bare(constructs = c2_two_constructs),
+    tf_embedding_redundancy(ck_bare(constructs = ck_two_constructs),
                             function(d) vectors[[d]])
   }, finally = assign("checklist", original, envir = cache))
   expect_identical(df$cosine, 0.6)
@@ -347,40 +347,40 @@ test_that("the views and the HTML report show not-applicable items", {
 
 # -- checklist 3.0 --------------------------------------------------------------
 
-c3_pred <- function(id, type, ...) {
+ck_pred <- function(id, type, ...) {
   list(id = id, statement = "s", type = type, derives_from = list("p1"), ...)
 }
 
 test_that("precision counts point and interval claims only with two finite bounds", {
-  t <- c2_bare(constructs = c2_two_constructs, propositions = c2_p1, predictions = list(
-    c3_pred("h1", "point"),
-    c3_pred("h2", "interval", bounds = list(lower = 20, upper = 60)),
-    c3_pred("h3", "point", bounds = list(lower = 5, upper = 5)),
-    c3_pred("h4", "directional", bounds = list(lower = 0))
+  t <- ck_bare(constructs = ck_two_constructs, propositions = ck_p1, predictions = list(
+    ck_pred("h1", "point"),
+    ck_pred("h2", "interval", bounds = list(lower = 20, upper = 60)),
+    ck_pred("h3", "point", bounds = list(lower = 5, upper = 5)),
+    ck_pred("h4", "directional", bounds = list(lower = 0))
   ))
-  expect_identical(c2_item(t, "precision"), list(status = "pass", score = 0.5))
+  expect_identical(ck_item(t, "precision"), list(status = "pass", score = 0.5))
   t$predictions[[3]]$bounds <- list(lower = 5)
-  expect_identical(c2_item(t, "precision"), list(status = "warn", score = 0.25))
+  expect_identical(ck_item(t, "precision"), list(status = "warn", score = 0.25))
 })
 
 test_that("parsimony leaves a core assumption whose prediction failed to the appraisal", {
   # Without a prior version the checklist cannot tell an assumption made before
   # a test from one made after it, so only a declared added_for is assessed,
   # and tf_appraise_amendment() infers undeclared additions.
-  preds <- list(c3_pred("h1", "directional"), c3_pred("h2", "directional"))
+  preds <- list(ck_pred("h1", "directional"), ck_pred("h2", "directional"))
   aux <- list(list(id = "a1", statement = "Only in calm settings.", protects = list("h1", "h2")))
   failed <- list(list(prediction_id = "h1", passed = FALSE))
-  t <- c2_bare(constructs = c2_two_constructs, propositions = c2_p1, predictions = preds,
+  t <- ck_bare(constructs = ck_two_constructs, propositions = ck_p1, predictions = preds,
                auxiliary_assumptions = aux, test_outcomes = failed)
-  expect_identical(c2_item(t, "parsimony"), list(status = "n/a", score = NULL))
+  expect_identical(ck_item(t, "parsimony"), list(status = "n/a", score = NULL))
   t$auxiliary_assumptions[[1]]$added_for <- "h1"
-  expect_identical(c2_item(t, "parsimony"), list(status = "fail", score = 0.0))
+  expect_identical(ck_item(t, "parsimony"), list(status = "fail", score = 0.0))
   t$test_outcomes <- c(failed, list(list(prediction_id = "h2", passed = TRUE)))
-  expect_identical(c2_item(t, "parsimony"), list(status = "pass", score = 1.0))
+  expect_identical(ck_item(t, "parsimony"), list(status = "pass", score = 1.0))
 })
 
 test_that("the screen flags a shared label and a shared measure", {
-  t <- c2_bare(constructs = list(
+  t <- ck_bare(constructs = list(
     list(id = "a", label = "Anxiety", definition = "Worry about future threat.",
          measurement = list("GAD-7 total score")),
     list(id = "b", label = " anxiety ", definition = "Bodily arousal under danger.",
@@ -393,10 +393,10 @@ test_that("the screen flags a shared label and a shared measure", {
   expect_identical(paste(df$a, df$b), c("a b", "a c", "b c"))
   expect_identical(df$flag, c("review", "ok", "review"))
   expect_identical(df$reason, c("same label, shared measurement", "", "shared measurement"))
-  expect_identical(c2_item(t, "non_redundancy"), list(status = "warn", score = 0.0))
+  expect_identical(ck_item(t, "non_redundancy"), list(status = "warn", score = 0.0))
   # Constructs that share a method but keep measures of their own are not
   # flagged, as in a multitrait-multimethod design.
-  t <- c2_bare(constructs = list(
+  t <- ck_bare(constructs = list(
     list(id = "a", label = "A", definition = "Worry about future threat.",
          measurement = list("Self-report", "Informant rating")),
     list(id = "b", label = "B", definition = "Bodily arousal under danger.",
@@ -406,11 +406,11 @@ test_that("the screen flags a shared label and a shared measure", {
 })
 
 test_that("non_redundancy cannot pass while a definition is empty", {
-  defined <- c2_two_constructs
-  expect_identical(c2_item(c2_bare(constructs = defined), "non_redundancy"),
+  defined <- ck_two_constructs
+  expect_identical(ck_item(ck_bare(constructs = defined), "non_redundancy"),
                    list(status = "pass", score = 1.0))
   defined[[2]]$definition <- "  "
-  expect_identical(c2_item(c2_bare(constructs = defined), "non_redundancy"),
+  expect_identical(ck_item(ck_bare(constructs = defined), "non_redundancy"),
                    list(status = "warn", score = 0.0))
 })
 
@@ -420,29 +420,29 @@ test_that("the aggregate range spans the alternative weightings", {
   expect_true(rep$aggregate_range[[1]] <= rep$aggregate_score &&
                 rep$aggregate_score <= rep$aggregate_range[[2]])
   # When every applicable item has one score, no weighting can move it.
-  rep <- tf_check(c2_bare(constructs = c2_two_constructs[1]))
+  rep <- tf_check(ck_bare(constructs = ck_two_constructs[1]))
   expect_identical(rep$aggregate_range, rep(rep$aggregate_score, 2))
 })
 
 test_that("a severity too large for a double is refused as non-numeric", {
-  t <- c2_bare(constructs = c2_two_constructs,
-               predictions = list(c3_pred("h1", "point", severity = Inf)))
+  t <- ck_bare(constructs = ck_two_constructs,
+               predictions = list(ck_pred("h1", "point", severity = Inf)))
   expect_error(tf_check(t), paste0("check requires numeric prediction severities; ",
                                    "non-numeric severity for prediction: h1"), fixed = TRUE)
 })
 
 test_that("full validation checks a claim form and sign against its bounds", {
   positive <- list(kind = "effect", x = "c1", y = "c2", sign = "positive")
-  t <- c2_bare(constructs = c2_two_constructs, predictions = list(
-    c3_pred("h1", "point", bounds = list(lower = 1)),
-    c3_pred("h2", "interval", bounds = list(upper = 2)),
-    c3_pred("h3", "directional", bounds = list(lower = 0.2, upper = 1)),
-    c3_pred("h4", "existence", bounds = list(lower = 0.2, upper = 0.8)),
-    c3_pred("h5", "interval", bounds = list(lower = -1, upper = 1), claim = positive),
+  t <- ck_bare(constructs = ck_two_constructs, predictions = list(
+    ck_pred("h1", "point", bounds = list(lower = 1)),
+    ck_pred("h2", "interval", bounds = list(upper = 2)),
+    ck_pred("h3", "directional", bounds = list(lower = 0.2, upper = 1)),
+    ck_pred("h4", "existence", bounds = list(lower = 0.2, upper = 0.8)),
+    ck_pred("h5", "interval", bounds = list(lower = -1, upper = 1), claim = positive),
     # A sign stated with a bound at 0 on a bounded scale, and an existence
     # claim on an absolute value, are accepted.
-    c3_pred("h6", "directional", bounds = list(lower = 0, upper = 1), claim = positive),
-    c3_pred("h7", "existence", bounds = list(lower = 0.2))
+    ck_pred("h6", "directional", bounds = list(lower = 0, upper = 1), claim = positive),
+    ck_pred("h7", "existence", bounds = list(lower = 0.2))
   ), test_outcomes = list(
     # A pass with the estimate outside the region is not invalid: a test that
     # fails to reject a predicted value passes it (Meehl, 1967).
@@ -469,4 +469,34 @@ test_that("the dossier writes an extreme severity as a bound", {
   t$test_outcomes <- list(list(prediction_id = "pred1", passed = TRUE, estimate = 26, se = 2))
   expect_true(grepl(paste0("post-data severity 0.309 for [15, 25]; recorded as passed, with the ",
                            "estimate outside that region\n"), tf_dossier(t), fixed = TRUE))
+})
+
+test_that("equal weights can set the end of the aggregate range", {
+  # Two low-weight items that pass beside a heavy one that fails: equal weights
+  # give the highest aggregate, doubling the heavy weight the lowest.
+  expect_identical(.tf_aggregate_range(c(0.15, 0.05, 0.05), c(0, 1, 1)), c(25.0, 66.7))
+})
+
+test_that("precision does not count an infinite bound", {
+  t <- ck_bare(constructs = ck_two_constructs, propositions = ck_p1,
+               predictions = list(ck_pred("h1", "point", bounds = list(lower = 0, upper = Inf))))
+  expect_identical(ck_item(t, "precision"), list(status = "warn", score = 0.0))
+})
+
+test_that("non_redundancy reads a definition of stopwords as no definition", {
+  cons <- ck_two_constructs
+  cons[[2]]$definition <- "The and of"
+  expect_identical(ck_item(ck_bare(constructs = cons), "non_redundancy"),
+                   list(status = "warn", score = 0.0))
+})
+
+test_that("an unknown field names the first of two equally close fields", {
+  # The Python suite asserts the same messages.
+  expect_identical(
+    .tf_unknown_fields(list(tyet = 1, x = 1, xnote = 1, x_note = 1, abcdef = 1), "p",
+                       c("id", "type", "test")),
+    c("p has unknown field: tyet (did you mean type?)",
+      "p has unknown field: x (did you mean id?)",
+      "p has unknown field: xnote",
+      "p has unknown field: abcdef"))
 })

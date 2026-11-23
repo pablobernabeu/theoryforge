@@ -1,3 +1,4 @@
+"""simulate(), embedding_redundancy(), osf_push() and render_report()."""
 import math
 
 import pytest

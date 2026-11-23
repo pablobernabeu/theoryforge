@@ -56,7 +56,7 @@ test("the Python vendor tree leaves out __pycache__ and every file the manifest 
 
 test("the manifest marks the examples and corpora each package ships and lists modality switching last", async () => {
   for (const dir of [path.join(repo, "python", "src", "theoryforge", "fixtures"),
-    path.join(repo, "r", "theoryforge", "inst", "fixtures")]) {
+    path.join(repo, "r", "theoryforge", "inst", "extdata")]) {
     const examples = await manifestExamples(dir);
     assert.equal(examples.length, 10);
     assert.equal(examples[examples.length - 1].path, "fixtures/modality-switching.theory.yaml");

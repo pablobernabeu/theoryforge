@@ -53,8 +53,7 @@ The package depends on `yaml` and `jsonlite`.
 library(theoryforge)
 
 # Read a bundled example theory (or build one incrementally with tf_theory + tf_add_*)
-theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
-                              package = "theoryforge"))
+theory <- tf_read(tf_example_path("panic-network.theory.yaml"))
 tf_validate(theory)
 
 # Score it against the 12-item rigour checklist

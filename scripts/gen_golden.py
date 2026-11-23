@@ -47,7 +47,7 @@ R_EXPECTED = ROOT / "r" / "theoryforge" / "tests" / "testthat" / "goldens"
 EXAMPLE_INPUTS = ("panic-network.theory.yaml", "panic-network-2026-v2.theory.yaml",
                   "modality-switching.theory.yaml", "weak-theory.theory.yaml",
                   "panic-corpus.yaml", "openalex-panic-2026.corpus.yaml")
-R_INPUTS = ROOT / "r" / "theoryforge" / "inst" / "fixtures"
+R_INPUTS = ROOT / "r" / "theoryforge" / "inst" / "extdata"
 PY_INPUTS = ROOT / "python" / "src" / "theoryforge" / "fixtures"
 # Each package reads its own copy of the schema and checklist, because neither
 # the CRAN tarball nor the sdist can reach the repository root. The webR app

@@ -912,8 +912,7 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5,
 #' cat(tf_lit_diagram(tf_litmap(corpus), "keyword_cooccurrence"))
 #'
 #' # On a large map, draw only the strongest edges.
-#' fixture <- tf_read_corpus(system.file("fixtures", "panic-corpus.yaml",
-#'                                       package = "theoryforge"))
+#' fixture <- tf_read_corpus(tf_example_path("panic-corpus.yaml"))
 #' cat(tf_lit_diagram(tf_litmap(fixture), "co_citation", max_edges = 1))
 #' @export
 tf_lit_diagram <- function(obj, type = "keyword_cooccurrence", max_edges = NULL) {
@@ -962,8 +961,7 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence", max_edges = NULL)
 #' @examples
 #' # The bundled panic theory cites one DOI as evidence and one for each of its
 #' # two registered alternatives. All three count as already cited.
-#' theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
-#'                               package = "theoryforge"))
+#' theory <- tf_read(tf_example_path("panic-network.theory.yaml"))
 #' tf_new_evidence_dois(theory, c(
 #'   "10.1176/ajp.155.5.610",                        # cited as evidence
 #'   "https://doi.org/10.1016/0005-7967(86)90011-2", # an alternative, in URL form

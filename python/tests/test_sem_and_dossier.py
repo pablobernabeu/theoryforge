@@ -1,3 +1,4 @@
+"""compile_sem() and dossier() on the shipped examples."""
 import theoryforge as tf
 
 

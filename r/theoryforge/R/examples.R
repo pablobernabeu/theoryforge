@@ -20,7 +20,7 @@ NULL
 #' tf_example_names()
 #' @export
 tf_example_names <- function() {
-  dir <- system.file("fixtures", package = "theoryforge")
+  dir <- system.file("extdata", package = "theoryforge")
   if (!nzchar(dir)) {
     stop("could not locate the packaged example theories", call. = FALSE)
   }
@@ -41,7 +41,7 @@ tf_example_path <- function(name) {
   # Only a listed name is looked up, so that no other file or folder of the
   # installed package can be reached through this function.
   listed <- is.character(name) && length(name) == 1L && name %in% tf_example_names()
-  path <- if (listed) system.file("fixtures", name, package = "theoryforge") else ""
+  path <- if (listed) system.file("extdata", name, package = "theoryforge") else ""
   if (!nzchar(path)) {
     stop("no packaged example named '", name, "'; available: ",
          paste(tf_example_names(), collapse = ", "), call. = FALSE)
