@@ -83,6 +83,11 @@ add the changes that concern the R package alone.
 
 ## Changed
 
+* `tf_write()` began writing each number with the fewest significant digits that read
+  back as the same double, the digits Python writes, in place of 15. A number that
+  needs 16 or 17 digits, such as 6/sqrt(2), read back as another number, so a theory
+  written and read again lost its recorded content hash.
+
 * The causal_testability item of the checklist cites Rohrer (2018), on stating causal
   assumptions in a graph, in place of the paper that describes the dagitty software.
 
@@ -263,6 +268,14 @@ add the changes that concern the R package alone.
   next minor release. Passing it gives a warning.
 
 ## Fixed
+
+* The YAML reader summed an octal or hexadecimal integer beyond 2^53 digit by digit,
+  rounding at each step, so that `0x200000000000011` (2^57 + 17) read as 2^57. It
+  now reads the double nearest the integer, 2^57 + 32, as Python does.
+
+* On R built without long double, the YAML reader misread a subnormal number such as
+  `2.5e-324`, which it handed to R's own parser. It now reads it correctly rounded,
+  as on other builds and in Python.
 
 * `tf_diagram()` dropped one space at the end of a label, title, scope condition or
   provenance detail, and so wrote different DOT from the Python package. It now

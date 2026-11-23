@@ -291,6 +291,10 @@ test_that("the canonical form keeps the shortest digits that read back as the nu
                             simplifyVector = TRUE)
   expect_identical(theoryforge:::.tf_canonical(as.list(x)),
                    paste0("[", paste(text, collapse = ","), "]"))
+  # Beside a power of two the nearest 16-digit decimal of 2^-24 does not read
+  # back, while the one above it does, and ECMAScript takes it.
+  expect_identical(theoryforge:::.tf_canonical(list(2^-24, 2^-44, 2^89)),
+                   "[5.960464477539063e-8,5.684341886080802e-14,6.189700196426902e+26]")
 })
 
 test_that("an effect under sigma counts no walk back through the intervened construct", {

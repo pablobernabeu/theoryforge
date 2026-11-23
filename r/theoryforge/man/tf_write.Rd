@@ -20,7 +20,9 @@ JSON for \code{.json} and YAML otherwise. Files are UTF-8 with LF line
 endings.
 }
 \details{
-Numbers keep 15 significant digits in both formats, logicals are written as
+Each number is written with the fewest significant digits, up to 17, that
+read back as the same double in both formats, so the file holds the theory's
+numbers exactly and keeps its content hash. Logicals are written as
 \code{true} and \code{false}, and a missing value (\code{NA}) is written as
 null, which reads back as \code{NULL} in R and \code{None} in Python. Every
 field the schema types as an array of strings (\code{derives_from},

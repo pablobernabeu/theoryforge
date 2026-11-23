@@ -12,9 +12,10 @@ NULL
 .tf_FORMAL <- setdiff(.tf_FORMAL_MODEL_TYPE, "none")
 
 # The mean as a left fold in file order (API_SPEC.md section 4). R's sum()
-# keeps an extended accumulator on x86_64 but not on Apple Silicon, and CPython
-# 3.12+ sum() compensates, so either can differ from a plain double sum in the
-# last bit, as for c(0.6, 0.7, 0.2).
+# accumulates in long double where R has it, as on x86_64 by default, but not
+# on Apple Silicon or a build without it, and CPython 3.12+ sum() compensates,
+# so either can differ from a plain double sum in the last bit, as for
+# c(0.6, 0.7, 0.2).
 .tf_mean <- function(xs) {
   acc <- 0.0
   for (x in xs) acc <- acc + x

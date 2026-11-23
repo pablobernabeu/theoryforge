@@ -266,6 +266,13 @@ scalar_table <- list(
   list("1,000", "1,000"), list("0,5", "0,5"), list("1,000.5", "1,000.5"), list(".", "."),
   list("2147483648", 2147483648), list("-2147483649", -2147483649),
   list("0x80000000", 2147483648), list("0777777777777", 68719476735), list("1.0e+400", Inf),
+  # beyond 2^53 an octal or hexadecimal integer is the nearest double, rounded
+  # once (2^57 + 17 is 2^57 + 32), where a sum digit by digit gave 2^57
+  list("0x200000000000011", 2^57 + 32), list("-0x200000000000011", -(2^57 + 32)),
+  list("010000000000000000021", 2^57 + 32),
+  # subnormal and underflowing floats, which R's own parser misreads on a build
+  # without long double
+  list("2.5e-324", 2^-1074), list("2.1e-322", 43 * 2^-1074), list("1.0e-400", 0),
   # read as yaml and Python read it, although as.numeric() and R's own parser
   # put it one unit in the last place away (-527.86795299999994)
   list("-527.867953", -0x1.07ef19157abb9p+9)
@@ -352,10 +359,12 @@ test_that("tf_write writes a string array held as one string as an array", {
   expect_identical(back$predictions[[1]]$diagnostic_vs, list("alt1"))
 })
 
-test_that("tf_write writes NA as null and numbers with 15 significant digits", {
+test_that("tf_write writes NA as null and every number so that it reads back exactly", {
   # yaml wrote NA as R's own .na forms and jsonlite wrote "NA" for a number,
   # which both readers take for text. yaml's precision counts decimal places,
-  # so 15 of them wrote 21.3 as 21.300000000000001.
+  # so 15 of them wrote 21.3 as 21.300000000000001. Fifteen significant digits
+  # changed a number that needs 16 or 17, such as 6/sqrt(2), and the 15 digits
+  # %g gives a subnormal number are 14 more than it needs.
   theory <- writer_theory()
   theory$predictions[[1]]$severity <- NA_real_
   theory$test_outcomes[[2]]$passed <- NA
@@ -365,6 +374,9 @@ test_that("tf_write writes NA as null and numbers with 15 significant digits", {
   theory$constructs[[1]]$mean_age <- 21.3
   theory$constructs[[1]]$small <- 0.000123456789012345
   theory$constructs[[1]]$large <- 1e20
+  theory$constructs[[1]]$long <- c(6 / sqrt(2), 41 / 3)
+  theory$constructs[[1]]$power <- 2^-24
+  theory$constructs[[1]]$tiny <- 2^-1074
   for (ext in c(".yaml", ".json")) {
     path <- tempfile(fileext = ext)
     tf_write(theory, path)
@@ -380,8 +392,30 @@ test_that("tf_write writes NA as null and numbers with 15 significant digits", {
     expect_null(back$constructs[[1]]$source, info = ext)
     expect_identical(back$constructs[[1]]$scores, list(0.5, NULL), info = ext)
     expect_identical(back$constructs[[1]]$mean_age, 21.3, info = ext)
-    expect_equal(back$constructs[[1]]$small, 0.000123456789012345, tolerance = 1e-14, info = ext)
+    expect_identical(back$constructs[[1]]$small, theory$constructs[[1]]$small, info = ext)
     expect_identical(back$constructs[[1]]$large, 1e20, info = ext)
+    expect_identical(unlist(back$constructs[[1]]$long), c(6 / sqrt(2), 41 / 3), info = ext)
+    expect_identical(back$constructs[[1]]$power, 2^-24, info = ext)
+    expect_identical(back$constructs[[1]]$tiny, 2^-1074, info = ext)
+    # The digits Python's repr() writes: 16 for 2^-24 and one for 2^-1074.
+    expect_true(grepl("5.960464477539063e-08", text, fixed = TRUE), info = ext)
+    expect_true(grepl("5(\\.0)?e-324", text), info = ext)
+  }
+})
+
+test_that("a recorded content hash survives tf_write in both formats", {
+  # A number that needs 17 digits, written with 15, read back as another
+  # number, so the theory's hash changed and tf_validate(full = TRUE) refused
+  # the hash it had recorded.
+  theory <- tf_read(tf_example_path("modality-switching.theory.yaml"))
+  theory$constructs[[1]]$x_scale <- c(6 / sqrt(2), 41.123456789012344)
+  theory$version$content_hash <- tf_content_hash(theory)
+  for (ext in c(".yaml", ".json")) {
+    path <- tempfile(fileext = ext)
+    tf_write(theory, path)
+    back <- tf_read(path)
+    expect_identical(tf_content_hash(back), theory$version$content_hash, info = ext)
+    expect_true(tf_validate(back, full = TRUE), info = ext)
   }
 })
 

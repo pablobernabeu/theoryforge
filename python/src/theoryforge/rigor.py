@@ -44,9 +44,9 @@ def _ne_list(v) -> bool:
 
 def _mean(xs):
     # A left fold in file order (API_SPEC.md section 4). CPython 3.12+ sum()
-    # compensates and R's sum() keeps an extended accumulator on x86_64, so
-    # either can differ from a plain double sum in the last bit, as for
-    # (0.6, 0.7, 0.2).
+    # compensates and R's sum() accumulates in long double where R has it, as on
+    # x86_64 by default, so either can differ from a plain double sum in the
+    # last bit, as for (0.6, 0.7, 0.2).
     acc = 0.0
     for x in xs:
         acc += x

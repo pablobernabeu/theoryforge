@@ -15,6 +15,29 @@ from ._compat import theory_keyword
 from ._num import number, plain
 
 
+def _decimal_up(s: str) -> str:
+    """The decimal one unit in the last place above ``s``, written as ``%e`` writes it.
+
+    ``5.960464477539062e-08`` gives ``5.960464477539063e-08``, and ``9.99e+02``
+    gives ``1.00e+03``. ``s`` is positive.
+    """
+    mantissa, exp = s.split("e")
+    digits = [int(c) for c in mantissa.replace(".", "")]
+    e = int(exp)
+    i = len(digits) - 1
+    while i >= 0 and digits[i] == 9:
+        digits[i] = 0
+        i -= 1
+    if i < 0:
+        digits = [1] + digits[:-1]
+        e += 1
+    else:
+        digits[i] += 1
+    text = "".join(str(d) for d in digits)
+    head = text[0] + ("." + text[1:] if len(text) > 1 else "")
+    return f"{head}e{'-' if e < 0 else '+'}{abs(e):02d}"
+
+
 def _number(x) -> str:
     """A number as ECMAScript's Number.prototype.toString writes it.
 
@@ -36,9 +59,16 @@ def _number(x) -> str:
         return "0"
     sign = "-" if x < 0 else ""
     x = abs(x)
+    # For each count of digits the nearest decimal is tried and then the one a
+    # unit in the last place above it, which only beside a power of two reads
+    # back where the nearest does not (API_SPEC.md section 34).
     for p in range(1, 18):
         s = f"{x:.{p - 1}e}"
         if float(s) == x:
+            break
+        t = _decimal_up(s)
+        if float(t) == x:
+            s = t
             break
     mantissa, exp = s.split("e")
     digits = mantissa.replace(".", "").rstrip("0") or "0"

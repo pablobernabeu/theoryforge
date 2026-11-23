@@ -460,6 +460,10 @@ def test_the_canonical_form_keeps_the_shortest_digits_that_read_back_as_the_numb
     text = ["-527.867953", "1.7839211372708861e-265", "-3.06405467662112e+212",
             "3.343559332129407e-41"]
     assert canonical([float(s) for s in text]) == "[" + ",".join(text) + "]"
+    # Beside a power of two the nearest 16-digit decimal of 2^-24 does not read
+    # back, while the one above it does, and ECMAScript takes it.
+    assert canonical([2.0 ** -24, 2.0 ** -44, 2.0 ** 89]) == \
+        "[5.960464477539063e-8,5.684341886080802e-14,6.189700196426902e+26]"
 
 
 def test_an_effect_under_sigma_counts_no_walk_back_through_the_intervened_construct():

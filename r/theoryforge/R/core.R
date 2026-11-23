@@ -839,7 +839,9 @@ tf_validate <- function(theory, full = FALSE) {
 #' JSON for \code{.json} and YAML otherwise. Files are UTF-8 with LF line
 #' endings.
 #'
-#' Numbers keep 15 significant digits in both formats, logicals are written as
+#' Each number is written with the fewest significant digits, up to 17, that
+#' read back as the same double in both formats, so the file holds the theory's
+#' numbers exactly and keeps its content hash. Logicals are written as
 #' \code{true} and \code{false}, and a missing value (\code{NA}) is written as
 #' null, which reads back as \code{NULL} in R and \code{None} in Python. Every
 #' field the schema types as an array of strings (\code{derives_from},
@@ -860,14 +862,17 @@ tf_write <- function(theory, path) {
   theory <- .tf_na_as_null(.tf_box_string_arrays(theory))
   ext <- tolower(tools::file_ext(path))
   if (identical(ext, "json")) {
-    # digits = NA keeps 15 significant digits. jsonlite's default rounds to four
-    # decimal places, which would write a severity of 0.49996 as 0.5.
-    text <- jsonlite::toJSON(theory, pretty = TRUE, auto_unbox = TRUE, null = "null", digits = NA)
+    # Each finite double is written as text with the fewest digits that read
+    # back as the same double. jsonlite's default rounds to four decimal places,
+    # which would write a severity of 0.49996 as 0.5, and digits = NA keeps 15
+    # significant digits.
+    text <- jsonlite::toJSON(.tf_json_doubles(theory), pretty = TRUE, auto_unbox = TRUE,
+                             null = "null", digits = NA, json_verbatim = TRUE)
     text <- paste0(as.character(text), "\n")
   } else {
     # yaml's default writes doubles to seven decimal places and a logical as yes
-    # or no. .tf_yaml_double keeps 15 significant digits, and verbatim_logical
-    # writes true and false.
+    # or no. .tf_yaml_double writes the fewest digits that read back as the same
+    # double, and verbatim_logical writes true and false.
     text <- yaml::as.yaml(theory, handlers = list(logical = yaml::verbatim_logical,
                                                   numeric = .tf_yaml_double))
   }

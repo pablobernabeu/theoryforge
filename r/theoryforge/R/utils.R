@@ -261,23 +261,55 @@ NULL
     value <- strtoi(digits, base)
     if (is.na(value)) {
       # The value is beyond R's integer range. A decimal goes through the float
-      # reading, which rounds correctly, and octal and hexadecimal are summed
-      # digit by digit, exact up to 2^53.
+      # reading, which rounds correctly, and octal and hexadecimal are read as
+      # the double nearest the integer, rounded once, as Python's float() reads
+      # the integer it holds.
       value <- if (base == 10L) {
         .tf_yaml_float(paste0(digits, ".0"))
       } else {
-        Reduce(function(acc, d) acc * base + d, strtoi(strsplit(digits, "")[[1L]], base), 0)
+        .tf_radix_double(digits, base)
       }
     }
     if (startsWith(x, "-")) -value else value
   }
 }
 
+# Octal or hexadecimal digits as the double nearest the integer they write,
+# rounded once, to nearest with ties to even. Summing digit by digit in doubles
+# would round at every digit once the sum passes 2^53.
+.tf_radix_double <- function(digits, base) {
+  width <- if (base == 16L) 4L else 3L
+  d <- strtoi(strsplit(digits, "")[[1L]], base)
+  bits <- as.vector(vapply(d, function(v) (v %/% 2^((width - 1L):0L)) %% 2, numeric(width)))
+  first <- match(1, bits)
+  if (is.na(first)) return(0)
+  bits <- bits[first:length(bits)]
+  n <- length(bits)
+  if (n <= 53L) return(sum(bits * 2^((n - 1L):0L)))
+  m <- sum(bits[1:53] * 2^(52:0))
+  # Round up when the first dropped bit is 1 and either a later dropped bit is
+  # 1 or the kept part is odd (a tie goes to even).
+  if (bits[[54L]] == 1 && ((n > 54L && any(bits[55:n] == 1)) || m %% 2 == 1)) m <- m + 1
+  m * 2^(n - 53L)
+}
+
 .tf_yaml_float <- function(x) {
   if (grepl(",", x, fixed = TRUE) || !grepl("[0-9]", sub("[eE].*$", "", x))) return(x)
   value <- suppressWarnings(yaml::yaml.load(x))
-  # NA only when the value is beyond the range of a double: +/-Inf or 0, as in Python.
-  if (is.na(value)) as.numeric(x) else value
+  # yaml gives NA when strtod reports a range error: an overflow (+/-Inf), an
+  # underflow to 0 or a subnormal result. R's own parser misreads subnormals on
+  # a build without long double, so the text is read with jsonlite, whose
+  # strtod rounds correctly, as Python's float() does. JSON has no leading
+  # '+', no leading zeros and no dot without a digit beside it.
+  if (is.na(value)) {
+    j <- sub("^[+]", "", x)
+    j <- sub("^(-?)0*([0-9])", "\\1\\2", j)
+    j <- sub("^(-?)[.]", "\\10.", j)
+    j <- sub("[.]([eE]|$)", ".0\\1", j)
+    value <- tryCatch(jsonlite::parse_json(paste0("[", j, "]"))[[1L]],
+                      error = function(err) suppressWarnings(as.numeric(x)))
+  }
+  value
 }
 
 .tf_yaml_number_handlers <- list(
@@ -418,13 +450,96 @@ NULL
   x
 }
 
+# The decimal one unit in the last place above s, a positive number as
+# sprintf("%.*e") writes it: "5.960464477539062e-08" gives
+# "5.960464477539063e-08", and "9.99e+02" gives "1.00e+03". Beside a power of
+# two the doubles below are closer together than those above, so the nearest
+# decimal with some number of digits can fail to read back while the one above
+# it reads back (API_SPEC.md section 34).
+.tf_decimal_up <- function(s) {
+  parts <- strsplit(s, "e", fixed = TRUE)[[1L]]
+  e <- as.integer(parts[[2L]])
+  d <- as.integer(strsplit(gsub(".", "", parts[[1L]], fixed = TRUE), "")[[1L]])
+  i <- length(d)
+  while (i >= 1L && d[[i]] == 9L) {
+    d[[i]] <- 0L
+    i <- i - 1L
+  }
+  if (i == 0L) {
+    d <- c(1L, d[-length(d)])
+    e <- e + 1L
+  } else {
+    d[[i]] <- d[[i]] + 1L
+  }
+  digits <- paste(d, collapse = "")
+  mantissa <- if (length(d) > 1L) paste0(substr(digits, 1L, 1L), ".", substring(digits, 2L)) else digits
+  sprintf("%se%s%02d", mantissa, if (e < 0L) "-" else "+", abs(e))
+}
+
+# The positive finite double a as sprintf("%.*e") writes it, with the fewest
+# significant digits, up to 17, that read back as a, and of two such the
+# nearer, as ECMAScript and Python's repr() choose. For each count of digits
+# the nearest decimal is tried and then the one a unit in the last place above
+# it. The digits are read back with jsonlite, whose strtod rounds correctly, as
+# the yaml package and Python read them: R's own parser rounds some decimals,
+# such as 527.867953, one unit in the last place, and more of them on a build
+# without long double.
+.tf_shortest_e <- function(a) {
+  candidates <- sprintf("%.*e", 0:16, a)
+  ups <- vapply(candidates, .tf_decimal_up, "", USE.NAMES = FALSE)
+  back <- jsonlite::parse_json(paste0("[", paste(c(candidates, ups), collapse = ","), "]"),
+                               simplifyVector = TRUE)
+  nearest <- back[1:17] == a
+  above <- back[18:34] == a
+  p <- which(nearest | above)[[1L]]
+  if (nearest[[p]]) candidates[[p]] else ups[[p]]
+}
+
+# Each finite double in x as the text with the fewest significant digits that
+# reads back as the same double, the digits Python's repr() writes. %.15g gives
+# them whenever 15 or fewer suffice, since it drops trailing zeros, except for
+# a subnormal number, whose few significant bits it spells out to 15 digits.
+# Beyond 15, the nearest 16-digit decimal, the one a unit above it and then 17
+# digits are tried, read back with jsonlite as .tf_shortest_e() reads them.
+.tf_shortest_double <- function(x) {
+  out <- sprintf("%.15g", x)
+  for (i in which(is.finite(x))) {
+    if (x[[i]] != 0 && abs(x[[i]]) < .Machine$double.xmin) {
+      out[[i]] <- paste0(if (x[[i]] < 0) "-" else "", .tf_shortest_e(abs(x[[i]])))
+      next
+    }
+    a <- abs(x[[i]])
+    up <- paste0(if (x[[i]] < 0) "-" else "", .tf_decimal_up(sprintf("%.15e", a)))
+    cands <- c(sprintf("%.*g", 15:16, x[[i]]), up, sprintf("%.17g", x[[i]]))
+    back <- jsonlite::parse_json(paste0("[", paste(cands, collapse = ","), "]"),
+                                 simplifyVector = TRUE)
+    out[[i]] <- cands[[which(back == x[[i]])[[1L]]]]
+  }
+  out
+}
+
+# Each finite double in x, at any depth, as JSON text with the fewest
+# significant digits that read back as the same double, for jsonlite::toJSON()
+# with json_verbatim = TRUE. A vector of two or more becomes a list, which
+# jsonlite writes as an array, as it writes the vector. A vector that holds a
+# value that is not finite is left to jsonlite, since JSON cannot hold it.
+.tf_json_doubles <- function(x) {
+  if (is.list(x)) {
+    for (i in seq_along(x)) if (!is.null(x[[i]])) x[[i]] <- .tf_json_doubles(x[[i]])
+    return(x)
+  }
+  if (!is.double(x) || length(x) == 0L || !all(is.finite(x))) return(x)
+  text <- lapply(.tf_shortest_double(unname(x)), function(s) structure(s, class = "json"))
+  if (length(x) == 1L) text[[1L]] else text
+}
+
 # The yaml handler that writes doubles. yaml's own precision argument counts
 # decimal places, so 15 of them would write 21.3 as 21.300000000000001 and keep
 # fewer than 15 significant digits of a small number. Each double is written with
-# 15 significant digits instead, as jsonlite's digits = NA writes JSON, with the
-# decimal point both readers need to take it for a float (5.0, 1.0e+20).
+# the fewest significant digits that read back as the same double instead, with
+# the decimal point both readers need to take it for a float (5.0, 1.0e+20).
 .tf_yaml_double <- function(x) {
-  out <- sub("^([-+]?[0-9]+)(e|$)", "\\1.0\\2", sprintf("%.15g", x))
+  out <- sub("^([-+]?[0-9]+)(e|$)", "\\1.0\\2", .tf_shortest_double(x))
   out[is.nan(x)] <- ".nan"
   out[is.infinite(x) & x > 0] <- ".inf"
   out[is.infinite(x) & x < 0] <- "-.inf"

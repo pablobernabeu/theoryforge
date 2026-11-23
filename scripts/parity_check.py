@@ -16,13 +16,15 @@ Five phases, each run through ``scripts/parity_emit.R``:
              YAML and JSON (YAML alone for a theory holding a non-finite number,
              which JSON cannot hold), R reads each file and writes it again, and Python reads
              both twins' files back. Each must hold the theory Python first read,
-             compared as JSON artefacts are (below) but with its shape kept: a
-             one-element array never equals its element. R's files may differ in
-             the one way API_SPEC section 3 documents, a single value in a field
-             the schema types as an array of strings written as a one-element
-             array. When jsonschema is installed each file must also validate
-             against schema/theory.schema.json whenever the theory it was written
-             from does.
+             compared as JSON artefacts are (below) but with its numbers exact and
+             its shape kept: a one-element array never equals its element. R's
+             files may differ in the two ways API_SPEC section 3 documents: a
+             single value in a field the schema types as an array of strings is
+             written as a one-element array, and an integer beyond 2^53, which R
+             holds as the nearest double, is written as that double. When
+             jsonschema is installed each file must also validate against
+             schema/theory.schema.json whenever the theory it was written from
+             does.
 
 Every file is compared:
   - *.json  -> SEMANTICALLY: float tolerance 1e-9, a bool equals only a bool, and
@@ -81,12 +83,13 @@ def _is_scalar(x) -> bool:
     return not isinstance(x, (list, dict))
 
 
-def deep_equal(a, b, path="", unbox=True) -> list[str]:
+def deep_equal(a, b, path="", unbox=True, exact=False) -> list[str]:
     """Return a list of difference descriptions (empty == equal).
 
     ``unbox=False`` drops the one leniency below, for the round-trip phase: a file
     must keep the shape of the theory it was written from, so a one-element array
-    read back as its bare element is a difference there.
+    read back as its bare element is a difference there. ``exact=True`` drops the
+    float tolerance, for the same phase: a writer must keep every number as it is.
     """
     # bools first, because bool is a subclass of int: True must not equal 1.
     if isinstance(a, bool) or isinstance(b, bool):
@@ -94,7 +97,7 @@ def deep_equal(a, b, path="", unbox=True) -> list[str]:
         return [] if same else [f"{path}: {a!r} != {b!r}"]
     if isinstance(a, (int, float)) and isinstance(b, (int, float)):
         # a == b first, so that two equal infinities match (their difference is NaN).
-        return [] if a == b or abs(a - b) <= TOL else [f"{path}: {a} != {b}"]
+        return [] if a == b or (not exact and abs(a - b) <= TOL) else [f"{path}: {a!r} != {b!r}"]
     if isinstance(a, dict) and isinstance(b, dict):
         diffs = []
         for k in sorted(set(a) | set(b)):
@@ -103,7 +106,7 @@ def deep_equal(a, b, path="", unbox=True) -> list[str]:
             elif k not in b:
                 diffs.append(f"{path}.{k}: missing in R output")
             else:
-                diffs += deep_equal(a[k], b[k], f"{path}.{k}", unbox)
+                diffs += deep_equal(a[k], b[k], f"{path}.{k}", unbox, exact)
         return diffs
     if isinstance(a, list) and isinstance(b, list):
         if len(a) != len(b):
@@ -113,16 +116,16 @@ def deep_equal(a, b, path="", unbox=True) -> list[str]:
         # states that invariant rather than leaving zip free to truncate if the
         # guard above is ever moved or loosened.
         for i, (x, y) in enumerate(zip(a, b, strict=True)):
-            diffs += deep_equal(x, y, f"{path}[{i}]", unbox)
+            diffs += deep_equal(x, y, f"{path}[{i}]", unbox, exact)
         return diffs
     # The one leniency: jsonlite's auto_unbox writes an R length-1 vector as a
     # bare scalar, and R has no way to tell the two apart. It applies to a single
     # scalar element only. Unwrapping a nested array or an object would hide a
     # real difference in shape.
     if unbox and isinstance(a, list) and len(a) == 1 and _is_scalar(a[0]) and _is_scalar(b):
-        return deep_equal(a[0], b, path)
+        return deep_equal(a[0], b, path, exact=exact)
     if unbox and isinstance(b, list) and len(b) == 1 and _is_scalar(b[0]) and _is_scalar(a):
-        return deep_equal(a, b[0], path)
+        return deep_equal(a, b[0], path, exact=exact)
     return [] if a == b else [f"{path}: {a!r} != {b!r}"]
 
 
@@ -262,8 +265,21 @@ def as_r_writes(data, paths: list[tuple[str, ...]]):
 
     The mirror of ``.tf_box_path()`` in R's utils.R: a scalar found at the end of
     a path becomes a one-element list, null and containers are left alone, and
-    ``"[]"`` visits every entry of a list or a mapping.
+    ``"[]"`` visits every entry of a list or a mapping. An integer beyond 2^53
+    becomes the double nearest it, which is what R holds (API_SPEC section 3).
     """
+    def as_double(x):
+        if isinstance(x, dict):
+            return {k: as_double(v) for k, v in x.items()}
+        if isinstance(x, list):
+            return [as_double(v) for v in x]
+        if isinstance(x, int) and not isinstance(x, bool) and abs(x) >= 2 ** 53:
+            try:
+                return float(x)
+            except OverflowError:
+                return math.inf if x > 0 else -math.inf
+        return x
+
     def box(x, path):
         if not path:
             return x if x is None or isinstance(x, (list, dict)) else [x]
@@ -278,6 +294,7 @@ def as_r_writes(data, paths: list[tuple[str, ...]]):
             return {**x, head: box(x[head], rest)}
         return x
 
+    data = as_double(data)
     for p in paths:
         data = box(data, p)
     return data
@@ -362,7 +379,7 @@ def roundtrip_failures(tf, originals: dict[str, dict], dirs: dict[str, Path],
                 except ValueError as err:
                     failures.append(f"{label}: unreadable ({err})")
                     continue
-                failures += deep_equal(expected, back, label, unbox=False)
+                failures += deep_equal(expected, back, label, unbox=False, exact=True)
                 if check_schema:
                     failures += [f"{label}: schema: {e}" for e in schema_errors(validator, back)]
     return n, failures

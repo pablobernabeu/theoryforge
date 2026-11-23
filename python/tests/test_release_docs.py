@@ -91,17 +91,28 @@ def test_pyproject_has_no_obsolete_backend_cap_or_licence_classifier():
     assert not licence_classifiers, f"licence classifiers beside license: {licence_classifiers}"
 
 
+def _release(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
 def test_every_record_of_the_version_agrees():
-    # The version is written by hand in five places, and a release that bumps
-    # four of them would print the old one on a site or in a citation.
+    # The version is written by hand in four places, and a release that bumps
+    # three of them would print the old one on a site or a package page.
     found = {
         "pyproject.toml": re.search(r'^version = "([^"]+)"', _text(PYPROJECT), re.M),
         "DESCRIPTION": re.search(r"^Version: (\S+)", _text(REPO / "r" / "theoryforge" / "DESCRIPTION"),
                                  re.M),
-        "CITATION.cff": re.search(r'^version: "([^"]+)"', _text(CITATION), re.M),
         "mkdocs.yml": re.search(r'^  version: "([^"]+)"', _text(PYTHON_DIR / "mkdocs.yml"), re.M),
         "API_SPEC.md": re.search(r"^# .*\(v([^)]+)\)$", _text(REPO / "API_SPEC.md"), re.M),
     }
     assert all(found.values()), [name for name, m in found.items() if m is None]
     versions = {name: m.group(1) for name, m in found.items()}
     assert len(set(versions.values())) == 1, versions
+    # CITATION.cff cites the newest published release, the newest that
+    # CHANGELOG.md dates, and moves to a new version only once that version is
+    # published, so between a release's submission and its publication it cites
+    # the one before.
+    cited = str(yaml.safe_load(_text(CITATION))["version"])
+    dated = re.findall(r"^## \[([^\]]+)\] - \d{4}-\d{2}-\d{2}[ \t]*$", _text(CHANGELOG), flags=re.M)
+    assert dated and cited == dated[0], (cited, dated[:1])
+    assert _release(cited) <= _release(versions["DESCRIPTION"]), (cited, versions["DESCRIPTION"])

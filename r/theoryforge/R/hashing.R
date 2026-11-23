@@ -10,15 +10,9 @@
   if (x == 0) return("0")
   sign <- if (x < 0) "-" else ""
   x <- abs(x)
-  # The fewest significant digits, up to 17, that read back as x. jsonlite
-  # reads them with the C library's strtod, which rounds correctly. R's own
-  # parser rounds some decimals, such as 527.867953, one unit in the last
-  # place, and more of them on a build without long double, so testing the
-  # digits with as.numeric() kept too few or too many of them.
-  candidates <- sprintf("%.*e", 0:16, x)
-  back <- jsonlite::parse_json(paste0("[", paste(candidates, collapse = ","), "]"),
-                               simplifyVector = TRUE)
-  s <- candidates[[which(back == x)[[1L]]]]
+  # The fewest significant digits, up to 17, that read back as x, and of two
+  # such the nearer (.tf_shortest_e() in utils.R).
+  s <- .tf_shortest_e(x)
   parts <- strsplit(s, "e", fixed = TRUE)[[1]]
   digits <- sub("0+$", "", gsub(".", "", parts[[1]], fixed = TRUE))
   if (!nzchar(digits)) digits <- "0"

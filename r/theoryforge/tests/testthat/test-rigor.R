@@ -133,10 +133,11 @@ with_severities <- function(...) {
 }
 
 test_that("the severity mean is a left fold", {
-  # R's sum() uses an extended accumulator on x86_64 and CPython 3.12+ sum()
-  # compensates, so either gives 0.5 here where a plain left-to-right sum, as
-  # on Apple Silicon R or Python 3.11, gives the double just below 0.5. The
-  # twins agree only if both fold left in file order (API_SPEC section 4).
+  # R's sum() accumulates in long double where R has it, as on x86_64 by
+  # default, and CPython 3.12+ sum() compensates, so either gives 0.5 here
+  # where a plain left-to-right sum, as R's on Apple Silicon or without long
+  # double, or Python 3.11's, gives the double just below 0.5. The twins agree
+  # only if both fold left in file order (API_SPEC section 4).
   # That double is written as 0.5 - 2^-54, which R computes exactly on every
   # build. R built without long double reads the literal 0.49999999999999994
   # as 0.5, since it accumulates the digits in a double.
