@@ -190,7 +190,7 @@ def test_an_enum_written_as_a_sequence_reads_as_absent_everywhere(tmp_path):
     sem = t.compile_sem()
     assert "b ~ a" not in sem and "c ~ b" in sem
     assert "a -> b" not in t.diagram("causal_dag")
-    assert '"a" -> "b" [label=""];' in t.diagram("nomological_net")
+    assert '"a" -> "b" [label="p1"];' in t.diagram("nomological_net")
     assert '"pred_h1" [label="h1\\n"' in t.diagram("workflow")
     assert "1. [] Gamma rises with Alpha." in t.preregister()
     # Alpha has no coupling to Beta, so Beta decays exactly as Alpha does.

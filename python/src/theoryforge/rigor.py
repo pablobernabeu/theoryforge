@@ -20,7 +20,7 @@ from ._access import (
 from ._num import rnd
 from ._relations import DIRECTED
 from ._status import classify_auxiliary
-from .diagram import _xml
+from ._text import xml_escape
 from .entailment import prediction_verdicts
 from .redundancy import _pairs
 from .scoring import severity as _rubric
@@ -337,16 +337,16 @@ def report(T, format: str = "json") -> str:
         # Every interpolated value is escaped: the schema allows any non-empty id,
         # so '<' or '&' in it would otherwise reach the markup.
         rows = "\n".join(
-            f'    <tr><td>{_xml(it["id"])}</td><td>{_xml(it["status"])}</td>'
-            f'<td>{"n/a" if it["score"] is None else _xml(it["score"])}</td>'
-            f'<td>{_xml(it["citation"])}</td></tr>'
+            f'    <tr><td>{xml_escape(it["id"])}</td><td>{xml_escape(it["status"])}</td>'
+            f'<td>{"n/a" if it["score"] is None else xml_escape(it["score"])}</td>'
+            f'<td>{xml_escape(it["citation"])}</td></tr>'
             for it in rep["items"]
         )
         return (
             f'<section class="theoryforge-report">\n'
-            f'  <h2>Rigour report: {_xml(rep["theory_id"])}</h2>\n'
-            f'  <p>Aggregate score: <strong>{_xml(rep["aggregate_score"])}</strong> &middot; '
-            f'gate: <strong>{_xml(rep["gate"])}</strong></p>\n'
+            f'  <h2>Rigour report: {xml_escape(rep["theory_id"])}</h2>\n'
+            f'  <p>Aggregate score: <strong>{xml_escape(rep["aggregate_score"])}</strong> &middot; '
+            f'gate: <strong>{xml_escape(rep["gate"])}</strong></p>\n'
             f'  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n'
             f'{rows}\n  </table>\n</section>\n'
         )

@@ -1,0 +1,48 @@
+# Edge case: test outcomes that record no result. h2's passed is null and h3's
+# is absent. The pipeline and workflow views labelled both 'failed' and filled
+# them red, where the preregistration and the dossier say 'no result recorded'.
+# Both views now give them that label and a grey fill. h1 passed and h4 failed,
+# so each of the three roles is drawn.
+schema_version: "1.0"
+id: edge-unrecorded-result
+title: Test outcomes that record no result
+maturity: testing
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+  - id: h2
+    statement: Beta rises with Alpha in adults.
+    type: directional
+    derives_from: [p1]
+  - id: h3
+    statement: Beta rises with Alpha in children.
+    type: directional
+    derives_from: [p1]
+  - id: h4
+    statement: Beta rises with Alpha at rest.
+    type: directional
+    derives_from: [p1]
+test_outcomes:
+  - prediction_id: h1
+    passed: true
+  - prediction_id: h2
+    passed: ~
+  - prediction_id: h3
+    observed: The run was abandoned.
+  - prediction_id: h4
+    passed: false

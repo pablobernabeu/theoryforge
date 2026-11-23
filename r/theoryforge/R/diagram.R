@@ -31,21 +31,6 @@ NULL
   if (nchar(s) > n) paste0(substr(s, 1L, n - 1L), "\u2026") else s
 }
 
-# Escape XML text content: ampersand first, then the angle brackets.
-.tf_xml <- function(s) {
-  if (is.null(s) || length(s) == 0L) {
-    s <- ""
-  } else {
-    s <- s[[1L]]
-    if (is.na(s)) s <- ""
-  }
-  s <- as.character(s)
-  s <- gsub("&", "&amp;", s, fixed = TRUE)
-  s <- gsub("<", "&lt;", s, fixed = TRUE)
-  s <- gsub(">", "&gt;", s, fixed = TRUE)
-  s
-}
-
 # The Meridian palette the DOT views share: fill/border pairs keyed by role.
 # These are part of the IR (both implementations emit them byte-identically),
 # so a renderer needs no styling of its own.
@@ -56,6 +41,7 @@ NULL
   prediction  = c("#E7EDF5", "#33567A"),
   passed      = c("#E5F2E7", "#3E7A46"),
   failed      = c("#F9E5E4", "#B2453C"),
+  unrecorded  = c("#F1F1F1", "#8A8A8A"),
   scope       = c("#FBF7EA", "#B49B55"),
   rival       = c("#F1F1F1", "#8A8A8A"),
   warn        = c("#FBF1DC", "#9C6B14"),
@@ -65,6 +51,10 @@ NULL
 
 # How many advisory steps the development roadmap places side by side.
 .tf_ROADMAP_COLS <- 3L
+
+# The label of each test-outcome role. An outcome whose `passed` is absent,
+# null or not a logical records no result, as the preregistration says.
+.tf_RESULT_LABEL <- c(passed = "passed", failed = "failed", unrecorded = "no result recorded")
 
 # The relation and the prediction type as a label: the enum value, or "" when
 # it is absent (API_SPEC.md section 3, "Reading a theory").
@@ -90,16 +80,20 @@ NULL
   )
 }
 
-# Escape a label and wrap it onto lines of at most `width` characters, breaking
-# at spaces (a longer single word stays whole). Wrapping happens after
-# escaping, and lines join with a literal backslash-n, DOT's in-label newline,
-# so nodes stay narrow enough for a documentation column.
-.tf_wrap <- function(s, width = 18L) {
-  text <- .tf_esc(s)
+# `text` broken at spaces onto lines of at most `width` characters. A longer
+# single word stays whole. The text is split at every space, and the empty
+# words that a run of spaces or a final space leaves are kept like any other
+# word. An empty text gives no lines. Mirrors Python's diagram._wrap_lines.
+.tf_wrap_lines <- function(text, width) {
   if (!nzchar(text)) {
-    return("")
+    return(character(0))
   }
   words <- strsplit(text, " ", fixed = TRUE)[[1L]]
+  # strsplit() drops the empty field after a final space, which Python's
+  # str.split(" ") keeps, so it is put back.
+  if (endsWith(text, " ")) {
+    words <- c(words, "")
+  }
   lines <- character(0)
   cur <- ""
   for (word in words) {
@@ -115,7 +109,15 @@ NULL
   if (nzchar(cur)) {
     lines <- c(lines, cur)
   }
-  paste(lines, collapse = "\\n")
+  lines
+}
+
+# Escape a label and wrap it onto lines of at most `width` characters, breaking
+# at spaces (a longer single word stays whole). Wrapping happens after
+# escaping, and lines join with a literal backslash-n, DOT's in-label newline,
+# so nodes stay narrow enough for a documentation column.
+.tf_wrap <- function(s, width = 18L) {
+  paste(.tf_wrap_lines(.tf_esc(s), width), collapse = "\\n")
 }
 
 .tf_nomological_net <- function(T) {
@@ -126,12 +128,16 @@ NULL
                               .tf_fill("construct")))
   }
   for (p in .tf_list(T, "propositions")) {
+    # The label gives the proposition's id with its relation, so that the ids
+    # a prediction derives from can be found on the figure.
+    parts <- c(.tf_str(p, "id"), .tf_rel(p))
+    label <- .tf_esc(paste(parts[nzchar(parts)], collapse = ": "))
     # An association states covariance with no direction (API_SPEC.md section
     # 28), so its edge is drawn without arrowheads.
     undirected <- if (.tf_rel(p) %in% .tf_BIDIRECTED) ", dir=none" else ""
     lines <- c(lines, sprintf('  "%s" -> "%s" [label="%s"%s];',
                               .tf_esc(.tf_str(p, "from")), .tf_esc(.tf_str(p, "to")),
-                              .tf_esc(.tf_rel(p)), undirected))
+                              label, undirected))
   }
   lines <- c(lines, "}")
   paste0(paste(lines, collapse = "\n"), "\n")
@@ -292,6 +298,13 @@ NULL
   paste0(paste(lines, collapse = "\n"), "\n")
 }
 
+# "passed" or "failed" when an outcome's `passed` is TRUE or FALSE, and
+# "unrecorded" otherwise. Mirrors Python's diagram._result_role.
+.tf_result_role <- function(t) {
+  passed <- .tf_get(t, "passed")
+  if (isTRUE(passed)) "passed" else if (isFALSE(passed)) "failed" else "unrecorded"
+}
+
 # Each test outcome as list(pid, node, role, date), in file order. The k-th
 # outcome of one prediction, from the second on, takes the node suffix "#<k>".
 # A replication thus gets a node and an edge of its own, which Graphviz would
@@ -312,7 +325,7 @@ NULL
     out[[i]] <- list(
       pid = pid,
       node = if (k == 1L) pid else paste0(pid, "#", k),
-      role = if (isTRUE(.tf_get(t, "passed"))) "passed" else "failed",
+      role = .tf_result_role(t),
       date = if (sum(pids == pid) > 1L && .tf_ne_str(date)) date else ""
     )
   }
@@ -321,14 +334,23 @@ NULL
 
 .tf_pipeline <- function(T) {
   lines <- .tf_prelude("pipeline", "LR")
-  for (p in .tf_list(T, "predictions")) {
+  preds <- .tf_list(T, "predictions")
+  for (p in preds) {
     lines <- c(lines, sprintf('  "%s" [label="%s\\n%s", %s];',
                               .tf_esc(.tf_str(p, "id")), .tf_esc(.tf_str(p, "id")),
                               .tf_esc(.tf_ptype(p)), .tf_fill("prediction")))
   }
+  # Under rankdir=LR, Graphviz stacks the nodes of a rank from the bottom up in
+  # the order they are declared. An invisible chain through the predictions in
+  # file order puts the first at the top. A repeated id joins the chain once.
+  chain <- unique(vapply(preds, function(p) .tf_esc(.tf_str(p, "id")), character(1)))
+  if (length(chain) > 1L) {
+    lines <- c(lines, sprintf("  { rank=same; %s [style=invis]; }",
+                              paste0('"', chain, '"', collapse = " -> ")))
+  }
   for (o in .tf_outcome_nodes(T)) {
     rid <- paste0("result_", o$node)
-    label <- paste0(o$role, if (nzchar(o$date)) paste0("\\n", .tf_esc(o$date)))
+    label <- paste0(.tf_RESULT_LABEL[[o$role]], if (nzchar(o$date)) paste0("\\n", .tf_esc(o$date)))
     lines <- c(lines, sprintf('  "%s" [label="%s", %s];', .tf_esc(rid), label, .tf_fill(o$role)))
     lines <- c(lines, sprintf('  "%s" -> "%s";', .tf_esc(o$pid), .tf_esc(rid)))
   }
@@ -392,14 +414,23 @@ NULL
   lines <- c(lines, "  }", .tf_cluster_open("test", "testing"))
   outcomes <- .tf_outcome_nodes(T)
   for (o in outcomes) {
-    label <- paste0(.tf_esc(o$pid), "\\n", o$role,
+    label <- paste0(.tf_esc(o$pid), "\\n", .tf_RESULT_LABEL[[o$role]],
                     if (nzchar(o$date)) paste0("\\n", .tf_esc(o$date)))
     lines <- c(lines, sprintf('    "outcome_%s" [label="%s", %s];',
                               .tf_esc(o$node), label, .tf_fill(o$role)))
   }
   lines <- c(lines, "  }")
   for (p in .tf_list(T, "propositions")) {
-    lines <- c(lines, sprintf('  "%s" -> "prop_%s";', .tf_esc(.tf_str(p, "from")), .tf_esc(.tf_str(p, "id"))))
+    pid <- .tf_esc(.tf_str(p, "id"))
+    # A dashed edge leads from the proposition to the construct it acts on, so a
+    # feedback loop shows. It does not constrain the ranks, which keeps every
+    # construct in the first column. An association has no direction
+    # (API_SPEC.md section 28), so its edge has no arrowhead.
+    undirected <- if (.tf_rel(p) %in% .tf_BIDIRECTED) ", dir=none" else ""
+    lines <- c(lines,
+               sprintf('  "%s" -> "prop_%s";', .tf_esc(.tf_str(p, "from")), pid),
+               sprintf('  "prop_%s" -> "%s" [style=dashed, constraint=false%s];',
+                       pid, .tf_esc(.tf_str(p, "to")), undirected))
   }
   for (pred in .tf_list(T, "predictions")) {
     for (src in .tf_str_list(.tf_get(pred, "derives_from"))) {
@@ -444,44 +475,74 @@ NULL
   sprintf('  <text x="%d" y="%d" text-anchor="middle" font-weight="bold">%d</text>', x, y, k)
 }
 
+# The Venn view wraps a construct name at this many characters and sets its
+# lines this many pixels apart.
+.tf_VENN_WRAP <- 18L
+.tf_VENN_LINE <- 16L
+
+# A wrapped construct name, one <tspan> per line, the first at `y`.
+.tf_vname <- function(x, y, lines) {
+  ys <- y + (seq_along(lines) - 1L) * .tf_VENN_LINE
+  spans <- paste0(sprintf('<tspan x="%d" y="%d">', x, ys),
+                  vapply(lines, .tf_xml, character(1), USE.NAMES = FALSE),
+                  "</tspan>", collapse = "")
+  sprintf('  <text x="%d" y="%d" text-anchor="middle">%s</text>', x, y, spans)
+}
+
+# Each name is wrapped as DOT labels are, and the circles move down by the
+# lines that the names above them add. When the theory has more than three
+# constructs, a second title line says that only the first three are drawn, and
+# the circles move down by that line too.
 .tf_venn <- function(T) {
-  constructs <- .tf_list(T, "constructs")
-  if (length(constructs) > 3L) constructs <- constructs[1:3]
+  every <- .tf_list(T, "constructs")
+  constructs <- if (length(every) > 3L) every[1:3] else every
   n <- length(constructs)
-  nms <- character(0)
+  nms <- list()
   setlist <- list()
   for (c in constructs) {
     nm <- .tf_str(c, "label")
     if (!nzchar(nm)) nm <- .tf_str(c, "id")
-    nms <- c(nms, nm)
+    nm <- .tf_wrap_lines(nm, .tf_VENN_WRAP)
+    nms[[length(nms) + 1L]] <- if (length(nm)) nm else ""
     setlist[[length(setlist) + 1L]] <- unique(.tf_str_list(.tf_get(c, "boundary_conditions")))
   }
-  out <- c(.tf_svg_open(380L, 300L),
-           '  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap</text>')
+  title <- '  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap'
+  top <- 0L
+  if (length(every) > 3L) {
+    title <- paste0(title, sprintf(
+      '<tspan x="190" y="42" font-size="13">first three of %d constructs</tspan>', length(every)))
+    top <- 18L
+  }
+  # The first two names sit above the circles and the third below them.
+  dy <- top + (max(1L, lengths(nms[seq_len(min(n, 2L))])) - 1L) * .tf_VENN_LINE
+  below <- if (n == 3L) (length(nms[[3L]]) - 1L) * .tf_VENN_LINE else 0L
+  out <- c(.tf_svg_open(380L, 300L + dy + below), paste0(title, "</text>"))
   if (n == 0L) {
     out <- c(out, .tf_vlabel(190L, 150L, "(no constructs)"))
   } else if (n == 1L) {
     a <- setlist[[1L]]
-    out <- c(out, .tf_vcircle(190L, 150L, 82L), .tf_vlabel(190L, 55L, nms[1]),
-             .tf_vcount(190L, 155L, length(a)))
+    out <- c(out, .tf_vcircle(190L, 150L + dy, 82L), .tf_vname(190L, 55L + top, nms[[1L]]),
+             .tf_vcount(190L, 155L + dy, length(a)))
   } else if (n == 2L) {
     a <- setlist[[1L]]; b <- setlist[[2L]]
-    out <- c(out, .tf_vcircle(150L, 150L, 82L), .tf_vcircle(230L, 150L, 82L),
-             .tf_vlabel(110L, 50L, nms[1]), .tf_vlabel(270L, 50L, nms[2]),
-             .tf_vcount(110L, 155L, length(setdiff(a, b))),
-             .tf_vcount(190L, 155L, length(intersect(a, b))),
-             .tf_vcount(270L, 155L, length(setdiff(b, a))))
+    out <- c(out, .tf_vcircle(150L, 150L + dy, 82L), .tf_vcircle(230L, 150L + dy, 82L),
+             .tf_vname(110L, 50L + top, nms[[1L]]), .tf_vname(270L, 50L + top, nms[[2L]]),
+             .tf_vcount(110L, 155L + dy, length(setdiff(a, b))),
+             .tf_vcount(190L, 155L + dy, length(intersect(a, b))),
+             .tf_vcount(270L, 155L + dy, length(setdiff(b, a))))
   } else {
     a <- setlist[[1L]]; b <- setlist[[2L]]; cc <- setlist[[3L]]
-    out <- c(out, .tf_vcircle(150L, 135L, 78L), .tf_vcircle(230L, 135L, 78L), .tf_vcircle(190L, 195L, 78L),
-             .tf_vlabel(110L, 45L, nms[1]), .tf_vlabel(270L, 45L, nms[2]), .tf_vlabel(190L, 290L, nms[3]),
-             .tf_vcount(120L, 115L, length(setdiff(setdiff(a, b), cc))),
-             .tf_vcount(260L, 115L, length(setdiff(setdiff(b, a), cc))),
-             .tf_vcount(190L, 230L, length(setdiff(setdiff(cc, a), b))),
-             .tf_vcount(190L, 105L, length(setdiff(intersect(a, b), cc))),
-             .tf_vcount(145L, 180L, length(setdiff(intersect(a, cc), b))),
-             .tf_vcount(235L, 180L, length(setdiff(intersect(b, cc), a))),
-             .tf_vcount(190L, 160L, length(intersect(intersect(a, b), cc))))
+    out <- c(out, .tf_vcircle(150L, 135L + dy, 78L), .tf_vcircle(230L, 135L + dy, 78L),
+             .tf_vcircle(190L, 195L + dy, 78L),
+             .tf_vname(110L, 45L + top, nms[[1L]]), .tf_vname(270L, 45L + top, nms[[2L]]),
+             .tf_vname(190L, 290L + dy, nms[[3L]]),
+             .tf_vcount(120L, 115L + dy, length(setdiff(setdiff(a, b), cc))),
+             .tf_vcount(260L, 115L + dy, length(setdiff(setdiff(b, a), cc))),
+             .tf_vcount(190L, 230L + dy, length(setdiff(setdiff(cc, a), b))),
+             .tf_vcount(190L, 105L + dy, length(setdiff(intersect(a, b), cc))),
+             .tf_vcount(145L, 180L + dy, length(setdiff(intersect(a, cc), b))),
+             .tf_vcount(235L, 180L + dy, length(setdiff(intersect(b, cc), a))),
+             .tf_vcount(190L, 160L + dy, length(intersect(intersect(a, b), cc))))
   }
   out <- c(out, "</svg>")
   paste0(paste(out, collapse = "\n"), "\n")
@@ -546,11 +607,13 @@ NULL
 
 #' Render a diagram intermediate representation
 #'
-#' Produces a deterministic diagram IR string for the requested type. The
-#' \code{engine} argument is accepted but has no effect, because the IR is
-#' engine independent (Graphviz DOT for the six digraph views, dagitty syntax
-#' for the causal DAG and SVG for the \code{venn}, \code{rigour} and
-#' \code{severity} views).
+#' Produces a deterministic diagram IR string for the requested type: Graphviz
+#' DOT for the six digraph views, dagitty syntax for the causal DAG and SVG for
+#' the \code{venn}, \code{rigour} and \code{severity} views.
+#'
+#' The nomological net labels each edge with the proposition's id and relation,
+#' as in \code{p1: increases}, so that the propositions a hypothesis derives
+#' from can be found on the figure.
 #'
 #' The causal DAG is read by \pkg{dagitty} and drawn by the apps with Graphviz.
 #' It writes a construct id bare only when the id is made of ASCII letters,
@@ -567,7 +630,16 @@ NULL
 #' workflow) and each later one `result_<id>#<k>` (`outcome_<id>#<k>`), where
 #' `<k>` counts the prediction's outcomes in file order, so a failed
 #' replication is not merged into an earlier pass. When a prediction has
-#' several outcomes, each label also carries the outcome's date.
+#' several outcomes, each label also carries the outcome's date. An outcome
+#' reads \code{passed} (green) when its \code{passed} is \code{TRUE},
+#' \code{failed} (red) when it is \code{FALSE} and \code{no result recorded}
+#' (grey) otherwise. The pipeline lists the predictions from the top down in
+#' file order. The workflow joins each proposition to the construct it acts on
+#' by a dashed edge, so a feedback loop shows.
+#'
+#' The Venn view wraps each construct name onto lines of at most 18
+#' characters, and when the theory has more than three constructs, its title
+#' says that only the first three are drawn.
 #'
 #' The \code{development_roadmap} and \code{rigour} views score the checklist,
 #' so they stop, as [tf_check()] does, when a test outcome's \code{passed} is
@@ -584,8 +656,9 @@ NULL
 #'   (the checklist as a status grid, as an SVG) or \code{"severity"} (the
 #'   claim-form riskiness of each prediction, the \code{computed_severity} of
 #'   [tf_severity()], as bars in an SVG).
-#' @param engine Rendering engine label, accepted but unused (default
-#'   \code{"graphviz"}).
+#' @param engine Deprecated. It has no effect, because the IR does not depend
+#'   on a rendering engine. Passing it gives a warning, and it will be removed
+#'   in the next minor release.
 #' @return A single string ending in a newline: Graphviz DOT for the digraphs,
 #'   dagitty syntax for the causal DAG and SVG for the \code{venn},
 #'   \code{rigour} and \code{severity} views.
@@ -597,7 +670,11 @@ NULL
 #' cat(tf_diagram(theory, "nomological_net"))
 #' cat(tf_diagram(theory, "causal_dag"))
 #' @export
-tf_diagram <- function(theory, type = "nomological_net", engine = "graphviz") {
+tf_diagram <- function(theory, type = "nomological_net", engine = NULL) {
+  if (!is.null(engine)) {
+    warning("the 'engine' argument of tf_diagram() has no effect and will be removed ",
+            "in the next minor release", call. = FALSE)
+  }
   T <- theory
   if (identical(type, "nomological_net")) {
     return(.tf_nomological_net(T))

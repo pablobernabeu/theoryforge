@@ -5,8 +5,8 @@ digraph nomological_net {
   "c_arousal" [label="Physiological\narousal", fillcolor="#E4F1F1", color="#1E7B7B"];
   "c_perceived_threat" [label="Perceived threat", fillcolor="#E4F1F1", color="#1E7B7B"];
   "c_avoidance" [label="Avoidance\nbehaviour", fillcolor="#E4F1F1", color="#1E7B7B"];
-  "c_arousal" -> "c_perceived_threat" [label="increases"];
-  "c_perceived_threat" -> "c_avoidance" [label="increases"];
-  "c_perceived_threat" -> "c_arousal" [label="causes"];
-  "c_arousal" -> "c_avoidance" [label="increases"];
+  "c_arousal" -> "c_perceived_threat" [label="p1: increases"];
+  "c_perceived_threat" -> "c_avoidance" [label="p2: increases"];
+  "c_perceived_threat" -> "c_arousal" [label="p3: causes"];
+  "c_arousal" -> "c_avoidance" [label="p4: increases"];
 }

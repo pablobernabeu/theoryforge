@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 """Cross-language parity check comparing R outputs with Python's.
 
-Four phases, each run through ``scripts/parity_emit.R``:
+Five phases, each run through ``scripts/parity_emit.R``:
 
   golden     R's artefacts for fixtures/*.theory.yaml and the corpora, against the
              Python-generated goldens in fixtures/expected/.
   edge       R's outcome records for the malformed or awkward theories and corpora
              in fixtures/edge/, against the Python records in fixtures/edge/expected/.
+  edge diagrams
+             every diagram view of each readable theory in fixtures/edge/, a
+             refusal as its message, written live by both twins (no goldens).
   apps       the per-theory artefacts of the app examples in apps/examples/, written
              live by both twins into temporary directories (they have no goldens).
   roundtrip  Python writes every fixture, app example and readable edge case to
@@ -379,6 +382,13 @@ def main() -> int:
         emit_r("edge", EDGE, out)
         n, failures = compare_tree(EDGE_EXPECTED, out)
         results.append(("edge", f"{n} outcome records", failures))
+
+        py_out, r_out = tmp / "edge-diagrams-py", tmp / "edge-diagrams-r"
+        py_out.mkdir()
+        n_theories = _gen_golden().emit_edge_diagrams(EDGE, py_out)
+        emit_r("edge-diagrams", EDGE, r_out)
+        n, failures = compare_tree(py_out, r_out)
+        results.append(("edge diagrams", f"{n_theories} theories, {n} views", failures))
 
         py_out, r_out = tmp / "apps-py", tmp / "apps-r"
         py_out.mkdir()

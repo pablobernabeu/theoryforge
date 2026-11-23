@@ -319,7 +319,7 @@ test_that("a replicated prediction has a node for each outcome", {
     '  "h1" -> "result_h1";\n',
     '  "result_h1#2" [label="failed\\n2026-06-10", fillcolor="#F9E5E4", color="#B2453C"];\n',
     '  "h1" -> "result_h1#2";\n',
-    '  "result_h1_2" [label="'
+    '  "result_h1_2" [label="no result recorded", fillcolor="#F1F1F1", color="#8A8A8A"];\n'
   ), pipe, fixed = TRUE))
   expect_identical(tr_count('"result_h1_2" [', pipe), 1L)
   expect_true(endsWith(pipe, '  "h1_2" -> "result_h1_2";\n}\n'))
@@ -327,13 +327,61 @@ test_that("a replicated prediction has a node for each outcome", {
   expect_true(grepl(paste0(
     '    "outcome_h1" [label="h1\\npassed\\n2026-05-01", fillcolor="#E5F2E7", color="#3E7A46"];\n',
     '    "outcome_h1#2" [label="h1\\nfailed\\n2026-06-10", fillcolor="#F9E5E4", color="#B2453C"];\n',
-    '    "outcome_h1_2" [label="h1_2\\n'
+    '    "outcome_h1_2" [label="h1_2\\nno result recorded", fillcolor="#F1F1F1", color="#8A8A8A"];\n'
   ), flow, fixed = TRUE))
   expect_identical(tr_count('"outcome_h1_2" [', flow), 1L)
   expect_true(endsWith(flow, paste0('  "pred_h1" -> "outcome_h1";\n',
                                     '  "pred_h1" -> "outcome_h1#2";\n',
                                     '  "pred_h1_2" -> "outcome_h1_2";\n',
                                     "}\n")))
+})
+
+# h2's passed is null and h3's is absent, so neither records a result.
+tr_unrecorded <- 'schema_version: "1.0"
+id: unrecorded
+title: Outcomes without a result
+maturity: testing
+predictions:
+  - id: h1
+    statement: Beta rises with Alpha.
+    type: directional
+  - id: h2
+    statement: Beta rises with Alpha in adults.
+    type: directional
+  - id: h3
+    statement: Beta rises with Alpha in children.
+    type: directional
+  - id: h4
+    statement: Beta rises with Alpha at rest.
+    type: directional
+test_outcomes:
+  - prediction_id: h1
+    passed: true
+  - prediction_id: h2
+    passed: ~
+  - prediction_id: h3
+    observed: The run was abandoned.
+  - prediction_id: h4
+    passed: false
+'
+
+test_that("an outcome without a logical result records no result", {
+  # The diagrams called every such outcome failed and filled it red, where the
+  # preregistration and the dossier say that no result is recorded.
+  t <- tr_read(tr_unrecorded)
+  expect_true(grepl(paste0(
+    '  "result_h1" [label="passed", fillcolor="#E5F2E7", color="#3E7A46"];\n',
+    '  "h1" -> "result_h1";\n',
+    '  "result_h2" [label="no result recorded", fillcolor="#F1F1F1", color="#8A8A8A"];\n',
+    '  "h2" -> "result_h2";\n',
+    '  "result_h3" [label="no result recorded", fillcolor="#F1F1F1", color="#8A8A8A"];\n',
+    '  "h3" -> "result_h3";\n',
+    '  "result_h4" [label="failed", fillcolor="#F9E5E4", color="#B2453C"];\n'
+  ), tf_diagram(t, "pipeline"), fixed = TRUE))
+  expect_true(grepl(paste0(
+    '    "outcome_h2" [label="h2\\nno result recorded", fillcolor="#F1F1F1", color="#8A8A8A"];\n',
+    '    "outcome_h3" [label="h3\\nno result recorded", fillcolor="#F1F1F1", color="#8A8A8A"];\n'
+  ), tf_diagram(t, "workflow"), fixed = TRUE))
 })
 
 test_that("a prediction tested once keeps its node and label", {

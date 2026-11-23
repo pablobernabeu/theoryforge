@@ -26,6 +26,7 @@ from ._load import load_document as _load_document
 from ._num import number as _number
 from ._text import trim as _trim
 from .develop import appraise_amendment as _appraise_amendment
+from .diagram import _warn_engine
 from .diagram import diagram as _diagram
 from .dossier import dossier as _dossier
 from .embedding import embedding_redundancy as _embedding_redundancy
@@ -965,14 +966,17 @@ class Theory:
         ``theoryforge.redundancy_check``)."""
         return _redundancy_check(self.data)
 
-    def diagram(self, type: str = "nomological_net", engine: str = "graphviz") -> str:
+    def diagram(self, type: str = "nomological_net", engine: str | None = None) -> str:
         """Return the diagram IR for ``type``.
 
         ``type`` is one of nomological_net, provenance, causal_dag,
         development_roadmap, pipeline, context, workflow, venn, rigour or
-        severity. See ``theoryforge.diagram.diagram``.
+        severity. ``engine`` is deprecated and has no effect. Passing it gives a
+        ``FutureWarning``. See ``theoryforge.diagram.diagram``.
         """
-        return _diagram(self.data, type=type, engine=engine)
+        if engine is not None:
+            _warn_engine(stacklevel=2)
+        return _diagram(self.data, type=type)
 
     def render_diagram(self, type: str = "nomological_net"):
         """Render a digraph view through the optional ``graphviz`` library, or return a

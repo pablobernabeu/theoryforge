@@ -14,13 +14,19 @@
 #             <src_dir>/*.corpus.yaml|json, mirroring edge_outcome() and
 #             corpus_edge_outcome() in scripts/gen_golden.py (src_dir is
 #             fixtures/edge/)
+#   edge-diagrams
+#             every diagram view of each readable <src_dir>/*.theory.yaml|json,
+#             a refusal as its message, mirroring emit_edge_diagrams() in
+#             scripts/gen_golden.py (src_dir is fixtures/edge/)
 #   roundtrip tf_read() then tf_write() for every <src_dir>/*.theory.yaml|json,
 #             each written to <out_dir> under its own name and format
 #             (parity_check.py runs it on the files the Python twin wrote)
 suppressWarnings(suppressMessages({
-  usage <- "usage: Rscript scripts/parity_emit.R <golden|theories|edge|roundtrip> <src_dir> <out_dir> [<pkg_dir>]"
+  usage <- paste("usage: Rscript scripts/parity_emit.R <golden|theories|edge|edge-diagrams|roundtrip>",
+                 "<src_dir> <out_dir> [<pkg_dir>]")
   args <- commandArgs(trailingOnly = TRUE)
-  if (length(args) < 3L || !(args[[1]] %in% c("golden", "theories", "edge", "roundtrip"))) {
+  if (length(args) < 3L ||
+      !(args[[1]] %in% c("golden", "theories", "edge", "edge-diagrams", "roundtrip"))) {
     stop(usage, call. = FALSE)
   }
   mode <- args[[1]]
@@ -168,6 +174,29 @@ suppressWarnings(suppressMessages({
     }
     cat(sprintf("emitted R edge outcomes for %d theory and %d corpus file(s) to %s [R engine from %s]\n",
                 length(inputs), length(corpora), out_dir, loaded_from))
+  } else if (mode == "edge-diagrams") {
+    # A view goes to <name>.<type>.<ext>, or a refusal's message to
+    # <name>.<type>.error, as emit_edge_diagrams() in scripts/gen_golden.py
+    # writes them. A file that cannot be read has no views.
+    inputs <- sort(list.files(src_dir, pattern = "\\.theory\\.(yaml|json)$", full.names = TRUE))
+    n <- 0L
+    for (path in inputs) {
+      t <- tryCatch(tf_read(path), error = function(e) e)
+      if (inherits(t, "error")) next
+      n <- n + 1L
+      name <- sub("\\.theory\\.(yaml|json)$", "", basename(path))
+      for (type in names(diagram_ext)) {
+        ir <- tryCatch(tf_diagram(t, type = type), error = function(e) e)
+        if (inherits(ir, "error")) {
+          write_raw(paste0(error_text(ir), "\n"),
+                    file.path(out_dir, paste0(name, ".", type, ".error")))
+        } else {
+          write_raw(ir, file.path(out_dir, paste0(name, ".", type, ".", diagram_ext[[type]])))
+        }
+      }
+    }
+    cat(sprintf("emitted R diagrams for %d edge theory file(s) to %s [R engine from %s]\n",
+                n, out_dir, loaded_from))
   } else if (mode == "roundtrip") {
     inputs <- sort(list.files(src_dir, pattern = "\\.theory\\.(yaml|json)$", full.names = TRUE))
     for (path in inputs) tf_write(tf_read(path), file.path(out_dir, basename(path)))

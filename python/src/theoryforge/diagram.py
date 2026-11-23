@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import re
+import warnings
 
 from ._access import PRED_TYPE, RELATION, enum, field, items, ne_str, str_list, text
 from ._relations import BIDIRECTED, DIRECTED
-from ._text import ascii_lower, trim
+from ._text import ascii_lower, trim, xml_escape
 
 _TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap",
           "pipeline", "context", "workflow", "venn", "rigour", "severity")
@@ -22,11 +23,6 @@ _DAGITTY_RESERVED = frozenset({"node", "graph"})
 
 def _esc(s) -> str:
     return str(s if s is not None else "").replace("\\", "\\\\").replace('"', '\\"')
-
-
-def _xml(s) -> str:
-    return (str(s if s is not None else "")
-            .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
 def _trunc(s, n: int) -> str:
@@ -59,6 +55,7 @@ _FILL = {
     "prediction":  ("#E7EDF5", "#33567A"),
     "passed":      ("#E5F2E7", "#3E7A46"),
     "failed":      ("#F9E5E4", "#B2453C"),
+    "unrecorded":  ("#F1F1F1", "#8A8A8A"),
     "scope":       ("#FBF7EA", "#B49B55"),
     "rival":       ("#F1F1F1", "#8A8A8A"),
     "warn":        ("#FBF1DC", "#9C6B14"),
@@ -69,6 +66,10 @@ _FILL = {
 
 # How many advisory steps the development roadmap places side by side.
 _ROADMAP_COLS = 3
+
+# The label of each test-outcome role. An outcome whose `passed` is absent,
+# null or not a boolean records no result, as the preregistration says.
+_RESULT_LABEL = {"passed": "passed", "failed": "failed", "unrecorded": "no result recorded"}
 
 
 def _fill(role: str) -> str:
@@ -91,14 +92,13 @@ def _prelude(name: str, rankdir: str, directed: bool = True) -> list[str]:
     ]
 
 
-def _wrap(s, width: int = 18) -> str:
-    """Escape a label and wrap it onto lines of at most `width` characters,
-    breaking at spaces (a longer single word stays whole). Wrapping happens
-    after escaping, and lines join with a literal backslash-n, DOT's in-label
-    newline, so nodes stay narrow enough for a documentation column."""
-    text = _esc(s)
-    if not text:
-        return ""
+def _wrap_lines(text: str, width: int) -> list[str]:
+    """``text`` broken at spaces onto lines of at most ``width`` characters.
+
+    A longer single word stays whole. The text is split at every space, and the
+    empty words that a run of spaces or a final space leaves are kept like any
+    other word. An empty text gives no lines.
+    """
     lines, cur = [], ""
     for word in text.split(" "):
         if not cur:
@@ -110,7 +110,15 @@ def _wrap(s, width: int = 18) -> str:
             cur = word
     if cur:
         lines.append(cur)
-    return "\\n".join(lines)
+    return lines
+
+
+def _wrap(s, width: int = 18) -> str:
+    """Escape a label and wrap it onto lines of at most `width` characters,
+    breaking at spaces (a longer single word stays whole). Wrapping happens
+    after escaping, and lines join with a literal backslash-n, DOT's in-label
+    newline, so nodes stay narrow enough for a documentation column."""
+    return "\\n".join(_wrap_lines(_esc(s), width))
 
 
 def _nomological_net(T: dict) -> str:
@@ -118,11 +126,14 @@ def _nomological_net(T: dict) -> str:
     for c in items(T, "constructs"):
         lines.append(f'  "{_esc(_t(c, "id"))}" [label="{_wrap(_t(c, "label"))}", {_fill("construct")}];')
     for p in items(T, "propositions"):
-        frm, to, rel = _esc(_t(p, "from")), _esc(_t(p, "to")), _esc(_rel(p))
+        frm, to = _esc(_t(p, "from")), _esc(_t(p, "to"))
+        # The label gives the proposition's id with its relation, so that the
+        # ids a prediction derives from can be found on the figure.
+        label = _esc(": ".join(x for x in (_t(p, "id"), _rel(p)) if x))
         # An association states covariance with no direction (API_SPEC.md
         # section 28), so its edge is drawn without arrowheads.
         undirected = ", dir=none" if _rel(p) in BIDIRECTED else ""
-        lines.append(f'  "{frm}" -> "{to}" [label="{rel}"{undirected}];')
+        lines.append(f'  "{frm}" -> "{to}" [label="{label}"{undirected}];')
     lines.append("}")
     return "\n".join(lines) + "\n"
 
@@ -243,6 +254,16 @@ def _development_roadmap(T: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _result_role(t) -> str:
+    """``passed`` or ``failed`` when an outcome's ``passed`` is a boolean, else ``unrecorded``."""
+    passed = field(t, "passed")
+    if passed is True:
+        return "passed"
+    if passed is False:
+        return "failed"
+    return "unrecorded"
+
+
 def _outcome_nodes(T: dict) -> list[tuple[str, str, str, str]]:
     """Each test outcome as ``(prediction id, node, role, date)``, in file order.
 
@@ -264,7 +285,7 @@ def _outcome_nodes(T: dict) -> list[tuple[str, str, str, str]]:
         out.append((
             pid,
             pid if k == 1 else f"{pid}#{k}",
-            "passed" if field(t, "passed") is True else "failed",
+            _result_role(t),
             date if pids.count(pid) > 1 and ne_str(date) else "",
         ))
     return out
@@ -272,12 +293,20 @@ def _outcome_nodes(T: dict) -> list[tuple[str, str, str, str]]:
 
 def _pipeline(T: dict) -> str:
     lines = _prelude("pipeline", "LR")
-    for p in items(T, "predictions"):
+    preds = items(T, "predictions")
+    for p in preds:
         pid = _esc(_t(p, "id"))
         lines.append(f'  "{pid}" [label="{pid}\\n{_esc(_ptype(p))}", {_fill("prediction")}];')
+    # Under rankdir=LR, Graphviz stacks the nodes of a rank from the bottom up
+    # in the order they are declared. An invisible chain through the
+    # predictions in file order puts the first at the top. A repeated id
+    # joins the chain once.
+    chain = list(dict.fromkeys(_esc(_t(p, "id")) for p in preds))
+    if len(chain) > 1:
+        lines.append("  { rank=same; " + " -> ".join(f'"{x}"' for x in chain) + " [style=invis]; }")
     for pid, node, role, date in _outcome_nodes(T):
         rid = f"result_{node}"
-        label = role + (f"\\n{_esc(date)}" if date else "")
+        label = _RESULT_LABEL[role] + (f"\\n{_esc(date)}" if date else "")
         lines.append(f'  "{_esc(rid)}" [label="{label}", {_fill(role)}];')
         lines.append(f'  "{_esc(pid)}" -> "{_esc(rid)}";')
     lines.append("}")
@@ -332,11 +361,19 @@ def _workflow(T: dict) -> str:
     _cluster(lines, "test", "testing")
     outcomes = _outcome_nodes(T)
     for pid, node, role, date in outcomes:
-        label = f"{_esc(pid)}\\n{role}" + (f"\\n{_esc(date)}" if date else "")
+        label = f"{_esc(pid)}\\n{_RESULT_LABEL[role]}" + (f"\\n{_esc(date)}" if date else "")
         lines.append(f'    "outcome_{_esc(node)}" [label="{label}", {_fill(role)}];')
     lines.append("  }")
     for p in items(T, "propositions"):
-        lines.append(f'  "{_esc(_t(p, "from"))}" -> "prop_{_esc(_t(p, "id"))}";')
+        pid = _esc(_t(p, "id"))
+        lines.append(f'  "{_esc(_t(p, "from"))}" -> "prop_{pid}";')
+        # A dashed edge leads from the proposition to the construct it acts on,
+        # so a feedback loop shows. It does not constrain the ranks, which keeps
+        # every construct in the first column. An association has no direction
+        # (API_SPEC.md section 28), so its edge has no arrowhead.
+        undirected = ", dir=none" if _rel(p) in BIDIRECTED else ""
+        lines.append(f'  "prop_{pid}" -> "{_esc(_t(p, "to"))}" '
+                     f'[style=dashed, constraint=false{undirected}];')
     for pred in items(T, "predictions"):
         for src in str_list(field(pred, "derives_from")):
             lines.append(f'  "prop_{_esc(src)}" -> "pred_{_esc(_t(pred, "id"))}";')
@@ -374,7 +411,20 @@ def _svg_open(width: int, height: int) -> str:
 
 
 def _vlabel(x: int, y: int, s) -> str:
-    return f'  <text x="{x}" y="{y}" text-anchor="middle">{_xml(s)}</text>'
+    return f'  <text x="{x}" y="{y}" text-anchor="middle">{xml_escape(s)}</text>'
+
+
+# The Venn view wraps a construct name at this many characters and sets its
+# lines this many pixels apart.
+_VENN_WRAP = 18
+_VENN_LINE = 16
+
+
+def _vname(x: int, y: int, lines: list[str]) -> str:
+    """A wrapped construct name, one ``<tspan>`` per line, the first at ``y``."""
+    spans = "".join(f'<tspan x="{x}" y="{y + i * _VENN_LINE}">{xml_escape(s)}</tspan>'
+                    for i, s in enumerate(lines))
+    return f'  <text x="{x}" y="{y}" text-anchor="middle">{spans}</text>'
 
 
 def _vcount(x: int, y: int, k: int) -> str:
@@ -383,34 +433,50 @@ def _vcount(x: int, y: int, k: int) -> str:
 
 def _venn(T: dict) -> str:
     """Construct scope overlap: the first up to three constructs as sets of their
-    boundary conditions, drawn as a fixed-layout (integer-coordinate) Venn diagram."""
-    constructs = items(T, "constructs")[:3]
+    boundary conditions, drawn as a fixed-layout (integer-coordinate) Venn diagram.
+
+    Each name is wrapped as DOT labels are, and the circles move down by the
+    lines that the names above them add. When the theory has more than three
+    constructs, a second title line says that only the first three are drawn,
+    and the circles move down by that line too.
+    """
+    every = items(T, "constructs")
+    constructs = every[:3]
     names, sets = [], []
     for c in constructs:
-        names.append(_t(c, "label") or _t(c, "id"))
+        names.append(_wrap_lines(_t(c, "label") or _t(c, "id"), _VENN_WRAP) or [""])
         sets.append(set(str_list(field(c, "boundary_conditions"))))
     n = len(constructs)
-    out = [_svg_open(380, 300),
-           '  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap</text>']
+    title = '  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap'
+    top = 0
+    if len(every) > 3:
+        title += f'<tspan x="190" y="42" font-size="13">first three of {len(every)} constructs</tspan>'
+        top = 18
+    # The first two names sit above the circles and the third below them.
+    dy = top + (max((len(x) for x in names[:2]), default=1) - 1) * _VENN_LINE
+    below = (len(names[2]) - 1) * _VENN_LINE if n == 3 else 0
+    out = [_svg_open(380, 300 + dy + below), title + "</text>"]
     if n == 0:
         out.append(_vlabel(190, 150, "(no constructs)"))
     elif n == 1:
         a = sets[0]
-        out += [_circle(190, 150, 82), _vlabel(190, 55, names[0]), _vcount(190, 155, len(a))]
+        out += [_circle(190, 150 + dy, 82), _vname(190, 55 + top, names[0]),
+                _vcount(190, 155 + dy, len(a))]
     elif n == 2:
         a, b = sets[0], sets[1]
-        out += [_circle(150, 150, 82), _circle(230, 150, 82),
-                _vlabel(110, 50, names[0]), _vlabel(270, 50, names[1]),
-                _vcount(110, 155, len(a - b)), _vcount(190, 155, len(a & b)),
-                _vcount(270, 155, len(b - a))]
+        out += [_circle(150, 150 + dy, 82), _circle(230, 150 + dy, 82),
+                _vname(110, 50 + top, names[0]), _vname(270, 50 + top, names[1]),
+                _vcount(110, 155 + dy, len(a - b)), _vcount(190, 155 + dy, len(a & b)),
+                _vcount(270, 155 + dy, len(b - a))]
     else:
         a, b, c = sets[0], sets[1], sets[2]
-        out += [_circle(150, 135, 78), _circle(230, 135, 78), _circle(190, 195, 78),
-                _vlabel(110, 45, names[0]), _vlabel(270, 45, names[1]), _vlabel(190, 290, names[2]),
-                _vcount(120, 115, len(a - b - c)), _vcount(260, 115, len(b - a - c)),
-                _vcount(190, 230, len(c - a - b)), _vcount(190, 105, len((a & b) - c)),
-                _vcount(145, 180, len((a & c) - b)), _vcount(235, 180, len((b & c) - a)),
-                _vcount(190, 160, len(a & b & c))]
+        out += [_circle(150, 135 + dy, 78), _circle(230, 135 + dy, 78), _circle(190, 195 + dy, 78),
+                _vname(110, 45 + top, names[0]), _vname(270, 45 + top, names[1]),
+                _vname(190, 290 + dy, names[2]),
+                _vcount(120, 115 + dy, len(a - b - c)), _vcount(260, 115 + dy, len(b - a - c)),
+                _vcount(190, 230 + dy, len(c - a - b)), _vcount(190, 105 + dy, len((a & b) - c)),
+                _vcount(145, 180 + dy, len((a & c) - b)), _vcount(235, 180 + dy, len((b & c) - a)),
+                _vcount(190, 160 + dy, len(a & b & c))]
     out.append("</svg>")
     return "\n".join(out) + "\n"
 
@@ -427,13 +493,14 @@ def _rigor(T: dict) -> str:
     h = 60 + len(items) * 24 + 12
     out = [_svg_open(460, h),
            '  <text x="20" y="28" font-size="15">Rigour checklist</text>',
-           f'  <text x="20" y="46">aggregate score {rep["aggregate_score"]:.1f}, gate {rep["gate"]}</text>']
+           f'  <text x="20" y="46">aggregate score {rep["aggregate_score"]:.1f}, '
+           f'gate {xml_escape(rep["gate"])}</text>']
     for i, it in enumerate(items):
         y = 60 + i * 24
         colour = _STATUS_COLOUR.get(it["status"], "#9e9e9e")
         out.append(f'  <rect x="20" y="{y}" width="16" height="16" rx="3" fill="{colour}"/>')
-        out.append(f'  <text x="44" y="{y + 12}">{_xml(it["id"])}</text>')
-        out.append(f'  <text x="320" y="{y + 12}">{_xml(it["status"])}</text>')
+        out.append(f'  <text x="44" y="{y + 12}">{xml_escape(it["id"])}</text>')
+        out.append(f'  <text x="320" y="{y + 12}">{xml_escape(it["status"])}</text>')
     out.append("</svg>")
     return "\n".join(out) + "\n"
 
@@ -459,19 +526,26 @@ def _severity_chart(T: dict) -> str:
         y = 40 + i * 28
         sev = r["computed_severity"]
         w = int(sev * 200 + 0.5 + 1e-6)
-        out.append(f'  <text x="20" y="{y + 12}">{_xml(labels[i])}</text>')
+        out.append(f'  <text x="20" y="{y + 12}">{xml_escape(labels[i])}</text>')
         out.append(f'  <rect x="{bar_x}" y="{y}" width="{w}" height="16" rx="2" fill="#4e79a7"/>')
         out.append(f'  <text x="{bar_x + w + 5}" y="{y + 12}">{sev:.3f}</text>')
     out.append("</svg>")
     return "\n".join(out) + "\n"
 
 
-def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") -> str:
+def _warn_engine(stacklevel: int) -> None:
+    """Warn that the ``engine`` argument of ``diagram()`` is deprecated."""
+    warnings.warn("the 'engine' argument of diagram() has no effect and will be removed "
+                  "in the next minor release", FutureWarning, stacklevel=stacklevel + 1)
+
+
+def diagram(T: dict, type: str = "nomological_net", engine: str | None = None) -> str:
     """Return the diagram IR string for the requested type.
 
     ``T`` is a ``Theory`` or a parsed theory mapping. ``type`` is one of
     ``nomological_net`` (the default, the constructs and the propositions
-    between them, an association drawn without arrowheads), ``provenance``
+    between them, each edge labelled with the proposition's id and relation
+    and an association drawn without arrowheads), ``provenance``
     (the build log as a chain of steps), ``causal_dag`` (the graph
     ``implications()`` reads), ``development_roadmap`` (the checklist items
     that fail or warn, blockers and heavier checks first, under a hub giving
@@ -483,9 +557,10 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
     ``severity`` (the claim-form riskiness of each prediction, the
     ``computed_severity`` of ``severity()``, as bars).
 
-    ``engine`` is accepted but has no effect, because the IR is engine-independent
-    (DOT for the digraphs, dagitty syntax for the causal DAG and SVG for the Venn,
-    the rigour grid and the severity chart).
+    ``engine`` is deprecated. It has no effect, because the IR is
+    engine-independent (DOT for the digraphs, dagitty syntax for the causal DAG
+    and SVG for the Venn, the rigour grid and the severity chart). Passing it
+    gives a ``FutureWarning``, and it will be removed in the next minor release.
 
     The causal DAG is read by dagitty and drawn by the apps with Graphviz. It
     writes a construct id bare only when the id is made of ASCII letters,
@@ -501,7 +576,15 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
     (``outcome_<id>#<k>``), where ``<k>`` counts the prediction's outcomes in
     file order, so a failed replication is not merged into an earlier pass.
     When a prediction has several outcomes, each label also carries the
-    outcome's date.
+    outcome's date. An outcome reads ``passed`` (green) when its ``passed`` is
+    true, ``failed`` (red) when it is false and ``no result recorded`` (grey)
+    otherwise. The pipeline lists the predictions from the top down in file
+    order. The workflow joins each proposition to the construct it acts on by
+    a dashed edge, so a feedback loop shows.
+
+    The Venn view wraps each construct name onto lines of at most 18
+    characters, and when the theory has more than three constructs, its title
+    says that only the first three are drawn.
 
     Raises:
         ValueError: for an unknown ``type``, and for a causal DAG that would
@@ -512,6 +595,8 @@ def diagram(T: dict, type: str = "nomological_net", engine: str = "graphviz") ->
             test outcome's ``passed`` is present and not a boolean or a
             prediction's ``severity`` is not a finite number within [0, 1].
     """
+    if engine is not None:
+        _warn_engine(stacklevel=2)
     T = T.data if hasattr(T, "data") else T
     if type == "nomological_net":
         return _nomological_net(T)

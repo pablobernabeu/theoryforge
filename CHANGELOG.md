@@ -14,6 +14,30 @@ version and a single behavioural contract
 
 ## [Unreleased]
 
+### Changed
+- The `pipeline` and `workflow` views of `diagram()` label an outcome whose `passed` is
+  absent, null or not a boolean `no result recorded` and fill it grey, as the
+  preregistration and the dossier describe it, where they labelled it `failed` and filled
+  it red.
+- The `workflow` view adds a dashed edge from each proposition to the construct it acts
+  on, so that every outcome construct is joined to the graph and a feedback loop shows.
+- The `pipeline` view lists the predictions from the top down in file order, where
+  Graphviz stacked them from the bottom up.
+- The `nomological_net` view labels each edge with the proposition's id and its relation,
+  as in `p1: increases`, so that the propositions a hypothesis derives from can be found
+  on the figure.
+- The `venn` view wraps each construct name onto lines of at most 18 characters, where
+  long names ran into each other and off the canvas, and its title says when only the
+  first three of a theory's constructs are drawn.
+
+### Deprecated
+- The `engine` argument of `diagram()` has no effect and will be removed in the next
+  minor release. Passing it gives a warning (Python: `FutureWarning`).
+
+### Fixed
+- R's `tf_diagram()` keeps every space at the end of a label, title, scope condition or
+  provenance detail, where it dropped one and so wrote different DOT from Python's.
+
 ### Documentation
 - R's `?tf_dossier`, the Python dossier module, the Python README, home page and workflow
   page and the code the apps show for `preregister()` call its output the hypotheses

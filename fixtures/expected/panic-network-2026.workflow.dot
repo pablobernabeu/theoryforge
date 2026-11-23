@@ -39,8 +39,11 @@ digraph workflow {
     "outcome_pred_indep" [label="pred_indep\nfailed", fillcolor="#F9E5E4", color="#B2453C"];
   }
   "c_arousal" -> "prop_p1";
+  "prop_p1" -> "c_perceived_threat" [style=dashed, constraint=false];
   "c_perceived_threat" -> "prop_p2";
+  "prop_p2" -> "c_avoidance" [style=dashed, constraint=false];
   "c_perceived_threat" -> "prop_p3";
+  "prop_p3" -> "c_arousal" [style=dashed, constraint=false];
   "prop_p1" -> "pred_pred1";
   "prop_p3" -> "pred_pred1";
   "prop_p2" -> "pred_pred2";

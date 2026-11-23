@@ -4,7 +4,8 @@ The two languages disagree on what whitespace is and on how to lowercase:
 Python's ``str.strip()`` and R's ``trimws()`` trim different characters, and
 ``str.lower()`` turns the Turkish dotted capital I into two code points where
 R's ``tolower()`` gives one. These helpers pin one reading, and R's ``text.R``
-mirrors each of them.
+mirrors each of them. The module also holds the XML escaper that the chart
+views of ``diagram()`` and the HTML rigour report share.
 """
 from __future__ import annotations
 
@@ -31,6 +32,15 @@ def trim(s: str) -> str:
 def squish(s: str) -> str:
     """``s`` trimmed, with each run of whitespace-set characters inside it made one space."""
     return trim(_WS_RUN.sub(" ", s))
+
+
+def xml_escape(s: object) -> str:
+    """``s`` as XML text content: ``&``, ``<`` and ``>`` escaped, ampersand first.
+
+    ``None`` gives the empty string, and any other value its ``str()``.
+    """
+    return (str(s if s is not None else "")
+            .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
 def ascii_lower(s: str) -> str:

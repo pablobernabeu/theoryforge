@@ -190,7 +190,7 @@ test_that("an enum written as a sequence reads as absent everywhere", {
   expect_false(grepl("b ~ a", sem, fixed = TRUE))
   expect_true(grepl("c ~ b", sem, fixed = TRUE))
   expect_false(grepl("a -> b", tf_diagram(t, "causal_dag"), fixed = TRUE))
-  expect_true(grepl('"a" -> "b" [label=""];', tf_diagram(t, "nomological_net"), fixed = TRUE))
+  expect_true(grepl('"a" -> "b" [label="p1"];', tf_diagram(t, "nomological_net"), fixed = TRUE))
   expect_true(grepl('"pred_h1" [label="h1\\n"', tf_diagram(t, "workflow"), fixed = TRUE))
   expect_true(grepl("1. [] Gamma rises with Alpha.", tf_preregister(t), fixed = TRUE))
   # Alpha has no coupling to Beta, so Beta decays exactly as Alpha does.

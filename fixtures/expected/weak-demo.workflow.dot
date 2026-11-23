@@ -31,4 +31,5 @@ digraph workflow {
     fontcolor="#5B7285";
   }
   "k_motivation" -> "prop_q1";
+  "prop_q1" -> "k_drive" [style=dashed, constraint=false, dir=none];
 }

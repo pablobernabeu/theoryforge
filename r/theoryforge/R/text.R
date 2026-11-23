@@ -5,8 +5,10 @@
 #' Python's str.lower() turns the Turkish dotted capital I into two code points
 #' where tolower() gives one, while ?tolower calls tolower() platform-dependent.
 #' These helpers pin one reading (API_SPEC.md sections 3, 6, 10, 14, 18 and 19),
-#' and the Python twin's _text.py mirrors each of them. The file is ASCII, as
-#' CRAN asks, so every other character is written as an escape.
+#' and the Python twin's _text.py mirrors each of them. The file also holds the
+#' XML escaper that the chart views of tf_diagram() and the HTML rigour report
+#' share. The file is ASCII, as CRAN asks, so every other character is written
+#' as an escape.
 #'
 #' @keywords internal
 #' @noRd
@@ -30,6 +32,23 @@ NULL
 # space. Mirrors Python's _text.squish.
 .tf_squish <- function(x) {
   .tf_trim(gsub(paste0(.tf_WS_CLASS, "+"), " ", enc2utf8(x), perl = TRUE))
+}
+
+# `s` as XML text content: the ampersand escaped first, then the angle
+# brackets. NULL, an empty vector and NA give the empty string, and any other
+# value its first element as a string. Mirrors Python's _text.xml_escape.
+.tf_xml <- function(s) {
+  if (is.null(s) || length(s) == 0L) {
+    s <- ""
+  } else {
+    s <- s[[1L]]
+    if (is.na(s)) s <- ""
+  }
+  s <- as.character(s)
+  s <- gsub("&", "&amp;", s, fixed = TRUE)
+  s <- gsub("<", "&lt;", s, fixed = TRUE)
+  s <- gsub(">", "&gt;", s, fixed = TRUE)
+  s
 }
 
 # `x` with A-Z lowercased and every other character kept.

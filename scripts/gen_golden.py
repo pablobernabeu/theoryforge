@@ -227,6 +227,31 @@ def edge_corpus_inputs(edge_dir: Path = EDGE) -> dict[str, Path]:
     return _edge_files(edge_dir, "corpus")
 
 
+def emit_edge_diagrams(edge_dir: Path, out_dir: Path) -> int:
+    """Write every diagram view of each readable edge-case theory into ``out_dir``.
+
+    A view goes to ``<name>.<type>.<ext>``, or, when ``diagram()`` refuses the
+    theory, the message goes to ``<name>.<type>.error``. Returns the number of
+    theories read. ``scripts/parity_check.py`` compares the files with those
+    that ``parity_emit.R edge-diagrams`` writes for the same inputs. They are
+    written live and not kept, as for the app examples.
+    """
+    n = 0
+    for name, path in edge_inputs(edge_dir).items():
+        try:
+            t = tf.read(path)
+        except Exception:
+            continue
+        n += 1
+        for dtype, ext in DIAGRAMS.items():
+            try:
+                out, ir = f"{name}.{dtype}.{ext}", t.diagram(dtype)
+            except Exception as err:
+                out, ir = f"{name}.{dtype}.error", error_text(err) + "\n"
+            (out_dir / out).write_bytes(ir.encode("utf-8"))
+    return n
+
+
 def write_edge_outcomes() -> list[str]:
     """Write one outcome record per edge case and prune records left by deleted cases."""
     EDGE_EXPECTED.mkdir(parents=True, exist_ok=True)
