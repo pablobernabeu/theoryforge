@@ -13,14 +13,15 @@ tf_fetch_corpus(
 )
 }
 \arguments{
-\item{query}{Free-text search query.}
+\item{query}{Free-text search query, a single non-empty string.}
 
 \item{per_page}{Number of works to request in each page (default \code{25}).
 It may be 1 to 200, but OpenAlex supports pages of up to 100 and has
 deprecated larger ones.}
 
-\item{mailto}{Optional contact email. It is still sent, but OpenAlex now
-ignores it, since API keys replaced the polite pool it once selected.}
+\item{mailto}{Optional contact email, sent when it is a non-empty string.
+OpenAlex now ignores it, since API keys replaced the polite pool it once
+selected.}
 
 \item{api_key}{An OpenAlex API key, by default the \code{OPENALEX_API_KEY}
 environment variable. It is sent only in an \code{Authorization: Bearer}
@@ -41,26 +42,33 @@ to a live service whose results change over time, so it is not part of the
 package's deterministic core. Each work is mapped to
 \code{{id, doi, title, year, keywords, references}}, with the DOI as OpenAlex
 gives it (keywords falls back to the first five concepts when no keywords
-are present).
+are present). A work whose title is null has no \code{title}, since the
+corpus schema types a title as a string. Only the fields the record uses are
+requested.
 }
 \details{
 OpenAlex returns the works that match a search in pages of \code{per_page},
 ranked by relevance, and a search usually matches far more works than one
-page holds. A \code{max_records} above \code{per_page} pages on through
-OpenAlex's cursor until that many works are collected or the results run
-out. Paging needs an API key: without one, OpenAlex serves the first page
-and refuses the next with HTTP 401, so the function stops and keeps none of
-the works already fetched. By default, \code{max_records} equals
-\code{per_page}, so one request is made, which works without a key. Each
-page is one request and costs USD 0.001. OpenAlex allows USD 0.10 a day
-without a key, about 100 one-page searches, and USD 1 with a free key. When
-OpenAlex refuses a request, as it does with HTTP 429 once the budget is
-spent and with HTTP 401 when a later page is asked for without a key, the
-function stops with the status and, when the suggested \pkg{curl} package
-is installed, OpenAlex's own message. The request is not retried. Every
-request is abandoned after 30 seconds.
+page holds. A \code{max_records} above \code{per_page} pages on until that
+many works are collected or the results run out. By default,
+\code{max_records} equals \code{per_page}, so one request is made. When the
+pages needed lie within the first 10,000 results, they are requested by
+number, which OpenAlex serves without a key. A larger \code{max_records}
+pages through OpenAlex's cursor instead, and OpenAlex serves a cursor past
+the first page only with an API key: without one, it refuses the second page
+with HTTP 401. Each page is one request and costs USD 0.001. OpenAlex allows
+USD 0.10 a day without a key, about 100 pages, and USD 1 with a free key.
+When OpenAlex refuses a request, as it does with HTTP 429 once the budget is
+spent and with HTTP 401 when a later cursor page is asked for without a key,
+the function stops with the status and, when the suggested \pkg{curl}
+package is installed, OpenAlex's own message. The request is not retried.
+When a page after the first fails, the works fetched before it are not
+returned, and the message ends with the number of them, as in
+\code{(after 200 records were fetched)}. Every request is abandoned after
+30 seconds.
 
-The arguments are checked before any request. \code{per_page} must be a
+The arguments are checked before any request. \code{query} must be a single
+string with at least one character left after trimming, \code{per_page} a
 whole number from 1 to 200 and \code{max_records} a positive whole number,
 and \code{api_key}, unless \code{NULL}, must be a single string that holds
 only visible ASCII characters once the spaces, tabs and line breaks around it
@@ -74,14 +82,17 @@ the order (\code{sort}). The date matters because the keywords change.
 Since late September 2026, OpenAlex has written each work's keywords with a
 language model that reads its title, abstract and venue. It merges and
 splits that vocabulary over time. Works without keywords fall back to their
-concepts, a deprecated vocabulary with capitalised names that do not match
-the lower-case keywords in \code{\link[=tf_litmap]{tf_litmap()}}. Save a fetched corpus and work
-from the saved file.
+concepts, a deprecated vocabulary of its own. \code{\link[=tf_litmap]{tf_litmap()}} compares
+keywords as exact strings, so a concept matches a keyword only where the two
+vocabularies write a term alike, which the concept 'Panic disorder' and the
+keyword 'panic disorder' do not. Save a fetched corpus and work from the
+saved file.
 }
 \examples{
 \dontrun{
-# With OPENALEX_API_KEY set, for example in .Renviron, the key is sent in a
-# request header.
+# Four pages of 100 lie within the first 10,000 results, so no key is
+# needed. With OPENALEX_API_KEY set, for example in .Renviron, the key is
+# sent in a request header.
 corpus <- tf_fetch_corpus("panic disorder interoception",
                           per_page = 100, max_records = 400)
 corpus$source

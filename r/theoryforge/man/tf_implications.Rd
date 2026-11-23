@@ -4,7 +4,7 @@
 \alias{tf_implications}
 \title{Derive a theory's implied conditional independencies}
 \usage{
-tf_implications(theory, cycles = "refuse")
+tf_implications(theory, cycles = "refuse", given = "basis")
 }
 \arguments{
 \item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
@@ -13,13 +13,19 @@ tf_implications(theory, cycles = "refuse")
 \code{"refuse"} (the default) stops with an error, and \code{"sigma"}
 derives the statements by sigma-separation (see the section on feedback
 loops).}
+
+\item{given}{The conditioning sets: \code{"basis"} (the default), the
+parents of the pair or else its other ancestors, or \code{"minimal"},
+that set pruned to a minimal one.}
 }
 \value{
 A named list
-\code{list(theory_id, criterion, acyclic, constructs, n_edges,
-  n_bidirected, feedback, implications, n_implications, inseparable)}.
-\code{criterion} names the separation criterion, \code{"m"} under
-\code{cycles = "refuse"} and \code{"sigma"} under \code{cycles = "sigma"}.
+\code{list(theory_id, criterion, conditioning, acyclic, constructs,
+  n_edges, n_bidirected, feedback, implications, n_implications,
+  inseparable)}. \code{criterion} names the separation criterion, \code{"m"}
+under \code{cycles = "refuse"} and \code{"sigma"} under
+\code{cycles = "sigma"}, and \code{conditioning} the value of
+\code{given}.
 \code{constructs} holds the vertices in file order. \code{n_edges} counts
 the directed edges the theory states and \code{n_bidirected} the
 bidirected ones, a pair stated twice counting once, before any
@@ -55,6 +61,16 @@ acyclic, they are the basis set of Pearl (1988) and Shipley (2000), from
 which every other independence the graph implies follows.
 }
 \details{
+\code{given = "minimal"} then drops each construct from the conditioning
+set, in file order, whenever the rest still separate the pair, which leaves
+a minimal separating set: no construct in it can be dropped. Every set tried
+lies among the ancestors of the pair, where m-separation is separation in an
+undirected graph that holding more constructs fixed cannot reopen
+(Richardson, 2003), so one pass suffices. Fewer conditioning constructs mean
+fewer measured with error, which matters for the reason given below. The
+minimal set returned is one of possibly several, and the file order of the
+constructs decides which.
+
 Constructs that no directed relation names are left out, because silence
 about a construct is not a claim that it is independent of anything, and so
 are constructs without an id, which no proposition can name. A construct
@@ -105,7 +121,8 @@ model.
 \section{Refusals}{
 
 The function stops in four cases. A value of \code{cycles} other than
-\code{"refuse"} or \code{"sigma"} is refused before the theory is read. Two
+\code{"refuse"} or \code{"sigma"}, or of \code{given} other than
+\code{"basis"} or \code{"minimal"}, is refused before the theory is read. Two
 constructs sharing an id would give one node two sets of parents, and a
 directed relation naming an undeclared construct would shrink the graph and
 so imply independencies the theory never claimed. With

@@ -9,7 +9,12 @@ tf_render_report(theory, path, title = NULL, render = FALSE, to = "html")
 \arguments{
 \item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
-\item{path}{Destination path. Any extension is replaced with \code{.qmd}.}
+\item{path}{Destination path. A file name that does not end in
+\code{.qmd} (in any letter case) loses everything from its last dot,
+unless the name begins with that dot, and gains \code{.qmd}. So
+\code{report.md} is written as \code{report.qmd}, \code{report} and
+\code{.hidden} gain the suffix and \code{a.tar.gz} becomes
+\code{a.tar.qmd}.}
 
 \item{title}{Optional report title. It defaults to
 \code{"theoryforge report: <title-or-id>"}, also when \code{NULL},

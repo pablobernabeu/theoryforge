@@ -2,32 +2,38 @@
 % Please edit documentation in R/core.R
 \name{tf_add_proposition}
 \alias{tf_add_proposition}
-\title{Add a proposition to a theory (BUILDING mode)}
+\title{Add a proposition to a theory}
 \usage{
-tf_add_proposition(theory, id, from, to, relation, mechanism = NULL)
+tf_add_proposition(
+  theory,
+  id,
+  from,
+  to,
+  relation,
+  mechanism = NULL,
+  functional_form = NULL
+)
 }
 \arguments{
 \item{theory}{A theory object (named list).}
 
-\item{id, from, to, relation}{Proposition fields. \code{from} is the source
-construct id (named \code{from} to match the schema field). \code{relation}
-is one of the directed relations \code{"increases"}, \code{"decreases"},
-\code{"causes"}, \code{"mediates"} (one link of a mediated path) and
-\code{"moderates"} (\code{from} modifies the effect of other causes on
-\code{to}), or \code{"associates"}, covariance between \code{from} and
-\code{to} that the theory leaves unexplained.}
+\item{id, from, to, relation}{Proposition fields. \code{relation} is one of
+\code{"increases"}, \code{"decreases"}, \code{"causes"},
+\code{"mediates"}, \code{"moderates"} or \code{"associates"}.}
 
-\item{mechanism}{Optional mechanism string.}
+\item{mechanism}{Optional statement of why the relation holds.}
+
+\item{functional_form}{Optional description of the relation's shape.}
 }
 \value{
-The (mutated) theory object.
+The theory with the proposition added.
 }
 \description{
-Add a proposition to a theory (BUILDING mode)
+Appends a proposition and a provenance entry. R does not change the theory
+in place, so assign the result.
 }
 \examples{
 tf_theory("demo-1", "A demonstration theory") |>
-  tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
-  tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
-  tf_add_proposition("p1", "c_arousal", "c_threat", "increases")
+  tf_add_proposition("p1", "c_arousal", "c_threat", "increases",
+                     mechanism = "Bodily cues are read as danger.")
 }

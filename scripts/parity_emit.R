@@ -256,6 +256,19 @@ suppressWarnings(suppressMessages({
       write_raw(paste0(jsonlite::toJSON(new_dois, auto_unbox = FALSE, pretty = TRUE), "\n"),
                 file.path(out_dir, "panic-network-2026.new_evidence_dois.json"))
 
+      # tf_read_dagitty: each model text of the case list gives the
+      # constructs, propositions and provenance it reads as, or the message it
+      # is refused with.
+      cases <- jsonlite::fromJSON(file.path(fixtures_dir, "edge", "dagitty.cases.json"))
+      outcomes <- lapply(cases, function(text) {
+        tryCatch({
+          t <- tf_read_dagitty(text)
+          list(ok = t[c("constructs", "propositions", "provenance")])
+        }, error = function(e) list(error = conditionMessage(e)))
+      })
+      write_raw(paste0(jsonlite::toJSON(outcomes, auto_unbox = TRUE, pretty = TRUE), "\n"),
+                file.path(out_dir, "dagitty-import.json"))
+
       # bibliometric layer (P2). The demo corpus keeps the name it was released
       # under, which tf_example_names() lists, so the *.corpus.yaml loop below
       # leaves it out, as in scripts/gen_golden.py.

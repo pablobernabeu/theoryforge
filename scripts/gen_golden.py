@@ -351,6 +351,18 @@ def main() -> int:
     )
     written.append("panic-network-2026.new_evidence_dois.json")
 
+    # read_dagitty (API_SPEC.md section 35): each model text of the case list
+    # gives the constructs, propositions and provenance it reads as, or the
+    # message it is refused with.
+    outcomes = []
+    for text in json.loads((FIXTURES / "edge" / "dagitty.cases.json").read_text(encoding="utf-8")):
+        try:
+            data = tf.read_dagitty(text).data
+            outcomes.append({"ok": {k: data[k] for k in ("constructs", "propositions", "provenance")}})
+        except ValueError as err:
+            outcomes.append({"error": str(err)})
+    written.append(_write_json("dagitty-import.json", outcomes))
+
     # bibliometric layer (P2): litmap + landscape + lit diagrams. The demo
     # corpus has artefacts of its own, and it keeps the name it was released
     # under, which example_names() lists, so the *.corpus.yaml loop below

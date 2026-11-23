@@ -13,8 +13,11 @@ tf_check(theory)
 A named list with elements \code{theory_id}, \code{schema_version}
 (the theory's), \code{checklist_version} (the rigour checklist's, which is
 what the weights and thresholds came from), \code{maturity},
-\code{aggregate_score} (0 to 100, to one decimal), \code{coverage},
-\code{gate}, \code{n_blockers_failed} and \code{items}. \code{gate} is
+\code{aggregate_score} (0 to 100, to one decimal), \code{aggregate_range},
+\code{coverage}, \code{gate}, \code{n_blockers_failed} and \code{items}.
+\code{aggregate_range} holds the lowest and highest aggregate under the
+checklist's weights, equal weights and each applicable item's weight
+halved or doubled in turn, since the weights are a convention. \code{gate} is
 \code{"advisory"} at \code{draft} maturity, and otherwise \code{"blocked"}
 when an item whose \code{severity_if_fail} is \code{"blocker"}
 (falsifiability or derivation_chain) fails and \code{"pass"} when none
@@ -33,7 +36,8 @@ Each item has a status (\code{"pass"}, \code{"warn"} or \code{"fail"}) and
 a score from 0 to 1. An item with nothing to assess has the status
 \code{"n/a"} and a \code{NULL} score: the redundancy screen with fewer than
 two constructs, the derivation chain with no prediction and parsimony when
-no auxiliary assumption was added in response to an anomaly. The aggregate
+no auxiliary assumption answers an anomaly, by naming it in
+\code{added_for} or by protecting a prediction that a test failed. The aggregate
 score is the weighted mean of the applicable items' scores, times 100, and
 \code{coverage} is the share of the checklist's weight that was applicable.
 

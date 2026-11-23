@@ -4,10 +4,13 @@
 \alias{tf_dossier}
 \title{Render a theory audit dossier (Markdown)}
 \usage{
-tf_dossier(theory)
+tf_dossier(theory, cycles = "refuse")
 }
 \arguments{
 \item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
+
+\item{cycles}{\code{"refuse"} (the default) or \code{"sigma"}, passed to
+\code{\link[=tf_entailments]{tf_entailments()}}, \code{\link[=tf_discriminate]{tf_discriminate()}} and \code{\link[=tf_preregister]{tf_preregister()}}.}
 }
 \value{
 The dossier Markdown as a single string (LF line endings, single

@@ -17,20 +17,71 @@ trailing newline).
 Compiles a theory's constructs and propositions into \pkg{lavaan} model
 syntax written for \code{lavaan::sem()}. Constructs with measurement
 indicators become a latent measurement model (\code{=~}), propositions
-become structural paths (\code{~}) and covariances (\code{~~}), and the
-covariances the theory rules out are fixed at zero. Comments say what to
-check before a fit. The output is deterministic.
+become labelled structural paths (\code{~}) and covariances (\code{~~}),
+the covariances the theory rules out are fixed at zero and the effects the
+theory's claims are about become defined parameters (\code{:=}). Comments
+say what to check before a fit. The output is deterministic.
 }
 \section{The structural model}{
 
-Each proposition becomes a line in file order: a regression
-(\code{to ~ from}) for \code{causes}, \code{increases}, \code{decreases} and
-\code{mediates}, and a covariance (\code{from ~~ to}) for
-\code{associates}. A \code{moderates} proposition gives the moderator's
-main effect, \code{to ~ from}, unless a path relation already writes that
-line. A comment follows on the product term, which has to be added by hand:
-\code{to ~ x:from} for an observed predictor \code{x}, and
-\code{lavaan::sam()} or the modsem package when the variables are latent.
+Each proposition becomes a line in file order: a labelled regression
+(\verb{to ~ b_from_to*from}) for \code{causes}, \code{increases},
+\code{decreases} and \code{mediates}, and a covariance (\code{from ~~ to})
+for \code{associates}. A \code{moderates} proposition gives the
+moderator's main effect, \verb{to ~ b_from_to*from}, unless a path relation
+already writes that line. A comment follows on the product term, which has
+to be added by hand: \code{to ~ x:from} for an observed predictor
+\code{x}, and \code{lavaan::sam()} or the modsem package when the
+variables are latent.
+
+A regression of a variable on itself only rescales its disturbance, so a
+linear SEM cannot estimate it. A relation from a construct to itself is
+therefore left out, with a comment that names the proposition, although
+\code{\link[=tf_implications]{tf_implications()}} and \code{\link[=tf_simulate]{tf_simulate()}} keep it. lavaan refuses a repeated
+line, so a second proposition on one ordered pair writes a comment in place
+of a second regression.
+
+Every regression carries a label, \code{b_<from>_<to>} in the names the
+syntax uses, so that the claims about it can be tested. lavaan reads one
+label on two paths as a constraint that the two are equal, so a label that
+another name already holds takes the first free suffix, \code{_2},
+\code{_3} and so on: \code{x -> y_z} and \code{x_y -> z} give
+\code{b_x_y_z} and \code{b_x_y_z_2}. A comment block then lists the sign
+each \code{increases} and \code{decreases} proposition states as an
+inequality on its label, such as \verb{# b_x_y > 0 (p1, increases)}. The
+fit does not impose them.
+}
+
+\section{Identification}{
+
+A note on identification follows the structural model. When the paths
+among the constructs form no loop and no two constructs are joined by both
+a path and a covariance (a bow), the path coefficients are identified for
+almost all values of the parameters (Brito & Pearl, 2002), provided that
+the measurement model identifies the constructs. That has to be checked
+separately. Otherwise a comment flags each feedback loop, since a
+non-recursive model may not be identified (Bollen, 1989), and the
+panic-network example is not. A further comment names each bow, whose path
+is not identified without further constraints, such as an instrument.
+}
+
+\section{Effects the claims are about}{
+
+Each prediction or phenomenon whose \code{claim} is an effect of \code{x}
+on \code{y} gets a comment that restates it, the claims on one pair
+together. On a graph without a feedback loop,
+\verb{effect_<x>_<y> := <sum>} then defines the effect as the sum over the
+directed paths from \code{x} to \code{y} of the product of the labels
+along each path, so that lavaan estimates the quantity the claim is about.
+The paths are found depth first from \code{x}, taking the successors of
+each construct in construct order. When no path leads from \code{x} to
+\code{y}, a comment says that the model fixes the effect at zero. When more
+than 100 paths do, or the graph has a feedback loop, a comment says that no
+parameter is defined. A claim that cannot be evaluated as written is passed
+over.
+}
+
+\section{Covariances fixed at zero}{
 
 The propositions form the graph that \code{\link[=tf_implications]{tf_implications()}} reads. Two of its
 constructs that are both exogenous, with no proposition pointing into
@@ -43,7 +94,9 @@ the claim. In the modality-switching example, two of the six independencies
 \code{\link[=tf_implications]{tf_implications()}} derives would go untested. The syntax therefore ends
 with a block that fixes each such covariance at zero (\verb{a ~~ 0*b}), and
 deleting the block restores lavaan's defaults. A pair with a moderator keeps
-those defaults, because the product term changes the moderator's role.
+those defaults, because the product term changes the moderator's role. A
+relation from a construct to itself does not count here, since the syntax
+writes no path for it.
 
 lavaan takes the covariances of observed exogenous variables from the data
 only until a covariance line names one of them. It then treats that variable
@@ -61,17 +114,14 @@ measurement entries and must match columns of the data, so entries written
 as column names, such as \code{heart_rate}, give syntax that fits as it
 stands. A comment lists each construct with a single indicator, whose
 residual variance \code{lavaan::sem()} fixes at zero, so the construct is
-treated as measured without error. A comment flags each feedback loop. A
-non-recursive model may not be identified (Bollen, 1989), and the
-panic-network example is not, so check identification before fitting. Some
-constructs have to be re-specified by hand. A manipulation is better entered
-as a coded observed variable and a categorical predictor with more than two
-levels as dummy variables. A covariate that a measurement entry only
-describes needs a variable of its own. Once the block names an observed
-predictor, a product term added by hand needs a free covariance with each
-observed exogenous variable that a covariance line names. lavaan fixes each
-one left unwritten at zero, and each takes a line of its own
-(\verb{x:m ~~ x}).
+treated as measured without error. Some constructs have to be re-specified
+by hand. A manipulation is better entered as a coded observed variable and a
+categorical predictor with more than two levels as dummy variables. A
+covariate that a measurement entry only describes needs a variable of its
+own. Once the block names an observed predictor, a product term added by
+hand needs a free covariance with each observed exogenous variable that a
+covariance line names. lavaan fixes each one left unwritten at zero, and
+each takes a line of its own (\verb{x:m ~~ x}).
 }
 
 \section{Names}{
@@ -99,7 +149,8 @@ cross-loading, is allowed.
 \examples{
 # Measurement entries written as column names give syntax that fits as it
 # stands. Threat and avoidance both follow from arousal alone, so the
-# syntax fixes the covariance of their disturbances at zero.
+# syntax fixes the covariance of their disturbances at zero. Each path is
+# labelled, and the signs the theory states are listed as comments.
 theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_arousal", "Arousal", "Bodily activation.",
                    measurement = c("heart_rate", "arousal_rating")) |>
@@ -114,7 +165,12 @@ cat(tf_compile_sem(theory))
 \references{
 Bollen, K. A. (1989). \emph{Structural equations with latent variables}.
 Wiley. \doi{10.1002/9781118619179}
+
+Brito, C., & Pearl, J. (2002). A new identification condition for recursive
+models with correlated errors. \emph{Structural Equation Modeling: A
+Multidisciplinary Journal, 9}(4), 459-474. \doi{10.1207/s15328007sem0904_1}
 }
 \seealso{
-\code{\link[=tf_implications]{tf_implications()}} for the independencies the zero block encodes.
+\code{\link[=tf_implications]{tf_implications()}} for the independencies the zero block encodes,
+and \code{\link[=tf_entailments]{tf_entailments()}} for the claims the defined effects estimate.
 }

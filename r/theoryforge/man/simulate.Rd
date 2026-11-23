@@ -6,8 +6,10 @@
 \description{
 Each construct is a state variable, and each proposition whose relation is
 \code{increases}, \code{decreases}, \code{causes} or \code{mediates}
-contributes a signed linear coupling term. The system is propagated either
-with fixed-step (Euler) updates or exactly, with the matrix exponential of
-the coupling matrix, so the trajectory is deterministic.
+contributes a linear coupling term with the sign the relation table gives
+it. \code{causes} and \code{mediates} state no sign and are coupled
+positively, an assumption the result records. The system is propagated
+either with fixed-step (Euler) updates or exactly, with the matrix
+exponential of the coupling matrix, so the trajectory is deterministic.
 }
 \keyword{internal}

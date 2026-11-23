@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{tf_theory}
 \alias{tf_theory}
-\title{Start a new, empty theory object (BUILDING mode entry point)}
+\title{Start a new, empty theory object}
 \usage{
 tf_theory(id, title, maturity = "building", theory_form = "network")
 }
@@ -23,7 +23,7 @@ it.}
 A theory object (named list).
 }
 \description{
-Seeds \code{schema_version = "1.0"} and a first provenance entry
+Seeds \code{schema_version = "1.1"} and a first provenance entry
 \code{{step:"1", action:"tf_theory", detail:<id>}}.
 }
 \details{

@@ -2,15 +2,18 @@
 % Please edit documentation in R/prereg.R
 \name{tf_preregister}
 \alias{tf_preregister}
-\title{Render the hypotheses section of a preregistration}
+\title{Render the theory and hypotheses sections of a preregistration}
 \usage{
-tf_preregister(theory, path = NULL)
+tf_preregister(theory, path = NULL, cycles = "refuse")
 }
 \arguments{
 \item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
 \item{path}{Optional destination path. When it is given, the Markdown is
 written with LF line endings.}
+
+\item{cycles}{\code{"refuse"} (the default) or \code{"sigma"}, as in
+\code{\link[=tf_implications]{tf_implications()}}.}
 }
 \value{
 The preregistration Markdown as a single string.
@@ -21,18 +24,27 @@ if \code{path} is given, writes it (LF, single trailing newline).
 }
 \details{
 The header gives the theory id, the version when it has an id (with its
-parent, when one is named), the schema version, the maturity and whether
-every prediction's derivation references resolve: \code{yes}, \code{no} or
-\code{not applicable (no predictions)}. The derivation line reports the
-checklist's reference check, which does not show that a prediction follows
-from the propositions it cites.
+parent, when one is named), the schema version, the maturity, the formal
+model when one is declared and the checklist's derivation check: \code{yes}
+when every prediction cites declared propositions and the causal graph
+entails every claim it states, \code{no} otherwise and \code{not applicable
+(no predictions)}.
 
-Each hypothesis is listed in file order with its claim type, statement and
-derivation, followed by the auxiliary assumptions that protect it
-(\code{core} or \verb{added for <id>}), the registered rivals it discriminates and its
-test record. A hypothesis that a recorded outcome has already tested reads
-\verb{already tested: passed (<date>, registered <where>)}, one entry per
-outcome, and any other reads \code{untested}.
+A theory section follows, so that the document can be read without the
+theory file: each construct with its label, definition, measures and
+boundary conditions, each proposition with its relation and mechanism, and,
+when the theory has them, the phenomena it sets out to explain with what the
+causal graph says of their claims, the auxiliary assumptions, the rival
+accounts and the scope.
+
+Each hypothesis is then listed in file order with its claim type, statement,
+prediction id and derivation, followed by the region its bounds allow, its
+claim and what the causal graph says of it, what an observational test of an
+effect claim must adjust for, the auxiliary assumptions that protect it
+(\code{core} or \verb{added for <id>}), the registered rivals it discriminates, with
+how each rival's own propositions read the claim, and its test record. A
+hypothesis that a recorded outcome has already tested reads \verb{already tested: passed (<date>, registered <where>)}, one entry per outcome, and any other
+reads \code{untested}.
 
 When at least one prediction states a sampling plan in its \code{test}
 block, a section headed \verb{Sampling plan (author-recorded; not scored)}
@@ -45,9 +57,13 @@ decides how informative a failed test is (Lakens, 2022). A theory without a
 plan has no such section.
 
 A section then lists the conditional independencies that
-\code{\link[=tf_implications]{tf_implications()}} derives from the causal graph with its default
-settings, which are claims the theory makes without stating them, or says
-why there are none. The claim-form severity rubric closes the document.
+\code{\link[=tf_implications]{tf_implications()}} derives from the causal graph, which are claims the
+theory makes without stating them, or says why there are none.
+\code{cycles} is passed to it and to \code{\link[=tf_entailments]{tf_entailments()}}: under the default,
+a graph with a feedback loop is not read, and with \code{"sigma"} it is read
+by sigma-separation. The claim-form severity rubric closes the document.
+Values are written on one line, so a line break inside a statement cannot end
+the list item it belongs to.
 
 The document is the part of a preregistration that the theory file holds. It
 is to be completed with the study design, the analysis plan, the inference

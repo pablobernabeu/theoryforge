@@ -11,7 +11,8 @@ tf_litmap(
   min_cocitation = NULL,
   min_theme_size = 2,
   max_theme_size = 10,
-  max_df = 1
+  max_df = 1,
+  min_df = 1
 )
 }
 \arguments{
@@ -34,9 +35,13 @@ tf_litmap(
 
 \item{max_df}{A number from 0 to 1 (default \code{1}). With
 \code{"simple_centres"}, a keyword in more than this share of the records
-is a field term, left out of the map and listed in \code{field_terms}.
-The three theme settings are checked with either method, although only
-\code{"simple_centres"} reads them.}
+is a field term, left out of the map and listed in \code{field_terms}.}
+
+\item{min_df}{A positive integer (default \code{1}). With
+\code{"simple_centres"}, a keyword in fewer than this many records is left
+out of the map, so that a rare keyword cannot seed a theme. The default
+leaves out none. The four theme settings are checked with either method,
+although only \code{"simple_centres"} reads them.}
 }
 \value{
 A named list with elements \code{n_records}, \code{keywords} (the
@@ -48,7 +53,7 @@ their first keyword) and \code{co_citation} (as
 \code{keyword_cooccurrence}, over the reference keys). With
 \code{"simple_centres"}, each theme also holds \code{centrality},
 \code{density} and \code{quadrant}, and the list ends with
-\code{method}, \code{parameters} (the five settings used) and
+\code{method}, \code{parameters} (the six settings used) and
 \code{field_terms}.
 }
 \description{
@@ -81,10 +86,10 @@ Co-citation maps of real corpora are large. 200 OpenAlex records give about
 \code{method} chooses how keywords are grouped into themes. With
 \code{"components"}, the default, a theme is a connected component of the
 keyword map, and on a real corpus one or a few keywords shared by most
-records join nearly every keyword into one. When the largest theme holds more
-than half the linked keywords, a warning says so: such themes, and any
-landscape built on them, do not describe the field. The result is returned
-unchanged.
+records join nearly every keyword into one. When the map links at least ten
+keywords and the largest theme holds more than half of them, a warning says
+so: such themes, and any landscape built on them, do not describe the field.
+The result is returned unchanged.
 
 \code{"simple_centres"} is the co-word clustering of Coulter et al. (1998)
 and Cobo et al. (2011). Each link is weighted by the equivalence index
@@ -98,11 +103,16 @@ dropped. Each theme gains its centrality (ten times the summed index of its
 links to the keywords of other themes) and its density (100 times the
 summed index of its internal links, over its size), the measures
 of Callon et al. (1991) as Cobo et al. (2011) scale them. It also gains its
-quadrant in the strategic diagram, split here at the median of each:
+quadrant in the strategic diagram, split here at the median of each
+measure, a value counting as high when it lies above the median, or at it
+when the median is the measure's highest value:
 \code{"motor"} (both high), \code{"basic"} (central but not dense),
 \code{"niche"} (dense but not central) or \code{"emerging_or_declining"}
-(both low). On real corpora, this gives bounded themes where components give
-one. Components remain the default for this release.
+(both low). A theme with centrality 0 is therefore never central. When all
+themes share one value of either measure, as a lone theme does, that measure
+cannot be split and the quadrant is \code{NA}. On real corpora, this method
+gives bounded themes where components give one. Components remain the
+default for this release.
 }
 \examples{
 corpus <- list(

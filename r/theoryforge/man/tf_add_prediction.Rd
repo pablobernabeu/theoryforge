@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{tf_add_prediction}
 \alias{tf_add_prediction}
-\title{Add a prediction to a theory (BUILDING mode)}
+\title{Add a prediction to a theory}
 \usage{
 tf_add_prediction(
   theory,
@@ -12,7 +12,9 @@ tf_add_prediction(
   derives_from = NULL,
   diagnostic_vs = NULL,
   severity = NULL,
-  test = NULL
+  test = NULL,
+  bounds = NULL,
+  claim = NULL
 )
 }
 \arguments{
@@ -30,15 +32,14 @@ an effect occurs only when a condition holds. \code{"interval"} asserts
 that a quantity lies in a stated range, the range the theory permits.
 \code{"point"} asserts one value, with the tolerance that measurement
 requires. The tolerance comes from measurement, and the theory itself
-permits only the one value. The label is self-declared, and no function
-checks it against the statement.}
+permits only the one value.}
 
-\item{derives_from, diagnostic_vs}{Optional character vectors.}
+\item{derives_from, diagnostic_vs}{Optional character vectors, stored without
+names.}
 
-\item{severity}{Optional declared pre-data severity from 0 to 1, stored only
-when given. The checklist's risk_severity item reads it, and reads the
-claim-form rubric's value (\code{\link[=tf_severity]{tf_severity()}}) for a prediction that declares
-none. \code{\link[=tf_dossier]{tf_dossier()}} sets the two side by side.}
+\item{severity}{Optional declared pre-data severity from 0 to 1. The
+checklist's risk_severity item reads it, and reads the claim-form rubric's
+value (\code{\link[=tf_severity]{tf_severity()}}) for a prediction that declares none.}
 
 \item{test}{Optional sampling plan for testing the prediction, a named list
 of any of \code{n_planned}, \code{unit}, \code{alpha}, \code{sided}
@@ -46,22 +47,36 @@ of any of \code{n_planned}, \code{unit}, \code{alpha}, \code{sided}
 smallest effect of interest and its scale), \code{power} or
 \code{decision_probability} with an optional \code{power_lo} and
 \code{power_hi}, \code{method}, \code{design_ref} and
-\code{justification}. It is stored only when given. \code{\link[=tf_preregister]{tf_preregister()}}
-lists it after the hypotheses, and nothing scores it.}
+\code{justification}. \code{\link[=tf_preregister]{tf_preregister()}} lists it after the hypotheses,
+and nothing scores it.}
+
+\item{bounds}{Optional region of the quantity the claim allows, a named list
+of \code{lower} and \code{upper}, either of which may be \code{NULL} for
+an open side. \code{\link[=tf_post_data_severity]{tf_post_data_severity()}} reads it with each test outcome.}
+
+\item{claim}{Optional machine-readable claim, a named list of \code{kind}
+(\code{"effect"} or \code{"association"}), the construct ids \code{x} and
+\code{y}, an optional \code{given} and \code{sign} (\code{"positive"},
+\code{"negative"}, \code{"zero"} or \code{"nonzero"}), which
+\code{\link[=tf_entailments]{tf_entailments()}} reads against the causal graph.}
 }
 \value{
-The (mutated) theory object.
+The theory with the prediction added.
 }
 \description{
-Appends a prediction and a provenance entry, returning the mutated theory.
+Appends a prediction and a provenance entry. R does not change the theory in
+place, so assign the result.
 }
 \examples{
 tf_theory("demo-1", "A demonstration theory") |>
-  tf_add_prediction("h1", "Arousal precedes threat appraisal.", "directional")
+  tf_add_prediction("h1", "Arousal raises perceived threat.", "directional",
+                    claim = list(kind = "effect", x = "c_arousal", y = "c_threat",
+                                 sign = "positive"))
 
 # A prediction with the sampling plan of its test.
 tf_theory("demo-1", "A demonstration theory") |>
   tf_add_prediction("h1", "The switch cost lies between 20 and 60 ms.", "interval",
+                    bounds = list(lower = 20, upper = 60),
                     test = list(n_planned = 48, unit = "participants", alpha = 0.05,
                                 sided = "two", power = 0.9))
 }

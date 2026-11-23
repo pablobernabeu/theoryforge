@@ -24,6 +24,7 @@ from .entailment import discriminate, entailments, equivalent_models
 from .examples import example_names, example_path
 from .hashing import content_hash
 from .implications import implications
+from .interop import read_dagitty
 from .lit import fetch_corpus, landscape, lit_diagram, litmap, new_evidence_dois, read_corpus
 from .osf import OSFUploadError, osf_push
 from .prereg import preregister
@@ -47,6 +48,7 @@ __all__ = [
     "read",
     "write",
     "new_theory",
+    "read_dagitty",
     "content_hash",
     "check",
     "report",

@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{tf_add_assumption}
 \alias{tf_add_assumption}
-\title{Add an auxiliary assumption (BUILDING mode)}
+\title{Add an auxiliary assumption}
 \usage{
 tf_add_assumption(theory, id, statement, added_for = NULL, protects = NULL)
 }
@@ -14,17 +14,18 @@ tf_add_assumption(theory, id, statement, added_for = NULL, protects = NULL)
 \item{added_for}{Optional id of the prediction whose anomaly the assumption
 was added to answer. Leave it \code{NULL} for a core assumption.
 \code{\link[=tf_appraise_amendment]{tf_appraise_amendment()}} counts an assumption added for an anomaly as ad
-hoc unless a prediction it protects that is new in the amended version,
-other than this one, is corroborated.}
+hoc unless a corroborated prediction it protects, new in the amended
+version and other than the one named in \code{added_for}, exists.}
 
 \item{protects}{Optional character vector of the ids of the predictions the
 assumption shields from refutation.}
 }
 \value{
-The (mutated) theory object.
+The theory with the assumption added.
 }
 \description{
-Add an auxiliary assumption (BUILDING mode)
+Appends an auxiliary assumption and a provenance entry. R does not change
+the theory in place, so assign the result.
 }
 \examples{
 tf_theory("demo-1", "A demonstration theory") |>
