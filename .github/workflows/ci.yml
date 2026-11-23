@@ -387,6 +387,9 @@ jobs:
       - name: Syntax-check the app sources
         run: |
           node --check apps/shared/app-core.js
+          node --check apps/shared/editor.js
+          node --check apps/shared/markdown.js
+          node --check apps/shared/share.js
           node --check apps/r/r-runtime.js
           node --check apps/py/py-runtime.js
           node --check apps/build.mjs
@@ -406,21 +409,23 @@ jobs:
         run: |
           npx --yes ajv-cli@5.0.0 compile --spec=draft2020 -s schema/theory.schema.json
           npx --yes ajv-cli@5.0.0 compile --spec=draft2020 --allow-union-types --validate-formats=false -s schema/corpus.schema.json
-      # The UI core, both runtimes, the vendor build and the site's landing and
-      # 404 pages under a stub DOM (apps/tests/dom.mjs), with no dependency.
-      - name: App and site tests
-        run: node --test apps/tests/*.test.mjs
       # The glue each runtime runs in its engine (APP_PY and BOOT_R), run on
       # the files the manifests list. The browser has PyYAML for Python and
-      # jsonlite and yaml for R, and no theoryforge installed. Python 3.12 and
-      # PyYAML 6.0.2 are what Pyodide 0.27.7 ships. The scripts copy those
+      # jsonlite and yaml for R, and no theoryforge installed. Python 3.14 and
+      # PyYAML 6.0.3 are what Pyodide 314.0.8 ships. The scripts copy those
       # packages into a private tree and run the glue there, so whatever else
-      # these steps install stays out of reach.
+      # these steps install stays out of reach. The same Python runs every
+      # Python snippet the apps write, in apps/tests/code.test.mjs.
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Install PyYAML
-        run: pip install "PyYAML==6.0.2"
+        run: pip install "PyYAML==6.0.3"
+      # The UI core, the editor, both runtimes, the vendor build and the site's
+      # landing and 404 pages under a stub DOM (apps/tests/dom.mjs), with no
+      # dependency beyond the Python above.
+      - name: App and site tests
+        run: node --test apps/tests/*.test.mjs
       - uses: r-lib/actions/setup-r@f9a764fea8d5c63df6ef9a5c7795bf7deb5d7e05  # v2.14.0
         with:
           r-version: "release"
@@ -435,6 +440,34 @@ jobs:
         run: |
           python scripts/app_smoke.py
           Rscript scripts/app_smoke.R
+
+  # Both apps in a real browser: Playwright boots webR and Pyodide in
+  # Chromium, runs every operation on every example and on a theory built in
+  # the editor, compares the text the two apps show where the packages promise
+  # the same output, and checks the layout at phone and tablet widths and the
+  # contrast of both themes (apps/tests/browser.e2e.mjs). The engines come
+  # from webr.r-wasm.org, repo.r-wasm.org and cdn.jsdelivr.net, as they do for
+  # a visitor. Playwright is pinned, and its Chromium with it.
+  apps-browser:
+    name: Apps in a browser (Playwright)
+    runs-on: ubuntu-latest
+    needs: [apps]
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: "24"
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/pw" playwright@1.63.0
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Build the apps
+        run: node apps/build.mjs
+      - name: Drive both apps in Chromium
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node apps/tests/browser.e2e.mjs
 
   parity:
     name: Cross-language parity

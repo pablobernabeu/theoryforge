@@ -3,9 +3,10 @@
 // They read the operations from scripts/app_smoke_cases.json. That file must
 // list every operation in apps/shared/app-core.js at the defaults the UI gives
 // it, and once more for each other option of a select parameter (the ten
-// diagram types, the cycles setting and the simulation method). The prior is
-// left out, since the scripts choose it from the examples' lineage as the UI
-// does.
+// diagram types, the cycles setting, the simulation's method and start, the
+// literature method) and of the corpus (the two bundled corpora and an
+// uploaded one). The prior, the rival and the construct an impulse starts in
+// are left out, since the scripts choose them from the theory as the UI does.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -20,10 +21,10 @@ const CASES = path.join(here, "..", "..", "scripts", "app_smoke_cases.json");
 function expectedCases(ops) {
   const out = [];
   for (const op of ops) {
-    const params = (op.params || []).filter((p) => p.type !== "theory");
+    const params = (op.params || []).filter((p) => !["theory", "rival", "construct"].includes(p.type));
     const defaults = Object.fromEntries(params.map((p) => [p.id, p.default]));
     out.push({ op: op.id, params: defaults });
-    for (const p of params.filter((q) => q.type === "select")) {
+    for (const p of params.filter((q) => q.type === "select" || q.type === "corpus")) {
       for (const o of p.options) {
         if (o !== p.default) out.push({ op: op.id, params: { ...defaults, [p.id]: o } });
       }

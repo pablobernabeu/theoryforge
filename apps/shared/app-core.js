@@ -2,9 +2,12 @@
  *
  * Responsibilities: the operation registry, the UI, shaping a runtime's raw
  * package output into display sections, rendering, export (SVG/PNG/text), the
- * reproducible-code panel, and the light/dark theme. A language runtime
- * (r-runtime.js / py-runtime.js) provides booting, theory loading, package calls
- * and the language-specific code snippets, then calls TF.start(runtime).
+ * reproducible-code panel, the link that carries the session and the
+ * light/dark theme. A language runtime (r-runtime.js / py-runtime.js) provides
+ * booting, theory loading, package calls and the language-specific code
+ * snippets, then calls TF.start(runtime). The theory editor (editor.js), the
+ * Markdown renderer (markdown.js) and the link encoder (share.js) are separate
+ * files that attach themselves to window.TF; the core runs without them.
  */
 (function () {
   "use strict";
@@ -13,13 +16,61 @@
   // vendored to vendor/logo.svg by build.mjs so the apps can never drift from it.
   const logoImg = () => el("img", { class: "logo", src: "vendor/logo.svg", alt: "theoryforge logo" });
 
+  // The operations fall into groups, each with a subtitle that says in plain
+  // words what its operations are for.
+  const GROUPS = [
+    { id: "assess", label: "Assess", sub: "Scores and checks of the theory as it is written." },
+    { id: "derive", label: "Derive", sub: "What the propositions imply beyond what the theory states." },
+    { id: "compare", label: "Compare", sub: "How the theory differs from a rival or from an earlier version." },
+    { id: "document", label: "Document", sub: "Diagrams and documents for readers and reviewers." },
+    { id: "simulate", label: "Simulate", sub: "How the construct network behaves as a linear dynamical system." },
+    { id: "literature", label: "Literature", sub: "How the words of the theory meet the themes of a literature corpus." },
+  ];
+  const CYCLES = { id: "cycles", label: "cycles", type: "select", default: "refuse", options: ["refuse", "sigma"] };
+  const CORPUS = {
+    id: "corpus", label: "Corpus", type: "corpus", default: "demo", options: ["demo", "openalex", "upload"],
+  };
+  const LIT_METHOD = {
+    id: "method", label: "method", type: "select", default: "simple_centres", options: ["simple_centres", "components"],
+  };
+
   const OPS = [
-    { id: "check", label: "Rigour checklist", desc: "12-item score, gate, per-item status",
+    { id: "check", group: "assess", label: "Rigour checklist", desc: "12-item score, gate, per-item status",
       help: "Scores the theory against the 12-item rigour checklist (falsifiability, precision, parsimony, and so on) and returns an aggregate 0–100 score, a pass/blocked/advisory gate and the colour-coded status grid." },
-    { id: "validate", label: "Validate", desc: "Structural + referential checks",
+    { id: "validate", group: "assess", label: "Validate", desc: "Structural + referential checks",
       help: "Runs the package's full validation: required fields, the type of every field and enum membership, plus referential integrity (unique ids, and every proposition, prediction, assumption, evidence and test-outcome reference points to a declared id). Lists every problem found, or confirms the theory is valid." },
+    { id: "severity", group: "assess", label: "Severity rubric", desc: "Per-prediction risk & severity",
+      help: "Applies the severity rubric, a pre-data ranking of claim form, to every prediction, returning its risk score (the riskiness of the claim form) and computed severity (with the directional discount and the diagnostic bonus)." },
+    { id: "post_severity", group: "assess", label: "Post-data severity", desc: "How severely each bounded claim passed",
+      help: "For each test outcome that records an estimate and its standard error, and whose prediction states in bounds the region its claim allows, computes the severity with which the claim passed (Mayo & Spanos, 2006): the probability that the test would have given a result less in accord with the claim, had the claim been false at the nearer bound. It uses a normal approximation to the sampling distribution of the estimate. Unlike the severity rubric, it depends on the design and the data. A high value does not show that the claim is true, and the rigour checklist does not read it." },
+    { id: "redundancy", group: "assess", label: "Redundancy screen", desc: "Lexical overlap of constructs",
+      help: "Compares every pair of construct definitions by the Jaccard index and the overlap coefficient of their word sets. A pair is flagged for review when its Jaccard index reaches the checklist's similarity threshold, a near-duplicate, or when both definitions hold at least three content words and their overlap coefficient reaches the overlap threshold, one definition contained in the other." },
     {
-      id: "diagram", label: "Diagram", desc: "Nomological net, DAG, workflow…",
+      id: "implications", group: "derive", label: "Implied independencies", desc: "What the causal graph implies",
+      help: "Derives the conditional independencies that the theory's causal graph implies, the claims data can refute. Only constructs that a directed relation (increases, decreases, causes, mediates or moderates) names enter the graph, and an association joins two of them as covariance the theory leaves unexplained. A missing edge is read as no direct effect, so the statements hold only if the graph omits no common cause of two of its constructs. A feedback loop is refused unless cycles is set to sigma, whose statements hold only when every loop has a unique equilibrium.",
+      params: [CYCLES],
+    },
+    {
+      id: "entailments", group: "derive", label: "What the graph entails", desc: "Claims the propositions entail or contradict",
+      help: "Reads each machine-readable claim of the predictions and phenomena against the causal graph of the propositions. A claim names two constructs and a sign: the effect of x on y, or the association between them, given other constructs where it says so. The signs along the paths of the graph decide whether it entails the claim, contradicts it or leaves it undetermined. The reading assumes a linear model, or at least relations that act in one direction throughout, and that no common cause of two constructs is left out unless an association stands for it. It shows what the propositions commit the theory to, and does not show whether the claims hold in data.",
+      params: [CYCLES],
+    },
+    { id: "equivalent", group: "derive", label: "Equivalent models", desc: "Directions observational data cannot test",
+      help: "Finds which causal directions of the theory observational data could test. Graphs that imply the same conditional independencies are Markov equivalent, and no observational study can tell them apart (Verma & Pearl, 1990). An edge is compelled when it points the same way in every equivalent graph, and reversible when some equivalent graph reverses it, so that testing its direction needs an intervention, a temporal order or another assumption. The rule covers acyclic graphs of directed relations only, so a feedback loop or an association leaves the answer undetermined." },
+    { id: "sem", group: "derive", label: "SEM (lavaan)", desc: "Compile to lavaan model syntax",
+      help: "Compiles the constructs (measurement model) and propositions (structural model) to lavaan model syntax for lavaan::sem(), a starting point for an SEM fit: rename indicators to your columns and check identification." },
+    {
+      id: "discriminate", group: "compare", label: "Compare with a rival", desc: "What would tell the two accounts apart",
+      help: "Sets the theory's causal graph against a rival's: an alternative that states propositions of its own over the theory's constructs, or a rival theory uploaded here, whose constructs are matched to the theory's by id. It lists the conditional independencies one graph implies and the other does not, the pairs of constructs whose effect or association has a different sign under the two and how each claim of the theory reads under each graph. The comparison shows where data could tell the accounts apart. It does not say which account the data favour, and it reads only the propositions each account states.",
+      params: [{ id: "rival", label: "Rival", type: "rival" }, CYCLES],
+    },
+    {
+      id: "appraise", group: "compare", label: "Appraise amendment", desc: "Progressive vs degenerating", needsPrior: true,
+      help: "Compares what the current theory, treated as the amendment, claims with what a prior version claims, and classifies the change as progressive or degenerating (Lakatos, 1970). Neutral is theoryforge's label for an amendment that meets neither rule. The prior defaults to the version the theory declares as its parent, an example whose version id is the theory's parent_id and whose id the theory's id begins with. Choose another below or upload one. Predictions are matched by id, or by statement and type when an id has changed, so a version of another theory gives a meaningless verdict.",
+      params: [{ id: "prior", label: "Prior version", type: "theory" }],
+    },
+    {
+      id: "diagram", group: "document", label: "Diagram", desc: "Nomological net, DAG, workflow…",
       help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams. The venn, rigour and severity types are emitted directly as SVG.",
       params: [{
         id: "type", label: "Diagram type", type: "select", default: "nomological_net",
@@ -27,47 +78,39 @@
           "development_roadmap", "pipeline", "venn", "rigour", "severity"],
       }],
     },
-    { id: "severity", label: "Severity rubric", desc: "Per-prediction risk & severity",
-      help: "Applies the severity rubric, a pre-data ranking of claim form, to every prediction, returning its risk score (the riskiness of the claim form) and computed severity (with the directional discount and the diagnostic bonus)." },
-    { id: "redundancy", label: "Redundancy screen", desc: "Lexical overlap of constructs",
-      help: "Compares every pair of construct definitions by the Jaccard index and the overlap coefficient of their word sets. A pair is flagged for review when its Jaccard index reaches the checklist's similarity threshold, a near-duplicate, or when both definitions hold at least three content words and their overlap coefficient reaches the overlap threshold, one definition contained in the other." },
+    { id: "preregister", group: "document", label: "Preregistration", desc: "Hypotheses for a preregistration",
+      help: "Generates the theory and hypotheses sections of a preregistration in Markdown. Each hypothesis is listed in file order with its derivation, its claim and what the causal graph says of it, the auxiliary assumptions that protect it, the rivals it discriminates and its test record. When some prediction records a sampling plan in its test block, a sampling plan section follows, with one line per prediction. The conditional independencies the causal graph implies and the per-prediction severity come last. cycles decides how a graph with a feedback loop is read: refuse leaves it unread, and sigma reads it by sigma-separation.",
+      params: [CYCLES] },
+    { id: "dossier", group: "document", label: "Audit dossier", desc: "Reviewer-facing bundle",
+      help: "Assembles a reviewer-facing audit bundle in Markdown: the rigour report, severity, the test record with each outcome's post-data severity where it can be computed, evidence, claims, equivalent models, rivals, provenance and the preregistration in one document. cycles is passed to the derivations, as in the preregistration.",
+      params: [CYCLES] },
     {
-      id: "appraise", label: "Appraise amendment", desc: "Progressive vs degenerating", needsPrior: true,
-      help: "Compares what the current theory, treated as the amendment, claims with what a prior version claims, and classifies the change as progressive or degenerating (Lakatos, 1970). Neutral is theoryforge's label for an amendment that meets neither rule. The prior defaults to the version the theory declares as its parent, an example whose version id is the theory's parent_id and whose id the theory's id begins with. Choose another below or upload one. Predictions are matched by id, or by statement and type when an id has changed, so a version of another theory gives a meaningless verdict.",
-      params: [{ id: "prior", label: "Prior version", type: "theory" }],
-    },
-    { id: "sem", label: "SEM (lavaan)", desc: "Compile to lavaan model syntax",
-      help: "Compiles the constructs (measurement model) and propositions (structural model) to lavaan model syntax for lavaan::sem(), a starting point for an SEM fit: rename indicators to your columns and check identification." },
-    {
-      id: "implications", label: "Implied independencies", desc: "What the causal graph implies",
-      help: "Derives the conditional independencies that the theory's causal graph implies, the claims data can refute. Only constructs that a directed relation (increases, decreases, causes, mediates or moderates) names enter the graph, and an association joins two of them as covariance the theory leaves unexplained. A missing edge is read as no direct effect, so the statements hold only if the graph omits no common cause of two of its constructs. A feedback loop is refused unless cycles is set to sigma, whose statements hold only when every loop has a unique equilibrium.",
-      params: [{ id: "cycles", label: "cycles", type: "select", default: "refuse", options: ["refuse", "sigma"] }],
-    },
-    { id: "preregister", label: "Preregistration", desc: "Hypotheses for a preregistration",
-      help: "Generates the hypotheses section of a preregistration in Markdown. Each hypothesis is listed in file order with its derivation, the auxiliary assumptions that protect it, the rivals it discriminates and its test record. When some prediction records a sampling plan in its test block, a sampling plan section follows, with one line per prediction. The conditional independencies the causal graph implies and the per-prediction severity come last." },
-    { id: "dossier", label: "Audit dossier", desc: "Reviewer-facing bundle",
-      help: "Assembles a reviewer-facing audit bundle in Markdown: the rigour report, severity, test record, evidence, provenance and the preregistration in one document." },
-    {
-      id: "simulate", label: "Simulation", desc: "Dynamical-system trajectory",
-      help: "Treats each construct as a state variable and each proposition whose relation is increases, decreases, causes or mediates as a signed coupling, then propagates the linear system and plots the trajectory. The exact method computes the solution at each step from the matrix exponential, whatever dt is. The Euler method takes fixed explicit steps, which drift from the solution when dt is large against the network's rates.",
+      id: "simulate", group: "simulate", label: "Simulation", desc: "Dynamical-system trajectory",
+      help: "Treats each construct as a state variable and each proposition whose relation is increases, decreases, causes or mediates as a signed coupling, then propagates the linear system and plots the trajectory. causes and mediates state no sign, so they are coupled positively by assumption, and the result lists them. The start is either one value for every construct or an impulse, which starts one chosen construct at 1 and every other at 0, so the chart traces how a change in that construct spreads. The exact method computes the solution at each step from the matrix exponential, whatever dt is. The Euler method takes fixed explicit steps, which drift from the solution when dt is large against the network's rates.",
       params: [
         { id: "method", label: "method", type: "select", default: "exact", options: ["exact", "euler"] },
+        { id: "start", label: "start", type: "select", default: "uniform", options: ["uniform", "impulse"],
+          labels: { uniform: "every construct at init", impulse: "an impulse in one construct" } },
+        { id: "impulse", label: "impulse in", type: "construct", when: { start: "impulse" } },
         { id: "steps", label: "steps", type: "number", default: 30, min: 1, max: 500, step: 1 },
         { id: "dt", label: "dt", type: "number", default: 0.1, min: 0.001, max: 2, step: 0.01 },
         { id: "k", label: "k (coupling)", type: "number", default: 1.0, min: 0, max: 10, step: 0.1 },
         { id: "damping", label: "damping", type: "number", default: 0.5, min: 0, max: 5, step: 0.1 },
-        { id: "init", label: "init", type: "number", default: 1.0, min: -10, max: 10, step: 0.1 },
+        { id: "init", label: "init", type: "number", default: 1.0, min: -10, max: 10, step: 0.1, when: { start: "uniform" } },
       ],
     },
     {
-      id: "litmap", label: "Literature map", desc: "Co-occurrence, themes, co-citation", corpus: true,
-      help: "Maps the bundled literature corpus: keyword co-occurrence, connected-component themes and co-citation. min_link is the minimum number of records a pair must share to count as a link. On a real corpus, connected components put nearly every keyword in one theme.",
-      params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
+      id: "litmap", group: "literature", label: "Literature map", desc: "Co-occurrence, themes, co-citation", corpus: true,
+      help: "Maps a literature corpus: the bundled demonstration corpus, a frozen OpenAlex corpus of 150 works on panic disorder or a corpus file you upload. It counts which keywords co-occur, groups them into themes and counts which references are cited together. min_link is the number of records a pair must share to count as a link. method chooses how themes are formed: simple_centres clusters keywords by the strength of their co-occurrence (Coulter et al., 1998), and components takes each connected group of keywords, which on a real corpus joins nearly all of them into one. min_df leaves out keywords that fewer records carry, and max_df those that more than that share of the records carry, the field's own terms.",
+      params: [CORPUS, LIT_METHOD,
+        { id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 },
+        { id: "min_df", label: "min_df", type: "number", default: 1, min: 1, max: 50, step: 1 },
+        { id: "max_df", label: "max_df", type: "number", default: 1, min: 0.05, max: 1, step: 0.05 }],
     },
     {
-      id: "landscape", label: "Theory landscape", desc: "Match theory words to lit themes", corpus: true,
-      help: "Matches the words of the theory's construct labels and of its alternatives against the keywords of the corpus themes, and names the words behind each match. A theme is under-theorised when none of the registered accounts shares a word with it, and crowded when two or more do. A shared word does not show that an account explains the theme.",
-      params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
+      id: "landscape", group: "literature", label: "Theory landscape", desc: "Match theory words to lit themes", corpus: true,
+      help: "Matches the words of the theory's construct labels and of its alternatives against the keywords of the corpus themes, and names the words behind each match. A theme is under-theorised when none of the registered accounts shares a word with it, and crowded when two or more do. A shared word does not show that an account explains the theme. The themes are built as in the literature map, with its other settings at the package's defaults, so min_df and max_df do not apply here.",
+      params: [CORPUS, LIT_METHOD, { id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
     },
   ];
 
@@ -94,7 +137,7 @@
     for (const c of [].concat(kids || [])) if (c != null) n.append(c.nodeType ? c : document.createTextNode(c));
     return n;
   }
-  const esc = (s) => String(s == null ? "" : s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
   function download(filename, content, mime) {
     const blob = content instanceof Blob ? content : new Blob([content], { type: mime || "text/plain;charset=utf-8" });
@@ -111,8 +154,25 @@
   function toast(msg) {
     let t = $(".toast"); if (!t) { t = el("div", { class: "toast", role: "status", "aria-live": "polite" }); document.body.append(t); }
     t.textContent = msg; t.classList.add("show");
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
   }
+  // A short status for screen readers. The result panel is replaced whole on
+  // each run, so it is no live region itself, and this one says what changed.
+  function announce(msg) {
+    const s = $("#liveStatus"); if (!s) return;
+    s.textContent = "";
+    setTimeout(() => { s.textContent = msg; }, 30);
+  }
+
+  // A fetch whose failure says which file and why, rather than handing on an
+  // error page as if it were the file.
+  async function fetchOk(url) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("Could not fetch " + url + " (HTTP " + r.status + ")");
+    return r;
+  }
+  const fetchJson = async (url) => (await fetchOk(url)).json();
+  const fetchBytes = async (url) => new Uint8Array(await (await fetchOk(url)).arrayBuffer());
 
   // ---- modal (WAI-ARIA dialog: labelled, focus-trapped, restores focus) ----
   let _modalReturnFocus = null;
@@ -149,7 +209,8 @@
     document.body.append(backdrop);
     const main = $("main"); if (main) main.setAttribute("aria-hidden", "true");
     document.addEventListener("keydown", onModalKey);
-    closeBtn.focus();
+    const first = opts && opts.focus ? opts.focus : closeBtn;
+    first.focus();
   }
 
   // ---- theme (shared 'tf-theme' key with the docs landing page) -----------
@@ -232,8 +293,9 @@
       el("tr", null, columns.map((c) => {
         const key = c.key || c;
         const v = r[key];
-        if (c.pill) return el("td", { class: colClass(c) }, pill(v));
-        return el("td", { class: colClass(c) }, c.num ? num(v) : (Array.isArray(v) ? v.join(", ") : (v === "" || v == null ? "—" : String(v))));
+        if (c.pill) return el("td", { class: colClass(c) }, v === "" || v == null ? "—" : pill(v));
+        if (v && v.nodeType) return el("td", { class: colClass(c) }, v);
+        return el("td", { class: colClass(c) }, c.num ? (v == null ? "—" : num(v)) : (Array.isArray(v) ? (v.join(", ") || "—") : (v === "" || v == null ? "—" : String(v))));
       }))));
     const table = el("div", { class: "tablewrap" }, el("table", { class: "grid" }, [thead, tbody]));
     return { kind: "node", node: wrapSection(title, opts && opts.extra, table) };
@@ -251,6 +313,8 @@
     if (extraControls) for (const c of extraControls) head.append(c);
     return el("div", { class: "section" }, [head, body]);
   }
+  const noteSection = (title, text) => ({ kind: "node", node: wrapSection(title, null, el("p", { class: "note", text })) });
+  const refusalSection = (title, message) => ({ kind: "node", node: wrapSection(title, null, el("p", { class: "refusal", text: String(message || "") })) });
 
   function figureSection(title, svgString, baseName) {
     const fig = el("div", { class: "figure", role: "img", "aria-label": title, html: svgString });
@@ -270,15 +334,49 @@
     ];
     return { kind: "node", node: wrapSection(title, ctrls, el("div", { class: "codewrap" }, pre)) };
   }
+  // A Markdown document, rendered as HTML by markdown.js with the raw text one
+  // click away. The renderer escapes every character of the text and writes
+  // only its own tags, so nothing in the document can inject markup.
+  function markdownSection(title, content, downloadName) {
+    const md = window.TF && window.TF.markdown;
+    if (!md) return textSection(title, content, downloadName, "text/markdown");
+    const rendered = el("div", { class: "md", html: md.toHtml(content) });
+    const raw = el("pre", { class: "text", text: content, hidden: "" });
+    const btnR = el("button", { class: "btn ghost sm seg", "aria-pressed": "true" }, "Rendered");
+    const btnM = el("button", { class: "btn ghost sm seg", "aria-pressed": "false" }, "Markdown");
+    const show = (asRaw) => {
+      if (asRaw) { rendered.setAttribute("hidden", ""); raw.removeAttribute("hidden"); }
+      else { raw.setAttribute("hidden", ""); rendered.removeAttribute("hidden"); }
+      btnR.setAttribute("aria-pressed", asRaw ? "false" : "true");
+      btnM.setAttribute("aria-pressed", asRaw ? "true" : "false");
+    };
+    btnR.addEventListener("click", () => show(false));
+    btnM.addEventListener("click", () => show(true));
+    const ctrls = [
+      el("span", { class: "segwrap", role: "group", "aria-label": "View" }, [btnR, btnM]),
+      el("button", { class: "btn ghost sm", onclick: () => copyText(content) }, "Copy"),
+      el("button", { class: "btn ghost sm", onclick: () => download(downloadName, content, "text/markdown") }, "Download"),
+    ];
+    return { kind: "node", node: wrapSection(title, ctrls, el("div", { class: "codewrap" }, [rendered, raw])) };
+  }
 
+  // An SVG length in CSS pixels. Graphviz sizes its SVG in points, and a
+  // canvas drawn at the point size as if it were pixels comes out at three
+  // quarters of the figure's size.
+  function cssPx(v) {
+    const m = /^\s*([0-9.]+(?:e[-+]?\d+)?)\s*(px|pt|pc|in|cm|mm)?\s*$/i.exec(String(v == null ? "" : v));
+    if (!m) return 0;
+    const f = { px: 1, pt: 96 / 72, pc: 16, in: 96, cm: 96 / 2.54, mm: 96 / 25.4 }[(m[2] || "px").toLowerCase()];
+    return Number(m[1]) * f;
+  }
   async function exportPng(svgEl, baseName) {
     try {
       const clone = svgEl.cloneNode(true);
       let w = 0, h = 0;
       const vb = (clone.getAttribute("viewBox") || "").split(/[ ,]+/).map(Number);
       if (vb.length === 4) { w = vb[2]; h = vb[3]; }
-      w = parseFloat(clone.getAttribute("width")) || w || svgEl.clientWidth || 0;
-      h = parseFloat(clone.getAttribute("height")) || h || svgEl.clientHeight || 0;
+      w = cssPx(clone.getAttribute("width")) || w || svgEl.clientWidth || 0;
+      h = cssPx(clone.getAttribute("height")) || h || svgEl.clientHeight || 0;
       if (!w || !h) { try { const bb = svgEl.getBBox(); w = w || Math.ceil(bb.width); h = h || Math.ceil(bb.height); } catch (e) { /* not laid out */ } }
       if (!w || !h) { w = w || 600; h = h || 400; toast("PNG size could not be determined; used " + w + "×" + h); }
       clone.setAttribute("width", w); clone.setAttribute("height", h);
@@ -379,18 +477,22 @@
     validate: "Validation reports structural and referential problems: missing required fields, values of the wrong type or outside the allowed set, duplicate identifiers and cross-references that point to nothing. A valid theory is the precondition for every other operation.",
     diagram: "The diagram is rendered from the package's intermediate representation, shown below the figure. Export the figure as SVG or PNG, or copy the representation to render it elsewhere.",
     severity: "The rubric grades each prediction by the form of its claim alone, so it can be read before any data exist. The risk score reflects how committal the claim is. The computed severity adjusts it down for merely directional claims and up for claims that discriminate between rival theories. Longer bars mark riskier claims. How severely a claim is tested depends on the design and the data, which the rubric does not read.",
+    post_severity: "Each row is a test outcome whose prediction states the region its claim allows. The severity is the probability that the test would have given an estimate less in accord with the claim, had the true value lain at the nearer bound, under a normal approximation with the recorded standard error. A value near 1 means the estimate would rarely have looked this good were the claim false at its edge. A value of 0.5 or below means the estimate lies at the edge of the region or outside it. With two finite bounds the value equals 1 minus the p value of the two one-sided tests of equivalence. It reads the recorded estimate and standard error as they stand, and does not check the design that produced them.",
     redundancy: "Each pair of constructs is compared by the words their definitions share. The Jaccard index divides the shared words by all the words of the two definitions, and the overlap coefficient divides them by the words of the shorter one, so both run from 0 to 1. A pair is flagged for review when its Jaccard index reaches 0.85, a near-duplicate, or when both definitions hold at least three content words and the overlap reaches 0.85, one definition contained in the other. Near-duplicate constructs blur a theory and inflate its apparent scope. The screen compares words only, so it cannot tell whether two constructs are empirically redundant.",
     appraise: "An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added, no corroborated prediction dropped, no unrefuted content lost and no refuted prediction weakened. It is degenerating when it adds an ad hoc assumption or weakens a refuted prediction without corroborating new content, and neutral otherwise. A prediction is corroborated when some test passes it and none fails it, and an assumption added for an anomaly is ad hoc unless new content it protects is corroborated. A prediction that only changed its id is a rename, and one derived only from the prior's own propositions is an articulation, so neither counts as new content. The verdict and its components appear below.",
+    discriminate: "The two causal graphs are compared on the constructs both name in a directed relation. An independence listed below is implied by one graph and not by the other, so a test of it bears on the choice between them. A sign difference is decisive when both graphs fix the sign, and a claim discriminates when one graph entails it and the other contradicts it. Both readings assume linear relations, or relations that act in one direction throughout, and no common cause left out. Markov-equivalent graphs imply the same independencies, and only an intervention or another assumption can separate them.",
     sem: "The constructs become a measurement model and the propositions a structural model, in lavaan syntax for lavaan::sem(). A closing block fixes at zero the covariances the theory rules out, which lavaan would otherwise free, and comments flag single indicators, moderations and feedback loops. The syntax is a starting point for an SEM fit: rename indicators to your columns and check identification.",
     implications: "Each statement says that two constructs are independent once the constructs after the bar are held fixed, a claim data can refute, for instance by a partial correlation in a linear model. The statements follow from the edges the theory leaves out, so each omission is read as a claim. A conditional statement tested on observed scores is rejected too often when the constructs held fixed are measured with error. A latent-variable model, such as one built on the SEM operation's measurement model, takes that error into account. A pair that no set of constructs separates is listed apart, since the theory implies no independence for it.",
-    preregister: "The document is the hypotheses section of a preregistration. Each hypothesis is listed in file order with its derivation, the auxiliary assumptions that protect it, the rivals it discriminates and its test record. A hypothesis that has already been tested is marked as such. When some prediction records a sampling plan, the plans are listed after the hypotheses, one line per prediction. The implied independencies follow, then the severity of each claim's form. Before data collection, complete it with the design, sampling plan, analysis plan and inference criteria that a preregistration template such as PRP-QUANT asks for (Bosnjak et al., 2022), as far as the document leaves them out.",
-    dossier: "The dossier gathers the rigour report, severity, test record, evidence, provenance and preregistration into one reviewer-facing document.",
-    simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, and causes and mediates, which state no sign and are taken as positive) or down (decreases) in proportion to another, with one gain k for every coupling, and every construct decays towards zero at the damping rate. Moderates and associates couple nothing. All constructs start from the same value. The chart traces the values from the initial state, and the table below holds the numbers.",
-    litmap: "The bundled corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked. A theme is a connected group of keywords, which separates this small designed corpus into four. On a real corpus, nearly every keyword joins one group, and the package warns that such themes are not informative.",
+    entailments: "Each row is a claim a prediction or phenomenon states about two constructs. Entailed means the signs along every path or trek of the causal graph agree with the claim, contradicted means they rule it out, and undetermined means paths of unknown or opposite sign meet. Not evaluated marks a claim that names a construct no directed relation names, or one that meets a feedback loop under cycles refuse. For an effect claim on an acyclic graph, the adjustment column gives a smallest set of constructs whose adjustment would identify the effect from observational data.",
+    equivalent: "A compelled edge points the same way in every graph that implies the same independencies as the theory's, so observational data bear on its direction. A reversible edge can be turned round without changing any implied independence, so testing its direction needs an experiment, a temporal order or another assumption. An unshielded collider, two constructs that both affect a third and are not joined, fixes the direction of the edges into it.",
+    preregister: "The document holds the theory and hypotheses sections of a preregistration. Each hypothesis is listed in file order with its derivation, its claim, the auxiliary assumptions that protect it, the rivals it discriminates and its test record. A hypothesis that has already been tested is marked as such. When some prediction records a sampling plan, the plans are listed after the hypotheses, one line per prediction. The implied independencies follow, then the severity of each claim's form. Before data collection, complete it with the design, sampling plan, analysis plan and inference criteria that a preregistration template such as PRP-QUANT asks for (Bosnjak et al., 2022), as far as the document leaves them out.",
+    dossier: "The dossier gathers the rigour report, severity, test record, evidence, claims, equivalent models, rivals, provenance and preregistration into one reviewer-facing document.",
+    simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, and causes and mediates, which state no sign and are taken as positive) or down (decreases) in proportion to another, with one gain k for every coupling, and every construct decays towards zero at the damping rate. Moderates and associates couple nothing. The chart traces the values from the initial state, and the table below holds the numbers.",
+    litmap: "The corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked. With components, a theme is a connected group of keywords, which separates the small designed corpus into four but joins nearly every keyword of a real corpus into one, and the package then warns. With simple_centres, each theme also has a centrality and a density, which place it in a quadrant of the strategic diagram (Cobo et al., 2011).",
     landscape: "The theory and its rivals are matched against the corpus themes by the words a theme's keywords share with the theory's construct labels, or with a rival's label and key constructs. Words of the theory's title, words most records carry and words such as theory or model do not count. Under-theorised fronts are themes that share no word with any registered account, and crowded themes share a word with two or more of them. The match is lexical: it does not show that an account explains what a theme's records report, and a crowded theme may call for predictions that discriminate between its accounts without showing that they compete.",
   };
   const fmtNum = (x) => (typeof x === "number" ? (Number.isInteger(x) ? String(x) : x.toFixed(2)) : String(x));
-  const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");
+  const plural = (n, w, pl) => n + " " + (n === 1 ? w : pl || w + "s");
   // "a", "a and b", "a, b and c".
   const listAnd = (xs) => (xs.length < 2 ? xs.join("") : xs.slice(0, -1).join(", ") + " and " + xs[xs.length - 1]);
   // Both packages report full validation as "invalid theory object: " followed
@@ -398,6 +500,40 @@
   // the sidebar chip all count problems through this one split.
   const problemList = (message) =>
     String(message).replace(/^invalid theory object:\s*/i, "").split(/;\s*/).filter(Boolean);
+  // A post-data severity as the dossier writes it: a value that rounds to 1
+  // or to 0 at three decimals is shown as a bound, since neither is reached.
+  const sevText = (s) => (typeof s !== "number" ? String(s) : s >= 0.9995 ? "> 0.999" : s <= 0.0005 ? "< 0.001" : s.toFixed(3));
+  const bound = (b) => (b == null ? "open" : fmtNum(b));
+  // A claim in words, as the tables show it.
+  function claimText(c) {
+    if (!c) return "—";
+    const given = asArr(c.given);
+    if (c.kind === "effect") return "effect of " + c.x + " on " + c.y + ": " + c.sign;
+    return "association of " + c.x + " and " + c.y + (given.length ? " given " + given.join(", ") : "") + ": " + c.sign;
+  }
+  const words = (s) => String(s == null ? "" : s).replace(/_/g, " ");
+
+  // A sentence on what a refusal under cycles = refuse means for the result.
+  function cycleRefusal(raw, params) {
+    return /cycle found/.test(String(raw.message)) && params.cycles !== "sigma"
+      ? "The directed relations form a feedback loop, which the default reading refuses. Set cycles to sigma to read the graph by sigma-separation, which assumes that every loop has a unique equilibrium."
+      : "Nothing can be derived until the problem the message names is corrected.";
+  }
+
+  // The plain-language reading of one post-data severity record.
+  function severityReading(r) {
+    const lo = r.lower, up = r.upper, est = Number(r.estimate), se = Number(r.se);
+    const zl = lo == null || !isFinite(lo) ? Infinity : (est - lo) / se;
+    const zu = up == null || !isFinite(up) ? Infinity : (up - est) / se;
+    const atLower = zl <= zu;
+    const which = atLower ? "lower bound of " + fmtNum(lo) : "upper bound of " + fmtNum(up);
+    const less = atLower ? "lower" : "higher";
+    const s = Number(r.severity);
+    const pct = s >= 0.9995 ? "more than 999 times in 1,000" : s <= 0.0005 ? "fewer than once in 1,000" : Math.round(s * 1000) / 10 + " times in 100";
+    let txt = "Had the true value lain at the " + which + ", an estimate " + less + " than " + fmtNum(est) + " would have come up " + pct + ".";
+    if (s <= 0.5) txt += " The estimate lies " + (s < 0.5 ? "outside the region the claim allows" : "on its edge") + ", so the test gives the claim no support.";
+    return txt;
+  }
 
   // A result-specific sentence that reads the actual output, to help interpret it.
   function interpret(opId, raw, params) {
@@ -438,6 +574,14 @@
       const mean = sev.reduce((a, b) => a + b, 0) / sev.length;
       return "Across " + plural(rows.length, "prediction") + ", computed severity runs from " + Math.min(...sev).toFixed(2) + " to " + Math.max(...sev).toFixed(2) + " (mean " + mean.toFixed(2) + "). The riskiest claim is " + top.prediction_id + ".";
     }
+    if (opId === "post_severity") {
+      if (raw.ok === false) return "The package refuses the test record as it stands. Full validation lists the same problem.";
+      const rows = asArr(raw.result);
+      if (!rows.length) return "No test outcome records both an estimate and a standard error for a prediction that states its bounds, so there is no severity to compute. The editor's bounds, estimate and SE fields supply them.";
+      const sev = rows.map((r) => Number(r.severity));
+      const range = rows.length === 1 ? "Its severity is " + sevText(sev[0]) + "." : "Their severities run from " + sevText(Math.min(...sev)) + " to " + sevText(Math.max(...sev)) + ".";
+      return plural(rows.length, "test outcome") + (rows.length === 1 ? " carries" : " carry") + " an estimate, a standard error and a prediction with bounds. " + range;
+    }
     if (opId === "redundancy") {
       const rows = asArr(raw.rows);
       if (!rows.length) return "There are fewer than two constructs, so there are no pairs to compare.";
@@ -454,13 +598,21 @@
       if (!isDeclaredParent(S, priorLineage(params.prior))) txt += " " + PRIOR_CAUTION;
       return txt;
     }
+    if (opId === "discriminate") {
+      if (raw.ok === false) return cycleRefusal(raw, params);
+      const r = raw.result, cn = r.counts || {};
+      if (!r.evaluated) return "The two graphs were not compared: " + words(r.reason || "a graph has a feedback loop") + ". Set cycles to sigma to read graphs with feedback loops.";
+      const shared = asArr(r.shared).length;
+      let txt = "Compared on the " + plural(shared, "construct") + " both accounts name, the graphs differ in " + plural(asArr(r.independencies).length, "implied independence", "implied independencies") +
+        " and give " + plural(Number(cn.decisive_effects || 0), "effect") + " and " + plural(Number(cn.decisive_associations || 0), "association") + " decisively different signs. They read " +
+        plural(Number(cn.discriminating_claims || 0), "claim") + " of the theory in opposite ways.";
+      if (r.markov_equivalent === true) txt += " The two graphs are Markov equivalent, so no observational test of independence separates them.";
+      if (asArr(r.only_theory).length || asArr(r.only_rival).length) txt += " Constructs that only one account names are left out of the comparison of independencies.";
+      return txt;
+    }
     if (opId === "sem") return "The measurement model covers " + plural(c.constructs || 0, "construct") + " and the structural model " + plural(c.propositions || 0, "proposition") + ".";
     if (opId === "implications") {
-      if (raw.ok === false) {
-        return /cycle found/.test(String(raw.message)) && params.cycles !== "sigma"
-          ? "The directed relations form a feedback loop, which the default reading refuses. Set cycles to sigma to derive the statements by sigma-separation, which assumes that every loop has a unique equilibrium."
-          : "No statement can be derived until the problem the message names is corrected.";
-      }
+      if (raw.ok === false) return cycleRefusal(raw, params);
       const r = raw.result, n = asArr(r.constructs).length, k = asArr(r.implications).length;
       const ins = asArr(r.inseparable).length, loops = asArr(r.feedback).map(asArr);
       if (!n) return "The theory states no directed relation between constructs, so its causal graph has no vertices and implies no independence.";
@@ -473,6 +625,43 @@
           (k ? ", so the statements hold only if each loop has a unique equilibrium." : ".");
       }
       return txt;
+    }
+    if (opId === "entailments") {
+      if (raw.ok === false) return cycleRefusal(raw, params);
+      const r = raw.result, claims = asArr(r.claims), cn = r.counts || {};
+      if (!claims.length) return "No prediction or phenomenon states a machine-readable claim, so there is nothing to read against the graph. The editor's claim fields add one.";
+      const parts = [];
+      if (cn.entailed) parts.push("entails " + cn.entailed);
+      if (cn.contradicted) parts.push("contradicts " + cn.contradicted);
+      if (cn.undetermined) parts.push("leaves " + cn.undetermined + " undetermined");
+      let txt = "The predictions and phenomena state " + plural(claims.length, "claim") + ". " +
+        (parts.length ? "The causal graph " + listAnd(parts) + "." : "The causal graph gives none of them a verdict.");
+      // The reasons are the package's own, as the preregistration words them.
+      const why = { malformed_claim: "the claim is incomplete", not_in_graph: "it names a construct that no directed relation names",
+        feedback_loop: "the causal graph has a feedback loop", graph_refused: "the causal graph cannot be built" };
+      const unread = claims.filter((x) => x.verdict === "not_evaluated");
+      const bases = [...new Set(unread.map((x) => x.basis))];
+      if (unread.length) {
+        txt += " " + (unread.length === 1 ? "One claim was" : unread.length + " claims were") + " not evaluated" +
+          (bases.length === 1 && why[bases[0]] ? ", since " + (unread.length === 1 ? why[bases[0]] : why[bases[0]].replace(/^it names/, "each names").replace(/^the claim is/, "each claim is")) : "") + ".";
+        if (bases.includes("feedback_loop") && params.cycles !== "sigma") txt += " Set cycles to sigma to read a graph with feedback loops, on the assumption that each loop settles to a unique equilibrium.";
+      }
+      const faith = claims.filter((x) => x.faithfulness === true).length;
+      if (faith) txt += " For " + (faith === 1 ? "one verdict" : faith + " verdicts") + ", the reading assumes that routes of unknown or opposite sign do not cancel exactly.";
+      return txt;
+    }
+    if (opId === "equivalent") {
+      if (raw.ok === false) return "";
+      const r = raw.result, edges = asArr(r.edges);
+      if (!r.computed) {
+        return r.reason === "associations"
+          ? "The theory states an association, which the rule for acyclic graphs of directed relations does not cover, so the testable directions are not determined."
+          : "The causal graph has a feedback loop, and the rule for equivalent graphs covers acyclic graphs only, so the testable directions are not determined.";
+      }
+      if (!edges.length) return "The theory states no directed relation, so there is no direction to test.";
+      const rc = Number(r.n_reversible || 0), cc = Number(r.n_compelled || 0);
+      return "Of the " + plural(edges.length, "directed edge") + ", " + cc + (cc === 1 ? " is" : " are") + " compelled and " + rc + (rc === 1 ? " is" : " are") + " reversible. " +
+        (rc ? "Observational data cannot test the direction of a reversible edge, whatever the sample size." : "Observational data bear on the direction of every edge.");
     }
     if (opId === "preregister") {
       // Every hypothesis has one test-record line (API_SPEC section 11), so both
@@ -510,23 +699,35 @@
       if (!isFinite(lo) || !isFinite(hi)) { lo = 0; hi = 0; }
       const coincide = coincidenceGroups(states, traj).filter((g) => g.length > 1);
       const how = r.method === "exact" ? "computed exactly" : "approximated with Euler steps";
-      let txt = "The " + plural(states.length, "construct") + " evolve over " + plural(r.steps, "step") + " of " + r.dt + " (" + how + "), with values from " + lo.toFixed(2) + " to " + hi.toFixed(2) + ".";
+      const impulse = params.start === "impulse";
+      let txt = "The " + plural(states.length, "construct") + " evolve over " + plural(r.steps, "step") + " of " + r.dt + " (" + how + "), " +
+        (impulse ? "from an impulse in " + params.impulse + ", " : "") + "with values from " + lo.toFixed(2) + " to " + hi.toFixed(2) + ".";
       if (coincide.length) {
         const lists = coincide.map((g) => g.map((i) => states[i]).join(", ")).join("; ");
-        txt += " Some constructs follow an identical path (" + lists + "), so their lines are drawn with a small offset to keep each visible. Every construct starts from the same value and every coupling has the same gain, so constructs that receive the same couplings from the same sources move together. The coincidence follows from these simplifications and is no reason to change the theory.";
+        txt += " Some constructs follow an identical path (" + lists + "), so their lines are drawn with a small offset to keep each visible. " +
+          (impulse ? "Constructs that the impulse never reaches stay at zero together, and constructs that receive the same couplings from the same sources move together."
+            : "Every construct starts from the same value and every coupling has the same gain, so constructs that receive the same couplings from the same sources move together.") +
+          " The coincidence follows from these simplifications and is no reason to change the theory.";
       } else {
         txt += " The trajectories are distinct.";
       }
-      const ignored = asArr(r.ignored), opposed = asArr(r.opposed).map(asArr);
+      const ignored = asArr(r.ignored), opposed = asArr(r.opposed).map(asArr), assumed = asArr(r.assumed_positive);
+      if (assumed.length) txt += " " + plural(assumed.length, "proposition") + " (" + assumed.join(", ") + ") state" + (assumed.length === 1 ? "s" : "") + " causes or mediates, which carry no sign, and " + (assumed.length === 1 ? "is" : "are") + " coupled positively by assumption. That choice alone can decide whether a loop grows or settles.";
       if (ignored.length) txt += " " + plural(ignored.length, "proposition") + (ignored.length === 1 ? " couples" : " couple") + " nothing here (" + ignored.map((s) => s || "without id").join(", ") + "): moderation, association and links to undeclared constructs have no term in the model.";
       if (opposed.length) txt += " " + (opposed.length === 1 ? "One pair carries" : opposed.length + " pairs carry") + " both a positive and a negative coupling (" + opposed.map((p) => p.join(" → ")).join("; ") + "), which offset each other.";
       return txt;
     }
     if (opId === "litmap") {
+      if (raw.ok === false) return "";
       const r = raw.result;
-      return "The corpus holds " + plural(r.n_records, "record") + ", " + plural(asArr(r.keywords).length, "distinct keyword") + " and " + plural(asArr(r.themes).length, "theme") + ", with " + plural(asArr(r.co_citation).length, "co-citation pair") + ".";
+      let txt = "The corpus holds " + plural(r.n_records, "record") + ", " + plural(asArr(r.keywords).length, "distinct keyword") + " and " + plural(asArr(r.themes).length, "theme") + ", with " + plural(asArr(r.co_citation).length, "co-citation pair") + ".";
+      const ft = asArr(r.field_terms);
+      if (ft.length) txt += " " + plural(ft.length, "keyword") + " (" + ft.slice(0, 6).join(", ") + (ft.length > 6 ? " and others" : "") + ") " + (ft.length === 1 ? "is" : "are") + " carried by more than max_df of the records and left out as field terms.";
+      if (asArr(r.keyword_cooccurrence).length > 60) txt += " The figure draws the 60 strongest of the " + asArr(r.keyword_cooccurrence).length + " keyword links.";
+      return txt;
     }
     if (opId === "landscape") {
+      if (raw.ok === false) return "";
       const r = raw.result;
       return plural(asArr(r.themes).length, "theme") + " mapped. " + plural(asArr(r.under_theorised_fronts).length, "front") + " under-theorised, " + plural(asArr(r.redundancy_risk).length, "theme") + " crowded.";
     }
@@ -538,9 +739,9 @@
   // shown beneath the figure to copy.
   function aboutText(opId, params) {
     if (opId === "diagram") {
-      return DIAG_SVG.includes(params.type)
-        ? "This diagram type is emitted directly as an SVG figure. Export it as SVG or PNG."
-        : RESULT_GUIDE.diagram;
+      if (DIAG_SVG.includes(params.type)) return "This diagram type is emitted directly as an SVG figure. Export it as SVG or PNG.";
+      if (params.type === "causal_dag") return "The causal DAG is written as dagitty model code, shown below the figure. Graphviz cannot read it, so the figure here is drawn from a translation. Paste the code into dagitty.net, or read it with the dagitty R package, to examine the graph further.";
+      return RESULT_GUIDE.diagram;
     }
     return RESULT_GUIDE[opId] || "";
   }
@@ -556,14 +757,19 @@
     return { kind: "node", node: el("div", { class: "result-intro" }, kids) };
   }
 
+  // A warning the package gave with its result.
+  const warningSection = (title, text) => ({ kind: "node", node: wrapSection(title, null, el("p", { class: "caution", role: "status", text })) });
+
   async function shapeResult(opId, raw, params, theoryId) {
     const sections = [];
-    const base = (theoryId || "theory") + "." + opId;
     if (opId === "check") {
       const rep = raw.report;
       sections.push(figureSection("Rigour grid", raw.svg, theoryId + ".rigour"));
+      // The range under other weightings, where the checklist reports one.
+      const range = Array.isArray(rep.aggregate_range) && rep.aggregate_range.length === 2
+        ? " (" + fmtNum(rep.aggregate_range[0]) + " to " + fmtNum(rep.aggregate_range[1]) + " under other weightings)" : "";
       sections.push(kvSection("Summary", [
-        ["Aggregate score", rep.aggregate_score + " / 100"],
+        ["Aggregate score", rep.aggregate_score + " / 100" + range],
         ["Coverage", num(rep.coverage) + " of the checklist's weight"],
         ["Gate", pill(rep.gate)],
         ["Blockers failed", String(rep.n_blockers_failed)],
@@ -585,7 +791,7 @@
         const errs = problemList(v.message || "invalid theory object");
         sections.push({ kind: "node", node: wrapSection("Validation", null,
           el("div", { class: "error", role: "alert" }, [
-            el("div", { class: "et", text: "Invalid theory: " + errs.length + " problem" + (errs.length === 1 ? "" : "s") }),
+            el("div", { class: "et", text: "Invalid theory: " + plural(errs.length, "problem") }),
             el("ul", { class: "err-list" }, errs.map((e) => el("li", null, e))),
           ])) });
       }
@@ -604,10 +810,14 @@
           { k: "Articulations of prior content", v: asArr(r.articulated).join(", ") || "—" },
           { k: "Derived from no proposition", v: asArr(r.underived).join(", ") || "—" },
           { k: "Renamed", v: asArr(r.renamed).map((p) => p.prior + " → " + p.new).join(", ") || "—" },
+          { k: "Revised", v: asArr(r.revised).map((p) => p.id + " (" + p.change + ")").join(", ") || "—" },
           { k: "Dropped", v: asArr(r.dropped).join(", ") || "—" },
           { k: "Dropped corroborated", v: asArr(r.dropped_corroborated).join(", ") || "—" },
+          { k: "Content lost", v: asArr(r.content_lost).join(", ") || "—" },
           { k: "New anomalies", v: asArr(r.new_anomalies).join(", ") || "—" },
           { k: "Ad hoc assumptions", v: asArr(r.ad_hoc_assumptions).join(", ") || "—" },
+          { k: "Implications lost", v: asArr(r.implications_lost).join("; ") || "—" },
+          { k: "Implications gained", v: asArr(r.implications_gained).join("; ") || "—" },
         ], { extra: [jsonBtn(theoryId + ".appraisal.json", r)] }));
     } else if (opId === "severity") {
       const rows = asArr(raw.rows);
@@ -616,30 +826,46 @@
         [{ key: "prediction_id", label: "prediction" }, { key: "type", label: "type" },
          { key: "risk_score", label: "risk", num: true }, { key: "computed_severity", label: "computed severity", num: true }],
         rows, { extra: [jsonBtn(theoryId + ".severity.json", rows)] }));
-      else sections.push({ kind: "node", node: wrapSection("Per-prediction severity", null, el("p", { class: "note", text: "This theory has no predictions." })) });
+      else sections.push(noteSection("Per-prediction severity", "This theory has no predictions."));
+    } else if (opId === "post_severity") {
+      if (raw.ok === false) sections.push(refusalSection("Post-data severity", raw.message));
+      else {
+        const rows = asArr(raw.result);
+        if (rows.length) {
+          sections.push(tableSection("Severity of each bounded claim",
+            [{ key: "prediction_id", label: "prediction" }, { key: "n", label: "outcome", num: true },
+             { key: "lo", label: "lower" }, { key: "up", label: "upper" },
+             { key: "estimate", label: "estimate", num: true }, { key: "se", label: "SE", num: true },
+             { key: "sev", label: "severity" }, { key: "reading", label: "reading", grow: true }],
+            rows.map((r) => Object.assign({}, r, { n: Number(r.outcome) + 1, lo: bound(r.lower), up: bound(r.upper),
+              sev: sevText(r.severity), reading: severityReading(r) })),
+            { extra: [jsonBtn(theoryId + ".post_data_severity.json", rows)] }));
+        } else sections.push(noteSection("Severity of each bounded claim", "Nothing to compute."));
+      }
     } else if (opId === "redundancy") {
       const rows = asArr(raw.rows);
-      if (rows.length) sections.push(tableSection("Construct pairs (descending similarity)",
-        [{ key: "a", label: "construct a" }, { key: "b", label: "construct b" },
-         { key: "similarity", label: "Jaccard", num: true }, { key: "overlap", label: "overlap", num: true },
-         { key: "flag", label: "flag", pill: true }],
-        rows, { extra: [jsonBtn(theoryId + ".redundancy.json", rows)] }));
-      else sections.push({ kind: "node", node: wrapSection("Redundancy screen", null, el("p", { class: "note", text: "Fewer than two constructs, so there are no pairs to compare." })) });
+      const cols = [{ key: "a", label: "construct a" }, { key: "b", label: "construct b" },
+        { key: "similarity", label: "Jaccard", num: true }, { key: "overlap", label: "overlap", num: true },
+        { key: "flag", label: "flag", pill: true }];
+      // Newer checklists say why a pair is flagged.
+      if (rows.some((r) => "reason" in r)) cols.push({ key: "reason", label: "reason", grow: true });
+      if (rows.length) sections.push(tableSection("Construct pairs (descending similarity)", cols, rows,
+        { extra: [jsonBtn(theoryId + ".redundancy.json", rows)] }));
+      else sections.push(noteSection("Redundancy screen", "Fewer than two constructs, so there are no pairs to compare."));
     } else if (opId === "diagram") {
       const ir = raw.ir, type = params.type;
       const isSvg = /^\s*<svg/.test(ir);
       let svg;
       if (isSvg) svg = ir;
       else svg = await renderDot(type === "causal_dag" ? dagToDigraph(ir) : ir);
-      sections.push(figureSection(type + " diagram", svg, theoryId + "." + type));
-      if (!isSvg) sections.push(textSection("Intermediate representation (" + (type === "causal_dag" ? "dagitty" : "Graphviz DOT") + ")", ir, theoryId + "." + type + (type === "causal_dag" ? ".dag" : ".dot"), "text/plain"));
+      sections.push(figureSection(words(type) + " diagram", svg, theoryId + "." + type));
+      if (!isSvg) sections.push(textSection(type === "causal_dag" ? "dagitty model code" : "Intermediate representation (Graphviz DOT)", ir, theoryId + "." + type + (type === "causal_dag" ? ".dag" : ".dot"), "text/plain"));
     } else if (opId === "sem") {
       sections.push(textSection("lavaan model syntax", raw.text, theoryId + ".sem.lavaan", "text/plain"));
     } else if (opId === "implications" && raw.ok === false) {
       // A refusal is the package's answer for this theory, so it is shown as a
       // result with the package's message.
-      sections.push({ kind: "node", node: wrapSection("Implied independencies", null,
-        el("p", { class: "refusal", text: String(raw.message || "") })) });
+      sections.push(refusalSection("Implied independencies", raw.message));
     } else if (opId === "implications") {
       const r = raw.result, stmts = asArr(r.implications), ins = asArr(r.inseparable);
       const loops = asArr(r.feedback).map((l) => asArr(l).join(", "));
@@ -653,10 +879,76 @@
       if (stmts.length) sections.push(textSection("Implied independencies", stmts.map((s) => s.statement).join("\n") + "\n", theoryId + ".implications.txt", "text/plain"));
       if (ins.length) sections.push(tableSection("Pairs no set separates", [{ key: "a", label: "construct a" }, { key: "b", label: "construct b" }], ins));
       sections.push(textSection("implications JSON", JSON.stringify(r, null, 2), theoryId + ".implications.json", "application/json"));
+    } else if (opId === "entailments") {
+      if (raw.ok === false) sections.push(refusalSection("What the graph entails", raw.message));
+      else {
+        const r = raw.result, claims = asArr(r.claims), cn = r.counts || {};
+        sections.push(kvSection("Summary", [
+          ["Criterion", r.criterion === "sigma" ? "sigma-separation" : "m-separation"],
+          ["Acyclic", r.acyclic ? "yes" : "no"],
+          ["Feedback loops", asArr(r.feedback).map((l) => asArr(l).join(", ")).join("; ") || "none"],
+          ["Verdicts", ["entailed", "contradicted", "undetermined", "not_evaluated"].map((k) => (cn[k] || 0) + " " + words(k)).join(", ")],
+        ]));
+        if (claims.length) {
+          sections.push(tableSection("Claims",
+            [{ key: "who", label: "claim of" }, { key: "what", label: "claim", grow: true }, { key: "derived", label: "derived" },
+             { key: "verdict", label: "verdict", pill: true }, { key: "why", label: "basis" }, { key: "adj", label: "adjust for" },
+             { key: "via", label: "via" }],
+            claims.map((x) => ({
+              who: x.source + " " + x.id, what: claimText(x) + (x.faithfulness ? " (assumes no exact cancellation)" : ""),
+              derived: x.derived == null ? "—" : String(x.derived), verdict: x.verdict, why: words(x.basis),
+              adj: x.identified === true ? (asArr(x.adjustment).join(", ") || "nothing") : x.identified === false ? "not identified" : "—",
+              via: asArr(x.via),
+            })),
+            { extra: [jsonBtn(theoryId + ".entailments.json", r)] }));
+        } else sections.push(noteSection("Claims", "No prediction or phenomenon states a claim."));
+      }
+    } else if (opId === "equivalent") {
+      if (raw.ok === false) sections.push(refusalSection("Equivalent models", raw.message));
+      else {
+        const r = raw.result, edges = asArr(r.edges), vs = asArr(r.v_structures);
+        if (!r.computed) sections.push(noteSection("Equivalent models", "Not determined: " + (r.reason === "associations" ? "the theory states an association." : "the causal graph has a feedback loop.")));
+        else {
+          sections.push(kvSection("Summary", [["Compelled edges", String(r.n_compelled)], ["Reversible edges", String(r.n_reversible)],
+            ["Unshielded colliders", vs.map((v) => v.a + " → " + v.collider + " ← " + v.b).join("; ") || "none"]]));
+          if (edges.length) sections.push(tableSection("Directed edges",
+            [{ key: "from", label: "from" }, { key: "to", label: "to" }, { key: "props", label: "propositions" }, { key: "status", label: "status", pill: true }],
+            edges.map((e) => Object.assign({}, e, { props: asArr(e.propositions) })),
+            { extra: [jsonBtn(theoryId + ".equivalent_models.json", r)] }));
+        }
+      }
+    } else if (opId === "discriminate") {
+      if (raw.ok === false) sections.push(refusalSection("Compare with a rival", raw.message));
+      else {
+        const r = raw.result;
+        sections.push(kvSection("Summary", [
+          ["Rival", r.rival_id || rivalName(params.rival) || "—"],
+          ["Criterion", r.criterion === "sigma" ? "sigma-separation" : "m-separation"],
+          ["Compared", r.evaluated ? "yes" : "no" + (r.reason ? " (" + words(r.reason) + ")" : "")],
+          ["Shared constructs", asArr(r.shared).join(", ") || "none"],
+          ["Only in the theory", asArr(r.only_theory).join(", ") || "none"],
+          ["Only in the rival", asArr(r.only_rival).join(", ") || "none"],
+          ["Markov equivalent", r.markov_equivalent === true ? "yes" : r.markov_equivalent === false ? "no" : "not applicable"],
+        ]));
+        const ind = asArr(r.independencies), eff = asArr(r.effects), ass = asArr(r.associations), cl = asArr(r.claims);
+        if (ind.length) sections.push(tableSection("Independencies one graph implies",
+          [{ key: "statement", label: "statement", grow: true }, { key: "implied_by", label: "implied by" }], ind));
+        if (eff.length) sections.push(tableSection("Effects whose signs differ",
+          [{ key: "x", label: "effect of" }, { key: "y", label: "on" }, { key: "theory", label: "theory" }, { key: "rival", label: "rival" }, { key: "dec", label: "decisive" }],
+          eff.map((e) => Object.assign({}, e, { dec: e.decisive ? "yes" : "no" }))));
+        if (ass.length) sections.push(tableSection("Associations whose signs differ",
+          [{ key: "a", label: "construct a" }, { key: "b", label: "construct b" }, { key: "theory", label: "theory" }, { key: "rival", label: "rival" }, { key: "dec", label: "decisive" }],
+          ass.map((e) => Object.assign({}, e, { dec: e.decisive ? "yes" : "no" }))));
+        if (cl.length) sections.push(tableSection("The theory's claims under each graph",
+          [{ key: "who", label: "claim of" }, { key: "theory", label: "theory", pill: true }, { key: "rival", label: "rival", pill: true }, { key: "dis", label: "discriminates" }],
+          cl.map((x) => ({ who: x.source + " " + x.id, theory: x.theory, rival: x.rival, dis: x.discriminates ? "yes" : "no" }))));
+        if (!ind.length && !eff.length && !ass.length && !cl.length) sections.push(noteSection("Differences", "The comparison found no difference between the two graphs."));
+        sections.push(textSection("discriminate JSON", JSON.stringify(r, null, 2), theoryId + ".discriminate.json", "application/json"));
+      }
     } else if (opId === "preregister") {
-      sections.push(textSection("Preregistration (Markdown)", raw.text, theoryId + ".prereg.md", "text/markdown"));
+      sections.push(markdownSection("Preregistration", raw.text, theoryId + ".prereg.md"));
     } else if (opId === "dossier") {
-      sections.push(textSection("Audit dossier (Markdown)", raw.text, theoryId + ".dossier.md", "text/markdown"));
+      sections.push(markdownSection("Audit dossier", raw.text, theoryId + ".dossier.md"));
     } else if (opId === "simulate" && raw.ok === false) {
       // Both packages refuse invalid knobs and stop at the step where a state
       // stops being finite, naming the step and the construct. Show their text,
@@ -676,38 +968,57 @@
       const r = raw.result;
       const states = asArr(r.states), traj = asArr(r.trajectory).map(asArr);
       // The Euler departure warning, which both packages raise with one text.
-      if (raw.warning) sections.push({ kind: "node", node: wrapSection("Euler steps", null,
-        el("p", { class: "note", role: "status", text: String(raw.warning) + ". The exact method gives the solution of the same system." })) });
+      if (raw.warning) sections.push(warningSection("Euler steps", String(raw.warning) + ". The exact method gives the solution of the same system."));
       sections.push(figureSection("Trajectory", trajectoryChart(states, traj), theoryId + ".simulate"));
+      sections.push(kvSection("Couplings", [
+        ["Initial state", states.map((s, i) => s + " " + fmtNum(Number(asArr(r.initial_state)[i]))).join(", ") || "—"],
+        ["Assumed positive", asArr(r.assumed_positive).join(", ") || "none"],
+        ["Coupling nothing", asArr(r.ignored).map((s) => s || "without id").join(", ") || "none"],
+        ["Opposed pairs", asArr(r.opposed).map((p) => asArr(p).join(" → ")).join("; ") || "none"],
+      ]));
       const cols = [{ key: "_step", label: "step" }].concat(states.map((s, i) => ({ key: "s" + i, label: s, num: true })));
       const rows = traj.map((row, i) => { const o = { _step: i }; row.forEach((v, j) => (o["s" + j] = v)); return o; });
       sections.push(tableSection("State trajectory (" + (r.method || "euler") + ", steps " + r.steps + ", dt " + r.dt + ")", cols, rows));
     } else if (opId === "litmap") {
-      const r = raw.result;
-      const themes = asArr(r.themes), kw = asArr(r.keywords), cooc = asArr(r.keyword_cooccurrence), cocite = asArr(r.co_citation);
-      sections.push(kvSection("Summary", [
-        ["Records", String(r.n_records)], ["Distinct keywords", String(kw.length)],
-        ["Themes", String(themes.length)], ["Co-citation pairs", String(cocite.length)],
-      ]));
-      if (themes.length) sections.push(tableSection("Themes (connected components)",
-        [{ key: "id", label: "theme" }, { key: "size", label: "size", num: true }, { key: "keywords", label: "keywords" }],
-        themes.map((t) => Object.assign({}, t, { keywords: asArr(t.keywords) }))));
-      if (cooc.length) sections.push(figureSection("Keyword co-occurrence", await renderDot(raw.dots.keyword_cooccurrence), theoryId + ".keyword_cooccurrence"));
-      if (cocite.length) sections.push(figureSection("Co-citation", await renderDot(raw.dots.co_citation), theoryId + ".co_citation"));
-      sections.push(textSection("litmap JSON", JSON.stringify(r, null, 2), theoryId + ".litmap.json", "application/json"));
+      if (raw.ok === false) sections.push(refusalSection("Literature map", raw.message));
+      else {
+        const r = raw.result;
+        const themes = asArr(r.themes), kw = asArr(r.keywords), cooc = asArr(r.keyword_cooccurrence), cocite = asArr(r.co_citation);
+        if (raw.warning) sections.push(warningSection("Themes", String(raw.warning)));
+        sections.push(kvSection("Summary", [
+          ["Corpus", corpusName(params.corpus)],
+          ["Method", r.method || params.method || "components"],
+          ["Records", String(r.n_records)], ["Distinct keywords", String(kw.length)],
+          ["Themes", String(themes.length)], ["Co-citation pairs", String(cocite.length)],
+        ].concat(asArr(r.field_terms).length ? [["Field terms left out", asArr(r.field_terms).join(", ")]] : [])));
+        const sc = themes.some((t) => "quadrant" in t);
+        if (themes.length) sections.push(tableSection(sc ? "Themes (simple centres)" : "Themes (connected components)",
+          [{ key: "id", label: "theme" }, { key: "size", label: "size", num: true }]
+            .concat(sc ? [{ key: "centrality", label: "centrality", num: true }, { key: "density", label: "density", num: true }, { key: "q", label: "quadrant" }] : [])
+            .concat([{ key: "keywords", label: "keywords", grow: true }]),
+          themes.map((t) => Object.assign({}, t, { keywords: asArr(t.keywords), q: t.quadrant == null ? "—" : words(t.quadrant) }))));
+        if (cooc.length) sections.push(figureSection("Keyword co-occurrence", await renderDot(raw.dots.keyword_cooccurrence), theoryId + ".keyword_cooccurrence"));
+        if (cocite.length) sections.push(figureSection("Co-citation", await renderDot(raw.dots.co_citation), theoryId + ".co_citation"));
+        sections.push(textSection("litmap JSON", JSON.stringify(r, null, 2), theoryId + ".litmap.json", "application/json"));
+      }
     } else if (opId === "landscape") {
-      const r = raw.result;
-      const themes = asArr(r.themes);
-      sections.push(tableSection("Themes mapped onto the theory",
-        [{ key: "id", label: "theme" }, { key: "status", label: "status", pill: true },
-         { key: "focal", label: "focal" }, { key: "keywords", label: "keywords" }, { key: "alternatives", label: "alternatives" }],
-        themes.map((t) => Object.assign({}, t, { focal: t.focal ? "yes" : "—", keywords: asArr(t.keywords), alternatives: asArr(t.alternatives) }))));
-      sections.push(kvSection("Flags", [
-        ["Under-theorised fronts", asArr(r.under_theorised_fronts).join(", ") || "—"],
-        ["Crowded themes", asArr(r.redundancy_risk).join(", ") || "—"],
-      ]));
-      if (raw.dot) sections.push(figureSection("Theme landscape", await renderDot(raw.dot), theoryId + ".theme_landscape"));
-      sections.push(textSection("landscape JSON", JSON.stringify(r, null, 2), theoryId + ".landscape.json", "application/json"));
+      if (raw.ok === false) sections.push(refusalSection("Theory landscape", raw.message));
+      else {
+        const r = raw.result;
+        const themes = asArr(r.themes);
+        if (raw.warning) sections.push(warningSection("Themes", String(raw.warning)));
+        sections.push(tableSection("Themes mapped onto the theory",
+          [{ key: "id", label: "theme" }, { key: "status", label: "status", pill: true },
+           { key: "focal", label: "focal" }, { key: "terms", label: "shared words" }, { key: "alternatives", label: "alternatives" }, { key: "keywords", label: "keywords", grow: true }],
+          themes.map((t) => Object.assign({}, t, { focal: t.focal ? "yes" : "—", keywords: asArr(t.keywords), alternatives: asArr(t.alternatives), terms: asArr(t.focal_terms) }))));
+        sections.push(kvSection("Flags", [
+          ["Corpus", corpusName(params.corpus)],
+          ["Under-theorised fronts", asArr(r.under_theorised_fronts).join(", ") || "—"],
+          ["Crowded themes", asArr(r.redundancy_risk).join(", ") || "—"],
+        ]));
+        if (raw.dot) sections.push(figureSection("Theme landscape", await renderDot(raw.dot), theoryId + ".theme_landscape"));
+        sections.push(textSection("landscape JSON", JSON.stringify(r, null, 2), theoryId + ".landscape.json", "application/json"));
+      }
     }
     const intro = buildIntro(opId, raw, params);
     if (intro) sections.unshift(intro);
@@ -715,13 +1026,28 @@
   }
 
   // ---- UI ------------------------------------------------------------------
-  // `input` is { mode: "example", path } or { mode: "upload", name, text }.
-  // `prior` is the uploaded prior version, { name, lineage }, and `priorError`
-  // the last failed upload of one, { name, err }.
-  let RT, STATE = { opId: "check", params: {}, summary: null, input: null, source: null, ran: false, prior: null, priorError: null };
+  // `input` is { mode: "example", path }, { mode: "upload", name, text } or,
+  // once the editor has changed the theory, { mode: "edited", name, text,
+  // format }. `prior` is the uploaded prior version, { name, lineage }, and
+  // `priorError` the last failed upload of one, { name, err }. `rival` and
+  // `corpus` hold the uploaded rival theory and corpus in the same way.
+  let RT, STATE = {
+    opId: "check", params: {}, summary: null, input: null, source: null, ran: false,
+    prior: null, priorError: null, rival: null, rivalError: null, corpus: null, corpusError: null,
+  };
   // Whether the result panel holds an operation's output or error, which a
   // change of theory then clears.
   let resultShown = false;
+  let EDITOR = null;
+
+  // Every call into the engine goes through this queue, so a background check
+  // from the editor cannot interleave with a load or an operation.
+  let engineChain = Promise.resolve();
+  function engine(fn) {
+    const p = engineChain.then(fn);
+    engineChain = p.then(() => {}, () => {});
+    return p;
+  }
 
   // ---- the appraisal's prior -----------------------------------------------
   // A candidate prior is the declared parent of the loaded theory when its
@@ -731,7 +1057,8 @@
   // example is version v1, so the version alone would make most of them a
   // parent. The runtimes read each example's lineage at start-up, and each
   // load reports the theory's version.
-  const UPLOADED_PRIOR = "upload";
+  const UPLOADED = "upload";
+  const UPLOADED_PRIOR = UPLOADED;
   const PRIOR_CAUTION = "This version is not the declared parent of the loaded theory. Predictions are matched by id, or by statement and type when an id has changed, so a version of another theory can make the verdict meaningless.";
   function isDeclaredParent(theory, cand) {
     const tv = (theory && theory.version) || {}, cv = (cand && cand.version) || {};
@@ -764,12 +1091,19 @@
     return parents.length === 1 ? parents[0] : "";
   }
   const priorValues = () => ["", UPLOADED_PRIOR].concat(RT.examples.map((e) => e.path));
-  // A prior chosen for one theory is no prior for the next.
+  // A prior chosen for one theory is no prior for the next, and a rival or an
+  // impulse construct the new theory lacks is dropped.
   function resetPrior() {
     STATE.params.prior = defaultPrior();
     STATE.priorError = null;
+    resetTheoryChoices();
     const op = OPS.find((o) => o.id === STATE.opId);
-    if (op && op.needsPrior) renderParams();
+    if (op && op.params) renderParams();
+  }
+  function resetTheoryChoices() {
+    if (!rivalValues().includes(STATE.params.rival)) STATE.params.rival = defaultRival();
+    const cons = constructIds();
+    if (!cons.includes(STATE.params.impulse)) STATE.params.impulse = cons[0] || "";
   }
   // Why the appraisal cannot run yet, or "" when it can.
   function priorMissing() {
@@ -779,19 +1113,60 @@
     return "";
   }
 
+  // ---- the rival, the impulse and the corpus --------------------------------
+  // The alternatives of the loaded theory that state propositions of their
+  // own, which discriminate() can read.
+  const rivalAlternatives = () => asArr((STATE.summary || {}).alternatives).filter((a) => Number(a.propositions) > 0 && a.id);
+  // An empty choice is no choice, so a theory with rivals replaces it with
+  // its first.
+  const rivalValues = () => rivalAlternatives().map((a) => a.id).concat([UPLOADED]);
+  const defaultRival = () => { const a = rivalAlternatives(); return a.length ? a[0].id : STATE.rival ? UPLOADED : ""; };
+  function rivalName(v) {
+    if (v === UPLOADED) return STATE.rival ? STATE.rival.name : "";
+    const a = rivalAlternatives().find((x) => x.id === v);
+    return a ? a.id + " (" + a.label + ")" : String(v || "");
+  }
+  function rivalMissing() {
+    const v = STATE.params.rival;
+    if (!v) return rivalAlternatives().length ? "Choose a rival first" : "This theory has no alternative with propositions. Upload a rival theory, or add propositions to an alternative in the editor";
+    if (v === UPLOADED && !STATE.rival) return "Upload a rival theory first";
+    return "";
+  }
+  const constructIds = () => asArr((STATE.summary || {}).constructs).map((c) => c.id).filter(Boolean);
+  function corpusName(key) {
+    if (key === UPLOADED) return STATE.corpus ? STATE.corpus.name : "uploaded corpus";
+    const c = (RT.corpora || []).find((x) => x.key === key);
+    return c ? c.name : String(key || "");
+  }
+  function corpusMissing() {
+    if (STATE.params.corpus === UPLOADED && !STATE.corpus) return "Upload a corpus first";
+    return "";
+  }
+  // Why the chosen operation cannot run yet, and the field to look at.
+  function whyNotRunnable(op) {
+    if (op.needsPrior && priorMissing()) return [priorMissing(), "#param-prior"];
+    if (op.id === "discriminate" && rivalMissing()) return [rivalMissing(), "#param-rival"];
+    if (op.corpus && corpusMissing()) return [corpusMissing(), "#param-corpus"];
+    if (op.id === "simulate" && STATE.params.start === "impulse" && !STATE.params.impulse) return ["Choose the construct the impulse starts in", "#param-impulse"];
+    return null;
+  }
+
   // ---- persistence (restore the session on refresh) -----------------------
   // The format of the saved session. Before format 2 the app saved the
   // example's place in the list and gave every theory the first example as its
   // prior by default, so a prior saved then may never have been chosen.
   const STATE_FORMAT = 2;
   function stateKey() { return "tf-app-" + (RT ? RT.lang : "x"); }
+  let saveTimer = null;
   function saveState() {
     try {
       localStorage.setItem(stateKey(), JSON.stringify({
         v: STATE_FORMAT, opId: STATE.opId, params: STATE.params, input: STATE.input, ran: !!STATE.ran,
       }));
     } catch (e) { /* quota exceeded, or private mode; not worth failing over */ }
+    scheduleLink();
   }
+  function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400); }
   function loadSaved() { try { return JSON.parse(localStorage.getItem(stateKey()) || "null"); } catch (e) { return null; } }
   async function fetchSource(path) {
     const r = await fetch("vendor/" + path);
@@ -804,13 +1179,81 @@
     catch (e) { return { name, text: null, error: (e && e.message) || String(e) }; }
   }
 
+  // ---- the link that carries the session ----------------------------------
+  // The theory and the chosen operation are encoded in the URL fragment, which
+  // the browser never sends to a server. An example travels as its path, any
+  // other theory as its text, compressed. Uploaded priors, rivals and corpora
+  // stay behind, since a link cannot carry a second file.
+  const LINK_PREFIX = "#s=";
+  let linkTimer = null, linkInfo = { ok: true, length: 0 };
+  function linkState() {
+    const op = OPS.find((o) => o.id === STATE.opId);
+    const params = {};
+    for (const p of (op && op.params) || []) {
+      const v = STATE.params[p.id];
+      if (v === undefined || v === UPLOADED) continue;
+      params[p.id] = v;
+    }
+    const inp = STATE.input || {};
+    const theory = inp.mode === "example" ? { example: inp.path }
+      : { name: inp.name || "theory.yaml", text: inp.text || "", format: inp.format || (/\.json$/i.test(inp.name || "") ? "json" : "yaml") };
+    return { v: 1, op: STATE.opId, params, run: !!STATE.ran, theory };
+  }
+  async function currentLink() {
+    const share = window.TF && window.TF.share;
+    if (!share || !STATE.input) return null;
+    const enc = await share.encode(linkState());
+    return { enc, ok: enc.length <= share.LIMIT, length: enc.length, limit: share.LIMIT };
+  }
+  function scheduleLink() {
+    clearTimeout(linkTimer);
+    linkTimer = setTimeout(updateLink, 700);
+  }
+  async function updateLink() {
+    try {
+      const l = await currentLink();
+      if (!l || typeof history === "undefined" || !history.replaceState) return;
+      linkInfo = l;
+      const base = location.pathname + location.search;
+      history.replaceState(null, "", l.ok ? base + LINK_PREFIX + l.enc : base);
+    } catch (e) { /* no compression stream in this browser: no link */ }
+  }
+  async function copyLink() {
+    const share = window.TF && window.TF.share;
+    if (!share) { toast("This browser cannot make a link"); return; }
+    let l;
+    try { l = await currentLink(); } catch (e) { toast("This browser cannot compress the theory for a link"); return; }
+    if (!l) return;
+    if (!l.ok) {
+      openModal("The theory is too large for a link", el("div", { class: "help" }, [
+        el("p", null, "Encoded, this theory and its settings take " + l.length.toLocaleString("en-GB") + " characters, and links are kept below " + l.limit.toLocaleString("en-GB") + " so that mail clients and chat programs pass them on whole."),
+        el("p", null, "Save the theory as YAML and send the file instead. Anyone can open it here with the upload field."),
+      ]));
+      return;
+    }
+    const base = location.href.split("#")[0];
+    history.replaceState(null, "", location.pathname + location.search + LINK_PREFIX + l.enc);
+    await copyText(base + LINK_PREFIX + l.enc);
+  }
+  async function readLink() {
+    const share = window.TF && window.TF.share;
+    const hash = (typeof location !== "undefined" && location.hash) || "";
+    if (!share || !hash.startsWith(LINK_PREFIX)) return null;
+    return share.decode(hash.slice(LINK_PREFIX.length));
+  }
+
+  function currentSourceText() {
+    if (EDITOR && EDITOR.sourceText) { const t = EDITOR.sourceText(); if (t != null) return t; }
+    return STATE.source ? STATE.source.text : null;
+  }
   function openSource() {
     if (!STATE.source) { toast("No theory loaded"); return; }
-    if (STATE.source.text == null) {
+    const text = currentSourceText();
+    if (text == null) {
       toast(STATE.source.error ? "Could not fetch source (" + STATE.source.error + ")" : "No source available for this input");
       return;
     }
-    const { name, text } = STATE.source;
+    const name = STATE.source.name;
     const actions = el("div", { class: "modal-actions" }, [
       el("button", { class: "btn ghost sm", onclick: () => copyText(text) }, "Copy"),
       el("button", { class: "btn ghost sm", onclick: () => download(name, text, "text/plain") }, "Download"),
@@ -820,24 +1263,26 @@
 
   function openHelp() {
     const li = (t) => el("li", null, t);
+    const byGroup = GROUPS.map((g) => [el("h5", null, g.label + ": " + g.sub),
+      el("ul", { class: "help-ops" }, OPS.filter((op) => op.group === g.id).map((op) => el("li", null, op.label + ": " + (op.help || op.desc))))]);
     const body = el("div", { class: "help" }, [
       el("p", null, "This app runs the real theoryforge " + RT.langLabel + " package entirely in your browser, via " +
         RT.engineLabel + ". Nothing is uploaded to a server, and the results match running the package locally."),
       el("h4", null, "How to use"),
       el("ol", { class: "steps" }, [
-        li("Pick an example theory, or upload your own YAML / JSON. Use “View source” to inspect the input."),
-        li("Choose an operation, then adjust any parameters."),
-        li("Press Run. Results appear on the right; every figure sits on a white panel."),
-        li("Export the figures (SVG / PNG), the text and JSON results and the " + RT.langLabel + " code that reproduces them."),
+        li("Pick an example theory, upload your own YAML or JSON file, or start a new theory in the editor."),
+        li("Edit the theory in the editor's forms or in its source. Each change is validated in full by the package, and the problems appear beside the fields they concern, with the checklist score and gate."),
+        li("Choose an operation, adjust any parameters and press Run. Results appear on the right."),
+        li("Export the figures (SVG or PNG), the text and JSON results and the " + RT.langLabel + " code that reproduces them. Save writes the theory as YAML with the package's own writer, so the file reads back as the same theory."),
       ]),
-      el("p", { class: "note" }, "Your theory, operation and last result are remembered, so a page refresh restores the session."),
+      el("p", { class: "note" }, "Your theory, operation and last result are remembered in this browser, so a page refresh restores the session. Copy link puts the theory and the operation in the address after the # sign, which browsers never send to a server, so the link reproduces the view without anything being stored elsewhere. A theory too large for a link is better sent as a file."),
       el("h4", null, "Operations"),
-      el("ul", { class: "help-ops" }, OPS.map((op) =>
-        el("li", null, op.label + ": " + (op.help || op.desc)))),
-      el("p", { class: "note" }, "The literature operations use a bundled demonstration corpus."),
-      el("p", { class: "note" }, "The package's network and credentialed adapters are intentionally not offered here. " +
-        "The OpenAlex corpus fetch, the embedding-based redundancy screen and the OSF deposit each need a live connection, " +
-        "an embedding model or credentials, so they belong in the desktop package."),
+      ...byGroup.flat(),
+      el("h4", null, "What the app leaves out"),
+      el("p", { class: "note" }, "The literature operations read the bundled demonstration corpus, a frozen OpenAlex corpus or a corpus file you upload. The app makes no network request for data, by design: every result then rests on files you can see and save, and nothing about you or your theory reaches another service. OpenAlex and Crossref would answer a browser directly, so the package's fetch_corpus() could run here in principle. To map a fresh corpus, run it in the package and upload the file it writes."),
+      el("p", { class: "note" }, "The embedding-based redundancy screen needs an embedding model, which the app does not ship, and the OSF deposit needs a personal access token, which a web page should not hold. Both are in the installed package."),
+      el("p", { class: "note" }, ["Documentation: ", el("a", { href: RT.docsUrl, target: "_blank", rel: "noopener" }, RT.docsUrl), ". Source: ",
+        el("a", { href: "https://github.com/pablobernabeu/theoryforge", target: "_blank", rel: "noopener" }, "github.com/pablobernabeu/theoryforge"), "."]),
     ]);
     openModal("How to use this app", body, { wide: true });
   }
@@ -845,8 +1290,10 @@
   function updateExampleDesc() {
     const e2 = $("#exDesc"); if (!e2) return;
     let txt = "";
-    if (STATE.input && STATE.input.mode === "upload") txt = "Your uploaded theory.";
-    else if (STATE.input && STATE.input.mode === "example") {
+    const mode = STATE.input && STATE.input.mode;
+    if (mode === "upload") txt = "Your uploaded theory.";
+    else if (mode === "edited") txt = "Your theory, as edited here. Save writes it as YAML.";
+    else if (mode === "example") {
       const ex = RT.examples.find((x) => x.path === STATE.input.path); txt = (ex && ex.desc) || "";
     }
     e2.textContent = txt; e2.style.display = txt ? "" : "none";
@@ -855,6 +1302,20 @@
     const e2 = $("#opHelp"); if (!e2) return;
     const op = OPS.find((o) => o.id === STATE.opId);
     e2.textContent = op ? (op.help || op.desc) : "";
+  }
+  // The example selector names a theory that is no example as its first
+  // option, so that choosing any example, the one shown before included, is a
+  // change that loads it.
+  function updateExampleSel() {
+    const sel = $("#exampleSel"); if (!sel) return;
+    const own = $("#exampleOwn");
+    const inp = STATE.input || {};
+    if (inp.mode === "example") { if (own) own.setAttribute("hidden", ""); sel.value = inp.path; return; }
+    if (own) {
+      own.removeAttribute("hidden");
+      own.textContent = (inp.mode === "edited" ? "Edited: " : "Uploaded: ") + (inp.name || "your theory");
+    }
+    sel.value = "";
   }
 
   function buildHeader() {
@@ -880,43 +1341,77 @@
   function summaryCard(s) {
     if (!s) return el("p", { class: "note", text: "No theory loaded." });
     const c = s.counts || {};
-    const chip = (label, n) => el("span", { class: "chip", html: "<b>" + n + "</b> " + label });
+    const chip = (n, one, many) => el("span", { class: "chip", html: "<b>" + n + "</b> " + esc(n === 1 ? one : many || one + "s") });
     // The load validates the theory in full, so the card can say at once
     // whether every operation has a valid theory to work on.
     const v = s.validation;
     const status = !v ? null : v.ok
       ? el("span", { class: "chip valid", title: "Full validation found no problem", text: "valid" })
       : el("span", { class: "chip invalid", title: "Run Validate to list them", text: plural(problemList(v.message || "invalid theory object").length, "problem") });
-    return el("div", { class: "summary" }, [
+    const ck = s.check;
+    const score = !ck ? null : ck.error
+      ? el("span", { class: "chip", title: ck.error, text: "not scored" })
+      : el("span", { class: "chip score", title: "Rigour checklist: aggregate score and gate", html: "<b>" + esc(num(ck.score)) + "</b> / 100 · " + esc(ck.gate) });
+    const edited = STATE.input && STATE.input.mode === "edited";
+    const kids = [
       el("div", { class: "ttl", text: s.title || s.id || "(untitled)" }),
-      el("div", { class: "meta" }, [s.id || "", s.maturity ? " · " + s.maturity : "", s.form ? " · " + s.form : ""].join("")),
+      el("div", { class: "meta" }, [s.id || "", s.maturity ? " · " + s.maturity : "", s.form ? " · " + s.form : "", edited ? " · edited" : ""].join("")),
       el("div", { class: "chips" }, [
-        status,
-        chip("constructs", c.constructs || 0), chip("propositions", c.propositions || 0),
-        chip("predictions", c.predictions || 0), chip("alternatives", c.alternatives || 0),
-        chip("assumptions", c.assumptions || 0),
+        status, score,
+        chip(c.constructs || 0, "construct"), chip(c.propositions || 0, "proposition"),
+        chip(c.predictions || 0, "prediction"), chip(c.alternatives || 0, "alternative"),
+        chip(c.assumptions || 0, "assumption"),
+        c.phenomena ? chip(c.phenomena, "phenomenon", "phenomena") : null,
+        c.outcomes ? chip(c.outcomes, "test outcome") : null,
       ]),
-    ]);
+    ];
+    // The content hash identifies exactly this content, whatever the layout of
+    // the file, and the preregistration and dossier print it too.
+    if (s.hash) {
+      const short = String(s.hash).replace(/^(sha256:[0-9a-f]{12})[0-9a-f]+([0-9a-f]{6})$/, "$1…$2");
+      kids.push(el("div", { class: "hash" }, [
+        el("span", { class: "hk", text: "Content hash " }),
+        el("code", { title: s.hash, text: short }),
+        el("button", { class: "linklike sm", onclick: () => copyText(s.hash), "aria-label": "Copy the content hash" }, "copy"),
+      ]));
+    }
+    return el("div", { class: "summary" }, kids);
+  }
+  function refreshSummary() {
+    const w = $("#summaryWrap"); if (w) w.replaceChildren(summaryCard(STATE.summary));
+    if (EDITOR && EDITOR.onSummary) EDITOR.onSummary(STATE.summary);
   }
 
   function buildSidebar() {
     const exSelect = el("select", { id: "exampleSel", onchange: onExampleChange },
-      RT.examples.map((e) => el("option", { value: e.path }, e.name)));
+      [el("option", { value: "", id: "exampleOwn", disabled: "", hidden: "" }, "Your theory")]
+        .concat(RT.examples.map((e) => el("option", { value: e.path }, e.name))));
     const fileInput = el("input", { type: "file", id: "fileInput", accept: ".yaml,.yml,.json", onchange: onFileChange });
     const summaryWrap = el("div", { id: "summaryWrap" }, summaryCard(STATE.summary));
 
-    const opGrid = el("div", { class: "ops", id: "opGrid", role: "group", "aria-label": "Operation" }, OPS.map((op) =>
-      el("button", {
-        class: "op" + (op.id === STATE.opId ? " active" : ""), "data-op": op.id,
-        onclick: () => selectOp(op.id), "aria-pressed": op.id === STATE.opId ? "true" : "false",
-        disabled: op.corpus && !RT.hasCorpus() ? "" : null,
-        title: op.corpus && !RT.hasCorpus() ? "Needs a corpus" : op.desc,
-      }, [el("span", { class: "on", text: op.label }), el("span", { class: "od", text: op.desc })])));
+    const opGroups = GROUPS.map((g) => {
+      const ops = OPS.filter((op) => op.group === g.id);
+      return el("div", { class: "opgroup", role: "group", "aria-labelledby": "grp-" + g.id }, [
+        el("div", { class: "gh" }, [el("h3", { id: "grp-" + g.id, text: g.label }), el("p", { class: "gs", text: g.sub })]),
+        el("div", { class: "ops" }, ops.map((op) =>
+          el("button", {
+            class: "op" + (op.id === STATE.opId ? " active" : ""), "data-op": op.id,
+            onclick: () => selectOp(op.id), "aria-pressed": op.id === STATE.opId ? "true" : "false",
+            disabled: op.corpus && !RT.hasCorpus() ? "" : null,
+            title: op.corpus && !RT.hasCorpus() ? "Needs a corpus" : op.desc,
+          }, [el("span", { class: "on", text: op.label }), el("span", { class: "od", text: op.desc })]))),
+      ]);
+    });
 
     const paramsWrap = el("div", { class: "params", id: "paramsWrap" });
     const runBtn = el("button", { class: "btn", id: "runBtn", onclick: runOp }, "Run ▸");
 
-    const viewSrc = el("button", { class: "btn ghost sm", id: "viewSrc", onclick: openSource }, "View source ⤢");
+    const viewSrc = el("button", { class: "btn ghost sm", id: "viewSrc", onclick: openSource }, "View source");
+    const link = el("button", { class: "btn ghost sm", id: "copyLink", onclick: copyLink, title: "Copy a link that reproduces this view" }, "Copy link");
+    const editBtns = window.TF && window.TF.editor ? [
+      el("button", { class: "btn ghost sm", id: "editTheory", onclick: () => showTab("editor") }, "Edit theory"),
+      el("button", { class: "btn ghost sm", id: "newTheory", onclick: () => { showTab("editor"); EDITOR && EDITOR.newTheory(); } }, "New theory"),
+    ] : [];
 
     return el("div", { class: "sidebar" }, [
       el("div", { class: "panel" }, [
@@ -925,14 +1420,14 @@
         el("p", { class: "exdesc", id: "exDesc" }, ""),
         el("label", { class: "field" }, [el("span", null, "…or upload your own (YAML / JSON)"), el("div", { class: "filewrap" }, fileInput)]),
         summaryWrap,
-        el("div", { class: "srcrow" }, viewSrc),
+        el("div", { class: "srcrow" }, editBtns.concat([viewSrc, link])),
       ]),
       el("div", { class: "panel" }, [
         el("h2", null, "Operation"),
-        opGrid,
+        el("div", { id: "opGrid" }, opGroups),
         el("p", { class: "ophelp", id: "opHelp" }, ""),
         paramsWrap,
-        el("div", { style: "margin-top:14px" }, runBtn),
+        el("div", { class: "runrow" }, runBtn),
       ]),
     ]);
   }
@@ -943,9 +1438,9 @@
     const li = (t) => el("li", null, t);
     return el("div", { class: "welcome" }, [
       el("h3", null, "Develop a theory you can test"),
-      el("p", null, "Theories often drift into vague constructs, claims that cannot be falsified, near-duplicate ideas and amendments that quietly weaken them. theoryforge takes a theory written as structured data and helps you keep it honest. It scores the theory against a rigour checklist, screens its constructs for redundancy, draws its structure, compiles it to a statistical model, simulates its dynamics and appraises whether an amendment strengthens or weakens it."),
+      el("p", null, "Theories often drift into vague constructs, claims that cannot be falsified, near-duplicate ideas and amendments that quietly weaken them. theoryforge takes a theory written as structured data and helps you keep it honest. It scores the theory against a rigour checklist, derives what its causal graph implies and entails, compares it with rivals, screens its constructs for redundancy, draws its structure, compiles it to a statistical model, simulates its dynamics and appraises whether an amendment strengthens or weakens it."),
       el("ol", { class: "welcome-steps" }, [
-        li("Pick an example theory on the left, or upload your own YAML or JSON. Use “View source” to inspect the input."),
+        li("Pick an example theory on the left, upload your own YAML or JSON file, or press New theory to build one in the editor without writing YAML."),
         li("Choose an operation and adjust any parameters."),
         li(["Press ", el("b", null, "Run"), ". Each result is explained here and can be exported as a figure and as " + RT.langLabel + " code."]),
       ]),
@@ -954,11 +1449,32 @@
     ]);
   }
 
+  // The result and the editor share the main column as two tabs.
+  function showTab(which) {
+    const tabs = [["result", "#tabResult", "#panelResult"], ["editor", "#tabEditor", "#panelEditor"]];
+    for (const [id, t, p] of tabs) {
+      const tab = $(t), panel = $(p);
+      if (!tab || !panel) continue;
+      const on = id === which;
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+      tab.setAttribute("tabindex", on ? "0" : "-1");
+      if (on) panel.removeAttribute("hidden"); else panel.setAttribute("hidden", "");
+    }
+    if (which === "editor" && EDITOR) EDITOR.open();
+  }
+  function onTabKey(e) {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const next = $("#tabResult").getAttribute("aria-selected") === "true" ? "editor" : "result";
+    showTab(next);
+    $(next === "editor" ? "#tabEditor" : "#tabResult").focus();
+  }
+
   function buildMain() {
-    return el("div", null, [
+    const resultPanel = el("div", { id: "panelResult", role: "tabpanel", "aria-labelledby": "tabResult" }, [
       el("div", { class: "panel" }, [
         el("div", { class: "outhead" }, [el("h2", { id: "outTitle" }, "Result"), el("span", { class: "grow" })]),
-        el("div", { id: "output", "aria-live": "polite", "aria-atomic": "false" }, welcomeBlock()),
+        el("div", { id: "staleNote", class: "caution stale", hidden: "" }, "The theory has changed since this result was computed. Press Run to update it."),
+        el("div", { id: "output" }, welcomeBlock()),
       ]),
       el("div", { class: "panel", id: "codePanel", style: "display:none" }, [
         el("div", { class: "outhead" }, [
@@ -971,36 +1487,60 @@
         el("pre", { class: "code" }, el("code", { id: "codeBlock" }, "")),
       ]),
     ]);
+    if (!(window.TF && window.TF.editor)) return el("div", { class: "maincol" }, [resultPanel]);
+    const tabs = el("div", { class: "tabs", role: "tablist", "aria-label": "Main view", onkeydown: onTabKey }, [
+      el("button", { role: "tab", id: "tabResult", "aria-selected": "true", "aria-controls": "panelResult", onclick: () => showTab("result") }, "Result"),
+      el("button", { role: "tab", id: "tabEditor", "aria-selected": "false", "aria-controls": "panelEditor", tabindex: "-1", onclick: () => showTab("editor") }, "Editor"),
+    ]);
+    const editorPanel = el("div", { id: "panelEditor", role: "tabpanel", "aria-labelledby": "tabEditor", hidden: "" });
+    EDITOR = window.TF.editor.create(editorHost(), editorPanel);
+    return el("div", { class: "maincol" }, [tabs, resultPanel, editorPanel]);
   }
 
+  // ---- parameters -----------------------------------------------------------
+  const paramShown = (p) => !p.when || Object.keys(p.when).every((k) => STATE.params[k] === p.when[k]);
   function renderParams() {
-    const wrap = $("#paramsWrap"); wrap.innerHTML = "";
+    const wrap = $("#paramsWrap"); if (!wrap) return;
+    wrap.innerHTML = "";
     const op = OPS.find((o) => o.id === STATE.opId);
     if (!op || !op.params) return;
     const rows = el("div", { class: "row" });
     let inRow = false;
     for (const p of op.params) {
-      let input;
-      if (p.type === "select") {
-        if (!p.options.includes(STATE.params[p.id])) STATE.params[p.id] = p.default;  // drop stale persisted value
-        input = el("select", { id: "param-" + p.id, onchange: (e) => { STATE.params[p.id] = e.target.value; saveState(); } },
-          p.options.map((o) => el("option", { value: o, selected: o === STATE.params[p.id] ? "" : null }, o)));
-        input.value = STATE.params[p.id];
-      } else if (p.type === "theory") {
+      if (p.type === "theory") {
         if (!priorValues().includes(STATE.params[p.id])) STATE.params[p.id] = defaultPrior();  // drop stale persisted value
         wrap.append(priorField(p));
         continue;
+      }
+      if (p.type === "rival") { wrap.append(rivalField(p)); continue; }
+      if (p.type === "corpus") { wrap.append(corpusField(p)); continue; }
+      if (!paramShown(p)) continue;
+      let input;
+      if (p.type === "select") {
+        if (!p.options.includes(STATE.params[p.id])) STATE.params[p.id] = p.default;  // drop stale persisted value
+        input = el("select", { id: "param-" + p.id, onchange: (e) => {
+          STATE.params[p.id] = e.target.value; saveState();
+          if (op.params.some((q) => q.when && p.id in q.when)) renderParams();
+        } }, p.options.map((o) => el("option", { value: o, selected: o === STATE.params[p.id] ? "" : null }, (p.labels && p.labels[o]) || o)));
+        input.value = STATE.params[p.id];
+      } else if (p.type === "construct") {
+        const cons = asArr((STATE.summary || {}).constructs).filter((c) => c.id);
+        if (!cons.some((c) => c.id === STATE.params[p.id])) STATE.params[p.id] = cons.length ? cons[0].id : "";
+        input = el("select", { id: "param-" + p.id, onchange: (e) => { STATE.params[p.id] = e.target.value; saveState(); } },
+          cons.length ? cons.map((c) => el("option", { value: c.id }, c.label ? c.id + " (" + c.label + ")" : c.id))
+            : [el("option", { value: "" }, "The theory has no construct")]);
+        input.value = STATE.params[p.id];
       } else {
         STATE.params[p.id] = clampNum(STATE.params[p.id] === undefined ? "" : STATE.params[p.id], p);  // clamp persisted value
         input = el("input", {
           type: "number", id: "param-" + p.id, value: STATE.params[p.id], min: p.min, max: p.max, step: p.step,
-          oninput: (e) => { STATE.params[p.id] = clampNum(e.target.value, p); saveState(); },
+          oninput: (e) => { STATE.params[p.id] = clampNum(e.target.value, p); saveSoon(); },
           // Once the entry is complete, the field shows the value a run uses.
-          onchange: (e) => { e.target.value = STATE.params[p.id]; },
+          onchange: (e) => { e.target.value = STATE.params[p.id]; saveState(); },
         });
       }
       const field = el("label", { class: "field", style: "margin:0" }, [el("span", null, p.label), input]);
-      if (op.params.length > 1 && p.type === "number") { rows.append(field); inRow = true; }
+      if (p.type === "number") { rows.append(field); inRow = true; }
       else wrap.append(field);
     }
     if (inRow) wrap.append(rows);
@@ -1015,6 +1555,12 @@
     if (typeof p.min === "number") n = Math.max(p.min, n);
     if (typeof p.max === "number") n = Math.min(p.max, n);
     return n;
+  }
+
+  // A file field for an upload that a parameter waits on.
+  function uploadField(label, id, onchange) {
+    return el("label", { class: "field", style: "margin:8px 0 0" }, [el("span", null, label),
+      el("div", { class: "filewrap" }, el("input", { type: "file", id, accept: ".yaml,.yml,.json", onchange }))]);
   }
 
   // The prior's selector lists the examples and an option to upload a version,
@@ -1044,10 +1590,7 @@
     if (!more) return more;
     const cur = STATE.params.prior, parents = declaredParents();
     const kids = [];
-    if (cur === UPLOADED_PRIOR) {
-      kids.push(el("label", { class: "field", style: "margin:8px 0 0" }, [el("span", null, "Prior version file (YAML / JSON)"),
-        el("div", { class: "filewrap" }, el("input", { type: "file", id: "priorFile", accept: ".yaml,.yml,.json", onchange: onPriorFileChange }))]));
-    }
+    if (cur === UPLOADED_PRIOR) kids.push(uploadField("Prior version file (YAML / JSON)", "priorFile", onPriorFileChange));
     if (STATE.priorError) {
       kids.push(errorBox("Could not load " + STATE.priorError.name + (STATE.prior ? "; the prior is still " + STATE.prior.name : ""), STATE.priorError.err));
     }
@@ -1080,7 +1623,7 @@
     const text = await f.text();
     await withBusy("Loading " + f.name + "…", async () => {
       try {
-        const lineage = await RT.loadPriorText(text, f.name);
+        const lineage = await engine(() => RT.loadPriorText(text, f.name));
         STATE.prior = { name: f.name, lineage: lineage || null };
         STATE.priorError = null;
         STATE.params.prior = UPLOADED_PRIOR;
@@ -1092,6 +1635,72 @@
       if (sel) fillPriorOptions(sel);
       fillPriorMore();
     });
+  }
+
+  // The rival is an alternative of the theory that states propositions, or a
+  // rival theory uploaded here.
+  function rivalField(p) {
+    if (!rivalValues().includes(STATE.params.rival)) STATE.params.rival = defaultRival();
+    const alts = rivalAlternatives();
+    const sel = el("select", { id: "param-rival", onchange: (e) => { STATE.params.rival = e.target.value; STATE.rivalError = null; saveState(); renderParams(); } },
+      [el("option", { value: "" }, alts.length ? "Choose a rival…" : "No alternative states propositions")]
+        .concat(alts.map((a) => el("option", { value: a.id }, a.id + " (" + a.label + ")")))
+        .concat([el("option", { value: UPLOADED }, STATE.rival ? "Uploaded: " + STATE.rival.name : "Upload a rival theory…")]));
+    sel.value = STATE.params.rival;
+    const more = [];
+    if (STATE.params.rival === UPLOADED) more.push(uploadField("Rival theory file (YAML / JSON)", "rivalFile", onRivalFileChange));
+    if (STATE.rivalError) more.push(errorBox("Could not load " + STATE.rivalError.name + (STATE.rival ? "; the rival is still " + STATE.rival.name : ""), STATE.rivalError.err));
+    const note = STATE.params.rival === UPLOADED
+      ? "An uploaded rival's constructs are matched to this theory's by id, so the two files must use the same construct ids."
+      : alts.length ? "An alternative's own propositions, written over this theory's constructs." :
+        "Add propositions to an alternative in the editor, or upload a rival theory that uses this theory's construct ids.";
+    more.push(el("p", { class: "note prior-note", text: note }));
+    return el("div", { class: "prior" }, [el("label", { class: "field", style: "margin:0 0 10px" }, [el("span", null, p.label), sel]), el("div", { id: "rivalMore" }, more)]);
+  }
+  async function onRivalFileChange(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const text = await f.text();
+    await withBusy("Loading " + f.name + "…", async () => {
+      try {
+        const info = await engine(() => RT.loadRivalText(text, f.name));
+        STATE.rival = { name: f.name, info };
+        STATE.rivalError = null;
+        STATE.params.rival = UPLOADED;
+        saveState();
+      } catch (err) { STATE.rivalError = { name: f.name, err }; }
+    });
+    renderParams();
+  }
+
+  // The corpus is a bundled one or a file uploaded here.
+  function corpusField(p) {
+    const keys = (RT.corpora || []).map((c) => c.key).filter(Boolean);
+    const options = p.options.filter((o) => o === UPLOADED || keys.includes(o) || !keys.length);
+    if (!options.includes(STATE.params.corpus)) STATE.params.corpus = options.includes(p.default) ? p.default : options[0];
+    const sel = el("select", { id: "param-corpus", onchange: (e) => { STATE.params.corpus = e.target.value; STATE.corpusError = null; saveState(); renderParams(); } },
+      options.map((o) => el("option", { value: o }, o === UPLOADED ? (STATE.corpus ? "Uploaded: " + STATE.corpus.name : "Upload a corpus…") : corpusName(o))));
+    sel.value = STATE.params.corpus;
+    const more = [];
+    if (STATE.params.corpus === UPLOADED) more.push(uploadField("Corpus file (YAML / JSON)", "corpusFile", onCorpusFileChange));
+    if (STATE.corpusError) more.push(errorBox("Could not load " + STATE.corpusError.name + (STATE.corpus ? "; the corpus is still " + STATE.corpus.name : ""), STATE.corpusError.err));
+    const c = (RT.corpora || []).find((x) => x.key === STATE.params.corpus);
+    if (c && c.desc) more.push(el("p", { class: "note prior-note", text: c.desc }));
+    if (STATE.params.corpus === UPLOADED && STATE.corpus && STATE.corpus.info) more.push(el("p", { class: "note prior-note", text: plural(Number(STATE.corpus.info.n_records || 0), "record") + " read from " + STATE.corpus.name + "." }));
+    return el("div", { class: "prior" }, [el("label", { class: "field", style: "margin:0 0 10px" }, [el("span", null, p.label), sel]), el("div", { id: "corpusMore" }, more)]);
+  }
+  async function onCorpusFileChange(e) {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const text = await f.text();
+    await withBusy("Loading " + f.name + "…", async () => {
+      try {
+        const info = await engine(() => RT.loadCorpusText(text, f.name));
+        STATE.corpus = { name: f.name, info };
+        STATE.corpusError = null;
+        STATE.params.corpus = UPLOADED;
+        saveState();
+      } catch (err) { STATE.corpusError = { name: f.name, err }; }
+    });
+    renderParams();
   }
 
   function selectOp(id) {
@@ -1109,6 +1718,7 @@
   // A result and its code belong to the theory they were computed on, so a
   // change of theory removes both.
   function clearResult() {
+    const stale = $("#staleNote"); if (stale) stale.setAttribute("hidden", "");
     if (!resultShown) return;
     resultShown = false;
     $("#output").replaceChildren(el("p", { class: "note", text: "Loaded " + theoryName(STATE.summary) + ". Choose an operation and press Run." }));
@@ -1116,6 +1726,12 @@
     $("#codePanel").style.display = "none";
     $("#codeBlock").textContent = "";
     STATE.ran = false;
+  }
+  // An edit keeps the result in view, marked as computed on an earlier
+  // version of the theory.
+  function markStale() {
+    const stale = $("#staleNote");
+    if (stale && resultShown) stale.removeAttribute("hidden");
   }
 
   // A load that fails leaves the engine on the theory it held, so the card
@@ -1126,24 +1742,33 @@
       summaryCard(STATE.summary));
   }
 
+  // After any change of theory: the card, the selector, the result, the
+  // choices that depend on the theory and the editor.
+  function theoryChanged() {
+    refreshSummary();
+    updateExampleSel();
+    clearResult();
+    resetPrior();
+    updateExampleDesc(); saveState();
+    if (EDITOR) EDITOR.reload();
+  }
+
   async function onExampleChange(e) {
     const ex = RT.examples.find((x) => x.path === e.target.value);
     if (!ex) return;
     await withBusy("Loading " + ex.name + "…", async () => {
       try {
-        STATE.summary = await RT.loadExample(ex.path);
+        STATE.summary = await engine(() => RT.loadExample(ex.path));
       } catch (err) {
         loadFailed(ex.name, err);
-        if (STATE.input && STATE.input.mode === "example") e.target.value = STATE.input.path;
+        updateExampleSel();
         return;
       }
       STATE.input = { mode: "example", path: ex.path };
       STATE.source = await exampleSource(ex.path.split("/").pop(), ex.path);
-      $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
       $("#fileInput").value = "";
-      clearResult();
-      resetPrior();
-      updateExampleDesc(); saveState();
+      theoryChanged();
+      announce("Loaded " + ex.name);
     });
   }
   async function onFileChange(e) {
@@ -1151,7 +1776,7 @@
     const text = await f.text();
     await withBusy("Loading " + f.name + "…", async () => {
       try {
-        STATE.summary = await RT.loadTheoryText(text, f.name);
+        STATE.summary = await engine(() => RT.loadTheoryText(text, f.name));
       } catch (err) {
         loadFailed(f.name, err);
         $("#fileInput").value = "";
@@ -1159,21 +1784,45 @@
       }
       STATE.input = { mode: "upload", name: f.name, text };
       STATE.source = { name: f.name, text };
-      $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
-      clearResult();
-      resetPrior();
-      updateExampleDesc(); saveState();
+      theoryChanged();
+      announce("Loaded " + f.name);
     });
   }
 
+  // ---- errors --------------------------------------------------------------
+  // The in-browser files that hold the user's own text appear in engine
+  // messages by their internal path, so each is named as the user named it.
+  function cleanMessage(msg) {
+    let s = String(msg == null ? "" : msg);
+    const names = (RT && RT.fileNames) || {};
+    for (const p of Object.keys(names).sort((a, b) => b.length - a.length)) s = s.split(p).join(names[p]);
+    return s.replace(/\/(?:tf|pkg)\/(input|prior|edit|rival|corpus)\.(yaml|json)/g, "$1.$2");
+  }
+  // The line that names the error. Python ends a traceback with the exception,
+  // except that a YAML error appends the line it could not read and a caret
+  // under the column, so the exception line is taken with its position. R's
+  // messages are a single line. Failing both, the last line with words in it.
+  function headline(lines) {
+    for (let i = lines.length - 1; i >= 0; i--) {
+      if (/^(?:[A-Za-z_][\w.]*(?:Error|Exception)|Error)\b[^:]*:/.test(lines[i])) {
+        // R puts the message of a long call on the next line.
+        let h = lines[i];
+        if (/:\s*$/.test(h) && lines[i + 1]) h += " " + lines[i + 1];
+        const at = lines.slice(i + 1).map((l) => /line (\d+), column (\d+)/.exec(l)).find(Boolean);
+        return h + (at && !/line \d+, column \d+/.test(h) ? " (line " + at[1] + ", column " + at[2] + ")" : "");
+      }
+    }
+    for (let i = lines.length - 1; i >= 0; i--) if (/[A-Za-z]{2}/.test(lines[i])) return lines[i];
+    return lines.length ? lines[lines.length - 1] : "";
+  }
   // Engine errors arrive as a whole traceback (Pyodide's PythonError) or as R's
-  // condition text. The box shows the last line, which names the error, and
-  // keeps the full text in a details element. `lead` is an optional node or
-  // text placed between the title and the error.
+  // condition text. The box shows the line that names the error and keeps the
+  // full text in a details element. `lead` is an optional node or text placed
+  // between the title and the error.
   function errorBox(title, err, lead) {
-    const msg = String((err && (err.message || err.toString())) || err);
+    const msg = cleanMessage((err && (err.message || err.toString())) || err);
     const lines = msg.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-    const last = lines.length ? lines[lines.length - 1] : msg;
+    const last = headline(lines) || msg;
     const kids = [el("div", { class: "et", text: title })];
     if (lead) kids.push(el("p", { class: "lead" }, lead));
     kids.push(el("div", { class: "last", text: last }));
@@ -1186,7 +1835,7 @@
     if (busy) return; busy = true;
     const btn = $("#runBtn"); const prev = btn ? btn.textContent : "";
     // Lock all theory/operation controls so the UI cannot desync mid-flight.
-    const controls = [...document.querySelectorAll("#exampleSel, #fileInput, #viewSrc, #runBtn, .op, #param-prior, #priorFile")];
+    const controls = [...document.querySelectorAll("#exampleSel, #fileInput, #viewSrc, #runBtn, .op, #param-prior, #priorFile, #param-rival, #rivalFile, #param-corpus, #corpusFile, #newTheory")];
     for (const c of controls) { c.setAttribute("data-busywas", c.disabled ? "1" : "0"); c.disabled = true; }
     if (btn && label) btn.textContent = label;
     try { await fn(); } finally {
@@ -1198,29 +1847,36 @@
 
   async function runOp() {
     const op = OPS.find((o) => o.id === STATE.opId);
+    if (EDITOR && EDITOR.flush) await EDITOR.flush();
     if (!STATE.summary) { toast("Load a theory first"); return; }
-    if (op.corpus && !RT.hasCorpus()) { toast("This operation needs a corpus"); return; }
-    if (op.needsPrior && priorMissing()) {
-      toast(priorMissing());
-      const sel = $("#param-prior"); if (sel) sel.focus();
+    if (op.corpus && !RT.hasCorpus() && STATE.params.corpus !== UPLOADED) { toast("This operation needs a corpus"); return; }
+    const why = whyNotRunnable(op);
+    if (why) {
+      toast(why[0]);
+      const sel = $(why[1]); if (sel) sel.focus();
       return;
     }
     const out = $("#output");
+    showTab("result");
     await withBusy("Running…", async () => {
       resultShown = true;
+      const stale = $("#staleNote"); if (stale) stale.setAttribute("hidden", "");
       out.replaceChildren(el("p", { class: "note", text: "Running " + op.label + "…" }));
       $("#outTitle").textContent = op.label;
+      announce("Running " + op.label);
       try {
         const params = Object.assign({}, STATE.params);
-        const { raw, code } = await RT.run(op.id, params);
+        const { raw, code } = await engine(() => RT.run(op.id, params));
         const sections = await shapeResult(op.id, raw, params, STATE.summary.id || "theory");
         out.replaceChildren(...sections.map((s) => s.node));
         const cp = $("#codePanel"); cp.style.display = "";
         $("#codeBlock").textContent = code;
         STATE.ran = true; saveState();
+        announce(op.label + " finished");
       } catch (err) {
         $("#codePanel").style.display = "none";
         out.replaceChildren(failureBox(err));
+        announce(op.label + " failed");
         console.error(err);
       }
     });
@@ -1234,7 +1890,90 @@
     const n = problemList(v.message || "invalid theory object").length;
     const toValidate = el("button", { class: "linklike", onclick: () => { selectOp("validate"); runOp(); } }, "Run Validate");
     return errorBox("Operation failed on an invalid theory", err,
-      ["This theory has " + plural(n, "problem") + ". ", toValidate, " to list them, then correct the file and upload it again."]);
+      ["This theory has " + plural(n, "problem") + ". ", toValidate, " to list them, then correct them in the editor or in the file and upload it again."]);
+  }
+
+  // ---- the editor's view of the app ----------------------------------------
+  // The editor holds the theory as data and asks the engine to read each
+  // version, so validation, the checklist and the writer are the package's.
+  function editName(doc) {
+    const inp = STATE.input || {};
+    if (inp.mode === "example") return inp.path.split("/").pop().replace(/\.json$/i, ".yaml");
+    if (inp.name && !inp.isNew) return String(inp.name).replace(/\.json$/i, ".yaml");
+    const id = doc && typeof doc.id === "string" && doc.id.trim() ? doc.id.trim().replace(/[^\w.-]+/g, "-") : "new-theory";
+    return id + ".theory.yaml";
+  }
+  // After the editor changes the theory: the card, the selector and the
+  // choices that depend on the theory. A fresh theory clears the result, and
+  // an edit marks it as computed on an earlier version.
+  function theoryShown(fresh) {
+    refreshSummary();
+    updateExampleSel();
+    updateExampleDesc();
+    if (fresh) { clearResult(); resetPrior(); } else { markStale(); resetTheoryChoices(); }
+    const op = OPS.find((o) => o.id === STATE.opId);
+    if (op && op.params && op.params.some((p) => p.type === "rival" || p.type === "construct")) renderParams();
+    saveSoon();
+  }
+  function editorHost() {
+    return {
+      el, esc, toast, openModal, closeModal, copyText, download, plural, problemList, errorBox, asArr, fmtNum,
+      summary: () => STATE.summary,
+      sourceOf: () => (STATE.source ? STATE.source.text : null),
+      sourceName: () => (STATE.source ? STATE.source.name : ""),
+      lang: () => RT.langLabel,
+      // The loaded theory as data, read through the package's JSON writer.
+      async theoryData() { return JSON.parse(await engine(() => RT.writeText("json"))); },
+      async writeText(fmt) { return engine(() => RT.writeText(fmt)); },
+      // Ask the engine to read `text` as the theory. On success the app takes
+      // it as the active theory, and the result carries the summary and the
+      // texts the writer gave in each of `want`.
+      async apply(text, format, want, opts) {
+        const isNew = !!(opts && opts.isNew) || !!(STATE.input && STATE.input.isNew);
+        const name = editName(opts && opts.doc);
+        let res;
+        try { res = await engine(() => RT.editText(text, format, name, want || [])); }
+        catch (err) { return { ok: false, error: err }; }
+        const texts = res.texts || {};
+        delete res.texts;
+        STATE.summary = res;
+        // A new theory's file is named after its id, which a change in the
+        // source may have just set.
+        let saved = name;
+        if (isNew && !(opts && opts.doc) && typeof res.id === "string" && res.id.trim()) {
+          saved = editName({ id: res.id });
+          if (RT.renameTheory) RT.renameTheory(saved);
+        }
+        STATE.input = { mode: "edited", name: saved, text, format, isNew };
+        STATE.source = { name: saved, text };
+        theoryShown(!!(opts && opts.fresh));
+        return { ok: true, summary: res, texts };
+      },
+      // The theory the package's DAGitty reader makes of `model` becomes the
+      // active theory, a new one named after its id.
+      canImportDagitty: () => !!RT.canImportDagitty,
+      importCode: (opts) => (RT.importCode ? RT.importCode(opts) : ""),
+      async importDagitty(model, opts, want) {
+        let res;
+        try { res = await engine(() => RT.importDagitty(model, opts, want || [])); }
+        catch (err) { return { ok: false, error: err }; }
+        const texts = res.texts || {};
+        delete res.texts;
+        const name = editName({ id: res.id });
+        const fmt = (want || [])[0] || "yaml";
+        STATE.summary = res;
+        STATE.input = { mode: "edited", name, text: texts[fmt] || "", format: fmt, isNew: true };
+        STATE.source = { name, text: texts[fmt] || "" };
+        theoryShown(true);
+        return { ok: true, summary: res, texts };
+      },
+      // The editor's own record of the current source, for View source.
+      setSource(text) { if (STATE.source) STATE.source.text = text; },
+      saveName: (doc) => editName(doc),
+      isEdited: () => !!(STATE.input && STATE.input.mode === "edited"),
+      isBusy: () => busy,
+      showResultTab: () => showTab("result"),
+    };
   }
 
   // ---- boot ---------------------------------------------------------------
@@ -1247,14 +1986,55 @@
     ]);
   }
 
-  // Restore theory + operation + params from a previous session, then optionally
-  // re-run the last operation so a refresh lands back where the user left off.
-  // init has already loaded example 0, and a load that fails leaves it loaded,
-  // so a failed restore falls back to it. The returned note says so; start()
-  // shows it once the boot overlay, which would hide a toast, is gone.
+  // Load the theory a saved session or a link names. Returns true on success.
+  async function restoreTheory(inp, blog) {
+    if (inp.mode === "edited" && typeof inp.text === "string") {
+      if (blog) blog("Restoring your edited theory…");
+      const res = await engine(() => RT.editText(inp.text, inp.format || "yaml", inp.name || "theory.yaml", []));
+      delete res.texts;
+      STATE.summary = res;
+      STATE.input = { mode: "edited", name: inp.name || "theory.yaml", text: inp.text, format: inp.format || "yaml", isNew: !!inp.isNew };
+      STATE.source = { name: STATE.input.name, text: inp.text };
+      return true;
+    }
+    if (inp.mode === "upload" && inp.text) {
+      if (blog) blog("Restoring your uploaded theory…");
+      STATE.summary = await engine(() => RT.loadTheoryText(inp.text, inp.name));
+      STATE.input = inp;
+      STATE.source = { name: inp.name, text: inp.text };
+      return true;
+    }
+    if (inp.mode === "example") {
+      const ex = RT.examples.find((x) => x.path === inp.path);
+      if (!ex) throw new Error("no longer an example");
+      if (blog) blog("Restoring " + ex.name + "…");
+      STATE.summary = await engine(() => RT.loadExample(ex.path));
+      STATE.input = { mode: "example", path: ex.path };
+      return true;
+    }
+    return false;
+  }
+
+  // Restore theory + operation + params from a link or a previous session,
+  // then optionally re-run the last operation so a refresh lands back where
+  // the user left off. A link wins over the saved session. init has already
+  // loaded example 0, and a load that fails leaves it loaded, so a failed
+  // restore falls back to it. The returned note says so; start() shows it
+  // once the boot overlay, which would hide a toast, is gone.
   async function applyRestore(blog) {
-    const saved = loadSaved();
-    let note = null;
+    let saved = loadSaved();
+    let note = null, fromLink = false;
+    try {
+      const link = await readLink();
+      if (link && link.v === 1 && link.theory) {
+        fromLink = true;
+        const t = link.theory;
+        saved = {
+          v: STATE_FORMAT, opId: link.op, params: link.params || {}, ran: !!link.run,
+          input: t.example ? { mode: "example", path: t.example } : { mode: "edited", name: t.name, text: t.text, format: t.format },
+        };
+      }
+    } catch (e) { note = "The link could not be read, so the saved session is shown instead"; }
     const first = RT.examples[0];
     const fallback = (name) => "Could not restore " + name + "; showing " + first.name + " instead";
     STATE.input = STATE.input || { mode: "example", path: first.path };
@@ -1272,25 +2052,13 @@
         }
         if (saved.params) delete saved.params.prior;
       }
-      if (saved.input && saved.input.mode === "upload" && saved.input.text) {
+      const inp = saved.input;
+      if (inp && !(inp.mode === "example" && inp.path === first.path)) {
         try {
-          if (blog) blog("Restoring your uploaded theory…");
-          STATE.summary = await RT.loadTheoryText(saved.input.text, saved.input.name);
-          STATE.input = saved.input;
-          STATE.source = { name: saved.input.name, text: saved.input.text };
+          await restoreTheory(inp, blog);
         } catch (e) {
           STATE.input = { mode: "example", path: first.path };
-          note = fallback(saved.input.name || "your uploaded theory");
-        }
-      } else if (saved.input && saved.input.mode === "example" && saved.input.path !== first.path) {
-        const ex = RT.examples.find((x) => x.path === saved.input.path);
-        try {
-          if (!ex) throw new Error("no longer an example");
-          if (blog) blog("Restoring " + ex.name + "…");
-          STATE.summary = await RT.loadExample(ex.path);
-          STATE.input = { mode: "example", path: ex.path };
-        } catch (e) {
-          note = fallback(ex ? ex.name : saved.input.path.split("/").pop());
+          note = fallback(inp.mode === "example" ? ((RT.examples.find((x) => x.path === inp.path) || {}).name || String(inp.path).split("/").pop()) : inp.name || "your theory");
         }
       }
       if (saved.opId && OPS.some((o) => o.id === saved.opId)) STATE.opId = saved.opId;
@@ -1301,24 +2069,35 @@
       STATE.source = await exampleSource(STATE.input.path.split("/").pop(), STATE.input.path);
     }
     // Reflect the restored selection in the UI.
-    const sel = $("#exampleSel");
-    if (sel && STATE.input.mode === "example") sel.value = STATE.input.path;
-    $("#summaryWrap").replaceChildren(summaryCard(STATE.summary));
-    for (const b of document.querySelectorAll(".op")) b.classList.toggle("active", b.getAttribute("data-op") === STATE.opId);
+    updateExampleSel();
+    refreshSummary();
+    for (const b of document.querySelectorAll(".op")) {
+      const on = b.getAttribute("data-op") === STATE.opId;
+      b.classList.toggle("active", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    }
     // A saved prior belongs to the saved theory, so it goes with a failed
     // restore, and one that is no longer offered falls back to the default.
     if (note || (STATE.params.prior !== undefined && !priorValues().includes(STATE.params.prior))) STATE.params.prior = defaultPrior();
+    resetTheoryChoices();
     updateExampleDesc(); updateOpHelp(); renderParams();
     saveState();
     const op = OPS.find((o) => o.id === STATE.opId);
-    if (saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus()) && !(op.needsPrior && priorMissing())) await runOp();
+    if (saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op)) await runOp();
+    if (fromLink && !note) note = "Opened the theory and operation from the link";
     return note;
   }
 
   async function start(runtime) {
     RT = runtime;
-    document.documentElement.style.setProperty("--accent", RT.accent);
-    if (RT.accentInk) document.documentElement.style.setProperty("--accent-ink", RT.accentInk);
+    const root = document.documentElement;
+    root.style.setProperty("--accent", RT.accent);
+    if (RT.accentInk) root.style.setProperty("--accent-ink", RT.accentInk);
+    if (RT.accentText) {
+      root.style.setProperty("--accent-text-light", RT.accentText.light);
+      root.style.setProperty("--accent-text-dark", RT.accentText.dark);
+    }
+    root.setAttribute("data-lang", RT.lang || "");
     initTheme();
     document.title = "theoryforge (" + RT.langLabel + "): interactive app";
     document.body.append(bootOverlay());
@@ -1327,11 +2106,13 @@
     try {
       const info = await RT.init(onProgress);
       RT.examples = info.examples; RT.version = info.version; RT.pkgVersion = info.pkgVersion;
+      if (info.corpora) RT.corpora = info.corpora;
       STATE.summary = info.summary || null;
       document.body.append(el("a", { class: "skip-link", href: "#main" }, "Skip to content"));
       document.body.append(buildHeader());
       const main = el("main", { id: "main", tabindex: "-1" }, [buildSidebar(), buildMain()]);
       document.body.append(main);
+      document.body.append(el("div", { id: "liveStatus", class: "sr-only", role: "status", "aria-live": "polite" }));
       // Two distinct versions meet here: RT.pkgVersion is the theoryforge
       // release (stamped into the manifest at build time from DESCRIPTION /
       // pyproject.toml), while RT.version is the interpreter the engine booted
@@ -1340,7 +2121,7 @@
       document.body.append(el("footer", { class: "app", html:
         "theoryforge" + (RT.pkgVersion ? " " + esc(RT.pkgVersion) : "") + " · " + esc(RT.version || "") +
         " via " + esc(RT.engineLabel) + " · running entirely client-side" +
-        " · <a href='https://github.com/pablobernabeu/theoryforge'>source</a>" }));
+        " · <a href='" + esc(RT.docsUrl) + "'>documentation</a> · <a href='https://github.com/pablobernabeu/theoryforge'>source</a>" }));
       updateThemeBtn();
       const note = await applyRestore(onProgress);
       $("#boot").classList.add("hidden");
@@ -1370,5 +2151,11 @@
   // caught here, where it can still be shown.
   const startCaught = (runtime) => start(runtime).catch(bootFailed);
 
-  window.TF = { start: startCaught, OPS, DIAG_SVG, util: { el, esc, download, copyText, toast, renderDot, dagToDigraph } };
+  window.TF = {
+    start: startCaught, OPS, GROUPS, DIAG_SVG,
+    util: {
+      el, esc, download, copyText, toast, renderDot, dagToDigraph, fetchJson, fetchBytes, plural, problemList,
+      headline, cleanMessage: (m) => cleanMessage(m), cssPx, sevText, severityReading, claimText,
+    },
+  };
 })();

@@ -43,17 +43,17 @@ const EXAMPLES = [
   { name: "Panic network, amended v2 (testing)", file: "panic-network-2026-v2.theory.yaml", src: FIXTURES,
     desc: "An amended version of the panic theory at the testing stage, with a fourth prediction and test outcomes." },
   { name: "Self-determination theory (developing)", file: "self-determination.theory.yaml", src: APP_EXAMPLES,
-    desc: "Three basic needs driving intrinsic motivation. A solid theory with one precision warning." },
+    desc: "Three basic needs driving intrinsic motivation, a simplified encoding of Ryan & Deci (2000). The checklist warns on precision and formalisation, and each prediction states a claim the causal graph entails." },
   { name: "Effort-recovery regulation (developing)", file: "effort-recovery.theory.yaml", src: APP_EXAMPLES,
     desc: "A negative feedback loop: fatigue overshoots its resting level of zero while recovery peaks, a damped oscillation that keeps the curves distinct. Lower damping to 0.1 and raise steps to 150 to see it cycle." },
   { name: "Happy vowel, Manchester English (testing)", file: "happy-vowel-manchester.theory.yaml", src: APP_EXAMPLES,
     desc: "Turton & Baranowski (2026), a real sociolinguistic study: a stable vocalic variable, socially stratified yet with linguistic constraints that hold independently of social class and ethnicity." },
   { name: "Cognitive dissonance (testing)", file: "cognitive-dissonance.theory.yaml", src: APP_EXAMPLES,
-    desc: "Festinger & Carlsmith (1959): a smaller incentive for a counter-attitudinal act produces more attitude change, the reverse of what reinforcement theory predicts." },
+    desc: "Festinger & Carlsmith (1959): a smaller incentive for a counter-attitudinal act produces more attitude change, the reverse of what reinforcement theory predicts. Both rivals state propositions, so Compare with a rival can set each against the theory." },
   { name: "Stereotype threat (testing)", file: "stereotype-threat.theory.yaml", src: APP_EXAMPLES,
     desc: "Steele & Aronson (1995): framing a test as diagnostic of ability depresses performance for a negatively stereotyped group, but not under a non-diagnostic frame." },
   { name: "Theory of planned behaviour (developing)", file: "planned-behaviour.theory.yaml", src: APP_EXAMPLES,
-    desc: "Ajzen (1991): attitude, subjective norm and perceived behavioural control predict intention, which predicts behaviour, extending the theory of reasoned action." },
+    desc: "Ajzen (1991): attitude, subjective norm and perceived behavioural control predict intention, which predicts behaviour, extending the theory of reasoned action, which is registered as a rival with its own propositions." },
   // The fixture's maturity field reads "building", not "draft": at draft
   // maturity the checklist runs in advisory mode and the gate can never be
   // blocked, and a blocked gate is the one thing this example exists to show.
@@ -63,7 +63,14 @@ const EXAMPLES = [
   { name: "Modality switching (developing)", file: "modality-switching.theory.yaml", src: FIXTURES,
     desc: "An acyclic theory of grounded conceptual processing. Implied independencies derives six statements from it, among them the independence its fourth prediction tests." },
 ];
-const CORPUS = [{ name: "Panic literature corpus (demo)", file: "panic-corpus.yaml", src: FIXTURES }];
+// Each corpus has a key, which the literature operations' corpus choice and
+// the smoke cases name.
+const CORPUS = [
+  { key: "demo", name: "Panic literature corpus (demo)", file: "panic-corpus.yaml", src: FIXTURES,
+    desc: "Eight designed records whose keywords fall into four clean themes, a worked example of the method." },
+  { key: "openalex", name: "OpenAlex: panic disorder, 150 works (frozen)", file: "openalex-panic-2026.corpus.yaml", src: FIXTURES,
+    desc: "The first 150 works OpenAlex returned for the search 'panic disorder' on 1 October 2026, with OpenAlex's model-generated keywords and without references, so it has no co-citation." },
+];
 
 async function rmrf(p) {
   await fs.rm(p, { recursive: true, force: true });
@@ -115,7 +122,7 @@ export async function manifestExamples(shippedDir) {
 }
 export async function manifestCorpora(shippedDir) {
   return Promise.all(CORPUS.map(async (c) => ({
-    name: c.name, path: `fixtures/${c.file}`, desc: c.desc || "",
+    key: c.key, name: c.name, path: `fixtures/${c.file}`, desc: c.desc || "",
     shipped: await isFile(path.join(shippedDir, c.file)),
   })));
 }

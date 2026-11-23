@@ -1,4 +1,12 @@
-schema_version: "1.0"
+# A simplified encoding of self-determination theory after Ryan & Deci (2000),
+# "Self-determination theory and the facilitation of intrinsic motivation,
+# social development, and well-being", American Psychologist, 55(1), 68-78.
+# https://doi.org/10.1037/0003-066X.55.1.68
+# The satisfaction of three basic psychological needs, autonomy, competence
+# and relatedness, supports intrinsic motivation. The encoding keeps only the
+# three paths from the needs to intrinsic motivation, and the article's
+# account of internalisation and of extrinsic motivation is left out.
+schema_version: "1.1"
 id: "self-determination-2026"
 title: "Self-determination theory of motivation"
 maturity: "developing"
@@ -57,6 +65,7 @@ predictions:
     risk_score: 0.4
     severity: 0.5
     diagnostic_vs: [alt_behaviourist]
+    claim: {kind: effect, x: c_autonomy, y: c_intrinsic_motivation, sign: positive}
   - id: pred2
     derives_from: [p2]
     statement: "Competence-supportive feedback raises intrinsic motivation scores within a 0.3-0.6 SD band."
@@ -64,6 +73,10 @@ predictions:
     risk_score: 0.6
     severity: 0.6
     diagnostic_vs: []
+    # The bounds restate the band of the statement: the rise in intrinsic
+    # motivation scores, in standard deviations, that the feedback produces.
+    bounds: {lower: 0.3, upper: 0.6}
+    claim: {kind: effect, x: c_competence, y: c_intrinsic_motivation, sign: positive}
   - id: pred3
     derives_from: [p3]
     statement: "Higher relatedness is associated with greater intrinsic motivation."
@@ -71,6 +84,7 @@ predictions:
     risk_score: 0.3
     severity: 0.4
     diagnostic_vs: []
+    claim: {kind: association, x: c_relatedness, y: c_intrinsic_motivation, sign: positive}
 
 auxiliary_assumptions:
   - id: aux1
@@ -83,12 +97,14 @@ evidence:
     source_doi: "10.1037/0003-066X.55.1.68"
     direction: "corroborates"
 
+# The test outcome is made up for the example, as its observed text says. It
+# is not a reported result, and it records no registration.
 test_outcomes:
   - prediction_id: pred1
-    observed: "Autonomy support raised persistence in 71% of studies."
+    observed: "Illustrative values, not a reported result: autonomy support raised free-choice persistence over the controlling condition."
     passed: true
     severity_at_test: 0.5
-    registered: "osf.io/example"
+    registered: null
     date: "2026-04-01"
 
 alternatives:
@@ -99,9 +115,10 @@ alternatives:
     label: "Expectancy-value account"
     key_constructs: ["expectancy", "task value"]
 
+# No formal model of the theory is specified here, so none is declared.
 formal_model:
-  type: "ode"
-  spec_ref: "models/sdt_ode.py"
+  type: "none"
+  spec_ref: null
 
 provenance:
   - step: "1"

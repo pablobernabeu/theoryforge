@@ -61,7 +61,7 @@ test_that("the app examples type comparative claims as directional", {
     list(name = "effort-recovery.theory.yaml", id = "pred3", declared = 0.7),
     list(name = "happy-vowel-manchester.theory.yaml", id = "pred_independence", declared = 0.8),
     list(name = "cognitive-dissonance.theory.yaml", id = "pred_rating_point", declared = 0.7),
-    list(name = "cognitive-dissonance.theory.yaml", id = "pred_dissonance_mediates", declared = 0.6),
+    list(name = "cognitive-dissonance.theory.yaml", id = "pred_one_dollar_above_control", declared = 0.6),
     list(name = "stereotype-threat.theory.yaml", id = "pred_salience_activation", declared = 0.6)
   )
   for (cs in retyped) {

@@ -124,6 +124,12 @@ jobs:
         with:
           node-version: '24'
 
+      # The UI core, the editor, the runtimes and the vendor build under a stub
+      # DOM, before anything is staged for deployment. The Python above runs
+      # the apps' Python snippets.
+      - name: App unit tests
+        run: node --test apps/tests/*.test.mjs
+
       - name: Build and stage the interactive apps under site/apps
         run: |
           node apps/build.mjs

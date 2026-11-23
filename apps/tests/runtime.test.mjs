@@ -223,9 +223,9 @@ test("both runtimes load a pinned engine release, which the apps' README names",
   }
   const webr = r.match(/^import \{ WebR \} from "https:\/\/webr\.r-wasm\.org\/v(\d+\.\d+\.\d+)\/webr\.mjs";$/m);
   assert.ok(webr, "r-runtime.js imports webR from a versioned address");
-  assert.equal(webr[1], "0.6.0");
+  assert.equal(webr[1], "0.6.1");
   const pyodide = [...py.matchAll(/cdn\.jsdelivr\.net\/pyodide\/v(\d+\.\d+\.\d+)\/full\//g)].map((m) => m[1]);
-  assert.deepEqual(pyodide, ["0.27.7", "0.27.7"], "the module and its index URL name one Pyodide release");
+  assert.deepEqual(pyodide, ["314.0.8", "314.0.8"], "the module and its index URL name one Pyodide release");
   // A line break may fall anywhere a space does.
   const readme = readFileSync(path.join(here, "..", "README.md"), "utf8").replace(/\s+/g, " ");
   assert.match(readme, new RegExp(`webR ${webr[1].replace(/\./g, "\\.")} \\(R \\d`));

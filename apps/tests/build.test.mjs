@@ -54,7 +54,7 @@ test("the Python vendor tree leaves out __pycache__ and every file the manifest 
   }
 });
 
-test("the manifest marks the examples each package ships and lists modality switching last", async () => {
+test("the manifest marks the examples and corpora each package ships and lists modality switching last", async () => {
   for (const dir of [path.join(repo, "python", "src", "theoryforge", "fixtures"),
     path.join(repo, "r", "theoryforge", "inst", "fixtures")]) {
     const examples = await manifestExamples(dir);
@@ -64,7 +64,8 @@ test("the manifest marks the examples each package ships and lists modality swit
       "fixtures/panic-network.theory.yaml", "fixtures/panic-network-2026-v2.theory.yaml",
       "fixtures/weak-theory.theory.yaml", "fixtures/modality-switching.theory.yaml",
     ]);
-    assert.deepEqual((await manifestCorpora(dir)).map((c) => [c.path, c.shipped]), [["fixtures/panic-corpus.yaml", true]]);
+    assert.deepEqual((await manifestCorpora(dir)).map((c) => [c.key, c.path, c.shipped]), [
+      ["demo", "fixtures/panic-corpus.yaml", true], ["openalex", "fixtures/openalex-panic-2026.corpus.yaml", true]]);
   }
 });
 

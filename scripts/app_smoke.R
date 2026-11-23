@@ -10,14 +10,21 @@
 # theoryforge is not installed there, so system.file() cannot find a resource
 # that BOOT_R fails to pre-seed, just as in the browser.
 #
-# It calls what the app calls: .tf_lineage_call() over every example and
-# .tf_load_corpus() at start-up, then .tf_load() and every operation in
-# scripts/app_smoke_cases.json for each example, each operation passed to
-# .tf_run_call() as a JSON call file. As in the UI, the appraisal's prior is
-# the example the theory declares as its parent when exactly one does.
-# Otherwise it is an example uploaded as a prior through .tf_load_prior().
-# Last, an invalid theory must load with {"ok": false, "message": ...} and give
-# the same from validate. Every result must be a JSON object.
+# It calls what the app calls: .tf_lineage_call() over every example at
+# start-up, an uploaded prior, rival and corpus, then .tf_load() and every
+# operation in scripts/app_smoke_cases.json for each example, each operation
+# passed to .tf_run_call() as a JSON call file. As in the UI, the appraisal's
+# prior is the example the theory declares as its parent when exactly one
+# does, and otherwise an example uploaded as a prior through .tf_load_prior().
+# The rival is the first alternative that states propositions, and otherwise a
+# theory uploaded through .tf_load_rival(). An impulse starts in the first
+# construct, and a corpus named by its key is read from its file. The
+# editor's call, .tf_edit_call(), must read the theory back from the JSON the
+# package's writer gives with the same content hash. Where the package has
+# tf_read_dagitty(), .tf_import_dagitty_call() must make the theory a small
+# model states. Last, an invalid theory must load with {"ok": false,
+# "message": ...} and give the same from validate. Every result must be a
+# JSON object.
 #
 # Usage: Rscript scripts/app_smoke.R [<apps_dir>]
 #
@@ -32,7 +39,7 @@
 local({
   # Readable YAML with a misspelt top-level field, which full validation refuses.
   invalid_theory <- "schema_version: '1.0'\nid: x\ntitle: X\nmaturity: draft\npredicitions: []\n"
-  uploaded_prior <- "upload"
+  uploaded <- "upload"
 
   file_arg <- grep("^--file=", commandArgs(FALSE), value = TRUE)[1]
   self <- normalizePath(gsub("~+~", " ", sub("^--file=", "", file_arg), fixed = TRUE), winslash = "/")
@@ -90,7 +97,8 @@ local({
     plan <- list(
       tree = tree, lib = lib, cases = file.path(root, "scripts", "app_smoke_cases.json"),
       examples = lapply(manifest$examples, function(e) list(name = e$name, path = file.path(tree, e$path))),
-      corpus = if (length(manifest$corpora)) file.path(tree, manifest$corpora[[1]]$path) else "")
+      corpora = stats::setNames(lapply(manifest$corpora, function(c) file.path(tree, c$path)),
+                                vapply(manifest$corpora, function(c) c$key, "")))
     path <- file.path(work, "plan.json")
     jsonlite::write_json(plan, path, auto_unbox = TRUE)
     path
@@ -150,16 +158,22 @@ local({
       if (!is.null(lineage)) fail("start-up: lineage", "not one lineage record per example")
       lineage <- vector("list", length(examples))
     }
-    if (nzchar(plan$corpus)) {
-      calls <- calls + 1L
-      tryCatch(.tf_load_corpus(plan$corpus),
-               error = function(e) fail("start-up: load_corpus", conditionMessage(e)))
+    # An uploaded prior, rival or corpus is written to a file of its own, as
+    # the app writes it.
+    for (kind in c("prior", "rival")) {
+      upload <- file.path(plan$tree, paste0(kind, ".yaml"))
+      file.copy(examples[[1]]$path, upload)
+      fn <- if (kind == "prior") .tf_load_prior else .tf_load_rival
+      up <- call_json(paste("upload a", kind), function() fn(upload))
+      if (!is.null(up) && (!is.list(up) || is.null(names(up)))) fail(paste("upload a", kind), "no record")
     }
-    # An uploaded prior is written to a file of its own, as the app writes it.
-    upload <- file.path(plan$tree, "prior.yaml")
-    file.copy(examples[[1]]$path, upload)
-    up <- call_json("upload a prior", function() .tf_load_prior(upload))
-    if (!is.null(up) && (!is.list(up) || is.null(names(up)))) fail("upload a prior", "no lineage record")
+    corpora <- plan$corpora
+    if (length(corpora)) {
+      upload <- file.path(plan$tree, "corpus.yaml")
+      file.copy(corpora[[1]], upload)
+      up <- call_json("upload a corpus", function() .tf_load_corpus(upload, uploaded))
+      if (!is.null(up) && !(is.list(up) && isTRUE(up$n_records > 0))) fail("upload a corpus", "no records read")
+    }
 
     for (i in seq_along(examples)) {
       ex <- examples[[i]]
@@ -168,10 +182,15 @@ local({
       parents <- paths[vapply(seq_along(examples), function(j) {
         j != i && is_declared_parent(summary, lineage[[j]])
       }, logical(1))]
-      prior <- if (length(parents) == 1L) parents else uploaded_prior
+      prior <- if (length(parents) == 1L) parents else uploaded
+      rivals <- unlist(lapply(summary$alternatives, function(a) if (isTRUE(a$propositions > 0)) a$id))
+      constructs <- unlist(lapply(summary$constructs, function(c) c$id))
       for (cs in cases) {
         params <- cs$params
         if (identical(cs$op, "appraise")) params$prior <- prior
+        if (identical(cs$op, "discriminate")) params$rival <- if (length(rivals)) rivals[[1]] else uploaded
+        if (identical(params$start, "impulse")) params$impulse <- constructs[[1]]
+        if (!is.null(params$corpus) && !identical(params$corpus, uploaded)) params$corpus <- corpora[[params$corpus]]
         params_json <- if (length(params)) as_json(params) else "{}"
         label <- paste0(ex$name, ": ", cs$op, " ", params_json)
         res <- call_json(label, function() {
@@ -182,6 +201,39 @@ local({
           fail(label, "the result is not a JSON object")
         }
       }
+      # The editor reads the theory back from the JSON the writer gives.
+      label <- paste0(ex$name, ": edit")
+      written <- file.path(plan$tree, "edit.json")
+      ok <- tryCatch({ writeBin(charToRaw(enc2utf8(.tf_write_text("json"))), written); TRUE },
+                     error = function(e) { fail(label, paste("write_text:", conditionMessage(e))); FALSE })
+      if (!ok) next
+      edited <- call_json(label, function() {
+        write_call(as_json(list(path = written, formats = c("yaml", "json"))))
+        .tf_edit_call()
+      })
+      if (is.list(edited)) {
+        if (!identical(edited$hash, summary$hash) || !identical(edited$validation, summary$validation)) {
+          fail(label, "the theory read back differs from the theory loaded")
+        }
+        if (!setequal(names(edited$texts), c("yaml", "json"))) fail(label, "the writer's texts are missing")
+      }
+    }
+
+    # The editor's DAGitty import, through the package's reader where this
+    # version of the package has one.
+    if (exists("tf_read_dagitty", mode = "function")) {
+      model <- file.path(plan$tree, "dagitty.txt")
+      writeBin(charToRaw("dag {\n  a -> b -> c\n  a <-> c [latent]\n}\n"), model)
+      res <- call_json("import a DAGitty model", function() {
+        write_call(as_json(list(path = model, id = "dag-demo", relation = "increases", formats = I("yaml"))))
+        .tf_import_dagitty_call()
+      })
+      if (!is.null(res) && !(identical(res$id, "dag-demo") && identical(res$counts$constructs, 3L) &&
+                             identical(res$counts$propositions, 3L) && !is.null(res$texts$yaml))) {
+        fail("import a DAGitty model", "not the theory of three constructs and three propositions the model states")
+      }
+    } else {
+      cat("This version of the package has no tf_read_dagitty(), so the DAGitty import was not run\n")
     }
 
     invalid <- file.path(plan$tree, "input.yaml")
@@ -199,8 +251,8 @@ local({
     if (!identical(res, v)) fail("invalid theory: validate", "differs from the load's validation")
 
     for (f in failures) cat("FAIL ", f, "\n", sep = "")
-    cat(sprintf(paste0("%d examples x %d operations, with start-up, an uploaded prior and an ",
-                       "invalid theory: %d calls, %d failures\n"),
+    cat(sprintf(paste0("%d examples x %d operations, with start-up, the uploads, the editor's call ",
+                       "and an invalid theory: %d calls, %d failures\n"),
                 length(examples), length(cases), calls, length(failures)))
     if (length(failures)) 1L else 0L
   }

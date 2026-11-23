@@ -432,7 +432,7 @@ test("the preregistration is a hypotheses section to complete, and its reading c
   for (const [records, reading] of cases) {
     const { ctx, $ } = await boot({}, lineageRuntime({ preregister: { text: text(records) } }));
     await opButton(ctx, "preregister").click();
-    assert.match($("#opHelp").textContent, /hypotheses section of a preregistration/);
+    assert.match($("#opHelp").textContent, /theory and hypotheses sections of a preregistration/);
     await $("#runBtn").click();
     const about = $("#output .ri-about").textContent;
     assert.match(about, /design, sampling plan, analysis plan and inference criteria/);
@@ -469,4 +469,204 @@ test("the help lists each operation as 'Label: description' and the title names 
     assert.equal(li.querySelector("b"), null, "no label is set in bold");
   }
   assert.match(items[0].textContent, /^Rigour checklist: Scores the theory against the 12-item rigour checklist/);
+});
+
+// ---- groups, chips, the selector, errors and the status region -------------
+
+test("the operations stand in groups, each with a plain-language subtitle", async () => {
+  const { ctx } = await boot();
+  const groups = ctx.document.querySelectorAll(".opgroup");
+  assert.equal(groups.length, ctx.TF.GROUPS.length);
+  for (const g of groups) {
+    assert.ok(g.querySelector("h3").textContent.length > 0);
+    assert.match(g.querySelector(".gs").textContent, /^[A-Z].*\.$/);
+  }
+  const inGroups = groups.flatMap((g) => g.querySelectorAll(".op").map((b) => b.getAttribute("data-op")));
+  const plain = (v) => JSON.parse(JSON.stringify(v));
+  assert.deepEqual(plain(inGroups.slice().sort()), plain(ctx.TF.OPS.map((o) => o.id).sort()));
+  for (const op of ctx.TF.OPS) assert.ok(ctx.TF.GROUPS.some((g) => g.id === op.group), op.id);
+});
+
+test("the summary counts in the singular when there is one", async () => {
+  const rt = stubRuntime({
+    async loadExample(p) {
+      this.active = p;
+      return { id: "one", title: "One", counts: { constructs: 1, propositions: 1, predictions: 2, alternatives: 0, assumptions: 1, phenomena: 1 },
+        validation: { ok: true }, check: { score: 41.5, gate: "pass" }, hash: "sha256:" + "ab".repeat(32) };
+    },
+  });
+  const { $ } = await boot({}, rt);
+  // The stand-in DOM keeps innerHTML as written.
+  const text = $("#summaryWrap .chips").textContent.replace(/<\/?b>/g, "");
+  assert.match(text, /1 construct(?!s)/);
+  assert.match(text, /1 assumption(?!s)/);
+  assert.match(text, /1 phenomenon/);
+  assert.match(text, /2 predictions/);
+  assert.match(text, /41\.5 \/ 100 · pass/);
+  assert.match($("#summaryWrap .hash").textContent, /sha256:abababababab…ababab/);
+});
+
+test("after an upload the selector names it, and the example shown before can be loaded again", async () => {
+  const { $, rt } = await boot();
+  await upload($("#fileInput"), "mine.theory.yaml", "id: mine\n");
+  assert.equal($("#exampleSel").value, "");
+  assert.equal($("#exampleOwn").textContent, "Uploaded: mine.theory.yaml");
+  assert.equal($("#exampleOwn").hasAttribute("hidden"), false);
+  await $("#exampleSel").dispatch("change", { target: { value: EXAMPLES[0].path } });
+  assert.equal(rt.active, EXAMPLES[0].path);
+  assert.equal($("#exampleOwn").hasAttribute("hidden"), true);
+});
+
+test("an error's headline names the error and the user's file, not a caret or an in-browser path", async () => {
+  const yamlError = "PythonError: Traceback (most recent call last):\n  File \"/pkg/_app.py\", line 80, in load\n" +
+    "yaml.scanner.ScannerError: mapping values are not allowed here\n  in \"/pkg/input.yaml\", line 2, column 9:\n    foo: bar: baz\n            ^";
+  const rt = stubRuntime({
+    fileNames: { "/pkg/input.yaml": "my theory.yaml" },
+    async loadTheoryText() { throw new Error(yamlError); },
+  });
+  const { $ } = await boot({}, rt);
+  await upload($("#fileInput"), "my theory.yaml", "foo: bar: baz\n");
+  assert.equal($("#summaryWrap .error .last").textContent,
+    "yaml.scanner.ScannerError: mapping values are not allowed here (line 2, column 9)");
+  const full = $("#summaryWrap .error details").textContent;
+  assert.match(full, /in "my theory\.yaml", line 2/);
+  assert.doesNotMatch(full, /\/pkg\/input/);
+  const { headline } = (await boot()).ctx.TF.util;
+  assert.equal(headline(["Error in tf_read(p) :", "(input.yaml) Scanner error: mapping values are not allowed in this context at line 2, column 9"]),
+    "Error in tf_read(p) : (input.yaml) Scanner error: mapping values are not allowed in this context at line 2, column 9");
+  assert.equal(headline(["something went wrong", "^"]), "something went wrong");
+});
+
+test("a run is announced in a status region, and the result panel is no live region", async () => {
+  const { $ } = await boot();
+  assert.equal($("#output").getAttribute("aria-live"), null);
+  assert.equal($("#liveStatus").getAttribute("role"), "status");
+  await $("#runBtn").click();
+  await new Promise((r) => setTimeout(r, 60));
+  assert.equal($("#liveStatus").textContent, "Rigour checklist finished");
+});
+
+test("a fetch that is not ok is refused with the file's name, and Graphviz points convert to pixels", async () => {
+  const ctx = makeWindow();
+  runScript(ctx, CORE);
+  ctx.fetch = async () => ({ ok: false, status: 404, json: async () => ({}), arrayBuffer: async () => new ArrayBuffer(0) });
+  await assert.rejects(ctx.TF.util.fetchJson("vendor/manifest.json"), /Could not fetch vendor\/manifest\.json \(HTTP 404\)/);
+  await assert.rejects(ctx.TF.util.fetchBytes("vendor/R/core.R"), /HTTP 404/);
+  const { cssPx } = ctx.TF.util;
+  assert.equal(cssPx("72pt"), 96);
+  assert.equal(cssPx("1in"), 96);
+  assert.equal(cssPx("100"), 100);
+  assert.equal(cssPx("12.5px"), 12.5);
+  assert.equal(cssPx("auto"), 0);
+});
+
+// ---- the new operations ------------------------------------------------------
+
+test("the check view shows the range of the aggregate where the checklist gives one", async () => {
+  const report = { aggregate_score: 87.1, aggregate_range: [83.5, 89.2], coverage: 1, gate: "pass", n_blockers_failed: 0, maturity: "testing", items: [] };
+  const { $ } = await boot({}, lineageRuntime({ check: { report, svg: "<svg></svg>" } }));
+  await $("#runBtn").click();
+  assert.match($("#output").textContent, /87\.1 \/ 100 \(83\.50 to 89\.20 under other weightings\)|87\.1 \/ 100 \(83\.5 to 89\.2 under other weightings\)/);
+});
+
+test("post-data severity reads each outcome in words and writes a value that rounds to 1 as a bound", async () => {
+  const rows = [{ prediction_id: "pred2", outcome: 0, lower: 20, upper: 60, estimate: 41, se: 6, severity: 1 },
+    { prediction_id: "pred3", outcome: 1, lower: 0.2, upper: null, estimate: 0.1, se: 0.1, severity: 0.159 }];
+  const { ctx, $ } = await boot({}, lineageRuntime({ post_severity: { result: rows } }));
+  await opButton(ctx, "post_severity").click();
+  await $("#runBtn").click();
+  const text = $("#output").textContent;
+  assert.match(text, /> 0\.999/);
+  assert.match(text, /more than 999 times in 1,000/);
+  assert.match(text, /Had the true value lain at the lower bound of 0\.20, an estimate lower than 0\.10 would have come up 15\.9 times in 100\./);
+  assert.match(text, /outside the region the claim allows/);
+  assert.match($("#output .ri-interp").textContent, /^2 test outcomes carry an estimate, a standard error and a prediction with bounds\./);
+});
+
+test("what the graph entails lists each claim with its verdict", async () => {
+  const result = { theory_id: "t", criterion: "m", acyclic: true, feedback: [], counts: { entailed: 1, contradicted: 1, undetermined: 0, not_evaluated: 0 },
+    claims: [
+      { source: "prediction", id: "pred1", kind: "effect", x: "a", y: "b", given: [], sign: "positive", derived: "positive", verdict: "entailed", basis: "paths_agree", faithfulness: false, via: ["p1"], identified: true, adjustment: [] },
+      { source: "phenomenon", id: "ph1", kind: "association", x: "a", y: "c", given: "b", sign: "zero", derived: "nonzero", verdict: "contradicted", basis: "connected", faithfulness: true, via: [], identified: null, adjustment: null },
+    ] };
+  const { ctx, $ } = await boot({}, lineageRuntime({ entailments: { result } }));
+  await opButton(ctx, "entailments").click();
+  assert.deepEqual($("#param-cycles").children.map((o) => o.textContent), ["refuse", "sigma"]);
+  await $("#runBtn").click();
+  const text = $("#output").textContent;
+  assert.match(text, /effect of a on b: positive/);
+  assert.match(text, /association of a and c given b: zero \(assumes no exact cancellation\)/);
+  assert.match($("#output .ri-interp").textContent, /state 2 claims\. The causal graph entails 1 and contradicts 1\./);
+});
+
+test("Compare with a rival offers the alternatives that state propositions, and an upload otherwise", async () => {
+  const rt = lineageRuntime({ discriminate: { result: { rival_id: "alt_b", criterion: "m", evaluated: true, shared: ["a", "b"], only_theory: [], only_rival: [],
+    markov_equivalent: false, independencies: [], effects: [{ x: "a", y: "b", theory: "positive", rival: "negative", decisive: true }], associations: [],
+    claims: [{ source: "prediction", id: "pred1", theory: "entailed", rival: "contradicted", discriminates: true }],
+    counts: { discriminating_claims: 1, independencies: 0, decisive_effects: 1, decisive_associations: 0 } } } });
+  const base = rt.loadExample;
+  rt.loadExample = async function (p) {
+    const s = await base.call(this, p);
+    s.alternatives = p === LINEAGE[0].path ? [{ id: "alt_a", label: "A", propositions: 0 }, { id: "alt_b", label: "B", propositions: 2 }] : [];
+    return s;
+  };
+  const { ctx, $ } = await boot({}, rt);
+  await opButton(ctx, "discriminate").click();
+  assert.deepEqual($("#param-rival").children.map((o) => o.getAttribute("value")), ["", "alt_b", "upload"]);
+  assert.equal($("#param-rival").value, "alt_b");
+  await $("#runBtn").click();
+  assert.equal(lastCall(rt).params.rival, "alt_b");
+  assert.match($("#output").textContent, /The theory's claims under each graph/);
+  assert.match($("#output .ri-interp").textContent, /read 1 claim of the theory in opposite ways/);
+  // A theory with no such alternative waits for an uploaded rival.
+  await choose($("#exampleSel"), LINEAGE[2].path);
+  assert.equal($("#param-rival").value, "");
+  // Back on a theory with rivals, the first of them is chosen again.
+  await choose($("#exampleSel"), LINEAGE[0].path);
+  assert.equal($("#param-rival").value, "alt_b");
+  await choose($("#exampleSel"), LINEAGE[2].path);
+  const before = rt.calls.length;
+  await $("#runBtn").click();
+  assert.equal(rt.calls.length, before);
+  assert.match($(".toast").textContent, /Upload a rival theory/);
+});
+
+test("an impulse starts in a construct of the theory, and the uniform start's value is hidden for it", async () => {
+  const rt = lineageRuntime({ simulate: { result: { states: ["a", "b"], steps: 2, dt: 0.1, method: "exact", initial_state: [1, 0],
+    assumed_positive: ["p2"], ignored: [], opposed: [], trajectory: [[1, 0], [0.9, 0.1], [0.8, 0.2]] } } });
+  const base = rt.loadExample;
+  rt.loadExample = async function (p) { const s = await base.call(this, p); s.constructs = [{ id: "a", label: "A" }, { id: "b", label: "B" }]; return s; };
+  const { ctx, $ } = await boot({}, rt);
+  await opButton(ctx, "simulate").click();
+  assert.ok($("#param-init"));
+  assert.equal($("#param-impulse"), null);
+  await choose($("#param-start"), "impulse");
+  assert.equal($("#param-init"), null);
+  assert.equal($("#param-impulse").value, "a");
+  await choose($("#param-impulse"), "b");
+  await $("#runBtn").click();
+  assert.equal(lastCall(rt).params.start, "impulse");
+  assert.equal(lastCall(rt).params.impulse, "b");
+  assert.match($("#output").textContent, /Assumed positivep2/);
+  assert.match($("#output .ri-interp").textContent, /from an impulse in b/);
+});
+
+test("the literature operations offer both bundled corpora and an upload", async () => {
+  const rt = lineageRuntime({ litmap: { result: { n_records: 0, keywords: [], themes: [], keyword_cooccurrence: [], co_citation: [] }, dots: {} } });
+  rt.corpora = [{ key: "demo", name: "Demo corpus", path: "fixtures/d.yaml" }, { key: "openalex", name: "OpenAlex corpus", path: "fixtures/o.yaml", desc: "Frozen." }];
+  const base = rt.init;
+  rt.init = async function () { const i = await base.call(this); i.corpora = this.corpora; return i; };
+  const { ctx, $ } = await boot({}, rt);
+  await opButton(ctx, "litmap").click();
+  assert.deepEqual($("#param-corpus").children.map((o) => o.textContent), ["Demo corpus", "OpenAlex corpus", "Upload a corpus…"]);
+  assert.equal($("#param-method").value, "simple_centres");
+  await choose($("#param-corpus"), "openalex");
+  assert.match($("#corpusMore").textContent, /Frozen\./);
+  await $("#runBtn").click();
+  assert.deepEqual([lastCall(rt).params.corpus, lastCall(rt).params.min_df, lastCall(rt).params.max_df], ["openalex", 1, 1]);
+  await choose($("#param-corpus"), "upload");
+  assert.ok($("#corpusFile"));
+  const before = rt.calls.length;
+  await $("#runBtn").click();
+  assert.equal(rt.calls.length, before, "Run waits for the upload");
 });

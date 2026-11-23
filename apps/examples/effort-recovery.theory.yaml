@@ -4,7 +4,9 @@
 # oscillation that keeps the curves distinct and makes this a clear worked
 # example for the simulation operation. Lower damping to 0.1 and raise steps to
 # 150 to see it cycle.
-schema_version: "1.0"
+# The theory is a constructed teaching example, not the encoding of a
+# published account.
+schema_version: "1.1"
 id: "effort-recovery-2026"
 title: "Effort-recovery regulation"
 maturity: "developing"
@@ -66,6 +68,10 @@ predictions:
     risk_score: 0.6
     severity: 0.6
     diagnostic_vs: []
+    # The bounds refer to the change in fatigue, in standard deviations, from
+    # before the break to the end of the same day. A fall of 0.3 to 0.6 SD is
+    # a change from -0.6 to -0.3, negative as the statement's 'lowers' is.
+    bounds: {lower: -0.6, upper: -0.3}
   - id: pred3
     derives_from: [p2]
     statement: "Fatigue and recovery effort oscillate out of phase over a working fortnight."
@@ -88,9 +94,11 @@ alternatives:
     label: "Stable trait fatigue account"
     key_constructs: ["dispositional exhaustion"]
 
+# The simulation operation reads the propositions as a linear system, but no
+# formal model of the theory is specified here, so none is declared.
 formal_model:
-  type: "ode"
-  spec_ref: "models/effort_recovery_ode.py"
+  type: "none"
+  spec_ref: null
 
 provenance:
   - step: "1"

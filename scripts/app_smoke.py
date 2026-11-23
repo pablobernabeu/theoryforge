@@ -10,13 +10,19 @@ tree and a copy of PyYAML, and nothing else. A file the build leaves out of the
 manifest, or a module Pyodide does not have, then fails here as it would in
 the browser.
 
-It calls what the app calls: lineage() over every example and load_corpus() at
-start-up, then load() and every operation in scripts/app_smoke_cases.json for
-each example. As in the UI, the appraisal's prior is the example the theory
-declares as its parent when exactly one does. Otherwise it is an example
-uploaded as a prior through load_prior(). Last, an invalid theory must load with
-{"ok": false, "message": ...} and give the same from validate. Every result
-must be a JSON object.
+It calls what the app calls: lineage() over every example at start-up, an
+uploaded prior, rival and corpus, then load() and every operation in
+scripts/app_smoke_cases.json for each example. As in the UI, the appraisal's
+prior is the example the theory declares as its parent when exactly one does,
+and otherwise an example uploaded as a prior through load_prior(). The rival is
+the first alternative that states propositions, and otherwise a theory
+uploaded through load_rival(). An impulse starts in the first construct, and a
+corpus named by its key is read from its file. The editor's call, edit(), must
+read the theory back from the JSON the package's writer gives with the same
+content hash. Where the package has read_dagitty(), import_dagitty() must make
+the theory a small model states. Last, an invalid theory must load with {"ok":
+false, "message": ...} and give the same from validate. Every result must be a
+JSON object.
 
 Usage: python scripts/app_smoke.py [APPS_DIR]
 
@@ -40,7 +46,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES = ROOT / "scripts" / "app_smoke_cases.json"
-UPLOADED_PRIOR = "upload"
+UPLOADED = "upload"
 # Readable YAML with a misspelt top-level field, which full validation refuses.
 INVALID = "schema_version: '1.0'\nid: x\ntitle: X\nmaturity: draft\npredicitions: []\n"
 
@@ -77,7 +83,7 @@ def prepare(apps: Path, work: Path) -> Path | None:
         "tree": str(tree),
         "deps": str(deps),
         "examples": [{"name": e["name"], "path": str(tree / e["path"])} for e in manifest["examples"]],
-        "corpus": str(tree / manifest["corpora"][0]["path"]) if manifest["corpora"] else None,
+        "corpora": {c["key"]: str(tree / c["path"]) for c in manifest["corpora"]},
         "cases": json.loads(CASES.read_text(encoding="utf-8"))["cases"],
     }
     path = work / "plan.json"
@@ -140,18 +146,22 @@ def child(plan_path: Path) -> int:
              and all(isinstance(x, dict) for x in lineage), "not one lineage record per example")
     if not isinstance(lineage, list) or len(lineage) != len(examples):
         lineage = [None] * len(examples)
-    if plan["corpus"]:
-        calls += 1
-        try:
-            app.load_corpus(plan["corpus"])
-        except Exception as e:  # noqa: BLE001
-            failures.append(f"start-up: load_corpus: {type(e).__name__}: {e}")
-    # An uploaded prior is written to a file of its own, as the app writes it.
-    upload = tree / "prior.yaml"
-    shutil.copyfile(examples[0]["path"], upload)
-    up = call("upload a prior", app.load_prior, str(upload))
-    if up is not None:
-        want("upload a prior", isinstance(up, dict), "no lineage record")
+    # An uploaded prior, rival or corpus is written to a file of its own, as
+    # the app writes it.
+    for kind, fn, src in (("prior", app.load_prior, examples[0]["path"]),
+                          ("rival", app.load_rival, examples[0]["path"])):
+        upload = tree / f"{kind}.yaml"
+        shutil.copyfile(src, upload)
+        up = call(f"upload a {kind}", fn, str(upload))
+        if up is not None:
+            want(f"upload a {kind}", isinstance(up, dict), "no record")
+    corpora = plan["corpora"]
+    if corpora:
+        upload = tree / "corpus.yaml"
+        shutil.copyfile(next(iter(corpora.values())), upload)
+        up = call("upload a corpus", app.load_corpus, str(upload), UPLOADED)
+        if up is not None:
+            want("upload a corpus", isinstance(up, dict) and up.get("n_records", 0) > 0, "no records read")
 
     for i, ex in enumerate(examples):
         summary = call(f"{ex['name']}: load", app.load, ex["path"])
@@ -159,15 +169,51 @@ def child(plan_path: Path) -> int:
             continue
         parents = [e["path"] for j, e in enumerate(examples)
                    if j != i and is_declared_parent(summary, lineage[j])]
-        prior = parents[0] if len(parents) == 1 else UPLOADED_PRIOR
+        prior = parents[0] if len(parents) == 1 else UPLOADED
+        rivals = [a["id"] for a in summary.get("alternatives", []) if a.get("propositions")]
+        constructs = [c["id"] for c in summary.get("constructs", []) if c.get("id")]
         for case in cases:
             params = dict(case["params"])
             if case["op"] == "appraise":
                 params["prior"] = prior
+            if case["op"] == "discriminate":
+                params["rival"] = rivals[0] if rivals else UPLOADED
+            if params.get("start") == "impulse":
+                params["impulse"] = constructs[0]
+            if params.get("corpus") not in (None, UPLOADED):
+                params["corpus"] = corpora[params["corpus"]]
             label = f"{ex['name']}: {case['op']} {json.dumps(params)}"
             res = call(label, app.run, case["op"], json.dumps(params))
             if res is not None:
                 want(label, isinstance(res, dict), "the result is not a JSON object")
+        # The editor reads the theory back from the JSON the writer gives.
+        label = f"{ex['name']}: edit"
+        written = tree / "edit.json"
+        try:
+            written.write_text(app.write_text("json"), encoding="utf-8")
+        except Exception as e:  # noqa: BLE001
+            failures.append(f"{label}: write_text: {type(e).__name__}: {e}")
+            continue
+        edited = call(label, app.edit, str(written), json.dumps(["yaml", "json"]))
+        if isinstance(edited, dict):
+            want(label, edited.get("hash") == summary.get("hash") and edited.get("validation") == summary.get("validation"),
+                 "the theory read back differs from the theory loaded")
+            want(label, set(edited.get("texts", {})) == {"yaml", "json"}, "the writer's texts are missing")
+
+    # The editor's DAGitty import, through the package's reader where this
+    # version of the package has one.
+    if app.can_import_dagitty():
+        model = tree / "dagitty.txt"
+        model.write_text("dag {\n  a -> b -> c\n  a <-> c [latent]\n}\n", encoding="utf-8")
+        res = call("import a DAGitty model", app.import_dagitty, str(model),
+                   json.dumps({"id": "dag-demo", "relation": "increases", "formats": ["yaml"]}))
+        if res is not None:
+            counts = res.get("counts", {}) if isinstance(res, dict) else {}
+            want("import a DAGitty model", res.get("id") == "dag-demo" and counts.get("constructs") == 3
+                 and counts.get("propositions") == 3 and "yaml" in res.get("texts", {}),
+                 "not the theory of three constructs and three propositions the model states")
+    else:
+        print("This version of the package has no read_dagitty(), so the DAGitty import was not run")
 
     invalid = tree / "input.yaml"
     invalid.write_text(INVALID, encoding="utf-8")
@@ -181,8 +227,8 @@ def child(plan_path: Path) -> int:
 
     for f in failures:
         print("FAIL " + f)
-    print(f"{len(examples)} examples x {len(cases)} operations, with start-up, an uploaded prior "
-          f"and an invalid theory: {calls} calls, {len(failures)} failures")
+    print(f"{len(examples)} examples x {len(cases)} operations, with start-up, the uploads, the editor's "
+          f"call and an invalid theory: {calls} calls, {len(failures)} failures")
     return 1 if failures else 0
 
 
