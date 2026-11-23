@@ -1,7 +1,7 @@
 # theoryforge dossier: Network theory of panic disorder
 
 - Theory ID: panic-network-2026-v2
-- Content hash: sha256:a9809e9774abff1b4dc6c4b8f10314c65af6becf6c4565bc7fcf0f7d69457c2c
+- Content hash: sha256:486b5a95b0fa635a7c4360b412a868f441191199b10ccea30089d9e13da69b10
 - Maturity: testing
 - Checklist version: 2.1
 - Aggregate rigour score: 89.8/100
@@ -35,12 +35,12 @@
 
 ## Test record
 
-- pred1: passed; observed: Arousal reached the predicted band in 78% of trials.; date: 2026-05-01; registered: osf.io/abcde
-- pred4: passed; observed: Avoidance dropped into the predicted band in 71% of cases.; date: 2026-06-10; registered: osf.io/fghij
+- pred1: passed; observed: Illustrative values, not a reported result: arousal reached the predicted band in 78% of trials.; date: 2026-05-01; registered: osf.io/abcde
+- pred4: passed; observed: Illustrative values, not a reported result: avoidance dropped into the predicted band in 71% of cases.; date: 2026-06-10; registered: osf.io/fghij
 
 ## Evidence
 
-- supports pred4: corroborates; doi: 10.1000/example.v2
+- supports pred4: corroborates
 
 ## Claims and the causal graph
 
@@ -66,7 +66,7 @@ _No alternative states propositions._
 - Theory ID: panic-network-2026-v2
 - Version: v2 (parent v1)
 - Schema version: 1.0
-- Content hash: sha256:a9809e9774abff1b4dc6c4b8f10314c65af6becf6c4565bc7fcf0f7d69457c2c
+- Content hash: sha256:486b5a95b0fa635a7c4360b412a868f441191199b10ccea30089d9e13da69b10
 - Maturity: testing
 - Formal model: ode (models/panic_ode.py)
 - Derivations check: yes

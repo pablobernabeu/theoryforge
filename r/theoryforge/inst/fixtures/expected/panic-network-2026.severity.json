@@ -16,5 +16,11 @@
     "type": "directional",
     "risk_score": 0.4,
     "computed_severity": 0.3
+  },
+  {
+    "prediction_id": "pred_indep",
+    "type": "interval",
+    "risk_score": 0.7,
+    "computed_severity": 0.7
   }
 ]

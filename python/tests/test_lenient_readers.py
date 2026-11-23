@@ -105,6 +105,9 @@ def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
         "ad_hoc_assumptions": [], "articulated": [], "underived": [""],
         "corroborated_new_registered": [], "renamed": [], "dropped": [],
         "dropped_corroborated": [], "content_lost": [], "new_anomalies": [], "assumptions": [],
+        "theoretically_progressive": False, "empirically_progressive": False, "revised": [],
+        "weakened_refuted": [], "unresolved": [], "implications_compared": False,
+        "implications_lost": [], "implications_lost_unrefuted": [], "implications_gained": [],
     }
 
 
@@ -344,7 +347,11 @@ def test_entries_without_ids_read_as_empty_ids(tmp_path):
         "corroborated_new_registered": [], "renamed": [], "dropped": [],
         "dropped_corroborated": [], "content_lost": [], "new_anomalies": [],
         "assumptions": [{"id": "", "added_for": "h1 failed at the first test", "class": "ad_hoc2",
-                         "independent": [{"id": "h1", "status": "untested"}]}],
+                         "independent": [{"id": "h1", "status": "untested"}],
+                         "added_for_inferred": False}],
+        "theoretically_progressive": True, "empirically_progressive": False, "revised": [],
+        "weakened_refuted": [], "unresolved": [], "implications_compared": True,
+        "implications_lost": [], "implications_lost_unrefuted": [], "implications_gained": [],
     }
     two_new = IDLESS.replace("auxiliary_assumptions:", """\
   - statement: A prediction without an id.

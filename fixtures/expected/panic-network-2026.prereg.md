@@ -2,8 +2,8 @@
 
 - Theory ID: panic-network-2026
 - Version: v1
-- Schema version: 1.0
-- Content hash: sha256:cc1ff8ce967c887aa1f28bd0333d0d7a1e4cae960d626c0b831448fc7ea9d35f
+- Schema version: 1.1
+- Content hash: sha256:baaf4a35b5a119634d9524c21ec32097e1c19e9f3299dfb6935e9a65e799f4a4
 - Maturity: developing
 - Formal model: ode (models/panic_ode.py)
 - Derivations check: yes
@@ -43,6 +43,9 @@
    - Test record: untested
 3. [directional] Higher perceived threat is associated with more avoidance. (pred3; derives from: p2)
    - Test record: untested
+4. [interval] Holding perceived threat constant, physiological arousal and avoidance correlate no more strongly than 0.10 in absolute value. (pred_indep; derives from: p1, p2, p3)
+   - Claim: c_arousal and c_avoidance are independent given c_perceived_threat; not evaluated, since the causal graph has a feedback loop
+   - Test record: already tested: failed (2026-05-20)
 
 ## Implied conditional independencies (derived from the causal graph, not predictions)
 _Not derived: the causal graph has a feedback loop, c_arousal -> c_perceived_threat -> c_arousal. With cycles = 'sigma', the statements are read by sigma-separation and hold if each loop settles to a unique equilibrium._
@@ -51,3 +54,4 @@ _Not derived: the causal graph has a feedback loop, c_arousal -> c_perceived_thr
 - pred1: severity 1.0, risk 0.9
 - pred2: severity 0.7, risk 0.7
 - pred3: severity 0.3, risk 0.4
+- pred_indep: severity 0.7, risk 0.7

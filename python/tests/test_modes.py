@@ -35,15 +35,20 @@ def test_severity_rubric(panic_path):
 
 
 def test_appraisal_progressive(fixtures_dir):
-    # v2 adds proposition p4 and derives pred4 from it, and a registered test
-    # corroborates pred4: new content that survived a test.
+    # v2 drops pred_indep, which a test refuted, adds proposition p4 and derives
+    # pred4 from it, and a registered test corroborates pred4: new content that
+    # survived a test. The one implication p4 withdraws is the refuted one.
     v1 = tf.read(fixtures_dir / "panic-network.theory.yaml")
     v2 = tf.read(fixtures_dir / "panic-network-2026-v2.theory.yaml")
     assert v2.appraise_amendment(v1) == {
         "verdict": "progressive", "new_predictions": ["pred4"], "corroborated_new": ["pred4"],
         "ad_hoc_assumptions": [], "articulated": [], "underived": [],
-        "corroborated_new_registered": ["pred4"], "renamed": [], "dropped": [],
+        "corroborated_new_registered": ["pred4"], "renamed": [], "dropped": ["pred_indep"],
         "dropped_corroborated": [], "content_lost": [], "new_anomalies": [], "assumptions": [],
+        "theoretically_progressive": True, "empirically_progressive": True, "revised": [],
+        "weakened_refuted": [], "unresolved": [], "implications_compared": True,
+        "implications_lost": ["c_arousal _||_ c_avoidance | c_perceived_threat"],
+        "implications_lost_unrefuted": [], "implications_gained": [],
     }
 
 
@@ -76,7 +81,7 @@ def test_preregister_names_the_rubric_for_what_it_is(panic_path):
 def test_new_diagrams(panic_path, weak_path):
     rm_ok = tf.read(panic_path).diagram("development_roadmap")
     assert '"all_checks_pass"' in rm_ok
-    assert 'label="Network theory of\\npanic disorder\\nscore 87.3, gate pass"' in rm_ok
+    assert 'label="Network theory of\\npanic disorder\\nscore 88.0, gate pass"' in rm_ok
     rm_weak = tf.read(weak_path).diagram("development_roadmap")
     # The failed blocker leads, numbered first and stating what it costs.
     assert ('"falsifiability" [label="1. falsifiability\\nAt least one\\nprediction forbids an'

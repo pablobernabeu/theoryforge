@@ -57,13 +57,13 @@ def _statuses(report):
 def test_panic_network_matches_exact_targets(panic_path):
     r = tf.read(panic_path).check()
     assert (r["aggregate_score"], r["coverage"], r["gate"], r["n_blockers_failed"]) == (
-        87.3, 0.92, "pass", 0)
+        88.0, 0.92, "pass", 0)
     assert _statuses(r) == {
-        "falsifiability": ("pass", 1.0), "precision": ("pass", 0.667),
-        "risk_severity": ("pass", 0.567), "parsimony": ("n/a", None),
+        "falsifiability": ("pass", 1.0), "precision": ("pass", 0.75),
+        "risk_severity": ("pass", 0.6), "parsimony": ("n/a", None),
         "non_redundancy": ("pass", 1.0), "construct_clarity": ("pass", 1.0),
         "scope": ("pass", 1.0), "logical_why": ("pass", 1.0),
-        "causal_testability": ("pass", 1.0), "diagnosticity": ("pass", 0.333),
+        "causal_testability": ("pass", 1.0), "diagnosticity": ("pass", 0.25),
         "formalisation": ("pass", 1.0), "derivation_chain": ("pass", 1.0),
     }
 

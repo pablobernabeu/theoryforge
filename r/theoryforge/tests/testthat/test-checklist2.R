@@ -65,7 +65,7 @@ test_that("the report gives coverage after the aggregate", {
                                  "n_blockers_failed", "items"))
   # parsimony has nothing to assess, and the other eleven items weigh 0.92.
   expect_identical(rep$checklist_version, "2.1")
-  expect_equal(rep$aggregate_score, 87.3)
+  expect_equal(rep$aggregate_score, 88.0)
   expect_equal(rep$coverage, 0.92)
   parsimony <- rep$items[[4L]]
   expect_identical(parsimony$status, "n/a")

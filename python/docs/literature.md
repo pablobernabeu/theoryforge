@@ -415,7 +415,7 @@ candidate list below is checked against.
 
 ```python exec="1" source="block" result="text" session="literature"
 candidates = [
-    "10.1016/j.brat.2015.10.002",                    # already cited as evidence
+    "10.1176/ajp.155.5.610",                         # already cited as evidence
     # already cited as an alternative, in URL form
     "https://doi.org/10.1016/0005-7967(86)90011-2",
     "https://doi.org/10.1037/0033-2909.99.1.20",     # not yet cited

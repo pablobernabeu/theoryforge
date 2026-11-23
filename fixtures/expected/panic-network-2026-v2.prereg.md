@@ -3,7 +3,7 @@
 - Theory ID: panic-network-2026-v2
 - Version: v2 (parent v1)
 - Schema version: 1.0
-- Content hash: sha256:a9809e9774abff1b4dc6c4b8f10314c65af6becf6c4565bc7fcf0f7d69457c2c
+- Content hash: sha256:486b5a95b0fa635a7c4360b412a868f441191199b10ccea30089d9e13da69b10
 - Maturity: testing
 - Formal model: ode (models/panic_ode.py)
 - Derivations check: yes

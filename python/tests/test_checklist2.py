@@ -70,7 +70,7 @@ def test_the_report_gives_coverage_after_the_aggregate(panic_path):
     assert list(r) == ["theory_id", "schema_version", "checklist_version", "maturity",
                        "aggregate_score", "coverage", "gate", "n_blockers_failed", "items"]
     # parsimony has nothing to assess, and the other eleven items weigh 0.92.
-    assert (r["checklist_version"], r["aggregate_score"], r["coverage"]) == ("2.1", 87.3, 0.92)
+    assert (r["checklist_version"], r["aggregate_score"], r["coverage"]) == ("2.1", 88.0, 0.92)
     assert (_items(r)["parsimony"]["status"], _items(r)["parsimony"]["score"]) == ("n/a", None)
 
 

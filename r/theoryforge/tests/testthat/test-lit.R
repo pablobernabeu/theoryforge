@@ -74,11 +74,11 @@ test_that("tf_landscape assigns the expected theme statuses", {
 })
 
 test_that("tf_new_evidence_dois excludes DOIs already cited by the theory", {
-  # The fixture already cites 10.1016/j.brat.2015.10.002 (evidence) and
+  # The fixture already cites 10.1176/ajp.155.5.610 (evidence) and
   # 10.1016/0005-7967(86)90011-2 / 10.1176/ajp.146.2.148 (alternatives).
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   candidates <- c(
-    "10.1016/j.brat.2015.10.002",                     # already cited (evidence), exact
+    "10.1176/ajp.155.5.610",                          # already cited (evidence), exact
     "https://doi.org/10.1016/0005-7967(86)90011-2",   # already cited (alternative), URL form
     "10.1176/AJP.146.2.148",                          # already cited (alternative), different case
     "10.1037/0033-2909.99.1.20",                      # new
@@ -100,7 +100,7 @@ test_that("tf_new_evidence_dois matches the golden JSON semantically", {
   # Same theory and candidate list as scripts/gen_golden.py.
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   candidates <- c(
-    "10.1016/j.brat.2015.10.002",
+    "10.1176/ajp.155.5.610",
     "https://doi.org/10.1016/0005-7967(86)90011-2",
     "10.1176/AJP.146.2.148",
     "10.1037/0033-2909.99.1.20",

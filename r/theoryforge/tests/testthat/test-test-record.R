@@ -152,7 +152,7 @@ test_that("the amended example states its version and its test record", {
 
 test_that("the version line needs an id and names a parent only when there is one", {
   panic <- tf_preregister(tf_read(tf_fixture_path("panic-network.theory.yaml")))
-  expect_true(grepl("\n- Theory ID: panic-network-2026\n- Version: v1\n- Schema version: 1.0\n",
+  expect_true(grepl("\n- Theory ID: panic-network-2026\n- Version: v1\n- Schema version: 1.1\n",
                     panic, fixed = TRUE))
   weak <- tf_preregister(tf_read(tf_fixture_path("weak-theory.theory.yaml")))
   expect_false(grepl("- Version:", weak, fixed = TRUE))
@@ -258,12 +258,12 @@ test_that("the dossier adds the test record and the evidence", {
   expect_true(grepl(paste0(
     "- pred4: severity 1.0, risk 0.9, declared 0.75\n",
     "\n## Test record\n\n",
-    "- pred1: passed; observed: Arousal reached the predicted band in 78% of trials.; ",
-    "date: 2026-05-01; registered: osf.io/abcde\n",
-    "- pred4: passed; observed: Avoidance dropped into the predicted band in 71% of cases.; ",
-    "date: 2026-06-10; registered: osf.io/fghij\n",
+    "- pred1: passed; observed: Illustrative values, not a reported result: arousal reached the ",
+    "predicted band in 78% of trials.; date: 2026-05-01; registered: osf.io/abcde\n",
+    "- pred4: passed; observed: Illustrative values, not a reported result: avoidance dropped into ",
+    "the predicted band in 71% of cases.; date: 2026-06-10; registered: osf.io/fghij\n",
     "\n## Evidence\n\n",
-    "- supports pred4: corroborates; doi: 10.1000/example.v2\n",
+    "- supports pred4: corroborates\n",
     "\n## Claims and the causal graph\n"
   ), d, fixed = TRUE))
   # The dossier embeds the preregistration, which holds the independencies, so

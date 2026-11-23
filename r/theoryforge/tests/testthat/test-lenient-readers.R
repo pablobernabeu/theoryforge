@@ -93,7 +93,11 @@ test_that("every consumer reads entries that are not mappings", {
     ad_hoc_assumptions = character(0), articulated = character(0), underived = "",
     corroborated_new_registered = character(0), renamed = list(), dropped = character(0),
     dropped_corroborated = character(0), content_lost = character(0),
-    new_anomalies = character(0), assumptions = list()))
+    new_anomalies = character(0), assumptions = list(),
+    theoretically_progressive = FALSE, empirically_progressive = FALSE, revised = list(),
+    weakened_refuted = character(0), unresolved = character(0), implications_compared = FALSE,
+    implications_lost = character(0), implications_lost_unrefuted = character(0),
+    implications_gained = character(0)))
 })
 
 test_that("full validation reports scalar entries instead of stopping", {
@@ -329,7 +333,12 @@ test_that("entries without ids read as empty ids", {
     dropped_corroborated = character(0), content_lost = character(0),
     new_anomalies = character(0),
     assumptions = list(list(id = "", added_for = "h1 failed at the first test", class = "ad_hoc2",
-                            independent = list(list(id = "h1", status = "untested"))))))
+                            independent = list(list(id = "h1", status = "untested")),
+                            added_for_inferred = FALSE)),
+    theoretically_progressive = TRUE, empirically_progressive = FALSE, revised = list(),
+    weakened_refuted = character(0), unresolved = character(0), implications_compared = TRUE,
+    implications_lost = character(0), implications_lost_unrefuted = character(0),
+    implications_gained = character(0)))
   two_new <- sub("auxiliary_assumptions:", "  - statement: A prediction without an id.
     type: directional
 auxiliary_assumptions:", lr_idless, fixed = TRUE)

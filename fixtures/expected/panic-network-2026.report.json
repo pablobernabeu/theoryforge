@@ -1,9 +1,9 @@
 {
   "theory_id": "panic-network-2026",
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "checklist_version": "2.1",
   "maturity": "developing",
-  "aggregate_score": 87.3,
+  "aggregate_score": 88.0,
   "coverage": 0.92,
   "gate": "pass",
   "n_blockers_failed": 0,
@@ -19,7 +19,7 @@
     {
       "id": "precision",
       "status": "pass",
-      "score": 0.667,
+      "score": 0.75,
       "weight": 0.1,
       "severity_if_fail": "warning",
       "citation": "Meehl (1967, 1990a)"
@@ -27,7 +27,7 @@
     {
       "id": "risk_severity",
       "status": "pass",
-      "score": 0.567,
+      "score": 0.6,
       "weight": 0.1,
       "severity_if_fail": "warning",
       "citation": "Popper (1959); Meehl (1967, 1990b)"
@@ -83,7 +83,7 @@
     {
       "id": "diagnosticity",
       "status": "pass",
-      "score": 0.333,
+      "score": 0.25,
       "weight": 0.06,
       "severity_if_fail": "warning",
       "citation": "Platt (1964); Fiedler (2017)"

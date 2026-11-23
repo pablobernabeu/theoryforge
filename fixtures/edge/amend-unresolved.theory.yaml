@@ -1,0 +1,37 @@
+# Edge case: amends amend-prior with a construct c4, a proposition p3 from c3
+# to c4 and a corroborated prediction h3 that cites p33, a typo for p3. An id
+# that names no proposition of the version leaves h3 unresolved, so it adds no
+# content and the amendment is neutral. Citing p3 would make it progressive.
+schema_version: "1.1"
+id: edge-amend-unresolved
+title: A new prediction that cites a missing proposition
+maturity: testing
+constructs:
+  - {id: c1, label: First, definition: The first construct.}
+  - {id: c2, label: Second, definition: The second construct.}
+  - {id: c3, label: Third, definition: The third construct.}
+  - {id: c4, label: Fourth, definition: The fourth construct.}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: It does.}
+  - {id: p2, from: c2, to: c3, relation: increases, mechanism: It does.}
+  - {id: p3, from: c3, to: c4, relation: increases, mechanism: It does.}
+predictions:
+  - id: h1
+    statement: c2 rises 0.5 SD per SD of c1, within 0.1.
+    type: point
+    derives_from: [p1]
+    bounds: {lower: 0.4, upper: 0.6}
+    claim: {kind: effect, x: c1, y: c2, sign: positive}
+  - id: h2
+    statement: c3 rises with c2.
+    type: directional
+    derives_from: [p2]
+  - id: h3
+    statement: c4 rises 0.3 SD per SD of c3, within 0.1.
+    type: point
+    derives_from: [p33]
+test_outcomes:
+  - prediction_id: h1
+    passed: false
+  - prediction_id: h3
+    passed: true

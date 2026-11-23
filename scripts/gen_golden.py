@@ -293,7 +293,7 @@ def main() -> int:
     # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
     # existing evidence and alternatives (three already cited, two new, one duplicate)
     new_evidence_candidates = [
-        "10.1016/j.brat.2015.10.002",
+        "10.1176/ajp.155.5.610",
         "https://doi.org/10.1016/0005-7967(86)90011-2",
         "10.1176/AJP.146.2.148",
         "10.1037/0033-2909.99.1.20",
@@ -301,16 +301,16 @@ def main() -> int:
         "10.1016/j.cpr.2011.09.005",
         # Spellings of the cited DOIs that the normaliser of API_SPEC.md
         # section 18 recognises, so the output is the same as without them.
-        "doi: 10.1016/j.brat.2015.10.002",
-        "DOI 10.1016/j.brat.2015.10.002",
-        "doi.org/10.1016/j.brat.2015.10.002",
-        "dx.doi.org/10.1016/j.brat.2015.10.002",
-        "https://www.doi.org/10.1016/j.brat.2015.10.002",
-        "info:doi/10.1016/j.brat.2015.10.002",
-        "urn:doi:10.1016/j.brat.2015.10.002",
+        "doi: 10.1176/ajp.155.5.610",
+        "DOI 10.1176/ajp.155.5.610",
+        "doi.org/10.1176/ajp.155.5.610",
+        "dx.doi.org/10.1176/ajp.155.5.610",
+        "https://www.doi.org/10.1176/ajp.155.5.610",
+        "info:doi/10.1176/ajp.155.5.610",
+        "urn:doi:10.1176/ajp.155.5.610",
         "https://doi.org/10.1016/0005-7967%2886%2990011-2",
-        "10.1016/j.brat.2015.10.002.",
-        "10.1016/J.BRAT.2015.10.002\u00a0",
+        "10.1176/ajp.155.5.610.",
+        "10.1176/AJP.155.5.610\u00a0",
     ]
     new_dois = v1.new_evidence_dois(new_evidence_candidates)
     (EXPECTED / "panic-network-2026.new_evidence_dois.json").write_bytes(

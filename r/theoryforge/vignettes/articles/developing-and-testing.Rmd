@@ -204,9 +204,12 @@ compares an amended theory against its prior version and returns a verdict in
 those terms.
 
 Here, the prior is the panic-network fixture and the amended version is its 2026
-revision. The revision adds a proposition, a direct path from arousal to
-avoidance, and derives from it a new prediction that a registered test later
-corroborates. It introduces no ad hoc assumption.
+revision. The prior implies that arousal and avoidance are independent given
+perceived threat and states that independence as `pred_indep`, which a test
+refuted. The revision drops `pred_indep`, adds a proposition, a direct path
+from arousal to avoidance, and derives from it a new prediction that a
+registered test later corroborates. It introduces no ad hoc assumption, and the
+one implied independence it gives up is the refuted one.
 
 ```{r appraise}
 v2 <- tf_read(
@@ -222,15 +225,21 @@ appraisal$new_predictions
 appraisal$corroborated_new
 appraisal$articulated
 appraisal$ad_hoc_assumptions
+appraisal$implications_lost
+appraisal$implications_lost_unrefuted
 ```
 
-A `progressive` verdict reflects new content that survived a test. Because the
-appraisal compares what the two versions claim, a prediction that only changed
-its identifier is reported under `renamed`. One derived only from propositions
-the prior already held is reported under `articulated` and does not make the
-amendment progressive. Had the amendment instead added assumptions tied to
-specific anomalies without generating corroborated predictions, the verdict
-would be `degenerating`.
+A `progressive` verdict reflects new content that survived a test, with no
+unrefuted content lost. Because the appraisal compares what the two versions
+claim, a prediction that only changed its identifier is reported under
+`renamed`. One derived only from propositions the prior already held, or whose
+claim the prior's causal graph already entails, is reported under `articulated`
+and does not make the amendment progressive. A prediction kept from the prior
+and rewritten is reported under `revised`, and weakening one that a test had
+refuted makes the amendment `degenerating` unless it also corroborates new
+content. Had the amendment instead added assumptions tied to specific anomalies
+without generating corroborated predictions, the verdict would be
+`degenerating` too.
 
 ## Compiling a measurement model
 

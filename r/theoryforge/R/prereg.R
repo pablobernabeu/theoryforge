@@ -78,7 +78,7 @@ NULL
 # The region a prediction's bounds allow, as an interval, or NULL. An absent,
 # infinite or null bound is open. A region that full validation would refuse,
 # with no finite bound or a lower bound above the upper one, is not written.
-.tf_region <- function(p) {
+.tf_region_text <- function(p) {
   b <- .tf_get(p, "bounds")
   if (!.tf_is_mapping(b)) return(NULL)
   lo <- .tf_number(.tf_get(b, "lower"))
@@ -477,7 +477,7 @@ tf_preregister <- function(theory, path = NULL, cycles = "refuse") {
       # Markdown nests a line under a numbered item only when it is indented by
       # the width of the number, its full stop and the space.
       pad <- strrep(" ", nchar(as.character(i)) + 2L)
-      region <- .tf_region(p)
+      region <- .tf_region_text(p)
       if (!is.null(region)) lines <- c(lines, paste0(pad, "- Region the claim allows: ", region))
       if (!is.null(claims[[i]])) {
         lines <- c(lines, paste0(pad, "- Claim: ", claims[[i]]$claim))

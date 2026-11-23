@@ -5,7 +5,7 @@ test_that("tf_dossier includes the expected header, table row, and prereg", {
   out <- tf_dossier(panic)
   expect_true(grepl("# theoryforge dossier: Network theory of panic disorder",
                     out, fixed = TRUE))
-  expect_true(grepl("- Aggregate rigour score: 87.3/100\n- Checklist coverage: 0.92\n",
+  expect_true(grepl("- Aggregate rigour score: 88.0/100\n- Checklist coverage: 0.92\n",
                     out, fixed = TRUE))
   expect_true(grepl("| falsifiability | At least one prediction forbids an observation | pass | 1.0 | 0.15 |",
                     out, fixed = TRUE))

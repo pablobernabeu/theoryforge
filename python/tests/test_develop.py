@@ -1,15 +1,22 @@
 """The amendment appraisal compares content, not prediction ids (API_SPEC.md section 10).
 
-Most cases amend the panic example. The R suite (test-develop.R) builds the same
+Most cases amend the panic example, and the rest amend the edge cases
+fixtures/edge/amend-*.theory.yaml. The R suite (test-develop.R) builds the same
 amendments and asserts the same records.
 """
 import copy
+
+import pytest
 
 import theoryforge as tf
 from theoryforge._status import prediction_status
 
 S4 = ("Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, "
       "within a tolerance of 5 percentage points, within two weeks.")
+
+# The one independence the panic example's v1 implies. A direct path from
+# arousal to avoidance withdraws it, and the failed test of pred_indep refutes it.
+LOST = "c_arousal _||_ c_avoidance | c_perceived_threat"
 
 # The record of an amendment that changes nothing, keys in the order of API_SPEC.md section 10.
 EMPTY = {
@@ -26,6 +33,15 @@ EMPTY = {
     "content_lost": [],
     "new_anomalies": [],
     "assumptions": [],
+    "theoretically_progressive": False,
+    "empirically_progressive": False,
+    "revised": [],
+    "weakened_refuted": [],
+    "unresolved": [],
+    "implications_compared": True,
+    "implications_lost": [],
+    "implications_lost_unrefuted": [],
+    "implications_gained": [],
 }
 
 
@@ -37,6 +53,10 @@ def _v1(fixtures_dir):
     return tf.read(fixtures_dir / "panic-network.theory.yaml").data
 
 
+def _edge(fixtures_dir, name):
+    return tf.read(fixtures_dir / "edge" / f"{name}.theory.yaml").data
+
+
 def _with_failed_pred2(fixtures_dir):
     """The panic example with a failed test of pred2, the anomaly the rescue cases answer."""
     prior = _v1(fixtures_dir)
@@ -45,7 +65,7 @@ def _with_failed_pred2(fixtures_dir):
 
 
 def _with_p4(theory):
-    """``theory`` amended as the revised v2 amends v1: a new proposition and a prediction from it."""
+    """``theory`` amended as v2 amends v1: a new proposition and a prediction from it."""
     t = copy.deepcopy(theory)
     t["propositions"].append({
         "id": "p4", "from": "c_arousal", "to": "c_avoidance", "relation": "increases",
@@ -57,12 +77,40 @@ def _with_p4(theory):
     return t
 
 
-def test_the_record_keeps_its_four_fields_first(fixtures_dir):
+def _p4_record(**changes):
+    """The record of ``_with_p4(v1)``: corroborated new content and the refuted independence lost."""
+    return _record(**{"verdict": "progressive", "new_predictions": ["pred4"],
+                      "corroborated_new": ["pred4"], "corroborated_new_registered": ["pred4"],
+                      "theoretically_progressive": True, "empirically_progressive": True,
+                      "implications_lost": [LOST], **changes})
+
+
+def test_the_record_keeps_its_fields_in_order(fixtures_dir):
     # D6: identical versions add nothing, lose nothing and are neutral.
     v1 = _v1(fixtures_dir)
     result = tf.appraise_amendment(copy.deepcopy(v1), v1)
     assert result == EMPTY
     assert list(result) == list(EMPTY)
+
+
+def test_the_shipped_amendment_answers_a_refuted_independence(fixtures_dir):
+    # v2 drops pred_indep, which a test refuted, and adds p4 and pred4. The
+    # independence p4 withdraws is the refuted one, so no content is lost.
+    v1 = _v1(fixtures_dir)
+    v2 = tf.read(fixtures_dir / "panic-network-2026-v2.theory.yaml").data
+    assert tf.appraise_amendment(v2, v1) == _p4_record(dropped=["pred_indep"])
+    # Had the test of pred_indep passed, v2 would give up a corroborated
+    # prediction and an unrefuted implication.
+    passed = copy.deepcopy(v1)
+    passed["test_outcomes"][1]["passed"] = True
+    assert tf.appraise_amendment(v2, passed) == _p4_record(
+        verdict="neutral", dropped=["pred_indep"], dropped_corroborated=["pred_indep"],
+        implications_lost_unrefuted=[LOST])
+    # Untested, pred_indep and the implication would both be content lost.
+    del passed["test_outcomes"][1]
+    assert tf.appraise_amendment(v2, passed) == _p4_record(
+        verdict="neutral", dropped=["pred_indep"], content_lost=["pred_indep"],
+        implications_lost_unrefuted=[LOST])
 
 
 def test_a_status_reads_every_outcome_of_the_prediction():
@@ -96,13 +144,33 @@ def test_a_prediction_derived_from_unchanged_propositions_is_an_articulation(fix
         corroborated_new_registered=["pred4"])
 
 
+def test_a_claim_the_prior_graph_entails_is_an_articulation(fixtures_dir):
+    # h3 cites the new p3 but claims that c1 raises c3, which the prior's chain
+    # c1 -> c2 -> c3 already entails. Without the claim, h3 is new content.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-unresolved")
+    new["predictions"][2]["derives_from"] = ["p3"]
+    new["predictions"][2]["claim"] = {"kind": "effect", "x": "c1", "y": "c3", "sign": "positive"}
+    gained = ["c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3"]
+    assert tf.appraise_amendment(new, prior) == _record(
+        new_predictions=["h3"], corroborated_new=["h3"], articulated=["h3"],
+        implications_gained=gained)
+    # A claim about c4, which the prior does not name, is not evaluated there.
+    new["predictions"][2]["claim"] = {"kind": "effect", "x": "c3", "y": "c4", "sign": "positive"}
+    assert tf.appraise_amendment(new, prior) == _record(
+        verdict="progressive", new_predictions=["h3"], corroborated_new=["h3"],
+        theoretically_progressive=True, empirically_progressive=True, implications_gained=gained)
+
+
 def test_failed_replications_leave_a_new_prediction_mixed(fixtures_dir):
     # D1: one pass and two failures make pred4 mixed, which is not corroborated.
     v1 = _v1(fixtures_dir)
     new = _with_p4(v1)
     new["test_outcomes"] += [{"prediction_id": "pred4", "passed": False} for _ in range(2)]
     assert prediction_status("pred4", new["test_outcomes"]) == "mixed"
-    assert tf.appraise_amendment(new, v1) == _record(new_predictions=["pred4"])
+    assert tf.appraise_amendment(new, v1) == _p4_record(
+        verdict="neutral", corroborated_new=[], corroborated_new_registered=[],
+        empirically_progressive=False)
 
 
 def test_a_renamed_prediction_is_not_new(fixtures_dir):
@@ -111,7 +179,7 @@ def test_a_renamed_prediction_is_not_new(fixtures_dir):
     new = copy.deepcopy(v1)
     statement = new["predictions"][0]["statement"]
     new["predictions"][0]["id"] = "pred1_v2"
-    new["predictions"][0]["statement"] = "  " + statement.replace(" ", "  \n ", 1) + "\t"
+    new["predictions"][0]["statement"] = "  " + statement.replace(" ", "  \n ", 1) + "\t"
     new["test_outcomes"][0]["prediction_id"] = "pred1_v2"
     assert tf.appraise_amendment(new, v1) == _record(renamed=[{"prior": "pred1", "new": "pred1_v2"}])
     # A different claim form is a different prediction, so pred1 is then dropped.
@@ -159,7 +227,8 @@ def test_a_rescue_cleared_by_a_reanalysis_of_its_anomaly_is_ad_hoc(fixtures_dir)
     new["test_outcomes"].append({"prediction_id": "pred2", "passed": True})
     assert tf.appraise_amendment(new, prior) == _record(
         verdict="degenerating", ad_hoc_assumptions=["aux_rescue"],
-        assumptions=[{"id": "aux_rescue", "added_for": "pred2", "class": "ad_hoc1", "independent": []}])
+        assumptions=[{"id": "aux_rescue", "added_for": "pred2", "class": "ad_hoc1", "independent": [],
+                      "added_for_inferred": False}])
 
 
 def test_an_old_corroborated_prediction_cannot_clear_a_rescue(fixtures_dir):
@@ -171,7 +240,8 @@ def test_an_old_corroborated_prediction_cannot_clear_a_rescue(fixtures_dir):
         "id": "aux_rescue", "statement": "s", "added_for": "pred2", "protects": ["pred2", "pred1"]})
     result = tf.appraise_amendment(new, prior)
     assert result["assumptions"] == [
-        {"id": "aux_rescue", "added_for": "pred2", "class": "ad_hoc1", "independent": []}]
+        {"id": "aux_rescue", "added_for": "pred2", "class": "ad_hoc1", "independent": [],
+         "added_for_inferred": False}]
     assert result["verdict"] == "degenerating"
 
 
@@ -187,7 +257,8 @@ def test_a_free_text_added_for_still_marks_a_rescue(fixtures_dir):
     new["test_outcomes"].append({"prediction_id": "pred2", "passed": True})
     result = tf.appraise_amendment(new, prior)
     assert result["assumptions"] == [
-        {"id": "aux_rescue", "added_for": "a subgroup explanation", "class": "ad_hoc1", "independent": []}]
+        {"id": "aux_rescue", "added_for": "a subgroup explanation", "class": "ad_hoc1", "independent": [],
+         "added_for_inferred": False}]
     assert result["ad_hoc_assumptions"] == ["aux_rescue"]
     assert result["verdict"] == "degenerating"
 
@@ -207,18 +278,22 @@ def test_a_corroborated_new_prediction_clears_the_assumption_that_yields_it(fixt
     assert tf.appraise_amendment(new, prior) == _record(
         verdict="degenerating", new_predictions=["pred5"], ad_hoc_assumptions=["aux_baseline"],
         assumptions=[{"id": "aux_baseline", "added_for": "pred2", "class": "ad_hoc2",
-                      "independent": [{"id": "pred5", "status": "untested"}]}])
+                      "independent": [{"id": "pred5", "status": "untested"}], "added_for_inferred": False}],
+        theoretically_progressive=True)
     new["test_outcomes"].append({"prediction_id": "pred5", "passed": True, "registered": "osf.io/x"})
     assert tf.appraise_amendment(new, prior) == _record(
         verdict="progressive", new_predictions=["pred5"], corroborated_new=["pred5"],
         corroborated_new_registered=["pred5"],
         assumptions=[{"id": "aux_baseline", "added_for": "pred2", "class": "independently_corroborated",
-                      "independent": [{"id": "pred5", "status": "corroborated"}]}])
+                      "independent": [{"id": "pred5", "status": "corroborated"}],
+                      "added_for_inferred": False}],
+        theoretically_progressive=True, empirically_progressive=True)
 
 
 def test_only_an_assumption_added_for_an_anomaly_is_appraised(fixtures_dir):
-    # A null, blank or non-text added_for marks a core assumption, and
-    # added_for is read as text, so a one-element list names its element.
+    # A null, blank or non-text added_for marks a core assumption when the
+    # assumption protects nothing that failed in the prior, and added_for is
+    # read as text, so a one-element list names its element.
     v1 = _v1(fixtures_dir)
     new = copy.deepcopy(v1)
     new["auxiliary_assumptions"] += [
@@ -229,20 +304,206 @@ def test_only_an_assumption_added_for_an_anomaly_is_appraised(fixtures_dir):
     ]
     result = tf.appraise_amendment(new, v1)
     assert result["assumptions"] == [
-        {"id": "listed", "added_for": "pred2", "class": "ad_hoc1", "independent": []}]
+        {"id": "listed", "added_for": "pred2", "class": "ad_hoc1", "independent": [],
+         "added_for_inferred": False}]
     assert result["ad_hoc_assumptions"] == ["listed"]
 
 
-def test_dropping_untested_predictions_is_reported_as_content_lost(fixtures_dir):
+def test_an_assumption_that_protects_a_failed_prediction_answers_it(fixtures_dir):
+    # amend-inferred: x1 protects h2, untested in the prior, and the refuted
+    # h1, and names no anomaly. h1 is taken as its anomaly.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-inferred")
+    rescue = [{"id": "x1", "added_for": "h1", "class": "ad_hoc1", "independent": [],
+               "added_for_inferred": True}]
+    assert tf.appraise_amendment(new, prior) == _record(
+        verdict="degenerating", ad_hoc_assumptions=["x1"], assumptions=rescue)
+    # A mixed status in the prior counts as failed too.
+    mixed = copy.deepcopy(prior)
+    mixed["test_outcomes"].append({"prediction_id": "h1", "passed": True})
+    assert tf.appraise_amendment(new, mixed)["assumptions"] == rescue
+    # The anomaly is found under the new id of a renamed prediction.
+    renamed = copy.deepcopy(new)
+    renamed["predictions"][0]["id"] = "h1_v2"
+    renamed["test_outcomes"][0]["prediction_id"] = "h1_v2"
+    renamed["auxiliary_assumptions"][0]["protects"] = ["h2", "h1_v2"]
+    result = tf.appraise_amendment(renamed, prior)
+    assert result["renamed"] == [{"prior": "h1", "new": "h1_v2"}]
+    assert result["assumptions"] == [{**rescue[0], "added_for": "h1_v2"}]
+    # Protecting only untested content, the assumption is a core one.
+    untested = copy.deepcopy(new)
+    untested["auxiliary_assumptions"][0]["protects"] = ["h2"]
+    assert tf.appraise_amendment(untested, prior) == EMPTY
+
+
+@pytest.mark.parametrize(("change", "expected"), [
+    ({}, None),
+    ({"statement": "c2 rises with c1 by half an SD, within 0.1."}, "reworded"),
+    ({"statement": "  c2 rises 0.5 SD per SD of c1,\n within 0.1. "}, None),
+    ({"type": "interval"}, "weakened"),
+    ({"type": "directional", "bounds": None, "claim": None}, "weakened"),
+    ({"type": "banana"}, "changed"),
+    ({"bounds": {"lower": 0.3, "upper": 0.7}}, "weakened"),
+    ({"bounds": {"lower": 0.45, "upper": 0.55}}, "strengthened"),
+    ({"bounds": {"lower": 0.5, "upper": 0.7}}, "changed"),
+    ({"bounds": {"lower": 0.4}}, "weakened"),
+    ({"bounds": {"lower": 0.4, "upper": None}}, "weakened"),
+    ({"bounds": {"lower": 0.4, "upper": float("inf")}}, "weakened"),
+    ({"bounds": {"lower": "0.4", "upper": 0.6}}, "weakened"),
+    ({"bounds": {"lower": 0.4, "upper": 0.6, "note": "ignored"}}, None),
+    ({"claim": {"kind": "effect", "x": "c1", "y": "c2", "sign": "nonzero"}}, "weakened"),
+    ({"claim": {"kind": "effect", "x": "c1", "y": "c2", "sign": "negative"}}, "changed"),
+    ({"claim": {"kind": "effect", "x": "c2", "y": "c1", "sign": "positive"}}, "changed"),
+    ({"claim": {"kind": "effect", "x": "c1", "y": "c2", "sign": "upward"}}, "weakened"),
+    ({"claim": None}, "weakened"),
+    ({"type": "directional", "bounds": {"lower": 0.45, "upper": 0.55}}, "changed"),
+    ({"type": "interval", "claim": {"kind": "effect", "x": "c1", "y": "c2", "sign": "negative"}}, "weakened"),
+])
+def test_a_retained_prediction_is_compared_by_type_bounds_and_claim(fixtures_dir, change, expected):
+    # Each case revises h1 of amend-prior, a point prediction with the region
+    # [0.4, 0.6] and a positive effect of c1 on c2. A None in `change` removes
+    # the field.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = copy.deepcopy(prior)
+    for key, value in change.items():
+        if value is None:
+            del new["predictions"][0][key]
+        else:
+            new["predictions"][0][key] = value
+    revised = [{"id": "h1", "change": expected}] if expected else []
+    assert tf.appraise_amendment(new, prior)["revised"] == revised
+
+
+@pytest.mark.parametrize(("before", "after", "expected"), [
+    ({"lower": 20}, {"lower": 100, "upper": 200}, "strengthened"),
+    ({"lower": 20, "upper": 60}, {"lower": 100}, "weakened"),
+    ({"lower": 20}, {"upper": 20}, "changed"),
+    (None, {"upper": 20}, "strengthened"),
+    ({"lower": None, "upper": 20}, {"lower": float("-inf"), "upper": 20}, None),
+])
+def test_a_two_sided_region_is_narrower_than_a_one_sided_one(before, after, expected):
+    def theory(bounds):
+        p = {"id": "h", "statement": "S", "type": "interval"}
+        return {"predictions": [p if bounds is None else {**p, "bounds": bounds}]}
+
+    revised = [{"id": "h", "change": expected}] if expected else []
+    assert tf.appraise_amendment(theory(after), theory(before))["revised"] == revised
+
+
+@pytest.mark.parametrize(("before", "after", "expected"), [
+    ({"kind": "association", "x": "a", "y": "b", "sign": "positive"},
+     {"kind": "association", "x": "b", "y": "a", "sign": "positive"}, None),
+    ({"kind": "association", "x": "a", "y": "b", "given": ["c", "d"], "sign": "zero"},
+     {"kind": "association", "x": "a", "y": "b", "given": ["d", "c"], "sign": "zero"}, None),
+    ({"kind": "association", "x": "a", "y": "b", "given": ["c"], "sign": "zero"},
+     {"kind": "association", "x": "a", "y": "b", "given": ["c"], "sign": "nonzero"}, "weakened"),
+    ({"kind": "association", "x": "a", "y": "b", "sign": "nonzero"},
+     {"kind": "association", "x": "a", "y": "b", "sign": "negative"}, "strengthened"),
+    ({"kind": "association", "x": "a", "y": "b", "sign": "positive"},
+     {"kind": "association", "x": "a", "y": "c", "sign": "nonzero"}, "changed"),
+    ({"kind": "association", "x": "a", "y": "b", "sign": "positive"},
+     {"kind": "effect", "x": "a", "y": "b", "sign": "positive"}, "changed"),
+    (None, {"kind": "effect", "x": "a", "y": "b", "sign": "nonzero"}, "strengthened"),
+])
+def test_a_claim_is_stronger_than_none_and_a_fixed_sign_than_nonzero(before, after, expected):
+    def theory(claim):
+        p = {"id": "h", "statement": "S", "type": "directional"}
+        return {"predictions": [p if claim is None else {**p, "claim": claim}]}
+
+    revised = [{"id": "h", "change": expected}] if expected else []
+    assert tf.appraise_amendment(theory(after), theory(before))["revised"] == revised
+
+
+def test_a_refuted_prediction_weakened_after_its_test_degenerates(fixtures_dir):
+    # amend-weakened rewrites the refuted h1 as an existence claim.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-weakened")
+    assert tf.appraise_amendment(new, prior) == _record(
+        verdict="degenerating", revised=[{"id": "h1", "change": "weakened"}], weakened_refuted=["h1"])
+    # Widening the region after the failed test is enough, and so is a rename
+    # that widens it.
+    widened = copy.deepcopy(prior)
+    widened["predictions"][0]["bounds"] = {"lower": 0.2, "upper": 0.8}
+    assert tf.appraise_amendment(widened, prior) == _record(
+        verdict="degenerating", revised=[{"id": "h1", "change": "weakened"}], weakened_refuted=["h1"])
+    widened["predictions"][0]["id"] = "h1_wide"
+    widened["test_outcomes"][0]["prediction_id"] = "h1_wide"
+    assert tf.appraise_amendment(widened, prior) == _record(
+        verdict="degenerating", renamed=[{"prior": "h1", "new": "h1_wide"}],
+        revised=[{"id": "h1_wide", "change": "weakened"}], weakened_refuted=["h1_wide"])
+
+
+def test_weakening_an_untested_prediction_loses_content(fixtures_dir):
+    # amend-unresolved with p3 cited correctly is progressive. Weakening the
+    # untested h2 to an existence claim makes it neutral.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-unresolved")
+    new["predictions"][2]["derives_from"] = ["p3"]
+    new["predictions"][1]["type"] = "existence"
+    assert tf.appraise_amendment(new, prior) == _record(
+        new_predictions=["h3"], corroborated_new=["h3"], content_lost=["h2"],
+        theoretically_progressive=True, empirically_progressive=True,
+        revised=[{"id": "h2", "change": "weakened"}],
+        implications_gained=["c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3"])
+
+
+def test_a_new_prediction_citing_a_missing_proposition_is_unresolved(fixtures_dir):
+    # amend-unresolved cites p33 for p3. Citing p3 makes the amendment progressive.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-unresolved")
+    gained = ["c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3"]
+    assert tf.appraise_amendment(new, prior) == _record(
+        new_predictions=["h3"], corroborated_new=["h3"], unresolved=["h3"], implications_gained=gained)
+    new["predictions"][2]["derives_from"] = ["p3", "p99"]
+    assert tf.appraise_amendment(new, prior)["unresolved"] == ["h3"]
+    new["predictions"][2]["derives_from"] = ["p3"]
+    assert tf.appraise_amendment(new, prior) == _record(
+        verdict="progressive", new_predictions=["h3"], corroborated_new=["h3"],
+        theoretically_progressive=True, empirically_progressive=True, implications_gained=gained)
+
+
+def test_an_unrefuted_implication_lost_blocks_a_progressive_verdict(fixtures_dir):
+    # amend-lost-implication joins c1 to c3 and gives up c1 _||_ c3 | c2.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-lost-implication")
+    record = _record(new_predictions=["h3"], corroborated_new=["h3"],
+                     theoretically_progressive=True, empirically_progressive=True,
+                     implications_lost=["c1 _||_ c3 | c2"])
+    assert tf.appraise_amendment(new, prior) == {
+        **record, "implications_lost_unrefuted": ["c1 _||_ c3 | c2"]}
+    # A refuted or mixed prediction of the prior that states the independence,
+    # with any given and either order, refutes the implication.
+    for outcomes in ([False], [True, False]):
+        refuted = copy.deepcopy(prior)
+        refuted["predictions"].append({
+            "id": "h0", "statement": "c1 and c3 are unrelated.", "type": "interval",
+            "claim": {"kind": "association", "x": "c3", "y": "c1", "sign": "zero"}})
+        refuted["test_outcomes"] += [{"prediction_id": "h0", "passed": p} for p in outcomes]
+        new["predictions"].append(copy.deepcopy(refuted["predictions"][-1]))
+        assert tf.appraise_amendment(new, refuted) == {**record, "verdict": "progressive"}
+        new["predictions"].pop()
+
+
+def test_a_version_whose_graph_is_refused_is_not_compared(fixtures_dir):
+    # A repeated construct id makes implications() refuse the new version.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-lost-implication")
+    new["constructs"].append(copy.deepcopy(new["constructs"][0]))
+    assert tf.appraise_amendment(new, prior) == _record(
+        verdict="progressive", new_predictions=["h3"], corroborated_new=["h3"],
+        theoretically_progressive=True, empirically_progressive=True,
+        implications_compared=False)
+
+
+def test_dropping_untested_predictions_loses_content(fixtures_dir):
     # D4: refuted pred2 and untested pred3 are dropped. Losing untested content
-    # is reported and does not block a progressive verdict.
+    # blocks a progressive verdict.
     prior = _with_failed_pred2(fixtures_dir)
     new = _with_p4(prior)
     new["predictions"] = [p for p in new["predictions"] if p["id"] not in ("pred2", "pred3")]
     new["test_outcomes"] = [t for t in new["test_outcomes"] if t["prediction_id"] != "pred2"]
-    assert tf.appraise_amendment(new, prior) == _record(
-        verdict="progressive", new_predictions=["pred4"], corroborated_new=["pred4"],
-        corroborated_new_registered=["pred4"], dropped=["pred2", "pred3"], content_lost=["pred3"])
+    assert tf.appraise_amendment(new, prior) == _p4_record(
+        verdict="neutral", dropped=["pred2", "pred3"], content_lost=["pred3"])
 
 
 def test_dropping_a_corroborated_prediction_blocks_a_progressive_verdict(fixtures_dir):
@@ -250,9 +511,8 @@ def test_dropping_a_corroborated_prediction_blocks_a_progressive_verdict(fixture
     new = _with_p4(v1)
     new["predictions"] = [p for p in new["predictions"] if p["id"] != "pred1"]
     new["test_outcomes"] = [t for t in new["test_outcomes"] if t["prediction_id"] != "pred1"]
-    assert tf.appraise_amendment(new, v1) == _record(
-        new_predictions=["pred4"], corroborated_new=["pred4"], corroborated_new_registered=["pred4"],
-        dropped=["pred1"], dropped_corroborated=["pred1"])
+    assert tf.appraise_amendment(new, v1) == _p4_record(
+        verdict="neutral", dropped=["pred1"], dropped_corroborated=["pred1"])
 
 
 def test_a_failed_replication_of_retained_content_is_a_new_anomaly(fixtures_dir):
@@ -266,7 +526,8 @@ def test_a_failed_replication_of_retained_content_is_a_new_anomaly(fixtures_dir)
     # A renamed prediction is retained content too.
     new["predictions"][0]["id"] = "pred1_v2"
     for t in new["test_outcomes"]:
-        t["prediction_id"] = "pred1_v2"
+        if t["prediction_id"] == "pred1":
+            t["prediction_id"] = "pred1_v2"
     result = tf.appraise_amendment(new, v1)
     assert result["renamed"] == [{"prior": "pred1", "new": "pred1_v2"}]
     assert result["new_anomalies"] == ["pred1_v2"]
@@ -278,8 +539,7 @@ def test_an_unregistered_pass_corroborates_but_is_not_reported_as_registered(fix
     for registered in (None, " "):
         new = _with_p4(v1)
         new["test_outcomes"][-1]["registered"] = registered
-        assert tf.appraise_amendment(new, v1) == _record(
-            verdict="progressive", new_predictions=["pred4"], corroborated_new=["pred4"])
+        assert tf.appraise_amendment(new, v1) == _p4_record(corroborated_new_registered=[])
 
 
 def test_a_prediction_derived_from_nothing_adds_no_content(fixtures_dir):

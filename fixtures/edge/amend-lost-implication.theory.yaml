@@ -1,0 +1,37 @@
+# Edge case: amends amend-prior with a direct path from c1 to c3 (p3) and a
+# corroborated prediction h3 derived from it. The new graph no longer implies
+# c1 _||_ c3 | c2, and no refuted prediction of the prior stated that
+# independence, so the amendment loses unrefuted content. It is theoretically
+# and empirically progressive, and neutral.
+schema_version: "1.1"
+id: edge-amend-lost-implication
+title: An amendment that gives up an untested independence
+maturity: testing
+constructs:
+  - {id: c1, label: First, definition: The first construct.}
+  - {id: c2, label: Second, definition: The second construct.}
+  - {id: c3, label: Third, definition: The third construct.}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: It does.}
+  - {id: p2, from: c2, to: c3, relation: increases, mechanism: It does.}
+  - {id: p3, from: c1, to: c3, relation: increases, mechanism: It does.}
+predictions:
+  - id: h1
+    statement: c2 rises 0.5 SD per SD of c1, within 0.1.
+    type: point
+    derives_from: [p1]
+    bounds: {lower: 0.4, upper: 0.6}
+    claim: {kind: effect, x: c1, y: c2, sign: positive}
+  - id: h2
+    statement: c3 rises with c2.
+    type: directional
+    derives_from: [p2]
+  - id: h3
+    statement: c3 rises 0.2 SD per SD of c1 with c2 held constant, within 0.1.
+    type: point
+    derives_from: [p3]
+test_outcomes:
+  - prediction_id: h1
+    passed: false
+  - prediction_id: h3
+    passed: true

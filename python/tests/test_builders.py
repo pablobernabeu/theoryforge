@@ -21,6 +21,9 @@ NOTHING_NEW = {
     "ad_hoc_assumptions": [], "articulated": [], "underived": [],
     "corroborated_new_registered": [], "renamed": [], "dropped": [],
     "dropped_corroborated": [], "content_lost": [], "new_anomalies": [], "assumptions": [],
+    "theoretically_progressive": False, "empirically_progressive": False, "revised": [],
+    "weakened_refuted": [], "unresolved": [], "implications_compared": True,
+    "implications_lost": [], "implications_lost_unrefuted": [], "implications_gained": [],
 }
 
 
@@ -212,5 +215,7 @@ def test_the_develop_help_example_started_from_a_copy_is_progressive():
     assert [p["id"] for p in prior.data["predictions"]] == ["h1"]
     assert new.appraise_amendment(prior) == {
         **NOTHING_NEW, "verdict": "progressive", "new_predictions": ["h2"],
-        "corroborated_new": ["h2"],
+        "corroborated_new": ["h2"], "theoretically_progressive": True,
+        "empirically_progressive": True,
+        "implications_gained": ["c_arousal _||_ c_avoid | c_threat"],
     }

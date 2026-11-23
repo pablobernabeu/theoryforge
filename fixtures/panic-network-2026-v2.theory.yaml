@@ -1,7 +1,10 @@
-# Amended version of panic-network-2026. It adds a direct path from arousal to
+# Amended version of panic-network-2026. A test refuted the independence of
+# arousal and avoidance given perceived threat that v1 implied and stated as
+# pred_indep. This version drops pred_indep, adds a direct path from arousal to
 # avoidance (proposition p4) and derives a new prediction from it (pred4). A
-# registered test corroborates pred4 and no ad hoc assumption is added, so the
-# amendment is a progressive problemshift in Lakatos's sense.
+# registered test corroborates pred4, no ad hoc assumption is added and the only
+# implication v1 held and v2 gives up is the refuted one, so the amendment is a
+# progressive problemshift in Lakatos's sense.
 schema_version: "1.0"
 id: "panic-network-2026-v2"
 title: "Network theory of panic disorder"
@@ -86,20 +89,24 @@ auxiliary_assumptions:
     added_for: null
     protects: [pred1]
 
+# The evidence entry for pred4 is illustrative and cites no published work.
 evidence:
   - supports: pred4
-    source_doi: "10.1000/example.v2"
+    source_doi: null
     direction: "corroborates"
 
+# The test outcomes are made up for the example, as their observed text says,
+# and osf.io/abcde and osf.io/fghij are placeholders, not registrations of these
+# tests.
 test_outcomes:
   - prediction_id: pred1
-    observed: "Arousal reached the predicted band in 78% of trials."
+    observed: "Illustrative values, not a reported result: arousal reached the predicted band in 78% of trials."
     passed: true
     severity_at_test: 0.7
     registered: "osf.io/abcde"
     date: "2026-05-01"
   - prediction_id: pred4
-    observed: "Avoidance dropped into the predicted band in 71% of cases."
+    observed: "Illustrative values, not a reported result: avoidance dropped into the predicted band in 71% of cases."
     passed: true
     severity_at_test: 0.75
     registered: "osf.io/fghij"

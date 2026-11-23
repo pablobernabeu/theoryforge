@@ -59,7 +59,7 @@ tf_validate(theory)
 
 # Score it against the 12-item rigour checklist
 report <- tf_check(theory)
-report$aggregate_score   # 87.3
+report$aggregate_score   # 88
 report$gate              # "pass"
 ```
 

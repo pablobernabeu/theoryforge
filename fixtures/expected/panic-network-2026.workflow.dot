@@ -28,6 +28,7 @@ digraph workflow {
     "pred_pred1" [label="pred1\npoint", fillcolor="#E7EDF5", color="#33567A"];
     "pred_pred2" [label="pred2\ninterval", fillcolor="#E7EDF5", color="#33567A"];
     "pred_pred3" [label="pred3\ndirectional", fillcolor="#E7EDF5", color="#33567A"];
+    "pred_pred_indep" [label="pred_indep\ninterval", fillcolor="#E7EDF5", color="#33567A"];
   }
   subgraph cluster_test {
     label="testing";
@@ -35,6 +36,7 @@ digraph workflow {
     color="#C4D1D9";
     fontcolor="#5B7285";
     "outcome_pred1" [label="pred1\npassed", fillcolor="#E5F2E7", color="#3E7A46"];
+    "outcome_pred_indep" [label="pred_indep\nfailed", fillcolor="#F9E5E4", color="#B2453C"];
   }
   "c_arousal" -> "prop_p1";
   "c_perceived_threat" -> "prop_p2";
@@ -43,5 +45,9 @@ digraph workflow {
   "prop_p3" -> "pred_pred1";
   "prop_p2" -> "pred_pred2";
   "prop_p2" -> "pred_pred3";
+  "prop_p1" -> "pred_pred_indep";
+  "prop_p2" -> "pred_pred_indep";
+  "prop_p3" -> "pred_pred_indep";
   "pred_pred1" -> "outcome_pred1";
+  "pred_pred_indep" -> "outcome_pred_indep";
 }

@@ -5,6 +5,9 @@ digraph pipeline {
   "pred1" [label="pred1\npoint", fillcolor="#E7EDF5", color="#33567A"];
   "pred2" [label="pred2\ninterval", fillcolor="#E7EDF5", color="#33567A"];
   "pred3" [label="pred3\ndirectional", fillcolor="#E7EDF5", color="#33567A"];
+  "pred_indep" [label="pred_indep\ninterval", fillcolor="#E7EDF5", color="#33567A"];
   "result_pred1" [label="passed", fillcolor="#E5F2E7", color="#3E7A46"];
   "pred1" -> "result_pred1";
+  "result_pred_indep" [label="failed", fillcolor="#F9E5E4", color="#B2453C"];
+  "pred_indep" -> "result_pred_indep";
 }

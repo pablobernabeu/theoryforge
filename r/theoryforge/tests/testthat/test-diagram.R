@@ -50,7 +50,7 @@ test_that("new diagram types are byte-identical to the golden files", {
 test_that("development_roadmap collapses to a single node when all checks pass", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   out <- tf_diagram(theory, "development_roadmap")
-  expect_true(grepl('label="Network theory of\\npanic disorder\\nscore 87.3, gate pass"',
+  expect_true(grepl('label="Network theory of\\npanic disorder\\nscore 88.0, gate pass"',
                     out, fixed = TRUE))
   expect_true(grepl('"all_checks_pass" [label="all checks pass", fillcolor="#E5F2E7", color="#3E7A46"];',
                     out, fixed = TRUE))

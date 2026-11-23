@@ -90,7 +90,7 @@ def test_severity_chart(panic_path):
     # how severely a claim was tested.
     assert '<text x="20" y="26" font-size="15">Pre-data riskiness</text>' in svg
     assert "Prediction severity" not in svg
-    assert svg.count("<rect ") == 3           # one bar per prediction
+    assert svg.count("<rect ") == 4           # one bar per prediction
     assert ">pred1<" in svg
 
 

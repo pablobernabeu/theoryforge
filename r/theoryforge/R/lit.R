@@ -918,7 +918,7 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence", max_edges = NULL)
 #' theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
 #'                               package = "theoryforge"))
 #' tf_new_evidence_dois(theory, c(
-#'   "10.1016/j.brat.2015.10.002",                   # cited as evidence
+#'   "10.1176/ajp.155.5.610",                        # cited as evidence
 #'   "https://doi.org/10.1016/0005-7967(86)90011-2", # an alternative, in URL form
 #'   "https://doi.org/10.1037/0033-2909.99.1.20"     # not yet cited
 #' ))

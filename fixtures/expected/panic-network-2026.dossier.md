@@ -1,10 +1,10 @@
 # theoryforge dossier: Network theory of panic disorder
 
 - Theory ID: panic-network-2026
-- Content hash: sha256:cc1ff8ce967c887aa1f28bd0333d0d7a1e4cae960d626c0b831448fc7ea9d35f
+- Content hash: sha256:baaf4a35b5a119634d9524c21ec32097e1c19e9f3299dfb6935e9a65e799f4a4
 - Maturity: developing
 - Checklist version: 2.1
-- Aggregate rigour score: 87.3/100
+- Aggregate rigour score: 88.0/100
 - Checklist coverage: 0.92
 - Gate: pass
 - Blockers failed: 0
@@ -14,15 +14,15 @@
 | item | criterion | status | score | weight |
 | --- | --- | --- | --- | --- |
 | falsifiability | At least one prediction forbids an observation | pass | 1.0 | 0.15 |
-| precision | Predictions are point/interval, not merely directional | pass | 0.667 | 0.1 |
-| risk_severity | Mean prediction severity (declared, else the claim-form rubric) at or above threshold | pass | 0.567 | 0.1 |
+| precision | Predictions are point/interval, not merely directional | pass | 0.75 | 0.1 |
+| risk_severity | Mean prediction severity (declared, else the claim-form rubric) at or above threshold | pass | 0.6 | 0.1 |
 | parsimony | No auxiliary assumption added in response to an anomaly lacks independent corroboration | n/a | n/a | 0.08 |
 | non_redundancy | No pair of construct definitions is a near-duplicate or contained in the other (lexical screen) | pass | 1.0 | 0.1 |
 | construct_clarity | Every construct has definition + measurement + boundary conditions | pass | 1.0 | 0.08 |
 | scope | Boundary conditions explicitly stated | pass | 1.0 | 0.06 |
 | logical_why | Each proposition states a mechanism, not just a correlation | pass | 1.0 | 0.08 |
 | causal_testability | At least one proposition states a causal relation | pass | 1.0 | 0.06 |
-| diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, or verified where the claim and the rival's propositions are stated) | pass | 0.333 | 0.06 |
+| diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, or verified where the claim and the rival's propositions are stated) | pass | 0.25 | 0.06 |
 | formalisation | A formal model of a recognised type (ode, abm, network, sem) is declared | pass | 1.0 | 0.05 |
 | derivation_chain | Every prediction cites declared propositions, and the causal graph entails the claim it states, if any | pass | 1.0 | 0.08 |
 
@@ -31,18 +31,20 @@
 - pred1: severity 1.0, risk 0.9, declared 0.7
 - pred2: severity 0.7, risk 0.7, declared 0.6
 - pred3: severity 0.3, risk 0.4, declared 0.4
+- pred_indep: severity 0.7, risk 0.7
 
 ## Test record
 
-- pred1: passed; observed: Arousal reached the predicted band in 78% of trials.; date: 2026-05-01; registered: osf.io/abcde
+- pred1: passed; observed: Illustrative values, not a reported result: arousal reached the predicted band in 78% of trials.; date: 2026-05-01; registered: osf.io/abcde
+- pred_indep: failed; observed: Illustrative values, not a reported result: the partial correlation of arousal and avoidance given perceived threat was 0.24.; date: 2026-05-20
 
 ## Evidence
 
-- supports pred1: corroborates; doi: 10.1016/j.brat.2015.10.002
+- supports pred1: corroborates; doi: 10.1176/ajp.155.5.610
 
 ## Claims and the causal graph
 
-_No prediction or phenomenon states a claim._
+- pred_indep (prediction): c_arousal and c_avoidance are independent given c_perceived_threat; not evaluated, since the causal graph has a feedback loop
 
 ## Equivalent models
 
@@ -57,6 +59,7 @@ _No alternative states propositions._
 1. tf_add_construct: Registered three constructs.
 2. tf_add_proposition: Linked constructs into a feedback network.
 3. tf_add_prediction: Derived three predictions from the propositions.
+4. tf_add_prediction: Stated the independence of arousal and avoidance given perceived threat that the causal graph implies.
 
 ## Preregistration
 
@@ -64,8 +67,8 @@ _No alternative states propositions._
 
 - Theory ID: panic-network-2026
 - Version: v1
-- Schema version: 1.0
-- Content hash: sha256:cc1ff8ce967c887aa1f28bd0333d0d7a1e4cae960d626c0b831448fc7ea9d35f
+- Schema version: 1.1
+- Content hash: sha256:baaf4a35b5a119634d9524c21ec32097e1c19e9f3299dfb6935e9a65e799f4a4
 - Maturity: developing
 - Formal model: ode (models/panic_ode.py)
 - Derivations check: yes
@@ -105,6 +108,9 @@ _No alternative states propositions._
    - Test record: untested
 3. [directional] Higher perceived threat is associated with more avoidance. (pred3; derives from: p2)
    - Test record: untested
+4. [interval] Holding perceived threat constant, physiological arousal and avoidance correlate no more strongly than 0.10 in absolute value. (pred_indep; derives from: p1, p2, p3)
+   - Claim: c_arousal and c_avoidance are independent given c_perceived_threat; not evaluated, since the causal graph has a feedback loop
+   - Test record: already tested: failed (2026-05-20)
 
 ### Implied conditional independencies (derived from the causal graph, not predictions)
 _Not derived: the causal graph has a feedback loop, c_arousal -> c_perceived_threat -> c_arousal. With cycles = 'sigma', the statements are read by sigma-separation and hold if each loop settles to a unique equilibrium._

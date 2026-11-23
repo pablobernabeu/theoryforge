@@ -83,7 +83,7 @@ def _outcome_result(t) -> str:
     return "no result recorded"
 
 
-def _region(p) -> str | None:
+def _region_text(p) -> str | None:
     """The region a prediction's ``bounds`` allow, as an interval, or None.
 
     An absent, infinite or null bound is open. A region that full validation
@@ -514,7 +514,7 @@ def document_lines(data: dict, cycles: str, embedded: bool = False) -> list[str]
             # Markdown nests a line under a numbered item only when it is
             # indented by the width of the number, its full stop and the space.
             pad = " " * (len(str(i)) + 2)
-            region = _region(p)
+            region = _region_text(p)
             if region is not None:
                 lines.append(f"{pad}- Region the claim allows: {region}")
             stated = claims[i - 1]

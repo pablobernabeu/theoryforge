@@ -13,9 +13,22 @@
     "pred4"
   ],
   "renamed": [],
-  "dropped": [],
+  "dropped": [
+    "pred_indep"
+  ],
   "dropped_corroborated": [],
   "content_lost": [],
   "new_anomalies": [],
-  "assumptions": []
+  "assumptions": [],
+  "theoretically_progressive": true,
+  "empirically_progressive": true,
+  "revised": [],
+  "weakened_refuted": [],
+  "unresolved": [],
+  "implications_compared": true,
+  "implications_lost": [
+    "c_arousal _||_ c_avoidance | c_perceived_threat"
+  ],
+  "implications_lost_unrefuted": [],
+  "implications_gained": []
 }

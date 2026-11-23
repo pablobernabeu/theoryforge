@@ -176,19 +176,19 @@ def test_compile_sem_folds_measurement_labels():
 # -- new_evidence_dois ------------------------------------------------------------
 
 DOI_VARIANTS = [
-    "doi: 10.1016/j.brat.2015.10.002",
-    "DOI: 10.1016/j.brat.2015.10.002",
-    "DOI 10.1016/j.brat.2015.10.002",
-    "doi.org/10.1016/j.brat.2015.10.002",
-    "dx.doi.org/10.1016/j.brat.2015.10.002",
-    "https://www.doi.org/10.1016/j.brat.2015.10.002",
-    "info:doi/10.1016/j.brat.2015.10.002",
-    "urn:doi:10.1016/j.brat.2015.10.002",
-    "https://doi.org/10.1016%2Fj.brat.2015.10.002",
+    "doi: 10.1176/ajp.155.5.610",
+    "DOI: 10.1176/ajp.155.5.610",
+    "DOI 10.1176/ajp.155.5.610",
+    "doi.org/10.1176/ajp.155.5.610",
+    "dx.doi.org/10.1176/ajp.155.5.610",
+    "https://www.doi.org/10.1176/ajp.155.5.610",
+    "info:doi/10.1176/ajp.155.5.610",
+    "urn:doi:10.1176/ajp.155.5.610",
+    "https://doi.org/10.1176%2Fajp.155.5.610",
     "https://doi.org/10.1016/0005-7967%2886%2990011-2",
-    "10.1016/j.brat.2015.10.002.",
-    "10.1016/J.BRAT.2015.10.002\u00a0",
-    "\u200910.1016/j.brat.2015.10.002\u3000",
+    "10.1176/ajp.155.5.610.",
+    "10.1176/AJP.155.5.610\u00a0",
+    "\u200910.1176/ajp.155.5.610\u3000",
 ]
 
 
@@ -213,7 +213,7 @@ def test_doi_normaliser_keeps_what_is_not_a_doi_pattern():
 def test_the_doi_golden_is_unchanged_by_the_longer_candidate_list(panic_path, fixtures_dir):
     golden = json.loads((fixtures_dir / "expected" / "panic-network-2026.new_evidence_dois.json")
                         .read_text(encoding="utf-8"))
-    base = ["10.1016/j.brat.2015.10.002", "https://doi.org/10.1016/0005-7967(86)90011-2",
+    base = ["10.1176/ajp.155.5.610", "https://doi.org/10.1016/0005-7967(86)90011-2",
             "10.1176/AJP.146.2.148", "10.1037/0033-2909.99.1.20", "10.1037/0033-2909.99.1.20",
             "10.1016/j.cpr.2011.09.005"]
     assert tf.read(panic_path).new_evidence_dois(base + copy.copy(DOI_VARIANTS)) == golden

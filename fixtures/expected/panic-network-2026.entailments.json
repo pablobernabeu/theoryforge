@@ -8,9 +8,28 @@
       "c_perceived_threat"
     ]
   ],
-  "claims": [],
+  "claims": [
+    {
+      "source": "prediction",
+      "id": "pred_indep",
+      "kind": "association",
+      "x": "c_arousal",
+      "y": "c_avoidance",
+      "given": [
+        "c_perceived_threat"
+      ],
+      "sign": "zero",
+      "derived": "zero",
+      "verdict": "entailed",
+      "basis": "separated",
+      "faithfulness": false,
+      "via": [],
+      "identified": null,
+      "adjustment": null
+    }
+  ],
   "counts": {
-    "entailed": 0,
+    "entailed": 1,
     "contradicted": 0,
     "undetermined": 0,
     "not_evaluated": 0

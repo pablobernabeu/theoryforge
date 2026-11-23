@@ -47,7 +47,7 @@ def content_key(p) -> tuple[str, str]:
     return squish(text(field(p, "statement"))), enum(field(p, "type"), PRED_TYPE) or ""
 
 
-def classify_auxiliary(a, tos, eligible) -> tuple[str, list[dict]]:
+def classify_auxiliary(a, tos, eligible, added_for: str | None = None) -> tuple[str, list[dict]]:
     """The ad hoc class of an assumption added for an anomaly, with the evidence for it.
 
     The independent predictions are the distinct entries of the assumption's
@@ -58,9 +58,11 @@ def classify_auxiliary(a, tos, eligible) -> tuple[str, list[dict]]:
     be tested apart from the anomaly, ``ad_hoc2`` when none is corroborated and
     ``independently_corroborated`` otherwise. The amendment appraisal passes the
     predictions that are new in the amended version as ``eligible``, so content
-    the prior already held cannot clear an assumption.
+    the prior already held cannot clear an assumption. It also passes the
+    anomaly it inferred as ``added_for`` when the assumption names none.
     """
-    added_for = text(field(a, "added_for"))
+    if added_for is None:
+        added_for = text(field(a, "added_for"))
     independent: list[str] = []
     for q in str_list(field(a, "protects")):
         if q != added_for and q in eligible and q not in independent:

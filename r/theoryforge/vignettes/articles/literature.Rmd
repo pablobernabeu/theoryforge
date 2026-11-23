@@ -424,7 +424,7 @@ panic <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
                              package = "theoryforge"))
 
 candidates <- c(
-  "10.1016/j.brat.2015.10.002",                   # already cited as evidence
+  "10.1176/ajp.155.5.610",                        # already cited as evidence
   # already cited as an alternative, in URL form
   "https://doi.org/10.1016/0005-7967(86)90011-2",
   "https://doi.org/10.1037/0033-2909.99.1.20"     # not yet cited
@@ -483,7 +483,7 @@ step runs. Only the newly added DOI comes back as new evidence.
 
 ```{r diff-standin}
 diff <- data.frame(
-  doi = c("10.1016/j.brat.2015.10.002", "10.1037/0033-2909.99.1.20"),
+  doi = c("10.1176/ajp.155.5.610", "10.1037/0033-2909.99.1.20"),
   status = c("unchanged", "added")
 )
 added <- diff$doi[diff$status == "added"]

@@ -147,7 +147,7 @@ def test_the_amended_example_states_its_version_and_test_record(fixtures_dir):
 
 def test_the_version_line_needs_an_id_and_names_a_parent_only_when_there_is_one(
         tmp_path, panic_path, weak_path):
-    assert "\n- Theory ID: panic-network-2026\n- Version: v1\n- Schema version: 1.0\n" in \
+    assert "\n- Theory ID: panic-network-2026\n- Version: v1\n- Schema version: 1.1\n" in \
         tf.read(panic_path).preregister()
     assert "- Version:" not in tf.read(weak_path).preregister()
     head = 'schema_version: "1.0"\nid: t\ntitle: T\nmaturity: building\n'
@@ -238,12 +238,12 @@ def test_the_dossier_adds_the_test_record_and_the_evidence(fixtures_dir):
     assert (
         "- pred4: severity 1.0, risk 0.9, declared 0.75\n"
         "\n## Test record\n\n"
-        "- pred1: passed; observed: Arousal reached the predicted band in 78% of trials.; "
-        "date: 2026-05-01; registered: osf.io/abcde\n"
-        "- pred4: passed; observed: Avoidance dropped into the predicted band in 71% of cases.; "
-        "date: 2026-06-10; registered: osf.io/fghij\n"
+        "- pred1: passed; observed: Illustrative values, not a reported result: arousal reached the "
+        "predicted band in 78% of trials.; date: 2026-05-01; registered: osf.io/abcde\n"
+        "- pred4: passed; observed: Illustrative values, not a reported result: avoidance dropped into "
+        "the predicted band in 71% of cases.; date: 2026-06-10; registered: osf.io/fghij\n"
         "\n## Evidence\n\n"
-        "- supports pred4: corroborates; doi: 10.1000/example.v2\n"
+        "- supports pred4: corroborates\n"
         "\n## Claims and the causal graph\n"
     ) in d
     # The dossier embeds the preregistration, which holds the independencies,

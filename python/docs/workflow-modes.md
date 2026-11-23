@@ -136,8 +136,9 @@ amendment is an improvement. The appraisal operationalises the Lakatosian
 distinction between progressive and degenerating problem shifts. An
 amendment is progressive when it adds content its prior version lacked and a
 test corroborates a prediction derived from that content, with no ad hoc
-assumption added and no corroborated prediction dropped. The two versions are
-compared by what they claim, not by the ids of their predictions.
+assumption added, no corroborated prediction dropped and no unrefuted content
+lost. The two versions are compared by what they claim, not by the ids of their
+predictions.
 
 Call `appraise_amendment` on the newer version, passing the prior version as
 the argument. The two versions must be distinct objects, as they are when the
@@ -153,10 +154,12 @@ result = v2.appraise_amendment(v1)
 print(result["verdict"])
 ```
 
-The v2 fixture adds proposition `p4`, a direct path from arousal to avoidance,
-and derives from it a new prediction, `pred4`, that a registered test
-corroborates. The return value is a dictionary that gives the verdict and the
-evidence behind it.
+The v1 fixture implies that arousal and avoidance are independent given
+perceived threat and states that independence as `pred_indep`, which a test
+refuted. The v2 fixture drops `pred_indep`, adds proposition `p4`, a direct
+path from arousal to avoidance, and derives from it a new prediction, `pred4`,
+that a registered test corroborates. The return value is a dictionary that
+gives the verdict and the evidence behind it.
 
 ```python
 {
@@ -167,46 +170,75 @@ evidence behind it.
     "corroborated_new": ["pred4"],
     # new assumptions added for an anomaly that nothing new corroborates
     "ad_hoc_assumptions": [],
-    "articulated": [],      # new predictions derived only from v1's propositions
+    # new predictions derived only from v1's propositions, or whose claim
+    # v1's causal graph entails
+    "articulated": [],
     "underived": [],        # new predictions derived from no proposition
     # corroborated new predictions whose passing test was preregistered
     "corroborated_new_registered": ["pred4"],
     "renamed": [],          # {"prior": ..., "new": ...}: one claim under a new id
-    "dropped": [],          # predictions of v1 that v2 no longer holds
+    "dropped": ["pred_indep"],   # predictions of v1 that v2 no longer holds
     "dropped_corroborated": [],  # of those, the ones v1 had corroborated
-    "content_lost": [],     # of those, the ones v1 had never tested
+    # untested predictions of v1 that v2 drops or weakens
+    "content_lost": [],
     "new_anomalies": [],    # retained predictions that now fail a test
     # one record per new assumption added for an anomaly, with its class
     "assumptions": [],
+    "theoretically_progressive": True,  # some new prediction adds content
+    "empirically_progressive": True,    # and one of those is corroborated
+    # retained predictions whose content changed: {"id": ..., "change": ...}
+    "revised": [],
+    "weakened_refuted": [],  # weakened predictions that had failed in v1
+    "unresolved": [],        # new predictions citing a missing proposition
+    "implications_compared": True,
+    # independencies v1's causal graph implies and v2's does not
+    "implications_lost": ["c_arousal _||_ c_avoidance | c_perceived_threat"],
+    # of those, the ones no failed prediction of v1 contradicts
+    "implications_lost_unrefuted": [],
+    "implications_gained": [],  # independencies only v2 implies
 }
 ```
 
 The appraisal applies the following rule to the content of both versions and
 the recorded test outcomes.
 
-- `progressive`: a corroborated new prediction adds content, no ad hoc
-  assumption was added and no corroborated prediction was dropped.
-- `degenerating`: an ad hoc assumption was added and no corroborated new
-  prediction adds content.
+- `progressive`: a corroborated new prediction adds content, no content is
+  lost, no ad hoc assumption was added, no corroborated prediction was dropped
+  and no prediction that failed in v1 was weakened.
+- `degenerating`: an ad hoc assumption was added or a failed prediction was
+  weakened, and no corroborated new prediction adds content.
 - `neutral`: any other combination. Lakatos's scheme has only the two
   verdicts above, and `neutral` is theoryforge's label for an amendment that
   meets neither.
 
-A new prediction adds content unless it derives from no proposition at all or
-is an articulation. An articulation derives only from propositions that v1
-already held with the same endpoints and relation, and no new assumption
-protects it. A prediction under a new id that makes the same claim as a dropped
-one, with the same statement and type, is that prediction renamed and is not
-new. A prediction counts as corroborated when at least one entry under
-`test_outcomes` passes it and none fails it.
+A new prediction adds content unless it derives from no proposition at all,
+cites an id that names no proposition, or is an articulation. An articulation
+derives only from propositions that v1 already held with the same endpoints
+and relation, with no new assumption protecting it, or states a claim that
+v1's causal graph already entails. A prediction under a new id that makes the
+same claim as a dropped one, with the same statement and type, is that
+prediction renamed and is not new. A prediction counts as corroborated when at
+least one entry under `test_outcomes` passes it and none fails it.
+
+A prediction that v2 keeps is compared with its v1 form. It is weakened when
+its type ranks lower (existence, directional, interval, point), its bounds
+allow a wider region, or its claim is dropped or gives up a fixed sign for
+`nonzero`, and nothing in it is stronger. Content is lost when v2 drops or
+weakens an untested prediction, or gives up an implied independence that no
+failed prediction of v1 contradicts. Lakatos (1970, p. 118) considers series
+in which each theory has at least as much content as the unrefuted content of
+its predecessor, so lost content blocks a progressive verdict.
 
 `added_for` holds the id of the prediction whose anomaly an assumption
-answers. A new assumption with an `added_for` counts as ad hoc unless one of
-the predictions it protects is new in this version, is not that anomaly and is
-corroborated. Re-analysing the anomalous prediction until it passes therefore
-does not stop the assumption counting as ad hoc. The appraisal reads
-`registered` only for `corroborated_new_registered`. It reads no date, so
-deciding which version is the prior is the caller's responsibility.
+answers. When it is empty, an assumption that protects a prediction that
+failed in v1 is taken to answer the first such prediction, and its record
+says so with `added_for_inferred`. A new assumption added for an anomaly
+counts as ad hoc unless one of the predictions it protects is new in this
+version, is not that anomaly and is corroborated. Re-analysing the anomalous
+prediction until it passes therefore does not stop the assumption counting as
+ad hoc. The appraisal reads `registered` only for
+`corroborated_new_registered`. It reads no date, so deciding which version is
+the prior is the caller's responsibility.
 
 ## TESTING
 
