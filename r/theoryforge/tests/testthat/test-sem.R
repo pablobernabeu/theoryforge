@@ -24,6 +24,40 @@
          "by hand (", to, " ~ <x>:", from, " for an observed predictor <x>; lavaan::sam() or ",
          "the modsem package for latent variables)")
 }
+.sem_path <- function(from, to, label = paste0("b_", from, "_", to)) {
+  paste0(to, " ~ ", label, "*", from)
+}
+.sem_self <- function(pid, name) {
+  paste0("# Proposition '", pid, "' relates ", name, " to itself and is left out: a ",
+         "regression of a variable on itself only rescales its disturbance, so a linear SEM ",
+         "cannot estimate it.")
+}
+.sem_repeat <- function(pid, from, to, label = paste0("b_", from, "_", to)) {
+  paste0("# Proposition '", pid, "' repeats the path from ", from, " to ", to, ", which is ",
+         "written once, as ", label, ", since lavaan refuses a repeated line.")
+}
+.sem_bow <- function(from, to) {
+  paste0("# Bow between ", from, " and ", to, ": a path and a covariance join them, so the ",
+         "path from ", from, " to ", to, " is not identified without further constraints, ",
+         "such as an instrument for ", from, ".")
+}
+# The sign block, from c(label, op, proposition, relation) vectors.
+.sem_signs <- function(...) {
+  c(.SEM_SIGNS, vapply(list(...), function(x) sprintf("# %s %s 0 (%s, %s)", x[[1]], x[[2]],
+                                                      x[[3]], x[[4]]), character(1)))
+}
+.sem_claimed <- function(id, x, y, sign) {
+  paste0("# ", id, " claims that the effect of ", x, " on ", y, " ", sign, ".")
+}
+.SEM_IDENTIFIED <- paste0("# Identification: the paths among the constructs form no loop, and ",
+                          "no two constructs are joined by both a path and a covariance (a ",
+                          "bow). The path coefficients are therefore generically identified ",
+                          "if the measurement model identifies the constructs (Brito & ",
+                          "Pearl, 2002). Whether it does has to be checked separately.")
+.SEM_SIGNS <- "# Signs the theory states, which the fit does not impose"
+.SEM_EFFECTS <- paste0("# Effects the claims are about, each the sum over the directed paths ",
+                       "from cause to outcome of the product of the labels along the path")
+.SEM_EFFECT_LOOP <- "# The paths form a feedback loop, so no parameter is defined."
 .SEM_ZERO <- paste0("# Covariances the theory fixes at zero (lavaan::sem() frees them by ",
                     "default; delete this block to restore its defaults)")
 .SEM_FREE <- paste0("# Covariances with a moderator, left free (once a covariance names an ",
@@ -57,32 +91,40 @@
   "c_avoidance =~ behavioural_avoidance_task + diary_counts",
   .sem_single("c_perceived_threat"),
   "# Structural model",
-  "c_perceived_threat ~ c_arousal",
-  "c_avoidance ~ c_perceived_threat",
-  "c_arousal ~ c_perceived_threat")
+  .sem_path("c_arousal", "c_perceived_threat"),
+  .sem_path("c_perceived_threat", "c_avoidance"),
+  .sem_path("c_perceived_threat", "c_arousal"))
+.panic_signs <- list(c("b_c_arousal_c_perceived_threat", ">", "p1", "increases"),
+                     c("b_c_perceived_threat_c_avoidance", ">", "p2", "increases"))
 
 test_that("tf_compile_sem produces the exact panic lavaan lines", {
   # Perceived threat has one indicator, and arousal and perceived threat form
   # a feedback loop that the syntax flags. No pair is both exogenous or both
-  # terminal, so nothing is fixed at zero.
+  # terminal, so nothing is fixed at zero. p3 is a causes proposition, which
+  # states no sign.
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   expect_identical(tf_compile_sem(theory), .sem_text(
     .sem_header("panic-network-2026"),
     .panic_measurement,
-    .sem_loop("c_arousal", "c_perceived_threat")))
+    .sem_loop("c_arousal", "c_perceived_threat"),
+    do.call(.sem_signs, .panic_signs)))
   v2 <- tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml"))
   expect_identical(tf_compile_sem(v2), .sem_text(
     .sem_header("panic-network-2026-v2"),
     .panic_measurement,
-    "c_avoidance ~ c_arousal",
-    .sem_loop("c_arousal", "c_perceived_threat")))
+    .sem_path("c_arousal", "c_avoidance"),
+    .sem_loop("c_arousal", "c_perceived_threat"),
+    do.call(.sem_signs, c(.panic_signs,
+                          list(c("b_c_arousal_c_avoidance", ">", "p4", "increases"))))))
 })
 
 test_that("tf_compile_sem fixes the modality-switching covariances lavaan would free", {
   # Sensorimotor experience and lexical familiarity are both exogenous, and
   # switch cost and conceptual access both terminal. lavaan::sem() frees both
   # covariances by default, although the theory implies that each pair is
-  # unrelated (the first pair is the fixture's own pred4).
+  # unrelated (the first pair is the fixture's own pred4). The graph is acyclic
+  # and has no bow, and pred1 and pred3 each claim an effect that one path
+  # carries.
   theory <- tf_read(tf_fixture_path("modality-switching.theory.yaml"))
   expect_identical(tf_compile_sem(theory), .sem_text(
     "# lavaan model generated by theoryforge for modality-switching-2026",
@@ -100,10 +142,27 @@ test_that("tf_compile_sem fixes the modality-switching covariances lavaan would 
     paste0("c_lexical_familiarity =~ subjective_familiarity_ratings + ",
            "corpus_frequency_of_the_word_form + age_of_acquisition"),
     "# Structural model",
-    "c_modality_activation ~ c_sensorimotor_experience",
-    "c_switch_cost ~ c_modality_activation",
-    "c_conceptual_access ~ c_modality_activation",
-    "c_conceptual_access ~ c_lexical_familiarity",
+    paste0("c_modality_activation ~ b_c_sensorimotor_experience_c_modality_activation*",
+           "c_sensorimotor_experience"),
+    "c_switch_cost ~ b_c_modality_activation_c_switch_cost*c_modality_activation",
+    paste0("c_conceptual_access ~ b_c_modality_activation_c_conceptual_access*",
+           "c_modality_activation"),
+    paste0("c_conceptual_access ~ b_c_lexical_familiarity_c_conceptual_access*",
+           "c_lexical_familiarity"),
+    .SEM_IDENTIFIED,
+    "# Signs the theory states, which the fit does not impose",
+    "# b_c_sensorimotor_experience_c_modality_activation > 0 (p1, increases)",
+    "# b_c_modality_activation_c_switch_cost > 0 (p2, increases)",
+    "# b_c_modality_activation_c_conceptual_access > 0 (p3, increases)",
+    "# b_c_lexical_familiarity_c_conceptual_access > 0 (p4, increases)",
+    .SEM_EFFECTS,
+    paste0("# pred1 claims that the effect of c_modality_activation on c_switch_cost is ",
+           "positive."),
+    "effect_c_modality_activation_c_switch_cost := b_c_modality_activation_c_switch_cost",
+    paste0("# pred3 claims that the effect of c_modality_activation on c_conceptual_access is ",
+           "positive."),
+    paste0("effect_c_modality_activation_c_conceptual_access := ",
+           "b_c_modality_activation_c_conceptual_access"),
     paste0("# Covariances the theory fixes at zero (lavaan::sem() frees them by default; ",
            "delete this block to restore its defaults)"),
     "c_sensorimotor_experience ~~ 0*c_lexical_familiarity",
@@ -132,7 +191,8 @@ test_that("tf_compile_sem sanitises labels and handles every relation kind", {
     "c1 =~ heart_rate_variability + spaces",
     "# Structural model",
     .sem_moderation("c1", "c2"),
-    "c2 ~ c1"))
+    .sem_path("c1", "c2"),
+    .SEM_IDENTIFIED))
 })
 
 test_that("tf_compile_sem output ends with a single trailing newline (LF)", {
@@ -169,24 +229,29 @@ test_that("a moderator gets its main effect, written once", {
     tf_compile_sem(.sem_theory(constructs, list(c("threat", "decreases", "perf"),
                                                 c("ident", "moderates", "perf")))),
     .sem_text(.sem_header("sem"), "# Measurement model", "# Structural model",
-              "perf ~ threat", "perf ~ ident", .sem_moderation("ident", "perf")))
+              .sem_path("threat", "perf"), .sem_path("ident", "perf"),
+              .sem_moderation("ident", "perf"), .SEM_IDENTIFIED,
+              .sem_signs(c("b_threat_perf", "<", "p1", "decreases"))))
   expect_identical(
     tf_compile_sem(.sem_theory(constructs, list(c("ident", "moderates", "perf"),
                                                 c("ident", "increases", "perf"),
                                                 c("threat", "decreases", "perf")))),
     .sem_text(.sem_header("sem"), "# Measurement model", "# Structural model",
-              .sem_moderation("ident", "perf"), "perf ~ ident", "perf ~ threat"))
+              .sem_moderation("ident", "perf"), .sem_path("ident", "perf"),
+              .sem_path("threat", "perf"), .SEM_IDENTIFIED,
+              .sem_signs(c("b_ident_perf", ">", "p2", "increases"),
+                         c("b_threat_perf", "<", "p3", "decreases"))))
   expect_identical(
     tf_compile_sem(.sem_theory(constructs, list(c("ident", "causes", "perf"),
                                                 c("ident", "moderates", "perf")))),
     .sem_text(.sem_header("sem"), "# Measurement model", "# Structural model",
-              "perf ~ ident", .sem_moderation("ident", "perf")))
+              .sem_path("ident", "perf"), .sem_moderation("ident", "perf"), .SEM_IDENTIFIED))
   expect_identical(
     tf_compile_sem(.sem_theory(constructs, list(c("ident", "moderates", "perf"),
                                                 c("ident", "moderates", "perf")))),
     .sem_text(.sem_header("sem"), "# Measurement model", "# Structural model",
-              "perf ~ ident", .sem_moderation("ident", "perf"),
-              .sem_moderation("ident", "perf")))
+              .sem_path("ident", "perf"), .sem_moderation("ident", "perf"),
+              .sem_moderation("ident", "perf"), .SEM_IDENTIFIED))
 })
 
 # -- covariances fixed at zero --------------------------------------------------
@@ -209,8 +274,14 @@ test_that("the zero block leaves out moderators and associated pairs", {
                              c("prior", "associates", "threat")))
   expect_identical(tf_compile_sem(theory), .sem_text(
     .sem_header("sem"), "# Measurement model", "# Structural model",
-    "anxiety ~ threat", "anxiety ~ load", "perf ~ anxiety", "dropout ~ anxiety",
-    "perf ~ prior", "perf ~ ident", .sem_moderation("ident", "perf"), "prior ~~ threat",
+    .sem_path("threat", "anxiety"), .sem_path("load", "anxiety"), .sem_path("anxiety", "perf"),
+    .sem_path("anxiety", "dropout"), .sem_path("prior", "perf"), .sem_path("ident", "perf"),
+    .sem_moderation("ident", "perf"), "prior ~~ threat", .SEM_IDENTIFIED,
+    .sem_signs(c("b_threat_anxiety", ">", "p1", "increases"),
+               c("b_load_anxiety", ">", "p2", "increases"),
+               c("b_anxiety_perf", "<", "p3", "decreases"),
+               c("b_anxiety_dropout", ">", "p4", "increases"),
+               c("b_prior_perf", ">", "p5", "increases")),
     .SEM_ZERO, "threat ~~ 0*load", "prior ~~ 0*load", "perf ~~ 0*dropout",
     .SEM_FREE, "ident ~~ load"))
 })
@@ -235,8 +306,8 @@ test_that("an observed moderator keeps the covariances lavaan takes from the dat
   # x1 ~~ 0*x2 alone would also fix those of the moderator m with x1 and x2. The
   # block writes them free.
   theories <- .moderated_theories()
-  structural <- c("# Structural model", "y ~ x1", "y ~ x2", "y ~ m",
-                  .sem_moderation("m", "y"))
+  structural <- c("# Structural model", .sem_path("x1", "y"), .sem_path("x2", "y"),
+                  .sem_path("m", "y"), .sem_moderation("m", "y"), .SEM_IDENTIFIED)
   expect_identical(tf_compile_sem(theories$observed), .sem_text(
     .sem_header("sem"), "# Measurement model", structural,
     .SEM_ZERO, "x1 ~~ 0*x2", .SEM_FREE, "x1 ~~ m", "x2 ~~ m"))
@@ -259,8 +330,8 @@ test_that("an observed moderator keeps the covariances lavaan takes from the dat
                              c("m", "moderates", "y")))
   expect_identical(tf_compile_sem(theory), .sem_text(
     .sem_header("sem"), "# Measurement model", "f1 =~ q1 + q2", "f2 =~ q3 + q4",
-    "# Structural model", "y ~ f1", "y ~ f2", "y ~ m", .sem_moderation("m", "y"),
-    .SEM_ZERO, "f1 ~~ 0*f2"))
+    "# Structural model", .sem_path("f1", "y"), .sem_path("f2", "y"), .sem_path("m", "y"),
+    .sem_moderation("m", "y"), .SEM_IDENTIFIED, .SEM_ZERO, "f1 ~~ 0*f2"))
 })
 
 test_that("the zero block and the loop caution hold in a cyclic theory", {
@@ -272,21 +343,25 @@ test_that("the zero block and the loop caution hold in a cyclic theory", {
                              c("b", "causes", "y1"), c("b", "causes", "y2")))
   expect_identical(tf_compile_sem(theory), .sem_text(
     .sem_header("sem"), "# Measurement model", "# Structural model",
-    "a ~ x1", "a ~ x2", "b ~ a", "a ~ b", "y1 ~ b", "y2 ~ b",
-    .sem_loop("a", "b"), .SEM_ZERO, "x1 ~~ 0*x2", "y1 ~~ 0*y2"))
+    .sem_path("x1", "a"), .sem_path("x2", "a"), .sem_path("a", "b"), .sem_path("b", "a"),
+    .sem_path("b", "y1"), .sem_path("b", "y2"), .sem_loop("a", "b"),
+    .sem_signs(c("b_a_b", ">", "p3", "increases"), c("b_b_a", ">", "p4", "increases")),
+    .SEM_ZERO, "x1 ~~ 0*x2", "y1 ~~ 0*y2"))
 })
 
 test_that("each feedback loop gets one caution, in the order of its first member", {
-  # Members come in construct order, and a construct with an edge to itself is
-  # a loop of one, as tf_implications() reads it.
+  # Members come in construct order. A construct with an edge to itself is a
+  # loop of one in tf_implications(), but the syntax writes no regression of a
+  # variable on itself, so d gets a comment in place of its line and no
+  # caution.
   theory <- .sem_theory(.bare("c", "a", "b", "d", "e"),
                         list(c("a", "causes", "b"), c("b", "causes", "a"),
                              c("d", "causes", "d"), c("c", "causes", "e"),
                              c("e", "causes", "c"), c("b", "causes", "d")))
   expect_identical(tf_compile_sem(theory), .sem_text(
     .sem_header("sem"), "# Measurement model", "# Structural model",
-    "b ~ a", "a ~ b", "d ~ d", "e ~ c", "c ~ e", "d ~ b",
-    .sem_loop("c", "e"), .sem_loop("a", "b"), .sem_loop("d")))
+    .sem_path("a", "b"), .sem_path("b", "a"), .sem_self("p3", "d"), .sem_path("c", "e"),
+    .sem_path("e", "c"), .sem_path("b", "d"), .sem_loop("c", "e"), .sem_loop("a", "b")))
 })
 
 test_that("undeclared endpoints follow the declared constructs in the zero block", {
@@ -298,7 +373,189 @@ test_that("undeclared endpoints follow the declared constructs in the zero block
                         list(c("u", "causes", "y"), c("w", "causes", "z")))
   expect_identical(tf_compile_sem(theory), .sem_text(
     .sem_header("sem"), "# Measurement model", "# Structural model",
-    "y ~ u", "z ~ w", .SEM_ZERO, "y ~~ 0*z", "u ~~ 0*w"))
+    .sem_path("u", "y"), .sem_path("w", "z"), .SEM_IDENTIFIED, .SEM_ZERO, "y ~~ 0*z",
+    "u ~~ 0*w"))
+})
+
+# -- labels, self loops and repeated pairs --------------------------------------
+
+test_that("a relation from a construct to itself is left out", {
+  # lavaan fits y ~ y with negative degrees of freedom, since the regression
+  # only rescales the disturbance. Any directed relation, a moderation too, gets
+  # a comment in place of its line, and s is no feedback loop here.
+  theory <- .sem_theory(.bare("x", "s", "y"),
+                        list(c("x", "increases", "y"), c("s", "increases", "s"),
+                             c("y", "moderates", "y")))
+  expect_identical(tf_compile_sem(theory), .sem_text(
+    .sem_header("sem"), "# Measurement model", "# Structural model", .sem_path("x", "y"),
+    .sem_self("p2", "s"), .sem_self("p3", "y"), .SEM_IDENTIFIED,
+    .sem_signs(c("b_x_y", ">", "p1", "increases")), .SEM_ZERO, "x ~~ 0*s", "s ~~ 0*y"))
+  # tf_implications() and tf_simulate() keep the self loop: the first reads it
+  # as a feedback loop and the second couples s to itself.
+  expect_identical(tf_implications(theory, cycles = "sigma")$feedback,
+                   list(list("s"), list("y")))
+  sim <- tf_simulate(theory, steps = 1, damping = 0, init = c(s = 1))
+  expect_identical(sim$trajectory[[2L]], c(0, 1.1, 0))
+})
+
+test_that("a repeated pair is written once and keeps each sign", {
+  # lavaan refuses a repeated line ("duplicate model element"), with a label or
+  # without. Each sign the theory states is listed, so the two propositions on
+  # a -> b show their contradiction.
+  theory <- .sem_theory(.bare("a", "b"),
+                        list(c("a", "increases", "b"), c("a", "decreases", "b"),
+                             c("a", "causes", "b"), c("a", "moderates", "b")))
+  expect_identical(tf_compile_sem(theory), .sem_text(
+    .sem_header("sem"), "# Measurement model", "# Structural model", .sem_path("a", "b"),
+    .sem_repeat("p2", "a", "b"), .sem_repeat("p3", "a", "b"), .sem_moderation("a", "b"),
+    .SEM_IDENTIFIED,
+    .sem_signs(c("b_a_b", ">", "p1", "increases"), c("b_a_b", "<", "p2", "decreases"))))
+})
+
+test_that("labels avoid every other name with a numbered suffix", {
+  # x -> y_z and x_y -> z both give b_x_y_z, and lavaan would read one label on
+  # two paths as an equality constraint. The construct b_a_c holds the label of
+  # a -> c, and the indicator b_a_d that of a -> d. The first claimant keeps the
+  # name, and each later one takes the first free suffix.
+  theory <- .sem_theory(list(list("x", NULL), list("y_z", NULL), list("x_y", NULL),
+                             list("z", NULL), list("a", NULL), list("c", NULL),
+                             list("b_a_c", NULL), list("b_a_c_2", NULL), list("d", "b_a_d")),
+                        list(c("x", "causes", "y_z"), c("x_y", "causes", "z"),
+                             c("a", "causes", "c"), c("a", "causes", "d"),
+                             c("b_a_c", "causes", "b_a_c_2")))
+  lines <- strsplit(tf_compile_sem(theory), "\n", fixed = TRUE)[[1L]]
+  start <- match("# Structural model", lines)
+  expect_identical(lines[start + seq_len(5L)], c(
+    .sem_path("x", "y_z"), .sem_path("x_y", "z", "b_x_y_z_2"), .sem_path("a", "c", "b_a_c_3"),
+    .sem_path("a", "d", "b_a_d_2"), .sem_path("b_a_c", "b_a_c_2")))
+})
+
+test_that("a proposition with an empty endpoint is written without a label", {
+  # tf_validate() reports it, and lavaan cannot read the line either way.
+  theory <- .sem_theory(.bare("a"))
+  theory$propositions <- list(list(id = "p1", from = "a", to = "", relation = "increases"),
+                              list(id = "p2", from = "a", to = "", relation = "increases"))
+  expect_identical(tf_compile_sem(theory), .sem_text(
+    .sem_header("sem"), "# Measurement model", "# Structural model", " ~ a", " ~ a"))
+})
+
+# -- identification ---------------------------------------------------------------
+
+# A theory whose predictions h1, h2 and so on state effect claims, each given as
+# c(x, y, sign).
+.claim_theory <- function(propositions, claims, constructs = c("a", "m", "y")) {
+  theory <- .sem_theory(do.call(.bare, as.list(constructs)), propositions)
+  for (i in seq_along(claims)) {
+    cl <- claims[[i]]
+    theory <- tf_add_prediction(theory, paste0("h", i), "A claim.", "directional")
+    theory$predictions[[i]]$claim <- list(kind = "effect", x = cl[[1]], y = cl[[2]],
+                                          sign = cl[[3]])
+  }
+  theory
+}
+.effects_block <- function(theory) {
+  lines <- strsplit(tf_compile_sem(theory), "\n", fixed = TRUE)[[1L]]
+  start <- match(.SEM_EFFECTS, lines)
+  if (is.na(start)) character(0) else lines[start:length(lines)]
+}
+
+test_that("a bow is named in place of the identification note", {
+  # m -> y with an association of the two is a bow. z is an instrument for m
+  # here, so the comment names one constraint that would identify it. The graph
+  # is acyclic, so the effect of z on y is defined all the same.
+  theory <- .claim_theory(list(c("z", "increases", "m"), c("m", "increases", "y"),
+                               c("m", "associates", "y")),
+                          list(c("z", "y", "positive")), constructs = c("z", "m", "y"))
+  expect_identical(tf_compile_sem(theory), .sem_text(
+    .sem_header("sem"), "# Measurement model", "# Structural model", .sem_path("z", "m"),
+    .sem_path("m", "y"), "m ~~ y", .sem_bow("m", "y"),
+    .sem_signs(c("b_z_m", ">", "p1", "increases"), c("b_m_y", ">", "p2", "increases")),
+    .SEM_EFFECTS, .sem_claimed("h1", "z", "y", "is positive"), "effect_z_y := b_z_m*b_m_y"))
+})
+
+test_that("a feedback loop and a bow are both named", {
+  theory <- .sem_theory(.bare("a", "b", "c"),
+                        list(c("a", "causes", "b"), c("b", "causes", "a"),
+                             c("b", "causes", "c"), c("b", "associates", "c")))
+  expect_identical(tf_compile_sem(theory), .sem_text(
+    .sem_header("sem"), "# Measurement model", "# Structural model", .sem_path("a", "b"),
+    .sem_path("b", "a"), .sem_path("b", "c"), "b ~~ c", .sem_loop("a", "b"),
+    .sem_bow("b", "c")))
+})
+
+test_that("no identification note without a path", {
+  theory <- .sem_theory(.bare("a", "b"), list(c("a", "associates", "b"),
+                                              c("a", "causes", "a")))
+  expect_identical(tf_compile_sem(theory), .sem_text(
+    .sem_header("sem"), "# Measurement model", "# Structural model", "a ~~ b",
+    .sem_self("p2", "a")))
+})
+
+# -- effects the claims are about -------------------------------------------------
+
+test_that("an effect sums the products of the labels over every path", {
+  # Depth-first from the cause, successors in construct order, so the path
+  # through m comes before the direct one. Two claims on one pair share one
+  # parameter, a claim the graph cannot carry fixes the effect at zero, and a
+  # claim that cannot be evaluated as written is passed over.
+  theory <- .claim_theory(list(c("a", "increases", "m"), c("m", "decreases", "y"),
+                               c("a", "causes", "y")),
+                          list(c("a", "y", "positive"), c("y", "a", "zero"),
+                               c("a", "y", "nonzero"), c("a", "a", "positive"),
+                               c("m", "y", "negative")))
+  expect_identical(.effects_block(theory), c(
+    .SEM_EFFECTS, .sem_claimed("h1", "a", "y", "is positive"),
+    .sem_claimed("h3", "a", "y", "is not zero"), "effect_a_y := b_a_m*b_m_y + b_a_y",
+    .sem_claimed("h2", "y", "a", "is zero"),
+    "# No directed path leads from y to a, so the model fixes this effect at zero.",
+    .sem_claimed("h5", "m", "y", "is negative"), "effect_m_y := b_m_y"))
+})
+
+test_that("an effect names a construct that no path names", {
+  # q is declared but no proposition names it, so no path leads to it.
+  theory <- .claim_theory(list(c("a", "increases", "y")), list(c("a", "q", "positive")),
+                          constructs = c("a", "y", "q"))
+  expect_identical(.effects_block(theory), c(
+    .SEM_EFFECTS, .sem_claimed("h1", "a", "q", "is positive"),
+    "# No directed path leads from a to q, so the model fixes this effect at zero."))
+})
+
+test_that("no effect is defined on a graph with a feedback loop", {
+  theory <- .claim_theory(list(c("a", "increases", "m"), c("m", "increases", "a"),
+                               c("a", "causes", "y")),
+                          list(c("a", "y", "positive")))
+  expect_identical(.effects_block(theory), c(
+    .SEM_EFFECTS, .sem_claimed("h1", "a", "y", "is positive"), .SEM_EFFECT_LOOP))
+})
+
+test_that("an effect name avoids the names already taken", {
+  theory <- .claim_theory(list(c("a", "increases", "y")), list(c("a", "y", "positive")),
+                          constructs = c("a", "y", "effect_a_y"))
+  block <- .effects_block(theory)
+  expect_identical(block[[length(block)]], "effect_a_y_2 := b_a_y")
+})
+
+test_that("an effect over more paths than the cap is not defined", {
+  # Ten middle constructs in each of two layers give 100 paths from x to y, the
+  # cap, and a direct path makes 101.
+  expect_identical(.tf_SEM_MAX_EFFECT_PATHS, 100L)
+  layer1 <- paste0("u", 0:9)
+  layer2 <- paste0("v", 0:9)
+  props <- c(lapply(layer1, function(u) c("x", "causes", u)),
+             unlist(lapply(layer1, function(u) lapply(layer2, function(v) c(u, "causes", v))),
+                    recursive = FALSE),
+             lapply(layer2, function(v) c(v, "causes", "y")))
+  names <- c("x", layer1, layer2, "y")
+  block <- .effects_block(.claim_theory(props, list(c("x", "y", "positive")),
+                                        constructs = names))
+  terms <- strsplit(strsplit(block[[length(block)]], " := ", fixed = TRUE)[[1L]][[2L]],
+                    " + ", fixed = TRUE)[[1L]]
+  expect_length(terms, 100L)
+  expect_identical(terms[c(1L, 100L)], c("b_x_u0*b_u0_v0*b_v0_y", "b_x_u9*b_u9_v9*b_v9_y"))
+  block <- .effects_block(.claim_theory(c(props, list(c("x", "causes", "y"))),
+                                        list(c("x", "y", "positive")), constructs = names))
+  expect_identical(block[[length(block)]], paste0(
+    "# More than 100 directed paths lead from x to y, so no parameter is defined."))
 })
 
 # -- single indicators ----------------------------------------------------------
@@ -388,10 +645,10 @@ test_that("the block changes no covariance but those its zero lines fix", {
 
 test_that("lavaan reads the cautions as comments and the block as covariances", {
   # Every kind of line the syntax writes is here: a single indicator (strain), a
-  # moderation, a feedback loop (perf and strain) and a zero block. The comments
-  # hold semicolons, which lavaan also reads as line breaks, so a parser that
-  # split lines before dropping comments would take the text after them as
-  # model syntax.
+  # moderation, a feedback loop (perf and strain), signs and a zero block. The
+  # comments hold semicolons, which lavaan also reads as line breaks, so a
+  # parser that split lines before dropping comments would take the text after
+  # them as model syntax.
   theory <- .sem_theory(list(list("threat", c("t1", "t2")), list("load", c("l1", "l2")),
                              list("ident", c("i1", "i2")), list("perf", c("f1", "f2")),
                              list("strain", "s1"), list("absence", c("a1", "a2")),
@@ -405,9 +662,14 @@ test_that("lavaan reads the cautions as comments and the block as covariances", 
     .sem_header("sem"), "# Measurement model", "threat =~ t1 + t2", "load =~ l1 + l2",
     "ident =~ i1 + i2", "perf =~ f1 + f2", "strain =~ s1", "absence =~ a1 + a2",
     "turnover =~ u1 + u2", .sem_single("strain"), "# Structural model",
-    "perf ~ threat", "perf ~ load", "perf ~ ident", .sem_moderation("ident", "perf"),
-    "strain ~ perf", "perf ~ strain", "absence ~ strain", "turnover ~ strain",
-    .sem_loop("perf", "strain"), .SEM_ZERO, "threat ~~ 0*load", "absence ~~ 0*turnover"))
+    .sem_path("threat", "perf"), .sem_path("load", "perf"), .sem_path("ident", "perf"),
+    .sem_moderation("ident", "perf"), .sem_path("perf", "strain"), .sem_path("strain", "perf"),
+    .sem_path("strain", "absence"), .sem_path("strain", "turnover"),
+    .sem_loop("perf", "strain"),
+    .sem_signs(c("b_threat_perf", "<", "p1", "decreases"), c("b_load_perf", ">", "p2", "increases"),
+               c("b_strain_absence", ">", "p6", "increases"),
+               c("b_strain_turnover", ">", "p7", "increases")),
+    .SEM_ZERO, "threat ~~ 0*load", "absence ~~ 0*turnover"))
   skip_if_not_installed("lavaan")
   pt <- NULL
   expect_no_warning(pt <- lavaan::lavaanify(syntax))
@@ -416,7 +678,64 @@ test_that("lavaan reads the cautions as comments and the block as covariances", 
                    c("perf ~ threat", "perf ~ load", "perf ~ ident", "strain ~ perf",
                      "perf ~ strain", "absence ~ strain", "turnover ~ strain",
                      "threat ~~ load", "absence ~~ turnover"))
+  expect_identical(user$label[user$op == "~"],
+                   c("b_threat_perf", "b_load_perf", "b_ident_perf", "b_perf_strain",
+                     "b_strain_perf", "b_strain_absence", "b_strain_turnover"))
   fixed <- user$op == "~~"
   expect_identical(user$free[fixed], c(0L, 0L))
   expect_identical(user$ustart[fixed], c(0, 0))
+})
+
+test_that("lavaan reads the labels and defined effects and fits the modality model", {
+  # Data simulated from the modality-switching theory with positive paths. The
+  # syntax fits as it stands, the zero block gives 61 degrees of freedom, and
+  # each defined effect is estimated as the label of its one path.
+  skip_if_not_installed("lavaan")
+  syntax <- tf_compile_sem(tf_read(tf_fixture_path("modality-switching.theory.yaml")))
+  set.seed(20261123)
+  n <- 600L
+  sm <- stats::rnorm(n)
+  lf <- stats::rnorm(n)
+  ma <- 0.6 * sm + stats::rnorm(n)
+  sc <- 0.5 * ma + stats::rnorm(n)
+  ca <- 0.4 * ma + 0.4 * lf + stats::rnorm(n)
+  factors <- list(c_sensorimotor_experience = sm, c_modality_activation = ma,
+                  c_switch_cost = sc, c_conceptual_access = ca, c_lexical_familiarity = lf)
+  data <- list()
+  for (line in grep(" =~ ", strsplit(syntax, "\n", fixed = TRUE)[[1L]], value = TRUE)) {
+    parts <- strsplit(line, " =~ ", fixed = TRUE)[[1L]]
+    for (ind in strsplit(parts[[2L]], " + ", fixed = TRUE)[[1L]]) {
+      data[[ind]] <- factors[[parts[[1L]]]] + stats::rnorm(n, sd = 0.5)
+    }
+  }
+  fit <- NULL
+  expect_no_warning(fit <- lavaan::sem(syntax, data = as.data.frame(data)))
+  expect_true(lavaan::lavInspect(fit, "converged"))
+  expect_identical(as.numeric(lavaan::fitMeasures(fit, "df")), 61)
+  est <- lavaan::parameterEstimates(fit)
+  defined <- est[est$op == ":=", ]
+  expect_identical(defined$lhs, c("effect_c_modality_activation_c_switch_cost",
+                                  "effect_c_modality_activation_c_conceptual_access"))
+  paths <- est[est$op == "~", ]
+  expect_equal(defined$est, paths$est[match(c("b_c_modality_activation_c_switch_cost",
+                                              "b_c_modality_activation_c_conceptual_access"),
+                                            paths$label)])
+  expect_true(all(paths$est > 0))
+})
+
+test_that("lavaan parses every shipped and edge syntax that holds a label", {
+  # The cyclic panic models parse, and lavaan cannot invert their information
+  # matrix (API_SPEC.md section 19), so they are not fitted here.
+  skip_if_not_installed("lavaan")
+  files <- c(tf_fixture_path("panic-network.theory.yaml"),
+             tf_fixture_path("panic-network-2026-v2.theory.yaml"),
+             tf_fixture_path("modality-switching.theory.yaml"))
+  for (f in files) {
+    syntax <- tf_compile_sem(tf_read(f))
+    pt <- NULL
+    expect_no_warning(pt <- lavaan::lavaanify(syntax), message = f)
+    regressions <- pt[pt$op == "~", ]
+    expect_identical(regressions$label, paste0("b_", regressions$rhs, "_", regressions$lhs),
+                     info = f)
+  }
 })

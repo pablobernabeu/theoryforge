@@ -1,7 +1,9 @@
 """Deterministic dynamical-system runner derived from a theory's network.
 
 Each construct is a state variable, and each proposition whose relation is ``increases``,
-``decreases``, ``causes`` or ``mediates`` contributes a signed linear coupling term. The system
+``decreases``, ``causes`` or ``mediates`` contributes a linear coupling term with the sign
+the relation table (API_SPEC.md section 28) gives it. ``causes`` and ``mediates`` state no
+sign and are coupled positively, an assumption the result records. The system
 dX/dt = (A - damping*I) X is propagated either with fixed-step (Euler) updates or exactly, with
 the matrix exponential of (A - damping*I)*dt. Both are deterministic and computed with
 explicit loops in a fixed order, so the R package gives the same values to the last bit.
@@ -11,12 +13,12 @@ from __future__ import annotations
 import math
 import numbers
 import warnings
+from collections.abc import Mapping
 
 from ._access import RELATION, enum, field, items, text
 from ._num import rnd
+from ._relations import PATHS, RELATIONS
 
-_POS = {"increases", "causes", "mediates"}
-_NEG = {"decreases"}
 _METHODS = ("euler", "exact")
 # Degree of the Taylor polynomial of the propagator, after scaling the matrix
 # to an infinity norm of at most 0.5 (API_SPEC section 22).
@@ -26,6 +28,9 @@ _TAYLOR_DEGREE = 18
 _DEPARTURE = 0.05
 _EULER_WARNING = ("simulate: the Euler steps depart from the exact solution by more than "
                   "5 per cent; use method 'exact' or a smaller dt")
+_INIT_FORM = ("simulate requires init to be a finite number or a mapping from construct ids "
+              "to finite numbers")
+_INIT_UNKNOWN = "simulate requires init to name declared constructs; unknown construct id: "
 
 
 def _finite_number(x) -> bool:
@@ -33,6 +38,17 @@ def _finite_number(x) -> bool:
     # twins refuse it.
     return (isinstance(x, numbers.Real) and not isinstance(x, bool)
             and math.isfinite(x))
+
+
+def _init_mapping(init) -> bool:
+    """Whether ``init`` maps nonempty strings to finite numbers.
+
+    R holds a mapping as a named vector or list, whose names are strings and
+    cannot be empty, so an empty or non-string key is refused here as well.
+    """
+    return (isinstance(init, Mapping)
+            and all(isinstance(key, str) and key != "" for key in init)
+            and all(_finite_number(value) for value in init.values()))
 
 
 def _check_knobs(steps, dt, k, damping, init, method) -> int:
@@ -55,8 +71,8 @@ def _check_knobs(steps, dt, k, damping, init, method) -> int:
         raise ValueError("simulate requires k to be a finite number")
     if not _finite_number(damping):
         raise ValueError("simulate requires damping to be a finite number")
-    if not _finite_number(init):
-        raise ValueError("simulate requires init to be a single finite number")
+    if not (_finite_number(init) or _init_mapping(init)):
+        raise ValueError(_INIT_FORM)
     if not (isinstance(method, str) and method in _METHODS):
         raise ValueError("simulate requires method to be one of: euler, exact")
     return int(steps)
@@ -143,19 +159,35 @@ def _apply(E: list, X: list) -> list:
 
 
 def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
-             damping: float = 0.5, init: float = 1.0, method: str = "euler") -> dict:
+             damping: float = 0.5, init: float | Mapping[str, float] = 1.0,
+             method: str = "euler") -> dict:
     """Propagate the theory's construct network as a linear dynamical system.
 
-    Returns {states, dt, steps, k, damping, init, method, ignored, opposed,
-    trajectory}, where trajectory[t] is the state vector at time t*dt (t = 0..steps),
-    each value rounded to 6 decimals. The settings and the method are returned as
-    given, because the trajectory cannot be reproduced without them. ``ignored``
-    lists the ids of the propositions that couple nothing (moderates, associates, a
-    relation outside the schema's set or an endpoint that is not a declared
-    construct), and ``opposed`` the ``[from, to]`` pairs that carry couplings of
-    both signs, which offset each other. Construct ids must be unique. A construct
-    without an id is a state with no couplings, and two of them do not count as
-    duplicates.
+    Returns {states, dt, steps, k, damping, init, initial_state, method, ignored,
+    assumed_positive, opposed, trajectory}, where trajectory[t] is the state vector
+    at time t*dt (t = 0..steps), each value rounded to 6 decimals. The settings and
+    the method are returned as given, because the trajectory cannot be reproduced
+    without them, and ``initial_state`` gives the value each state starts from, in
+    the order of ``states``. Construct ids must be unique. A construct without an
+    id is a state with no couplings, and two of them do not count as duplicates.
+
+    Each proposition between two declared constructs whose relation is
+    ``increases``, ``decreases``, ``causes`` or ``mediates`` adds k times the sign
+    of its relation to the coupling from ``from`` to ``to``. The signs are those
+    of the relation table (API_SPEC.md section 28): +1 for ``increases`` and -1
+    for ``decreases``. ``causes`` and ``mediates`` state no sign, and they are
+    coupled at +k by assumption. ``assumed_positive`` lists their ids, in file
+    order, since that choice alone can decide whether a feedback loop grows or
+    settles. ``ignored`` lists the ids of the propositions that couple nothing
+    (``moderates``, ``associates``, a relation outside the schema's set or an
+    endpoint that is not a declared construct), and ``opposed`` the ``[from,
+    to]`` pairs that carry couplings of both signs, which offset each other.
+
+    ``init`` is either one finite number, the value every state starts from, or
+    a mapping from construct ids to finite numbers, in which case each state it
+    does not name starts from 0. A mapping with one entry gives the response to
+    an impulse in that construct. A key that is not a declared construct id
+    raises ValueError.
 
     ``method = "exact"`` multiplies the state by the matrix exponential of
     (A - damping*I)*dt at every step, so the trajectory is the solution of the
@@ -169,17 +201,18 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     will change to ``"exact"`` in the next minor release.
 
     ``steps`` must be a whole number of at least 0 and ``dt`` a finite number
-    above 0. ``k``, ``damping`` and ``init`` must be finite numbers, and ``method``
-    one of "euler" and "exact". Anything else raises ValueError. When a state grows so large that
-    a million times it is not a finite double, the run stops with ValueError naming
-    the step and the state. The initial state is tested as step 0, so an ``init``
-    beyond about 1.8e302 in absolute value stops there.
+    above 0. ``k`` and ``damping`` must be finite numbers, ``init`` as above and
+    ``method`` one of "euler" and "exact". Anything else raises ValueError. When a
+    state grows so large that a million times it is not a finite double, the run
+    stops with ValueError naming the step and the state. The initial state is
+    tested as step 0, so a starting value beyond about 1.8e302 in absolute value
+    stops there.
 
-    The model is deliberately simple: one gain ``k`` for every coupling, ``causes``
-    and ``mediates`` taken as positive, ``moderates`` and ``associates`` coupling
-    nothing, ``functional_form`` not read and a common initial value for every
-    state. A linear system has one equilibrium, or a continuum of them when its
-    matrix is singular, and never two separate ones, so it cannot show bistability.
+    The model is deliberately simple: one gain ``k`` for every coupling,
+    ``causes`` and ``mediates`` taken as positive, ``moderates`` and
+    ``associates`` coupling nothing and ``functional_form`` not read. A linear
+    system has one equilibrium, or a continuum of them when its matrix is
+    singular, and never two separate ones, so it cannot show bistability.
     """
     n_steps = _check_knobs(steps, dt, k, damping, init, method)
     T = T.data if hasattr(T, "data") else T
@@ -197,19 +230,29 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
             raise ValueError(f"simulate requires unique construct ids; duplicate construct id: {s}")
         seen.add(s)
     idx = {s: i for i, s in enumerate(states) if s != ""}
+    if isinstance(init, Mapping):
+        for key in init:
+            if key not in idx:
+                raise ValueError(_INIT_UNKNOWN + key)
+        X = [float(init[s]) if s in init else 0.0 for s in states]
+    else:
+        X = [float(init)] * n
 
     A = [[0.0] * n for _ in range(n)]
     ignored: list = []
+    assumed: list = []
     # The signs each ordered pair carries, in the order the pairs first couple.
     pair_signs: dict = {}
     for p in items(T, "propositions"):
         f, t = text(field(p, "from")), text(field(p, "to"))
         rel = enum(field(p, "relation"), RELATION)
-        sign = 1.0 if rel in _POS else (-1.0 if rel in _NEG else 0.0)
-        if f in idx and t in idx:
+        if rel in PATHS and f in idx and t in idx:
+            stated = RELATIONS[rel][1]
+            sign = 1.0 if stated is None else float(stated)
             A[idx[t]][idx[f]] += sign * k
-        if f in idx and t in idx and sign != 0.0:
             pair_signs.setdefault((f, t), set()).add(sign)
+            if stated is None:
+                assumed.append(text(field(p, "id")))
         else:
             ignored.append(text(field(p, "id")))
     opposed = [[f, t] for (f, t), signs in pair_signs.items() if len(signs) == 2]
@@ -227,7 +270,7 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     remedy = ("raise damping, reduce k or take fewer steps" if method == "exact"
               else "reduce dt or k")
 
-    X = [float(init)] * n
+    initial = list(X)
     # Row 0 is tested as every update is. A finite init can be too large to
     # round (about 1.8e302 or more), and only init shapes this row.
     _check_finite(X, states, 0, "reduce init")
@@ -263,5 +306,6 @@ def simulate(T, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     if departed:
         warnings.warn(_EULER_WARNING, UserWarning, stacklevel=2)
     return {"states": states, "dt": dt, "steps": steps, "k": k, "damping": damping,
-            "init": init, "method": method, "ignored": ignored, "opposed": opposed,
-            "trajectory": traj}
+            "init": dict(init) if isinstance(init, Mapping) else init,
+            "initial_state": initial, "method": method, "ignored": ignored,
+            "assumed_positive": assumed, "opposed": opposed, "trajectory": traj}

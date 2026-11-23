@@ -49,10 +49,64 @@ def test_simulate_refuses_an_unknown_method(panic_path, method):
 def test_simulate_records_the_method_and_what_it_leaves_out(panic_path):
     t = tf.read(panic_path)
     r = t.simulate(steps=2)
-    assert list(r) == ["states", "dt", "steps", "k", "damping", "init", "method", "ignored",
-                       "opposed", "trajectory"]
+    assert list(r) == ["states", "dt", "steps", "k", "damping", "init", "initial_state", "method",
+                       "ignored", "assumed_positive", "opposed", "trajectory"]
     assert (r["method"], r["ignored"], r["opposed"]) == ("euler", [], [])
+    # p3 states that perceived threat causes arousal, without a sign. The
+    # coupling is positive by assumption, and that alone makes the loop grow.
+    assert r["assumed_positive"] == ["p3"]
     assert t.simulate(steps=2, method="exact")["method"] == "exact"
+
+
+def _fan():
+    # a reaches each of b to e by one relation, and three propositions couple
+    # nothing.
+    t = tf.new_theory("signs", "Signs")
+    for c in "abcde":
+        t.add_construct(c, c.upper(), "d")
+    for pid, to, rel in [("p1", "b", "increases"), ("p2", "c", "decreases"), ("p3", "d", "causes"),
+                         ("p4", "e", "mediates"), ("p5", "zz", "causes"), ("p6", "b", "moderates")]:
+        t.add_proposition(pid, "a", to, rel)
+    return t.add_proposition("p7", "b", "c", "associates")
+
+
+def test_simulate_reads_the_signs_from_the_relation_table():
+    # increases and decreases carry the table's signs. causes and mediates
+    # carry none and are coupled at +k, and the record lists them in file
+    # order. A coupling to an undeclared construct is ignored and assumes
+    # nothing.
+    from theoryforge._relations import PATHS
+
+    assert PATHS == frozenset({"increases", "decreases", "causes", "mediates"})
+    r = _fan().simulate(steps=1, dt=1, damping=0, init={"a": 1})
+    assert r["trajectory"][1] == [1.0, 1.0, -1.0, 1.0, 1.0]
+    assert r["assumed_positive"] == ["p3", "p4"]
+    assert r["ignored"] == ["p5", "p6", "p7"]
+
+
+def test_simulate_starts_from_a_mapping_for_an_impulse_response(panic_path):
+    # A construct the mapping leaves out starts from 0, so one entry gives the
+    # response to an impulse in that construct. The mapping is echoed as given
+    # and initial_state holds every starting value, in the order of states.
+    t = tf.read(panic_path)
+    r = t.simulate(steps=2, init={"c_avoidance": 2, "c_arousal": 0.5}, method="exact")
+    assert r["init"] == {"c_avoidance": 2, "c_arousal": 0.5}
+    assert r["initial_state"] == [0.5, 0.0, 2.0]
+    assert r["trajectory"][0] == [0.5, 0.0, 2.0]
+    # Constructs with the same incoming couplings now part: arousal and
+    # threat no longer follow one path.
+    impulse = t.simulate(steps=5, init={"c_arousal": 1}, method="exact")["trajectory"]
+    assert impulse[5][0] != impulse[5][1]
+    assert t.simulate(steps=1, init={})["trajectory"] == [[0.0, 0.0, 0.0]] * 2
+
+
+def test_simulate_refuses_a_mapping_that_names_an_unknown_construct(panic_path):
+    # Checked once the theory is read, after the duplicate ids, in the order
+    # of the mapping. The R suite asserts the same message.
+    with pytest.raises(ValueError) as exc:
+        tf.read(panic_path).simulate(init={"c_arousal": 1, "arousal": 1, "zz": 2})
+    assert str(exc.value) == ("simulate requires init to name declared constructs; unknown "
+                              "construct id: arousal")
 
 
 def test_exact_decays_where_euler_explodes(weak_path):

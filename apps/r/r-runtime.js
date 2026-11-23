@@ -358,7 +358,7 @@ const RT = {
       case "dossier":
         return `${head}\n\ncat(tf_dossier(theory))           # reviewer-facing audit bundle (Markdown)`;
       case "simulate":
-        return `${head}\n\nsim <- tf_simulate(theory, steps = ${p.steps}, dt = ${p.dt}, k = ${p.k}, damping = ${p.damping}, init = ${p.init}, method = "${p.method || "exact"}")\nstr(sim)                          # list(states, dt, steps, k, damping, init, method, ignored, opposed, trajectory)`;
+        return `${head}\n\nsim <- tf_simulate(theory, steps = ${p.steps}, dt = ${p.dt}, k = ${p.k}, damping = ${p.damping}, init = ${p.init}, method = "${p.method || "exact"}")\nstr(sim)                          # list(states, dt, steps, k, damping, init, initial_state, method, ignored, assumed_positive, opposed, trajectory)`;
       case "litmap":
         return `${head}\n${corpus}\n\nlm <- tf_litmap(corpus, min_link = ${p.min_link})\nlm$themes\ncat(tf_lit_diagram(lm, "keyword_cooccurrence"))`;
       case "landscape":

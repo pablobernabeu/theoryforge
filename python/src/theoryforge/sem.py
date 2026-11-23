@@ -1,9 +1,10 @@
 """Compile a theory's constructs and propositions to lavaan model syntax.
 
 The output is deterministic. Constructs with measurement indicators become a latent
-measurement model (=~), and directed propositions become structural paths (~).
-Every name takes a form that lavaan reads as written, and the syntax fixes at zero
-the covariances the theory rules out.
+measurement model (=~), and directed propositions become labelled structural paths
+(~). Every name takes a form that lavaan reads as written, the syntax fixes at zero
+the covariances the theory rules out, and defined parameters (:=) give the effects
+that the theory's claims are about.
 """
 from __future__ import annotations
 
@@ -11,10 +12,14 @@ import re
 
 from ._access import RELATION, enum, field, items, str_list, text
 from ._graph import reach, strong_components
-from ._relations import BIDIRECTED, DIRECTED
+from ._relations import BIDIRECTED, DIRECTED, PATHS, RELATIONS
 from ._text import fold, normalise_words
+from .entailment import _claims
 
-_PATH = {"causes", "increases", "decreases", "mediates"}
+# The most directed paths an effect is summed over (API_SPEC.md section 19).
+# The number of paths can grow exponentially with the number of constructs,
+# so an effect carried by more paths gets no defined parameter.
+MAX_EFFECT_PATHS = 100
 # The comment lines of the syntax (API_SPEC.md section 19), shared with R's
 # sem.R. lavaan drops a comment before it reads a semicolon as a line break, so
 # the semicolons inside them stay comment text.
@@ -22,6 +27,12 @@ _WRITTEN_FOR = ("# Written for lavaan::sem(); indicator names are the sanitised 
                 "entries and must match columns of the data.")
 _SINGLE = ("# Single-indicator constructs (lavaan fixes the indicator's residual variance at "
            "zero, so each is treated as measured without error): ")
+# A regression of a variable on itself only rescales its disturbance, and
+# lavaan fits `y ~ y` with negative degrees of freedom.
+_SELF = ("# Proposition '{pid}' relates {name} to itself and is left out: a regression of a "
+         "variable on itself only rescales its disturbance, so a linear SEM cannot estimate it.")
+_REPEAT = ("# Proposition '{pid}' repeats the path from {frm} to {to}, which is written once, "
+           "as {label}, since lavaan refuses a repeated line.")
 # The order and rank conditions assume that the disturbances of a loop may
 # correlate (Bollen, 1989, ch. 4). sem() leaves them uncorrelated, and then a
 # loop can be identified without an instrument, as the effort-recovery app
@@ -30,9 +41,29 @@ _LOOP = ("# Feedback loop among {}: a non-recursive model may not be identified.
          "lavaan::sem() leaves these disturbances uncorrelated, and the order and rank "
          "conditions (Bollen, 1989) assume they may correlate, so check identification "
          "before fitting.")
+# Brito and Pearl (2002) show that an acyclic model with no bow is identified
+# for almost all values of its parameters. The constructs stand in for its
+# variables, so the claim holds once the measurement model identifies them.
+_IDENTIFIED = ("# Identification: the paths among the constructs form no loop, and no two "
+               "constructs are joined by both a path and a covariance (a bow). The path "
+               "coefficients are therefore generically identified if the measurement model "
+               "identifies the constructs (Brito & Pearl, 2002). Whether it does has to be "
+               "checked separately.")
+_BOW = ("# Bow between {frm} and {to}: a path and a covariance join them, so the path from "
+        "{frm} to {to} is not identified without further constraints, such as an instrument "
+        "for {frm}.")
 _MODERATION = ("# moderation: {frm} moderates the paths into {to}; add the product term by hand "
                "({to} ~ <x>:{frm} for an observed predictor <x>; lavaan::sam() or the modsem "
                "package for latent variables)")
+_SIGNS = "# Signs the theory states, which the fit does not impose"
+_EFFECTS = ("# Effects the claims are about, each the sum over the directed paths from cause "
+            "to outcome of the product of the labels along the path")
+_CLAIMED = {"positive": "is positive", "negative": "is negative", "zero": "is zero",
+            "nonzero": "is not zero"}
+_EFFECT_LOOP = "# The paths form a feedback loop, so no parameter is defined."
+_NO_PATH = "# No directed path leads from {x} to {y}, so the model fixes this effect at zero."
+_TOO_MANY = ("# More than {n} directed paths lead from {x} to {y}, so no parameter is "
+             "defined.")
 _ZERO = ("# Covariances the theory fixes at zero (lavaan::sem() frees them by default; delete "
          "this block to restore its defaults)")
 _FREE = ("# Covariances with a moderator, left free (once a covariance names an observed "
@@ -114,7 +145,7 @@ def _indicator_name(m: str) -> str:
     return s if _lavaan_safe(s) else "i_" + s
 
 
-def _renamings(T) -> list[str]:
+def _renamings(T) -> tuple[list[str], set[str]]:
     """One comment per renamed construct id, after refusing names that would merge.
 
     The ids are the declared constructs in file order and then the endpoints of
@@ -122,7 +153,8 @@ def _renamings(T) -> list[str]:
     is renamed and checked like one. Each construct's name is checked before
     its indicators, and the first name claimed twice is reported. An indicator
     shared by two constructs is a cross-loading, which lavaan reads as one
-    variable measuring both, so it is allowed.
+    variable measuring both, so it is allowed. Also returns every name
+    claimed, which the path labels and defined parameters must avoid.
     """
     owner: dict[str, tuple[str, str]] = {}  # name -> ("construct" | "indicator", construct id)
     claimed: set[str] = set()
@@ -162,7 +194,7 @@ def _renamings(T) -> list[str]:
         if enum(field(p, "relation"), RELATION) is not None:
             claim(text(field(p, "from")))
             claim(text(field(p, "to")))
-    return comments
+    return comments, set(owner)
 
 
 def _graph(T) -> tuple[list[str], list[list[bool]], list[list[bool]], list[bool]]:
@@ -176,7 +208,7 @@ def _graph(T) -> tuple[list[str], list[list[bool]], list[list[bool]], list[bool]
     and an undeclared endpoint follows the declared constructs. Vertices come
     in claim order, as in ``_renamings``. An empty id names no vertex, and a
     relation with an empty endpoint adds no edge. ``moderator`` marks each
-    vertex that some ``moderates`` edge leaves.
+    vertex that some ``moderates`` edge to another vertex leaves.
     """
     ids: list[str] = []
     position: dict[str, int] = {}
@@ -205,7 +237,7 @@ def _graph(T) -> tuple[list[str], list[list[bool]], list[list[bool]], list[bool]
             e = (position[frm], position[to])
             if e not in edges:
                 edges.append(e)
-            if rel == "moderates":
+            if rel == "moderates" and frm != to:
                 moderators.add(frm)
         elif rel in BIDIRECTED:
             associations.append((frm, to))
@@ -226,23 +258,199 @@ def _graph(T) -> tuple[list[str], list[list[bool]], list[list[bool]], list[bool]
     return nodes, directed, bidirected, [n in moderators for n in nodes]
 
 
-def _cautions(T, latent: set[str]) -> list[str]:
-    """The lines after the structural model: loop cautions, then the zero block.
+def _unique(base: str, taken: set[str]) -> str:
+    """``base``, or ``base_2``, ``base_3`` and so on, whichever is first not in ``taken``.
 
-    A feedback loop is a strongly connected component of two or more vertices,
-    or one with an edge to itself, as in implications(). The zero block takes
-    every pair of vertices, in vertex order, that are both exogenous (no edge
-    enters either) or both terminal (no edge leaves either). It passes over a
-    pair that an association joins or that holds a moderator. The theory
-    states no common cause for such a pair beyond the causes it names, so
-    their disturbances are uncorrelated. lavaan::sem() frees the covariance of
-    two exogenous latent variables and of two terminal variables by default,
-    and takes that of two exogenous observed variables from the data. Where
-    lavaan fixes the covariance at zero already, as between an exogenous
-    latent variable and an exogenous observed one, the line restates that.
-    The rule encodes uncorrelated disturbances, so it holds in a cyclic graph
-    too. A moderator keeps lavaan's defaults, since the product term the user
-    adds changes its role.
+    lavaan reads one label on two paths as a constraint that the two are
+    equal, so each label and defined parameter takes a name of its own. It
+    also keeps clear of the variable names, so that each name in the syntax
+    means one thing. The name is added to ``taken``.
+    """
+    name, n = base, 1
+    while name in taken:
+        n += 1
+        name = f"{base}_{n}"
+    taken.add(name)
+    return name
+
+
+def _structural(props: list, taken: set[str]) -> tuple[list[str], dict[tuple[str, str], str],
+                                                        list[str]]:
+    """The lines of the structural model, the label of each path and the sign lines.
+
+    Each proposition gives its lines in file order. A path relation writes
+    ``to ~ b_<from>_<to>*from`` for the first proposition on an ordered pair
+    and a comment for each later one, since lavaan refuses a repeated line. A
+    moderation writes the same line for the moderator's main effect, unless a
+    path relation anywhere in the file or an earlier moderation writes it, and
+    then its comment. A directed relation from a construct to itself writes a
+    comment in place of its line. A proposition with an empty endpoint names
+    no path, so its line is written without a label, as lavaan cannot read it
+    anyway. ``labels`` maps each pair of names (from, to) to its label, and
+    each ``increases`` or ``decreases`` proposition with a label gives one
+    sign line.
+    """
+    def ends(p) -> tuple[str, str]:
+        return text(field(p, "from")), text(field(p, "to"))
+
+    path_pairs = {tuple(_construct_name(e) for e in ends(p)) for p in props
+                  if enum(field(p, "relation"), RELATION) in PATHS}
+    labels: dict[tuple[str, str], str] = {}
+    main_effects: set[tuple[str, str]] = set()
+    out: list[str] = []
+    signs: list[str] = []
+    for p in props:
+        rel = enum(field(p, "relation"), RELATION)
+        fid, tid = ends(p)
+        frm, to = _construct_name(fid), _construct_name(tid)
+        pid = _comment_text(text(field(p, "id")))
+        if rel in BIDIRECTED:
+            out.append(f"{frm} ~~ {to}")
+            continue
+        if rel not in DIRECTED:
+            continue
+        if fid and fid == tid:
+            out.append(_SELF.format(pid=pid, name=frm))
+            continue
+        pair = (frm, to)
+        if not (frm and to):
+            if rel in PATHS or (pair not in path_pairs and pair not in main_effects):
+                main_effects.add(pair)
+                out.append(f"{to} ~ {frm}")
+        elif rel in PATHS:
+            if pair in labels:
+                out.append(_REPEAT.format(pid=pid, frm=frm, to=to, label=labels[pair]))
+            else:
+                labels[pair] = _unique(f"b_{frm}_{to}", taken)
+                out.append(f"{to} ~ {labels[pair]}*{frm}")
+            sign = RELATIONS[rel][1]
+            if sign is not None:
+                signs.append(f"# {labels[pair]} {'>' if sign > 0 else '<'} 0 ({pid}, {rel})")
+        elif pair not in path_pairs and pair not in main_effects:
+            main_effects.add(pair)
+            labels[pair] = _unique(f"b_{frm}_{to}", taken)
+            out.append(f"{to} ~ {labels[pair]}*{frm}")
+        if rel == "moderates":
+            out.append(_MODERATION.format(frm=frm, to=to))
+    return out, labels, signs
+
+
+def _identification(names: list[str], paths: list[list[bool]], bidirected: list[list[bool]],
+                    loops: list[list[int]]) -> list[str]:
+    """The identification note on the structural paths.
+
+    Nothing is said when no path is written. An acyclic graph without a bow
+    gets the note of Brito and Pearl (2002). Otherwise each feedback loop gets
+    a caution and each bow, a path from u to v beside a covariance of the two,
+    a line, the bows in the order of u and then v.
+    """
+    k = len(names)
+    if not any(any(row) for row in paths):
+        return []
+    bows = [(u, v) for u in range(k) for v in range(k) if paths[u][v] and bidirected[u][v]]
+    if not loops and not bows:
+        return [_IDENTIFIED]
+    return ([_LOOP.format(", ".join(names[v] for v in comp)) for comp in loops]
+            + [_BOW.format(frm=names[u], to=names[v]) for u, v in bows])
+
+
+def _effect_paths(paths: list[list[bool]], r: list[list[bool]], x: int,
+                  y: int) -> list[list[int]] | None:
+    """The directed paths from x to y of an acyclic graph, or None for more than the cap.
+
+    A depth-first search from x that takes successors in vertex order and
+    steps only to a vertex from which y can be reached, so that each branch
+    ends in a path and the search stops once the paths outnumber
+    ``MAX_EFFECT_PATHS``.
+    """
+    k = len(paths)
+    found: list[list[int]] = []
+    if not r[x][y]:
+        return found
+    path = [x]
+    stack = [[x, 0]]  # vertex, successors already examined
+    while stack:
+        top = stack[-1]
+        v, nxt = top[0], top[1]
+        if v == y:
+            found.append(list(path))
+            if len(found) > MAX_EFFECT_PATHS:
+                return None
+            stack.pop()
+            path.pop()
+        elif nxt < k:
+            top[1] = nxt + 1
+            if paths[v][nxt] and r[nxt][y]:
+                path.append(nxt)
+                stack.append([nxt, 0])
+        else:
+            stack.pop()
+            path.pop()
+    return found
+
+
+def _effects(T, nodes: list[str], paths: list[list[bool]], r: list[list[bool]], cyclic: bool,
+             labels: dict[tuple[str, str], str], taken: set[str]) -> list[str]:
+    """The defined parameters for the effects the claims are about.
+
+    The claims are read as entailments() reads them, the predictions first
+    and then the phenomena, and a claim that cannot be evaluated as written is
+    passed over. The effect claims on one ordered pair share one group, in the
+    order of their first claim. Each claim gives a comment line, and the group
+    then gets ``effect_<x>_<y> := <sum>``, where each term is the product of
+    the labels along one directed path, the paths in the order
+    ``_effect_paths`` finds them. A graph with a feedback loop, a pair that no
+    path joins and a pair joined by more than ``MAX_EFFECT_PATHS`` paths each
+    get a comment in its place.
+    """
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for c in _claims(T):
+        if c["kind"] == "effect" and c["ok"]:
+            groups.setdefault((c["x"], c["y"]), []).append(c)
+    if not groups:
+        return []
+    names = [_construct_name(n) for n in nodes]
+    vertex = {cid: i for i, cid in enumerate(nodes)}
+    out = [_EFFECTS]
+    for (x, y), claims in groups.items():
+        xn, yn = _construct_name(x), _construct_name(y)
+        out += [f"# {_comment_text(c['id'])} claims that the effect of {xn} on {yn} "
+                f"{_CLAIMED[c['sign']]}." for c in claims]
+        if cyclic:
+            out.append(_EFFECT_LOOP)
+            continue
+        found = (_effect_paths(paths, r, vertex[x], vertex[y])
+                 if x in vertex and y in vertex else [])
+        if found is None:
+            out.append(_TOO_MANY.format(n=MAX_EFFECT_PATHS, x=xn, y=yn))
+        elif not found:
+            out.append(_NO_PATH.format(x=xn, y=yn))
+        else:
+            terms = ["*".join(labels[(names[path[i]], names[path[i + 1]])]
+                              for i in range(len(path) - 1))
+                     for path in found]
+            out.append(f"{_unique(f'effect_{xn}_{yn}', taken)} := {' + '.join(terms)}")
+    return out
+
+
+def _covariances(T, names: list[str], paths: list[list[bool]], bidirected: list[list[bool]],
+                 moderator: list[bool], latent: set[str]) -> list[str]:
+    """The block of covariances the theory fixes at zero, and the free lines that close it.
+
+    The block takes every pair of vertices, in vertex order, that are both
+    exogenous (no path enters either) or both terminal (no path leaves
+    either). A relation from a construct to itself writes no path, so it
+    counts for neither. The block passes over a pair that an association
+    joins or that holds a moderator. The theory states no common cause for
+    such a pair beyond the causes it names, so their disturbances are
+    uncorrelated. lavaan::sem() frees the covariance of two exogenous latent
+    variables and of two terminal variables by default, and takes that of two
+    exogenous observed variables from the data. Where lavaan fixes the
+    covariance at zero already, as between an exogenous latent variable and
+    an exogenous observed one, the line restates that. The rule encodes
+    uncorrelated disturbances, so it holds in a cyclic graph too. A moderator
+    keeps lavaan's defaults, since the product term the user adds changes its
+    role.
 
     lavaan::sem() takes the covariances of the observed exogenous variables
     from the data (fixed.x) until a covariance line names one of them. It then
@@ -256,20 +464,15 @@ def _cautions(T, latent: set[str]) -> list[str]:
     names is random already, and lavaan fixes its covariances with them at
     zero with or without the block.
     """
-    nodes, directed, bidirected, moderator = _graph(T)
-    k = len(nodes)
-    names = [_construct_name(n) for n in nodes]
-    out = [_LOOP.format(", ".join(names[v] for v in comp))
-           for comp in strong_components(reach(directed, k))
-           if len(comp) > 1 or directed[comp[0]][comp[0]]]
-    exogenous = [not any(directed[u][v] for u in range(k)) for v in range(k)]
-    terminal = [not any(row) for row in directed]
+    k = len(names)
+    exogenous = [not any(paths[u][v] for u in range(k)) for v in range(k)]
+    terminal = [not any(row) for row in paths]
     pairs = [(i, j) for i in range(k) for j in range(i + 1, k)
              if not (moderator[i] or moderator[j] or bidirected[i][j])
              and ((exogenous[i] and exogenous[j]) or (terminal[i] and terminal[j]))]
     if not pairs:
-        return out
-    out += [_ZERO, *(f"{names[i]} ~~ 0*{names[j]}" for i, j in pairs)]
+        return []
+    out = [_ZERO, *(f"{names[i]} ~~ 0*{names[j]}" for i, j in pairs)]
     named = {_construct_name(text(field(p, end))) for p in items(T, "propositions")
              if enum(field(p, "relation"), RELATION) == "associates" for end in ("from", "to")}
     given = [v for v in range(k)
@@ -289,14 +492,54 @@ def compile_sem(T) -> str:
     The syntax is written for ``lavaan::sem()``. Each construct with
     measurement indicators becomes a latent variable (``=~``). Each
     proposition becomes a line of the structural model, in file order: a
-    regression (``~``) for ``causes``, ``increases``, ``decreases`` and
-    ``mediates`` and a covariance (``~~``) for ``associates``. A
-    ``moderates`` proposition gives the moderator's main effect,
-    ``to ~ from``, unless a path relation already writes that line. A comment
-    follows on the product term, which has to be added by hand:
-    ``to ~ x:from`` for an observed predictor ``x``, and ``lavaan::sam()`` or
-    the modsem package when the variables are latent. The R package's
-    ``tf_compile_sem()`` writes the same syntax, byte for byte.
+    labelled regression (``to ~ b_from_to*from``) for ``causes``,
+    ``increases``, ``decreases`` and ``mediates`` and a covariance (``~~``)
+    for ``associates``. A ``moderates`` proposition gives the moderator's
+    main effect, ``to ~ b_from_to*from``, unless a path relation already
+    writes that line. A comment follows on the product term, which has to be
+    added by hand: ``to ~ x:from`` for an observed predictor ``x``, and
+    ``lavaan::sam()`` or the modsem package when the variables are latent.
+    The R package's ``tf_compile_sem()`` writes the same syntax, byte for
+    byte.
+
+    A regression of a variable on itself only rescales its disturbance, so a
+    linear SEM cannot estimate it. A relation from a construct to itself is
+    therefore left out, with a comment that names the proposition, although
+    ``implications()`` and ``simulate()`` keep it. lavaan refuses a repeated
+    line, so a second proposition on one ordered pair writes a comment in
+    place of a second regression.
+
+    Every regression carries a label, ``b_<from>_<to>`` in the names the
+    syntax uses, so that the claims about it can be tested. lavaan reads one
+    label on two paths as a constraint that the two are equal, so a label
+    that another name already holds takes the first free suffix, ``_2``,
+    ``_3`` and so on: ``x -> y_z`` and ``x_y -> z`` give ``b_x_y_z`` and
+    ``b_x_y_z_2``. A comment block then lists the sign each ``increases`` and
+    ``decreases`` proposition states as an inequality on its label, such as
+    ``# b_x_y > 0 (p1, increases)``. The fit does not impose them.
+
+    A note on identification follows the structural model. When the paths
+    among the constructs form no loop and no two constructs are joined by
+    both a path and a covariance (a bow), the path coefficients are
+    identified for almost all values of the parameters (Brito & Pearl,
+    2002), provided that the measurement model identifies the constructs.
+    That has to be checked separately. Otherwise a comment flags each
+    feedback loop, since a non-recursive model may not be identified
+    (Bollen, 1989), and the panic-network example is not. A further comment
+    names each bow, whose path is not identified without further
+    constraints, such as an instrument.
+
+    Each prediction or phenomenon whose ``claim`` is an effect of ``x`` on
+    ``y`` gets a comment that restates it, the claims on one pair together.
+    On a graph without a feedback loop, ``effect_<x>_<y> := <sum>`` then
+    defines the effect as the sum over the directed paths from ``x`` to ``y``
+    of the product of the labels along each path, so that lavaan estimates
+    the quantity the claim is about. The paths are found depth first from
+    ``x``, taking the successors of each construct in construct order. When
+    no path leads from ``x`` to ``y``, a comment says that the model fixes
+    the effect at zero. When more than ``MAX_EFFECT_PATHS`` (100) paths do,
+    or the graph has a feedback loop, a comment says that no parameter is
+    defined. A claim that cannot be evaluated as written is passed over.
 
     The propositions form the graph that ``implications()`` reads. Two of its
     constructs that are both exogenous, with no proposition pointing into
@@ -310,7 +553,8 @@ def compile_sem(T) -> str:
     therefore ends with a block that fixes each such covariance at zero
     (``a ~~ 0*b``), and deleting the block restores lavaan's defaults. A pair
     with a moderator keeps those defaults, because the product term changes
-    the moderator's role.
+    the moderator's role. A relation from a construct to itself does not
+    count here, since the syntax writes no path for it.
 
     lavaan takes the covariances of observed exogenous variables from the
     data only until a covariance line names one of them. It then treats that
@@ -325,17 +569,14 @@ def compile_sem(T) -> str:
     entries written as column names, such as ``heart_rate``, give syntax that
     fits as it stands. A comment lists each construct with a single
     indicator, whose residual variance ``lavaan::sem()`` fixes at zero, so the
-    construct is treated as measured without error. A comment flags each
-    feedback loop. A non-recursive model may not be identified (Bollen, 1989),
-    and the panic-network example is not, so check identification before
-    fitting. Some constructs have to be re-specified by hand. A manipulation
-    is better entered as a coded observed variable and a categorical
-    predictor with more than two levels as dummy variables. A covariate that
-    a measurement entry only describes needs a variable of its own. Once the
-    block names an observed predictor, a product term added by hand needs a
-    free covariance with each observed exogenous variable that a covariance
-    line names. lavaan fixes each one left unwritten at zero, and each takes
-    a line of its own (``x:m ~~ x``).
+    construct is treated as measured without error. Some constructs have to
+    be re-specified by hand. A manipulation is better entered as a coded
+    observed variable and a categorical predictor with more than two levels
+    as dummy variables. A covariate that a measurement entry only describes
+    needs a variable of its own. Once the block names an observed predictor,
+    a product term added by hand needs a free covariance with each observed
+    exogenous variable that a covariance line names. lavaan fixes each one
+    left unwritten at zero, and each takes a line of its own (``x:m ~~ x``).
 
     Every name is one lavaan reads as written. Construct ids that lavaan
     would refuse or misread, such as ``self-efficacy``, ``1arousal``, ``NA``
@@ -360,9 +601,13 @@ def compile_sem(T) -> str:
     References:
         Bollen, K. A. (1989). Structural equations with latent variables.
         Wiley. https://doi.org/10.1002/9781118619179
+        Brito, C., & Pearl, J. (2002). A new identification condition for
+        recursive models with correlated errors. Structural Equation
+        Modeling: A Multidisciplinary Journal, 9(4), 459-474.
+        https://doi.org/10.1207/s15328007sem0904_1
     """
     T = T.data if hasattr(T, "data") else T
-    comments = _renamings(T)
+    comments, taken = _renamings(T)
     out = [f"# lavaan model generated by theoryforge for {_comment_text(text(T.get('id')))}",
            _WRITTEN_FOR, *comments, "# Measurement model"]
     # The indicators of each construct name, in the order of its first line.
@@ -384,25 +629,19 @@ def compile_sem(T) -> str:
     if single:
         out.append(_SINGLE + ", ".join(single))
     out.append("# Structural model")
-    props = items(T, "propositions")
-    # A moderator's main effect is written unless a path relation, wherever it
-    # stands in the file, or an earlier moderation already writes that line.
-    path_lines = {f"{_construct_name(text(field(p, 'to')))} ~ "
-                  f"{_construct_name(text(field(p, 'from')))}"
-                  for p in props if enum(field(p, "relation"), RELATION) in _PATH}
-    main_effects: set[str] = set()
-    for p in props:
-        rel = enum(field(p, "relation"), RELATION)
-        frm, to = _construct_name(text(field(p, "from"))), _construct_name(text(field(p, "to")))
-        if rel in _PATH:
-            out.append(f"{to} ~ {frm}")
-        elif rel == "associates":
-            out.append(f"{frm} ~~ {to}")
-        elif rel == "moderates":
-            main = f"{to} ~ {frm}"
-            if main not in path_lines and main not in main_effects:
-                main_effects.add(main)
-                out.append(main)
-            out.append(_MODERATION.format(frm=frm, to=to))
-    out += _cautions(T, set(factors))
+    structural, labels, signs = _structural(items(T, "propositions"), taken)
+    out += structural
+    # The paths the syntax writes: the directed edges of the graph without
+    # the edges from a construct to itself.
+    nodes, directed, bidirected, moderator = _graph(T)
+    k = len(nodes)
+    names = [_construct_name(n) for n in nodes]
+    paths = [[directed[u][v] and u != v for v in range(k)] for u in range(k)]
+    r = reach(paths, k)
+    loops = [comp for comp in strong_components(r) if len(comp) > 1]
+    out += _identification(names, paths, bidirected, loops)
+    if signs:
+        out += [_SIGNS, *signs]
+    out += _effects(T, nodes, paths, r, bool(loops), labels, taken)
+    out += _covariances(T, names, paths, bidirected, moderator, set(factors))
     return "\n".join(out) + "\n"

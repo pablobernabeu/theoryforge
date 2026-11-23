@@ -252,6 +252,7 @@ def test_the_relation_table_covers_the_schema_enum():
     }
     assert _relations.DIRECTED == frozenset(
         {"increases", "decreases", "causes", "mediates", "moderates"})
+    assert _relations.PATHS == frozenset({"increases", "decreases", "causes", "mediates"})
 
 
 def test_formalisation_needs_a_recognised_model_type():

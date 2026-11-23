@@ -719,9 +719,10 @@ def new_evidence_dois(theory, candidate_dois: list) -> list:
     made single, since doi.org redirects such a DOI to the one with a single slash. A
     candidate that is not a string, or holds only whitespace, is skipped: None, the
     float NaN that pandas gives a missing value, an empty string and a number among
-    them. A single string is one candidate. Returns the qualifying DOIs in their original form, deduplicated and sorted
-    by normalised form. The function is deterministic and makes no network call. The
-    search itself is left to whichever literature tool the caller prefers.
+    them. A single string is one candidate. Returns the qualifying DOIs in their
+    original form, deduplicated and sorted by normalised form. The function is
+    deterministic and makes no network call. The search itself is left to whichever
+    literature tool the caller prefers.
     """
     T = theory.data if hasattr(theory, "data") else theory
     known = set()

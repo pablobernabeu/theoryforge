@@ -276,6 +276,8 @@ test_that("the relation table covers the schema enum", {
   ))
   expect_identical(sort(theoryforge:::.tf_DIRECTED),
                    sort(c("increases", "decreases", "causes", "mediates", "moderates")))
+  expect_identical(sort(theoryforge:::.tf_PATHS),
+                   sort(c("increases", "decreases", "causes", "mediates")))
 })
 
 test_that("formalisation needs a recognised model type", {

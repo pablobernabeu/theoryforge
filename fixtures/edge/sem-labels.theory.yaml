@@ -1,0 +1,51 @@
+# Edge case: how compile_sem() labels the paths and defines the effects the
+# claims are about. Activation reaches the outcome directly and through the
+# mediator, so the effect of activation on the outcome is the sum over two
+# paths. The second proposition on that pair is written once. Strain relates
+# to itself, which no regression can state. The paths x -> y_z and x_y -> z
+# would both take the label b_x_y_z, and the construct effect_a_y holds the
+# name the first effect would take, so later names get a suffix.
+schema_version: "1.1"
+id: edge-sem-labels
+title: Labelled paths, a repeated pair, a self loop and defined effects
+maturity: building
+constructs:
+  - {id: a, label: Activation, definition: The first construct.}
+  - {id: m, label: Mediator, definition: The construct between activation and the outcome.}
+  - {id: y, label: Outcome, definition: The construct the claims are about.}
+  - {id: s, label: Strain, definition: A construct that sustains itself.}
+  - {id: x, label: Ex, definition: A construct whose path shares a label.}
+  - {id: y_z, label: Wye zed, definition: A construct whose name holds an underscore.}
+  - {id: x_y, label: Ex wye, definition: Another construct whose name holds an underscore.}
+  - {id: z, label: Zed, definition: The outcome of the second labelled path.}
+  - {id: effect_a_y, label: Effect name, definition: A construct named like a defined effect.}
+propositions:
+  - {id: p1, from: a, to: m, relation: increases}
+  - {id: p2, from: m, to: y, relation: decreases}
+  - {id: p3, from: a, to: y, relation: causes}
+  - {id: p4, from: a, to: y, relation: increases}
+  - {id: p5, from: s, to: s, relation: causes}
+  - {id: p6, from: x, to: y_z, relation: increases}
+  - {id: p7, from: x_y, to: z, relation: decreases}
+  - {id: p8, from: effect_a_y, to: z, relation: mediates}
+predictions:
+  - id: pred1
+    statement: Activation raises the outcome.
+    type: directional
+    claim: {kind: effect, x: a, y: y, sign: positive}
+  - id: pred2
+    statement: The outcome leaves activation unchanged.
+    type: point
+    claim: {kind: effect, x: y, y: a, sign: zero}
+  - id: pred3
+    statement: Activation changes the outcome.
+    type: directional
+    claim: {kind: effect, x: a, y: y, sign: nonzero}
+  - id: pred4
+    statement: A claim about one construct alone, which cannot be evaluated.
+    type: directional
+    claim: {kind: effect, x: a, y: a, sign: positive}
+phenomena:
+  - id: ph1
+    statement: The mediator lowers the outcome.
+    claim: {kind: effect, x: m, y: y, sign: negative}

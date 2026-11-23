@@ -5,8 +5,10 @@
 #' @keywords internal
 NULL
 
-# Relations that compile to a directed structural path (`<to> ~ <from>`).
-.tf_SEM_PATH <- c("causes", "increases", "decreases", "mediates")
+# The most directed paths an effect is summed over (API_SPEC.md section 19).
+# The number of paths can grow exponentially with the number of constructs, so
+# an effect carried by more paths gets no defined parameter.
+.tf_SEM_MAX_EFFECT_PATHS <- 100L
 
 # The comment lines of the syntax (API_SPEC.md section 19), shared with
 # Python's sem.py. lavaan drops a comment before it reads a semicolon as a line
@@ -15,6 +17,13 @@ NULL
                               "measurement entries and must match columns of the data.")
 .tf_SEM_SINGLE <- paste0("# Single-indicator constructs (lavaan fixes the indicator's residual ",
                          "variance at zero, so each is treated as measured without error): ")
+# A regression of a variable on itself only rescales its disturbance, and
+# lavaan fits `y ~ y` with negative degrees of freedom.
+.tf_SEM_SELF <- paste0("# Proposition '%s' relates %s to itself and is left out: a regression ",
+                       "of a variable on itself only rescales its disturbance, so a linear SEM ",
+                       "cannot estimate it.")
+.tf_SEM_REPEAT <- paste0("# Proposition '%s' repeats the path from %s to %s, which is written ",
+                         "once, as %s, since lavaan refuses a repeated line.")
 # The order and rank conditions assume that the disturbances of a loop may
 # correlate (Bollen, 1989, ch. 4). sem() leaves them uncorrelated, and then a
 # loop can be identified without an instrument, as the effort-recovery app
@@ -23,9 +32,30 @@ NULL
                        "lavaan::sem() leaves these disturbances uncorrelated, and the order and ",
                        "rank conditions (Bollen, 1989) assume they may correlate, so check ",
                        "identification before fitting.")
+# Brito and Pearl (2002) show that an acyclic model with no bow is identified
+# for almost all values of its parameters. The constructs stand in for its
+# variables, so the claim holds once the measurement model identifies them.
+.tf_SEM_IDENTIFIED <- paste0("# Identification: the paths among the constructs form no loop, and ",
+                             "no two constructs are joined by both a path and a covariance (a ",
+                             "bow). The path coefficients are therefore generically identified ",
+                             "if the measurement model identifies the constructs (Brito & ",
+                             "Pearl, 2002). Whether it does has to be checked separately.")
+.tf_SEM_BOW <- paste0("# Bow between %1$s and %2$s: a path and a covariance join them, so the ",
+                      "path from %1$s to %2$s is not identified without further constraints, ",
+                      "such as an instrument for %1$s.")
 .tf_SEM_MODERATION <- paste0("# moderation: %1$s moderates the paths into %2$s; add the product ",
                              "term by hand (%2$s ~ <x>:%1$s for an observed predictor <x>; ",
                              "lavaan::sam() or the modsem package for latent variables)")
+.tf_SEM_SIGNS <- "# Signs the theory states, which the fit does not impose"
+.tf_SEM_EFFECTS <- paste0("# Effects the claims are about, each the sum over the directed paths ",
+                          "from cause to outcome of the product of the labels along the path")
+.tf_SEM_CLAIMED <- c(positive = "is positive", negative = "is negative", zero = "is zero",
+                     nonzero = "is not zero")
+.tf_SEM_EFFECT_LOOP <- "# The paths form a feedback loop, so no parameter is defined."
+.tf_SEM_NO_PATH <- paste0("# No directed path leads from %s to %s, so the model fixes this ",
+                          "effect at zero.")
+.tf_SEM_TOO_MANY <- paste0("# More than %d directed paths lead from %s to %s, so no parameter ",
+                           "is defined.")
 .tf_SEM_ZERO <- paste0("# Covariances the theory fixes at zero (lavaan::sem() frees them by ",
                        "default; delete this block to restore its defaults)")
 .tf_SEM_FREE <- paste0("# Covariances with a moderator, left free (once a covariance names an ",
@@ -110,7 +140,9 @@ NULL
 # renamed and checked like one. Each construct's name is checked before its
 # indicators, and the first name claimed twice is reported. An indicator shared
 # by two constructs is a cross-loading, which lavaan reads as one variable
-# measuring both, so it is allowed. Mirrors Python's sem._renamings().
+# measuring both, so it is allowed. Returns list(comments, names), `names`
+# holding every name claimed, which the path labels and defined parameters must
+# avoid. Mirrors Python's sem._renamings().
 .tf_sem_renamings <- function(T) {
   names_claimed <- character(0)  # each name claimed so far
   kinds <- character(0)          # "construct" or "indicator", by name
@@ -168,7 +200,7 @@ NULL
       claim(.tf_str(p, "to"))
     }
   }
-  comments
+  list(comments = comments, names = names_claimed)
 }
 
 # The causal graph the structural model states, as list(nodes, directed,
@@ -180,7 +212,8 @@ NULL
 # vertex and an undeclared endpoint follows the declared constructs. Vertices
 # come in claim order, as in .tf_sem_renamings(). An empty id names no vertex,
 # and a relation with an empty endpoint adds no edge. `moderator` marks each
-# vertex that some `moderates` edge leaves. Mirrors Python's sem._graph().
+# vertex that some `moderates` edge to another vertex leaves. Mirrors Python's
+# sem._graph().
 .tf_sem_graph <- function(T) {
   ids <- character(0)
   add <- function(cid) {
@@ -211,7 +244,7 @@ NULL
         edge_from <- c(edge_from, u)
         edge_to <- c(edge_to, v)
       }
-      if (identical(rel, "moderates")) moderators <- c(moderators, frm)
+      if (identical(rel, "moderates") && frm != to) moderators <- c(moderators, frm)
     } else if (rel %in% .tf_BIDIRECTED) {
       assoc_from <- c(assoc_from, frm)
       assoc_to <- c(assoc_to, to)
@@ -236,12 +269,225 @@ NULL
        moderator = nodes %in% moderators)
 }
 
-# The lines after the structural model: one caution per feedback loop, then the
-# covariances the theory fixes at zero. A feedback loop is a strongly connected
-# component of two or more vertices, or one with an edge to itself, as in
-# tf_implications(). The zero block takes every pair of vertices, in vertex
-# order, that are both exogenous (no edge enters either) or both terminal (no
-# edge leaves either). It passes over a pair that an association joins or that
+# `base`, or `base_2`, `base_3` and so on, whichever is first not in `taken`.
+# lavaan reads one label on two paths as a constraint that the two are equal,
+# so each label and defined parameter takes a name of its own. It also keeps
+# clear of the variable names, so that each name in the syntax means one thing.
+# The caller adds the name to `taken`. Mirrors Python's sem._unique().
+.tf_sem_unique <- function(base, taken) {
+  name <- base
+  n <- 1L
+  while (name %in% taken) {
+    n <- n + 1L
+    name <- paste0(base, "_", n)
+  }
+  name
+}
+
+# The lines of the structural model, the label of each path and the sign
+# lines, as list(lines, labels, signs, taken). Each proposition gives its lines
+# in file order. A path relation writes `to ~ b_<from>_<to>*from` for the first
+# proposition on an ordered pair and a comment for each later one, since lavaan
+# refuses a repeated line. A moderation writes the same line for the
+# moderator's main effect, unless a path relation anywhere in the file or an
+# earlier moderation writes it, and then its comment. A directed relation from
+# a construct to itself writes a comment in place of its line. A proposition
+# with an empty endpoint names no path, so its line is written without a label,
+# as lavaan cannot read it anyway. `labels` is a character vector named by
+# "<from> <to>", and each `increases` or `decreases` proposition with a label
+# gives one sign line. `taken` comes back with the labels added. Mirrors
+# Python's sem._structural().
+.tf_sem_structural <- function(props, taken) {
+  ends <- function(p) c(.tf_str(p, "from"), .tf_str(p, "to"))
+  path_pairs <- character(0)
+  for (p in props) {
+    if (.tf_enum_str(p, "relation", .tf_RELATION) %in% .tf_PATHS) {
+      e <- ends(p)
+      path_pairs <- c(path_pairs, paste(.tf_lavaan_construct(e[[1L]]),
+                                        .tf_lavaan_construct(e[[2L]])))
+    }
+  }
+  labels <- character(0)
+  main_effects <- character(0)
+  out <- character(0)
+  signs <- character(0)
+  new_label <- function(pair, frm, to) {
+    label <- .tf_sem_unique(paste0("b_", frm, "_", to), taken)
+    taken <<- c(taken, label)
+    labels[[pair]] <<- label
+    label
+  }
+  for (p in props) {
+    rel <- .tf_enum_str(p, "relation", .tf_RELATION)
+    e <- ends(p)
+    frm <- .tf_lavaan_construct(e[[1L]])
+    to <- .tf_lavaan_construct(e[[2L]])
+    pid <- .tf_sem_comment_text(.tf_str(p, "id"))
+    if (rel %in% .tf_BIDIRECTED) {
+      out <- c(out, sprintf("%s ~~ %s", frm, to))
+      next
+    }
+    if (!(rel %in% .tf_DIRECTED)) next
+    if (nzchar(e[[1L]]) && identical(e[[1L]], e[[2L]])) {
+      out <- c(out, sprintf(.tf_SEM_SELF, pid, frm))
+      next
+    }
+    pair <- paste(frm, to)
+    if (!nzchar(frm) || !nzchar(to)) {
+      if (rel %in% .tf_PATHS || (!(pair %in% path_pairs) && !(pair %in% main_effects))) {
+        main_effects <- c(main_effects, pair)
+        out <- c(out, sprintf("%s ~ %s", to, frm))
+      }
+    } else if (rel %in% .tf_PATHS) {
+      if (pair %in% names(labels)) {
+        label <- labels[[pair]]
+        out <- c(out, sprintf(.tf_SEM_REPEAT, pid, frm, to, label))
+      } else {
+        label <- new_label(pair, frm, to)
+        out <- c(out, sprintf("%s ~ %s*%s", to, label, frm))
+      }
+      sign <- .tf_RELATIONS[[rel]]$sign
+      if (!is.na(sign)) {
+        signs <- c(signs, sprintf("# %s %s 0 (%s, %s)", label, if (sign > 0L) ">" else "<",
+                                  pid, rel))
+      }
+    } else if (!(pair %in% path_pairs) && !(pair %in% main_effects)) {
+      main_effects <- c(main_effects, pair)
+      label <- new_label(pair, frm, to)
+      out <- c(out, sprintf("%s ~ %s*%s", to, label, frm))
+    }
+    if (identical(rel, "moderates")) out <- c(out, sprintf(.tf_SEM_MODERATION, frm, to))
+  }
+  list(lines = out, labels = labels, signs = signs, taken = taken)
+}
+
+# The identification note on the structural paths. Nothing is said when no path
+# is written. An acyclic graph without a bow gets the note of Brito and Pearl
+# (2002). Otherwise each feedback loop gets a caution and each bow, a path from
+# u to v beside a covariance of the two, a line, the bows in the order of u and
+# then v. Mirrors Python's sem._identification().
+.tf_sem_identification <- function(cnames, paths, bidirected, loops) {
+  k <- length(cnames)
+  if (!any(paths)) return(character(0))
+  bows <- character(0)
+  for (u in seq_len(k)) {
+    for (v in seq_len(k)) {
+      if (paths[u, v] && bidirected[u, v]) {
+        bows <- c(bows, sprintf(.tf_SEM_BOW, cnames[[u]], cnames[[v]]))
+      }
+    }
+  }
+  if (length(loops) == 0L && length(bows) == 0L) return(.tf_SEM_IDENTIFIED)
+  c(vapply(loops, function(comp) sprintf(.tf_SEM_LOOP, paste(cnames[comp], collapse = ", ")),
+           character(1)),
+    bows)
+}
+
+# The directed paths from x to y of an acyclic graph, as a list of vertex
+# vectors, or NULL for more than the cap. A depth-first search from x that
+# takes successors in vertex order and steps only to a vertex from which y can
+# be reached, so that each branch ends in a path and the search stops once the
+# paths outnumber .tf_SEM_MAX_EFFECT_PATHS. Mirrors Python's
+# sem._effect_paths().
+.tf_sem_effect_paths <- function(paths, r, x, y) {
+  k <- nrow(paths)
+  found <- list()
+  if (!r[x, y]) return(found)
+  path <- x
+  stack_v <- x       # the vertices on the search stack
+  stack_n <- 0L      # the successors each has had examined
+  while (length(stack_v) > 0L) {
+    top <- length(stack_v)
+    v <- stack_v[[top]]
+    nxt <- stack_n[[top]]
+    if (v == y) {
+      found[[length(found) + 1L]] <- path
+      if (length(found) > .tf_SEM_MAX_EFFECT_PATHS) return(NULL)
+      stack_v <- stack_v[-top]
+      stack_n <- stack_n[-top]
+      path <- path[-length(path)]
+    } else if (nxt < k) {
+      nxt <- nxt + 1L
+      stack_n[[top]] <- nxt
+      if (paths[v, nxt] && r[nxt, y]) {
+        path <- c(path, nxt)
+        stack_v <- c(stack_v, nxt)
+        stack_n <- c(stack_n, 0L)
+      }
+    } else {
+      stack_v <- stack_v[-top]
+      stack_n <- stack_n[-top]
+      path <- path[-length(path)]
+    }
+  }
+  found
+}
+
+# The defined parameters for the effects the claims are about. The claims are
+# read as tf_entailments() reads them, the predictions first and then the
+# phenomena, and a claim that cannot be evaluated as written is passed over.
+# The effect claims on one ordered pair share one group, in the order of their
+# first claim. Each claim gives a comment line, and the group then gets
+# `effect_<x>_<y> := <sum>`, where each term is the product of the labels along
+# one directed path, the paths in the order .tf_sem_effect_paths() finds them.
+# A graph with a feedback loop, a pair that no path joins and a pair joined by
+# more than .tf_SEM_MAX_EFFECT_PATHS paths each get a comment in its place.
+# Mirrors Python's sem._effects().
+.tf_sem_effects <- function(T, nodes, paths, r, cyclic, labels, taken) {
+  gx <- character(0)
+  gy <- character(0)
+  groups <- list()
+  for (cl in .tf_claims(T)) {
+    if (!identical(cl$kind, "effect") || !isTRUE(cl$ok)) next
+    g <- which(gx == cl$x & gy == cl$y)
+    if (length(g) == 0L) {
+      gx <- c(gx, cl$x)
+      gy <- c(gy, cl$y)
+      g <- length(gx)
+      groups[[g]] <- list()
+    }
+    groups[[g]][[length(groups[[g]]) + 1L]] <- cl
+  }
+  if (length(gx) == 0L) return(character(0))
+  cnames <- vapply(nodes, .tf_lavaan_construct, character(1), USE.NAMES = FALSE)
+  out <- .tf_SEM_EFFECTS
+  for (g in seq_along(gx)) {
+    xn <- .tf_lavaan_construct(gx[[g]])
+    yn <- .tf_lavaan_construct(gy[[g]])
+    for (cl in groups[[g]]) {
+      out <- c(out, sprintf("# %s claims that the effect of %s on %s %s.",
+                            .tf_sem_comment_text(cl$id), xn, yn, .tf_SEM_CLAIMED[[cl$sign]]))
+    }
+    if (cyclic) {
+      out <- c(out, .tf_SEM_EFFECT_LOOP)
+      next
+    }
+    i <- match(gx[[g]], nodes)
+    j <- match(gy[[g]], nodes)
+    found <- if (is.na(i) || is.na(j)) list() else .tf_sem_effect_paths(paths, r, i, j)
+    if (is.null(found)) {
+      out <- c(out, sprintf(.tf_SEM_TOO_MANY, .tf_SEM_MAX_EFFECT_PATHS, xn, yn))
+    } else if (length(found) == 0L) {
+      out <- c(out, sprintf(.tf_SEM_NO_PATH, xn, yn))
+    } else {
+      terms <- vapply(found, function(path) {
+        pairs <- paste(cnames[path[-length(path)]], cnames[path[-1L]])
+        paste(unname(labels[pairs]), collapse = "*")
+      }, character(1))
+      name <- .tf_sem_unique(paste0("effect_", xn, "_", yn), taken)
+      taken <- c(taken, name)
+      # paste0(), as sprintf() limits each string it inserts to 8192 bytes.
+      out <- c(out, paste0(name, " := ", paste(terms, collapse = " + ")))
+    }
+  }
+  out
+}
+
+# The block of covariances the theory fixes at zero, and the free lines that
+# close it. The block takes every pair of vertices, in vertex order, that are
+# both exogenous (no path enters either) or both terminal (no path leaves
+# either). A relation from a construct to itself writes no path, so it counts
+# for neither. The block passes over a pair that an association joins or that
 # holds a moderator. The theory states no common cause for such a pair beyond
 # the causes it names, so their disturbances are uncorrelated. lavaan::sem()
 # frees the covariance of two exogenous latent variables and of two terminal
@@ -262,26 +508,18 @@ NULL
 # zero line names one of them, the block frees each pair of them that holds a
 # moderator. A moderator that an association names is random already, and
 # lavaan fixes its covariances with them at zero with or without the block.
-# Mirrors Python's sem._cautions().
-.tf_sem_cautions <- function(T, latent) {
-  g <- .tf_sem_graph(T)
-  k <- length(g$nodes)
+# Mirrors Python's sem._covariances().
+.tf_sem_covariances <- function(T, cnames, paths, bidirected, moderator, latent) {
+  k <- length(cnames)
   if (k == 0L) return(character(0))
-  cnames <- vapply(g$nodes, .tf_lavaan_construct, character(1), USE.NAMES = FALSE)
-  out <- character(0)
-  for (comp in .tf_strong_components(.tf_reach(g$directed, k))) {
-    if (length(comp) > 1L || g$directed[comp[[1L]], comp[[1L]]]) {
-      out <- c(out, sprintf(.tf_SEM_LOOP, paste(cnames[comp], collapse = ", ")))
-    }
-  }
-  exogenous <- colSums(g$directed) == 0
-  terminal <- rowSums(g$directed) == 0
+  exogenous <- colSums(paths) == 0
+  terminal <- rowSums(paths) == 0
   zero_a <- integer(0)
   zero_b <- integer(0)
   if (k >= 2L) {
     for (i in seq_len(k - 1L)) {
       for (j in (i + 1L):k) {
-        if (g$moderator[[i]] || g$moderator[[j]] || g$bidirected[i, j]) next
+        if (moderator[[i]] || moderator[[j]] || bidirected[i, j]) next
         if ((exogenous[[i]] && exogenous[[j]]) || (terminal[[i]] && terminal[[j]])) {
           zero_a <- c(zero_a, i)
           zero_b <- c(zero_b, j)
@@ -289,8 +527,8 @@ NULL
       }
     }
   }
-  if (length(zero_a) == 0L) return(out)
-  out <- c(out, .tf_SEM_ZERO, sprintf("%s ~~ 0*%s", cnames[zero_a], cnames[zero_b]))
+  if (length(zero_a) == 0L) return(character(0))
+  out <- c(.tf_SEM_ZERO, sprintf("%s ~~ 0*%s", cnames[zero_a], cnames[zero_b]))
   named <- character(0)
   for (p in .tf_list(T, "propositions")) {
     if (identical(.tf_enum_str(p, "relation", .tf_RELATION), "associates")) {
@@ -305,7 +543,7 @@ NULL
     for (b in (a + 1L):length(given)) {
       i <- given[[a]]
       j <- given[[b]]
-      if (g$moderator[[i]] || g$moderator[[j]]) {
+      if (moderator[[i]] || moderator[[j]]) {
         free <- c(free, sprintf("%s ~~ %s", cnames[[i]], cnames[[j]]))
       }
     }
@@ -319,20 +557,65 @@ NULL
 #' Compiles a theory's constructs and propositions into \pkg{lavaan} model
 #' syntax written for \code{lavaan::sem()}. Constructs with measurement
 #' indicators become a latent measurement model (\code{=~}), propositions
-#' become structural paths (\code{~}) and covariances (\code{~~}), and the
-#' covariances the theory rules out are fixed at zero. Comments say what to
-#' check before a fit. The output is deterministic.
+#' become labelled structural paths (\code{~}) and covariances (\code{~~}),
+#' the covariances the theory rules out are fixed at zero and the effects the
+#' theory's claims are about become defined parameters (\code{:=}). Comments
+#' say what to check before a fit. The output is deterministic.
 #'
 #' @section The structural model:
-#' Each proposition becomes a line in file order: a regression
-#' (\code{to ~ from}) for \code{causes}, \code{increases}, \code{decreases} and
-#' \code{mediates}, and a covariance (\code{from ~~ to}) for
-#' \code{associates}. A \code{moderates} proposition gives the moderator's
-#' main effect, \code{to ~ from}, unless a path relation already writes that
-#' line. A comment follows on the product term, which has to be added by hand:
-#' \code{to ~ x:from} for an observed predictor \code{x}, and
-#' \code{lavaan::sam()} or the modsem package when the variables are latent.
+#' Each proposition becomes a line in file order: a labelled regression
+#' (\verb{to ~ b_from_to*from}) for \code{causes}, \code{increases},
+#' \code{decreases} and \code{mediates}, and a covariance (\code{from ~~ to})
+#' for \code{associates}. A \code{moderates} proposition gives the
+#' moderator's main effect, \verb{to ~ b_from_to*from}, unless a path relation
+#' already writes that line. A comment follows on the product term, which has
+#' to be added by hand: \code{to ~ x:from} for an observed predictor
+#' \code{x}, and \code{lavaan::sam()} or the modsem package when the
+#' variables are latent.
 #'
+#' A regression of a variable on itself only rescales its disturbance, so a
+#' linear SEM cannot estimate it. A relation from a construct to itself is
+#' therefore left out, with a comment that names the proposition, although
+#' [tf_implications()] and [tf_simulate()] keep it. lavaan refuses a repeated
+#' line, so a second proposition on one ordered pair writes a comment in place
+#' of a second regression.
+#'
+#' Every regression carries a label, \code{b_<from>_<to>} in the names the
+#' syntax uses, so that the claims about it can be tested. lavaan reads one
+#' label on two paths as a constraint that the two are equal, so a label that
+#' another name already holds takes the first free suffix, \code{_2},
+#' \code{_3} and so on: \code{x -> y_z} and \code{x_y -> z} give
+#' \code{b_x_y_z} and \code{b_x_y_z_2}. A comment block then lists the sign
+#' each \code{increases} and \code{decreases} proposition states as an
+#' inequality on its label, such as \verb{# b_x_y > 0 (p1, increases)}. The
+#' fit does not impose them.
+#'
+#' @section Identification:
+#' A note on identification follows the structural model. When the paths
+#' among the constructs form no loop and no two constructs are joined by both
+#' a path and a covariance (a bow), the path coefficients are identified for
+#' almost all values of the parameters (Brito & Pearl, 2002), provided that
+#' the measurement model identifies the constructs. That has to be checked
+#' separately. Otherwise a comment flags each feedback loop, since a
+#' non-recursive model may not be identified (Bollen, 1989), and the
+#' panic-network example is not. A further comment names each bow, whose path
+#' is not identified without further constraints, such as an instrument.
+#'
+#' @section Effects the claims are about:
+#' Each prediction or phenomenon whose \code{claim} is an effect of \code{x}
+#' on \code{y} gets a comment that restates it, the claims on one pair
+#' together. On a graph without a feedback loop,
+#' \verb{effect_<x>_<y> := <sum>} then defines the effect as the sum over the
+#' directed paths from \code{x} to \code{y} of the product of the labels
+#' along each path, so that lavaan estimates the quantity the claim is about.
+#' The paths are found depth first from \code{x}, taking the successors of
+#' each construct in construct order. When no path leads from \code{x} to
+#' \code{y}, a comment says that the model fixes the effect at zero. When more
+#' than 100 paths do, or the graph has a feedback loop, a comment says that no
+#' parameter is defined. A claim that cannot be evaluated as written is passed
+#' over.
+#'
+#' @section Covariances fixed at zero:
 #' The propositions form the graph that [tf_implications()] reads. Two of its
 #' constructs that are both exogenous, with no proposition pointing into
 #' either, or both terminal, with neither pointing to another construct, are
@@ -344,7 +627,9 @@ NULL
 #' [tf_implications()] derives would go untested. The syntax therefore ends
 #' with a block that fixes each such covariance at zero (\verb{a ~~ 0*b}), and
 #' deleting the block restores lavaan's defaults. A pair with a moderator keeps
-#' those defaults, because the product term changes the moderator's role.
+#' those defaults, because the product term changes the moderator's role. A
+#' relation from a construct to itself does not count here, since the syntax
+#' writes no path for it.
 #'
 #' lavaan takes the covariances of observed exogenous variables from the data
 #' only until a covariance line names one of them. It then treats that variable
@@ -360,17 +645,14 @@ NULL
 #' as column names, such as \code{heart_rate}, give syntax that fits as it
 #' stands. A comment lists each construct with a single indicator, whose
 #' residual variance \code{lavaan::sem()} fixes at zero, so the construct is
-#' treated as measured without error. A comment flags each feedback loop. A
-#' non-recursive model may not be identified (Bollen, 1989), and the
-#' panic-network example is not, so check identification before fitting. Some
-#' constructs have to be re-specified by hand. A manipulation is better entered
-#' as a coded observed variable and a categorical predictor with more than two
-#' levels as dummy variables. A covariate that a measurement entry only
-#' describes needs a variable of its own. Once the block names an observed
-#' predictor, a product term added by hand needs a free covariance with each
-#' observed exogenous variable that a covariance line names. lavaan fixes each
-#' one left unwritten at zero, and each takes a line of its own
-#' (\verb{x:m ~~ x}).
+#' treated as measured without error. Some constructs have to be re-specified
+#' by hand. A manipulation is better entered as a coded observed variable and a
+#' categorical predictor with more than two levels as dummy variables. A
+#' covariate that a measurement entry only describes needs a variable of its
+#' own. Once the block names an observed predictor, a product term added by
+#' hand needs a free covariance with each observed exogenous variable that a
+#' covariance line names. lavaan fixes each one left unwritten at zero, and
+#' each takes a line of its own (\verb{x:m ~~ x}).
 #'
 #' @section Names:
 #' Every name is one lavaan reads as written. Construct ids that lavaan would
@@ -398,11 +680,17 @@ NULL
 #' @references
 #' Bollen, K. A. (1989). \emph{Structural equations with latent variables}.
 #'   Wiley. \doi{10.1002/9781118619179}
-#' @seealso [tf_implications()] for the independencies the zero block encodes.
+#'
+#' Brito, C., & Pearl, J. (2002). A new identification condition for recursive
+#'   models with correlated errors. \emph{Structural Equation Modeling: A
+#'   Multidisciplinary Journal, 9}(4), 459-474. \doi{10.1207/s15328007sem0904_1}
+#' @seealso [tf_implications()] for the independencies the zero block encodes,
+#'   and [tf_entailments()] for the claims the defined effects estimate.
 #' @examples
 #' # Measurement entries written as column names give syntax that fits as it
 #' # stands. Threat and avoidance both follow from arousal alone, so the
-#' # syntax fixes the covariance of their disturbances at zero.
+#' # syntax fixes the covariance of their disturbances at zero. Each path is
+#' # labelled, and the signs the theory states are listed as comments.
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.",
 #'                    measurement = c("heart_rate", "arousal_rating")) |>
@@ -416,11 +704,12 @@ NULL
 #' @export
 tf_compile_sem <- function(theory) {
   T <- theory
+  renamed <- .tf_sem_renamings(T)
   lines <- c(
     sprintf("# lavaan model generated by theoryforge for %s",
             .tf_sem_comment_text(.tf_str(T, "id"))),
     .tf_SEM_WRITTEN_FOR,
-    .tf_sem_renamings(T),
+    renamed$comments,
     "# Measurement model"
   )
   # The indicators of each construct name, in the order of its first line.
@@ -449,34 +738,22 @@ tf_compile_sem <- function(theory) {
     lines <- c(lines, paste0(.tf_SEM_SINGLE, paste(single, collapse = ", ")))
   }
   lines <- c(lines, "# Structural model")
-  props <- .tf_list(T, "propositions")
-  # A moderator's main effect is written unless a path relation, wherever it
-  # stands in the file, or an earlier moderation already writes that line.
-  path_lines <- character(0)
-  for (p in props) {
-    if (.tf_enum_str(p, "relation", .tf_RELATION) %in% .tf_SEM_PATH) {
-      path_lines <- c(path_lines, sprintf("%s ~ %s", .tf_lavaan_construct(.tf_str(p, "to")),
-                                          .tf_lavaan_construct(.tf_str(p, "from"))))
-    }
-  }
-  main_effects <- character(0)
-  for (p in props) {
-    rel <- .tf_enum_str(p, "relation", .tf_RELATION)
-    frm <- .tf_lavaan_construct(.tf_str(p, "from"))
-    to <- .tf_lavaan_construct(.tf_str(p, "to"))
-    if (rel %in% .tf_SEM_PATH) {
-      lines <- c(lines, sprintf("%s ~ %s", to, frm))
-    } else if (identical(rel, "associates")) {
-      lines <- c(lines, sprintf("%s ~~ %s", frm, to))
-    } else if (identical(rel, "moderates")) {
-      main <- sprintf("%s ~ %s", to, frm)
-      if (!(main %in% path_lines) && !(main %in% main_effects)) {
-        main_effects <- c(main_effects, main)
-        lines <- c(lines, main)
-      }
-      lines <- c(lines, sprintf(.tf_SEM_MODERATION, frm, to))
-    }
-  }
-  lines <- c(lines, .tf_sem_cautions(T, factor_names))
+  st <- .tf_sem_structural(.tf_list(T, "propositions"), renamed$names)
+  lines <- c(lines, st$lines)
+  # The paths the syntax writes: the directed edges of the graph without the
+  # edges from a construct to itself.
+  g <- .tf_sem_graph(T)
+  k <- length(g$nodes)
+  cnames <- vapply(g$nodes, .tf_lavaan_construct, character(1), USE.NAMES = FALSE)
+  paths <- g$directed
+  if (k > 0L) diag(paths) <- FALSE
+  r <- .tf_reach(paths, k)
+  loops <- Filter(function(comp) length(comp) > 1L, .tf_strong_components(r))
+  lines <- c(lines, .tf_sem_identification(cnames, paths, g$bidirected, loops))
+  if (length(st$signs) > 0L) lines <- c(lines, .tf_SEM_SIGNS, st$signs)
+  lines <- c(lines, .tf_sem_effects(T, g$nodes, paths, r, length(loops) > 0L, st$labels,
+                                    st$taken))
+  lines <- c(lines, .tf_sem_covariances(T, cnames, paths, g$bidirected, g$moderator,
+                                        factor_names))
   paste0(paste(lines, collapse = "\n"), "\n")
 }

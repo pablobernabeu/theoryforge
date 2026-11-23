@@ -7,9 +7,9 @@ def test_compile_sem(panic_path):
     # measurement model: sanitised indicator names
     assert "c_arousal =~ heart_rate_variability + self_reported_arousal" in lav
     assert "c_perceived_threat =~ threat_appraisal_questionnaire" in lav
-    # structural model: directed paths (to ~ from)
-    assert "c_perceived_threat ~ c_arousal" in lav
-    assert "c_arousal ~ c_perceived_threat" in lav
+    # structural model: labelled directed paths (to ~ label*from)
+    assert "c_perceived_threat ~ b_c_arousal_c_perceived_threat*c_arousal" in lav
+    assert "c_arousal ~ b_c_perceived_threat_c_arousal*c_perceived_threat" in lav
     assert lav.endswith("\n")
 
 

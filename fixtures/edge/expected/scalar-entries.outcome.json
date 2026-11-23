@@ -102,10 +102,15 @@
     "k": 1.0,
     "damping": 0.5,
     "init": 1.0,
+    "initial_state": [
+      1.0,
+      1.0
+    ],
     "method": "euler",
     "ignored": [
       "p1"
     ],
+    "assumed_positive": [],
     "opposed": [],
     "trajectory": [
       [

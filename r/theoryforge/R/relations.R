@@ -1,7 +1,7 @@
 # What each proposition relation asserts (API_SPEC.md section 28, "Relation
 # semantics"). The table is defined once here and read wherever a relation's
 # meaning matters. The Python twin's _relations.py holds the same table
-# (RELATIONS, DIRECTED, BIDIRECTED).
+# (RELATIONS, DIRECTED, BIDIRECTED, PATHS).
 #
 # A directed relation states an effect of `from` on `to`. A bidirected one
 # states covariance that the theory leaves unexplained, as a latent common cause
@@ -28,3 +28,10 @@
 # The relations that state unexplained covariance: the bidirected edges of that
 # graph, and the edges the nomological_net view draws without arrowheads.
 .tf_BIDIRECTED <- names(Filter(function(r) identical(r$kind, "bidirected"), .tf_RELATIONS))
+
+# The directed relations whose claim is the effect of `from` on `to` itself:
+# every directed relation but `moderates`, whose claim is that `from` modifies
+# the effects of other causes on `to`. tf_compile_sem() writes each as a
+# labelled regression and tf_simulate() couples each, both with the sign of the
+# table.
+.tf_PATHS <- setdiff(.tf_DIRECTED, "moderates")

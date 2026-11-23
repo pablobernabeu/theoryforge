@@ -8,9 +8,10 @@ def test_simulate_records_every_knob(panic_path):
     # omitted k could not be reproduced from what it reports.
     t = tf.read(panic_path)
     r = t.simulate(steps=3, dt=0.2, k=0.75, damping=0.25, init=2.0)
-    assert list(r) == ["states", "dt", "steps", "k", "damping", "init", "method", "ignored",
-                       "opposed", "trajectory"]
+    assert list(r) == ["states", "dt", "steps", "k", "damping", "init", "initial_state", "method",
+                       "ignored", "assumed_positive", "opposed", "trajectory"]
     assert (r["dt"], r["steps"], r["k"], r["damping"], r["init"]) == (0.2, 3, 0.75, 0.25, 2.0)
+    assert r["initial_state"] == [2.0, 2.0, 2.0]
     # At k = 1.5 the feedback loop grows fast enough for three Euler steps of
     # 0.2 to fall short of the exact solution by more than 5 per cent.
     with pytest.warns(UserWarning, match="depart from the exact solution"):
@@ -29,6 +30,8 @@ def test_simulate_refuses_duplicate_construct_ids():
 
 
 _STEPS_MSG = "simulate requires steps to be a whole number of at least 0"
+_INIT_MSG = ("simulate requires init to be a finite number or a mapping from construct ids to "
+             "finite numbers")
 
 
 @pytest.mark.parametrize("knobs, message", [
@@ -53,9 +56,17 @@ _STEPS_MSG = "simulate requires steps to be a whole number of at least 0"
     ({"damping": float("nan")}, "simulate requires damping to be a finite number"),
     ({"damping": None}, "simulate requires damping to be a finite number"),
     # R recycled init = c(1, 2, 3) into nine-value rows; Python raised TypeError.
-    ({"init": [1.0, 2.0, 3.0]}, "simulate requires init to be a single finite number"),
-    ({"init": float("nan")}, "simulate requires init to be a single finite number"),
-    ({"init": False}, "simulate requires init to be a single finite number"),
+    ({"init": [1.0, 2.0, 3.0]}, _INIT_MSG),
+    ({"init": float("nan")}, _INIT_MSG),
+    ({"init": False}, _INIT_MSG),
+    ({"init": "1"}, _INIT_MSG),
+    # A mapping needs finite numbers under nonempty string keys, which is all
+    # an R name can be.
+    ({"init": {"c_arousal": float("inf")}}, _INIT_MSG),
+    ({"init": {"c_arousal": True}}, _INIT_MSG),
+    ({"init": {"c_arousal": "1"}}, _INIT_MSG),
+    ({"init": {"": 1.0}}, _INIT_MSG),
+    ({"init": {1: 1.0}}, _INIT_MSG),
 ])
 def test_simulate_refuses_invalid_knobs(panic_path, knobs, message):
     # The R suite asserts the same messages for the same knobs.

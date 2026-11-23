@@ -1064,8 +1064,13 @@ class Theory:
         return _dossier(self.data)
 
     def simulate(self, steps: int = 10, dt: float = 0.1, k: float = 1.0,
-                 damping: float = 0.5, init: float = 1.0, method: str = "euler") -> dict:
-        """Propagate the construct network as a linear dynamical system (see ``theoryforge.simulate``)."""
+                 damping: float = 0.5, init: float | Mapping[str, float] = 1.0,
+                 method: str = "euler") -> dict:
+        """Propagate the construct network as a linear dynamical system (see ``theoryforge.simulate``).
+
+        ``causes`` and ``mediates`` state no sign and are coupled positively,
+        and the result lists them under ``assumed_positive``.
+        """
         return _simulate(self.data, steps=steps, dt=dt, k=k, damping=damping, init=init,
                          method=method)
 

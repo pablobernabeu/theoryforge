@@ -9,8 +9,16 @@
   "k": 1.0,
   "damping": 0.5,
   "init": 1.0,
+  "initial_state": [
+    1.0,
+    1.0,
+    1.0
+  ],
   "method": "exact",
   "ignored": [],
+  "assumed_positive": [
+    "p3"
+  ],
   "opposed": [],
   "trajectory": [
     [

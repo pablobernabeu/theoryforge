@@ -431,8 +431,11 @@ print(t.dossier())
 
 `compile_sem()` translates the structural content into lavaan model syntax.
 Constructs with measurement indicators become a latent measurement model
-with `=~`, directed propositions become structural paths with `~` and
-associations become covariances with `~~`. A block at the end fixes at zero
+with `=~`, directed propositions become labelled structural paths with `~` and
+associations become covariances with `~~`. Comments then say whether the paths
+are identified and list the sign each `increases` or `decreases` proposition
+states, and each effect a prediction claims becomes a defined parameter with
+`:=`, which lavaan estimates. A block at the end fixes at zero
 each covariance between two constructs that are both exogenous or both
 terminal, unless an association joins them or either is a moderator. Deleting
 the block restores lavaan's defaults. The theory built above has no such pair,
@@ -670,12 +673,15 @@ departs from the exact one by more than 5 per cent, and the default will change
 to `"exact"` in the next minor release.
 
 The returned record names the method and lists the propositions that couple
-nothing (`ignored`, here none) and the pairs whose increases and decreases
-offset each other (`opposed`).
+nothing (`ignored`, here none), those coupled positively without a stated sign
+(`assumed_positive`, the `causes` and `mediates` propositions, here none) and
+the pairs whose increases and decreases offset each other (`opposed`).
 
 `steps` must be a whole number of at least 0, `dt` a finite number above 0,
-`k`, `damping` and `init` finite numbers, and `method` either `"euler"` or
-`"exact"`. Anything else raises ValueError with the message the R twin gives.
+`k` and `damping` finite numbers, `init` a finite number or a mapping from
+construct ids to finite numbers, and `method` either `"euler"` or `"exact"`.
+A mapping such as `init={"arousal": 1}` starts the constructs it leaves out
+from 0, which traces the response to an impulse in arousal. Anything else raises ValueError with the message the R twin gives.
 A run whose states grow too large to round stops with a ValueError naming the
 step and the construct. The explicit Euler step is stable only when `dt` times
 the damping stays below 2 in a network without feedback loops, so a larger

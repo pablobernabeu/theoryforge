@@ -247,12 +247,20 @@ When constructs carry measurement indicators, `tf_compile_sem()` compiles the
 theory into `lavaan` model syntax written for `lavaan::sem()`. It returns a
 plain string and does not require `lavaan` to be installed. Constructs with
 indicators become latent variables with `=~`, and propositions become
-structural paths with `~` and covariances with `~~`. The modality-switching
-theory shows what else the syntax contains.
+labelled structural paths with `~` and covariances with `~~`. The
+modality-switching theory shows what else the syntax contains.
 
 ```{r sem}
 cat(tf_compile_sem(switching))
 ```
+
+A comment after the structural model says that its paths form no loop and
+that no pair of constructs is joined by both a path and a covariance, so the
+path coefficients are identified once the measurement model identifies the
+constructs ([Brito & Pearl, 2002](https://doi.org/10.1207/s15328007sem0904_1)).
+The signs the four propositions state are listed against the path labels, and
+the effects that pred1 and pred3 claim are defined with `:=`, so that lavaan
+estimates the quantities the claims are about.
 
 The last block fixes two covariances at zero, those behind the two claims
 singled out above. Sensorimotor experience and lexical familiarity are

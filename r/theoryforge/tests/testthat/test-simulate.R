@@ -1,8 +1,8 @@
 test_that("tf_simulate returns states, dt, steps, and trajectory of the right shape", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   sim <- tf_simulate(theory)
-  expect_named(sim, c("states", "dt", "steps", "k", "damping", "init", "method",
-                      "ignored", "opposed", "trajectory"))
+  expect_named(sim, c("states", "dt", "steps", "k", "damping", "init", "initial_state",
+                      "method", "ignored", "assumed_positive", "opposed", "trajectory"))
   expect_equal(unlist(sim$states),
                c("c_arousal", "c_perceived_threat", "c_avoidance"))
   expect_equal(sim$dt, 0.1)
@@ -23,6 +23,7 @@ test_that("tf_simulate echoes back every knob that shapes the trajectory", {
   expect_equal(sim$k, 0.75)
   expect_equal(sim$damping, 0.25)
   expect_equal(sim$init, 2.0)
+  expect_identical(sim$initial_state, c(2, 2, 2))
   # At k = 1.5 the feedback loop grows fast enough for three Euler steps of
   # 0.2 to fall short of the exact solution by more than 5 per cent.
   expect_warning(other <- tf_simulate(theory, steps = 3L, dt = 0.2, k = 1.5,
@@ -49,6 +50,8 @@ test_that("tf_simulate refuses invalid knobs with the Python twin's messages", {
   # the same messages for the same knobs.
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   steps_msg <- "simulate requires steps to be a whole number of at least 0"
+  init_msg <- paste0("simulate requires init to be a finite number or a mapping from ",
+                     "construct ids to finite numbers")
   dt_msg <- "simulate requires dt to be a finite number greater than 0"
   cases <- list(
     list(list(steps = 2.5), steps_msg),
@@ -69,9 +72,19 @@ test_that("tf_simulate refuses invalid knobs with the Python twin's messages", {
     list(list(k = "1"), "simulate requires k to be a finite number"),
     list(list(damping = NaN), "simulate requires damping to be a finite number"),
     list(list(damping = NULL), "simulate requires damping to be a finite number"),
-    list(list(init = c(1, 2, 3)), "simulate requires init to be a single finite number"),
-    list(list(init = NaN), "simulate requires init to be a single finite number"),
-    list(list(init = FALSE), "simulate requires init to be a single finite number")
+    list(list(init = c(1, 2, 3)), init_msg),
+    list(list(init = NaN), init_msg),
+    list(list(init = FALSE), init_msg),
+    list(list(init = "1"), init_msg),
+    # A mapping needs finite numbers under names that are not empty or
+    # repeated, which is all a Python key can be.
+    list(list(init = c(c_arousal = Inf)), init_msg),
+    list(list(init = c(c_arousal = TRUE)), init_msg),
+    list(list(init = list(c_arousal = "1")), init_msg),
+    list(list(init = list(c_arousal = c(1, 2))), init_msg),
+    list(list(init = c(1, c_arousal = 2)), init_msg),
+    list(list(init = c(c_arousal = 1, c_arousal = 2)), init_msg),
+    list(list(init = list(1, 2)), init_msg)
   )
   for (case in cases) {
     expect_error(do.call(tf_simulate, c(list(theory), case[[1]])), case[[2]],
@@ -269,7 +282,63 @@ test_that("tf_simulate records the method and what the coupling leaves out", {
   expect_identical(sim$method, "euler")
   expect_identical(sim$ignored, list())
   expect_identical(sim$opposed, list())
+  # p3 states that perceived threat causes arousal, without a sign. The
+  # coupling is positive by assumption, and that alone makes the loop grow.
+  expect_identical(sim$assumed_positive, list("p3"))
   expect_identical(tf_simulate(theory, steps = 2, method = "exact")$method, "exact")
+})
+
+# a reaches each of b to e by one relation, and three propositions couple
+# nothing.
+.fan_theory <- function() {
+  theory <- tf_theory("signs", "Signs")
+  for (c in c("a", "b", "c", "d", "e")) theory <- tf_add_construct(theory, c, toupper(c), "d")
+  props <- list(c("p1", "b", "increases"), c("p2", "c", "decreases"), c("p3", "d", "causes"),
+                c("p4", "e", "mediates"), c("p5", "zz", "causes"), c("p6", "b", "moderates"))
+  for (p in props) theory <- tf_add_proposition(theory, p[[1]], "a", p[[2]], p[[3]])
+  tf_add_proposition(theory, "p7", "b", "c", "associates")
+}
+
+test_that("tf_simulate reads the signs from the relation table", {
+  # increases and decreases carry the table's signs. causes and mediates carry
+  # none and are coupled at +k, and the record lists them in file order. A
+  # coupling to an undeclared construct is ignored and assumes nothing.
+  expect_setequal(.tf_PATHS, c("increases", "decreases", "causes", "mediates"))
+  sim <- tf_simulate(.fan_theory(), steps = 1, dt = 1, damping = 0, init = c(a = 1))
+  expect_identical(sim$trajectory[[2L]], c(1, 1, -1, 1, 1))
+  expect_identical(sim$assumed_positive, list("p3", "p4"))
+  expect_identical(sim$ignored, list("p5", "p6", "p7"))
+})
+
+test_that("tf_simulate starts from a mapping for an impulse response", {
+  # A construct the mapping leaves out starts from 0, so one entry gives the
+  # response to an impulse in that construct. The mapping is echoed as a named
+  # list and initial_state holds every starting value, in the order of states.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  sim <- tf_simulate(theory, steps = 2, init = c(c_avoidance = 2, c_arousal = 0.5),
+                     method = "exact")
+  expect_identical(sim$init, list(c_avoidance = 2, c_arousal = 0.5))
+  expect_identical(sim$initial_state, c(0.5, 0, 2))
+  expect_identical(sim$trajectory[[1L]], c(0.5, 0, 2))
+  expect_identical(tf_simulate(theory, steps = 2, init = list(c_avoidance = 2, c_arousal = 0.5),
+                               method = "exact")$trajectory,
+                   sim$trajectory)
+  # Constructs with the same incoming couplings now part: arousal and threat no
+  # longer follow one path.
+  impulse <- tf_simulate(theory, steps = 5, init = c(c_arousal = 1), method = "exact")
+  expect_false(identical(impulse$trajectory[[6L]][[1L]], impulse$trajectory[[6L]][[2L]]))
+  expect_identical(tf_simulate(theory, steps = 1, init = list())$trajectory,
+                   list(c(0, 0, 0), c(0, 0, 0)))
+})
+
+test_that("tf_simulate refuses a mapping that names an unknown construct", {
+  # Checked once the theory is read, after the duplicate ids, in the order of
+  # the mapping. The Python suite asserts the same message.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  expect_error(tf_simulate(theory, init = c(c_arousal = 1, arousal = 1, zz = 2)),
+               paste0("simulate requires init to name declared constructs; unknown ",
+                      "construct id: arousal"),
+               fixed = TRUE)
 })
 
 test_that("tf_simulate's exact method decays where Euler explodes", {

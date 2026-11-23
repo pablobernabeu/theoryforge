@@ -235,5 +235,5 @@ test("both runtimes load a pinned engine release, which the apps' README names",
 test("r/r-runtime.js: the simulate comment lists every element of the record", () => {
   const { RT } = withStubEngine("r/r-runtime.js", []);
   const code = RT.code("simulate", { steps: 30, dt: 0.1, k: 1, damping: 0.5, init: 1, method: "exact" });
-  assert.match(code, /# list\(states, dt, steps, k, damping, init, method, ignored, opposed, trajectory\)$/m);
+  assert.match(code, /# list\(states, dt, steps, k, damping, init, initial_state, method, ignored, assumed_positive, opposed, trajectory\)$/m);
 });

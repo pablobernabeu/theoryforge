@@ -78,6 +78,27 @@ version and a single behavioural contract
 - R's `tf_new_evidence_dois()` normalises its candidates in one vectorised call, where it
   grew its vectors and searched them one candidate at a time.
 
+- `compile_sem()` labels every regression `b_<from>_<to>`, with a numbered suffix when
+  another name holds the label, lists the sign each `increases` and `decreases`
+  proposition states as an inequality on its label, and defines with `:=` the effect that
+  each effect claim of a prediction or phenomenon is about, as the sum over the directed
+  paths of the products of their labels. No effect is defined on a graph with a feedback
+  loop or over more than 100 paths.
+- `compile_sem()` leaves out a relation from a construct to itself, which it wrote as
+  `y ~ y`, with a comment that names the proposition, and writes a pair that two path
+  relations state once, where lavaan refused the second line.
+- `compile_sem()` adds a note on identification after the structural model. Paths that
+  form no loop and no bow are generically identified once the measurement model
+  identifies the constructs (Brito & Pearl, 2002), and each bow is named otherwise.
+- `simulate()` takes the signs from the relation table. It still couples `causes` and
+  `mediates` positively, and its record lists them under `assumed_positive`. The record
+  also gains `initial_state`.
+- `simulate()` accepts `init` as a mapping from construct ids to starting values, the
+  other constructs starting from 0, so that the response to one perturbed construct can
+  be traced. It refuses an unknown construct id, and an invalid `init` now gives
+  `simulate requires init to be a finite number or a mapping from construct ids to
+  finite numbers`.
+
 ### Documentation
 - The landscape's documentation, in both packages, the specification, both literature guides
   and the apps, says that its statuses count accounts that share a word with a theme and
