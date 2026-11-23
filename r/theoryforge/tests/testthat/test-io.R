@@ -403,6 +403,34 @@ test_that("tf_write writes NA as null and every number so that it reads back exa
   }
 })
 
+test_that("tf_write keeps dates as text, the shape of an array and the digits beside Inf", {
+  # The JSON writer took a Date or a POSIXct for a bare number and stopped, wrote
+  # a matrix as one flat array, kept 15 digits of a number in a vector that also
+  # held Inf, and wrote -0, which JSON reads as the integer 0. yaml wrote a Date
+  # as the number of days since 1970.
+  theory <- tf_theory("demo-1", "A demonstration theory") |>
+    tf_add_construct("c1", "C", "A construct.") |>
+    tf_add_prediction("h1", "C rises.", "directional") |>
+    tf_add_test_outcome("h1", TRUE, observed = "ok", date = as.Date("2026-11-20"))
+  theory$constructs[[1]]$x_seen <- as.POSIXct("2026-11-20 10:00:00", tz = "UTC")
+  theory$constructs[[1]]$x_m <- matrix(c(6 / sqrt(2), -0.25, 0.125, 1), 2)
+  theory$constructs[[1]]$x_inf <- c(6 / sqrt(2), Inf)
+  theory$constructs[[1]]$x_zero <- -0
+  for (ext in c(".yaml", ".json")) {
+    path <- tempfile(fileext = ext)
+    tf_write(theory, path)
+    back <- tf_read(path)
+    expect_identical(back$test_outcomes[[1]]$date, "2026-11-20", info = ext)
+    expect_identical(back$constructs[[1]]$x_seen, "2026-11-20 10:00:00", info = ext)
+    expect_identical(back$constructs[[1]]$x_inf[[1]], 6 / sqrt(2), info = ext)
+    expect_identical(1 / back$constructs[[1]]$x_zero, -Inf, info = ext)
+    expect_true(tf_validate(back, full = TRUE), info = ext)
+  }
+  path <- tempfile(fileext = ".json")
+  tf_write(theory, path)
+  expect_identical(jsonlite::fromJSON(path)$constructs$x_m[[1]], theory$constructs[[1]]$x_m)
+})
+
 test_that("a recorded content hash survives tf_write in both formats", {
   # A number that needs 17 digits, written with 15, read back as another
   # number, so the theory's hash changed and tf_validate(full = TRUE) refused

@@ -86,7 +86,9 @@ add the changes that concern the R package alone.
 * `tf_write()` began writing each number with the fewest significant digits that read
   back as the same double, the digits Python writes, in place of 15. A number that
   needs 16 or 17 digits, such as 6/sqrt(2), read back as another number, so a theory
-  written and read again lost its recorded content hash.
+  that held one lost its recorded content hash when written and read again. A date
+  or a date-time is now written as text in YAML too, as in JSON, where YAML held the
+  number of days since 1970.
 
 * The causal_testability item of the checklist cites Rohrer (2018), on stating causal
   assumptions in a graph, in place of the paper that describes the dagitty software.

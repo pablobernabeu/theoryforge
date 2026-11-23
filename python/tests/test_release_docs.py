@@ -7,8 +7,10 @@ wheel. PyPI shows the page away from GitHub, so the logo needs an absolute addre
 changelog must date the release that CITATION.cff cites as CITATION.cff does. Those two
 files sit at the root of the repository, outside the Python project, so that test skips
 where they are absent. One test reads pyproject.toml with tomllib, or on Python 3.10 with
-tomli, which pytest itself requires there, and the last checks that the five records of
-the version agree.
+tomli, which pytest itself requires there. The last checks that pyproject.toml,
+DESCRIPTION, mkdocs.yml and API_SPEC.md give the same version, and that CITATION.cff cites
+the newest release CHANGELOG.md dates, no later than that version: between a release's
+submission and its publication, CITATION.cff still cites the one before.
 """
 
 import re
