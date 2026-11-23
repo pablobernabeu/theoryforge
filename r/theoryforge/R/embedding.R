@@ -16,15 +16,19 @@ NULL
   sum(a * b) / (sqrt(sum(a * a)) * sqrt(sum(b * b)))
 }
 
-# Whether an embedding vector holds only finite numbers and has a nonzero
-# norm. An empty vector passes here and is refused with its pair's lengths.
+# Whether an embedding vector holds only finite numbers and has a finite,
+# nonzero norm. An empty vector passes here and is refused with its pair's
+# lengths. The norm is tested as computed, since one can underflow to 0 or
+# overflow to an infinity although every entry is finite.
 .tf_usable_vector <- function(v) {
   if (is.list(v)) {
     if (!all(vapply(v, function(x) is.numeric(x) && length(x) == 1L, logical(1)))) return(FALSE)
     v <- unlist(v)
   }
   if (length(v) == 0L) return(TRUE)
-  is.numeric(v) && all(is.finite(v)) && any(v != 0)
+  if (!is.numeric(v) || !all(is.finite(v))) return(FALSE)
+  norm <- sqrt(sum(as.numeric(v) * as.numeric(v)))
+  norm > 0 && is.finite(norm)
 }
 
 #' Embedding-based pairwise construct-redundancy screen

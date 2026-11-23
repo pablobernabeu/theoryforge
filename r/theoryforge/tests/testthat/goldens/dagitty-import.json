@@ -519,7 +519,8 @@
         {
           "id": "x",
           "label": "x",
-          "definition": ""
+          "definition": "",
+          "x_latent": true
         },
         {
           "id": "y",
@@ -758,6 +759,152 @@
           "step": "1",
           "action": "tf_read_dagitty",
           "detail": "2 constructs, 2 propositions"
+        }
+      ]
+    }
+  },
+  {
+    "error": "read_dagitty cannot read ']' at character 3"
+  },
+  {
+    "error": "read_dagitty cannot read '@' at character 3"
+  },
+  {
+    "error": "read_dagitty reads dag and pdag diagrams, not a pag"
+  },
+  {
+    "error": "read_dagitty reads dag and pdag diagrams, not a mag"
+  },
+  {
+    "ok": {
+      "constructs": [
+        {
+          "id": "pag",
+          "label": "pag",
+          "definition": ""
+        },
+        {
+          "id": "b",
+          "label": "b",
+          "definition": ""
+        }
+      ],
+      "propositions": [
+        {
+          "id": "p1",
+          "from": "pag",
+          "to": "b",
+          "relation": "causes"
+        }
+      ],
+      "provenance": [
+        {
+          "step": "1",
+          "action": "tf_read_dagitty",
+          "detail": "2 constructs, 1 propositions"
+        }
+      ]
+    }
+  },
+  {
+    "ok": {
+      "constructs": [
+        {
+          "id": "u",
+          "label": "u",
+          "definition": "",
+          "x_latent": true
+        },
+        {
+          "id": "x",
+          "label": "x",
+          "definition": ""
+        },
+        {
+          "id": "y",
+          "label": "y",
+          "definition": ""
+        }
+      ],
+      "propositions": [
+        {
+          "id": "p1",
+          "from": "u",
+          "to": "x",
+          "relation": "causes"
+        },
+        {
+          "id": "p2",
+          "from": "x",
+          "to": "y",
+          "relation": "causes"
+        },
+        {
+          "id": "p3",
+          "from": "u",
+          "to": "y",
+          "relation": "causes"
+        }
+      ],
+      "provenance": [
+        {
+          "step": "1",
+          "action": "tf_read_dagitty",
+          "detail": "3 constructs, 3 propositions"
+        }
+      ]
+    }
+  },
+  {
+    "error": "read_dagitty cannot read a selected variable; theoryforge holds no selection on a variable"
+  },
+  {
+    "ok": {
+      "constructs": [
+        {
+          "id": "x",
+          "label": "x",
+          "definition": "",
+          "x_latent": true
+        }
+      ],
+      "propositions": [],
+      "provenance": [
+        {
+          "step": "1",
+          "action": "tf_read_dagitty",
+          "detail": "1 constructs, 0 propositions"
+        }
+      ]
+    }
+  },
+  {
+    "ok": {
+      "constructs": [
+        {
+          "id": "a",
+          "label": "a",
+          "definition": ""
+        },
+        {
+          "id": "b",
+          "label": "b",
+          "definition": ""
+        }
+      ],
+      "propositions": [
+        {
+          "id": "p1",
+          "from": "a",
+          "to": "b",
+          "relation": "causes"
+        }
+      ],
+      "provenance": [
+        {
+          "step": "1",
+          "action": "tf_read_dagitty",
+          "detail": "2 constructs, 1 propositions"
         }
       ]
     }

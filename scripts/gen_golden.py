@@ -315,7 +315,7 @@ def main() -> int:
         "modality-switching-2026.post_data_severity.json",
         tf.read(FIXTURES / "modality-switching.theory.yaml").post_data_severity()))
 
-    # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
+    # new_evidence_dois: candidate DOIs against the panic-network theory's
     # existing evidence and alternatives (three already cited, two new, one duplicate)
     new_evidence_candidates = [
         "10.1176/ajp.155.5.610",
@@ -363,7 +363,7 @@ def main() -> int:
             outcomes.append({"error": str(err)})
     written.append(_write_json("dagitty-import.json", outcomes))
 
-    # bibliometric layer (P2): litmap + landscape + lit diagrams. The demo
+    # bibliometric layer: litmap + landscape + lit diagrams. The demo
     # corpus has artefacts of its own, and it keeps the name it was released
     # under, which example_names() lists, so the *.corpus.yaml loop below
     # leaves it out.

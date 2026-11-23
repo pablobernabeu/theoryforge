@@ -211,8 +211,10 @@ test_that("tf_tokens and tf_jaccard take the inputs Python takes", {
   # jaccard() reads any collections of strings as sets.
   expect_identical(tf_tokens(NULL), character(0))
   expect_identical(tf_tokens(NA_character_), character(0))
+  expect_identical(tf_tokens(NA), character(0))
   for (bad in list(123, list("drive goals"), TRUE, c("a", "b"))) {
     expect_error(tf_tokens(bad), "tokens requires a string", fixed = TRUE)
   }
   expect_identical(tf_jaccard(c("drive", "goal", "goal"), "drive"), 0.5)
+  expect_identical(tf_jaccard(NULL, "drive"), 0)
 })

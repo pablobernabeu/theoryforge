@@ -250,7 +250,9 @@ NULL
       assoc_to <- c(assoc_to, to)
     }
   }
-  used <- sort(unique(c(edge_from, edge_to)))
+  distinct <- assoc_from != assoc_to
+  used <- sort(unique(c(edge_from, edge_to,
+                        match(c(assoc_from[distinct], assoc_to[distinct]), ids))))
   nodes <- ids[used]
   k <- length(nodes)
   directed <- matrix(FALSE, nrow = k, ncol = k)

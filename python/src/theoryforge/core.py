@@ -705,40 +705,41 @@ class Theory:
                         errors.append(f"{name} {end} '{val}' is not a known construct")
                 errors += _optional_text(_field(p, "mechanism"), f"{name} mechanism")
 
-        # 16: a claim's form against its bounds, and a recorded pass against
-        # its estimate, where those fields are themselves valid. A type the
-        # bounds contradict makes the riskiness rubric and the precision item
-        # read the wrong claim, and a pass with the estimate outside the region
-        # gives a post-data severity below 0.5 beside the word passed.
+        # 16: a claim's form and sign against its bounds, where both are
+        # themselves valid. A type or a sign the bounds contradict makes the
+        # riskiness rubric, the precision item and the causal reading describe
+        # a different claim from the one post_data_severity() tests.
         for i, p in enumerate(preds):
             region = _bounds_region(_field(p, "bounds"))
-            ty = _field(p, "type")
-            if region is None or not isinstance(ty, str):
-                continue
-            lo, up = region
-            if ty in ("point", "interval") and (lo is None or up is None):
-                article = "an" if ty == "interval" else "a"
-                errors.append(f"prediction[{i}] is {article} {ty} claim, so its bounds need a "
-                              "finite lower and a finite upper")
-            elif ty == "directional" and lo is not None and up is not None:
-                errors.append(f"prediction[{i}] is a directional claim, so its bounds must leave "
-                              "one side open")
-            elif ty == "existence":
-                errors.append(f"prediction[{i}] is an existence claim, which bounds cannot state")
-        for i, t in enumerate(tos):
-            est = _number(_field(t, "estimate"))
-            pid = _field(t, "prediction_id")
-            if _field(t, "passed") is not True or est is None or not math.isfinite(est) \
-                    or not _nonempty_str(pid):
-                continue
-            pred = next((p for p in preds if _field(p, "id") == pid), None)
-            region = _bounds_region(_field(pred, "bounds"))
             if region is None:
                 continue
             lo, up = region
-            if (lo is not None and est < lo) or (up is not None and est > up):
-                errors.append(f"test_outcome[{i}] records a pass, but its estimate lies outside "
-                              f"the bounds of prediction '{pid}'")
+            both = lo is not None and up is not None
+            ty = _field(p, "type")
+            if ty in ("point", "interval") and not both:
+                article = "an" if ty == "interval" else "a"
+                errors.append(f"prediction[{i}] is {article} {ty} claim, so its bounds need a "
+                              "finite lower and a finite upper")
+            elif ty == "directional" and both and lo != 0 and up != 0:
+                errors.append(f"prediction[{i}] is a directional claim, so its bounds must leave "
+                              "one side open or end at 0")
+            elif ty == "existence" and both:
+                errors.append(f"prediction[{i}] is an existence claim, so its bounds must leave "
+                              "one side open")
+            claim = _field(p, "claim")
+            sign = claim.get("sign") if isinstance(claim, dict) else None
+            if sign == "positive" and not (lo is not None and lo >= 0):
+                errors.append(f"prediction[{i}] claims a positive sign, so its lower bound must "
+                              "be 0 or above")
+            elif sign == "negative" and not (up is not None and up <= 0):
+                errors.append(f"prediction[{i}] claims a negative sign, so its upper bound must "
+                              "be 0 or below")
+            elif sign == "zero" and not ((lo is None or lo <= 0) and (up is None or up >= 0)):
+                errors.append(f"prediction[{i}] claims a zero sign, so its bounds must include 0")
+            elif sign == "nonzero" and not ((lo is not None and lo > 0)
+                                            or (up is not None and up < 0)):
+                errors.append(f"prediction[{i}] claims a nonzero sign, so its bounds must "
+                              "exclude 0")
 
         # 17: the fields of each entry, which the schema closes as it closes the
         # top level, since a misspelt severty or derives_form would drop what
@@ -805,14 +806,16 @@ class Theory:
     def _coll(self, key: str) -> list:
         """The list a builder appends to under ``key``.
 
-        A missing key gives a new empty list, and so does a null one. A template
-        that leaves ``constructs:`` blank reads as null, and ``setdefault`` would
-        hand that None back. The caller stores the list once it has appended to
+        A missing key gives a new empty list, and so does a null one or an empty
+        mapping. A template that leaves ``constructs:`` blank reads as null, and
+        ``setdefault`` would hand that None back. The caller stores the list once it has appended to
         it. Any other value that is not a list is refused with a message that
         names the key.
         """
         v = self.data.get(key)
-        if v is None:
+        # An empty mapping holds nothing, and R builds it as list(), as it builds
+        # an empty sequence.
+        if v is None or (isinstance(v, Mapping) and not v):
             return []
         if not isinstance(v, list):
             # Described in words both languages can give (API_SPEC.md section 8).
@@ -824,7 +827,7 @@ class Theory:
 
     def _provenance(self, action: str, detail: str) -> None:
         prov = self._coll("provenance")
-        prov.append({"step": str(len(prov) + 1), "action": action, "detail": detail})
+        prov.append({"step": str(len(prov) + 1), "action": action, "detail": _plain(detail)})
         self.data["provenance"] = prov
 
     def _add(self, key: str, item: dict, action: str, detail: str) -> Theory:
@@ -1146,10 +1149,11 @@ class Theory:
         """What would tell this theory apart from a rival (see ``theoryforge.discriminate``)."""
         return _discriminate(self.data, rival, cycles=cycles)
 
-    def preregister(self, path=None) -> str:
+    def preregister(self, path=None, cycles: str = "refuse") -> str:
         """Render the hypotheses section of a preregistration, writing it to ``path``
-        when one is given (see ``theoryforge.preregister``)."""
-        return _preregister(self.data, path)
+        when one is given (see ``theoryforge.preregister``). ``cycles="sigma"``
+        reads a causal graph with feedback loops by sigma-separation."""
+        return _preregister(self.data, path, cycles=cycles)
 
     def landscape(self, corpus, min_link: int = 2, max_token_share: float = 0.5,
                   method: str = "components") -> dict:
@@ -1172,10 +1176,11 @@ class Theory:
         """
         return _compile_sem(self.data)
 
-    def dossier(self) -> str:
+    def dossier(self, cycles: str = "refuse") -> str:
         """A reviewer-facing audit bundle of the rigour report, severity, test record, evidence,
-        provenance and preregistration (see ``theoryforge.dossier.dossier``)."""
-        return _dossier(self.data)
+        provenance and preregistration (see ``theoryforge.dossier.dossier``).
+        ``cycles="sigma"`` reads a causal graph with feedback loops by sigma-separation."""
+        return _dossier(self.data, cycles=cycles)
 
     def simulate(self, steps: int = 10, dt: float = 0.1, k: float = 1.0,
                  damping: float = 0.5, init: float | Mapping[str, float] = 1.0,

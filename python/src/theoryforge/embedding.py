@@ -25,14 +25,20 @@ def _cosine(a: Sequence[float], b: Sequence[float]) -> float:
 
 
 def _usable(v) -> bool:
-    """Whether an embedding vector holds only finite numbers and has a nonzero norm.
+    """Whether an embedding vector holds only finite numbers and has a finite, nonzero norm.
 
-    An empty vector passes here and is refused with its pair's lengths.
+    An empty vector passes here and is refused with its pair's lengths. The
+    norm is tested as computed, since one can underflow to 0 or overflow to an
+    infinity although every entry is finite.
     """
-    xs = [number(x) for x in v]
-    if any(x is None or not math.isfinite(x) for x in xs):
+    read = [number(x) for x in v]
+    xs = [x for x in read if x is not None and math.isfinite(x)]
+    if len(xs) < len(read):
         return False
-    return not xs or any(x != 0 for x in xs)
+    if not xs:
+        return True
+    norm = math.sqrt(sum(x * x for x in xs))
+    return norm > 0 and math.isfinite(norm)
 
 
 @theory_keyword

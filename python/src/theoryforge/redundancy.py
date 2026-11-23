@@ -50,11 +50,12 @@ def jaccard(a, b) -> float:
     """Jaccard similarity of two token sets, such as two results of ``tokens()``.
 
     ``a`` and ``b`` may be any collections of strings, read as sets, as R's
-    ``tf_jaccard()`` reads its vectors. Returns the size of the intersection
-    divided by the size of the union, rounded to 3 decimals, or 0.0 when both
-    sets are empty.
+    ``tf_jaccard()`` reads its vectors. A single string is a set of one word,
+    and None the empty set. Returns the size of the intersection divided by
+    the size of the union, rounded to 3 decimals, or 0.0 when both sets are
+    empty.
     """
-    a, b = set(a), set(b)
+    a, b = (set() if v is None else {v} if isinstance(v, str) else set(v) for v in (a, b))
     if not a and not b:
         return 0.0
     inter = len(a & b)
@@ -88,9 +89,11 @@ def _pairs(T: dict, thr: dict) -> list[dict]:
     ``redundancy_similarity_max``; ``contained``, when both definitions hold at
     least three tokens and their overlap coefficient reaches
     ``redundancy_overlap_max``; ``same label``, when the two constructs carry
-    one name; and ``shared measurement``, when they list a measure in common,
-    so that data from it cannot tell them apart. The checklist's non_redundancy
-    item reads the same flags.
+    one name; and ``shared measurement``, when every measure one of them lists
+    is listed for the other too, so that it has no indicator of its own and
+    data from these measures cannot tell the two apart. Constructs that share
+    a method or an inventory but keep measures of their own are not flagged.
+    The checklist's non_redundancy item reads the same flags.
     """
     cons = items(T, "constructs")
     ids = [text(field(c, "id")) for c in cons]
@@ -111,7 +114,8 @@ def _pairs(T: dict, thr: dict) -> list[dict]:
                 reasons.append("contained")
             if labels[i] and labels[i] == labels[j]:
                 reasons.append("same label")
-            if measures[i] & measures[j]:
+            if measures[i] and measures[j] and (measures[i] <= measures[j]
+                                                or measures[j] <= measures[i]):
                 reasons.append("shared measurement")
             rows.append({
                 "a": ids[i],
@@ -137,9 +141,10 @@ def redundancy_check(theory: dict) -> list[dict]:
     ``near duplicate`` (a Jaccard similarity at or above the checklist's
     ``redundancy_similarity_max``), a definition ``contained`` in the other (an
     overlap at or above ``redundancy_overlap_max`` when both definitions hold
-    at least three tokens), two constructs with the ``same label`` and two that
-    list a measure in common (``shared measurement``). Labels and measures are
-    compared after folding case, accents and whitespace. ``flag`` is ``ok``,
+    at least three tokens), two constructs with the ``same label`` and two of
+    which one has no measure that the other does not list (``shared
+    measurement``). Labels and measures are compared after folding case,
+    accents and whitespace. ``flag`` is ``ok``,
     and ``reason`` empty, otherwise.
 
     The screen compares words, so it cannot detect empirical redundancy, two

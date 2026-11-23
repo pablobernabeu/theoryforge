@@ -278,3 +278,29 @@ test_that("the content hash is SHA-256 of the canonical form", {
   t$constructs <- rev(t$constructs)
   expect_false(identical(tf_content_hash(t), h))
 })
+
+test_that("an effect under sigma counts no walk back through the intervened construct", {
+  # r lowers f and f raises r. Intervening on r replaces r's own equation, so
+  # the loop back through r carries nothing, and the effect is the direct,
+  # negative one. The Python suite asserts the same record.
+  t <- tf_theory("rf", "RF") |>
+    tf_add_construct("r", "R", "a.") |>
+    tf_add_construct("f", "F", "b.") |>
+    tf_add_proposition("p1", "r", "f", "decreases") |>
+    tf_add_proposition("p2", "f", "r", "increases") |>
+    tf_add_prediction("h1", "R lowers F.", "directional", derives_from = "p1",
+                      claim = list(kind = "effect", x = "r", y = "f", sign = "negative"))
+  rec <- tf_entailments(t, cycles = "sigma")$claims[[1]]
+  expect_identical(list(rec$derived, rec$verdict, unlist(rec$via)),
+                   list("negative", "entailed", "p1"))
+})
+
+test_that("the causal_dag export keeps an association between constructs no arrow names", {
+  t <- tf_theory("a", "A")
+  for (cid in c("x", "y", "z", "w")) t <- tf_add_construct(t, cid, toupper(cid), "A construct.")
+  t <- t |>
+    tf_add_proposition("p1", "x", "y", "causes") |>
+    tf_add_proposition("p2", "z", "w", "associates")
+  expect_identical(tf_diagram(t, "causal_dag"), "dag {\n  x -> y\n  z <-> w\n}\n")
+  expect_identical(unlist(tf_implications(t)$constructs), c("x", "y", "z", "w"))
+})

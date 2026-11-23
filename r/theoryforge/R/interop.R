@@ -6,9 +6,13 @@
 .tf_ARROW_RELATIONS <- c("causes", "increases", "decreases")
 # The characters that end a name written without quotation marks, and the
 # white space, ASCII only so that Python reads it alike.
-.tf_DAGITTY_SPECIAL <- strsplit('{}[]";=,<>-', "")[[1]]
+.tf_DAGITTY_SPECIAL <- strsplit('{}[]";=,<>-@', "")[[1]]
 .tf_DAGITTY_SPACE <- c(" ", "\t", "\n", "\r", "\f", "\v")
 .tf_GRAPH_TYPES <- c("dag", "pdag", "mag", "pag", "graph", "digraph")
+# Ancestral graphs carry edge marks and a meaning theoryforge has no relation
+# for. A graph type is read before the text is split into tokens, so that the
+# marks themselves do not decide the message.
+.tf_REFUSED_GRAPH_TYPE <- "^[ \t\n\r\f\v]*(mag|pag)[ \t\n\r\f\v]*([A-Za-z0-9_.]+[ \t\n\r\f\v]*)?\\{"
 
 .tf_dagitty_fail <- function(message) stop("read_dagitty ", message, call. = FALSE)
 
@@ -67,7 +71,7 @@
     } else if (c1 %in% c("{", "}", "=")) {
       out[[length(out) + 1L]] <- c(c1, c1)
       i <- i + 1L
-    } else if (c1 %in% c("<", ">", "-")) {
+    } else if (c1 %in% c("<", ">", "-", "]", "@")) {
       .tf_dagitty_fail(sprintf("cannot read '%s' at character %d", c1, i))
     } else {
       j <- i
@@ -79,6 +83,34 @@
     }
   }
   out
+}
+
+# The keys of a bracketed attribute list, such as latent and pos in
+# [latent,pos="0,1"].
+.tf_attr_keys <- function(attrs) {
+  ch <- strsplit(attrs, "")[[1]]
+  ch <- ch[-c(1L, length(ch))]
+  keys <- character(0)
+  key <- ""
+  quoted <- FALSE
+  past_eq <- FALSE
+  for (c1 in ch) {
+    if (c1 == '"') {
+      quoted <- !quoted
+    } else if (quoted) {
+      next
+    } else if (c1 %in% c(",", ";")) {
+      keys <- c(keys, trimws(key, whitespace = "[ \t\n\r\f\v]"))
+      key <- ""
+      past_eq <- FALSE
+    } else if (c1 == "=") {
+      past_eq <- TRUE
+    } else if (!past_eq) {
+      key <- paste0(key, c1)
+    }
+  }
+  keys <- c(keys, trimws(key, whitespace = "[ \t\n\r\f\v]"))
+  keys[nzchar(keys)]
 }
 
 # The statements of the graph: inside the braces after a graph type, or all of
@@ -121,7 +153,11 @@
 #' \code{p2} and so on in order of appearance, and a repeated edge is kept
 #' once. Bracketed attributes such as \code{[exposure]}, \code{[latent]} or
 #' \code{pos="0,1"}, and graph settings such as \code{bb="0,0,1,1"}, are read
-#' and ignored.
+#' and ignored, except that a variable marked \code{[latent]} keeps the mark as
+#' \code{x_latent: true}. It stays a construct whose relations the theory
+#' states, and a statement that holds it fixed needs a measure of it before
+#' data can test it. [tf_diagram()] with \code{type = "causal_dag"} writes the
+#' mark back.
 #'
 #' The theory is at \code{draft} maturity and records the import in its
 #' provenance. It does not pass [tf_validate()] until each construct has a
@@ -130,8 +166,9 @@
 #'
 #' The function stops when \code{relation} is not one of the three above, when
 #' the diagram holds an undirected edge (\code{--}), which theoryforge has no
-#' relation for, when an edge lacks a variable at one end, and when a quotation
-#' mark, an attribute list or a brace is left open.
+#' relation for, or is a MAG or a PAG, whose edge marks it cannot hold, when a
+#' variable is marked \code{[selected]}, when an edge lacks a variable at one
+#' end, and when a quotation mark, an attribute list or a brace is left open.
 #'
 #' @param text The model code, a single string.
 #' @param id,title The id and title of the theory.
@@ -158,16 +195,20 @@ tf_read_dagitty <- function(text, id = "dagitty-import",
   if (!is.character(text) || length(text) != 1L || is.na(text)) {
     stop("read_dagitty requires the model code as a string", call. = FALSE)
   }
-  tokens <- .tf_dagitty_body(.tf_dagitty_tokens(enc2utf8(text)))
+  text <- enc2utf8(text)
+  refused <- regmatches(text, regexec(.tf_REFUSED_GRAPH_TYPE, text, perl = TRUE))[[1]]
+  if (length(refused)) .tf_dagitty_fail(paste0("reads dag and pdag diagrams, not a ", refused[[2]]))
+  tokens <- .tf_dagitty_body(.tf_dagitty_tokens(text))
   n <- length(tokens)
   kind <- function(k) tokens[[k]][[1]]
   value <- function(k) tokens[[k]][[2]]
 
   names_seen <- character(0)
+  latent <- character(0)
   edges <- list()
 
-  # The variables of the group that starts at token k, and the next token's
-  # index.
+  # The variables of the group that starts at token k, the next token's index
+  # and the keys of the attribute lists that follow it.
   group <- function(k) {
     if (k <= n && kind(k) == "name") {
       members <- value(k)
@@ -188,11 +229,15 @@ tf_read_dagitty <- function(text, id = "dagitty-import",
     } else {
       .tf_dagitty_fail("found an edge without a variable at one end")
     }
-    while (k <= n && kind(k) == "attrs") k <- k + 1L
+    keys <- character(0)
+    while (k <= n && kind(k) == "attrs") {
+      keys <- c(keys, .tf_attr_keys(value(k)))
+      k <- k + 1L
+    }
     for (m in members) {
       if (!(m %in% names_seen)) names_seen <<- c(names_seen, m)
     }
-    list(members = members, k = k)
+    list(members = members, k = k, keys = keys)
   }
 
   k <- 1L
@@ -211,6 +256,14 @@ tf_read_dagitty <- function(text, id = "dagitty-import",
     g <- group(k)
     left <- g$members
     k <- g$k
+    if (!(k <= n && kind(k) == "edge")) {
+      # A variable declared on its own carries its own attributes.
+      if ("selected" %in% g$keys) {
+        .tf_dagitty_fail(paste0("cannot read a selected variable; theoryforge holds no ",
+                                "selection on a variable"))
+      }
+      if ("latent" %in% g$keys) latent <- union(latent, left)
+    }
     while (k <= n && kind(k) == "edge") {
       op <- value(k)
       if (op == "--") {
@@ -236,7 +289,9 @@ tf_read_dagitty <- function(text, id = "dagitty-import",
     id = id,
     title = title,
     maturity = "draft",
-    constructs = lapply(names_seen, function(nm) list(id = nm, label = nm, definition = "")),
+    constructs = lapply(names_seen, function(nm) {
+      c(list(id = nm, label = nm, definition = ""), if (nm %in% latent) list(x_latent = TRUE))
+    }),
     propositions = lapply(seq_along(edges), function(i) {
       list(id = paste0("p", i), from = edges[[i]][[1]], to = edges[[i]][[2]],
            relation = edges[[i]][[3]])

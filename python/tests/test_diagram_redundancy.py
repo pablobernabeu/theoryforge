@@ -34,9 +34,9 @@ def test_causal_dag(panic_path):
 
 def test_causal_dag_exports_the_graph_implications_reads():
     # Every directed relation is an edge, and an association between two
-    # constructs that a directed relation names is a bidirected edge (API_SPEC.md
-    # sections 5 and 27). An association touching any other construct, or joining
-    # a construct to itself, is left out, as implications() leaves it out.
+    # different constructs is a bidirected edge (API_SPEC.md sections 5 and 27),
+    # so k, which only an association names, is a vertex as implications()
+    # makes it one. An association of a construct with itself is left out.
     t = tf.new_theory("mixed", "Mixed relations")
     for n in ("a", "b", "c", "d", "k"):
         t.add_construct(n, n.upper(), "d")
@@ -46,7 +46,8 @@ def test_causal_dag_exports_the_graph_implications_reads():
     t.add_proposition("p4", "k", "a", "associates")
     t.add_proposition("p5", "b", "d", "decreases")
     t.add_proposition("p6", "d", "d", "associates")
-    assert t.diagram("causal_dag") == "dag {\n  a -> b\n  c -> b\n  a <-> c\n  b -> d\n}\n"
+    assert t.diagram("causal_dag") == ("dag {\n  a -> b\n  c -> b\n  a <-> c\n  k <-> a\n"
+                                       "  b -> d\n}\n")
 
 
 def test_labels_keep_a_trailing_space():
@@ -217,3 +218,7 @@ def test_tokens_and_jaccard_take_the_inputs_r_takes():
         with pytest.raises(TypeError, match="^tokens requires a string$"):
             tokens(bad)
     assert jaccard(["drive", "goal", "goal"], ("drive",)) == 0.5
+    # A single string is one word, as R reads a one-element vector, and None
+    # is the empty set, as R reads NULL.
+    assert jaccard(["drive", "goal", "goal"], "drive") == 0.5
+    assert jaccard(None, ["drive"]) == 0.0

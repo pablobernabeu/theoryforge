@@ -2,7 +2,7 @@
   "read": "ok",
   "validate": true,
   "validate_full": {
-    "error": "invalid theory object: prediction[0] is a point claim, so its bounds need a finite lower and a finite upper; prediction[1] is a directional claim, so its bounds must leave one side open; test_outcome[0] records a pass, but its estimate lies outside the bounds of prediction 'h3'; construct[1] has unknown field: measurment (did you mean measurement?); prediction[2] has unknown field: severty (did you mean severity?)"
+    "error": "invalid theory object: prediction[0] is a point claim, so its bounds need a finite lower and a finite upper; construct[1] has unknown field: measurment (did you mean measurement?); prediction[2] has unknown field: severty (did you mean severity?)"
   },
   "check": {
     "aggregate_score": 61.6,

@@ -39,9 +39,9 @@ def implications(theory, cycles: str = "refuse", given: str = "basis") -> dict:
     relation (``increases``, ``decreases``, ``causes``,
     ``mediates`` or ``moderates``) is an edge from ``from`` to ``to``, and
     ``associates`` is a bidirected edge, covariance the theory leaves
-    unexplained. The constructs that a directed relation names are the
-    vertices, and an association is an edge only between two of them. The
-    function then takes every pair of vertices that no edge joins. The pair is
+    unexplained. The constructs that some proposition relates to another are
+    the vertices. The function then takes every pair of vertices that no edge
+    joins. The pair is
     stated independent given the parents of both when those m-separate it
     (Richardson, 2003), and otherwise given all the other ancestors of the two
     when those do. A pair that neither set separates is separated by no set of
@@ -59,7 +59,12 @@ def implications(theory, cycles: str = "refuse", given: str = "basis") -> dict:
     (Richardson, 2003), so one pass suffices. Fewer conditioning constructs
     mean fewer measured with error, which matters for the reason given below.
     The minimal set returned is one of possibly several, and the file order
-    of the constructs decides which.
+    of the constructs decides which. Minimal statements suit tests of single
+    pairs. They are no longer a basis set: unless the distribution satisfies
+    composition, they do not jointly imply the graph's other independencies,
+    and their tests are not independent, so they should not be combined into
+    one test of the whole model, as Shipley's (2000) C statistic combines the
+    basis set's.
 
     ``cycles`` says what to do with a graph whose directed edges form a cycle.
     The default, ``"refuse"``, raises an error that names a cycle found.
@@ -86,12 +91,11 @@ def implications(theory, cycles: str = "refuse", given: str = "basis") -> dict:
     n_edges, n_bidirected, feedback, implications, n_implications,
     inseparable}``. ``criterion`` names the separation criterion, ``"m"`` under
     ``"refuse"`` and ``"sigma"`` under ``"sigma"``, and ``conditioning`` the
-    value of ``given``. ``constructs`` lists the vertices in
-    file order. Constructs that no directed relation names are left out,
-    because silence about a construct is not a claim that it is independent of
-    anything, and so are constructs without an id, which no proposition can
-    name. A construct named only by associations would be a collider on every
-    path through it, so leaving it out loses no statement about the others.
+    value of ``given``. ``constructs`` lists the vertices in file order. A
+    construct that no proposition relates to another is left out, because
+    silence about a construct is not a claim that it is independent of
+    anything, and so is a construct without an id, which no proposition can
+    name.
     ``n_edges`` counts the directed edges the theory states and
     ``n_bidirected`` the bidirected ones, a pair stated twice counting once,
     before any acyclification. ``feedback`` lists the feedback loops, each the
@@ -119,9 +123,9 @@ def implications(theory, cycles: str = "refuse", given: str = "basis") -> dict:
     writes is one starting point, and each statement can be tested in it
     separately (Thoemmes et al., 2018).
 
-    A theory with no directed relations comes back with no vertices and no
-    error: ``constructs``, ``implications`` and ``inseparable`` are empty and
-    ``n_implications`` is 0.
+    A theory whose propositions relate no two constructs comes back with no
+    vertices and no error: ``constructs``, ``implications`` and
+    ``inseparable`` are empty and ``n_implications`` is 0.
 
     Raises:
         ValueError: if ``cycles`` is not ``"refuse"`` or ``"sigma"`` or

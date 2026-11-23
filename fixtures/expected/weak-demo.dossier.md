@@ -16,8 +16,8 @@
 | falsifiability | At least one prediction forbids an observation | fail | 0.0 | 0.15 |
 | precision | Predictions are point or interval claims whose bounds state the region, not merely directional | warn | 0.0 | 0.1 |
 | risk_severity | Mean prediction riskiness (declared severity, else the claim-form rubric) at or above threshold | warn | 0.2 | 0.1 |
-| parsimony | No auxiliary assumption that answers an anomaly (named in added_for, or a protected prediction a test failed) lacks independent corroboration | n/a | n/a | 0.08 |
-| non_redundancy | Every construct is defined, and no two have near-duplicate or contained definitions, one label or a shared measure (lexical screen) | warn | 0.0 | 0.1 |
+| parsimony | No auxiliary assumption added for an anomaly (named in added_for) lacks independent corroboration | n/a | n/a | 0.08 |
+| non_redundancy | Every construct is defined, and no two have near-duplicate or contained definitions or one label, and no construct's measures are all listed for another (lexical screen) | warn | 0.0 | 0.1 |
 | construct_clarity | Every construct has definition + measurement + boundary conditions | warn | 0.0 | 0.08 |
 | scope | Boundary conditions explicitly stated | warn | 0.0 | 0.06 |
 | logical_why | Each proposition states a mechanism, not just a correlation | warn | 0.0 | 0.08 |

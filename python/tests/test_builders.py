@@ -145,7 +145,7 @@ def test_a_collection_that_is_not_a_list_is_refused_and_left_alone():
     with pytest.raises(TypeError, match="the theory holds a number there, not a list"):
         t.add_prediction("h1", "A claim.", "point")
 
-    t = tf.Theory(dict(base, alternatives=OrderedDict()))
+    t = tf.Theory(dict(base, alternatives=OrderedDict(a1={"id": "a1"})))
     with pytest.raises(TypeError, match="the theory holds a mapping there, not a list"):
         t.add_alternative("alt1", "A rival")
 
@@ -219,3 +219,11 @@ def test_the_develop_help_example_started_from_a_copy_is_progressive():
         "empirically_progressive": True,
         "implications_gained": ["c_arousal _||_ c_avoid | c_threat"],
     }
+
+
+def test_a_builder_adds_to_an_empty_mapping_as_r_does():
+    # R builds an empty mapping and an empty sequence alike as list().
+    t = tf.Theory({"schema_version": "1.1", "id": "t", "title": "T", "maturity": "draft",
+                   "constructs": {}})
+    t.add_construct("a", "A", "The first construct.")
+    assert t.data["constructs"] == [{"id": "a", "label": "A", "definition": "The first construct."}]

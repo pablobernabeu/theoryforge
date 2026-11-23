@@ -24,9 +24,9 @@ NULL
 #' \code{"causes"}, \code{"mediates"} or \code{"moderates"}) is an edge from
 #' \code{from} to \code{to}, and \code{"associates"} is a bidirected edge,
 #' covariance the theory leaves unexplained, as a latent common cause of the two
-#' constructs would. The constructs that a directed relation names are the
-#' vertices, and an association is an edge only between two of them. The
-#' function then takes every pair of vertices that no edge joins. The pair is
+#' constructs would. The constructs that some proposition relates to another
+#' are the vertices. The function then takes every pair of vertices that no
+#' edge joins. The pair is
 #' stated independent given the parents of both when those m-separate it
 #' (Richardson, 2003), and otherwise given all the other ancestors of the two
 #' when those do. A pair that neither set separates is separated by no set of
@@ -45,14 +45,18 @@ NULL
 #' (Richardson, 2003), so one pass suffices. Fewer conditioning constructs mean
 #' fewer measured with error, which matters for the reason given below. The
 #' minimal set returned is one of possibly several, and the file order of the
-#' constructs decides which.
+#' constructs decides which. Minimal statements suit tests of single pairs.
+#' They are no longer a basis set: unless the distribution satisfies
+#' composition, they do not jointly imply the graph's other independencies,
+#' and their tests are not independent, so they should not be combined into
+#' one test of the whole model, as Shipley's (2000) C statistic combines the
+#' basis set's.
 #'
-#' Constructs that no directed relation names are left out, because silence
-#' about a construct is not a claim that it is independent of anything, and so
-#' are constructs without an id, which no proposition can name. A construct
-#' named only by associations would be a collider on every path through it, so
-#' leaving it out loses no statement about the others. A theory with no
-#' directed relations therefore comes back with no vertices and no error.
+#' A construct that no proposition relates to another is left out, because
+#' silence about a construct is not a claim that it is independent of anything,
+#' and so is a construct without an id, which no proposition can name. A theory
+#' whose propositions relate no two constructs therefore comes back with no
+#' vertices and no error.
 #'
 #' @section Measurement:
 #' The statements concern constructs, and a study measures them with error.

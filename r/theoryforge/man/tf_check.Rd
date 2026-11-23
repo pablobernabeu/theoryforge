@@ -36,8 +36,8 @@ Each item has a status (\code{"pass"}, \code{"warn"} or \code{"fail"}) and
 a score from 0 to 1. An item with nothing to assess has the status
 \code{"n/a"} and a \code{NULL} score: the redundancy screen with fewer than
 two constructs, the derivation chain with no prediction and parsimony when
-no auxiliary assumption answers an anomaly, by naming it in
-\code{added_for} or by protecting a prediction that a test failed. The aggregate
+no auxiliary assumption names, in \code{added_for}, an anomaly it was added
+to answer. The aggregate
 score is the weighted mean of the applicable items' scores, times 100, and
 \code{coverage} is the share of the checklist's weight that was applicable.
 

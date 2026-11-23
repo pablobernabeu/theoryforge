@@ -222,7 +222,7 @@ suppressWarnings(suppressMessages({
                                         digits = NA, pretty = TRUE), "\n"),
                 file.path(out_dir, "modality-switching-2026.post_data_severity.json"))
 
-      # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
+      # new_evidence_dois: candidate DOIs against the panic-network theory's
       # existing evidence and alternatives (three already cited, two new, one duplicate)
       new_evidence_candidates <- c(
         "10.1176/ajp.155.5.610",
@@ -269,7 +269,7 @@ suppressWarnings(suppressMessages({
       write_raw(paste0(jsonlite::toJSON(outcomes, auto_unbox = TRUE, pretty = TRUE), "\n"),
                 file.path(out_dir, "dagitty-import.json"))
 
-      # bibliometric layer (P2). The demo corpus keeps the name it was released
+      # bibliometric layer. The demo corpus keeps the name it was released
       # under, which tf_example_names() lists, so the *.corpus.yaml loop below
       # leaves it out, as in scripts/gen_golden.py.
       corpus <- tf_read_corpus(file.path(fixtures_dir, "panic-corpus.yaml"))

@@ -22,7 +22,7 @@ the theory first states it, is a list of \code{from}, \code{to},
 \description{
 Two causal graphs that imply the same conditional independencies are Markov
 equivalent, and no observational study can tell them apart (Verma & Pearl,
-1990). For an acyclic graph of directed relations, they are the graphs with
+1990/2022). For an acyclic graph of directed relations, they are the graphs with
 the same skeleton and the same unshielded colliders. An edge is
 \code{compelled} when it points the same way in every graph equivalent to
 the theory's, and \code{reversible} when some equivalent graph reverses it,
@@ -50,9 +50,10 @@ knowledge. In P. Besnard & S. Hanks (Eds.), \emph{Proceedings of the
 Eleventh Conference on Uncertainty in Artificial Intelligence} (pp.
 403--410). Morgan Kaufmann.
 
-Verma, T., & Pearl, J. (1990). Equivalence and synthesis of causal models.
-In \emph{Proceedings of the Sixth Conference on Uncertainty in Artificial
-Intelligence} (pp. 255--270).
+Verma, T., & Pearl, J. (2022). Equivalence and synthesis of causal models.
+In \emph{Probabilistic and causal inference: The works of Judea Pearl}
+(pp. 221-236). Association for Computing Machinery.
+\doi{10.1145/3501714.3501732} (Original work published 1990)
 }
 \seealso{
 Other causal reading:

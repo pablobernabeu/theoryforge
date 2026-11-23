@@ -1,4 +1,4 @@
-"""The keyword ``T``, which named the theory argument before version 0.8.0."""
+"""The keyword ``T``, which named the theory argument up to version 0.7.0."""
 from __future__ import annotations
 
 import functools

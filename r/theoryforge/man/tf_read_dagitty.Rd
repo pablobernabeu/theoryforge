@@ -37,7 +37,11 @@ gives one proposition per arrow, and a group in braces, as in
 \code{p2} and so on in order of appearance, and a repeated edge is kept
 once. Bracketed attributes such as \code{[exposure]}, \code{[latent]} or
 \code{pos="0,1"}, and graph settings such as \code{bb="0,0,1,1"}, are read
-and ignored.
+and ignored, except that a variable marked \code{[latent]} keeps the mark as
+\code{x_latent: true}. It stays a construct whose relations the theory
+states, and a statement that holds it fixed needs a measure of it before
+data can test it. \code{\link[=tf_diagram]{tf_diagram()}} with \code{type = "causal_dag"} writes the
+mark back.
 }
 \details{
 The theory is at \code{draft} maturity and records the import in its
@@ -47,8 +51,9 @@ definition, which a diagram cannot supply. \code{\link[=tf_diagram]{tf_diagram()
 
 The function stops when \code{relation} is not one of the three above, when
 the diagram holds an undirected edge (\code{--}), which theoryforge has no
-relation for, when an edge lacks a variable at one end, and when a quotation
-mark, an attribute list or a brace is left open.
+relation for, or is a MAG or a PAG, whose edge marks it cannot hold, when a
+variable is marked \code{[selected]}, when an edge lacks a variable at one
+end, and when a quotation mark, an attribute list or a brace is left open.
 }
 \examples{
 theory <- tf_read_dagitty("dag { arousal -> threat -> avoidance; arousal <-> avoidance }")

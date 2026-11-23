@@ -1,7 +1,9 @@
 """The causal reading of API_SPEC.md Part J: entailments, equivalent models and rivals."""
 from __future__ import annotations
 
+import copy
 import itertools
+import math
 import random
 
 import pytest
@@ -449,3 +451,36 @@ def test_the_content_hash_is_sha256_of_the_canonical_form(modality, tmp_path):
     assert modality.content_hash() == h and modality.validate(full=True)
     modality.data["constructs"].reverse()
     assert modality.content_hash() != h
+
+
+def test_an_effect_under_sigma_counts_no_walk_back_through_the_intervened_construct():
+    # r lowers f and f raises r. Intervening on r replaces r's own equation, so
+    # the loop back through r carries nothing, and the effect is the direct,
+    # negative one. Counting the walk r -> f -> r -> f gave opposite signs.
+    t = tf.new_theory("rf", "RF")
+    t.add_construct("r", "R", "a.").add_construct("f", "F", "b.")
+    t.add_proposition("p1", "r", "f", "decreases").add_proposition("p2", "f", "r", "increases")
+    t.add_prediction("h1", "R lowers F.", "directional", derives_from=["p1"],
+                     claim={"kind": "effect", "x": "r", "y": "f", "sign": "negative"})
+    rec = tf.entailments(t, cycles="sigma")["claims"][0]
+    assert (rec["derived"], rec["verdict"], rec["via"]) == ("negative", "entailed", ["p1"])
+
+
+def test_the_causal_dag_export_keeps_an_association_between_constructs_no_arrow_names():
+    t = tf.new_theory("a", "A")
+    for c in ("x", "y", "z", "w"):
+        t.add_construct(c, c.upper(), "A construct.")
+    t.add_proposition("p1", "x", "y", "causes").add_proposition("p2", "z", "w", "associates")
+    assert t.diagram("causal_dag") == "dag {\n  x -> y\n  z <-> w\n}\n"
+    assert t.implications()["constructs"] == ["x", "y", "z", "w"]
+
+
+def test_the_content_hash_reads_an_integer_too_large_for_a_double_as_r_does():
+    # R reads a 400-digit integer as Inf and writes Infinity; float() raised
+    # OverflowError here, in the hash and so in the preregistration and dossier.
+    t = tf.read(tf.example_path("modality-switching.theory.yaml"))
+    t.data["predictions"][1]["bounds"] = {"lower": 20, "upper": 10 ** 400}
+    inf = copy.deepcopy(t.data)
+    inf["predictions"][1]["bounds"]["upper"] = math.inf
+    assert tf.content_hash(t) == tf.content_hash(inf)
+    assert t.preregister() and t.dossier()

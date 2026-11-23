@@ -465,39 +465,44 @@ tf_validate <- function(theory, full = FALSE) {
       }
     }
 
-    # 16: a claim's form against its bounds, and a recorded pass against its
-    # estimate, where those fields are themselves valid. A type the bounds
-    # contradict makes the riskiness rubric and the precision item read the
-    # wrong claim, and a pass with the estimate outside the region gives a
-    # post-data severity below 0.5 beside the word passed.
+    # 16: a claim's form and sign against its bounds, where both are
+    # themselves valid. A type or a sign the bounds contradict makes the
+    # riskiness rubric, the precision item and the causal reading describe a
+    # different claim from the one tf_post_data_severity() tests.
     for (i in seq_along(preds)) {
       region <- .tf_bounds_region(.tf_get(preds[[i]], "bounds"))
+      if (is.null(region)) next
+      lo <- region$lower
+      up <- region$upper
+      both <- !is.null(lo) && !is.null(up)
       ty <- .tf_get(preds[[i]], "type")
-      if (is.null(region) || !.tf_is_string(ty)) next
-      if (ty %in% c("point", "interval") && (is.null(region$lower) || is.null(region$upper))) {
+      ty <- if (.tf_is_string(ty)) ty else ""
+      if (ty %in% c("point", "interval") && !both) {
         article <- if (identical(ty, "interval")) "an" else "a"
         errors <- c(errors, sprintf(paste0("prediction[%d] is %s %s claim, so its bounds need a ",
                                            "finite lower and a finite upper"), i - 1L, article, ty))
-      } else if (identical(ty, "directional") && !is.null(region$lower) && !is.null(region$upper)) {
+      } else if (identical(ty, "directional") && both && lo != 0 && up != 0) {
         errors <- c(errors, sprintf(paste0("prediction[%d] is a directional claim, so its bounds ",
+                                           "must leave one side open or end at 0"), i - 1L))
+      } else if (identical(ty, "existence") && both) {
+        errors <- c(errors, sprintf(paste0("prediction[%d] is an existence claim, so its bounds ",
                                            "must leave one side open"), i - 1L))
-      } else if (identical(ty, "existence")) {
-        errors <- c(errors, sprintf("prediction[%d] is an existence claim, which bounds cannot state",
-                                    i - 1L))
       }
-    }
-    for (i in seq_along(tos)) {
-      t <- tos[[i]]
-      est <- .tf_number(.tf_get(t, "estimate"))
-      pid <- .tf_get(t, "prediction_id")
-      if (!isTRUE(.tf_get(t, "passed")) || is.null(est) || !is.finite(est) || !.tf_ne_str(pid)) next
-      hit <- Find(function(p) identical(.tf_get(p, "id"), pid), preds)
-      region <- .tf_bounds_region(.tf_get(hit, "bounds"))
-      if (is.null(region)) next
-      if ((!is.null(region$lower) && est < region$lower) ||
-          (!is.null(region$upper) && est > region$upper)) {
-        errors <- c(errors, sprintf(paste0("test_outcome[%d] records a pass, but its estimate lies ",
-                                           "outside the bounds of prediction '%s'"), i - 1L, pid))
+      claim <- .tf_get(preds[[i]], "claim")
+      sign <- if (.tf_is_mapping(claim)) .tf_get(claim, "sign") else NULL
+      sign <- if (.tf_is_string(sign)) sign else ""
+      if (sign == "positive" && !(!is.null(lo) && lo >= 0)) {
+        errors <- c(errors, sprintf(paste0("prediction[%d] claims a positive sign, so its lower ",
+                                           "bound must be 0 or above"), i - 1L))
+      } else if (sign == "negative" && !(!is.null(up) && up <= 0)) {
+        errors <- c(errors, sprintf(paste0("prediction[%d] claims a negative sign, so its upper ",
+                                           "bound must be 0 or below"), i - 1L))
+      } else if (sign == "zero" && !((is.null(lo) || lo <= 0) && (is.null(up) || up >= 0))) {
+        errors <- c(errors, sprintf("prediction[%d] claims a zero sign, so its bounds must include 0",
+                                    i - 1L))
+      } else if (sign == "nonzero" && !((!is.null(lo) && lo > 0) || (!is.null(up) && up < 0))) {
+        errors <- c(errors, sprintf(paste0("prediction[%d] claims a nonzero sign, so its bounds ",
+                                           "must exclude 0"), i - 1L))
       }
     }
 
@@ -516,7 +521,7 @@ tf_validate <- function(theory, full = FALSE) {
       for (i in seq_along(coll)) {
         errors <- c(errors, .tf_unknown_fields(coll[[i]], sprintf("%s[%d]", entries[[key]], i - 1L),
                                                keys(item)))
-        rival <- if (key == "alternatives" && .tf_is_mapping(coll[[i]])) coll[[i]]$propositions
+        rival <- if (key == "alternatives") .tf_get(coll[[i]], "propositions")
         if (is.list(rival) && !.tf_is_mapping(rival)) {
           for (j in seq_along(rival)) {
             errors <- c(errors, .tf_unknown_fields(
@@ -526,7 +531,8 @@ tf_validate <- function(theory, full = FALSE) {
         }
       }
     }
-    errors <- c(errors, .tf_unknown_fields(d$formal_model, "formal_model", keys(props$formal_model)))
+    errors <- c(errors, .tf_unknown_fields(.tf_get(d, "formal_model"), "formal_model",
+                                           keys(props$formal_model)))
     steps <- .tf_list(d, "provenance")
     for (i in seq_along(steps)) {
       errors <- c(errors, .tf_unknown_fields(steps[[i]], sprintf("provenance[%d]", i - 1L),

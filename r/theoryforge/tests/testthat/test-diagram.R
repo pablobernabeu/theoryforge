@@ -216,9 +216,9 @@ test_that("the engine argument is deprecated", {
 
 test_that("causal_dag exports the graph tf_implications() reads", {
   # Every directed relation is an edge, and an association between two
-  # constructs that a directed relation names is a bidirected edge (API_SPEC.md
-  # sections 5 and 27). An association touching any other construct, or joining
-  # a construct to itself, is left out, as tf_implications() leaves it out.
+  # different constructs is a bidirected edge (API_SPEC.md sections 5 and 27),
+  # so k, which only an association names, is a vertex as tf_implications()
+  # makes it one. An association of a construct with itself is left out.
   theory <- tf_theory("mixed", "Mixed relations")
   for (n in c("a", "b", "c", "d", "k")) theory <- tf_add_construct(theory, n, toupper(n), "d")
   theory <- theory |>
@@ -229,7 +229,7 @@ test_that("causal_dag exports the graph tf_implications() reads", {
     tf_add_proposition("p5", "b", "d", "decreases") |>
     tf_add_proposition("p6", "d", "d", "associates")
   expect_identical(tf_diagram(theory, "causal_dag"),
-                   "dag {\n  a -> b\n  c -> b\n  a <-> c\n  b -> d\n}\n")
+                   "dag {\n  a -> b\n  c -> b\n  a <-> c\n  k <-> a\n  b -> d\n}\n")
 })
 
 test_that("tf_diagram rejects unknown types", {

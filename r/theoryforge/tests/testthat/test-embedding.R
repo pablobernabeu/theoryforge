@@ -74,7 +74,10 @@ test_that("tf_embedding_redundancy refuses a vector without a direction and a ba
   theory <- tf_theory("t", "T") |>
     tf_add_construct("c1", "One", "one") |>
     tf_add_construct("c2", "Two", "two")
-  for (bad in list(c(NaN, 1), c(0, 0), c(Inf, 1), c("0.5", "1"))) {
+  # A norm that underflows to 0 or overflows to an infinity is refused too,
+  # although every entry is finite.
+  for (bad in list(c(NaN, 1), c(0, 0), c(Inf, 1), c("0.5", "1"), c(1e-200, 1e-200),
+                   c(1e200, 1e200))) {
     vecs <- list(one = c(1, 1), two = bad)
     expect_error(tf_embedding_redundancy(theory, function(def) vecs[[def]]),
                  paste0("embedding_redundancy requires finite, nonzero embedding vectors; ",

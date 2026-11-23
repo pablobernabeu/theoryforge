@@ -43,23 +43,9 @@ NULL
 .tf_bounded <- function(p) {
   b <- .tf_get(p, "bounds")
   if (!.tf_is_mapping(b)) return(FALSE)
-  lo <- .tf_number(b$lower)
-  up <- .tf_number(b$upper)
+  lo <- .tf_number(.tf_get(b, "lower"))
+  up <- .tf_number(.tf_get(b, "upper"))
   !is.null(lo) && !is.null(up) && is.finite(lo) && is.finite(up)
-}
-
-# The anomaly an assumption answers, or NULL when it answers none: its
-# added_for when it names one, and otherwise the first prediction it protects
-# whose test outcomes include a failure (status refuted or mixed). An
-# assumption that shields a failed prediction is defensive whether or not its
-# author says so.
-.tf_defensive <- function(x, tos) {
-  declared <- .tf_str(x, "added_for")
-  if (.tf_ne_str(declared)) return(declared)
-  for (q in .tf_str_list(.tf_get(x, "protects"))) {
-    if (.tf_prediction_status(q, tos) %in% c("refuted", "mixed")) return(q)
-  }
-  NULL
 }
 
 # Compute (status, score) for each checklist item; returns a named list of
@@ -140,27 +126,25 @@ NULL
   }
 
   # 4 parsimony
-  # An assumption is assessed when it answers an anomaly: one its added_for
-  # names, or else a protected prediction that a test outcome failed, so
-  # leaving added_for out cannot spare an assumption the test. It is ad hoc,
-  # and fails the item, when nothing it protects besides the anomaly is
-  # corroborated, by the rule of the amendment appraisal
+  # Only an assumption added for an anomaly, one whose added_for names the
+  # prediction it answers, is assessed. A core assumption (added_for null)
+  # protecting a prediction that later failed is not taken for ad hoc: with no
+  # prior version the checklist cannot tell an assumption made before the test
+  # from one made after it, and tf_appraise_amendment(), which compares
+  # versions, infers the anomaly an undeclared addition answers. An assessed
+  # assumption is ad hoc, and fails the item, when nothing it protects besides
+  # the anomaly is corroborated, by the rule of the amendment appraisal
   # (.tf_classify_auxiliary() in develop.R). With no prior version to compare,
-  # every prediction it protects counts, so tf_appraise_amendment(), which
-  # counts only the content an amendment adds, is the authoritative check. Core
-  # assumptions are not counted: every derivation uses auxiliaries (Meehl,
-  # 1990a), and a ratio of assumptions to propositions would penalise declaring
-  # them.
-  anomalies <- lapply(aux, .tf_defensive, tos = tos)
-  assessed <- which(!vapply(anomalies, is.null, logical(1)))
-  if (length(assessed) == 0L) {
+  # every prediction it protects counts. Core assumptions are not counted:
+  # every derivation uses auxiliaries (Meehl, 1990a), and a ratio of
+  # assumptions to propositions would penalise declaring them.
+  defensive <- Filter(function(x) .tf_ne_str(.tf_str(x, "added_for")), aux)
+  if (length(defensive) == 0L) {
     out$parsimony <- item("n/a", NULL)
   } else {
-    ad_hoc <- vapply(assessed, function(k) {
-      x <- aux[[k]]
+    ad_hoc <- vapply(defensive, function(x) {
       protects <- .tf_str_list(.tf_get(x, "protects"))
-      !identical(.tf_classify_auxiliary(x, tos, protects, anomalies[[k]])$class,
-                 "independently_corroborated")
+      !identical(.tf_classify_auxiliary(x, tos, protects)$class, "independently_corroborated")
     }, logical(1))
     out$parsimony <- if (any(ad_hoc)) item("fail", 0.0) else item("pass", 1.0)
   }
@@ -301,8 +285,8 @@ NULL
 #' a score from 0 to 1. An item with nothing to assess has the status
 #' \code{"n/a"} and a \code{NULL} score: the redundancy screen with fewer than
 #' two constructs, the derivation chain with no prediction and parsimony when
-#' no auxiliary assumption answers an anomaly, by naming it in
-#' \code{added_for} or by protecting a prediction that a test failed. The aggregate
+#' no auxiliary assumption names, in \code{added_for}, an anomaly it was added
+#' to answer. The aggregate
 #' score is the weighted mean of the applicable items' scores, times 100, and
 #' \code{coverage} is the share of the checklist's weight that was applicable.
 #'

@@ -31,12 +31,12 @@ items:
     severity_if_fail: warning
     citation: "Popper (1959); Meehl (1967, 1990b)"
   - id: parsimony
-    criterion: "No auxiliary assumption that answers an anomaly (named in added_for, or a protected prediction a test failed) lacks independent corroboration"
+    criterion: "No auxiliary assumption added for an anomaly (named in added_for) lacks independent corroboration"
     weight: 0.08
     severity_if_fail: warning
     citation: "Lakatos (1970); Meehl (1990a)"
   - id: non_redundancy
-    criterion: "Every construct is defined, and no two have near-duplicate or contained definitions, one label or a shared measure (lexical screen)"
+    criterion: "Every construct is defined, and no two have near-duplicate or contained definitions or one label, and no construct's measures are all listed for another (lexical screen)"
     weight: 0.10
     severity_if_fail: warning
     citation: "Kelley (1927); Le et al. (2010); Lawson & Robins (2021)"

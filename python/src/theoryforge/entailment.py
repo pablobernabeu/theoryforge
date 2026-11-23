@@ -53,11 +53,13 @@ def _mul(a: int, b: int) -> int:
 
 
 def walk_signs(directed: list[list[bool]], sign: list[list[int | None]], k: int,
-               start: int) -> list[int]:
+               start: int, held: bool = False) -> list[int]:
     """For each vertex, the sign set of the directed walks to it from ``start``.
 
     The empty walk counts, so ``start`` holds POS. Each state (vertex, sign) is
-    visited once, so the search ends on a graph with feedback loops too.
+    visited once, so the search ends on a graph with feedback loops too. With
+    ``held``, no walk returns to ``start``, as when an intervention holds it
+    fixed and so cuts the edges into it.
     """
     masks = [0] * k
     masks[start] = POS
@@ -65,7 +67,7 @@ def walk_signs(directed: list[list[bool]], sign: list[list[int | None]], k: int,
     while queue:
         v, bit = queue.pop()
         for w in range(k):
-            if not directed[v][w]:
+            if not directed[v][w] or (held and w == start):
                 continue
             nxt = _mul(bit, _EDGE_MASK[sign[v][w]])
             for b in (POS, NEG, UNK):
@@ -153,11 +155,22 @@ class _Graph:
             self.sep_d, self.sep_b = self.directed, self.bidirected
         self.sep_r = reach(self.sep_d, self.k)
         self._walks: dict[int, list[int]] = {}
+        self._held: dict[int, tuple[list[int], list[list[bool]]]] = {}
 
     def walks(self, s: int) -> list[int]:
         if s not in self._walks:
             self._walks[s] = walk_signs(self.directed, self.sign, self.k, s)
         return self._walks[s]
+
+    def held(self, x: int) -> tuple[list[int], list[list[bool]]]:
+        """The sign sets of the walks from ``x`` that never return to it, and the
+        reachability of the graph without the edges into ``x``: the graph an
+        intervention on ``x`` leaves."""
+        if x not in self._held:
+            cut = [[self.directed[u][v] and v != x for v in range(self.k)] for u in range(self.k)]
+            self._held[x] = (walk_signs(self.directed, self.sign, self.k, x, held=True),
+                             reach(cut, self.k))
+        return self._held[x]
 
     def separated(self, i: int, j: int, given: list[int]) -> bool:
         return m_separated(self.sep_d, self.sep_b, self.sep_r, i, j, given)
@@ -172,9 +185,12 @@ class _Graph:
         return out
 
     def effect(self, x: int, y: int) -> tuple[str, str, list[str]]:
-        derived, basis = _derived(self.walks(x)[y])
-        r = self.r
-        on = {pid for (u, v), ps in self.edge_props.items() if r[x][u] and r[v][y] for pid in ps}
+        # An intervention on x replaces its own equation, so a walk that comes
+        # back to x carries nothing to y. In an acyclic graph no walk does.
+        masks, r = self.held(x)
+        derived, basis = _derived(masks[y])
+        on = {pid for (u, v), ps in self.edge_props.items()
+              if v != x and r[x][u] and r[v][y] for pid in ps}
         return derived, basis, self._ordered(lambda pid: pid in on)
 
     def association(self, x: int, y: int) -> tuple[str, str, list[str]]:
@@ -316,7 +332,7 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     Each claim is then ``entailed`` when the derived sign implies it,
     ``contradicted`` when it rules it out, ``undetermined`` when the graph
     leaves the sign open, and ``not_evaluated`` when the claim is malformed,
-    names a construct that no directed relation names, or meets a feedback
+    names a construct that no proposition relates to another, or meets a feedback
     loop under ``cycles="refuse"``. ``faithfulness`` is True when the verdict
     relies on routes of unknown or opposite signs not cancelling exactly.
 
@@ -380,7 +396,7 @@ _ASSOCIATED = {"positive": "are positively associated", "negative": "are negativ
 _UNDETERMINED = {"unsigned": "a route between them passes through a relation that states no sign",
                  "opposite_signs": "routes between them have opposite signs"}
 _NOT_EVALUATED = {"malformed_claim": "the claim is incomplete",
-                  "not_in_graph": "it names a construct that no directed relation names",
+                  "not_in_graph": "it names a construct that no proposition relates to another",
                   "feedback_loop": "the causal graph has a feedback loop",
                   "graph_refused": "the causal graph cannot be built"}
 
@@ -503,7 +519,7 @@ def equivalent_models(theory) -> dict:
 
     Two causal graphs that imply the same conditional independencies are
     Markov equivalent, and no observational study can tell them apart
-    (Verma & Pearl, 1990). For an acyclic graph of directed relations, they are
+    (Verma & Pearl, 1990/2022). For an acyclic graph of directed relations, they are
     the graphs with the same skeleton and the same unshielded colliders. An
     edge is ``compelled`` when it points the same way in every graph
     equivalent to the theory's, and ``reversible`` when some equivalent graph
@@ -538,10 +554,10 @@ def equivalent_models(theory) -> dict:
         background knowledge. In P. Besnard & S. Hanks (Eds.), Proceedings of
         the Eleventh Conference on Uncertainty in Artificial Intelligence (pp.
         403-410). Morgan Kaufmann.
-        Verma, T., & Pearl, J. (1990). Equivalence and synthesis of causal
-        models. In P. P. Bonissone, M. Henrion, L. N. Kanal, & J. F. Lemmer
-        (Eds.), Proceedings of the Sixth Conference on Uncertainty in Artificial
-        Intelligence (pp. 255-270). Elsevier.
+        Verma, T., & Pearl, J. (2022). Equivalence and synthesis of causal
+        models. In Probabilistic and causal inference: The works of Judea Pearl
+        (pp. 221-236). Association for Computing Machinery.
+        https://doi.org/10.1145/3501714.3501732 (Original work published 1990)
     """
     theory = theory.data if hasattr(theory, "data") else theory
     g = causal_graph(theory, "equivalent_models")
@@ -579,7 +595,7 @@ def _project(G: _Graph, keep: list[str]) -> tuple[list[list[bool]], list[list[bo
     constructs only, and ``a <-> b`` when a trek joins them through dropped
     constructs only, by a dropped common source or an association, with an
     arrowhead at both ends. Separation among the kept constructs is unchanged
-    (Verma & Pearl, 1990).
+    (Verma & Pearl, 1990/2022).
     """
     kept = [G.index[c] for c in keep]
     is_kept = [False] * G.k

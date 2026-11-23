@@ -3,8 +3,8 @@
   "validate": true,
   "validate_full": true,
   "check": {
-    "aggregate_score": 58.0,
-    "coverage": 1.0,
+    "aggregate_score": 63.0,
+    "coverage": 0.92,
     "gate": "pass",
     "n_blockers_failed": 0,
     "items": [
@@ -25,8 +25,8 @@
       },
       {
         "id": "parsimony",
-        "status": "fail",
-        "score": 0.0
+        "status": "n/a",
+        "score": null
       },
       {
         "id": "non_redundancy",

@@ -171,7 +171,7 @@ def _dag_id(s: str) -> str:
 def _causal_dag(T: dict) -> str:
     # The graph implications() reads (API_SPEC.md sections 5 and 27): a line
     # per directed relation, and a bidirected line per association between two
-    # constructs that a directed relation names, in proposition file order.
+    # different constructs, in proposition file order.
     # It is emitted as written, with no acyclicity check, so a theory with a
     # feedback loop (the panic-network example has one) yields a cyclic graph
     # inside a `dag` block. dagitty accepts it but reads it by d-separation,
@@ -180,11 +180,11 @@ def _causal_dag(T: dict) -> str:
     # implications() refuses the graph by default and reads it by
     # sigma-separation with cycles="sigma".
     props = items(T, "propositions")
-    vertices: set[str] = set()
-    for p in props:
-        if _rel(p) in DIRECTED:
-            vertices.update((_t(p, "from"), _t(p, "to")))
     lines = ["dag {"]
+    # A construct that read_dagitty() read as unobserved keeps the mark.
+    for c in items(T, "constructs"):
+        if field(c, "x_latent") is True:
+            lines.append(f"  {_dag_id(text(field(c, 'id')))} [latent]")
     # Each id goes through _dag_id, `from` before `to`, so a refused id is the
     # first one the view would write.
     for p in props:
@@ -192,7 +192,7 @@ def _causal_dag(T: dict) -> str:
         if _rel(p) in DIRECTED:
             a = _dag_id(frm)
             lines.append(f"  {a} -> {_dag_id(to)}")
-        elif _rel(p) in BIDIRECTED and frm != to and frm in vertices and to in vertices:
+        elif _rel(p) in BIDIRECTED and frm != to:
             a = _dag_id(frm)
             lines.append(f"  {a} <-> {_dag_id(to)}")
     lines.append("}")

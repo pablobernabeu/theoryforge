@@ -227,7 +227,10 @@ def test_embedding_redundancy_refuses_a_vector_without_a_direction_and_a_bad_thr
     # of 0 for identical definitions. The R suite asserts the same messages.
     t = tf.new_theory("t", "T")
     t.add_construct("c1", "One", "one").add_construct("c2", "Two", "two")
-    for bad in ([math.nan, 1.0], [0.0, 0.0], [math.inf, 1.0], ["0.5", 1.0]):
+    # A norm that underflows to 0 or overflows to an infinity is refused too,
+    # although every entry is finite.
+    for bad in ([math.nan, 1.0], [0.0, 0.0], [math.inf, 1.0], ["0.5", 1.0], [1e-200, 1e-200],
+                [1e200, 1e200]):
         vecs = {"one": [1.0, 1.0], "two": bad}
         with pytest.raises(ValueError) as exc:
             t.embedding_redundancy(lambda d, vecs=vecs: vecs[d])

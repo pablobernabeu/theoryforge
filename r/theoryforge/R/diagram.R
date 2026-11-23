@@ -193,7 +193,7 @@ NULL
 .tf_causal_dag <- function(T) {
   # The graph tf_implications() reads (API_SPEC.md sections 5 and 27): a line
   # per directed relation, and a bidirected line per association between two
-  # constructs that a directed relation names, in proposition file order. It is
+  # different constructs, in proposition file order. It is
   # emitted as written, with no acyclicity check, so a theory with a feedback
   # loop (the panic-network example has one) yields a cyclic graph inside a
   # `dag` block. dagitty accepts it but reads it by d-separation, which a cyclic
@@ -201,13 +201,13 @@ NULL
   # them (Bongers et al., 2021, Theorem 6.3). tf_implications() refuses the
   # graph by default and reads it by sigma-separation with cycles = "sigma".
   props <- .tf_list(T, "propositions")
-  vertices <- character(0)
-  for (p in props) {
-    if (.tf_rel(p) %in% .tf_DIRECTED) {
-      vertices <- c(vertices, .tf_str(p, "from"), .tf_str(p, "to"))
+  lines <- c("dag {")
+  # A construct that tf_read_dagitty() read as unobserved keeps the mark.
+  for (c in .tf_list(T, "constructs")) {
+    if (isTRUE(.tf_get(c, "x_latent"))) {
+      lines <- c(lines, sprintf("  %s [latent]", .tf_dag_id(.tf_str(c, "id"))))
     }
   }
-  lines <- c("dag {")
   # Each id goes through .tf_dag_id(), `from` before `to`, so a refused id is
   # the first one the view would write.
   for (p in props) {
@@ -216,8 +216,7 @@ NULL
     if (.tf_rel(p) %in% .tf_DIRECTED) {
       a <- .tf_dag_id(frm)
       lines <- c(lines, sprintf("  %s -> %s", a, .tf_dag_id(to)))
-    } else if (.tf_rel(p) %in% .tf_BIDIRECTED && frm != to &&
-               frm %in% vertices && to %in% vertices) {
+    } else if (.tf_rel(p) %in% .tf_BIDIRECTED && frm != to) {
       a <- .tf_dag_id(frm)
       lines <- c(lines, sprintf("  %s <-> %s", a, .tf_dag_id(to)))
     }

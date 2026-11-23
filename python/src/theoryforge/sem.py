@@ -202,8 +202,11 @@ def _graph(T) -> tuple[list[str], list[list[bool]], list[list[bool]], list[bool]
     """The causal graph the structural model states: nodes, directed, bidirected, moderator.
 
     It is the graph implications() reads (API_SPEC.md section 27). Every
-    directed relation is an edge from -> to, the vertices are the ids those
-    edges name and an association is a bidirected edge between two of them.
+    directed relation is an edge from -> to, an association between two
+    different ids is a bidirected edge, and the vertices are the ids those
+    edges name. A construct related only by associations is a vertex, so the
+    zero-covariance block holds its covariances with the rest at zero, where
+    lavaan would free them between exogenous latent variables.
     implications() refuses a repeated construct id and an undeclared endpoint,
     which the syntax writes all the same, so here a repeated id is one vertex
     and an undeclared endpoint follows the declared constructs. Vertices come
@@ -242,7 +245,8 @@ def _graph(T) -> tuple[list[str], list[list[bool]], list[list[bool]], list[bool]
                 moderators.add(frm)
         elif rel in BIDIRECTED:
             associations.append((frm, to))
-    used = sorted({i for e in edges for i in e})
+    used = sorted({i for e in edges for i in e}
+                  | {position[c] for frm, to in associations if frm != to for c in (frm, to)})
     nodes = [ids[i] for i in used]
     k = len(nodes)
     rank = {i: r for r, i in enumerate(used)}

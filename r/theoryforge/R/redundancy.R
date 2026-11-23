@@ -31,12 +31,10 @@ NULL
 #' tf_tokens("naive emotion")
 #' @export
 tf_tokens <- function(s) {
-  if (is.null(s)) {
+  if (is.null(s) || (is.atomic(s) && length(s) == 1L && is.na(s))) {
     s <- ""
   } else if (!is.character(s) || length(s) != 1L) {
     stop("tokens requires a string", call. = FALSE)
-  } else if (is.na(s)) {
-    s <- ""
   }
   s <- .tf_normalise_words(s)
   parts <- regmatches(s, gregexpr("[\\p{L}\\p{M}\\p{N}]+", s, perl = TRUE))[[1L]]
@@ -86,9 +84,11 @@ tf_jaccard <- function(a, b) {
 # reaches redundancy_similarity_max; "contained", when both definitions hold at
 # least three tokens and their overlap coefficient reaches
 # redundancy_overlap_max; "same label", when the two constructs carry one name;
-# and "shared measurement", when they list a measure in common, so that data
-# from it cannot tell them apart. The checklist's non_redundancy item reads the
-# same flags.
+# and "shared measurement", when every measure one of them lists is listed for
+# the other too, so that it has no indicator of its own and data from these
+# measures cannot tell the two apart. Constructs that share a method or an
+# inventory but keep measures of their own are not flagged. The checklist's
+# non_redundancy item reads the same flags.
 .tf_redundancy_pairs <- function(theory, thr) {
   cons <- .tf_list(theory, "constructs")
   ids <- vapply(cons, function(c) .tf_str(c, "id"), character(1))
@@ -121,7 +121,9 @@ tf_jaccard <- function(a, b) {
         if (nzchar(labels[[i]]) && identical(labels[[i]], labels[[j]])) {
           why <- c(why, "same label")
         }
-        if (length(intersect(measures[[i]], measures[[j]])) > 0L) {
+        mi <- measures[[i]]
+        mj <- measures[[j]]
+        if (length(mi) > 0L && length(mj) > 0L && (all(mi %in% mj) || all(mj %in% mi))) {
           why <- c(why, "shared measurement")
         }
         a <- c(a, ids[[i]])
@@ -149,8 +151,8 @@ tf_jaccard <- function(a, b) {
 #' checklist's \code{redundancy_similarity_max}), a definition
 #' \code{"contained"} in the other (an overlap at or above
 #' \code{redundancy_overlap_max} when both definitions hold at least three
-#' tokens), two constructs with the \code{"same label"} and two that list a
-#' measure in common (\code{"shared measurement"}). Labels and measures are
+#' tokens), two constructs with the \code{"same label"} and two of which one
+#' has no measure that the other does not list (\code{"shared measurement"}). Labels and measures are
 #' compared after folding case, accents and whitespace. \code{flag} is
 #' \code{"ok"}, and \code{reason} empty, otherwise.
 #'

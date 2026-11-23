@@ -24,8 +24,8 @@ by commas, for a \code{"near duplicate"} (a similarity at or above the
 checklist's \code{redundancy_similarity_max}), a definition
 \code{"contained"} in the other (an overlap at or above
 \code{redundancy_overlap_max} when both definitions hold at least three
-tokens), two constructs with the \code{"same label"} and two that list a
-measure in common (\code{"shared measurement"}). Labels and measures are
+tokens), two constructs with the \code{"same label"} and two of which one
+has no measure that the other does not list (\code{"shared measurement"}). Labels and measures are
 compared after folding case, accents and whitespace. \code{flag} is
 \code{"ok"}, and \code{reason} empty, otherwise.
 }

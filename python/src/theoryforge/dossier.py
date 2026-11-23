@@ -23,12 +23,13 @@ from .scoring import severity as _severity
 DECLARED_MARGIN = 0.2
 
 
-def _post_data(row: dict) -> str:
+def _post_data(row: dict, passed) -> str:
     """The post-data severity note of a test-record line, an open bound written as an infinity.
 
     The bounds are written as recorded, with up to 15 significant digits, so a
     small bound is not rounded to zero. A severity that rounds to 1 or 0 is
-    written as ``> 0.999`` or ``< 0.001``.
+    written as ``> 0.999`` or ``< 0.001``. A pass whose estimate lies outside
+    the region is said to be one.
     """
     lower = "-inf" if row["lower"] is None else _plan_number(row["lower"])
     upper = "inf" if row["upper"] is None else _plan_number(row["upper"])
@@ -36,7 +37,16 @@ def _post_data(row: dict) -> str:
     # no finite test can give.
     sev = row["severity"]
     value = "> 0.999" if sev == 1 else "< 0.001" if sev == 0 else _fmt(sev)
-    return f"; post-data severity {value} for [{lower}, {upper}]"
+    note = f"; post-data severity {value} for [{lower}, {upper}]"
+    # A pass with the estimate outside the region is not refused, since a test
+    # that fails to reject a predicted value passes it (Meehl, 1967), but the
+    # reader is told.
+    est = row["estimate"]
+    outside = ((row["lower"] is not None and est < row["lower"])
+               or (row["upper"] is not None and est > row["upper"]))
+    if passed is True and outside:
+        note += "; recorded as passed, with the estimate outside that region"
+    return note
 
 
 def _claims_section(data: dict, cycles: str) -> list[str]:
@@ -185,7 +195,7 @@ def dossier(theory, cycles: str = "refuse") -> str:
                 if ne_str(value):
                     line += f"; {key}: {value}"
             if row is not None:
-                line += _post_data(row)
+                line += _post_data(row, field(t, "passed"))
             lines.append(line)
 
     lines += ["", "## Evidence", ""]

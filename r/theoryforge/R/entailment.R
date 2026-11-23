@@ -33,8 +33,10 @@
 
 # For each vertex, the sign set of the directed walks to it from `start`. The
 # empty walk counts, so `start` holds POS. Each state (vertex, sign) is visited
-# once, so the search ends on a graph with feedback loops too.
-.tf_walk_signs <- function(directed, sign, k, start) {
+# once, so the search ends on a graph with feedback loops too. With `held`, no
+# walk returns to `start`, as when an intervention holds it fixed and so cuts
+# the edges into it.
+.tf_walk_signs <- function(directed, sign, k, start, held = FALSE) {
   masks <- integer(k)
   masks[[start]] <- .tf_POS
   qv <- start
@@ -46,6 +48,7 @@
     qv <- qv[-n]
     qb <- qb[-n]
     for (w in which(directed[v, ])) {
+      if (held && w == start) next
       nxt <- .tf_sign_mul(bit, .tf_edge_mask(sign[v, w]))
       for (b in c(.tf_POS, .tf_NEG, .tf_UNK)) {
         if (bitwAnd(nxt, b) != 0L && bitwAnd(masks[[w]], b) == 0L) {
@@ -151,11 +154,30 @@
   out
 }
 
+# The sign sets of the walks from `x` that never return to it, and the
+# reachability of the graph without the edges into `x`: the graph an
+# intervention on `x` leaves.
+.tf_held <- function(G, x) {
+  key <- paste0("held", x)
+  if (is.null(G$walk_cache[[key]])) {
+    cut <- G$directed
+    cut[, x] <- FALSE
+    G$walk_cache[[key]] <- list(masks = .tf_walk_signs(G$directed, G$sign, G$k, x, held = TRUE),
+                                r = .tf_reach(cut, G$k))
+  }
+  G$walk_cache[[key]]
+}
+
 .tf_effect <- function(G, x, y) {
-  d <- .tf_derived(.tf_walks(G, x)[[y]])
+  # An intervention on x replaces its own equation, so a walk that comes back
+  # to x carries nothing to y. In an acyclic graph no walk does.
+  h <- .tf_held(G, x)
+  d <- .tf_derived(h$masks[[y]])
   on <- character(0)
   for (e in seq_along(G$edge_from)) {
-    if (G$r[x, G$edge_from[[e]]] && G$r[G$edge_to[[e]], y]) on <- c(on, G$edge_props[[e]])
+    u <- G$edge_from[[e]]
+    v <- G$edge_to[[e]]
+    if (v != x && h$r[x, u] && h$r[v, y]) on <- c(on, G$edge_props[[e]])
   }
   list(derived = d[[1L]], basis = d[[2L]], via = .tf_ordered_props(G, on))
 }
@@ -402,7 +424,7 @@ tf_entailments <- function(theory, cycles = "refuse") {
 .tf_UNDETERMINED <- c(unsigned = "a route between them passes through a relation that states no sign",
                       opposite_signs = "routes between them have opposite signs")
 .tf_NOT_EVALUATED <- c(malformed_claim = "the claim is incomplete",
-                       not_in_graph = "it names a construct that no directed relation names",
+                       not_in_graph = "it names a construct that no proposition relates to another",
                        feedback_loop = "the causal graph has a feedback loop",
                        graph_refused = "the causal graph cannot be built")
 
@@ -496,7 +518,7 @@ tf_entailments <- function(theory, cycles = "refuse") {
 #'
 #' Two causal graphs that imply the same conditional independencies are Markov
 #' equivalent, and no observational study can tell them apart (Verma & Pearl,
-#' 1990). For an acyclic graph of directed relations, they are the graphs with
+#' 1990/2022). For an acyclic graph of directed relations, they are the graphs with
 #' the same skeleton and the same unshielded colliders. An edge is
 #' \code{compelled} when it points the same way in every graph equivalent to
 #' the theory's, and \code{reversible} when some equivalent graph reverses it,
@@ -528,9 +550,10 @@ tf_entailments <- function(theory, cycles = "refuse") {
 #' Eleventh Conference on Uncertainty in Artificial Intelligence} (pp.
 #' 403--410). Morgan Kaufmann.
 #'
-#' Verma, T., & Pearl, J. (1990). Equivalence and synthesis of causal models.
-#' In \emph{Proceedings of the Sixth Conference on Uncertainty in Artificial
-#' Intelligence} (pp. 255--270).
+#' Verma, T., & Pearl, J. (2022). Equivalence and synthesis of causal models.
+#' In \emph{Probabilistic and causal inference: The works of Judea Pearl}
+#' (pp. 221-236). Association for Computing Machinery.
+#' \doi{10.1145/3501714.3501732} (Original work published 1990)
 #' @family causal reading
 #' @examples
 #' t <- tf_read(tf_example_path("modality-switching.theory.yaml"))
@@ -577,7 +600,7 @@ tf_equivalent_models <- function(theory) {
 # a -> b when a directed path leads from a to b through dropped constructs
 # only, and a <-> b when a trek joins them through dropped constructs only, by
 # a dropped common source or an association, with an arrowhead at both ends.
-# Separation among the kept constructs is unchanged (Verma & Pearl, 1990).
+# Separation among the kept constructs is unchanged (Verma & Pearl, 1990/2022).
 .tf_project <- function(G, keep) {
   kept <- match(keep, G$nodes)
   is_kept <- logical(G$k)

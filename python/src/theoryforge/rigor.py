@@ -20,7 +20,7 @@ from ._access import (
 from ._compat import theory_keyword
 from ._num import number, rnd
 from ._relations import DIRECTED
-from ._status import classify_auxiliary, prediction_status
+from ._status import classify_auxiliary
 from ._text import xml_escape
 from .entailment import prediction_verdicts
 from .redundancy import _pairs, tokens
@@ -64,23 +64,6 @@ def _bounded(p) -> bool:
         return False
     lo, up = number(b.get("lower")), number(b.get("upper"))
     return lo is not None and up is not None and math.isfinite(lo) and math.isfinite(up)
-
-
-def _defensive(x, tos) -> str | None:
-    """The anomaly an assumption answers, or None when it answers none.
-
-    The anomaly is the assumption's ``added_for`` when it names one, and
-    otherwise the first prediction it protects whose test outcomes include a
-    failure (status ``refuted`` or ``mixed``). An assumption that shields a
-    failed prediction is defensive whether or not its author says so.
-    """
-    declared = text(field(x, "added_for"))
-    if ne_str(declared):
-        return declared
-    for q in str_list(field(x, "protects")):
-        if prediction_status(q, tos) in ("refuted", "mixed"):
-            return q
-    return None
 
 
 def _refuse_non_boolean_outcomes(T, caller: str) -> None:
@@ -166,23 +149,24 @@ def _check_items(T: dict, thr: dict) -> dict:
         out["risk_severity"] = ("pass" if m >= thr["min_severity"] else "warn", m)
 
     # 4 parsimony
-    # An assumption is assessed when it answers an anomaly: one its added_for
-    # names, or else a protected prediction that a test outcome failed, so
-    # leaving added_for out cannot spare an assumption the test. It is ad hoc,
-    # and fails the item, when nothing it protects besides the anomaly is
-    # corroborated, by the rule of the amendment appraisal
-    # (_status.classify_auxiliary). With no prior version to compare, every
-    # prediction it protects counts, so appraise_amendment(), which counts only
-    # the content an amendment adds, is the authoritative check. Core
-    # assumptions are not counted: every derivation uses auxiliaries (Meehl,
-    # 1990a), and a ratio of assumptions to propositions would penalise
-    # declaring them.
-    defensive = [(x, a) for x in aux if (a := _defensive(x, tos)) is not None]
+    # Only an assumption added for an anomaly, one whose added_for names the
+    # prediction it answers, is assessed. A core assumption (added_for null)
+    # protecting a prediction that later failed is not taken for ad hoc: with
+    # no prior version the checklist cannot tell an assumption made before the
+    # test from one made after it, and appraise_amendment(), which compares
+    # versions, infers the anomaly an undeclared addition answers. An assessed
+    # assumption is ad hoc, and fails the item, when nothing it protects
+    # besides the anomaly is corroborated, by the rule of the amendment
+    # appraisal (_status.classify_auxiliary). With no prior version to compare,
+    # every prediction it protects counts. Core assumptions are not counted:
+    # every derivation uses auxiliaries (Meehl, 1990a), and a ratio of
+    # assumptions to propositions would penalise declaring them.
+    defensive = [x for x in aux if ne_str(text(field(x, "added_for")))]
     if not defensive:
         out["parsimony"] = ("n/a", None)
     else:
-        ad_hoc = [x for x, a in defensive
-                  if classify_auxiliary(x, tos, str_list(field(x, "protects")), a)[0]
+        ad_hoc = [x for x in defensive
+                  if classify_auxiliary(x, tos, str_list(field(x, "protects")))[0]
                   != "independently_corroborated"]
         out["parsimony"] = ("fail", 0.0) if ad_hoc else ("pass", 1.0)
 

@@ -13,8 +13,8 @@ NULL
 
 # The post-data severity note of a test-record line, an open bound written as
 # an infinity. A severity that rounds to 1 or 0 is written as "> 0.999" or
-# "< 0.001".
-.tf_post_data_note <- function(row) {
+# "< 0.001". A pass whose estimate lies outside the region is said to be one.
+.tf_post_data_note <- function(row, passed) {
   # The bounds are written as recorded, with up to 15 significant digits, so a
   # small bound is not rounded to zero.
   lower <- if (is.na(row$lower)) "-inf" else .tf_plan_number(row$lower)
@@ -23,7 +23,16 @@ NULL
   # finite test can give.
   sev <- row$severity
   value <- if (sev == 1) "> 0.999" else if (sev == 0) "< 0.001" else .tf_fmt(sev)
-  sprintf("; post-data severity %s for [%s, %s]", value, lower, upper)
+  note <- sprintf("; post-data severity %s for [%s, %s]", value, lower, upper)
+  # A pass with the estimate outside the region is not refused, since a test
+  # that fails to reject a predicted value passes it (Meehl, 1967), but the
+  # reader is told.
+  outside <- (!is.na(row$lower) && row$estimate < row$lower) ||
+    (!is.na(row$upper) && row$estimate > row$upper)
+  if (isTRUE(passed) && outside) {
+    note <- paste0(note, "; recorded as passed, with the estimate outside that region")
+  }
+  note
 }
 
 #' Render a theory audit dossier (Markdown)
@@ -151,7 +160,7 @@ tf_dossier <- function(theory, cycles = "refuse") {
         if (.tf_ne_str(value)) line <- paste0(line, "; ", key, ": ", value)
       }
       row <- sevs[[i]]$row
-      if (!is.null(row)) line <- paste0(line, .tf_post_data_note(row))
+      if (!is.null(row)) line <- paste0(line, .tf_post_data_note(row, .tf_get(t, "passed")))
       lines <- c(lines, line)
     }
   }

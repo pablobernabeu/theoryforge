@@ -65,13 +65,13 @@ def test_causal_dag_refuses_the_two_ids_dagitty_reserves():
     with pytest.raises(ValueError) as exc:
         t.diagram("causal_dag")
     assert str(exc.value) == "causal_dag cannot export construct id 'graph': dagitty reserves it"
-    # Only an id the view writes is refused: this association joins two
-    # constructs that no directed relation names, so it is not exported.
+    # An association is written too, so its reserved id is refused as well.
     t = _theory([(c, None) for c in ("a", "b", "node", "k")], [
         ("p1", "a", "b", "causes"),
         ("p2", "node", "k", "associates"),
     ])
-    assert t.diagram("causal_dag") == "dag {\n  a -> b\n}\n"
+    with pytest.raises(ValueError, match="construct id 'node': dagitty reserves it"):
+        t.diagram("causal_dag")
 
 
 def test_causal_dag_quotes_an_empty_endpoint():
@@ -90,7 +90,9 @@ def test_compile_sem_renames_ids_and_indicators_that_lavaan_cannot_read_as_writt
     # with a comment that records the renaming, an unsafe indicator name gains
     # `i_`, and safe names are written as they are, `node` among them, since
     # only dagitty reserves it. The comments, the path labels and the zero
-    # block use the new names.
+    # block use the new names. .hidden and .1a, which only associations name,
+    # are in the zero block, since lavaan would otherwise free their
+    # covariances with the other exogenous constructs.
     t = _theory([
         ("self-efficacy", ["7-point Likert rating", "Self report"]),
         ("task persistence", ["Time on task"]),
@@ -150,13 +152,26 @@ def test_compile_sem_renames_ids_and_indicators_that_lavaan_cannot_read_as_writt
         "delete this block to restore its defaults)\n"
         "self_efficacy ~~ 0*c_1arousal\n"
         "self_efficacy ~~ 0*c_if\n"
+        "self_efficacy ~~ 0*c_.1a\n"
+        "self_efficacy ~~ 0*.hidden\n"
         "self_efficacy ~~ 0*node\n"
         "task_persistence ~~ 0*c_arger\n"
+        "task_persistence ~~ 0*c_.1a\n"
+        "task_persistence ~~ 0*.hidden\n"
         "task_persistence ~~ 0*a.b\n"
         "c_1arousal ~~ 0*c_if\n"
+        "c_1arousal ~~ 0*c_.1a\n"
+        "c_1arousal ~~ 0*.hidden\n"
         "c_1arousal ~~ 0*node\n"
+        "c_if ~~ 0*.hidden\n"
         "c_if ~~ 0*node\n"
+        "c_arger ~~ 0*c_.1a\n"
+        "c_arger ~~ 0*.hidden\n"
         "c_arger ~~ 0*a.b\n"
+        "c_.1a ~~ 0*.hidden\n"
+        "c_.1a ~~ 0*a.b\n"
+        "c_.1a ~~ 0*node\n"
+        ".hidden ~~ 0*node\n"
     )
 
 

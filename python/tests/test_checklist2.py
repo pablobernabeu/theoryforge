@@ -12,6 +12,8 @@ the same theories and asserts the same values.
 """
 import copy
 
+import pytest
+
 import theoryforge as tf
 from theoryforge import _resources
 
@@ -284,12 +286,11 @@ def test_the_dossier_gives_coverage_and_names_the_failed_blockers(weak_path):
     assert ("- Aggregate rigour score: 2.2/100 (1.1 to 3.9 under other weightings)\n"
             "- Checklist coverage: 0.92\n- Gate: blocked\n"
             "- Blockers failed: 2 (falsifiability, derivation_chain)\n") in d
-    assert "| parsimony | No auxiliary assumption that answers an anomaly (named in added_for, or " \
-        "a protected prediction a test failed) lacks independent corroboration | n/a | n/a | " \
-        "0.08 |\n" in d
+    assert "| parsimony | No auxiliary assumption added for an anomaly (named in added_for) lacks " \
+        "independent corroboration | n/a | n/a | 0.08 |\n" in d
     assert "| non_redundancy | Every construct is defined, and no two have near-duplicate or " \
-        "contained definitions, one label or a shared measure (lexical screen) | warn | 0.0 | " \
-        "0.1 |\n" in d
+        "contained definitions or one label, and no construct's measures are all listed for " \
+        "another (lexical screen) | warn | 0.0 | 0.1 |\n" in d
 
 
 def test_the_views_and_the_html_report_show_not_applicable_items(weak_path):
@@ -322,17 +323,18 @@ def test_precision_counts_point_and_interval_claims_only_with_two_finite_bounds(
     assert _item(t, "precision") == ("warn", 0.25)
 
 
-def test_parsimony_assesses_an_assumption_that_shields_a_failed_prediction():
+def test_parsimony_leaves_a_core_assumption_whose_prediction_failed_to_the_appraisal():
+    # Without a prior version the checklist cannot tell an assumption made
+    # before a test from one made after it, so only a declared added_for is
+    # assessed, and appraise_amendment() infers undeclared additions.
     preds = [_pred("h1", "directional"), _pred("h2", "directional")]
     aux = [{"id": "a1", "statement": "Only in calm settings.", "protects": ["h1", "h2"]}]
     failed = [{"prediction_id": "h1", "passed": False}]
     t = _bare(constructs=TWO_CONSTRUCTS, propositions=P1, predictions=preds,
-              auxiliary_assumptions=aux)
+              auxiliary_assumptions=aux, test_outcomes=failed)
     assert _item(t, "parsimony") == ("n/a", None)
-    t.data["test_outcomes"] = failed
+    t.data["auxiliary_assumptions"][0]["added_for"] = "h1"
     assert _item(t, "parsimony") == ("fail", 0.0)
-    # A corroborated prediction it also protects clears it, as a declared
-    # added_for would.
     t.data["test_outcomes"] = failed + [{"prediction_id": "h2", "passed": True}]
     assert _item(t, "parsimony") == ("pass", 1.0)
 
@@ -351,6 +353,15 @@ def test_the_screen_flags_a_shared_label_and_a_shared_measure():
                     ("a", "c"): ("ok", ""),
                     ("b", "c"): ("review", "shared measurement")}
     assert _item(t, "non_redundancy") == ("warn", 0.0)
+    # Constructs that share a method but keep measures of their own are not
+    # flagged, as in a multitrait-multimethod design.
+    t = _bare(constructs=[
+        {"id": "a", "label": "A", "definition": "Worry about future threat.",
+         "measurement": ["Self-report", "Informant rating"]},
+        {"id": "b", "label": "B", "definition": "Bodily arousal under danger.",
+         "measurement": ["self-report", "Heart rate"]},
+    ])
+    assert t.redundancy_check()[0]["flag"] == "ok"
 
 
 def test_non_redundancy_cannot_pass_while_a_definition_is_empty():
@@ -385,31 +396,32 @@ def test_a_severity_too_large_for_a_double_is_refused_as_non_numeric():
         raise AssertionError("check() accepted an infinite severity")
 
 
-def test_full_validation_checks_a_claim_form_against_its_bounds_and_a_pass_against_its_estimate():
-    t = _bare(predictions=[
+def test_full_validation_checks_a_claim_form_and_sign_against_its_bounds():
+    positive = {"kind": "effect", "x": "c1", "y": "c2", "sign": "positive"}
+    t = _bare(constructs=TWO_CONSTRUCTS, predictions=[
         _pred("h1", "point", bounds={"lower": 1}),
         _pred("h2", "interval", bounds={"upper": 2}),
-        _pred("h3", "directional", bounds={"lower": 0, "upper": 1}),
-        _pred("h4", "existence", bounds={"lower": 0}),
-        _pred("h5", "interval", bounds={"lower": 20, "upper": 60}),
-        _pred("h6", "directional", bounds={"lower": 0}),
+        _pred("h3", "directional", bounds={"lower": 0.2, "upper": 1}),
+        _pred("h4", "existence", bounds={"lower": 0.2, "upper": 0.8}),
+        _pred("h5", "interval", bounds={"lower": -1, "upper": 1}, claim=positive),
+        # A sign stated with a bound at 0 on a bounded scale, and an existence
+        # claim on an absolute value, are accepted.
+        _pred("h6", "directional", bounds={"lower": 0, "upper": 1}, claim=positive),
+        _pred("h7", "existence", bounds={"lower": 0.2}),
     ], test_outcomes=[
-        {"prediction_id": "h5", "passed": True, "estimate": 61, "se": 5},
-        {"prediction_id": "h5", "passed": False, "estimate": 40, "se": 50},
-        {"prediction_id": "h6", "passed": True, "estimate": 0, "se": 1},
+        # A pass with the estimate outside the region is not invalid: a test
+        # that fails to reject a predicted value passes it (Meehl, 1967).
+        {"prediction_id": "h6", "passed": True, "estimate": -0.1, "se": 0.2},
     ])
-    del t.data["predictions"][0]["derives_from"]
-    try:
+    with pytest.raises(ValueError) as exc:
         t.validate(full=True)
-    except ValueError as err:
-        msg = str(err)
-    assert msg.endswith(
+    assert str(exc.value).endswith(
         "prediction[0] is a point claim, so its bounds need a finite lower and a finite upper; "
         "prediction[1] is an interval claim, so its bounds need a finite lower and a finite upper; "
-        "prediction[2] is a directional claim, so its bounds must leave one side open; "
-        "prediction[3] is an existence claim, which bounds cannot state; "
-        "test_outcome[0] records a pass, but its estimate lies outside the bounds of prediction "
-        "'h5'")
+        "prediction[2] is a directional claim, so its bounds must leave one side open or end "
+        "at 0; "
+        "prediction[3] is an existence claim, so its bounds must leave one side open; "
+        "prediction[4] claims a positive sign, so its lower bound must be 0 or above")
 
 
 def test_the_dossier_writes_an_extreme_severity_as_a_bound(panic_path):
@@ -417,4 +429,7 @@ def test_the_dossier_writes_an_extreme_severity_as_a_bound(panic_path):
     t.data["test_outcomes"] = [{"prediction_id": "pred1", "passed": True, "estimate": 20, "se": 0.5}]
     assert "post-data severity > 0.999 for [15, 25]" in t.dossier()
     t.data["test_outcomes"] = [{"prediction_id": "pred1", "passed": False, "estimate": 40, "se": 1}]
-    assert "post-data severity < 0.001 for [15, 25]" in t.dossier()
+    assert "post-data severity < 0.001 for [15, 25]\n" in t.dossier()
+    t.data["test_outcomes"] = [{"prediction_id": "pred1", "passed": True, "estimate": 26, "se": 2}]
+    assert ("post-data severity 0.309 for [15, 25]; recorded as passed, with the estimate "
+            "outside that region\n") in t.dossier()

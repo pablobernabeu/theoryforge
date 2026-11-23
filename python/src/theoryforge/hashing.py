@@ -12,7 +12,7 @@ import math
 import numbers
 
 from ._compat import theory_keyword
-from ._num import plain
+from ._num import number, plain
 
 
 def _number(x) -> str:
@@ -24,7 +24,10 @@ def _number(x) -> str:
     """
     if isinstance(x, numbers.Integral) and abs(int(x)) < 2 ** 53:
         return str(int(x))
-    x = float(x)
+    # number() reads an integer too large for a double as an infinity, as R
+    # holds it, where float() would raise OverflowError.
+    y = number(x)
+    x = math.nan if y is None else y
     if math.isnan(x):
         return "NaN"
     if math.isinf(x):
