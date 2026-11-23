@@ -242,13 +242,23 @@ suppressWarnings(suppressMessages({
         "urn:doi:10.1176/ajp.155.5.610",
         "https://doi.org/10.1016/0005-7967%2886%2990011-2",
         "10.1176/ajp.155.5.610.",
-        "10.1176/AJP.155.5.610\u00a0"
+        "10.1176/AJP.155.5.610\u00a0",
+        # A double slash after the prefix, which doi.org redirects to the new
+        # DOI above with one slash, and blank or missing candidates. None of
+        # them changes the output.
+        "10.1037//0033-2909.99.1.20",
+        "",
+        " ",
+        NA,
+        NA
       )
       new_dois <- tf_new_evidence_dois(v1, new_evidence_candidates)
       write_raw(paste0(jsonlite::toJSON(new_dois, auto_unbox = FALSE, pretty = TRUE), "\n"),
                 file.path(out_dir, "panic-network-2026.new_evidence_dois.json"))
 
-      # bibliometric layer (P2)
+      # bibliometric layer (P2). The demo corpus keeps the name it was released
+      # under, which tf_example_names() lists, so the *.corpus.yaml loop below
+      # leaves it out, as in scripts/gen_golden.py.
       corpus <- tf_read_corpus(file.path(fixtures_dir, "panic-corpus.yaml"))
       cid <- corpus$id
       lm <- tf_litmap(corpus)

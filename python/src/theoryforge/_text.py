@@ -61,6 +61,9 @@ def normalise_words(s: str) -> str:
 # A DOI as Crossref matches one, with explicit ASCII classes: R's PCRE and
 # Python's re give \d, \S and \v different meanings.
 _DOI = re.compile(r"10\.[0-9]{4,9}/[^\x09-\x0d\x20]+")
+# Some APA DOIs are also registered with a double slash after the prefix
+# (10.1037//0033-2909.99.1.20), and doi.org redirects each to the DOI with one.
+_DOUBLE_SLASH = re.compile(r"^(10\.[0-9]{4,9})//")
 _PCT = re.compile(r"%[0-9a-f]{2}")
 _DOI_PREFIXES = ("https://doi.org/", "http://doi.org/", "https://dx.doi.org/", "http://dx.doi.org/", "doi:")
 
@@ -81,12 +84,13 @@ def find_doi(s: str) -> str | None:
     ``s`` is trimmed and lowercased (ASCII only, as the DOI Handbook
     prescribes), with every percent escape of a printable ASCII character
     decoded. The result is the first run that looks like a DOI, less any
-    trailing full stops, commas or semicolons. litmap keys a reference by it
-    (API_SPEC.md section 14), and since the prefix rule of ``normalise_doi`` is
-    left out, text without such a run gives None.
+    trailing full stops, commas or semicolons, with a double slash after the
+    prefix made single. litmap keys a reference by it (API_SPEC.md section 14),
+    and since the prefix rule of ``normalise_doi`` is left out, text without
+    such a run gives None.
     """
     m = _DOI.search(_prepared(s))
-    return m.group(0).rstrip(".,;") if m else None
+    return _DOUBLE_SLASH.sub(r"\1/", m.group(0).rstrip(".,;")) if m else None
 
 
 def normalise_doi(doi) -> str:

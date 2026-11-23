@@ -126,9 +126,9 @@ deterministic connected-component themes and co-citation, and warns when one the
 the linked keywords, which happens on real corpora. `litmap(corpus, method="simple_centres")`
 gives bounded co-word themes with their centrality, density and strategic-diagram quadrant
 instead, as the frozen OpenAlex corpus `openalex-panic-2026.corpus.yaml` shows. `landscape`
-maps a theory and its alternatives onto those themes, names the words behind each match and
-marks each theme under-theorised, covered or crowded by how many of the registered accounts
-address it.
+matches a theory and its alternatives against those themes word by word, names the words
+behind each match and marks each theme under-theorised, covered or crowded by how many of the
+registered accounts share a word with it.
 `lit_diagram` draws the co-occurrence, co-citation and theme-landscape views. Where a network
 connection is available, the `fetch_corpus` OpenAlex adapter retrieves a corpus.
 `new_evidence_dois` checks deterministically which candidate DOIs, from any search tool, a

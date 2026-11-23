@@ -65,8 +65,8 @@
       params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
     },
     {
-      id: "landscape", label: "Theory landscape", desc: "Map theory onto lit themes", corpus: true,
-      help: "Positions the theory and its alternatives against the corpus themes and names the words behind each match. A theme is under-theorised when none of the registered accounts addresses it, and crowded when two or more do, which calls for predictions that tell them apart.",
+      id: "landscape", label: "Theory landscape", desc: "Match theory words to lit themes", corpus: true,
+      help: "Matches the words of the theory's construct labels and of its alternatives against the keywords of the corpus themes, and names the words behind each match. A theme is under-theorised when none of the registered accounts shares a word with it, and crowded when two or more do. A shared word does not show that an account explains the theme.",
       params: [{ id: "min_link", label: "min_link", type: "number", default: 2, min: 1, max: 20, step: 1 }],
     },
   ];
@@ -387,7 +387,7 @@
     dossier: "The dossier gathers the rigour report, severity, test record, evidence, provenance and preregistration into one reviewer-facing document.",
     simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, causes, mediates) or down (decreases) in proportion to another, with one gain k for every coupling, and every construct decays towards zero at the damping rate. Moderates and associates couple nothing. All constructs start from the same value. The chart traces the values from the initial state, and the table below holds the numbers.",
     litmap: "The bundled corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked. A theme is a connected group of keywords, which separates this small designed corpus into four. On a real corpus, nearly every keyword joins one group, and the package warns that such themes are not informative.",
-    landscape: "The theory and its rivals are placed against the corpus themes by the words a theme's keywords share with the theory's construct labels, or with a rival's label and key constructs. Words of the theory's title, words most records carry and words such as theory or model do not count. Under-theorised fronts are themes that none of the registered accounts addresses. Crowded themes are addressed by two or more of them and call for predictions that discriminate between the accounts.",
+    landscape: "The theory and its rivals are matched against the corpus themes by the words a theme's keywords share with the theory's construct labels, or with a rival's label and key constructs. Words of the theory's title, words most records carry and words such as theory or model do not count. Under-theorised fronts are themes that share no word with any registered account, and crowded themes share a word with two or more of them. The match is lexical: it does not show that an account explains what a theme's records report, and a crowded theme may call for predictions that discriminate between its accounts without showing that they compete.",
   };
   const fmtNum = (x) => (typeof x === "number" ? (Number.isInteger(x) ? String(x) : x.toFixed(2)) : String(x));
   const plural = (n, w) => n + " " + w + (n === 1 ? "" : "s");

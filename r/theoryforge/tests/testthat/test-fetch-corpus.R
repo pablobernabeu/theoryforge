@@ -56,18 +56,39 @@ openalex_work <- function(i) {
   )
 }
 
-# Five works over cursor pages of two: the last page holds one work, and the
-# cursor after it gives an empty page with no further cursor, as OpenAlex does.
-openalex_pages <- list("*" = list(ids = 1:2, nxt = "c2"), c2 = list(ids = 3:4, nxt = "c3"),
-                       c3 = list(ids = 5L, nxt = "c4"), c4 = list(ids = integer(0), nxt = NULL))
+select <- "id,doi,title,publication_year,keywords,concepts,referenced_works"
+
+# Five works over pages of two, asked for by number or by cursor: the third page
+# holds one work and the fourth none, as OpenAlex gives them. A cursor page also
+# names the cursor of the next, and the empty page names none.
+openalex_pages <- list("1" = 1:2, "2" = 3:4, "3" = 5L, "4" = integer(0))
+openalex_cursors <- list("*" = list(page = "1", nxt = "c2"), c2 = list(page = "2", nxt = "c3"),
+                         c3 = list(page = "3", nxt = "c4"), c4 = list(page = "4", nxt = NULL))
 
 paged_answer <- function(url, headers) {
-  page <- openalex_pages[[query_param(url, "cursor")]]
+  number <- query_param(url, "page")
+  meta <- if (!is.null(number)) {
+    list(count = 5L, per_page = 2L, page = as.integer(number))
+  } else {
+    cursor <- openalex_cursors[[query_param(url, "cursor")]]
+    number <- cursor$page
+    list(count = 5L, per_page = 2L, next_cursor = cursor$nxt)
+  }
   list(status = 200L, body = as_json(list(
-    meta = list(count = 5L, per_page = 2L, next_cursor = page$nxt),
-    results = lapply(page$ids, openalex_work)
+    meta = meta, results = lapply(openalex_pages[[number]], openalex_work)
   )))
 }
+
+# The page number or cursor of each request, in order.
+pages_sent <- function(fake) {
+  vapply(fake$sent, function(s) {
+    number <- query_param(s$url, "page")
+    if (is.null(number)) query_param(s$url, "cursor") else number
+  }, character(1))
+}
+
+# A max_records whose pages, two works each, run past the first 10,000 results.
+beyond <- 10001
 
 # OPENALEX_API_KEY as it was, to restore after a test that sets or unsets it.
 restore_env_key <- function(old) {
@@ -198,19 +219,33 @@ test_that("the default is one request of per_page works", {
   expect_true(startsWith(url, "https://api.openalex.org/works?"))
   expect_identical(query_param(url, "search"), "panic")
   expect_identical(query_param(url, "per-page"), "2")
+  # select asks for the fields a record uses and no others.
+  expect_identical(query_param(url, "select"), select)
   expect_identical(query_param(url, "mailto"), "me@example.org")
-  expect_identical(query_param(url, "cursor"), "*")
+  expect_identical(query_param(url, "page"), "1")
+  expect_null(query_param(url, "cursor"))
 })
 
-test_that("cursor paging stops once max_records are collected", {
+test_that("an empty mailto is not sent", {
+  # Python skipped it, and R sent mailto= with nothing after it.
   fake <- fake_openalex(paged_answer)
   local_mocked_bindings(.tf_http = fake$http)
-  corpus <- tf_fetch_corpus("panic", per_page = 2, max_records = 3)
+  tf_fetch_corpus("panic", per_page = 2, mailto = "")
+  tf_fetch_corpus("panic", per_page = 2, mailto = NA_character_)
+  for (s in fake$sent) expect_null(query_param(s$url, "mailto"))
+})
+
+test_that("page numbers run until max_records are collected", {
+  # Pages by number need no key, and these lie within the first 10,000 results.
+  fake <- fake_openalex(paged_answer)
+  local_mocked_bindings(.tf_http = fake$http)
+  corpus <- tf_fetch_corpus("panic", per_page = 2, max_records = 3, api_key = NULL)
   # Two pages give four works, cut to three.
   expect_identical(vapply(corpus$records, function(r) r$id, ""),
                    sprintf("https://openalex.org/W%d", 1:3))
-  expect_identical(vapply(fake$sent, function(s) query_param(s$url, "cursor"), ""), c("*", "c2"))
+  expect_identical(pages_sent(fake), c("1", "2"))
   expect_identical(vapply(fake$sent, function(s) query_param(s$url, "per-page"), ""), c("2", "2"))
+  expect_identical(lapply(fake$sent, function(s) s$headers), list(NULL, NULL))
 
   fake <- fake_openalex(paged_answer)
   local_mocked_bindings(.tf_http = fake$http)
@@ -218,22 +253,115 @@ test_that("cursor paging stops once max_records are collected", {
   expect_length(fake$sent, 3L)
 })
 
-test_that("cursor paging stops at an empty page or without a cursor", {
+test_that("page numbers stop at an empty page", {
   fake <- fake_openalex(paged_answer)
   local_mocked_bindings(.tf_http = fake$http)
   corpus <- tf_fetch_corpus("panic", per_page = 2, max_records = 50)
   expect_identical(vapply(corpus$records, function(r) r$id, ""),
                    sprintf("https://openalex.org/W%d", 1:5))
-  expect_identical(vapply(fake$sent, function(s) query_param(s$url, "cursor"), ""),
-                   c("*", "c2", "c3", "c4"))
+  expect_identical(pages_sent(fake), c("1", "2", "3", "4"))
+})
+
+test_that("a cursor serves results beyond the first 10,000", {
+  fake <- fake_openalex(paged_answer)
+  local_mocked_bindings(.tf_http = fake$http)
+  corpus <- tf_fetch_corpus("panic", per_page = 2, max_records = beyond, api_key = "k")
+  expect_identical(vapply(corpus$records, function(r) r$id, ""),
+                   sprintf("https://openalex.org/W%d", 1:5))
+  expect_identical(pages_sent(fake), c("*", "c2", "c3", "c4"))
 
   # A page that gives no next cursor ends the run, whatever max_records asks for.
   fake <- fake_openalex(function(url, headers) {
     list(status = 200L, body = as_json(list(meta = list(count = 9L), results = list(openalex_work(1L)))))
   })
   local_mocked_bindings(.tf_http = fake$http)
-  expect_length(tf_fetch_corpus("panic", per_page = 2, max_records = 50)$records, 1L)
+  expect_length(tf_fetch_corpus("panic", per_page = 2, max_records = beyond)$records, 1L)
   expect_length(fake$sent, 1L)
+})
+
+test_that("page numbers are used while the pages lie within 10,000 results", {
+  # 1,428 pages of seven hold 9,996 results, and a 1,429th would run past
+  # 10,000, which OpenAlex refuses by number.
+  cases <- list(list(100, 10000, "page"), list(100, 10001, "cursor"), list(200, 10000, "page"),
+                list(7, 9996, "page"), list(7, 9997, "cursor"))
+  for (cs in cases) {
+    fake <- fake_openalex(function(url, headers) {
+      list(status = 200L, body = '{"meta": {"count": 0}, "results": []}')
+    })
+    local_mocked_bindings(.tf_http = fake$http)
+    tf_fetch_corpus("panic", per_page = cs[[1]], max_records = cs[[2]])
+    url <- fake$sent[[1L]]$url
+    expect_identical(c(page = !is.null(query_param(url, "page")),
+                       cursor = !is.null(query_param(url, "cursor"))),
+                     c(page = cs[[3]] == "page", cursor = cs[[3]] == "cursor"), info = cs[[2]])
+  }
+})
+
+# `answer` for the first request, and HTTP 401 for any later one.
+refuse_second <- function(answer) {
+  function(url, headers) {
+    if (identical(query_param(url, "page"), "1") || identical(query_param(url, "cursor"), "*")) {
+      return(answer(url, headers))
+    }
+    list(status = 401L, body = as_json(list(
+      error = "API key required for cursor paging",
+      message = "Paging past the first page with cursor= needs a free API key."
+    )))
+  }
+}
+
+test_that("a failed later page says how many records came before it", {
+  fake <- fake_openalex(refuse_second(paged_answer))
+  local_mocked_bindings(.tf_http = fake$http)
+  expect_identical(refusal(tf_fetch_corpus("panic", per_page = 2, max_records = beyond)),
+                   paste("OpenAlex request failed with HTTP 401: Paging past the first page with",
+                         "cursor= needs a free API key. (after 2 records were fetched)"))
+  expect_identical(pages_sent(fake), c("*", "c2"))
+
+  one_work <- function(url, headers) {
+    list(status = 200L, body = as_json(list(meta = list(count = 9L, next_cursor = "c2"),
+                                            results = list(openalex_work(1L)))))
+  }
+  fake <- fake_openalex(refuse_second(one_work))
+  local_mocked_bindings(.tf_http = fake$http)
+  msg <- refusal(tf_fetch_corpus("panic", per_page = 1, max_records = beyond))
+  expect_true(endsWith(msg, " (after 1 record was fetched)"))
+
+  # A later page without results, and a transport that fails, say so too.
+  fake <- fake_openalex(function(url, headers) {
+    if (identical(query_param(url, "page"), "1")) paged_answer(url, headers) else
+      list(status = 200L, body = '{"meta": {}}')
+  })
+  local_mocked_bindings(.tf_http = fake$http)
+  expect_identical(refusal(tf_fetch_corpus("panic", per_page = 2, max_records = 5)),
+                   "OpenAlex response has no results list (after 2 records were fetched)")
+  fake <- fake_openalex(function(url, headers) {
+    if (identical(query_param(url, "page"), "1")) paged_answer(url, headers) else
+      stop("cannot open the connection: Could not connect to server", call. = FALSE)
+  })
+  local_mocked_bindings(.tf_http = fake$http)
+  expect_identical(refusal(tf_fetch_corpus("panic", per_page = 2, max_records = 5)), paste(
+    "cannot open the connection: Could not connect to server (after 2 records were fetched)"))
+})
+
+test_that("a query that is not a non-empty string is refused", {
+  # R sent an empty search, and Python searched for "None".
+  fake <- fake_openalex(paged_answer)
+  local_mocked_bindings(.tf_http = fake$http)
+  for (bad in list(NULL, NA_character_, "", "   ", "\u00a0", 42, c("panic", "anxiety"),
+                   list("panic"))) {
+    expect_identical(refusal(tf_fetch_corpus(bad, per_page = 0)),
+                     "query must be a non-empty string")
+  }
+  expect_length(fake$sent, 0L)
+})
+
+test_that("an integral double per_page is read as its integer", {
+  fake <- fake_openalex(paged_answer)
+  local_mocked_bindings(.tf_http = fake$http)
+  corpus <- tf_fetch_corpus("panic", per_page = 2.0)
+  expect_identical(query_param(fake$sent[[1L]]$url, "per-page"), "2")
+  expect_identical(corpus$source$per_page, 2L)
 })
 
 test_that("the corpus records where and when it was fetched", {
@@ -265,6 +393,18 @@ test_that("the corpus records where and when it was fetched", {
   corpus <- tf_fetch_corpus("panic")
   expect_true("total_count" %in% names(corpus$source))
   expect_null(corpus$source$total_count)
+})
+
+test_that("a null title is left out of the record", {
+  # A null title failed the corpus schema, which types a title as a string.
+  fake <- fake_openalex(function(url, headers) {
+    work <- openalex_work(1L)
+    work["title"] <- list(NULL)
+    list(status = 200L, body = as_json(list(meta = list(count = 1L), results = list(work))))
+  })
+  local_mocked_bindings(.tf_http = fake$http)
+  record <- tf_fetch_corpus("panic")$records[[1L]]
+  expect_identical(names(record), c("id", "doi", "year", "keywords", "references"))
 })
 
 test_that("each record keeps its DOI as returned", {

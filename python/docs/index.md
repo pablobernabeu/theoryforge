@@ -43,7 +43,7 @@ t.check()                       # 12-item rigour checklist + gate
 t.severity()                    # pre-data severity rubric of claim form
 t.preregister()                 # hypotheses section of a preregistration
 corpus = tf.read_corpus(tf.example_path("panic-corpus.yaml"))
-t.landscape(corpus)             # themes by how many registered accounts address them
+t.landscape(corpus)             # themes by how many registered accounts share a word with them
 ```
 
 ## Author

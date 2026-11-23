@@ -78,6 +78,10 @@ NULL
 # re give \d, \S and \v different meanings.
 .tf_DOI_PATTERN <- "10\\.[0-9]{4,9}/[^\\x{09}-\\x{0D}\\x{20}]+"
 
+# Some APA DOIs are also registered with a double slash after the prefix
+# (10.1037//0033-2909.99.1.20), and doi.org redirects each to the DOI with one.
+.tf_DOI_DOUBLE_SLASH <- "^(10\\.[0-9]{4,9})//"
+
 .tf_DOI_PREFIXES <- c("https://doi.org/", "http://doi.org/", "https://dx.doi.org/",
                       "http://dx.doi.org/", "doi:")
 
@@ -103,35 +107,38 @@ NULL
 
 # The DOI in each element of `x`, a character vector without NA, in the form
 # .tf_normalize_doi() gives it. That is the first run of the prepared text that
-# looks like a DOI, less any trailing full stops, commas or semicolons.
-# tf_litmap() keys a reference by it (API_SPEC.md section 14). The prefix rule
-# of .tf_normalize_doi() is left out, so text without such a run gives NA. The
-# function is vectorised, as a corpus holds thousands of references. Mirrors
-# Python's _text.find_doi.
+# looks like a DOI, less any trailing full stops, commas or semicolons, with a
+# double slash after the prefix made single. tf_litmap() keys a reference by it
+# (API_SPEC.md section 14). The prefix rule of .tf_normalize_doi() is left out,
+# so text without such a run gives NA. The function is vectorised, as a corpus
+# holds thousands of references. Mirrors Python's _text.find_doi.
 .tf_find_doi <- function(x) {
   out <- rep(NA_character_, length(x))
   if (length(x) == 0L) return(out)
   d <- .tf_doi_prepared(x)
   pos <- regexpr(.tf_DOI_PATTERN, d, perl = TRUE)
   hit <- pos > 0L
-  out[hit] <- sub("[.,;]+$", "", regmatches(d, pos), perl = TRUE)
+  found <- sub("[.,;]+$", "", regmatches(d, pos), perl = TRUE)
+  out[hit] <- sub(.tf_DOI_DOUBLE_SLASH, "\\1/", found, perl = TRUE)
   out
 }
 
-# The form two DOIs are compared in (API_SPEC.md section 18): the DOI that
-# .tf_find_doi() finds in the text. Text with no such run is trimmed,
-# lowercased and percent-decoded, loses a known prefix, if it has one, and is
-# trimmed again. Mirrors Python's _text.normalise_doi.
-.tf_normalize_doi <- function(doi) {
-  if (is.null(doi) || length(doi) == 0L || is.na(doi)) doi <- ""
-  doi <- as.character(doi)
-  found <- .tf_find_doi(doi)
-  if (!is.na(found)) return(found)
-  d <- .tf_doi_prepared(doi)
+# The form two DOIs are compared in (API_SPEC.md section 18), for each element
+# of `x`, a character vector without NA: the DOI that .tf_find_doi() finds in
+# the text. Text with no such run is trimmed, lowercased and percent-decoded,
+# loses the first known prefix it starts with, if any, and is trimmed again.
+# Mirrors Python's _text.normalise_doi.
+.tf_normalize_doi <- function(x) {
+  out <- .tf_find_doi(x)
+  rest <- which(is.na(out))
+  if (length(rest) == 0L) return(out)
+  d <- .tf_doi_prepared(x[rest])
+  open <- rep(TRUE, length(d))
   for (prefix in .tf_DOI_PREFIXES) {
-    if (startsWith(d, prefix)) {
-      return(.tf_trim(substr(d, nchar(prefix) + 1L, nchar(d))))
-    }
+    hit <- open & startsWith(d, prefix)
+    d[hit] <- .tf_trim(substring(d[hit], nchar(prefix) + 1L))
+    open <- open & !hit
   }
-  d
+  out[rest] <- d
+  out
 }

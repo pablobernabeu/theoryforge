@@ -65,12 +65,13 @@ connected-component themes and co-citation, and warns when one theme holds most 
 keywords, which happens on real corpora. Its `simple_centres` method, the co-word clustering of
 Coulter et al. (1998) and Cobo et al. (2011), gives bounded themes with their centrality,
 density and strategic-diagram quadrant instead. Both packages include a frozen 150-record
-OpenAlex corpus that shows the difference. `landscape` then maps a theory and its alternatives
-onto those themes, names the words behind each match and marks each theme under-theorised,
-covered or crowded by how many of the registered accounts address it. Three literature
-diagrams draw those maps. The `fetch_corpus` adapter, the one part of this layer that needs a
-network connection, assembles a corpus from OpenAlex. `new_evidence_dois` checks
-deterministically which candidate DOIs, from any search tool, a theory does not yet cite.
+OpenAlex corpus that shows the difference. `landscape` then matches a theory and its
+alternatives against those themes word by word, names the words behind each match and marks
+each theme under-theorised, covered or crowded by how many of the registered accounts share a
+word with it. Three literature diagrams draw those maps. The `fetch_corpus` adapter, the one
+part of this layer that needs a network connection, assembles a corpus from OpenAlex.
+`new_evidence_dois` checks deterministically which candidate DOIs, from any search tool, a
+theory does not yet cite.
 
 The remaining functions cover analysis, review and deposit. `implications` reads the
 propositions as a causal graph, the directed relations as arrows and associations as

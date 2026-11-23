@@ -38,7 +38,52 @@ version and a single behavioural contract
 - R's `tf_diagram()` keeps every space at the end of a label, title, scope condition or
   provenance detail, where it dropped one and so wrote different DOT from Python's.
 
+### Changed results
+- With `method="simple_centres"`, a theme is high on centrality or density only when its
+  value lies above the median, where a value at the median counted as high, and `quadrant`
+  is null when every theme has the same value of either measure. A theme with centrality 0
+  was central, `motor` or `basic`, when the median centrality was 0, and is now never
+  central. The four unlinked themes of the demo corpus have no quadrant, and two themes of
+  the frozen OpenAlex corpus move, one from `basic` to `emerging_or_declining` and one from
+  `motor` to `basic`.
+- `landscape()` counts an alternative id that the theory repeats as one account, where two
+  entries with one id made a theme crowded.
+- `litmap()` and `landscape()` give the giant-theme warning only for a map of ten or more
+  linked keywords, so a corpus whose only link is one pair no longer warns.
+- The DOI normaliser makes a double slash after the prefix single, as in
+  `10.1037//0033-2909.99.1.20`, which doi.org redirects to the DOI with one slash.
+  `new_evidence_dois()` and the co-citation map of `litmap()` read the two forms as one
+  work.
+- `new_evidence_dois()` skips a candidate that is not a string or holds only whitespace.
+  Python returned the float NaN that pandas gives a missing DOI as a new DOI. Python also
+  reads a single string as one candidate, as R does, where it read each of its characters.
+- `fetch_corpus()` asks for pages by number, which OpenAlex serves without a key, while the
+  pages it needs lie within the first 10,000 results, and pages through a cursor, which needs
+  a key past the first page, only beyond them. A `max_records` above `per_page` needed a key.
+- `fetch_corpus()` leaves out a null title, which made the record fail
+  `corpus.schema.json`, and asks OpenAlex with `select=` for only the fields a record maps.
+
+### Added
+- `litmap()` gains `min_df`, the fewest records a keyword must be in to enter the
+  simple-centres map, so that rare keywords cannot seed a theme. Its default of 1 leaves the
+  map as it was, and `parameters` records it.
+
+### Fixed
+- `fetch_corpus()` refuses a `query` that is not a single string with a character left after
+  trimming, with `query must be a non-empty string`, where Python searched for `None` and R
+  sent an empty search. Python accepts an integral float `per_page`, as R does, and R no
+  longer sends `mailto=` with an empty `mailto`, as Python does not.
+- When a page after the first fails, the message of `fetch_corpus()` ends with the number of
+  records fetched before it.
+- R's `tf_new_evidence_dois()` normalises its candidates in one vectorised call, where it
+  grew its vectors and searched them one candidate at a time.
+
 ### Documentation
+- The landscape's documentation, in both packages, the specification, both literature guides
+  and the apps, says that its statuses count accounts that share a word with a theme and
+  what such a match does not establish. The guides no longer say that the layer shows which
+  questions are crowded, nor contrast capitalised concepts with lower-case keywords, since
+  OpenAlex keywords include capitalised names.
 - R's `?tf_dossier`, the Python dossier module, the Python README, home page and workflow
   page and the code the apps show for `preregister()` call its output the hypotheses
   section of a preregistration, as the rest of the 0.7.0 documentation does, where they

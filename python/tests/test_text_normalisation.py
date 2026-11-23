@@ -118,8 +118,6 @@ def test_identical_cyrillic_definitions_are_flagged():
                                      "flag": "review"}]
 
 
-# The corpus forms one theme, so landscape warns that it holds every linked keyword.
-@pytest.mark.filterwarnings("ignore:litmap:UserWarning")
 def test_an_accented_word_no_longer_matches_its_tail():
     corpus = {"schema_version": "1.0", "id": "c", "records": [
         {"id": "r1", "keywords": ["motion perception", "visual motion"]},

@@ -1,20 +1,22 @@
 # The literature layer
 
 Before claiming that a construct or proposition adds something new, an author
-needs a view of the field that their theory enters: which questions are already
-crowded, which fronts are thin and where the proposed theory overlaps with
-existing accounts. The literature layer in `theoryforge` provides that view
-from a corpus of records. Its computations are deterministic, so the same
-corpus always yields the same map.
+needs a view of the field that their theory enters. The literature layer in
+`theoryforge` summarises a corpus of records by the keywords that occur
+together, the themes those keywords form and the works cited together. It then
+lists the themes whose keywords share a word with the theory's constructs or
+with the alternatives the theory registers. Its computations are deterministic,
+so the same corpus always yields the same map.
 
 This layer comprises four entry points. `tf.read_corpus` loads a corpus
 from disk. `tf.litmap` summarises the corpus through keyword
-co-occurrence, themes and co-citation. `Theory.landscape` positions a
-theory and its registered alternatives against those themes. `tf.lit_diagram`
-exports any of these structures as Graphviz DOT. Two further functions are
-described towards the end. `tf.fetch_corpus` builds a corpus from the OpenAlex
-API, and is optional and network-dependent. `tf.new_evidence_dois` checks a
-list of candidate DOIs against the sources a theory already cites.
+co-occurrence, themes and co-citation. `Theory.landscape` matches the words
+of a theory and its registered alternatives against those themes.
+`tf.lit_diagram` exports any of these structures as Graphviz DOT. Two further
+functions are described towards the end. `tf.fetch_corpus` builds a corpus
+from the OpenAlex API, and is optional and network-dependent.
+`tf.new_evidence_dois` checks a list of candidate DOIs against the sources a
+theory already cites.
 
 ## Reading a corpus
 
@@ -105,25 +107,27 @@ Connected components suit this fixture, built to fall into four separate
 themes. On a real corpus, one or a few keywords that most records carry, such
 as the name of the field, link nearly every keyword to every other, so a single
 component holds the map. Seven OpenAlex corpora of 100 to 600 records each gave
-a largest theme holding at least 98.8 per cent of the linked keywords. When one
-theme holds more than half of them, `litmap` warns that the themes, and any
-landscape built on them, are not informative. The map itself is returned
-unchanged. Below, one keyword shared by two pairs joins them into one theme.
+a largest theme holding at least 98.8 per cent of the linked keywords. When the
+map links ten or more keywords and one theme holds more than half of them,
+`litmap` warns that the themes, and any landscape built on them, are not
+informative. A smaller map, such as a single pair, can be one theme
+legitimately and gives no warning. The map itself is returned unchanged.
+Below, one keyword that every record carries joins nine others into one theme.
 
 ```python exec="1" source="block" result="text" session="literature"
 import warnings
 
+others = ["arousal", "avoidance", "catastrophising", "exposure", "heart rate",
+          "interoception", "safety behaviour", "sleep", "worry"]
 hub = {"schema_version": "1.0", "id": "hub", "records": [
-    {"id": "w1", "keywords": ["anxiety", "arousal"]},
-    {"id": "w2", "keywords": ["anxiety", "arousal"]},
-    {"id": "w3", "keywords": ["anxiety", "avoidance"]},
-    {"id": "w4", "keywords": ["anxiety", "avoidance"]},
+    {"id": f"w{i}", "keywords": ["anxiety", keyword]}
+    for i, keyword in enumerate(others * 2, start=1)
 ]}
 with warnings.catch_warnings(record=True) as caught:
     warnings.simplefilter("always")
     hub_map = tf.litmap(hub)
 
-print("themes:", hub_map["themes"])
+print("theme sizes:", [theme["size"] for theme in hub_map["themes"]])
 print(caught[0].message)
 ```
 
@@ -180,6 +184,11 @@ joins none. On the real corpus below, about two in five linked keywords end up
 in no theme. Themes smaller than `min_theme_size`, two by default, are dropped.
 `max_df` leaves out the keywords held by more than that share of the records
 and lists them as `field_terms`. At its default of 1, it leaves out none.
+`min_df` leaves out the keywords held by fewer than that many records, without
+listing them. Two keywords that occur once, in the same record, have the
+highest index there is, so at `min_link=1` they start a theme before any other
+link. `min_df=2` leaves such keywords out, and the default of 1 leaves out
+none.
 
 On the designed fixture, simple centres find the same four themes as
 components. The package also includes a real corpus, frozen so that its results
@@ -209,20 +218,25 @@ summed index of the theme's links to the keywords of other themes, and says
 how strongly the theme is tied to the rest of the field. Density is 100 times the
 summed index of its internal links, divided by its size, and says how strongly
 the theme holds together. Splitting each measure at its median places the
-theme in one quadrant of the strategic diagram. Motor themes are both central
-and dense, basic themes central but not dense, niche themes dense but
-peripheral, and the rest `emerging_or_declining`. Telling an emerging theme
-from a declining one needs corpora from more than one period. The result also
-gains `method`, the five `parameters` used and `field_terms`.
+theme in one quadrant of the strategic diagram, and a theme counts as high on
+a measure only when its value lies above the median. A theme at the median is
+low, and a theme with centrality 0 is never central. Motor themes are both
+central and dense, basic themes central but not dense, niche themes dense but
+peripheral, and the rest `emerging_or_declining`. When every theme has the same
+centrality, or the same density, the median cannot split them, and the
+quadrant is `None`. The four themes of the designed fixture, none linked to
+another, are such a case. Telling an emerging theme from a declining one needs
+corpora from more than one period. The result also gains `method`, the six
+`parameters` used and `field_terms`.
 
 Components remain the default for this release, and the default is planned to
 become simple centres in the next minor release.
 
 ## Positioning a theory against the field
 
-`Theory.landscape` takes the themes from `litmap` and places a theory on
-them. A theme is matched by the words its keywords share with the focal
-theory's construct labels, or with the label and key constructs of a
+`Theory.landscape` takes the themes from `litmap` and matches a theory against
+them word by word. A theme is matched by the words its keywords share with the
+focal theory's construct labels, or with the label and key constructs of a
 registered alternative, and the result names those words. Three kinds of word
 never match. Field tokens, the words most of the corpus shares, are those in
 the keywords of more than `max_token_share` of the records, half by default.
@@ -232,9 +246,9 @@ that also appears in the title is a phenomenon token too, so give the theory a
 title that names its phenomenon. The third kind is a fixed list of words that
 name a kind of account: theory, model, account, hypothesis, framework and
 approach, with their plurals. One shared word is enough for a match. A theme
-that none of the registered accounts addresses is under-theorised, one that a
-single account addresses is covered and one that two or more address is
-crowded.
+that none of the registered accounts matches is under-theorised, one that a
+single account matches is covered and one that two or more match is crowded.
+An alternative id that the theory repeats counts as one account.
 
 ```python exec="1" source="block" result="text" session="literature"
 t = tf.read(tf.example_path("panic-network.theory.yaml"))
@@ -250,26 +264,28 @@ print("crowded themes:", ls["redundancy_risk"])
 ```
 
 Each entry in `ls["themes"]` reports the theme `id`, its `keywords`, the
-`alternatives` that map onto it, whether the focal theory is `focal` on it and
-a `status` of `under_theorised`, `covered` or `crowded`. The words behind each
+`alternatives` that match it, whether the focal theory is `focal` on it and a
+`status` of `under_theorised`, `covered` or `crowded`. The words behind each
 match are in `focal_terms` and in `alternative_terms`, which holds one
-`{id, terms}` entry per alternative that maps onto the theme.
+`{id, terms}` entry per alternative that matches the theme.
 
-The statuses count the registered accounts only, so an account the theory does
-not register may still address an under-theorised theme. A crowded theme calls
-for predictions that discriminate between its accounts, and does not show that
-any of them is redundant. `under_theorised_fronts` lists the ids of the
-under-theorised themes, and `redundancy_risk`, despite its name, the ids of the
-crowded ones.
+The match is lexical. It shows that an account and a theme have a word in
+common, and does not show that the account explains what the theme's records
+report. The statuses count the matching accounts only, so an account the
+theory does not register, or one that names the same idea in other words, may
+still address an under-theorised theme. A crowded theme may call for
+predictions that discriminate between its accounts, and does not show that
+they compete or that any of them is redundant. `under_theorised_fronts` lists
+the ids of the under-theorised themes, and `redundancy_risk`, despite its name,
+the ids of the crowded ones.
 
 The same function is available at module level as `tf.landscape(theory,
 corpus)`, where `theory` may be a `Theory` object or a plain dictionary. The
 `min_link` argument is passed through to the underlying `litmap` call, which
 skips the co-citation count. `method` chooses how `litmap` builds the themes.
 With `"simple_centres"`, the result gains `method` after `theory_id`, and each
-theme keeps its `centrality`, `density` and `quadrant`. A front that none of
-the accounts addresses can then be read with its place in the strategic
-diagram.
+theme keeps its `centrality`, `density` and `quadrant`. A theme that no account
+matches can then be read with its place in the strategic diagram.
 
 ```python exec="1" source="block" result="text" session="literature"
 ls = tf.landscape(t, corpus, min_link=2, max_token_share=0.5)
@@ -327,7 +343,7 @@ print(tf.lit_diagram(m, type="co_citation", max_edges=1))
 ```
 
 The theme landscape is a directed graph. It links the focal theory and its
-registered alternatives to the themes each of them addresses and labels every
+registered alternatives to the themes each of them matches and labels every
 theme node with its status.
 
 ```python exec="1" source="block" result="text" session="literature"
@@ -358,8 +374,7 @@ assemble a starting corpus, then save the result and work from the saved file
 so that later analysis stays reproducible.
 
 ```python
-# Paging past the first page needs an OpenAlex API key, read here from the
-# OPENALEX_API_KEY environment variable.
+# Four pages of 100 lie within the first 10,000 results, so no key is needed.
 corpus = tf.fetch_corpus(
     "panic disorder theory",
     per_page=100,
@@ -375,18 +390,22 @@ the `OPENALEX_API_KEY` environment variable, or pass it as `api_key`, and
 `fetch_corpus` sends it in a request header, never in the URL or the corpus.
 The `mailto` argument is still accepted, but OpenAlex now ignores it.
 
-Without a key, OpenAlex serves only the first page of a search and rejects a
-request for the next with HTTP 401, so a `max_records` above `per_page` needs a
-key. The other usual rejection is HTTP 429, sent once the budget is spent. On
-any rejection, `fetch_corpus` raises `theoryforge.lit.OpenAlexHTTPError`, a
-subclass of `urllib.error.HTTPError`, with the status and OpenAlex's message.
-
 Each request returns one page of works, ranked by relevance, from a result set
 that is usually far larger. A search for panic disorder matched about 187,000
 works in October 2026. OpenAlex supports pages of up to 100 works and has
 deprecated larger ones, although it still accepts 200. `max_records` pages on
-through OpenAlex's cursor, with an API key, until that many works are
-collected.
+until that many works are collected. OpenAlex serves the first 10,000 results
+of a search by page number, without a key, and `fetch_corpus` asks for pages
+by number while the pages it needs lie within them. Beyond 10,000 results,
+OpenAlex serves pages only through a cursor, and only with a key past the
+first page. Without one, it rejects the second page with HTTP 401. The other
+usual rejection is HTTP 429, sent once the budget is spent. On any rejection,
+`fetch_corpus` raises `theoryforge.lit.OpenAlexHTTPError`, a subclass of
+`urllib.error.HTTPError`, with the status and OpenAlex's message. When a page
+after the first fails, the works fetched before it are not returned, and the
+message ends with the number of them, as in `(after 200 records were
+fetched)`. A work whose title is null is kept without a `title`, since the
+corpus schema types a title as a string.
 
 `corpus["source"]` records the query, the UTC time of retrieval, the number of
 works that matched and the number kept. That record matters because the
@@ -394,9 +413,11 @@ keywords change. Since late September 2026, OpenAlex has written each work's
 keywords with a language model that reads its title, abstract and venue. It
 merges and splits that vocabulary over time, so the same works fetched a week
 apart can carry different keywords. Works left without keywords fall back to
-their concepts, a deprecated vocabulary whose capitalised names do not match
-the lower-case keywords. Each corpus record also keeps the work's DOI as
-OpenAlex gives it.
+their concepts, a deprecated vocabulary of its own. `litmap` compares keywords
+as exact strings, so a concept matches a keyword only where the two
+vocabularies write a term alike, which the concept 'Panic disorder' and the
+keyword 'panic disorder' do not. Each corpus record also keeps the work's DOI
+as OpenAlex gives it.
 
 The returned mapping has the same shape as a corpus read from disk and can be
 passed to `litmap` and `landscape` without further change.
@@ -428,8 +449,12 @@ The comparison is on a normalised form of each DOI, the DOI itself found
 wherever it sits in the text, lower-cased and percent-decoded. A plain DOI, a
 resolvable URL and the forms `doi: 10...` and `DOI 10...` for the same work are
 therefore recognised as the same source, and a trailing full stop is ignored.
-The function itself has no network dependency, and the search is left to
-whichever tool supplies the candidate list.
+Some APA DOIs are also registered with a double slash after the prefix, as in
+`10.1037//0033-2909.99.1.20`, and doi.org redirects each to the DOI with one,
+so the two forms are the same source too. A candidate that is not a string,
+such as the `NaN` that pandas gives a missing DOI, is skipped. The function
+itself has no network dependency, and the search is left to whichever tool
+supplies the candidate list.
 
 ### Combining it with scopusflow-py
 

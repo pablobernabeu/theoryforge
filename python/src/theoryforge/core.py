@@ -1039,7 +1039,7 @@ class Theory:
 
     def landscape(self, corpus, min_link: int = 2, max_token_share: float = 0.5,
                   method: str = "components") -> dict:
-        """Map this theory and its alternatives onto a literature corpus's themes.
+        """Match the words of this theory and its alternatives against a corpus's themes.
 
         See ``theoryforge.landscape`` for the matching rules, statuses and methods.
         """

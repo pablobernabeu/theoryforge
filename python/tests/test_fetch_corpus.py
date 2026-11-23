@@ -81,15 +81,33 @@ def _work(i: int) -> dict:
     }
 
 
-# Five works over cursor pages of two: the last page holds one work, and the
-# cursor after it gives an empty page with no further cursor, as OpenAlex does.
-_PAGES = {"*": ([1, 2], "c2"), "c2": ([3, 4], "c3"), "c3": ([5], "c4"), "c4": ([], None)}
+SELECT = "id,doi,title,publication_year,keywords,concepts,referenced_works"
+
+# Five works over pages of two, asked for by number or by cursor: the third page
+# holds one work and the fourth none, as OpenAlex gives them. A cursor page also
+# names the cursor of the next, and the empty page names none.
+_PAGES = {"1": [1, 2], "2": [3, 4], "3": [5], "4": []}
+_CURSORS = {"*": ("1", "c2"), "c2": ("2", "c3"), "c3": ("3", "c4"), "c4": ("4", None)}
 
 
 def _paged(request):
-    ids, nxt = _PAGES[_query(request)["cursor"][0]]
-    return 200, {"meta": {"count": 5, "per_page": 2, "next_cursor": nxt},
-                 "results": [_work(i) for i in ids]}
+    query = _query(request)
+    if "page" in query:
+        number = query["page"][0]
+        meta = {"count": 5, "per_page": 2, "page": int(number)}
+    else:
+        number, nxt = _CURSORS[query["cursor"][0]]
+        meta = {"count": 5, "per_page": 2, "next_cursor": nxt}
+    return 200, {"meta": meta, "results": [_work(i) for i in _PAGES[number]]}
+
+
+def _pages(fake) -> list:
+    """The page number or cursor of each request, in order."""
+    return [(_query(r).get("page") or _query(r)["cursor"])[0] for r in fake.requests]
+
+
+# A max_records whose pages, two works each, run past the first 10,000 results.
+BEYOND = 10_001
 
 
 @pytest.fixture
@@ -172,18 +190,27 @@ def test_the_default_is_one_request_of_per_page_works(monkeypatch, no_env_key):
     assert len(fake.requests) == 1
     assert [r["id"] for r in corpus["records"]] == ["https://openalex.org/W1", "https://openalex.org/W2"]
     query = _query(fake.requests[0])
-    assert query == {"search": ["panic"], "per-page": ["2"], "mailto": ["me@example.org"],
-                     "cursor": ["*"]}
+    # select asks for the fields a record uses and no others.
+    assert query == {"search": ["panic"], "per-page": ["2"], "select": [SELECT],
+                     "mailto": ["me@example.org"], "page": ["1"]}
     assert fake.timeouts == [30]
 
 
-def test_cursor_paging_stops_once_max_records_are_collected(monkeypatch, no_env_key):
+def test_an_empty_mailto_is_not_sent(monkeypatch, no_env_key):
+    fake = _install(monkeypatch, _paged)
+    tf.fetch_corpus("panic", per_page=2, mailto="")
+    assert "mailto" not in _query(fake.requests[0])
+
+
+def test_page_numbers_run_until_max_records_are_collected(monkeypatch, no_env_key):
+    # Pages by number need no key, and these lie within the first 10,000 results.
     fake = _install(monkeypatch, _paged)
     corpus = tf.fetch_corpus("panic", per_page=2, max_records=3)
     # Two pages give four works, cut to three.
     assert [r["id"] for r in corpus["records"]] == [f"https://openalex.org/W{i}" for i in (1, 2, 3)]
-    assert [_query(r)["cursor"] for r in fake.requests] == [["*"], ["c2"]]
+    assert _pages(fake) == ["1", "2"]
     assert all(_query(r)["per-page"] == ["2"] for r in fake.requests)
+    assert all(r.get_header("Authorization") is None for r in fake.requests)
 
     fake = _install(monkeypatch, _paged)
     corpus = tf.fetch_corpus("panic", per_page=2, max_records=5)
@@ -191,17 +218,108 @@ def test_cursor_paging_stops_once_max_records_are_collected(monkeypatch, no_env_
     assert len(fake.requests) == 3
 
 
-def test_cursor_paging_stops_at_an_empty_page_or_without_a_cursor(monkeypatch, no_env_key):
+def test_page_numbers_stop_at_an_empty_page(monkeypatch, no_env_key):
     fake = _install(monkeypatch, _paged)
     corpus = tf.fetch_corpus("panic", per_page=2, max_records=50)
     assert [r["id"] for r in corpus["records"]] == [f"https://openalex.org/W{i}" for i in range(1, 6)]
-    assert [_query(r)["cursor"] for r in fake.requests] == [["*"], ["c2"], ["c3"], ["c4"]]
+    assert _pages(fake) == ["1", "2", "3", "4"]
+
+
+def test_a_cursor_serves_results_beyond_the_first_10000(monkeypatch, no_env_key):
+    fake = _install(monkeypatch, _paged)
+    corpus = tf.fetch_corpus("panic", per_page=2, max_records=BEYOND, api_key="k")
+    assert [r["id"] for r in corpus["records"]] == [f"https://openalex.org/W{i}" for i in range(1, 6)]
+    assert _pages(fake) == ["*", "c2", "c3", "c4"]
 
     # A page that gives no next cursor ends the run, whatever max_records asks for.
     fake = _install(monkeypatch, lambda r: (200, {"meta": {"count": 9}, "results": [_work(1)]}))
-    corpus = tf.fetch_corpus("panic", per_page=2, max_records=50)
+    corpus = tf.fetch_corpus("panic", per_page=2, max_records=BEYOND)
     assert len(corpus["records"]) == 1
     assert len(fake.requests) == 1
+
+
+@pytest.mark.parametrize("per_page, max_records, first", [
+    (100, 10_000, "page"), (100, 10_001, "cursor"), (200, 10_000, "page"),
+    # 1,428 pages of seven hold 9,996 results, and a 1,429th would run past
+    # 10,000, which OpenAlex refuses by number.
+    (7, 9_996, "page"), (7, 9_997, "cursor"),
+])
+def test_page_numbers_are_used_while_the_pages_lie_within_10000_results(
+        monkeypatch, no_env_key, per_page, max_records, first):
+    fake = _install(monkeypatch, lambda r: (200, {"meta": {"count": 0}, "results": []}))
+    tf.fetch_corpus("panic", per_page=per_page, max_records=max_records)
+    assert set(_query(fake.requests[0])) & {"page", "cursor"} == {first}
+
+
+def _refuse_second(answer):
+    """``answer`` for the first request, and HTTP 401 for any later one."""
+    def respond(request):
+        query = _query(request)
+        if query.get("page", query.get("cursor")) in (["1"], ["*"]):
+            return answer(request)
+        return 401, {"error": "API key required for cursor paging",
+                     "message": "Paging past the first page with cursor= needs a free API key."}
+    return respond
+
+
+def test_a_failed_later_page_says_how_many_records_came_before_it(monkeypatch, no_env_key):
+    fake = _install(monkeypatch, _refuse_second(_paged))
+    with pytest.raises(lit.OpenAlexHTTPError) as exc:
+        tf.fetch_corpus("panic", per_page=2, max_records=BEYOND)
+    assert str(exc.value) == ("OpenAlex request failed with HTTP 401: Paging past the first page "
+                              "with cursor= needs a free API key. (after 2 records were fetched)")
+    assert exc.value.code == 401
+    assert json.loads(exc.value.read())["error"] == "API key required for cursor paging"
+    assert _pages(fake) == ["*", "c2"]
+
+    def one_work(request):
+        return 200, {"meta": {"count": 9, "next_cursor": "c2"}, "results": [_work(1)]}
+
+    _install(monkeypatch, _refuse_second(one_work))
+    with pytest.raises(lit.OpenAlexHTTPError) as exc:
+        tf.fetch_corpus("panic", per_page=1, max_records=BEYOND)
+    assert str(exc.value).endswith(" (after 1 record was fetched)")
+
+
+@pytest.mark.parametrize("failure, kind, message", [
+    ((200, {"meta": {}}), ValueError,
+     "OpenAlex response has no results list (after 2 records were fetched)"),
+    (urllib.error.URLError("[Errno 111] Connection refused"), urllib.error.URLError,
+     "<urlopen error [Errno 111] Connection refused (after 2 records were fetched)>"),
+    (TimeoutError("The read operation timed out"), TimeoutError,
+     "The read operation timed out (after 2 records were fetched)"),
+])
+def test_every_failure_of_a_later_page_keeps_its_class(monkeypatch, no_env_key,
+                                                         failure, kind, message):
+    def answer(request):
+        if _query(request)["page"] == ["1"]:
+            return _paged(request)
+        if isinstance(failure, Exception):
+            raise failure
+        return failure
+
+    _install(monkeypatch, answer)
+    with pytest.raises(kind) as exc:
+        tf.fetch_corpus("panic", per_page=2, max_records=5)
+    assert str(exc.value) == message
+
+
+@pytest.mark.parametrize("bad", [None, "", "   ", "\u00a0", 42, ["panic"]])
+def test_a_query_that_is_not_a_non_empty_string_is_refused(monkeypatch, no_env_key, bad):
+    # Python searched for "None", and R sent an empty search.
+    fake = _install(monkeypatch, _paged)
+    with pytest.raises(ValueError) as exc:
+        tf.fetch_corpus(bad, per_page=0)
+    assert str(exc.value) == "query must be a non-empty string"
+    assert fake.requests == []
+
+
+def test_an_integral_float_per_page_is_read_as_its_integer(monkeypatch, no_env_key):
+    fake = _install(monkeypatch, _paged)
+    corpus = tf.fetch_corpus("panic", per_page=2.0)
+    assert _query(fake.requests[0])["per-page"] == ["2"]
+    assert corpus["source"]["per_page"] == 2
+    assert isinstance(corpus["source"]["per_page"], int)
 
 
 def test_the_corpus_records_where_and_when_it_was_fetched(monkeypatch, no_env_key):
@@ -229,6 +347,24 @@ def test_the_corpus_records_where_and_when_it_was_fetched(monkeypatch, no_env_ke
 def test_a_missing_count_is_recorded_as_null(monkeypatch, no_env_key):
     _install(monkeypatch, lambda r: (200, {"results": [_work(1)]}))
     assert tf.fetch_corpus("panic")["source"]["total_count"] is None
+
+
+def test_a_null_title_is_left_out_of_the_record(monkeypatch, no_env_key):
+    # A null title failed the corpus schema, which types a title as a string.
+    def answer(request):
+        return 200, {"meta": {"count": 1}, "results": [{**_work(1), "title": None}]}
+
+    _install(monkeypatch, answer)
+    corpus = tf.fetch_corpus("panic")
+    assert list(corpus["records"][0]) == ["id", "doi", "year", "keywords", "references"]
+    jsonschema = pytest.importorskip("jsonschema")
+    if not hasattr(jsonschema, "Draft202012Validator"):
+        pytest.skip("Draft 2020-12 needs jsonschema 4.0 or later")
+    from importlib.resources import files
+
+    schema = json.loads((files("theoryforge") / "schema" / "corpus.schema.json")
+                        .read_text(encoding="utf-8"))
+    jsonschema.Draft202012Validator(schema).validate(corpus)
 
 
 def test_each_record_keeps_its_doi_as_returned(monkeypatch, no_env_key):
