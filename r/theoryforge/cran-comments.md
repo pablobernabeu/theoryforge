@@ -1,57 +1,41 @@
 ## Submission
 
-This is an update from theoryforge 0.6.0, which CRAN published on 2026-09-01,
-to 0.7.0.
+This is a patch release of theoryforge 0.7.0, which CRAN published on
+2026-11-22. It corrects the test that failed in the noLD additional check of
+0.7.0.
 
-0.7.0 changes results and interfaces. tf_check() and every report score a
-theory against version 2.0 of the package's rigour checklist, so the same
-theory can get a different score and status. Other functions return different
-values for the same input (tf_implications(), tf_compile_sem() and the
-causal_dag view of tf_diagram() among them), some input that 0.6.0 accepted is
-refused and some functions stop with an error where they returned output. The
-package also requires yaml 2.3.8 or later. NEWS.md lists each of these changes
-under 'Upgrading from the previous release (0.6.0)', in three parts: 'Changed
-results', 'Changed interface' and 'Changed output'.
-
-In a Latin-9 locale (en_US.iso885915), with NOT_CRAN unset, three tests of
-0.6.0 fail in a local R CMD check under R 4.3.3, because they compare the
-package's UTF-8 output with text read in the session's charset. The output
-itself is correct. The tests of 0.7.0 mark that text as UTF-8 and pass in that
-locale.
+The test compared the mean of three severities with the constant
+0.49999999999999994. R built without long double reads that literal as 0.5,
+because its parser accumulates the digits in a double, so the test failed
+although the mean had the expected value. The test now writes the constant as
+0.5 - 2^-54, which every build computes exactly. The package's code is
+unchanged. The release also carries two corrections of the documentation,
+listed in NEWS.md.
 
 ## R CMD check results
 
-0 errors | 0 warnings | 0 notes
+0 errors | 0 warnings | 1 note
+
+* checking CRAN incoming feasibility ... NOTE
+  Possibly misspelled words in DESCRIPTION: checkable, independencies
+
+  Both are words, used in their ordinary sense, and DESCRIPTION is the same
+  as in 0.7.0. A submission within a week of 0.7.0 will also show 'Days since
+  last update', since this release is the correction CRAN asked for.
 
 ## Test environments
 
-GitHub Actions, run 44941094268 on 2026-11-21, at commit 743e9e6, which holds
-the package as submitted. Each leg built the tarball and ran
-`R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
-which r-lib/actions turns off. Each leg ended with 'Status: OK':
+* R-devel (2026-11-23 r90966) configured with --disable-long-double, as for
+  the noLD check, on x86_64 Linux: `R CMD check --as-cran --no-manual
+  --ignore-vignettes`, Status: OK, with 3586 expectations met and none
+  failed. The vignettes were left out because this build has no cairo for
+  their SVG figures, and ggm, which needs Bioconductor, was not installed, so
+  its tests skipped. The same build reproduces the failure of 0.7.0 exactly.
+* R 4.3.3 on x86_64 Linux (Ubuntu 24.04): `R CMD check --as-cran
+  --no-manual`, with the incoming spelling check on, 1 note (above).
 
-* ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.6.2
-* ubuntu-latest (Ubuntu 26.04.1 LTS), R-devel (2026-11-20 r90953)
-* ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.5.3
-* windows-latest (Windows Server 2025, x86_64-w64-mingw32), R 4.6.2
-* windows-latest (Windows Server 2025, x86_64-w64-mingw32), R-devel
-  (2026-11-17 r90926 ucrt)
-* macos-latest (macOS 26.7.2, aarch64-apple-darwin23), R 4.6.2
-
-The test suite passed in every leg, with 3635 expectations met, no failures
-and no warnings. 20 tests skip everywhere because they read repository files
-that are not in the built package: the apps, the shared schema folder and two
-articles that .Rbuildignore excludes.
-
-On the Ubuntu R-devel leg, the same run also ran the test suite on the
-package source in the en_US.iso885915 locale (session charset ISO-8859-15),
-with NOT_CRAN unset. It passed with no failures and no warnings.
-
-The same run tested the package on R 4.1.3, the last release of R 4.1, the
-oldest series that DESCRIPTION's 'R (>= 4.1.0)' allows, under ubuntu-latest
-with only the packages in Imports, testthat and pkgload installed. There the
-test suite passed, and the 15 tests that need a suggested package (curl,
-dagitty, DiagrammeR, ggm or lavaan) skipped.
+The test suite of 0.7.0 passed on every CRAN flavour that has checked it,
+including macOS arm64, where long double is the same as double.
 
 ## Notes
 
