@@ -279,6 +279,20 @@ test_that("the content hash is SHA-256 of the canonical form", {
   expect_false(identical(tf_content_hash(t), h))
 })
 
+test_that("the canonical form keeps the shortest digits that read back as the number", {
+  # R's parser reads -527.867953 one unit in the last place away, so testing
+  # the digits with as.numeric() wrote -527.8679530000001, and it took too few
+  # digits for the second number and too many for the third. The numbers are
+  # read here as a theory file's would be. The Python suite asserts the same
+  # text.
+  text <- c("-527.867953", "1.7839211372708861e-265", "-3.06405467662112e+212",
+            "3.343559332129407e-41")
+  x <- jsonlite::parse_json(paste0("[", paste(text, collapse = ","), "]"),
+                            simplifyVector = TRUE)
+  expect_identical(theoryforge:::.tf_canonical(as.list(x)),
+                   paste0("[", paste(text, collapse = ","), "]"))
+})
+
 test_that("an effect under sigma counts no walk back through the intervened construct", {
   # r lowers f and f raises r. Intervening on r replaces r's own equation, so
   # the loop back through r carries nothing, and the effect is the direct,

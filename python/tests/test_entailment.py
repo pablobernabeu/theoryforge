@@ -453,6 +453,15 @@ def test_the_content_hash_is_sha256_of_the_canonical_form(modality, tmp_path):
     assert modality.content_hash() != h
 
 
+def test_the_canonical_form_keeps_the_shortest_digits_that_read_back_as_the_number():
+    # R's twin tested its digits with a parser that reads -527.867953 one unit
+    # in the last place away. The R suite asserts the same text.
+    from theoryforge.hashing import canonical
+    text = ["-527.867953", "1.7839211372708861e-265", "-3.06405467662112e+212",
+            "3.343559332129407e-41"]
+    assert canonical([float(s) for s in text]) == "[" + ",".join(text) + "]"
+
+
 def test_an_effect_under_sigma_counts_no_walk_back_through_the_intervened_construct():
     # r lowers f and f raises r. Intervening on r replaces r's own equation, so
     # the loop back through r carries nothing, and the effect is the direct,
