@@ -87,7 +87,8 @@ add the changes that concern the R package alone.
   score and the content hash, which follow the card once the work the user started
   has run. The apps compute the score unasked for a theory with at most 300
   constructs, propositions and predictions, and the hash for one whose JSON is at
-  most 50,000 characters long in the R app and 1,000,000 in the Python app.
+  most 50,000 characters long in the R app and 1,000,000 in the Python app and that
+  holds at most 20,000 values.
 
 ## Changed
 
@@ -118,10 +119,20 @@ add the changes that concern the R package alone.
   that holds itself.
 
 * `tf_read()` and `tf_read_corpus()` began refusing a document nested more than 64
-  levels deep, the document being the first, with `(<path>) the document is nested
-  more than 64 levels deep`, as the Python package does. R read such a YAML file
-  without limit and stopped at its C stack on a JSON file some thousands of levels
-  deep. A YAML document is measured as its aliases expand it.
+  levels deep, counting the document itself as the first level, with `(<path>) the
+  document is nested more than 64 levels deep`, as the Python package does. R read
+  such a YAML file without limit and stopped at its C stack on a JSON file a little
+  over 800 levels deep. A YAML document is measured as its aliases expand it.
+
+* `tf_read()` and `tf_read_corpus()` began refusing a file that is not valid UTF-8,
+  with `(<path>) the file is not valid UTF-8`, and one that holds a NUL byte, with
+  `(<path>) the file holds a NUL byte, which theoryforge cannot read`, as the Python
+  package does. A NUL byte stopped them with `embedded nul in string`, a message
+  that quoted the whole file.
+
+* `tf_read()` and `tf_read_corpus()` began refusing a JSON file with a form feed or
+  a vertical tab between tokens, which JSON does not allow and the Python package
+  refuses, with `(<path>) lexical error: invalid char in json text.`.
 
 * `tf_fetch_corpus()` began refusing a page whose results hold a value that is not
   an object, with `OpenAlex response has a work that is not an object`. It read a
@@ -144,12 +155,14 @@ add the changes that concern the R package alone.
   vertex from lists built once per graph and keeps to the ancestors of the pair and
   of the conditioning set. In an acyclic graph without associations, the parents of
   a pair are taken without a search, since they always separate it there. On a
-  theory of 400 constructs with two causes each, `tf_implications()` takes about 10
-  seconds where it took nearly 8 minutes. The results are unchanged.
+  theory of 400 constructs, each caused by two chosen at random among those before
+  it, and five associations, `tf_implications()` takes about 8 seconds where it
+  took about 7.5 minutes. The results are unchanged.
 
 * `tf_validate()` gathers its messages without copying them at every check and
-  looks references up in a set of ids, so a theory of 20000 constructs validates in
-  seconds where it took nearly a minute. Every message and its order are unchanged.
+  looks references up in a set of ids, so a theory of 20,000 constructs joined by a
+  chain of 19,999 propositions validates in about 10 seconds where it took about
+  22. Every message and its order are unchanged.
 
 * The causal_testability item of the checklist cites Rohrer (2018), on stating causal
   assumptions in a graph, in place of the paper that describes the dagitty software.
@@ -407,14 +420,16 @@ add the changes that concern the R package alone.
   walked the whole theory, then ran for hours. `tf_read()` and `tf_read_corpus()`
   now refuse a document that holds more than 1000000 values once its aliases are
   expanded, with `(<path>) the document holds more than 1000000 values once its
-  aliases are expanded`. Merge keys read as before.
+  aliases are expanded`. Merge keys read as before, and the values they give a
+  mapping are counted before the merges are built, so that a chain of merges that
+  stands for more values is refused at once, where yaml took minutes to build it.
 
 * `tf_read()` and `tf_read_corpus()` evaluated a value tagged `!expr` as R code
   when the option `yaml.eval.expr` was `TRUE`, so reading a theory file from
-  someone else could run code. They now parse every file with `eval.expr = FALSE`,
-  whatever the option says, and stop with `(<path>) a value is tagged !expr, which
-  theoryforge does not read`, however the tag is spelled, as the Python package
-  refuses it.
+  someone else could run code, and otherwise read the value's text with a warning.
+  They now parse every file with `eval.expr = FALSE`, whatever the option says, and
+  stop with `(<path>) a value is tagged !expr, which theoryforge does not read`,
+  however the tag is spelled, as the Python package refuses it.
 
 * `tf_read()` and `tf_read_corpus()` read the file or downloaded the URL that a
   `.json` file's whole text named, since `jsonlite::fromJSON()` takes a short text

@@ -79,7 +79,8 @@ that concern it alone.
   operation. The theory card gained the score and the content hash, which follow the card
   once the work the user started has run. The apps compute the score unasked for a theory
   with at most 300 constructs, propositions and predictions, and the hash for one whose
-  JSON is at most 50,000 characters long in the R app and 1,000,000 in the Python app.
+  JSON is at most 50,000 characters long in the R app and 1,000,000 in the Python app and
+  that holds at most 20,000 values.
 
 ### Changed
 - The causal_testability item of the checklist cites Rohrer (2018), on stating causal
@@ -155,14 +156,17 @@ that concern it alone.
   '<name>' names no node that ends before it`, and one that gives an anchor to two nodes,
   with `(<path>) the anchor '<name>' names two nodes`, as R's reader now does. PyYAML
   raised its own `ComposerError` for the first and the third and read the second as a list
-  that holds itself, which `content_hash()`, `write()` and `dossier()` could not walk,
-  while R read all three.
+  that holds itself, which `write()` could not write as JSON, while R read all three.
 - `read()` and `read_corpus()` began refusing a document nested more than 64 levels deep,
-  the document being the first, with `(<path>) the document is nested more than 64 levels
-  deep`, in both packages. Python raised `RecursionError` on a document about a thousand
-  levels deep, or crashed in PyYAML's C composer at some tens of thousands, and R stopped
-  at its C stack on such a JSON file. A YAML document is measured as its aliases expand
-  it.
+  counting the document itself as the first level, with `(<path>) the document is nested
+  more than 64 levels deep`, in both packages. Python raised `RecursionError` on a YAML
+  document about 500 levels deep, or crashed in PyYAML's C composer at some tens of
+  thousands, and R stopped at its C stack on a JSON file a little over 800 levels deep. A
+  YAML document is measured as its aliases expand it.
+- `read()` and `read_corpus()` began refusing a file that is not valid UTF-8, with
+  `(<path>) the file is not valid UTF-8`, where Python raised `UnicodeDecodeError`, and
+  one that holds a NUL byte, with `(<path>) the file holds a NUL byte, which theoryforge
+  cannot read`, where each package gave its parser's error.
 - `fetch_corpus()` began refusing a page whose results hold a value that is not an object,
   with `ValueError("OpenAlex response has a work that is not an object")`, where it raised
   `AttributeError`. Keyword and concept entries without a name given as text, references
@@ -181,8 +185,9 @@ that concern it alone.
   at each vertex from lists built once per graph and keeps to the ancestors of the pair and
   of the conditioning set. In an acyclic graph without associations, the parents of a pair
   are taken without a search, since they always separate it there. On a theory of 400
-  constructs with two causes each, `implications()` takes about a second in Python and 10
-  seconds in R, where it took over 3 and nearly 8 minutes. The results are unchanged.
+  constructs, each caused by two chosen at random among those before it, and five
+  associations, `implications()` takes about a second in Python and 8 seconds in R, where
+  it took about 3 and 7.5 minutes. The results are unchanged.
 - The message for an unknown type of `diagram()`, `render_diagram()` or `lit_diagram()`
   began listing the types separated by commas, as R lists them, in place of a tuple. These
   messages and that of `report()` began quoting a string between single quotation marks
@@ -315,10 +320,19 @@ that concern it alone.
   more than 1000000 values once its aliases are expanded, with `(<path>) the document holds
   more than 1000000 values once its aliases are expanded`. Merge keys read as before.
 - A YAML file with a long chain of merge keys, in which each mapping merges the one before,
-  raised `RecursionError` from about a thousand links. It now reads, as in R.
+  could raise `RecursionError` once the chain passed some hundreds of links. It now reads,
+  as in R, and the values that merge keys give a mapping are counted before the merges are
+  built, so that a chain that stands for more than 1000000 values is refused at once.
+- A merge key compared the keys it adds with the mapping's own by their values, so a
+  merged `1` was dropped beside the mapping's own `yes` (True == 1) and a merged `"1"`
+  replaced the mapping's own `1`. It now compares them by their text, as R does.
+- `read()` raised `KeyError`, `AttributeError`, `TypeError` or a bare `ValueError` for some
+  explicit tags, such as `!!bool maybe` and `!!timestamp xyz`, which R reads as NA or text.
+  It now raises PyYAML's `ConstructorError`.
 - When a YAML file repeated a key in a mapping that ends before a syntax error, `read()`
-  reported the syntax error, and in JSON it reported a repeated key that comes before a
-  syntax error. R reported the other fault in both cases. The two readers now report the
+  reported the syntax error, in JSON it reported a repeated key that comes before a syntax
+  error, and it reported a repeated key after a mapping whose merge key names a value that
+  is not a mapping. R reported the other fault in each case. The two readers now report the
   first of several faults in one order, which the specification gives.
 - `write()` wrote a string that holds U+0085 (NEL) to YAML in single quotes with the
   character as it is, which libyaml reads as a line feed and folds into a space, so
@@ -386,9 +400,10 @@ that concern it alone.
   break added keys, and R passed it to the shell as it stood, so a value such as
   `"html; rm x"` ran a command.
 - R's `tf_read()` and `tf_read_corpus()` evaluated a value tagged `!expr` as R code when
-  the option `yaml.eval.expr` was `TRUE`. Both packages now refuse the tag, however it is
-  spelled, with `(<path>) a value is tagged !expr, which theoryforge does not read`, and R
-  parses with `eval.expr = FALSE` whatever the option says.
+  the option `yaml.eval.expr` was `TRUE`, and Python raised PyYAML's `ConstructorError`.
+  Both packages now refuse the tag, however it is spelled, with `(<path>) a value is tagged
+  !expr, which theoryforge does not read`, and R parses with `eval.expr = FALSE` whatever
+  the option says.
 - R's `tf_read()` and `tf_read_corpus()` read the file or downloaded the URL that a `.json`
   file's whole text named, since `jsonlite::fromJSON()` takes a short text that is not JSON
   for a file name or a URL. R now validates the text first and parses it with
