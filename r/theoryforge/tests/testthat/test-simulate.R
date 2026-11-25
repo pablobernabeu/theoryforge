@@ -499,3 +499,13 @@ test_that("a theory of 400 constructs simulates", {
   expect_length(euler, 11L)
   expect_length(euler[[11L]], 400L)
 })
+
+test_that("tf_simulate finds an opposed pair whose ids differ only in encoding", {
+  # The two spellings of one id compare equal, as they do with ==.
+  u <- "\u00e9"
+  l <- iconv(u, "UTF-8", "latin1")
+  t <- list(constructs = list(list(id = u), list(id = "b")),
+            propositions = list(list(id = "p1", from = l, to = "b", relation = "increases"),
+                                list(id = "p2", from = u, to = "b", relation = "decreases")))
+  expect_identical(tf_simulate(t, steps = 1)$opposed, list(c(l, "b")))
+})

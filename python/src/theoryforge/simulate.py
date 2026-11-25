@@ -269,6 +269,9 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     singular, and never two separate ones, so it cannot show bistability.
     """
     n_steps = _check_knobs(steps, dt, k, damping, init, method)
+    # The knobs are echoed as given, and computed with as doubles, as R holds
+    # them: a NumPy float32 would otherwise make some products float32.
+    dt_, k_, damping_ = float(dt), float(k), float(damping)
     theory = theory.data if hasattr(theory, "data") else theory
     states = [text(field(c, "id")) for c in items(theory, "constructs")]
     n = len(states)
@@ -303,7 +306,7 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
         if rel in PATHS and f in idx and t in idx:
             stated = RELATIONS[rel][1]
             sign = 1.0 if stated is None else float(stated)
-            A[idx[t]][idx[f]] += sign * k
+            A[idx[t]][idx[f]] += sign * k_
             pair_signs.setdefault((f, t), set()).add(sign)
             if stated is None:
                 assumed.append(text(field(p, "id")))
@@ -315,8 +318,8 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     # is checked against. Neither needs it when nothing moves.
     E: list = []
     if n > 0 and n_steps > 0:
-        J = [[A[i][j] - (damping if i == j else 0.0) for j in range(n)] for i in range(n)]
-        E = _nonzero(_propagator(J, dt))
+        J = [[A[i][j] - (damping_ if i == j else 0.0) for j in range(n)] for i in range(n)]
+        E = _nonzero(_propagator(J, dt_))
     couplings = _nonzero(A)
     # A smaller dt cures an Euler divergence that the step causes, but it does
     # not change the exact solution, which grows only when the system does.
@@ -348,8 +351,8 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
             # A left-to-right loop, as R adds. The builtin sum() compensates
             # rounding error from Python 3.12, and in fast-growing regimes that
             # moved the twins apart beyond the parity tolerance.
-            dX = [acc - damping * x for acc, x in zip(_apply(couplings, X), X, strict=True)]
-            X = [X[i] + dt * dX[i] for i in range(n)]
+            dX = [acc - damping_ * x for acc, x in zip(_apply(couplings, X), X, strict=True)]
+            X = [X[i] + dt_ * dX[i] for i in range(n)]
         _check_finite(X, states, step, remedy)
         if method == "euler" and not departed:
             Y = _apply(E, Y)

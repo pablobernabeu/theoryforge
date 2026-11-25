@@ -12,6 +12,10 @@
 NULL
 
 .tf_SIM_METHODS <- c("euler", "exact")
+# Below this many states, the matrix products and the steps loop over single
+# entries, which is quicker there than adding whole columns. Both give the same
+# bits.
+.tf_SIM_SMALL <- 10L
 # Degree of the Taylor polynomial of the propagator, after scaling the matrix
 # to an infinity norm of at most 0.5 (API_SPEC section 22).
 .tf_SIM_TAYLOR_DEGREE <- 18L
@@ -200,10 +204,12 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
     pair_sign[[n_pairs]] <- sign
   }
   # The pairs that carry couplings of both signs, in the order the pairs first
-  # couple. The length of `from` in bytes keeps two pairs' keys apart.
+  # couple. The ids are compared in UTF-8, as == compares them, and the length
+  # of `from` in bytes keeps two pairs' keys apart.
   pair_from <- pair_from[seq_len(n_pairs)]
   pair_to <- pair_to[seq_len(n_pairs)]
-  key <- paste0(nchar(pair_from, type = "bytes"), ":", pair_from, pair_to)
+  utf8_from <- enc2utf8(pair_from)
+  key <- paste0(nchar(utf8_from, type = "bytes"), ":", utf8_from, enc2utf8(pair_to))
   first <- which(!duplicated(key))
   at <- match(key, key[first])
   signs <- pair_sign[seq_len(n_pairs)]
@@ -217,9 +223,9 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
     J <- A
     for (i in seq_len(n)) J[i, i] <- A[i, i] - damping
     E <- .tf_sim_propagator(J, dt)
-    E_cols <- .tf_sim_columns(E)
+    E_cols <- if (n >= .tf_SIM_SMALL) .tf_sim_columns(E)
   }
-  A_cols <- .tf_sim_columns(A)
+  A_cols <- if (n >= .tf_SIM_SMALL) .tf_sim_columns(A)
   # A smaller dt cures an Euler divergence that the step causes, but it does
   # not change the exact solution, which grows only when the system does.
   # Raising damping shifts every eigenvalue of J to the left, so it tames the
@@ -284,10 +290,21 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
 # element adds its terms in the order of m. A term with one factor 0 and the
 # other finite is 0 or -0, and adding it leaves a sum unchanged, since a sum
 # that starts at +0 never holds -0, so the columns of A that a 0 in B
-# multiplies are skipped when they are finite.
+# multiplies are skipped when they are finite. Below .tf_SIM_SMALL states, the
+# triple loop over i, j and m is quicker and gives the same bits.
 .tf_sim_matmul <- function(A, B) {
   n <- nrow(A)
   out <- matrix(0.0, n, n)
+  if (n < .tf_SIM_SMALL) {
+    for (i in seq_len(n)) {
+      for (j in seq_len(n)) {
+        acc <- 0.0
+        for (m in seq_len(n)) acc <- acc + A[i, m] * B[m, j]
+        out[i, j] <- acc
+      }
+    }
+    return(out)
+  }
   finite <- colSums(!is.finite(A)) == 0
   for (j in seq_len(n)) {
     b <- B[, j]
@@ -322,9 +339,21 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
 # twin's _apply(). Every state in X is finite, since each update is tested
 # before the next, so a column of M that holds only 0 adds nothing. A term with
 # X[j] = 0 is 0 or -0 too when column j is finite. `cols` is
-# .tf_sim_columns(M).
-.tf_sim_apply <- function(M, X, cols = .tf_sim_columns(M)) {
-  acc <- numeric(length(X))
+# .tf_sim_columns(M), or NULL below .tf_SIM_SMALL states, where the loop over
+# each row is quicker.
+.tf_sim_apply <- function(M, X, cols = NULL) {
+  n <- length(X)
+  if (n < .tf_SIM_SMALL) {
+    out <- numeric(n)
+    for (i in seq_len(n)) {
+      acc <- 0.0
+      for (j in seq_len(n)) acc <- acc + M[i, j] * X[j]
+      out[i] <- acc
+    }
+    return(out)
+  }
+  if (is.null(cols)) cols <- .tf_sim_columns(M)
+  acc <- numeric(n)
   for (j in cols$nonzero) {
     if (X[[j]] != 0 || !cols$finite[[j]]) acc <- acc + M[, j] * X[[j]]
   }

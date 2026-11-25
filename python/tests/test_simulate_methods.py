@@ -289,3 +289,26 @@ def test_a_theory_of_400_constructs_simulates():
         euler = t.simulate()["trajectory"]
     assert [row[0] for row in euler] == pytest.approx([0.95 ** s for s in range(11)], abs=1e-6)
     assert len(euler) == 11 and len(euler[10]) == 400
+
+
+def test_numpy_float32_knobs_give_the_trajectory_of_the_equal_floats():
+    # The knobs are computed with as doubles, as R holds them, so a float32
+    # gives the bits of the double it equals, with either method. They are
+    # echoed as given.
+    np = pytest.importorskip("numpy")
+    import struct
+
+    t = (tf.new_theory("f32", "Float32").add_construct("a", "A", "d").add_construct("b", "B", "d")
+         .add_construct("c", "C", "d").add_proposition("p1", "a", "b", "increases")
+         .add_proposition("p2", "b", "c", "decreases"))
+    for method in ("euler", "exact"):
+        for knobs in ({"dt": 0.3, "k": 1.7, "damping": 0.0}, {"dt": 0.5, "k": 1.0, "damping": 0.2}):
+            given = {name: np.float32(value) for name, value in knobs.items()}
+            equal = {name: float(value) for name, value in given.items()}
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                a = tf.simulate(t, steps=8, init=1234.56789, method=method, **given)
+                b = tf.simulate(t, steps=8, init=1234.56789, method=method, **equal)
+            assert [[struct.pack("<d", x) for x in row] for row in a["trajectory"]] == \
+                [[struct.pack("<d", x) for x in row] for row in b["trajectory"]]
+            assert a["dt"] is given["dt"]
