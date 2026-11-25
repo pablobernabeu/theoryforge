@@ -351,12 +351,13 @@ def test_render_report_writes_the_theory_text_as_text(tmp_path):
     t = _hostile(tmp_path)
     out = t.render_report(tmp_path / "r.qmd")
     lines = open(out, encoding="utf-8", newline="").read().split("\n")
-    assert lines[0] == "---" and lines[2:7] == [
-        "format: html", "engine: markdown", "from: markdown-raw_html-raw_attribute-raw_tex", "---", ""]
+    assert lines[0] == "---" and lines[2:10] == [
+        "format: html", "engine: markdown", "ojs-engine: false",
+        "from: markdown-raw_html-raw_attribute-raw_tex", "menu:", '  title-selector: ""', "---", ""]
     assert yaml.safe_load("\n".join(lines[1:2]))["title"] == (
         r"theoryforge report: Injection &#96;r writeLines\('ran'\, 'PWNED\.txt'\)&#96; "
         r"\{\{\{\< env HOME \>\}\}\} \<b\>bold\<\/b\>")
-    body = lines[7:]
+    body = lines[10:]
     assert len(body) == len(t.dossier().split("\n"))
     assert not [line for line in body if _FENCE.match(line) or line == "---"]
     assert not [line for line in body if "`" in line or "{{<" in line or "](" in line]
@@ -418,11 +419,7 @@ def test_render_report_refuses_text_that_quarto_reads_as_an_encoded_shortcode(tm
             t.render_report(tmp_path / "r.qmd")
         assert str(err.value) == message
         assert not (tmp_path / "r.qmd").exists()
-    # A title passed by the caller is read with its escapes removed, and any
-    # UUID counts, in either letter case.
-    escaped = ENCODED.replace("-", "\\-")
-    with pytest.raises(ValueError, match="encoded shortcode: 'b58fc729-690b"):
-        tf.read(panic_path).render_report(tmp_path / "r.qmd", title=escaped)
+    # Any UUID counts, in either letter case.
     other = "0A1B2C3D-0000-4000-8000-00000000ABCD;41;"
     with pytest.raises(ValueError, match=f"encoded shortcode: '{other}'"):
         _scope(tf.read(panic_path), other).render_report(tmp_path / "r.qmd")
@@ -430,23 +427,51 @@ def test_render_report_refuses_text_that_quarto_reads_as_an_encoded_shortcode(tm
     assert _scope(tf.read(panic_path), ENCODED[:-1]).render_report(tmp_path / "r.qmd")
 
 
+def _ojs_theory(modality_path, tmp_path):
+    """modality-switching with a construct id that holds 'ojs_define', which turned on
+    Quarto's OJS compiler, and a title with an OJS expression and a tag, which the
+    slide menu of revealjs wrote back as HTML."""
+    text = modality_path.read_text(encoding="utf-8").replace("c_lexical_familiarity", "c_ojs_define")
+    text = re.sub(r"(?m)^title: .*$", 'title: "Modality ${alert(1)} <img src=x onerror=alert(2)>"',
+                  text, count=1)
+    path = tmp_path / "ojs.theory.yaml"
+    path.write_bytes(text.encode("utf-8"))
+    return tf.read(path)
+
+
+def test_render_report_keeps_ojs_define_out_of_the_text_quarto_reads(modality_path, tmp_path):
+    # Quarto turns on its OJS compiler when 'ojs_define' is anywhere in the text
+    # it reads, and the code span of a plain implied independence kept the
+    # construct id as it stood. test-render.R pins the same text.
+    t = _ojs_theory(modality_path, tmp_path)
+    text = open(t.render_report(tmp_path / "r.qmd"), encoding="utf-8").read()
+    assert "ojs_define" not in text
+    assert "\nojs-engine: false\n" in text and '\nmenu:\n  title-selector: ""\n' in text
+    assert r"- c\_sensorimotor\_experience \_\|\|\_ c\_ojs\_define" in text.split("\n")
+
+
 @pytest.mark.skipif(shutil.which("quarto") is None, reason="Quarto is not installed")
-def test_quarto_renders_the_hostile_report_as_text(tmp_path, monkeypatch):
-    # Rendered through Quarto, the report runs no code, expands no shortcode
-    # and passes on no script, event handler or link of the theory's.
+@pytest.mark.parametrize("to", ["html", "revealjs", "dashboard"])
+def test_quarto_renders_the_hostile_reports_as_text(tmp_path, monkeypatch, modality_path, to):
+    # Rendered through Quarto, the report runs no code, compiles no OJS, expands
+    # no shortcode and passes on no script, event handler or link of the
+    # theory's. revealjs is told to take its menu titles from the escaped text.
     monkeypatch.setenv("TF_SECRET_TOKEN", "s3cr3t-env-value")
     (tmp_path / "secret.txt").write_text("SECRET-FILE-CONTENTS", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
-    _hostile(tmp_path).render_report("report.qmd", render=True)
-    html = (tmp_path / "report.html").read_text(encoding="utf-8")
-    assert not list(tmp_path.glob("PWNED*"))
-    for leaked in ("s3cr3t-env-value", "SECRET-FILE-CONTENTS", os.path.expanduser("~")):
-        assert leaked not in html
-    main = html[html.index("<main"):html.index("</main>")]
-    assert re.search(r"<[a-zA-Z][^>]*\son[a-z]+\s*=", main) is None
-    assert re.search(r"""(?:href|src)\s*=\s*["']?\s*javascript:""", main) is None
-    for tag in ("<script", "<b>", "<code", "<a "):
-        assert tag not in main
+    for name, t in (("hostile", _hostile(tmp_path)), ("ojs", _ojs_theory(modality_path, tmp_path))):
+        t.render_report(f"{name}.qmd", render=True, to=to)
+        html = (tmp_path / f"{name}.html").read_text(encoding="utf-8")
+        assert not list(tmp_path.glob("PWNED*"))
+        for leaked in ("s3cr3t-env-value", "SECRET-FILE-CONTENTS", os.path.expanduser("~")):
+            assert leaked not in html
+        for live in ("ojs-element-id", "ojs-module-contents", "quarto-ojs-runtime", "<script>alert",
+                     '<img src="x"', "<b>"):
+            assert live not in html
+        assert re.search(r"<[a-zA-Z][^>]*\son[a-z]+\s*=", html) is None
+        assert re.search(r"""(?:href|src)\s*=\s*["']?\s*javascript:""", html) is None
+        if to == "revealjs":
+            assert '"titleSelector":""' in html
 
 
 @pytest.mark.parametrize("to", ["html; echo ran > ran.txt", "html\nengine: knitr", "-o", "", "pdf ",

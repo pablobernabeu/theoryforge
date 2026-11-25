@@ -2,7 +2,10 @@
 title: "theoryforge report: An underspecified motivation theory"
 format: html
 engine: markdown
+ojs-engine: false
 from: markdown-raw_html-raw_attribute-raw_tex
+menu:
+  title-selector: ""
 ---
 
 # theoryforge dossier\: An underspecified motivation theory

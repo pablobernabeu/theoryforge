@@ -8,10 +8,12 @@ test_that("tf_render_report writes a .qmd containing the dossier", {
   text <- tf_read_golden(out)
   # YAML header with title, format, engine and reader.
   expect_match(text, "^---\\ntitle: ", perl = TRUE)
-  expect_match(text, "\nformat: html\nengine: markdown\nfrom: markdown-raw_html-raw_attribute-raw_tex\n---\n\n",
+  expect_match(text, paste0("\nformat: html\nengine: markdown\nojs-engine: false\n",
+                            "from: markdown-raw_html-raw_attribute-raw_tex\n",
+                            "menu:\n  title-selector: \"\"\n---\n\n"),
                fixed = TRUE)
   # The body is the dossier, line for line, with its text escaped.
-  body <- strsplit(text, "\n", fixed = TRUE)[[1L]][-(1:7)]
+  body <- strsplit(text, "\n", fixed = TRUE)[[1L]][-(1:10)]
   expect_identical(length(body), length(strsplit(tf_dossier(theory), "\n", fixed = TRUE)[[1L]]))
   expect_true("- Theory ID\\: panic\\-network\\-2026" %in% body)
 })
@@ -177,12 +179,13 @@ test_that("tf_render_report writes the theory's text as text", {
   t <- hostile_theory()
   out <- tf_render_report(t, tempfile(fileext = ".qmd"))
   lines <- strsplit(tf_read_golden(out), "\n", fixed = TRUE)[[1L]]
-  expect_identical(lines[c(1L, 3:6)], c("---", "format: html", "engine: markdown",
-                                        "from: markdown-raw_html-raw_attribute-raw_tex", "---"))
+  expect_identical(lines[c(1L, 3:9)], c("---", "format: html", "engine: markdown", "ojs-engine: false",
+                                        "from: markdown-raw_html-raw_attribute-raw_tex", "menu:",
+                                        '  title-selector: ""', "---"))
   expect_identical(yaml::yaml.load(lines[[2L]])$title, paste0(
     r"---(theoryforge report: Injection &#96;r writeLines\('ran'\, 'PWNED\.txt'\)&#96; )---",
     r"---(\{\{\{\< env HOME \>\}\}\} \<b\>bold\<\/b\>)---"))
-  body <- lines[-(1:7)]
+  body <- lines[-(1:10)]
   expect_identical(length(body), length(strsplit(tf_dossier(t), "\n", fixed = TRUE)[[1L]]))
   expect_identical(fence_lines(body), character(0))
   expect_false(any(grepl("`", body, fixed = TRUE) | grepl("{{<", body, fixed = TRUE) |
@@ -238,11 +241,8 @@ test_that("tf_render_report refuses text that Quarto reads as an encoded shortco
     expect_error(tf_render_report(t, path), message, fixed = TRUE)
     expect_false(file.exists(path))
   }
-  # A title passed by the caller is read with its escapes removed, and any
-  # UUID counts, in either letter case.
+  # Any UUID counts, in either letter case.
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
-  expect_error(tf_render_report(panic, path, title = gsub("-", "\\-", encoded_shortcode, fixed = TRUE)),
-               "encoded shortcode: 'b58fc729-690b", fixed = TRUE)
   other <- "0A1B2C3D-0000-4000-8000-00000000ABCD;41;"
   scoped <- function(value) {
     t <- panic
@@ -255,11 +255,38 @@ test_that("tf_render_report refuses text that Quarto reads as an encoded shortco
   expect_true(file.exists(tf_render_report(scoped(sub(";$", "", encoded_shortcode)), path)))
 })
 
-test_that("Quarto renders the hostile report as text", {
+# modality-switching with a construct id that holds 'ojs_define', which turned
+# on Quarto's OJS compiler, and a title with an OJS expression and a tag, which
+# the slide menu of revealjs wrote back as HTML. The Python twin builds the
+# same theory.
+ojs_theory <- function() {
+  text <- readLines(tf_fixture_path("modality-switching.theory.yaml"), encoding = "UTF-8")
+  text <- gsub("c_lexical_familiarity", "c_ojs_define", text, fixed = TRUE)
+  first <- grep("^title: ", text)[[1L]]
+  text[[first]] <- 'title: "Modality ${alert(1)} <img src=x onerror=alert(2)>"'
+  path <- tempfile(fileext = ".yaml")
+  writeBin(charToRaw(enc2utf8(paste0(paste(text, collapse = "\n"), "\n"))), path)
+  tf_read(path)
+}
+
+test_that("tf_render_report keeps ojs_define out of the text Quarto reads", {
+  # Quarto turns on its OJS compiler when 'ojs_define' is anywhere in the text
+  # it reads, and the code span of a plain implied independence kept the
+  # construct id as it stood. The Python twin pins the same text.
+  text <- tf_read_golden(tf_render_report(ojs_theory(), tempfile()))
+  expect_false(grepl("ojs_define", text, fixed = TRUE))
+  expect_match(text, "\nojs-engine: false\n", fixed = TRUE)
+  expect_match(text, '\nmenu:\n  title-selector: ""\n', fixed = TRUE)
+  expect_true(r"---(- c\_sensorimotor\_experience \_\|\|\_ c\_ojs\_define)---" %in%
+                strsplit(text, "\n", fixed = TRUE)[[1L]])
+})
+
+test_that("Quarto renders the hostile reports as text in html, revealjs and dashboard", {
   skip_on_cran()
   skip_if(!nzchar(Sys.which("quarto")), "Quarto is not installed")
-  # Rendered through Quarto, the report runs no code, expands no shortcode
-  # and passes on no script, event handler or link of the theory's.
+  # Rendered through Quarto, the report runs no code, compiles no OJS, expands
+  # no shortcode and passes on no script, event handler or link of the
+  # theory's. revealjs is told to take its menu titles from the escaped text.
   dir <- tempfile("quarto")
   dir.create(dir)
   writeLines("SECRET-FILE-CONTENTS", file.path(dir, "secret.txt"))
@@ -269,16 +296,24 @@ test_that("Quarto renders the hostile report as text", {
   Sys.setenv(TF_SECRET_TOKEN = "s3cr3t-env-value")
   wd <- setwd(dir)
   on.exit(setwd(wd), add = TRUE)
-  tf_render_report(hostile_theory(), "report.qmd", render = TRUE)
-  html <- tf_read_golden(file.path(dir, "report.html"))
-  expect_length(Sys.glob(file.path(dir, "PWNED*")), 0L)
-  for (leaked in c("s3cr3t-env-value", "SECRET-FILE-CONTENTS", path.expand("~"))) {
-    expect_false(grepl(leaked, html, fixed = TRUE))
+  theories <- list(hostile = hostile_theory(), ojs = ojs_theory())
+  for (to in c("html", "revealjs", "dashboard")) {
+    for (name in names(theories)) {
+      tf_render_report(theories[[name]], paste0(name, "-", to, ".qmd"), render = TRUE, to = to)
+      html <- tf_read_golden(file.path(dir, paste0(name, "-", to, ".html")))
+      expect_length(Sys.glob(file.path(dir, "PWNED*")), 0L)
+      for (leaked in c("s3cr3t-env-value", "SECRET-FILE-CONTENTS", path.expand("~"))) {
+        expect_false(grepl(leaked, html, fixed = TRUE))
+      }
+      for (live in c("ojs-element-id", "ojs-module-contents", "quarto-ojs-runtime", "<script>alert",
+                     '<img src="x"', "<b>")) {
+        expect_false(grepl(live, html, fixed = TRUE))
+      }
+      expect_false(grepl("<[a-zA-Z][^>]*\\son[a-z]+\\s*=", html, perl = TRUE))
+      expect_false(grepl("(?:href|src)\\s*=\\s*[\"']?\\s*javascript:", html, perl = TRUE))
+      if (identical(to, "revealjs")) expect_true(grepl('"titleSelector":""', html, fixed = TRUE))
+    }
   }
-  main <- sub("(?s)</main>.*$", "", sub("(?s)^.*?<main", "<main", html, perl = TRUE), perl = TRUE)
-  expect_false(grepl("<[a-zA-Z][^>]*\\son[a-z]+\\s*=", main, perl = TRUE))
-  expect_false(grepl("(?:href|src)\\s*=\\s*[\"']?\\s*javascript:", main, perl = TRUE))
-  for (tag in c("<script", "<b>", "<code", "<a ")) expect_false(grepl(tag, main, fixed = TRUE))
 })
 
 test_that("tf_render_report refuses a format that is not a name or a writer", {

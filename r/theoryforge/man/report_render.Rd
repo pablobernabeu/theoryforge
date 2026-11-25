@@ -8,10 +8,11 @@ Writes a \code{.qmd} (a YAML header plus the deterministic dossier body) and
 can optionally invoke Quarto to render it. The report content is the
 deterministic \code{tf_dossier} output, and only the rendering step depends
 on the environment. A theory file may come from someone else, and Quarto
-runs the code chunks and inline code of a document, expands its shortcodes
-(which can read files and environment variables) and passes on its raw
-HTML, so the report is written so that the theory's text reaches Quarto as
-text alone, and text that Quarto would decode as a shortcode after reading
-it is refused (API_SPEC.md section 23).
+runs the code chunks and inline code of a document, compiles its OJS,
+expands its shortcodes (which can read files and environment variables) and
+passes on its raw HTML, so the report is written so that the theory's text
+reaches Quarto as text, and a dossier that Quarto would decode as a
+shortcode is refused. The measures were checked against Quarto 1.11
+(API_SPEC.md section 23).
 }
 \keyword{internal}

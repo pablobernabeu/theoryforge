@@ -528,11 +528,12 @@ a fit.
 ## Rendering and depositing
 
 `render_report()` writes the dossier as a Quarto source document, ready to render to HTML or
-PDF. Its header tells Quarto to run no code, the theory's text is escaped so that Quarto
-reads it as text, and a theory whose text Quarto would decode as a shortcode is refused, so
-that a reviewer can render the report of a theory file that someone else wrote. With
-`render=False`, the default, it writes the `.qmd` without calling Quarto, and it returns the
-path of the file it wrote.
+PDF. A theory file may come from someone else, so the header tells Quarto to run no code and
+compile no OJS, the theory's text is escaped so that Quarto reads it as text, and a theory
+whose text Quarto would decode as a shortcode is refused. With Quarto 1.11, reports of hostile
+theory files rendered this way to html, revealjs and dashboard ran none of the code,
+shortcodes or scripts the files held. With `render=False`, the default, it writes the `.qmd`
+without calling Quarto, and it returns the path of the file it wrote.
 
 ```python
 # Shown and not run when the page is built: it writes a file, and rendering

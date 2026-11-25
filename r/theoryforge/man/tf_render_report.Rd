@@ -23,8 +23,8 @@ escaped as the body is, and with Quarto's shortcode delimiters in their
 escaped forms \code{\{\{\{<} and \code{>\}\}\}}. It is written as a YAML
 double-quoted scalar with backslashes, double quotes and control
 characters escaped, so a YAML parser reads back exactly the string passed.
-Quarto then reads the title as Markdown, so in a title passed by the
-caller raw TeX such as \verb{\\emph\{\}} is dropped from HTML output and
+A title passed by the caller is the caller's Markdown and is not escaped
+otherwise, so raw TeX such as \verb{\\emph\{\}} is dropped from HTML output and
 \verb{$\\alpha$} becomes mathematics.}
 
 \item{render}{When \code{TRUE}, run \code{quarto render} on the written file
@@ -47,31 +47,34 @@ suffix): a YAML header followed by the deterministic
 installation, and stops if that render fails. Quarto is given the absolute
 path of the report, so that a path beginning with \code{-} is not read as
 an option. It stops before writing anything when \code{to} is not a format
-name or a writer, when \code{\link[=tf_check]{tf_check()}} refuses the theory or when the text
+name or a writer, when \code{\link[=tf_check]{tf_check()}} refuses the theory or when the dossier
 holds an encoded shortcode.
 }
 \details{
-The header gives \code{title} and \code{format}, \code{engine: markdown},
-so that Quarto runs no code, and
-\code{from: markdown-raw_html-raw_attribute-raw_tex}, so that it passes on
-no raw HTML, raw attribute or raw TeX. In the body, every ASCII punctuation
+The report is written so that the theory's text, which may come from
+someone else, reaches Quarto as text. The measures are these, and they were
+checked against Quarto 1.11 in the html, revealjs and dashboard formats. The
+header gives \code{title} and \code{format}, then \code{engine: markdown},
+so that Quarto runs no code chunk, \code{ojs-engine: false}, so that it
+compiles no OJS, \code{from: markdown-raw_html-raw_attribute-raw_tex}, so
+that it passes on no raw HTML, raw attribute or raw TeX, and \code{menu}
+with an empty \code{title-selector}, so that the slide menu of revealjs
+takes each title from the text of the slide, which it escapes, rather than
+writing a heading's text back as HTML. In the body, every ASCII punctuation
 character of the dossier's text but the quotation marks gains a backslash
-and a backtick becomes \code{&#96;}, so that Quarto reads the theory's text
-as text: no code chunk, inline code, shortcode, link, span or tag can open
-from it. Typed \code{--} and \code{...} therefore show as typed, and a
-heading's anchor follows its typed text. The marker of each heading and list
-item, the underscores of a line in italics and the checklist table are
-kept. An implied conditional independence keeps its code span when it holds
-only letters, digits, \code{_}, \code{|}, \code{,}, \code{.} and spaces
-and does not begin with \code{r} and a space, and is written without it
-otherwise.
-
-Quarto encodes a shortcode as a UUID followed by \code{;<hex>;} and
-decodes such a run in any text once the document is parsed, escapes
-removed. Text that holds one, a UUID followed by a semicolon, hexadecimal
-digits and a semicolon, is therefore refused: the dossier, the default title
-before it is escaped and a title passed by the caller with its backslashes
-removed.
+and a backtick becomes \code{&#96;}, so that no code chunk, inline code,
+shortcode, link, span or tag opens from the theory's text. Typed \code{--}
+and \code{...} therefore show as typed, and a heading's anchor follows its
+typed text. The marker of each heading and list item, the underscores of a
+line in italics and the checklist table are kept. An implied conditional
+independence keeps its code span when it holds only letters, digits,
+\code{_}, \code{|}, \code{,}, \code{.} and spaces, does not begin with
+\code{r} and a space and does not hold \code{ojs_define}, and is written
+without it otherwise. Quarto encodes a shortcode as a UUID followed by
+\code{;<hex>;} and, once the document is parsed and its escapes removed,
+decodes such a run in the body, so a dossier that holds one, a UUID followed
+by a semicolon, hexadecimal digits and a semicolon, is refused. The
+theory's title and id are both in the dossier.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

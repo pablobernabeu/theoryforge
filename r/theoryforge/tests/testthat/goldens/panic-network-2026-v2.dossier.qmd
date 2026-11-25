@@ -2,7 +2,10 @@
 title: "theoryforge report: Network theory of panic disorder"
 format: html
 engine: markdown
+ojs-engine: false
 from: markdown-raw_html-raw_attribute-raw_tex
+menu:
+  title-selector: ""
 ---
 
 # theoryforge dossier\: Network theory of panic disorder
