@@ -321,7 +321,8 @@ def test_a_rival_that_agrees_on_the_claim_does_not_count_as_discriminated():
 
 def test_the_preregistration_states_each_claim_and_how_each_rival_reads_it(modality):
     doc = modality.preregister()
-    assert "- Derivations check: yes" in doc
+    assert ("- Derivation references resolve, the causal graph entails every claim a prediction "
+            "states and contradicts no claim a phenomenon states: yes") in doc
     assert ("   - Claim: the effect of c_modality_activation on c_conceptual_access is positive; "
             "entailed by the causal graph through p3") in doc
     assert ("   - Rivals it is declared to discriminate: alt_grounding_by_interaction "

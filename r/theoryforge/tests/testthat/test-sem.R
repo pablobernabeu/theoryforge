@@ -38,8 +38,8 @@
 }
 .sem_bow <- function(from, to) {
   paste0("# Bow between ", from, " and ", to, ": a path and a covariance join them, so the ",
-         "path from ", from, " to ", to, " is not identified without further constraints, ",
-         "such as an instrument for ", from, ".")
+         "path from ", from, " to ", to, " may not be identified unless the theory supplies ",
+         "an instrument for ", from, ".")
 }
 # The sign block, from c(label, op, proposition, relation) vectors.
 .sem_signs <- function(...) {
@@ -397,7 +397,7 @@ test_that("a relation from a construct to itself is left out", {
   # as a feedback loop and the second couples s to itself.
   expect_identical(tf_implications(theory, cycles = "sigma")$feedback,
                    list(list("s"), list("y")))
-  sim <- tf_simulate(theory, steps = 1, damping = 0, init = c(s = 1))
+  sim <- tf_simulate(theory, steps = 1, damping = 0, init = c(s = 1), method = "euler")
   expect_identical(sim$trajectory[[2L]], c(0, 1.1, 0))
 })
 

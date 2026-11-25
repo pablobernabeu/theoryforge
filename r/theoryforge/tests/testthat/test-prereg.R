@@ -32,16 +32,19 @@ test_that("tf_preregister writes the file when a path is given", {
   expect_identical(raw, charToRaw(enc2utf8(txt)))
 })
 
-test_that("the derivation line reflects the rigour item status", {
+test_that("the derivation line reflects the checklist item status", {
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   weak <- tf_read(tf_fixture_path("weak-theory.theory.yaml"))
+  line <- paste0("\n- Derivation references resolve, the causal graph entails every claim a ",
+                 "prediction states and contradicts no claim a phenomenon states: ")
   # The causal graph has feedback loops, so the checklist leaves the claim of
   # pred_indep unread under the default cycles = "refuse".
-  expect_true(grepl("Derivations check: not checked (feedback loop)", tf_preregister(panic),
-                    fixed = TRUE))
+  expect_true(grepl(paste0(line, 'not checked (feedback loop; use cycles = "sigma")\n'),
+                    tf_preregister(panic), fixed = TRUE))
   v2 <- tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml"))
-  expect_true(grepl("Derivations check: yes", tf_preregister(v2), fixed = TRUE))
-  expect_true(grepl("Derivations check: no", tf_preregister(weak), fixed = TRUE))
+  expect_true(grepl(paste0(line, "yes\n"), tf_preregister(v2), fixed = TRUE))
+  expect_true(grepl(paste0(line, "no\n"), tf_preregister(weak), fixed = TRUE))
+  expect_false(grepl("Derivations check", tf_preregister(panic), fixed = TRUE))
 })
 
 test_that("the severity heading names the rubric for what it is", {

@@ -24,10 +24,11 @@ test_that("tf_simulate echoes back every knob that shapes the trajectory", {
   expect_equal(sim$damping, 0.25)
   expect_equal(sim$init, 2.0)
   expect_identical(sim$initial_state, c(2, 2, 2))
+  expect_identical(sim$method, "exact")
   # At k = 1.5 the feedback loop grows fast enough for three Euler steps of
   # 0.2 to fall short of the exact solution by more than 5 per cent.
   expect_warning(other <- tf_simulate(theory, steps = 3L, dt = 0.2, k = 1.5,
-                                      damping = 0.25, init = 2.0),
+                                      damping = 0.25, init = 2.0, method = "euler"),
                  "depart from the exact solution", fixed = TRUE)
   expect_false(isTRUE(all.equal(sim$trajectory, other$trajectory)))
 })
@@ -108,13 +109,14 @@ test_that("tf_simulate stops with the step and state where it diverges", {
   # double range. Both twins now stop at that step.
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   expect_error(
-    tf_simulate(theory, steps = 240, dt = 2, k = 10, damping = 0, init = 10),
+    tf_simulate(theory, steps = 240, dt = 2, k = 10, damping = 0, init = 10, method = "euler"),
     "simulate diverged at step 228: state 'c_arousal' is not finite; reduce dt or k",
     fixed = TRUE)
   # One step fewer runs to completion, and warns that the Euler steps have
   # left the exact solution.
   expect_warning(
-    sim <- tf_simulate(theory, steps = 227, dt = 2, k = 10, damping = 0, init = 10),
+    sim <- tf_simulate(theory, steps = 227, dt = 2, k = 10, damping = 0, init = 10,
+                       method = "euler"),
     "depart from the exact solution", fixed = TRUE)
   expect_length(sim$trajectory, 228L)
   expect_true(all(is.finite(unlist(sim$trajectory))))
@@ -191,7 +193,7 @@ test_that("tf_simulate matches the Python golden semantically (tol 1e-9)", {
     theory <- tf_read(tf_fixture_path(fixture))
     sim <- tf_simulate(theory, method = method)
 
-    golden_file <- paste0(id, if (method == "exact") ".simulate_exact.json" else ".simulate.json")
+    golden_file <- paste0(id, if (method == "euler") ".simulate_euler.json" else ".simulate.json")
     golden <- jsonlite::fromJSON(tf_expected_path(golden_file), simplifyVector = TRUE)
     id <- paste(id, method)
 
@@ -213,9 +215,12 @@ test_that("tf_simulate matches the Python golden semantically (tol 1e-9)", {
   }
 })
 
-test_that("tf_simulate panic trajectory reproduces the documented first rows", {
+test_that("tf_simulate panic trajectory reproduces the first Euler rows", {
+  # With every state at 1, each grows by dt * (k - damping) = 0.05 per Euler
+  # step, and by exp(0.05) per step of the exact solution, the default.
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
-  sim <- tf_simulate(theory)
+  expect_equal(tf_simulate(theory, steps = 1)$trajectory[[2L]], rep(round(exp(0.05), 6), 3))
+  sim <- tf_simulate(theory, method = "euler")
   expect_equal(sim$trajectory[[1L]], c(1, 1, 1))
   expect_equal(sim$trajectory[[2L]], c(1.05, 1.05, 1.05))
   expect_equal(sim$trajectory[[3L]], c(1.1025, 1.1025, 1.1025))
@@ -279,13 +284,14 @@ test_that("tf_simulate refuses an unknown method with the Python twin's message"
 test_that("tf_simulate records the method and what the coupling leaves out", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   sim <- tf_simulate(theory, steps = 2)
-  expect_identical(sim$method, "euler")
+  # The default method is the exact solution.
+  expect_identical(sim$method, "exact")
   expect_identical(sim$ignored, list())
   expect_identical(sim$opposed, list())
   # p3 states that perceived threat causes arousal, without a sign. The
   # coupling is positive by assumption, and that alone makes the loop grow.
   expect_identical(sim$assumed_positive, list("p3"))
-  expect_identical(tf_simulate(theory, steps = 2, method = "exact")$method, "exact")
+  expect_identical(tf_simulate(theory, steps = 2, method = "euler")$method, "euler")
 })
 
 # a reaches each of b to e by one relation, and three propositions couple
@@ -348,7 +354,8 @@ test_that("tf_simulate's exact method decays where Euler explodes", {
   exact <- tf_simulate(theory, steps = 3, dt = 1, damping = 2.5, method = "exact")
   expect_identical(vapply(exact$trajectory, `[[`, numeric(1), 1L),
                    c(1, 0.082085, 0.006738, 0.000553))
-  expect_warning(euler <- tf_simulate(theory, steps = 3, dt = 1, damping = 2.5),
+  expect_warning(euler <- tf_simulate(theory, steps = 3, dt = 1, damping = 2.5,
+                                      method = "euler"),
                  euler_warning, fixed = TRUE)
   expect_identical(vapply(euler$trajectory, `[[`, numeric(1), 1L),
                    c(1, -1.5, 2.25, -3.375))
@@ -360,13 +367,15 @@ test_that("tf_simulate's exact method keeps the oscillation that Euler inflates"
   theory <- regulation_theory()
   exact <- tf_simulate(theory, steps = 500, method = "exact")
   expect_lt(max(abs(unlist(utils::tail(exact$trajectory, 73L)))), 1.4)
-  expect_warning(euler <- tf_simulate(theory, steps = 500), euler_warning, fixed = TRUE)
+  expect_warning(euler <- tf_simulate(theory, steps = 500, method = "euler"), euler_warning,
+                 fixed = TRUE)
   expect_gt(max(abs(unlist(utils::tail(euler$trajectory, 73L)))), 8)
 })
 
 test_that("tf_simulate's Euler steps do not warn while they track the exact solution", {
-  expect_no_warning(tf_simulate(tf_read(tf_fixture_path("panic-network.theory.yaml"))))
-  expect_no_warning(tf_simulate(regulation_theory(), steps = 5))
+  expect_no_warning(tf_simulate(tf_read(tf_fixture_path("panic-network.theory.yaml")),
+                                method = "euler"))
+  expect_no_warning(tf_simulate(regulation_theory(), steps = 5, method = "euler"))
 })
 
 test_that("tf_simulate's Euler warning does not depend on the unit of init", {
@@ -376,12 +385,12 @@ test_that("tf_simulate's Euler warning does not depend on the unit of init", {
   # as the exact state, so a start at 0.2 warns as a start at 1 does.
   theory <- tf_read(tf_fixture_path("weak-theory.theory.yaml"))
   for (init in c(1, 0.2, -0.01)) {
-    expect_warning(tf_simulate(theory, steps = 10, dt = 1, init = init), euler_warning,
-                   fixed = TRUE)
+    expect_warning(tf_simulate(theory, steps = 10, dt = 1, init = init, method = "euler"),
+                   euler_warning, fixed = TRUE)
   }
   # A run that tracks the exact solution stays silent at any scale.
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
-  for (init in c(100, 0.01)) expect_no_warning(tf_simulate(panic, init = init))
+  for (init in c(100, 0.01)) expect_no_warning(tf_simulate(panic, init = init, method = "euler"))
   # The scale is the largest absolute starting value, here that of the one
   # construct init names. A run that starts at 0 everywhere stays at 0 and
   # gives no warning.
@@ -389,9 +398,9 @@ test_that("tf_simulate's Euler warning does not depend on the unit of init", {
     tf_add_construct("a", "A", "d") |>
     tf_add_construct("b", "B", "d") |>
     tf_add_proposition("p1", "a", "b", "increases")
-  expect_warning(tf_simulate(chain, steps = 4, dt = 3, init = list(a = 0.01)), euler_warning,
-                 fixed = TRUE)
-  expect_no_warning(tf_simulate(chain, steps = 4, dt = 3, init = 0))
+  expect_warning(tf_simulate(chain, steps = 4, dt = 3, init = list(a = 0.01), method = "euler"),
+                 euler_warning, fixed = TRUE)
+  expect_no_warning(tf_simulate(chain, steps = 4, dt = 3, init = 0, method = "euler"))
 })
 
 test_that("tf_simulate's exact method has no step-size limit", {
@@ -502,9 +511,9 @@ test_that("a theory of 400 constructs simulates", {
   t <- tf_theory("chain", "Chain")
   for (i in 0:399) t <- tf_add_construct(t, paste0("c", i), paste0("C", i), "A state.")
   for (i in 0:398) t <- tf_add_proposition(t, paste0("p", i), paste0("c", i), paste0("c", i + 1L), "increases")
-  exact <- tf_simulate(t, method = "exact")$trajectory
+  exact <- tf_simulate(t)$trajectory
   expect_equal(vapply(exact, `[[`, 0, 1L), exp(-0.05 * 0:10), tolerance = 1e-6)
-  euler <- suppressWarnings(tf_simulate(t))$trajectory
+  euler <- suppressWarnings(tf_simulate(t, method = "euler"))$trajectory
   expect_equal(vapply(euler, `[[`, 0, 1L), 0.95^(0:10), tolerance = 1e-6)
   expect_length(euler, 11L)
   expect_length(euler[[11L]], 400L)

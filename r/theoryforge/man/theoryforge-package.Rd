@@ -42,9 +42,10 @@ preregistration or a dossier describes. \code{\link[=tf_example_names]{tf_exampl
 
 \code{\link[=tf_validate]{tf_validate()}} checks the fields the schema requires and their allowed
 values, and with \code{full = TRUE} also every type, reference, claim and unknown
-field. \code{\link[=tf_check]{tf_check()}} scores the theory against a 12-item rigour checklist,
-with a weighted aggregate, its range under other weightings and a gate that
-blocks when an item marked as a blocker fails, and \code{\link[=tf_report]{tf_report()}} writes the
+field. \code{\link[=tf_check]{tf_check()}} runs a 12-item checklist of how completely the file is
+specified, with the checklist score, its range with equal weights or one
+weight halved or doubled and a gate that blocks when an item marked as a
+blocker fails, and \code{\link[=tf_report]{tf_report()}} writes the
 result as JSON or HTML. \code{\link[=tf_redundancy_check]{tf_redundancy_check()}} flags a pair of constructs
 when their definitions are near duplicates, when one definition is contained
 in the other, when the two carry the same label or when every measure of one
@@ -61,12 +62,12 @@ the conditional independencies the graph implies. A graph with a feedback
 loop is read by sigma-separation when \code{cycles = "sigma"}. \code{\link[=tf_entailments]{tf_entailments()}}
 reads each claim of a prediction or phenomenon against the graph and says
 whether the graph entails it, contradicts it or leaves it open.
-\code{\link[=tf_equivalent_models]{tf_equivalent_models()}} lists the causal directions that no observational
-study can test. \code{\link[=tf_discriminate]{tf_discriminate()}} sets the theory against a rival and
-lists the claims, independencies and signs that would tell the two apart.
-\code{\link[=tf_appraise_amendment]{tf_appraise_amendment()}} calls an amendment progressive, degenerating or
-neutral, and \code{\link[=tf_simulate]{tf_simulate()}} runs the construct network as a linear
-dynamical system. The causal reading assumes that the propositions state
+\code{\link[=tf_equivalent_models]{tf_equivalent_models()}} lists the causal directions that no test of
+conditional independence can settle. \code{\link[=tf_discriminate]{tf_discriminate()}} sets the theory
+against a rival and lists the claims, independencies and signs that would
+tell the two apart. \code{\link[=tf_appraise_amendment]{tf_appraise_amendment()}} calls an amendment
+progressive, degenerating or neutral, and \code{\link[=tf_simulate]{tf_simulate()}} runs the construct
+network as a linear dynamical system. The causal reading assumes that the propositions state
 every direct relation among the constructs, with an association for each
 common cause they leave unnamed.
 }

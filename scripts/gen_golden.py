@@ -102,12 +102,13 @@ def emit_theory(t: tf.Theory, out_dir: Path) -> list[str]:
     # The Quarto report, whose body is the dossier escaped (API_SPEC.md section 23).
     t.render_report(out_dir / f"{tid}.dossier.qmd")
     written.append(f"{tid}.dossier.qmd")
+    # The defaults, whose method is "exact", and the Euler steps beside them.
     (out_dir / f"{tid}.simulate.json").write_bytes(
         (json.dumps(t.simulate(), indent=2) + "\n").encode("utf-8"))
     written.append(f"{tid}.simulate.json")
-    (out_dir / f"{tid}.simulate_exact.json").write_bytes(
-        (json.dumps(t.simulate(method="exact"), indent=2) + "\n").encode("utf-8"))
-    written.append(f"{tid}.simulate_exact.json")
+    (out_dir / f"{tid}.simulate_euler.json").write_bytes(
+        (json.dumps(t.simulate(method="euler"), indent=2) + "\n").encode("utf-8"))
+    written.append(f"{tid}.simulate_euler.json")
     # Sigma-separation, so that a theory with a feedback loop has a record too
     # (API_SPEC.md section 27). On an acyclic theory, it gives the statements of
     # the default.

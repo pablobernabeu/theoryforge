@@ -1,4 +1,4 @@
-#' Render a theory's audit dossier as a standalone Quarto report.
+#' Render a theory's dossier as a standalone Quarto report.
 #'
 #' Writes a \code{.qmd} (a YAML header plus the deterministic dossier body) and
 #' can optionally invoke Quarto to render it. The report content is the
@@ -85,7 +85,7 @@ NULL
 #'   \code{.hidden} gain the suffix and \code{a.tar.gz} becomes
 #'   \code{a.tar.qmd}.
 #' @param title Optional report title. It defaults to
-#'   \code{"theoryforge report: <title-or-id>"}, also when \code{NULL},
+#'   \code{"theoryforge dossier: <title-or-id>"}, also when \code{NULL},
 #'   \code{NA} or empty, with the theory's title or id written on one line and
 #'   escaped as the body is, and with Quarto's shortcode delimiters in their
 #'   escaped forms \code{\{\{\{<} and \code{>\}\}\}}. It is written as a YAML
@@ -133,7 +133,7 @@ tf_render_report <- function(theory, path, title = NULL, render = FALSE, to = "h
   if (is.null(title) || is.na(title) || !nzchar(title)) {
     label <- .tf_str(T, "title")
     if (!nzchar(label)) label <- .tf_str(T, "id")
-    title <- paste0("theoryforge report: ", .tf_md_text(.tf_shortcodes(.tf_flat(label))))
+    title <- paste0("theoryforge dossier: ", .tf_md_text(.tf_shortcodes(.tf_flat(label))))
   }
 
   path <- .tf_qmd_path(path)

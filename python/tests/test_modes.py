@@ -72,7 +72,8 @@ def test_preregister_doc(panic_path):
     assert md.startswith("# Preregistration: Network theory of panic disorder\n")
     # The causal graph has feedback loops, so the checklist leaves the claim of
     # pred_indep unread under the default cycles = "refuse".
-    assert "- Derivations check: not checked (feedback loop)" in md
+    assert ('states and contradicts no claim a phenomenon states: not checked (feedback loop; '
+            'use cycles = "sigma")\n') in md
     assert "1. [point]" in md
     assert "- pred1: severity 1.0, risk 0.9" in md
     assert md.endswith("\n")

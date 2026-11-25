@@ -55,6 +55,14 @@ def implications(theory, cycles: str = "refuse", given: str = "basis") -> dict:
     distribution has the property called composition, as a multivariate
     normal one does, they imply every other independence the graph implies.
 
+    The statements are consequences of the graph as encoded. The graph reads
+    every pair of its constructs that no proposition joins as having no
+    direct effect on each other and no unexplained association, so the
+    statements are the theory's commitments only if its authors meant those
+    omissions. A construct marked ``x_latent: true`` is read like any other,
+    so a statement can hold fixed a construct that a test would need a
+    measure of, and no other set of observed constructs is sought for it.
+
     ``given="minimal"`` then drops each construct from the conditioning set,
     in file order, whenever the rest still separate the pair, which leaves a
     minimal separating set: no construct in it can be dropped. Every set tried

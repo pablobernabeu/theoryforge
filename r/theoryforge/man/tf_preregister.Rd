@@ -13,6 +13,7 @@ tf_preregister(theory, path = NULL, cycles = "refuse")
 written with LF line endings.}
 
 \item{cycles}{\code{"refuse"} (the default) or \code{"sigma"}, as in
+\code{\link[=tf_implications]{tf_implications()}}, passed to \code{\link[=tf_check]{tf_check()}}, \code{\link[=tf_entailments]{tf_entailments()}} and
 \code{\link[=tf_implications]{tf_implications()}}.}
 }
 \value{
@@ -26,10 +27,18 @@ file (LF, single trailing newline).
 \details{
 The header gives the theory id, the version when it has an id (with its
 parent, when one is named), the schema version, the maturity, the formal
-model when one is declared and the checklist's derivation check: \code{yes}
-when every prediction cites declared propositions and the causal graph
-entails every claim it states, \code{no} otherwise and \code{not applicable
-(no predictions)}.
+model when one is declared and the status of the checklist's
+derivation_chain item, read with the document's \code{cycles}. That line
+states what the item checks, that the derivation references resolve and
+that the causal graph entails every claim a prediction states and
+contradicts no claim a phenomenon states, and answers \code{yes},
+\code{no}, \code{not checked (feedback loop; use cycles = "sigma")} when a
+feedback loop leaves a prediction's claim unread, or \code{not applicable
+(no predictions)}. A fixed line in italics then says that the document was
+generated from the theory file, that the study design, the analysis plan,
+the inference criteria and whatever the sampling plan leaves out must be
+added before registration, and that the content hash identifies the file
+and is not a time stamp.
 
 A theory section follows, so that the document can be read without the
 theory file: each construct with its label, definition, measures and
@@ -38,7 +47,15 @@ when the theory has them, the phenomena it sets out to explain with what the
 causal graph says of their claims, the auxiliary assumptions, the rival
 accounts and the scope.
 
-Each hypothesis is then listed in file order with its claim type, statement,
+The hypotheses section opens, when the document states any claim, with one
+sentence naming the assumptions the verdicts on the claims rest on: the
+graph is the causal structure, with no omitted common cause of two of its
+constructs, each directed relation acts in its stated direction whatever
+the other inputs, paths do not cancel exactly where a claim line ends
+\code{unless paths cancel exactly} (faithfulness), and under
+\code{cycles = "sigma"} each feedback loop settles to a unique equilibrium,
+also once the intervened construct is held fixed. Each hypothesis is then
+listed in file order with its claim type, statement,
 prediction id and derivation, followed by the region its bounds allow, its
 claim and what the causal graph says of it, what an observational test of an
 effect claim must adjust for, the auxiliary assumptions that protect it
@@ -60,11 +77,15 @@ how informative a failed test is (Lakens, 2022). A theory without a plan has
 no such section.
 
 A section then lists the conditional independencies that
-\code{\link[=tf_implications]{tf_implications()}} derives from the causal graph, which are claims the
-theory makes without stating them, or says why there are none.
-\code{cycles} is passed to it and to \code{\link[=tf_entailments]{tf_entailments()}}: under the default,
-a graph with a feedback loop is not read, and with \code{"sigma"} it is read
-by sigma-separation. The claim-form severity rubric closes the document.
+\code{\link[=tf_implications]{tf_implications()}} derives from the causal graph, or says why there are
+none. They are consequences of the graph as encoded, which reads every pair
+of constructs that no proposition joins as having no direct effect and no
+unexplained association, so they are the theory's commitments only if its
+authors meant those omissions, and a line in italics above them says so.
+\code{cycles} is passed to it, to \code{\link[=tf_check]{tf_check()}} and to \code{\link[=tf_entailments]{tf_entailments()}}:
+under the default, a graph with a feedback loop is not read, and with
+\code{"sigma"} it is read by sigma-separation. The claim-form severity
+rubric closes the document.
 Values are written on one line, ids and dates included, so a line break
 inside a statement cannot end the list item it belongs to or start a line of
 its own.

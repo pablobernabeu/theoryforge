@@ -1165,7 +1165,7 @@ class Theory:
         return _entailments(self.data, cycles=cycles)
 
     def equivalent_models(self) -> dict:
-        """Which causal directions observational data can and cannot test (see
+        """Which causal directions no test of conditional independence can settle (see
         ``theoryforge.equivalent_models``)."""
         return _equivalent_models(self.data)
 
@@ -1201,19 +1201,20 @@ class Theory:
         return _compile_sem(self.data)
 
     def dossier(self, cycles: str = "refuse") -> str:
-        """A reviewer-facing audit bundle of the rigour report, severity, test record, evidence,
-        claims and causal graph, equivalent models, rivals, provenance and preregistration
+        """The dossier: the checklist report, severity, test record, evidence, claims and
+        causal graph, equivalent models, rivals, provenance and preregistration of the file
         (see ``theoryforge.dossier.dossier``).
         ``cycles="sigma"`` reads a causal graph with feedback loops by sigma-separation."""
         return _dossier(self.data, cycles=cycles)
 
     def simulate(self, steps: int = 10, dt: float = 0.1, k: float = 1.0,
                  damping: float = 0.5, init: float | Mapping[str, float] = 1.0,
-                 method: str = "euler") -> dict:
+                 method: str = "exact") -> dict:
         """Propagate the construct network as a linear dynamical system (see ``theoryforge.simulate``).
 
-        ``causes`` and ``mediates`` state no sign and are coupled positively,
-        and the result lists them under ``assumed_positive``.
+        The trajectory is that of one linear model consistent with the stated
+        signs. ``causes`` and ``mediates`` state no sign and are coupled
+        positively, and the result lists them under ``assumed_positive``.
         """
         return _simulate(self.data, steps=steps, dt=dt, k=k, damping=damping, init=init,
                          method=method)
@@ -1223,7 +1224,7 @@ class Theory:
         return _embedding_redundancy(self.data, embedder, threshold=threshold)
 
     def render_report(self, path, title=None, render: bool = False, to: str = "html") -> str:
-        """Write (and optionally render) a Quarto report of the audit dossier (see
+        """Write (and optionally render) a Quarto report of the dossier (see
         ``theoryforge.render_report``)."""
         return _render_report(self.data, path, title=title, render=render, to=to)
 

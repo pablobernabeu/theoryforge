@@ -84,9 +84,9 @@ suppressWarnings(suppressMessages({
     tf_render_report(t, file.path(out_dir, paste0(id, ".dossier.qmd")))
     write_raw(paste0(jsonlite::toJSON(tf_simulate(t), auto_unbox = TRUE, digits = 10, pretty = TRUE), "\n"),
               file.path(out_dir, paste0(id, ".simulate.json")))
-    write_raw(paste0(jsonlite::toJSON(tf_simulate(t, method = "exact"), auto_unbox = TRUE,
+    write_raw(paste0(jsonlite::toJSON(tf_simulate(t, method = "euler"), auto_unbox = TRUE,
                                       digits = 10, pretty = TRUE), "\n"),
-              file.path(out_dir, paste0(id, ".simulate_exact.json")))
+              file.path(out_dir, paste0(id, ".simulate_euler.json")))
     write_raw(paste0(jsonlite::toJSON(tf_implications(t, cycles = "sigma"), auto_unbox = TRUE,
                                       pretty = TRUE), "\n"),
               file.path(out_dir, paste0(id, ".implications.json")))

@@ -41,9 +41,9 @@ documented with the class under Core IO.
 
 ::: theoryforge.read_dagitty
 
-## Rigour
+## Checklist and severity
 
-Score a theory against the versioned rigour checklist, grade the form of each prediction's
+Run the versioned checklist on a theory file, grade the form of each prediction's
 claim before any data, and report how severely each bounded prediction passed its test.
 
 ::: theoryforge.check
@@ -85,8 +85,8 @@ Appraise an amendment to a theory by fixed rules that borrow Lakatos's terms pro
 
 ## The causal reading
 
-What the causal graph of the propositions implies and entails, which of its directions
-observational data cannot test, and what would tell the theory from a rival.
+What the causal graph of the propositions implies and entails, which of its directions no
+test of conditional independence can settle, and what would tell the theory from a rival.
 
 ::: theoryforge.implications.implications
 
@@ -98,7 +98,7 @@ observational data cannot test, and what would tell the theory from a rival.
 
 ## Testing and review
 
-The theory and hypotheses sections of a preregistration, lavaan syntax and the audit dossier
+The theory and hypotheses sections of a preregistration, lavaan syntax and the dossier
 for a reviewer.
 
 ::: theoryforge.preregister

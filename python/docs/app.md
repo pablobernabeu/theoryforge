@@ -13,7 +13,7 @@ while, and the browser keeps it for later visits.
 
 A theory comes from the list of examples, from a YAML or JSON file uploaded from your
 computer or from the editor. A card beside it shows whether the package finds it valid, its
-rigour score and gate, the number of its constructs, propositions and predictions, and its
+checklist score and gate, the number of its constructs, propositions and predictions, and its
 content hash. The score and the hash follow once nothing you started is waiting, so an
 operation you run goes first. A theory with more than 300 constructs, propositions and
 predictions is scored only when you ask, and one longer than 1,000,000 characters written as
@@ -23,13 +23,13 @@ the result appears with a note on what it shows. Figures can be saved as SVG or 
 and JSON results as files, and the preregistration and the dossier are shown as formatted
 pages with their Markdown a click away.
 
-The operations are grouped by purpose. Assess holds the rigour checklist, the full
+The operations are grouped by purpose. Assess holds the checklist, the full
 validation, the claim-form rubric, post-data severity and the redundancy screen. Derive holds
 the implied conditional independencies, what the causal graph entails, the equivalent models
 and the lavaan syntax. Compare sets the theory against a rival, which is either an
 alternative that states its own propositions or a theory you upload, and appraises an
 amendment against a prior version, by default the version the theory names as its parent.
-Document draws the ten diagram views and writes the preregistration and the audit dossier.
+Document draws the ten diagram views and writes the preregistration and the dossier.
 Simulate propagates the construct network from one value for every construct or from an
 impulse in one of them. Literature maps the small demonstration corpus, the frozen OpenAlex
 corpus of works on panic disorder or a corpus you upload, and builds the theory's landscape

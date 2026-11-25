@@ -15,10 +15,11 @@ def test_simulate_records_every_knob(panic_path):
                        "ignored", "assumed_positive", "opposed", "trajectory"]
     assert (r["dt"], r["steps"], r["k"], r["damping"], r["init"]) == (0.2, 3, 0.75, 0.25, 2.0)
     assert r["initial_state"] == [2.0, 2.0, 2.0]
+    assert r["method"] == "exact"
     # At k = 1.5 the feedback loop grows fast enough for three Euler steps of
     # 0.2 to fall short of the exact solution by more than 5 per cent.
     with pytest.warns(UserWarning, match="depart from the exact solution"):
-        other = t.simulate(steps=3, dt=0.2, k=1.5, damping=0.25, init=2.0)
+        other = t.simulate(steps=3, dt=0.2, k=1.5, damping=0.25, init=2.0, method="euler")
     assert other["trajectory"] != r["trajectory"]
 
 
@@ -97,14 +98,14 @@ def test_simulate_stops_with_the_step_and_state_where_it_diverges(panic_path):
     # R returned rows of Inf and then NaN. Both twins now stop at that step.
     t = tf.read(panic_path)
     with pytest.raises(ValueError) as exc:
-        t.simulate(steps=240, dt=2, k=10, damping=0, init=10)
+        t.simulate(steps=240, dt=2, k=10, damping=0, init=10, method="euler")
     assert str(exc.value) == (
         "simulate diverged at step 228: state 'c_arousal' is not finite; reduce dt or k"
     )
     # One step fewer runs to completion with every value finite, and warns
     # that the Euler steps have left the exact solution.
     with pytest.warns(UserWarning, match="depart from the exact solution"):
-        r = t.simulate(steps=227, dt=2, k=10, damping=0, init=10)
+        r = t.simulate(steps=227, dt=2, k=10, damping=0, init=10, method="euler")
     assert len(r["trajectory"]) == 228
 
 
@@ -218,8 +219,8 @@ def test_render_report_writes_qmd(panic_path, tmp_path):
     p = tf.read(panic_path).render_report(tmp_path / "report")
     assert p.endswith(".qmd")
     text = open(p, encoding="utf-8").read()
-    assert text.startswith("---\ntitle:")
-    assert "## Rigour checklist" in text
+    assert text.startswith('---\ntitle: "theoryforge dossier: Network theory of panic disorder"')
+    assert "## Checklist\n" in text
     # The text of each heading is escaped as Markdown text (API_SPEC.md section 23).
     assert "# Preregistration\\: Network theory of panic disorder" in text
 

@@ -34,9 +34,10 @@
 #' @section Checking a theory:
 #' [tf_validate()] checks the fields the schema requires and their allowed
 #' values, and with `full = TRUE` also every type, reference, claim and unknown
-#' field. [tf_check()] scores the theory against a 12-item rigour checklist,
-#' with a weighted aggregate, its range under other weightings and a gate that
-#' blocks when an item marked as a blocker fails, and [tf_report()] writes the
+#' field. [tf_check()] runs a 12-item checklist of how completely the file is
+#' specified, with the checklist score, its range with equal weights or one
+#' weight halved or doubled and a gate that blocks when an item marked as a
+#' blocker fails, and [tf_report()] writes the
 #' result as JSON or HTML. [tf_redundancy_check()] flags a pair of constructs
 #' when their definitions are near duplicates, when one definition is contained
 #' in the other, when the two carry the same label or when every measure of one
@@ -51,12 +52,12 @@
 #' loop is read by sigma-separation when `cycles = "sigma"`. [tf_entailments()]
 #' reads each claim of a prediction or phenomenon against the graph and says
 #' whether the graph entails it, contradicts it or leaves it open.
-#' [tf_equivalent_models()] lists the causal directions that no observational
-#' study can test. [tf_discriminate()] sets the theory against a rival and
-#' lists the claims, independencies and signs that would tell the two apart.
-#' [tf_appraise_amendment()] calls an amendment progressive, degenerating or
-#' neutral, and [tf_simulate()] runs the construct network as a linear
-#' dynamical system. The causal reading assumes that the propositions state
+#' [tf_equivalent_models()] lists the causal directions that no test of
+#' conditional independence can settle. [tf_discriminate()] sets the theory
+#' against a rival and lists the claims, independencies and signs that would
+#' tell the two apart. [tf_appraise_amendment()] calls an amendment
+#' progressive, degenerating or neutral, and [tf_simulate()] runs the construct
+#' network as a linear dynamical system. The causal reading assumes that the propositions state
 #' every direct relation among the constructs, with an association for each
 #' common cause they leave unnamed.
 #'

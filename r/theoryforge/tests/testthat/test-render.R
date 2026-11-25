@@ -81,7 +81,7 @@ test_that("tf_render_report treats an empty title as absent, as Python does", {
     out <- tf_render_report(tf_theory("the-id", ""), tempfile(fileext = ".qmd"), title = title)
     text <- readChar(out, file.info(out)$size, useBytes = TRUE)
     # The id is escaped as Markdown text, and the backslash then for YAML.
-    expect_match(text, 'title: "theoryforge report: the\\\\-id"', fixed = TRUE)
+    expect_match(text, 'title: "theoryforge dossier: the\\\\-id"', fixed = TRUE)
   }
 })
 
@@ -184,7 +184,7 @@ test_that("tf_render_report writes the theory's text as text", {
                                          "from: markdown-raw_html-raw_attribute-raw_tex", "menu:",
                                          '  title-selector: ""', "---"))
   expect_identical(yaml::yaml.load(lines[[2L]])$title, paste0(
-    r"---(theoryforge report: Injection &#96;r writeLines\('ran'\, 'PWNED\.txt'\)&#96; )---",
+    r"---(theoryforge dossier: Injection &#96;r writeLines\('ran'\, 'PWNED\.txt'\)&#96; )---",
     r"---(\{\{\{\< env HOME \>\}\}\} \<b\>bold\<\/b\>)---"))
   body <- lines[-(1:11)]
   expect_identical(length(body), length(strsplit(tf_dossier(t), "\n", fixed = TRUE)[[1L]]))

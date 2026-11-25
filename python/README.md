@@ -18,8 +18,8 @@ the predictions derived from those propositions, its auxiliary assumptions, its 
 accounts and its record of tests. From that file, the package computes what can be checked
 mechanically.
 
-It scores the theory against a 12-item rigour checklist and reads the propositions as a
-causal graph, from which it derives the conditional independencies the graph implies and
+It checks how completely the theory file states what a 12-item checklist asks for, and it
+reads the propositions as a causal graph, from which it derives the conditional independencies the graph implies and
 whether the graph entails each claim the theory states. It compares the theory with a rival
 account or with an earlier version of itself, grades how risky each prediction's claim is
 before data and how severely a recorded test probed it, and writes the theory and hypotheses
@@ -28,8 +28,13 @@ bibliographic corpus into keyword themes and shows which of them share words wit
 and its rivals.
 
 These are checks of what the file states, and none of them shows that a theory is true. The
-checklist's weights are a convention, so the report gives the range of the score under other
-weightings. The causal reading assumes that the propositions state every direct relation
+checklist score describes how completely the file states what checklist 3.1 asks for. Most
+items read whether a field is filled in or how a prediction is labelled, and stated claims
+are checked against the causal graph. Test outcomes are read only by the parsimony item, the
+weights are conventions, and no study has established what difference between two scores is
+meaningful. The score does not show that the theory is true or well reasoned. The report
+therefore gives the lowest and highest score with equal weights or with one weight halved or
+doubled. The causal reading assumes that the propositions state every direct relation
 among the constructs, with an association for each common cause they leave unnamed. A word
 that a theory shares with a literature theme does not show that the theory accounts for what
 the theme's records report.
@@ -81,7 +86,7 @@ theory = (
 )
 theory.validate(full=True)  # raises with every problem it finds
 
-# Check it against the rigour checklist and list the items that do not pass.
+# Run the checklist and list the items that do not pass.
 report = theory.check()
 print(report["aggregate_score"], report["aggregate_range"], report["gate"])
 not_passed = [(item["id"], item["status"]) for item in report["items"]
@@ -137,10 +142,10 @@ carry so that a reader can confirm which file they describe. `example_names()` a
 ### Check
 
 `validate()` checks the fields the schema requires and their allowed values, and with
-`full=True` also every type, reference, claim and unknown field. `check()` scores the theory
-against the rigour checklist. Each of its 12 items has a status, a score and a weight, and
-the report adds a weighted aggregate, its range under other weightings and a gate that
-blocks when a blocker item fails. `report()` gives the same as JSON or as an HTML fragment.
+`full=True` also every type, reference, claim and unknown field. `check()` runs the
+checklist. Each of its 12 items has a status, a score and a weight, and the report adds the
+checklist score, a weighted mean of the item scores, its range with equal weights or one
+weight halved or doubled and a gate that blocks when a blocker item fails. `report()` gives the same as JSON or as an HTML fragment.
 `redundancy_check()` flags a pair of constructs when their definitions are near duplicates,
 when one definition is contained in the other, when the two carry the same label or when
 every measure of one is listed for the other. `embedding_redundancy()` compares definitions
@@ -160,15 +165,18 @@ fallible measures is rejected too often, so a latent-variable model is the bette
 whether the graph entails it, contradicts it or leaves it open. For an effect in a graph
 without a feedback loop, it also says whether adjusting for some of the constructs
 identifies the effect in observational data and names a minimal such set.
-`equivalent_models()` lists the causal directions that no observational study can test.
+`equivalent_models()` lists the causal directions that no test of conditional independence
+can settle.
 `discriminate()` sets the theory against a rival, either an alternative that states its own
 propositions or another theory, and lists the claims, independencies and signs that would
 tell the two apart. `appraise_amendment()` compares two versions of a theory and calls the
 amendment progressive or degenerating by fixed rules that borrow the terms of Lakatos (1970),
 or neutral, the package's label for one that meets neither rule. The verdict holds only if
-what the two versions declare is true. `simulate()` runs the construct network as
-a linear dynamical system with one coupling gain. Its trajectory shows what the propositions
-imply under that model and is not fitted to data.
+what the two versions declare is true. `simulate()` runs the construct network as one linear
+dynamical system consistent with the signs the propositions state, with one coupling gain
+and unsigned relations taken as positive. Whether a feedback loop grows or settles is set
+by the gain against the damping, which the theory does not state, and the trajectory is not
+fitted to data.
 
 ### Test
 
@@ -181,8 +189,9 @@ with the sampling plan the file records, the implied independencies and, for eac
 hypothesis, its claim, adjustment set and rivals. The study design, the analysis plan and
 the inference criteria are left to the author. Once a test outcome records an estimate and
 its standard error, `post_data_severity()` computes how severely a bounded prediction passed
-(Mayo & Spanos, 2006). It uses a normal approximation, which overstates the severity of an
-estimate inside the region when the standard error comes from a small sample.
+(Mayo & Spanos, 2006), the minimum over two bounds being the package's own extension. It uses
+a normal approximation, which overstates the severity of an estimate inside the region when
+the standard error comes from a small sample, and it does not account for selection.
 
 ### Document
 
@@ -190,7 +199,7 @@ estimate inside the region when the standard error comes from a small sample.
 nomological network, the causal graph, the provenance, a roadmap of the checklist items
 still to meet, the pipeline from predictions to test results, the theory's constructs, scope
 and rivals, the workflow from constructs to tests, the overlap of construct scopes, the
-rigour checklist and the riskiness of each prediction. `render_diagram()` draws a view with
+checklist and the riskiness of each prediction. `render_diagram()` draws a view with
 the render extra. `dossier()` gathers the checklist, the severities, the test record, the
 causal reading, the rivals, the provenance and the preregistration in one Markdown document
 for reviewers. `render_report()` wraps the dossier in a Quarto document, and `osf_push()`

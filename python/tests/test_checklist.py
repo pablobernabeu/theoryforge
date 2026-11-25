@@ -293,8 +293,8 @@ def test_embedding_redundancy_defaults_to_its_own_threshold(monkeypatch):
 
 def test_the_dossier_gives_coverage_and_names_the_failed_blockers(weak_path):
     d = tf.read(weak_path).dossier()
-    assert ("- Aggregate rigour score: 2.2/100 (1.1 to 3.9 under other weightings)\n"
-            "- Checklist coverage: 0.92\n- Gate: blocked\n"
+    assert ("- Checklist score: 2.2 (1.1 to 3.9 with equal weights or one weight halved or "
+            "doubled)\n- Checklist coverage: 0.92\n- Gate: blocked\n"
             "- Blockers failed: 2 (falsifiability, derivation_chain)\n") in d
     assert "| parsimony | No auxiliary assumption added for an anomaly (named in added_for) lacks " \
         "independent corroboration | n/a | n/a | 0.08 |\n" in d

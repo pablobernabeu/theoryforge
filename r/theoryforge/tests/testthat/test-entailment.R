@@ -38,7 +38,7 @@ test_that("the example entails its four claims", {
                       "pred4 zero no_path ", "ph1 positive paths_agree p1+p3"))
 })
 
-test_that("the example has two directions no observational study can test", {
+test_that("the example has two directions no test of conditional independence can settle", {
   eq <- tf_equivalent_models(modality())
   expect_true(eq$computed)
   expect_equal(vapply(eq$edges, function(e) e$status, ""),
@@ -153,7 +153,9 @@ test_that("a rival that agrees on the claim does not count as discriminated", {
 test_that("the preregistration and the dossier report the causal reading", {
   t <- modality()
   doc <- tf_preregister(t)
-  expect_match(doc, "- Derivations check: yes", fixed = TRUE)
+  expect_match(doc, paste0("- Derivation references resolve, the causal graph entails every ",
+                           "claim a prediction states and contradicts no claim a phenomenon ",
+                           "states: yes"), fixed = TRUE)
   expect_match(doc, paste0("   - Rivals it is declared to discriminate: ",
                            "alt_grounding_by_interaction (its propositions contradict the claim)"),
                fixed = TRUE)

@@ -75,7 +75,7 @@ except ValueError as problem:
 `content_hash()` returns the SHA-256 digest of the theory's content written in a canonical
 form. Two files that hold the same theory have the same hash, whatever their layout,
 comments, key order or format, and any change to a value changes it. The preregistration
-and the audit dossier both print it, so a reader can check that the theory file in hand is
+and the dossier both print it, so a reader can check that the theory file in hand is
 the one a document describes. R's `tf_content_hash()` gives the same digest.
 
 ```python exec="1" source="block" result="text" session="getting-started"

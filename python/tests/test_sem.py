@@ -55,7 +55,7 @@ def repeat(pid, frm, to, label=None):
 
 def bow(frm, to):
     return (f"# Bow between {frm} and {to}: a path and a covariance join them, so the path "
-            f"from {frm} to {to} is not identified without further constraints, such as an "
+            f"from {frm} to {to} may not be identified unless the theory supplies an "
             f"instrument for {frm}.")
 
 
@@ -374,7 +374,7 @@ def test_a_relation_from_a_construct_to_itself_is_left_out():
     # implications() and simulate() keep the self loop: the first reads it as
     # a feedback loop and the second couples s to itself.
     assert t.implications(cycles="sigma")["feedback"] == [["s"], ["y"]]
-    r = t.simulate(steps=1, damping=0, init={"s": 1})
+    r = t.simulate(steps=1, damping=0, init={"s": 1}, method="euler")
     assert r["trajectory"][1] == [0.0, 1.1, 0.0]
 
 

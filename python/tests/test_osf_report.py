@@ -355,7 +355,7 @@ def test_render_report_writes_the_theory_text_as_text(tmp_path):
         "format: html", "engine: markdown", "ojs-engine: false", "html-math-method: plain",
         "from: markdown-raw_html-raw_attribute-raw_tex", "menu:", '  title-selector: ""', "---", ""]
     assert yaml.safe_load("\n".join(lines[1:2]))["title"] == (
-        r"theoryforge report: Injection &#96;r writeLines\('ran'\, 'PWNED\.txt'\)&#96; "
+        r"theoryforge dossier: Injection &#96;r writeLines\('ran'\, 'PWNED\.txt'\)&#96; "
         r"\{\{\{\< env HOME \>\}\}\} \<b\>bold\<\/b\>")
     body = lines[11:]
     assert len(body) == len(t.dossier().split("\n"))

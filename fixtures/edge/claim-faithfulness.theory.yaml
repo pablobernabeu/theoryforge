@@ -1,0 +1,32 @@
+# Verdicts that rest on faithfulness, as the preregistration writes them. x
+# raises y through m1 and lowers it through m2, so the sign of the effect is
+# open. A claimed zero is contradicted, and a claimed nonzero entailed, only if
+# the two paths do not cancel exactly, and both claim lines end with 'unless
+# paths cancel exactly'. So does the contradicted claim that m1 and m2 are
+# independent given y, a collider that connects them. A claimed positive is
+# left open, and the claim that m1 and m2 are independent given x, which
+# separates them, is entailed without any cancellation, so neither line ends
+# so. The phenomenon ph1, whose claim is left open, does not change the
+# derivation chain, which fails for h1, h3 and h4.
+schema_version: "1.1"
+id: "claim-faithfulness"
+title: "Offsetting paths and verdicts that rest on faithfulness"
+maturity: "developing"
+constructs:
+  - {id: x, label: "X", definition: "The cause."}
+  - {id: m1, label: "M1", definition: "The first mediator."}
+  - {id: m2, label: "M2", definition: "The second mediator."}
+  - {id: y, label: "Y", definition: "The outcome."}
+propositions:
+  - {id: p1, from: x, to: m1, relation: increases, mechanism: "It does."}
+  - {id: p2, from: m1, to: y, relation: increases, mechanism: "It does."}
+  - {id: p3, from: x, to: m2, relation: increases, mechanism: "It does."}
+  - {id: p4, from: m2, to: y, relation: decreases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "The two paths offset.", type: directional, derives_from: [p1, p2, p3, p4], claim: {kind: effect, x: x, y: y, sign: zero}}
+  - {id: h2, statement: "x moves y.", type: existence, derives_from: [p1, p2, p3, p4], claim: {kind: effect, x: x, y: y, sign: nonzero}}
+  - {id: h3, statement: "x raises y.", type: directional, derives_from: [p1, p2], claim: {kind: effect, x: x, y: y, sign: positive}}
+  - {id: h4, statement: "The mediators are unrelated given y.", type: directional, derives_from: [p2, p4], claim: {kind: association, x: m1, y: m2, given: [y], sign: zero}}
+  - {id: h5, statement: "The mediators are unrelated given x.", type: directional, derives_from: [p1, p3], claim: {kind: association, x: m1, y: m2, given: [x], sign: zero}}
+phenomena:
+  - {id: ph1, statement: "y rises with x.", claim: {kind: effect, x: x, y: y, sign: positive}}
