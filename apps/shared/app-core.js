@@ -2409,11 +2409,12 @@
       const main = el("main", { id: "main", tabindex: "-1" }, [buildSidebar(), buildMain()]);
       document.body.append(main);
       document.body.append(el("div", { id: "liveStatus", class: "sr-only", role: "status", "aria-live": "polite" }));
-      // Two distinct versions meet here: RT.pkgVersion is the theoryforge
-      // release (stamped into the manifest at build time from DESCRIPTION /
-      // pyproject.toml), while RT.version is the interpreter the engine booted
-      // (R.version.string / "Python x.y.z"). Keep them apart in the footer so
-      // the package version is never mistaken for the interpreter's.
+      // Two distinct versions meet here: RT.pkgVersion is the version of the
+      // app's own package (DESCRIPTION for R, pyproject.toml for Python), which
+      // build.mjs stamps into the manifest, while RT.version is the interpreter
+      // the engine booted (R.version.string / "Python x.y.z"). Keep them apart
+      // in the footer so the package version is never mistaken for the
+      // interpreter's.
       document.body.append(el("footer", { class: "app", html:
         "theoryforge" + (RT.pkgVersion ? " " + esc(RT.pkgVersion) : "") + " · " + esc(RT.version || "") +
         " via " + esc(RT.engineLabel) + " · running entirely client-side" +

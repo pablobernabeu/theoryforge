@@ -146,7 +146,7 @@ function compareRelease(a, b) {
   return 0;
 }
 export function versionsAgree(rV, pyV) {
-  if (rV === pyV) return true;
+  if (rV === pyV) return !/\.9000$/.test(rV);
   const r = rV.match(/^(\d+(?:\.\d+)*)\.9000$/);
   const py = pyV.match(/^(\d+(?:\.\d+)*)\.dev\d+$/);
   return Boolean(r && py) && compareRelease(py[1], r[1]) > 0;

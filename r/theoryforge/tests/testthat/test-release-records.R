@@ -47,7 +47,9 @@ test_that("every record of the version agrees", {
                       regexec("^(\\d+(?:\\.\\d+)*)\\.dev\\d+$",
                               versions[["pyproject"]], perl = TRUE))[[1L]]
     expect_length(dev, 2L)
-    expect_gt(utils::compareVersion(dev[2L], released), 0)
+    # Trailing zeros are dropped, so 0.7.1.0 ranks with 0.7.1, as in PEP 440.
+    expect_gt(utils::compareVersion(sub("(\\.0)+$", "", dev[2L]),
+                                    sub("(\\.0)+$", "", released)), 0)
     expect_identical(versions[["spec"]], "development version")
   } else {
     versions[["spec"]] <- sub("^v", "", versions[["spec"]])

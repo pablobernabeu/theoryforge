@@ -97,7 +97,11 @@ def test_pyproject_has_no_obsolete_backend_cap_or_licence_classifier():
 
 
 def _release(version: str) -> tuple[int, ...]:
-    return tuple(int(part) for part in version.split("."))
+    # Trailing zeros are dropped, so 0.7.1.0 ranks with 0.7.1, as in PEP 440.
+    parts = [int(part) for part in version.split(".")]
+    while len(parts) > 1 and parts[-1] == 0:
+        parts.pop()
+    return tuple(parts)
 
 
 def test_every_record_of_the_version_agrees():

@@ -96,4 +96,6 @@ test("the build accepts a release or a development line of the two package versi
   assert.ok(!versionsAgree("0.7.1.9000", "0.7.1"));
   assert.ok(!versionsAgree("0.7.1.9000", "0.7.1.dev0"));
   assert.ok(!versionsAgree("0.7.1", "0.8.0.dev0"));
+  assert.ok(!versionsAgree("0.7.1.9000", "0.7.1.9000"));
+  assert.ok(!versionsAgree("0.7.1.9000", "0.7.1.0.dev0"));
 });

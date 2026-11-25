@@ -334,7 +334,7 @@ const RT = {
   examples: [],
   corpora: [],
   version: "",     // interpreter version (R.version.string), set at boot
-  pkgVersion: "",  // theoryforge release, stamped into the manifest by build.mjs
+  pkgVersion: "",  // this package's version (DESCRIPTION), which build.mjs stamps into the manifest
   _webR: null,
   _theoryFile: "your-theory.yaml",
   // Whether the package ships the theory's file, which the code then reads
@@ -407,9 +407,9 @@ const RT = {
     this.canImportDagitty = await webR.evalRBoolean('exists("tf_read_dagitty", mode = "function")');
 
     this.version = (await webR.evalRString("R.version.string")) || "R";
-    // The theoryforge release shown in the footer. build.mjs stamps it into the
-    // manifest from DESCRIPTION (after checking pyproject.toml agrees), so the
-    // app cannot drift from the packaged version.
+    // The version of the R package, shown in the footer. build.mjs stamps it
+    // into the manifest from DESCRIPTION, after checking that pyproject.toml
+    // agrees with it, so the app cannot drift from the packaged version.
     this.pkgVersion = manifest.pkgVersion || "";
     // Each example's lineage, read once, lets the appraisal default to the
     // version the loaded theory declares as its parent.

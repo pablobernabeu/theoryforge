@@ -526,13 +526,17 @@ test("the help lists every work that the help texts and the result guides cite",
   await $("#helpBtn").click();
   const refs = [...ctx.document.querySelectorAll("#tfModal ul.help-refs li")].map((li) => li.textContent);
   assert.ok(refs.length > 0, "the help lists the works cited");
-  // Each author-year citation in the source, such as (Verma & Pearl, 1990/2022).
-  const cites = readFileSync(CORE, "utf8").match(/\(([A-Z][A-Za-z'-]+)( et al\.| & [A-Z][A-Za-z -]+)?, (\d{4})/g) || [];
+  // Each author-year citation in the source, such as (Lakatos, 1970) or, for a
+  // work republished later, (Verma & Pearl, 1990/2022).
+  const CITE = /\(([A-Z][A-Za-z'-]+)( et al\.| & [A-Z][A-Za-z -]+)?, (\d{4})(?:\/(\d{4}))?/;
+  const cites = readFileSync(CORE, "utf8").match(new RegExp(CITE.source, "g")) || [];
   assert.ok(cites.length >= 6, "the help texts cite works");
   for (const c of cites) {
-    const [, first, , year] = c.match(/\(([A-Z][A-Za-z'-]+)( et al\.| & [A-Z][A-Za-z -]+)?, (\d{4})/);
-    assert.ok(refs.some((r) => r.startsWith(first + ", ") && (r.includes("(" + year + ")") || r.includes("published " + year))),
-      c + " has an entry");
+    const [, author, , year, reprint] = c.match(CITE);
+    const listed = refs.filter((r) => r.startsWith(author + ", "));
+    assert.ok(listed.some((r) => reprint
+      ? r.includes("(" + reprint + ")") && r.includes("Original work published " + year)
+      : r.includes("(" + year + ")") && !r.includes("Original work published")), c + " has an entry");
   }
   for (const r of refs) assert.match(r, / https:\/\/doi\.org\/10\.\S+( \(Original work published \d{4}\))?$/);
 });

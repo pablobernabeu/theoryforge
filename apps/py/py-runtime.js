@@ -314,7 +314,7 @@ const RT = {
   examples: [],
   corpora: [],
   version: "",     // interpreter version ("Python x.y.z"), set at boot
-  pkgVersion: "",  // theoryforge release, stamped into the manifest by build.mjs
+  pkgVersion: "",  // this package's version (pyproject.toml), which build.mjs stamps into the manifest
   _py: null,
   _app: null,
   _theoryFile: "your-theory.yaml",
@@ -379,9 +379,9 @@ const RT = {
     this.canImportDagitty = !!this._app.can_import_dagitty();
 
     this.version = "Python " + pyodide.runPython("import platform; platform.python_version()");
-    // The theoryforge release shown in the footer. build.mjs stamps it into the
-    // manifest from pyproject.toml (after checking DESCRIPTION agrees), so the
-    // app cannot drift from the packaged version.
+    // The version of the Python package, shown in the footer. build.mjs stamps
+    // it into the manifest from pyproject.toml, after checking that DESCRIPTION
+    // agrees with it, so the app cannot drift from the packaged version.
     this.pkgVersion = manifest.pkgVersion || "";
     // Each example's lineage, read once, lets the appraisal default to the
     // version the loaded theory declares as its parent.

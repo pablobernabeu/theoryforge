@@ -5,8 +5,8 @@
 % for tf_read_dagitty(). Where Crossref records only the first page of an
 % article, the last page is the one before the next article in the issue, and a
 % comment above an entry says where else it departs from Crossref's record.
-% Kelley (1927) and Popper (1959) are books without a DOI. The file is not a
-% complete list of the works the documentation cites.
+% Kelley (1927) is a book without a DOI. The file is not a complete list of the
+% works the documentation cites.
 
 @article{bacharach1989organizational,
   author = {Bacharach, Samuel B.},
@@ -158,11 +158,14 @@
   doi = {10.1126/science.146.3642.347},
 }
 
-@book{popper1959logic,
-  author = {Popper, Karl R.},
-  year = {1959},
+% The edition the methodology article cites, as Popper (1959/2005).
+@book{popper2005logic,
+  author = {Popper, Karl},
+  year = {2005},
   title = {The logic of scientific discovery},
-  publisher = {Hutchinson},
+  publisher = {Routledge},
+  doi = {10.4324/9780203994627},
+  note = {Original work published 1959},
 }
 
 @article{robinaugh2021invisible,
@@ -246,12 +249,14 @@
   doi = {10.1016/j.tics.2019.11.009},
 }
 
-% Crossref's record is that of the advance article (2017, with no volume or
-% pages). The year, volume, issue and pages are PubMed's (PMID 28089956).
+% Crossref's record gives only the online date (15 January 2017), with no
+% volume or issue and the article identifier dyw341 as its page. The year,
+% volume, issue and pages are PubMed's (PMID 28089956), which dates the issue
+% December 2016.
 @article{textor2016dagitty,
   author = {Textor, Johannes and van der Zander, Benito and Gilthorpe, Mark S. and Liśkiewicz, Maciej and Ellison, George T. H.},
   year = {2016},
-  title = {Robust causal inference using directed acyclic graphs: The {R} package dagitty},
+  title = {Robust causal inference using directed acyclic graphs: The {R} package `dagitty'},
   journal = {International Journal of Epidemiology},
   volume = {45},
   number = {6},
