@@ -176,6 +176,13 @@ that concern it alone.
 - `simulate()` skips only the terms of its sums that cannot change them, so every value
   keeps its bits in both packages, and at 200 constructs the default run takes under a
   second where it took 6 to 13.
+- `implications()` reads large graphs much faster in both packages, and so do
+  `preregister()` and `dossier()`, which call it. The m-separation search reads the edges
+  at each vertex from lists built once per graph and keeps to the ancestors of the pair and
+  of the conditioning set. In an acyclic graph without associations, the parents of a pair
+  are taken without a search, since they always separate it there. On a theory of 400
+  constructs with two causes each, `implications()` takes about a second in Python and 10
+  seconds in R, where it took over 3 and nearly 8 minutes. The results are unchanged.
 - The message for an unknown type of `diagram()`, `render_diagram()` or `lit_diagram()`
   began listing the types separated by commas, as R lists them, in place of a tuple. These
   messages and that of `report()` began quoting a string between single quotation marks

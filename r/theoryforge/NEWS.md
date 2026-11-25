@@ -139,6 +139,14 @@ add the changes that concern the R package alone.
   value keeps its bits, and at 200 constructs the default run takes under a second
   where it took about 13.
 
+* `tf_implications()` reads large graphs much faster, and so do `tf_preregister()`
+  and `tf_dossier()`, which call it. The m-separation search reads the edges at each
+  vertex from lists built once per graph and keeps to the ancestors of the pair and
+  of the conditioning set. In an acyclic graph without associations, the parents of
+  a pair are taken without a search, since they always separate it there. On a
+  theory of 400 constructs with two causes each, `tf_implications()` takes about 10
+  seconds where it took nearly 8 minutes. The results are unchanged.
+
 * `tf_validate()` gathers its messages without copying them at every check and
   looks references up in a set of ids, so a theory of 20000 constructs validates in
   seconds where it took nearly a minute. Every message and its order are unchanged.
