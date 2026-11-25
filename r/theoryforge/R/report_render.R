@@ -44,7 +44,9 @@ NULL
 #' character of the dossier's text but the quotation marks gains a backslash
 #' and a backtick becomes \code{&#96;}, so that no code chunk, inline code,
 #' shortcode, link, span or tag opens from the theory's text. Typed \code{--}
-#' and \code{...} therefore show as typed. The marker of each heading and list
+#' and \code{...} therefore show as typed in the HTML formats, while the
+#' \code{typst} writer of Pandoc still sets \code{...} as an ellipsis and
+#' \code{-?} as a soft hyphen. The marker of each heading and list
 #' item, the underscores of a line in italics and the checklist table are kept.
 #' The level-1 heading, the dossier's title, gains the fixed identifier
 #' \code{\{#theoryforge-dossier\}}, so that Quarto's scripts never read one
@@ -58,6 +60,21 @@ NULL
 #' decodes such a run in the body, so a dossier that holds one, a UUID followed
 #' by a semicolon, hexadecimal digits and a semicolon, is refused. The
 #' theory's title and id are both in the dossier.
+#'
+#' These measures make Quarto and Pandoc read the theory's text as text, and
+#' they stop there. The writers of other markup languages
+#' (\code{docusaurus-md}, \code{hugo-md}, \code{org}, \code{rst},
+#' \code{textile}, \code{mediawiki}, \code{dokuwiki}, \code{zimwiki},
+#' \code{xwiki}, \code{jira} and \code{markua}) write the text back with few
+#' escapes or none, so the program that reads such a report can run what the
+#' theory holds. Render a theory from
+#' someone else to \code{html}, \code{revealjs}, \code{dashboard},
+#' \code{pdf}, \code{typst}, \code{docx}, \code{odt}, \code{pptx} or
+#' \code{epub}. Quarto also reads \code{_quarto.yml}, \code{_metadata.yml},
+#' \code{_brand.yml} and \code{_extensions} in the report's folder and in
+#' every folder above it, and runs the scripts and filters they name, which
+#' the header cannot turn off. Write the report of someone else's theory into
+#' a folder of your own.
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param path Destination path. A file name that does not end in
@@ -77,14 +94,20 @@ NULL
 #'   otherwise, so raw TeX such as `\emph{}` is dropped from HTML output.
 #'   Mathematics such as `$\alpha$` is written by the plain method of Pandoc in
 #'   the HTML formats, as the Greek letter in italics, since the report loads no
-#'   MathJax.
+#'   MathJax. \code{hugo-md} and \code{docusaurus-md} copy the title into the
+#'   front matter of the page as written, so the default title shows its
+#'   escaping backslashes there. Pass \code{title} for those formats.
 #' @param render When \code{TRUE}, run \code{quarto render} on the written file
 #'   and stop if it exits non-zero.
 #' @param to Quarto output format (default \code{"html"}). It must be a format
 #'   name or the path of a custom writer: a letter or digit followed by
 #'   letters, digits, \code{_}, \code{.}, \code{+}, \code{/} and \code{-},
 #'   as in \code{"pdf"}, \code{"gfm+tex_math_dollars"} or
-#'   \code{"writers/plain.lua"}.
+#'   \code{"writers/plain.lua"}. Render a theory from someone else to
+#'   \code{html}, \code{revealjs}, \code{dashboard}, \code{pdf},
+#'   \code{typst}, \code{docx}, \code{odt}, \code{pptx} or \code{epub}: the
+#'   writers of other markup languages write its text back with few escapes
+#'   or none (see Details).
 #' @return The path of the written \code{.qmd} file.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>

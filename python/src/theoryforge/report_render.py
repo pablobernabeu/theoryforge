@@ -194,8 +194,10 @@ def render_report(theory, path, title: str | None = None, render: bool = False, 
     In the body, every ASCII punctuation character of the dossier's text but the
     quotation marks gains a backslash and a backtick becomes ``&#96;``, so that no code
     chunk, inline code, shortcode, link, span or tag opens from the theory's text.
-    Typed ``--`` and ``...`` therefore show as typed. The marker of each heading and
-    list item, the underscores of a line in italics and the checklist table are kept.
+    Typed ``--`` and ``...`` therefore show as typed in the HTML formats, while the
+    ``typst`` writer of Pandoc still sets ``...`` as an ellipsis and ``-?`` as a soft
+    hyphen. The marker of each heading and list item, the underscores of a line in
+    italics and the checklist table are kept.
     The level-1 heading, the dossier's title, gains the fixed identifier
     ``{#theoryforge-dossier}``, so that Quarto's scripts never read one made from the
     theory's title, and the anchor of every other heading follows its typed text. An
@@ -207,6 +209,18 @@ def render_report(theory, path, title: str | None = None, render: bool = False, 
     followed by a semicolon, hexadecimal digits and a semicolon, is refused. The
     theory's title and id are both in the dossier.
 
+    These measures make Quarto and Pandoc read the theory's text as text, and they stop
+    there. The writers of other markup languages (``docusaurus-md``, ``hugo-md``,
+    ``org``, ``rst``, ``textile``, ``mediawiki``, ``dokuwiki``, ``zimwiki``, ``xwiki``,
+    ``jira`` and ``markua``) write the text back with few escapes or none, so the
+    program that reads such a report can run what the theory holds. Render a theory from someone
+    else to ``html``, ``revealjs``, ``dashboard``, ``pdf``, ``typst``, ``docx``,
+    ``odt``, ``pptx`` or ``epub``. Quarto also reads ``_quarto.yml``,
+    ``_metadata.yml``, ``_brand.yml`` and ``_extensions`` in the report's folder and in
+    every folder above it, and runs the scripts and filters they name, which the header
+    cannot turn off. Write the report of someone else's theory into a folder of your
+    own.
+
     A file name that does not end in ``.qmd`` (in any letter case) loses everything from its
     last dot, unless the name begins with that dot, and gains ``.qmd``. So ``report.md`` is
     written as ``report.qmd``, ``report`` and ``.hidden`` gain the suffix and ``a.tar.gz``
@@ -214,7 +228,8 @@ def render_report(theory, path, title: str | None = None, render: bool = False, 
     ``to`` is the Quarto output format, ``"html"`` by default, written into the header and
     passed to ``quarto render --to``. It must be a format name or the path of a custom
     writer: a letter or digit followed by letters, digits, ``_``, ``.``, ``+``, ``/`` and
-    ``-``, as in ``pdf``, ``gfm+tex_math_dollars`` or ``writers/plain.lua``.
+    ``-``, as in ``pdf``, ``gfm+tex_math_dollars`` or ``writers/plain.lua``. Render a
+    theory from someone else to one of the formats named above.
 
     ``title`` defaults to ``"theoryforge report: <title-or-id>"``, also when empty, with the
     theory's title or id written on one line and escaped as the body is, and with
@@ -224,7 +239,10 @@ def render_report(theory, path, title: str | None = None, render: bool = False, 
     A title passed by the caller is the caller's Markdown and is not escaped otherwise,
     so raw TeX such as ``\\emph{}`` is dropped from HTML output. Mathematics such as
     ``$\\alpha$`` is written by the plain method of Pandoc in the HTML formats, as the Greek
-    letter in italics, since the report loads no MathJax.
+    letter in italics, since the report loads no MathJax. ``hugo-md`` and
+    ``docusaurus-md`` copy the title into the front matter of the page as written, so
+    the default title shows its escaping backslashes there. Pass ``title`` for those
+    formats.
 
     When ``to`` is not a format name or a writer, when ``check()`` refuses the theory or
     when the dossier holds an encoded shortcode, ``ValueError`` is raised before anything
