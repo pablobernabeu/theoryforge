@@ -352,7 +352,7 @@ tf_appraise_amendment <- function(new, prior) {
   prior_graph <- tryCatch(
     .tf_prepare_graph(.tf_causal_graph(prior, "appraise_amendment"), "sigma",
                       .tf_list(prior, "propositions")),
-    error = function(e) NULL)
+    tf_refusal = function(e) NULL)
   entailed <- function(p) {
     cl <- .tf_read_claim(.tf_get(p, "claim"))
     !is.null(prior_graph) && !is.null(cl) &&
@@ -438,7 +438,7 @@ tf_appraise_amendment <- function(new, prior) {
   implied <- tryCatch(
     list(before = tf_implications(prior, cycles = "sigma")$implications,
          after = tf_implications(new, cycles = "sigma")$implications),
-    error = function(e) NULL)
+    tf_refusal = function(e) NULL)
   compared <- !is.null(implied)
   before <- if (compared) implied$before else list()
   after <- if (compared) implied$after else list()

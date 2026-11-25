@@ -322,3 +322,45 @@ test_that("the causal_dag export keeps an association between constructs no arro
   expect_identical(tf_diagram(t, "causal_dag"), "dag {\n  x -> y\n  z <-> w\n}\n")
   expect_identical(unlist(tf_implications(t)$constructs), c("x", "y", "z", "w"))
 })
+
+test_that("an association of a construct with itself adds nothing, though no other proposition names it", {
+  # c2 is related to no other construct, so it is no vertex. Looking it up
+  # anyway failed before the association was skipped. The Python suite asserts
+  # the same records.
+  t <- small_theory(list(c("c0", "c1", "increases"), c("c2", "c2", "associates")),
+                    claims = list(claim("effect", "c0", "c1", "negative")), k = 3L)
+  t$predictions[[1]]$diagnostic_vs <- list("r")
+  t$alternatives <- list(list(id = "r", label = "r", propositions = list(
+    list(id = "r1", from = "c0", to = "c1", relation = "increases"),
+    list(id = "r2", from = "c2", to = "c2", relation = "associates"))))
+  imp <- tf_implications(t)
+  expect_identical(list(unlist(imp$constructs), imp$n_bidirected, imp$n_implications),
+                   list(c("c0", "c1"), 0L, 0L))
+  expect_identical(tf_entailments(t)$claims[[1]]$verdict, "contradicted")
+  expect_true(tf_equivalent_models(t)$computed)
+  expect_true(tf_discriminate(t, "r")$markov_equivalent)
+  status <- function(t, id) Filter(function(i) i$id == id, tf_check(t)$items)[[1]][c("status", "score")]
+  expect_identical(status(t, "derivation_chain"), list(status = "fail", score = 0))
+  expect_identical(status(t, "diagnosticity"), list(status = "warn", score = 0))
+  expect_match(tf_preregister(t), "contradicted by the causal graph", fixed = TRUE)
+  expect_match(tf_dossier(t), "- r: claims it discriminates: none", fixed = TRUE)
+  expect_true(tf_appraise_amendment(t, t)$implications_compared)
+  # The same association stated by the rival alone.
+  t$propositions[[2]] <- NULL
+  expect_identical(status(t, "diagnosticity"), list(status = "warn", score = 0))
+})
+
+test_that("a refusal of the causal graph has its own class, and nothing else is read as one", {
+  # The functions that report a refusal in place of a result catch this class
+  # alone, as the Python twin catches ValueError alone.
+  expect_error(tf_entailments(small_theory(list()), cycles = "loops"), class = "tf_refusal")
+  expect_error(tf_implications(small_theory(list(c("c0", "c9", "causes")))),
+               "proposition 'p0' refers to unknown construct 'c9'", class = "tf_refusal")
+  expect_error(tf_implications(small_theory(list(c("c0", "c1", "causes"), c("c1", "c0", "causes")))),
+               "implications requires an acyclic causal graph", class = "tf_refusal")
+  expect_error(tf_discriminate(small_theory(list()), "r"), class = "tf_refusal")
+  t <- small_theory(list(c("c0", "c1", "increases")), claims = list(claim("effect", "c0", "c1", "positive")))
+  local_mocked_bindings(.tf_read_with = function(G, cl) stop("an internal fault"))
+  expect_error(tf_check(t), "an internal fault")
+  expect_error(tf_preregister(t), "an internal fault")
+})

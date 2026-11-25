@@ -36,3 +36,11 @@ test_that("arrows take the relation asked for and refuse what theoryforge cannot
                fixed = TRUE)
   expect_error(tf_read_dagitty("x -- y"), "undirected edge (--)", fixed = TRUE)
 })
+
+test_that("a variable associated only with itself reads as a construct outside the graph", {
+  # DAGitty writes z <-> z without complaint. The association adds nothing, so
+  # z is no vertex, as in the Python suite.
+  t <- tf_read_dagitty("dag { x -> y; z <-> z }")
+  expect_identical(vapply(t$propositions, function(p) p$relation, ""), c("causes", "associates"))
+  expect_identical(unlist(tf_implications(t)$constructs), c("x", "y"))
+})

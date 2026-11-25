@@ -98,9 +98,11 @@ def causal_graph(T: dict, caller: str, propositions=None) -> dict:
     assoc_props: dict[tuple[int, int], list[str]] = {}
     n_bidirected = 0
     for frm, to, pid in associations:
-        a, b = vertex[frm], vertex[to]
-        if a == b:
+        # An association of a construct with itself adds nothing, and its
+        # construct is a vertex only when another proposition relates it to another.
+        if frm == to:
             continue
+        a, b = vertex[frm], vertex[to]
         key = (min(a, b), max(a, b))
         if not bidirected[a][b]:
             bidirected[a][b] = bidirected[b][a] = True

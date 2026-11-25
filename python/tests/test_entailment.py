@@ -497,3 +497,33 @@ def test_the_content_hash_reads_an_integer_too_large_for_a_double_as_r_does():
     inf["predictions"][1]["bounds"]["upper"] = math.inf
     assert tf.content_hash(t) == tf.content_hash(inf)
     assert t.preregister() and t.dossier()
+
+
+def test_an_association_of_a_construct_with_itself_adds_nothing_though_no_other_proposition_names_it():
+    # c2 is related to no other construct, so it is no vertex. Looking it up
+    # anyway raised KeyError before the association was skipped. The R suite
+    # asserts the same records.
+    rival = {"id": "r", "label": "r", "propositions": [
+        {"id": "r1", "from": "c0", "to": "c1", "relation": "increases"},
+        {"id": "r2", "from": "c2", "to": "c2", "relation": "associates"}]}
+    t = _theory([("c0", "c1", "increases"), ("c2", "c2", "associates")],
+                claims=[_claim("effect", "c0", "c1", "negative")], alternatives=[rival], k=3)
+    t.data["predictions"][0]["diagnostic_vs"] = ["r"]
+    imp = t.implications()
+    assert (imp["constructs"], imp["n_bidirected"], imp["n_implications"]) == (["c0", "c1"], 0, 0)
+    assert t.entailments()["claims"][0]["verdict"] == "contradicted"
+    assert t.equivalent_models()["computed"] is True
+    assert t.discriminate("r")["markov_equivalent"] is True
+
+    def status(t, item):
+        it = next(i for i in t.check()["items"] if i["id"] == item)
+        return it["status"], it["score"]
+
+    assert status(t, "derivation_chain") == ("fail", 0)
+    assert status(t, "diagnosticity") == ("warn", 0)
+    assert "contradicted by the causal graph" in t.preregister()
+    assert "- r: claims it discriminates: none" in t.dossier()
+    assert tf.appraise_amendment(t, t.copy())["implications_compared"] is True
+    # The same association stated by the rival alone.
+    del t.data["propositions"][1]
+    assert status(t, "diagnosticity") == ("warn", 0)

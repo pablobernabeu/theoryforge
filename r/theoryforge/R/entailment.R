@@ -299,7 +299,7 @@
 .tf_check_cycles <- function(cycles, caller) {
   if (!is.character(cycles) || length(cycles) != 1L || is.na(cycles) ||
       !(cycles %in% c("refuse", "sigma"))) {
-    stop(caller, " requires cycles to be 'refuse' or 'sigma'", call. = FALSE)
+    .tf_refuse(caller, " requires cycles to be 'refuse' or 'sigma'")
   }
 }
 
@@ -397,7 +397,7 @@ tf_entailments <- function(theory, cycles = "refuse") {
   preds <- .tf_list(T, "predictions")
   focal <- tryCatch(
     .tf_prepare_graph(.tf_causal_graph(T, "check"), cycles, .tf_list(T, "propositions")),
-    error = function(e) NULL)
+    tf_refusal = function(e) NULL)
   if (is.null(focal)) return(vector("list", length(preds)))
   rivals <- list()
   for (a in .tf_list(T, "alternatives")) {
@@ -406,7 +406,7 @@ tf_entailments <- function(theory, cycles = "refuse") {
     if (!nzchar(aid) || length(props) == 0L || !is.null(rivals[[aid]])) next
     g <- tryCatch(
       .tf_prepare_graph(.tf_causal_graph(T, "check", propositions = props), cycles, props),
-      error = function(e) NULL)
+      tf_refusal = function(e) NULL)
     if (!is.null(g)) rivals[[aid]] <- g
   }
   out <- vector("list", length(preds))
@@ -772,10 +772,10 @@ tf_discriminate <- function(theory, rival, cycles = "refuse") {
         break
       }
     }
-    if (is.null(alt)) stop("discriminate found no alternative '", rival, "' in the theory", call. = FALSE)
+    if (is.null(alt)) .tf_refuse("discriminate found no alternative '", rival, "' in the theory")
     props <- .tf_list(alt, "propositions")
     if (length(props) == 0L) {
-      stop("discriminate requires alternative '", rival, "' to state propositions", call. = FALSE)
+      .tf_refuse("discriminate requires alternative '", rival, "' to state propositions")
     }
     other <- .tf_prepare_graph(.tf_causal_graph(T, "discriminate", propositions = props), cycles, props)
     rival_id <- rival

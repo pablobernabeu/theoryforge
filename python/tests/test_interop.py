@@ -39,3 +39,11 @@ def test_arrows_take_the_relation_asked_for_and_refuse_what_theoryforge_cannot_h
         tf.read_dagitty("x -> y", relation="mediates")
     with pytest.raises(ValueError, match=r"undirected edge \(--\)"):
         tf.read_dagitty("x -- y")
+
+
+def test_a_variable_associated_only_with_itself_reads_as_a_construct_outside_the_graph():
+    # DAGitty writes z <-> z without complaint. The association adds nothing, so
+    # z is no vertex, as in the R suite.
+    t = tf.read_dagitty("dag { x -> y; z <-> z }")
+    assert [p["relation"] for p in t.data["propositions"]] == ["causes", "associates"]
+    assert t.implications()["constructs"] == ["x", "y"]

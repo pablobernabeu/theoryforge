@@ -105,7 +105,9 @@ NULL
 #' so imply independencies the theory never claimed. With
 #' \code{cycles = "refuse"}, the default, a cycle among the directed edges is
 #' refused too, and the message names a cycle that was found and the
-#' \code{"sigma"} option.
+#' \code{"sigma"} option. Each refusal is an error of class \code{tf_refusal},
+#' as are those of [tf_entailments()], [tf_equivalent_models()] and
+#' [tf_discriminate()], so that a caller can catch a refusal and nothing else.
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param cycles What to do with a graph whose directed edges form a cycle:
@@ -200,11 +202,11 @@ tf_implications <- function(theory, cycles = "refuse", given = "basis") {
   # such whatever the theory holds.
   if (!is.character(cycles) || length(cycles) != 1L || is.na(cycles) ||
       !(cycles %in% c("refuse", "sigma"))) {
-    stop("implications requires cycles to be 'refuse' or 'sigma'", call. = FALSE)
+    .tf_refuse("implications requires cycles to be 'refuse' or 'sigma'")
   }
   if (!is.character(given) || length(given) != 1L || is.na(given) ||
       !(given %in% c("basis", "minimal"))) {
-    stop("implications requires given to be 'basis' or 'minimal'", call. = FALSE)
+    .tf_refuse("implications requires given to be 'basis' or 'minimal'")
   }
   T <- theory
   g <- .tf_causal_graph(T, "implications")
@@ -222,9 +224,9 @@ tf_implications <- function(theory, cycles = "refuse", given = "basis") {
   if (cycles == "refuse") {
     cycle <- .tf_first_cycle(directed, k)
     if (!is.null(cycle)) {
-      stop("implications requires an acyclic causal graph; cycle found: ",
-           paste(nodes[cycle], collapse = " -> "),
-           "; set cycles to 'sigma' to derive sigma-separation statements", call. = FALSE)
+      .tf_refuse("implications requires an acyclic causal graph; cycle found: ",
+                 paste(nodes[cycle], collapse = " -> "),
+                 "; set cycles to 'sigma' to derive sigma-separation statements")
     }
   } else {
     # A feedback loop is a component of two or more vertices, or one with a self
