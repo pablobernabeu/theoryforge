@@ -1,0 +1,64 @@
+# Source: philosophy-of-science-check/inputs/c3_prior.json, validity audit of theoryforge at f72ce4c (written here as YAML).
+schema_version: '1.1'
+id: demo
+title: Demo
+maturity: developing
+theory_form: network
+constructs:
+- id: x
+  label: X
+  definition: The x quantity measured by task 1.
+  measurement:
+  - m1
+  boundary_conditions:
+  - adults
+- id: 'y'
+  label: 'Y'
+  definition: The y quantity measured by task 2.
+  measurement:
+  - m2
+  boundary_conditions:
+  - adults
+- id: z
+  label: Z
+  definition: The z quantity measured by task 3.
+  measurement:
+  - m3
+  boundary_conditions:
+  - adults
+- id: w
+  label: W
+  definition: The w quantity measured by task 4.
+  measurement:
+  - m4
+  boundary_conditions:
+  - adults
+- id: v
+  label: V
+  definition: The v quantity measured by task 5.
+  measurement:
+  - m5
+  boundary_conditions:
+  - adults
+propositions:
+- id: p1
+  from: x
+  to: 'y'
+  relation: increases
+  mechanism: m
+predictions:
+- id: labA
+  derives_from:
+  - p1
+  type: directional
+  statement: x raises y in lab A.
+  bounds:
+    lower: 0
+    upper: null
+auxiliary_assumptions: []
+test_outcomes:
+- prediction_id: labA
+  passed: true
+alternatives: []
+formal_model:
+  type: none

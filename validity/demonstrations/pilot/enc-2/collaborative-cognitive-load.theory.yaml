@@ -1,0 +1,250 @@
+# Source: pilot/enc-2/collaborative-cognitive-load.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Encoder 2, encoding-reliability pilot. Encoded only from
+# audit/pilot/source-collaborative-cognitive-load.md, which describes
+# collaborative cognitive load theory as stated in Kirschner, Sweller, Kirschner
+# and Zambrano (2018). Every judgement call is listed in enc-2/notes.md.
+schema_version: "1.1"
+id: "collaborative-cognitive-load-2018"
+title: "Collaborative cognitive load theory"
+maturity: "developing"
+theory_form: "variance"
+
+constructs:
+  - id: c_collaboration
+    label: "Collaborative learning"
+    definition: "Learning together with other members of a group, face to face or supported by computers, as against learning alone."
+  - id: c_element_interactivity
+    label: "Element interactivity"
+    definition: "The extent to which the elements of the material must be processed together in working memory because they interact, which depends both on the task and on the learner's expertise."
+  - id: c_domain_expertise
+    label: "Domain expertise"
+    definition: "The organised domain-specific knowledge a learner holds in long-term memory as schemas, which lets interacting elements be held as one stored unit."
+  - id: c_intrinsic_load
+    label: "Intrinsic load"
+    definition: "Working-memory load that comes from the complexity of the material, defined as its element interactivity."
+  - id: c_extraneous_load
+    label: "Extraneous load"
+    definition: "Working-memory load that comes from the way information is presented or the task is organised, which the instructor can change."
+  - id: c_cognitive_load
+    label: "Cognitive load"
+    definition: "The total working-memory resource that a learning task requires of a learner, to which intrinsic and extraneous load add."
+  - id: c_collective_wm
+    label: "Collective working memory"
+    definition: "The working memories of the members of a group taken together, across which interacting elements can be distributed, larger than that of any one member."
+  - id: c_transactive_activities
+    label: "Transactive activities"
+    definition: "The communication and coordination among group members that collaboration requires."
+  - id: c_transactive_load
+    label: "Extraneous load of transactive activities"
+    definition: "The cognitive load that communication and coordination impose when they do not serve learning, for example because they produce errors, conflict or duplication."
+  - id: c_learning
+    label: "Learning"
+    definition: "The domain-specific knowledge that learners come to store in long-term memory, which is the main aim of instruction."
+    measurement: ["problem-solving skill"]
+  - id: c_worked_examples
+    label: "Worked-example study"
+    definition: "Studying worked examples instead of solving equivalent problems."
+  - id: c_collaboration_guidance
+    label: "Guidance and support for collaboration"
+    definition: "How much guidance and support for collaborating the task provides."
+  - id: c_collaboration_skills
+    label: "Collaboration skills"
+    definition: "The skills that group members have for collaborating."
+  - id: c_role_assignment
+    label: "Assignment of roles"
+    definition: "Whether roles are assigned to the members of the group."
+  - id: c_coordination_experience
+    label: "Experience of coordinating on tasks"
+    definition: "The experience members have of coordinating their actions on tasks."
+  - id: c_team_familiarity
+    label: "Prior work together"
+    definition: "Whether the members have worked with each other before."
+  - id: c_group_size
+    label: "Team size"
+    definition: "The number of members in a learning group."
+  - id: c_knowledge_unevenness
+    label: "Uneven distribution of knowledge"
+    definition: "How unevenly the relevant knowledge is distributed among the members of a group."
+  - id: c_channel_proximity
+    label: "Closeness of the channel to face-to-face interaction"
+    definition: "How close the channel through which members communicate is to face-to-face interaction."
+
+propositions:
+  - id: cp1
+    from: c_domain_expertise
+    to: c_element_interactivity
+    relation: "decreases"
+    mechanism: "An expert holds interacting elements as one stored unit, so fewer elements must be processed together in working memory."
+  - id: cp2
+    from: c_element_interactivity
+    to: c_intrinsic_load
+    relation: "increases"
+    mechanism: "Intrinsic load comes from the complexity of the material, which is its element interactivity."
+  - id: cp3
+    from: c_intrinsic_load
+    to: c_cognitive_load
+    relation: "increases"
+    mechanism: "Cognitive load has two sources that add together, and intrinsic load is one of them."
+    functional_form: "additive"
+  - id: cp4
+    from: c_extraneous_load
+    to: c_cognitive_load
+    relation: "increases"
+    mechanism: "Cognitive load has two sources that add together, and extraneous load is the other."
+    functional_form: "additive"
+  - id: cp5
+    from: c_cognitive_load
+    to: c_learning
+    relation: "decreases"
+    mechanism: "Working memory is severely limited in capacity and duration when it handles new information, so a load that exceeds it hinders the storing of domain-specific knowledge in long-term memory."
+    functional_form: "harmful when the load exceeds the working memory available"
+  - id: cp6
+    from: c_worked_examples
+    to: c_element_interactivity
+    relation: "decreases"
+    mechanism: "Studying a worked example reduces the element interactivity the learner faces."
+  - id: cp7
+    from: c_worked_examples
+    to: c_extraneous_load
+    relation: "decreases"
+    mechanism: "Studying a worked example reduces extraneous load compared with solving an equivalent problem."
+  - id: cp8
+    from: c_collaboration
+    to: c_collective_wm
+    relation: "increases"
+    mechanism: "When people learn together, interacting elements can be distributed across the working memories of group members, which together form a collective working memory larger than any one of them."
+  - id: cp9
+    from: c_collective_wm
+    to: c_cognitive_load
+    relation: "decreases"
+    mechanism: "Distributing the interacting elements across the collective working memory reduces the load on each member."
+  - id: cp10
+    from: c_collaboration
+    to: c_transactive_activities
+    relation: "increases"
+    mechanism: "Collaboration requires communication and coordination."
+  - id: cp11
+    from: c_transactive_activities
+    to: c_transactive_load
+    relation: "increases"
+    mechanism: "Communication and coordination themselves impose cognitive load, which is extraneous when they do not serve learning."
+  - id: cp12
+    from: c_transactive_load
+    to: c_extraneous_load
+    relation: "increases"
+    mechanism: "The load of transactive activities that do not serve learning is extraneous load."
+    functional_form: "additive"
+  - id: cp13
+    from: c_transactive_activities
+    to: c_learning
+    relation: "increases"
+    mechanism: "Transactive activities can serve learning, as when one member explains a step to another."
+  - id: cp14
+    from: c_element_interactivity
+    to: c_learning
+    relation: "moderates"
+    mechanism: "Sharing the processing pays when the material is complex enough to exceed each individual's working memory, whereas for simple tasks it does not repay the cost of transactive activities, so element interactivity modifies the effect of collaboration on learning."
+  - id: cp15
+    from: c_domain_expertise
+    to: c_learning
+    relation: "moderates"
+    mechanism: "Procedures that help novices can harm more expert learners (the expertise reversal effect), so collaboration is unnecessary when members already hold the relevant knowledge and can harm advanced learners."
+  - id: cp16
+    from: c_collaboration_guidance
+    to: c_transactive_load
+    relation: "decreases"
+  - id: cp17
+    from: c_domain_expertise
+    to: c_transactive_load
+    relation: "decreases"
+  - id: cp18
+    from: c_collaboration_skills
+    to: c_transactive_load
+    relation: "decreases"
+  - id: cp19
+    from: c_role_assignment
+    to: c_transactive_load
+    relation: "decreases"
+  - id: cp20
+    from: c_coordination_experience
+    to: c_transactive_load
+    relation: "decreases"
+  - id: cp21
+    from: c_team_familiarity
+    to: c_transactive_load
+    relation: "decreases"
+  - id: cp22
+    from: c_group_size
+    to: c_transactive_load
+    relation: "increases"
+  - id: cp23
+    from: c_knowledge_unevenness
+    to: c_transactive_load
+    relation: "increases"
+  - id: cp24
+    from: c_group_size
+    to: c_collective_wm
+    relation: "increases"
+    mechanism: "A larger team forms a larger collective working memory, which partly offsets its higher transactive load if the task is complex enough."
+  - id: cp25
+    from: c_channel_proximity
+    to: c_transactive_load
+    relation: "decreases"
+    mechanism: "The closer a channel is to face-to-face interaction, the more collaboration through it draws on biologically primary skills, so the less load it imposes."
+
+boundary_conditions:
+  - "learning of domain-specific, biologically secondary knowledge"
+  - "collaborative learning face to face or supported by computers"
+
+phenomena:
+  - id: cph1
+    statement: "Studying worked examples improves problem-solving skill more than solving equivalent problems."
+    claim: {kind: effect, x: c_worked_examples, y: c_learning, sign: positive}
+  - id: cph2
+    statement: "Procedures that help novices can harm more expert learners (the expertise reversal effect)."
+
+predictions:
+  - id: cpred1
+    derives_from: [cp8, cp9, cp5, cp14]
+    statement: "Group learning is more effective than individual learning when the material is complex enough to exceed each individual's working memory."
+    type: "directional"
+  - id: cpred2
+    derives_from: [cp10, cp11, cp12, cp4, cp5, cp14]
+    statement: "Group learning is less efficient than individual learning for simple tasks."
+    type: "directional"
+  - id: cpred3
+    derives_from: [cp12, cp4, cp5]
+    statement: "The outcome of collaboration reflects a trade-off between the gain from sharing the processing and the cost of transactive activities, so the benefit of group learning falls as the extraneous load of transactive activities rises, and high costs can cancel the gain."
+    type: "directional"
+    claim: {kind: effect, x: c_transactive_load, y: c_learning, sign: negative}
+  - id: cpred4
+    derives_from: [cp1, cp14, cp15]
+    statement: "Collaboration helps learning when the task exceeds individual working-memory capacity under time limits and members lack relevant prior knowledge, and it is unnecessary when most members already hold the relevant knowledge."
+    type: "directional"
+  - id: cpred5
+    derives_from: [cp15]
+    statement: "Collaboration can harm learning when advanced learners work on material they have already learned."
+    type: "directional"
+  - id: cpred6
+    derives_from: [cp11, cp12, cp4]
+    statement: "Although collaborating is itself biologically primary, communicating and coordinating about domain-specific material imposes a heavy cognitive load, so learners may need to be taught how to collaborate on such tasks."
+    type: "directional"
+    claim: {kind: effect, x: c_transactive_activities, y: c_cognitive_load, sign: positive}
+
+auxiliary_assumptions:
+  - id: ca1
+    statement: "Working memory is severely limited in capacity and duration when it handles new information, whereas organised knowledge retrieved from long-term memory, stored as schemas, meets no known working-memory limit."
+    added_for: null
+    protects: [cpred1, cpred2, cpred4]
+  - id: ca2
+    statement: "Domain-specific knowledge, such as reading or mathematics, is biologically secondary: people have not evolved to acquire it and it usually needs explicit instruction, whereas biologically primary skills, among them general problem solving, speaking a native language and communicating with others, are acquired without instruction."
+    added_for: null
+    protects: [cpred6]
+  - id: ca3
+    statement: "Germane load is not a third additive source of cognitive load."
+    added_for: null
+
+provenance:
+  - step: "1"
+    action: "encode"
+    detail: "Encoded by hand from the pilot source text on collaborative cognitive load theory (Kirschner et al., 2018, doi:10.1007/s11412-018-9277-y)."

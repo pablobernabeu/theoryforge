@@ -1,0 +1,543 @@
+# Judgements that build_register.py reads. Each was made by reading the lens's
+# finding or verdict and the second reader's text side by side.
+#
+# checks: the second reader's checks, numbered in the order the reader gave
+#   them. Each names the lens finding and/or verdict it examines (numbered in
+#   the lens's order), or none. verdict_verified and recommendation_verified
+#   record a verdict or recommendation the reader changed.
+# evidence: evidence_path for a lens finding where the first file its evidence
+#   names is not the right one, or where the reader's correction rests the
+#   finding on the reader's own case. Paths are relative to the audit
+#   directory, several separated by '; '. An empty string leaves it blank.
+# missed: the items the reader said the lens missed. defect: true adds the item
+#   to the register as a finding raised by the second reader; extends names
+#   the lens finding it adds to; severity is filled only where the reader's
+#   text states one. defect: false items comment on the lens's own analysis,
+#   report a positive result or concern future work, and are left out.
+
+claims-register:
+  checks:
+    1: {finding: 1}    # appraise_amendment calls a content-weakening amendment progressive
+    2: {finding: 2}    # completeness score called a rigour score
+    3: {finding: 3}    # 'no observational study can test'
+    4: {finding: 4}    # precision ignores the width of the region
+    5: {finding: 5}    # derivation_chain and the cited propositions
+    6: {finding: 6}    # diagnosticity credits a rival that leaves the claim open
+    7: {finding: 7}    # item names state judgements
+    8: {finding: 8}    # aggregate_range understates weight dependence
+    9: {finding: 9}    # simulation regime set by k and assumed signs
+    10: {finding: 10}  # landscape statuses
+    11: {finding: 11}  # 'severity' names two quantities
+    12: {finding: 12}  # gate wording
+    13: {finding: 13}  # existence claim suffices for progressive
+    14: {verdict: 1}   # rigour checklist aggregate, unsupported
+    15: {verdict: 2}   # methodology page, scope and limits
+    16: {verdict: 12}  # construct_clarity
+    17: {verdict: 13}  # logical_why
+    18: {verdict: 19}  # methodology page, grounding
+    19: {verdict: 20}  # no study of inter-coder agreement
+    20: {verdict: 21, verdict_verified: questionable}  # app validate guide
+    21: {verdict: 23, finding: 14}  # basis-set sentence omits composition
+    22: {verdict: 25}  # DAGitty reading of a cyclic graph
+    23: {verdict: 26}  # Westfall and Yarkoni example
+    24: {verdict: 31}  # equivalent_models wording (finding 3 is checked by 3)
+    25: {verdict: 34}  # app discriminate sentence
+    26: {verdict: 38}  # appraise_amendment verdict
+    27: {verdict: 41}  # 'neutral' label
+    28: {verdict: 43}  # two-bound severity and TOST
+    29: {verdict: 44}  # small-sample overstatement
+    30: {verdict: 48}  # linear system cannot be bistable
+    31: {verdict: 50}  # landscape statuses
+    32: {verdict: 56}  # content_hash
+    33: {verdict: 58}  # README disclaimer
+    34: {verdict: 61}  # app score chip
+    35: {}             # the lens's reference list
+  evidence:
+    1: claims-register/probes3.out; claims-register-check/c1b_signflip.out
+    4: claims-register/probes.out; claims-register-check/c4_items.out
+    5: claims-register/probes.out; claims-register-check/c5_derivation_cycles.out
+    7: claims-register/probes.out
+    8: claims-register/probes.out; claims-register-check/c8_range.out
+    11: claims-register/probes.out
+  missed:
+    1:
+      defect: true
+      extends: 1
+      severity: critical
+      title: The amendment appraisal does not read signs, so a reversal that contradicts a corroborated prediction is judged progressive
+      component: appraise_amendment
+      evidence: claims-register-check/c1b_signflip.out
+    2:
+      defect: true
+      extends: 5
+      title: derivation_chain counts claims marked not_evaluated as derived, so a theory with a feedback loop passes the gate
+      component: checklist item derivation_chain (rigor.py:254)
+      evidence: claims-register-check/c5_derivation_cycles.out
+    3:
+      defect: true
+      title: A test outcome recorded as passed is never checked against its own recorded estimate
+      component: validate(full=True); corroboration in appraise_amendment
+      evidence: claims-register-check/c1_amendment.out
+    4:
+      defect: true
+      title: A declared severity overrides the claim-form rubric in risk_severity
+      component: checklist item risk_severity
+      evidence: claims-register-check/c4_items.out
+    5:
+      defect: true
+      title: For one amended theory the appraisal says progressive while the gate is blocked and a corroborated claim is contradicted, with no warning
+      component: appraise_amendment; check(); entailments()
+      evidence: claims-register-check/c1b_signflip.out
+    6:
+      defect: true
+      title: The scope item passes a boundary condition reading 'always'
+      component: checklist item scope
+      evidence: claims-register/probes.out
+    7: {defect: false, note: asks that the lens's summary be narrowed}
+
+causal-verification:
+  checks:
+    1: {finding: 1}    # cyclic sign verdicts wrong in stable linear models
+    2: {verdict: 18, verdict_verified: sound with caveats}  # conservativeness on cyclic graphs
+    3: {verdict: 1}    # basis statements
+    4: {verdict: 2}    # Shipley basis set on DAGs
+    5: {verdict: 3}    # inseparable list
+    6: {verdict: 4}    # given='minimal'
+    7: {verdict: 6}    # refusing d-separation on cyclic graphs
+    8: {verdict: 8}    # adjustment sets
+    9: {finding: 2}    # 'identified' reports adjustment only
+    10: {finding: 3}   # adjustment for latent exposure or outcome
+    11: {finding: 4}   # implications() ignores latent marks
+    12: {verdict: 11}  # equivalent_models()
+    13: {verdict: 12}  # sign calculus, effects
+    14: {verdict: 13}  # sign calculus, marginal associations
+    15: {finding: 5}   # 'positive' means non-negative; crossover moderation
+    16: {finding: 6, verdict: 23}  # assumptions absent where verdicts are consumed
+    17: {finding: 7}   # sigma 'nonzero' is zero in linear cyclic models
+    18: {verdict: 5}   # sigma-separation via acyclification
+    19: {verdict: 20}  # latent projection in discriminate()
+    20: {verdict: 21}  # measurement note
+    21: {verdict: 22}  # R and Python twin engines
+    22: {finding: 8}   # partial-correlation tests under nonlinearity
+    23: {}             # references
+  evidence:
+    6: ''
+  missed:
+    1:
+      defect: true
+      severity: major
+      title: derivation_chain accepts claims the causal reading never evaluated, including one the sigma reading contradicts
+      component: checklist item derivation_chain (rigor.py:223; API_SPEC.md:242)
+      recommendation: Read cyclic theories with cycles='sigma' in the checklist, or count 'not_evaluated' claims as not verified.
+      evidence: causal-verification-check/out_derivation_chain_cases.txt
+    2:
+      defect: true
+      severity: major
+      title: A claimed zero against an undetermined derivation is reported as contradicted, a verdict that holds only under faithfulness
+      component: entailments() verdict rules; derivation_chain
+      recommendation: Report 'undetermined', or 'contradicted only if no paths cancel', and do not fail the blocker on it.
+      evidence: causal-verification-check/out_cancellation_case.txt
+    3: {defect: false, note: 'reports a test the lens did not run, with no mismatch'}
+    4:
+      defect: true
+      severity: minor
+      title: discriminate() says each independence record can tell the two graphs apart, which needs faithfulness
+      component: discriminate() wording (API_SPEC.md:1380)
+      evidence: causal-verification-check/out_discriminate_check.txt
+    5: {defect: false, note: concerns the planned data tests; the current specification claims independence only for DAGs}
+    6:
+      defect: true
+      title: The README does not say that every pair the theory leaves unjoined is read as an implied independence
+      component: README; implications()
+    7: {defect: false, note: asks how often encoded real theories reach the failure regions}
+    8:
+      defect: true
+      severity: minor
+      title: A prediction that restates its one proposition, or a nonzero claim through unsigned edges, is entailed and passes derivation_chain
+      component: checklist item derivation_chain; entailments()
+      evidence: causal-verification-check/out_derivation_chain_cases.txt
+      note: the reader graded it minor to major, depending on how derivation_chain is presented; the lower grade is recorded
+
+statistics-and-simulation:
+  checks:
+    1: {verdict: 1}    # post_data_severity, one bound
+    2: {verdict: 3}    # point claim at most 0.5
+    3: {verdict: 12}   # identification note (Brito and Pearl)
+    4: {verdict: 13}   # loop caution in compile_sem
+    5: {verdict: 15}   # defined effects
+    6: {verdict: 17}   # simulate exact method
+    7: {finding: 1}    # recorded pass counts when severity is 0
+    8: {finding: 2, verdict: 14}  # bow comment
+    9: {finding: 3}    # pre-data 'severity' rubric
+    10: {finding: 4}   # small-sample overstatement not in help or app
+    11: {finding: 5, verdict: 19}  # simulation set by default knobs
+    12: {finding: 6}   # simulate() default still 'euler'
+    13: {finding: 7}   # help attributes the two-bound minimum
+    14: {finding: 9}   # measured construct escapes the zero block
+    15: {}             # references
+  evidence:
+    6: ''
+    7: ''
+  missed:
+    1:
+      defect: true
+      severity: major
+      title: The appraisal has no control over chance corroboration, since one pass among many failed new predictions gives progressive
+      component: appraise_amendment
+      recommendation: Report the failed new predictions beside the verdict and state how the verdict depends on how many predictions were tested.
+      evidence: statistics-and-simulation-check/out/appraisal_many.out
+    2:
+      defect: true
+      title: The zero-covariance block states exact zeros with no tolerance, so global fit cannot separate a false proposition from a small omitted correlation
+      component: compile_sem zero-covariance block
+      recommendation: Give a per-line score test or modification index for the zero lines, or equivalence bounds for implied independencies.
+      evidence: statistics-and-simulation-check/out/zero_block_crud.out
+    3:
+      defect: true
+      extends: 5
+      title: The time window, as well as gain against damping, decides the qualitative picture, and neither the help nor the app says so
+      component: simulate(); app simulation view
+      evidence: statistics-and-simulation-check/out/sim_window.out
+    4:
+      defect: true
+      title: Bounds carry no scale, so an estimate on a different scale from the bounds goes undetected
+      component: schema bounds; post_data_severity()
+    5:
+      defect: true
+      extends: 1
+      title: A recorded pass is never reconciled with its estimate, standard error, alpha and sidedness
+      component: test outcomes; appraise_amendment; checklist
+    6:
+      defect: true
+      title: validate(full=True) accepts a point or interval prediction without bounds, which the rubric then scores highest
+      component: validate(); severity()
+    7: {defect: false, note: notes that the lens did not check the power of compiled models}
+
+red-team-score:
+  checks:
+    1: {finding: 1}    # empty, circular and refuted theories outscore strong ones
+    2: {finding: 2}    # score and gate ignore the test record
+    3: {finding: 3}    # declaring and omitting raise the score
+    4: {finding: 4}    # one decimal
+    5: {finding: 5, verdict: 4, verdict_verified: sound with caveats, recommendation_verified: qualify}  # aggregate_range
+    6: {finding: 6}    # app presents the score as rigour
+    7: {finding: 7}    # gate and alternative rules
+    8: {finding: 8}    # showcase examples declare high severities
+    9: {finding: 9}    # formalisation item
+    10: {verdict: 1, recommendation_verified: rework}  # 'twelve facets of rigour'
+    11: {verdict: 3}   # one decimal
+    12: {verdict: 6}   # gate depends only on blockers
+    13: {verdict: 7}   # falsifiability item
+    14: {verdict: 8}   # precision item
+    15: {verdict: 13, verdict_verified: 'sound with caveats (construct_clarity, scope); unsupported (logical_why)'}
+    16: {verdict: 16}  # close scores
+    17: {verdict: 17}  # twin parity
+  evidence:
+    6: ''
+  missed:
+    1:
+      defect: true
+      extends: 2
+      title: The methodology page lists the outcomes of tests among what a score difference reflects, although check() does not read them
+      component: methodology page (methodology.md:430)
+    2:
+      defect: true
+      extends: 4
+      title: The app's interpretation sentence pads the score to two decimals while the chip shows one
+      component: app interpretation sentence (app-core.js:589-593, 653)
+      evidence: red-team-score-check/out/app_number_format.txt
+    3:
+      defect: true
+      extends: 6
+      title: The dossier labels the number 'Aggregate rigour score'
+      component: dossier (dossier.py:154); README.md:104-106
+      evidence: red-team-score-check/out/dossier_rt3.txt
+    4:
+      defect: true
+      title: One prediction's type label feeds three items carrying 38 per cent of the aggregate, so the twelve items are not independent
+      component: falsifiability, precision and risk_severity; diagnosticity
+      evidence: red-team-score-check/out/check_extra.txt
+    5:
+      defect: true
+      extends: 1
+      title: The lexical redundancy screen passes mutually circular definitions
+      component: checklist item non_redundancy
+      evidence: red-team-score-check/out/check_extra.txt
+    6:
+      defect: true
+      title: The schema cannot state a rival's quantitative prediction
+      component: schema alternatives; discriminate()
+    7: {defect: false, note: describes a confound in the lens's own design}
+    8: {defect: false, note: corrects the lens's rank statistic}
+    9: {defect: false, note: reports a positive result}
+    10: {defect: false, note: questions the lens's prototype recommendation}
+
+philosophy-of-science:
+  checks:
+    1: {finding: 1, verdict: 7}  # accommodation labelled progressive
+    2: {finding: 2}    # step-by-step appraisal never credits
+    3: {finding: 3, verdict: 4}  # declared severity passes risk_severity
+    4: {finding: 4}    # ad hoc test cleared by an old success
+    5: {finding: 5}    # diagnosticity credits a prediction favouring the rival
+    6: {finding: 6}    # weakening judged by the type label
+    7: {finding: 7}    # corroboration ignores data and severity
+    8: {finding: 8}    # riskiness and precision read labels
+    9: {finding: 9}    # falsifiability passes on a label
+    10: {finding: 10}  # no hard core or history
+    11: {finding: 11}  # verdict depends on how the anomaly is encoded
+    12: {finding: 12}  # Mayo (1991) citation
+    13: {verdict: 17, verdict_verified: 'unsupported (app wording); questionable (rubric bonus)'}
+    14: {verdict: 21}  # no verisimilitude claim
+    15: {verdict: 12, verdict_verified: questionable, recommendation_verified: rework}  # content lost
+    16: {verdict: 13, verdict_verified: questionable, recommendation_verified: rework}  # articulation rule
+    17: {verdict: 5}   # post_data_severity
+    18: {finding: 16}  # Lakatos page reference
+    19: {}             # references
+  evidence:
+    1: philosophy-of-science/demos_output.txt; philosophy-of-science-check/check_demos_output.txt
+    2: philosophy-of-science/demos_output.txt
+    3: philosophy-of-science/demos_output.txt
+    4: philosophy-of-science/demos_output.txt
+    5: philosophy-of-science/demos_output.txt
+    6: philosophy-of-science/demos_output.txt
+    7: philosophy-of-science/demos_output.txt
+    8: philosophy-of-science/demos_output.txt
+    9: philosophy-of-science/demos_output.txt
+    10: philosophy-of-science/demos_output.txt
+    11: philosophy-of-science/demos_output.txt
+  missed:
+    1:
+      defect: true
+      extends: 1
+      title: Novelty can be manufactured without an anomaly, since a trivial assumption that lists an old prediction in 'protects' makes a replication progressive
+      component: appraise_amendment (develop.py:364)
+      evidence: philosophy-of-science-check/check_demos_output.txt
+    2:
+      defect: true
+      title: The content-loss rule ignores implied signs, so reversing an unstated sign entailment loses no content
+      component: appraise_amendment content loss (develop.py:420-436)
+      evidence: philosophy-of-science-check/check_demos_output.txt
+    3:
+      defect: true
+      extends: 11
+      title: Whether a new prediction is new content or an articulation depends on whether it states a machine-readable claim
+      component: appraise_amendment
+      evidence: philosophy-of-science-check/check_demos_output.txt
+    4:
+      defect: true
+      extends: 2
+      title: An auxiliary assumption with an untested independent prediction is classed ad_hoc2 and the amendment called degenerating
+      component: classify_auxiliary (_status.py:73); app PRIOR_CAUTION (app-core.js:1164)
+      evidence: philosophy-of-science-check/check_demos_output.txt
+    5:
+      defect: true
+      title: post_data_severity is nominal and ignores selection effects, and no document mentions them
+      component: post_data_severity()
+      evidence: philosophy-of-science-check/check_demos_output.txt
+    6: {defect: false, note: lists mitigations already in place}
+    7:
+      defect: true
+      extends: 9
+      title: validate(full=True) accepts a directional prediction whose claim has sign 'nonzero', and it passes the falsifiability blocker
+      component: validate(); checklist item falsifiability
+      evidence: philosophy-of-science-check/check_demos_output.txt
+    8:
+      defect: true
+      extends: 5
+      title: The diagnosticity item and discriminate() use different criteria
+      component: checklist item diagnosticity; discriminate()
+      evidence: philosophy-of-science-check/check_demos_output.txt
+    9:
+      defect: true
+      title: The app's appraisal sentence does not report new anomalies when a progressive amendment loses a corroborated prediction
+      component: app appraisal sentence (app-core.js:701)
+      evidence: philosophy-of-science-check/check_extra_output.txt
+    10: {defect: false, note: proposes a framing for the automation question}
+
+measurement:
+  checks:
+    1: {finding: 1}    # headline number presented as rigour
+    2: {finding: 2}    # re-encodings move the score
+    3: {finding: 3}    # feedback loop disables the derivation check
+    4: {finding: 4}    # verification asymmetry
+    5: {finding: 5}    # labels control about 36 points
+    6: {finding: 6}    # checklist ignores phenomena and the test record
+    7: {finding: 7}    # aggregate_range covers one-at-a-time changes
+    8: {finding: 8}    # roadmap turns the index into a target
+    9: {finding: 9, verdict: 21}  # no validity evidence
+    10: {verdict: 1}   # aggregate as a rigour score
+    11: {verdict: 4}   # presence-based item scoring
+    12: {verdict: 9, verdict_verified: questionable}  # 'the same theory always gives the same result'
+    13: {verdict: 11}  # determinism and parity
+    14: {verdict: 15}  # thresholds and cut-offs
+  evidence:
+    3: measurement/out/12_cycle_verdicts.txt; measurement-check/own/02_unrelated_cycle.txt
+  missed:
+    1:
+      defect: true
+      extends: 3
+      title: A feedback loop anywhere in the propositions, even one unrelated to the claim, sets every claim to not_evaluated and unblocks the gate
+      component: checklist item derivation_chain; gate
+      evidence: measurement-check/own/02_unrelated_cycle.txt
+    2: {defect: false, note: quantifies how much credit is checked rather than declared}
+    3:
+      defect: true
+      extends: 4
+      title: The parsimony item and the amendment appraisal treat a protected prediction differently
+      component: checklist item parsimony; classify_auxiliary (_status.py:59-62)
+    4: {defect: false, note: qualifies the lens's recommendation to read cycles with sigma}
+    5: {defect: false, note: reanalyses the lens's encoding multiverse}
+    6: {defect: false, note: qualifies the lens's 36-point figure}
+    7:
+      defect: true
+      extends: 1
+      title: The app's reading guide and welcome text carry no caveat
+      component: app-core.js:571, 1807
+    8:
+      defect: true
+      extends: 5
+      title: The mislabelled order claim recurs in tf_report and the help pages, and three other R examples type a point claim with no bounds
+      component: R examples (rigor.R:409; dossier.R:76; prereg.R:425; scoring.R:57)
+    9: {defect: false, note: corrects small errors of fact in the lens}
+
+metascience-and-related-tools:
+  checks:
+    1: {finding: 1}    # score ignores outcomes and phenomena
+    2: {finding: 2}    # Eronen and Bringmann
+    3: {finding: 3}    # no evidence on reliability or validity
+    4: {finding: 4}    # related-tools page omits precedents
+    5: {finding: 5}    # planned data tests on observed scores
+    6: {finding: 6}    # half the implications rest on silence
+    7: {finding: 7}    # planned ensemble simulation
+    8: {finding: 8}    # pgmpy route
+    9: {finding: 9}    # read_dagitty drops labels
+    10: {finding: 10}  # external construct identifiers
+    11: {finding: 11}  # description says the package tests theories
+    12: {finding: 12}  # VAST reference year
+    13: {verdict: 6}   # mechanical appraisal by fixed rules
+    14: {verdict: 16}  # measurement caveat for implications
+    15: {verdict: 15, verdict_verified: unsupported}  # teaching mode
+    16: {verdict: 18}  # simulate() as a reading of dynamics
+    17: {verdict: 10}  # novelty
+    18: {verdict: 3}   # Meehl's levels 1-2 (Van Lissa et al.)
+    19: {verdict: 11}  # expressiveness of propositions
+  evidence:
+    3: ''
+  missed:
+    1:
+      defect: true
+      extends: 1
+      title: A phenomenon the theory's own graph contradicts leaves the score and gate unchanged, while the same claim as a prediction blocks the gate
+      component: check(); phenomena; derivation_chain
+      recommendation: Let derivation_chain, or a new item, treat a contradicted phenomenon as it treats a contradicted prediction.
+      evidence: metascience-and-related-tools-check/out/phenomenon_vs_prediction_asymmetry.out
+    2: {defect: false, note: 'describes how theories are stated in an expert database, as evidence for the encoding study'}
+    3: {defect: false, note: supplies a human baseline for the feasibility question}
+    4:
+      defect: true
+      title: Signs and claims reach data only through an assumed link from constructs to observations, and estimates are read as if on the construct's scale
+      component: constructs' measurement; compile_sem(); post_data_severity()
+    5:
+      defect: true
+      title: Phenomena cannot record their evidential status, such as replication or robustness
+      component: schema phenomena
+    6:
+      defect: true
+      extends: 1
+      title: Further passages present the checklist as judging quality
+      component: app-core.js:39, 1807; .github/landing.html:72
+    7: {defect: false, note: notes that the lens tested only bundled examples}
+    8: {defect: false, note: lists limits of the lens's own checks}
+
+communication-and-apps:
+  checks:
+    1: {verdict: 1}    # apps give the same displayed results
+    2: {verdict: 2}    # README and methodology state the limits
+    3: {finding: 1}    # score and gate displayed as a quality judgement
+    4: {finding: 2}    # dossier reads as an independent audit
+    5: {finding: 3, verdict: 3}  # passing gate wording
+    6: {finding: 4}    # rival comparison colours
+    7: {finding: 5}    # 'under-theorised' in red
+    8: {finding: 6}    # simulation settings not mentioned
+    9: {finding: 7}    # 'entailed' shown as a green verdict
+    10: {finding: 8}   # two 'severity' quantities
+    11: {finding: 9}   # preregistration partial; 'Derivations check: yes'
+    12: {finding: 10}  # criterion strings
+    13: {finding: 11, verdict: 18}  # number formats
+    14: {finding: 12, verdict: 19, verdict_verified: sound with caveats}  # words break in table cells
+    15: {finding: 23}  # toast
+    16: {finding: 17}  # function-level help
+    17: {finding: 22}  # CRAN Description
+    18: {}             # a general suggestion on design changes against disclaimers
+  missed:
+    1:
+      defect: true
+      extends: 1
+      title: Blue-socks with every recorded test failed keeps its score of 97.8 and its gate pass
+      component: check() and gate; app score card
+      evidence: communication-and-apps-check/logs/refuted_same_score.out
+    2:
+      defect: true
+      extends: 1
+      title: A theory whose every text field is the letter 'x' passes full validation, scores 87.0 and passes the gate
+      component: check(); validate(full=True)
+      evidence: communication-and-apps-check/logs/declared_and_gaming.out
+    3:
+      defect: true
+      extends: 3
+      title: The gate opens on a label alone, taking the weak example from 2.2, blocked, to 27.2, pass
+      component: gate; checklist item falsifiability; worked example (index.md:31-35)
+      evidence: communication-and-apps-check/logs/relabel_weak.out
+    4:
+      defect: true
+      extends: 8
+      title: The author's declared prediction severity outranks the rubric in risk_severity
+      component: checklist item risk_severity; dossier
+      evidence: communication-and-apps-check/logs/declared_and_gaming.out
+    5:
+      defect: true
+      extends: 1
+      title: The HTML and Quarto reports show the score without its limits, and the HTML grounding column cites literature beside presence checks
+      component: report(format='html'); render_report()
+      evidence: communication-and-apps-check/logs/html_and_quarto_report.out
+    6:
+      defect: true
+      title: An item's status and score can disagree, as with diagnosticity 'pass' at 0.25
+      component: check() items; HTML report
+      evidence: communication-and-apps-check/logs/html_and_quarto_report.out
+    7: {defect: false, note: credits what the package already does well}
+    8:
+      defect: true
+      title: equivalent_models() cannot know that a construct is manipulated, so an experimentally manipulated direction is listed as reversible
+      component: equivalent_models(); schema
+      recommendation: Add a schema field for manipulated constructs, used as background knowledge for Meek's rules.
+    9: {defect: false, note: proposes a reader study}
+
+pilot:
+  evidence:
+    8: pilot/analysis/out/py
+
+# References the second readers verified that are not in a Crossref record
+# saved under their directories. Each was checked against Crossref again when
+# the register was built.
+extra_references:
+  - doi: 10.1037/0003-066X.34.7.571
+    citation: 'Dawes, R. M. (1979). The robust beauty of improper linear models in decision making. American Psychologist, 34(7), 571-582.'
+    second_reader: metascience-and-related-tools
+    verified_how: 'Crossref record summarised by the second reader in metascience-and-related-tools-check/out/crossref_missed_refs.txt; authors, year, title, journal, volume, issue and pages rechecked against Crossref on 25 November 2026.'
+  - doi: 10.1037/1040-3590.12.1.19
+    citation: 'Grove, W. M., Zald, D. H., Lebow, B. S., Snitz, B. E. & Nelson, C. (2000). Clinical versus mechanical prediction: A meta-analysis. Psychological Assessment, 12(1), 19-30.'
+    second_reader: metascience-and-related-tools
+    verified_how: 'Crossref record summarised by the second reader in metascience-and-related-tools-check/out/crossref_missed_refs.txt and PubMed 10752360 (out/pubmed_grove2000.txt); rechecked against Crossref on 25 November 2026.'
+  - doi: 10.1371/journal.pone.0014331
+    citation: 'Bornmann, L., Mutz, R. & Daniel, H.-D. (2010). A reliability-generalization study of journal peer reviews: A multilevel meta-analysis of inter-rater reliability and its determinants. PLoS ONE, 5(12), e14331.'
+    second_reader: metascience-and-related-tools
+    verified_how: 'Crossref record summarised by the second reader in metascience-and-related-tools-check/out/crossref_missed_refs.txt and PubMed 21179459; rechecked against Crossref on 25 November 2026.'
+  - doi: 10.1007/s00407-026-00377-9
+    citation: 'Bodner, M. (2026). Paul Hertz'' contribution to proof theory: Normal-form results for deductions. Archive for History of Exact Sciences, 80(1), Article 31.'
+    second_reader: philosophy-of-science
+    verified_how: 'Crossref record summarised by the second reader in philosophy-of-science-check/crossref_check_output.txt; full text read in PMC 13619662 for its quotation of Lakatos (1978, p. 33); rechecked against Crossref on 25 November 2026.'
+  - doi: 10.1017/CBO9780511621123
+    citation: 'Lakatos, I. (1978). The methodology of scientific research programmes (J. Worrall & G. Currie, Eds.). Cambridge University Press.'
+    second_reader: philosophy-of-science
+    verified_how: 'Crossref record summarised by the second reader in philosophy-of-science-check/crossref_check_output.txt (edited book; Crossref lists Worrall and Currie as editors); rechecked against Crossref on 25 November 2026. Text not read.'

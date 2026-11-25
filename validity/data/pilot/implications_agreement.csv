@@ -1,0 +1,4 @@
+theory,criterion,n_enc-1,n_enc-2,n_enc-3,J_literal_basis_enc-1/enc-2,J_literal_basis_enc-1/enc-3,J_literal_basis_enc-2/enc-3,J_literal_minimal_enc-1/enc-2,J_literal_minimal_enc-1/enc-3,J_literal_minimal_enc-2/enc-3,J_pairs_common_enc-1/enc-2,J_pairs_common_enc-1/enc-3,J_pairs_common_enc-2/enc-3
+bilingual-rhm,refuse,20,15,22,0.207,0.077,0.233,0.458,0.167,0.37,0.727,0.727,1.0
+collaborative-cognitive-load,refuse,146,146,115,0.659,0.396,0.396,0.77,0.411,0.411,0.991,0.95,0.958
+health-habit,sigma,42,29,19,0.145,0.052,0.2,0.164,0.109,0.333,0.571,0.593,0.944

@@ -1,0 +1,97 @@
+# Source: red-team-score/inputs/strong/s2-prospect-theory.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Strong theory 2: prospect theory, encoded only from what the abstract of
+# Kahneman and Tversky (1979) states (verified via Crossref; abstract from
+# OpenAlex, saved under abstracts/10.2307_1914185.openalex.json):
+#   Kahneman, D., & Tversky, A. (1979). Prospect theory: An analysis of decision
+#   under risk. Econometrica, 47(2), 263 (Crossref and OpenAlex give the first
+#   page only). https://doi.org/10.2307/1914185
+# The abstract names expected utility theory as the account it criticises,
+# states the certainty, reflection and isolation effects, a value function that
+# is concave for gains, convex for losses and steeper for losses, and decision
+# weights below the probabilities except for low probabilities. It states no
+# construct-level measurement or boundary condition other than 'choices among
+# risky prospects', and its value and weighting functions are not a formal
+# model of a type the schema lists. The encoding choices are the auditor's.
+schema_version: "1.1"
+id: "s2-prospect-theory"
+title: "Prospect theory: an analysis of decision under risk"
+maturity: "testing"
+theory_form: "process"
+version: {id: "v1", parent_id: null, content_hash: null}
+
+constructs:
+  - id: c_loss_frame
+    label: "Outcome coded as a loss"
+    definition: "Whether an outcome is assigned value as a loss rather than a gain relative to the decision maker's position, instead of as a final asset."
+    measurement: ["choices among risky prospects"]
+  - id: c_certainty
+    label: "Certainty of an outcome"
+    definition: "Whether an outcome is obtained with certainty rather than being merely probable."
+    measurement: ["choices among risky prospects"]
+  - id: c_decision_weight
+    label: "Decision weight"
+    definition: "The weight that replaces the probability of an outcome when a prospect is evaluated."
+    measurement: ["choices among risky prospects"]
+  - id: c_risk_seeking
+    label: "Risk seeking"
+    definition: "Preference for a risky prospect over a sure outcome of comparable expected value."
+    measurement: ["choices among risky prospects"]
+
+propositions:
+  - id: p_certainty_weight
+    from: c_certainty
+    to: c_decision_weight
+    relation: "increases"
+    mechanism: "People underweight outcomes that are merely probable in comparison with outcomes that are obtained with certainty."
+  - id: p_weight_risk
+    from: c_decision_weight
+    to: c_risk_seeking
+    relation: "causes"
+    mechanism: "The certainty effect contributes to risk aversion in choices involving sure gains and to risk seeking in choices involving sure losses."
+  - id: p_frame_risk
+    from: c_loss_frame
+    to: c_risk_seeking
+    relation: "increases"
+    mechanism: "The value function is normally concave for gains and commonly convex for losses."
+
+boundary_conditions: ["choices among risky prospects"]
+
+predictions:
+  - id: pred_certainty
+    derives_from: [p_certainty_weight]
+    statement: "Outcomes that are merely probable are underweighted in comparison with outcomes that are obtained with certainty."
+    type: "directional"
+    diagnostic_vs: [alt_eut]
+    claim: {kind: effect, x: c_certainty, y: c_decision_weight, sign: positive}
+  - id: pred_reflection
+    derives_from: [p_frame_risk]
+    statement: "Choices involving sure gains show risk aversion and choices involving sure losses show risk seeking."
+    type: "directional"
+    diagnostic_vs: [alt_eut]
+    claim: {kind: effect, x: c_loss_frame, y: c_risk_seeking, sign: positive}
+  - id: pred_isolation
+    derives_from: [p_frame_risk]
+    statement: "Because components shared by all prospects are discarded, preferences change when the same choice is presented in different forms."
+    type: "existence"
+    diagnostic_vs: [alt_eut]
+  - id: pred_loss_aversion
+    derives_from: [p_frame_risk]
+    statement: "The value function is steeper for losses than for gains."
+    type: "directional"
+    diagnostic_vs: [alt_eut]
+  - id: pred_low_probability
+    derives_from: [p_certainty_weight]
+    statement: "Decision weights are lower than the corresponding probabilities, except in the range of low probabilities, where they are higher."
+    type: "directional"
+    diagnostic_vs: [alt_eut]
+
+alternatives:
+  - id: alt_eut
+    label: "Expected utility theory as a descriptive model of decision under risk"
+    key_constructs: ["utility of final assets", "probabilities weight utilities linearly"]
+    source_doi: null
+
+# The value and weighting functions are not of a type the schema lists.
+formal_model:
+  type: "none"
+  spec_ref: null

@@ -1,0 +1,44 @@
+# Source: built as in communication-and-apps-check/scripts/declared_and_gaming.py (case 2), validity audit of theoryforge at f72ce4c.
+schema_version: '1.1'
+id: m
+title: Minimal theory
+maturity: testing
+constructs:
+- id: a
+  label: A
+  definition: The first quantity.
+  measurement:
+  - x
+  boundary_conditions:
+  - x
+- id: b
+  label: B
+  definition: The second quantity.
+  measurement:
+  - x
+  boundary_conditions:
+  - x
+propositions:
+- id: p1
+  from: a
+  to: b
+  relation: increases
+  mechanism: x
+predictions:
+- id: h1
+  derives_from:
+  - p1
+  statement: A raises B.
+  type: interval
+  bounds:
+    lower: 0
+    upper: 1
+  diagnostic_vs:
+  - alt1
+alternatives:
+- id: alt1
+  label: x
+formal_model:
+  type: ode
+boundary_conditions:
+- x

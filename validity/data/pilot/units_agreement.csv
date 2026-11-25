@@ -1,0 +1,5 @@
+theory,units,all_three_same_element,fleiss_fine,fleiss_coarse,fleiss_claim,disagreements_by_source,codes_enc-1,codes_enc-2,codes_enc-3
+bilingual-rhm,20,12/20,0.671,0.801,0.666,encoder=4; format=2; verbal=2,A=5 ALT=1 B=3 EV=1 P=2 PRc=5 PRn=3,A=4 ALT=1 B=3 EV=1 P=2 PH=3 PRc=3 PRn=3,A=1 ALT=1 B=3 EV=1 FF=1 P=4 PH=3 PRc=3 PRn=3
+collaborative-cognitive-load,29,15/29,0.588,0.516,0.367,encoder=12; format=2,A=3 B=2 FF=1 P=6 PH=2 PRc=12 PRn=3,A=3 B=2 FF=1 P=17 PH=2 PRc=2 PRn=2,A=4 B=2 FF=3 P=6 PH=2 PRc=10 PRn=2
+health-habit,24,14/24,0.658,0.739,0.747,encoder=6; format=2; verbal=2,A=1 B=4 FF=1 P=4 PRc=5 PRn=9,A=3 B=3 FF=3 P=6 PH=1 PRc=4 PRn=4,A=3 B=2 FF=2 P=6 PRc=6 PRn=5
+all,73,41/73,0.643,0.672,0.559,encoder=22; format=6; verbal=4,A=9 ALT=1 B=9 EV=1 FF=2 P=12 PH=2 PRc=22 PRn=15,A=10 ALT=1 B=8 EV=1 FF=4 P=25 PH=6 PRc=9 PRn=9,A=8 ALT=1 B=7 EV=1 FF=6 P=16 PH=5 PRc=19 PRn=10
