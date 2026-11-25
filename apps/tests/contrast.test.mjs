@@ -25,7 +25,7 @@ const DARK = block('html[data-theme="dark"]');
 
 function runtime(file) {
   let src = readFileSync(path.join(here, "..", file), "utf8");
-  src = src.replace(/^import .*$/m, "").replace("window.TF.start(RT);", "globalThis.__RT = RT;");
+  src = src.replace(/^import .* from ".*";$/m, "").replace("window.TF.start(RT);", "globalThis.__RT = RT;");
   const ctx = { window: { TF: { DIAG_SVG: [] } }, TextEncoder, TextDecoder, JSON, console };
   ctx.globalThis = ctx;
   vm.createContext(ctx);

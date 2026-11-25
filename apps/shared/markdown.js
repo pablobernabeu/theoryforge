@@ -26,8 +26,14 @@
     const hold = (html) => { links.push(html); return "\u0001" + (links.length - 1) + "\u0001"; };
     s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (m, label, href) =>
       hold('<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + label + "</a>"));
-    s = s.replace(/https?:\/\/[^\s<]+[^\s<.,;:)]/g, (href) =>
-      hold('<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + href + "</a>"));
+    // The text is escaped, so a quote or bracket next to an address is now an
+    // entity. The address takes &amp; and, inside it, &#39; but no other
+    // entity, and gives its trailing punctuation back to the sentence.
+    s = s.replace(/https?:\/\/(?:[^\s<&]|&amp;|&#39;(?=[^\s<&]))+/g, (m) => {
+      const href = m.replace(/(?:&amp;|&#39;|[.,;:)])+$/, "");
+      if (/^https?:\/\/$/.test(href)) return m;
+      return hold('<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + href + "</a>") + m.slice(href.length);
+    });
     s = s.replace(/\*\*(?=\S)([^*]*?\S)\*\*/g, "<strong>$1</strong>");
     // Emphasis needs a letter inside and a space or the line's edge outside,
     // so identifiers such as c_arousal and the _||_ of an independence

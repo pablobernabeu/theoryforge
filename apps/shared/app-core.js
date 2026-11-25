@@ -165,9 +165,11 @@
   }
 
   // A fetch whose failure says which file and why, rather than handing on an
-  // error page as if it were the file.
+  // error page as if it were the file. A request that fails before any answer,
+  // as when the network drops, names the file too.
   async function fetchOk(url) {
-    const r = await fetch(url);
+    let r;
+    try { r = await fetch(url); } catch (e) { throw new Error("Could not fetch " + url + " (" + ((e && e.message) || e) + ")"); }
     if (!r.ok) throw new Error("Could not fetch " + url + " (HTTP " + r.status + ")");
     return r;
   }
@@ -202,7 +204,9 @@
     const titleId = "tfModalTitle";
     const backdrop = el("div", { class: "modal-backdrop", id: "tfModal", onclick: (e) => { if (e.target === backdrop) closeModal(); } });
     const closeBtn = el("button", { class: "icon-btn close", onclick: closeModal, title: "Close (Esc)", "aria-label": "Close dialog", html: "&times;" });
-    const header = el("header", null, [el("h3", { id: titleId, text: title }), closeBtn]);
+    // A div rather than a header, which would make the dialog's head a second
+    // banner landmark beside the page's own.
+    const header = el("div", { class: "modal-head" }, [el("h2", { id: titleId, text: title }), closeBtn]);
     const modal = el("div", { class: "modal" + (opts && opts.wide ? " wide" : ""), role: "dialog", "aria-modal": "true", "aria-labelledby": titleId },
       [header, el("div", { class: "body" }, bodyNode)]);
     backdrop.append(modal);
@@ -248,14 +252,18 @@
   // ---- Graphviz (DOT -> SVG), lazily loaded -------------------------------
   let _gv = null, _gvPromise = null;
   const GRAPHVIZ_URL = "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm-graphviz@1.22.2/dist/index.js";
+  // A load that fails is forgotten, so the next figure tries again rather
+  // than meet the same failure for the rest of the session.
   async function graphviz() {
     if (_gv) return _gv;
-    if (!_gvPromise) _gvPromise = (async () => {
-      const mod = await import(GRAPHVIZ_URL);
-      const G = mod.Graphviz || (mod.default && mod.default.Graphviz);
-      _gv = await G.load();
-      return _gv;
-    })();
+    if (!_gvPromise) {
+      _gvPromise = (async () => {
+        const mod = await import(GRAPHVIZ_URL);
+        const G = mod.Graphviz || (mod.default && mod.default.Graphviz);
+        _gv = await G.load();
+        return _gv;
+      })().catch((e) => { _gvPromise = null; throw e; });
+    }
     return _gvPromise;
   }
   async function renderDot(dot) {
@@ -268,10 +276,16 @@
   // digraph purely for rendering. The exported IR keeps the dagitty form. DOT has
   // no bidirected edge, so an association, `a <-> b`, is drawn as a dashed edge
   // with an arrowhead at each end. An identifier may be bare or double-quoted.
+  // dagitty reads only \" as an escape inside quotes and keeps any other
+  // backslash, where DOT also reads \\ as one, so `"a\\" [URL=...]` would end
+  // the id early in DOT and leave the rest as attributes. Each quoted id is
+  // therefore read by dagitty's rule and written again by DOT's first.
+  const DAGITTY_QUOTED = /"((?:\\"|[^"\\]|\\(?!"))*)"/g;
   const DAG_ID = '("(?:[^"\\\\]|\\\\.)*"|[^\\s"]+)';
   const BIDIRECTED_LINE = new RegExp("^([ \\t]*)" + DAG_ID + " <-> " + DAG_ID + "[ \\t]*$", "gm");
   function dagToDigraph(ir) {
     return ir
+      .replace(DAGITTY_QUOTED, (m, body) => '"' + body.replace(/\\"/g, '"').replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"')
       .replace(/^\s*dag\s*\{/, "digraph causal_dag {\n  rankdir=LR;\n  node [shape=box, style=rounded];")
       .replace(BIDIRECTED_LINE, "$1$2 -> $3 [dir=both, style=dashed]");
   }
@@ -280,7 +294,14 @@
   // R's jsonlite auto_unbox collapses length-1 vectors to scalars; coerce any
   // field that must be an array back to one so both runtimes shape identically.
   const asArr = (v) => (Array.isArray(v) ? v : v == null ? [] : [v]);
-  const num = (x) => (typeof x === "number" ? (Number.isInteger(x) ? String(x) : x.toFixed(3).replace(/\.?0+$/, "")) : String(x));
+  // A value that rounds to zero is written 0 whatever its sign, as a small
+  // positive one is, rather than -0.
+  const num = (x) => {
+    if (typeof x !== "number") return String(x);
+    if (Number.isInteger(x)) return String(x);
+    const s = x.toFixed(3).replace(/\.?0+$/, "");
+    return s === "-0" ? "0" : s;
+  };
   function pill(s) { return el("span", { class: "pill " + String(s).replace(/[^a-z_]/gi, "_"), text: s }); }
 
   function colClass(c) {
@@ -315,13 +336,62 @@
   }
   const noteSection = (title, text) => ({ kind: "node", node: wrapSection(title, null, el("p", { class: "note", text })) });
   const refusalSection = (title, message) => ({ kind: "node", node: wrapSection(title, null, el("p", { class: "refusal", text: String(message || "") })) });
+  // A warning the package gave with its result, or a figure that could not be shown.
+  const warningSection = (title, text) => ({ kind: "node", node: wrapSection(title, null, el("p", { class: "caution", role: "status", text })) });
 
+  // A figure is an SVG document that carries text from the theory, and
+  // Graphviz turns a DOT attribute such as URL into a link. It is therefore
+  // read as XML and inserted as nodes, never as markup, and anything that can
+  // run code or lead elsewhere is taken out first: scripts, foreign content,
+  // style sheets, animations, every event-handler attribute and every href or
+  // src that points outside the figure. A link is replaced by what it holds,
+  // since the packages make none. The result is the clean node and whether
+  // anything was taken out, or null when the text is no SVG.
+  const SVG_DROP = new Set(["script", "foreignobject", "iframe", "object", "embed", "style",
+    "animate", "animatemotion", "animatetransform", "set", "handler", "listener"]);
+  function cleanSvg(svgString) {
+    let doc;
+    try { doc = new DOMParser().parseFromString(String(svgString == null ? "" : svgString), "image/svg+xml"); }
+    catch (e) { return null; }
+    const root = doc && doc.documentElement;
+    if (!root || root.localName !== "svg" || doc.getElementsByTagName("parsererror").length) return null;
+    let changed = false;
+    const scrub = (n) => {
+      for (const c of [...n.childNodes]) {
+        if (c.nodeType !== 1) continue;
+        const name = String(c.localName).toLowerCase();
+        if (SVG_DROP.has(name)) { c.remove(); changed = true; continue; }
+        scrub(c);
+        if (name === "a") { c.replaceWith(...c.childNodes); changed = true; }
+      }
+      for (const at of n.getAttributeNames()) {
+        const local = at.replace(/^.*:/, "").toLowerCase();
+        if (/^on/.test(local) || ((local === "href" || local === "src") && !/^\s*#/.test(n.getAttribute(at) || ""))) {
+          n.removeAttribute(at); changed = true;
+        }
+      }
+    };
+    scrub(root);
+    return { node: document.importNode(root, true), changed };
+  }
   function figureSection(title, svgString, baseName) {
-    const fig = el("div", { class: "figure", role: "img", "aria-label": title, html: svgString });
-    const svgEl = fig.querySelector("svg");
-    const btnSvg = el("button", { class: "btn ghost sm", onclick: () => download(baseName + ".svg", svgString, "image/svg+xml") }, "SVG");
+    const clean = cleanSvg(svgString);
+    if (!clean) return warningSection(title, "The figure could not be shown: its SVG cannot be read.");
+    const fig = el("div", { class: "figure", role: "img", "aria-label": title }, clean.node);
+    const svgEl = clean.node;
+    // The download is the text the package or Graphviz wrote, unless something
+    // had to be taken out of it, when it is the figure as shown.
+    const svgText = () => (clean.changed ? new XMLSerializer().serializeToString(svgEl) : svgString);
+    const btnSvg = el("button", { class: "btn ghost sm", onclick: () => download(baseName + ".svg", svgText(), "image/svg+xml") }, "SVG");
     const btnPng = el("button", { class: "btn ghost sm", onclick: () => exportPng(svgEl, baseName) }, "PNG");
     return { kind: "node", node: wrapSection(title, [btnSvg, btnPng], fig) };
+  }
+  // A Graphviz figure. When it cannot be drawn, because Graphviz did not load
+  // or refused the DOT, the rest of the result stays and a note takes the
+  // figure's place.
+  async function dotFigure(title, dot, baseName) {
+    try { return figureSection(title, await renderDot(dot), baseName); }
+    catch (e) { return warningSection(title, "The figure could not be drawn: " + ((e && e.message) || e) + ". Run the operation again to try once more."); }
   }
   function jsonBtn(filename, obj) {
     return el("button", { class: "btn ghost sm", onclick: () => download(filename, JSON.stringify(obj, null, 2), "application/json") }, "JSON");
@@ -491,15 +561,25 @@
     litmap: "The corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked. With components, a theme is a connected group of keywords, which separates the small designed corpus into four but joins nearly every keyword of a real corpus into one, and the package then warns. With simple_centres, each theme also has a centrality and a density, which place it in a quadrant of the strategic diagram (Cobo et al., 2011).",
     landscape: "The theory and its rivals are matched against the corpus themes by the words a theme's keywords share with the theory's construct labels, or with a rival's label and key constructs. Words of the theory's title, words most records carry and words such as theory or model do not count. Under-theorised fronts are themes that share no word with any registered account, and crowded themes share a word with two or more of them. The match is lexical: it does not show that an account explains what a theme's records report, and a crowded theme may call for predictions that discriminate between its accounts without showing that they compete.",
   };
-  const fmtNum = (x) => (typeof x === "number" ? (Number.isInteger(x) ? String(x) : x.toFixed(2)) : String(x));
+  const fmtNum = (x) => {
+    if (typeof x !== "number" || Number.isInteger(x)) return String(x);
+    const s = x.toFixed(2);
+    return s === "-0.00" ? "0.00" : s;
+  };
   const plural = (n, w, pl) => n + " " + (n === 1 ? w : pl || w + "s");
   // "a", "a and b", "a, b and c".
   const listAnd = (xs) => (xs.length < 2 ? xs.join("") : xs.slice(0, -1).join(", ") + " and " + xs[xs.length - 1]);
-  // Both packages report full validation as "invalid theory object: " followed
-  // by the problems joined by "; ". The Validate result, its interpretation and
-  // the sidebar chip all count problems through this one split.
-  const problemList = (message) =>
-    String(message).replace(/^invalid theory object:\s*/i, "").split(/;\s*/).filter(Boolean);
+  // The problems of a full validation. The runtimes pass the packages' own
+  // list, since a problem may quote a value of the theory that holds "; ", and
+  // the message alone, "invalid theory object: " followed by the problems
+  // joined by "; ", is split only when no list came with it. The Validate
+  // result, its interpretation, the sidebar chip and the editor all count
+  // problems through this one function, which also takes a bare message.
+  const problemList = (v) => {
+    if (v && typeof v === "object" && Array.isArray(v.problems)) return v.problems.map(String);
+    const message = v && typeof v === "object" ? v.message || (v.ok === false ? "invalid theory object" : "") : v;
+    return String(message == null ? "" : message).replace(/^invalid theory object:\s*/i, "").split(/; /).filter(Boolean);
+  };
   // A post-data severity as the dossier writes it: a value that rounds to 1
   // or to 0 at three decimals is shown as a bound, since neither is reached.
   const sevText = (s) => (typeof s !== "number" ? String(s) : s >= 0.9995 ? "> 0.999" : s <= 0.0005 ? "< 0.001" : s.toFixed(3));
@@ -563,7 +643,7 @@
     }
     if (opId === "validate") {
       if (raw.ok) return "The theory is structurally valid and every internal reference resolves.";
-      const errs = problemList(raw.message || "");
+      const errs = problemList(raw);
       return "Validation found " + plural(errs.length, "problem") + ". Each one is listed below.";
     }
     if (opId === "severity") {
@@ -757,9 +837,6 @@
     return { kind: "node", node: el("div", { class: "result-intro" }, kids) };
   }
 
-  // A warning the package gave with its result.
-  const warningSection = (title, text) => ({ kind: "node", node: wrapSection(title, null, el("p", { class: "caution", role: "status", text })) });
-
   async function shapeResult(opId, raw, params, theoryId) {
     const sections = [];
     if (opId === "check") {
@@ -788,7 +865,7 @@
         sections.push({ kind: "node", node: wrapSection("Validation", null,
           el("div", { class: "valid-ok", role: "status" }, "✓ Valid. The theory passes structural validation.")) });
       } else {
-        const errs = problemList(v.message || "invalid theory object");
+        const errs = problemList(v);
         sections.push({ kind: "node", node: wrapSection("Validation", null,
           el("div", { class: "error", role: "alert" }, [
             el("div", { class: "et", text: "Invalid theory: " + plural(errs.length, "problem") }),
@@ -855,10 +932,8 @@
     } else if (opId === "diagram") {
       const ir = raw.ir, type = params.type;
       const isSvg = /^\s*<svg/.test(ir);
-      let svg;
-      if (isSvg) svg = ir;
-      else svg = await renderDot(type === "causal_dag" ? dagToDigraph(ir) : ir);
-      sections.push(figureSection(words(type) + " diagram", svg, theoryId + "." + type));
+      sections.push(isSvg ? figureSection(words(type) + " diagram", ir, theoryId + "." + type)
+        : await dotFigure(words(type) + " diagram", type === "causal_dag" ? dagToDigraph(ir) : ir, theoryId + "." + type));
       if (!isSvg) sections.push(textSection(type === "causal_dag" ? "dagitty model code" : "Intermediate representation (Graphviz DOT)", ir, theoryId + "." + type + (type === "causal_dag" ? ".dag" : ".dot"), "text/plain"));
     } else if (opId === "sem") {
       sections.push(textSection("lavaan model syntax", raw.text, theoryId + ".sem.lavaan", "text/plain"));
@@ -997,8 +1072,8 @@
             .concat(sc ? [{ key: "centrality", label: "centrality", num: true }, { key: "density", label: "density", num: true }, { key: "q", label: "quadrant" }] : [])
             .concat([{ key: "keywords", label: "keywords", grow: true }]),
           themes.map((t) => Object.assign({}, t, { keywords: asArr(t.keywords), q: t.quadrant == null ? "—" : words(t.quadrant) }))));
-        if (cooc.length) sections.push(figureSection("Keyword co-occurrence", await renderDot(raw.dots.keyword_cooccurrence), theoryId + ".keyword_cooccurrence"));
-        if (cocite.length) sections.push(figureSection("Co-citation", await renderDot(raw.dots.co_citation), theoryId + ".co_citation"));
+        if (cooc.length) sections.push(await dotFigure("Keyword co-occurrence", raw.dots.keyword_cooccurrence, theoryId + ".keyword_cooccurrence"));
+        if (cocite.length) sections.push(await dotFigure("Co-citation", raw.dots.co_citation, theoryId + ".co_citation"));
         sections.push(textSection("litmap JSON", JSON.stringify(r, null, 2), theoryId + ".litmap.json", "application/json"));
       }
     } else if (opId === "landscape") {
@@ -1016,7 +1091,7 @@
           ["Under-theorised fronts", asArr(r.under_theorised_fronts).join(", ") || "—"],
           ["Crowded themes", asArr(r.redundancy_risk).join(", ") || "—"],
         ]));
-        if (raw.dot) sections.push(figureSection("Theme landscape", await renderDot(raw.dot), theoryId + ".theme_landscape"));
+        if (raw.dot) sections.push(await dotFigure("Theme landscape", raw.dot, theoryId + ".theme_landscape"));
         sections.push(textSection("landscape JSON", JSON.stringify(r, null, 2), theoryId + ".landscape.json", "application/json"));
       }
     }
@@ -1185,7 +1260,9 @@
   // other theory as its text, compressed. Uploaded priors, rivals and corpora
   // stay behind, since a link cannot carry a second file.
   const LINK_PREFIX = "#s=";
-  let linkTimer = null, linkInfo = { ok: true, length: 0 };
+  // lastLinkHash is the fragment the app last wrote, so that a fragment
+  // pasted into the address bar can be told from the app's own.
+  let linkTimer = null, linkInfo = { ok: true, length: 0 }, lastLinkHash = "";
   function linkState() {
     const op = OPS.find((o) => o.id === STATE.opId);
     const params = {};
@@ -1195,8 +1272,11 @@
       params[p.id] = v;
     }
     const inp = STATE.input || {};
+    // A new theory travels as one, so that the recipient's copy is still
+    // named after its id.
     const theory = inp.mode === "example" ? { example: inp.path }
-      : { name: inp.name || "theory.yaml", text: inp.text || "", format: inp.format || (/\.json$/i.test(inp.name || "") ? "json" : "yaml") };
+      : Object.assign({ name: inp.name || "theory.yaml", text: inp.text || "", format: inp.format || (/\.json$/i.test(inp.name || "") ? "json" : "yaml") },
+        inp.isNew ? { isNew: true } : {});
     return { v: 1, op: STATE.opId, params, run: !!STATE.ran, theory };
   }
   async function currentLink() {
@@ -1215,12 +1295,16 @@
       if (!l || typeof history === "undefined" || !history.replaceState) return;
       linkInfo = l;
       const base = location.pathname + location.search;
-      history.replaceState(null, "", l.ok ? base + LINK_PREFIX + l.enc : base);
+      lastLinkHash = l.ok ? LINK_PREFIX + l.enc : "";
+      history.replaceState(null, "", base + lastLinkHash);
     } catch (e) { /* no compression stream in this browser: no link */ }
   }
   async function copyLink() {
     const share = window.TF && window.TF.share;
     if (!share) { toast("This browser cannot make a link"); return; }
+    // An edit typed just before the click is applied first, so the link
+    // carries it.
+    if (EDITOR && EDITOR.flush) await EDITOR.flush();
     let l;
     try { l = await currentLink(); } catch (e) { toast("This browser cannot compress the theory for a link"); return; }
     if (!l) return;
@@ -1232,7 +1316,8 @@
       return;
     }
     const base = location.href.split("#")[0];
-    history.replaceState(null, "", location.pathname + location.search + LINK_PREFIX + l.enc);
+    lastLinkHash = LINK_PREFIX + l.enc;
+    history.replaceState(null, "", location.pathname + location.search + lastLinkHash);
     await copyText(base + LINK_PREFIX + l.enc);
   }
   async function readLink() {
@@ -1246,7 +1331,8 @@
     if (EDITOR && EDITOR.sourceText) { const t = EDITOR.sourceText(); if (t != null) return t; }
     return STATE.source ? STATE.source.text : null;
   }
-  function openSource() {
+  async function openSource() {
+    if (EDITOR && EDITOR.flush) await EDITOR.flush();
     if (!STATE.source) { toast("No theory loaded"); return; }
     const text = currentSourceText();
     if (text == null) {
@@ -1263,12 +1349,12 @@
 
   function openHelp() {
     const li = (t) => el("li", null, t);
-    const byGroup = GROUPS.map((g) => [el("h5", null, g.label + ": " + g.sub),
+    const byGroup = GROUPS.map((g) => [el("h4", null, g.label + ": " + g.sub),
       el("ul", { class: "help-ops" }, OPS.filter((op) => op.group === g.id).map((op) => el("li", null, op.label + ": " + (op.help || op.desc))))]);
     const body = el("div", { class: "help" }, [
       el("p", null, "This app runs the real theoryforge " + RT.langLabel + " package entirely in your browser, via " +
         RT.engineLabel + ". Nothing is uploaded to a server, and the results match running the package locally."),
-      el("h4", null, "How to use"),
+      el("h3", null, "How to use"),
       el("ol", { class: "steps" }, [
         li("Pick an example theory, upload your own YAML or JSON file, or start a new theory in the editor."),
         li("Edit the theory in the editor's forms or in its source. Each change is validated in full by the package, and the problems appear beside the fields they concern, with the checklist score and gate."),
@@ -1276,9 +1362,9 @@
         li("Export the figures (SVG or PNG), the text and JSON results and the " + RT.langLabel + " code that reproduces them. Save writes the theory as YAML with the package's own writer, so the file reads back as the same theory."),
       ]),
       el("p", { class: "note" }, "Your theory, operation and last result are remembered in this browser, so a page refresh restores the session. Copy link puts the theory and the operation in the address after the # sign, which browsers never send to a server, so the link reproduces the view without anything being stored elsewhere. A theory too large for a link is better sent as a file."),
-      el("h4", null, "Operations"),
+      el("h3", null, "Operations"),
       ...byGroup.flat(),
-      el("h4", null, "What the app leaves out"),
+      el("h3", null, "What the app leaves out"),
       el("p", { class: "note" }, "The literature operations read the bundled demonstration corpus, a frozen OpenAlex corpus or a corpus file you upload. The app makes no network request for data, by design: every result then rests on files you can see and save, and nothing about you or your theory reaches another service. OpenAlex and Crossref would answer a browser directly, so the package's fetch_corpus() could run here in principle. To map a fresh corpus, run it in the package and upload the file it writes."),
       el("p", { class: "note" }, "The embedding-based redundancy screen needs an embedding model, which the app does not ship, and the OSF deposit needs a personal access token, which a web page should not hold. Both are in the installed package."),
       el("p", { class: "note" }, ["Documentation: ", el("a", { href: RT.docsUrl, target: "_blank", rel: "noopener" }, RT.docsUrl), ". Source: ",
@@ -1347,7 +1433,7 @@
     const v = s.validation;
     const status = !v ? null : v.ok
       ? el("span", { class: "chip valid", title: "Full validation found no problem", text: "valid" })
-      : el("span", { class: "chip invalid", title: "Run Validate to list them", text: plural(problemList(v.message || "invalid theory object").length, "problem") });
+      : el("span", { class: "chip invalid", title: "Run Validate to list them", text: plural(problemList(v).length, "problem") });
     const ck = s.check;
     const score = !ck ? null : ck.error
       ? el("span", { class: "chip", title: ck.error, text: "not scored" })
@@ -1365,17 +1451,49 @@
         c.outcomes ? chip(c.outcomes, "test outcome") : null,
       ]),
     ];
-    // The content hash identifies exactly this content, whatever the layout of
-    // the file, and the preregistration and dossier print it too.
-    if (s.hash) {
-      const short = String(s.hash).replace(/^(sha256:[0-9a-f]{12})[0-9a-f]+([0-9a-f]{6})$/, "$1…$2");
-      kids.push(el("div", { class: "hash" }, [
-        el("span", { class: "hk", text: "Content hash " }),
-        el("code", { title: s.hash, text: short }),
-        el("button", { class: "linklike sm", onclick: () => copyText(s.hash), "aria-label": "Copy the content hash" }, "copy"),
-      ]));
-    }
+    kids.push(hashRow(s));
     return el("div", { class: "summary" }, kids);
+  }
+  // The content hash identifies exactly this content, whatever the layout of
+  // the file, and the preregistration and dossier print it too. It arrives
+  // after the load (requestHash), so the row is empty until then, and says so
+  // when the package could not compute it.
+  function hashRow(s) {
+    const row = el("div", { class: "hash", id: "summaryHash" });
+    if (s && s.hash) {
+      const short = String(s.hash).replace(/^(sha256:[0-9a-f]{12})[0-9a-f]+([0-9a-f]{6})$/, "$1…$2");
+      row.append(el("span", { class: "hk", text: "Content hash " }), el("code", { title: s.hash, text: short }),
+        el("button", { class: "linklike sm", onclick: () => copyText(s.hash), "aria-label": "Copy the content hash" }, "copy"));
+    } else if (s && s.hashError) {
+      row.append(el("span", { class: "hk", title: s.hashError, text: "Content hash not computed: " + s.hashError }));
+    } else row.setAttribute("hidden", "");
+    return row;
+  }
+  // The hash is asked of the engine in a call of its own once a theory has
+  // loaded, so that a slow hash never holds up a load or the start. One
+  // request waits in the engine's queue at a time, and it hashes the theory
+  // loaded when its turn comes. A result for a theory that has since been
+  // replaced is dropped.
+  let hashQueued = false;
+  function requestHash() {
+    if (hashQueued || !RT || typeof RT.contentHash !== "function") return;
+    hashQueued = true;
+    let s = null;
+    const show = () => { const row = $("#summaryHash"); if (row && STATE.summary === s) row.replaceWith(hashRow(s)); };
+    engine(() => {
+      hashQueued = false;
+      s = STATE.summary;
+      return s && !s.hash ? RT.contentHash() : null;
+    }).then((r) => {
+      if (!r || !s || STATE.summary !== s) return;
+      if (typeof r.hash === "string") s.hash = r.hash;
+      else s.hashError = String(r.error || "the package gave no hash");
+      show();
+    }, (err) => {
+      if (!s || STATE.summary !== s) return;
+      s.hashError = cleanMessage((err && err.message) || err);
+      show();
+    });
   }
   function refreshSummary() {
     const w = $("#summaryWrap"); if (w) w.replaceChildren(summaryCard(STATE.summary));
@@ -1715,6 +1833,18 @@
 
   const theoryName = (s) => (s && (s.title || s.id)) || "(untitled)";
 
+  // The session in the browser's storage is the only copy of edits that Save
+  // has not written, so replacing an edited theory asks first, as New theory
+  // does. A browser without confirm() replaces it, as before.
+  function confirmed(question) {
+    if (typeof window === "undefined" || typeof window.confirm !== "function") return true;
+    return !!window.confirm(question);
+  }
+  function mayDiscardEdits(action) {
+    if (!(STATE.input && STATE.input.mode === "edited")) return true;
+    return confirmed(action + "? Edits to " + theoryName(STATE.summary) + " that you have not saved will be lost.");
+  }
+
   // A result and its code belong to the theory they were computed on, so a
   // change of theory removes both.
   function clearResult() {
@@ -1751,12 +1881,19 @@
     resetPrior();
     updateExampleDesc(); saveState();
     if (EDITOR) EDITOR.reload();
+    requestHash();
   }
 
+  // The choice is read before the editor's pending change is applied, which
+  // puts the selector back on the edited theory. The change is applied first,
+  // so that an edit made just before the choice is neither lost nor applied
+  // to the example, and an edited theory is replaced only once the user agrees.
   async function onExampleChange(e) {
     const ex = RT.examples.find((x) => x.path === e.target.value);
     if (!ex) return;
     await withBusy("Loading " + ex.name + "…", async () => {
+      if (EDITOR && EDITOR.flush) await EDITOR.flush();
+      if (!mayDiscardEdits("Load " + ex.name)) { updateExampleSel(); return; }
       try {
         STATE.summary = await engine(() => RT.loadExample(ex.path));
       } catch (err) {
@@ -1775,6 +1912,8 @@
     const f = e.target.files && e.target.files[0]; if (!f) return;
     const text = await f.text();
     await withBusy("Loading " + f.name + "…", async () => {
+      if (EDITOR && EDITOR.flush) await EDITOR.flush();
+      if (!mayDiscardEdits("Load " + f.name)) { $("#fileInput").value = ""; return; }
       try {
         STATE.summary = await engine(() => RT.loadTheoryText(text, f.name));
       } catch (err) {
@@ -1796,7 +1935,11 @@
     let s = String(msg == null ? "" : msg);
     const names = (RT && RT.fileNames) || {};
     for (const p of Object.keys(names).sort((a, b) => b.length - a.length)) s = s.split(p).join(names[p]);
-    return s.replace(/\/(?:tf|pkg)\/(input|prior|edit|rival|corpus)\.(yaml|json)/g, "$1.$2");
+    s = s.replace(/\/(?:tf|pkg)\/(input|prior|edit|rival|corpus)\.(yaml|json)/g, "$1.$2");
+    // webR reports an R condition raised with call. = FALSE, as the package
+    // raises its refusals, as "Error in unknown source: ". R itself prints
+    // "Error: ", which headline() still finds on a message of several lines.
+    return s.replace(/^Error in unknown source: /, "Error: ");
   }
   // The line that names the error. Python ends a traceback with the exception,
   // except that a YAML error appends the line it could not read and a caret
@@ -1887,7 +2030,7 @@
   function failureBox(err) {
     const v = STATE.summary && STATE.summary.validation;
     if (!v || v.ok) return errorBox("Operation failed", err);
-    const n = problemList(v.message || "invalid theory object").length;
+    const n = problemList(v).length;
     const toValidate = el("button", { class: "linklike", onclick: () => { selectOp("validate"); runOp(); } }, "Run Validate");
     return errorBox("Operation failed on an invalid theory", err,
       ["This theory has " + plural(n, "problem") + ". ", toValidate, " to list them, then correct them in the editor or in the file and upload it again."]);
@@ -1896,12 +2039,20 @@
   // ---- the editor's view of the app ----------------------------------------
   // The editor holds the theory as data and asks the engine to read each
   // version, so validation, the checklist and the writer are the package's.
-  function editName(doc) {
+  // A new theory's file is named after its id, with every run of characters
+  // a file name should not hold made one hyphen.
+  function idFileName(id) {
+    return (typeof id === "string" && id.trim() ? id.trim().replace(/[^\w.-]+/g, "-") : "new-theory") + ".theory.yaml";
+  }
+  // The name of the file the edited theory is saved as and read from in the
+  // code. A theory that is new, or about to replace the input as a new one, is
+  // named after its id; any other keeps the name of the file it came from.
+  function editName(doc, isNew) {
     const inp = STATE.input || {};
+    if (isNew || inp.isNew) return idFileName(doc && doc.id);
     if (inp.mode === "example") return inp.path.split("/").pop().replace(/\.json$/i, ".yaml");
-    if (inp.name && !inp.isNew) return String(inp.name).replace(/\.json$/i, ".yaml");
-    const id = doc && typeof doc.id === "string" && doc.id.trim() ? doc.id.trim().replace(/[^\w.-]+/g, "-") : "new-theory";
-    return id + ".theory.yaml";
+    if (inp.name) return String(inp.name).replace(/\.json$/i, ".yaml");
+    return idFileName(doc && doc.id);
   }
   // After the editor changes the theory: the card, the selector and the
   // choices that depend on the theory. A fresh theory clears the result, and
@@ -1914,6 +2065,7 @@
     const op = OPS.find((o) => o.id === STATE.opId);
     if (op && op.params && op.params.some((p) => p.type === "rival" || p.type === "construct")) renderParams();
     saveSoon();
+    requestHash();
   }
   function editorHost() {
     return {
@@ -1930,7 +2082,7 @@
       // texts the writer gave in each of `want`.
       async apply(text, format, want, opts) {
         const isNew = !!(opts && opts.isNew) || !!(STATE.input && STATE.input.isNew);
-        const name = editName(opts && opts.doc);
+        const name = editName(opts && opts.doc, isNew);
         let res;
         try { res = await engine(() => RT.editText(text, format, name, want || [])); }
         catch (err) { return { ok: false, error: err }; }
@@ -1952,14 +2104,16 @@
       // The theory the package's DAGitty reader makes of `model` becomes the
       // active theory, a new one named after its id.
       canImportDagitty: () => !!RT.canImportDagitty,
-      importCode: (opts) => (RT.importCode ? RT.importCode(opts) : ""),
+      // The code names the file as Save and the code panel name it.
+      importCode: (opts) => (RT.importCode ? RT.importCode(Object.assign({}, opts, { file: idFileName(opts && opts.id ? opts.id : "dagitty-import") })) : ""),
       async importDagitty(model, opts, want) {
         let res;
         try { res = await engine(() => RT.importDagitty(model, opts, want || [])); }
         catch (err) { return { ok: false, error: err }; }
         const texts = res.texts || {};
         delete res.texts;
-        const name = editName({ id: res.id });
+        const name = editName({ id: res.id }, true);
+        if (RT.renameTheory) RT.renameTheory(name);
         const fmt = (want || [])[0] || "yaml";
         STATE.summary = res;
         STATE.input = { mode: "edited", name, text: texts[fmt] || "", format: fmt, isNew: true };
@@ -1970,6 +2124,8 @@
       // The editor's own record of the current source, for View source.
       setSource(text) { if (STATE.source) STATE.source.text = text; },
       saveName: (doc) => editName(doc),
+      // Before the editor replaces an edited theory with a new one.
+      mayDiscard: (action) => mayDiscardEdits(action),
       isEdited: () => !!(STATE.input && STATE.input.mode === "edited"),
       isBusy: () => busy,
       showResultTab: () => showTab("result"),
@@ -1990,11 +2146,22 @@
   async function restoreTheory(inp, blog) {
     if (inp.mode === "edited" && typeof inp.text === "string") {
       if (blog) blog("Restoring your edited theory…");
-      const res = await engine(() => RT.editText(inp.text, inp.format || "yaml", inp.name || "theory.yaml", []));
+      const name = inp.name || "theory.yaml";
+      const res = await engine(() => RT.editText(inp.text, inp.format || "yaml", name, []));
       delete res.texts;
       STATE.summary = res;
-      STATE.input = { mode: "edited", name: inp.name || "theory.yaml", text: inp.text, format: inp.format || "yaml", isNew: !!inp.isNew };
-      STATE.source = { name: STATE.input.name, text: inp.text };
+      STATE.input = { mode: "edited", name, text: inp.text, format: inp.format || "yaml", isNew: !!inp.isNew };
+      // A change in the forms is kept as the JSON the editor sent, while the
+      // source pane, View source and the download take their format from the
+      // file name. The saved text is shown when it is in that format, a
+      // source-pane edit with its comments among them, and otherwise the
+      // package's writer gives the text in that format.
+      const viewFmt = /\.json$/i.test(name) ? "json" : "yaml";
+      let shown = inp.text;
+      if ((inp.format || "yaml") !== viewFmt) {
+        try { shown = await engine(() => RT.writeText(viewFmt)); } catch (e) { shown = inp.text; }
+      }
+      STATE.source = { name, text: shown };
       return true;
     }
     if (inp.mode === "upload" && inp.text) {
@@ -2015,26 +2182,71 @@
     return false;
   }
 
+  // A link this app can open, or the reason it cannot: a link of another
+  // format version, or one with no theory in it, is refused with a note.
+  function linkProblem(link) {
+    if (link && link.v === 1 && link.theory && typeof link.theory === "object" && !Array.isArray(link.theory)) return null;
+    return link && typeof link.v === "number" && link.v > 1
+      ? "This link was made by a newer version of the app, so the saved session is shown instead"
+      : "The link could not be read, so the saved session is shown instead";
+  }
+  // The input a link's theory stands for.
+  const linkInput = (t) => (t.example ? { mode: "example", path: t.example }
+    : { mode: "edited", name: t.name, text: t.text, format: t.format, isNew: !!t.isNew });
+  // What a link's theory is called, for the question asked before it replaces
+  // an edited one.
+  const linkName = (t) => (t.example ? ((RT.examples.find((x) => x.path === t.example) || {}).name || String(t.example)) : t.name || "a theory");
+  // The address without the link, so that a reload does not open it again.
+  function dropLinkHash() {
+    if (typeof history === "undefined" || !history.replaceState || typeof location === "undefined") return;
+    history.replaceState(null, "", location.pathname + location.search + lastLinkHash);
+  }
+  // While a theory from a link loads, the start panel offers to open the app
+  // without it, which reloads the page with no link in the address. The
+  // session saved before is kept, since nothing is saved until the theory has
+  // loaded.
+  function offerSkipLink() {
+    const b = $("#boot");
+    if (!b || $("#skipLink", b)) return;
+    b.append(el("button", { class: "btn ghost sm", id: "skipLink", onclick: () => location.replace(location.pathname + location.search) },
+      "Open the app without the link"));
+  }
+
   // Restore theory + operation + params from a link or a previous session,
   // then optionally re-run the last operation so a refresh lands back where
-  // the user left off. A link wins over the saved session. init has already
-  // loaded example 0, and a load that fails leaves it loaded, so a failed
-  // restore falls back to it. The returned note says so; start() shows it
-  // once the boot overlay, which would hide a toast, is gone.
+  // the user left off. A link wins over the saved session, unless that session
+  // holds edits the link would replace and the user keeps them. init has
+  // already loaded example 0, and a load that fails leaves it loaded, so a
+  // failed restore falls back to it. A link whose theory cannot be loaded is
+  // taken out of the address and is not saved, so the next visit starts from
+  // the session saved before. The returned note says what happened; start()
+  // shows it once the boot overlay, which would hide a toast, is gone.
   async function applyRestore(blog) {
     let saved = loadSaved();
-    let note = null, fromLink = false;
+    let note = null, fromLink = false, linkFailed = false;
     try {
       const link = await readLink();
-      if (link && link.v === 1 && link.theory) {
-        fromLink = true;
-        const t = link.theory;
-        saved = {
-          v: STATE_FORMAT, opId: link.op, params: link.params || {}, ran: !!link.run,
-          input: t.example ? { mode: "example", path: t.example } : { mode: "edited", name: t.name, text: t.text, format: t.format },
-        };
+      if (link) {
+        const problem = linkProblem(link);
+        if (problem) { note = problem; linkFailed = true; }
+        else {
+          const t = link.theory;
+          const prev = saved && saved.input;
+          // updateLink keeps the tab's own edited theory in the address, so an
+          // ordinary reload arrives as a link that holds the saved text, and
+          // nothing is asked then.
+          const same = !t.example && prev && prev.text === t.text;
+          if (prev && prev.mode === "edited" && typeof prev.text === "string" && !same &&
+              !confirmed("This link opens " + linkName(t) + ". Edits to " + (prev.name || "your theory") + " that you have not saved will be lost. Open the link?")) {
+            note = "The link was not opened, so your edited theory is shown";
+            linkFailed = true;
+          } else {
+            fromLink = true;
+            saved = { v: STATE_FORMAT, opId: link.op, params: link.params || {}, ran: !!link.run, input: linkInput(t) };
+          }
+        }
       }
-    } catch (e) { note = "The link could not be read, so the saved session is shown instead"; }
+    } catch (e) { note = "The link could not be read, so the saved session is shown instead"; linkFailed = true; }
     const first = RT.examples[0];
     const fallback = (name) => "Could not restore " + name + "; showing " + first.name + " instead";
     STATE.input = STATE.input || { mode: "example", path: first.path };
@@ -2054,11 +2266,15 @@
       }
       const inp = saved.input;
       if (inp && !(inp.mode === "example" && inp.path === first.path)) {
+        if (fromLink) offerSkipLink();
         try {
-          await restoreTheory(inp, blog);
+          // A theory that restoreTheory cannot take, such as an edited one
+          // whose text is not text, is a failure like any other.
+          if (!(await restoreTheory(inp, blog))) throw new Error("the theory in it cannot be read");
         } catch (e) {
           STATE.input = { mode: "example", path: first.path };
           note = fallback(inp.mode === "example" ? ((RT.examples.find((x) => x.path === inp.path) || {}).name || String(inp.path).split("/").pop()) : inp.name || "your theory");
+          if (fromLink) linkFailed = true;
         }
       }
       if (saved.opId && OPS.some((o) => o.id === saved.opId)) STATE.opId = saved.opId;
@@ -2081,11 +2297,53 @@
     if (note || (STATE.params.prior !== undefined && !priorValues().includes(STATE.params.prior))) STATE.params.prior = defaultPrior();
     resetTheoryChoices();
     updateExampleDesc(); updateOpHelp(); renderParams();
-    saveState();
+    if (linkFailed) dropLinkHash(); else saveState();
     const op = OPS.find((o) => o.id === STATE.opId);
     if (saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op)) await runOp();
     if (fromLink && !note) note = "Opened the theory and operation from the link";
     return note;
+  }
+
+  // A link pasted into the address bar of a tab that already shows the app
+  // changes only the fragment, so the browser keeps the page and the app
+  // opens the link here. A fragment the app wrote itself is no link to open.
+  async function openLinkInPlace() {
+    const h = (typeof location !== "undefined" && location.hash) || "";
+    if (!h.startsWith(LINK_PREFIX) || h === lastLinkHash || busy) return;
+    let link;
+    try { link = await readLink(); } catch (e) { toast("The link could not be read"); dropLinkHash(); return; }
+    const problem = linkProblem(link);
+    if (problem) { toast(problem.replace(/, so the saved session is shown instead$/, "")); dropLinkHash(); return; }
+    const t = link.theory;
+    if (EDITOR && EDITOR.flush) await EDITOR.flush();
+    if (!mayDiscardEdits("Open " + linkName(t) + " from the link")) { dropLinkHash(); return; }
+    let ok = false;
+    await withBusy("Opening the link…", async () => {
+      const inp = linkInput(t);
+      try {
+        if (!(await restoreTheory(inp))) throw new Error("the theory in it cannot be read");
+      } catch (err) { loadFailed(t.example || t.name || "the theory in the link", err); dropLinkHash(); return; }
+      if (inp.mode === "example") STATE.source = await exampleSource(inp.path.split("/").pop(), inp.path);
+      $("#fileInput").value = "";
+      // The change of theory resets the choices that depend on it, and the
+      // link's operation and parameters are then applied, as at start-up.
+      theoryChanged();
+      if (OPS.some((o) => o.id === link.op)) STATE.opId = link.op;
+      STATE.params = Object.assign({}, STATE.params, link.params || {});
+      if (STATE.params.prior !== undefined && !priorValues().includes(STATE.params.prior)) STATE.params.prior = defaultPrior();
+      resetTheoryChoices();
+      for (const b of document.querySelectorAll(".op")) {
+        const on = b.getAttribute("data-op") === STATE.opId;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      }
+      updateOpHelp(); renderParams(); saveState();
+      ok = true;
+    });
+    if (!ok) return;
+    const op = OPS.find((o) => o.id === STATE.opId);
+    if (link.run && op && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op)) await runOp();
+    toast("Opened the theory and operation from the link");
   }
 
   async function start(runtime) {
@@ -2108,7 +2366,12 @@
       RT.examples = info.examples; RT.version = info.version; RT.pkgVersion = info.pkgVersion;
       if (info.corpora) RT.corpora = info.corpora;
       STATE.summary = info.summary || null;
-      document.body.append(el("a", { class: "skip-link", href: "#main" }, "Skip to content"));
+      // The skip link moves the focus itself, since following #main would
+      // replace the link that the address may hold.
+      document.body.append(el("a", { class: "skip-link", href: "#main", onclick: (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        const m = $("#main"); if (m) m.focus();
+      } }, "Skip to content"));
       document.body.append(buildHeader());
       const main = el("main", { id: "main", tabindex: "-1" }, [buildSidebar(), buildMain()]);
       document.body.append(main);
@@ -2126,6 +2389,8 @@
       const note = await applyRestore(onProgress);
       $("#boot").classList.add("hidden");
       if (note) toast(note);
+      requestHash();
+      if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("hashchange", () => openLinkInPlace());
     } catch (err) {
       bootFailed(err);
     }

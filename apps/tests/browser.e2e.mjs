@@ -6,6 +6,9 @@
 //   - runs every operation, at the parameters the UI gives it, on every
 //     example and on a theory built in the editor (a DAGitty import, or a
 //     new theory, then field edits, a claim, bounds, an estimate and its SE);
+//   - checks that a copied link reproduces the view in a fresh tab, and that
+//     a link pasted into a tab that shows the app opens there, after asking
+//     before it replaces the edited theory;
 //   - checks that a source the package cannot read is reported by the line
 //     that names the error, with the user's file name in place of the
 //     in-browser path;
@@ -281,6 +284,21 @@ async function linkRoundTrip(browser, page, base, lang) {
   if (title !== "A theory built in the editor") fail(`${lang} link`, "the link opened " + title);
   if ((await resultText(fresh)) !== want) fail(`${lang} link`, "the result the link reproduces differs");
   console.log(`${lang}: a link of ${url.length - url.indexOf("#")} characters reproduced the view`);
+  // A link pasted into a tab that shows the app opens there, without a
+  // reload, once the user agrees to replace the edited theory.
+  const ex = (await fresh.$$eval("#exampleSel option", (os) => os.map((o) => o.value))).filter(Boolean)[1];
+  const pasted = base + lang + "/#s=" + await fresh.evaluate((p) => window.TF.share.encode({ v: 1, op: "validate", run: true, theory: { example: p } }), ex);
+  await fresh.evaluate(() => { window.__sameDocument = true; });
+  const asked = [];
+  fresh.once("dialog", (d) => { asked.push(d.message()); d.accept(); });
+  await fresh.goto(pasted);
+  try {
+    await fresh.waitForFunction(() => /^Validate$/.test(document.querySelector("#outTitle").textContent), null, { timeout: RUN_MS });
+    await idle(fresh);
+    if (!(await fresh.evaluate(() => window.__sameDocument === true))) fail(`${lang} pasted link`, "the page was loaded again");
+    if ((await fresh.$eval("#exampleSel", (s) => s.value)) !== ex) fail(`${lang} pasted link`, "the example in the link was not loaded");
+    if (!/that you have not saved will be lost/.test(asked[0] || "")) fail(`${lang} pasted link`, "the edited theory was replaced without a question");
+  } catch (e) { fail(`${lang} pasted link`, "the link did not open in the tab: " + e.message); }
   await ctx.close();
 }
 

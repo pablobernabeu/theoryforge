@@ -7,9 +7,14 @@
 // Pyodide 314.0.8 runs Python 3.14.2 and ships PyYAML 6.0.3. The release is
 // pinned, as webR's is in r-runtime.js, and the two engines are updated
 // together and on purpose (apps/README.md, "Runtimes").
-import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v314.0.8/full/pyodide.mjs";
-
 const PYODIDE_INDEX = "https://cdn.jsdelivr.net/pyodide/v314.0.8/full/";
+
+// The engine is imported inside init rather than at the top of this module.
+// A module whose static import fails never runs, so the page would stay blank,
+// where a failure inside init reaches the app's panel with a Reload button.
+const loadEngine = (what, host, url) => import(url).catch((e) => {
+  throw new Error(`Could not download ${what} from ${host}. Check that your network allows it, then reload. (${(e && e.message) || e})`);
+});
 
 const APP_PY = String.raw`
 import json
@@ -63,12 +68,17 @@ def _summary(t):
                          for a in items(d, "alternatives")],
     }
 
+# Full validation, with the problems as a list as well as the package's joined
+# message: a message may quote a value of the theory that holds "; " itself, so
+# the app counts and lists the problems from the list.
 def _validation(t):
     try:
-        t.validate(full=True)
-        return {"ok": True}
+        problems = t._problems(full=True)
     except ValueError as e:
         return {"ok": False, "message": str(e)}
+    if not problems:
+        return {"ok": True}
+    return {"ok": False, "message": "invalid theory object: " + "; ".join(problems), "problems": problems}
 
 # The checklist's score and gate, which the editor shows as the theory changes,
 # or the message of a theory the checklist refuses.
@@ -87,12 +97,20 @@ def _hash(t):
     except Exception:
         return None
 
+# The content hash of the loaded theory, or the message of the error that
+# stopped it. It is a call of its own, which the app makes once a load has
+# finished, so that a slow hash never holds up a load or the start.
+def content_hash():
+    try:
+        return json.dumps({"hash": _state["theory"].content_hash()})
+    except Exception as e:
+        return json.dumps({"error": str(e) or type(e).__name__})
+
 def _loaded(t):
     _state["theory"] = t
     out = _summary(t)
     out["validation"] = _validation(t)
     out["check"] = _score(t)
-    out["hash"] = _hash(t)
     return out
 
 # A file that cannot be read raises, and the previous theory stays loaded. One
@@ -315,6 +333,9 @@ const RT = {
   hasCorpus() { return this.corpora.length > 0; },
 
   async init(onProgress) {
+    // The engine downloads while the manifest and the package files are fetched.
+    const engine = loadEngine("the Python engine (Pyodide)", "cdn.jsdelivr.net", PYODIDE_INDEX + "pyodide.mjs");
+    engine.catch(() => {});   // a failure is reported where it is awaited
     onProgress("Fetching package manifest…");
     const manifest = await window.TF.util.fetchJson("vendor/manifest.json");
 
@@ -325,11 +346,20 @@ const RT = {
       ...manifest.corpora.map((c) => [c.path, "/pkg/" + c.path])];
     const fetched = Promise.all(files.map(([rel, dest]) => window.TF.util.fetchBytes("vendor/" + rel).then((buf) => [dest, buf])));
     fetched.catch(() => {});   // a failure is reported where it is awaited
+    const { loadPyodide } = await engine;
     const pyodide = await loadPyodide({ indexURL: PYODIDE_INDEX });
     this._py = pyodide;
 
     onProgress("Loading PyYAML…");
-    await pyodide.loadPackage("pyyaml");
+    // loadPackage() resolves even when the download fails, and the failure
+    // would surface later as a traceback about a missing module, so the
+    // package is checked here.
+    const yamlErrors = [];
+    await pyodide.loadPackage("pyyaml", { errorCallback: (m) => yamlErrors.push(m) });
+    if (!pyodide.loadedPackages.pyyaml) {
+      throw new Error("Could not load PyYAML from cdn.jsdelivr.net" +
+        (yamlErrors.length ? " (" + yamlErrors[yamlErrors.length - 1] + ")" : "") + ". Check the connection and reload.");
+    }
 
     onProgress("Vendoring the theoryforge package into the browser…");
     const enc = new TextEncoder();
@@ -419,11 +449,14 @@ const RT = {
   // The code that makes the same theory with the installed package.
   importCode(opts) {
     const args = ["id", "title", "relation"].filter((k) => opts[k]).map((k) => `, ${k}=${JSON.stringify(String(opts[k]))}`).join("");
-    return `import theoryforge as tf\n\nwith open("model.dag", encoding="utf-8") as fh:   # the DAGitty model code\n    theory = tf.read_dagitty(fh.read()${args})\ntheory.write(${JSON.stringify((opts.id || "dagitty-import") + ".theory.yaml")})`;
+    return `import theoryforge as tf\n\nwith open("model.dag", encoding="utf-8") as fh:   # the DAGitty model code\n    theory = tf.read_dagitty(fh.read()${args})\ntheory.write(${JSON.stringify(opts.file || (opts.id || "dagitty-import") + ".theory.yaml")})`;
   },
 
   // The name the code panel reads the theory from, when the app renames it.
   renameTheory(filename) { this._theoryFile = filename; },
+
+  // The content hash of the loaded theory, as { hash } or { error }.
+  async contentHash() { return JSON.parse(this._str(this._app.content_hash())); },
 
   // The loaded theory as the package's writer writes it ("yaml" or "json").
   async writeText(format) { return this._str(this._app.write_text(format)); },

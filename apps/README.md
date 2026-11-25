@@ -86,7 +86,20 @@ with the browser's `CompressionStream('deflate-raw')` and encoded as base64url. 
 example travels as its path and any other theory as its text. Links are kept below
 16,000 characters so that mail clients and chat programs pass them on whole, and a
 theory too large for that is better sent as a file. An uploaded prior, rival or
-corpus is not carried.
+corpus is not carried. A link that opens is read with the same limit, and one that
+decompresses to more than 1 MiB is refused, as is one written by a newer version of
+the app. A link pasted into a tab that already shows the app opens there. A link
+that would replace a theory edited in the session asks first, as choosing an example,
+uploading a file or New theory does, since the session is the only copy of edits that
+Save has not written. While a theory from a link loads, the start panel offers to
+open the app without it, and a link whose theory cannot be loaded is taken out of
+the address and leaves the saved session as it was.
+
+The diagrams are Graphviz's SVG, drawn from text the theory supplies. Each figure is
+read as XML and inserted as nodes, with any script, foreign content, style sheet,
+animation, event handler and link to anything outside the figure taken out, so no
+text in a theory can run code in the page. The causal DAG is written again from
+dagitty's quoting to DOT's before Graphviz reads it.
 
 ## Runtimes
 
@@ -98,7 +111,12 @@ example under it. The CI apps job runs the Python glue under Python 3.14 with Py
 6.0.3 to match. The R app installs jsonlite and yaml from repo.r-wasm.org when it loads.
 These two are not pinned, so each session gets the builds the repository serves that
 day, and the browser console records their versions. The Graphviz renderer,
-`@hpcc-js/wasm-graphviz` 1.22.2, is pinned in `shared/app-core.js`.
+`@hpcc-js/wasm-graphviz` 1.22.2, is pinned in `shared/app-core.js`. Each runtime imports
+its engine when it starts, so a host the network blocks gives the start panel's
+message, which names the host, and a Reload button. A figure Graphviz cannot draw is
+replaced by a note that says why, the rest of the result stays, and the next run tries
+to load Graphviz again. The content hash on the theory card is computed after each
+load, in a call of its own, so a slow hash holds up neither the load nor the start.
 
 ## Build and run locally
 
@@ -119,7 +137,8 @@ file to be saved beside the script first.
 ## Test
 
 `apps/tests/` holds tests for the UI core, the editor's helpers (including a check that
-the editor leaves DAGitty code to the package's reader), the Markdown renderer, the link,
+the editor leaves DAGitty code to the package's reader), the editor on a page, the
+Markdown renderer, the link,
 the colour contrast of both themes, the two runtimes and their reproducible code,
 `build.mjs` and the site's landing and 404 pages. They run under Node's built-in test
 runner with a small stand-in for the browser DOM (`tests/dom.mjs`), so they need no
@@ -133,7 +152,8 @@ node --test apps/tests/*.test.mjs   # from the repository root
 
 `tests/browser.e2e.mjs` drives both apps in Chromium with Playwright. It boots the
 two engines and runs every operation on every example and on a theory it builds in
-the editor. It checks how a source the package cannot read is reported, the layout at
+the editor. It checks that a link reproduces the view and that a link pasted into an
+open tab opens there, how a source the package cannot read is reported, the layout at
 390 and 768 px wide and the contrast of coloured text in both themes. Last, it
 compares the displayed text of the two apps wherever the packages promise the same
 output. It needs Playwright with its Chromium and network access to the engines'
