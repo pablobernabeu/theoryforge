@@ -1,5 +1,5 @@
 {
-  "verdict": "progressive",
+  "verdict": "neutral",
   "new_predictions": [
     "pred4"
   ],
@@ -30,5 +30,17 @@
     "c_arousal _||_ c_avoidance | c_perceived_threat"
   ],
   "implications_lost_unrefuted": [],
-  "implications_gained": []
+  "implications_gained": [],
+  "entailments_lost": [],
+  "signs_lost": [
+    "effect of c_perceived_threat on c_avoidance: positive"
+  ],
+  "protected_only": [],
+  "refuted_new": [],
+  "corroborated_new_severity": [
+    {
+      "id": "pred4",
+      "severity": null
+    }
+  ]
 }
