@@ -505,10 +505,12 @@ NULL
 # The escapes of a valid JSON text that R cannot hold: \u0000, a high surrogate
 # escape that the next escape does not pair with a low one, and a low surrogate
 # escape that is not the second of a pair. NULL when there is none, and
-# otherwise a list with `what`, the first in the text, `marks`, and `probe`, the
-# text with each such escape replaced by the escape of its mark. Once the text
-# is valid JSON, every backslash starts an escape inside a string, so the
-# escapes are listed in order by one pattern.
+# otherwise a list with `what`, the first in the text, `marks` and `probe`, the
+# text with each such escape replaced by the escape of its mark followed by the
+# four hex digits of the code point it stood for, so that two keys that differ
+# only in which surrogate they hold stay apart. Once the text is valid JSON,
+# every backslash starts an escape inside a string, so the escapes are listed
+# in order by one pattern.
 .tf_json_unreadable <- function(text) {
   bytes <- charToRaw(text)
   m <- gregexpr("\\\\(u[0-9A-Fa-f]{4}|.)", text, perl = TRUE, useBytes = TRUE)[[1L]]
@@ -522,6 +524,7 @@ NULL
   if (length(suspect) == 0L) return(NULL)
   bad <- character(0)
   at <- integer(0)
+  held <- integer(0)
   paired <- FALSE
   for (k in suspect) {
     if (paired) {
@@ -539,13 +542,19 @@ NULL
     }
     bad <- c(bad, what)
     at <- c(at, starts[[k]])
+    held <- c(held, cp[[k]])
   }
   if (length(bad) == 0L) return(NULL)
   marks <- .tf_free_marks(text)
+  pieces <- vector("list", 2L * length(at) + 1L)
+  from <- 1L
   for (i in seq_along(at)) {
-    bytes[at[[i]]:(at[[i]] + 5L)] <- charToRaw(sprintf("\\u%04X", marks[[bad[[i]]]]))
+    pieces[[2L * i - 1L]] <- bytes[seq_len(at[[i]] - from) + from - 1L]
+    pieces[[2L * i]] <- charToRaw(sprintf("\\u%04X%04x", marks[[bad[[i]]]], held[[i]]))
+    from <- at[[i]] + 6L
   }
-  probe <- rawToChar(bytes)
+  pieces[[length(pieces)]] <- bytes[seq_len(length(bytes) - from + 1L) + from - 1L]
+  probe <- rawToChar(unlist(pieces))
   Encoding(probe) <- "UTF-8"
   list(what = bad[[1L]], marks = marks, probe = probe)
 }

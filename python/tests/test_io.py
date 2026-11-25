@@ -407,6 +407,12 @@ def test_a_repeated_key_is_reported_before_a_string_r_cannot_hold(tmp_path):
                        ("dup.theory.yaml", 'k: {a: 1, a: 2}\nt: "' + BS + '0"\n')]:
         with pytest.raises(ValueError, match="Duplicate map key: 'a'"):
             tf.read(_file(tmp_path, name, text))
+    # Two keys that differ only in which lone surrogate they hold are two keys,
+    # so the repeat reported is the one after them.
+    text = ('{"id": "x", "a": {"' + BS + 'ud800": 1, "' + BS + 'udbff": 2}, '
+            '"b": {"q": 1, "q": 2}}')
+    with pytest.raises(ValueError, match="Duplicate map key: 'q'"):
+        tf.read(_file(tmp_path, "surrogate-keys.theory.json", text))
 
 
 def test_json_comments_are_refused(tmp_path):

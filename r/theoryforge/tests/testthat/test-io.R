@@ -310,6 +310,11 @@ test_that("a string R cannot hold is refused with one message", {
                "Duplicate map key: 'a'", fixed = TRUE)
   expect_error(tf_read(io_file(paste0('k: {a: 1, a: 2}\nt: "', bs, '0"\n'))),
                "Duplicate map key: 'a'", fixed = TRUE)
+  # Two keys that differ only in which lone surrogate they hold are two keys,
+  # so the repeat reported is the one after them.
+  text <- paste0('{"id": "x", "a": {"', bs, 'ud800": 1, "', bs, 'udbff": 2}, ',
+                 '"b": {"q": 1, "q": 2}}')
+  expect_error(tf_read(io_file(text, ext = ".json")), "Duplicate map key: 'q'", fixed = TRUE)
 })
 
 test_that("JSON comments are refused, as Python's json module refuses them", {
