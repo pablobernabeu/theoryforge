@@ -5,6 +5,7 @@
 #' counterpart to the deterministic lexical screen in
 #' \code{tf_redundancy_check}.
 #' @name embedding
+#' @noRd
 #' @keywords internal
 NULL
 

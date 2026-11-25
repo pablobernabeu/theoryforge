@@ -5,6 +5,7 @@
 #' push requires the user's OSF token and network access and is never performed
 #' automatically.
 #' @name osf
+#' @noRd
 #' @keywords internal
 NULL
 

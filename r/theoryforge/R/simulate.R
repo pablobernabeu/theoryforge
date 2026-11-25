@@ -8,6 +8,7 @@
 #' either with fixed-step (Euler) updates or exactly, with the matrix
 #' exponential of the coupling matrix, so the trajectory is deterministic.
 #' @name simulate
+#' @noRd
 #' @keywords internal
 NULL
 

@@ -2,6 +2,7 @@
 #'
 #' Deterministic Markdown output.
 #' @name prereg
+#' @noRd
 #' @keywords internal
 NULL
 

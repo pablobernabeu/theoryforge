@@ -6,6 +6,7 @@
 #' set m-separates the pair. A graph with feedback loops is refused by default,
 #' or read by sigma-separation on request.
 #' @name implications
+#' @noRd
 #' @keywords internal
 NULL
 

@@ -1,9 +1,10 @@
 #' Assemble a reviewer-facing audit bundle as a single Markdown document.
 #'
-#' Composes the rigour report, severity table, test record, evidence,
-#' provenance and the hypotheses section of a preregistration into one
-#' deterministic bundle.
+#' Composes the rigour report, severity table, test record, evidence, claims
+#' and causal graph, equivalent models, rivals, provenance and the theory and
+#' hypotheses sections of a preregistration into one deterministic bundle.
 #' @name dossier
+#' @noRd
 #' @keywords internal
 NULL
 

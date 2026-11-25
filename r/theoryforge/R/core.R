@@ -1,6 +1,7 @@
 #' Read, validate and write theory objects.
 #'
 #' @name core
+#' @noRd
 #' @keywords internal
 NULL
 

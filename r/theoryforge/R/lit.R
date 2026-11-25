@@ -4,6 +4,7 @@
 #' deterministic for a given corpus. Only the OpenAlex fetch,
 #' [tf_fetch_corpus()], depends on a live network service.
 #' @name lit
+#' @noRd
 #' @keywords internal
 NULL
 
