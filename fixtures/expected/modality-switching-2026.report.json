@@ -107,7 +107,8 @@
       "weight": 0.08,
       "severity_if_fail": "blocker",
       "citation": "Scheel et al. (2021); Szollosi et al. (2020)",
-      "not_checked": []
+      "not_checked": [],
+      "phenomena_not_checked": []
     }
   ]
 }

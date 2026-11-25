@@ -3,7 +3,7 @@
   "validate": true,
   "validate_full": true,
   "check": {
-    "aggregate_score": 45.7,
+    "aggregate_score": 54.3,
     "coverage": 0.92,
     "gate": "pass",
     "n_blockers_failed": 0,
@@ -66,7 +66,7 @@
       {
         "id": "derivation_chain",
         "status": "warn",
-        "score": 0.0
+        "score": 1.0
       }
     ]
   },
