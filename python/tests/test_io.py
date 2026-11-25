@@ -273,7 +273,11 @@ ALIAS_FAULTS = [
     # a line, which libyaml skips.
     ("%TAG ! tag:example.com,2000:\n---\nid: s\na: &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
     ("%TAG ! tag:example.com,2000:\n---\n{id: s, a: &x 1, b: &x 2}\n", "the anchor 'x' names two nodes"),
-    ("id: s\na: [1,\n\ufeff&x 2]\nb: &x 3\n", "the anchor 'x' names two nodes"),
+    # PyYAML's pure-Python scanner skips a byte-order mark only at the start of
+    # the text.
+    pytest.param("id: s\na: [1,\n\ufeff&x 2]\nb: &x 3\n", "the anchor 'x' names two nodes",
+                 marks=pytest.mark.skipif(not yaml.__with_libyaml__,
+                                          reason="PyYAML was built without libyaml")),
     # More names than the R twin probes with one tag each.
     ("".join(f"k{i}: &n{i} {i}\n" for i in range(300)) + "".join(f"t{i}: text &n{i}\n" for i in range(300))
      + "z: &n257 x\n", "the anchor 'n257' names two nodes"),
@@ -432,12 +436,57 @@ ORDER_FAULTS = [
 def test_a_file_with_two_faults_is_refused_for_the_one_that_comes_first(tmp_path, suffix, text, message):
     path = _file(tmp_path, "two.theory." + suffix, text)
     if message == _SYNTAX:
-        with pytest.raises(json.JSONDecodeError if suffix == "json" else yaml.YAMLError):
+        # The parser's own error, which R gives as a 'Parser error', and not
+        # the refusal of a text nested deeper than libyaml allows.
+        with pytest.raises(json.JSONDecodeError if suffix == "json" else yaml.parser.ParserError):
             tf.read(path)
         return
     with pytest.raises(ValueError) as err:
         tf.read(path)
     assert str(err.value) == f"({path}) {message}"
+
+
+@pytest.mark.parametrize(("suffix", "text", "message"),
+                         [c for c in ORDER_FAULTS if c[0] == "yaml" and ("[" * 990) in c[1]])
+def test_a_text_beyond_libyaml_reads_alike_through_the_pure_python_parser(
+        tmp_path, monkeypatch, suffix, text, message):
+    # libyaml 0.2.6, which PyYAML 6.0.4 and later bundle, refuses a text nested
+    # about 1000 levels deep, and Python then reads it again with PyYAML's
+    # pure-Python parser (API_SPEC.md section 3). Taking that path for every
+    # text gives the same refusals, without recursion at 2000 levels.
+    from theoryforge import _load
+    monkeypatch.setattr(_load, "_TolerantLoader", _load._PythonTolerantLoader)
+    test_a_file_with_two_faults_is_refused_for_the_one_that_comes_first(tmp_path, suffix, text, message)
+    path = _file(tmp_path, "deep.theory.yaml", "x: " + _deep(2000) + "\ny: {a: " * 1 + _deep(2000) + "}\n")
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read(path)
+
+
+def test_the_pure_python_parser_reads_every_fixture_as_libyaml_does():
+    # The reading that Python falls back on beyond libyaml's limit gives the
+    # document libyaml gives, for every theory and corpus in fixtures/ whose
+    # text holds no tab and no byte-order mark, which that parser treats apart.
+    from theoryforge import _load
+    root = Path(__file__).resolve().parents[2] / "fixtures"
+    paths = sorted(root.rglob("*.yaml"))
+    assert len(paths) > 50
+    for path in paths:
+        text = path.read_bytes().decode("utf-8-sig")
+        if "\t" in text or "\ufeff" in text:
+            continue
+        try:
+            want = _load._read_as_r(text, _load._TolerantLoader)
+        except Exception as err:
+            with pytest.raises(type(err)):
+                _load._read_as_r(text, _load._PythonTolerantLoader)
+            continue
+        try:
+            # A document whose aliases expand past the limit is not compared
+            # value by value.
+            _load._check_size(want[0], path)
+        except ValueError:
+            continue
+        assert _load._read_as_r(text, _load._PythonTolerantLoader) == want, path.name
 
 
 def test_a_json_string_of_millions_of_characters_is_measured(tmp_path):

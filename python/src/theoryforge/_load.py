@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import math
 import re
+from collections import OrderedDict
 from collections.abc import Iterator
 from itertools import accumulate
 from pathlib import Path
@@ -39,6 +40,9 @@ from yaml.events import (
     StreamEndEvent,
 )
 from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
+from yaml.parser import Parser
+from yaml.reader import Reader
+from yaml.scanner import Scanner, ScannerError
 
 _MERGE = "tag:yaml.org,2002:merge"
 _VALUE = "tag:yaml.org,2002:value"
@@ -417,6 +421,68 @@ class _TolerantLoader(_TolerantComposer, _StrictLoader):
     """``_StrictLoader`` with the composer that binds aliases as R does."""
 
 
+def _beyond_libyaml(err: BaseException) -> bool:
+    """Whether ``err`` is libyaml's refusal of a text nested deeper than it
+    allows. libyaml 0.2.6, which PyYAML 6.0.4 and later bundle, refuses a text
+    whose flow collections or block indentation pass about 1000 levels, where
+    the libyaml that R's yaml package bundles reads it."""
+    return (isinstance(err, ScannerError)
+            and "exceeded maximum nesting depth" in str(getattr(err, "problem", "")))
+
+
+class _PythonEvents(Reader, Scanner, Parser):
+    """The parser's events of a text from PyYAML's pure-Python reader, scanner
+    and parser, which keep no limit on nesting and do not recurse.
+
+    PyYAML's scanner keeps a possible simple key for each open flow
+    collection and, for every token, looks at all of them for one that has
+    gone stale and for the one that came first. A key belongs to a level no
+    deeper than the current one, and it is kept only while no deeper level is
+    open, so the keys come in the order of their levels and of the text. The
+    two methods below therefore look only at the first key, in an ordered
+    mapping, which gives the same tokens in time proportional to the text.
+    """
+
+    def __init__(self, text: str) -> None:
+        Reader.__init__(self, text)
+        Scanner.__init__(self)
+        Parser.__init__(self)
+        self.possible_simple_keys: Any = OrderedDict()
+
+    def stale_possible_simple_keys(self) -> None:
+        keys = self.possible_simple_keys
+        while keys:
+            level, key = next(iter(keys.items()))
+            if key.line == self.line and self.index - key.index <= 1024:
+                return
+            if key.required:
+                raise ScannerError("while scanning a simple key", key.mark,
+                                   "could not find expected ':'", self.get_mark())
+            del keys[level]
+
+    def next_possible_simple_key(self) -> Any:
+        keys = self.possible_simple_keys
+        return next(iter(keys.values())).token_number if keys else None
+
+
+class _PythonTolerantLoader(_TolerantLoader):
+    """``_TolerantLoader`` that takes its events from ``_PythonEvents`` in
+    place of libyaml, for a text nested deeper than libyaml allows."""
+
+    def __init__(self, text: str) -> None:
+        super().__init__(text)
+        self._events = _PythonEvents(text)
+
+    def check_event(self, *choices: Any) -> bool:
+        return self._events.check_event(*choices)
+
+    def peek_event(self) -> Any:
+        return self._events.peek_event()
+
+    def get_event(self) -> Any:
+        return self._events.get_event()
+
+
 def _load_yaml(text: str) -> tuple[Any, set[str]]:
     """The document ``text`` holds, and the anchors it gives to two nodes.
 
@@ -435,6 +501,8 @@ def _load_yaml(text: str) -> tuple[Any, set[str]]:
     the token after it begins, so an alias that is that token comes after the
     end, while an error of the parser or the constructor that the alias itself
     causes, such as a merge of the alias, is marked where the alias stands.
+    When libyaml refuses a text as nested deeper than it allows, the text is
+    read again with ``_PythonTolerantLoader``.
     """
     if not _text_too_deep(text):
         loader = _StrictLoader(text)
@@ -446,11 +514,29 @@ def _load_yaml(text: str) -> tuple[Any, set[str]]:
             pass
         finally:
             loader.dispose()
-    tolerant = _TolerantLoader(text)
+    # Without libyaml, _TolerantLoader reads with PyYAML's pure-Python parser
+    # already, and _PythonTolerantLoader does the same in time proportional to
+    # a deeply nested text.
+    first = _PythonTolerantLoader if _BaseLoader is yaml.SafeLoader else _TolerantLoader
+    try:
+        return _read_as_r(text, first)
+    except ScannerError as err:
+        if not _beyond_libyaml(err):
+            raise
+    return _read_as_r(text, _PythonTolerantLoader)
+
+
+def _read_as_r(text: str, loader_class: type[_TolerantLoader]) -> tuple[Any, set[str]]:
+    """The document ``text`` holds and the anchors it gives to two nodes, read
+    by ``loader_class`` as R reads it (``_load_yaml``). libyaml's refusal of a
+    text nested deeper than it allows is raised as it is."""
+    tolerant = loader_class(text)
     try:
         try:
             data = tolerant.get_single_data()
         except (_DuplicateKey, yaml.YAMLError) as err:
+            if _beyond_libyaml(err):
+                raise
             if isinstance(err, _DuplicateKey):
                 mark, after = err.mark, 0
             else:
@@ -582,7 +668,8 @@ def _text_too_deep(text: str) -> bool:
 
     The events are read only until they pass that depth, since the answer
     only chooses the composer. A syntax error before that depth, and anything
-    after the first document, are left for the loader to report.
+    after the first document, are left for the loader to report. A text that
+    libyaml refuses as nested deeper than it allows is too deep.
     """
     if _text_depth_bound(text) <= _MAX_TEXT_DEPTH:
         return False
@@ -598,8 +685,8 @@ def _text_too_deep(text: str) -> bool:
                 depth -= 1
             elif kind is yaml.DocumentEndEvent:
                 return False
-    except yaml.YAMLError:
-        return False
+    except yaml.YAMLError as err:
+        return _beyond_libyaml(err)
     return False
 
 
