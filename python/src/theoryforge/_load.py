@@ -255,20 +255,21 @@ class _TolerantComposer:
     node passes without one. PyYAML refuses the first and the third and builds
     a cyclic node for the second. A loader with this composer reads all three
     as R does. It notes, in ``unknown``, the first alias that names no node and
-    where it stands, and, in ``twice``, the first anchor given to a second
-    node. ``load_document`` uses it only when the ordinary loader has met one
-    of the three, so that it can refuse the file at the point where R's reader
+    where it stands, and, in ``twice``, every anchor given to a second node.
+    ``load_document`` uses it only when the ordinary loader has met one of the
+    three, so that it can refuse the file at the point where R's reader
     refuses it.
     """
 
     unknown: tuple[str, int] | None = None
-    twice: str | None = None
+    twice: set[str]
 
     def get_single_node(self) -> Node | None:
         loader: Any = self
         loader.get_event()  # the start of the stream
         self._ended: dict[str, Node] = {}
         self._started: set[str] = set()
+        self.twice = set()
         document: Any = None
         if not loader.check_event(StreamEndEvent):
             loader.get_event()  # the start of the document
@@ -293,8 +294,8 @@ class _TolerantComposer:
             return ScalarNode("tag:yaml.org,2002:str", _BAD_ANCHOR, event.start_mark, event.end_mark)
         anchor = loader.peek_event().anchor
         if anchor is not None:
-            if anchor in self._started and self.twice is None:
-                self.twice = anchor
+            if anchor in self._started:
+                self.twice.add(anchor)
             self._started.add(anchor)
         loader.descend_resolver(parent, index)
         start = loader.get_event()
@@ -331,8 +332,8 @@ class _TolerantLoader(_TolerantComposer, _StrictLoader):
     """``_StrictLoader`` with the composer that binds aliases as R does."""
 
 
-def _load_yaml(text: str) -> tuple[Any, str | None]:
-    """The document ``text`` holds, and the first anchor it gives to two nodes, if any.
+def _load_yaml(text: str) -> tuple[Any, set[str]]:
+    """The document ``text`` holds, and the anchors it gives to two nodes.
 
     libyaml's composer refuses an undefined alias and an anchor given to a
     second node, and composes an alias inside the node its anchor names as a
@@ -340,11 +341,16 @@ def _load_yaml(text: str) -> tuple[Any, str | None]:
     it has read them. When the ordinary loader meets one, the text is read
     again by ``_TolerantLoader``, which reads it as R does, so that the file is
     refused at the point where R refuses it. An alias that names no node raises
-    ``_AliasFault`` unless a syntax error or a repeated key comes before it.
+    ``_AliasFault``, unless a syntax error comes before it in the text or a
+    mapping that repeats a key ends before it, since R's yaml package checks
+    the keys of a mapping as the mapping ends. A block mapping ends where the
+    token after it begins, so an alias that is that token comes after the end,
+    while an error of the parser or the constructor that the alias itself
+    causes, such as a merge of the alias, is marked where the alias stands.
     """
     loader = _StrictLoader(text)
     try:
-        return loader.get_single_data(), None
+        return loader.get_single_data(), set()
     except ComposerError as err:
         if "undefined alias" not in str(err) and "duplicate anchor" not in str(err):
             raise
@@ -357,8 +363,11 @@ def _load_yaml(text: str) -> tuple[Any, str | None]:
         try:
             data = tolerant.get_single_data()
         except (_DuplicateKey, yaml.YAMLError) as err:
-            mark = err.mark if isinstance(err, _DuplicateKey) else getattr(err, "problem_mark", None)
-            if tolerant.unknown is not None and (mark is None or tolerant.unknown[1] <= mark.index):
+            if isinstance(err, _DuplicateKey):
+                mark, after = err.mark, 0
+            else:
+                mark, after = getattr(err, "problem_mark", None), 1
+            if tolerant.unknown is not None and (mark is None or tolerant.unknown[1] < mark.index + after):
                 raise _AliasFault(tolerant.unknown[0]) from None
             raise
     finally:
@@ -459,13 +468,15 @@ def load_document(path) -> Any:
     A YAML alias that names no node that ends before it, because its anchor is
     undefined or because the alias lies inside the node its anchor names, raises
     ``ValueError("(<path>) the alias '<name>' names no node that ends before
-    it")``, unless a syntax error or a repeated key comes before it in the text.
-    An anchor given to two nodes raises ``ValueError("(<path>) the anchor
-    '<name>' names two nodes")`` once the file has passed every other check.
+    it")``, unless a syntax error comes before it in the text or a mapping that
+    repeats a key ends before it. An anchor given to two nodes raises
+    ``ValueError("(<path>) the anchor '<name>' names two nodes")`` once the
+    file has passed every other check, naming the first such anchor by code
+    point.
     """
     path = Path(path)
     text = path.read_bytes().decode("utf-8-sig")
-    twice = None
+    twice: set[str] = set()
     try:
         if path.suffix.lower() == ".json":
             data = json.loads(text, object_pairs_hook=_unique_pairs)
@@ -483,8 +494,8 @@ def load_document(path) -> Any:
     what = _unreadable(data)
     if what:
         raise ValueError(f"({path}) a string holds {what}, which theoryforge cannot read")
-    if twice is not None:
-        raise ValueError(f"({path}) the anchor '{twice}' names two nodes")
+    if twice:
+        raise ValueError(f"({path}) the anchor '{min(twice)}' names two nodes")
     return data
 
 

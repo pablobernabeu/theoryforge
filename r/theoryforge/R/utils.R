@@ -341,11 +341,15 @@ NULL
 # whose anchor is undefined or that lies inside the node its anchor names, as
 # the text "_yaml.bad-anchor_" with a warning, and libyaml through PyYAML
 # refuses the first and reads the second as a cycle. Both twins refuse such an
-# alias, unless a syntax error or a repeated key comes before it in the text.
+# alias, unless a syntax error comes before it in the text or a mapping that
+# repeats a key ends before it, since yaml checks the keys of a mapping as the
+# mapping ends.
 .tf_read_yaml <- function(path) {
   text <- .tf_read_text(path)
+  # No parse evaluates R code (!expr), whatever the session's options say.
   parse <- function(handlers, txt = text) {
-    yaml::yaml.load(txt, handlers = handlers, merge.precedence = "override", error.label = path)
+    yaml::yaml.load(txt, handlers = handlers, merge.precedence = "override", error.label = path,
+                    eval.expr = FALSE)
   }
   .tf_yaml_refuse_nul(text, path, parse)
   warned <- FALSE
@@ -369,47 +373,93 @@ NULL
   data
 }
 
-# Refuse a YAML text that gives one anchor to two nodes. yaml binds a later
-# alias to the first of them, where YAML binds it to the last, and libyaml
-# through PyYAML refuses the text. What yaml returns does not show anchors, so
-# each `&name` that could be an anchor of a name written twice gets a tag of
-# its own in a probe copy, whose handler records the anchors libyaml read: an
-# `&name` in a comment or a scalar stays text. A node that already has a tag
-# cannot take a second one, so when the probe fails, each `&name` is tried
-# alone, and one whose tag the parser refuses is an anchor.
+# What libyaml can read as an anchor: an ampersand at the start of the text or
+# after white space, a line break or one of [{,:?-, then the characters of an
+# anchor name, then white space, a line break, the end or one of ?:,]}%@` (it
+# refuses the text otherwise). The line breaks include U+0085, U+2028 and
+# U+2029. The pattern matches bytes, which writes them as their UTF-8 bytes,
+# since gregexpr() takes time quadratic in the length of a text that is not
+# ASCII when it matches characters.
+.tf_YAML_BREAK <- "[\\n\\r]|\\xC2\\x85|\\xE2\\x80[\\xA8\\xA9]"
+.tf_ANCHOR_PATTERN <- paste0(
+  "(?:^|(?<=[\\t\\n\\r \\[{,:?-])|(?<=\\xC2\\x85)|(?<=\\xE2\\x80[\\xA8\\xA9]))&[0-9A-Za-z_-]+",
+  "(?=[\\t\\n\\r ?:,\\]}%@`]|\\xC2\\x85|\\xE2\\x80[\\xA8\\xA9]|$)"
+)
+
+# Refuse a YAML text that gives one anchor to two nodes, naming the first such
+# anchor by code point. yaml binds a later alias to the first of the nodes,
+# where YAML binds it to the last, and libyaml through PyYAML refuses the
+# text. What yaml returns does not show anchors, so only a name that the text
+# writes twice where libyaml could read it as an anchor is looked at. In a
+# probe copy, each such `&name` is preceded by a tag of the name's own, whose
+# handler yaml calls once for each node that takes it, so an `&name` in a
+# comment or in a scalar calls nothing. A node with an explicit tag cannot
+# take a second one, so an `&name` next to a tag is tried alone, and so is
+# each `&name` of a probe the parser refuses, after the probe is split in
+# halves. Tried alone, an `&name` whose tag the parser refuses is an anchor
+# when the copy with spaces in place of the tag reads, and text otherwise,
+# since the tag can also make a key longer than the 1024 characters libyaml
+# allows. An anchor that starts such a key is then missed. The parses are one,
+# plus about two for each anchor next to a tag.
 .tf_yaml_refuse_twice <- function(text, path, parse) {
-  m <- gregexpr("(?<![^\\s\\[{,:?-])&[0-9A-Za-z_-]+", text, perl = TRUE)
+  m <- gregexpr(.tf_ANCHOR_PATTERN, text, perl = TRUE, useBytes = TRUE)
   found <- regmatches(text, m)[[1L]]
   probed <- which(found %in% found[duplicated(found)])
   if (length(probed) == 0L) return(invisible())
-  prefix <- "tfanchor"
-  while (grepl(prefix, text, fixed = TRUE)) prefix <- paste0(prefix, "x")
-  read <- function(ks) {
-    seen <- integer(0)
-    handlers <- lapply(ks, function(k) function(x) {
-      seen <<- c(seen, k)
-      x
+  # A short tag that no tag of the text begins with, and that names no type
+  # yaml resolves by itself, none of which begins with z.
+  prefix <- "z"
+  while (grepl(paste0("!", prefix), text, fixed = TRUE)) prefix <- paste0(prefix, "z")
+  tag <- paste0(prefix, substring(found, 2L))
+  # The names whose tag a node took, once for each node, in a copy where each
+  # occurrence in `ks` is preceded by its tag, or by as many spaces when
+  # `blank`, or NULL when the parser refuses the copy.
+  probe <- function(ks, blank = FALSE) {
+    took <- character(0)
+    handlers <- lapply(unique(tag[ks]), function(tg) {
+      function(x) {
+        took <<- c(took, tg)
+        x
+      }
     })
-    names(handlers) <- paste0(prefix, ks)
+    names(handlers) <- unique(tag[ks])
+    lead <- paste0("!", tag[ks], " ")
     marked <- found
-    marked[ks] <- paste0("!", prefix, ks, " ", found[ks])
-    probe <- text
-    regmatches(probe, m) <- list(marked)
+    marked[ks] <- paste0(if (blank) strrep(" ", nchar(lead)) else lead, found[ks])
+    copy <- text
+    regmatches(copy, m) <- list(marked)
+    Encoding(copy) <- "UTF-8"
     ok <- tryCatch({
-      suppressWarnings(parse(c(.tf_yaml_handlers, handlers), probe))
+      suppressWarnings(parse(c(.tf_yaml_handlers, handlers), copy))
       TRUE
     }, error = function(e) FALSE)
-    if (ok) ks[ks %in% seen]
+    if (ok) took
   }
-  anchors <- read(probed)
-  if (is.null(anchors)) {
-    anchors <- probed[vapply(probed, function(k) !identical(read(k), integer(0)), logical(1L))]
+  anchors <- function(ks) {
+    if (length(ks) == 0L) return(character(0))
+    took <- probe(ks)
+    if (!is.null(took)) return(took)
+    if (length(ks) == 1L) return(if (is.null(probe(ks, blank = TRUE))) character(0) else tag[ks])
+    half <- seq_len(length(ks) %/% 2L)
+    c(anchors(ks[half]), anchors(ks[-half]))
   }
-  names <- found[sort(anchors)]
-  twice <- names[duplicated(names)]
+  # An explicit tag on the same line, just before the occurrence or just after
+  # it, with only blanks between.
+  at <- as.integer(m[[1L]])[probed]
+  to <- at + attr(m[[1L]], "match.length")[probed] - 1L
+  b <- gregexpr(.tf_YAML_BREAK, text, perl = TRUE, useBytes = TRUE)[[1L]]
+  line <- c(1L, (as.integer(b) + attr(b, "match.length"))[b > 0L])
+  line <- line[findInterval(at, line)]
+  bytes <- text
+  Encoding(bytes) <- "bytes"
+  tagged <- grepl("(^|[\\t \\[{,])![^\\t ]*[\\t ]+$", substring(bytes, line, at - 1L),
+                  perl = TRUE, useBytes = TRUE) |
+    grepl("^[\\t ]+!", substring(bytes, to + 1L, to + 80L), perl = TRUE, useBytes = TRUE)
+  took <- c(anchors(probed[!tagged]), unlist(lapply(probed[tagged], anchors)))
+  twice <- sort(unique(took[duplicated(took)]), method = "radix")
   if (length(twice) > 0L) {
-    stop(sprintf("(%s) the anchor '%s' names two nodes", path, substring(twice[[1L]], 2L)),
-         call. = FALSE)
+    stop(sprintf("(%s) the anchor '%s' names two nodes", path,
+                 substring(twice[[1L]], nchar(prefix) + 1L)), call. = FALSE)
   }
   invisible()
 }

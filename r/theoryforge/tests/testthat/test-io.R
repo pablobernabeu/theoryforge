@@ -164,9 +164,20 @@ test_that("an alias that names no node and an anchor given twice are refused", {
     list("id: x\na: &x [&x 1]\n", "the anchor 'x' names two nodes"),
     list("id: x\na: !!str &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
     list("id: x\na: &x 1 # &x\nb: '&x'\nc: R &x\nd: |\n  &x\ne: *x\n", NULL),
-    # As both readers meet them: a repeated key or an alias that names no
-    # node, whichever comes first, then U+0000, then an anchor given twice.
+    # The second &x is text beside a tagged anchor, and the first text in a key
+    # that a tag before it would make longer than libyaml allows.
+    list("id: x\na: !!str &x 1\nb: c &x\nc: *x\n", NULL),
+    list(paste0(strrep("k", 1012L), " &x: 1\nb: &x 2\n"), NULL),
+    # A next-line character is a line break to libyaml, and with more than one
+    # anchor given twice, the first by code point is named.
+    list("id: x\na: 1\u0085&x b: 2\u0085&x c: 3\n", "the anchor 'x' names two nodes"),
+    list("id: x\np: &y 1\nq: &y 2\nr: &b 3\ns: &b 4\n", "the anchor 'b' names two nodes"),
+    # As both readers meet them: a repeated key, as its mapping ends, or an
+    # alias that names no node, whichever comes first, then U+0000, then an
+    # anchor given twice.
     list("id: x\nk: {a: 1, a: 2}\nz: *u\n", "Duplicate map key: 'a'"),
+    # A block mapping ends where the alias after it begins.
+    list("m:\n  a: 1\n  a: 2\n*u : 3\n", "Duplicate map key: 'a'"),
     list("id: x\nz: *u\nk: {a: 1, a: 2}\n", "the alias 'u' names no node that ends before it"),
     list(paste0("id: x\nz: *u\nt: \"a", bs, "0b\"\n"), "the alias 'u' names no node that ends before it"),
     list(paste0("id: x\nt: \"a", bs, "0b\"\na: &x 1\nb: &x 2\n"),
@@ -176,11 +187,21 @@ test_that("an alias that names no node and an anchor given twice are refused", {
   for (case in cases) {
     path <- io_file(case[[1]])
     if (is.null(case[[2]])) {
-      expect_identical(expect_silent(tf_read(path))$e, 1L, info = case[[1]])
+      expect_true(is.list(expect_silent(tf_read(path))), info = case[[1]])
     } else {
       expect_error(tf_read(path), sprintf("(%s) %s", path, case[[2]]), fixed = TRUE, info = case[[1]])
     }
   }
+})
+
+test_that("no parse of a YAML file runs R code, whatever the options say", {
+  # The probes that look for an anchor given twice parse the file again.
+  op <- options(yaml.eval.expr = TRUE, tf.test.evaluated = NULL)
+  on.exit(options(op), add = TRUE)
+  path <- io_file(paste0("id: x\nnote: !expr options(tf.test.evaluated = TRUE)\n",
+                         "a: !!str &x 1\nb: text &x\nc: more &x\n"))
+  try(suppressWarnings(tf_read(path)), silent = TRUE)
+  expect_null(getOption("tf.test.evaluated"))
 })
 
 test_that("an unquoted date stays a string and writes to JSON", {
