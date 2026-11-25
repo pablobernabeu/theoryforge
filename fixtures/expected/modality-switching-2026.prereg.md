@@ -84,5 +84,5 @@
 ## Severity (pre-data rubric of claim form)
 - pred1: severity 0.3, risk 0.4
 - pred2: severity 0.7, risk 0.7
-- pred3: severity 1.0, risk 0.9
+- pred3: severity 0.4, risk 0.4
 - pred4: severity 0.8, risk 0.7

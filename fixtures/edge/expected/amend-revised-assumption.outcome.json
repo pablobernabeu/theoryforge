@@ -3,7 +3,7 @@
   "validate": true,
   "validate_full": true,
   "check": {
-    "aggregate_score": 57.3,
+    "aggregate_score": 55.3,
     "coverage": 1.0,
     "gate": "pass",
     "n_blockers_failed": 0,
@@ -21,7 +21,7 @@
       {
         "id": "risk_severity",
         "status": "pass",
-        "score": 0.7
+        "score": 0.5
       },
       {
         "id": "parsimony",
@@ -86,8 +86,8 @@
     {
       "prediction_id": "h3",
       "type": "point",
-      "risk_score": 0.9,
-      "computed_severity": 0.9
+      "risk_score": 0.4,
+      "computed_severity": 0.3
     }
   ],
   "implications": {
@@ -256,5 +256,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: An assumption rewritten under its id to answer an anomaly\n\n- Theory ID: edge-amend-revised-assumption\n- Schema version: 1.1\n- Content hash: sha256:905fd4cc49d63157d44769a80c4e351eb819db1f231995542462c14f2322ed67\n- Maturity: testing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- c1 (First): The first construct.\n- c2 (Second): The second construct.\n- c3 (Third): The third construct.\n- c4 (Fourth): The fourth construct.\n\n### Propositions\n- p1: c1 increases c2. Mechanism: It does.\n- p2: c2 increases c3. Mechanism: It does.\n- p3: c3 increases c4. Mechanism: It does.\n\n### Auxiliary assumptions\n- a1 (added for h1): The c2 scale measures c2 only in samples of students.\n\n## Hypotheses\n1. [point] c2 rises 0.5 SD per SD of c1, within 0.1. (h1; derives from: p1)\n   - Region the claim allows: [0.4, 0.6]\n   - Claim: the effect of c1 on c2 is positive; entailed by the causal graph through p1\n   - Adjustment for an observational test: none needed\n   - Auxiliary assumptions: a1 (added for h1)\n   - Test record: already tested: failed\n2. [directional] c3 rises with c2. (h2; derives from: p2)\n   - Test record: untested\n3. [point] c4 rises 0.3 SD per SD of c3, within 0.1. (h3; derives from: p3)\n   - Test record: already tested: passed\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n- `c1 _||_ c3 | c2`\n- `c1 _||_ c4 | c3`\n- `c2 _||_ c4 | c1, c3`\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.9, risk 0.9\n- h2: severity 0.3, risk 0.4\n- h3: severity 0.9, risk 0.9\n"
+  "preregister": "# Preregistration: An assumption rewritten under its id to answer an anomaly\n\n- Theory ID: edge-amend-revised-assumption\n- Schema version: 1.1\n- Content hash: sha256:905fd4cc49d63157d44769a80c4e351eb819db1f231995542462c14f2322ed67\n- Maturity: testing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- c1 (First): The first construct.\n- c2 (Second): The second construct.\n- c3 (Third): The third construct.\n- c4 (Fourth): The fourth construct.\n\n### Propositions\n- p1: c1 increases c2. Mechanism: It does.\n- p2: c2 increases c3. Mechanism: It does.\n- p3: c3 increases c4. Mechanism: It does.\n\n### Auxiliary assumptions\n- a1 (added for h1): The c2 scale measures c2 only in samples of students.\n\n## Hypotheses\n1. [point] c2 rises 0.5 SD per SD of c1, within 0.1. (h1; derives from: p1)\n   - Region the claim allows: [0.4, 0.6]\n   - Claim: the effect of c1 on c2 is positive; entailed by the causal graph through p1\n   - Adjustment for an observational test: none needed\n   - Auxiliary assumptions: a1 (added for h1)\n   - Test record: already tested: failed\n2. [directional] c3 rises with c2. (h2; derives from: p2)\n   - Test record: untested\n3. [point] c4 rises 0.3 SD per SD of c3, within 0.1. (h3; derives from: p3)\n   - Test record: already tested: passed\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n- `c1 _||_ c3 | c2`\n- `c1 _||_ c4 | c3`\n- `c2 _||_ c4 | c1, c3`\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.9, risk 0.9\n- h2: severity 0.3, risk 0.4\n- h3: severity 0.3, risk 0.4\n"
 }

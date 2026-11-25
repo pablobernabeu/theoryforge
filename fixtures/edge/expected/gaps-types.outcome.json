@@ -5,7 +5,7 @@
     "error": "invalid theory object: prediction[0] derives_from entry 1 must be a nonempty string; prediction[0] diagnostic_vs entry 1 must be a nonempty string; assumption[0] protects entry 0 must be a nonempty string; assumption[0] added_for must be a string or null; test_outcome[0] severity_at_test must be a number between 0 and 1; test_outcome[0] registered must be a string or null; test_outcome[0] date must be a string or null; formal_model spec_ref must be a string or null; version id must be a string (quote the value in YAML); version parent_id must be a string or null; version content_hash must be a string or null; construct[0] measurement entry 1 must be a nonempty string; construct[0] boundary_conditions entry 0 must be a nonempty string; proposition[0] mechanism must be a string (quote the value in YAML); proposition[0] functional_form must be a string (quote the value in YAML); boundary_conditions entry 1 must be a nonempty string; prediction[0] risk_score must be a number between 0 and 1; evidence[0] source_doi must be a string or null; test_outcome[0] observed must be a string (quote the value in YAML); alternative[0] key_constructs entry 0 must be a nonempty string; alternative[0] source_doi must be a string or null; provenance[0] step must be a string (quote the value in YAML); provenance[1] must be a mapping"
   },
   "check": {
-    "aggregate_score": 71.7,
+    "aggregate_score": 65.2,
     "coverage": 0.92,
     "gate": "pass",
     "n_blockers_failed": 0,
@@ -22,8 +22,8 @@
       },
       {
         "id": "risk_severity",
-        "status": "pass",
-        "score": 1.0
+        "status": "warn",
+        "score": 0.4
       },
       {
         "id": "parsimony",
@@ -76,8 +76,8 @@
     {
       "prediction_id": "h1",
       "type": "point",
-      "risk_score": 0.9,
-      "computed_severity": 1.0
+      "risk_score": 0.4,
+      "computed_severity": 0.4
     }
   ],
   "implications": {
@@ -169,5 +169,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Optional fields of the wrong type\n\n- Theory ID: edge-gaps-types\n- Schema version: 1.0\n- Content hash: sha256:048d0379a9b7638dc9c6632caef33db7ae8688dcbac486f85b0055ea21958a1d\n- Maturity: testing\n- Formal model: ode\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- c1 (Alpha): The first construct. Measures: m1.\n- c2 (Beta): The second construct.\n\n### Propositions\n- p1: c1 increases c2.\n\n### Auxiliary assumptions\n- x1 (core): Beta is measured at rest.\n\n### Rival accounts\n- rival: A rival account (doi: 10.1000/example)\n\n### Scope\n- adults\n\n## Hypotheses\n1. [point] Beta rises with Alpha. (h1; derives from: p1)\n   - Rivals it is declared to discriminate: rival\n   - Test record: already tested: passed\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 1.0, risk 0.9\n"
+  "preregister": "# Preregistration: Optional fields of the wrong type\n\n- Theory ID: edge-gaps-types\n- Schema version: 1.0\n- Content hash: sha256:048d0379a9b7638dc9c6632caef33db7ae8688dcbac486f85b0055ea21958a1d\n- Maturity: testing\n- Formal model: ode\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- c1 (Alpha): The first construct. Measures: m1.\n- c2 (Beta): The second construct.\n\n### Propositions\n- p1: c1 increases c2.\n\n### Auxiliary assumptions\n- x1 (core): Beta is measured at rest.\n\n### Rival accounts\n- rival: A rival account (doi: 10.1000/example)\n\n### Scope\n- adults\n\n## Hypotheses\n1. [point] Beta rises with Alpha. (h1; derives from: p1)\n   - Rivals it is declared to discriminate: rival\n   - Test record: already tested: passed\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.4, risk 0.4\n"
 }

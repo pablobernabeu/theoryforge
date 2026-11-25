@@ -5,7 +5,7 @@
     "error": "invalid theory object: duplicate phenomenon id: ph1; phenomenon[1] missing/empty statement; prediction[1] claim has unknown field: note; prediction[1] claim sign 'upward' not allowed; prediction[1] claim x and y must differ; prediction[2] claim y 'c9' is not a known construct; prediction[3] claim must be a mapping; phenomenon[0] claim sign must be zero or nonzero when given is not empty; alternative[0] proposition[1] relation 'boosts' not allowed; alternative[0] duplicate proposition id: r1; alternative[0] proposition[1] to 'c9' is not a known construct"
   },
   "check": {
-    "aggregate_score": 44.3,
+    "aggregate_score": 39.9,
     "coverage": 0.92,
     "gate": "blocked",
     "n_blockers_failed": 1,
@@ -68,7 +68,7 @@
       {
         "id": "derivation_chain",
         "status": "fail",
-        "score": 0.75
+        "score": 0.25
       }
     ]
   },
