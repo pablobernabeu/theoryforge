@@ -11,8 +11,14 @@ dv_S4 <- paste("Blocking interoceptive feedback lowers avoidance-task scores by 
 # arousal to avoidance withdraws it, and the failed test of pred_indep refutes it.
 dv_LOST <- "c_arousal _||_ c_avoidance | c_perceived_threat"
 
+# The sign v1 entails and the shipped v2 gives up: with p3 unsigned, the new
+# route from threat through arousal to avoidance leaves the effect open.
+dv_SIGN <- "effect of c_perceived_threat on c_avoidance: positive"
+
 # The record of an amendment that changes nothing, with the fields in `...`
-# replaced, keys in the order of API_SPEC.md section 10.
+# replaced, keys in the order of API_SPEC.md section 10. Unless `...` says
+# otherwise, each corroborated new prediction has no post-data severity, since
+# no outcome records an estimate.
 dv_record <- function(...) {
   rec <- list(
     verdict = "neutral", new_predictions = character(0), corroborated_new = character(0),
@@ -23,15 +29,21 @@ dv_record <- function(...) {
     theoretically_progressive = FALSE, empirically_progressive = FALSE, revised = list(),
     weakened_refuted = character(0), unresolved = character(0), implications_compared = TRUE,
     implications_lost = character(0), implications_lost_unrefuted = character(0),
-    implications_gained = character(0)
+    implications_gained = character(0), entailments_lost = list(), signs_lost = character(0),
+    protected_only = character(0), refuted_new = character(0),
+    corroborated_new_severity = list()
   )
   changes <- list(...)
   for (k in names(changes)) rec[k] <- list(changes[[k]])
+  if (!("corroborated_new_severity" %in% names(changes))) {
+    rec$corroborated_new_severity <- lapply(sort(rec$corroborated_new, method = "radix"),
+                                            function(i) list(id = i, severity = NA))
+  }
   rec
 }
 
-# The record of dv_with_p4(v1): corroborated new content and the refuted
-# independence lost.
+# The record of dv_with_p4(v1) with p3 signed: corroborated new content and the
+# refuted independence lost.
 dv_p4_record <- function(...) {
   base <- list(verdict = "progressive", new_predictions = "pred4", corroborated_new = "pred4",
                corroborated_new_registered = "pred4", theoretically_progressive = TRUE,
@@ -42,6 +54,16 @@ dv_p4_record <- function(...) {
 }
 
 dv_v1 <- function() tf_read(tf_fixture_path("panic-network.theory.yaml"))
+
+# `theory` with p3, from threat to arousal, stated as increases. Adding p4 to
+# the panic example then keeps every sign v1 entails, so the cases built on it
+# test one rule at a time.
+dv_signed_p3 <- function(theory) {
+  for (i in seq_along(theory$propositions)) {
+    if (identical(theory$propositions[[i]]$id, "p3")) theory$propositions[[i]]$relation <- "increases"
+  }
+  theory
+}
 
 # The edge cases live at the repository root and are not shipped in the
 # package, so the tests that read them are skipped where the root is absent,
@@ -60,7 +82,7 @@ dv_edge <- function(name) {
 
 # The panic example with a failed test of pred2, the anomaly the rescue cases answer.
 dv_with_failed_pred2 <- function() {
-  prior <- dv_v1()
+  prior <- dv_signed_p3(dv_v1())
   prior$test_outcomes <- c(prior$test_outcomes, list(list(prediction_id = "pred2", passed = FALSE)))
   prior
 }
@@ -90,9 +112,18 @@ dv_drop <- function(items, ids, key = "id") Filter(function(x) !(x[[key]] %in% i
 
 test_that("the shipped amendment answers a refuted independence", {
   # v2 drops pred_indep, which a test refuted, and adds p4 and pred4. The
-  # independence p4 withdraws is the refuted one, so no content is lost.
+  # independence p4 withdraws is the refuted one. But p3 states no sign, so p4
+  # opens a route from threat to avoidance through arousal whose sign is open,
+  # and v2 no longer entails the positive effect of threat on avoidance that v1
+  # entails. That is content lost.
   v1 <- dv_v1()
   v2 <- tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml"))
+  expect_identical(tf_appraise_amendment(v2, v1), dv_p4_record(
+    verdict = "neutral", dropped = "pred_indep", signs_lost = dv_SIGN))
+  # With p3 stated as increases in both versions, no sign is lost and the
+  # amendment is progressive.
+  v1 <- dv_signed_p3(v1)
+  v2 <- dv_signed_p3(v2)
   expect_identical(tf_appraise_amendment(v2, v1), dv_p4_record(dropped = "pred_indep"))
   # Had the test of pred_indep passed, v2 would give up a corroborated
   # prediction and an unrefuted implication.
@@ -195,14 +226,15 @@ test_that("a claim the prior graph entails is an articulation", {
 
 test_that("failed replications leave a new prediction mixed", {
   # D1: one pass and two failures make pred4 mixed, which is not corroborated.
-  v1 <- dv_v1()
+  v1 <- dv_signed_p3(dv_v1())
   new <- dv_with_p4(v1)
   new$test_outcomes <- c(new$test_outcomes,
                          rep(list(list(prediction_id = "pred4", passed = FALSE)), 2L))
   expect_identical(.tf_prediction_status("pred4", new$test_outcomes), "mixed")
   expect_identical(tf_appraise_amendment(new, v1), dv_p4_record(
     verdict = "neutral", corroborated_new = character(0),
-    corroborated_new_registered = character(0), empirically_progressive = FALSE))
+    corroborated_new_registered = character(0), empirically_progressive = FALSE,
+    refuted_new = "pred4"))
 })
 
 test_that("a renamed prediction is not new", {
@@ -296,8 +328,11 @@ test_that("a free-text added_for still marks a rescue", {
 
 test_that("a corroborated new prediction clears the assumption that yields it", {
   # I16 case C. pred5 derives from the unchanged p2 but needs the new
-  # assumption, so it is new content and not an articulation. While pred5 is
-  # untested, the assumption is ad hoc (ad_hoc2), and its corroboration clears it.
+  # assumption, so it is new content and not an articulation, and its novelty
+  # rests on that declaration (protected_only). While pred5 is untested, the
+  # assumption is pending, not ad hoc, and the amendment is neutral. Its
+  # corroboration clears the assumption, and its failure makes it ad hoc
+  # (ad_hoc2).
   prior <- dv_with_failed_pred2()
   new <- dv_add(prior, "predictions", list(
     id = "pred5", statement = "Exposure lowers avoidance only where baseline avoidance is high.",
@@ -305,22 +340,26 @@ test_that("a corroborated new prediction clears the assumption that yields it", 
   new <- dv_add(new, "auxiliary_assumptions", list(
     id = "aux_baseline", statement = "Exposure works through habituation of high avoidance.",
     added_for = "pred2", protects = list("pred2", "pred5", "pred5")))
+  rescue <- function(class, status) {
+    list(list(id = "aux_baseline", added_for = "pred2", class = class,
+              independent = list(list(id = "pred5", status = status)),
+              added_for_inferred = FALSE, change = "new"))
+  }
   expect_identical(tf_appraise_amendment(new, prior), dv_record(
-    verdict = "degenerating", new_predictions = "pred5", ad_hoc_assumptions = "aux_baseline",
-    assumptions = list(list(id = "aux_baseline", added_for = "pred2", class = "ad_hoc2",
-                            independent = list(list(id = "pred5", status = "untested")),
-                            added_for_inferred = FALSE, change = "new")),
-    theoretically_progressive = TRUE))
-  new <- dv_add(new, "test_outcomes", list(prediction_id = "pred5", passed = TRUE,
-                                           registered = "osf.io/x"))
-  expect_identical(tf_appraise_amendment(new, prior), dv_record(
+    new_predictions = "pred5", assumptions = rescue("pending", "untested"),
+    theoretically_progressive = TRUE, protected_only = "pred5"))
+  passed <- dv_add(new, "test_outcomes", list(prediction_id = "pred5", passed = TRUE,
+                                              registered = "osf.io/x"))
+  expect_identical(tf_appraise_amendment(passed, prior), dv_record(
     verdict = "progressive", new_predictions = "pred5", corroborated_new = "pred5",
     corroborated_new_registered = "pred5",
-    assumptions = list(list(id = "aux_baseline", added_for = "pred2",
-                            class = "independently_corroborated",
-                            independent = list(list(id = "pred5", status = "corroborated")),
-                            added_for_inferred = FALSE, change = "new")),
-    theoretically_progressive = TRUE, empirically_progressive = TRUE))
+    assumptions = rescue("independently_corroborated", "corroborated"),
+    theoretically_progressive = TRUE, empirically_progressive = TRUE, protected_only = "pred5"))
+  failed <- dv_add(new, "test_outcomes", list(prediction_id = "pred5", passed = FALSE))
+  expect_identical(tf_appraise_amendment(failed, prior), dv_record(
+    verdict = "degenerating", new_predictions = "pred5", ad_hoc_assumptions = "aux_baseline",
+    assumptions = rescue("ad_hoc2", "refuted"), theoretically_progressive = TRUE,
+    protected_only = "pred5", refuted_new = "pred5"))
 })
 
 test_that("only an assumption added for an anomaly is appraised", {
@@ -374,14 +413,17 @@ test_that("an assumption that protects a failed prediction answers it", {
 test_that("a retained prediction is compared by type, bounds and claim", {
   # Each case revises h1 of amend-prior, a point prediction with the region
   # [0.4, 0.6] and a positive effect of c1 on c2. A NULL in a change removes
-  # the field.
+  # the field. Since h1 states a region, its type label alone neither weakens
+  # nor strengthens it, so relabelling cannot hide a wider region.
   prior <- dv_edge("amend-prior")
   effect <- function(sign, x = "c1", y = "c2") list(kind = "effect", x = x, y = y, sign = sign)
   cases <- list(
     list(list(), NA),
     list(list(statement = "c2 rises with c1 by half an SD, within 0.1."), "reworded"),
     list(list(statement = "  c2 rises 0.5 SD per SD of c1,\n within 0.1. "), NA),
-    list(list(type = "interval"), "weakened"),
+    list(list(type = "interval"), "changed"),
+    list(list(type = "interval", bounds = list(lower = 0.3, upper = 0.7)), "weakened"),
+    list(list(type = "existence", bounds = NULL), "weakened"),
     list(list(type = "directional", bounds = NULL, claim = NULL), "weakened"),
     list(list(type = "banana"), "changed"),
     list(list(bounds = list(lower = 0.3, upper = 0.7)), "weakened"),
@@ -397,8 +439,8 @@ test_that("a retained prediction is compared by type, bounds and claim", {
     list(list(claim = effect("positive", x = "c2", y = "c1")), "changed"),
     list(list(claim = effect("upward")), "weakened"),
     list(list(claim = NULL), "weakened"),
-    list(list(type = "directional", bounds = list(lower = 0.45, upper = 0.55)), "changed"),
-    list(list(type = "interval", claim = effect("negative")), "weakened")
+    list(list(type = "directional", bounds = list(lower = 0.45, upper = 0.55)), "strengthened"),
+    list(list(type = "interval", claim = effect("negative")), "changed")
   )
   for (case in cases) {
     new <- prior
@@ -460,6 +502,16 @@ test_that("a claim is stronger than none and a fixed sign than nonzero", {
   }
 })
 
+test_that("the type ranks only when neither version states a region", {
+  theory <- function(type) list(predictions = list(list(id = "h", statement = "S", type = type)))
+  cases <- list(c("point", "existence", "weakened"), c("existence", "directional", "strengthened"),
+                c("interval", "banana", "changed"))
+  for (case in cases) {
+    expect_identical(tf_appraise_amendment(theory(case[[2]]), theory(case[[1]]))$revised,
+                     list(list(id = "h", change = case[[3]])))
+  }
+})
+
 test_that("a refuted prediction weakened after its test degenerates", {
   # amend-weakened rewrites the refuted h1 as an existence claim.
   prior <- dv_edge("amend-prior")
@@ -479,6 +531,13 @@ test_that("a refuted prediction weakened after its test degenerates", {
   expect_identical(tf_appraise_amendment(widened, prior), dv_record(
     verdict = "degenerating", renamed = list(list(prior = "h1", new = "h1_wide")),
     revised = list(list(id = "h1_wide", change = "weakened")), weakened_refuted = "h1_wide"))
+  # D14: relabelling the widened region as an interval does not hide it.
+  relabelled <- prior
+  relabelled$predictions[[1]]$bounds <- list(lower = 0.2, upper = 0.8)
+  relabelled$predictions[[1]]$type <- "interval"
+  expect_identical(tf_appraise_amendment(relabelled, prior), dv_record(
+    verdict = "degenerating", revised = list(list(id = "h1", change = "weakened")),
+    weakened_refuted = "h1"))
 })
 
 test_that("weakening an untested prediction loses content", {
@@ -586,7 +645,9 @@ test_that("an assumption rewritten under its id is appraised", {
   needs$auxiliary_assumptions[[1]]$protects <- list("h1", "h4")
   ap <- tf_appraise_amendment(needs, prior)
   expect_identical(ap$articulated, character(0))
-  expect_identical(ap$ad_hoc_assumptions, "a1")
+  expect_identical(ap$protected_only, "h4")
+  expect_identical(ap$ad_hoc_assumptions, character(0))
+  expect_identical(ap$assumptions[[1]]$class, "pending")
   expect_identical(ap$assumptions[[1]]$independent, list(list(id = "h4", status = "untested")))
   # Whitespace, added_for and protects alone do not revise an assumption.
   kept <- needs
@@ -656,7 +717,7 @@ test_that("dropping untested predictions loses content", {
 })
 
 test_that("dropping a corroborated prediction blocks a progressive verdict", {
-  v1 <- dv_v1()
+  v1 <- dv_signed_p3(dv_v1())
   new <- dv_with_p4(v1)
   new$predictions <- dv_drop(new$predictions, "pred1")
   new$test_outcomes <- dv_drop(new$test_outcomes, "pred1", key = "prediction_id")
@@ -666,7 +727,7 @@ test_that("dropping a corroborated prediction blocks a progressive verdict", {
 
 test_that("a failed replication of retained content is a new anomaly", {
   # D5. An anomaly is reported and never decides the verdict.
-  v1 <- dv_v1()
+  v1 <- dv_signed_p3(dv_v1())
   new <- dv_add(v1, "test_outcomes", list(prediction_id = "pred1", passed = FALSE,
                                           registered = "osf.io/klmno"))
   expect_identical(tf_appraise_amendment(new, v1), dv_record(new_anomalies = "pred1"))
@@ -686,7 +747,7 @@ test_that("a failed replication of retained content is a new anomaly", {
 
 test_that("an unregistered pass corroborates but is not reported as registered", {
   # D7: registered is read for the report key alone.
-  v1 <- dv_v1()
+  v1 <- dv_signed_p3(dv_v1())
   for (registered in list(NA, " ")) {
     new <- dv_with_p4(v1)
     new$test_outcomes[[length(new$test_outcomes)]]$registered <- registered
@@ -720,11 +781,211 @@ test_that("propositions are compared by content, not by id", {
   ap <- tf_appraise_amendment(renamed, v1)
   expect_identical(ap$verdict, "neutral")
   expect_identical(ap$articulated, "pred5")
+  # Reversing p2 makes pred5 new content, and gives up the positive effects of
+  # arousal and threat on avoidance that v1 entails, so content is lost.
   changed <- v1
   changed$propositions[[2]]$relation <- "decreases"
   changed <- dv_add(changed, "predictions", c(pred5, list(derives_from = list("p2"))))
   changed <- dv_add(changed, "test_outcomes", list(prediction_id = "pred5", passed = TRUE))
   ap <- tf_appraise_amendment(changed, v1)
-  expect_identical(ap$verdict, "progressive")
+  expect_identical(ap$verdict, "neutral")
   expect_identical(ap$articulated, character(0))
+  expect_identical(ap$signs_lost, c("effect of c_arousal on c_avoidance: positive", dv_SIGN))
+})
+
+# What the amendment gives up and what its new content rests on. The cases
+# below amend amend-prior and amend-prior-corroborated in fixtures/edge.
+# dv_GAINED is what adding c4 and p3 from c3 to c4 adds.
+
+dv_GAINED <- c("c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3")
+
+# The record of an amendment that adds c4, p3 and a corroborated h3 derived
+# from it.
+dv_new_h3 <- function(...) {
+  base <- list(new_predictions = "h3", corroborated_new = "h3",
+               theoretically_progressive = TRUE, empirically_progressive = TRUE,
+               implications_gained = dv_GAINED)
+  changes <- list(...)
+  for (k in names(changes)) base[k] <- list(changes[[k]])
+  do.call(dv_record, base)
+}
+
+test_that("a reversed proposition loses the entailment of a corroborated claim", {
+  # amend-sign-flip (c1b): p1 now lowers c2, so the new graph contradicts the
+  # corroborated h1, which states that c1 raises c2.
+  prior <- dv_edge("amend-prior-corroborated")
+  new <- dv_edge("amend-sign-flip")
+  signs <- c("effect of c1 on c2: positive", "effect of c1 on c3: positive")
+  expect_identical(tf_appraise_amendment(new, prior), dv_new_h3(
+    verdict = "neutral", content_lost = "h1", signs_lost = signs,
+    entailments_lost = list(list(id = "h1", prior = "entailed", new = "contradicted"))))
+  # Under a new id, h1 is renamed and listed under that id.
+  renamed <- new
+  renamed$predictions[[1]]$id <- "h1_v2"
+  renamed$test_outcomes[[1]]$prediction_id <- "h1_v2"
+  ap <- tf_appraise_amendment(renamed, prior)
+  expect_identical(ap$content_lost, "h1_v2")
+  expect_identical(ap$entailments_lost,
+                   list(list(id = "h1_v2", prior = "entailed", new = "contradicted")))
+  # Untested in the prior, h1 is unrefuted content too.
+  untested <- prior
+  untested$test_outcomes <- list()
+  expect_identical(tf_appraise_amendment(new, untested)$content_lost, "h1")
+  # Refuted in the prior, its claim was refuted content, and so was the sign of
+  # the effect of c1 on c2 that it states. Only the sign of the effect of c1 on
+  # c3 is then lost.
+  refuted <- prior
+  refuted$test_outcomes[[1]]$passed <- FALSE
+  ap <- tf_appraise_amendment(new, refuted)
+  expect_identical(ap$content_lost, character(0))
+  expect_identical(ap$entailments_lost, list())
+  expect_identical(ap$signs_lost, "effect of c1 on c3: positive")
+  # A failed claim that the effect is nonzero refutes either sign of it.
+  nonzero <- refuted
+  nonzero$predictions[[1]]$claim$sign <- "nonzero"
+  expect_identical(tf_appraise_amendment(new, nonzero)$signs_lost, "effect of c1 on c3: positive")
+})
+
+test_that("a retained prediction is counted once in content_lost", {
+  # h1 is both weakened, from a directional claim to an existence claim with
+  # its region dropped, and no longer entailed.
+  prior <- dv_edge("amend-prior-corroborated")
+  new <- dv_edge("amend-sign-flip")
+  new$predictions[[1]]$type <- "existence"
+  new$predictions[[1]]$bounds <- NULL
+  ap <- tf_appraise_amendment(new, prior)
+  expect_identical(ap$content_lost, "h1")
+  expect_identical(ap$revised, list(list(id = "h1", change = "weakened")))
+  expect_identical(ap$entailments_lost,
+                   list(list(id = "h1", prior = "entailed", new = "contradicted")))
+})
+
+test_that("an unsigned proposition leaves a corroborated claim undetermined", {
+  # amend-weakened-sign (V2): p1 restated as causes.
+  prior <- dv_edge("amend-prior-corroborated")
+  new <- dv_edge("amend-weakened-sign")
+  expect_identical(tf_appraise_amendment(new, prior), dv_new_h3(
+    verdict = "neutral", content_lost = "h1",
+    signs_lost = c("effect of c1 on c2: positive", "effect of c1 on c3: positive"),
+    entailments_lost = list(list(id = "h1", prior = "entailed", new = "undetermined"))))
+  # Without p1, the new graph no longer relates c1, so the claim is not evaluated.
+  dropped <- new
+  dropped$propositions <- dropped$propositions[-1]
+  expect_identical(tf_appraise_amendment(dropped, prior)$entailments_lost,
+                   list(list(id = "h1", prior = "entailed", new = "not_evaluated")))
+})
+
+test_that("a sign no prediction states is content", {
+  # amend-lost-sign (C4): reversing p2 gives up the positive effects of c1 and
+  # c2 on c3, which no prediction states.
+  prior <- dv_edge("amend-prior")
+  new <- dv_edge("amend-lost-sign")
+  expect_identical(tf_appraise_amendment(new, prior), dv_new_h3(
+    verdict = "neutral",
+    signs_lost = c("effect of c1 on c3: positive", "effect of c2 on c3: positive")))
+  # A sign the new graph cannot derive, because no proposition relates c3 once
+  # p2 is dropped, is lost too.
+  dropped <- prior
+  dropped$propositions <- dropped$propositions[1]
+  ap <- tf_appraise_amendment(dropped, prior)
+  expect_identical(ap$signs_lost, c("effect of c1 on c3: positive", "effect of c2 on c3: positive"))
+  expect_identical(ap$implications_lost_unrefuted, "c1 _||_ c3 | c2")
+})
+
+test_that("a version whose graph is refused compares no signs", {
+  # As in amend-lost-sign, with a repeated construct id: the graphs are not
+  # compared, so no sign is lost.
+  prior <- dv_edge("amend-prior")
+  new <- dv_edge("amend-lost-sign")
+  new$constructs <- c(new$constructs, new$constructs[1])
+  expect_identical(tf_appraise_amendment(new, prior), dv_new_h3(
+    verdict = "progressive", implications_compared = FALSE, implications_gained = character(0)))
+})
+
+test_that("novelty that rests on protects is reported", {
+  # amend-protects-only (C3): a replication of old content is new content only
+  # because the core assumption a2 lists it in protects.
+  prior <- dv_edge("amend-prior")
+  new <- dv_edge("amend-protects-only")
+  expect_identical(tf_appraise_amendment(new, prior), dv_record(
+    verdict = "progressive", new_predictions = "h4", corroborated_new = "h4",
+    theoretically_progressive = TRUE, empirically_progressive = TRUE, protected_only = "h4"))
+  # Without a2, h4 articulates old content and the amendment is neutral.
+  without <- new
+  without$auxiliary_assumptions <- without$auxiliary_assumptions[1]
+  expect_identical(tf_appraise_amendment(without, prior), dv_record(
+    new_predictions = "h4", corroborated_new = "h4", articulated = "h4"))
+  # A claim the prior's graph entails is old content whatever protects it.
+  entailed <- new
+  entailed$predictions[[3]]$claim <- list(kind = "effect", x = "c2", y = "c3", sign = "positive")
+  ap <- tf_appraise_amendment(entailed, prior)
+  expect_identical(ap$articulated, "h4")
+  expect_identical(ap$protected_only, character(0))
+  expect_identical(ap$verdict, "neutral")
+})
+
+test_that("refuted new predictions are reported", {
+  # amend-refuted-new: one corroborated new prediction is enough, and the
+  # refuted one is reported beside the verdict.
+  prior <- dv_edge("amend-prior")
+  new <- dv_edge("amend-refuted-new")
+  expect_identical(tf_appraise_amendment(new, prior), dv_new_h3(
+    verdict = "progressive", new_predictions = c("h3", "h4"), refuted_new = "h4"))
+  # A new prediction both passed and failed is mixed, and reported too.
+  new <- dv_add(new, "test_outcomes", list(prediction_id = "h4", passed = TRUE))
+  expect_identical(tf_appraise_amendment(new, prior)$refuted_new, "h4")
+})
+
+test_that("the severity of each corroborating pass is reported", {
+  # amend-low-severity: h3 passed with an estimate below its region.
+  prior <- dv_edge("amend-prior")
+  new <- dv_edge("amend-low-severity")
+  expect_identical(tf_appraise_amendment(new, prior), dv_new_h3(
+    verdict = "progressive", corroborated_new_severity = list(list(id = "h3", severity = 0.001))))
+  expect_identical(tf_post_data_severity(new)$severity, 0.001)
+  # The smallest severity over the passes is reported.
+  more <- dv_add(new, "test_outcomes", list(prediction_id = "h3", passed = TRUE,
+                                            estimate = 0.3, se = 0.05))
+  expect_identical(tf_appraise_amendment(more, prior)$corroborated_new_severity,
+                   list(list(id = "h3", severity = 0.001)))
+  more$test_outcomes[[2]] <- list(prediction_id = "h3", passed = TRUE)
+  expect_identical(tf_appraise_amendment(more, prior)$corroborated_new_severity,
+                   list(list(id = "h3", severity = 0.977)))
+  # An outcome that tf_post_data_severity() would refuse gives no value, and
+  # neither does a prediction without bounds.
+  refused <- new
+  refused$test_outcomes[[2]]$se <- 0
+  expect_identical(tf_appraise_amendment(refused, prior)$corroborated_new_severity,
+                   list(list(id = "h3", severity = NA)))
+  unbounded <- new
+  unbounded$predictions[[3]]$bounds <- NULL
+  expect_identical(tf_appraise_amendment(unbounded, prior)$corroborated_new_severity,
+                   list(list(id = "h3", severity = NA)))
+  # A severity that cannot be computed is written as null.
+  expect_identical(as.character(jsonlite::toJSON(list(list(id = "h3", severity = NA)),
+                                                 auto_unbox = TRUE)),
+                   '[{"id":"h3","severity":null}]')
+})
+
+test_that("an assumption whose independent prediction is untested is pending", {
+  # amend-pending (C5): a2 answers the refuted h1 and yields the untested h4.
+  prior <- dv_edge("amend-prior")
+  new <- dv_edge("amend-pending")
+  pending <- list(id = "a2", added_for = "h1", class = "pending",
+                  independent = list(list(id = "h4", status = "untested")),
+                  added_for_inferred = FALSE, change = "new")
+  expect_identical(tf_appraise_amendment(new, prior), dv_record(
+    new_predictions = "h4", assumptions = list(pending), theoretically_progressive = TRUE,
+    protected_only = "h4"))
+  # With one independent prediction tested and failed, a2 is ad hoc.
+  h5 <- new$predictions[[3]]
+  h5$id <- "h5"
+  h5$statement <- "c2 rises with c1 only in a quiet room."
+  new <- dv_add(new, "predictions", h5)
+  new$auxiliary_assumptions[[2]]$protects <- list("h1", "h4", "h5")
+  new <- dv_add(new, "test_outcomes", list(prediction_id = "h5", passed = FALSE))
+  ap <- tf_appraise_amendment(new, prior)
+  expect_identical(ap$assumptions[[1]]$class, "ad_hoc2")
+  expect_identical(ap$ad_hoc_assumptions, "a2")
+  expect_identical(ap$verdict, "degenerating")
 })

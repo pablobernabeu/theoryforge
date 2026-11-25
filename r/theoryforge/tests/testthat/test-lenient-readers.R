@@ -97,7 +97,9 @@ test_that("every consumer reads entries that are not mappings", {
     theoretically_progressive = FALSE, empirically_progressive = FALSE, revised = list(),
     weakened_refuted = character(0), unresolved = character(0), implications_compared = FALSE,
     implications_lost = character(0), implications_lost_unrefuted = character(0),
-    implications_gained = character(0)))
+    implications_gained = character(0), entailments_lost = list(), signs_lost = character(0),
+    protected_only = character(0), refuted_new = character(0),
+    corroborated_new_severity = list()))
 })
 
 test_that("full validation reports scalar entries instead of stopping", {
@@ -325,20 +327,30 @@ test_that("entries without ids read as empty ids", {
   expect_true(grepl('"result_" [label="failed"', tf_diagram(t, "pipeline"), fixed = TRUE))
   expect_identical(lr_item(tf_check(t), "parsimony")$status, "fail")
   prior <- lr_read(paste0(lr_head, lr_two_constructs))
-  # h1 needs the new assumption, so it is not an articulation of p1.
+  # h1 needs the new assumption, so it is not an articulation of p1, which the
+  # prior holds: its novelty rests on protects. h1 is untested, so the
+  # assumption is pending.
   expect_identical(tf_appraise_amendment(t, prior), list(
-    verdict = "degenerating", new_predictions = "h1", corroborated_new = character(0),
-    ad_hoc_assumptions = "", articulated = character(0), underived = character(0),
+    verdict = "neutral", new_predictions = "h1", corroborated_new = character(0),
+    ad_hoc_assumptions = character(0), articulated = character(0), underived = character(0),
     corroborated_new_registered = character(0), renamed = list(), dropped = character(0),
     dropped_corroborated = character(0), content_lost = character(0),
     new_anomalies = character(0),
-    assumptions = list(list(id = "", added_for = "h1 failed at the first test", class = "ad_hoc2",
+    assumptions = list(list(id = "", added_for = "h1 failed at the first test", class = "pending",
                             independent = list(list(id = "h1", status = "untested")),
                             added_for_inferred = FALSE, change = "new")),
     theoretically_progressive = TRUE, empirically_progressive = FALSE, revised = list(),
     weakened_refuted = character(0), unresolved = character(0), implications_compared = TRUE,
     implications_lost = character(0), implications_lost_unrefuted = character(0),
-    implications_gained = character(0)))
+    implications_gained = character(0), entailments_lost = list(), signs_lost = character(0),
+    protected_only = "h1", refuted_new = character(0), corroborated_new_severity = list()))
+  # Failed, h1 leaves the assumption, whose id reads as "", ad hoc.
+  failed <- lr_read(sub("  - passed: false", "  - prediction_id: h1\n    passed: false", lr_idless,
+                        fixed = TRUE))
+  ap <- tf_appraise_amendment(failed, prior)
+  expect_identical(ap$verdict, "degenerating")
+  expect_identical(ap$ad_hoc_assumptions, "")
+  expect_identical(ap$refuted_new, "h1")
   two_new <- sub("auxiliary_assumptions:", "  - statement: A prediction without an id.
     type: directional
 auxiliary_assumptions:", lr_idless, fixed = TRUE)

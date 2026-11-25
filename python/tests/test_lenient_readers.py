@@ -106,6 +106,8 @@ def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
         "theoretically_progressive": False, "empirically_progressive": False, "revised": [],
         "weakened_refuted": [], "unresolved": [], "implications_compared": False,
         "implications_lost": [], "implications_lost_unrefuted": [], "implications_gained": [],
+        "entailments_lost": [], "signs_lost": [], "protected_only": [], "refuted_new": [],
+        "corroborated_new_severity": [],
     }
 
 
@@ -338,19 +340,30 @@ def test_entries_without_ids_read_as_empty_ids(tmp_path):
     assert _item(t.check(), "parsimony")["status"] == "fail"
     prior = _read(tmp_path, HEAD + TWO_CONSTRUCTS, "prior.theory.yaml")
     # Python compared None with a string while sorting and raised TypeError.
-    # h1 needs the new assumption, so it is not an articulation of p1.
-    assert t.appraise_amendment(prior) == {
-        "verdict": "degenerating", "new_predictions": ["h1"], "corroborated_new": [],
-        "ad_hoc_assumptions": [""], "articulated": [], "underived": [],
+    # h1 needs the new assumption, so it is not an articulation of p1, which
+    # the prior holds: its novelty rests on protects. h1 is untested, so the
+    # assumption is pending.
+    record = {
+        "verdict": "neutral", "new_predictions": ["h1"], "corroborated_new": [],
+        "ad_hoc_assumptions": [], "articulated": [], "underived": [],
         "corroborated_new_registered": [], "renamed": [], "dropped": [],
         "dropped_corroborated": [], "content_lost": [], "new_anomalies": [],
-        "assumptions": [{"id": "", "added_for": "h1 failed at the first test", "class": "ad_hoc2",
+        "assumptions": [{"id": "", "added_for": "h1 failed at the first test", "class": "pending",
                          "independent": [{"id": "h1", "status": "untested"}],
                          "added_for_inferred": False, "change": "new"}],
         "theoretically_progressive": True, "empirically_progressive": False, "revised": [],
         "weakened_refuted": [], "unresolved": [], "implications_compared": True,
         "implications_lost": [], "implications_lost_unrefuted": [], "implications_gained": [],
+        "entailments_lost": [], "signs_lost": [], "protected_only": ["h1"], "refuted_new": [],
+        "corroborated_new_severity": [],
     }
+    assert t.appraise_amendment(prior) == record
+    # Failed, h1 leaves the assumption, whose id reads as "", ad hoc.
+    failed = _read(tmp_path, IDLESS.replace("  - passed: false", "  - prediction_id: h1\n    passed: false"),
+                   "failed.theory.yaml")
+    result = failed.appraise_amendment(prior)
+    assert (result["verdict"], result["ad_hoc_assumptions"], result["refuted_new"]) == (
+        "degenerating", [""], ["h1"])
     two_new = IDLESS.replace("auxiliary_assumptions:", """\
   - statement: A prediction without an id.
     type: directional

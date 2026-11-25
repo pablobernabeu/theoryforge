@@ -1,10 +1,12 @@
 """Development mode: the amendment appraisal.
 
-Lakatos (1970, p. 118) calls a problemshift progressive when the new theory
-predicts a fact its predecessor did not and some of that excess content is
-corroborated, and degenerating when it is not. The appraisal therefore compares
-what two versions of a theory claim, not the ids of their predictions. Meehl
-(1990a) argues for appraising the amendments of a theory in these terms.
+Lakatos (1970) calls a problemshift theoretically progressive when each new
+theory predicts some novel fact that its predecessor did not, empirically
+progressive when some of this excess content is corroborated, and degenerating
+when it is not progressive. The appraisal borrows these terms for fixed rules
+applied to what two versions of a theory file declare, so it compares what the
+two claim, not the ids of their predictions. Meehl (1990a) argues for
+appraising the amendments of a theory in these terms.
 """
 from __future__ import annotations
 
@@ -16,14 +18,16 @@ from ._causal import causal_graph
 from ._num import number
 from ._status import CORROBORATED, classify_auxiliary, content_key, prediction_status
 from ._text import squish
-from .entailment import _Graph, read_claim
+from .entailment import NEG, POS, _Graph, read_claim
 from .implications import implications
 from .rigor import _refuse_non_boolean_outcomes
+from .scoring import outcome_rows
 
 # The prediction types from the weakest claim form to the strongest (API_SPEC.md
 # section 9).
 _TYPE_RANK = {"existence": 1, "directional": 2, "interval": 3, "point": 4}
 _FAILED = ("refuted", "mixed")
+_FIXED_SIGNS = ("positive", "negative")
 
 
 def _proposition_content(p) -> tuple[str, str, str]:
@@ -56,6 +60,11 @@ def _region(p) -> tuple[float, float]:
     lo, up = number(field(b, "lower")), number(field(b, "upper"))
     return (lo if lo is not None and math.isfinite(lo) else -math.inf,
             up if up is not None and math.isfinite(up) else math.inf)
+
+
+def _states_region(r: tuple[float, float]) -> bool:
+    """Whether region ``r`` has at least one finite end."""
+    return math.isfinite(r[0]) or math.isfinite(r[1])
 
 
 def _narrower(a: tuple[float, float], b: tuple[float, float]) -> bool:
@@ -105,10 +114,23 @@ def _claim_change(old: dict | None, new: dict | None) -> str:
 
 
 def _revision(old, new) -> str | None:
-    """How prediction ``new`` revises ``old``, or None when its content is unchanged."""
+    """How prediction ``new`` revises ``old``, or None when its content is unchanged.
+
+    When either states a region with a finite end, the regions and the claims
+    decide how the content changed, and the type labels are compared only for
+    equality, so that relabelling cannot hide a wider region. The rank of the
+    types decides only when neither states a finite end.
+    """
+    old_type = enum(field(old, "type"), PRED_TYPE) or ""
+    new_type = enum(field(new, "type"), PRED_TYPE) or ""
+    old_region, new_region = _region(old), _region(new)
+    if _states_region(old_region) or _states_region(new_region):
+        type_change = "same" if old_type == new_type else "different"
+    else:
+        type_change = _type_change(old_type, new_type)
     changes = [
-        _type_change(enum(field(old, "type"), PRED_TYPE) or "", enum(field(new, "type"), PRED_TYPE) or ""),
-        _bounds_change(_region(old), _region(new)),
+        type_change,
+        _bounds_change(old_region, new_region),
         _claim_change(_stated_claim(old), _stated_claim(new)),
     ]
     weaker, stronger = "weaker" in changes, "stronger" in changes
@@ -119,6 +141,55 @@ def _revision(old, new) -> str | None:
     if content_key(old)[0] != content_key(new)[0]:
         return "reworded"
     return None
+
+
+def _sigma_graph(T) -> _Graph | None:
+    """The causal graph of ``T`` read with ``cycles="sigma"``, or None when it is refused."""
+    try:
+        return _Graph(causal_graph(T, "appraise_amendment"), "sigma", items(T, "propositions"))
+    except ValueError:
+        return None
+
+
+def _refuted_signs(preds, tos) -> set[tuple[str, str, str]]:
+    """The signed effects ``(x, y, sign)`` that a failed prediction in ``preds`` states.
+
+    A failed claim that the effect is nonzero refutes both fixed signs, since
+    each of them implies it.
+    """
+    out: set[tuple[str, str, str]] = set()
+    for p in preds:
+        c = _stated_claim(p)
+        if (c is None or c["kind"] != "effect"
+                or prediction_status(text(field(p, "id")), tos) not in _FAILED):
+            continue
+        for sign in _FIXED_SIGNS if c["sign"] == "nonzero" else (c["sign"],):
+            if sign in _FIXED_SIGNS:
+                out.add((c["x"], c["y"], sign))
+    return out
+
+
+def _signs_lost(before: _Graph, after: _Graph, refuted: set[tuple[str, str, str]]) -> list[str]:
+    """The signed total effects ``before`` entails and ``after`` does not, as statements.
+
+    The pairs are taken in ``before``'s vertex order, ``x`` and then ``y``.
+    Only a pair in which ``x`` reaches ``y`` can have a fixed sign, so the row
+    of walks from each ``x`` is read once.
+    """
+    lost = []
+    for i, x in enumerate(before.nodes):
+        row = before.held(i)
+        for j, y in enumerate(before.nodes):
+            if j == i or row[j] not in (POS, NEG):
+                continue
+            sign = before.effect(i, j, via=False)[0]
+            if (x, y, sign) in refuted:
+                continue
+            now = (after.effect(after.index[x], after.index[y], via=False)[0]
+                   if x in after.index and y in after.index else "")
+            if now != sign:
+                lost.append(f"effect of {x} on {y}: {sign}")
+    return lost
 
 
 def _appraised_assumptions(new, prior) -> list[tuple[Any, str]]:
@@ -161,6 +232,26 @@ def _appraised_assumptions(new, prior) -> list[tuple[Any, str]]:
 def appraise_amendment(new, prior) -> dict:
     """Appraise an amendment as progressive, degenerating or neutral relative to a prior version.
 
+    The appraisal applies fixed rules, which borrow the terms of Lakatos
+    (1970), to what the two files declare. Lakatos calls a problemshift
+    theoretically progressive when each new theory predicts some novel fact
+    that its predecessor did not, empirically progressive when some of this
+    excess content is corroborated, progressive when it is both and
+    degenerating otherwise. The verdict holds only if the declarations are
+    true: the test outcomes, the registrations and the ``added_for`` and
+    ``protects`` of each assumption. A new prediction counts as novel when the
+    prior file does not hold it and the prior's causal graph does not entail
+    its claim. The appraisal cannot tell a prediction from an accommodation of
+    data already seen, since it reads no dates and nothing about where the
+    data came from, so the prior must be the version before the new
+    predictions were stated. A prediction made in one version and corroborated
+    in the next is appraised against the version before it was made. The
+    appraisal does not distinguish a programme's hard core from its
+    protective belt. Read ``refuted_new`` and ``corroborated_new_severity``
+    with the verdict: one corroborated new prediction among many that failed,
+    or a pass whose own estimate gives a low post-data severity, is enough for
+    ``progressive``.
+
     The two versions are compared by content. A new prediction whose statement
     and type match a prediction the amendment dropped is that prediction
     renamed. Assumptions are compared by statement too. An assumption kept
@@ -170,24 +261,41 @@ def appraise_amendment(new, prior) -> dict:
     appraised. A new prediction articulates old content when it derives only
     from propositions the prior already held and needs no new or revised
     assumption, or when the prior's causal graph already entails its claim.
-    It is underived when it cites no proposition and unresolved when it cites
-    an id that names no proposition of the new version. A prediction is
+    One that would articulate old content but for an appraised assumption
+    that lists it in ``protects`` is new content whose novelty rests on that
+    declaration, and is reported in ``protected_only``. A new prediction is
+    underived when it cites no proposition and unresolved when it cites an id
+    that names no proposition of the new version. A prediction is
     corroborated when at least one test outcome passes it and none fails it.
-    A new or revised assumption added for an anomaly is ad hoc unless a
-    prediction it protects that is new in this version, other than the
-    anomaly, is corroborated. Its ``added_for`` names the anomaly. When that
-    is empty, the first prediction it protects that was refuted or mixed in
-    the prior is taken as the anomaly.
+    A new or revised assumption added for an anomaly is classed by the
+    predictions it protects that are new in this version, other than the
+    anomaly: ``ad_hoc1`` when there are none, ``pending`` when none of them
+    is tested yet, ``ad_hoc2`` when some were tested and none is
+    corroborated, and ``independently_corroborated`` otherwise. The first two
+    names follow the first two of the three senses in which Lakatos calls a
+    hypothesis ad hoc, as the package reads them, and the third sense is not
+    assessed. Its ``added_for`` names the anomaly. When
+    that is empty, the first prediction it protects that was refuted or mixed
+    in the prior is taken as the anomaly.
 
     A prediction kept from the prior, under its id or renamed, is revised when
-    its statement, type, bounds or claim changed. Its content is weaker when
-    its type ranks lower in existence < directional < interval < point, when
-    its bounds allow a wider region, when it drops its claim or when its claim
-    gives up a sign of positive, negative or zero for nonzero. The two causal
-    graphs are compared through ``implications()`` with ``cycles="sigma"``. A
-    pair of constructs that the prior's graph separates and the new graph does
-    not is an implication lost. It is refuted when a prediction of the prior
-    that states the independence of the two is refuted or mixed there.
+    its statement, type, bounds or claim changed. When either version states a
+    region with a finite end, its content is weaker when its bounds allow a
+    wider region, when it drops its claim or when its claim gives up a sign of
+    positive, negative or zero for nonzero, and a change of type alone neither
+    weakens nor strengthens it. When neither states such a region, a type that
+    ranks lower in existence < directional < interval < point is weaker too.
+    The two causal graphs are read with ``cycles="sigma"``. They are compared
+    through ``implications()``: a pair of constructs that the prior's graph
+    separates and the new graph does not is an implication lost, refuted when
+    a prediction of the prior that states the independence of the two is
+    refuted or mixed there. A retained prediction untested or corroborated in
+    the prior whose prior claim the prior's graph entails and the new graph
+    does not is in ``entailments_lost``. A total effect of one construct on
+    another that the prior's graph signs positive or negative and the new
+    graph does not sign the same way is in ``signs_lost``, unless a prediction
+    that failed in the prior states an effect claim on the pair with that sign
+    or with nonzero.
 
     The amendment is theoretically progressive when a new prediction adds
     content, being neither renamed, articulated, underived nor unresolved, and
@@ -196,9 +304,8 @@ def appraise_amendment(new, prior) -> dict:
     prediction is dropped, no content is lost and no prediction refuted or
     mixed in the prior is weakened. Content is lost when an untested
     prediction is dropped, an untested or corroborated prediction is weakened
-    or an implication is lost without being refuted. The rule follows Lakatos
-    (1970, p. 118), who considers series in which 'each theory [has] at least
-    as much content as the unrefuted content of its predecessor'. The verdict
+    or loses the entailment of its claim, an implication is lost without being
+    refuted or a signed effect is lost without having been refuted. The verdict
     is ``degenerating`` when an assumption is ad hoc or a prediction refuted
     or mixed in the prior is weakened, and no prediction adds corroborated
     content. It is ``neutral`` otherwise. Lakatos has only the first two.
@@ -215,45 +322,60 @@ def appraise_amendment(new, prior) -> dict:
             ``assumptions``, ``theoretically_progressive``,
             ``empirically_progressive``, ``revised``, ``weakened_refuted``,
             ``unresolved``, ``implications_compared``, ``implications_lost``,
-            ``implications_lost_unrefuted`` and ``implications_gained``.
+            ``implications_lost_unrefuted``, ``implications_gained``,
+            ``entailments_lost``, ``signs_lost``, ``protected_only``,
+            ``refuted_new`` and ``corroborated_new_severity``.
             ``new_predictions``, ``corroborated_new``, ``ad_hoc_assumptions``,
             ``articulated``, ``underived``, ``corroborated_new_registered``,
             ``dropped``, ``dropped_corroborated``, ``content_lost``,
-            ``new_anomalies``, ``weakened_refuted`` and ``unresolved`` are
-            sorted id lists. ``content_lost`` holds the untested predictions
-            the amendment drops, under their prior ids, and the untested or
-            corroborated predictions it weakens, under their new ids.
-            ``weakened_refuted`` holds the predictions refuted or mixed in the
-            prior that it weakens. ``renamed`` holds ``{prior, new}`` pairs
-            sorted by ``new``, and ``revised`` one
-            ``{id, change}`` record per revised prediction sorted by its new
-            id, where ``change`` is ``weakened``, ``strengthened``,
-            ``reworded`` or ``changed``. ``assumptions`` holds one ``{id,
-            added_for, class, independent, added_for_inferred, change}``
-            record per new or revised assumption added for an anomaly, in file
-            order. ``added_for_inferred`` is True when ``added_for`` was taken
-            from ``protects``. ``change`` is ``new`` for an assumption under an
-            id the prior lacks and ``revised`` for one kept under its id whose
-            statement changed, by any change of wording, even one that keeps
-            its meaning. ``independent`` lists, each as ``{id, status}`` and
-            in the order of ``protects``, the distinct predictions the
-            assumption protects that are new in this version and differ from
-            ``added_for``, with their status in ``new`` (``corroborated``,
-            ``refuted``, ``mixed`` or ``untested``). ``class`` is ``ad_hoc1``
-            when there are none, ``ad_hoc2`` when none is corroborated and
-            ``independently_corroborated`` otherwise, and
-            ``ad_hoc_assumptions`` holds the ids of the first two classes.
-            ``theoretically_progressive`` and ``empirically_progressive`` are
-            booleans. ``implications_lost`` and ``implications_lost_unrefuted``
-            hold the statements of the lost implications, all of them and the
-            unrefuted ones, in the order of the prior's record, and
-            ``implications_gained`` the statements of the pairs the new graph
-            separates and the prior's does not, in the order of the new
-            record. ``implications_compared`` is False, and the three lists
-            are empty, when ``implications()`` refuses either version. Only
-            ``corroborated_new_registered`` reads ``registered``, and no date
-            is read, so which version is the prior is the caller's
-            responsibility.
+            ``new_anomalies``, ``weakened_refuted``, ``unresolved``,
+            ``protected_only`` and ``refuted_new`` are sorted id lists.
+            ``content_lost`` holds the untested predictions the amendment
+            drops, under their prior ids, and, under their new ids, the
+            untested or corroborated predictions it weakens or whose claim it
+            no longer entails. ``weakened_refuted`` holds the predictions
+            refuted or mixed in the prior that it weakens. ``refuted_new``
+            holds the new predictions refuted or mixed in ``new``.
+            ``renamed`` holds ``{prior, new}`` pairs sorted by ``new``, and
+            ``revised`` one ``{id, change}`` record per revised prediction
+            sorted by its new id, where ``change`` is ``weakened``,
+            ``strengthened``, ``reworded`` or ``changed``. ``assumptions``
+            holds one ``{id, added_for, class, independent,
+            added_for_inferred, change}`` record per new or revised assumption
+            added for an anomaly, in file order. ``added_for_inferred`` is
+            True when ``added_for`` was taken from ``protects``. ``change`` is
+            ``new`` for an assumption under an id the prior lacks and
+            ``revised`` for one kept under its id whose statement changed, by
+            any change of wording, even one that keeps its meaning.
+            ``independent`` lists, each as ``{id, status}`` and in the order
+            of ``protects``, the distinct predictions the assumption protects
+            that are new in this version and differ from ``added_for``, with
+            their status in ``new`` (``corroborated``, ``refuted``, ``mixed``
+            or ``untested``). ``class`` is ``ad_hoc1``, ``pending``,
+            ``ad_hoc2`` or ``independently_corroborated``, and
+            ``ad_hoc_assumptions`` holds the ids of those classed ``ad_hoc1``
+            or ``ad_hoc2``. ``theoretically_progressive`` and
+            ``empirically_progressive`` are booleans. ``implications_lost``
+            and ``implications_lost_unrefuted`` hold the statements of the
+            lost implications, all of them and the unrefuted ones, in the
+            order of the prior's record, and ``implications_gained`` the
+            statements of the pairs the new graph separates and the prior's
+            does not, in the order of the new record.
+            ``entailments_lost`` holds one ``{id, prior, new}`` record, under
+            the new id, with the verdicts of the two graphs, sorted by id.
+            ``signs_lost`` holds statements ``effect of <x> on <y>: <sign>``
+            in the prior graph's vertex order, ``x`` and then ``y``.
+            ``corroborated_new_severity`` holds one ``{id, severity}`` record
+            per corroborated new prediction, sorted by id, where ``severity``
+            is the smallest value of ``post_data_severity()`` over its passes
+            that record an estimate and a standard error for a prediction with
+            bounds, and None when none does. ``implications_compared`` is
+            False when ``implications()`` refuses either version, and the three
+            lists of implications, ``entailments_lost`` and ``signs_lost`` are
+            then empty. ``corroborated_new_registered`` reads ``registered``,
+            ``corroborated_new_severity`` reads ``estimate`` and ``se``, and
+            neither decides the verdict. No date is read, so which version is
+            the prior is the caller's responsibility.
 
     Raises:
         ValueError: ``new`` and ``prior`` are the same object. The builders
@@ -340,11 +462,12 @@ def appraise_amendment(new, prior) -> dict:
     content_of: dict[str, tuple[str, str, str]] = {}
     for p in items(new, "propositions"):
         content_of.setdefault(text(field(p, "id")), _proposition_content(p))
-    try:
-        prior_graph: _Graph | None = _Graph(causal_graph(prior, "appraise_amendment"), "sigma",
-                                            items(prior, "propositions"))
-    except ValueError:
-        prior_graph = None
+    # Both causal graphs, read with cycles="sigma". A graph that is refused
+    # entails nothing, and the graphs are compared only when both are built,
+    # which is when implications() accepts both versions.
+    prior_graph = _sigma_graph(prior)
+    new_graph = _sigma_graph(new)
+    graphs = (prior_graph, new_graph) if prior_graph is not None and new_graph is not None else None
 
     def entailed(p) -> bool:
         c = read_claim(field(p, "claim"))
@@ -353,6 +476,7 @@ def appraise_amendment(new, prior) -> dict:
     articulated: list[str] = []
     underived: list[str] = []
     unresolved: list[str] = []
+    protected_only: list[str] = []
     for pid, p in zip(new_ids, new_preds, strict=True):
         if pid not in new_predictions:
             continue
@@ -361,10 +485,12 @@ def appraise_amendment(new, prior) -> dict:
             underived.append(pid)
         if any(d not in content_of for d in sources):
             unresolved.append(pid)
-        old_only = (bool(sources) and pid not in protected
-                    and all(content_of.get(d) in old_content for d in sources))
-        if old_only or entailed(p):
+        old_sources = bool(sources) and all(content_of.get(d) in old_content for d in sources)
+        if (old_sources and pid not in protected) or entailed(p):
             articulated.append(pid)
+        elif old_sources:
+            # New content only because an appraised assumption protects it.
+            protected_only.append(pid)
 
     dropped = [pid for pid in prior_ids if pid not in new_ids and pid not in renamed_prior]
     dropped_corroborated = [pid for pid in dropped if prediction_status(pid, prior_tos) == CORROBORATED]
@@ -376,20 +502,33 @@ def appraise_amendment(new, prior) -> dict:
 
     # A weakened prediction loses content when it was unrefuted (untested or
     # corroborated), and retreats from a refutation when it was refuted or
-    # mixed.
+    # mixed. An unrefuted prediction loses content too when the claim it
+    # stated in the prior, which the prior's graph entailed, is no longer
+    # entailed by the new graph. Each retained prediction is counted once.
     revised: list[dict[str, str]] = []
     weakened_refuted: list[str] = []
+    entailments_lost: list[dict[str, str]] = []
     for was, now, old, cur in retained:
+        status = prediction_status(was, prior_tos)
+        loses = False
+        claim = _stated_claim(old)
+        if graphs is not None and claim is not None and status in ("untested", CORROBORATED):
+            before = graphs[0].read(claim)["verdict"]
+            if before == "entailed":
+                after = graphs[1].read(claim)["verdict"]
+                if after != "entailed":
+                    entailments_lost.append({"id": now, "prior": before, "new": after})
+                    loses = True
         change = _revision(old, cur)
-        if change is None:
-            continue
-        revised.append({"id": now, "change": change})
-        if change == "weakened":
-            status = prediction_status(was, prior_tos)
-            if status in ("untested", CORROBORATED):
-                content_lost.append(now)
-            elif status in _FAILED:
-                weakened_refuted.append(now)
+        if change is not None:
+            revised.append({"id": now, "change": change})
+            if change == "weakened":
+                if status in ("untested", CORROBORATED):
+                    loses = True
+                elif status in _FAILED:
+                    weakened_refuted.append(now)
+        if loses:
+            content_lost.append(now)
 
     assumptions: list[dict] = []
     ad_hoc: list[str] = []
@@ -409,10 +548,22 @@ def appraise_amendment(new, prior) -> dict:
         assumptions.append({"id": aid, "added_for": added_for, "class": cls,
                             "independent": independent, "added_for_inferred": inferred,
                             "change": change})
-        if cls != "independently_corroborated":
+        if cls in ("ad_hoc1", "ad_hoc2"):
             ad_hoc.append(aid)
 
     registered = [pid for pid in corroborated_new if any(_registered_pass(t, pid) for t in new_tos)]
+    refuted_new = [pid for pid in new_predictions if prediction_status(pid, new_tos) in _FAILED]
+
+    # The smallest post-data severity over the passes of each corroborated new
+    # prediction whose outcome records an estimate and a standard error and
+    # whose prediction states bounds (API_SPEC.md section 29). An outcome that
+    # post_data_severity() would refuse gives none.
+    least: dict[str, float] = {}
+    for t, (row, _) in zip(new_tos, outcome_rows(new), strict=True):
+        if row is not None and field(t, "passed") is True:
+            pid = row["prediction_id"]
+            least[pid] = min(least.get(pid, math.inf), row["severity"])
+    severities = [{"id": pid, "severity": least.get(pid)} for pid in sorted(corroborated_new)]
 
     # The independencies the two graphs imply, pair by pair. Sigma-separation
     # reads a graph with feedback loops, and reads an acyclic one as
@@ -435,11 +586,16 @@ def appraise_amendment(new, prior) -> dict:
             refuted_pairs.add(frozenset((c["x"], c["y"])))
     unrefuted = [i["statement"] for i in lost if frozenset((i["a"], i["b"])) not in refuted_pairs]
 
+    # The signed total effects the prior's graph entails and the new graph
+    # does not, unless a prediction that failed in the prior stated the sign.
+    signs_lost = ([] if graphs is None
+                  else _signs_lost(graphs[0], graphs[1], _refuted_signs(prior_preds, prior_tos)))
+
     adds_content = [pid for pid in new_predictions
                     if pid not in articulated and pid not in underived and pid not in unresolved]
     theoretical = bool(adds_content)
     empirical = any(pid in corroborated_new for pid in adds_content)
-    loses_content = bool(content_lost) or bool(unrefuted)
+    loses_content = bool(content_lost) or bool(unrefuted) or bool(signs_lost)
     if empirical and not ad_hoc and not dropped_corroborated and not loses_content and not weakened_refuted:
         verdict = "progressive"
     elif (ad_hoc or weakened_refuted) and not empirical:
@@ -470,4 +626,9 @@ def appraise_amendment(new, prior) -> dict:
         "implications_lost": [i["statement"] for i in lost],
         "implications_lost_unrefuted": unrefuted,
         "implications_gained": gained,
+        "entailments_lost": sorted(entailments_lost, key=lambda r: r["id"]),
+        "signs_lost": signs_lost,
+        "protected_only": sorted(protected_only),
+        "refuted_new": sorted(refuted_new),
+        "corroborated_new_severity": severities,
     }

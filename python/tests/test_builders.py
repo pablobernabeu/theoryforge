@@ -24,6 +24,8 @@ NOTHING_NEW = {
     "theoretically_progressive": False, "empirically_progressive": False, "revised": [],
     "weakened_refuted": [], "unresolved": [], "implications_compared": True,
     "implications_lost": [], "implications_lost_unrefuted": [], "implications_gained": [],
+    "entailments_lost": [], "signs_lost": [], "protected_only": [], "refuted_new": [],
+    "corroborated_new_severity": [],
 }
 
 
@@ -218,6 +220,7 @@ def test_the_develop_help_example_started_from_a_copy_is_progressive():
         "corroborated_new": ["h2"], "theoretically_progressive": True,
         "empirically_progressive": True,
         "implications_gained": ["c_arousal _||_ c_avoid | c_threat"],
+        "corroborated_new_severity": [{"id": "h2", "severity": None}],
     }
 
 

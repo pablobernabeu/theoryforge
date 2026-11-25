@@ -1,0 +1,43 @@
+# Edge case: amends amend-prior with an assumption a2 added for the refuted h1
+# and a new prediction h4 that a2 is needed to derive. h4 is not yet tested, so
+# a2 is pending rather than ad hoc, and the amendment, theoretically but not yet
+# empirically progressive, is neutral. h4 derives from the unchanged p1, so
+# it is in protected_only.
+schema_version: "1.1"
+id: edge-amend-pending
+title: An assumption whose independent prediction is not yet tested
+maturity: testing
+constructs:
+  - {id: c1, label: First, definition: The first construct.}
+  - {id: c2, label: Second, definition: The second construct.}
+  - {id: c3, label: Third, definition: The third construct.}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: It does.}
+  - {id: p2, from: c2, to: c3, relation: increases, mechanism: It does.}
+predictions:
+  - id: h1
+    statement: c2 rises 0.5 SD per SD of c1, within 0.1.
+    type: point
+    derives_from: [p1]
+    bounds: {lower: 0.4, upper: 0.6}
+    claim: {kind: effect, x: c1, y: c2, sign: positive}
+  - id: h2
+    statement: c3 rises with c2.
+    type: directional
+    derives_from: [p2]
+  - id: h4
+    statement: c2 rises with c1 only in a calm setting.
+    type: directional
+    derives_from: [p1]
+auxiliary_assumptions:
+  - id: a1
+    statement: The c2 scale measures c2 in every sample.
+    added_for: ~
+    protects: [h1]
+  - id: a2
+    statement: The effect of c1 on c2 holds only in a calm setting.
+    added_for: h1
+    protects: [h1, h4]
+test_outcomes:
+  - prediction_id: h1
+    passed: false

@@ -1,0 +1,41 @@
+# Edge case: amends amend-prior-corroborated by restating p1 as causes, which
+# states no sign, and adds c4, a proposition p3 from c3 to c4 and a
+# corroborated prediction h3 derived from it. The new graph leaves the claim of
+# the corroborated h1 undetermined, so h1 is in entailments_lost and
+# content_lost, and the positive effects of c1 on c2 and on c3 are signs lost.
+# The amendment is neutral.
+schema_version: "1.1"
+id: edge-amend-weakened-sign
+title: A corroborated signed claim left open by an amendment
+maturity: testing
+constructs:
+  - {id: c1, label: First, definition: The first construct.}
+  - {id: c2, label: Second, definition: The second construct.}
+  - {id: c3, label: Third, definition: The third construct.}
+  - {id: c4, label: Fourth, definition: The fourth construct.}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: causes, mechanism: It does.}
+  - {id: p2, from: c2, to: c3, relation: increases, mechanism: It does.}
+  - {id: p3, from: c3, to: c4, relation: increases, mechanism: It does.}
+predictions:
+  - id: h1
+    statement: c2 rises with c1.
+    type: directional
+    derives_from: [p1]
+    bounds: {lower: 0}
+    claim: {kind: effect, x: c1, y: c2, sign: positive}
+  - id: h2
+    statement: c3 rises with c2.
+    type: directional
+    derives_from: [p2]
+  - id: h3
+    statement: c4 rises with c3.
+    type: directional
+    derives_from: [p3]
+    bounds: {lower: 0}
+    claim: {kind: effect, x: c3, y: c4, sign: positive}
+test_outcomes:
+  - prediction_id: h1
+    passed: true
+  - prediction_id: h3
+    passed: true

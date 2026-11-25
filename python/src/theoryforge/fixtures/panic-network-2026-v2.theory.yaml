@@ -3,8 +3,12 @@
 # pred_indep. This version drops pred_indep, adds a direct path from arousal to
 # avoidance (proposition p4) and derives a new prediction from it (pred4). A
 # registered test corroborates pred4, no ad hoc assumption is added and the only
-# implication v1 held and v2 gives up is the refuted one, so the amendment is a
-# progressive problemshift in Lakatos's sense.
+# implication v1 held and v2 gives up is the refuted one. Both versions state p3,
+# from perceived threat to arousal, without a sign, so p4 also opens a route
+# from perceived threat to avoidance through arousal whose sign is open. v2
+# therefore no longer entails the positive effect of perceived threat on
+# avoidance that v1 entails, and appraise_amendment() calls the amendment
+# neutral.
 schema_version: "1.0"
 id: "panic-network-2026-v2"
 title: "Network theory of panic disorder"
