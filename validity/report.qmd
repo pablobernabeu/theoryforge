@@ -52,6 +52,10 @@ Nw <- function(n) {
 pct <- function(x, d = 0) {
   paste(formatC(100 * x, format = "f", digits = d), "per cent")
 }
+# Several percentages in one phrase, with 'per cent' once at the end.
+pcts <- function(x, d = 0) {
+  paste(and_list(formatC(100 * x, format = "f", digits = d)), "per cent")
+}
 # A number written in a note of data/verification.csv, found by the text
 # around it, so that the prose can quote the note without typing the number.
 note_num <- function(row, pattern) {
@@ -263,12 +267,38 @@ nv <- function(s, rows = TRUE) sum(vd$status[rows] %in% s)
 changed_behaviour <- c("fixed", "reported")
 not_changed <- c("unchanged", "deferred")
 # Reworded verdicts whose recommendation was to rework the component, and
-# verdicts of sound with caveats left unchanged because the documentation
-# already stated the caveat.
+# verdicts of sound with caveats whose recommendation was to keep and that
+# version 0.8.0 left unchanged. The basis of each of these says whether the
+# documentation already stated the caveat, whether the caveat concerns the
+# auditors' own reading of a source or whether it is not documented.
 n_rw_rework <- sum(vd$status == "reworded" & vd$rec == "rework")
-n_caveat_unch <- sum(vd$status %in% not_changed & vd$v == "sound with caveats" &
-                       vd$rec == "keep")
+caveat_unch <- vd$id[vd$status %in% not_changed & vd$v == "sound with caveats" &
+                       vd$rec == "keep"]
+cav_basis <- st$basis[match(paste("verdict", caveat_unch), key)]
+cav_doc <- grepl("The documentation already stated the caveat", cav_basis, fixed = TRUE)
+cav_src <- grepl("The caveat concerns the auditors' own reading of a source",
+                 cav_basis, fixed = TRUE)
+cav_undoc <- grepl("The caveat is not documented", cav_basis, fixed = TRUE)
+stopifnot(all(cav_doc + cav_src + cav_undoc == 1))
+n_caveat_unch <- length(caveat_unch)
+undoc_ids <- caveat_unch[cav_undoc]
 n_basis_rerun <- sum(grepl("rerun|reran", st$basis, ignore.case = TRUE))
+# Reported findings on feedback loops, whose bases say that the gate still
+# passes: there the derivation chain warns and the score falls.
+n_rep_loop <- sum(fd$status == "reported" &
+                    grepl("gate still passes|still passes the gate",
+                          st$basis[match(paste("finding", fd$id), key)]))
+# Which rows were checked again after the classifying agent, and what changed.
+stopifnot(all(st$checked %in% c("drafter", "reviewer", "both", "none")),
+          all(st$revised %in% c("status", "basis", "none")))
+n_chk <- sum(st$checked != "none")
+n_chk_drafter <- sum(st$checked %in% c("drafter", "both"))
+n_chk_reviewer <- sum(st$checked %in% c("reviewer", "both"))
+n_chk_both <- sum(st$checked == "both")
+n_chk_status <- sum(st$checked != "none" & st$revised == "status")
+n_chk_basis <- sum(st$checked != "none" & st$revised == "basis")
+n_unchk <- sum(st$checked == "none")
+n_unchk_status <- sum(st$checked == "none" & st$revised == "status")
 
 # Checks of the deductive and numerical core. 'package' compares an output of
 # the package with independent software, the auditors' own implementation of
@@ -422,20 +452,44 @@ strong_below <- all(!vapply(strong_all, all_pass, logical(1)))
 ```{r}
 #| label: summary-numbers
 # Agreement of the pilot encoders' independence models over the constructs all
-# three used, needed in the summary.
+# three used, needed in the summary: the share of statements on which all
+# three agreed and Fleiss' kappa, which no interval accompanies.
 indep <- rd("pilot/independence_model_common.csv")
-kap <- setNames(indep$fleiss_kappa, indep$theory)
-kap_hi <- sort(kap[kap > 0])
-kap_lo <- kap[kap <= 0]
-kappa_text <- if (length(kap_hi) == 2 && length(kap_lo) == 1) {
-  paste0("agreed beyond chance for two theories (Fleiss' kappa ",
-         and_list(num(kap_hi, 2)), ") and not for the third (",
-         num(kap_lo, 2), "), whose source left open a choice that changes ",
-         "most of the statements")
+th_lab <- c("bilingual-rhm" = "RHM", "collaborative-cognitive-load" = "CCLT",
+            "health-habit" = "habit")
+im <- indep[match(names(th_lab), indep$theory), ]
+hb <- im[im$theory == "health-habit", ]
+two <- im[im$theory != "health-habit", ]
+hb_share <- unlist(hb[, paste0("share_independent_enc-", 1:3)])
+kappa_text <- if (nrow(two) == 2 && nrow(hb) == 1 &&
+                  hb$all_three_agree < min(two$all_three_agree)) {
+  paste0("All three encoders agreed on ", pcts(two$all_three_agree),
+         " of the statements for two theories (Fleiss' kappa ",
+         and_list(num(two$fleiss_kappa, 2)), ") and on ",
+         pct(hb$all_three_agree), " for the third, whose source leaves open ",
+         "whether habit prompts repetition directly or through behaviour. That ",
+         "choice decides whether many of the statements are independences, and ",
+         "kappa for that theory, ", num(hb$fleiss_kappa, 2), ", is unstable, since ",
+         "the three encodings state an independence for ",
+         pcts(hb_share, 1), " of the statements.")
 } else {
-  paste0("agreed with Fleiss' kappa of ", and_list(num(kap, 2)),
-         " for the three theories")
+  paste0("All three encoders agreed on ", pcts(im$all_three_agree),
+         " of the statements for the three theories (Fleiss' kappa ",
+         and_list(num(im$fleiss_kappa, 2)), ").")
 }
+# The verdicts of sound with caveats kept unchanged whose caveat no document
+# states.
+r_lisrel <- vrow("Compiled syntax fits with lavaan::sem() as written (one feedback loop)")
+stopifnot(grepl("LISREL representation refuses", r_lisrel$note, fixed = TRUE))
+undoc_text <- if (length(undoc_ids) == 0) "" else paste0(
+  " For ", nw(length(undoc_ids)), ", ", and_list(undoc_ids), ", the caveat is ",
+  "still undocumented",
+  if (identical(undoc_ids, "statistics-and-simulation-v16")) paste0(
+    ": lavaan's default representation refuses ", nw(r_lisrel$discrepancies),
+    " of the ", int(r_lisrel$cases), " compiled models with a feedback loop ",
+    "that the auditors fitted, and no document says so") else "",
+  ".")
+loop_thru <- "loops/loop-through-claim.theory.yaml"
 ```
 
 # Summary {.unnumbered}
@@ -488,8 +542,8 @@ and damping that the theory does not state. A compiled model fixes at zero the
 covariances the theory omits, so a small omitted correlation can make the global
 fit reject a model whose propositions are all true. Every output, finally,
 describes the file and not the theory. In the pilot, the independence models
-that encoders of the same short text produced, compared over the constructs all
-three used, `r kappa_text`.
+that encoders of the same short text produced were compared over the constructs
+all three used. `r kappa_text`
 
 The checklist score cannot be trusted to mean what its earlier name, a rigour
 score, suggested. It describes how completely a file fills in what the checklist
@@ -503,26 +557,32 @@ tell a prediction from an accommodation and does not weigh how good a test was.
 Its verdicts have not been compared with any expert's.
 
 Of the `r int(n_find)` findings in the register, version `r pkg_version` fixed
-`r int(nf("fixed"))` and now reports `r int(nf("reported"))` beside a result it
-leaves unchanged. It answered `r int(nf("reworded"))` by rewording what the
-outputs and documents say, with the behaviour unchanged, and left
-`r int(nf(not_changed))` unchanged, `r int(nf("deferred"))` of them for
-expansions the maintainer plans for version 0.9.0 but has not published. Of the
-`r int(n_verd)` verdicts on components and claims, the status register counts
-`r status_phrase(vd$status)`. Not applicable marks verdicts of sound that needed
-no change. The reworded verdicts include
-`r int(n_rw_rework)` whose recommendation was to rework the component, and the
+`r int(nf("fixed"))` and now reports `r int(nf("reported"))` beside a verdict or
+gate that it leaves unchanged. For the `r nw(n_rep_loop)` reported findings on
+feedback loops, the derivation chain now warns and the score falls, from
+`r sc(dm(loop_thru, "score", "old"))` to `r sc(dm(loop_thru, "score"))` in the
+loops demonstrations, while the gate still passes. The release answered
+`r int(nf("reworded"))` findings by rewording what the outputs and documents
+say, with the behaviour unchanged, and left `r int(nf(not_changed))` unchanged,
+`r int(nf("deferred"))` of them for expansions the maintainer plans for version
+0.9.0 but has not published. Of the `r int(n_verd)` verdicts on components and
+claims, the status register counts `r status_phrase(vd$status)`. Not applicable
+marks verdicts of sound that needed no change. The reworded verdicts include
+`r int(n_rw_rework)` whose recommendation was to rework the component. The
 unchanged ones include `r int(n_caveat_unch)` verdicts of sound with caveats
-whose caveat the documentation already stated. The main behavioural corrections
-concern two rules. The amendment appraisal now reads the signs the two graphs
-entail, so an amendment that reverses a corroborated prediction is no longer
-called progressive, provided the new version's graph can be built. And the
-checklist no longer counts a claim it could not read as derived. The score
-still rates empty, circular and refuted files highly. Apart from the derivation
-chain and a few narrower rules, the release changed what the score is called and
-what is said about it, not what it computes. Rerunning the evidence also showed
-problems in the corrected rules that the register does not list
-(@sec-changes).
+whose recommendation was to keep. For `r nw(sum(cav_doc))` of them, the
+documentation already stated the caveat, and for `r nw(sum(cav_src))`, the
+caveat concerns the auditors' own reading of a source.`r undoc_text`
+
+The main behavioural corrections concern two rules. The amendment appraisal now
+reads the signs the two graphs entail, so an amendment that reverses a
+corroborated prediction is no longer called progressive, provided the new
+version's graph can be built. And the checklist no longer counts a claim it
+could not read as derived. The score still rates empty, circular and refuted
+files highly. Apart from the derivation chain and a few narrower rules, the
+release changed what the score is called and what is said about it, not what it
+computes. A separate review of the release found problems in the corrected
+rules that the register does not list (@sec-changes).
 
 This evidence answers in part whether automated appraisal of theories is
 feasible. Deduction from a stated graph can be automated soundly, and a fixed
@@ -687,9 +747,12 @@ kab(vt)
 For each finding and verdict, `data/status-0.8.0.csv` records what version
 `r pkg_version` does about it, with the file or rerun that shows it. Fixed means
 that the behaviour or rule was corrected. Reported means that the package now
-reports the problem beside its result without changing the result. Reworded
-means that the outputs and documentation now say what is computed while the
-behaviour is unchanged. Unchanged means that nothing was done. Deferred marks a
+reports the problem beside its result without changing the verdict or the gate
+that the finding concerns. For the `r nw(n_rep_loop)` reported findings on
+feedback loops, the derivation chain now warns and the score falls, while the
+gate still passes. Reworded means that the outputs and documentation now say
+what is computed while the behaviour is unchanged. Unchanged means that nothing
+was done. Deferred marks a
 finding left unchanged whose remedy is one of the expansions the maintainer
 plans for version 0.9.0, data tests of implications, ensemble simulation,
 interoperability and a teaching mode. The register records that plan in its
@@ -698,9 +761,11 @@ finding is best read as unchanged. Remedies that the audit recommended for a
 later release and that the plan does not include count as unchanged. Withdrawn
 marks the finding the second reader withdrew, and not applicable marks verdicts
 of sound whose recommendation was to keep the component as it is. A verdict of
-sound with caveats counts as reworded where version `r pkg_version` states its
-caveat in more places than before, and as unchanged where the documentation
-already stated it.
+sound with caveats whose recommendation was to keep counts as reworded where
+version `r pkg_version` states its caveat in more places than before, and
+otherwise as unchanged, whether the documentation already stated the caveat, the
+caveat concerns the auditors' own reading of a source or no document states it.
+Other verdicts are classed as findings are, by what was done.
 
 A finding is classed by the part of it that the second reader stated, and where
 part of what its title names remains, the basis says so. The status was
@@ -708,11 +773,19 @@ established by rerunning the audit's evidence against the code of this
 repository where a script exists, as `r int(n_basis_rerun)` of the
 `r int(nrow(st))` bases record, and otherwise by reading the files at this
 commit, never from commit messages alone. AI agents assigned the status of each
-row. The drafter of this report rechecked a sample of rows, reviewers of the
-draft, also AI agents, reran the evidence for a further sample, and the rows
-they found misclassified were corrected. The other rows rest on the classifying
-agent's reading alone. A further round of corrections may follow before release.
-The counts in this report are read from the file, so they follow it.
+row, and the column `checked` records which rows were checked again. The agents
+that drafted and revised this report rechecked `r int(n_chk_drafter)` rows, and
+reviewers of the draft, also AI agents, reran the evidence or reread the files
+for `r int(n_chk_reviewer)`, `r int(n_chk_both)` of them in both checks. Of the
+`r int(n_chk)` rows checked, `r int(n_chk_status)` now carry a different status
+from the one the classifying agent gave them, because a check found them
+misclassified or because the definitions of the statuses were narrowed, and
+`r int(n_chk_basis)` kept their status with a qualified basis, as the column
+`revised` records. The other `r int(n_unchk)` rows rest on the classifying
+agent's reading alone, though `r int(n_unchk_status)` of them changed status
+when the definitions were narrowed. The classifying agents did not record which
+rows they were unsure of. A further round of corrections may follow before
+release. The counts in this report are read from the file, so they follow it.
 
 # The deductive core {#sec-core}
 
@@ -1295,7 +1368,6 @@ units <- rd("pilot/units_agreement.csv")
 edges <- rd("pilot/edge_agreement.csv")
 claims <- rd("pilot/claim_agreement.csv")
 impl <- rd("pilot/implications_agreement.csv")
-indep <- rd("pilot/independence_model_common.csv")
 dsa <- rd("pilot/derived_sign_agreement.csv")
 lin <- rd("pilot/linear_check.csv")
 ichk <- rd("pilot/implications_independent_check.csv")
@@ -1303,8 +1375,6 @@ par <- rd("pilot/parity_r_python.csv")
 prer <- rd("pilot/preregistration.csv")
 pert <- rd("pilot/perturbations.csv")
 summ <- fromJSON(file.path("data", "pilot", "summary.json"))
-th_lab <- c("bilingual-rhm" = "RHM", "collaborative-cognitive-load" = "CCLT",
-            "health-habit" = "habit")
 n_enc <- length(unique(cbe$encoder))
 n_th <- length(unique(cbe$theory))
 
@@ -1314,7 +1384,6 @@ u_n <- as.numeric(sub(".*/", "", u_all$all_three_same_element))
 u_ci <- wilson(u_k, u_n)
 ed <- edges[edges$level == "directed" & edges$scope == "all", ]
 lit <- unlist(impl[, grepl("^J_literal_basis", names(impl))])
-habit_kappa <- indep$fleiss_kappa[indep$theory == "health-habit"]
 reversals <- sum(dsa$sign_reversals)
 ok_lists <- ichk[ichk$package == "ok", ]
 n_lists <- nrow(ok_lists)
@@ -1359,10 +1428,9 @@ src_n <- setNames(as.numeric(vapply(src_tab, `[`, "", 2)),
                   vapply(src_tab, `[`, "", 1))
 stopifnot(setequal(names(src_n), c("encoder", "format", "verbal")),
           sum(src_n) == u_n - u_k)
-# Agreement of the independence models over the constructs all three encoders
-# of a theory used, and a pair of encodings with the same independence model
-# whose literal basis statements differ.
-im <- indep[match(names(th_lab), indep$theory), ]
+# A pair of encodings with the same independence model over the constructs all
+# three encoders of a theory used (im, from the summary) whose literal basis
+# statements differ.
 pairs <- c("enc-1/enc-2", "enc-1/enc-3", "enc-2/enc-3")
 same_model <- do.call(rbind, lapply(seq_len(nrow(im)), function(i) {
   j <- unlist(im[i, paste0("J_indep_", pairs)])
@@ -1376,9 +1444,6 @@ same_text <- if (nrow(same_model) >= 1) {
          "model over their shared constructs and a literal Jaccard index of ",
          num(s$lit, 2), ".")
 } else ""
-hb <- im[im$theory == "health-habit", ]
-hb_share <- unlist(hb[, paste0("share_independent_enc-", 1:3)])
-two <- im[im$theory != "health-habit", ]
 # What filling the form without changing a statement does at this version:
 # every empty mechanism restates its relation, every construct takes the
 # theory's boundary conditions and a construct without a measure gets 'a
@@ -1444,14 +1509,15 @@ constructs or choose different conditioning sets, even when their graphs imply
 the same independencies. `r same_text` Over the constructs that all three
 encoders of a theory used, the independence models agreed with Fleiss' kappa of
 `r and_list(num(two$fleiss_kappa, 2))` for `r and_list(th_lab[two$theory])`,
-and all three encoders agreed on `r and_list(pct(two$all_three_agree))` of the
+and all three encoders agreed on `r pcts(two$all_three_agree)` of the
 statements compared. For habit, all three agreed on
 `r pct(hb$all_three_agree)` of them, but kappa was `r num(hb$fleiss_kappa, 2)`.
 One choice the text leaves open, whether habit prompts repetition directly or
-through behaviour, changes most of the statements: the share of statements of
-independence was `r and_list(pct(hb_share, 1))` in the three encodings. Kappa is
-unstable when the shares differ this much, and no interval is given for any of
-these kappas, since the statements of one theory are not independent units.
+through behaviour, decides whether many of the statements are independences:
+the share of statements of independence was `r pcts(hb_share, 1)` in the three
+encodings. Kappa is unstable when the shares differ this much, and no interval
+is given for any of these kappas, since the statements of one theory are not
+independent units.
 
 The perturbations, which change one element at a time, traced the disagreements
 in the derivations that they examined to ambiguity in the source text, to the
@@ -1583,17 +1649,21 @@ ph_th <- list(
   phenomena = list(list(id = "ph1", statement = "a lowers b",
                         claim = list(kind = "effect", x = "a", y = "b",
                                      sign = "negative"))))
-ph_line <- function(cy) {
-  l <- grep("phenomenon states", strsplit(tf_preregister(ph_th, cycles = cy), "\n")[[1]],
-            value = TRUE)
-  stopifnot(length(l) == 1)
-  sub(".*: ", "", l)
-}
 ph_rep <- function(cy) {
   r <- tf_check(ph_th, cycles = cy)
-  list(gate = r$gate,
-       chain = Filter(function(i) i$id == "derivation_chain", r$items)[[1]]$status,
-       line = ph_line(cy))
+  dc <- Filter(function(i) i$id == "derivation_chain", r$items)[[1]]
+  pr <- strsplit(tf_preregister(ph_th, cycles = cy), "\n")[[1]]
+  # The header line on phenomena, and whether the claim lines under 'Phenomena
+  # to explain' mark the phenomenon's claim as not evaluated.
+  l <- grep("phenomenon states", pr, value = TRUE)
+  stopifnot(length(l) == 1)
+  s <- grep("^### Phenomena to explain", pr)
+  stopifnot(length(s) == 1)
+  e <- grep("^#{1,3} ", pr)
+  e <- c(e[e > s], length(pr) + 1)[1]
+  list(gate = r$gate, chain = dc$status, not_checked = length(dc$not_checked),
+       line = sub(".*: ", "", l),
+       listed = any(grepl("^ *- Claim: .*not evaluated", pr[s:(e - 1)])))
 }
 # Table captions that name the version.
 cap_status <- paste0("Status in version ", pkg_version, " of every finding and verdict in the register.")
@@ -1602,30 +1672,55 @@ cap_demos <- paste0("Demonstrations at f72ce4c and in the live run of version ",
 cap_demos_other <- paste0("Other results of the demonstrations that changed between f72ce4c and the live run of version ", pkg_version, ". An empty list is written 'none'.")
 ph_refuse <- ph_rep("refuse")
 ph_sigma <- ph_rep("sigma")
-rv <- c(
-  phenomenon = if (ph_refuse$chain == "pass" && ph_refuse$line == "yes") paste0(
+# Each problem is reported only while it holds.
+rv_holds <- c(
+  phenomenon = ph_refuse$chain == "pass" && ph_refuse$line == "yes" &&
+    ph_refuse$not_checked == 0,
+  appraisal = ap_undeclared$verdict == "progressive",
+  dossier = preamble_says_above)
+rv_say <- c(
+  phenomenon = paste0(
     "Under the default reading, a phenomenon whose claim the graph contradicts ",
-    "is not read when the graph has a feedback loop, and nothing says so. In a ",
-    "constructed theory of two constructs that raise each other, beside a ",
+    "is not read when the graph has a feedback loop, and `check()` neither warns ",
+    "nor lists it among the claims it could not read",
+    if (ph_refuse$listed) paste0(", although the preregistration's list of ",
+                                 "phenomena marks it not evaluated") else "",
+    ". In a constructed theory of two constructs that raise each other, beside a ",
     "prediction that states no claim, the derivation chain ",
     chain_phrase(ph_refuse$chain), ", the gate ", gate_phrase(ph_refuse$gate),
-    " and the preregistration answers '", ph_refuse$line, "' to whether the ",
-    "graph contradicts no claim a phenomenon states. Read by sigma-separation, ",
-    "the same file's derivation chain ", chain_phrase(ph_sigma$chain),
-    ", its gate ", gate_phrase(ph_sigma$gate), " and the answer is '",
-    ph_sigma$line, "'.") else NULL,
-  appraisal = if (ap_undeclared$verdict == "progressive") paste0(
+    " and the preregistration's header answers '", ph_refuse$line, "' to ",
+    "whether the graph contradicts no claim a phenomenon states. Read by ",
+    "sigma-separation, the same file's derivation chain ",
+    chain_phrase(ph_sigma$chain), ", its gate ", gate_phrase(ph_sigma$gate),
+    " and the answer is '", ph_sigma$line, "'."),
+  appraisal = paste0(
     "An amendment whose new graph cannot be built skips the new rules of the ",
     "appraisal, as @sec-appraisal shows with one proposition to an undeclared ",
-    "construct.") else NULL,
-  dossier = if (preamble_says_above) paste0(
-    "The dossier's preamble overstates what it flags (@sec-outputs).") else NULL)
+    "construct."),
+  dossier = "The dossier's preamble overstates what it flags (@sec-outputs).")
+rv <- rv_say[rv_holds]
+n_rv_checked <- length(rv_holds)
 rv_text <- if (length(rv) == 0) {
-  "None of the problems that review reported holds at this commit."
-} else paste0(Nw(length(rv)), " of the problems that review reported hold at ",
-              "this commit, as this report checks when it is rendered, and the ",
-              "register, built from the audit of f72ce4c, does not list them. ",
-              paste(rv, collapse = " "))
+  paste0("When it is rendered, this report checks ", nw(n_rv_checked), " of the ",
+         "problems that review reported, and none of them holds at this commit.")
+} else paste0("When it is rendered, this report checks ", nw(n_rv_checked),
+              " of the problems that review reported. ",
+              if (length(rv) == n_rv_checked) paste("All", nw(length(rv)), "hold") else
+                paste(Nw(length(rv)), if (length(rv) == 1) "holds" else "hold"),
+              " at this commit, and the register, built from the audit of ",
+              "f72ce4c, does not list ", if (length(rv) == 1) "it" else "them",
+              ". ", paste(rv, collapse = " "))
+# What Section 10 says of that review: the problems checked here, those that
+# earlier sections describe, and the minor ones this report does not check.
+rv_elsewhere <- c(
+  "that a claim a loop leaves unread lowers the score (@sec-checklist)",
+  if (gate_unexplained) "that the dossier does not say what the gate checks (@sec-outputs)")
+review_text <- paste0(
+  Nw(n_rv_checked), " problems from that review are checked when this report is ",
+  "rendered, and those that hold are reported in @sec-changes. The review also ",
+  "showed ", and_list(rv_elsewhere), ", and it lists further minor problems, ",
+  "among them passages of the documentation that misdescribe a rule, which this ",
+  "report does not check.")
 ```
 
 @tbl-status counts the status of every finding and verdict. Of the
@@ -1849,16 +1944,15 @@ and so were the drafter of this report and the agents that classified the
 status of each finding and verdict in version `r pkg_version`. Their agreement
 may reflect shared training rather than independent confirmation, and defects
 that all of them would miss are not in the register. Where they judged how a
-reader would understand a display, they judged without readers. The status
-register was checked only in samples, so some of its rows may still be
-misclassified.
+reader would understand a display, they judged without readers. Only
+`r int(n_chk)` of the `r int(nrow(st))` rows of the status register were checked
+again after their classification, so some rows may still be misclassified.
 
 The audit examined one commit, and the status of `r pkg_version` was
 established by rerunning the audit's evidence and reading the files, not by a
 new audit. The changes made in the release were reviewed separately by AI
-agents before this report, and the problems of that review that hold at this
-commit are reported in @sec-changes. Neither the review nor this report is a
-full audit of the new code.
+agents before this report. `r review_text` Neither the review nor this report is
+a full audit of the new code.
 
 The lenses were chosen in advance. Others, such as an audit of security, of
 accessibility or of the performance of the apps on large theories, were not part
