@@ -1,0 +1,380 @@
+{
+  "read": "ok",
+  "validate": true,
+  "validate_full": true,
+  "check": {
+    "aggregate_score": 48.7,
+    "coverage": 0.92,
+    "gate": "blocked",
+    "n_blockers_failed": 1,
+    "items": [
+      {
+        "id": "falsifiability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "precision",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "risk_severity",
+        "status": "warn",
+        "score": 0.26
+      },
+      {
+        "id": "parsimony",
+        "status": "n/a",
+        "score": null
+      },
+      {
+        "id": "non_redundancy",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "construct_clarity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "scope",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "logical_why",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "causal_testability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "diagnosticity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "formalisation",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "derivation_chain",
+        "status": "fail",
+        "score": 0.4
+      }
+    ]
+  },
+  "severity": [
+    {
+      "prediction_id": "h1",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h2",
+      "type": "existence",
+      "risk_score": 0.1,
+      "computed_severity": 0.1
+    },
+    {
+      "prediction_id": "h3",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h4",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h5",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    }
+  ],
+  "implications": {
+    "theory_id": "claim-faithfulness",
+    "criterion": "m",
+    "conditioning": "basis",
+    "acyclic": true,
+    "constructs": [
+      "x",
+      "m1",
+      "m2",
+      "y"
+    ],
+    "n_edges": 4,
+    "n_bidirected": 0,
+    "feedback": [],
+    "implications": [
+      {
+        "a": "x",
+        "b": "y",
+        "given": [
+          "m1",
+          "m2"
+        ],
+        "statement": "x _||_ y | m1, m2"
+      },
+      {
+        "a": "m1",
+        "b": "m2",
+        "given": [
+          "x"
+        ],
+        "statement": "m1 _||_ m2 | x"
+      }
+    ],
+    "n_implications": 2,
+    "inseparable": []
+  },
+  "entailments": {
+    "theory_id": "claim-faithfulness",
+    "criterion": "m",
+    "acyclic": true,
+    "feedback": [],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "h1",
+        "kind": "effect",
+        "x": "x",
+        "y": "y",
+        "given": [],
+        "sign": "zero",
+        "derived": "undetermined",
+        "verdict": "contradicted",
+        "basis": "opposite_signs",
+        "faithfulness": true,
+        "via": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ],
+        "identified": true,
+        "adjustment": []
+      },
+      {
+        "source": "prediction",
+        "id": "h2",
+        "kind": "effect",
+        "x": "x",
+        "y": "y",
+        "given": [],
+        "sign": "nonzero",
+        "derived": "undetermined",
+        "verdict": "entailed",
+        "basis": "opposite_signs",
+        "faithfulness": true,
+        "via": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ],
+        "identified": true,
+        "adjustment": []
+      },
+      {
+        "source": "prediction",
+        "id": "h3",
+        "kind": "effect",
+        "x": "x",
+        "y": "y",
+        "given": [],
+        "sign": "positive",
+        "derived": "undetermined",
+        "verdict": "undetermined",
+        "basis": "opposite_signs",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ],
+        "identified": true,
+        "adjustment": []
+      },
+      {
+        "source": "prediction",
+        "id": "h4",
+        "kind": "association",
+        "x": "m1",
+        "y": "m2",
+        "given": [
+          "y"
+        ],
+        "sign": "zero",
+        "derived": "nonzero",
+        "verdict": "contradicted",
+        "basis": "connected",
+        "faithfulness": true,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h5",
+        "kind": "association",
+        "x": "m1",
+        "y": "m2",
+        "given": [
+          "x"
+        ],
+        "sign": "zero",
+        "derived": "zero",
+        "verdict": "entailed",
+        "basis": "separated",
+        "faithfulness": false,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "phenomenon",
+        "id": "ph1",
+        "kind": "effect",
+        "x": "x",
+        "y": "y",
+        "given": [],
+        "sign": "positive",
+        "derived": "undetermined",
+        "verdict": "undetermined",
+        "basis": "opposite_signs",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ],
+        "identified": true,
+        "adjustment": []
+      }
+    ],
+    "counts": {
+      "entailed": 2,
+      "contradicted": 2,
+      "undetermined": 2,
+      "not_evaluated": 0
+    }
+  },
+  "equivalent_models": {
+    "theory_id": "claim-faithfulness",
+    "computed": true,
+    "reason": null,
+    "constructs": [
+      "x",
+      "m1",
+      "m2",
+      "y"
+    ],
+    "v_structures": [
+      {
+        "a": "m1",
+        "collider": "y",
+        "b": "m2"
+      }
+    ],
+    "edges": [
+      {
+        "from": "x",
+        "to": "m1",
+        "propositions": [
+          "p1"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "m1",
+        "to": "y",
+        "propositions": [
+          "p2"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "x",
+        "to": "m2",
+        "propositions": [
+          "p3"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "m2",
+        "to": "y",
+        "propositions": [
+          "p4"
+        ],
+        "status": "compelled"
+      }
+    ],
+    "n_compelled": 2,
+    "n_reversible": 2
+  },
+  "compile_sem": "# lavaan model generated by theoryforge for claim-faithfulness\n# Written for lavaan::sem(); indicator names are the sanitised measurement entries and must match columns of the data.\n# Measurement model\n# Structural model\nm1 ~ b_x_m1*x\ny ~ b_m1_y*m1\nm2 ~ b_x_m2*x\ny ~ b_m2_y*m2\n# Identification: the paths among the constructs form no loop, and no two constructs are joined by both a path and a covariance (a bow). The path coefficients are therefore generically identified if the measurement model identifies the constructs (Brito & Pearl, 2002). Whether it does has to be checked separately.\n# Signs the theory states, which the fit does not impose\n# b_x_m1 > 0 (p1, increases)\n# b_m1_y > 0 (p2, increases)\n# b_x_m2 > 0 (p3, increases)\n# b_m2_y < 0 (p4, decreases)\n# Effects the claims are about, each the sum over the directed paths from cause to outcome of the product of the labels along the path\n# h1 claims that the effect of x on y is zero.\n# h2 claims that the effect of x on y is not zero.\n# h3 claims that the effect of x on y is positive.\n# ph1 claims that the effect of x on y is positive.\neffect_x_y := b_x_m1*b_m1_y + b_x_m2*b_m2_y\n",
+  "simulate": {
+    "states": [
+      "x",
+      "m1",
+      "m2",
+      "y"
+    ],
+    "dt": 0.1,
+    "steps": 3,
+    "k": 1.0,
+    "damping": 0.5,
+    "init": 1.0,
+    "initial_state": [
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "method": "exact",
+    "ignored": [],
+    "assumed_positive": [],
+    "opposed": [],
+    "trajectory": [
+      [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        0.951229,
+        1.046352,
+        1.046352,
+        0.951229
+      ],
+      [
+        0.904837,
+        1.085805,
+        1.085805,
+        0.904837
+      ],
+      [
+        0.860708,
+        1.11892,
+        1.11892,
+        0.860708
+      ]
+    ]
+  },
+  "preregister": "# Preregistration: Offsetting paths and verdicts that rest on faithfulness\n\n- Theory ID: claim-faithfulness\n- Schema version: 1.1\n- Content hash: sha256:829a983b4f67ec53f4f31c0443ce14ae23c1e812bfab115d4d0c8c1539a76fdf\n- Maturity: developing\n- Derivation references resolve, the causal graph entails every claim a prediction states and contradicts no claim a phenomenon states: no\n\n_Generated by theoryforge from the theory file. It holds the theory and hypotheses sections of a preregistration, with any sampling plan the file records. The study design, the analysis plan, the inference criteria and whatever the sampling plan leaves out must be added before registration. The content hash identifies the file and is not a time stamp._\n\n## Theory\n\n### Constructs\n- x (X): The cause.\n- m1 (M1): The first mediator.\n- m2 (M2): The second mediator.\n- y (Y): The outcome.\n\n### Propositions\n- p1: x increases m1. Mechanism: It does.\n- p2: m1 increases y. Mechanism: It does.\n- p3: x increases m2. Mechanism: It does.\n- p4: m2 decreases y. Mechanism: It does.\n\n### Phenomena to explain\n- ph1: y rises with x.\n  - Claim: the effect of x on y is positive; left open by the causal graph, since routes between them have opposite signs\n\n## Hypotheses\n_The verdicts on the claims assume that the graph of the propositions is the causal structure, with no omitted common cause of two of its constructs, that each directed relation acts in its stated direction whatever the other inputs (as in a linear model or a uniformly monotone one), that paths do not cancel exactly where a verdict says 'unless paths cancel exactly' (faithfulness) and, for feedback loops read by sigma-separation, that each loop settles to a unique equilibrium, also once the intervened construct is held fixed._\n\n1. [directional] The two paths offset. (h1; derives from: p1, p2, p3, p4)\n   - Claim: the effect of x on y is zero; contradicted by the causal graph, unless paths cancel exactly\n   - Adjustment for an observational test: none needed\n   - Test record: untested\n2. [existence] x moves y. (h2; derives from: p1, p2, p3, p4)\n   - Claim: the effect of x on y is not zero; entailed by the causal graph through p1, p2, p3, p4, unless paths cancel exactly\n   - Adjustment for an observational test: none needed\n   - Test record: untested\n3. [directional] x raises y. (h3; derives from: p1, p2)\n   - Claim: the effect of x on y is positive; left open by the causal graph, since routes between them have opposite signs\n   - Adjustment for an observational test: none needed\n   - Test record: untested\n4. [directional] The mediators are unrelated given y. (h4; derives from: p2, p4)\n   - Claim: m1 and m2 are independent given y; contradicted by the causal graph, unless paths cancel exactly\n   - Test record: untested\n5. [directional] The mediators are unrelated given x. (h5; derives from: p1, p3)\n   - Claim: m1 and m2 are independent given x; entailed by the causal graph\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_Each statement follows from the causal graph as encoded, which reads every pair of its constructs that no proposition joins as having no direct effect on each other and no unexplained association. The statements are the theory's commitments only if its authors meant those omissions._\n- `x _||_ y | m1, m2`\n- `m1 _||_ m2 | x`\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.1, risk 0.1\n- h3: severity 0.3, risk 0.4\n- h4: severity 0.3, risk 0.4\n- h5: severity 0.3, risk 0.4\n"
+}
