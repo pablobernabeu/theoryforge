@@ -141,7 +141,10 @@ tf_validate <- function(theory, full = FALSE) {
   # The messages are gathered as a list and joined once at the end, since c()
   # would copy every earlier message at each check.
   found <- list()
-  add <- function(...) found[[length(found) + 1L]] <<- c(...)
+  add <- function(...) {
+    x <- c(...)
+    if (length(x)) found[[length(found) + 1L]] <<- x
+  }
 
   for (req in c("schema_version", "id", "title", "maturity")) {
     add(.tf_required_text(.tf_get(d, req),
@@ -224,19 +227,23 @@ tf_validate <- function(theory, full = FALSE) {
       }, character(1))
       ids[!is.na(ids)]
     }
+    construct_list <- ids_of(cons)
+    proposition_list <- ids_of(props)
+    prediction_list <- ids_of(preds)
+    alternative_list <- ids_of(alts)
     # Each set of ids is asked about once for every reference to it
     # (.tf_string_set()).
-    construct_ids <- .tf_string_set(ids_of(cons))
-    proposition_ids <- .tf_string_set(ids_of(props))
-    prediction_ids <- .tf_string_set(ids_of(preds))
-    alternative_ids <- .tf_string_set(ids_of(alts))
+    construct_ids <- .tf_string_set(construct_list)
+    proposition_ids <- .tf_string_set(proposition_list)
+    prediction_ids <- .tf_string_set(prediction_list)
+    alternative_ids <- .tf_string_set(alternative_list)
     # Each repeat of an id, in order.
-    dups <- function(items, kind) {
-      ids <- ids_of(items)
+    dups <- function(ids, kind) {
       for (i in ids[duplicated(ids)]) add(sprintf("duplicate %s id: %s", kind, i))
     }
-    dups(cons, "construct"); dups(props, "proposition"); dups(preds, "prediction")
-    dups(alts, "alternative"); dups(auxs, "assumption")
+    dups(construct_list, "construct"); dups(proposition_list, "proposition")
+    dups(prediction_list, "prediction"); dups(alternative_list, "alternative")
+    dups(ids_of(auxs), "assumption")
     for (i in seq_along(props)) {
       if (.tf_ne_str(.tf_get(props[[i]], "from"))) {
         frm <- .tf_str(props[[i]], "from")
@@ -431,7 +438,7 @@ tf_validate <- function(theory, full = FALSE) {
     # 15: the claims of predictions and phenomena, and the propositions of
     # rival accounts, which tf_entailments() and tf_discriminate() read.
     phens <- .tf_list(d, "phenomena")
-    dups(phens, "phenomenon")
+    dups(ids_of(phens), "phenomenon")
     for (i in seq_along(phens)) {
       prefix <- sprintf("phenomenon[%d]", i - 1L)
       add(.tf_required_fields(phens[[i]], prefix, c("id", "statement")),
@@ -562,34 +569,51 @@ keys(item$properties$propositions$items)))
 }
 
 # -- validation helpers (API_SPEC.md section 2) ------------------------------
-
-# A set of strings that the validator asks about once for every reference to
-# it. %in% would hash the whole set at each question, so the set is an
-# environment whose variable names spell the strings' UTF-8 bytes, and a
-# string is a member when match() would find it. A string too long for a
-# variable name is kept aside and looked up with %in%.
-.tf_string_set <- function(x) {
-  key <- .tf_set_key(x)
-  env <- new.env(hash = TRUE, parent = emptyenv(), size = max(29L, length(x)))
-  for (k in key[!is.na(key)]) assign(k, TRUE, envir = env)
-  list(env = env, long = x[is.na(key)])
-}
-
-.tf_set_key <- function(x) {
-  vapply(enc2utf8(as.character(x)), function(s) {
-    if (nchar(s, type = "bytes") > 4000L) return(NA_character_)
-    paste(c("k", as.character(charToRaw(s))), collapse = "")
-  }, character(1), USE.NAMES = FALSE)
-}
-
-.tf_in_set <- function(x, set) {
-  key <- .tf_set_key(x)
-  if (is.na(key)) x %in% set$long else exists(key, envir = set$env, inherits = FALSE)
-}
 #
 # Each returns the messages for one value, so that tf_validate() lists them in
 # the contract's order. The Python twin's core.py holds the same helpers
 # (_required_text and the rest) with the same messages.
+
+# A set of strings that the validator asks about once for every reference to
+# it, such as the construct ids. A small set is kept as it is and searched with
+# %in%. %in% hashes the whole set at each question, though, so a larger set is
+# an environment whose variable names spell the strings' UTF-8 bytes, which
+# answers at once. A string is a member when match() would find it, so a
+# string whose UTF-8 bytes do not say how match() compares it is kept aside and
+# searched with %in%: one marked as bytes, which match() compares only with
+# other bytes, one in the native encoding that is not ASCII outside a UTF-8
+# locale, whose bytes enc2utf8() would rewrite, and one too long for a
+# variable name.
+.tf_SET_SMALL <- 200L
+
+.tf_string_set <- function(x) {
+  if (length(x) <= .tf_SET_SMALL) return(list(env = NULL, aside = x))
+  key <- .tf_set_key(x)
+  env <- new.env(hash = TRUE, parent = emptyenv(), size = length(x))
+  for (k in key[!is.na(key)]) assign(k, TRUE, envir = env)
+  list(env = env, aside = x[is.na(key)])
+}
+
+.tf_set_key <- function(x) {
+  x <- as.character(x)
+  enc <- Encoding(x)
+  utf8_locale <- isTRUE(l10n_info()[["UTF-8"]])
+  vapply(seq_along(x), function(i) {
+    bytes <- charToRaw(x[[i]])
+    if (enc[[i]] == "bytes" || (enc[[i]] == "unknown" && !utf8_locale && any(bytes > as.raw(0x7F)))) {
+      return(NA_character_)
+    }
+    bytes <- charToRaw(enc2utf8(x[[i]]))
+    if (length(bytes) > 4000L) return(NA_character_)
+    paste(c("k", as.character(bytes)), collapse = "")
+  }, character(1))
+}
+
+.tf_in_set <- function(x, set) {
+  if (is.null(set$env)) return(x %in% set$aside)
+  key <- .tf_set_key(x)
+  if (is.na(key)) x %in% set$aside else exists(key, envir = set$env, inherits = FALSE)
+}
 
 # The message for a present value that should be a string. YAML reads an
 # unquoted 1.0, 2026 or Yes as a number or a logical, so for those the message

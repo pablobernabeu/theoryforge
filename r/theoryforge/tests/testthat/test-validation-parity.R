@@ -603,3 +603,19 @@ test_that("full validation of many constructs lists every repeat in order", {
                    c(rep("duplicate construct id: a", 4999L),
                      "proposition[4999] to 'c5000' is not a known construct"))
 })
+
+test_that("full validation compares an id marked as bytes as match() does", {
+  # match() compares a string marked as bytes only with other such strings, so
+  # the UTF-8 spelling of the same bytes is not a known construct. With more
+  # than 200 constructs, the ids are kept in an environment, which sets such
+  # an id aside for %in%.
+  b <- "\u00e9"
+  Encoding(b) <- "bytes"
+  pad <- lapply(1:300, function(i) list(id = paste0("c", i), label = "C", definition = "D"))
+  t <- list(schema_version = "1.1", id = "v", title = "V", maturity = "draft",
+            constructs = c(list(list(id = b, label = "A", definition = "D")), pad),
+            propositions = list(list(id = "p1", from = "\u00e9", to = "c1", relation = "causes"),
+                                list(id = "p2", from = b, to = "c1", relation = "causes")))
+  expect_identical(theoryforge:::.tf_validation_problems(t, full = TRUE),
+                   "proposition[0] from '\u00e9' is not a known construct")
+})
