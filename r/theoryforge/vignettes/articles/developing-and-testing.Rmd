@@ -61,8 +61,9 @@ for an amendment that meets neither rule. A new prediction adds no content when
 it derives from no proposition or only articulates what the prior version
 already held, and a prediction under a new id with the same statement and type
 is reported as `renamed`. An assumption added for an anomaly is ad hoc unless a
-new prediction it protects, other than that anomaly, is corroborated. The
-appraisal reads no dates, so deciding which version is the prior is the
+new prediction it protects, other than that anomaly, is corroborated. An
+assumption rewritten under its id is appraised as a new one is, and one moved
+unchanged to another id is not appraised. The appraisal reads no dates, so deciding which version is the prior is the
 caller's responsibility. `?tf_appraise_amendment` lists the other fields of the
 result, and the article 'Methodological foundations' gives the full rule.
 

@@ -495,6 +495,25 @@ test_that("weakening an untested prediction loses content", {
     implications_gained = c("c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3")))
 })
 
+test_that("weakening a corroborated prediction loses content", {
+  # As above, with h2 corroborated in the prior. Corroborated content is
+  # unrefuted content, so weakening it loses content, as dropping it does.
+  prior <- dv_add(dv_edge("amend-prior"), "test_outcomes",
+                  list(prediction_id = "h2", passed = TRUE))
+  new <- dv_edge("amend-unresolved")
+  new$predictions[[3]]$derives_from <- list("p3")
+  gained <- c("c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3")
+  expect_identical(tf_appraise_amendment(new, prior), dv_record(
+    verdict = "progressive", new_predictions = "h3", corroborated_new = "h3",
+    theoretically_progressive = TRUE, empirically_progressive = TRUE,
+    implications_gained = gained))
+  new$predictions[[2]]$type <- "existence"
+  expect_identical(tf_appraise_amendment(new, prior), dv_record(
+    new_predictions = "h3", corroborated_new = "h3", content_lost = "h2",
+    theoretically_progressive = TRUE, empirically_progressive = TRUE,
+    revised = list(list(id = "h2", change = "weakened")), implications_gained = gained))
+})
+
 test_that("a new prediction citing a missing proposition is unresolved", {
   # amend-unresolved cites p33 for p3. Citing p3 makes the amendment progressive.
   prior <- dv_edge("amend-prior")
@@ -532,6 +551,73 @@ test_that("an unrefuted implication lost blocks a progressive verdict", {
       theoretically_progressive = TRUE, empirically_progressive = TRUE,
       implications_lost = "c1 _||_ c3 | c2"))
   }
+})
+
+test_that("an assumption rewritten under its id is appraised", {
+  # amend-revised-assumption rewrites the core assumption a1 of the prior for
+  # the refuted h1.
+  prior <- dv_edge("amend-prior")
+  new <- dv_edge("amend-revised-assumption")
+  rescue <- list(id = "a1", added_for = "h1", class = "ad_hoc1", independent = list(),
+                 added_for_inferred = FALSE)
+  expect_identical(tf_appraise_amendment(new, prior), dv_record(
+    new_predictions = "h3", corroborated_new = "h3", ad_hoc_assumptions = "a1",
+    assumptions = list(rescue), theoretically_progressive = TRUE,
+    empirically_progressive = TRUE,
+    implications_gained = c("c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3")))
+  # The same rewrite under a new id is appraised the same way.
+  moved <- new
+  moved$auxiliary_assumptions[[1]]$id <- "a2"
+  moved_rescue <- rescue
+  moved_rescue$id <- "a2"
+  expect_identical(tf_appraise_amendment(moved, prior)$assumptions, list(moved_rescue))
+  # Without added_for, the refuted h1 it protects is taken as its anomaly.
+  inferred <- new
+  inferred$auxiliary_assumptions[[1]]["added_for"] <- list(NULL)
+  inferred_rescue <- rescue
+  inferred_rescue$added_for_inferred <- TRUE
+  expect_identical(tf_appraise_amendment(inferred, prior)$assumptions, list(inferred_rescue))
+  # A new prediction that the rewritten assumption protects needs it, so it
+  # articulates nothing, though it derives from p1 alone.
+  needs <- dv_add(new, "predictions", list(
+    id = "h4", statement = "c2 rises with c1 in samples of students.", type = "directional",
+    derives_from = list("p1")))
+  needs$auxiliary_assumptions[[1]]$protects <- list("h1", "h4")
+  ap <- tf_appraise_amendment(needs, prior)
+  expect_identical(ap$articulated, character(0))
+  expect_identical(ap$ad_hoc_assumptions, "a1")
+  expect_identical(ap$assumptions[[1]]$independent, list(list(id = "h4", status = "untested")))
+  # Whitespace, added_for and protects alone do not revise an assumption.
+  kept <- needs
+  kept$auxiliary_assumptions[[1]]$statement <- "  The c2 scale measures\n c2 in every sample. "
+  ap <- tf_appraise_amendment(kept, prior)
+  expect_identical(ap$articulated, "h4")
+  expect_identical(ap$assumptions, list())
+})
+
+test_that("an assumption moved to a new id is not appraised", {
+  # amend-renamed-assumption moves the core assumption a1, unchanged, to a_scale.
+  prior <- dv_edge("amend-prior")
+  new <- dv_edge("amend-renamed-assumption")
+  expect_identical(tf_appraise_amendment(new, prior), dv_record(
+    verdict = "progressive", new_predictions = "h3", corroborated_new = "h3",
+    theoretically_progressive = TRUE, empirically_progressive = TRUE,
+    implications_gained = c("c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3")))
+  # While the new version keeps a1, a copy under another id is new, and so is a
+  # second copy, since each prior assumption is taken once.
+  both <- new
+  both$auxiliary_assumptions <- c(prior$auxiliary_assumptions, both$auxiliary_assumptions)
+  expect_identical(tf_appraise_amendment(both, prior)$ad_hoc_assumptions, "a_scale")
+  copy <- new$auxiliary_assumptions[[1]]
+  copy$id <- "a_copy"
+  twice <- dv_add(new, "auxiliary_assumptions", copy)
+  expect_identical(tf_appraise_amendment(twice, prior)$ad_hoc_assumptions, "a_copy")
+  # A blank statement matches nothing.
+  blank_prior <- prior
+  blank_prior$auxiliary_assumptions[[1]]$statement <- " "
+  blank <- new
+  blank$auxiliary_assumptions[[1]]$statement <- ""
+  expect_identical(tf_appraise_amendment(blank, blank_prior)$ad_hoc_assumptions, "a_scale")
 })
 
 test_that("a version whose graph is refused is not compared", {

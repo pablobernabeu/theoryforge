@@ -159,6 +159,46 @@ NULL
   any(vapply(recs, function(r) (r$a == a && r$b == b) || (r$a == b && r$b == a), logical(1)))
 }
 
+# The assumptions of `new` that the appraisal reads, in file order. An
+# assumption kept under a prior id is read when its statement, with whitespace
+# runs squished, differs from that of the first prior assumption with that id.
+# An assumption under an id the prior lacks is read unless its statement is not
+# blank and matches that of a prior assumption whose id the new version no
+# longer holds, which it then takes, so that a renamed assumption is not new.
+# Its added_for and protects alone do not decide. Python's
+# _appraised_assumptions holds the same rule.
+.tf_appraised_assumptions <- function(new, prior) {
+  prior_aux <- .tf_list(prior, "auxiliary_assumptions")
+  new_aux <- .tf_list(new, "auxiliary_assumptions")
+  prior_ids <- unname(vapply(prior_aux, function(a) .tf_str(a, "id"), character(1)))
+  prior_statements <- unname(vapply(prior_aux, function(a) .tf_squish(.tf_str(a, "statement")),
+                                    character(1)))
+  new_ids <- unname(vapply(new_aux, function(a) .tf_str(a, "id"), character(1)))
+  taken <- rep(FALSE, length(prior_aux))
+  read <- list()
+  for (a in new_aux) {
+    aid <- .tf_str(a, "id")
+    st <- .tf_squish(.tf_str(a, "statement"))
+    k <- match(aid, prior_ids)
+    if (!is.na(k)) {
+      if (st != prior_statements[[k]]) read[[length(read) + 1L]] <- a
+      next
+    }
+    renamed <- FALSE
+    if (nzchar(st)) {
+      for (j in seq_along(prior_aux)) {
+        if (!taken[[j]] && !(prior_ids[[j]] %in% new_ids) && prior_statements[[j]] == st) {
+          taken[[j]] <- TRUE
+          renamed <- TRUE
+          break
+        }
+      }
+    }
+    if (!renamed) read[[length(read) + 1L]] <- a
+  }
+  read
+}
+
 #' Appraise an amendment as progressive, degenerating or neutral
 #'
 #' Compares an amended theory \code{new} with its \code{prior} version by
@@ -166,16 +206,21 @@ NULL
 #' evidence behind it.
 #'
 #' A new prediction whose statement and type match a prediction the amendment
-#' dropped is that prediction renamed. A new prediction articulates old
-#' content when it derives only from propositions the prior already held and
-#' needs no new assumption, or when the prior's causal graph already entails
-#' its claim. It is underived when it cites no proposition and unresolved when
-#' it cites an id that names no proposition of the new version. A prediction
-#' is corroborated when at least one test outcome passes it and none fails it.
-#' An assumption added for an anomaly is ad hoc unless a prediction it protects
-#' that is new in this version, other than the anomaly, is corroborated. Its
-#' \code{added_for} names the anomaly. When that is empty, the first prediction
-#' it protects that was refuted or mixed in the prior is taken as the anomaly.
+#' dropped is that prediction renamed. Assumptions are compared by statement
+#' too. An assumption kept under its id is revised when its statement changed,
+#' and one under a new id whose statement matches that of an assumption the
+#' amendment dropped is that assumption renamed, so only a new or revised
+#' assumption is appraised. A new prediction articulates old content when it
+#' derives only from propositions the prior already held and needs no new or
+#' revised assumption, or when the prior's causal graph already entails its
+#' claim. It is underived when it cites no proposition and unresolved when it
+#' cites an id that names no proposition of the new version. A prediction is
+#' corroborated when at least one test outcome passes it and none fails it. A
+#' new or revised assumption added for an anomaly is ad hoc unless a
+#' prediction it protects that is new in this version, other than the anomaly,
+#' is corroborated. Its \code{added_for} names the anomaly. When that is empty,
+#' the first prediction it protects that was refuted or mixed in the prior is
+#' taken as the anomaly.
 #'
 #' A prediction kept from the prior, under its id or renamed, is revised when
 #' its statement, type, bounds or claim changed. Its content is weaker when its
@@ -193,13 +238,13 @@ NULL
 #' \code{"progressive"} when it is both, no assumption is ad hoc, no
 #' corroborated prediction is dropped, no content is lost and no prediction
 #' refuted or mixed in the prior is weakened. Content is lost when an untested
-#' prediction is dropped or weakened or an implication is lost without being
-#' refuted. The rule follows Lakatos (1970, p. 118), who considers series in
-#' which 'each theory \[has\] at least as much content as the unrefuted content
-#' of its predecessor'. The verdict is \code{"degenerating"} when an
-#' assumption is ad hoc or a prediction refuted or mixed in the prior is
-#' weakened, and no prediction adds corroborated content. It is
-#' \code{"neutral"} otherwise. Lakatos has only the first two.
+#' prediction is dropped, an untested or corroborated prediction is weakened or
+#' an implication is lost without being refuted. The rule follows Lakatos
+#' (1970, p. 118), who considers series in which 'each theory \[has\] at least
+#' as much content as the unrefuted content of its predecessor'. The verdict is
+#' \code{"degenerating"} when an assumption is ad hoc or a prediction refuted
+#' or mixed in the prior is weakened, and no prediction adds corroborated
+#' content. It is \code{"neutral"} otherwise. Lakatos has only the first two.
 #' \code{"neutral"} is theoryforge's label for an amendment that meets neither
 #' rule, and the vectors returned tell its cases apart. Only
 #' \code{corroborated_new_registered} reads a test outcome's
@@ -221,16 +266,17 @@ NULL
 #'   \code{dropped}, \code{dropped_corroborated}, \code{content_lost},
 #'   \code{new_anomalies}, \code{weakened_refuted} and \code{unresolved} are
 #'   ascending-sorted character vectors. \code{content_lost} holds the untested
-#'   predictions the amendment drops, under their prior ids, and those it
-#'   weakens, under their new ids. \code{weakened_refuted} holds the
-#'   predictions refuted or mixed in the prior that it weakens.
-#'   \code{renamed} is a list of \code{list(prior, new)} pairs sorted by
-#'   \code{new}, and \code{revised} a list of \code{list(id, change)} records,
-#'   one per revised prediction sorted by its new id, where \code{change} is
-#'   \code{"weakened"}, \code{"strengthened"}, \code{"reworded"} or
-#'   \code{"changed"}. \code{assumptions} holds one
+#'   predictions the amendment drops, under their prior ids, and the untested
+#'   or corroborated predictions it weakens, under their new ids.
+#'   \code{weakened_refuted} holds the predictions refuted or mixed in the
+#'   prior that it weakens. \code{renamed} is a list of
+#'   \code{list(prior, new)} pairs sorted by \code{new}, and \code{revised} a
+#'   list of \code{list(id, change)} records, one per revised prediction sorted
+#'   by its new id, where \code{change} is \code{"weakened"},
+#'   \code{"strengthened"}, \code{"reworded"} or \code{"changed"}.
+#'   \code{assumptions} holds one
 #'   \code{list(id, added_for, class, independent, added_for_inferred)} per new
-#'   assumption added for an anomaly, in file order.
+#'   or revised assumption added for an anomaly, in file order.
 #'   \code{added_for_inferred} is \code{TRUE} when \code{added_for} was taken
 #'   from \code{protects}. \code{independent} lists, each as
 #'   \code{list(id, status)} and in the order of \code{protects}, the distinct
@@ -336,9 +382,8 @@ tf_appraise_amendment <- function(new, prior) {
   # under any id, so renaming a proposition adds nothing either. A claim the
   # prior's causal graph entails is old content too, whatever the prediction
   # cites.
-  prior_aux_ids <- ids_of(.tf_list(prior, "auxiliary_assumptions"))
-  new_aux <- Filter(function(a) !(.tf_str(a, "id") %in% prior_aux_ids),
-                    .tf_list(new, "auxiliary_assumptions"))
+  # The new and revised assumptions, the only ones appraised.
+  new_aux <- .tf_appraised_assumptions(new, prior)
   protected <- as.character(unlist(lapply(new_aux, function(a) .tf_str_list(.tf_get(a, "protects")))))
   content <- function(p) {
     c(.tf_str(p, "from"), .tf_str(p, "to"), .tf_enum_str(p, "relation", .tf_RELATION))
@@ -381,8 +426,8 @@ tf_appraise_amendment <- function(new, prior) {
   new_anomalies <- now[.tf_status_in(now, new_tos, failed) &
                          .tf_status_in(was, prior_tos, c("corroborated", "untested"))]
 
-  # A weakened prediction loses content when it was untested, and retreats from
-  # a refutation when it was refuted or mixed.
+  # A weakened prediction loses content when it was unrefuted (untested or
+  # corroborated), and retreats from a refutation when it was refuted or mixed.
   revised <- list()
   weakened_refuted <- character(0)
   for (r in retained) {
@@ -391,7 +436,7 @@ tf_appraise_amendment <- function(new, prior) {
     revised[[length(revised) + 1L]] <- list(id = r$now, change = change)
     if (change == "weakened") {
       status <- .tf_prediction_status(r$was, prior_tos)
-      if (status == "untested") {
+      if (status %in% c("untested", "corroborated")) {
         content_lost <- c(content_lost, r$now)
       } else if (status %in% failed) {
         weakened_refuted <- c(weakened_refuted, r$now)

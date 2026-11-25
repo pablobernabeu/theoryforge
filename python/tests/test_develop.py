@@ -447,6 +447,23 @@ def test_weakening_an_untested_prediction_loses_content(fixtures_dir):
         implications_gained=["c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3"])
 
 
+def test_weakening_a_corroborated_prediction_loses_content(fixtures_dir):
+    # As above, with h2 corroborated in the prior. Corroborated content is
+    # unrefuted content, so weakening it loses content, as dropping it does.
+    prior = _edge(fixtures_dir, "amend-prior")
+    prior["test_outcomes"].append({"prediction_id": "h2", "passed": True})
+    new = _edge(fixtures_dir, "amend-unresolved")
+    new["predictions"][2]["derives_from"] = ["p3"]
+    gained = ["c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3"]
+    record = _record(new_predictions=["h3"], corroborated_new=["h3"],
+                     theoretically_progressive=True, empirically_progressive=True,
+                     implications_gained=gained)
+    assert tf.appraise_amendment(new, prior) == {**record, "verdict": "progressive"}
+    new["predictions"][1]["type"] = "existence"
+    assert tf.appraise_amendment(new, prior) == {
+        **record, "content_lost": ["h2"], "revised": [{"id": "h2", "change": "weakened"}]}
+
+
 def test_a_new_prediction_citing_a_missing_proposition_is_unresolved(fixtures_dir):
     # amend-unresolved cites p33 for p3. Citing p3 makes the amendment progressive.
     prior = _edge(fixtures_dir, "amend-prior")
@@ -482,6 +499,68 @@ def test_an_unrefuted_implication_lost_blocks_a_progressive_verdict(fixtures_dir
         new["predictions"].append(copy.deepcopy(refuted["predictions"][-1]))
         assert tf.appraise_amendment(new, refuted) == {**record, "verdict": "progressive"}
         new["predictions"].pop()
+
+
+def test_an_assumption_rewritten_under_its_id_is_appraised(fixtures_dir):
+    # amend-revised-assumption rewrites the core assumption a1 of the prior
+    # for the refuted h1.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-revised-assumption")
+    record = _record(new_predictions=["h3"], corroborated_new=["h3"],
+                     theoretically_progressive=True, empirically_progressive=True,
+                     implications_gained=["c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3"])
+    rescue = {"id": "a1", "added_for": "h1", "class": "ad_hoc1", "independent": [],
+              "added_for_inferred": False}
+    assert tf.appraise_amendment(new, prior) == {
+        **record, "ad_hoc_assumptions": ["a1"], "assumptions": [rescue]}
+    # The same rewrite under a new id is appraised the same way.
+    moved = copy.deepcopy(new)
+    moved["auxiliary_assumptions"][0]["id"] = "a2"
+    assert tf.appraise_amendment(moved, prior)["assumptions"] == [{**rescue, "id": "a2"}]
+    # Without added_for, the refuted h1 it protects is taken as its anomaly.
+    inferred = copy.deepcopy(new)
+    inferred["auxiliary_assumptions"][0]["added_for"] = None
+    assert tf.appraise_amendment(inferred, prior)["assumptions"] == [
+        {**rescue, "added_for_inferred": True}]
+    # A new prediction that the rewritten assumption protects needs it, so it
+    # articulates nothing, though it derives from p1 alone.
+    h4 = {"id": "h4", "statement": "c2 rises with c1 in samples of students.",
+          "type": "directional", "derives_from": ["p1"]}
+    needs = copy.deepcopy(new)
+    needs["predictions"].append(h4)
+    needs["auxiliary_assumptions"][0]["protects"] = ["h1", "h4"]
+    result = tf.appraise_amendment(needs, prior)
+    assert (result["articulated"], result["ad_hoc_assumptions"]) == ([], ["a1"])
+    assert result["assumptions"][0]["independent"] == [{"id": "h4", "status": "untested"}]
+    # Whitespace, added_for and protects alone do not revise an assumption.
+    kept = copy.deepcopy(needs)
+    kept["auxiliary_assumptions"][0]["statement"] = "  The c2 scale measures\n c2 in every sample. "
+    result = tf.appraise_amendment(kept, prior)
+    assert (result["articulated"], result["assumptions"]) == (["h4"], [])
+
+
+def test_an_assumption_moved_to_a_new_id_is_not_appraised(fixtures_dir):
+    # amend-renamed-assumption moves the core assumption a1, unchanged, to a_scale.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-renamed-assumption")
+    assert tf.appraise_amendment(new, prior) == _record(
+        verdict="progressive", new_predictions=["h3"], corroborated_new=["h3"],
+        theoretically_progressive=True, empirically_progressive=True,
+        implications_gained=["c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3"])
+    # While the new version keeps a1, a copy under another id is new, and so
+    # is a second copy, since each prior assumption is taken once.
+    both = copy.deepcopy(new)
+    both["auxiliary_assumptions"].insert(0, copy.deepcopy(prior["auxiliary_assumptions"][0]))
+    assert tf.appraise_amendment(both, prior)["ad_hoc_assumptions"] == ["a_scale"]
+    twice = copy.deepcopy(new)
+    twice["auxiliary_assumptions"].append({**new["auxiliary_assumptions"][0], "id": "a_copy"})
+    assert tf.appraise_amendment(twice, prior)["ad_hoc_assumptions"] == ["a_copy"]
+    # A blank statement matches nothing.
+    blank_prior = copy.deepcopy(prior)
+    blank_prior["auxiliary_assumptions"][0]["statement"] = " "
+    blank = copy.deepcopy(new)
+    blank["auxiliary_assumptions"][0]["statement"] = ""
+    assert tf.appraise_amendment(blank, blank_prior)["ad_hoc_assumptions"] == ["a_scale"]
 
 
 def test_a_version_whose_graph_is_refused_is_not_compared(fixtures_dir):

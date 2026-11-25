@@ -220,8 +220,9 @@ combination is `neutral`, theoryforge's label for an amendment that meets neithe
 A new prediction adds no content when it derives from no proposition or only articulates
 what the prior version already held, and a prediction under a new id with the same
 statement and type is reported as `renamed`. An assumption added for an anomaly is ad hoc
-unless a new prediction it protects, other than that anomaly, is corroborated. The
-appraisal reads no dates, so deciding which version is the prior is the caller's
+unless a new prediction it protects, other than that anomaly, is corroborated. An
+assumption rewritten under its id is appraised as a new one is, and one moved unchanged to
+another id is not appraised. The appraisal reads no dates, so deciding which version is the prior is the caller's
 responsibility. The returned dictionary holds further fields, listed in the
 [API reference](api.md#theoryforge.appraise_amendment), and
 [Methodological foundations](methodology.md) gives the full rule.
