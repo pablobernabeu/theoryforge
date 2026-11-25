@@ -4,14 +4,15 @@ This folder holds the validity report on theoryforge, the data it reads and
 the protocol of the studies that would test what the report leaves open. The
 report rests on an audit of the packages and apps at commit f72ce4c, whose code
 is the same as that of b5ebf84, the release candidate before the corrections
-made for version 0.8.0. Eight lenses examined the code and documentation: the
-claims register, causal verification, statistics and simulation, a red team of
-the checklist score, metascience and related tools, communication and apps,
-philosophy of science and measurement. An independent second reader rechecked
-each lens, and three encoders encoded three verbal theories in a pilot. Every
-auditor, second reader and encoder was an AI agent. The folder lies outside
-both packages: neither the R build, the Python distributions nor any CI job
-reads it.
+made for version 0.8.0. Eight lenses, each an auditor examining the package
+from one point of view, examined the code and documentation: the claims
+register, causal verification, statistics and simulation, a red team of the
+checklist score, philosophy of science, measurement, metascience and related
+tools, and communication and apps. An independent second reader rechecked each
+lens, and three encoders encoded three verbal theories in a pilot. Every
+auditor, second reader and encoder was an AI agent, and so was the drafter of
+the report and of the status register. The folder lies outside both packages:
+no R build, Python distribution or CI job reads it.
 
 The audit's own files, the scripts, inputs and outputs of each lens, of each
 second reader and of the pilot, are kept outside the repository. Every path
@@ -20,8 +21,9 @@ into them, here and in the register, is relative to that audit directory.
 ## The report and the protocol
 
 - `report.qmd`: the validity report. It reads every number from `data/`,
-  reruns `demonstrations/run.R` against `r/theoryforge` in the working tree
-  and says whether that run equals `data/demonstrations-0.8.0.csv`.
+  reruns `demonstrations/run.R` against `r/theoryforge` in the working tree,
+  says whether that run equals `data/demonstrations-0.8.0.csv` and prints a
+  hash of the package source it read.
 - `protocol.qmd`: the protocol of three preregistered studies with human
   participants (encoding reliability, agreement with expert judgement and
   known groups, and a reader study), with sample sizes computed from stated
@@ -79,26 +81,35 @@ Crossref or PubMed checks name it).
 behaviour or rule is corrected), `reported` (the problem is reported beside
 the result, which is unchanged), `reworded` (the outputs and documents say
 what is computed, the behaviour is unchanged), `unchanged`, `deferred`
-(unchanged, with the remedy listed for 0.9.0), `withdrawn` or `not
-applicable` (a verdict of sound, or sound with caveats, whose recommendation
-is to keep). `basis` names the file or the rerun on 0.8.0 that shows it.
+(unchanged, the remedy being one of the expansions the maintainer plans for
+0.9.0, for which no plan is published), `withdrawn` or `not applicable` (a
+verdict of sound whose recommendation is to keep). A verdict of sound with
+caveats is `reworded` where 0.8.0 states its caveat in more places, and
+`unchanged` otherwise. `basis` names the file or the rerun on 0.8.0 that shows
+it and, after 'Remaining:', what is left of a finding classed as fixed.
 
 `data/verification.csv` has one row per independent check of the deductive
 and numerical core by the causal-verification and statistics-and-simulation
 lenses and their second readers: `component`, `quantity` (which names the
-unit of the cases), `comparator`, `cases`, `agreements` and `discrepancies`
-(blank where the check measures a rate or the size of an approximation),
-`note` and `evidence_path`.
+unit of the cases), `comparator`, `kind`, `cases`, `agreements` and
+`discrepancies` (blank where the check measures a rate or the size of an
+approximation), `note` and `evidence_path`. `kind` is `package` where an output
+of the package is compared with independent software, the auditors' own
+implementation of a definition or an analytic or published value, `parity`
+where the R twin is compared with the Python twin, and `other` where the check
+concerns a sentence of the documentation, a design argument, a reference
+implementation or the package against itself.
 
-`scripts/build_register.py` writes the three files from the two results of
-the audit (the formal and the conceptual group, each a JSON file holding the
-lenses' results and the second readers' checks). The judgements it needs, which
-check covers which finding or verdict, which missed items state a defect and
-where the evidence lies when the text does not name it, are in
-`scripts/mapping.yaml`, each made by reading the lens and the reader side by
-side. To rebuild, with PyYAML installed:
+`scripts/build_register.py` writes `findings.csv`, `verdicts.csv` and
+`references.csv` from the two results of the audit (the formal and the
+conceptual group, each a JSON file holding the lenses' results and the second
+readers' checks). The judgements it needs, which check covers which finding or
+verdict, which missed items state a defect and where the evidence lies when the
+text does not name it, are in `scripts/mapping.yaml`, each made by reading the
+lens and the reader side by side. To rebuild, with PyYAML installed:
 
-    python3 validity/scripts/build_register.py FORMAL.json CONCEPTUAL.json --audit AUDIT_DIR
+    python3 validity/scripts/build_register.py FORMAL.json CONCEPTUAL.json \
+      --audit AUDIT_DIR
 
 ## The demonstrations
 
@@ -110,7 +121,7 @@ demonstrations. The first line of each says where it came from.
   measurement lens's hollow theory, the one-letter 'x' theory and the
   blue-socks theory, as written and with every test failed.
 - `strong/`: four theories encoded from their sources (light deflection,
-  prospect theory, Hick's law, Michaelis-Menten kinetics), each as first
+  prospect theory, Hick's law, Michaelis–Menten kinetics), each as first
   encoded and as re-encoded with every field the sources allow filled in.
 - `amendments/`: a sign reversal and a weakened sign, both against one prior,
   and an amendment whose only addition is an assumption listing an old
@@ -148,8 +159,9 @@ made.
   intraclass correlation between theories, item status agreement and the count
   of differences between R and Python.
 - `checklist_by_encoder.csv`: score, range, coverage, gate and every item's
-  status and score for the nine files; `checklist_item_spread.csv` the three
-  encoders' values of each item and the points they move.
+  status and score for the nine files.
+- `checklist_item_spread.csv`: the three encoders' values of each item and the
+  points they move.
 - `construct_agreement.csv`, `edge_agreement.csv` and `claim_agreement.csv`:
   agreement between encoders on constructs, edges and stated claims.
 - `units_agreement.csv`: how many statements of each source became the same
@@ -167,7 +179,8 @@ made.
 - `perturbations.csv`: one-change-at-a-time edits of an encoding and what each
   changed.
 - `linear_check.csv` and `linear_check_pairs.csv`: derived signs against
-  sampled linear models, and the pairs left open that every stable draw fixed.
+  sampled linear models, and the pairs left open that every sampled stable
+  draw fixed.
 - `implications_independent_check.csv`: the implied independencies against a
   separation reader that does not import theoryforge.
 - `parity_r_python.csv`: differences between the R and Python results.
