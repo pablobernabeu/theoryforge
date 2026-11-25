@@ -547,9 +547,10 @@ def test_the_separation_search_agrees_with_the_oracle_for_every_conditioning_set
         k = rng.randint(3, 6)
         perm = list(range(k))
         rng.shuffle(perm)
+        p_assoc = 0.2 if rng.random() < 0.6 else 0
         directed = [(perm[i], perm[j]) for i in range(k) for j in range(i + 1, k) if rng.random() < 0.4]
         bidirected = [(perm[i], perm[j]) for i in range(k) for j in range(i + 1, k)
-                      if rng.random() < (0.2 if rng.random() < 0.6 else 0)]
+                      if rng.random() < p_assoc]
         d = [[(u, v) in directed for v in range(k)] for u in range(k)]
         b = [[(u, v) in bidirected or (v, u) in bidirected for v in range(k)] for u in range(k)]
         g = MixedGraph(d, b)
