@@ -282,6 +282,13 @@ def test_a_failed_later_page_says_how_many_records_came_before_it(monkeypatch, n
     assert str(exc.value).endswith(" (after 1 record was fetched)")
 
 
+class _CutShort(io.BytesIO):
+    """The body of an error reply whose connection closes before the body ends."""
+
+    def read(self, *args):
+        raise http.client.IncompleteRead(b"x" * 19, 100)
+
+
 @pytest.mark.parametrize("failure, kind, message", [
     ((200, {"meta": {}}), ValueError,
      "OpenAlex response has no results list (after 2 records were fetched)"),
@@ -297,6 +304,10 @@ def test_a_failed_later_page_says_how_many_records_came_before_it(monkeypatch, n
      "<urlopen error IncompleteRead(5 bytes read) (after 2 records were fetched)>"),
     ((200, {"meta": {}, "results": [None]}), ValueError,
      "OpenAlex response has a work that is not an object (after 2 records were fetched)"),
+    # An error reply cut short while its body is read.
+    (urllib.error.HTTPError("https://api.openalex.org/works", 500, "Reason", {}, _CutShort()),
+     urllib.error.URLError,
+     "<urlopen error IncompleteRead(19 bytes read, 100 more expected) (after 2 records were fetched)>"),
 ])
 def test_every_failure_of_a_later_page_keeps_its_class(monkeypatch, no_env_key,
                                                          failure, kind, message):

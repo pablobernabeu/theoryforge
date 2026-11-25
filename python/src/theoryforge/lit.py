@@ -845,7 +845,13 @@ def _openalex_page(params: dict, headers: dict, key: str) -> dict:
         with _urlopen(request, timeout=_NET_TIMEOUT) as resp:
             body = resp.read()
     except urllib.error.HTTPError as err:
-        body = err.read() if err.fp is not None else b""
+        try:
+            body = err.read() if err.fp is not None else b""
+        except TimeoutError:
+            raise
+        except (OSError, http.client.HTTPException) as read_err:
+            # The error reply was cut short or its connection reset.
+            raise urllib.error.URLError(read_err) from read_err
         # A server that repeats the key in an error must not carry it into the message.
         if key:
             body = body.replace(key.encode("ascii"), b"<api_key>")
@@ -990,19 +996,19 @@ def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None,
     character outside visible ASCII.
 
     When OpenAlex refuses a request, as it does with HTTP 429 once the budget is
-    spent and with HTTP 401 when a later cursor page is asked for without a
-    key, ``theoryforge.lit.OpenAlexHTTPError`` (a ``urllib.error.HTTPError``)
-    is raised with the status and OpenAlex's own message, and the request is not
+    spent and with HTTP 401 when a later cursor page is asked for without a key,
+    ``theoryforge.lit.OpenAlexHTTPError`` (a ``urllib.error.HTTPError``) is
+    raised with the status and OpenAlex's own message, and the request is not
     retried. A response without a ``results`` list, or with a work that is not
     an object, raises ValueError. Keyword and concept entries without a name
-    given as text, and references that are not text, are left out. A request
-    is abandoned after 30 seconds without progress. A failure to connect,
-    including a connection that times out, raises ``urllib.error.URLError``, as
-    does a connection reset or closed while the reply is read, and a reply that
-    stalls raises ``TimeoutError``. Neither is an ``OpenAlexHTTPError``. When a
-    page after the first fails, the works fetched before it are not returned,
-    and the message ends with the number of them, as in ``(after 200 records
-    were fetched)``.
+    given as text, and references that are not text, are left out. A request is
+    abandoned after 30 seconds without progress. A failure to connect, including
+    a connection that times out, raises ``urllib.error.URLError``, as does a
+    connection reset or closed, or a reply cut short, while a reply or an error
+    reply is read, and a reply that stalls raises ``TimeoutError``. Neither is
+    an ``OpenAlexHTTPError``. When a page after the first fails, the works
+    fetched before it are not returned, and the message ends with the number of
+    them, as in ``(after 200 records were fetched)``.
 
     The corpus records where, when and how it was fetched in ``source``. It
     gives the service, endpoint and query and the UTC time of retrieval
