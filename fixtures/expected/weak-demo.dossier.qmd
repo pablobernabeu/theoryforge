@@ -75,8 +75,8 @@ _No provenance recorded\._
 ### Theory
 
 #### Constructs
-- k\_motivation \(Motivation\)\: A person\'s internal drive to act\.
-- k\_drive \(Drive\)\: A person\'s internal drive to act towards goals\.
+- k\_motivation \(Motivation\)\: A person's internal drive to act\.
+- k\_drive \(Drive\)\: A person's internal drive to act towards goals\.
 
 #### Propositions
 - q1\: k\_motivation associates k\_drive\.

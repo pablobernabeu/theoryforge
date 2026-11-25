@@ -6,7 +6,9 @@ the same request and write the same header.
 """
 import io
 import json
+import os
 import re
+import shutil
 import urllib.error
 
 import pytest
@@ -255,10 +257,13 @@ def test_render_report_escapes_the_noncharacters_fffe_and_ffff(tmp_path):
 
 # A theory whose ids, label, statement, date and registration hold line
 # breaks, code fences, knitr and Jupyter chunks, inline R code, YAML header
-# lines, a shortcode, a link and a span with an event handler. It validates
-# and passes the gate, and rendering its report ran the chunks. test-render.R
+# lines, a shortcode, a link and a span with an event handler. Its scope
+# holds the form in which Quarto encodes {{< env HOME >}}. It validates and
+# passes the gate, and rendering its report ran the chunks. test-render.R
 # reads the same text, and fixtures/edge/markdown-injection.theory.yaml holds
 # it too.
+ENCODED = "b58fc729-690b-4000-b19f-365a4093b2ff;7B7B3C20656E7620484F4D45203E7D7D;"
+
 HOSTILE = """\
 schema_version: "1.1"
 id: |-
@@ -271,6 +276,8 @@ id: |-
   ---
 title: "Injection `r writeLines('ran', 'PWNED.txt')` {{< env HOME >}} <b>bold</b>"
 maturity: developing
+boundary_conditions:
+  - "b58fc729-690b-4000-b19f-365a4093b2ff;7B7B3C20656E7620484F4D45203E7D7D;"
 constructs:
   - id: c_a
     label: |-
@@ -314,11 +321,14 @@ test_outcomes:
 _FENCE = re.compile(r"^[\t >]*(```|~~~)|^ {0,3}(```|~~~)")
 
 
-def _hostile(tmp_path):
+def _hostile(tmp_path, encoded=False):
+    """The hostile theory, without the encoded shortcode of its scope unless ``encoded``."""
     path = tmp_path / "hostile.theory.yaml"
     path.write_bytes(HOSTILE.encode("utf-8"))
     t = tf.read(path)
     assert t.validate() is True and t.check()["gate"] == "pass"
+    if not encoded:
+        del t.data["boundary_conditions"]
     return t
 
 
@@ -336,57 +346,142 @@ def test_dossier_and_preregister_write_every_value_on_one_line(tmp_path):
 
 def test_render_report_writes_the_theory_text_as_text(tmp_path):
     # The header runs no engine and reads no raw markup, and the body escapes
-    # every punctuation character of the text, so Quarto ran no chunk and
-    # expanded no shortcode once the fix was in.
+    # every punctuation character of the text but the quotation marks, so
+    # Quarto ran no chunk and expanded no shortcode once the fix was in.
     t = _hostile(tmp_path)
     out = t.render_report(tmp_path / "r.qmd")
     lines = open(out, encoding="utf-8", newline="").read().split("\n")
     assert lines[0] == "---" and lines[2:7] == [
         "format: html", "engine: markdown", "from: markdown-raw_html-raw_attribute-raw_tex", "---", ""]
     assert yaml.safe_load("\n".join(lines[1:2]))["title"] == (
-        r"theoryforge report: Injection &#96;r writeLines\(\'ran\'\, \'PWNED\.txt\'\)&#96; "
+        r"theoryforge report: Injection &#96;r writeLines\('ran'\, 'PWNED\.txt'\)&#96; "
         r"\{\{\{\< env HOME \>\}\}\} \<b\>bold\<\/b\>")
     body = lines[7:]
     assert len(body) == len(t.dossier().split("\n"))
     assert not [line for line in body if _FENCE.match(line) or line == "---"]
     assert not [line for line in body if "`" in line or "{{<" in line or "](" in line]
     theory_id = (r"- Theory ID\: edge\-markdown\-injection &#96;&#96;&#96;\{r\} "
-                 r"writeLines\(\"ran\"\, \"PWNED\.txt\"\) &#96;&#96;&#96; \-\-\- engine\: knitr \-\-\-")
+                 r'writeLines\("ran"\, "PWNED\.txt"\) &#96;&#96;&#96; \-\-\- engine\: knitr \-\-\-')
     assert body.count(theory_id) == 2
-    assert r"- c\_a \_\|\|\_ r writeLines\(\'ran\'\, \'PWNED\.txt\'\) \| c\_b" in body
+    assert r"- c\_a \_\|\|\_ r writeLines\('ran'\, 'PWNED\.txt'\) \| c\_b" in body
     assert (r"   - Test record\: already tested\: passed \(2026\-05\-01 \-\-\-\, registered "
-            r"osf\.io\/abcde &#96;&#96;&#96;\{r\} stop\(\'ran\'\) &#96;&#96;&#96; "
+            r"osf\.io\/abcde &#96;&#96;&#96;\{r\} stop\('ran'\) &#96;&#96;&#96; "
             r"\{\{\< include secret\.txt \>\}\}\)") in body
     assert "_No alternative states propositions\\._" in body
     assert "| item | criterion | status | score | weight |" in body
 
 
-@pytest.mark.parametrize("to", ["html; echo ran > ran.txt", "html\nengine: knitr", "-o", "", "pdf "])
+def test_render_report_keeps_the_code_span_of_a_plain_implied_independence(modality_path, tmp_path):
+    # An implied conditional independence of ordinary construct ids opens
+    # nothing in a code span, so it keeps the span. test-render.R pins the
+    # same lines.
+    out = tf.read(modality_path).render_report(tmp_path / "r.qmd")
+    lines = open(out, encoding="utf-8").read().split("\n")
+    assert ("- `c_sensorimotor_experience _||_ c_switch_cost | c_modality_activation`"
+            in lines)
+    t = tf.new_theory("t", "T")
+    for cid in ("r x", "a", "b", "c"):
+        t.add_construct(cid, cid.upper(), "A construct.")
+    t.add_proposition("p1", "a", "b", "causes").add_proposition("p2", "b", "c", "causes")
+    t.add_proposition("p3", "r x", "b", "causes")
+    body = open(t.render_report(tmp_path / "s.qmd"), encoding="utf-8").read().split("\n")
+    assert "- `a _||_ c | b`" in body
+    # A text that begins with 'r ' could be knitr's inline code.
+    assert r"- r x \_\|\|\_ a" in body
+    assert r"- r x \_\|\|\_ c \| b" in body
+
+
+def _scope(t, value):
+    t.data["boundary_conditions"] = [value]
+    return t
+
+
+def test_render_report_refuses_text_that_quarto_reads_as_an_encoded_shortcode(tmp_path, panic_path):
+    # Quarto's reader decodes such a run and runs the shortcode once Pandoc has
+    # removed the escapes, so it leaked environment values and passed on a
+    # script. test-render.R pins the same messages.
+    message = f"render_report refuses text that Quarto reads as an encoded shortcode: '{ENCODED}'"
+    t = _hostile(tmp_path, encoded=True)
+    with pytest.raises(ValueError) as err:
+        t.render_report(tmp_path / "r.qmd")
+    assert str(err.value) == message
+    assert not (tmp_path / "r.qmd").exists()
+    for field in ("id", "title", "label", "registered"):
+        t = tf.read(panic_path)
+        if field == "label":
+            t.data["constructs"][0]["label"] = "x " + ENCODED
+        elif field == "registered":
+            t.data["test_outcomes"][0]["registered"] = "osf.io/x\n" + ENCODED
+        else:
+            t.data[field] = "x " + ENCODED
+        with pytest.raises(ValueError) as err:
+            t.render_report(tmp_path / "r.qmd")
+        assert str(err.value) == message
+        assert not (tmp_path / "r.qmd").exists()
+    # A title passed by the caller is read with its escapes removed, and any
+    # UUID counts, in either letter case.
+    escaped = ENCODED.replace("-", "\\-")
+    with pytest.raises(ValueError, match="encoded shortcode: 'b58fc729-690b"):
+        tf.read(panic_path).render_report(tmp_path / "r.qmd", title=escaped)
+    other = "0A1B2C3D-0000-4000-8000-00000000ABCD;41;"
+    with pytest.raises(ValueError, match=f"encoded shortcode: '{other}'"):
+        _scope(tf.read(panic_path), other).render_report(tmp_path / "r.qmd")
+    # Without the closing semicolon nothing is decoded, and the report is written.
+    assert _scope(tf.read(panic_path), ENCODED[:-1]).render_report(tmp_path / "r.qmd")
+
+
+@pytest.mark.skipif(shutil.which("quarto") is None, reason="Quarto is not installed")
+def test_quarto_renders_the_hostile_report_as_text(tmp_path, monkeypatch):
+    # Rendered through Quarto, the report runs no code, expands no shortcode
+    # and passes on no script, event handler or link of the theory's.
+    monkeypatch.setenv("TF_SECRET_TOKEN", "s3cr3t-env-value")
+    (tmp_path / "secret.txt").write_text("SECRET-FILE-CONTENTS", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    _hostile(tmp_path).render_report("report.qmd", render=True)
+    html = (tmp_path / "report.html").read_text(encoding="utf-8")
+    assert not list(tmp_path.glob("PWNED*"))
+    for leaked in ("s3cr3t-env-value", "SECRET-FILE-CONTENTS", os.path.expanduser("~")):
+        assert leaked not in html
+    main = html[html.index("<main"):html.index("</main>")]
+    assert re.search(r"<[a-zA-Z][^>]*\son[a-z]+\s*=", main) is None
+    assert re.search(r"""(?:href|src)\s*=\s*["']?\s*javascript:""", main) is None
+    for tag in ("<script", "<b>", "<code", "<a "):
+        assert tag not in main
+
+
+@pytest.mark.parametrize("to", ["html; echo ran > ran.txt", "html\nengine: knitr", "-o", "", "pdf ",
+                                ".lua"])
 def test_render_report_refuses_a_format_that_is_not_a_name(tmp_path, to):
     # A format was written into the header and, in R, passed to the shell as
     # it stood. test-render.R pins the same message.
     with pytest.raises(ValueError) as err:
         _theory().render_report(tmp_path / "r.qmd", to=to)
-    assert str(err.value) == ("render_report requires `to` to be a Quarto format name of letters, "
-                              f"digits, '_', '+' and '-' that starts with a letter or digit, not '{to}'")
+    assert str(err.value) == ("render_report requires `to` to be a Quarto format or writer of "
+                              "letters, digits, '_', '.', '+', '/' and '-' that starts with a letter "
+                              f"or digit, not '{to}'")
     assert not (tmp_path / "r.qmd").exists()
     with pytest.raises(ValueError, match="not None$"):
         _theory().render_report(tmp_path / "r.qmd", to=None)
 
 
-def test_render_report_takes_a_format_with_extensions(tmp_path):
-    for to in ("pdf", "gfm+tex_math_dollars", "acm-pdf"):
+def test_render_report_takes_a_format_with_extensions_or_a_writer(tmp_path):
+    for to in ("pdf", "gfm+tex_math_dollars", "acm-pdf", "plainw.lua", "writers/plain.lua"):
         out = _theory().render_report(tmp_path / "r.qmd", to=to)
         assert open(out, encoding="utf-8").read().split("\n")[2] == f"format: {to}"
 
 
-def test_render_report_passes_quarto_the_expanded_path(tmp_path, monkeypatch):
+def test_render_report_passes_quarto_the_absolute_expanded_path(tmp_path, monkeypatch):
+    # Quarto read a path beginning with '-' as an option, rendered nothing and
+    # exited with status 0.
     calls = []
     monkeypatch.setattr(report_render.subprocess, "run", lambda args, check: calls.append(args))
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    monkeypatch.chdir(tmp_path)
     assert _theory().render_report("~/r", render=True, to="pdf") == "~/r.qmd"
-    assert calls == [["quarto", "render", str(tmp_path / "r.qmd"), "--to", "pdf"]]
+    assert _theory().render_report("-dash", render=True) == "-dash.qmd"
+    assert calls == [["quarto", "render", str(tmp_path / "r.qmd"), "--to", "pdf"],
+                     ["quarto", "render", str(tmp_path / "-dash.qmd"), "--to", "html"]]
 
 
 def test_render_report_escapes_a_nul_character(tmp_path):

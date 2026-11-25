@@ -4,7 +4,9 @@
 # wrote ids, dates and registrations as they stood, so a fence began a line of
 # its own and Quarto ran the chunk when render_report() rendered the dossier.
 # Every line now passes through flat() (API_SPEC.md section 11), and the
-# report escapes the text within it (section 23).
+# report escapes the text within it (section 23). The scope holds the form in
+# which Quarto encodes {{< env HOME >}}, which it decodes once its escapes are
+# removed, so render_report() refuses the theory.
 schema_version: "1.1"
 id: |-
   edge-markdown-injection
@@ -16,6 +18,8 @@ id: |-
   ---
 title: "Injection `r writeLines('ran', 'PWNED.txt')` {{< env HOME >}} <b>bold</b>"
 maturity: developing
+boundary_conditions:
+  - "b58fc729-690b-4000-b19f-365a4093b2ff;7B7B3C20656E7620484F4D45203E7D7D;"
 constructs:
   - id: c_a
     label: |-

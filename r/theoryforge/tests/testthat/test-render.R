@@ -85,10 +85,14 @@ test_that("tf_render_report treats an empty title as absent, as Python does", {
 
 # A theory whose ids, label, statement, date and registration hold line
 # breaks, code fences, knitr and Jupyter chunks, inline R code, YAML header
-# lines, a shortcode, a link and a span with an event handler. It validates
-# and passes the gate, and rendering its report ran the chunks. The Python
-# twin's test_osf_report.py reads the same text.
-hostile_theory <- function() {
+# lines, a shortcode, a link and a span with an event handler. Its scope
+# holds the form in which Quarto encodes {{< env HOME >}}, which is left out
+# unless `encoded` is TRUE. It validates and passes the gate, and rendering its
+# report ran the chunks. The Python twin's test_osf_report.py reads the same
+# text.
+encoded_shortcode <- "b58fc729-690b-4000-b19f-365a4093b2ff;7B7B3C20656E7620484F4D45203E7D7D;"
+
+hostile_theory <- function(encoded = FALSE) {
   path <- tempfile(fileext = ".yaml")
   writeBin(charToRaw(r"---(schema_version: "1.1"
 id: |-
@@ -101,6 +105,8 @@ id: |-
   ---
 title: "Injection `r writeLines('ran', 'PWNED.txt')` {{< env HOME >}} <b>bold</b>"
 maturity: developing
+boundary_conditions:
+  - "b58fc729-690b-4000-b19f-365a4093b2ff;7B7B3C20656E7620484F4D45203E7D7D;"
 constructs:
   - id: c_a
     label: |-
@@ -143,6 +149,7 @@ test_outcomes:
   t <- tf_read(path)
   expect_true(tf_validate(t))
   expect_identical(tf_check(t)$gate, "pass")
+  if (!encoded) t$boundary_conditions <- NULL
   t
 }
 
@@ -165,15 +172,15 @@ test_that("tf_dossier and tf_preregister write every value on one line", {
 
 test_that("tf_render_report writes the theory's text as text", {
   # The header runs no engine and reads no raw markup, and the body escapes
-  # every punctuation character of the text, so Quarto runs no chunk and
-  # expands no shortcode.
+  # every punctuation character of the text but the quotation marks, so
+  # Quarto runs no chunk and expands no shortcode.
   t <- hostile_theory()
   out <- tf_render_report(t, tempfile(fileext = ".qmd"))
   lines <- strsplit(tf_read_golden(out), "\n", fixed = TRUE)[[1L]]
   expect_identical(lines[c(1L, 3:6)], c("---", "format: html", "engine: markdown",
                                         "from: markdown-raw_html-raw_attribute-raw_tex", "---"))
   expect_identical(yaml::yaml.load(lines[[2L]])$title, paste0(
-    r"---(theoryforge report: Injection &#96;r writeLines\(\'ran\'\, \'PWNED\.txt\'\)&#96; )---",
+    r"---(theoryforge report: Injection &#96;r writeLines\('ran'\, 'PWNED\.txt'\)&#96; )---",
     r"---(\{\{\{\< env HOME \>\}\}\} \<b\>bold\<\/b\>)---"))
   body <- lines[-(1:7)]
   expect_identical(length(body), length(strsplit(tf_dossier(t), "\n", fixed = TRUE)[[1L]]))
@@ -181,38 +188,122 @@ test_that("tf_render_report writes the theory's text as text", {
   expect_false(any(grepl("`", body, fixed = TRUE) | grepl("{{<", body, fixed = TRUE) |
                      grepl("](", body, fixed = TRUE)))
   theory_id <- paste0(r"---(- Theory ID\: edge\-markdown\-injection &#96;&#96;&#96;\{r\} )---",
-                      r"---(writeLines\(\"ran\"\, \"PWNED\.txt\"\) &#96;&#96;&#96; \-\-\- engine\: knitr \-\-\-)---")
+                      r"---(writeLines\("ran"\, "PWNED\.txt"\) &#96;&#96;&#96; \-\-\- engine\: knitr \-\-\-)---")
   expect_identical(sum(body == theory_id), 2L)
-  expect_true(r"---(- c\_a \_\|\|\_ r writeLines\(\'ran\'\, \'PWNED\.txt\'\) \| c\_b)---" %in% body)
+  expect_true(r"---(- c\_a \_\|\|\_ r writeLines\('ran'\, 'PWNED\.txt'\) \| c\_b)---" %in% body)
   expect_true(paste0(r"---(   - Test record\: already tested\: passed \(2026\-05\-01 \-\-\-\, registered )---",
-                     r"---(osf\.io\/abcde &#96;&#96;&#96;\{r\} stop\(\'ran\'\) &#96;&#96;&#96; )---",
+                     r"---(osf\.io\/abcde &#96;&#96;&#96;\{r\} stop\('ran'\) &#96;&#96;&#96; )---",
                      r"---(\{\{\< include secret\.txt \>\}\}\))---") %in% body)
   expect_true("_No alternative states propositions\\._" %in% body)
   expect_true("| item | criterion | status | score | weight |" %in% body)
 })
 
-test_that("tf_render_report refuses a format that is not a name", {
+test_that("tf_render_report keeps the code span of a plain implied independence", {
+  # An implied conditional independence of ordinary construct ids opens
+  # nothing in a code span, so it keeps the span. The Python twin pins the
+  # same lines.
+  out <- tf_render_report(tf_read(tf_fixture_path("modality-switching.theory.yaml")), tempfile())
+  lines <- strsplit(tf_read_golden(out), "\n", fixed = TRUE)[[1L]]
+  expect_true("- `c_sensorimotor_experience _||_ c_switch_cost | c_modality_activation`" %in% lines)
+  t <- tf_theory("t", "T")
+  for (cid in c("r x", "a", "b", "c")) t <- tf_add_construct(t, cid, toupper(cid), "A construct.")
+  t <- tf_add_proposition(t, "p1", "a", "b", "causes")
+  t <- tf_add_proposition(t, "p2", "b", "c", "causes")
+  t <- tf_add_proposition(t, "p3", "r x", "b", "causes")
+  body <- strsplit(tf_read_golden(tf_render_report(t, tempfile())), "\n", fixed = TRUE)[[1L]]
+  expect_true("- `a _||_ c | b`" %in% body)
+  # A text that begins with 'r ' could be knitr's inline code.
+  expect_true(r"---(- r x \_\|\|\_ a)---" %in% body)
+  expect_true(r"---(- r x \_\|\|\_ c \| b)---" %in% body)
+})
+
+test_that("tf_render_report refuses text that Quarto reads as an encoded shortcode", {
+  # Quarto's reader decodes such a run and runs the shortcode once Pandoc has
+  # removed the escapes, so it leaked environment values and passed on a
+  # script. The Python twin pins the same messages.
+  message <- paste0("render_report refuses text that Quarto reads as an encoded shortcode: '",
+                    encoded_shortcode, "'")
+  path <- tempfile(fileext = ".qmd")
+  expect_error(tf_render_report(hostile_theory(encoded = TRUE), path), message, fixed = TRUE)
+  expect_false(file.exists(path))
+  for (field in c("id", "title", "label", "registered")) {
+    t <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+    if (identical(field, "label")) {
+      t$constructs[[1L]]$label <- paste("x", encoded_shortcode)
+    } else if (identical(field, "registered")) {
+      t$test_outcomes[[1L]]$registered <- paste0("osf.io/x\n", encoded_shortcode)
+    } else {
+      t[[field]] <- paste("x", encoded_shortcode)
+    }
+    expect_error(tf_render_report(t, path), message, fixed = TRUE)
+    expect_false(file.exists(path))
+  }
+  # A title passed by the caller is read with its escapes removed, and any
+  # UUID counts, in either letter case.
+  panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  expect_error(tf_render_report(panic, path, title = gsub("-", "\\-", encoded_shortcode, fixed = TRUE)),
+               "encoded shortcode: 'b58fc729-690b", fixed = TRUE)
+  other <- "0A1B2C3D-0000-4000-8000-00000000ABCD;41;"
+  scoped <- function(value) {
+    t <- panic
+    t$boundary_conditions <- list(value)
+    t
+  }
+  expect_error(tf_render_report(scoped(other), path),
+               paste0("encoded shortcode: '", other, "'"), fixed = TRUE)
+  # Without the closing semicolon nothing is decoded, and the report is written.
+  expect_true(file.exists(tf_render_report(scoped(sub(";$", "", encoded_shortcode)), path)))
+})
+
+test_that("Quarto renders the hostile report as text", {
+  skip_on_cran()
+  skip_if(!nzchar(Sys.which("quarto")), "Quarto is not installed")
+  # Rendered through Quarto, the report runs no code, expands no shortcode
+  # and passes on no script, event handler or link of the theory's.
+  dir <- tempfile("quarto")
+  dir.create(dir)
+  writeLines("SECRET-FILE-CONTENTS", file.path(dir, "secret.txt"))
+  old <- Sys.getenv("TF_SECRET_TOKEN", NA)
+  on.exit(if (is.na(old)) Sys.unsetenv("TF_SECRET_TOKEN") else Sys.setenv(TF_SECRET_TOKEN = old),
+          add = TRUE)
+  Sys.setenv(TF_SECRET_TOKEN = "s3cr3t-env-value")
+  wd <- setwd(dir)
+  on.exit(setwd(wd), add = TRUE)
+  tf_render_report(hostile_theory(), "report.qmd", render = TRUE)
+  html <- tf_read_golden(file.path(dir, "report.html"))
+  expect_length(Sys.glob(file.path(dir, "PWNED*")), 0L)
+  for (leaked in c("s3cr3t-env-value", "SECRET-FILE-CONTENTS", path.expand("~"))) {
+    expect_false(grepl(leaked, html, fixed = TRUE))
+  }
+  main <- sub("(?s)</main>.*$", "", sub("(?s)^.*?<main", "<main", html, perl = TRUE), perl = TRUE)
+  expect_false(grepl("<[a-zA-Z][^>]*\\son[a-z]+\\s*=", main, perl = TRUE))
+  expect_false(grepl("(?:href|src)\\s*=\\s*[\"']?\\s*javascript:", main, perl = TRUE))
+  for (tag in c("<script", "<b>", "<code", "<a ")) expect_false(grepl(tag, main, fixed = TRUE))
+})
+
+test_that("tf_render_report refuses a format that is not a name or a writer", {
   # A format was written into the header and passed to the shell as it stood.
   # The Python twin pins the same message.
-  for (to in c("html; echo ran > ran.txt", "html\nengine: knitr", "-o", "", "pdf ")) {
+  for (to in c("html; echo ran > ran.txt", "html\nengine: knitr", "-o", "", "pdf ", ".lua")) {
     path <- tempfile(fileext = ".qmd")
     expect_error(tf_render_report(tf_theory("t", "T"), path, to = to),
-                 paste0("render_report requires `to` to be a Quarto format name of letters, digits, ",
-                        "'_', '+' and '-' that starts with a letter or digit, not '", to, "'"),
+                 paste0("render_report requires `to` to be a Quarto format or writer of letters, ",
+                        "digits, '_', '.', '+', '/' and '-' that starts with a letter or digit, not '",
+                        to, "'"),
                  fixed = TRUE)
     expect_false(file.exists(path))
   }
   expect_error(tf_render_report(tf_theory("t", "T"), tempfile(), to = NULL), "not NULL$")
   expect_error(tf_render_report(tf_theory("t", "T"), tempfile(), to = c("html", "pdf")),
                'not c("html", "pdf")', fixed = TRUE)
-  for (to in c("pdf", "gfm+tex_math_dollars", "acm-pdf")) {
+  for (to in c("pdf", "gfm+tex_math_dollars", "acm-pdf", "plainw.lua", "writers/plain.lua")) {
     out <- tf_render_report(tf_theory("t", "T"), tempfile(), to = to)
     expect_identical(strsplit(tf_read_golden(out), "\n", fixed = TRUE)[[1L]][[3L]],
                      paste0("format: ", to))
   }
 })
 
-test_that("tf_render_report quotes each argument it hands the shell", {
+test_that("tf_render_report quotes, expands and makes absolute the path it hands the shell", {
   skip_on_os("windows")
   skip_on_cran()
   # A stand-in for quarto that writes the arguments it was given.
@@ -228,7 +319,20 @@ test_that("tf_render_report quotes each argument it hands the shell", {
   dir <- tempfile("a dir with 'quotes'")
   dir.create(dir)
   path <- tf_render_report(tf_theory("t", "T"), file.path(dir, "r.qmd"), render = TRUE, to = "pdf")
-  expect_identical(readLines(args_file), c("render", path, "--to", "pdf"))
+  expect_identical(readLines(args_file), c("render", normalizePath(path), "--to", "pdf"))
+  # The shell does not expand a quoted ~, and Quarto read a path beginning with
+  # - as an option, rendered nothing and exited with status 0.
+  home <- Sys.getenv("HOME")
+  on.exit(Sys.setenv(HOME = home), add = TRUE)
+  Sys.setenv(HOME = dir)
+  expect_identical(tf_render_report(tf_theory("t", "T"), "~/home", render = TRUE), "~/home.qmd")
+  expect_identical(readLines(args_file),
+                   c("render", normalizePath(file.path(dir, "home.qmd")), "--to", "html"))
+  wd <- setwd(dir)
+  on.exit(setwd(wd), add = TRUE)
+  expect_identical(tf_render_report(tf_theory("t", "T"), "-dash", render = TRUE), "-dash.qmd")
+  expect_identical(readLines(args_file),
+                   c("render", normalizePath(file.path(dir, "-dash.qmd")), "--to", "html"))
 })
 
 # tf_render_diagram() is a language-native convenience over the deterministic

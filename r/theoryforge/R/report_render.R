@@ -7,7 +7,8 @@
 #' runs the code chunks and inline code of a document, expands its shortcodes
 #' (which can read files and environment variables) and passes on its raw
 #' HTML, so the report is written so that the theory's text reaches Quarto as
-#' text alone (API_SPEC.md section 23).
+#' text alone, and text that Quarto would decode as a shortcode after reading
+#' it is refused (API_SPEC.md section 23).
 #' @name report_render
 #' @keywords internal
 NULL
@@ -18,20 +19,33 @@ NULL
 #' suffix): a YAML header followed by the deterministic
 #' \code{tf_dossier(theory)} body. Returns the written path. When
 #' \code{render = TRUE}, invokes \code{quarto render}, which requires a Quarto
-#' installation, and stops if that render fails. It stops before writing
-#' anything when \code{to} is not a format name or when [tf_check()] refuses
-#' the theory.
+#' installation, and stops if that render fails. Quarto is given the absolute
+#' path of the report, so that a path beginning with \code{-} is not read as
+#' an option. It stops before writing anything when \code{to} is not a format
+#' name or a writer, when [tf_check()] refuses the theory or when the text
+#' holds an encoded shortcode.
 #'
 #' The header gives \code{title} and \code{format}, \code{engine: markdown},
 #' so that Quarto runs no code, and
 #' \code{from: markdown-raw_html-raw_attribute-raw_tex}, so that it passes on
 #' no raw HTML, raw attribute or raw TeX. In the body, every ASCII punctuation
-#' character of the dossier's text gains a backslash and a backtick becomes
-#' \code{&#96;}, so that Quarto reads the theory's text as text: no code
-#' chunk, inline code, shortcode, link, span or tag can open. The marker of
-#' each heading and list item, the underscores of a line in italics and the
-#' checklist table are kept, and an implied independency is written without
-#' its code span.
+#' character of the dossier's text but the quotation marks gains a backslash
+#' and a backtick becomes \code{&#96;}, so that Quarto reads the theory's text
+#' as text: no code chunk, inline code, shortcode, link, span or tag can open
+#' from it. Typed \code{--} and \code{...} therefore show as typed, and a
+#' heading's anchor follows its typed text. The marker of each heading and list
+#' item, the underscores of a line in italics and the checklist table are
+#' kept. An implied conditional independence keeps its code span when it holds
+#' only letters, digits, \code{_}, \code{|}, \code{,}, \code{.} and spaces
+#' and does not begin with \code{r} and a space, and is written without it
+#' otherwise.
+#'
+#' Quarto encodes a shortcode as a UUID followed by \code{;<hex>;} and
+#' decodes such a run in any text once the document is parsed, escapes
+#' removed. Text that holds one, a UUID followed by a semicolon, hexadecimal
+#' digits and a semicolon, is therefore refused: the dossier, the default title
+#' before it is escaped and a title passed by the caller with its backslashes
+#' removed.
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param path Destination path. A file name that does not end in
@@ -53,8 +67,10 @@ NULL
 #' @param render When \code{TRUE}, run \code{quarto render} on the written file
 #'   and stop if it exits non-zero.
 #' @param to Quarto output format (default \code{"html"}). It must be a format
-#'   name: a letter or digit followed by letters, digits, \code{_}, \code{+}
-#'   and \code{-}, as in \code{"pdf"} or \code{"gfm+tex_math_dollars"}.
+#'   name or the path of a custom writer: a letter or digit followed by
+#'   letters, digits, \code{_}, \code{.}, \code{+}, \code{/} and \code{-},
+#'   as in \code{"pdf"}, \code{"gfm+tex_math_dollars"} or
+#'   \code{"writers/plain.lua"}.
 #' @return The path of the written \code{.qmd} file.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
@@ -63,38 +79,53 @@ NULL
 #' tf_render_report(theory, path)
 #' @export
 tf_render_report <- function(theory, path, title = NULL, render = FALSE, to = "html") {
-  # A format name alone, so that `to` can add no key to the header and no
-  # option or command to the call of Quarto. \z, since $ also matches before a
-  # final newline.
+  # A format name or a writer's path alone, so that `to` can add no key to the
+  # header and no option or command to the call of Quarto. \z, since $ also
+  # matches before a final newline.
   if (!(is.character(to) && length(to) == 1L && !is.na(to) &&
-        grepl("^[A-Za-z0-9][A-Za-z0-9_+-]*\\z", to, perl = TRUE))) {
-    stop(sprintf(paste0("render_report requires `to` to be a Quarto format name of letters, ",
-                        "digits, '_', '+' and '-' that starts with a letter or digit, not %s"),
+        grepl("^[A-Za-z0-9][A-Za-z0-9_.+/-]*\\z", to, perl = TRUE))) {
+    stop(sprintf(paste0("render_report requires `to` to be a Quarto format or writer of letters, ",
+                        "digits, '_', '.', '+', '/' and '-' that starts with a letter or digit, ",
+                        "not %s"),
                  .tf_quote_arg(to)), call. = FALSE)
   }
   T <- theory
   # An empty title means the default, as in Python, where '' is falsy, and so
-  # does NA, R's other way of saying absent.
+  # does NA, R's other way of saying absent. `shown` is the title as Quarto
+  # reads it, escapes removed, which the refusal below scans.
   if (is.null(title) || is.na(title) || !nzchar(title)) {
     label <- .tf_str(T, "title")
     if (!nzchar(label)) label <- .tf_str(T, "id")
-    title <- paste0("theoryforge report: ", .tf_md_text(.tf_shortcodes(.tf_flat(label))))
+    label <- .tf_flat(label)
+    shown <- paste0("theoryforge report: ", label)
+    title <- paste0("theoryforge report: ", .tf_md_text(.tf_shortcodes(label)))
+  } else {
+    shown <- gsub("\\", "", title, fixed = TRUE)
   }
 
   path <- .tf_qmd_path(path)
+  md <- tf_dossier(T)
+  for (scanned in c(shown, md)) {
+    found <- regmatches(scanned, regexpr(.tf_ENCODED, scanned, perl = TRUE))
+    if (length(found) > 0L) {
+      stop(sprintf("render_report refuses text that Quarto reads as an encoded shortcode: '%s'",
+                   found), call. = FALSE)
+    }
+  }
 
   header <- sprintf(paste0("---\ntitle: \"%s\"\nformat: %s\nengine: markdown\n",
                            "from: markdown-raw_html-raw_attribute-raw_tex\n---\n\n"),
                     .tf_yaml_dq(title), to)
-  text <- paste0(header, .tf_qmd_body(tf_dossier(T)))
-  .tf_write_lf(path, text)
+  .tf_write_lf(path, paste0(header, .tf_qmd_body(md)))
 
   if (render) {
     # A failed render must not return the path as if it had succeeded; the
     # Python twin's subprocess.run(check = TRUE) raises on the same condition.
-    # system2() hands its arguments to the shell, so each is quoted, and the
-    # path is expanded first, since the shell does not expand a quoted ~.
-    status <- system2("quarto", c("render", shQuote(path.expand(path)), "--to", shQuote(to)))  # nocov
+    # system2() hands its arguments to the shell, so each is quoted. The path is
+    # absolute, so that one beginning with - is not read as an option, and
+    # expanded, since the shell does not expand a quoted ~.
+    target <- normalizePath(path.expand(path), mustWork = FALSE)  # nocov
+    status <- system2("quarto", c("render", shQuote(target), "--to", shQuote(to)))  # nocov
     if (!identical(as.integer(status), 0L)) {  # nocov
       stop("quarto render failed with status ", status, call. = FALSE)  # nocov
     }
@@ -102,14 +133,23 @@ tf_render_report <- function(theory, path, title = NULL, render = FALSE, to = "h
   path
 }
 
+# Quarto's reader encodes each shortcode it finds in the text as a UUID
+# followed by ';<hex>;' and, once Pandoc has read the document and removed its
+# escapes, decodes such a run in any text and runs it as a shortcode. Any UUID
+# is matched, in case another version of Quarto uses another one. The Python
+# twin's _ENCODED is the same pattern.
+.tf_ENCODED <- "[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12};[0-9A-Fa-f]+;"
+
 # `s` written so that Quarto reads each of its characters as text, as the
-# Python twin's _md_text() writes it. Every ASCII punctuation character gains a
-# backslash, which Pandoc's Markdown reads as the character itself, so that no
-# emphasis, link, span, attribute, raw HTML, mathematics or shortcode can open.
-# A backtick becomes the entity &#96;, since knitr finds inline code by its
-# backticks whatever precedes them.
+# Python twin's _md_text() writes it. Every ASCII punctuation character but the
+# quotation marks gains a backslash, which Pandoc's Markdown reads as the
+# character itself, so that no emphasis, link, span, attribute, raw HTML,
+# mathematics or shortcode can open. The quotation marks open nothing once the
+# others are escaped, and keep their typographic form. A backtick becomes the
+# entity &#96;, since knitr finds inline code by its backticks whatever
+# precedes them.
 .tf_md_text <- function(s) {
-  s <- gsub("([!-/:-@\\[-_{-~])", "\\\\\\1", s, perl = TRUE)
+  s <- gsub("([!#-&(-/:-@\\[-_{-~])", "\\\\\\1", s, perl = TRUE)
   gsub("`", "&#96;", s, fixed = TRUE)
 }
 
@@ -126,10 +166,13 @@ tf_render_report <- function(theory, path, title = NULL, render = FALSE, to = "h
 # checklist table, which holds the checklist's own text alone, are kept as they
 # are. Every other line keeps the marker of its heading or list item. A line
 # without a marker that is set in italics keeps its two underscores. A list
-# item that is a code span alone (an implied independency) loses its
-# backticks, since the escaped text needs no code span to keep its
-# underscores. The rest of the line is escaped. The dossier ends in a newline,
-# which strsplit() leaves out and paste0() puts back.
+# item that is a code span alone (an implied conditional independence) keeps
+# it when its text holds only letters, digits, underscores, bars, commas, full
+# stops and spaces and does not begin with 'r ', so that it holds no brace,
+# angle bracket, backtick or hyphen and knitr reads no inline code in it.
+# Otherwise it loses its backticks, since the escaped text needs no code span
+# to keep its underscores. The rest of the line is escaped. The dossier ends in
+# a newline, which strsplit() leaves out and paste0() puts back.
 .tf_qmd_body <- function(md) {
   lines <- strsplit(md, "\n", fixed = TRUE)[[1L]]
   out <- vapply(lines, function(line) {
@@ -140,7 +183,9 @@ tf_render_report <- function(theory, path, title = NULL, render = FALSE, to = "h
     n <- nchar(rest)
     if (identical(trimws(marker), "-") && n > 1L && startsWith(rest, "`") && endsWith(rest, "`") &&
         !grepl("`", substr(rest, 2L, n - 1L), fixed = TRUE)) {
-      rest <- .tf_md_text(substr(rest, 2L, n - 1L))
+      inner <- substr(rest, 2L, n - 1L)
+      plain <- grepl("^[A-Za-z0-9_|,. ]+\\z", inner, perl = TRUE) && !startsWith(inner, "r ")
+      if (!plain) rest <- .tf_md_text(inner)
     } else if (!nzchar(marker) && n > 1L && startsWith(rest, "_") && endsWith(rest, "_")) {
       rest <- paste0("_", .tf_md_text(substr(rest, 2L, n - 1L)), "_")
     } else {

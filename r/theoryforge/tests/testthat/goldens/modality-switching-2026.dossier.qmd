@@ -151,9 +151,9 @@ from: markdown-raw_html-raw_attribute-raw_tex
 - pred4\: no sampling plan stated
 
 ### Implied conditional independencies \(derived from the causal graph\, not predictions\)
-- c\_sensorimotor\_experience \_\|\|\_ c\_switch\_cost \| c\_modality\_activation
-- c\_sensorimotor\_experience \_\|\|\_ c\_conceptual\_access \| c\_modality\_activation\, c\_lexical\_familiarity
-- c\_sensorimotor\_experience \_\|\|\_ c\_lexical\_familiarity
-- c\_modality\_activation \_\|\|\_ c\_lexical\_familiarity \| c\_sensorimotor\_experience
-- c\_switch\_cost \_\|\|\_ c\_conceptual\_access \| c\_modality\_activation\, c\_lexical\_familiarity
-- c\_switch\_cost \_\|\|\_ c\_lexical\_familiarity \| c\_modality\_activation
+- `c_sensorimotor_experience _||_ c_switch_cost | c_modality_activation`
+- `c_sensorimotor_experience _||_ c_conceptual_access | c_modality_activation, c_lexical_familiarity`
+- `c_sensorimotor_experience _||_ c_lexical_familiarity`
+- `c_modality_activation _||_ c_lexical_familiarity | c_sensorimotor_experience`
+- `c_switch_cost _||_ c_conceptual_access | c_modality_activation, c_lexical_familiarity`
+- `c_switch_cost _||_ c_lexical_familiarity | c_modality_activation`

@@ -11,6 +11,7 @@ on the environment. A theory file may come from someone else, and Quarto
 runs the code chunks and inline code of a document, expands its shortcodes
 (which can read files and environment variables) and passes on its raw
 HTML, so the report is written so that the theory's text reaches Quarto as
-text alone (API_SPEC.md section 23).
+text alone, and text that Quarto would decode as a shortcode after reading
+it is refused (API_SPEC.md section 23).
 }
 \keyword{internal}

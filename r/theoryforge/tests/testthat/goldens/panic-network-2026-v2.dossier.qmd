@@ -122,4 +122,4 @@ _No alternative states propositions\._
    - Test record\: already tested\: passed \(2026\-06\-10\, registered osf\.io\/fghij\)
 
 ### Implied conditional independencies \(derived from the causal graph\, not predictions\)
-_Not derived\: the causal graph has a feedback loop\, c\_arousal \-\> c\_perceived\_threat \-\> c\_arousal\. With cycles \= \'sigma\'\, the statements are read by sigma\-separation and hold if each loop settles to a unique equilibrium\._
+_Not derived\: the causal graph has a feedback loop\, c\_arousal \-\> c\_perceived\_threat \-\> c\_arousal\. With cycles \= 'sigma'\, the statements are read by sigma\-separation and hold if each loop settles to a unique equilibrium\._

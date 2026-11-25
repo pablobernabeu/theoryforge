@@ -3,7 +3,7 @@
   "validate": true,
   "validate_full": true,
   "check": {
-    "aggregate_score": 45.7,
+    "aggregate_score": 52.2,
     "coverage": 0.92,
     "gate": "pass",
     "n_blockers_failed": 0,
@@ -40,8 +40,8 @@
       },
       {
         "id": "scope",
-        "status": "warn",
-        "score": 0.0
+        "status": "pass",
+        "score": 1.0
       },
       {
         "id": "logical_why",
@@ -192,5 +192,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Injection `r writeLines('ran', 'PWNED.txt')` {{< env HOME >}} <b>bold</b>\n\n- Theory ID: edge-markdown-injection ```{r} writeLines(\"ran\", \"PWNED.txt\") ``` --- engine: knitr ---\n- Schema version: 1.1\n- Content hash: sha256:f7b208faedc35eb64346bdd0d2fe9ec4bc1c65361043097372981404e533a983\n- Maturity: developing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- c_a (Arousal `r 1 + 1` --- title: injected): First construct.\n- c_b (Threat): Second construct.\n- r writeLines('ran', 'PWNED.txt') (Avoidance): Third construct.\n\n### Propositions\n- p1 ```{python} open('PWNED.txt', 'w') ```: c_a increases c_b.\n- p2: c_b increases r writeLines('ran', 'PWNED.txt').\n\n## Hypotheses\n1. [directional] Arousal raises threat. ```{r} stop(\"ran\") ``` --- `{r} 1 + 1` and [link](javascript:alert(1)){onmouseover=\"alert(2)\"} (h1 ```{r} stop('ran') ```; derives from: p1 ```{python} open('PWNED.txt', 'w') ```)\n   - Test record: already tested: passed (2026-05-01 ---, registered osf.io/abcde ```{r} stop('ran') ``` {{< include secret.txt >}})\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n- `c_a _||_ r writeLines('ran', 'PWNED.txt') | c_b`\n\n## Severity (pre-data rubric of claim form)\n- h1 ```{r} stop('ran') ```: severity 0.3, risk 0.4\n"
+  "preregister": "# Preregistration: Injection `r writeLines('ran', 'PWNED.txt')` {{< env HOME >}} <b>bold</b>\n\n- Theory ID: edge-markdown-injection ```{r} writeLines(\"ran\", \"PWNED.txt\") ``` --- engine: knitr ---\n- Schema version: 1.1\n- Content hash: sha256:68b022612ff0eb228b253460aecfe71adb3315c48d042fb724b1c79941cedfe7\n- Maturity: developing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- c_a (Arousal `r 1 + 1` --- title: injected): First construct.\n- c_b (Threat): Second construct.\n- r writeLines('ran', 'PWNED.txt') (Avoidance): Third construct.\n\n### Propositions\n- p1 ```{python} open('PWNED.txt', 'w') ```: c_a increases c_b.\n- p2: c_b increases r writeLines('ran', 'PWNED.txt').\n\n### Scope\n- b58fc729-690b-4000-b19f-365a4093b2ff;7B7B3C20656E7620484F4D45203E7D7D;\n\n## Hypotheses\n1. [directional] Arousal raises threat. ```{r} stop(\"ran\") ``` --- `{r} 1 + 1` and [link](javascript:alert(1)){onmouseover=\"alert(2)\"} (h1 ```{r} stop('ran') ```; derives from: p1 ```{python} open('PWNED.txt', 'w') ```)\n   - Test record: already tested: passed (2026-05-01 ---, registered osf.io/abcde ```{r} stop('ran') ``` {{< include secret.txt >}})\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n- `c_a _||_ r writeLines('ran', 'PWNED.txt') | c_b`\n\n## Severity (pre-data rubric of claim form)\n- h1 ```{r} stop('ran') ```: severity 0.3, risk 0.4\n"
 }
