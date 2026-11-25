@@ -56,7 +56,7 @@
       params: [CYCLES],
     },
     { id: "equivalent", group: "derive", label: "Equivalent models", desc: "Directions observational data cannot test",
-      help: "Finds which causal directions of the theory observational data could test. Graphs that imply the same conditional independencies are Markov equivalent, and no observational study can tell them apart (Verma & Pearl, 1990). An edge is compelled when it points the same way in every equivalent graph, and reversible when some equivalent graph reverses it, so that testing its direction needs an intervention, a temporal order or another assumption. The rule covers acyclic graphs of directed relations only, so a feedback loop or an association leaves the answer undetermined." },
+      help: "Finds which causal directions of the theory observational data could test. Graphs that imply the same conditional independencies are Markov equivalent, and no observational study can tell them apart (Verma & Pearl, 1990/2022). An edge is compelled when it points the same way in every equivalent graph, and reversible when some equivalent graph reverses it, so that testing its direction needs an intervention, a temporal order or another assumption. The rule covers acyclic graphs of directed relations only, so a feedback loop or an association leaves the answer undetermined." },
     { id: "sem", group: "derive", label: "SEM (lavaan)", desc: "Compile to lavaan model syntax",
       help: "Compiles the constructs (measurement model) and propositions (structural model) to lavaan model syntax for lavaan::sem(), a starting point for an SEM fit: rename indicators to your columns and check identification." },
     {
@@ -1347,6 +1347,37 @@
     openModal("Source · " + name, el("div", null, [actions, el("pre", { class: "text", text })]), { wide: true });
   }
 
+  // The works that the help texts and the result guides cite, in APA style.
+  // Each entry is a list of plain text and italic ({ i: text }) pieces, its DOI
+  // and any note that follows the DOI. The methodology page lists them too,
+  // except Bosnjak et al. (2022), which the reference page of preregister()
+  // gives.
+  const WORKS_CITED = [
+    [["Bosnjak, M., Fiebach, C. J., Mellor, D., Mueller, S., O'Connor, D. B., Oswald, F. L., & Sokol, R. I. (2022). A template for preregistration of quantitative research in psychology: Report of the joint psychological societies preregistration task force. ",
+      { i: "American Psychologist" }, ", ", { i: "77" }, "(4), 602–615."], "10.1037/amp0000879"],
+    [["Cobo, M. J., López-Herrera, A. G., Herrera-Viedma, E., & Herrera, F. (2011). An approach for detecting, quantifying, and visualizing the evolution of a research field: A practical application to the Fuzzy Sets Theory field. ",
+      { i: "Journal of Informetrics" }, ", ", { i: "5" }, "(1), 146–166."], "10.1016/j.joi.2010.10.002"],
+    [["Coulter, N., Monarch, I., & Konda, S. (1998). Software engineering as seen through its research literature: A study in co-word analysis. ",
+      { i: "Journal of the American Society for Information Science" }, ", ", { i: "49" }, "(13), 1206–1223."],
+      "10.1002/(SICI)1097-4571(1998)49:13<1206::AID-ASI7>3.0.CO;2-F"],
+    [["Lakatos, I. (1970). Falsification and the methodology of scientific research programmes. In I. Lakatos & A. Musgrave (Eds.), ",
+      { i: "Criticism and the growth of knowledge" }, " (pp. 91–196). Cambridge University Press."], "10.1017/cbo9781139171434.009"],
+    [["Mayo, D. G., & Spanos, A. (2006). Severe testing as a basic concept in a Neyman–Pearson philosophy of induction. ",
+      { i: "The British Journal for the Philosophy of Science" }, ", ", { i: "57" }, "(2), 323–357."], "10.1093/bjps/axl003"],
+    [["Verma, T. S., & Pearl, J. (2022). Equivalence and synthesis of causal models. In H. Geffner, R. Dechter, & J. Y. Halpern (Eds.), ",
+      { i: "Probabilistic and causal inference: The works of Judea Pearl" },
+      " (pp. 221–236). Association for Computing Machinery."], "10.1145/3501714.3501732",
+      " (Original work published 1990)"],
+  ];
+  function workCited([pieces, doi, note]) {
+    const url = "https://doi.org/" + doi;
+    const href = "https://doi.org/" + doi.replace(/</g, "%3C").replace(/>/g, "%3E");
+    return el("li", null, [
+      ...pieces.map((x) => (typeof x === "string" ? x : el("i", null, x.i))), " ",
+      el("a", { href, target: "_blank", rel: "noopener" }, url), note,
+    ]);
+  }
+
   function openHelp() {
     const li = (t) => el("li", null, t);
     const byGroup = GROUPS.map((g) => [el("h4", null, g.label + ": " + g.sub),
@@ -1364,6 +1395,8 @@
       el("p", { class: "note" }, "Your theory, operation and last result are remembered in this browser, so a page refresh restores the session. Copy link puts the theory and the operation in the address after the # sign, which browsers never send to a server, so the link reproduces the view without anything being stored elsewhere. A theory too large for a link is better sent as a file."),
       el("h3", null, "Operations"),
       ...byGroup.flat(),
+      el("h3", null, "Works cited"),
+      el("ul", { class: "help-refs" }, WORKS_CITED.map(workCited)),
       el("h3", null, "What the app leaves out"),
       el("p", { class: "note" }, "The literature operations read the bundled demonstration corpus, a frozen OpenAlex corpus or a corpus file you upload. The app makes no network request for data, by design: every result then rests on files you can see and save, and nothing about you or your theory reaches another service. OpenAlex and Crossref would answer a browser directly, so the package's fetch_corpus() could run here in principle. To map a fresh corpus, run it in the package and upload the file it writes."),
       el("p", { class: "note" }, "The embedding-based redundancy screen needs an embedding model, which the app does not ship, and the OSF deposit needs a personal access token, which a web page should not hold. Both are in the installed package."),

@@ -111,8 +111,9 @@ To derive and compare, `implications()` lists the conditional independencies tha
 graph of the propositions implies, `entailments()` reads each stated claim against that
 graph, `equivalent_models()` lists the causal directions that no observational study can
 test, `discriminate()` sets the theory against a rival, `appraise_amendment()` calls an
-amendment progressive, degenerating or neutral (Lakatos, 1970) and `simulate()` runs the
-construct network as a linear dynamical system.
+amendment progressive or degenerating (Lakatos, 1970) or neutral, the package's label for
+one that meets neither rule, and `simulate()` runs the construct network as a linear
+dynamical system.
 
 To test it, `severity()` grades the riskiness of each prediction's claim before data,
 `compile_sem()` writes lavaan model syntax, `preregister()` writes the theory and hypotheses

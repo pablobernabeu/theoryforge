@@ -6,6 +6,7 @@
 // operations and the page title.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { makeWindow, runScript } from "./dom.mjs";
@@ -520,6 +521,22 @@ test("the help lists each operation as 'Label: description' and the title names 
   assert.match(items[0].textContent, /^Rigour checklist: Scores the theory against the 12-item rigour checklist/);
 });
 
+test("the help lists every work that the help texts and the result guides cite", async () => {
+  const { ctx, $ } = await boot();
+  await $("#helpBtn").click();
+  const refs = [...ctx.document.querySelectorAll("#tfModal ul.help-refs li")].map((li) => li.textContent);
+  assert.ok(refs.length > 0, "the help lists the works cited");
+  // Each author-year citation in the source, such as (Verma & Pearl, 1990/2022).
+  const cites = readFileSync(CORE, "utf8").match(/\(([A-Z][A-Za-z'-]+)( et al\.| & [A-Z][A-Za-z -]+)?, (\d{4})/g) || [];
+  assert.ok(cites.length >= 6, "the help texts cite works");
+  for (const c of cites) {
+    const [, first, , year] = c.match(/\(([A-Z][A-Za-z'-]+)( et al\.| & [A-Z][A-Za-z -]+)?, (\d{4})/);
+    assert.ok(refs.some((r) => r.startsWith(first + ", ") && (r.includes("(" + year + ")") || r.includes("published " + year))),
+      c + " has an entry");
+  }
+  for (const r of refs) assert.match(r, / https:\/\/doi\.org\/10\.\S+( \(Original work published \d{4}\))?$/);
+});
+
 // ---- groups, chips, the selector, errors and the status region -------------
 
 test("the operations stand in groups, each with a plain-language subtitle", async () => {
@@ -857,7 +874,7 @@ test("the help dialog has one banner, an h2 title and headings that follow it", 
   assert.equal(modal.querySelectorAll("header").length, 0, "the dialog's head is no banner landmark");
   assert.equal($("#tfModalTitle").tagName, "H2");
   assert.equal(modal.querySelectorAll("h4").length, 6, "the groups are h4 under the h3 sections");
-  assert.equal(modal.querySelectorAll("h3").length, 3);
+  assert.equal(modal.querySelectorAll("h3").length, 4);
   assert.equal(modal.querySelectorAll("h5").length, 0);
 });
 

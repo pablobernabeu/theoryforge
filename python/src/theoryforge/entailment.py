@@ -653,9 +653,10 @@ def equivalent_models(theory) -> dict:
         background knowledge. In P. Besnard & S. Hanks (Eds.), Proceedings of
         the Eleventh Conference on Uncertainty in Artificial Intelligence (pp.
         403-410). Morgan Kaufmann.
-        Verma, T., & Pearl, J. (2022). Equivalence and synthesis of causal
-        models. In Probabilistic and causal inference: The works of Judea Pearl
-        (pp. 221-236). Association for Computing Machinery.
+        Verma, T. S., & Pearl, J. (2022). Equivalence and synthesis of causal
+        models. In H. Geffner, R. Dechter, & J. Y. Halpern (Eds.), Probabilistic
+        and causal inference: The works of Judea Pearl (pp. 221-236).
+        Association for Computing Machinery.
         https://doi.org/10.1145/3501714.3501732 (Original work published 1990)
     """
     theory = theory.data if hasattr(theory, "data") else theory

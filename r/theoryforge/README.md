@@ -164,10 +164,10 @@ identifies the effect in observational data and names a minimal such set.
 `tf_discriminate()` sets the theory against a rival, either an alternative that states its
 own propositions or another theory, and lists the claims, independencies and signs that
 would tell the two apart. `tf_appraise_amendment()` compares two versions of a theory and
-calls the amendment progressive, degenerating or neutral in the sense of Lakatos (1970).
-`tf_simulate()` runs the construct network as a linear dynamical system with one coupling
-gain. Its trajectory shows what the propositions imply under that model and is not fitted to
-data.
+calls the amendment progressive or degenerating in the sense of Lakatos (1970), or neutral,
+the package's label for one that meets neither rule. `tf_simulate()` runs the construct
+network as a linear dynamical system with one coupling gain. Its trajectory shows what the
+propositions imply under that model and is not fitted to data.
 
 ### Test
 

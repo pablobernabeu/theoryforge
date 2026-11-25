@@ -655,6 +655,12 @@ Each theme is `{id, keywords, size, centrality, density, quadrant}`. The default
 
 The corpora in `fixtures/edge/*.corpus.*` pin these rules in both languages (§7).
 
+Callon, M., Courtial, J. P., & Laville, F. (1991). Co-word analysis as a tool for describing the network of interactions between basic and technological research: The case of polymer chemistry. *Scientometrics*, *22*(1), 155–205. https://doi.org/10.1007/BF02019280
+
+Cobo, M. J., López-Herrera, A. G., Herrera-Viedma, E., & Herrera, F. (2011). An approach for detecting, quantifying, and visualizing the evolution of a research field: A practical application to the Fuzzy Sets Theory field. *Journal of Informetrics*, *5*(1), 146–166. https://doi.org/10.1016/j.joi.2010.10.002
+
+Coulter, N., Monarch, I., & Konda, S. (1998). Software engineering as seen through its research literature: A study in co-word analysis. *Journal of the American Society for Information Science*, *49*(13), 1206–1223. https://doi.org/10.1002/(SICI)1097-4571(1998)49:13%3C1206::AID-ASI7%3E3.0.CO;2-F
+
 ## 15. landscape(theory, corpus, min_link=2, max_token_share=0.5, method="components"): deterministic
 
 The arguments are checked in the order `min_link` (§14), `max_token_share`, `method` (§14), then the corpus (§14). `max_token_share` must be one number from 0 to 1, or the call raises `max_token_share must be a number between 0 and 1`. Python accepts an int or a float and never a bool, R a numeric of length 1 that is not `NA`, and NaN and the infinities are refused in both. Compute `lm = litmap(corpus, min_link, method)`, with litmap's other defaults and without the co-citation count, which the landscape does not read and which is most of the work on a corpus with references. With `components`, it warns as litmap does (§14). Using the §6 tokeniser, with `join` joining strings with a space:
@@ -933,6 +939,10 @@ Every matrix product is an explicit triple loop over `i`, then `j`, then the inn
 **What the record says about the propositions.** `ignored` lists, in file order, the ids of the propositions that couple nothing: those whose relation is `moderates`, `associates` or outside the schema's set, and those whose `from` or `to` is not a nonempty construct id. A proposition without an id is listed as `""`. `assumed_positive` lists those coupled at +k without a stated sign (**Couplings** above). `opposed` lists, in the order each pair first couples, the `[from, to]` pairs that carry at least one positive coupling (increases, or causes and mediates by assumption) and at least one `decreases`. Their couplings offset each other in `A`, and cancel when their counts match. Pairs are ordered: `[a, b]` and `[b, a]` are different pairs.
 
 **Scope of the model.** Every coupling has the one gain `k`. `causes` and `mediates` are taken as positive, `moderates` and `associates` couple 0 and `functional_form` is not read. With a number `init`, every state starts from it, and constructs with the same in-structure follow the same trajectory. Every eigenvalue of an acyclic theory equals `−damping`, so it decays at that rate asymptotically, though not in its transients. The regime of a cyclic theory is set by `k` against `damping`. A linear system has one equilibrium, or a continuum of them when `J` is singular, never two separate ones, so it cannot show bistability (Robinaugh et al., 2024).
+
+Moler, C., & Van Loan, C. (2003). Nineteen dubious ways to compute the exponential of a matrix, twenty-five years later. *SIAM Review*, *45*(1), 3–49. https://doi.org/10.1137/S00361445024180
+
+Robinaugh, D. J., Haslbeck, J. M. B., Waldorp, L. J., Kossakowski, J. J., Fried, E. I., Millner, A. J., McNally, R. J., Ryan, O., de Ron, J., van der Maas, H. L. J., van Nes, E. H., Scheffer, M., Kendler, K. S., & Borsboom, D. (2024). Advancing the network theory of mental disorders: A computational model of panic disorder. *Psychological Review*, *131*(6), 1482–1508. https://doi.org/10.1037/rev0000515
 
 ## 23. render_report(theory, path, title=None, render=False, to="html")
 
@@ -1300,7 +1310,7 @@ van der Zander, B., Liśkiewicz, M., & Textor, J. (2019). Separators and adjustm
 
 VanderWeele, T. J., & Robins, J. M. (2010). Signed directed acyclic graphs for causal inference. *Journal of the Royal Statistical Society Series B: Statistical Methodology*, *72*(1), 111–127. https://doi.org/10.1111/j.1467-9868.2009.00728.x
 
-Verma, T., & Pearl, J. (2022). Equivalence and synthesis of causal models. In *Probabilistic and causal inference: The works of Judea Pearl* (pp. 221–236). Association for Computing Machinery. https://doi.org/10.1145/3501714.3501732 (Original work published 1990)
+Verma, T. S., & Pearl, J. (2022). Equivalence and synthesis of causal models. In H. Geffner, R. Dechter, & J. Y. Halpern (Eds.), *Probabilistic and causal inference: The works of Judea Pearl* (pp. 221–236). Association for Computing Machinery. https://doi.org/10.1145/3501714.3501732 (Original work published 1990)
 
 Wright, S. (1934). The method of path coefficients. *The Annals of Mathematical Statistics*, *5*(3), 161–215. https://doi.org/10.1214/aoms/1177732676
 
@@ -1371,7 +1381,7 @@ MacCallum, R. C., Wegener, D. T., Uchino, B. N., & Fabrigar, L. R. (1993). The p
 
 Meek, C. (1995). Causal inference and causal explanation with background knowledge. In P. Besnard & S. Hanks (Eds.), *Proceedings of the Eleventh Conference on Uncertainty in Artificial Intelligence* (pp. 403–410). Morgan Kaufmann.
 
-Verma, T., & Pearl, J. (2022). Equivalence and synthesis of causal models. In *Probabilistic and causal inference: The works of Judea Pearl* (pp. 221–236). Association for Computing Machinery. https://doi.org/10.1145/3501714.3501732 (Original work published 1990)
+Verma, T. S., & Pearl, J. (2022). Equivalence and synthesis of causal models. In H. Geffner, R. Dechter, & J. Y. Halpern (Eds.), *Probabilistic and causal inference: The works of Judea Pearl* (pp. 221–236). Association for Computing Machinery. https://doi.org/10.1145/3501714.3501732 (Original work published 1990)
 
 ## 34. content_hash(theory) → the SHA-256 digest of the theory's canonical form (deterministic, parity-tested)
 
