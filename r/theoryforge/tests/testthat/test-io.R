@@ -285,6 +285,11 @@ test_that("a string R cannot hold is refused with one message", {
     list(".yaml", paste0('id: x\ntitle: "before', bs, 'u0000after"\n'), "U+0000"),
     list(".yaml", paste0('"a', bs, '0b": 1\n"a', bs, '0c": 2\n'), "U+0000"),
     list(".yaml", paste0('"a', bs, '0b": 1\n"a', bs, '0b": 2\n'), "U+0000"),
+    # A key whose value is null or an empty collection, which unlist() would
+    # drop, is searched too.
+    list(".yaml", paste0('id: x\nextra:\n  "a', bs, '0b": ~\n'), "U+0000"),
+    list(".yaml", paste0('id: x\nextra:\n  "a', bs, '0b": []\n'), "U+0000"),
+    list(".yaml", paste0('id: x\nextra:\n  "a', bs, '0b": {}\n'), "U+0000"),
     # A paired surrogate escape is one character, an escaped backslash is no
     # escape, and only a double-quoted YAML scalar has escapes.
     list(".json", paste0('{"id": "x", "title": "a', bs, 'uD83D', bs, 'uDE00b"}'), NULL),
@@ -350,8 +355,10 @@ predictions:
     list(id = "c1", label = "Alpha", definition = "Bodily\tactivation."),
     list(id = "c2", label = "Beta", definition = "Appraised danger.")))
   expect_identical(t$predictions[[1]]$derives_from, list("p1", "p2"))
-  # A tab that indents a line, or follows the dash of a sequence entry, is refused.
-  for (bad in c("id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n")) {
+  # A tab that indents a line, or stands between the dash of a sequence entry
+  # and its content, is refused.
+  for (bad in c("id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n",
+                "id: a\nconstructs:\n  - \tc1\n")) {
     expect_error(tf_read(io_file(bad)), "found character that cannot start any token", fixed = TRUE)
   }
 })

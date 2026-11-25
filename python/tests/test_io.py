@@ -379,6 +379,11 @@ UNREADABLE = [
     ("nulu.theory.yaml", 'id: x\ntitle: "before' + BS + 'u0000after"\n', "U+0000"),
     ("keys.theory.yaml", '"a' + BS + '0b": 1\n"a' + BS + '0c": 2\n', "U+0000"),
     ("dupkey.theory.yaml", '"a' + BS + '0b": 1\n"a' + BS + '0b": 2\n', "U+0000"),
+    # A key whose value is null or an empty collection, which R's unlist()
+    # would drop, is searched too.
+    ("nullkey.theory.yaml", 'id: x\nextra:\n  "a' + BS + '0b": ~\n', "U+0000"),
+    ("seqkey.theory.yaml", 'id: x\nextra:\n  "a' + BS + '0b": []\n', "U+0000"),
+    ("mapkey.theory.yaml", 'id: x\nextra:\n  "a' + BS + '0b": {}\n', "U+0000"),
     # A paired surrogate escape is one character, an escaped backslash is no
     # escape, and only a double-quoted YAML scalar has escapes.
     ("pair.theory.json", '{"id": "x", "title": "a' + BS + 'uD83D' + BS + 'uDE00b"}', None),
@@ -586,7 +591,8 @@ def test_yaml_is_parsed_with_libyaml_as_r_parses_it():
 
 
 def test_a_tab_reads_as_r_reads_it(tmp_path):
-    yaml = pytest.importorskip("yaml")
+    import yaml
+
     if not yaml.__with_libyaml__:
         pytest.skip("PyYAML was built without libyaml")
     t = tf.read(_file(tmp_path, "tabs.theory.yaml", TABS))
@@ -596,8 +602,9 @@ def test_a_tab_reads_as_r_reads_it(tmp_path):
         {"id": "c2", "label": "Beta", "definition": "Appraised danger."}]
     assert t.data["predictions"][0]["derives_from"] == ["p1", "p2"]
     # A tab that YAML does not allow is refused by both twins: one that indents
-    # a line, and one right after the dash of a sequence entry.
-    for i, text in enumerate(["id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n"]):
+    # a line, and one between the dash of a sequence entry and its content.
+    for i, text in enumerate(["id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n",
+                              "id: a\nconstructs:\n  - \tc1\n"]):
         with pytest.raises(yaml.YAMLError, match="found character that cannot start any token"):
             tf.read(_file(tmp_path, f"bad{i}.theory.yaml", text))
 
