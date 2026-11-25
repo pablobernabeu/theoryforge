@@ -342,6 +342,13 @@ test_that("a failed later page says how many records came before it", {
   local_mocked_bindings(.tf_http = fake$http)
   expect_identical(refusal(tf_fetch_corpus("panic", per_page = 2, max_records = 5)), paste(
     "cannot open the connection: Could not connect to server (after 2 records were fetched)"))
+  fake <- fake_openalex(function(url, headers) {
+    if (identical(query_param(url, "page"), "1")) paged_answer(url, headers) else
+      list(status = 200L, body = '{"meta": {}, "results": [null]}')
+  })
+  local_mocked_bindings(.tf_http = fake$http)
+  expect_identical(refusal(tf_fetch_corpus("panic", per_page = 2, max_records = 5)),
+                   "OpenAlex response has a work that is not an object (after 2 records were fetched)")
 })
 
 test_that("a query that is not a non-empty string is refused", {
@@ -405,6 +412,38 @@ test_that("a null title is left out of the record", {
   local_mocked_bindings(.tf_http = fake$http)
   record <- tf_fetch_corpus("panic")$records[[1L]]
   expect_identical(names(record), c("id", "doi", "year", "keywords", "references"))
+})
+
+test_that("a work that is not an object is refused", {
+  bodies <- c("[null]", '["https://openalex.org/W1"]', paste0("[", as_json(openalex_work(1L)), ", []]"))
+  for (results in bodies) {
+    fake <- fake_openalex(function(url, headers) {
+      list(status = 200L, body = paste0('{"meta": {"count": 1}, "results": ', results, "}"))
+    })
+    local_mocked_bindings(.tf_http = fake$http)
+    expect_identical(refusal(tf_fetch_corpus("panic")),
+                     "OpenAlex response has a work that is not an object")
+  }
+})
+
+test_that("entries without a name as text are left out", {
+  # The Python suite maps the same works. A field that is not an array gives
+  # no entries, and so does an object.
+  works <- paste0('[{"id": "W1", "keywords": [null, {"display_name": 5}, {"display_name": ""}, ',
+                  '"panic", {"display_name": "fear"}], ',
+                  '"referenced_works": [null, 5, "https://openalex.org/R1"]}, ',
+                  '{"id": "W2", "keywords": "panic", "concepts": {"display_name": "Panic disorder"}, ',
+                  '"referenced_works": "https://openalex.org/R2"}, ',
+                  '{"id": "W3", "keywords": [null], ',
+                  '"concepts": [null, "x", {"display_name": "Anxiety"}]}]')
+  fake <- fake_openalex(function(url, headers) {
+    list(status = 200L, body = paste0('{"meta": {"count": 3}, "results": ', works, "}"))
+  })
+  local_mocked_bindings(.tf_http = fake$http)
+  records <- tf_fetch_corpus("panic", per_page = 3)$records
+  expect_identical(lapply(records, `[[`, "keywords"), list(list("fear"), list(), list("Anxiety")))
+  expect_identical(lapply(records, `[[`, "references"),
+                   list(list("https://openalex.org/R1"), list(), list()))
 })
 
 test_that("each record keeps its DOI as returned", {

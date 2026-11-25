@@ -4,6 +4,7 @@ No test here reaches the network. Each one replaces ``theoryforge.lit._urlopen``
 through which fetch_corpus sends every request (API_SPEC.md section 17). The R
 suite's test-fetch-corpus.R asserts the same messages and the same corpus.
 """
+import http.client
 import io
 import json
 import re
@@ -288,6 +289,14 @@ def test_a_failed_later_page_says_how_many_records_came_before_it(monkeypatch, n
      "<urlopen error [Errno 111] Connection refused (after 2 records were fetched)>"),
     (TimeoutError("The read operation timed out"), TimeoutError,
      "The read operation timed out (after 2 records were fetched)"),
+    # A connection reset, or a reply cut short, while the response is read,
+    # which urllib raises as they are.
+    (ConnectionResetError(104, "Connection reset by peer"), urllib.error.URLError,
+     "<urlopen error [Errno 104] Connection reset by peer (after 2 records were fetched)>"),
+    (http.client.IncompleteRead(b'{"res'), urllib.error.URLError,
+     "<urlopen error IncompleteRead(5 bytes read) (after 2 records were fetched)>"),
+    ((200, {"meta": {}, "results": [None]}), ValueError,
+     "OpenAlex response has a work that is not an object (after 2 records were fetched)"),
 ])
 def test_every_failure_of_a_later_page_keeps_its_class(monkeypatch, no_env_key,
                                                          failure, kind, message):
@@ -365,6 +374,32 @@ def test_a_null_title_is_left_out_of_the_record(monkeypatch, no_env_key):
     schema = json.loads((files("theoryforge") / "schema" / "corpus.schema.json")
                         .read_text(encoding="utf-8"))
     jsonschema.Draft202012Validator(schema).validate(corpus)
+
+
+def test_a_work_that_is_not_an_object_is_refused(monkeypatch, no_env_key):
+    for results in ([None], ["https://openalex.org/W1"], [_work(1), []]):
+        body = {"meta": {"count": 1}, "results": results}
+        _install(monkeypatch, lambda r, body=body: (200, body))
+        with pytest.raises(ValueError) as exc:
+            tf.fetch_corpus("panic")
+        assert str(exc.value) == "OpenAlex response has a work that is not an object"
+
+
+def test_entries_without_a_name_as_text_are_left_out(monkeypatch, no_env_key):
+    # The R suite maps the same works. A field that is not an array gives no
+    # entries, and so does an object.
+    works = [
+        {"id": "W1", "keywords": [None, {"display_name": 5}, {"display_name": ""}, "panic",
+                                  {"display_name": "fear"}],
+         "referenced_works": [None, 5, "https://openalex.org/R1"]},
+        {"id": "W2", "keywords": "panic", "concepts": {"display_name": "Panic disorder"},
+         "referenced_works": "https://openalex.org/R2"},
+        {"id": "W3", "keywords": [None], "concepts": [None, "x", {"display_name": "Anxiety"}]},
+    ]
+    _install(monkeypatch, lambda r: (200, {"meta": {"count": 3}, "results": works}))
+    records = tf.fetch_corpus("panic", per_page=3)["records"]
+    assert [r["keywords"] for r in records] == [["fear"], [], ["Anxiety"]]
+    assert [r["references"] for r in records] == [["https://openalex.org/R1"], [], []]
 
 
 def test_each_record_keeps_its_doi_as_returned(monkeypatch, no_env_key):

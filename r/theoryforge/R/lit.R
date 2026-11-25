@@ -1019,6 +1019,9 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #' spent and with HTTP 401 when a later cursor page is asked for without a key,
 #' the function stops with the status and, when the suggested \pkg{curl}
 #' package is installed, OpenAlex's own message. The request is not retried.
+#' A response without a \code{results} list, or with a work that is not an
+#' object, stops. Keyword and concept entries without a name given as text,
+#' and references that are not text, are left out.
 #' When a page after the first fails, the works fetched before it are not
 #' returned, and the message ends with the number of them, as in
 #' \code{(after 200 records were fetched)}. Every request is abandoned after
@@ -1192,6 +1195,9 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL,
   if (!is.list(results) || .tf_is_mapping(results)) {
     stop("OpenAlex response has no results list", call. = FALSE)
   }
+  if (!all(vapply(results, .tf_is_mapping, logical(1L)))) {
+    stop("OpenAlex response has a work that is not an object", call. = FALSE)
+  }
   list(meta = data[["meta"]], results = results)
 }
 
@@ -1234,23 +1240,28 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL,
   if (is.numeric(x) && length(x) == 1L && is.finite(x) && x == trunc(x)) x else NULL
 }
 
-# One OpenAlex work as a corpus record.
+# The entries of a field OpenAlex gives as an array, or none when it is
+# anything else, an object included.
+.tf_openalex_entries <- function(w, key) {
+  v <- w[[key]]
+  if (is.list(v) && !.tf_is_mapping(v)) v else list()
+}
+
+# The display_name of each entry that gives one as nonempty text.
+.tf_openalex_names <- function(entries) {
+  names <- lapply(entries, function(e) if (.tf_is_mapping(e)) e[["display_name"]])
+  unlist(Filter(function(n) .tf_is_string(n) && nzchar(n), names), use.names = FALSE)
+}
+
+# One OpenAlex work as a corpus record. Entries without a name are dropped
+# before the emptiness test, so a keywords list made only of nulls still falls
+# back to the concepts, as in the Python twin.
 .tf_openalex_record <- function(w) {
-  kws <- character(0)
-  for (k in .tf_as_list(w, "keywords")) {
-    dn <- .tf_get(k, "display_name")
-    if (!is.null(dn) && nzchar(as.character(dn))) kws <- c(kws, as.character(dn))
-  }
+  kws <- .tf_openalex_names(.tf_openalex_entries(w, "keywords"))
   if (length(kws) == 0L) {
-    concepts <- .tf_as_list(w, "concepts")
-    concepts <- utils::head(concepts, 5L)
-    for (cc in concepts) {
-      dn <- .tf_get(cc, "display_name")
-      if (!is.null(dn) && nzchar(as.character(dn))) kws <- c(kws, as.character(dn))
-    }
+    kws <- .tf_openalex_names(utils::head(.tf_openalex_entries(w, "concepts"), 5L))
   }
-  refs <- vapply(.tf_as_list(w, "referenced_works"),
-                 function(x) as.character(x[[1L]]), character(1))
+  refs <- Filter(.tf_is_string, .tf_openalex_entries(w, "referenced_works"))
   title <- .tf_get(w, "title")
   c(
     list(id = .tf_get(w, "id"), doi = .tf_get(w, "doi")),
@@ -1259,7 +1270,7 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL,
     list(
       year = .tf_get(w, "publication_year"),
       keywords = as.list(kws),
-      references = as.list(refs)
+      references = refs
     )
   )
 }
