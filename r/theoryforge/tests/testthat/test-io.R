@@ -150,6 +150,40 @@ test_that("aliases that expand past the limit refuse the file", {
   expect_identical(ids, c("c1", "c2"))
 })
 
+# A theory whose `x` holds `levels` sequences, one inside the next, with a
+# string in the innermost, so that the string lies levels + 2 levels deep.
+nested <- function(levels, json = FALSE) {
+  inner <- paste0(strrep("[", levels), if (json) '"s"' else "s", strrep("]", levels))
+  if (json) {
+    paste0('{"schema_version": "1.1", "id": "d", "title": "D", "maturity": "draft", "x": ', inner, "}\n")
+  } else {
+    paste0("schema_version: '1.1'\nid: d\ntitle: D\nmaturity: draft\nx: ", inner, "\n")
+  }
+}
+
+test_that("a document nested more than 64 levels deep refuses the file", {
+  # The document is the first level, so 62 sequences reach the limit with
+  # their string. The Python twin measures the same levels.
+  for (json in c(FALSE, TRUE)) {
+    ext <- if (json) ".json" else ".yaml"
+    expect_identical(tf_read(io_file(nested(62L, json), ext))$id, "d")
+    path <- io_file(nested(63L, json), ext)
+    expect_error(tf_read(path), sprintf("(%s) the document is nested more than 64 levels deep", path),
+                 fixed = TRUE)
+  }
+  # An alias counts at the depth where it stands, and an empty sequence is a
+  # value of its own.
+  path <- io_file(paste0("a: &a ", strrep("[", 40L), strrep("]", 40L), "\n",
+                         "b: ", strrep("[", 24L), "*a", strrep("]", 24L), "\n"))
+  expect_error(tf_read(path), "nested more than 64 levels deep", fixed = TRUE)
+  expect_error(tf_read_corpus(path), "nested more than 64 levels deep", fixed = TRUE)
+  # Text far deeper than that is refused too, without exhausting the stack:
+  # jsonlite would recurse once for every level.
+  expect_error(tf_read(io_file(nested(20000L, TRUE), ".json")), "nested more than 64 levels deep",
+               fixed = TRUE)
+  expect_error(tf_read(io_file(nested(2000L))), "nested more than 64 levels deep", fixed = TRUE)
+})
+
 test_that("an unquoted date stays a string and writes to JSON", {
   theory <- tf_read(io_file(date_theory))
   expect_identical(theory$test_outcomes[[1]]$date, "2026-05-01")

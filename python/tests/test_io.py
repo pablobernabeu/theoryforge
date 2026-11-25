@@ -249,6 +249,44 @@ def test_aliases_that_expand_past_the_limit_refuse_the_file(tmp_path):
     assert [c["id"] for c in t.data["constructs"]] == ["c1", "c2"]
 
 
+def _nested(levels: int, json: bool = False) -> str:
+    """A theory whose ``x`` holds ``levels`` sequences, one inside the next,
+    with a string in the innermost, so that the string lies levels + 2 levels
+    deep."""
+    inner = "[" * levels + ('"s"' if json else "s") + "]" * levels
+    if json:
+        return ('{"schema_version": "1.1", "id": "d", "title": "D", "maturity": "draft", "x": '
+                + inner + "}\n")
+    return "schema_version: '1.1'\nid: d\ntitle: D\nmaturity: draft\nx: " + inner + "\n"
+
+
+@pytest.mark.parametrize("suffix", [".yaml", ".json"])
+def test_a_document_nested_more_than_64_levels_deep_refuses_the_file(tmp_path, suffix):
+    # The document is the first level, so 62 sequences reach the limit with
+    # their string. The R twin measures the same levels.
+    json = suffix == ".json"
+    assert tf.read(_file(tmp_path, "at.theory" + suffix, _nested(62, json))).data["id"] == "d"
+    path = _file(tmp_path, "over.theory" + suffix, _nested(63, json))
+    with pytest.raises(ValueError) as exc:
+        tf.read(path)
+    assert str(exc.value) == f"({path}) the document is nested more than 64 levels deep"
+    # Text far deeper than that is refused too, where the parsers would raise
+    # RecursionError or, for libyaml's composer, exhaust the C stack.
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read(_file(tmp_path, "deeper.theory" + suffix, _nested(100000, json)))
+
+
+def test_an_alias_counts_at_the_depth_where_it_stands(tmp_path):
+    # An empty sequence is a value of its own, 41 levels deep here, and the
+    # alias puts it 24 levels deeper still.
+    text = "a: &a " + "[" * 40 + "]" * 40 + "\nb: " + "[" * 24 + "*a" + "]" * 24 + "\n"
+    path = _file(tmp_path, "alias.theory.yaml", text)
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read(path)
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read_corpus(path)
+
+
 def test_an_unquoted_date_stays_a_string_and_writes_to_json(tmp_path):
     t = tf.read(_file(tmp_path, "date.theory.yaml", DATE_THEORY))
     outcome = t.data["test_outcomes"][0]

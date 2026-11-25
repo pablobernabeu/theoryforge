@@ -44,3 +44,22 @@ test_that("a variable associated only with itself reads as a construct outside t
   expect_identical(vapply(t$propositions, function(p) p$relation, ""), c("causes", "associates"))
   expect_identical(unlist(tf_implications(t)$constructs), c("x", "y"))
 })
+
+test_that("tf_read_dagitty reads ten thousand edges and keeps each once", {
+  # Two groups of 100 give 10000 edges, drawn again with the arrow reversed and
+  # once more as an association. The Python suite reads the same text.
+  a <- paste0("a", 0:99)
+  b <- paste0("\"b ", 0:99, "\"")
+  text <- sprintf("dag { {%s} -> {%s}; {%s} <- {%s}; a0 <-> \"b 0\"; a0 -> \"b 0\" }",
+                  paste(a, collapse = " "), paste(b, collapse = " "),
+                  paste(b, collapse = " "), paste(a, collapse = " "))
+  t <- tf_read_dagitty(text)
+  expect_length(t$constructs, 200L)
+  expect_length(t$propositions, 10001L)
+  ends <- function(p) c(p$from, p$to, p$relation)
+  expect_identical(ends(t$propositions[[1]]), c("a0", "b 0", "causes"))
+  expect_identical(ends(t$propositions[[2]]), c("a0", "b 1", "causes"))
+  expect_identical(ends(t$propositions[[101]]), c("a1", "b 0", "causes"))
+  expect_identical(ends(t$propositions[[10001]]), c("a0", "b 0", "associates"))
+  expect_identical(t$propositions[[10001]]$id, "p10001")
+})

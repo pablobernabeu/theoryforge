@@ -47,3 +47,20 @@ def test_a_variable_associated_only_with_itself_reads_as_a_construct_outside_the
     t = tf.read_dagitty("dag { x -> y; z <-> z }")
     assert [p["relation"] for p in t.data["propositions"]] == ["causes", "associates"]
     assert t.implications()["constructs"] == ["x", "y"]
+
+
+def test_read_dagitty_reads_ten_thousand_edges_and_keeps_each_once():
+    # Two groups of 100 give 10000 edges, drawn again with the arrow reversed and
+    # once more as an association. The R suite reads the same text.
+    a = " ".join(f"a{i}" for i in range(100))
+    b = " ".join(f'"b {i}"' for i in range(100))
+    t = tf.read_dagitty(f'dag {{ {{{a}}} -> {{{b}}}; {{{b}}} <- {{{a}}}; a0 <-> "b 0"; a0 -> "b 0" }}')
+    props = t.data["propositions"]
+    assert len(t.data["constructs"]) == 200
+    assert len(props) == 10001
+    ends = [(p["from"], p["to"], p["relation"]) for p in props]
+    assert ends[0] == ("a0", "b 0", "causes")
+    assert ends[1] == ("a0", "b 1", "causes")
+    assert ends[100] == ("a1", "b 0", "causes")
+    assert ends[10000] == ("a0", "b 0", "associates")
+    assert props[10000]["id"] == "p10001"

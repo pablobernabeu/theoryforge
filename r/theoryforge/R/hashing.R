@@ -84,27 +84,25 @@
 }
 
 # SHA-256 of a raw vector, as 64 lowercase hexadecimal digits (FIPS 180-4).
-# Base R has no SHA-256 before R 4.5, so it is computed here. Words are held as
-# doubles from 0 to 2^32 - 1, and the bitwise operations work on their two
-# 16-bit halves, since an R integer cannot hold 2^31.
+# From R 4.5, tools::sha256sum() computes it, and the web app's R has it too.
+# get0() finds the function without a note from R CMD check on the earlier
+# versions, which lack it and use .tf_sha256_r().
 .tf_sha256 <- function(bytes) {
+  f <- get0("sha256sum", envir = asNamespace("tools"), mode = "function", inherits = FALSE)
+  if (!is.null(f) && "bytes" %in% names(formals(f))) return(unname(f(bytes = bytes)))
+  .tf_sha256_r(bytes)
+}
+
+# The same digest in R alone, for versions of R before 4.5. A word is held as
+# a double from 0 to 2^32 - 1 where it is added, since an R integer cannot hold
+# 2^31, and as a vector of its 32 bits, the most significant first, where the
+# rounds rotate and combine it: a rotation is then a permutation of the bits,
+# the exclusive or of three words their column sum modulo 2, and the choice and
+# majority functions arithmetic on 0 and 1. The message schedule is computed
+# for every block at once, one column of 64 per step.
+.tf_sha256_r <- function(bytes) {
   w32 <- 4294967296
-  half <- function(x) list(hi = as.integer(x %/% 65536), lo = as.integer(x %% 65536))
-  join <- function(h) h$hi * 65536 + h$lo
-  xor <- function(a, b) {
-    a <- half(a)
-    b <- half(b)
-    join(list(hi = bitwXor(a$hi, b$hi), lo = bitwXor(a$lo, b$lo)))
-  }
-  and <- function(a, b) {
-    a <- half(a)
-    b <- half(b)
-    join(list(hi = bitwAnd(a$hi, b$hi), lo = bitwAnd(a$lo, b$lo)))
-  }
-  not <- function(a) w32 - 1 - a
-  rotr <- function(x, n) (x %/% 2^n) + (x %% 2^n) * 2^(32 - n)
-  shr <- function(x, n) x %/% 2^n
-  add <- function(...) sum(...) %% w32
+  pow2 <- 2^(31:0)
   k <- c(
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
     0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -117,36 +115,51 @@
   h <- c(0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19)
   b <- as.integer(bytes)
   len_bits <- length(b) * 8
-  b <- c(b, 0x80L)
-  b <- c(b, rep(0L, (56 - length(b) %% 64) %% 64))
-  len_bytes <- vapply(7:0, function(i) as.integer((len_bits %/% 256^i) %% 256), integer(1))
-  b <- c(b, len_bytes)
-  for (start in seq(1L, length(b), by = 64L)) {
-    chunk <- b[start:(start + 63L)]
-    w <- numeric(64)
-    for (t in 1:16) {
-      i <- (t - 1L) * 4L
-      w[[t]] <- chunk[[i + 1L]] * 16777216 + chunk[[i + 2L]] * 65536 + chunk[[i + 3L]] * 256 + chunk[[i + 4L]]
-    }
-    for (t in 17:64) {
-      s0 <- xor(xor(rotr(w[[t - 15L]], 7), rotr(w[[t - 15L]], 18)), shr(w[[t - 15L]], 3))
-      s1 <- xor(xor(rotr(w[[t - 2L]], 17), rotr(w[[t - 2L]], 19)), shr(w[[t - 2L]], 10))
-      w[[t]] <- add(w[[t - 16L]], s0, w[[t - 7L]], s1)
-    }
-    a <- h[[1]]; bb <- h[[2]]; cc <- h[[3]]; d <- h[[4]]
-    e <- h[[5]]; f <- h[[6]]; g <- h[[7]]; hh <- h[[8]]
+  b <- c(b, 0x80L, integer((55L - length(b)) %% 64L),
+         as.integer((len_bits %/% 256^(7:0)) %% 256))
+  nb <- length(b) %/% 64L
+  # The schedule: W[i, t] is word t of block i.
+  m <- matrix(b, nrow = 4L)
+  W <- matrix(0, nb, 64L)
+  W[, 1:16] <- matrix(m[1L, ] * 16777216 + m[2L, ] * 65536 + m[3L, ] * 256 + m[4L, ],
+                      nb, 16L, byrow = TRUE)
+  rotr <- function(x, n) (x %/% 2^n) + (x %% 2^n) * 2^(32 - n)
+  # The exclusive or of three vectors of words, on their 16-bit halves.
+  xor3 <- function(x, y, z) {
+    xh <- x %/% 65536
+    yh <- y %/% 65536
+    zh <- z %/% 65536
+    bitwXor(bitwXor(xh, yh), zh) * 65536 +
+      bitwXor(bitwXor(x - xh * 65536, y - yh * 65536), z - zh * 65536)
+  }
+  for (t in 17:64) {
+    x <- W[, t - 15L]
+    y <- W[, t - 2L]
+    s0 <- xor3(rotr(x, 7), rotr(x, 18), x %/% 8)
+    s1 <- xor3(rotr(y, 17), rotr(y, 19), y %/% 1024)
+    W[, t] <- (W[, t - 16L] + s0 + W[, t - 7L] + s1) %% w32
+  }
+  # The positions of the bits of a word rotated right by n, three rotations
+  # interleaved so that .colSums() adds the three bits of each position.
+  rot <- function(n) ((0:31 - n) %% 32L) + 1L
+  r1 <- as.vector(rbind(rot(6L), rot(11L), rot(25L)))
+  r0 <- as.vector(rbind(rot(2L), rot(13L), rot(22L)))
+  for (blk in seq_len(nb)) {
+    kw <- k + W[blk, ]
+    av <- h[[1]]; bv <- h[[2]]; cv <- h[[3]]; dv <- h[[4]]
+    ev <- h[[5]]; fv <- h[[6]]; gv <- h[[7]]; hv <- h[[8]]
+    a <- (av %/% pow2) %% 2; bb <- (bv %/% pow2) %% 2; cc <- (cv %/% pow2) %% 2
+    e <- (ev %/% pow2) %% 2; f <- (fv %/% pow2) %% 2; g <- (gv %/% pow2) %% 2
     for (t in 1:64) {
-      s1 <- xor(xor(rotr(e, 6), rotr(e, 11)), rotr(e, 25))
-      ch <- xor(and(e, f), and(not(e), g))
-      t1 <- add(hh, s1, ch, k[[t]], w[[t]])
-      s0 <- xor(xor(rotr(a, 2), rotr(a, 13)), rotr(a, 22))
-      maj <- xor(xor(and(a, bb), and(a, cc)), and(bb, cc))
-      t2 <- add(s0, maj)
-      hh <- g; g <- f; f <- e; e <- add(d, t1)
-      d <- cc; cc <- bb; bb <- a; a <- add(t1, t2)
+      # t1 = h + Sigma1(e) + Ch(e, f, g) + k + w, and t2 = Sigma0(a) + Maj(a, b, c).
+      t1 <- hv + sum((.colSums(e[r1], 3L, 32L) %% 2 + g + e * (f - g)) * pow2) + kw[[t]]
+      t2 <- sum((.colSums(a[r0], 3L, 32L) %% 2 + (a + bb + cc > 1)) * pow2)
+      hv <- gv; gv <- fv; fv <- ev; ev <- (dv + t1) %% w32
+      g <- f; f <- e; e <- (ev %/% pow2) %% 2
+      dv <- cv; cv <- bv; bv <- av; av <- (t1 + t2) %% w32
+      cc <- bb; bb <- a; a <- (av %/% pow2) %% 2
     }
-    h <- c(add(h[[1]], a), add(h[[2]], bb), add(h[[3]], cc), add(h[[4]], d),
-           add(h[[5]], e), add(h[[6]], f), add(h[[7]], g), add(h[[8]], hh))
+    h <- (h + c(av, bv, cv, dv, ev, fv, gv, hv)) %% w32
   }
   paste(sprintf("%04x%04x", as.integer(h %/% 65536), as.integer(h %% 65536)), collapse = "")
 }

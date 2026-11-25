@@ -27,10 +27,14 @@
     k <- nchar(s)
     i + k - 1L <= n && identical(paste(ch[i:(i + k - 1L)], collapse = ""), s)
   }
+  # For each position, the next quotation mark and the next character that
+  # ends a name at or after it (n + 1 when there is none), found once for the
+  # whole text.
+  next_of <- function(hit) rev(cummin(rev(ifelse(hit, seq_len(n), n + 1L))))
+  next_quote <- c(next_of(ch == '"'), n + 1L)
+  next_stop <- c(next_of(ch %in% c(.tf_DAGITTY_SPACE, .tf_DAGITTY_SPECIAL)), n + 1L)
   find_quote <- function(from) {
-    if (from > n) return(NA_integer_)
-    hit <- which(ch[from:n] == '"')
-    if (length(hit)) from + hit[[1]] - 1L else NA_integer_
+    if (from > n || next_quote[[from]] > n) NA_integer_ else next_quote[[from]]
   }
   out <- list()
   i <- 1L
@@ -74,10 +78,7 @@
     } else if (c1 %in% c("<", ">", "-", "]", "@")) {
       .tf_dagitty_fail(sprintf("cannot read '%s' at character %d", c1, i))
     } else {
-      j <- i
-      while (j <= n && !(ch[[j]] %in% .tf_DAGITTY_SPACE) && !(ch[[j]] %in% .tf_DAGITTY_SPECIAL)) {
-        j <- j + 1L
-      }
+      j <- next_stop[[i]]
       out[[length(out) + 1L]] <- c("name", paste(ch[i:(j - 1L)], collapse = ""))
       i <- j
     }
@@ -204,7 +205,9 @@ tf_read_dagitty <- function(text, id = "dagitty-import",
   kind <- function(k) tokens[[k]][[1]]
   value <- function(k) tokens[[k]][[2]]
 
-  names_seen <- character(0)
+  # The names each group declares and the edges each arrow draws, in order and
+  # with repeats, which are dropped once the whole graph is read.
+  declared <- list()
   latent <- character(0)
   edges <- list()
 
@@ -235,9 +238,7 @@ tf_read_dagitty <- function(text, id = "dagitty-import",
       keys <- c(keys, .tf_attr_keys(value(k)))
       k <- k + 1L
     }
-    for (m in members) {
-      if (!(m %in% names_seen)) names_seen <<- c(names_seen, m)
-    }
+    declared[[length(declared) + 1L]] <<- members
     list(members = members, k = k, keys = keys)
   }
 
@@ -263,7 +264,7 @@ tf_read_dagitty <- function(text, id = "dagitty-import",
         .tf_dagitty_fail(paste0("cannot read a selected variable; theoryforge holds no ",
                                 "selection on a variable"))
       }
-      if ("latent" %in% g$keys) latent <- union(latent, left)
+      if ("latent" %in% g$keys) latent <- c(latent, left)
     }
     while (k <= n && kind(k) == "edge") {
       op <- value(k)
@@ -274,25 +275,37 @@ tf_read_dagitty <- function(text, id = "dagitty-import",
       g <- group(k + 1L)
       right <- g$members
       k <- g$k
-      for (a in left) {
-        for (b in right) {
-          edge <- switch(op, "->" = c(a, b, relation), "<-" = c(b, a, relation),
-                         c(a, b, "associates"))
-          if (!any(vapply(edges, identical, logical(1), edge))) edges[[length(edges) + 1L]] <- edge
-        }
-      }
+      # Every member of the left group with every member of the right, the
+      # left one varying slowest.
+      a <- rep(left, each = length(right))
+      b <- rep(right, times = length(left))
+      edges[[length(edges) + 1L]] <- switch(
+        op,
+        "->" = list(from = a, to = b, relation = rep(relation, length(a))),
+        "<-" = list(from = b, to = a, relation = rep(relation, length(a))),
+        list(from = a, to = b, relation = rep("associates", length(a))))
       left <- right
     }
   }
+  names_seen <- unique(as.character(unlist(declared)))
+  from <- as.character(unlist(lapply(edges, `[[`, "from")))
+  to <- as.character(unlist(lapply(edges, `[[`, "to")))
+  rel <- as.character(unlist(lapply(edges, `[[`, "relation")))
+  # An edge drawn again is kept where it was first drawn. The lengths in bytes
+  # keep two edges' keys apart.
+  keep <- !duplicated(paste0(nchar(from, type = "bytes"), ":", nchar(to, type = "bytes"), ":",
+                             from, to, rel)[seq_along(from)])
+  edges <- Map(c, from[keep], to[keep], rel[keep], USE.NAMES = FALSE)
+  is_latent <- names_seen %in% latent
 
   list(
     schema_version = "1.1",
     id = id,
     title = title,
     maturity = "draft",
-    constructs = lapply(names_seen, function(nm) {
-      c(list(id = nm, label = nm, definition = ""), if (nm %in% latent) list(x_latent = TRUE))
-    }),
+    constructs = Map(function(nm, lat) {
+      c(list(id = nm, label = nm, definition = ""), if (lat) list(x_latent = TRUE))
+    }, names_seen, is_latent, USE.NAMES = FALSE),
     propositions = lapply(seq_along(edges), function(i) {
       list(id = paste0("p", i), from = edges[[i]][[1]], to = edges[[i]][[2]],
            relation = edges[[i]][[3]])

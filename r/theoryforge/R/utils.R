@@ -360,17 +360,30 @@ NULL
 # first, would then walk. The YAML reader refuses a document that holds more
 # values than this once its aliases are expanded (API_SPEC.md section 3).
 .tf_MAX_VALUES <- 1000000L
+# The functions that walk a theory recurse once for every level of it, so the
+# readers refuse a document nested deeper than this, the document itself being
+# the first level (API_SPEC.md section 3).
+.tf_MAX_DEPTH <- 64L
 
-# Stop when `data` holds more than .tf_MAX_VALUES values. Each mapping,
-# sequence and scalar counts once for every place it appears, so a node an
-# alias repeats counts each time, and a mapping's keys do not count. The walk
-# goes one level at a time and stops before a level would pass the limit, so
-# its cost is bounded by the limit and not by the size the aliases stand for.
-# Python's _load._check_size() counts the same way.
+.tf_too_deep <- function(path) {
+  stop(sprintf("(%s) the document is nested more than %d levels deep", path, .tf_MAX_DEPTH),
+       call. = FALSE)
+}
+
+# Stop when `data` holds more than .tf_MAX_VALUES values or is nested more than
+# .tf_MAX_DEPTH levels deep. Each mapping, sequence and scalar counts once for
+# every place it appears, so a node an alias repeats counts each time, and a
+# mapping's keys do not count. The walk goes one level at a time and stops at
+# the first level that passes either limit, so its cost is bounded by the
+# limits and not by the size the aliases stand for. Python's
+# _load._check_size() counts the same way.
 .tf_check_size <- function(data, path) {
   n <- 0
+  depth <- 0L
   level <- list(data)
   while (length(level) > 0L) {
+    depth <- depth + 1L
+    if (depth > .tf_MAX_DEPTH) .tf_too_deep(path)
     n <- n + length(level)
     level <- level[vapply(level, is.list, logical(1L))]
     if (n + sum(lengths(level)) > .tf_MAX_VALUES) {
@@ -391,6 +404,9 @@ NULL
 # after that (.tf_json_unreadable()).
 .tf_read_json <- function(path) {
   text <- .tf_read_text(path)
+  # jsonlite recurses in C once for every level, so depth is measured on the
+  # text, before anything parses it.
+  if (.tf_json_depth(text) > .tf_MAX_DEPTH) .tf_too_deep(path)
   ok <- jsonlite::validate(text)
   if (!isTRUE(ok)) stop(sprintf("(%s) %s", path, trimws(attr(ok, "err"))), call. = FALSE)
   bad <- .tf_json_unreadable(text)
@@ -405,6 +421,21 @@ NULL
   }
   if (!is.null(bad)) .tf_refuse_unreadable(path, bad$what)
   data
+}
+
+# The level of the deepest value of a JSON text, the document being the first,
+# read from its brackets outside strings: an opening bracket is at the level of
+# the brackets open after it, and any other character of a value one below the
+# brackets open around it. The bytes are compared, which a text that is not
+# valid JSON allows too. Python's _load._json_depth() reads the same levels.
+.tf_json_depth <- function(text) {
+  s <- gsub('"(?:[^"\\\\]|\\\\.)*"', "0", text, perl = TRUE, useBytes = TRUE)
+  b <- as.integer(charToRaw(s))
+  open <- b == 0x5BL | b == 0x7BL
+  close <- b == 0x5DL | b == 0x7DL
+  depth <- cumsum(open - close)
+  value <- !(open | close | b %in% c(0x2CL, 0x3AL, 0x20L, 0x09L, 0x0AL, 0x0DL))
+  max(0L, depth[open], depth[value] + 1L)
 }
 
 # R cannot hold every string a file can spell. jsonlite and yaml cut a string

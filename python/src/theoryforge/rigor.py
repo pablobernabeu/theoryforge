@@ -23,7 +23,7 @@ from ._relations import DIRECTED
 from ._status import classify_auxiliary
 from ._text import quoted, xml_escape
 from .entailment import prediction_verdicts
-from .redundancy import _pairs, tokens
+from .redundancy import _flagged, tokens
 from .scoring import severity as _rubric
 
 _FORBIDDING = {"point", "interval", "directional"}
@@ -180,7 +180,7 @@ def _check_items(T: dict, thr: dict) -> dict:
     if len(cons) < 2:
         out["non_redundancy"] = ("n/a", None)
     else:
-        flagged = any(r["flag"] == "review" for r in _pairs(T, thr))
+        flagged = _flagged(T, thr)
         undefined = any(not tokens(text(field(c, "definition"))) for c in cons)
         out["non_redundancy"] = ("warn", 0.0) if flagged or undefined else ("pass", 1.0)
 
