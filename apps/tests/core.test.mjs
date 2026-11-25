@@ -457,7 +457,7 @@ test("the checklist's guide and reading say what pass, blocked and advisory mean
     "Most items read whether a field is filled in or how a prediction is labelled, and stated claims are checked against the causal graph. " +
     "Test outcomes are read only by the parsimony item, the weights are conventions, and no study has established what difference between two scores is meaningful. " +
     "The score does not show that the theory is true or well reasoned. Read the item statuses first"), about);
-  assert.match(about, /The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted\. The labels are the author's\./);
+  assert.match(about, /The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted\. The labels are the author's and are not checked against the statements\./);
   assert.match(about, /The derivation chain reads each stated claim against the causal graph, diagnosticity sets a claim against a rival's propositions where both are stated, precision asks for two finite bounds and non-redundancy compares the words of the construct definitions\./);
   assert.match(about, /At draft maturity, the gate is advisory/);
   assert.doesNotMatch(about, /rigour|facets|quality/i);
@@ -1359,6 +1359,7 @@ test("the appraisal says what its verdict is to be read with, and leaves out key
   const about = $("#output .ri-about").textContent, interp = $("#output .ri-interp").textContent, text = $("#output").textContent;
   assert.match(about, /^The verdict applies fixed rules that borrow Lakatos's terms to what the two files declare/);
   assert.match(about, /the prior must be the version before the new predictions were stated/);
+  assert.match(about, /A prediction that only changed its id is a rename\. One derived only from the prior's own propositions is an articulation unless a new or revised assumption lists it in protects, and so is one whose claim the prior's graph entails\. Neither a rename nor an articulation counts as new content\./);
   assert.match(interp, /^The amendment is progressive by fixed rules that borrow Lakatos's terms, applied to what the two files declare\./);
   assert.match(interp, /One prediction the prior held now fails a test: h1\./);
   assert.match(interp, /One new prediction failed a test: h4\./);
@@ -1458,6 +1459,7 @@ test("the verdicts of the causal readings and the landscape's statuses are neutr
   assert.match($("#output").textContent, /Themes several accounts share a word witht3/);
   assert.match($("#output .ri-about").textContent, /does not show that the account explains what the theme's records report, nor that a theme without a match is unexplained/);
   assert.doesNotMatch($("#output").textContent, /nder-theorised|Crowded/);
+  assert.match($("#output .ri-about").textContent, /The figure, like the JSON, keeps the package's names for the three statuses: under_theorised for a theme no account shares a word with, covered for one and crowded for several\. The JSON also keeps the package's names for the two lists, under_theorised_fronts and redundancy_risk\.$/);
   await runOp("redundancy");
   assert.deepEqual(pills(), [["review", "pill review"], ["not flagged", "pill plain"]]);
   assert.match($("#output .ri-about").textContent, /when the two carry the same label or when every measure of one is listed for the other/);
@@ -1490,18 +1492,18 @@ test("the dossier, validation, post-data severity and start panel say what they 
   const dossier = ctx.TF.OPS.find((o) => o.id === "dossier");
   assert.equal(dossier.label, "Dossier");
   assert.equal(dossier.desc, "The file and its checks, for reviewers");
-  assert.match($("#output").textContent, /theoryforge reads a theory written as structured data and checks what the file states: which fields are filled in, what its propositions imply as a causal graph, how it differs from a rival or an earlier version, and whether an amendment meets fixed rules that borrow Lakatos's terms\. None of these checks shows that a theory is true or well reasoned, and the checklist's weights and thresholds have not been validated against expert judgement\./);
+  assert.match($("#output").textContent, /theoryforge reads a theory written as structured data and checks what the file states: which fields are filled in, what its propositions imply as a causal graph, how it differs from a rival or from an earlier version and whether an amendment meets fixed rules that borrow Lakatos's terms\. None of these checks shows that a theory is true or well reasoned, and the checklist's weights and thresholds have not been validated against expert judgement\./);
   await opButton(ctx, "dossier").click();
   await $("#runBtn").click();
   assert.equal($("#outTitle").textContent, "Dossier");
-  assert.match($("#output .ri-about").textContent, /^The dossier gathers what the theory file records and what the package derives from it\. The score, gate and verdicts describe the file by fixed rules\. Test outcomes, evidence, registrations and declared severities are as the author entered them, and the package checks only whether a recorded estimate agrees with its pass or failure and whether a declared severity exceeds the rubric\. It is not an independent audit\.$/);
+  assert.match($("#output .ri-about").textContent, /^The dossier gathers what the theory file records and what the package derives from it\. The score, gate and verdicts describe the file by fixed rules\. Test outcomes, evidence, registrations and declared severities are as the author entered them, and the package checks only whether a recorded estimate agrees with its pass or failure and whether a declared severity is more than 0\.2 above the rubric\. It is not an independent audit\.$/);
   await opButton(ctx, "validate").click();
   await $("#runBtn").click();
   assert.match($("#output").textContent, /✓ Well-formed\. Full validation found no problem in the file's structure or references\./);
   assert.match($("#output .ri-about").textContent, /Validate first: other operations run on an invalid file, but their results may not mean what they say\.$/);
   await opButton(ctx, "post_severity").click();
   await $("#runBtn").click();
-  assert.match($("#output .ri-about").textContent, /post-data severity of Mayo and Spanos \(2006\)\. With two finite bounds the package takes the smaller of the two one-sided values, its own extension, which equals 1 minus the p value of the two one-sided z-tests of equivalence \(Lakens, 2017\)\./);
+  assert.match($("#output .ri-about").textContent, /post-data severity of Mayo and Spanos \(2006\)\. With two finite bounds, the package takes the smaller of the two one-sided values, its own extension, which equals 1 minus the p value of the two one-sided z-tests of equivalence \(Lakens, 2017\)\./);
   assert.match($("#output .ri-about").textContent, /It treats the standard error as known, so in small samples it overstates the severity of an estimate inside the region, and it does not account for a subgroup or analysis chosen after seeing the data\. A high value does not show that the claim is true\.$/);
   for (const op of ctx.TF.OPS) assert.doesNotMatch(op.label + " " + op.desc + " " + (op.help || ""), /rigour checklist|Audit|in Lakatos's sense/i, op.id);
 });
