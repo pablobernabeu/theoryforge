@@ -1222,10 +1222,16 @@ def read(path) -> Theory:
     The file is read as the R package's ``tf_read()`` reads it. A byte-order
     mark is ignored. Dates and ``y``, ``Y``, ``n`` and ``N`` stay strings, and
     integers are decimal, octal or hexadecimal only, so ``1:30`` and ``1_000``
-    are strings too. A merge key
-    lets the mapping's own keys win. A repeated key anywhere raises
-    ``ValueError("(<path>) Duplicate map key: '<key>'")``, and a document that is
-    not a mapping raises ``ValueError("Theory data must be a mapping")``.
+    are strings too. YAML is parsed with libyaml, as in R, so a tab is read as
+    YAML allows it: as white space after a value, before a comment and in a
+    flow collection, and as text inside an unquoted value. A merge key lets the
+    mapping's own keys win. A repeated key anywhere raises
+    ``ValueError("(<path>) Duplicate map key: '<key>'")``. A string or key that
+    holds U+0000 or a lone surrogate, which R cannot hold, raises
+    ``ValueError("(<path>) a string holds U+0000, which theoryforge cannot read")``,
+    or the same message naming ``a lone surrogate``. JSON has no comments, and
+    ``json`` refuses them. A document that is not a mapping raises
+    ``ValueError("Theory data must be a mapping")``.
     """
     data = _load_document(path)
     if not isinstance(data, dict):

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.1",
+  "id": "edge-nul-json",
+  "title": "A title with a NUL \u0000 in it",
+  "maturity": "building",
+  "constructs": [
+    {"id": "c1", "label": "Alpha", "definition": "The first construct."},
+    {"id": "c2", "label": "Beta", "definition": "The second construct."}
+  ],
+  "propositions": [
+    {"id": "p1", "from": "c1", "to": "c2", "relation": "increases"}
+  ]
+}

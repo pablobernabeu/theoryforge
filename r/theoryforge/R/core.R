@@ -30,9 +30,15 @@ NULL
 #' \code{off} are logicals. Integers are decimal, octal or hexadecimal only, so
 #' \code{1:30} and \code{1_000} are strings, and so is a number written with a
 #' comma (\code{1,000}). An integer too large for an R integer is read as a
-#' double. A merge key (\code{<<}) lets the mapping's own keys win. A key
+#' double. A tab is read as YAML allows it: as white space after a value,
+#' before a comment and in a flow collection, and as text inside an unquoted
+#' value. A merge key (\code{<<}) lets the mapping's own keys win. A key
 #' repeated in any mapping, in YAML or JSON, stops with
-#' \code{(<path>) Duplicate map key: '<key>'}. A document that is not a
+#' \code{(<path>) Duplicate map key: '<key>'}. A comment in a JSON file stops
+#' with jsonlite's message, since JSON has no comments. A string or key that
+#' holds U+0000 or a lone surrogate, which R would cut short or misread, stops
+#' with \code{(<path>) a string holds U+0000, which theoryforge cannot read}, or
+#' the same message naming \code{a lone surrogate}. A document that is not a
 #' mapping, such as a sequence or an empty YAML file, stops with
 #' \code{Theory data must be a mapping}.
 #'
