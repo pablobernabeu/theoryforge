@@ -1,3 +1,4 @@
+import copy
 import warnings
 
 import pytest
@@ -239,3 +240,55 @@ def test_tokens_and_jaccard_take_the_inputs_r_takes():
     # is the empty set, as R reads NULL.
     assert jaccard(["drive", "goal", "goal"], "drive") == 0.5
     assert jaccard(None, ["drive"]) == 0.0
+
+
+def _screen_theory(n: int) -> dict:
+    """A theory of ``n`` constructs whose definitions share three words, as
+    generated definitions do, and hold four words of their own and their
+    number. R's test-redundancy.R builds the same theory."""
+    cons = []
+    for i in range(n):
+        own = " ".join(f"word{4 * i + k}" for k in range(4))
+        cons.append({"id": f"c{i:04d}", "label": f"Construct {i}",
+                     "definition": f"The degree of {own} relative to the number {i}",
+                     "measurement": [f"scale {i}"]})
+    return {"schema_version": "1.1", "id": "screen", "title": "Screen", "maturity": "draft",
+            "constructs": cons}
+
+
+def test_the_checklists_screen_agrees_with_the_full_screen():
+    from theoryforge import _resources
+    from theoryforge.redundancy import _flagged
+    thr = _resources.checklist()["thresholds"]
+
+    def agrees(t):
+        flagged = any(r["flag"] == "review" for r in tf.redundancy_check(t))
+        assert _flagged(t, thr) == flagged
+        return flagged
+
+    t = _screen_theory(300)
+    assert not agrees(t)
+    # Each of the four reasons, planted in one pair far apart.
+    near = copy.deepcopy(t)
+    near["constructs"][289]["definition"] = t["constructs"][5]["definition"]
+    assert agrees(near)
+    contained = copy.deepcopy(t)
+    contained["constructs"][289]["definition"] = "The word20 word21 word22."
+    assert agrees(contained)
+    label = copy.deepcopy(t)
+    label["constructs"][289]["label"] = " construct  5"
+    assert agrees(label)
+    measure = copy.deepcopy(t)
+    measure["constructs"][289]["measurement"] = ["Scale 5", "scale 289"]
+    assert agrees(measure)
+
+
+def test_a_theory_of_2000_constructs_is_screened_and_checked():
+    def item(t):
+        return next(i for i in tf.check(t)["items"] if i["id"] == "non_redundancy")
+
+    t = _screen_theory(2000)
+    assert item(t)["status"] == "pass"
+    t["constructs"][1989]["definition"] = t["constructs"][2]["definition"]
+    assert item(t)["status"] == "warn"
+    assert len(tf.redundancy_check(_screen_theory(400))) == 79800

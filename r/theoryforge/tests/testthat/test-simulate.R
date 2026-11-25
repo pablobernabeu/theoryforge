@@ -464,3 +464,58 @@ test_that("tf_simulate's propagator of a non-finite matrix is NaN", {
   E <- .tf_sim_propagator(matrix(c(0, 1e308, 1e308, 0), nrow = 2), 10)
   expect_true(all(is.nan(E)))
 })
+
+test_that("the matrix product gives the triple loop's bits", {
+  # The product skips a term only when one factor is 0 and the other finite,
+  # which leaves a sum unchanged. Zeros of both signs, infinities and NaN
+  # check that nothing else is skipped. The Python suite makes the same check.
+  triple <- function(A, B) {
+    n <- nrow(A)
+    out <- matrix(0.0, n, n)
+    for (i in seq_len(n)) for (j in seq_len(n)) {
+      acc <- 0.0
+      for (m in seq_len(n)) acc <- acc + A[i, m] * B[m, j]
+      out[i, j] <- acc
+    }
+    out
+  }
+  special <- c(0, -0, Inf, -Inf, NaN, 5e-324, 1e308)
+  set.seed(5)
+  for (r in 1:300) {
+    n <- sample(1:7, 1)
+    draw <- function() {
+      x <- ifelse(runif(n * n) < 0.4, runif(n * n, -2, 2), 0)
+      pick <- runif(n * n) < 0.15
+      x[pick] <- sample(special, sum(pick), TRUE)
+      matrix(x, n, n)
+    }
+    A <- draw()
+    B <- draw()
+    expect_identical(theoryforge:::.tf_sim_matmul(A, B), triple(A, B))
+  }
+})
+
+test_that("a theory of 400 constructs simulates", {
+  # A chain: the first state has no couplings into it, so it decays at the
+  # damping rate, exactly with method "exact" and by 1 - dt * damping per step
+  # with Euler.
+  t <- tf_theory("chain", "Chain")
+  for (i in 0:399) t <- tf_add_construct(t, paste0("c", i), paste0("C", i), "A state.")
+  for (i in 0:398) t <- tf_add_proposition(t, paste0("p", i), paste0("c", i), paste0("c", i + 1L), "increases")
+  exact <- tf_simulate(t, method = "exact")$trajectory
+  expect_equal(vapply(exact, `[[`, 0, 1L), exp(-0.05 * 0:10), tolerance = 1e-6)
+  euler <- suppressWarnings(tf_simulate(t))$trajectory
+  expect_equal(vapply(euler, `[[`, 0, 1L), 0.95^(0:10), tolerance = 1e-6)
+  expect_length(euler, 11L)
+  expect_length(euler[[11L]], 400L)
+})
+
+test_that("tf_simulate finds an opposed pair whose ids differ only in encoding", {
+  # The two spellings of one id compare equal, as they do with ==.
+  u <- "\u00e9"
+  l <- iconv(u, "UTF-8", "latin1")
+  t <- list(constructs = list(list(id = u), list(id = "b")),
+            propositions = list(list(id = "p1", from = l, to = "b", relation = "increases"),
+                                list(id = "p2", from = u, to = "b", relation = "decreases")))
+  expect_identical(tf_simulate(t, steps = 1)$opposed, list(c(l, "b")))
+})

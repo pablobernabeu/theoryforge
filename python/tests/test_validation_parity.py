@@ -603,3 +603,18 @@ def test_appraise_amendment_refuses_a_non_boolean_passed_in_either_theory():
     result = new.appraise_amendment(prior)
     assert result["corroborated_new"] == ["h2"]
     assert (result["articulated"], result["verdict"]) == (["h2"], "neutral")
+
+
+def test_full_validation_of_many_constructs_lists_every_repeat_in_order():
+    # 5000 constructs that share one id, as YAML aliases of one mapping would
+    # give, and 5000 propositions between constructs with ids of their own. The
+    # R suite checks the same messages.
+    same = [{"id": "a", "label": "A", "definition": "D"}] * 5000
+    own = [{"id": f"c{i}", "label": "C", "definition": "D"} for i in range(5000)]
+    props = [{"id": f"p{i}", "from": f"c{i}", "to": f"c{(i + 1) % 5001}", "relation": "causes"}
+             for i in range(5000)]
+    t = Theory({"schema_version": "1.1", "id": "v", "title": "V", "maturity": "draft",
+                "constructs": same + own, "propositions": props})
+    problems = t._problems(full=True)
+    assert problems == ["duplicate construct id: a"] * 4999 + [
+        "proposition[4999] to 'c5000' is not a known construct"]

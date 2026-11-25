@@ -5,7 +5,9 @@ results depend on the embedder.
 """
 from __future__ import annotations
 
+import math
 import unicodedata
+from collections import Counter
 
 from . import _resources
 from ._access import field, items, str_list, text
@@ -81,6 +83,20 @@ def _name(s) -> str:
     return squish(normalise_words(text(s)))
 
 
+def _fields(T: dict) -> tuple[list[str], list[set[str]], list[str], list[set[str]]]:
+    """What the screen compares of each construct: its id, its definition's
+    tokens, its label and its measures, the last two as the screen names them."""
+    cons = items(T, "constructs")
+    ids = [text(field(c, "id")) for c in cons]
+    toks = [tokens(text(field(c, "definition"))) for c in cons]
+    labels = [_name(field(c, "label")) for c in cons]
+    measures = [{_name(m) for m in str_list(field(c, "measurement"))} - {""} for c in cons]
+    return ids, toks, labels, measures
+
+
+_REASONS = ("near duplicate", "contained", "same label", "shared measurement")
+
+
 def _pairs(T: dict, thr: dict) -> list[dict]:
     """The screen's record of every unordered construct pair, in construct order.
 
@@ -93,39 +109,120 @@ def _pairs(T: dict, thr: dict) -> list[dict]:
     is listed for the other too, so that it has no indicator of its own and
     data from these measures cannot tell the two apart. Constructs that share
     a method or an inventory but keep measures of their own are not flagged.
-    The checklist's non_redundancy item reads the same flags.
+    The checklist's non_redundancy item reads the same flags (``_flagged()``).
+    Each similarity and overlap is the value ``jaccard()`` and ``_overlap()``
+    give for the pair alone.
     """
-    cons = items(T, "constructs")
-    ids = [text(field(c, "id")) for c in cons]
-    toks = [tokens(text(field(c, "definition"))) for c in cons]
-    labels = [_name(field(c, "label")) for c in cons]
-    measures = [{_name(m) for m in str_list(field(c, "measurement"))} - {""} for c in cons]
+    ids, toks, labels, measures = _fields(T)
+    sim_max, overlap_max = thr["redundancy_similarity_max"], thr["redundancy_overlap_max"]
+    sizes = [len(t) for t in toks]
+    # What a pair's definitions give, which depends only on the number of
+    # shared tokens and the two sizes: (similarity, overlap, reasons).
+    known: dict[tuple[int, int, int], tuple[float, float, tuple[str, ...]]] = {}
+
+    def screen(inter: int, la: int, lb: int) -> tuple[float, float, tuple[str, ...]]:
+        sim = 0.0 if la + lb == 0 else rnd(inter / (la + lb - inter), 3)
+        ov = 0.0 if not la or not lb else rnd(inter / min(la, lb), 3)
+        why: tuple[str, ...] = ("near duplicate",) if sim >= sim_max else ()
+        if la >= _MIN_OVERLAP_TOKENS and lb >= _MIN_OVERLAP_TOKENS and ov >= overlap_max:
+            why += ("contained",)
+        return sim, ov, why
+
     rows: list[dict] = []
-    for i in range(len(cons)):
-        for j in range(i + 1, len(cons)):
-            a, b = toks[i], toks[j]
-            sim = jaccard(a, b)
-            ov = _overlap(a, b)
-            reasons = []
-            if sim >= thr["redundancy_similarity_max"]:
-                reasons.append("near duplicate")
-            if (len(a) >= _MIN_OVERLAP_TOKENS and len(b) >= _MIN_OVERLAP_TOKENS
-                    and ov >= thr["redundancy_overlap_max"]):
-                reasons.append("contained")
-            if labels[i] and labels[i] == labels[j]:
-                reasons.append("same label")
-            if measures[i] and measures[j] and (measures[i] <= measures[j]
-                                                or measures[j] <= measures[i]):
-                reasons.append("shared measurement")
-            rows.append({
-                "a": ids[i],
-                "b": ids[j],
-                "similarity": sim,
-                "overlap": ov,
-                "flag": "review" if reasons else "ok",
-                "reason": ", ".join(reasons),
-            })
+    fields = (toks, sizes, measures, labels, ids)
+    for i, (a, la, mi, label, id_a) in enumerate(zip(*fields, strict=True)):
+        later = zip(*(f[i + 1:] for f in fields), strict=True)
+        for b, lb, mj, label_b, id_b in later:
+            key = (len(a & b), la, lb)
+            got = known.get(key)
+            if got is None:
+                got = known[key] = screen(*key)
+            sim, ov, why = got
+            same = bool(label) and label == label_b
+            shared = bool(mi) and bool(mj) and (mi <= mj or mj <= mi)
+            if why or same or shared:
+                reasons = list(why)
+                if same:
+                    reasons.append("same label")
+                if shared:
+                    reasons.append("shared measurement")
+                flag, reason = "review", ", ".join(reasons)
+            else:
+                flag, reason = "ok", ""
+            rows.append({"a": id_a, "b": id_b, "similarity": sim, "overlap": ov,
+                         "flag": flag, "reason": reason})
     return rows
+
+
+def _flagged(T: dict, thr: dict) -> bool:
+    """Whether the screen flags any pair, as ``any(r["flag"] == "review" for r
+    in _pairs(T, thr))`` would say, without comparing every pair.
+
+    Two constructs share a label when a label is seen twice. A construct's
+    measures lie within another's only if that construct lists the rarest of
+    them, so only the constructs that list it are compared. A pair of
+    definitions with ``m`` and ``n`` tokens, ``m <= n``, can be a near
+    duplicate or contained only if it shares at least ``k(m)`` tokens: the
+    rounded Jaccard similarity is at most the share of the ``n`` tokens that
+    are shared, plus half a unit in the last place, and the overlap coefficient
+    is that share of the ``m``. At least one of any ``m - k(m) + 1`` tokens of
+    the shorter definition is then shared, so each construct is indexed by that
+    many of its rarest tokens, and only definitions that hold one of another's
+    indexed tokens are compared. Thresholds at or below 0, which would flag
+    pairs that share no token, are left to the full comparison.
+    """
+    sim_max, overlap_max = thr["redundancy_similarity_max"], thr["redundancy_overlap_max"]
+    if not (sim_max > 0 and overlap_max > 0):
+        return any(r["flag"] == "review" for r in _pairs(T, thr))
+    ids, toks, labels, measures = _fields(T)
+    if len(ids) < 2:
+        return False
+    seen: set[str] = set()
+    for label in labels:
+        if label in seen:
+            return True
+        if label:
+            seen.add(label)
+    holders: dict[str, list[int]] = {}
+    for j, ms in enumerate(measures):
+        for m in ms:
+            holders.setdefault(m, []).append(j)
+    for i, ms in enumerate(measures):
+        if ms:
+            rarest = min(ms, key=lambda m: (len(holders[m]), m))
+            if any(j != i and ms <= measures[j] for j in holders[rarest]):
+                return True
+    # The fewest shared tokens either flag needs, less a margin that covers
+    # the rounding to 3 decimals.
+    def needed(m: int) -> int:
+        bound = (sim_max - 0.001) * m - 1e-6
+        if m >= _MIN_OVERLAP_TOKENS:
+            bound = min(bound, (overlap_max - 0.001) * m - 1e-6)
+        return max(1, math.ceil(bound))
+
+    freq = Counter(t for ts in toks for t in ts)
+    index: dict[str, list[int]] = {}
+    for j, ts in enumerate(toks):
+        if ts:
+            rare = sorted(ts, key=lambda t: (freq[t], t))
+            for t in rare[:max(0, len(ts) - needed(len(ts)) + 1)]:
+                index.setdefault(t, []).append(j)
+    for i, a in enumerate(toks):
+        near: set[int] = set()
+        for t in a:
+            near.update(index.get(t, ()))
+        near.discard(i)
+        la = len(a)
+        for j in near:
+            b = toks[j]
+            lb = len(b)
+            inter = len(a & b)
+            if rnd(inter / (la + lb - inter), 3) >= sim_max:
+                return True
+            if (la >= _MIN_OVERLAP_TOKENS and lb >= _MIN_OVERLAP_TOKENS
+                    and rnd(inter / min(la, lb), 3) >= overlap_max):
+                return True
+    return False
 
 
 @theory_keyword

@@ -586,3 +586,36 @@ test_that("full validation names unknown entry fields and the field they resembl
     "prediction[0] has unknown field: severty (did you mean severity?); ",
     "prediction[0] has unknown field: derives_form (did you mean derives_from?)"))
 })
+
+test_that("full validation of many constructs lists every repeat in order", {
+  # 5000 constructs that share one id, as YAML aliases of one mapping would
+  # give, and 5000 propositions between constructs with ids of their own. The
+  # Python suite checks the same messages.
+  same <- rep(list(list(id = "a", label = "A", definition = "D")), 5000L)
+  own <- lapply(0:4999, function(i) list(id = paste0("c", i), label = "C", definition = "D"))
+  props <- lapply(0:4999, function(i) {
+    list(id = paste0("p", i), from = paste0("c", i), to = paste0("c", (i + 1L) %% 5001L),
+         relation = "causes")
+  })
+  t <- list(schema_version = "1.1", id = "v", title = "V", maturity = "draft",
+            constructs = c(same, own), propositions = props)
+  expect_identical(theoryforge:::.tf_validation_problems(t, full = TRUE),
+                   c(rep("duplicate construct id: a", 4999L),
+                     "proposition[4999] to 'c5000' is not a known construct"))
+})
+
+test_that("full validation compares an id marked as bytes as match() does", {
+  # match() compares a string marked as bytes only with other such strings, so
+  # the UTF-8 spelling of the same bytes is not a known construct. With more
+  # than 200 constructs, the ids are kept in an environment, which sets such
+  # an id aside for %in%.
+  b <- "\u00e9"
+  Encoding(b) <- "bytes"
+  pad <- lapply(1:300, function(i) list(id = paste0("c", i), label = "C", definition = "D"))
+  t <- list(schema_version = "1.1", id = "v", title = "V", maturity = "draft",
+            constructs = c(list(list(id = b, label = "A", definition = "D")), pad),
+            propositions = list(list(id = "p1", from = "\u00e9", to = "c1", relation = "causes"),
+                                list(id = "p2", from = b, to = "c1", relation = "causes")))
+  expect_identical(theoryforge:::.tf_validation_problems(t, full = TRUE),
+                   "proposition[0] from '\u00e9' is not a known construct")
+})

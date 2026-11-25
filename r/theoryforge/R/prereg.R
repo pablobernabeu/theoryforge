@@ -431,9 +431,11 @@ tf_preregister <- function(theory, path = NULL, cycles = "refuse") {
 }
 
 # The lines of the preregistration. `embedded` leaves out the severity section,
-# which the dossier gives with the declared values beside it.
-.tf_document_lines <- function(T, cycles, embedded = FALSE) {
-  rep <- tf_check(T)
+# which the dossier gives with the declared values beside it. The dossier
+# passes the checklist report and the content hash it has computed already.
+.tf_document_lines <- function(T, cycles, embedded = FALSE, report = tf_check(T),
+                               digest = tf_content_hash(T)) {
+  rep <- report
   resolve <- "no"
   for (it in rep$items) {
     if (identical(it$id, "derivation_chain")) {
@@ -448,7 +450,7 @@ tf_preregister <- function(theory, path = NULL, cycles = "refuse") {
     sprintf("- Theory ID: %s", .tf_str(T, "id")),
     .tf_version_line(T),
     sprintf("- Schema version: %s", .tf_str(T, "schema_version")),
-    sprintf("- Content hash: %s", tf_content_hash(T)),
+    sprintf("- Content hash: %s", digest),
     sprintf("- Maturity: %s", .tf_enum_str(T, "maturity", .tf_MATURITY)),
     .tf_formal_model_line(T),
     paste0("- Derivations check: ", resolve),

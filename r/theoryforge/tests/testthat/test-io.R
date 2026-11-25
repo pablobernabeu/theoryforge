@@ -219,6 +219,131 @@ test_that("no parse of a YAML file runs R code, whatever the options say", {
   expect_null(getOption("tf.test.evaluated"))
 })
 
+# A theory whose `x` holds `levels` sequences, one inside the next, with a
+# string in the innermost, so that the string lies levels + 2 levels deep.
+nested <- function(levels, json = FALSE) {
+  inner <- paste0(strrep("[", levels), if (json) '"s"' else "s", strrep("]", levels))
+  if (json) {
+    paste0('{"schema_version": "1.1", "id": "d", "title": "D", "maturity": "draft", "x": ', inner, "}\n")
+  } else {
+    paste0("schema_version: '1.1'\nid: d\ntitle: D\nmaturity: draft\nx: ", inner, "\n")
+  }
+}
+
+test_that("a document nested more than 64 levels deep refuses the file", {
+  # The document is the first level, so 62 sequences reach the limit with
+  # their string. The Python twin measures the same levels.
+  for (json in c(FALSE, TRUE)) {
+    ext <- if (json) ".json" else ".yaml"
+    expect_identical(tf_read(io_file(nested(62L, json), ext))$id, "d")
+    path <- io_file(nested(63L, json), ext)
+    expect_error(tf_read(path), sprintf("(%s) the document is nested more than 64 levels deep", path),
+                 fixed = TRUE)
+  }
+  # An alias counts at the depth where it stands, and an empty sequence is a
+  # value of its own.
+  path <- io_file(paste0("a: &a ", strrep("[", 40L), strrep("]", 40L), "\n",
+                         "b: ", strrep("[", 24L), "*a", strrep("]", 24L), "\n"))
+  expect_error(tf_read(path), "nested more than 64 levels deep", fixed = TRUE)
+  expect_error(tf_read_corpus(path), "nested more than 64 levels deep", fixed = TRUE)
+  # Text far deeper than that is refused too, without exhausting the stack:
+  # jsonlite would recurse once for every level.
+  expect_error(tf_read(io_file(nested(20000L, TRUE), ".json")), "nested more than 64 levels deep",
+               fixed = TRUE)
+  expect_error(tf_read(io_file(nested(2000L))), "nested more than 64 levels deep", fixed = TRUE)
+})
+
+test_that("a long chain of merges reads", {
+  # Each of 1000 mappings merges the one before, in both forms of the merge
+  # key, so the document is three levels deep however long the chain. The
+  # Python suite reads the same text.
+  for (form in c("*m%d", "[*m%d]")) {
+    chain <- paste0(sprintf(paste0("  - &m%d {<<: ", form, "}\n"), 1:999, 0:998), collapse = "")
+    text <- paste0("schema_version: '1.1'\nid: m\ntitle: M\nmaturity: draft\n",
+                   "s:\n  - &m0 {k0: 0}\n", chain, "last: {<<: *m999}\n")
+    t <- tf_read(io_file(text))
+    expect_identical(t$last, list(k0 = 0L))
+    expect_length(t$s, 1000L)
+  }
+})
+
+test_that("a file with two faults is refused for the one that comes first", {
+  # API_SPEC.md section 3, "Order of refusals". "syntax" stands for the
+  # parser's own error. The Python suite reads the same texts.
+  deep <- function(levels, json = FALSE) {
+    paste0(strrep("[", levels), if (json) '"s"' else "s", strrep("]", levels))
+  }
+  # Seven keys whose aliases expand past 1000000 values below the fifth level
+  # of the mapping that holds them, joined by `sep`.
+  bomb <- function(sep = "\n") {
+    paste(c(paste0("b0: &a0 [", paste(rep("ha", 10L), collapse = ", "), "]"),
+            sprintf("b%d: &a%d [%s]", 1:6, 1:6,
+                    vapply(0:5, function(i) paste(rep(sprintf("*a%d", i), 10L), collapse = ", "), ""))),
+          collapse = sep)
+  }
+  depth <- "the document is nested more than 64 levels deep"
+  count <- "the document holds more than 1000000 values once its aliases are expanded"
+  dup <- "Duplicate map key: 'a'"
+  alias <- "the alias 'u' names no node that ends before it"
+  cases <- list(
+    list("yaml", paste0("k: {a: 1, a: 2}\nx: ", deep(70L), "\n"), dup),
+    list("yaml", paste0("x: ", deep(70L), "\nk: {a: 1, a: 2}\n"), dup),
+    list("yaml", paste0("x: ", deep(70L), "\ny: *u\n"), alias),
+    list("yaml", paste0("a: &x 1\nb: &x 2\nx: ", deep(70L), "\n"), depth),
+    list("yaml", paste0("t: \"a\\0b\"\nx: ", deep(70L), "\n"), depth),
+    # The walk of the levels reports the limit it passes first.
+    list("yaml", paste0(bomb(), "\nx: ", deep(70L), "\n"), count),
+    list("yaml", paste0("x: ", strrep("[", 66L), "{", bomb(", "), "}", strrep("]", 66L), "\n"), depth),
+    list("yaml", paste0("k: {a: 1, a: 2}\n", bomb(), "\n"), dup),
+    list("yaml", paste0("y: *u\n", bomb(), "\n"), alias),
+    list("yaml", paste0("a: &x 1\nb: &x 2\n", bomb(), "\n"), count),
+    list("yaml", paste0("t: \"a\\0b\"\n", bomb(), "\n"), count),
+    list("yaml", "p: &x 1\nq: &x 2\nk: {a: 1, a: 2}\n", dup),
+    # A syntax error, a repeated key and an alias that names no node, in the
+    # order the parser meets them.
+    list("yaml", "k: {a: 1, a: 2}\ny: [unclosed\n", dup),
+    list("yaml", "y: [unclosed\nk: {a: 1, a: 2}\n", "syntax"),
+    list("yaml", "k: {a: 1, a: 2}\nz: *u\ny: [unclosed\n", dup),
+    list("yaml", "z: *u\ny: [unclosed\n", alias),
+    # A text nested more than 1000 levels deep, which Python composes without
+    # recursion, and one just under that, which it may compose twice.
+    list("yaml", paste0("x: ", deep(1100L), "\ny: [unclosed\n"), "syntax"),
+    list("yaml", paste0("x: ", deep(1100L), "\nk: {a: 1, a: 2}\n"), dup),
+    list("yaml", paste0("x: ", deep(1100L), "\ny: *u\n"), alias),
+    list("yaml", paste0("x: &u ", strrep("[", 1100L), "*u", strrep("]", 1100L), "\n"), alias),
+    list("yaml", paste0("x: ", strrep("[", 990L), "*u", strrep("]", 990L), "\n"), alias),
+    list("yaml", paste0("x: &u ", strrep("[", 990L), "*u", strrep("]", 990L), "\n"), alias),
+    # JSON is measured for depth before it is parsed, and R validates it whole
+    # before it looks for a repeated key.
+    list("json", paste0('{"x": ', deep(70L, TRUE), ",}"), depth),
+    list("json", paste0('{"k": {"a": 1, "a": 2}, "x": ', deep(70L, TRUE), "}"), depth),
+    list("json", paste0('{"t": "a\\u0000b", "x": ', deep(70L, TRUE), "}"), depth),
+    list("json", paste0('{"t": "\\ud800", "x": ', deep(70L, TRUE), "}"), depth),
+    list("json", '{"k": {"a": 1, "a": 2},}', "syntax")
+  )
+  for (case in cases) {
+    path <- io_file(case[[2]], paste0(".", case[[1]]))
+    if (identical(case[[3]], "syntax")) {
+      expect_error(tf_read(path), if (case[[1]] == "json") "parse error" else "Parser error",
+                   fixed = TRUE, info = case[[2]])
+    } else {
+      expect_error(tf_read(path), sprintf("(%s) %s", path, case[[3]]), fixed = TRUE,
+                   info = substr(case[[2]], 1L, 200L))
+    }
+  }
+})
+
+test_that("a JSON string of millions of characters is measured", {
+  # Its brackets and escaped quotation marks are text. A regular expression
+  # would give up on a string of this many escapes, and the depth is measured
+  # without one. The Python suite reads the same text.
+  note <- strrep('\\"[', 1700000L)
+  text <- paste0('{"schema_version": "1.1", "id": "j", "title": "J", "maturity": "draft", ',
+                 '"x_note": "', note, '"}\n')
+  expect_no_warning(t <- tf_read(io_file(text, ".json")))
+  expect_identical(t$x_note, strrep('"[', 1700000L))
+})
+
 test_that("an unquoted date stays a string and writes to JSON", {
   theory <- tf_read(io_file(date_theory))
   expect_identical(theory$test_outcomes[[1]]$date, "2026-05-01")

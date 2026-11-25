@@ -478,10 +478,13 @@ def preregister(theory, path=None, cycles: str = "refuse") -> str:
     return doc
 
 
-def document_lines(data: dict, cycles: str, embedded: bool = False) -> list[str]:
+def document_lines(data: dict, cycles: str, embedded: bool = False,
+                   report: dict | None = None, digest: str | None = None) -> list[str]:
     """The lines of the preregistration. ``embedded`` leaves out the severity
-    section, which the dossier gives with the declared values beside it."""
-    rep = _check(data)
+    section, which the dossier gives with the declared values beside it. The
+    dossier passes the checklist report and the content hash it has computed
+    already."""
+    rep = _check(data) if report is None else report
     deriv = next((it for it in rep["items"] if it["id"] == "derivation_chain"), None)
     resolve = _RESOLVE[deriv["status"]] if deriv else "no"
 
@@ -491,7 +494,7 @@ def document_lines(data: dict, cycles: str, embedded: bool = False) -> list[str]
         f"- Theory ID: {text(data.get('id'))}",
         *_version_line(data),
         f"- Schema version: {text(data.get('schema_version'))}",
-        f"- Content hash: {content_hash(data)}",
+        f"- Content hash: {content_hash(data) if digest is None else digest}",
         f"- Maturity: {enum(data.get('maturity'), MATURITY) or ''}",
         *_formal_model_line(data),
         f"- Derivations check: {resolve}",

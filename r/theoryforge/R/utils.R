@@ -335,7 +335,7 @@ NULL
 
 .tf_yaml_float <- function(x) {
   if (grepl(",", x, fixed = TRUE) || !grepl("[0-9]", sub("[eE].*$", "", x))) return(x)
-  value <- suppressWarnings(yaml::yaml.load(x))
+  value <- suppressWarnings(yaml::yaml.load(x, eval.expr = FALSE))
   # yaml gives NA when strtod reports a range error: an overflow (+/-Inf), an
   # underflow to 0 or a subnormal result. R's own parser misreads subnormals on
   # a build without long double, so the text is read with jsonlite, whose
@@ -383,7 +383,11 @@ NULL
 # refuses the first and reads the second as a cycle. Both twins refuse such an
 # alias, unless a syntax error comes before it in the text or a mapping that
 # repeats a key ends before it, since yaml checks the keys of a mapping as the
-# mapping ends.
+# mapping ends. The faults are reported in one order in both twins (API_SPEC.md
+# section 3): those yaml meets while it parses, in the order it meets them,
+# then the depth and the count of values (.tf_check_size()), then U+0000
+# (.tf_yaml_refuse_nul(), which measures its probe first) and last an anchor
+# given twice.
 .tf_read_yaml <- function(path) {
   text <- .tf_read_text(path)
   # No parse evaluates R code (!expr), whatever the session's options say.
@@ -552,17 +556,30 @@ NULL
 # first, would then walk. The YAML reader refuses a document that holds more
 # values than this once its aliases are expanded (API_SPEC.md section 3).
 .tf_MAX_VALUES <- 1000000L
+# The functions that walk a theory recurse once for every level of it, so the
+# readers refuse a document nested deeper than this, the document itself being
+# the first level (API_SPEC.md section 3).
+.tf_MAX_DEPTH <- 64L
 
-# Stop when `data` holds more than .tf_MAX_VALUES values. Each mapping,
-# sequence and scalar counts once for every place it appears, so a node an
-# alias repeats counts each time, and a mapping's keys do not count. The walk
-# goes one level at a time and stops before a level would pass the limit, so
-# its cost is bounded by the limit and not by the size the aliases stand for.
-# Python's _load._check_size() counts the same way.
+.tf_too_deep <- function(path) {
+  stop(sprintf("(%s) the document is nested more than %d levels deep", path, .tf_MAX_DEPTH),
+       call. = FALSE)
+}
+
+# Stop when `data` holds more than .tf_MAX_VALUES values or is nested more than
+# .tf_MAX_DEPTH levels deep. Each mapping, sequence and scalar counts once for
+# every place it appears, so a node an alias repeats counts each time, and a
+# mapping's keys do not count. The walk goes one level at a time and stops at
+# the first level that passes either limit, so its cost is bounded by the
+# limits and not by the size the aliases stand for. Python's
+# _load._check_size() counts the same way.
 .tf_check_size <- function(data, path) {
   n <- 0
+  depth <- 0L
   level <- list(data)
   while (length(level) > 0L) {
+    depth <- depth + 1L
+    if (depth > .tf_MAX_DEPTH) .tf_too_deep(path)
     n <- n + length(level)
     level <- level[vapply(level, is.list, logical(1L))]
     if (n + sum(lengths(level)) > .tf_MAX_VALUES) {
@@ -583,6 +600,9 @@ NULL
 # after that (.tf_json_unreadable()).
 .tf_read_json <- function(path) {
   text <- .tf_read_text(path)
+  # jsonlite recurses in C once for every level, so depth is measured on the
+  # text, before anything parses it.
+  if (.tf_json_too_deep(text)) .tf_too_deep(path)
   ok <- jsonlite::validate(text)
   if (!isTRUE(ok)) stop(sprintf("(%s) %s", path, trimws(attr(ok, "err"))), call. = FALSE)
   bad <- .tf_json_unreadable(text)
@@ -597,6 +617,102 @@ NULL
   }
   if (!is.null(bad)) .tf_refuse_unreadable(path, bad$what)
   data
+}
+
+# The level of the deepest value of a JSON text, the document being the first,
+# read from its brackets outside strings (API_SPEC.md section 3). Outside a
+# string, a quotation mark opens one. Inside, a backslash escapes the character
+# after it and a quotation mark closes it, and a string left open runs to the
+# end of the text. A quotation mark inside a string is therefore escaped when
+# an odd number of backslashes comes just before it. Each string is a value.
+# An opening bracket is at the level of the brackets open after it, and any
+# other character of a value one below the brackets open around it. The bytes
+# are compared, which a text that is not valid JSON allows too, and no regular
+# expression is used, since PCRE gives up on a string of some millions of
+# escapes. Python's _load._json_depth() reads the same levels.
+.tf_json_depth <- function(text) {
+  b <- as.integer(charToRaw(text))
+  n <- length(b)
+  if (n == 0L) return(0L)
+  quotes <- which(b == 0x22L)
+  inside <- logical(n)
+  if (length(quotes)) {
+    # The backslashes just before each quotation mark.
+    other <- seq_len(n)
+    other[b == 0x5CL] <- 0L
+    other <- cummax(other)
+    before <- quotes - 1L
+    run <- before - other[pmax(before, 1L)]
+    run[before == 0L] <- 0L
+    odd <- run %% 2L == 1L
+    # The marks that open or close a string. In valid JSON no backslash comes
+    # outside a string, so the marks after an even run do it and each mark
+    # after an odd run lies inside a string. Otherwise the marks are read one
+    # by one.
+    edges <- quotes[!odd]
+    if (any(odd) && any(findInterval(quotes[odd], edges) %% 2L == 0L)) {
+      open_now <- FALSE
+      keep <- logical(length(quotes))
+      for (k in seq_along(quotes)) {
+        if (!open_now) {
+          open_now <- keep[[k]] <- TRUE
+        } else if (!odd[[k]]) {
+          open_now <- FALSE
+          keep[[k]] <- TRUE
+        }
+      }
+      edges <- quotes[keep]
+    }
+    flip <- integer(n)
+    flip[edges] <- 1L
+    inside <- cumsum(flip) %% 2L == 1L
+  }
+  step <- .tf_JSON_STEP[b + 1L]
+  step[inside] <- 0L
+  depth <- cumsum(step)
+  value <- .tf_JSON_VALUE[b + 1L] | (inside & step == 0L)
+  max(0L, depth[step == 1L], depth[value] + 1L)
+}
+
+# For each byte, +1 for an opening bracket and -1 for a closing one, and
+# whether it belongs to a value outside a string: any byte but a bracket, a
+# comma, a colon, a space, a tab, a line feed and a carriage return.
+.tf_JSON_STEP <- local({
+  x <- integer(256)
+  x[c(0x5B, 0x7B) + 1L] <- 1L
+  x[c(0x5D, 0x7D) + 1L] <- -1L
+  x
+})
+.tf_JSON_VALUE <- local({
+  x <- rep(TRUE, 256)
+  x[c(0x5B, 0x7B, 0x5D, 0x7D, 0x2C, 0x3A, 0x20, 0x09, 0x0A, 0x0D) + 1L] <- FALSE
+  x
+})
+.tf_JSON_MARK <- local({
+  x <- logical(256)
+  x[c(0x22, 0x5B, 0x7B, 0x5D, 0x7D) + 1L] <- TRUE
+  x
+})
+
+# Whether a JSON text nests more than .tf_MAX_DEPTH levels deep. A text with
+# fewer opening brackets than that in all cannot. When no backslash comes just
+# before a quotation mark, every quotation mark opens or closes a string. If,
+# once all but the quotation marks and brackets are dropped, every string is
+# then empty, the brackets left are those outside strings, and a value lies at
+# most one level deeper than they nest. Only a text whose brackets reach the
+# limit, or that has brackets inside strings, is measured in full. Python's
+# _load._json_too_deep() decides the same way.
+.tf_json_too_deep <- function(text) {
+  b <- charToRaw(text)
+  marks <- b[.tf_JSON_MARK[as.integer(b) + 1L]]
+  if (sum(.tf_JSON_STEP[as.integer(marks) + 1L] == 1L) < .tf_MAX_DEPTH) return(FALSE)
+  if (!grepl('\\"', text, fixed = TRUE, useBytes = TRUE)) {
+    bare <- as.integer(charToRaw(gsub('""', "", rawToChar(marks), fixed = TRUE, useBytes = TRUE)))
+    if (!any(bare == 0x22L) && max(0L, cumsum(.tf_JSON_STEP[bare + 1L])) < .tf_MAX_DEPTH) {
+      return(FALSE)
+    }
+  }
+  .tf_json_depth(text) > .tf_MAX_DEPTH
 }
 
 # R cannot hold every string a file can spell. jsonlite and yaml cut a string

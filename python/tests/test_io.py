@@ -3,6 +3,7 @@ import math
 from pathlib import Path
 
 import pytest
+import yaml
 
 import theoryforge as tf
 
@@ -305,6 +306,153 @@ def test_an_alias_that_names_no_node_and_an_anchor_given_twice_are_refused(tmp_p
     with pytest.raises(ValueError) as err:
         tf.read(path)
     assert str(err.value) == f"({path}) {message}"
+
+
+def _nested(levels: int, json: bool = False) -> str:
+    """A theory whose ``x`` holds ``levels`` sequences, one inside the next,
+    with a string in the innermost, so that the string lies levels + 2 levels
+    deep."""
+    inner = "[" * levels + ('"s"' if json else "s") + "]" * levels
+    if json:
+        return ('{"schema_version": "1.1", "id": "d", "title": "D", "maturity": "draft", "x": '
+                + inner + "}\n")
+    return "schema_version: '1.1'\nid: d\ntitle: D\nmaturity: draft\nx: " + inner + "\n"
+
+
+@pytest.mark.parametrize("suffix", [".yaml", ".json"])
+def test_a_document_nested_more_than_64_levels_deep_refuses_the_file(tmp_path, suffix):
+    # The document is the first level, so 62 sequences reach the limit with
+    # their string. The R twin measures the same levels.
+    json = suffix == ".json"
+    assert tf.read(_file(tmp_path, "at.theory" + suffix, _nested(62, json))).data["id"] == "d"
+    path = _file(tmp_path, "over.theory" + suffix, _nested(63, json))
+    with pytest.raises(ValueError) as exc:
+        tf.read(path)
+    assert str(exc.value) == f"({path}) the document is nested more than 64 levels deep"
+    # Text far deeper than that is refused too, where json would raise
+    # RecursionError and PyYAML's composers would exhaust the stack.
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read(_file(tmp_path, "deeper.theory" + suffix, _nested(100000 if json else 2000, json)))
+
+
+def test_a_long_chain_of_merges_reads(tmp_path):
+    # Each of 1000 mappings merges the one before, in both forms of the merge
+    # key, so the document is three levels deep however long the chain. The R
+    # suite reads the same text.
+    for form in ("*m{}", "[*m{}]"):
+        chain = "".join(f"  - &m{i} {{<<: {form.format(i - 1)}}}\n" for i in range(1, 1000))
+        text = ("schema_version: '1.1'\nid: m\ntitle: M\nmaturity: draft\n"
+                "s:\n  - &m0 {k0: 0}\n" + chain + "last: {<<: *m999}\n")
+        t = tf.read(_file(tmp_path, "merge.theory.yaml", text))
+        assert t.data["last"] == {"k0": 0}
+        assert len(t.data["s"]) == 1000
+
+
+def test_a_deep_text_is_refused_after_a_syntax_error_and_beside_a_later_document(tmp_path):
+    # Python composes a text nested more than 1000 levels deep without
+    # PyYAML's composers, which recurse, so a syntax error later in it is
+    # reported as R reports it, before the depth (API_SPEC.md section 3). Only
+    # the first document is measured, and more than one document is outside
+    # the contract.
+    head = "schema_version: '1.1'\nid: d\ntitle: D\nmaturity: draft\n"
+    deep = "[" * 1200 + "]" * 1200
+    with pytest.raises(yaml.YAMLError, match="while parsing a flow sequence"):
+        tf.read(_file(tmp_path, "late.theory.yaml", head + "x: " + deep + "\ny: [unclosed\n"))
+    with pytest.raises(yaml.YAMLError, match="while parsing a flow sequence"):
+        tf.read(_file(tmp_path, "early.theory.yaml", head + "y: [unclosed\nx: " + deep + "\n"))
+    with pytest.raises(yaml.YAMLError, match="expected a single document"):
+        tf.read(_file(tmp_path, "second.theory.yaml", head + "---\nx: " + deep + "\n"))
+
+
+def _deep(levels: int, json: bool = False) -> str:
+    """``levels`` sequences, one inside the next, around one string."""
+    return "[" * levels + ('"s"' if json else "s") + "]" * levels
+
+
+def _bomb(sep: str = "\n") -> str:
+    """Seven keys whose aliases expand past 1000000 values below the fifth
+    level of the mapping that holds them, joined by ``sep``."""
+    return sep.join(["b0: &a0 [" + ", ".join(["ha"] * 10) + "]"] + [
+        f"b{i}: &a{i} [" + ", ".join([f"*a{i - 1}"] * 10) + "]" for i in range(1, 7)])
+
+
+_DEPTH = "the document is nested more than 64 levels deep"
+_COUNT = "the document holds more than 1000000 values once its aliases are expanded"
+_DUP = "Duplicate map key: 'a'"
+_ALIAS = "the alias 'u' names no node that ends before it"
+_SYNTAX = "syntax"
+
+# Files with two faults, and the one both readers report (API_SPEC.md section
+# 3, "Order of refusals"). _SYNTAX stands for the parser's own error. The R
+# suite reads the same texts.
+ORDER_FAULTS = [
+    ("yaml", "k: {a: 1, a: 2}\nx: " + _deep(70) + "\n", _DUP),
+    ("yaml", "x: " + _deep(70) + "\nk: {a: 1, a: 2}\n", _DUP),
+    ("yaml", "x: " + _deep(70) + "\ny: *u\n", _ALIAS),
+    ("yaml", "a: &x 1\nb: &x 2\nx: " + _deep(70) + "\n", _DEPTH),
+    ("yaml", "t: \"a\\0b\"\nx: " + _deep(70) + "\n", _DEPTH),
+    # The walk of the levels reports the limit it passes first.
+    ("yaml", _bomb() + "\nx: " + _deep(70) + "\n", _COUNT),
+    ("yaml", "x: " + "[" * 66 + "{" + _bomb(", ") + "}" + "]" * 66 + "\n", _DEPTH),
+    ("yaml", "k: {a: 1, a: 2}\n" + _bomb() + "\n", _DUP),
+    ("yaml", "y: *u\n" + _bomb() + "\n", _ALIAS),
+    ("yaml", "a: &x 1\nb: &x 2\n" + _bomb() + "\n", _COUNT),
+    ("yaml", "t: \"a\\0b\"\n" + _bomb() + "\n", _COUNT),
+    ("yaml", "p: &x 1\nq: &x 2\nk: {a: 1, a: 2}\n", _DUP),
+    # A syntax error, a repeated key and an alias that names no node, in the
+    # order the parser meets them.
+    ("yaml", "k: {a: 1, a: 2}\ny: [unclosed\n", _DUP),
+    ("yaml", "y: [unclosed\nk: {a: 1, a: 2}\n", _SYNTAX),
+    ("yaml", "k: {a: 1, a: 2}\nz: *u\ny: [unclosed\n", _DUP),
+    ("yaml", "z: *u\ny: [unclosed\n", _ALIAS),
+    # A text nested more than 1000 levels deep, which Python composes without
+    # recursion, and one just under that, which it may compose twice.
+    ("yaml", "x: " + _deep(1100) + "\ny: [unclosed\n", _SYNTAX),
+    ("yaml", "x: " + _deep(1100) + "\nk: {a: 1, a: 2}\n", _DUP),
+    ("yaml", "x: " + _deep(1100) + "\ny: *u\n", _ALIAS),
+    ("yaml", "x: &u " + "[" * 1100 + "*u" + "]" * 1100 + "\n", _ALIAS),
+    ("yaml", "x: " + "[" * 990 + "*u" + "]" * 990 + "\n", _ALIAS),
+    ("yaml", "x: &u " + "[" * 990 + "*u" + "]" * 990 + "\n", _ALIAS),
+    # JSON is measured for depth before it is parsed, and R validates it whole
+    # before it looks for a repeated key.
+    ("json", '{"x": ' + _deep(70, True) + ",}", _DEPTH),
+    ("json", '{"k": {"a": 1, "a": 2}, "x": ' + _deep(70, True) + "}", _DEPTH),
+    ("json", '{"t": "a\\u0000b", "x": ' + _deep(70, True) + "}", _DEPTH),
+    ("json", '{"t": "\\ud800", "x": ' + _deep(70, True) + "}", _DEPTH),
+    ("json", '{"k": {"a": 1, "a": 2},}', _SYNTAX),
+]
+
+
+@pytest.mark.parametrize(("suffix", "text", "message"), ORDER_FAULTS)
+def test_a_file_with_two_faults_is_refused_for_the_one_that_comes_first(tmp_path, suffix, text, message):
+    path = _file(tmp_path, "two.theory." + suffix, text)
+    if message == _SYNTAX:
+        with pytest.raises(json.JSONDecodeError if suffix == "json" else yaml.YAMLError):
+            tf.read(path)
+        return
+    with pytest.raises(ValueError) as err:
+        tf.read(path)
+    assert str(err.value) == f"({path}) {message}"
+
+
+def test_a_json_string_of_millions_of_characters_is_measured(tmp_path):
+    # Its brackets and escaped quotation marks are text. The R twin measures
+    # the same string without a regular expression, which PCRE would give up on.
+    note = '\\"[' * 1700000
+    text = ('{"schema_version": "1.1", "id": "j", "title": "J", "maturity": "draft", '
+            f'"x_note": "{note}"}}\n')
+    assert tf.read(_file(tmp_path, "long.theory.json", text)).data["x_note"] == '"[' * 1700000
+
+
+def test_an_alias_counts_at_the_depth_where_it_stands(tmp_path):
+    # An empty sequence is a value of its own, 41 levels deep here, and the
+    # alias puts it 24 levels deeper still.
+    text = "a: &a " + "[" * 40 + "]" * 40 + "\nb: " + "[" * 24 + "*a" + "]" * 24 + "\n"
+    path = _file(tmp_path, "alias.theory.yaml", text)
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read(path)
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read_corpus(path)
 
 
 def test_an_unquoted_date_stays_a_string_and_writes_to_json(tmp_path):

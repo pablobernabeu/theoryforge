@@ -33,17 +33,25 @@ mapping, in YAML or JSON, stops with \code{(<path>) Duplicate map key:
 '<key>'}. A YAML document that holds more than 1000000 values once its
 aliases (\code{*a}) are expanded stops with \code{(<path>) the document holds
 more than 1000000 values once its aliases are expanded}, before anything
-walks it. An alias whose anchor is undefined, or that lies inside the node
-its anchor names, stops with \code{(<path>) the alias '<name>' names no node
-that ends before it}, and an anchor given to two nodes with \code{(<path>)
-the anchor '<name>' names two nodes}, where yaml would read a placeholder or
-the first of the two nodes. A comment in a JSON file stops with the message
-of the JSON parser, since JSON has no comments. A string or key that holds
-U+0000 or a lone surrogate, which R would cut short or misread, stops with
-\code{(<path>) a string holds U+0000, which theoryforge cannot read}, or the
-same message naming \code{a lone surrogate}. A document that is not a
-mapping, such as a sequence or an empty YAML file, stops with \code{Theory
-data must be a mapping}.
+walks it, and a document nested more than 64 levels deep, the document being
+the first, stops with \code{(<path>) the document is nested more than 64
+levels deep}. An alias whose anchor is undefined, or that lies inside the
+node its anchor names, stops with \code{(<path>) the alias '<name>' names no
+node that ends before it}, and an anchor given to two nodes with
+\code{(<path>) the anchor '<name>' names two nodes}, where yaml would read a
+placeholder or the first of the two nodes. A comment in a JSON file stops
+with the message of the JSON parser, since JSON has no comments. A string or
+key that holds U+0000 or a lone surrogate, which R would cut short or
+misread, stops with \code{(<path>) a string holds U+0000, which theoryforge
+cannot read}, or the same message naming \code{a lone surrogate}. A file
+with more than one of these faults is refused for the first in this order.
+A JSON text is measured for depth before it is parsed, and a syntax error
+anywhere in it comes before a repeated key. In YAML, a syntax error, a
+repeated key and an alias that names no node come in the order the parser
+meets them, a repeated key where its mapping ends. The depth and the count
+of values come next, then U+0000 or a lone surrogate and last an anchor
+given twice. A document that is not a mapping, such as a sequence or
+an empty YAML file, stops with \code{Theory data must be a mapping}.
 }
 \examples{
 # Round-trip a theory through a temporary file.

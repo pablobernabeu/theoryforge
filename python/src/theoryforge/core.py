@@ -1243,17 +1243,25 @@ def read(path) -> Theory:
     ``ValueError("(<path>) Duplicate map key: '<key>'")``. A YAML document that
     holds more than 1000000 values once its aliases (``*a``) are expanded raises
     ``ValueError("(<path>) the document holds more than 1000000 values once its
-    aliases are expanded")`` before anything walks it. An alias whose anchor is
-    undefined, or that lies inside the node its anchor names, raises
-    ``ValueError("(<path>) the alias '<name>' names no node that ends before
-    it")``, and an anchor given to two nodes raises ``ValueError("(<path>) the
-    anchor '<name>' names two nodes")``, which R's yaml package would read as a
-    placeholder or as the first of the two nodes. A string or key that holds
-    U+0000 or a lone surrogate, which R cannot hold, raises
-    ``ValueError("(<path>) a string holds U+0000, which theoryforge cannot
-    read")``, or the same message naming ``a lone surrogate``. JSON has no
-    comments, and ``json`` refuses them. A document that is not a mapping raises
-    ``ValueError("Theory data must be a mapping")``.
+    aliases are expanded")`` before anything walks it, and a document nested
+    more than 64 levels deep, the document being the first, raises
+    ``ValueError("(<path>) the document is nested more than 64 levels deep")``.
+    An alias whose anchor is undefined, or that lies inside the node its anchor
+    names, raises ``ValueError("(<path>) the alias '<name>' names no node that
+    ends before it")``, and an anchor given to two nodes raises
+    ``ValueError("(<path>) the anchor '<name>' names two nodes")``, which R's
+    yaml package would read as a placeholder or as the first of the two nodes.
+    A string or key that holds U+0000 or a lone surrogate, which R cannot hold,
+    raises ``ValueError("(<path>) a string holds U+0000, which theoryforge
+    cannot read")``, or the same message naming ``a lone surrogate``. JSON has
+    no comments, and ``json`` refuses them. A file with more than one of these
+    faults is refused for the first in this order. A JSON text is measured for
+    depth before it is parsed, and a syntax error anywhere in it comes before a
+    repeated key. In YAML, a syntax error, a repeated key and an alias that
+    names no node come in the order the parser meets them, a repeated key where
+    its mapping ends. The depth and the count of values come next, then U+0000
+    or a lone surrogate and last an anchor given twice. A document that is not
+    a mapping raises ``ValueError("Theory data must be a mapping")``.
     """
     data = _load_document(path)
     if not isinstance(data, dict):

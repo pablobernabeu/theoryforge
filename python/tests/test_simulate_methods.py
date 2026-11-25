@@ -247,3 +247,79 @@ EXACT_FB_ROW_7_D = 3.837653
 # itself grows by exp(20) per step and leaves the double range at step 35.
 EXACT_DIVERGENCE = ("simulate diverged at step 35: state 'c_arousal' is not finite; "
                     "raise damping, reduce k or take fewer steps")
+
+
+def _triple_loop(A, B):
+    """A times B by the loop over i, j and m that API_SPEC section 22 states."""
+    n = len(A)
+    out = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            acc = 0.0
+            for m in range(n):
+                acc = acc + A[i][m] * B[m][j]
+            out[i][j] = acc
+    return out
+
+
+def test_the_matrix_product_gives_the_triple_loops_bits():
+    # The product skips a term only when one factor is 0 and the other finite,
+    # which leaves a sum unchanged. Zeros of both signs, infinities and NaN
+    # check that nothing else is skipped. The R suite makes the same check.
+    import random
+    import struct
+
+    from theoryforge.simulate import _matmul
+
+    rng = random.Random(5)
+    special = [0.0, -0.0, math.inf, -math.inf, math.nan, 5e-324, 1e308]
+    for _ in range(300):
+        n = rng.randint(1, 7)
+        A, B = ([[rng.choice(special) if rng.random() < 0.15 else
+                  (rng.uniform(-2, 2) if rng.random() < 0.4 else 0.0) for _ in range(n)]
+                 for _ in range(n)] for _ in range(2))
+        got, want = _matmul(A, B), _triple_loop(A, B)
+        assert [[struct.pack("<d", x) for x in row] for row in got] == \
+            [[struct.pack("<d", x) for x in row] for row in want]
+
+
+def test_a_theory_of_400_constructs_simulates():
+    # A chain: the first state has no couplings into it, so it decays at the
+    # damping rate, exactly with method "exact" and by 1 - dt * damping per step
+    # with Euler.
+    t = tf.new_theory("chain", "Chain")
+    for i in range(400):
+        t = t.add_construct(f"c{i}", f"C{i}", "A state.")
+    for i in range(399):
+        t = t.add_proposition(f"p{i}", f"c{i}", f"c{i + 1}", "increases")
+    exact = t.simulate(method="exact")["trajectory"]
+    assert [row[0] for row in exact] == pytest.approx([math.exp(-0.05 * s) for s in range(11)],
+                                                      abs=1e-6)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        euler = t.simulate()["trajectory"]
+    assert [row[0] for row in euler] == pytest.approx([0.95 ** s for s in range(11)], abs=1e-6)
+    assert len(euler) == 11 and len(euler[10]) == 400
+
+
+def test_numpy_float32_knobs_give_the_trajectory_of_the_equal_floats():
+    # The knobs are computed with as doubles, as R holds them, so a float32
+    # gives the bits of the double it equals, with either method. They are
+    # echoed as given.
+    np = pytest.importorskip("numpy")
+    import struct
+
+    t = (tf.new_theory("f32", "Float32").add_construct("a", "A", "d").add_construct("b", "B", "d")
+         .add_construct("c", "C", "d").add_proposition("p1", "a", "b", "increases")
+         .add_proposition("p2", "b", "c", "decreases"))
+    for method in ("euler", "exact"):
+        for knobs in ({"dt": 0.3, "k": 1.7, "damping": 0.0}, {"dt": 0.5, "k": 1.0, "damping": 0.2}):
+            given = {name: np.float32(value) for name, value in knobs.items()}
+            equal = {name: float(value) for name, value in given.items()}
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                a = tf.simulate(t, steps=8, init=1234.56789, method=method, **given)
+                b = tf.simulate(t, steps=8, init=1234.56789, method=method, **equal)
+            assert [[struct.pack("<d", x) for x in row] for row in a["trajectory"]] == \
+                [[struct.pack("<d", x) for x in row] for row in b["trajectory"]]
+            assert a["dt"] is given["dt"]

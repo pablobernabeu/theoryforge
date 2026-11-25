@@ -14,6 +14,8 @@ import math
 import numbers
 import warnings
 from collections.abc import Mapping
+from itertools import repeat
+from operator import add, mul, truediv
 
 from ._access import RELATION, enum, field, items, text
 from ._compat import theory_keyword
@@ -79,16 +81,53 @@ def _check_knobs(steps, dt, k, damping, init, method) -> int:
     return int(steps)
 
 
-def _matmul(A: list, B: list) -> list:
-    """A times B by explicit loops, the inner index last, each sum a left fold."""
+def _rows(B: list) -> list:
+    """For each row of B: the columns of its nonzero entries, the span from the
+    first of them to one past the last, and whether every entry is finite.
+    NaN counts as nonzero. A row whose sum is not finite is taken to hold an
+    entry that is not finite, which at worst means a term is added that could
+    have been skipped."""
+    out = []
+    for row in B:
+        nonzero = [j for j, b in enumerate(row) if b]
+        out.append((nonzero, nonzero[0] if nonzero else 0, nonzero[-1] + 1 if nonzero else 0,
+                    math.isfinite(sum(row))))
+    return out
+
+
+def _matmul(A: list, B: list, rows: list | None = None) -> list:
+    """A times B, each element a left fold over the inner index m.
+
+    Row i of the product is built by adding A[i][m] times row m of B for each
+    m in turn, so that every element adds its terms in the order of m, as the
+    triple loop over i, j and m does. A term with one factor 0 and the other
+    finite is 0 or -0, and adding it leaves a sum unchanged, since a sum that
+    starts at +0 never holds -0, so such terms are skipped. A term with an
+    infinite or NaN factor is always added. ``rows`` is ``_rows(B)``, which a
+    caller that multiplies by the same B again can pass.
+    """
     n = len(A)
-    out = [[0.0] * n for _ in range(n)]
-    for i in range(n):
-        for j in range(n):
-            acc = 0.0
-            for m in range(n):
-                acc = acc + A[i][m] * B[m][j]
-            out[i][j] = acc
+    if rows is None:
+        rows = _rows(B)
+    every_row_finite = all(r[3] for r in rows)
+    out = []
+    for row_a in A:
+        acc = [0.0] * n
+        terms = ([(m, a) for m, a in enumerate(row_a) if a] if every_row_finite
+                 else enumerate(row_a))
+        for m, a in terms:
+            nonzero, lo, hi, finite = rows[m]
+            if a == 0.0 and finite:
+                continue
+            row_b = B[m]
+            if not math.isfinite(a):
+                acc = list(map(add, acc, map(mul, repeat(a), row_b)))
+            elif 3 * len(nonzero) < hi - lo:
+                for j in nonzero:
+                    acc[j] = acc[j] + a * row_b[j]
+            elif lo < hi:
+                acc[lo:hi] = map(add, acc[lo:hi], map(mul, repeat(a), row_b[lo:hi]))
+        out.append(acc)
     return out
 
 
@@ -124,10 +163,11 @@ def _propagator(J: list, dt: float) -> list:
     A = [[M[i][j] * scale for j in range(n)] for i in range(n)]
     E = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
     term = [row[:] for row in E]
+    rows = _rows(A)
     for kk in range(1, _TAYLOR_DEGREE + 1):
-        term = _matmul(term, A)
-        term = [[term[i][j] / kk for j in range(n)] for i in range(n)]
-        E = [[E[i][j] + term[i][j] for j in range(n)] for i in range(n)]
+        term = _matmul(term, A, rows)
+        term = [list(map(truediv, row, repeat(kk))) for row in term]
+        E = [list(map(add, row_e, row_t)) for row_e, row_t in zip(E, term, strict=True)]
     for _ in range(s):
         E = _matmul(E, E)
     return E
@@ -147,14 +187,24 @@ def _check_finite(X: list, states: list, step: int, remedy: str) -> None:
                 + remedy)
 
 
-def _apply(E: list, X: list) -> list:
-    """E times X, each sum a left-to-right loop as R adds."""
-    n = len(X)
+def _nonzero(M: list) -> list:
+    """The entries of each row of M that are not 0, as (column, value) pairs in
+    column order. NaN is not 0 and is kept."""
+    return [[(j, x) for j, x in enumerate(row) if x != 0.0] for row in M]
+
+
+def _apply(rows: list, X: list) -> list:
+    """M times X, each sum a left-to-right loop as R adds, from the nonzero
+    entries of M's rows (``_nonzero()``).
+
+    Every state in X is finite, since each update is tested before the next, so
+    the terms a 0 of M gives are 0 or -0 and leave the sum as it is.
+    """
     out = []
-    for i in range(n):
+    for row in rows:
         acc = 0.0
-        for j in range(n):
-            acc = acc + E[i][j] * X[j]
+        for j, x in row:
+            acc = acc + x * X[j]
         out.append(acc)
     return out
 
@@ -225,6 +275,9 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
         3-49. https://doi.org/10.1137/S00361445024180
     """
     n_steps = _check_knobs(steps, dt, k, damping, init, method)
+    # The knobs are echoed as given, and computed with as doubles, as R holds
+    # them: a NumPy float32 would otherwise make some products float32.
+    dt_, k_, damping_ = float(dt), float(k), float(damping)
     theory = theory.data if hasattr(theory, "data") else theory
     states = [text(field(c, "id")) for c in items(theory, "constructs")]
     n = len(states)
@@ -259,7 +312,7 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
         if rel in PATHS and f in idx and t in idx:
             stated = RELATIONS[rel][1]
             sign = 1.0 if stated is None else float(stated)
-            A[idx[t]][idx[f]] += sign * k
+            A[idx[t]][idx[f]] += sign * k_
             pair_signs.setdefault((f, t), set()).add(sign)
             if stated is None:
                 assumed.append(text(field(p, "id")))
@@ -271,8 +324,9 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     # is checked against. Neither needs it when nothing moves.
     E: list = []
     if n > 0 and n_steps > 0:
-        J = [[A[i][j] - (damping if i == j else 0.0) for j in range(n)] for i in range(n)]
-        E = _propagator(J, dt)
+        J = [[A[i][j] - (damping_ if i == j else 0.0) for j in range(n)] for i in range(n)]
+        E = _nonzero(_propagator(J, dt_))
+    couplings = _nonzero(A)
     # A smaller dt cures an Euler divergence that the step causes, but it does
     # not change the exact solution, which grows only when the system does.
     # Raising damping shifts every eigenvalue of J to the left, so it tames
@@ -300,16 +354,11 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
         if method == "exact":
             X = _apply(E, X)
         else:
-            dX = []
-            for i in range(n):
-                # A left-to-right loop, as R adds. The builtin sum() compensates
-                # rounding error from Python 3.12, and in fast-growing regimes that
-                # moved the twins apart beyond the parity tolerance.
-                acc = 0.0
-                for j in range(n):
-                    acc = acc + A[i][j] * X[j]
-                dX.append(acc - damping * X[i])
-            X = [X[i] + dt * dX[i] for i in range(n)]
+            # A left-to-right loop, as R adds. The builtin sum() compensates
+            # rounding error from Python 3.12, and in fast-growing regimes that
+            # moved the twins apart beyond the parity tolerance.
+            dX = [acc - damping_ * x for acc, x in zip(_apply(couplings, X), X, strict=True)]
+            X = [X[i] + dt_ * dX[i] for i in range(n)]
         _check_finite(X, states, step, remedy)
         if method == "euler" and not departed:
             Y = _apply(E, Y)

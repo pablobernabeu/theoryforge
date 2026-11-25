@@ -22,6 +22,8 @@ from __future__ import annotations
 import json
 import math
 import re
+from collections.abc import Iterator
+from itertools import accumulate
 from pathlib import Path
 from typing import Any
 
@@ -122,9 +124,34 @@ class _StrictLoader(_BaseLoader):
         first and lets a later ``<<`` override an earlier one, which would give
         the twins different key orders and, for a repeated ``<<``, different
         values.
+
+        A merged mapping that merges others is resolved first. Each resolution
+        is a generator that yields the mapping it waits for, and the loop below
+        keeps the waiting ones on a stack, so that a long chain of merges cannot
+        exhaust Python's stack. A mapping that merges itself, through an alias
+        of an anchor it is still defining, is refused.
         """
         if not any(key_node.tag == _MERGE for key_node, _ in node.value):
             return
+        waiting = [(node, self._flatten_steps(node))]
+        pending = {id(node)}
+        while waiting:
+            try:
+                source = next(waiting[-1][1])
+            except StopIteration:
+                pending.discard(id(waiting.pop()[0]))
+                continue
+            if any(key_node.tag == _MERGE for key_node, _ in source.value):
+                if id(source) in pending:
+                    raise ConstructorError(
+                        "while constructing a mapping", waiting[-1][0].start_mark,
+                        "found a mapping that merges itself", source.start_mark)
+                waiting.append((source, self._flatten_steps(source)))
+                pending.add(id(source))
+
+    def _flatten_steps(self, node: MappingNode) -> Iterator[MappingNode]:
+        """Resolve the merge keys of ``node``, yielding each merged mapping
+        before its keys are taken, so that the caller can resolve it first."""
         own = []
         merged = []
         for key_node, value_node in node.value:
@@ -145,7 +172,7 @@ class _StrictLoader(_BaseLoader):
                     raise ConstructorError(
                         "while constructing a mapping", node.start_mark,
                         f"expected a mapping for merging, but found {source.id}", source.start_mark)
-                self.flatten_mapping(source)
+                yield source
                 merged.extend(source.value)
         present = {self.construct_object(k) for k, _ in own if isinstance(k, ScalarNode)}
         for key_node, value_node in merged:
@@ -192,6 +219,22 @@ def _key_text(key: Any) -> str:
     return str(key)
 
 
+def _repeated_key(loader: Any, node: MappingNode) -> str | None:
+    """The first key that the mapping ``node`` repeats, named as R's yaml package
+    names it, or None. Merge keys are skipped, as R does."""
+    seen = set()
+    for key_node, _ in node.value:
+        if key_node.tag == _MERGE or not isinstance(key_node, ScalarNode):
+            continue
+        if key_node.tag == _VALUE:  # an explicit !!value key, which PyYAML reads as text
+            key_node.tag = "tag:yaml.org,2002:str"
+        key = _key_text(loader.construct_object(key_node))
+        if key in seen:
+            return key
+        seen.add(key)
+    return None
+
+
 def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
     """Raise ``_DuplicateKey`` for the first mapping, in the order mappings close, that repeats a key.
 
@@ -199,44 +242,49 @@ def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
     reported before a repeated top-level key even when the top-level one comes
     first in the text. The walk therefore visits a node's children before the node,
     and it runs on the composed document before any merge is resolved, so a merged
-    key never counts as a repeat. Merge keys themselves are skipped, as R does.
+    key never counts as a repeat. The walk keeps its own stack, so that a deep
+    document cannot exhaust Python's.
 
     An alias inside the node its anchor names makes the composed document cyclic,
-    and R reads such an alias as one that names no node. The walk then raises
-    ``_Recursive``, whatever key it has found repeated, so that ``load_document``
-    reads the text again as R does.
+    and R reads such an alias as one that names no node. The walk finds it as a
+    collection met again while it is still open, and then raises ``_Recursive``,
+    whatever key it has found repeated, so that ``load_document`` reads the text
+    again as R does.
     """
     visited: set[int] = set()
-    active: set[int] = set()
+    # The collections whose children are being visited: those on the way from
+    # the root to the node at hand.
+    open_now: set[int] = set()
     repeats: list[_DuplicateKey] = []
-
-    def visit(node: Node) -> None:
-        if id(node) in active:  # an alias inside the node it names
+    # Each entry is a mapping or sequence and whether its children have been
+    # visited. A scalar has no keys to check and holds no alias, so it is never
+    # put on the stack.
+    stack: list[tuple[Node, bool]] = [(root, False)]
+    while stack:
+        node, closed = stack.pop()
+        if closed:
+            open_now.discard(id(node))
+            if isinstance(node, MappingNode) and not repeats:
+                key = _repeated_key(loader, node)
+                if key is not None:
+                    repeats.append(_DuplicateKey(key, node.end_mark))
+            continue
+        if id(node) in open_now:  # an alias inside the node it names
             raise _Recursive()
         if id(node) in visited:  # an alias of a node already checked
-            return
+            continue
         visited.add(id(node))
-        active.add(id(node))
-        if isinstance(node, SequenceNode):
-            for child in node.value:
-                visit(child)
-        elif isinstance(node, MappingNode):
-            for key_node, value_node in node.value:
-                visit(key_node)
-                visit(value_node)
-            seen = set()
-            for key_node, _ in node.value:
-                if key_node.tag == _MERGE or not isinstance(key_node, ScalarNode):
-                    continue
-                if key_node.tag == _VALUE:  # an explicit !!value key, which PyYAML reads as text
-                    key_node.tag = "tag:yaml.org,2002:str"
-                key = _key_text(loader.construct_object(key_node))
-                if key in seen and not repeats:
-                    repeats.append(_DuplicateKey(key, node.end_mark))
-                seen.add(key)
-        active.discard(id(node))
-
-    visit(root)
+        open_now.add(id(node))
+        stack.append((node, True))
+        if isinstance(node, MappingNode):
+            for key_node, value_node in reversed(node.value):
+                if not isinstance(value_node, ScalarNode):
+                    stack.append((value_node, False))
+                if not isinstance(key_node, ScalarNode):
+                    stack.append((key_node, False))
+        elif isinstance(node, SequenceNode):
+            stack.extend((child, False) for child in reversed(node.value)
+                         if not isinstance(child, ScalarNode))
     if repeats:
         raise repeats[0]
 
@@ -246,7 +294,7 @@ _BAD_ANCHOR = "_yaml.bad-anchor_"
 
 
 class _TolerantComposer:
-    """Compose a document as R's yaml package binds its aliases, noting what R refuses.
+    """Compose a document as R's yaml package reads it, noting what R refuses.
 
     R records an anchor when its node ends and binds an alias to the first node
     with that anchor to have ended. Three cases follow. An alias whose anchor
@@ -256,9 +304,12 @@ class _TolerantComposer:
     a cyclic node for the second. A loader with this composer reads all three
     as R does. It notes, in ``unknown``, the first alias that names no node and
     where it stands, and, in ``twice``, every anchor given to a second node.
-    ``load_document`` uses it only when the ordinary loader has met one of the
-    three, so that it can refuse the file at the point where R's reader
-    refuses it.
+    It checks the keys of each mapping as the mapping ends, as R does, and
+    raises ``_DuplicateKey`` there, so that a syntax error, a repeated key and
+    an alias that names no node are met in the order R meets them. It keeps
+    the collections that are open on a stack of its own, where PyYAML's
+    composers recurse once for every level, and reads any other text as they
+    do.
     """
 
     unknown: tuple[str, int] | None = None
@@ -273,7 +324,7 @@ class _TolerantComposer:
         document: Any = None
         if not loader.check_event(StreamEndEvent):
             loader.get_event()  # the start of the document
-            document = self._compose(None, None)
+            document = self._compose()
             loader.get_event()  # the end of the document
         if not loader.check_event(StreamEndEvent):
             event = loader.get_event()
@@ -282,46 +333,80 @@ class _TolerantComposer:
         loader.get_event()  # the end of the stream
         return document
 
-    def _compose(self, parent: Node | None, index: Any) -> Node:
+    def _compose(self) -> Node:
         loader: Any = self
-        if loader.check_event(AliasEvent):
-            event = loader.get_event()
-            found = self._ended.get(event.anchor)
-            if found is not None:
-                return found
-            if self.unknown is None:
-                self.unknown = (event.anchor, event.start_mark.index)
-            return ScalarNode("tag:yaml.org,2002:str", _BAD_ANCHOR, event.start_mark, event.end_mark)
-        anchor = loader.peek_event().anchor
-        if anchor is not None:
-            if anchor in self._started:
-                self.twice.add(anchor)
-            self._started.add(anchor)
-        loader.descend_resolver(parent, index)
-        start = loader.get_event()
-        node: Node
-        if isinstance(start, ScalarEvent):
-            tag = start.tag
-            if tag is None or tag == "!":
-                tag = loader.resolve(ScalarNode, start.value, start.implicit)
-            node = ScalarNode(tag, start.value, start.start_mark, start.end_mark, style=start.style)
-        elif isinstance(start, SequenceStartEvent):
-            tag = start.tag
-            if tag is None or tag == "!":
-                tag = loader.resolve(SequenceNode, None, start.implicit)
-            node = SequenceNode(tag, [], start.start_mark, None, flow_style=start.flow_style)
-            while not loader.check_event(SequenceEndEvent):
-                node.value.append(self._compose(node, len(node.value)))
-            node.end_mark = loader.get_event().end_mark
-        else:
-            tag = start.tag
-            if tag is None or tag == "!":
-                tag = loader.resolve(MappingNode, None, start.implicit)
-            node = MappingNode(tag, [], start.start_mark, None, flow_style=start.flow_style)
-            while not loader.check_event(MappingEndEvent):
-                key = self._compose(node, None)
-                node.value.append((key, self._compose(node, key)))
-            node.end_mark = loader.get_event().end_mark
+        # The collections that have begun and not yet ended, innermost last,
+        # each with its anchor and, for a mapping, the key whose value comes
+        # next, or None.
+        stack: list[list[Any]] = []
+        while True:
+            parent: Node | None = None
+            index: Any = None
+            if stack:
+                parent = stack[-1][0]
+                index = len(parent.value) if isinstance(parent, SequenceNode) else stack[-1][2]
+            node: Node | None = None
+            if loader.check_event(AliasEvent):
+                event = loader.get_event()
+                node = self._ended.get(event.anchor)
+                if node is None:
+                    if self.unknown is None:
+                        self.unknown = (event.anchor, event.start_mark.index)
+                    node = ScalarNode("tag:yaml.org,2002:str", _BAD_ANCHOR, event.start_mark,
+                                      event.end_mark)
+            else:
+                anchor = loader.peek_event().anchor
+                if anchor is not None:
+                    if anchor in self._started:
+                        self.twice.add(anchor)
+                    self._started.add(anchor)
+                loader.descend_resolver(parent, index)
+                start = loader.get_event()
+                tag = start.tag
+                if isinstance(start, ScalarEvent):
+                    if tag is None or tag == "!":
+                        tag = loader.resolve(ScalarNode, start.value, start.implicit)
+                    node = self._end(ScalarNode(tag, start.value, start.start_mark, start.end_mark,
+                                                style=start.style), anchor)
+                elif isinstance(start, SequenceStartEvent):
+                    if tag is None or tag == "!":
+                        tag = loader.resolve(SequenceNode, None, start.implicit)
+                    stack.append([SequenceNode(tag, [], start.start_mark, None,
+                                               flow_style=start.flow_style), anchor, None])
+                else:
+                    if tag is None or tag == "!":
+                        tag = loader.resolve(MappingNode, None, start.implicit)
+                    stack.append([MappingNode(tag, [], start.start_mark, None,
+                                              flow_style=start.flow_style), anchor, None])
+            # Put the node that has ended into the collection that holds it, and
+            # end each collection whose end comes next.
+            while True:
+                if node is not None:
+                    if not stack:
+                        return node
+                    top = stack[-1]
+                    if isinstance(top[0], SequenceNode):
+                        top[0].value.append(node)
+                    elif top[2] is None:
+                        top[2] = node
+                    else:
+                        top[0].value.append((top[2], node))
+                        top[2] = None
+                collection, anchor, _ = stack[-1]
+                end = SequenceEndEvent if isinstance(collection, SequenceNode) else MappingEndEvent
+                if not loader.check_event(end):
+                    break
+                collection.end_mark = loader.get_event().end_mark
+                stack.pop()
+                if isinstance(collection, MappingNode):
+                    key = _repeated_key(self, collection)
+                    if key is not None:
+                        raise _DuplicateKey(key, collection.end_mark)
+                node = self._end(collection, anchor)
+
+    def _end(self, node: Node, anchor: str | None) -> Node:
+        """``node``, which has ended, with its anchor recorded unless one has ended already."""
+        loader: Any = self
         loader.ascend_resolver()
         if anchor is not None:
             self._ended.setdefault(anchor, node)
@@ -338,26 +423,29 @@ def _load_yaml(text: str) -> tuple[Any, set[str]]:
     libyaml's composer refuses an undefined alias and an anchor given to a
     second node, and composes an alias inside the node its anchor names as a
     cycle. R's yaml package reads all three, and R's reader refuses them once
-    it has read them. When the ordinary loader meets one, the text is read
-    again by ``_TolerantLoader``, which reads it as R does, so that the file is
-    refused at the point where R refuses it. An alias that names no node raises
-    ``_AliasFault``, unless a syntax error comes before it in the text or a
-    mapping that repeats a key ends before it, since R's yaml package checks
-    the keys of a mapping as the mapping ends. A block mapping ends where the
-    token after it begins, so an alias that is that token comes after the end,
-    while an error of the parser or the constructor that the alias itself
+    it has read them. The ordinary loader composes the whole document before
+    its keys are checked, while R checks the keys of a mapping as the mapping
+    ends. When the ordinary loader meets one of these aliases or anchors, or a
+    syntax error, the text is read again by ``_TolerantLoader``, which reads it
+    as R does, so that the file is refused for the fault that R's reader meets
+    first. So is a text whose collections nest more than ``_MAX_TEXT_DEPTH``
+    levels deep, on which PyYAML's composers would exhaust the stack. An alias
+    that names no node raises ``_AliasFault`` unless a syntax error or the end
+    of a mapping that repeats a key comes before it. A block mapping ends where
+    the token after it begins, so an alias that is that token comes after the
+    end, while an error of the parser or the constructor that the alias itself
     causes, such as a merge of the alias, is marked where the alias stands.
     """
-    loader = _StrictLoader(text)
-    try:
-        return loader.get_single_data(), set()
-    except ComposerError as err:
-        if "undefined alias" not in str(err) and "duplicate anchor" not in str(err):
+    if not _text_too_deep(text):
+        loader = _StrictLoader(text)
+        try:
+            return loader.get_single_data(), set()
+        except ConstructorError:
             raise
-    except _Recursive:
-        pass
-    finally:
-        loader.dispose()
+        except (_Recursive, yaml.YAMLError):
+            pass
+        finally:
+            loader.dispose()
     tolerant = _TolerantLoader(text)
     try:
         try:
@@ -422,20 +510,41 @@ def _unreadable(x: Any) -> str | None:
 # first, would then walk. The YAML reader refuses a document that holds more
 # values than this once its aliases are expanded (API_SPEC.md section 3).
 MAX_VALUES = 1_000_000
+# The functions that walk a theory recurse once for every level of it, so the
+# readers refuse a document nested deeper than this, the document itself being
+# the first level (API_SPEC.md section 3).
+MAX_DEPTH = 64
+# PyYAML's C composer (CParser, which uses libyaml only to parse) recurses once
+# for every level of the text, and tens of thousands of levels exhaust its
+# stack. Its pure-Python composer, used where libyaml is missing, recurses in
+# Python, two frames for every level. A YAML document nested deeper than this in
+# its text is therefore composed by _TolerantComposer, which keeps its own stack
+# (API_SPEC.md section 3).
+_MAX_TEXT_DEPTH = 1000 if _BaseLoader is not yaml.SafeLoader else 200
+
+
+def _too_deep(path: Path) -> ValueError:
+    return ValueError(f"({path}) the document is nested more than {MAX_DEPTH} levels deep")
 
 
 def _check_size(data: Any, path: Path) -> None:
-    """Refuse ``data`` when it holds more than ``MAX_VALUES`` values.
+    """Refuse ``data`` when it holds more than ``MAX_VALUES`` values or is
+    nested more than ``MAX_DEPTH`` levels deep.
 
     Each mapping, sequence and scalar counts once for every place it appears,
     so a node an alias repeats counts each time, and a mapping's keys do not
-    count. The walk goes one level at a time and stops as soon as the count
-    passes the limit, so its cost is bounded by the limit and not by the size
-    the aliases stand for. The R twin's ``.tf_check_size()`` counts the same way.
+    count. The walk goes one level at a time and stops at the first level that
+    passes either limit, so its cost is bounded by the limits and not by the
+    size the aliases stand for. The R twin's ``.tf_check_size()`` counts the
+    same way.
     """
     n = 0
+    depth = 0
     level = [data]
     while level:
+        depth += 1
+        if depth > MAX_DEPTH:
+            raise _too_deep(path)
         n += len(level)
         nxt: list[Any] = []
         for x in level:
@@ -451,6 +560,104 @@ def _check_size(data: Any, path: Path) -> None:
         level = nxt
 
 
+def _text_depth_bound(text: str) -> int:
+    """A bound on how deep the collections of a YAML text can nest.
+
+    A flow collection opens with a bracket or a brace, and a single-pair
+    mapping inside a flow sequence adds at most one level more. A block
+    collection nested in another starts in a later column, except a sequence
+    that is the value of a mapping key, which may start in the key's column
+    but holds its entries further right. So block collections nest at most
+    twice as deep as the longest line is long. Splitting at line feeds alone
+    gives lines at least as long as YAML's own.
+    """
+    longest = max(map(len, text.split("\n")))
+    return 2 * (text.count("[") + text.count("{")) + 2 * longest + 2
+
+
+def _text_too_deep(text: str) -> bool:
+    """Whether the first document of a YAML text nests more than
+    ``_MAX_TEXT_DEPTH`` levels deep, read from the parser's events, which
+    libyaml gives without recursing.
+
+    The events are read only until they pass that depth, since the answer
+    only chooses the composer. A syntax error before that depth, and anything
+    after the first document, are left for the loader to report.
+    """
+    if _text_depth_bound(text) <= _MAX_TEXT_DEPTH:
+        return False
+    depth = 0
+    try:
+        for event in yaml.parse(text, Loader=_BaseLoader):
+            kind = type(event)
+            if kind is yaml.SequenceStartEvent or kind is yaml.MappingStartEvent:
+                depth += 1
+                if depth > _MAX_TEXT_DEPTH:
+                    return True
+            elif kind is yaml.SequenceEndEvent or kind is yaml.MappingEndEvent:
+                depth -= 1
+            elif kind is yaml.DocumentEndEvent:
+                return False
+    except yaml.YAMLError:
+        return False
+    return False
+
+
+# A JSON string as API_SPEC.md section 3 reads it for depth: a backslash
+# escapes any character after it, and a string left open runs to the end of the
+# text. Then the characters that separate values, and a run of the characters
+# of a number or a literal.
+_JSON_STRING = re.compile(r'"(?:[^"\\]+|\\.)*(?:"|\\?\Z)', re.DOTALL)
+_JSON_SEPARATORS = str.maketrans("", "", ",: \t\n\r")
+_JSON_VALUE = re.compile(r"[^\[\]{}]+")
+_JSON_STEP = {"[": 1, "{": 1, "]": -1, "}": -1}
+
+
+def _json_depth(text: str) -> int:
+    """The level of the deepest value of a JSON text, the document being the
+    first, read from its brackets outside strings, as the R twin's
+    ``.tf_json_depth()`` reads it.
+
+    Each string becomes a value and each value an empty pair of brackets,
+    which lies at the same level, so the deepest level is the most brackets
+    open at once. When no backslash comes just before a quotation mark, every
+    quotation mark opens or closes a string, and the text is split at them.
+    """
+    if '\\"' in text:
+        outside = _JSON_STRING.sub("0", text)
+    else:
+        pieces = text.split('"')
+        outside = "0".join(pieces[0::2]) + ("0" if len(pieces) % 2 == 0 else "")
+    s = _JSON_VALUE.sub("[]", outside.translate(_JSON_SEPARATORS))
+    return max(0, max(accumulate(map(_JSON_STEP.__getitem__, s)), default=0))
+
+
+# The bytes other than quotation marks and brackets.
+_JSON_NOT_STRUCTURE = bytes(c for c in range(256) if c not in b'"[]{}')
+_JSON_BYTE_STEP = {ord("["): 1, ord("{"): 1, ord("]"): -1, ord("}"): -1}
+
+
+def _json_too_deep(text: str) -> bool:
+    """Whether a JSON text nests more than ``MAX_DEPTH`` levels deep.
+
+    A text with fewer opening brackets than that in all cannot. When no
+    backslash comes just before a quotation mark, every quotation mark opens or
+    closes a string. If, once all but the quotation marks and brackets are
+    dropped, every string is then empty, the brackets left are those outside
+    strings, and a value lies at most one level deeper than they nest. Only a
+    text whose brackets reach the limit, or that has brackets inside strings,
+    is measured in full.
+    """
+    if text.count("[") + text.count("{") < MAX_DEPTH:
+        return False
+    if '\\"' not in text:
+        marks = text.encode("utf-8").translate(None, _JSON_NOT_STRUCTURE).replace(b'""', b"")
+        if (b'"' not in marks and
+                max(accumulate(map(_JSON_BYTE_STEP.__getitem__, marks)), default=0) < MAX_DEPTH):
+            return False
+    return _json_depth(text) > MAX_DEPTH
+
+
 def load_document(path) -> Any:
     """Parse the YAML or JSON file at ``path`` (JSON when its suffix is ``.json``).
 
@@ -458,38 +665,51 @@ def load_document(path) -> Any:
     in any mapping raises ``ValueError("(<path>) Duplicate map key: '<key>'")``, the
     message R's reader gives. A YAML document that holds more than ``MAX_VALUES``
     values once its aliases are expanded raises ``ValueError("(<path>) the document
-    holds more than 1000000 values once its aliases are expanded")``. A string or
-    key that holds U+0000 or a lone surrogate, which R cannot hold, raises
-    ``ValueError("(<path>) a string holds U+0000, which theoryforge cannot read")``,
-    or the same message naming ``a lone surrogate``. A repeated key is reported
-    first, unless the key itself holds one of the two, and the size before either
-    character. JSON has no comments, and ``json`` refuses them.
-
-    A YAML alias that names no node that ends before it, because its anchor is
+    holds more than 1000000 values once its aliases are expanded")``, and a
+    document nested more than ``MAX_DEPTH`` levels deep raises
+    ``ValueError("(<path>) the document is nested more than 64 levels deep")``. A
+    YAML alias that names no node that ends before it, because its anchor is
     undefined or because the alias lies inside the node its anchor names, raises
     ``ValueError("(<path>) the alias '<name>' names no node that ends before
-    it")``, unless a syntax error comes before it in the text or a mapping that
-    repeats a key ends before it. An anchor given to two nodes raises
-    ``ValueError("(<path>) the anchor '<name>' names two nodes")`` once the
-    file has passed every other check, naming the first such anchor by code
-    point.
+    it")``, and an anchor given to two nodes raises ``ValueError("(<path>) the
+    anchor '<name>' names two nodes")``, naming the first such anchor by code
+    point. A string or key that holds U+0000 or a lone surrogate, which R cannot
+    hold, raises ``ValueError("(<path>) a string holds U+0000, which theoryforge
+    cannot read")``, or the same message naming ``a lone surrogate``. JSON has no
+    comments, and ``json`` refuses them.
+
+    A file with more than one of these faults is refused for the first in the
+    order of API_SPEC.md section 3, which R's reader follows too. A JSON text is
+    measured for depth before it is parsed, and a syntax error anywhere in it
+    comes before a repeated key. In YAML, a syntax error, a repeated key and an
+    alias that names no node come in the order the parser meets them, a repeated
+    key where its mapping ends. The depth and the count of values come next,
+    then U+0000 or a lone surrogate, unless a repeated key holds one, and last
+    an anchor given twice.
     """
     path = Path(path)
     text = path.read_bytes().decode("utf-8-sig")
+    json_file = path.suffix.lower() == ".json"
+    if json_file and _json_too_deep(text):
+        raise _too_deep(path)
     twice: set[str] = set()
     try:
-        if path.suffix.lower() == ".json":
+        if json_file:
             data = json.loads(text, object_pairs_hook=_unique_pairs)
         else:
             data, twice = _load_yaml(text)
     except _DuplicateKey as dup:
+        if json_file:
+            # R validates the whole text before it parses it, so a syntax error
+            # anywhere comes before a repeated key.
+            json.loads(text)
         what = _unreadable(str(dup.key))
         if what:
             raise ValueError(f"({path}) a string holds {what}, which theoryforge cannot read") from None
         raise ValueError(f"({path}) Duplicate map key: '{dup.key}'") from None
     except _AliasFault as fault:
         raise ValueError(f"({path}) the alias '{fault.anchor}' names no node that ends before it") from None
-    if path.suffix.lower() != ".json":
+    if not json_file:
         _check_size(data, path)
     what = _unreadable(data)
     if what:
