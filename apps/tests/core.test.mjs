@@ -60,6 +60,15 @@ async function boot(opts, rt) {
   return { ctx, rt, $ };
 }
 const upload = (f, name, text) => f.dispatch("change", { target: { files: [{ name, text: async () => text }] } });
+// Wait until cond() holds, checking every few milliseconds, and fail after a
+// generous time, so that a test does not hang on the speed of the machine.
+async function until(cond, what, ms = 10000) {
+  const t0 = Date.now();
+  while (!cond()) {
+    if (Date.now() - t0 > ms) throw new Error("timed out waiting for " + (what || "the condition"));
+    await new Promise((r) => setTimeout(r, 5));
+  }
+}
 
 test("the app starts when the browser blocks site storage", async () => {
   const { $ } = await boot({ storage: "blocked" });
@@ -598,7 +607,7 @@ test("a run is announced in a status region, and the result panel is no live reg
   assert.equal($("#output").getAttribute("aria-live"), null);
   assert.equal($("#liveStatus").getAttribute("role"), "status");
   await $("#runBtn").click();
-  await new Promise((r) => setTimeout(r, 60));
+  await until(() => $("#liveStatus").textContent === "Rigour checklist finished", "the announcement");
   assert.equal($("#liveStatus").textContent, "Rigour checklist finished");
 });
 
@@ -791,14 +800,15 @@ test("a link asks before it replaces an edited theory, and a reload of the tab's
 test("a link pasted into an open tab opens there, and the skip link leaves the address alone", async () => {
   const { ctx, rt, $, enc } = await bootWithLink({ v: 1, op: "check", run: false, theory: { example: EXAMPLES[0].path } });
   runsOf(rt);
-  ctx.location.hash = "#s=" + await enc({ v: 1, op: "validate", run: true, theory: { example: EXAMPLES[1].path } });
+  const pasted = "#s=" + await enc({ v: 1, op: "validate", run: true, theory: { example: EXAMPLES[1].path } });
+  ctx.location.hash = pasted;
   await ctx.__fire("hashchange");
   assert.equal(rt.active, EXAMPLES[1].path);
   assert.equal($("#exampleSel").value, EXAMPLES[1].path);
   assert.equal(ctx.document.querySelectorAll(".op.active")[0].getAttribute("data-op"), "validate");
   assert.deepEqual(rt.ran, ["validate"]);
   // A fragment the app wrote itself opens nothing.
-  await new Promise((r) => setTimeout(r, 800));
+  await until(() => ctx.location.hash !== pasted && ctx.location.hash.startsWith("#s="), "the app's own link");
   const own = ctx.location.hash;
   rt.ran = [];
   await ctx.__fire("hashchange");
@@ -815,11 +825,10 @@ test("a link pasted into an open tab opens there, and the skip link leaves the a
 test("the content hash arrives after the load, from a call of its own, and an error is shown", async () => {
   const rt = stubRuntime({ hashes: 0, async contentHash() { this.hashes++; return this.active === EXAMPLES[1].path ? { error: "MemoryError" } : { hash: "sha256:" + "cd".repeat(32) }; } });
   const { ctx, $ } = await boot({}, rt);
-  await new Promise((r) => setTimeout(r, 20));
-  assert.equal(rt.hashes, 1);
+  await until(() => rt.hashes === 1 && /sha256/.test($("#summaryHash").textContent), "the hash");
   assert.match($("#summaryHash").textContent, /sha256:cdcdcdcdcdcd…cdcdcd/);
   await choose($("#exampleSel"), EXAMPLES[1].path);
-  await new Promise((r) => setTimeout(r, 20));
+  await until(() => /not computed/.test($("#summaryHash").textContent), "the hash's error");
   assert.equal($("#summaryHash").textContent, "Content hash not computed: MemoryError");
   assert.ok(ctx);
 });
@@ -905,16 +914,18 @@ test("the card shows before the checklist has run, and each text is scored once"
   assert.ok($("#boot").classList.contains("hidden"), "the start did not wait for the score");
   assert.match($("#summaryWrap .ttl").textContent, /Title a\.theory\.yaml/);
   assert.equal(scoreChipText($), "scoring…");
-  await tick();
+  await until(() => rt.waiting.length > 0, "the score call");
   assert.deepEqual(rt.scored, [EXAMPLES[0].path], "the score is asked once the card is shown");
-  rt.release(); await tick();
-  assert.equal(scoreChipText($), "61.5 / 100 · pass");
+  rt.release();
+  await until(() => scoreChipText($) === "61.5 / 100 · pass" && rt.hashed.length === 1, "the first score and hash");
   await choose($("#exampleSel"), EXAMPLES[1].path);
-  await tick(); rt.release(); await tick();
+  await until(() => rt.waiting.length > 0, "the second score call");
+  rt.release();
+  await until(() => scoreChipText($) === "61.5 / 100 · pass" && rt.hashed.length === 2, "the second score and hash");
   assert.deepEqual(rt.scored, [EXAMPLES[0].path, EXAMPLES[1].path]);
   // Back on the first example, its score is known.
   await choose($("#exampleSel"), EXAMPLES[0].path);
-  await tick();
+  await tick(100);
   assert.deepEqual(rt.scored, [EXAMPLES[0].path, EXAMPLES[1].path], "no second score for the same text");
   assert.equal(scoreChipText($), "61.5 / 100 · pass");
   assert.deepEqual(rt.hashed, [EXAMPLES[0].path, EXAMPLES[1].path], "no second hash either");
@@ -925,9 +936,11 @@ test("the card shows before the checklist has run, and each text is scored once"
 test("a large theory is scored only on request, and its last operation is not run again as it opens", async () => {
   const rt = runsOf(slowScoreRuntime());
   const { ctx, $ } = await boot({}, rt);
-  await tick(); rt.release(); await tick();
+  await until(() => rt.waiting.length > 0, "the first score call");
+  rt.release();
+  await until(() => scoreChipText($) === "61.5 / 100 · pass" && rt.hashed.length === 1, "the first score and hash");
   await upload($("#fileInput"), "large.theory.yaml", "id: large\n");
-  await tick();
+  await tick(100);
   assert.deepEqual(rt.scored, [EXAMPLES[0].path], "the large theory is not scored unasked");
   assert.deepEqual(rt.hashed, [EXAMPLES[0].path], "nor hashed");
   assert.equal(scoreChipText($), "not scored score it");
@@ -938,7 +951,7 @@ test("a large theory is scored only on request, and its last operation is not ru
   const compute = $("#summaryHash button");
   compute.focus();
   await compute.click();
-  await tick(60);
+  await until(() => $("#liveStatus").textContent === "Content hash computed", "the announcement of the hash");
   assert.deepEqual(rt.hashed, [EXAMPLES[0].path, "large.theory.yaml"]);
   assert.match($("#summaryHash").textContent, /^Content hash sha256:efef/);
   assert.equal(ctx.document.activeElement, $("#summaryHash button"), "the focus is on the hash's copy button");
@@ -949,9 +962,10 @@ test("a large theory is scored only on request, and its last operation is not ru
   assert.equal(scoreChipText($), "scoring…");
   assert.equal(ctx.document.activeElement, $("#summaryScore"), "the focus stays on the card");
   assert.match($(".toast").textContent, /^Scoring Title large\.theory\.yaml with the rigour checklist/);
-  await tick();
+  await until(() => rt.waiting.length > 0, "the requested score call");
   assert.deepEqual(rt.scored, [EXAMPLES[0].path, "large.theory.yaml"]);
-  rt.release(); await tick(60);
+  rt.release();
+  await until(() => $("#liveStatus").textContent === "Checklist score 61.5 / 100, gate pass", "the announcement of the score");
   assert.equal(scoreChipText($), "61.5 / 100 · pass");
   assert.equal(ctx.document.activeElement, $("#summaryScore"));
   assert.equal($("#liveStatus").textContent, "Checklist score 61.5 / 100, gate pass");
@@ -962,15 +976,38 @@ test("a large theory is scored only on request, and its last operation is not ru
   const again = await boot({ stored }, rt2);
   assert.deepEqual(rt2.ran, []);
   assert.equal(again.$(".toast").textContent, "The theory is large, so the Rigour checklist operation was not run. Press Run to run it");
-  await tick();
+  await tick(100);
   assert.deepEqual(rt2.scored, []);
+});
+
+test("a user who moves on while a requested score or hash is computed keeps the focus", async () => {
+  const rt = slowScoreRuntime();
+  const { ctx, $ } = await boot({}, rt);
+  await until(() => rt.waiting.length > 0, "the first score call");
+  rt.release();
+  await until(() => scoreChipText($) === "61.5 / 100 · pass" && rt.hashed.length === 1, "the first score and hash");
+  await upload($("#fileInput"), "large.theory.yaml", "id: large\n");
+  const button = $("#summaryScore button");
+  button.focus();
+  await button.click();
+  await until(() => rt.waiting.length > 0, "the requested score call");
+  // The user goes on to the example selector before the score arrives.
+  $("#exampleSel").focus();
+  rt.release();
+  await until(() => $("#liveStatus").textContent === "Checklist score 61.5 / 100, gate pass", "the announcement of the score");
+  assert.equal(ctx.document.activeElement, $("#exampleSel"), "the focus stays where the user put it");
+  const compute = $("#summaryHash button");
+  compute.focus();
+  await compute.click();
+  $("#runBtn").focus();
+  await until(() => $("#liveStatus").textContent === "Content hash computed", "the announcement of the hash");
+  assert.equal(ctx.document.activeElement, $("#runBtn"));
 });
 
 test("a Rigour checklist run gives the card its score, and the score names an error without a message", async () => {
   const rt = slowScoreRuntime({ async score() { this.scored.push(this.active); return { error: "" }; } });
   const { $ } = await boot({}, rt);
-  await tick();
-  assert.equal(scoreChipText($), "not scored");
+  await until(() => scoreChipText($) === "not scored", "the refused score");
   assert.equal($("#summaryScore").getAttribute("title"), "the checklist stopped without a message");
   await upload($("#fileInput"), "large.theory.yaml", "id: large\n");
   await $("#runBtn").click();
@@ -1010,8 +1047,7 @@ test("a reload soon after an edit opens the latest edit and asks nothing", async
   assert.deepEqual(questions, []);
   assert.deepEqual(rt.texts, ["title: Second edit\n"]);
   // The address then catches up with the session, and the tab records it as its own.
-  await tick(800);
-  assert.notEqual(ctx.location.hash, first);
+  await until(() => ctx.location.hash !== first && ctx.location.hash.startsWith("#s="), "the app's own link");
   assert.equal(JSON.parse(ctx.sessionStorage.getItem("tf-app-py-tab")).link, ctx.location.hash);
   // The same fragment, not written by this tab, is a link like any other and asks first.
   const rt2 = editedRuntime();
@@ -1025,7 +1061,9 @@ test("a reload of one tab opens its own theory, whatever another tab has saved s
   // Two tabs share the browser's storage, and each keeps its own record.
   const A = await bootAt("", {}, stubRuntime());
   await A.$("#exampleSel").dispatch("change", { target: { value: EXAMPLES[1].path } });
-  await tick(900);
+  const record = () => JSON.parse(A.ctx.sessionStorage.getItem("tf-app-py-tab") || "{}");
+  await until(() => record().input && record().input.path === EXAMPLES[1].path && record().link && record().link === A.ctx.location.hash,
+    "tab A's record of its link");
   const linkA = A.ctx.location.hash;
   assert.ok(linkA.startsWith("#s="));
   const B = makeWindow({});
@@ -1052,21 +1090,22 @@ test("a link pasted while the start panel restores a session opens once the app 
   runScript(ctx, CORE); runScript(ctx, SHARE);
   let release;
   const gate = new Promise((r) => (release = r));
-  const rt = stubRuntime({ async loadTheoryText(text, name) { await gate; this.active = name; return summaryOf(name, { ok: true }); } });
+  const rt = stubRuntime({ restoring: false,
+    async loadTheoryText(text, name) { this.restoring = true; await gate; this.active = name; return summaryOf(name, { ok: true }); } });
   const started = ctx.TF.start(rt);
-  await tick(20);
+  await until(() => rt.restoring, "the start panel to restore the session");
   const pasted = await encodeLink({ v: 1, op: "validate", run: false, theory: { example: EXAMPLES[1].path } });
   ctx.location.hash = pasted;
   await ctx.__fire("hashchange");
   release();
   await started;
-  await tick(20);
-  assert.equal(rt.active, EXAMPLES[1].path, "the pasted link opened");
+  await until(() => rt.active === EXAMPLES[1].path, "the pasted link to open");
   // The app writes its own link again after the next change.
+  await until(() => !ctx.document.querySelector("#runBtn").disabled, "the app to be idle");
   await ctx.document.querySelector("#exampleSel").dispatch("change", { target: { value: EXAMPLES[0].path } });
-  await tick(900);
-  assert.notEqual(ctx.location.hash, pasted);
-  assert.equal(JSON.parse(ctx.sessionStorage.getItem("tf-app-py-tab")).link, ctx.location.hash);
+  const record = () => JSON.parse(ctx.sessionStorage.getItem("tf-app-py-tab") || "{}");
+  await until(() => ctx.location.hash !== pasted && ctx.location.hash.startsWith("#s=") && record().link === ctx.location.hash
+    && record().input && record().input.path === EXAMPLES[0].path, "the app's own link");
 });
 
 test("an operation the user starts goes ahead of the card's score and hash", async () => {
@@ -1080,7 +1119,7 @@ test("an operation the user starts goes ahead of the card's score and hash", asy
   const { $ } = await boot({}, rt);
   // The card's calls wait for an idle engine, so a Run pressed at once goes first.
   await $("#runBtn").click();
-  await tick(30);
+  await until(() => order.length >= 2, "the card's hash");
   assert.deepEqual(order, ["run check", "hash"], "the run went first, and gave the card its score");
 });
 
@@ -1096,25 +1135,23 @@ test("the hash waits for a request when the theory is long, whatever its counts"
     },
   });
   const { $ } = await boot({}, rt);
-  await tick(20);
-  const before = rt.hashed;
+  await until(() => rt.hashed === 1 && scoreChipText($) === "50 / 100 · pass", "the first score and hash");
   await upload($("#fileInput"), "long.theory.yaml", "id: long\n");
-  await tick(20);
-  assert.equal(rt.hashed, before, "a theory longer than the runtime's limit is not hashed unasked");
+  await until(() => scoreChipText($) === "50 / 100 · pass", "the score, since the theory's counts are small");
+  await tick(100);
+  assert.equal(rt.hashed, 1, "a theory longer than the runtime's limit is not hashed unasked");
   assert.match($("#summaryHash").textContent, /^Content hash not computed for a theory this long/);
-  assert.equal(scoreChipText($), "50 / 100 · pass", "its counts are small, so it is scored");
   await upload($("#fileInput"), "unmeasured.theory.yaml", "id: unmeasured\n");
-  await tick(20);
-  assert.equal(rt.hashed, before);
-  assert.match($("#summaryHash .hk").getAttribute("title"), /^This theory holds too many values to measure as it loads/);
+  await tick(100);
+  assert.equal(rt.hashed, 1);
+  assert.equal($("#summaryHash .hk").getAttribute("title"),
+    "This theory holds more than 20,000 values, more than the app measures as it loads, so its hash is computed only when you ask.");
   // A runtime with a higher limit hashes the same theory unasked.
   const roomy = stubRuntime(Object.assign({}, rt, { limits: { score: 300, hashChars: 1000000 }, hashed: 0 }));
   const again = await boot({}, roomy);
-  await tick(20);
-  const atStart = roomy.hashed;
+  await until(() => roomy.hashed === 1, "the first hash");
   await upload(again.$("#fileInput"), "long.theory.yaml", "id: long\n");
-  await tick(20);
-  assert.equal(roomy.hashed, atStart + 1);
+  await until(() => roomy.hashed === 2, "the long theory's hash");
 });
 
 test("a link pasted while an operation runs opens once the run has finished", async () => {
@@ -1124,7 +1161,7 @@ test("a link pasted while an operation runs opens once the run has finished", as
   const run = rt.run;
   rt.run = async (op, p) => { if (op === "check") await new Promise((r) => (release = r)); return run(op, p); };
   const running = $("#runBtn").click();
-  await tick();
+  await until(() => typeof release === "function", "the run to start");
   const pasted = "#s=" + await enc({ v: 1, op: "validate", run: true, theory: { example: EXAMPLES[1].path } });
   ctx.location.hash = pasted;
   await ctx.__fire("hashchange");
@@ -1133,7 +1170,7 @@ test("a link pasted while an operation runs opens once the run has finished", as
   assert.equal(ctx.location.hash, pasted, "the app's own state leaves the pasted link alone");
   release();
   await running;
-  await tick(20);
+  await until(() => rt.ran.length === 2 && /Opened the theory/.test($(".toast").textContent), "the pasted link to open and run");
   assert.equal(rt.active, EXAMPLES[1].path);
   assert.equal($("#exampleSel").value, EXAMPLES[1].path);
   assert.deepEqual(rt.ran, ["check", "validate"]);

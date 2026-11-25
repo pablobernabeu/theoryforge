@@ -224,6 +224,10 @@
     let doc = null, stale = true, built = false, loading = null;
     let format = "yaml", view = null, srcError = null;
     let timer = null, origin = null, inflight = null, again = false;
+    // reloads counts the theories the app has loaded, and docOf the one the
+    // forms were read from, so that a change made to the forms of a theory
+    // since replaced is dropped. reading is true while a new theory is read.
+    let reloads = 0, docOf = 0, reading = false;
     let fieldIndex = new Map(), inputIndex = new Map(), problems = [];
     const openSecs = new Set(["theory", "constructs", "propositions", "predictions"]);
     let formsEl, srcArea, lintEl, srcNote, srcLabel, bodyEl;
@@ -292,26 +296,40 @@
     function setSource(text) { srcArea.value = text; }
 
     // ---- loading the active theory -----------------------------------------
+    // While the new theory is read, which can wait behind other work in the
+    // engine, the forms and the source of the theory before it take no input.
     async function load() {
       stale = false;
+      const at = reloads;
+      reading = true;
+      lockAll();
       try {
-        const data = await host.theoryData();
+        let data;
+        try { data = await host.theoryData(); } catch (err) {
+          if (at !== reloads) return;
+          doc = null;
+          formsEl.replaceChildren(host.errorBox("The theory could not be read into the forms", err));
+          return;
+        }
+        if (at !== reloads) return;
+        const name = host.sourceName() || "";
+        let text = host.sourceOf();
+        const fmt = /\.json$/i.test(name) ? "json" : "yaml";
+        if (text == null) { text = await host.writeText(format); }
+        else if (fmt !== format) { format = fmt; srcLabel.textContent = "Source (" + fmt.toUpperCase() + ")"; }
+        if (at !== reloads) return;
+        // A change made meanwhile to the forms of the theory before is dropped.
+        clearTimeout(timer); timer = null; origin = null; again = false;
         doc = isMap(data) ? data : {};
-      } catch (err) {
-        doc = null;
-        formsEl.replaceChildren(host.errorBox("The theory could not be read into the forms", err));
-        return;
+        docOf = at;
+        for (const b of panel.querySelectorAll(".seg")) if (b.getAttribute("data-format")) b.setAttribute("aria-pressed", b.getAttribute("data-format") === format ? "true" : "false");
+        srcError = null;
+        setSource(text);
+        render();
+        lint(host.summary());
+      } finally {
+        if (at === reloads) { reading = false; unlock(); }
       }
-      const name = host.sourceName() || "";
-      let text = host.sourceOf();
-      const fmt = /\.json$/i.test(name) ? "json" : "yaml";
-      if (text == null) { text = await host.writeText(format); }
-      else if (fmt !== format) { format = fmt; srcLabel.textContent = "Source (" + fmt.toUpperCase() + ")"; }
-      for (const b of panel.querySelectorAll(".seg")) if (b.getAttribute("data-format")) b.setAttribute("aria-pressed", b.getAttribute("data-format") === format ? "true" : "false");
-      srcError = null;
-      setSource(text);
-      render();
-      lint(host.summary());
     }
     async function open() {
       build();
@@ -322,9 +340,10 @@
     // the new one.
     function reload() {
       clearTimeout(timer); timer = null; origin = null; again = false;
-      unlock();
+      reloads++;
       stale = true;
       if (built && visible()) open();
+      else lockAll();
     }
 
     // ---- syncing with the engine -------------------------------------------
@@ -339,8 +358,12 @@
       if (from === "source") { formsEl.inert = true; formsEl.setAttribute("aria-busy", "true"); }
       else srcArea.readOnly = true;
     }
+    function lockAll() {
+      if (!formsEl || !srcArea) return;
+      formsEl.inert = true; formsEl.setAttribute("aria-busy", "true"); srcArea.readOnly = true;
+    }
     function unlock() {
-      if (timer || inflight || again || !formsEl || !srcArea) return;
+      if (timer || inflight || again || reading || stale || !formsEl || !srcArea) return;
       formsEl.inert = false; formsEl.removeAttribute("aria-busy"); srcArea.readOnly = false;
     }
     function schedule(from) {
@@ -367,7 +390,7 @@
             srcError = res.error;
             lint(host.summary());
           }
-        } else if (doc) {
+        } else if (doc && docOf === reloads) {
           const res = await host.apply(JSON.stringify(doc, null, 2), "json", [format], { doc });
           if (res.ok) {
             srcError = null;
@@ -410,7 +433,9 @@
       await flush();
       if (host.mayDiscard && !host.mayDiscard("Start a new theory")) return;
       doc = templateTheory();
+      docOf = reloads;
       stale = false;
+      unlock();
       srcError = null;
       const res = await host.apply(JSON.stringify(doc, null, 2), "json", [format], { fresh: true, isNew: true, doc });
       if (res.ok) { setSource(res.texts[format] || ""); host.setSource(srcArea.value); }
@@ -460,7 +485,9 @@
         go.disabled = false;
         if (!res.ok) { status.replaceChildren(host.errorBox("The package's DAGitty reader refused the model", res.error)); return; }
         try { doc = JSON.parse(res.texts.json); } catch (e) { doc = {}; }
+        docOf = reloads;
         stale = false;
+        unlock();
         srcError = null;
         setSource(res.texts[format] || "");
         host.setSource(srcArea.value);
@@ -536,11 +563,15 @@
           // A hash not computed yet, as for a theory too long to hash as it
           // loads, is computed first, and recorded if the theory is still the
           // one it was computed for.
+          // An edit typed just before is applied first, and one applied while
+          // the hash was computed means the hash is of an earlier version.
           const use = el("button", { class: "btn ghost sm", type: "button", onclick: async () => {
+            await flush();
             let s = host.summary();
-            if (s && !s.hash && host.hash) {
-              host.toast("Computing the content hash, which can take a while for a theory this long");
+            if (s && !s.hash && !s.hashError && host.hash) {
+              if (s.hashWait === "asked") host.toast("Computing the content hash, which can take a while for a theory this long");
               const asked = await host.hash();
+              await flush();
               s = host.summary();
               if (asked !== s) { host.toast("The theory changed while its hash was computed. Press Record again"); return; }
             }

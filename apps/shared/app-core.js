@@ -1543,8 +1543,11 @@
   const largeNote = (s, kind) => (kind === "score"
     ? "This theory has " + theorySize(s).toLocaleString("en-GB") + " constructs, propositions and predictions, more than the " +
       limits().score.toLocaleString("en-GB") + " the app scores as it loads, since the checklist can take a while on a theory this large."
-    : (typeof s.chars === "number" ? "Written as JSON, this theory takes " + s.chars.toLocaleString("en-GB") + " characters" : "This theory holds too many values to measure as it loads") +
-      ", more than the " + limits().hashChars.toLocaleString("en-GB") + " characters the app hashes as it loads, since the hash can take a while on a theory this long.");
+    : typeof s.chars === "number"
+      ? "Written as JSON, this theory takes " + s.chars.toLocaleString("en-GB") + " characters, more than the " +
+        limits().hashChars.toLocaleString("en-GB") + " the app hashes as it loads, since the hash can take a while on a theory this long."
+      : "This theory holds more than " + limits().values.toLocaleString("en-GB") +
+        " values, more than the app measures as it loads, so its hash is computed only when you ask.");
   // An example is known by its path, and any other theory by its format and
   // its text.
   function cardKey(inp) {
@@ -1643,12 +1646,17 @@
   };
   // After a change the user asked for, the focus moves to what replaced the
   // control they used, on the card or in the editor, so it does not fall back
-  // to the page.
+  // to the page. A user who has moved on to something else keeps the focus
+  // there, and the result is only announced.
   function showCard(s, kind) {
     const c = CARD[kind];
     if (STATE.summary !== s) return;
     c.show(s);
     const by = s[c.by];
+    const a = document.activeElement;
+    let up = a;
+    while (up && up !== document.body) up = up.parentNode;
+    if (a && a !== document.body && up) return;
     if (by === "editor" && EDITOR && EDITOR.focusScore && kind === "score") EDITOR.focusScore();
     else if (by === "card") {
       const n = c.focus();
