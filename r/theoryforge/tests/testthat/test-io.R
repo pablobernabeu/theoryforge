@@ -150,6 +150,39 @@ test_that("aliases that expand past the limit refuse the file", {
   expect_identical(ids, c("c1", "c2"))
 })
 
+test_that("an alias that names no node and an anchor given twice are refused", {
+  # yaml read the first two aliases as "_yaml.bad-anchor_" with a warning and
+  # bound an alias to the first of two anchors, where PyYAML refused the file
+  # or read a cycle (API_SPEC.md section 3). The Python suite reads the same
+  # texts.
+  bs <- "\\"
+  cases <- list(
+    list("id: x\na: *u\n", "the alias 'u' names no node that ends before it"),
+    list("id: x\na: &p [*p]\n", "the alias 'p' names no node that ends before it"),
+    list("id: x\na: &p {b: *p}\n", "the alias 'p' names no node that ends before it"),
+    list("id: x\na: &x 1\nb: &x 2\nc: *x\n", "the anchor 'x' names two nodes"),
+    list("id: x\na: &x [&x 1]\n", "the anchor 'x' names two nodes"),
+    list("id: x\na: !!str &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
+    list("id: x\na: &x 1 # &x\nb: '&x'\nc: R &x\nd: |\n  &x\ne: *x\n", NULL),
+    # As both readers meet them: a repeated key or an alias that names no
+    # node, whichever comes first, then U+0000, then an anchor given twice.
+    list("id: x\nk: {a: 1, a: 2}\nz: *u\n", "Duplicate map key: 'a'"),
+    list("id: x\nz: *u\nk: {a: 1, a: 2}\n", "the alias 'u' names no node that ends before it"),
+    list(paste0("id: x\nz: *u\nt: \"a", bs, "0b\"\n"), "the alias 'u' names no node that ends before it"),
+    list(paste0("id: x\nt: \"a", bs, "0b\"\na: &x 1\nb: &x 2\n"),
+         "a string holds U+0000, which theoryforge cannot read"),
+    list("id: x\na: &x 1\nb: &x 2\nc: *u\n", "the alias 'u' names no node that ends before it")
+  )
+  for (case in cases) {
+    path <- io_file(case[[1]])
+    if (is.null(case[[2]])) {
+      expect_identical(expect_silent(tf_read(path))$e, 1L, info = case[[1]])
+    } else {
+      expect_error(tf_read(path), sprintf("(%s) %s", path, case[[2]]), fixed = TRUE, info = case[[1]])
+    }
+  }
+})
+
 test_that("an unquoted date stays a string and writes to JSON", {
   theory <- tf_read(io_file(date_theory))
   expect_identical(theory$test_outcomes[[1]]$date, "2026-05-01")

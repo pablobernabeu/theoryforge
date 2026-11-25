@@ -1,0 +1,5 @@
+{
+  "read": {
+    "error": "the alias 'log' names no node that ends before it"
+  }
+}

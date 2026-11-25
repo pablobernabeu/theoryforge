@@ -249,6 +249,39 @@ def test_aliases_that_expand_past_the_limit_refuse_the_file(tmp_path):
     assert [c["id"] for c in t.data["constructs"]] == ["c1", "c2"]
 
 
+# Aliases R's yaml package and PyYAML read apart (API_SPEC.md section 3). Each
+# entry is (text, the message without its path, or None when the file reads).
+# The R suite reads the same texts.
+ALIAS_FAULTS = [
+    ("id: x\na: *u\n", "the alias 'u' names no node that ends before it"),
+    ("id: x\na: &p [*p]\n", "the alias 'p' names no node that ends before it"),
+    ("id: x\na: &p {b: *p}\n", "the alias 'p' names no node that ends before it"),
+    ("id: x\na: &x 1\nb: &x 2\nc: *x\n", "the anchor 'x' names two nodes"),
+    ("id: x\na: &x [&x 1]\n", "the anchor 'x' names two nodes"),
+    ("id: x\na: !!str &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
+    ("id: x\na: &x 1 # &x\nb: '&x'\nc: R &x\nd: |\n  &x\ne: *x\n", None),
+    # As both readers meet them: a repeated key or an alias that names no node,
+    # whichever comes first, then U+0000, then an anchor given twice.
+    ("id: x\nk: {a: 1, a: 2}\nz: *u\n", "Duplicate map key: 'a'"),
+    ("id: x\nz: *u\nk: {a: 1, a: 2}\n", "the alias 'u' names no node that ends before it"),
+    ("id: x\nz: *u\nt: \"a" + "\\" + "0b\"\n", "the alias 'u' names no node that ends before it"),
+    ("id: x\nt: \"a" + "\\" + "0b\"\na: &x 1\nb: &x 2\n",
+     "a string holds U+0000, which theoryforge cannot read"),
+    ("id: x\na: &x 1\nb: &x 2\nc: *u\n", "the alias 'u' names no node that ends before it"),
+]
+
+
+@pytest.mark.parametrize(("text", "message"), ALIAS_FAULTS)
+def test_an_alias_that_names_no_node_and_an_anchor_given_twice_are_refused(tmp_path, text, message):
+    path = _file(tmp_path, "aliases.theory.yaml", text)
+    if message is None:
+        assert tf.read(path).data["e"] == 1
+        return
+    with pytest.raises(ValueError) as err:
+        tf.read(path)
+    assert str(err.value) == f"({path}) {message}"
+
+
 def test_an_unquoted_date_stays_a_string_and_writes_to_json(tmp_path):
     t = tf.read(_file(tmp_path, "date.theory.yaml", DATE_THEORY))
     outcome = t.data["test_outcomes"][0]

@@ -1236,17 +1236,22 @@ def read(path) -> Theory:
     mark is ignored. Dates and ``y``, ``Y``, ``n`` and ``N`` stay strings, and
     integers are decimal, octal or hexadecimal only, so ``1:30`` and ``1_000``
     are strings too. YAML is parsed with libyaml, as in R, so a tab is read as
-    YAML allows it: as white space after a value, before a comment and in a
-    flow collection, and as text inside an unquoted value. A merge key lets the
+    YAML allows it: as white space after a value, before a comment and in a flow
+    collection, and as text inside an unquoted value. A merge key lets the
     mapping's own keys win. A repeated key anywhere raises
     ``ValueError("(<path>) Duplicate map key: '<key>'")``. A YAML document that
     holds more than 1000000 values once its aliases (``*a``) are expanded raises
     ``ValueError("(<path>) the document holds more than 1000000 values once its
-    aliases are expanded")`` before anything walks it. A string or key that
-    holds U+0000 or a lone surrogate, which R cannot hold, raises
-    ``ValueError("(<path>) a string holds U+0000, which theoryforge cannot read")``,
-    or the same message naming ``a lone surrogate``. JSON has no comments, and
-    ``json`` refuses them. A document that is not a mapping raises
+    aliases are expanded")`` before anything walks it. An alias whose anchor is
+    undefined, or that lies inside the node its anchor names, raises
+    ``ValueError("(<path>) the alias '<name>' names no node that ends before
+    it")``, and an anchor given to two nodes raises ``ValueError("(<path>) the
+    anchor '<name>' names two nodes")``, which R's yaml package would read as a
+    placeholder or as the first of the two nodes. A string or key that holds
+    U+0000 or a lone surrogate, which R cannot hold, raises
+    ``ValueError("(<path>) a string holds U+0000, which theoryforge cannot
+    read")``, or the same message naming ``a lone surrogate``. JSON has no
+    comments, and ``json`` refuses them. A document that is not a mapping raises
     ``ValueError("Theory data must be a mapping")``.
     """
     data = _load_document(path)

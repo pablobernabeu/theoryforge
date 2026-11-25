@@ -337,7 +337,11 @@ NULL
 # stops with "(<path>) Duplicate map key: '<key>'", which the Python twin copies.
 # The number handlers cost a callback for every number, so they are used only
 # when yaml warned on the first reading. Any warning left after that is the
-# caller's to see.
+# caller's to see. yaml reads an alias that names no node it has read, one
+# whose anchor is undefined or that lies inside the node its anchor names, as
+# the text "_yaml.bad-anchor_" with a warning, and libyaml through PyYAML
+# refuses the first and reads the second as a cycle. Both twins refuse such an
+# alias, unless a syntax error or a repeated key comes before it in the text.
 .tf_read_yaml <- function(path) {
   text <- .tf_read_text(path)
   parse <- function(handlers, txt = text) {
@@ -345,13 +349,69 @@ NULL
   }
   .tf_yaml_refuse_nul(text, path, parse)
   warned <- FALSE
+  unknown <- character(0)
+  refuse_alias <- function(...) {
+    if (length(unknown) > 0L) {
+      stop(sprintf("(%s) the alias '%s' names no node that ends before it", path, unknown[[1L]]),
+           call. = FALSE)
+    }
+  }
   data <- withCallingHandlers(parse(.tf_yaml_handlers), warning = function(w) {
+    msg <- conditionMessage(w)
+    if (startsWith(msg, "Unknown anchor: ")) unknown <<- c(unknown, substring(msg, 17L))
     warned <<- TRUE
     invokeRestart("muffleWarning")
-  })
-  if (warned) data <- parse(c(.tf_yaml_handlers, .tf_yaml_number_handlers))
+  }, error = refuse_alias)
+  refuse_alias()
   .tf_check_size(data, path)
+  if (warned) data <- parse(c(.tf_yaml_handlers, .tf_yaml_number_handlers))
+  .tf_yaml_refuse_twice(text, path, parse)
   data
+}
+
+# Refuse a YAML text that gives one anchor to two nodes. yaml binds a later
+# alias to the first of them, where YAML binds it to the last, and libyaml
+# through PyYAML refuses the text. What yaml returns does not show anchors, so
+# each `&name` that could be an anchor of a name written twice gets a tag of
+# its own in a probe copy, whose handler records the anchors libyaml read: an
+# `&name` in a comment or a scalar stays text. A node that already has a tag
+# cannot take a second one, so when the probe fails, each `&name` is tried
+# alone, and one whose tag the parser refuses is an anchor.
+.tf_yaml_refuse_twice <- function(text, path, parse) {
+  m <- gregexpr("(?<![^\\s\\[{,:?-])&[0-9A-Za-z_-]+", text, perl = TRUE)
+  found <- regmatches(text, m)[[1L]]
+  probed <- which(found %in% found[duplicated(found)])
+  if (length(probed) == 0L) return(invisible())
+  prefix <- "tfanchor"
+  while (grepl(prefix, text, fixed = TRUE)) prefix <- paste0(prefix, "x")
+  read <- function(ks) {
+    seen <- integer(0)
+    handlers <- lapply(ks, function(k) function(x) {
+      seen <<- c(seen, k)
+      x
+    })
+    names(handlers) <- paste0(prefix, ks)
+    marked <- found
+    marked[ks] <- paste0("!", prefix, ks, " ", found[ks])
+    probe <- text
+    regmatches(probe, m) <- list(marked)
+    ok <- tryCatch({
+      suppressWarnings(parse(c(.tf_yaml_handlers, handlers), probe))
+      TRUE
+    }, error = function(e) FALSE)
+    if (ok) ks[ks %in% seen]
+  }
+  anchors <- read(probed)
+  if (is.null(anchors)) {
+    anchors <- probed[vapply(probed, function(k) !identical(read(k), integer(0)), logical(1L))]
+  }
+  names <- found[sort(anchors)]
+  twice <- names[duplicated(names)]
+  if (length(twice) > 0L) {
+    stop(sprintf("(%s) the anchor '%s' names two nodes", path, substring(twice[[1L]], 2L)),
+         call. = FALSE)
+  }
+  invisible()
 }
 
 # A YAML alias repeats the content its anchor names without repeating the
@@ -496,16 +556,21 @@ NULL
 # replaced by the escape of a mark in a probe copy, which is parsed: the mark
 # appears in a value or a key only where an escape stood in a double-quoted
 # scalar. A repeated key comes first, as in the Python twin, unless the key
-# itself holds U+0000. Any other error of the probe is left to the reading of
-# the file itself, which reports its own positions. libyaml refuses a
-# surrogate escape.
+# itself holds U+0000. Any other error of the probe, and an alias that names no
+# node, are left to the reading of the file itself, which reports its own
+# positions. libyaml refuses a surrogate escape.
 .tf_yaml_refuse_nul <- function(text, path, parse) {
   nul <- "(?<!\\\\)((?:\\\\\\\\)*)\\\\(?:0|x00|u0000|U00000000)"
   if (!grepl(nul, text, perl = TRUE, useBytes = TRUE)) return(invisible())
   mark <- .tf_free_marks(text)[["U+0000"]]
   probe <- gsub(nul, sprintf("\\1\\\\u%04X", mark), text, perl = TRUE, useBytes = TRUE)
   Encoding(probe) <- "UTF-8"
-  data <- tryCatch(suppressWarnings(parse(.tf_yaml_handlers, probe)), error = function(e) e)
+  unknown <- FALSE
+  data <- tryCatch(withCallingHandlers(parse(.tf_yaml_handlers, probe), warning = function(w) {
+    if (startsWith(conditionMessage(w), "Unknown anchor: ")) unknown <<- TRUE
+    invokeRestart("muffleWarning")
+  }), error = function(e) e)
+  if (unknown) return(invisible())
   if (inherits(data, "error")) {
     msg <- conditionMessage(data)
     if (grepl("Duplicate map key: '", msg, fixed = TRUE) &&

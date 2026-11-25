@@ -1,0 +1,20 @@
+# Edge case: an alias whose anchor is never defined. R's yaml package read it
+# as the text "_yaml.bad-anchor_" with a warning, so the label passed
+# validation and the diagrams printed it, while Python refused the file. Both
+# twins refuse it (API_SPEC.md section 3).
+schema_version: "1.1"
+id: edge-alias-undefined
+title: A label given by an alias that names no anchor
+maturity: building
+constructs:
+  - id: c1
+    label: *alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
