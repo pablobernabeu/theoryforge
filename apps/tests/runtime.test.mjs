@@ -244,19 +244,15 @@ test("r/r-runtime.js: the simulate comment lists every element of the record", (
   assert.match(code, /# list\(states, dt, steps, k, damping, init, initial_state, method, ignored, assumed_positive, opposed, trajectory\)$/m);
 });
 
-// The checklist's code names cycles only where the package's check() reads
-// it, which each runtime reads at start-up, and draws the grid only under the
-// default reading, as the app does.
-test("the checklist's code passes cycles where the package takes it, and draws the grid only under refuse", async () => {
-  for (const [file, refuse, sigma, plain] of [
-    ["r/r-runtime.js", 'tf_check(theory, cycles = "refuse")', 'tf_check(theory, cycles = "sigma")', "tf_check(theory)"],
-    ["py/py-runtime.js", 'theory.check(cycles="refuse")', 'theory.check(cycles="sigma")', "theory.check()"],
+// The checklist's code passes the cycles setting and draws the grid only
+// under the default reading, as the app does.
+test("the checklist's code passes cycles and draws the grid only under refuse", async () => {
+  for (const [file, refuse, sigma] of [
+    ["r/r-runtime.js", 'tf_check(theory, cycles = "refuse")', 'tf_check(theory, cycles = "sigma")'],
+    ["py/py-runtime.js", 'theory.check(cycles="refuse")', 'theory.check(cycles="sigma")'],
   ]) {
     const { RT } = withStubEngine(file, []);
     await RT.loadExample(GOOD);
-    assert.equal(RT.checkTakesCycles, false, file);
-    assert.ok(RT.code("check", { cycles: "sigma" }).includes(plain), file);
-    RT.checkTakesCycles = true;
     const r = RT.code("check", { cycles: "refuse" }), s = RT.code("check", { cycles: "sigma" });
     assert.ok(r.includes(refuse) && /rigour\.svg/.test(r), file + "\n" + r);
     assert.ok(s.includes(sigma) && !/rigour\.svg/.test(s), file + "\n" + s);
