@@ -26,7 +26,8 @@ const EXAMPLES = [
 function loadRuntime(file) {
   let src = readFileSync(path.join(here, "..", file), "utf8");
   src = src.replace(/^import .* from ".*";$/m, "").replace("window.TF.start(RT);", "globalThis.__RT = RT;");
-  const ctx = { window: { TF: { DIAG_SVG: ["venn", "rigour", "severity"] } }, TextEncoder, TextDecoder, JSON, console };
+  // As app-core.js gives them (checked in core.test.mjs).
+  const ctx = { window: { TF: { DIAG_SVG: ["venn", "rigour", "severity"], DIAG_FILE: { rigour: "checklist" } } }, TextEncoder, TextDecoder, JSON, console };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   vm.runInContext(src, ctx);
@@ -254,8 +255,14 @@ test("the checklist's code passes cycles and draws the grid only under refuse", 
     const { RT } = withStubEngine(file, []);
     await RT.loadExample(GOOD);
     const r = RT.code("check", { cycles: "refuse" }), s = RT.code("check", { cycles: "sigma" });
-    assert.ok(r.includes(refuse) && /rigour\.svg/.test(r), file + "\n" + r);
-    assert.ok(s.includes(sigma) && !/rigour\.svg/.test(s), file + "\n" + s);
-    assert.doesNotMatch(r + s, /Aggregate score|rigour grid/i, file);
+    assert.ok(r.includes(refuse) && /"checklist\.svg"/.test(r), file + "\n" + r);
+    assert.ok(s.includes(sigma) && !/\.svg/.test(s), file + "\n" + s);
+    assert.doesNotMatch(r + s, /Aggregate score|rigour grid|rigour\.svg/i, file);
+    // The view keeps its name in the call, and the diagram's code saves it
+    // under the name the app gives the download.
+    const d = RT.code("diagram", { type: "rigour" });
+    assert.match(d, /"rigour"\)/, file + "\n" + d);
+    assert.match(d, /"checklist\.svg"/, file + "\n" + d);
+    assert.doesNotMatch(d, /rigour\.svg/, file + "\n" + d);
   }
 });

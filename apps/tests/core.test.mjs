@@ -486,7 +486,9 @@ test("the checklist names the predictions it could not read, and a run under sig
   await $("#runBtn").click();
   assert.equal(lastCall(rt).params.cycles, "refuse");
   assert.match($("#output .ri-interp").textContent, /1 prediction \(pred3\) was not checked, since the causal graph has a feedback loop\. Set cycles to sigma/);
-  assert.match($("#output").textContent, /Not checked \(feedback loop\)pred3/);
+  assert.match($("#output").textContent, /Predictions not checkedpred3/);
+  // A package that reports no unread phenomena gives no row for them.
+  assert.doesNotMatch($("#output").textContent, /Phenomena not checked/);
   assert.match($("#output").textContent, /Checklist grid/);
   await $("#param-cycles").dispatch("change", { target: { value: "sigma" } });
   await $("#runBtn").click();
@@ -503,6 +505,78 @@ test("the checklist names the predictions it could not read, and a run under sig
   assert.match(o.$("#output").textContent, /Checklist grid/);
   assert.match(o.$("#output").textContent, /Cyclesrefuse/);
   assert.doesNotMatch(o.$("#output").textContent, /not drawn for cycles sigma/);
+});
+
+test("the checklist names the phenomena it could not read beside the predictions", async () => {
+  const chain = (nc, pnc) => ({ id: "derivation_chain", status: "warn", score: 1, weight: 0.08, severity_if_fail: "blocker", not_checked: nc, phenomena_not_checked: pnc });
+  const cases = [
+    [chain(["pred_indep"], ["ph1"]), /1 prediction \(pred_indep\) and 1 phenomenon \(ph1\) were not checked, since the causal graph has a feedback loop\./],
+    [chain([], ["ph1", "ph2"]), /2 phenomena \(ph1, ph2\) were not checked, since the causal graph has a feedback loop\./],
+    // R's JSON writer gives a list of one as a scalar.
+    [chain([], "ph1"), /1 phenomenon \(ph1\) was not checked, since the causal graph has a feedback loop\./],
+  ];
+  for (const [item, want] of cases) {
+    const report = { aggregate_score: 88, coverage: 0.92, gate: "pass", n_blockers_failed: 0, maturity: "developing", checklist_version: "3.1", items: [item] };
+    const { ctx, $ } = await boot({}, lineageRuntime({ check: { report, svg: "<svg></svg>" } }));
+    await opButton(ctx, "check").click();
+    await $("#runBtn").click();
+    assert.match($("#output .ri-interp").textContent, want);
+    assert.match($("#output").textContent, /Phenomena not checkedph1/);
+  }
+});
+
+test("the checklist writes the score with its decimal and shows each item's criterion below its id", async () => {
+  const report = {
+    aggregate_score: 88, aggregate_range: [84.2, 90], coverage: 0.92, gate: "pass", n_blockers_failed: 0, maturity: "developing", checklist_version: "3.1",
+    items: [{ id: "falsifiability", status: "pass", score: 1, weight: 0.15, severity_if_fail: "blocker" },
+      { id: "parsimony", status: "n/a", score: null, weight: 0.08, severity_if_fail: "warning" }],
+  };
+  const criteria = { falsifiability: "At least one prediction is typed point, interval or directional; the label is the author's", parsimony: "No auxiliary assumption lacks corroboration" };
+  const { ctx, $ } = await boot({}, lineageRuntime({ check: { report, svg: "<svg></svg>", criteria } }));
+  await opButton(ctx, "check").click();
+  await $("#runBtn").click();
+  assert.match($("#output .ri-interp").textContent, /^The checklist score is 88\.0\./);
+  assert.match($("#output").textContent, /Checklist score88\.0 \(84\.2 to 90\.0 with equal weights or one weight halved or doubled\)/);
+  const table = ctx.document.querySelectorAll("#output table.grid").find((t) => /falsifiability/.test(t.textContent));
+  assert.ok(table.classList.contains("stack"), "the table stacks on a narrow screen");
+  const cell = table.querySelector("tbody tr td");
+  assert.equal(cell.querySelector(".iid").textContent, "falsifiability");
+  assert.equal(cell.querySelector(".crit").textContent, criteria.falsifiability);
+  assert.ok(cell.classList.contains("grow"), "the item and its criterion take the room the table has");
+  // The columns after the item are named on a narrow screen, where the
+  // header row is not shown.
+  const tds = table.querySelector("tbody tr").querySelectorAll("td");
+  assert.deepEqual(tds.map((td) => td.getAttribute("data-label")), [null, null, "score", "weight", "severity if fail"]);
+  // A runtime that gives no criteria shows the ids alone.
+  const o = await boot({}, lineageRuntime({ check: { report, svg: "<svg></svg>" } }));
+  await opButton(o.ctx, "check").click();
+  await o.$("#runBtn").click();
+  assert.equal(o.ctx.document.querySelectorAll("#output .crit").length, 0);
+  assert.match(o.$("#output").textContent, /falsifiability/);
+});
+
+test("the checklist grid is offered and saved under that name, and its view keeps the package's name", async () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><text x="1" y="9">grid</text></svg>';
+  const rt = lineageRuntime({ diagram: { ir: svg }, check: { report: { aggregate_score: 80, gate: "pass", items: [] }, svg } });
+  const { ctx, $ } = await boot({}, rt);
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx.TF.DIAG_FILE)), { rigour: "checklist" });
+  await opButton(ctx, "diagram").click();
+  const opt = $("#param-type").querySelectorAll("option").find((o) => o.getAttribute("value") === "rigour");
+  assert.equal(opt.textContent, "Checklist grid");
+  await $("#param-type").dispatch("change", { target: { value: "rigour" } });
+  await $("#runBtn").click();
+  assert.equal(lastCall(rt).params.type, "rigour", "the package's view name is what is run");
+  const saved = [];
+  const head = () => $("#output .section .sh");
+  assert.equal(head().querySelector("span").textContent, "Checklist grid");
+  const real = ctx.document.createElement.bind(ctx.document);
+  ctx.document.createElement = (t) => { const n = real(t); if (t === "a") n.click = () => saved.push(n.getAttribute("download")); return n; };
+  await head().querySelectorAll("button").find((b) => b.textContent === "SVG").click();
+  await opButton(ctx, "check").click();
+  await $("#runBtn").click();
+  await head().querySelectorAll("button").find((b) => b.textContent === "SVG").click();
+  assert.deepEqual(saved, ["panic-network-2026.checklist.svg", "panic-network-2026.checklist.svg"]);
+  assert.match(ctx.TF.OPS.find((o) => o.id === "diagram").help, /The venn, checklist grid and severity types are emitted directly as SVG\./);
 });
 
 test("whole-number parameters are rounded before they are run", async () => {
@@ -988,7 +1062,9 @@ function slowScoreRuntime(extra) {
   }, extra || {}));
   return rt;
 }
-const scoreChipText = ($) => ($("#summaryScore") ? $("#summaryScore").textContent.replace(/<\/?b>/g, "") : "");
+// The chip is plain text: the stub DOM counts markup as text, so a bold
+// score would not match.
+const scoreChipText = ($) => ($("#summaryScore") ? $("#summaryScore").textContent : "");
 
 test("the card shows before the checklist has run, and each text is scored once", async () => {
   const rt = slowScoreRuntime();
@@ -1093,7 +1169,7 @@ test("a Checklist run gives the card its score, and the score names an error wit
   assert.equal($("#summaryScore").getAttribute("title"), "the checklist stopped without a message");
   await upload($("#fileInput"), "large.theory.yaml", "id: large\n");
   await $("#runBtn").click();
-  assert.equal(scoreChipText($), "checklist 80 · gate pass", "the run's report scores the card");
+  assert.equal(scoreChipText($), "checklist 80.0 · gate pass", "the run's report scores the card");
   assert.deepEqual(rt.scored, [EXAMPLES[0].path]);
 });
 
@@ -1217,9 +1293,9 @@ test("the hash waits for a request when the theory is long, whatever its counts"
     },
   });
   const { $ } = await boot({}, rt);
-  await until(() => rt.hashed === 1 && scoreChipText($) === "checklist 50 · gate pass", "the first score and hash");
+  await until(() => rt.hashed === 1 && scoreChipText($) === "checklist 50.0 · gate pass", "the first score and hash");
   await upload($("#fileInput"), "long.theory.yaml", "id: long\n");
-  await until(() => scoreChipText($) === "checklist 50 · gate pass", "the score, since the theory's counts are small");
+  await until(() => scoreChipText($) === "checklist 50.0 · gate pass", "the score, since the theory's counts are small");
   await tick(100);
   assert.equal(rt.hashed, 1, "a theory longer than the runtime's limit is not hashed unasked");
   assert.match($("#summaryHash").textContent, /^Content hash not computed for a theory this long/);
@@ -1470,6 +1546,7 @@ test("the claim-form rubric names every claim at the highest value", async () =>
   const cases = [
     [[0.4, 0.4, 0.3], /the rubric value runs from 0\.3 to 0\.4 \(mean 0\.367\)\. The riskiest claim forms, at 0\.4, are those of p1 and p2\./],
     [[0.9, 0.4], /The riskiest claim form, at 0\.9, is that of p1\./],
+    [[1, 0.2], /the rubric value runs from 0\.2 to 1\.0 \(mean 0\.6\)\. The riskiest claim form, at 1\.0, is that of p1\./],
     [[0.4, 0.4], /Every prediction's claim form has the same value\./],
     [[0.3], /^The one prediction, p1, has a rubric value of 0\.3\.$/],
   ];
@@ -1481,6 +1558,18 @@ test("the claim-form rubric names every claim at the highest value", async () =>
     assert.match($("#output").textContent, /risk scorerubric value/);
     assert.match($("#output .ri-about").textContent, /predictions that name a registered rival they are declared to discriminate from \(the declaration is not checked\)/);
   }
+  // The chart writes each value with one decimal, as the table does.
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100">\n  <text x="20" y="26">Pre-data riskiness</text>\n' +
+    '  <text x="20" y="52">p1</text>\n  <rect x="44" y="40" width="200" height="16" rx="2" fill="#4e79a7"/>\n  <text x="249" y="52">1.000</text>\n' +
+    '  <text x="20" y="80">p2</text>\n  <rect x="44" y="68" width="60" height="16" rx="2" fill="#4e79a7"/>\n  <text x="109" y="80">0.300</text>\n</svg>\n';
+  const c = await boot({}, lineageRuntime({ severity: { rows: [{ prediction_id: "p1", type: "point", risk_score: 0.9, computed_severity: 1 },
+    { prediction_id: "p2", type: "directional", risk_score: 0.4, computed_severity: 0.3 }], svg } }));
+  await opButton(c.ctx, "severity").click();
+  await c.$("#runBtn").click();
+  const labels = c.ctx.document.querySelectorAll("#output .figure text").map((t) => t.textContent);
+  assert.deepEqual(labels, ["Pre-data riskiness", "p1", "1.0", "p2", "0.3"]);
+  const tableRows = c.ctx.document.querySelectorAll("#output table.grid tbody tr").map((tr) => tr.querySelectorAll("td").map((td) => td.textContent).join(" "));
+  assert.deepEqual(tableRows, ["p1 point 0.9 1.0", "p2 directional 0.4 0.3"]);
   const { ctx } = await boot({}, lineageRuntime());
   const op = ctx.TF.OPS.find((o) => o.id === "severity");
   assert.equal(op.label, "Claim-form rubric");

@@ -72,11 +72,12 @@
     },
     {
       id: "diagram", group: "document", label: "Diagram", desc: "Nomological net, DAG, workflow…",
-      help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams. The venn, rigour and severity types are emitted directly as SVG.",
+      help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams. The venn, checklist grid and severity types are emitted directly as SVG.",
       params: [{
         id: "type", label: "Diagram type", type: "select", default: "nomological_net",
         options: ["nomological_net", "context", "workflow", "causal_dag", "provenance",
           "development_roadmap", "pipeline", "venn", "rigour", "severity"],
+        labels: { rigour: "Checklist grid" },
       }],
     },
     { id: "preregister", group: "document", label: "Preregistration", desc: "Hypotheses for a preregistration",
@@ -118,6 +119,12 @@
   // Diagram types the package emits directly as SVG (vs Graphviz DOT / dagitty).
   // Shared so the two runtimes' code-snippet generators cannot drift.
   const DIAG_SVG = ["venn", "rigour", "severity"];
+  // The package's view "rigour" draws the checklist as a status grid. The app
+  // names it the checklist grid and saves it as <id>.checklist.svg, as do the
+  // code snippets, while the view keeps its name in the call.
+  const DIAG_TITLE = { rigour: "Checklist grid" };
+  const DIAG_FILE = { rigour: "checklist" };
+  const diagFile = (type) => DIAG_FILE[type] || type;
 
   // Figures render on a light "paper" canvas in both themes so the package's
   // black-text SVGs and the trajectory chart stay legible. Single source for
@@ -319,6 +326,13 @@
     const s = x.toFixed(3).replace(/\.?0+$/, "");
     return s === "-0" ? "0" : s;
   };
+  // The checklist score and the claim-form rubric's values carry one decimal,
+  // as the packages round them and the dossier writes them, so a whole number
+  // keeps its decimal (88.0, 1.0) and no value is padded beyond it.
+  const oneDec = (x) => {
+    const s = num(x);
+    return typeof x === "number" && /^-?\d+$/.test(s) ? s + ".0" : s;
+  };
   // A pill takes its colour from its value, as the statuses of the checklist
   // do, unless a tone is given. The tone "plain" is a neutral fill for values
   // that report what a rule found rather than how well the theory fares: the
@@ -339,18 +353,24 @@
   // A column's `pill` is true for a pill coloured by its value, a tone for a
   // pill of that tone, or a function that gives the tone of a value.
   const pillTone = (c, v) => (typeof c.pill === "function" ? c.pill(v) : typeof c.pill === "string" ? c.pill : undefined);
+  // A table whose `stack` option is set lays each row out as a block on a
+  // narrow screen (app.css), and a column with `tag` then names its value,
+  // since the header row is not shown there. A column's `fmt` writes its
+  // numbers.
   function tableSection(title, columns, rows, opts) {
+    const stack = !!(opts && opts.stack);
     const thead = el("thead", null, el("tr", null,
       columns.map((c) => el("th", { class: colClass(c), scope: "col", text: c.label || c }))));
     const tbody = el("tbody", null, rows.map((r) =>
       el("tr", null, columns.map((c) => {
         const key = c.key || c;
         const v = r[key];
-        if (c.pill) return el("td", { class: colClass(c) }, v === "" || v == null ? "—" : pill(v, pillTone(c, v)));
-        if (v && v.nodeType) return el("td", { class: colClass(c) }, v);
-        return el("td", { class: colClass(c) }, c.num ? (v == null ? "—" : num(v)) : (Array.isArray(v) ? (v.join(", ") || "—") : (v === "" || v == null ? "—" : String(v))));
+        const at = { class: colClass(c), "data-label": stack && c.tag ? c.label : null };
+        if (c.pill) return el("td", at, v === "" || v == null ? "—" : pill(v, pillTone(c, v)));
+        if (v && v.nodeType) return el("td", at, v);
+        return el("td", at, c.num ? (v == null ? "—" : (c.fmt || num)(v)) : (Array.isArray(v) ? (v.join(", ") || "—") : (v === "" || v == null ? "—" : String(v))));
       }))));
-    const table = el("div", { class: "tablewrap" }, el("table", { class: "grid" }, [thead, tbody]));
+    const table = el("div", { class: "tablewrap" }, el("table", { class: "grid" + (stack ? " stack" : "") }, [thead, tbody]));
     return { kind: "node", node: wrapSection(title, opts && opts.extra, table) };
   }
   function kvSection(title, items) {
@@ -427,6 +447,12 @@
     const btnPng = el("button", { class: "btn ghost sm", onclick: () => exportPng(svgEl, baseName) }, "PNG");
     return { kind: "node", node: wrapSection(title, [btnSvg, btnPng], fig) };
   }
+  // The claim-form rubric's chart as the package draws it, with each bar's
+  // value written with one decimal, as the table and the dossier write it.
+  // A value label is the text that follows a bar, and the download is the
+  // chart as shown.
+  const rubricChart = (svg) => String(svg == null ? "" : svg).replace(/(<rect\b[^>]*\/>\s*<text\b[^>]*>)\s*(-?\d+(?:\.\d+)?)\s*(<\/text>)/g,
+    (m, open, v, close) => open + oneDec(Number(v)) + close);
   // A Graphviz figure. When it cannot be drawn, because Graphviz did not load
   // or refused the DOT, the rest of the result stays and a note takes the
   // figure's place. Only a failed load is worth another run, since a DOT that
@@ -706,6 +732,15 @@
   // it read it, since a package whose check() takes no cycles reads the
   // default whatever was asked, or else as it was asked.
   const checkReading = (raw, params) => (raw && raw.cycles) || params.cycles || "refuse";
+  // The predictions and the phenomena whose claims the derivation chain left
+  // unread for a feedback loop. A prediction and a phenomenon may share an id,
+  // so the two are kept apart, and a package that reports no phenomena gives
+  // none.
+  function unreadClaims(rep) {
+    const chain = asArr(rep && rep.items).find((i) => i && i.id === "derivation_chain");
+    return { predictions: chain ? asArr(chain.not_checked).map(String) : [],
+      phenomena: chain ? asArr(chain.phenomena_not_checked).map(String) : [] };
+  }
 
   // A result-specific sentence that reads the actual output, to help interpret it.
   function interpret(opId, raw, params) {
@@ -720,7 +755,7 @@
       // The score first, then the statuses, and the gate as what the blocking
       // items' statuses give. At draft maturity the gate is advisory whatever
       // fails, so it says nothing and the sentence says why.
-      let txt = "The checklist score is " + num(r.aggregate_score) + ".";
+      let txt = "The checklist score is " + oneDec(r.aggregate_score) + ".";
       txt += " Of the " + (items.length - na) + " applicable items, " + by("pass") + " pass, " + by("warn") + " warn and " + by("fail") + " fail";
       if (r.gate === "advisory") {
         txt += failed.length
@@ -733,12 +768,16 @@
       } else {
         txt += ". No blocking item fails, so the gate " + (r.gate === "pass" ? "passes." : "is " + r.gate + ".");
       }
-      // A claim the derivation chain could not read is named, since its item
-      // warns rather than fails (checklist 3.1).
-      const chain = items.find((i) => i.id === "derivation_chain");
-      const unread = chain ? asArr(chain.not_checked) : [];
-      if (unread.length) {
-        txt += " " + plural(unread.length, "prediction") + " (" + unread.join(", ") + ") " + (unread.length === 1 ? "was" : "were") +
+      // A claim the derivation chain could not read is named, a prediction's
+      // or a phenomenon's, since its item warns rather than fails (checklist
+      // 3.1).
+      const unread = unreadClaims(r);
+      const nu = unread.predictions.length + unread.phenomena.length;
+      if (nu) {
+        const who = [];
+        if (unread.predictions.length) who.push(plural(unread.predictions.length, "prediction") + " (" + unread.predictions.join(", ") + ")");
+        if (unread.phenomena.length) who.push(plural(unread.phenomena.length, "phenomenon", "phenomena") + " (" + unread.phenomena.join(", ") + ")");
+        txt += " " + listAnd(who) + (nu === 1 ? " was" : " were") +
           " not checked, since the causal graph has a feedback loop" + (checkReading(raw, params) !== "sigma" ? ". Set cycles to sigma to read the graph on the assumption that each loop settles to a unique equilibrium." : ".");
       }
       // Items with nothing to assess are left out of the score, which then
@@ -755,15 +794,15 @@
       const rows = asArr(raw.rows);
       if (!rows.length) return "This theory has no predictions to grade.";
       const sev = rows.map((r) => Number(r.computed_severity));
-      if (rows.length === 1) return "The one prediction, " + rows[0].prediction_id + ", has a rubric value of " + num(sev[0]) + ".";
+      if (rows.length === 1) return "The one prediction, " + rows[0].prediction_id + ", has a rubric value of " + oneDec(sev[0]) + ".";
       const max = Math.max(...sev), mean = sev.reduce((a, b) => a + b, 0) / sev.length;
       // Every prediction at the highest value is named, since the rubric
       // gives many claims the same value.
       const top = rows.filter((r, i) => num(sev[i]) === num(max)).map((r) => r.prediction_id);
-      let txt = "Across " + plural(rows.length, "prediction") + ", the rubric value runs from " + num(Math.min(...sev)) + " to " + num(max) + " (mean " + num(mean) + ").";
+      let txt = "Across " + plural(rows.length, "prediction") + ", the rubric value runs from " + oneDec(Math.min(...sev)) + " to " + oneDec(max) + " (mean " + oneDec(mean) + ").";
       if (top.length === rows.length) txt += " Every prediction's claim form has the same value.";
-      else txt += top.length === 1 ? " The riskiest claim form, at " + num(max) + ", is that of " + top[0] + "."
-        : " The riskiest claim forms, at " + num(max) + ", are those of " + listAnd(top) + ".";
+      else txt += top.length === 1 ? " The riskiest claim form, at " + oneDec(max) + ", is that of " + top[0] + "."
+        : " The riskiest claim forms, at " + oneDec(max) + ", are those of " + listAnd(top) + ".";
       return txt;
     }
     if (opId === "post_severity") {
@@ -983,28 +1022,36 @@
       // The package draws the grid with the default reading of a feedback
       // loop, so it is shown only for that reading, where it agrees with the
       // table.
-      if (raw.svg || read !== "sigma") sections.push(figureSection("Checklist grid", raw.svg, theoryId + ".rigour"));
+      if (raw.svg || read !== "sigma") sections.push(figureSection("Checklist grid", raw.svg, theoryId + "." + diagFile("rigour")));
       else sections.push(noteSection("Checklist grid", "The package draws the grid with cycles refuse, its default, so it is not drawn for cycles sigma. The table below gives each item's status under sigma."));
       // The range with other weights, where the checklist reports one.
       const range = Array.isArray(rep.aggregate_range) && rep.aggregate_range.length === 2
-        ? " (" + num(rep.aggregate_range[0]) + " to " + num(rep.aggregate_range[1]) + " with equal weights or one weight halved or doubled)" : "";
-      const chain = asArr(rep.items).find((i) => i.id === "derivation_chain");
-      const unread = chain ? asArr(chain.not_checked) : [];
+        ? " (" + oneDec(rep.aggregate_range[0]) + " to " + oneDec(rep.aggregate_range[1]) + " with equal weights or one weight halved or doubled)" : "";
+      const unread = unreadClaims(rep);
       sections.push(kvSection("Summary", [
-        ["Checklist score", num(rep.aggregate_score) + range],
+        ["Checklist score", oneDec(rep.aggregate_score) + range],
         ["Coverage", num(rep.coverage) + " of the checklist's weight"],
         ["Gate", pill(rep.gate)],
         ["Blockers failed", String(rep.n_blockers_failed)],
         ["Maturity", rep.maturity],
         ["Cycles", read],
-      ].concat(unread.length ? [["Not checked (feedback loop)", unread.join(", ")]] : [])));
-      // An item with nothing to assess has a null score, shown as n/a.
-      const checkRows = asArr(rep.items).map((it) => Object.assign({}, it, { score: it.score == null ? "n/a" : it.score }));
+      // The reading says why they were not checked, and the labels stay short,
+      // so that the values keep their room on a narrow screen.
+      ].concat(unread.predictions.length ? [["Predictions not checked", unread.predictions.join(", ")]] : [],
+        unread.phenomena.length ? [["Phenomena not checked", unread.phenomena.join(", ")]] : [])));
+      // Each item is shown with its criterion, as the package's checklist
+      // states it, below its id, so that the id is not read for more than the
+      // item checks. An item with nothing to assess has a null score, shown
+      // as n/a.
+      const crit = raw.criteria && typeof raw.criteria === "object" ? raw.criteria : {};
+      const checkRows = asArr(rep.items).map((it) => Object.assign({}, it, {
+        item: crit[it.id] ? el("span", null, [el("span", { class: "iid", text: it.id }), el("span", { class: "crit", text: String(crit[it.id]) })]) : it.id,
+        score: it.score == null ? "n/a" : it.score }));
       sections.push(tableSection("Checklist items",
-        [{ key: "id", label: "item" }, { key: "status", label: "status", pill: true },
-         { key: "score", label: "score", num: true }, { key: "weight", label: "weight", num: true },
-         { key: "severity_if_fail", label: "severity if fail", grow: true }],
-        checkRows, { extra: [jsonBtn(theoryId + ".report.json", rep)] }));
+        [{ key: "item", label: "item", grow: true }, { key: "status", label: "status", pill: true },
+         { key: "score", label: "score", num: true, tag: true }, { key: "weight", label: "weight", num: true, tag: true },
+         { key: "severity_if_fail", label: "severity if fail", tag: true }],
+        checkRows, { stack: true, extra: [jsonBtn(theoryId + ".report.json", rep)] }));
     } else if (opId === "validate") {
       const v = raw;
       if (v.ok) {
@@ -1058,10 +1105,10 @@
         rows, { extra: [jsonBtn(theoryId + ".appraisal.json", r)] }));
     } else if (opId === "severity") {
       const rows = asArr(raw.rows);
-      sections.push(figureSection("Rubric chart", raw.svg, theoryId + ".severity"));
+      sections.push(figureSection("Rubric chart", rubricChart(raw.svg), theoryId + ".severity"));
       if (rows.length) sections.push(tableSection("Rubric value of each prediction",
         [{ key: "prediction_id", label: "prediction" }, { key: "type", label: "type" },
-         { key: "risk_score", label: "risk score", num: true }, { key: "computed_severity", label: "rubric value", num: true }],
+         { key: "risk_score", label: "risk score", num: true, fmt: oneDec }, { key: "computed_severity", label: "rubric value", num: true, fmt: oneDec }],
         rows, { extra: [jsonBtn(theoryId + ".severity.json", rows)] }));
       else sections.push(noteSection("Rubric value of each prediction", "This theory has no predictions."));
     } else if (opId === "post_severity") {
@@ -1094,8 +1141,9 @@
     } else if (opId === "diagram") {
       const ir = raw.ir, type = params.type;
       const isSvg = /^\s*<svg/.test(ir);
-      sections.push(isSvg ? figureSection(words(type) + " diagram", ir, theoryId + "." + type)
-        : await dotFigure(words(type) + " diagram", type === "causal_dag" ? dagToDigraph(ir) : ir, theoryId + "." + type));
+      const title = DIAG_TITLE[type] || words(type) + " diagram";
+      sections.push(isSvg ? figureSection(title, type === "severity" ? rubricChart(ir) : ir, theoryId + "." + diagFile(type))
+        : await dotFigure(title, type === "causal_dag" ? dagToDigraph(ir) : ir, theoryId + "." + diagFile(type)));
       if (!isSvg) sections.push(textSection(type === "causal_dag" ? "dagitty model code" : "Intermediate representation (Graphviz DOT)", ir, theoryId + "." + type + (type === "causal_dag" ? ".dag" : ".dot"), "text/plain"));
     } else if (opId === "sem") {
       sections.push(textSection("lavaan model syntax", raw.text, theoryId + ".sem.lavaan", "text/plain"));
@@ -1794,7 +1842,7 @@
     const ck = s && s.check;
     let node;
     if (ck && !("error" in ck)) {
-      node = el("span", { class: "chip score", title: scoreTitle(ck), html: "checklist <b>" + esc(num(ck.score)) + "</b> · gate " + esc(ck.gate) });
+      node = el("span", { class: "chip score", title: scoreTitle(ck), text: "checklist " + oneDec(ck.score) + " · gate " + (ck.gate == null ? "" : ck.gate) });
     } else if (ck) {
       node = el("span", { class: "chip", title: ck.error, text: "not scored" });
     } else if (s && s.scoreWait === "asked") {
@@ -1820,7 +1868,7 @@
       show: (s) => { const chip = $("#summaryScore"); if (chip) chip.replaceWith(scoreChip(s)); if (EDITOR && EDITOR.onSummary) EDITOR.onSummary(s); },
       focus: () => $("#summaryScore"),
       said: (s) => ("error" in s.check ? "The checklist could not score the theory: " + s.check.error
-        : "Checklist score " + num(s.check.score) + ", gate " + s.check.gate),
+        : "Checklist score " + oneDec(s.check.score) + ", gate " + s.check.gate),
     },
     hash: {
       call: () => RT.contentHash(), done: (x) => !!(x.hash || x.hashError), wait: "hashWait", by: "hashBy",
@@ -2495,7 +2543,7 @@
   }
   function editorHost() {
     return {
-      el, esc, toast, openModal, closeModal, copyText, download, plural, problemList, errorBox, asArr, fmtNum, num,
+      el, esc, toast, openModal, closeModal, copyText, download, plural, problemList, errorBox, asArr, fmtNum, num, oneDec,
       scoreTitle, wellFormedTitle: WELL_FORMED_TITLE,
       summary: () => STATE.summary,
       sourceOf: () => (STATE.source ? STATE.source.text : null),
@@ -2882,7 +2930,7 @@
   const startCaught = (runtime) => start(runtime).catch(bootFailed);
 
   window.TF = {
-    start: startCaught, OPS, GROUPS, DIAG_SVG,
+    start: startCaught, OPS, GROUPS, DIAG_SVG, DIAG_FILE,
     util: {
       el, esc, download, copyText, toast, renderDot, dagToDigraph, fetchJson, fetchBytes, plural, problemList,
       headline, cleanMessage: (m) => cleanMessage(m), cssPx, sevText, severityReading, claimText,

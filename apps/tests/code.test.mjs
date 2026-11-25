@@ -23,7 +23,8 @@ const CASES = JSON.parse(readFileSync(path.join(ROOT, "scripts", "app_smoke_case
 function loadRuntime(file) {
   let src = readFileSync(path.join(here, "..", file), "utf8");
   src = src.replace(/^import .* from ".*";$/m, "").replace("window.TF.start(RT);", "globalThis.__RT = RT;");
-  const ctx = { window: { TF: { DIAG_SVG: ["venn", "rigour", "severity"] } }, TextEncoder, TextDecoder, JSON, console };
+  // As app-core.js gives them (checked in core.test.mjs).
+  const ctx = { window: { TF: { DIAG_SVG: ["venn", "rigour", "severity"], DIAG_FILE: { rigour: "checklist" } } }, TextEncoder, TextDecoder, JSON, console };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   vm.runInContext(src, ctx);

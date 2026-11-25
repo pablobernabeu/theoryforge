@@ -325,6 +325,30 @@ table.grid tbody tr:hover td { background: color-mix(in srgb, var(--accent) 9%, 
 .pill.plain { background: #3f5a73; color: #ffffff; }
 .pill.not_evaluated { background: #616161; color: #ffffff; }
 
+/* A checklist item's criterion, below its id. */
+table.grid .iid { display: block; }
+table.grid .crit { display: block; color: var(--ink-soft); font-size: .78rem; line-height: 1.4; margin-top: 2px; max-width: 46rem; }
+/* On a narrow screen, a table marked to stack lays each row out as a block:
+   the first cell on a line of its own and the others after it, each named
+   by its column, since the header row is not shown. */
+@media (max-width: 620px) {
+  table.grid.stack, table.grid.stack tbody { display: block; width: 100%; }
+  table.grid.stack thead { display: none; }
+  table.grid.stack tr {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px;
+    padding: 7px 0; border-bottom: 1px solid var(--line);
+  }
+  table.grid.stack td { display: block; padding: 0; border: 0; background: none; white-space: normal; }
+  table.grid.stack td.grow { flex: 1 1 100%; width: auto; }
+  table.grid.stack td.num { padding-left: 0; text-align: left; }
+  table.grid.stack td[data-label]::before {
+    content: attr(data-label) " "; color: var(--ink-soft); font-family: var(--sans);
+    font-size: .72rem; text-transform: uppercase; letter-spacing: .04em;
+  }
+  table.grid.stack tbody tr:nth-child(even) { background: color-mix(in srgb, var(--ink) 4%, transparent); }
+  table.grid.stack tbody tr:nth-child(even) td, table.grid.stack tbody tr:hover td { background: none; }
+}
+
 .note { font-size: .85rem; color: var(--ink-soft); }
 .error {
   background: color-mix(in srgb, var(--danger) 12%, var(--panel)); border: 1px solid var(--danger);
