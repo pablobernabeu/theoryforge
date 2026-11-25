@@ -1,0 +1,10 @@
+theory,encoder,maturity,theory_form,constructs,constructs_with_measure,propositions,props_with_mechanism,increases,decreases,causes,moderates,predictions,pred_directional,pred_existence,predictions_with_claim,predictions_with_bounds,phenomena,phenomena_with_claim,assumptions,evidence,alternatives,boundary_conditions,feedback_loop
+bilingual-rhm,enc-1,developing,process,8,3,8,3,3,4,1,0,8,8,0,5,0,1,0,4,2,1,4,False
+bilingual-rhm,enc-2,testing,variance,7,2,6,6,2,2,1,1,6,6,0,3,0,4,0,4,1,1,4,False
+bilingual-rhm,enc-3,testing,variance,8,3,6,6,4,2,0,0,6,6,0,3,2,4,0,1,1,1,4,False
+collaborative-cognitive-load,enc-1,building,variance,19,0,26,15,11,12,0,3,15,15,0,12,0,2,1,3,0,0,3,False
+collaborative-cognitive-load,enc-2,developing,variance,19,1,25,17,11,12,0,2,6,6,0,2,0,2,1,3,0,0,2,False
+collaborative-cognitive-load,enc-3,building,variance,17,5,21,10,8,12,0,1,12,12,0,10,0,2,1,4,0,0,3,False
+health-habit,enc-1,building,process,11,0,12,9,8,1,0,3,14,13,1,5,0,0,0,1,0,0,4,True
+health-habit,enc-2,developing,variance,11,0,13,12,8,2,1,2,9,9,0,4,0,1,0,3,0,0,3,True
+health-habit,enc-3,developing,process,10,1,13,13,9,2,0,2,11,10,1,6,0,0,0,3,0,0,2,True

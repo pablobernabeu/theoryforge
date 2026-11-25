@@ -1,0 +1,13 @@
+theory,pair,jaccard,n_a,n_b
+bilingual-rhm,enc-1/enc-2,0.875,8,7
+bilingual-rhm,enc-1/enc-3,0.6,8,8
+bilingual-rhm,enc-2/enc-3,0.667,7,8
+bilingual-rhm,all three,0.6,6,10
+collaborative-cognitive-load,enc-1/enc-2,1.0,19,19
+collaborative-cognitive-load,enc-1/enc-3,0.895,19,17
+collaborative-cognitive-load,enc-2/enc-3,0.895,19,17
+collaborative-cognitive-load,all three,0.895,17,19
+health-habit,enc-1/enc-2,0.833,11,11
+health-habit,enc-1/enc-3,0.75,11,10
+health-habit,enc-2/enc-3,0.909,11,10
+health-habit,all three,0.75,9,12

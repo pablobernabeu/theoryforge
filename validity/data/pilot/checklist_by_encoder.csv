@@ -1,0 +1,10 @@
+theory,encoder,aggregate,range_low,range_high,coverage,gate,falsifiability,precision,risk_severity,parsimony,non_redundancy,construct_clarity,scope,logical_why,causal_testability,diagnosticity,formalisation,derivation_chain
+bilingual-rhm,enc-1,55.4,50.0,61.7,0.92,pass,pass:1.0,warn:0.0,warn:0.3,n/a:None,pass:1.0,warn:0.0,pass:1.0,warn:0.375,pass:1.0,warn:0.0,warn:0.0,pass:1.0
+bilingual-rhm,enc-2,60.9,54.9,66.4,0.92,pass,pass:1.0,warn:0.0,warn:0.3,n/a:None,pass:1.0,warn:0.0,pass:1.0,pass:1.0,pass:1.0,warn:0.0,warn:0.0,pass:1.0
+bilingual-rhm,enc-3,60.9,54.9,66.4,0.92,pass,pass:1.0,warn:0.0,warn:0.3,n/a:None,pass:1.0,warn:0.0,pass:1.0,pass:1.0,pass:1.0,warn:0.0,warn:0.0,pass:1.0
+collaborative-cognitive-load,enc-1,57.2,51.6,63.2,0.92,pass,pass:1.0,warn:0.0,warn:0.3,n/a:None,pass:1.0,warn:0.0,pass:1.0,warn:0.577,pass:1.0,warn:0.0,warn:0.0,pass:1.0
+collaborative-cognitive-load,enc-2,58.1,52.4,64.0,0.92,pass,pass:1.0,warn:0.0,warn:0.3,n/a:None,pass:1.0,warn:0.0,pass:1.0,warn:0.68,pass:1.0,warn:0.0,warn:0.0,pass:1.0
+collaborative-cognitive-load,enc-3,56.3,50.8,62.4,0.92,pass,pass:1.0,warn:0.0,warn:0.3,n/a:None,pass:1.0,warn:0.0,pass:1.0,warn:0.476,pass:1.0,warn:0.0,warn:0.0,pass:1.0
+health-habit,enc-1,58.5,52.8,64.4,0.92,pass,pass:1.0,warn:0.0,warn:0.286,n/a:None,pass:1.0,warn:0.0,pass:1.0,warn:0.75,pass:1.0,warn:0.0,warn:0.0,pass:1.0
+health-habit,enc-2,60.2,54.3,65.8,0.92,pass,pass:1.0,warn:0.0,warn:0.3,n/a:None,pass:1.0,warn:0.0,pass:1.0,warn:0.923,pass:1.0,warn:0.0,warn:0.0,pass:1.0
+health-habit,enc-3,60.7,54.7,66.2,0.92,pass,pass:1.0,warn:0.0,warn:0.282,n/a:None,pass:1.0,warn:0.0,pass:1.0,pass:1.0,pass:1.0,warn:0.0,warn:0.0,pass:1.0
