@@ -1,0 +1,59 @@
+# Source: red-team-score/inputs/strong/s3-hick.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Strong theory 3: Hick's law of choice reaction time, encoded only from what the
+# abstract of Hick (1952) states (verified via Crossref; abstract from OpenAlex,
+# saved under abstracts/10.1080_17470215208416600.openalex.json):
+#   Hick, W. E. (1952). On the rate of gain of information. Quarterly Journal of
+#   Experimental Psychology, 4(1), 11-26. https://doi.org/10.1080/17470215208416600
+# The abstract reports that the rate of gain of information is, on average,
+# constant within one perceptual-motor act, of the order of five bits per
+# second, that reaction time is related to the uncertainty of the response,
+# and that 'tests against the data' of the conceptual models considered 'are
+# inconclusive'. It therefore states no mechanism and names no rival. The
+# information-theoretic analysis is not a formal model of a type the schema
+# lists. The encoding choices are the auditor's.
+schema_version: "1.1"
+id: "s3-hick"
+title: "On the rate of gain of information (Hick's law)"
+maturity: "testing"
+theory_form: "process"
+version: {id: "v1", parent_id: null, content_hash: null}
+
+constructs:
+  - id: c_uncertainty
+    label: "Stimulus-response uncertainty"
+    definition: "The information, in bits, conveyed by which of the alternative responses is given to a stimulus."
+    measurement: ["number of alternatives in a choice-reaction experiment", "proportion of errors subjects allow themselves"]
+  - id: c_reaction_time
+    label: "Choice reaction time"
+    definition: "The time from the stimulus to the response in a choice-reaction experiment."
+    measurement: ["choice reaction time with up to ten alternatives"]
+
+propositions:
+  - id: p_info_rt
+    from: c_uncertainty
+    to: c_reaction_time
+    relation: "increases"
+    functional_form: "linear in bits: a constant rate of gain of information"
+
+boundary_conditions: ["one perceptual-motor act", "choice-reaction experiments with up to ten alternatives"]
+
+predictions:
+  - id: pred_constant_rate
+    derives_from: [p_info_rt]
+    statement: "The rate of gain of information is, on average, constant with respect to time within one perceptual-motor act."
+    # A constancy claim; 'directional' (the invariance of a direction) is the
+    # nearest type the schema offers.
+    type: "directional"
+  - id: pred_rate_value
+    derives_from: [p_info_rt]
+    statement: "The rate of gain of information is of the order of five bits per second."
+    type: "point"
+  - id: pred_rt_uncertainty
+    derives_from: [p_info_rt]
+    statement: "Reaction time increases with the uncertainty as to which response will be given to a stimulus."
+    type: "directional"
+    claim: {kind: effect, x: c_uncertainty, y: c_reaction_time, sign: positive}
+
+formal_model:
+  type: "none"
+  spec_ref: null

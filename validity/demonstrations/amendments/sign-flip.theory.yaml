@@ -1,0 +1,84 @@
+# Source: built as in claims-register-check/scripts/c1b_signflip.py (amendment), validity audit of theoryforge at f72ce4c.
+schema_version: '1.1'
+id: amend
+title: Amendment
+maturity: testing
+theory_form: network
+provenance:
+- step: '1'
+  action: tf_theory
+  detail: amend
+- step: '2'
+  action: tf_add_construct
+  detail: a
+- step: '3'
+  action: tf_add_construct
+  detail: b
+- step: '4'
+  action: tf_add_proposition
+  detail: p1
+- step: '5'
+  action: tf_add_prediction
+  detail: h1
+- step: '6'
+  action: tf_add_test_outcome
+  detail: h1
+- step: '7'
+  action: tf_add_construct
+  detail: c
+- step: '8'
+  action: tf_add_proposition
+  detail: p2
+- step: '9'
+  action: tf_add_prediction
+  detail: h2
+- step: '10'
+  action: tf_add_test_outcome
+  detail: h2
+constructs:
+- id: a
+  label: A
+  definition: construct a defined here.
+- id: b
+  label: B
+  definition: construct b defined here.
+- id: c
+  label: C
+  definition: construct c defined here.
+propositions:
+- id: p1
+  from: a
+  to: b
+  relation: decreases
+  mechanism: m.
+- id: p2
+  from: b
+  to: c
+  relation: increases
+  mechanism: m.
+predictions:
+- id: h1
+  statement: A raises B.
+  type: directional
+  derives_from:
+  - p1
+  claim:
+    kind: effect
+    x: a
+    'y': b
+    sign: positive
+- id: h2
+  statement: B raises C.
+  type: directional
+  derives_from:
+  - p2
+  claim:
+    kind: effect
+    x: b
+    'y': c
+    sign: positive
+test_outcomes:
+- prediction_id: h1
+  passed: true
+- prediction_id: h2
+  passed: true

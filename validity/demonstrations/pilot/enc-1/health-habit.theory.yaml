@@ -1,0 +1,215 @@
+# Source: pilot/enc-1/health-habit.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Encoder 1, encoding-reliability pilot. Encoded by hand from
+# pilot/source-health-habit.md alone, which follows Gardner (2015). Nothing
+# was added from outside that text. Every judgement call is listed in
+# notes.md.
+#
+# Habit is held as habit strength, the strength of the learned cue-response
+# association, and kept apart from the impulse it generates and the
+# behaviour the impulse may produce, as the text insists. The text names no
+# measure for any construct and gives no numbers, so no construct carries
+# measurement and no prediction carries bounds. Habit prompts further
+# repetition and repetition strengthens habit, so the graph has a feedback
+# loop between the two.
+schema_version: "1.1"
+id: "health-habit-enc1"
+title: "Habit and health behaviour"
+maturity: "building"
+theory_form: "process"
+version:
+  id: "gardner-2015"
+  parent_id: null
+  content_hash: null
+
+constructs:
+  - id: c_cue
+    label: "Encountering the cue"
+    definition: "Meeting a contextual cue that has been associated with the behaviour, such as a place, a time, the presence of other people or a mood."
+  - id: c_habit_strength
+    label: "Habit strength"
+    definition: "The strength of the learned association in memory between a cue and a response, through which encountering the cue automatically generates an impulse to perform the behaviour. Habit is this process linking cue to impulse, distinct from the behaviour it may produce."
+  - id: c_impulse
+    label: "Habitual impulse"
+    definition: "The impulse to perform the behaviour that encountering the cue generates automatically, without awareness, deliberation or effort."
+  - id: c_behaviour
+    label: "Performance of the behaviour"
+    definition: "Whether the person performs the health-related behaviour on a given occasion."
+  - id: c_intention
+    label: "Intention"
+    definition: "A conscious decision to act, which belongs to the slower, deliberate system."
+  - id: c_repetition
+    label: "Repetition in a consistent context"
+    definition: "How often the behaviour has been performed in the same context."
+  - id: c_reward
+    label: "Reward"
+    definition: "Whether performing the behaviour is rewarded."
+  - id: c_motivation
+    label: "Conscious motivation"
+    definition: "The conscious motivation to perform the behaviour, which prompts repetition while a habit is forming."
+  - id: c_self_regulation
+    label: "Cognitive capacity and self-regulatory resources"
+    definition: "The cognitive capacity and self-regulatory resources a person has available at the moment to inhibit an impulse."
+  - id: c_urge
+    label: "Urge"
+    definition: "The conscious experience of a habitual impulse that has been blocked."
+  - id: c_context_change
+    label: "Change of context"
+    definition: "Moving away from the contexts that cue a habit, as when moving house."
+
+propositions:
+  - id: h1
+    from: c_repetition
+    to: c_habit_strength
+    relation: "increases"
+    mechanism: "Each repetition of the behaviour in a consistent context strengthens the cue-response association in memory, and alternative responses become less accessible."
+    functional_form: "levels off: once habit strength has peaked, further repetition has little effect, and people differ in how quickly habit grows and in the level it reaches"
+  # Gardner cites this as a proposal; the text gives no mechanism.
+  - id: h2
+    from: c_reward
+    to: c_habit_strength
+    relation: "moderates"
+  # The text gives no reason for either relation into repetition.
+  - id: h3
+    from: c_motivation
+    to: c_repetition
+    relation: "increases"
+    functional_form: "while the habit is forming"
+  - id: h4
+    from: c_habit_strength
+    to: c_repetition
+    relation: "increases"
+    functional_form: "once the habit is established"
+  # The impulse needs both the cue and the learned association. Each is
+  # entered as 'increases' with the interaction in functional_form, which no
+  # function reads (notes.md, Habit 3).
+  - id: h5
+    from: c_cue
+    to: c_impulse
+    relation: "increases"
+    mechanism: "Encountering a cue automatically generates an impulse to perform the behaviour, as a result of the learned association between the cue and the response."
+    functional_form: "jointly with habit strength: no impulse arises when the cue is absent"
+  - id: h6
+    from: c_habit_strength
+    to: c_impulse
+    relation: "increases"
+    mechanism: "The learned cue-response association is what makes encountering the cue generate the impulse, so the stronger the association, the stronger the impulse."
+    functional_form: "only when the cue is encountered"
+  - id: h7
+    from: c_impulse
+    to: c_behaviour
+    relation: "increases"
+    mechanism: "A habitual impulse is one of several momentary influences on what a person does, and it can combine with, or compete against, impulses and inhibitions from other sources, including conscious decisions."
+  - id: h8
+    from: c_intention
+    to: c_behaviour
+    relation: "increases"
+    mechanism: "Intentions belong to a slower, deliberate system that runs in parallel with the automatic system, and conscious decisions are among the momentary influences on what a person does."
+  # Triandis's hypothesis that habit strength weakens the
+  # intention-behaviour relationship, which is a moderation.
+  - id: h9
+    from: c_habit_strength
+    to: c_behaviour
+    relation: "moderates"
+    mechanism: "The habitual impulse and the intention come from two systems running in parallel, and the impulse can compete against conscious decisions, so the stronger the habit, the less behaviour depends on intention."
+  - id: h10
+    from: c_self_regulation
+    to: c_behaviour
+    relation: "moderates"
+    mechanism: "People can inhibit habitual impulses when they have enough cognitive capacity and self-regulatory resources; when these are depleted, impulses govern behaviour by default."
+  - id: h11
+    from: c_impulse
+    to: c_urge
+    relation: "increases"
+    mechanism: "An impulse that is blocked may be experienced consciously as an urge."
+    functional_form: "only when the impulse is blocked"
+  - id: h12
+    from: c_context_change
+    to: c_cue
+    relation: "decreases"
+    mechanism: "Moving away from the contexts that cue a habit removes its cues, so the habit is not activated, while the learned association itself may survive."
+
+boundary_conditions:
+  - "health-related behaviours, such as eating, physical activity, drinking alcohol and taking medication"
+  - "habit as a process within the individual, built on cues that are personal to that individual"
+  - "complex health behaviours, such as cycling to work or exercising in a gym, may be habitual in how they are started, in how they are carried out, or in both"
+  - "habits and intentions usually agree, because habits form by repeating intended actions, so the claim that habit overrides intention matters chiefly where the two conflict"
+
+predictions:
+  # The first two relationships, which Gardner attributes to Triandis's
+  # theory of interpersonal behaviour.
+  - id: k1
+    derives_from: [h6, h7]
+    statement: "The stronger the habit, the more likely the behaviour is to be performed."
+    type: "directional"
+    claim: {kind: effect, x: c_habit_strength, y: c_behaviour, sign: positive}
+  - id: k2
+    derives_from: [h8, h9]
+    statement: "As habit strength increases, the relationship between intention and behaviour weakens, so that where intention is weak and habit strong, behaviour follows habit and not intention."
+    type: "directional"
+  # The third relationship.
+  - id: k3
+    derives_from: [h1]
+    statement: "Repetition of the behaviour in the same context strengthens habit."
+    type: "directional"
+    claim: {kind: effect, x: c_repetition, y: c_habit_strength, sign: positive}
+  - id: k4
+    derives_from: [h1]
+    statement: "The growth of habit with repetition levels off: once habit strength has peaked, further repetition has little effect."
+    type: "directional"
+  - id: k5
+    derives_from: [h1]
+    statement: "People differ in how quickly habit grows and in the level it reaches even when they repeat the behaviour equally often."
+    type: "existence"
+  # A proposal that Gardner cites.
+  - id: k6
+    derives_from: [h1, h2]
+    statement: "Repetition strengthens habit more when the behaviour is rewarded."
+    type: "directional"
+  - id: k7
+    derives_from: [h3]
+    statement: "While a habit is forming, motivation prompts repetition."
+    type: "directional"
+    claim: {kind: effect, x: c_motivation, y: c_repetition, sign: positive}
+  - id: k8
+    derives_from: [h4]
+    statement: "Once the habit is established, it prompts further repetition."
+    type: "directional"
+    claim: {kind: effect, x: c_habit_strength, y: c_repetition, sign: positive}
+  # The further expectations.
+  - id: k9
+    derives_from: [h5, h6]
+    statement: "Because habit depends on cues, it is not activated when its cue is absent, so a habit can be automatic yet rarely expressed."
+    type: "directional"
+  - id: k10
+    derives_from: [h1, h4, h6, h7]
+    statement: "In unchanging contexts, habits remain stable and persist when conscious motivation wanes, so interventions that form new habits keep their effects after they end."
+    type: "directional"
+  - id: k11
+    derives_from: [h8, h9]
+    statement: "Unwanted habitual behaviours resist change through deliberation, such as changing intentions."
+    type: "directional"
+  - id: k12
+    derives_from: [h9, h10]
+    statement: "Habits override counter-habitual intentions, an expectation that the possibility of inhibiting habitual impulses qualifies."
+    type: "directional"
+  - id: k13
+    derives_from: [h12, h5, h7]
+    statement: "Moving people away from the contexts that cue a habit, as when they move house, disrupts the habit; if the change is temporary, the learned association may survive and the behaviour may return with the old context."
+    type: "directional"
+    claim: {kind: effect, x: c_context_change, y: c_behaviour, sign: negative}
+  # Stated in the account rather than as an expectation, and not captured
+  # by any proposition (notes.md, Habit 8).
+  - id: k14
+    derives_from: [h10]
+    statement: "Forming a strong intention to act against a habit may mobilise cognitive capacity and self-regulatory resources and so suppress the habitual response."
+    type: "directional"
+
+auxiliary_assumptions:
+  - id: b1
+    statement: "Habit belongs to a fast, automatic system that runs in parallel with a slower, deliberate system to which intentions belong."
+    added_for: null
+
+provenance:
+  - step: "1"
+    action: "manual_encoding"
+    detail: "Encoded by hand by encoder 1 from pilot/source-health-habit.md, which follows Gardner (2015), doi:10.1080/17437199.2013.876238."

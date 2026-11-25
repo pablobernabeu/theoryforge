@@ -1,0 +1,90 @@
+# Source: red-team-score/inputs/redteam/rt1-tautology.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Red-team input 1: a circular theory dressed in the schema's fields.
+# Motivation is defined as the disposition to expend effort, and effort as the
+# energy spent because one is motivated, so the central proposition is true by
+# definition. Every prediction is either entailed by the definitions or by
+# arithmetic: a correlation between -1 and 1, a percentage between 0 and 100,
+# a reaction time above zero. The rival is a straw man that no one holds.
+# Nothing here is a scientific claim; the file tests whether the checklist
+# can tell.
+schema_version: "1.1"
+id: "rt1-tautology"
+title: "Effort theory of motivation"
+maturity: "testing"
+theory_form: "process"
+version: {id: "v1", parent_id: null, content_hash: null}
+
+constructs:
+  - id: c_motivation
+    label: "Motivation"
+    definition: "A person's disposition to expend effort on a task."
+    measurement: ["self-reported willingness to try hard", "observer rating of persistence"]
+    boundary_conditions: ["adults", "goal-directed tasks"]
+  - id: c_effort
+    label: "Effort"
+    definition: "The energy a person spends on a task because they are motivated to complete it."
+    measurement: ["time on task", "self-reported exertion"]
+    boundary_conditions: ["adults", "tasks that allow variable exertion"]
+  - id: c_performance
+    label: "Task performance"
+    definition: "The observable quality of the product of an attempt at a task."
+    measurement: ["accuracy score", "completion count"]
+    boundary_conditions: ["adults", "tasks with a scorable outcome"]
+
+propositions:
+  - id: p1
+    from: c_motivation
+    to: c_effort
+    relation: "increases"
+    mechanism: "A disposition to expend effort is expressed as the expenditure of effort when a task is present."
+  - id: p2
+    from: c_effort
+    to: c_performance
+    relation: "increases"
+    mechanism: "Energy spent on a task is energy directed at producing its outcome, which improves the product."
+
+boundary_conditions: ["adults", "goal-directed tasks"]
+
+predictions:
+  - id: pred_corr
+    derives_from: [p1]
+    statement: "The correlation between motivation and effort lies between -1 and 1."
+    type: "interval"
+    bounds: {lower: -1, upper: 1}
+    diagnostic_vs: [alt_demotivation]
+  - id: pred_share
+    derives_from: [p1, p2]
+    statement: "The percentage of motivated participants who expend some effort lies between 0 and 100."
+    type: "interval"
+    bounds: {lower: 0, upper: 100}
+    diagnostic_vs: [alt_demotivation]
+  - id: pred_rt
+    derives_from: [p2]
+    statement: "Time on task is greater than zero seconds for every participant who attempts the task."
+    type: "directional"
+    diagnostic_vs: [alt_demotivation]
+  - id: pred_effect
+    derives_from: [p1, p2]
+    statement: "More motivated people perform better, because they expend more effort."
+    type: "directional"
+    diagnostic_vs: [alt_demotivation]
+    claim: {kind: effect, x: c_motivation, y: c_performance, sign: positive}
+
+auxiliary_assumptions:
+  - id: aux1
+    statement: "Self-reports of willingness to try hard index motivation."
+    added_for: null
+    protects: [pred_corr]
+
+alternatives:
+  - id: alt_demotivation
+    label: "Demotivation account"
+    key_constructs: ["motivation lowers effort"]
+    source_doi: null
+    propositions:
+      - {id: r1, from: c_motivation, to: c_effort, relation: "decreases"}
+      - {id: r2, from: c_effort, to: c_performance, relation: "decreases"}
+
+formal_model:
+  type: "sem"
+  spec_ref: null

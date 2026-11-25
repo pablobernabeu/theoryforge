@@ -1,0 +1,105 @@
+# Source: red-team-score/inputs/strong/s4-michaelis-menten.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Strong theory 4: the Michaelis-Menten theory of invertase kinetics, encoded
+# only from Johnson and Goody's (2011) account of the 1913 paper (verified via
+# Crossref; full text from PMC3381512, saved under
+# fulltext/michaelis-menten-1913-translation.txt):
+#   Johnson, K. A., & Goody, R. S. (2011). The original Michaelis constant:
+#   Translation of the 1913 Michaelis-Menten paper. Biochemistry, 50(39),
+#   8264-8269. https://doi.org/10.1021/bi201284u
+# The account quotes the theory ('invertase forms a complex with sucrose that is
+# very labile and decays to free enzyme, glucose and fructose'), its prediction
+# ('the rate of inversion must be proportional to the prevailing concentration
+# of sucrose-enzyme complex'), the rate law, competitive inhibition by the
+# products, the test that a single constant C/K_S fits every time course at
+# every sucrose concentration, and its outcome ('consistent and, apart from
+# slight fluctuations, shows no slant either with time or with sugar
+# concentration'). The integrated rate equation is a differential equation, so
+# the formal model is typed 'ode'. No rival theory is named. The encoding
+# choices are the auditor's.
+schema_version: "1.1"
+id: "s4-michaelis-menten"
+title: "The kinetics of invertase action (Michaelis and Menten, 1913)"
+maturity: "testing"
+theory_form: "process"
+version: {id: "v1", parent_id: null, content_hash: null}
+
+constructs:
+  - id: c_sucrose
+    label: "Sucrose concentration"
+    definition: "The concentration of the substrate, sucrose, in the reaction mixture."
+    measurement: ["sucrose added at the start, from 20.8 to 333 mM"]
+  - id: c_enzyme
+    label: "Amount of enzyme"
+    definition: "The relative amount of invertase added to the reaction mixture."
+    measurement: ["relative amount of enzyme preparation added"]
+  - id: c_complex
+    label: "Sucrose-enzyme complex"
+    definition: "The labile complex that invertase forms with sucrose and that decays to free enzyme, glucose and fructose."
+  - id: c_products
+    label: "Cleavage products"
+    definition: "The fructose and glucose formed by the inversion, which bind the enzyme."
+    measurement: ["fraction of sucrose converted, from optical rotation"]
+  - id: c_rate
+    label: "Rate of inversion"
+    definition: "The rate at which sucrose is converted to fructose and glucose."
+    measurement: ["change in optical rotation with time"]
+
+propositions:
+  - id: p_binding
+    from: c_sucrose
+    to: c_complex
+    relation: "increases"
+    mechanism: "Sucrose binds the enzyme in a rapid equilibrium with dissociation constant K_S, so more sucrose means more complex until the enzyme is saturated."
+    functional_form: "hyperbolic, S / (S + K_S)"
+  - id: p_enzyme
+    from: c_enzyme
+    to: c_complex
+    relation: "increases"
+    mechanism: "The complex is a share of the total enzyme, so it scales with the amount of enzyme added."
+  - id: p_decay
+    from: c_complex
+    to: c_rate
+    relation: "increases"
+    mechanism: "The complex decays to free enzyme and products at a constant rate, so the rate is a constant times the concentration of complex."
+    functional_form: "proportional"
+  - id: p_product_inhibition
+    from: c_products
+    to: c_complex
+    relation: "decreases"
+    mechanism: "Fructose and glucose compete with sucrose for the enzyme, which lowers the share of enzyme bound to sucrose."
+
+boundary_conditions: ["controlled pH", "initial rates measured before the influence of the cleavage products is noticeable, or the products' inhibition included in the rate equation"]
+
+predictions:
+  - id: pred_enzyme_proportional
+    derives_from: [p_enzyme, p_decay]
+    statement: "The rate is proportional to the amount of enzyme added."
+    type: "directional"
+    claim: {kind: effect, x: c_enzyme, y: c_rate, sign: positive}
+  - id: pred_saturation
+    derives_from: [p_binding, p_decay]
+    statement: "The initial rate rises with sucrose concentration as C * S / (S + K_S), approaching a maximum."
+    # A functional form; 'directional' is the nearest type the schema offers.
+    type: "directional"
+    claim: {kind: effect, x: c_sucrose, y: c_rate, sign: positive}
+  - id: pred_single_constant
+    derives_from: [p_binding, p_decay, p_product_inhibition]
+    statement: "The full time course at every starting sucrose concentration is fitted by one constant C/K_S, which shows no trend with time or with sucrose concentration."
+    # Asserts that one constant exists for all time courses, without a value.
+    type: "existence"
+  - id: pred_products
+    derives_from: [p_product_inhibition, p_decay]
+    statement: "Fructose and glucose slow the inversion, as competitive inhibitors."
+    type: "directional"
+    claim: {kind: effect, x: c_products, y: c_rate, sign: negative}
+
+test_outcomes:
+  - prediction_id: pred_single_constant
+    observed: "The constant C/K_S was 'consistent and, apart from slight fluctuations, shows no slant either with time or with sugar concentration' (mean 0.0454 per minute), as Johnson and Goody (2011) report."
+    passed: true
+    registered: null
+    date: "1913"
+
+formal_model:
+  type: "ode"
+  spec_ref: "integrated rate equation with competitive product inhibition (Johnson & Goody, 2011)"

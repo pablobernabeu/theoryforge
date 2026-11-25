@@ -1,0 +1,42 @@
+# Source: measurement/inputs/gaming/hollow.theory.yaml, validity audit of theoryforge at f72ce4c.
+schema_version: '1.1'
+id: hollow
+title: x
+maturity: testing
+constructs:
+- id: a
+  label: A
+  definition: alpha thing
+  measurement:
+  - m1
+  boundary_conditions:
+  - any
+- id: b
+  label: B
+  definition: beta thing
+  measurement:
+  - m2
+  boundary_conditions:
+  - any
+propositions:
+- id: p
+  from: a
+  to: b
+  relation: causes
+  mechanism: because
+predictions:
+- id: h
+  derives_from:
+  - p
+  statement: x
+  type: point
+  bounds:
+    lower: -1000000000.0
+    upper: 1000000000.0
+  diagnostic_vs:
+  - r
+alternatives:
+- id: r
+  label: r
+formal_model:
+  type: network
