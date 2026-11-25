@@ -26,9 +26,10 @@ The table maps single characters to their folded text:
   (``Ά`` and ``ά`` to ``α``, ``Й`` and ``й`` to ``и``).
 
 The combining marks U+0300-036F are deleted, so a text in NFD folds as its NFC
-form does. No output contains a character the table folds, which lets R apply
-the one-character entries with ``chartr`` and the longer ones with ``gsub``, one
-after the other, and still agree with Python's single ``str.translate``.
+form does. No output contains a character the table folds, which lets R map the
+one-character entries by code point and then apply the longer ones with a fixed
+``gsub``, one after the other, and still agree with Python's single
+``str.translate``.
 """
 from __future__ import annotations
 

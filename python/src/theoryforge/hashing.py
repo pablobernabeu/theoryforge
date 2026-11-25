@@ -171,7 +171,7 @@ def content_hash(theory) -> str:
     same double, as RFC 8785 specifies. Three conventions make it the same in
     R and Python: an empty mapping is written as an empty sequence, since R
     holds the two alike, an infinity or a missing number is written as
-    ``Infinity``, ``-Infinity`` or ``NaN``, and a single value in a field that
+    ``Infinity``, ``-Infinity`` or ``NaN`` and a single value in a field that
     the schema types as an array of strings, such as ``measurement`` or
     ``derives_from``, is written as a one-element array, since a reader takes
     ``derives_from: p1`` for ``[p1]``. R's ``tf_write()`` writes such a field
