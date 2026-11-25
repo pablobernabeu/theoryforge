@@ -76,13 +76,13 @@
   # sign bits[i] and the entry numbered n: 1 for none, and from 2 on for the
   # vertices of simple cycles in vertex order.
   entries <- c(0L, which(simple[comp]))
-  entry_no <- integer(k + 1L)
-  entry_no[entries + 1L] <- seq_along(entries)
-  state_of <- function(v, i, e) v + k * (i - 1L) + 3L * k * (entry_no[e + 1L] - 1L)
+  # The part of the state number that the entry e gives, at offset[e + 1].
+  offset <- integer(k + 1L)
+  offset[entries + 1L] <- 3L * k * (seq_along(entries) - 1L)
   masks <- integer(k)
   masks[[start]] <- .tf_POS
   seen <- logical(3L * k * length(entries))
-  state <- state_of(start, 1L, if (simple[[comp[[start]]]]) start else 0L)
+  state <- start + offset[[(if (simple[[comp[[start]]]]) start else 0L) + 1L]]
   seen[state] <- TRUE
   while (length(state) > 0L) {
     s0 <- state - 1L
@@ -100,15 +100,20 @@
     i <- i[keep]
     entry <- entry[keep]
     same <- same[keep]
-    ne <- ifelse(same, entry, ifelse(simple[comp[w]], w, 0L))
+    # The entry stays within a component, and on leaving it is the vertex
+    # reached when that vertex's component is a simple cycle, or 0.
+    ne <- entry
+    out <- !same
+    ne[out] <- w[out] * simple[comp[w[out]]]
     nxt <- .tf_MUL[cbind(bits[i] + 1L, G$mask[cbind(v, w)] + 1L)]
     state <- integer(0)
     for (j in 1:3) {
       has <- bitwAnd(nxt, bits[[j]]) != 0L
       masks[w[has]] <- bitwOr(masks[w[has]], bits[[j]])
-      state <- c(state, state_of(w[has], j, ne[has]))
+      state <- c(state, w[has] + k * (j - 1L) + offset[ne[has] + 1L])
     }
-    state <- unique(state[!seen[state]])
+    state <- state[!seen[state]]
+    if (length(state) > 1L) state <- unique(state)
     seen[state] <- TRUE
   }
   masks
@@ -224,18 +229,27 @@
   }
   G$feedback <- feedback
   G$evaluable <- cycles == "sigma" || length(feedback) == 0L
-  if (length(feedback) > 0L && cycles == "sigma") {
+  G$acyclified <- length(feedback) > 0L && cycles == "sigma"
+  if (G$acyclified) {
     acy <- .tf_acyclify(g$directed, g$bidirected, comps)
     G$sep_d <- acy$directed
     G$sep_b <- acy$bidirected
-    G$sep <- .tf_mixed_graph(G$sep_d, G$sep_b, .tf_reach(G$sep_d, k))
   } else {
     G$sep_d <- g$directed
     G$sep_b <- g$bidirected
-    G$sep <- .tf_mixed_graph(G$sep_d, G$sep_b, G$r)
   }
   G$walk_cache <- new.env(parent = emptyenv())
   G
+}
+
+# The graph that separation is read in, prepared by .tf_mixed_graph() when a
+# claim first needs it.
+.tf_sep_graph <- function(G) {
+  if (is.null(G$walk_cache[["sep"]])) {
+    r <- if (G$acyclified) .tf_reach(G$sep_d, G$k) else G$r
+    G$walk_cache[["sep"]] <- .tf_mixed_graph(G$sep_d, G$sep_b, r)
+  }
+  G$walk_cache[["sep"]]
 }
 
 .tf_walks <- function(G, s) {
@@ -350,7 +364,7 @@
   canonical <- setdiff(which((r[, x] | r[, y]) & !G$latent), c(forbidden, y))
   # The proper back-door graph. Without feedback loops, separation is read in
   # the theory's own graph.
-  d <- .tf_without_edges(G$sep, x, on_path)
+  d <- .tf_without_edges(.tf_sep_graph(G), x, on_path)
   if (!.tf_m_separated(d, x, y, canonical)) return(NULL)
   if (length(canonical) > .tf_ADJUSTMENT_SEARCH) {
     # Every member is an ancestor of x or y in the proper back-door graph, and
@@ -398,7 +412,7 @@
   y <- match(cl$y, G$nodes)
   if (cl$kind == "association" && length(cl$given) > 0L) {
     z <- match(cl$given, G$nodes)
-    if (.tf_m_separated(G$sep, x, y, z)) {
+    if (.tf_m_separated(.tf_sep_graph(G), x, y, z)) {
       return(out("zero", .tf_verdict(cl$sign, "zero"), "separated"))
     }
     return(out("nonzero", .tf_verdict(cl$sign, "nonzero"), "connected", faithfulness = TRUE))
@@ -619,9 +633,9 @@ tf_entailments <- function(theory, cycles = "refuse") {
   for (c in seq_len(k)) {
     parents <- which(directed[, c])
     if (length(parents) < 2L) next
-    pairs <- utils::combn(length(parents), 2L)
-    a <- parents[pairs[1L, ]]
-    b <- parents[pairs[2L, ]]
+    n <- length(parents)
+    a <- parents[rep.int(seq_len(n - 1L), (n - 1L):1)]
+    b <- parents[sequence((n - 1L):1, from = 2:n)]
     open <- !adj[cbind(a, b)]
     if (any(open)) rows[[c]] <- c(rbind(a[open], c, b[open]))
   }

@@ -218,10 +218,17 @@ class _Graph:
             self.sep_d, self.sep_b = acyclify(self.directed, self.bidirected, self.comps)
         else:
             self.sep_d, self.sep_b = self.directed, self.bidirected
-        self.sep = MixedGraph(self.sep_d, self.sep_b)
+        self._sep: MixedGraph | None = None
         self._walks: dict[int, list[int]] = {}
         self._held: dict[int, list[int]] = {}
         self._cov: list[list[int]] | None = None
+
+    @property
+    def sep(self) -> MixedGraph:
+        """The graph that separation is read in, prepared when a claim first needs it."""
+        if self._sep is None:
+            self._sep = MixedGraph(self.sep_d, self.sep_b)
+        return self._sep
 
     def walks(self, s: int) -> list[int]:
         if s not in self._walks:

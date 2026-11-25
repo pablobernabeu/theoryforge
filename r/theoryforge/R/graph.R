@@ -51,8 +51,56 @@
 .tf_reach <- function(directed, k) {
   reach <- matrix(FALSE, nrow = k, ncol = k)
   children <- lapply(seq_len(k), function(u) which(directed[u, ]))
-  for (s in seq_len(k)) {
-    reach[s, ] <- .tf_reached(children, s, logical(k))
+  # The order in which a depth-first search finishes the vertices. In an acyclic
+  # graph, every child comes before its parents.
+  finished <- integer(k)
+  n <- 0L
+  examined <- integer(k)
+  visited <- logical(k)
+  for (r in seq_len(k)) {
+    if (visited[[r]]) next
+    visited[[r]] <- TRUE
+    stack <- r
+    while (length(stack) > 0L) {
+      u <- stack[[length(stack)]]
+      i <- examined[[u]] + 1L
+      if (i <= length(children[[u]])) {
+        examined[[u]] <- i
+        v <- children[[u]][[i]]
+        if (!visited[[v]]) {
+          visited[[v]] <- TRUE
+          stack <- c(stack, v)
+        }
+      } else {
+        stack <- stack[-length(stack)]
+        n <- n + 1L
+        finished[[n]] <- u
+      }
+    }
+  }
+  # The rows are filled in that order, and the row of a vertex already filled is
+  # taken whole, so the search goes beyond the children of a vertex only within
+  # a feedback loop.
+  done <- logical(k)
+  for (s in finished) {
+    seen <- logical(k)
+    seen[[s]] <- TRUE
+    stack <- s
+    while (length(stack) > 0L) {
+      u <- stack[[length(stack)]]
+      stack <- stack[-length(stack)]
+      for (v in children[[u]]) {
+        if (seen[[v]]) next
+        if (done[[v]]) {
+          seen <- seen | reach[v, ]
+        } else {
+          seen[[v]] <- TRUE
+          stack <- c(stack, v)
+        }
+      }
+    }
+    reach[s, ] <- seen
+    done[[s]] <- TRUE
   }
   reach
 }
@@ -159,11 +207,13 @@
 # and their descendants. Every vertex that a vertex marked in `mark` leads to
 # must be marked there too, as in a result of this function.
 .tf_reached <- function(adjacent, seeds, mark) {
-  new <- unique(seeds[!mark[seeds]])
+  new <- seeds[!mark[seeds]]
+  if (length(new) > 1L) new <- unique(new)
   mark[new] <- TRUE
   while (length(new) > 0L) {
     nxt <- unlist(adjacent[new], use.names = FALSE)
-    new <- unique(nxt[!mark[nxt]])
+    new <- nxt[!mark[nxt]]
+    if (length(new) > 1L) new <- unique(new)
     mark[new] <- TRUE
   }
   mark
@@ -205,7 +255,8 @@
   keep <- region[w]
   state <- w[keep] + k * g$ends_hw[[x]][keep]
   while (length(state) > 0L) {
-    state <- unique(state[!seen[state]])
+    state <- state[!seen[state]]
+    if (length(state) > 1L) state <- unique(state)
     seen[state] <- TRUE
     head_in <- state > k
     v <- state - k * head_in
