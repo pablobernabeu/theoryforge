@@ -314,15 +314,15 @@ table.grid tbody tr:hover td { background: color-mix(in srgb, var(--accent) 9%, 
 /* Solid, theme-independent pills so the pass/warn/fail verdicts meet WCAG AA
    text contrast (at least 4.5:1) regardless of the surrounding panel tint. */
 .pill { padding: 2px 9px; border-radius: 999px; font-size: .74rem; font-weight: 700; white-space: nowrap; }
-.pill.pass, .pill.ok, .pill.covered, .pill.progressive { background: #2e7d46; color: #ffffff; }
-.pill.warn, .pill.advisory, .pill.review, .pill.neutral, .pill.crowded { background: #e8a33d; color: #3a2600; }
-.pill.fail, .pill.blocked, .pill.degenerating, .pill.under_theorised { background: #b5392f; color: #ffffff; }
+.pill.pass, .pill.progressive { background: #2e7d46; color: #ffffff; }
+.pill.warn, .pill.advisory, .pill.review, .pill.neutral { background: #e8a33d; color: #3a2600; }
+.pill.fail, .pill.blocked, .pill.degenerating { background: #b5392f; color: #ffffff; }
 /* A checklist item with nothing to assess (status n/a, class n_a). */
 .pill.n_a { background: #616161; color: #ffffff; }
-/* The verdicts of the causal readings. */
-.pill.entailed, .pill.compelled { background: #2e7d46; color: #ffffff; }
-.pill.contradicted { background: #b5392f; color: #ffffff; }
-.pill.undetermined, .pill.reversible { background: #e8a33d; color: #3a2600; }
+/* What a rule found, with no colour of success or failure: the verdicts of
+   the causal readings, the compelled and reversible edges, the statuses of
+   the landscape and a pair the redundancy screen does not flag. */
+.pill.plain { background: #3f5a73; color: #ffffff; }
 .pill.not_evaluated { background: #616161; color: #ffffff; }
 
 .note { font-size: .85rem; color: var(--ink-soft); }
@@ -455,7 +455,8 @@ button.btn.ghost.seg[aria-pressed="true"] {
 .md code { font-family: var(--mono); font-size: .84em; background: var(--panel-2); padding: 0 3px; border-radius: 4px; }
 .md .md-table { overflow-x: auto; }
 .md table { border-collapse: collapse; font-size: .82rem; margin: 6px 0 10px; }
-.md th, .md td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; vertical-align: top; }
+/* Words stay whole inside a table cell, and the table scrolls sideways. */
+.md th, .md td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; vertical-align: top; overflow-wrap: normal; }
 .md th { background: var(--panel-2); }
 
 /* ---- the theory editor ---- */

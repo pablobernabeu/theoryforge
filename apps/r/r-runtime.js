@@ -102,16 +102,29 @@ invisible(lapply(.tf_app_files, source))
   }, error = function(e) list(ok = FALSE, message = conditionMessage(e)))
 }
 
+# Whether tf_check() reads the graph with a cycles setting, as it does from
+# checklist 3.1 on. A package without the argument reads it with the default,
+# and the result says which reading it gives. The package draws the grid with
+# the default, so the grid is drawn only for that reading.
+.tf_app_check_takes_cycles <- function() "cycles" %in% names(formals(tf_check))
+.tf_app_check <- function(t, cycles = "refuse") {
+  takes <- .tf_app_check_takes_cycles()
+  read <- if (takes) cycles else "refuse"
+  list(report = if (takes) tf_check(t, cycles = cycles) else tf_check(t),
+       svg = if (identical(read, "refuse")) tf_diagram(t, "rigour"), cycles = read)
+}
+
 # The checklist's score and gate, which the card and the editor show, or the
 # message of a theory the checklist refuses. An error without a message is
-# named by its class.
+# named by its class. The card reads the graph with the default cycles.
 .tf_score <- function(t) {
   tryCatch({
     r <- tf_check(t)
     ids <- function(status) {
       as.character(unlist(lapply(r$items, function(i) if (identical(i$status, status)) i$id)))
     }
-    list(score = r$aggregate_score, gate = r$gate, failed = I(ids("fail")), warned = I(ids("warn")))
+    list(score = r$aggregate_score, gate = r$gate, failed = I(ids("fail")), warned = I(ids("warn")),
+         version = r$checklist_version)
   }, error = function(e) {
     msg <- conditionMessage(e)
     list(error = if (nzchar(msg)) msg else class(e)[[1L]])
@@ -269,7 +282,7 @@ invisible(lapply(.tf_app_files, source))
   t <- .tf_app$theory
   env <- .tf_json
   cycles <- if (is.null(p$cycles)) "refuse" else p$cycles
-  if (op == "check")      return(env(list(report = tf_check(t), svg = tf_diagram(t, "rigour"))))
+  if (op == "check")      return(env(.tf_app_check(t, cycles)))
   if (op == "validate")   return(env(.tf_validation(t)))
   if (op == "severity")   return(env(list(rows = tf_severity(t), svg = tf_diagram(t, "severity"))))
   if (op == "post_severity") return(env(.tf_answer(list(result = tf_post_data_severity(t)))))
@@ -432,6 +445,7 @@ const RT = {
     await webR.FS.writeFile("/tf/boot.R", enc.encode(BOOT_R));
     await webR.evalRVoid('source("/tf/boot.R")');
     this.canImportDagitty = await webR.evalRBoolean('exists("tf_read_dagitty", mode = "function")');
+    this.checkTakesCycles = await webR.evalRBoolean(".tf_app_check_takes_cycles()");
 
     this.version = (await webR.evalRString("R.version.string")) || "R";
     // The version of the R package, shown in the footer. build.mjs stamps it
@@ -501,6 +515,9 @@ const RT = {
 
   // Whether this package version has a DAGitty reader, read at start-up.
   canImportDagitty: false,
+  // Whether its tf_check() takes cycles, read at start-up, so that the code
+  // shown names the setting only where the package reads it.
+  checkTakesCycles: false,
 
   // The theory the package's DAGitty reader makes of `model` replaces the
   // loaded one. `opts` holds the id, title and relation the user chose.
@@ -525,7 +542,7 @@ const RT = {
   async contentHash() { return JSON.parse(await this._webR.evalRString(".tf_hash_call()")); },
 
   // The checklist's score of the loaded theory, as { score, gate, failed,
-  // warned } or { error }.
+  // warned, version } or { error }.
   async score() { return JSON.parse(await this._webR.evalRString(".tf_score_call()")); },
 
   // The loaded theory as the package's writer writes it ("yaml" or "json").
@@ -615,8 +632,12 @@ const RT = {
       this._read("theory", "tf_read", this._theoryFile, this._theoryShipped, " (View source or Save in the app offers a download).");
     const cycles = `cycles = "${p.cycles || "refuse"}"`;
     switch (opId) {
-      case "check":
-        return `${head}\n\nreport <- tf_check(theory)\nreport$aggregate_score   # overall 0-100\nreport$gate              # pass / blocked / advisory\n\n# Visualise the rigour grid (SVG):\nwriteLines(tf_diagram(theory, "rigour"), "rigour.svg")`;
+      case "check": {
+        const c = p.cycles || "refuse";
+        const call = this.checkTakesCycles ? `tf_check(theory, ${cycles})` : "tf_check(theory)";
+        const grid = c === "refuse" ? `\n\n# Visualise the checklist grid (SVG):\nwriteLines(tf_diagram(theory, "rigour"), "rigour.svg")` : "";
+        return `${head}\n\nreport <- ${call}\nreport$aggregate_score   # the checklist score, 0-100\nreport$gate              # pass / blocked / advisory${grid}`;
+      }
       case "validate":
         return `${head}\n\ntf_validate(theory, full = TRUE)   # structural + referential integrity; stops, listing every problem`;
       case "appraise": {

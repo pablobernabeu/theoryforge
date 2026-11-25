@@ -221,13 +221,13 @@ async function buildTheory(page, lang) {
   await page.fill('[data-k="test_outcomes.0.se"]', "0.08");
   await page.fill('[data-k="test_outcomes.0.observed"]', "Illustrative values, not a reported result.");
   // The engine reads the last change once typing pauses.
-  await page.waitForFunction(() => /0\.41|valid|problem/.test(document.querySelector("#edLint").textContent) &&
+  await page.waitForFunction(() => /0\.41|well-formed|problem/.test(document.querySelector("#edLint").textContent) &&
     /A theory built in the editor/.test(document.querySelector("#summaryWrap").textContent), null, { timeout: RUN_MS });
   await page.waitForTimeout(1500);
   const lint = await page.textContent("#edLint");
   const summary = await page.textContent("#summaryWrap");
-  if (!/valid/.test(summary) || /problem/.test(summary)) fail(`${lang} editor`, "the built theory is not valid: " + lint.slice(0, 400));
-  if (!/checklist \d/.test(lint)) fail(`${lang} editor`, "the lint bar shows no checklist score: " + lint.slice(0, 200));
+  if (!/well-formed/.test(summary) || /problem/.test(summary)) fail(`${lang} editor`, "the built theory is not well-formed: " + lint.slice(0, 400));
+  if (!/checklist \d+(\.\d+)? · gate (pass|blocked|advisory)/.test(lint)) fail(`${lang} editor`, "the lint bar shows no checklist score: " + lint.slice(0, 200));
   const src = await page.inputValue("#edSource");
   if (!/edited-demo/.test(src) || !/Task demand/.test(src)) fail(`${lang} editor`, "the source pane does not follow the forms");
   // An empty definition is reported beside the field.
@@ -443,6 +443,32 @@ async function contrast(page, lang) {
   await page.evaluate(() => document.documentElement.removeAttribute("data-theme"));
 }
 
+// What the results say they compute, on the first example: the checklist's
+// guide opens with what the score describes and gives the gate's rule, the
+// card's chip reads "checklist <score> · gate <gate>" with that statement's
+// first and last sentences as its title, and the simulation's figure carries
+// its settings and says it is not fitted to data.
+async function wording(page, lang, record, name) {
+  const check = (record[name + " :: check"] || {}).text || "";
+  if (!/The checklist score describes how completely the file states what checklist \d+\.\d+ asks for\./.test(check)) fail(`${lang} wording`, "the checklist's guide does not say what the score describes");
+  if (!check.includes("The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states")) {
+    fail(`${lang} wording`, "the checklist's guide does not give the gate's rule");
+  }
+  // The app's own text: the guide and the reading, which come first. The grid
+  // is the package's figure.
+  if (/rigour|out of 100|\/ 100/i.test(check.split("\n")[0])) fail(`${lang} wording`, "the checklist's guide or reading still names rigour or a score out of 100");
+  const chip = await page.evaluate(() => { const c = document.querySelector("#summaryScore"); return c ? [c.textContent, c.getAttribute("title") || ""] : ["", ""]; });
+  if (!/^checklist \d+(\.\d)? · gate (pass|blocked|advisory)$/.test(chip[0])) fail(`${lang} wording`, "the card's chip reads " + chip[0]);
+  if (!/^The checklist score describes how completely the file states what checklist \d+\.\d+ asks for\. The score does not show that the theory is true or well reasoned\.$/.test(chip[1])) {
+    fail(`${lang} wording`, "the chip's title is " + chip[1]);
+  }
+  const sim = (record[name + " :: simulate"] || {}).text || "";
+  if (!sim.includes("Linear system, k = 1, damping = 0.5, exact method. Not fitted to data.") || !sim.includes("value (no unit)") || !sim.includes("step (dt = 0.1)")) {
+    fail(`${lang} wording`, "the simulation's figure lacks its caption or axis titles");
+  }
+  if (!/At k = 1 and damping = 0\.5, the values (grow|settle|change too little)/.test(sim)) fail(`${lang} wording`, "the simulation's reading does not name k and the damping");
+}
+
 // ---- main --------------------------------------------------------------------
 const server = await serve();
 const base = `http://127.0.0.1:${server.address().port}/`;
@@ -467,6 +493,7 @@ try {
       await chooseExample(page, value);
       if (SHOTS && n === 1) await page.screenshot({ path: path.join(SHOTS, `${lang}-start.png`) });
       await runAll(page, lang, name, record);
+      if (n === 1) await wording(page, lang, record, name);
       console.log(`${lang}: ${name} done`);
     }
     await buildTheory(page, lang);
