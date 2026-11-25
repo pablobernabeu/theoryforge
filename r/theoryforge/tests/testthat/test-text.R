@@ -112,6 +112,35 @@ test_that("tf_tokens keeps every script", {
                    "\u60ca\u6050\u969c\u788d")
 })
 
+test_that("the noncharacters U+FFFE and U+FFFF are text like any other", {
+  # chartr() and tolower() refuse both ("invalid input ... in 'utf8towcs'"),
+  # so a label, definition, id or DOI holding one stopped tf_check(), the
+  # redundancy screen, the preregistration, the dossier, the SEM syntax, two
+  # views and the DOI screen. The Python suite asserts the same values.
+  fe <- intToUtf8(0xFFFE)
+  ff <- intToUtf8(0xFFFF)
+  expect_identical(theoryforge:::.tf_normalise_words(paste0("\u00c5B", fe, ff)),
+                   paste0("ab", fe, ff))
+  expect_identical(theoryforge:::.tf_fold(c(x = "\u00c9", y = NA)), c(x = "E", y = NA))
+  expect_identical(theoryforge:::.tf_ascii_lower(c(x = "AbC\u00c9")), c(x = "abc\u00c9"))
+  expect_setequal(tf_tokens(paste0("Arousal ", ff, " level.")), c("arousal", "level"))
+  t <- .text_theory(
+    list(list(id = paste0("a", ff), label = paste0("Pa", fe, "ic"),
+              definition = paste0("Arousal ", ff, " level.")),
+         list(id = "b", label = "B", definition = "Threat appraisal.")),
+    list(list(id = "p1", from = paste0("a", ff), to = "b", relation = "increases")))
+  expect_equal(tf_check(t)$aggregate_score, 19)
+  expect_identical(tf_redundancy_check(t)$flag, "ok")
+  sem <- tf_compile_sem(t)
+  expect_true(grepl(paste0("# renamed for lavaan: 'a", ff, "' -> a\n"), sem, fixed = TRUE))
+  expect_true(grepl("\nb ~ b_a_b*a\n", sem, fixed = TRUE))
+  for (view in c("rigour", "venn")) expect_true(nzchar(tf_diagram(t, view)), info = view)
+  expect_true(nzchar(tf_preregister(t)))
+  expect_true(nzchar(tf_dossier(t)))
+  dois <- c("10.1234/abc", paste0("10.1234/X", ff))
+  expect_identical(tf_new_evidence_dois(t, dois), dois)
+})
+
 test_that("identical Cyrillic definitions are flagged", {
   d <- paste("\u0421\u0442\u0440\u0430\u0445 \u043f\u0435\u0440\u0435\u0434",
              "\u0442\u0435\u043b\u0435\u0441\u043d\u044b\u043c\u0438",

@@ -51,20 +51,34 @@ NULL
   s
 }
 
-# `x` with A-Z lowercased and every other character kept.
+# `x` with A-Z lowercased and every other character kept. PCRE's \L lowercases
+# only the ASCII letters the pattern matched. chartr() and tolower() convert the
+# text to wide characters first, which refuses the noncharacters U+FFFE and
+# U+FFFF ("invalid input ... in 'utf8towcs'"), valid code points that JSON and
+# YAML can carry.
 .tf_ascii_lower <- function(x) {
-  chartr("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz", x)
+  gsub("([A-Z]+)", "\\L\\1", x, perl = TRUE)
 }
 
-# `x` folded through schema/fold.json: the one-character entries with chartr,
+# `x` folded through schema/fold.json: the one-character entries by code point,
 # the longer ones (such as the sharp s to "ss") with a fixed gsub, then the
 # combining marks deleted. No entry's output is folded again, so applying them
-# in turn gives what Python's single str.translate gives. iconv()'s
-# transliteration is avoided because its output differs between platforms.
+# in turn gives what Python's single str.translate gives. The code points are
+# mapped through utf8ToInt() and intToUtf8(), which accept U+FFFE and U+FFFF
+# where chartr() refuses them, and `x[] <-` keeps the names of `x`, as chartr()
+# did. iconv()'s transliteration is avoided because its output differs between
+# platforms.
 .tf_fold <- function(x) {
   f <- tf_fold_table()
   x <- enc2utf8(x)
-  x <- chartr(f$old, f$new, x)
+  x[] <- vapply(x, function(s) {
+    cp <- utf8ToInt(s)
+    i <- match(cp, f$old_cp)
+    hit <- !is.na(i)
+    if (!any(hit)) return(s)
+    cp[hit] <- f$new_cp[i[hit]]
+    intToUtf8(cp)
+  }, character(1), USE.NAMES = FALSE)
   for (k in names(f$multi)) x <- gsub(k, f$multi[[k]], x, fixed = TRUE)
   gsub(f$delete, "", x, perl = TRUE)
 }

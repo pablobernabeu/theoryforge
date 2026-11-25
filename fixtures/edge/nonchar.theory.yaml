@@ -1,0 +1,30 @@
+# Edge case: the noncharacters U+FFFE and U+FFFF, written as escapes, in a
+# construct id, a label, a definition, a mechanism and a statement. Both are
+# valid code points that JSON and YAML can carry. R's chartr() and tolower(),
+# which the fold and the lowercasing used, refuse them, so tf_check(), the
+# redundancy screen, the preregistration, the dossier, the SEM syntax and the
+# views that read text stopped in R, while Python read the theory.
+schema_version: "1.1"
+id: edge-nonchar
+title: "Noncharacters \uFFFE and \uFFFF in text"
+maturity: building
+constructs:
+  - id: "c1\uFFFF"
+    label: "Pa\uFFFEic"
+    definition: "Arousal \uFFFF level."
+    measurement: ["Heart \uFFFErate"]
+  - id: c2
+    label: Threat
+    definition: "Appraised \uFFFEdanger."
+propositions:
+  - id: p1
+    from: "c1\uFFFF"
+    to: c2
+    relation: increases
+    mechanism: "Arousal \uFFFF is read as danger."
+predictions:
+  - id: h1
+    statement: "Threat \uFFFE rises with arousal."
+    type: directional
+    derives_from: [p1]
+    claim: {kind: effect, x: "c1\uFFFF", y: c2, sign: positive}

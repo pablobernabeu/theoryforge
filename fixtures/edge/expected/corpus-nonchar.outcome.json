@@ -1,0 +1,34 @@
+{
+  "read": "ok",
+  "litmap": {
+    "n_records": 2,
+    "keywords": [
+      "arousal \ufffe",
+      "panic"
+    ],
+    "keyword_cooccurrence": [
+      {
+        "a": "arousal \ufffe",
+        "b": "panic",
+        "count": 2
+      }
+    ],
+    "themes": [
+      {
+        "id": "theme_1",
+        "keywords": [
+          "arousal \ufffe",
+          "panic"
+        ],
+        "size": 2
+      }
+    ],
+    "co_citation": [
+      {
+        "a": "10.1234/abc",
+        "b": "10.1234/x\uffff",
+        "count": 2
+      }
+    ]
+  }
+}
