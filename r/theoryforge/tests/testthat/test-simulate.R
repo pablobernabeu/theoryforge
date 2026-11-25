@@ -382,6 +382,16 @@ test_that("tf_simulate's Euler warning does not depend on the unit of init", {
   # A run that tracks the exact solution stays silent at any scale.
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   for (init in c(100, 0.01)) expect_no_warning(tf_simulate(panic, init = init))
+  # The scale is the largest absolute starting value, here that of the one
+  # construct init names. A run that starts at 0 everywhere stays at 0 and
+  # gives no warning.
+  chain <- tf_theory("chain", "Chain") |>
+    tf_add_construct("a", "A", "d") |>
+    tf_add_construct("b", "B", "d") |>
+    tf_add_proposition("p1", "a", "b", "increases")
+  expect_warning(tf_simulate(chain, steps = 4, dt = 3, init = list(a = 0.01)), euler_warning,
+                 fixed = TRUE)
+  expect_no_warning(tf_simulate(chain, steps = 4, dt = 3, init = 0))
 })
 
 test_that("tf_simulate's exact method has no step-size limit", {

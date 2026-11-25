@@ -377,21 +377,173 @@ NULL
 # stops with "(<path>) Duplicate map key: '<key>'", which the Python twin copies.
 # The number handlers cost a callback for every number, so they are used only
 # when yaml warned on the first reading. Any warning left after that is the
-# caller's to see.
+# caller's to see. yaml reads an alias that names no node it has read, one
+# whose anchor is undefined or that lies inside the node its anchor names, as
+# the text "_yaml.bad-anchor_" with a warning, and libyaml through PyYAML
+# refuses the first and reads the second as a cycle. Both twins refuse such an
+# alias, unless a syntax error comes before it in the text or a mapping that
+# repeats a key ends before it, since yaml checks the keys of a mapping as the
+# mapping ends.
 .tf_read_yaml <- function(path) {
   text <- .tf_read_text(path)
+  # No parse evaluates R code (!expr), whatever the session's options say.
   parse <- function(handlers, txt = text) {
-    yaml::yaml.load(txt, handlers = handlers, merge.precedence = "override", error.label = path)
+    yaml::yaml.load(txt, handlers = handlers, merge.precedence = "override", error.label = path,
+                    eval.expr = FALSE)
   }
   .tf_yaml_refuse_nul(text, path, parse)
   warned <- FALSE
+  unknown <- character(0)
+  refuse_alias <- function(...) {
+    if (length(unknown) > 0L) {
+      stop(sprintf("(%s) the alias '%s' names no node that ends before it", path, unknown[[1L]]),
+           call. = FALSE)
+    }
+  }
   data <- withCallingHandlers(parse(.tf_yaml_handlers), warning = function(w) {
+    msg <- conditionMessage(w)
+    if (startsWith(msg, "Unknown anchor: ")) unknown <<- c(unknown, substring(msg, 17L))
     warned <<- TRUE
     invokeRestart("muffleWarning")
-  })
-  if (warned) data <- parse(c(.tf_yaml_handlers, .tf_yaml_number_handlers))
+  }, error = refuse_alias)
+  refuse_alias()
   .tf_check_size(data, path)
+  if (warned) data <- parse(c(.tf_yaml_handlers, .tf_yaml_number_handlers))
+  .tf_yaml_refuse_twice(text, path, parse)
   data
+}
+
+# What libyaml can read as an anchor: an ampersand at the start of the text or
+# after white space, a line break, a byte-order mark or one of [{,:?-, then the
+# characters of an anchor name, then white space, a line break, the end or one
+# of ?:,]}%@` (it refuses the text otherwise). An explicit tag beside it is
+# part of the match: one before it on its line, followed by blanks, one that
+# ends the line before it, with only blanks between, or one after it, so that
+# the probe can put its own tag in that one's place. The line breaks include
+# U+0085, U+2028 and U+2029. The patterns match bytes, which writes these and
+# the byte-order mark as their UTF-8 bytes, since gregexpr() takes time
+# quadratic in the length of a text that is not ASCII when it matches
+# characters.
+.tf_YAML_BREAK <- "[\\n\\r]|\\xC2\\x85|\\xE2\\x80[\\xA8\\xA9]"
+.tf_YAML_TAG <- "!<[^>\\t\\n\\r ]*>|![^\\t\\n\\r ,\\[\\]{}]*"
+# What a tag or an anchor can follow: the start of the text, white space, a
+# line break, a byte-order mark or [{, (and, for an anchor, also :?-).
+.tf_YAML_AFTER <- function(also = "") {
+  paste0("(?:^|(?<=[\\t\\n\\r \\[{,", also, "])|(?<=\\xC2\\x85)|(?<=\\xE2\\x80[\\xA8\\xA9])",
+         "|(?<=\\xEF\\xBB\\xBF))")
+}
+# The name in a match of the pattern below.
+.tf_ANCHOR_NAME <- paste0(
+  "(?s)^(?:(?:", .tf_YAML_TAG, ")(?:[\\t ]|", .tf_YAML_BREAK, ")+)?&([0-9A-Za-z_-]+).*$"
+)
+.tf_ANCHOR_PATTERN <- paste0(
+  "(?:", .tf_YAML_AFTER(), "(?:", .tf_YAML_TAG, ")",
+  "(?:[\\t ]+|[\\t ]*(?:\\r\\n?|\\n|\\xC2\\x85|\\xE2\\x80[\\xA8\\xA9])[\\t ]*))?",
+  .tf_YAML_AFTER(":?-"),
+  "&[0-9A-Za-z_-]+(?:[\\t ]+(?:", .tf_YAML_TAG, "))?",
+  "(?=[\\t\\n\\r ?:,\\]}%@`]|\\xC2\\x85|\\xE2\\x80[\\xA8\\xA9]|$)"
+)
+
+# Refuse a YAML text that gives one anchor to two nodes, naming the first such
+# anchor by code point. yaml binds a later alias to the first of the nodes,
+# where YAML binds it to the last, and libyaml through PyYAML refuses the text.
+# What yaml returns does not show anchors, so only a name that the text writes
+# twice where libyaml could read it as an anchor is looked at, and a probe copy
+# of the text puts a tag before each such `&name`, in place of the explicit tag
+# beside it if there is one. yaml calls the tag's handler once for each node
+# that takes the tag, so an `&name` in a comment or in a scalar calls nothing.
+# The names are numbered, and with up to 256 names one probe gives each name its
+# number as a tag. Beyond that, a probe gives each name the first digit of its
+# number in base ceiling(sqrt(names)), which keeps the handlers yaml looks
+# through for every node few, and when two nodes or more take a tag a second
+# probe gives the second digit, the handlers running in the same order of nodes
+# in both. When a probe is refused, as by a tag two lines above its anchor, it
+# is split in halves, at about two more parses for each occurrence that it
+# isolates. An occurrence alone whose tag is refused is an anchor when the copy
+# with as many spaces in place of the tag reads, and text otherwise, since the
+# tag can also make a key longer than the 1024 characters libyaml allows. An
+# anchor in a key that comes within the tag's length of that limit, three
+# characters and the digits of its number, is then missed.
+.tf_yaml_refuse_twice <- function(text, path, parse) {
+  m <- gregexpr(.tf_ANCHOR_PATTERN, text, perl = TRUE, useBytes = TRUE)
+  found <- regmatches(text, m)[[1L]]
+  if (length(found) < 2L) return(invisible())
+  name <- sub(.tf_ANCHOR_NAME, "\\1", found, perl = TRUE, useBytes = TRUE)
+  probed <- which(name %in% name[duplicated(name)])
+  if (length(probed) == 0L) return(invisible())
+  # Where a tag ends the line above the anchor, the line break and the
+  # indentation stay, and the tag gives way to spaces.
+  before <- sub("(?s)^(.*)&[0-9A-Za-z_-]+(?:[\\t ]+[^\\t ]*)?$", "\\1", found, perl = TRUE,
+                useBytes = TRUE)
+  lead <- ifelse(grepl(.tf_YAML_BREAK, before, perl = TRUE, useBytes = TRUE),
+                 gsub("[!-~]", " ", before, perl = TRUE, useBytes = TRUE), "")
+  # A short tag that no tag of the text begins with, and that names no type
+  # yaml resolves by itself, none of which begins with z. Under a %TAG
+  # directive, which can redefine `!`, the tag is written verbatim.
+  prefix <- "z"
+  while (grepl(paste0("!", prefix), text, fixed = TRUE)) prefix <- paste0(prefix, "z")
+  verbatim <- grepl("%TAG", text, fixed = TRUE)
+  # The tags whose handler ran, once for each node in the order the nodes end,
+  # in a copy where each occurrence in `ks` takes the tag numbered `tg` in
+  # place of its own, or NULL when the parser refuses the copy. With `blank`,
+  # the copy keeps the occurrences and puts as many spaces before them as the
+  # tags would add.
+  probe <- function(ks, tg, blank = FALSE) {
+    took <- integer(0)
+    handlers <- lapply(unique(tg), function(t) {
+      function(x) {
+        took <<- c(took, t)
+        x
+      }
+    })
+    names(handlers) <- paste0(prefix, unique(tg))
+    new <- paste0(lead[ks], if (verbatim) "!<!" else "!", prefix, tg, if (verbatim) "> &" else " &",
+                  name[ks])
+    if (blank) {
+      grow <- pmax(0L, nchar(new, type = "bytes") - nchar(found[ks], type = "bytes"))
+      new <- paste0(strrep(" ", grow), found[ks])
+    }
+    marked <- found
+    marked[ks] <- new
+    copy <- text
+    regmatches(copy, m) <- list(marked)
+    Encoding(copy) <- "UTF-8"
+    ok <- tryCatch({
+      suppressWarnings(parse(c(.tf_yaml_handlers, handlers), copy))
+      TRUE
+    }, error = function(e) FALSE)
+    if (ok) took
+  }
+  names_probed <- unique(name[probed])
+  id <- match(name, names_probed)
+  # The numbers of the names whose anchors the occurrences `ks` hold, once for
+  # each node, found by halves when a probe is refused.
+  halves <- function(ks) {
+    if (length(ks) == 0L) return(integer(0))
+    took <- probe(ks, id[ks])
+    if (!is.null(took)) return(took)
+    if (length(ks) == 1L) return(if (is.null(probe(ks, id[ks], TRUE))) integer(0) else id[ks])
+    half <- seq_len(length(ks) %/% 2L)
+    c(halves(ks[half]), halves(ks[-half]))
+  }
+  n <- length(names_probed)
+  if (n <= 256L) {
+    held <- probe(probed, id[probed])
+  } else {
+    base <- as.integer(ceiling(sqrt(n)))
+    held <- probe(probed, (id[probed] - 1L) %% base + 1L)
+    if (!is.null(held) && length(held) <= 1L) return(invisible())
+    if (!is.null(held)) {
+      high <- probe(probed, (id[probed] - 1L) %/% base + 1L)
+      held <- if (is.null(high) || length(high) != length(held)) NULL else (high - 1L) * base + held
+    }
+  }
+  if (is.null(held)) held <- halves(probed)
+  twice <- sort(unique(names_probed[held[duplicated(held)]]), method = "radix")
+  if (length(twice) > 0L) {
+    stop(sprintf("(%s) the anchor '%s' names two nodes", path, twice[[1L]]), call. = FALSE)
+  }
+  invisible()
 }
 
 # A YAML alias repeats the content its anchor names without repeating the
@@ -485,10 +637,12 @@ NULL
 # The escapes of a valid JSON text that R cannot hold: \u0000, a high surrogate
 # escape that the next escape does not pair with a low one, and a low surrogate
 # escape that is not the second of a pair. NULL when there is none, and
-# otherwise a list with `what`, the first in the text, `marks`, and `probe`, the
-# text with each such escape replaced by the escape of its mark. Once the text
-# is valid JSON, every backslash starts an escape inside a string, so the
-# escapes are listed in order by one pattern.
+# otherwise a list with `what`, the first in the text, `marks` and `probe`, the
+# text with each such escape replaced by the escape of its mark followed by the
+# four hex digits of the code point it stood for, so that two keys that differ
+# only in which surrogate they hold stay apart. Once the text is valid JSON,
+# every backslash starts an escape inside a string, so the escapes are listed
+# in order by one pattern.
 .tf_json_unreadable <- function(text) {
   bytes <- charToRaw(text)
   m <- gregexpr("\\\\(u[0-9A-Fa-f]{4}|.)", text, perl = TRUE, useBytes = TRUE)[[1L]]
@@ -502,6 +656,7 @@ NULL
   if (length(suspect) == 0L) return(NULL)
   bad <- character(0)
   at <- integer(0)
+  held <- integer(0)
   paired <- FALSE
   for (k in suspect) {
     if (paired) {
@@ -519,13 +674,19 @@ NULL
     }
     bad <- c(bad, what)
     at <- c(at, starts[[k]])
+    held <- c(held, cp[[k]])
   }
   if (length(bad) == 0L) return(NULL)
   marks <- .tf_free_marks(text)
+  pieces <- vector("list", 2L * length(at) + 1L)
+  from <- 1L
   for (i in seq_along(at)) {
-    bytes[at[[i]]:(at[[i]] + 5L)] <- charToRaw(sprintf("\\u%04X", marks[[bad[[i]]]]))
+    pieces[[2L * i - 1L]] <- bytes[seq_len(at[[i]] - from) + from - 1L]
+    pieces[[2L * i]] <- charToRaw(sprintf("\\u%04X%04x", marks[[bad[[i]]]], held[[i]]))
+    from <- at[[i]] + 6L
   }
-  probe <- rawToChar(bytes)
+  pieces[[length(pieces)]] <- bytes[seq_len(length(bytes) - from + 1L) + from - 1L]
+  probe <- rawToChar(unlist(pieces))
   Encoding(probe) <- "UTF-8"
   list(what = bad[[1L]], marks = marks, probe = probe)
 }
@@ -536,16 +697,21 @@ NULL
 # replaced by the escape of a mark in a probe copy, which is parsed: the mark
 # appears in a value or a key only where an escape stood in a double-quoted
 # scalar. A repeated key comes first, as in the Python twin, unless the key
-# itself holds U+0000. Any other error of the probe is left to the reading of
-# the file itself, which reports its own positions. libyaml refuses a
-# surrogate escape.
+# itself holds U+0000. Any other error of the probe, and an alias that names no
+# node, are left to the reading of the file itself, which reports its own
+# positions. libyaml refuses a surrogate escape.
 .tf_yaml_refuse_nul <- function(text, path, parse) {
   nul <- "(?<!\\\\)((?:\\\\\\\\)*)\\\\(?:0|x00|u0000|U00000000)"
   if (!grepl(nul, text, perl = TRUE, useBytes = TRUE)) return(invisible())
   mark <- .tf_free_marks(text)[["U+0000"]]
   probe <- gsub(nul, sprintf("\\1\\\\u%04X", mark), text, perl = TRUE, useBytes = TRUE)
   Encoding(probe) <- "UTF-8"
-  data <- tryCatch(suppressWarnings(parse(.tf_yaml_handlers, probe)), error = function(e) e)
+  unknown <- FALSE
+  data <- tryCatch(withCallingHandlers(parse(.tf_yaml_handlers, probe), warning = function(w) {
+    if (startsWith(conditionMessage(w), "Unknown anchor: ")) unknown <<- TRUE
+    invokeRestart("muffleWarning")
+  }), error = function(e) e)
+  if (unknown) return(invisible())
   if (inherits(data, "error")) {
     msg <- conditionMessage(data)
     if (grepl("Duplicate map key: '", msg, fixed = TRUE) &&

@@ -357,8 +357,10 @@ async function recordedHash(page, lang) {
   if (!(await page.$eval('.ed-sec[data-sec="theory"]', (d) => d.open))) await page.click('.ed-sec[data-sec="theory"] > summary');
   await page.click('.ed-sec[data-sec="theory"] button:has-text("Record the current hash")');
   await page.waitForFunction(() => /content_hash: sha256:/.test(document.querySelector("#edSource").value), null, { timeout: RUN_MS });
-  // The engine reads the change once typing pauses.
-  await page.waitForTimeout(1500);
+  // The engine reads the change once typing pauses. The summary then marks
+  // the theory as edited and, once the engine has hashed it, shows the hash.
+  await page.waitForFunction(() => (document.querySelector("#summaryWrap .meta")?.textContent || "")
+    .endsWith(" \u00b7 edited") && document.querySelector("#summaryWrap .hash code"), null, { timeout: RUN_MS });
   await idle(page);
   const after = await state();
   if (!after.valid) fail(`${lang} recorded hash`, "recording the current hash made the theory invalid: " + after.status);

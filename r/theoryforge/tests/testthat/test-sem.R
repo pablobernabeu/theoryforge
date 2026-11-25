@@ -541,6 +541,12 @@ test_that("no effect is defined across a feedback loop", {
                           list(c("x", "y", "positive")), constructs = c("x", "y", "a", "b"))
   expect_identical(.effects_block(theory), c(
     .SEM_EFFECTS, .sem_claimed("h1", "x", "y", "is positive"), .sem_effect_loop("x", "y")))
+  # The outcome itself lies on the loop y <-> z of x -> y.
+  theory <- .claim_theory(list(c("x", "increases", "y"), c("y", "increases", "z"),
+                               c("z", "increases", "y")),
+                          list(c("x", "y", "positive")), constructs = c("x", "y", "z"))
+  expect_identical(.effects_block(theory), c(
+    .SEM_EFFECTS, .sem_claimed("h1", "x", "y", "is positive"), .sem_effect_loop("x", "y")))
 })
 
 test_that("an effect is defined when the feedback loop lies off its paths", {

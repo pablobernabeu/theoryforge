@@ -31,20 +31,24 @@ NULL
 #' \code{off} are logicals. Integers are decimal, octal or hexadecimal only, so
 #' \code{1:30} and \code{1_000} are strings, and so is a number written with a
 #' comma (\code{1,000}). An integer too large for an R integer is read as a
-#' double. A tab is read as YAML allows it: as white space after a value,
-#' before a comment and in a flow collection, and as text inside an unquoted
-#' value. A merge key (\code{<<}) lets the mapping's own keys win. A key
-#' repeated in any mapping, in YAML or JSON, stops with
-#' \code{(<path>) Duplicate map key: '<key>'}. A YAML document that holds
-#' more than 1000000 values once its aliases (\code{*a}) are expanded stops
-#' with \code{(<path>) the document holds more than 1000000 values once its
-#' aliases are expanded}, before anything walks it. A comment in a JSON file
-#' stops with the message of the JSON parser, since JSON has no comments. A
-#' string or key that holds U+0000 or a lone surrogate, which R would cut short
-#' or misread, stops with \code{(<path>) a string holds U+0000, which
-#' theoryforge cannot read}, or the same message naming \code{a lone
-#' surrogate}. A document that is not a mapping, such as a sequence or an empty
-#' YAML file, stops with \code{Theory data must be a mapping}.
+#' double. A tab is read as YAML allows it: as white space after a value, before
+#' a comment and in a flow collection, and as text inside an unquoted value. A
+#' merge key (\code{<<}) lets the mapping's own keys win. A key repeated in any
+#' mapping, in YAML or JSON, stops with \code{(<path>) Duplicate map key:
+#' '<key>'}. A YAML document that holds more than 1000000 values once its
+#' aliases (\code{*a}) are expanded stops with \code{(<path>) the document holds
+#' more than 1000000 values once its aliases are expanded}, before anything
+#' walks it. An alias whose anchor is undefined, or that lies inside the node
+#' its anchor names, stops with \code{(<path>) the alias '<name>' names no node
+#' that ends before it}, and an anchor given to two nodes with \code{(<path>)
+#' the anchor '<name>' names two nodes}, where yaml would read a placeholder or
+#' the first of the two nodes. A comment in a JSON file stops with the message
+#' of the JSON parser, since JSON has no comments. A string or key that holds
+#' U+0000 or a lone surrogate, which R would cut short or misread, stops with
+#' \code{(<path>) a string holds U+0000, which theoryforge cannot read}, or the
+#' same message naming \code{a lone surrogate}. A document that is not a
+#' mapping, such as a sequence or an empty YAML file, stops with \code{Theory
+#' data must be a mapping}.
 #'
 #' @param path Path to a \code{.yaml}, \code{.yml} or \code{.json} file.
 #' @return A named list holding the parsed theory object.

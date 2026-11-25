@@ -125,6 +125,12 @@ def test_lit_diagrams(fixtures_dir, panic_path):
         tf.lit_diagram(lm, "mindmap")
     assert str(err.value) == ("unknown lit diagram type 'mindmap'; expected one of "
                               "keyword_cooccurrence, co_citation, theme_landscape")
+    # A value that is not a string is written as repr() writes it, as R writes
+    # NULL with deparse().
+    with pytest.raises(ValueError) as err:
+        tf.lit_diagram(lm, None)
+    assert str(err.value) == ("unknown lit diagram type None; expected one of "
+                              "keyword_cooccurrence, co_citation, theme_landscape")
 
 
 # -- validated arguments and corpora (API_SPEC.md section 14) -----------------

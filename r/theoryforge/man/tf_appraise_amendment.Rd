@@ -28,10 +28,13 @@ list of \code{list(id, change)} records, one per revised prediction sorted
 by its new id, where \code{change} is \code{"weakened"},
 \code{"strengthened"}, \code{"reworded"} or \code{"changed"}.
 \code{assumptions} holds one
-\code{list(id, added_for, class, independent, added_for_inferred)} per new
-or revised assumption added for an anomaly, in file order.
+\code{list(id, added_for, class, independent, added_for_inferred, change)}
+per new or revised assumption added for an anomaly, in file order.
 \code{added_for_inferred} is \code{TRUE} when \code{added_for} was taken
-from \code{protects}. \code{independent} lists, each as
+from \code{protects}. \code{change} is \code{"new"} for an assumption
+under an id the prior lacks and \code{"revised"} for one kept under its id
+whose statement changed, by any change of wording, even one that keeps its
+meaning. \code{independent} lists, each as
 \code{list(id, status)} and in the order of \code{protects}, the distinct
 predictions the assumption protects that are new in this version and
 differ from \code{added_for}, with their status in \code{new}

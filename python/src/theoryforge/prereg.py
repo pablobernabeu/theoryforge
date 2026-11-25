@@ -418,10 +418,11 @@ def preregister(theory, path=None, cycles: str = "refuse") -> str:
     allow, its claim and what the causal graph says of it, what an
     observational test of an effect claim must adjust for, the auxiliary
     assumptions that protect it (``core`` or ``added for <id>``), the
-    registered rivals it is declared to discriminate, with how each rival's
-    own propositions read the claim, and its test record. A hypothesis that a recorded outcome
-    has already tested reads ``already tested: passed (<date>, registered
-    <where>)``, one entry per outcome, and any other reads ``untested``.
+    registered rivals it is declared to discriminate, with how each rival's own
+    propositions read the claim, and its test record. A hypothesis that a
+    recorded outcome has already tested reads ``already tested: passed (<date>,
+    registered <where>)``, one entry per outcome, and any other reads
+    ``untested``.
 
     When at least one prediction states a sampling plan in its ``test`` block,
     a section headed ``Sampling plan (author-recorded; not scored)`` follows,

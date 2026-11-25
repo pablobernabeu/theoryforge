@@ -161,7 +161,7 @@
 #' 8785 specifies (Rundgren et al., 2020). Three conventions make it the same
 #' in R and Python: an empty mapping is written as an empty sequence, an
 #' infinity or a missing number as \code{Infinity}, \code{-Infinity} or
-#' \code{NaN}, and a single value in a field that the schema types as an array
+#' \code{NaN} and a single value in a field that the schema types as an array
 #' of strings, such as \code{measurement} or \code{derives_from}, as a
 #' one-element array, since a reader takes \code{derives_from: p1} for
 #' \code{[p1]}. [tf_write()] writes such a field as an array, so a theory keeps

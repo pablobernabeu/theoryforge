@@ -1,0 +1,21 @@
+# Edge case: an alias inside the node its anchor names. R's yaml package read
+# the alias as the text "_yaml.bad-anchor_" with a warning, and Python read a
+# list that holds itself, which the content hash, the writers and the dossier
+# could not walk. Both twins refuse the file (API_SPEC.md section 3).
+schema_version: "1.1"
+id: edge-alias-recursive
+title: A provenance list that holds itself
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+provenance: &log [*log]

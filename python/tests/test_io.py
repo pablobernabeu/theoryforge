@@ -249,6 +249,64 @@ def test_aliases_that_expand_past_the_limit_refuse_the_file(tmp_path):
     assert [c["id"] for c in t.data["constructs"]] == ["c1", "c2"]
 
 
+# Aliases R's yaml package and PyYAML read apart (API_SPEC.md section 3). Each
+# entry is (text, the message without its path, or None when the file reads).
+# The R suite reads the same texts.
+ALIAS_FAULTS = [
+    ("id: x\na: *u\n", "the alias 'u' names no node that ends before it"),
+    ("id: x\na: &p [*p]\n", "the alias 'p' names no node that ends before it"),
+    ("id: x\na: &p {b: *p}\n", "the alias 'p' names no node that ends before it"),
+    ("id: x\na: &x 1\nb: &x 2\nc: *x\n", "the anchor 'x' names two nodes"),
+    ("id: x\na: &x [&x 1]\n", "the anchor 'x' names two nodes"),
+    ("id: x\na: !!str &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
+    ("id: x\na: &x 1 # &x\nb: '&x'\nc: R &x\nd: |\n  &x\ne: *x\n", None),
+    # The second &x is text beside a tagged anchor, and the first text in a key
+    # of 1024 characters, the most libyaml allows, which any tag lengthens.
+    ("id: x\na: !!str &x 1\nb: c &x\nc: *x\n", None),
+    ("k" * 1021 + " &x: 1\nb: &x 2\n", None),
+    # A tag that ends the line above an anchor is that node's, and one in a
+    # comment is text.
+    ("c:\n  label: !!str\n    &l1 Alpha\n  def: &l1 x\n", "the anchor 'l1' names two nodes"),
+    ("id: x\n# note !x\n&a k: 1\nb: text &a\n", None),
+    # A %TAG directive that redefines !, and a byte-order mark at the start of
+    # a line, which libyaml skips.
+    ("%TAG ! tag:example.com,2000:\n---\nid: s\na: &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
+    ("%TAG ! tag:example.com,2000:\n---\n{id: s, a: &x 1, b: &x 2}\n", "the anchor 'x' names two nodes"),
+    ("id: s\na: [1,\n\ufeff&x 2]\nb: &x 3\n", "the anchor 'x' names two nodes"),
+    # More names than the R twin probes with one tag each.
+    ("".join(f"k{i}: &n{i} {i}\n" for i in range(300)) + "".join(f"t{i}: text &n{i}\n" for i in range(300))
+     + "z: &n257 x\n", "the anchor 'n257' names two nodes"),
+    ("".join(f"k{i}: &n{i} {i}\n" for i in range(300)) + "".join(f"t{i}: text &n{i}\n" for i in range(300)),
+     None),
+    # A next-line character is a line break to libyaml, and with more than one
+    # anchor given twice, the first by code point is named.
+    ("id: x\na: 1\x85&x b: 2\x85&x c: 3\n", "the anchor 'x' names two nodes"),
+    ("id: x\np: &y 1\nq: &y 2\nr: &b 3\ns: &b 4\n", "the anchor 'b' names two nodes"),
+    # As both readers meet them: a repeated key, as its mapping ends, or an alias
+    # that names no node, whichever comes first, then U+0000, then an anchor
+    # given twice.
+    ("id: x\nk: {a: 1, a: 2}\nz: *u\n", "Duplicate map key: 'a'"),
+    # A block mapping ends where the alias after it begins.
+    ("m:\n  a: 1\n  a: 2\n*u : 3\n", "Duplicate map key: 'a'"),
+    ("id: x\nz: *u\nk: {a: 1, a: 2}\n", "the alias 'u' names no node that ends before it"),
+    ("id: x\nz: *u\nt: \"a" + "\\" + "0b\"\n", "the alias 'u' names no node that ends before it"),
+    ("id: x\nt: \"a" + "\\" + "0b\"\na: &x 1\nb: &x 2\n",
+     "a string holds U+0000, which theoryforge cannot read"),
+    ("id: x\na: &x 1\nb: &x 2\nc: *u\n", "the alias 'u' names no node that ends before it"),
+]
+
+
+@pytest.mark.parametrize(("text", "message"), ALIAS_FAULTS)
+def test_an_alias_that_names_no_node_and_an_anchor_given_twice_are_refused(tmp_path, text, message):
+    path = _file(tmp_path, "aliases.theory.yaml", text)
+    if message is None:
+        assert isinstance(tf.read(path).data, dict)
+        return
+    with pytest.raises(ValueError) as err:
+        tf.read(path)
+    assert str(err.value) == f"({path}) {message}"
+
+
 def test_an_unquoted_date_stays_a_string_and_writes_to_json(tmp_path):
     t = tf.read(_file(tmp_path, "date.theory.yaml", DATE_THEORY))
     outcome = t.data["test_outcomes"][0]
@@ -346,6 +404,11 @@ UNREADABLE = [
     ("nulu.theory.yaml", 'id: x\ntitle: "before' + BS + 'u0000after"\n', "U+0000"),
     ("keys.theory.yaml", '"a' + BS + '0b": 1\n"a' + BS + '0c": 2\n', "U+0000"),
     ("dupkey.theory.yaml", '"a' + BS + '0b": 1\n"a' + BS + '0b": 2\n', "U+0000"),
+    # A key whose value is null or an empty collection, which R's unlist()
+    # would drop, is searched too.
+    ("nullkey.theory.yaml", 'id: x\nextra:\n  "a' + BS + '0b": ~\n', "U+0000"),
+    ("seqkey.theory.yaml", 'id: x\nextra:\n  "a' + BS + '0b": []\n', "U+0000"),
+    ("mapkey.theory.yaml", 'id: x\nextra:\n  "a' + BS + '0b": {}\n', "U+0000"),
     # A paired surrogate escape is one character, an escaped backslash is no
     # escape, and only a double-quoted YAML scalar has escapes.
     ("pair.theory.json", '{"id": "x", "title": "a' + BS + 'uD83D' + BS + 'uDE00b"}', None),
@@ -374,6 +437,12 @@ def test_a_repeated_key_is_reported_before_a_string_r_cannot_hold(tmp_path):
                        ("dup.theory.yaml", 'k: {a: 1, a: 2}\nt: "' + BS + '0"\n')]:
         with pytest.raises(ValueError, match="Duplicate map key: 'a'"):
             tf.read(_file(tmp_path, name, text))
+    # Two keys that differ only in which lone surrogate they hold are two keys,
+    # so the repeat reported is the one after them.
+    text = ('{"id": "x", "a": {"' + BS + 'ud800": 1, "' + BS + 'udbff": 2}, '
+            '"b": {"q": 1, "q": 2}}')
+    with pytest.raises(ValueError, match="Duplicate map key: 'q'"):
+        tf.read(_file(tmp_path, "surrogate-keys.theory.json", text))
 
 
 def test_json_comments_are_refused(tmp_path):
@@ -477,6 +546,23 @@ def test_a_written_string_reads_back_as_the_same_string(tmp_path, value):
     assert tf.read(out).data["title"] == value
 
 
+def test_written_yaml_escapes_a_next_line_character(tmp_path):
+    # YAML counts U+0085, U+2028 and U+2029 as line breaks. libyaml read U+0085
+    # written in single quotes as a line feed and folded it into a space, so
+    # it is written in double quotes as \N, as the R twin writes it. The
+    # escapes of the other two follow in such a string. Alone, those two are
+    # written as they are, and read back.
+    t = tf.new_theory("w", "Panic\x85disorder")
+    t.data["constructs"] = [{"id": "c1", "label": "a\u2028b", "definition": "c\u2029d\x85"}]
+    out = tmp_path / "w.theory.yaml"
+    t.write(out)
+    text = out.read_text(encoding="utf-8")
+    assert 'title: "Panic\\Ndisorder"' in text and 'definition: "c\\Pd\\N"' in text
+    back = tf.read(out).data
+    assert back["title"] == "Panic\x85disorder"
+    assert back["constructs"] == t.data["constructs"]
+
+
 def test_written_yaml_quotes_what_r_takes_for_a_number(tmp_path):
     # R's yaml package takes 1,000 and a bare dot for numbers it cannot convert,
     # and theoryforge 0.6.0 in R reads NA for them, so the writer quotes them.
@@ -530,7 +616,8 @@ def test_yaml_is_parsed_with_libyaml_as_r_parses_it():
 
 
 def test_a_tab_reads_as_r_reads_it(tmp_path):
-    yaml = pytest.importorskip("yaml")
+    import yaml
+
     if not yaml.__with_libyaml__:
         pytest.skip("PyYAML was built without libyaml")
     t = tf.read(_file(tmp_path, "tabs.theory.yaml", TABS))
@@ -540,8 +627,9 @@ def test_a_tab_reads_as_r_reads_it(tmp_path):
         {"id": "c2", "label": "Beta", "definition": "Appraised danger."}]
     assert t.data["predictions"][0]["derives_from"] == ["p1", "p2"]
     # A tab that YAML does not allow is refused by both twins: one that indents
-    # a line, and one right after the dash of a sequence entry.
-    for i, text in enumerate(["id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n"]):
+    # a line, and one between the dash of a sequence entry and its content.
+    for i, text in enumerate(["id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n",
+                              "id: a\nconstructs:\n  - \tc1\n"]):
         with pytest.raises(yaml.YAMLError, match="found character that cannot start any token"):
             tf.read(_file(tmp_path, f"bad{i}.theory.yaml", text))
 

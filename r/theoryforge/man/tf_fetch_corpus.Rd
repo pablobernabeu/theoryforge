@@ -62,6 +62,9 @@ When OpenAlex refuses a request, as it does with HTTP 429 once the budget is
 spent and with HTTP 401 when a later cursor page is asked for without a key,
 the function stops with the status and, when the suggested \pkg{curl}
 package is installed, OpenAlex's own message. The request is not retried.
+A response without a \code{results} list, or with a work that is not an
+object, stops. Keyword and concept entries without a name given as text,
+and references that are not text, are left out.
 When a page after the first fails, the works fetched before it are not
 returned, and the message ends with the number of them, as in
 \code{(after 200 records were fetched)}. Every request is abandoned after

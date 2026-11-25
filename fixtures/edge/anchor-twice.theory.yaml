@@ -1,0 +1,24 @@
+# Edge case: one anchor given to two nodes. YAML binds a later alias to the
+# last of them. R's yaml package bound it to the first, so the third label
+# read as Alpha, and Python refused the file. Both twins refuse it (API_SPEC.md
+# section 3). The &name in the comment, in the definition and in the quoted
+# title is text, not an anchor.
+schema_version: "1.1"
+id: edge-anchor-twice
+title: "Two labels anchored as &name"
+maturity: building
+constructs:
+  - id: c1
+    label: &name Alpha
+    definition: The first construct, whose label is anchored as &name.
+  - id: c2
+    label: &name Beta
+    definition: The second construct.
+  - id: c3
+    label: *name
+    definition: The third construct, whose label is the anchor's.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases

@@ -223,7 +223,11 @@ what the prior version already held, and a prediction under a new id with the sa
 statement and type is reported as `renamed`. An assumption added for an anomaly is ad hoc
 unless a new prediction it protects, other than that anomaly, is corroborated. An
 assumption rewritten under its id is appraised as a new one is, and one moved unchanged to
-another id is not appraised. The appraisal reads no dates, so deciding which version is the prior is the caller's
+another id is not appraised. Any change of wording counts, even one that keeps the
+meaning, so a core assumption reworded under its id is appraised and, when it protects a
+prediction that failed in the prior, is read as answering it. Each appraised assumption
+that answers an anomaly is listed in `assumptions` with its `change`, `new` or `revised`.
+The appraisal reads no dates, so deciding which version is the prior is the caller's
 responsibility. The returned dictionary holds further fields, listed in the
 [API reference](api.md#theoryforge.appraise_amendment), and
 [Methodological foundations](methodology.md) gives the full rule.
@@ -352,8 +356,8 @@ print(switching.data["predictions"][0]["claim"])
 constructs decide whether the graph entails the claim, contradicts it or leaves it
 undetermined, and `via` names the propositions the verdict rests on. For an effect claim on
 an acyclic graph, `adjustment` gives a smallest set of constructs whose adjustment would
-identify the effect in observational data, here the empty set, or a minimal set when more
-than 12 constructs are candidates.
+identify the effect in observational data, or a minimal set when more than 12 constructs
+are candidates. Here it is the empty set.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 entailed = switching.entailments()

@@ -406,12 +406,14 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     product of the signs along each directed path from ``x`` to ``y``. The
     sign of a marginal association is the product along each simple trek, a
     pair of directed paths from a common source to the two constructs that
-    share no other construct, and a trek that passes through an association
-    has no fixed sign. When every path or trek has the same sign, the graph
-    fixes the sign of the quantity. When none exists, the quantity is zero. A
-    trek whose two paths share an edge adds no term of its own, since the
-    square of that edge's coefficient is part of a variance, so when ``t``
-    causes ``u`` and ``u`` increases ``y``, ``u`` and ``y`` are positively
+    share no other construct, or a directed path from each end of an
+    association to the two constructs that share no construct. A trek topped
+    by an association has no fixed sign. When every path or trek has the same
+    sign, the graph fixes the sign of the quantity. When none exists, the
+    quantity is zero. A trek whose two paths share a construct adds no term of
+    its own, since the product of the coefficients that lead to the construct
+    they share is part of that construct's variance, so when ``t`` causes
+    ``u`` and ``u`` increases ``y``, ``u`` and ``y`` are positively
     associated. A conditional association is zero when the two constructs are
     m-separated given the others and nonzero otherwise.
 
@@ -456,8 +458,8 @@ def entailments(theory, cycles: str = "refuse") -> dict:
 
     Raises:
         ValueError: if ``cycles`` is not ``"refuse"`` or ``"sigma"``, if two
-            constructs share an id or if a directed relation names a construct
-            the theory has not declared.
+            constructs share an id or if a proposition, directed or an
+            association, names a construct the theory has not declared.
 
     References:
         van der Zander, B., Liśkiewicz, M., & Textor, J. (2019). Separators and
@@ -637,8 +639,9 @@ def equivalent_models(theory) -> dict:
     ``reversible``.
 
     Raises:
-        ValueError: if two constructs share an id or if a directed relation
-            names a construct the theory has not declared.
+        ValueError: if two constructs share an id or if a proposition,
+            directed or an association, names a construct the theory has not
+            declared.
 
     References:
         Andersson, S. A., Madigan, D., & Perlman, M. D. (1997). A

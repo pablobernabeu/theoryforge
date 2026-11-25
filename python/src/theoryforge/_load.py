@@ -26,7 +26,16 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from yaml.composer import ComposerError
 from yaml.constructor import ConstructorError
+from yaml.events import (
+    AliasEvent,
+    MappingEndEvent,
+    ScalarEvent,
+    SequenceEndEvent,
+    SequenceStartEvent,
+    StreamEndEvent,
+)
 from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
 _MERGE = "tag:yaml.org,2002:merge"
@@ -47,11 +56,28 @@ _FLOAT = re.compile(
 
 
 class _DuplicateKey(Exception):
-    """A mapping repeats a key. ``load_document`` adds the file's path to the message."""
+    """A mapping repeats a key. ``load_document`` adds the file's path to the message.
 
-    def __init__(self, key: Any) -> None:
+    ``mark`` is where the YAML mapping ends, the point at which R's yaml package
+    refuses it, and None for JSON.
+    """
+
+    def __init__(self, key: Any, mark: Any = None) -> None:
         super().__init__(key)
         self.key = key
+        self.mark = mark
+
+
+class _Recursive(Exception):
+    """An alias lies inside the node its anchor names, so the composed document is cyclic."""
+
+
+class _AliasFault(Exception):
+    """An alias names no node that ends before it. ``load_document`` words the message."""
+
+    def __init__(self, anchor: str) -> None:
+        super().__init__(anchor)
+        self.anchor = anchor
 
 
 # libyaml is the parser that R's yaml package bundles, so with it both twins
@@ -174,13 +200,23 @@ def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
     first in the text. The walk therefore visits a node's children before the node,
     and it runs on the composed document before any merge is resolved, so a merged
     key never counts as a repeat. Merge keys themselves are skipped, as R does.
+
+    An alias inside the node its anchor names makes the composed document cyclic,
+    and R reads such an alias as one that names no node. The walk then raises
+    ``_Recursive``, whatever key it has found repeated, so that ``load_document``
+    reads the text again as R does.
     """
     visited: set[int] = set()
+    active: set[int] = set()
+    repeats: list[_DuplicateKey] = []
 
     def visit(node: Node) -> None:
+        if id(node) in active:  # an alias inside the node it names
+            raise _Recursive()
         if id(node) in visited:  # an alias of a node already checked
             return
         visited.add(id(node))
+        active.add(id(node))
         if isinstance(node, SequenceNode):
             for child in node.value:
                 visit(child)
@@ -195,11 +231,150 @@ def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
                 if key_node.tag == _VALUE:  # an explicit !!value key, which PyYAML reads as text
                     key_node.tag = "tag:yaml.org,2002:str"
                 key = _key_text(loader.construct_object(key_node))
-                if key in seen:
-                    raise _DuplicateKey(key)
+                if key in seen and not repeats:
+                    repeats.append(_DuplicateKey(key, node.end_mark))
                 seen.add(key)
+        active.discard(id(node))
 
     visit(root)
+    if repeats:
+        raise repeats[0]
+
+
+# The text R's yaml package gives an alias that names no node it has read.
+_BAD_ANCHOR = "_yaml.bad-anchor_"
+
+
+class _TolerantComposer:
+    """Compose a document as R's yaml package binds its aliases, noting what R refuses.
+
+    R records an anchor when its node ends and binds an alias to the first node
+    with that anchor to have ended. Three cases follow. An alias whose anchor
+    is undefined, and one inside the node its anchor names, read in R as the
+    text ``_yaml.bad-anchor_`` with a warning, and an anchor given to a second
+    node passes without one. PyYAML refuses the first and the third and builds
+    a cyclic node for the second. A loader with this composer reads all three
+    as R does. It notes, in ``unknown``, the first alias that names no node and
+    where it stands, and, in ``twice``, every anchor given to a second node.
+    ``load_document`` uses it only when the ordinary loader has met one of the
+    three, so that it can refuse the file at the point where R's reader
+    refuses it.
+    """
+
+    unknown: tuple[str, int] | None = None
+    twice: set[str]
+
+    def get_single_node(self) -> Node | None:
+        loader: Any = self
+        loader.get_event()  # the start of the stream
+        self._ended: dict[str, Node] = {}
+        self._started: set[str] = set()
+        self.twice = set()
+        document: Any = None
+        if not loader.check_event(StreamEndEvent):
+            loader.get_event()  # the start of the document
+            document = self._compose(None, None)
+            loader.get_event()  # the end of the document
+        if not loader.check_event(StreamEndEvent):
+            event = loader.get_event()
+            raise ComposerError("expected a single document in the stream", document.start_mark,
+                                "but found another document", event.start_mark)
+        loader.get_event()  # the end of the stream
+        return document
+
+    def _compose(self, parent: Node | None, index: Any) -> Node:
+        loader: Any = self
+        if loader.check_event(AliasEvent):
+            event = loader.get_event()
+            found = self._ended.get(event.anchor)
+            if found is not None:
+                return found
+            if self.unknown is None:
+                self.unknown = (event.anchor, event.start_mark.index)
+            return ScalarNode("tag:yaml.org,2002:str", _BAD_ANCHOR, event.start_mark, event.end_mark)
+        anchor = loader.peek_event().anchor
+        if anchor is not None:
+            if anchor in self._started:
+                self.twice.add(anchor)
+            self._started.add(anchor)
+        loader.descend_resolver(parent, index)
+        start = loader.get_event()
+        node: Node
+        if isinstance(start, ScalarEvent):
+            tag = start.tag
+            if tag is None or tag == "!":
+                tag = loader.resolve(ScalarNode, start.value, start.implicit)
+            node = ScalarNode(tag, start.value, start.start_mark, start.end_mark, style=start.style)
+        elif isinstance(start, SequenceStartEvent):
+            tag = start.tag
+            if tag is None or tag == "!":
+                tag = loader.resolve(SequenceNode, None, start.implicit)
+            node = SequenceNode(tag, [], start.start_mark, None, flow_style=start.flow_style)
+            while not loader.check_event(SequenceEndEvent):
+                node.value.append(self._compose(node, len(node.value)))
+            node.end_mark = loader.get_event().end_mark
+        else:
+            tag = start.tag
+            if tag is None or tag == "!":
+                tag = loader.resolve(MappingNode, None, start.implicit)
+            node = MappingNode(tag, [], start.start_mark, None, flow_style=start.flow_style)
+            while not loader.check_event(MappingEndEvent):
+                key = self._compose(node, None)
+                node.value.append((key, self._compose(node, key)))
+            node.end_mark = loader.get_event().end_mark
+        loader.ascend_resolver()
+        if anchor is not None:
+            self._ended.setdefault(anchor, node)
+        return node
+
+
+class _TolerantLoader(_TolerantComposer, _StrictLoader):
+    """``_StrictLoader`` with the composer that binds aliases as R does."""
+
+
+def _load_yaml(text: str) -> tuple[Any, set[str]]:
+    """The document ``text`` holds, and the anchors it gives to two nodes.
+
+    libyaml's composer refuses an undefined alias and an anchor given to a
+    second node, and composes an alias inside the node its anchor names as a
+    cycle. R's yaml package reads all three, and R's reader refuses them once
+    it has read them. When the ordinary loader meets one, the text is read
+    again by ``_TolerantLoader``, which reads it as R does, so that the file is
+    refused at the point where R refuses it. An alias that names no node raises
+    ``_AliasFault``, unless a syntax error comes before it in the text or a
+    mapping that repeats a key ends before it, since R's yaml package checks
+    the keys of a mapping as the mapping ends. A block mapping ends where the
+    token after it begins, so an alias that is that token comes after the end,
+    while an error of the parser or the constructor that the alias itself
+    causes, such as a merge of the alias, is marked where the alias stands.
+    """
+    loader = _StrictLoader(text)
+    try:
+        return loader.get_single_data(), set()
+    except ComposerError as err:
+        if "undefined alias" not in str(err) and "duplicate anchor" not in str(err):
+            raise
+    except _Recursive:
+        pass
+    finally:
+        loader.dispose()
+    tolerant = _TolerantLoader(text)
+    try:
+        try:
+            data = tolerant.get_single_data()
+        except (_DuplicateKey, yaml.YAMLError) as err:
+            if isinstance(err, _DuplicateKey):
+                mark, after = err.mark, 0
+            else:
+                mark, after = getattr(err, "problem_mark", None), 1
+            if tolerant.unknown is not None and (mark is None or tolerant.unknown[1] < mark.index + after):
+                raise _AliasFault(tolerant.unknown[0]) from None
+            raise
+    finally:
+        tolerant.dispose()
+    if tolerant.unknown is not None:
+        raise _AliasFault(tolerant.unknown[0])
+    return data, tolerant.twice
 
 
 def _unique_pairs(pairs: list[tuple[str, Any]]) -> dict:
@@ -289,28 +464,38 @@ def load_document(path) -> Any:
     or the same message naming ``a lone surrogate``. A repeated key is reported
     first, unless the key itself holds one of the two, and the size before either
     character. JSON has no comments, and ``json`` refuses them.
+
+    A YAML alias that names no node that ends before it, because its anchor is
+    undefined or because the alias lies inside the node its anchor names, raises
+    ``ValueError("(<path>) the alias '<name>' names no node that ends before
+    it")``, unless a syntax error comes before it in the text or a mapping that
+    repeats a key ends before it. An anchor given to two nodes raises
+    ``ValueError("(<path>) the anchor '<name>' names two nodes")`` once the
+    file has passed every other check, naming the first such anchor by code
+    point.
     """
     path = Path(path)
     text = path.read_bytes().decode("utf-8-sig")
+    twice: set[str] = set()
     try:
         if path.suffix.lower() == ".json":
             data = json.loads(text, object_pairs_hook=_unique_pairs)
         else:
-            loader = _StrictLoader(text)
-            try:
-                data = loader.get_single_data()
-            finally:
-                loader.dispose()
+            data, twice = _load_yaml(text)
     except _DuplicateKey as dup:
         what = _unreadable(str(dup.key))
         if what:
             raise ValueError(f"({path}) a string holds {what}, which theoryforge cannot read") from None
         raise ValueError(f"({path}) Duplicate map key: '{dup.key}'") from None
+    except _AliasFault as fault:
+        raise ValueError(f"({path}) the alias '{fault.anchor}' names no node that ends before it") from None
     if path.suffix.lower() != ".json":
         _check_size(data, path)
     what = _unreadable(data)
     if what:
         raise ValueError(f"({path}) a string holds {what}, which theoryforge cannot read")
+    if twice:
+        raise ValueError(f"({path}) the anchor '{min(twice)}' names two nodes")
     return data
 
 
@@ -338,6 +523,19 @@ _Dumper.add_implicit_resolver("tag:yaml.org,2002:float", _FLOAT, list("-+0123456
 _Dumper.add_implicit_resolver(
     "tag:yaml.org,2002:null", re.compile(r"^\.na(?:\.real|\.integer|\.character)?$"), ["."])
 _Dumper.add_implicit_resolver("tag:yaml.org,2002:float", _R_NUMBER, list("-+0123456789."))
+
+# YAML counts U+0085 (NEL) as a line break. PyYAML writes a string that holds
+# one in single quotes with the break as it is, which libyaml reads as a line
+# feed, and the fold of a quoted scalar turns that into a space. Double quotes
+# write it as the escape \N, which both twins read back, as the R twin's
+# writer does. U+2028 and U+2029 are line breaks too, but a reader keeps them.
+def _represent_str(dumper: yaml.SafeDumper, data: str) -> yaml.ScalarNode:
+    if "\x85" in data:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
+    return dumper.represent_str(data)
+
+
+_Dumper.add_representer(str, _represent_str)
 
 
 def dump_yaml(data: Any) -> str:

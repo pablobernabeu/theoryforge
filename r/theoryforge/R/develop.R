@@ -160,10 +160,11 @@ NULL
   any(vapply(recs, function(r) (r$a == a && r$b == b) || (r$a == b && r$b == a), logical(1)))
 }
 
-# The assumptions of `new` that the appraisal reads, in file order. An
-# assumption kept under a prior id is read when its statement, with whitespace
-# runs squished, differs from that of the first prior assumption with that id.
-# An assumption under an id the prior lacks is read unless its statement is not
+# The assumptions of `new` that the appraisal reads, in file order, each as
+# list(a, change). An assumption kept under a prior id is read, as "revised",
+# when its statement, with whitespace runs squished, differs from that of the
+# first prior assumption with that id, by any change of wording. An assumption
+# under an id the prior lacks is read, as "new", unless its statement is not
 # blank and matches that of a prior assumption whose id the new version no
 # longer holds, which it then takes, so that a renamed assumption is not new.
 # Its added_for and protects alone do not decide. Python's
@@ -182,7 +183,7 @@ NULL
     st <- .tf_squish(.tf_str(a, "statement"))
     k <- match(aid, prior_ids)
     if (!is.na(k)) {
-      if (st != prior_statements[[k]]) read[[length(read) + 1L]] <- a
+      if (st != prior_statements[[k]]) read[[length(read) + 1L]] <- list(a = a, change = "revised")
       next
     }
     renamed <- FALSE
@@ -195,7 +196,7 @@ NULL
         }
       }
     }
-    if (!renamed) read[[length(read) + 1L]] <- a
+    if (!renamed) read[[length(read) + 1L]] <- list(a = a, change = "new")
   }
   read
 }
@@ -276,10 +277,13 @@ NULL
 #'   by its new id, where \code{change} is \code{"weakened"},
 #'   \code{"strengthened"}, \code{"reworded"} or \code{"changed"}.
 #'   \code{assumptions} holds one
-#'   \code{list(id, added_for, class, independent, added_for_inferred)} per new
-#'   or revised assumption added for an anomaly, in file order.
+#'   \code{list(id, added_for, class, independent, added_for_inferred, change)}
+#'   per new or revised assumption added for an anomaly, in file order.
 #'   \code{added_for_inferred} is \code{TRUE} when \code{added_for} was taken
-#'   from \code{protects}. \code{independent} lists, each as
+#'   from \code{protects}. \code{change} is \code{"new"} for an assumption
+#'   under an id the prior lacks and \code{"revised"} for one kept under its id
+#'   whose statement changed, by any change of wording, even one that keeps its
+#'   meaning. \code{independent} lists, each as
 #'   \code{list(id, status)} and in the order of \code{protects}, the distinct
 #'   predictions the assumption protects that are new in this version and
 #'   differ from \code{added_for}, with their status in \code{new}
@@ -379,13 +383,17 @@ tf_appraise_amendment <- function(new, prior) {
   new_predictions <- new_ids[!(new_ids %in% prior_ids) & !(new_ids %in% renamed_new)]
   corroborated_new <- new_predictions[.tf_status_in(new_predictions, new_tos, "corroborated")]
 
+  # The new and revised assumptions, the only ones appraised, each with its
+  # change, and the predictions they protect.
+  appraised <- .tf_appraised_assumptions(new, prior)
+  protected <- as.character(unlist(lapply(appraised, function(entry) {
+    .tf_str_list(.tf_get(entry$a, "protects"))
+  })))
+
   # Old content: a proposition whose endpoints and relation the prior holds,
   # under any id, so renaming a proposition adds nothing either. A claim the
   # prior's causal graph entails is old content too, whatever the prediction
   # cites.
-  # The new and revised assumptions, the only ones appraised.
-  new_aux <- .tf_appraised_assumptions(new, prior)
-  protected <- as.character(unlist(lapply(new_aux, function(a) .tf_str_list(.tf_get(a, "protects")))))
   content <- function(p) {
     c(.tf_str(p, "from"), .tf_str(p, "to"), .tf_enum_str(p, "relation", .tf_RELATION))
   }
@@ -447,7 +455,8 @@ tf_appraise_amendment <- function(new, prior) {
 
   assumptions <- list()
   ad_hoc <- character(0)
-  for (a in new_aux) {
+  for (entry in appraised) {
+    a <- entry$a
     added_for <- .tf_str(a, "added_for")
     inferred <- FALSE
     if (!.tf_ne_str(added_for)) {
@@ -464,7 +473,8 @@ tf_appraise_amendment <- function(new, prior) {
     assumptions[[length(assumptions) + 1L]] <- list(id = aid, added_for = added_for,
                                                     class = res$class,
                                                     independent = res$independent,
-                                                    added_for_inferred = inferred)
+                                                    added_for_inferred = inferred,
+                                                    change = entry$change)
     if (!identical(res$class, "independently_corroborated")) ad_hoc <- c(ad_hoc, aid)
   }
 

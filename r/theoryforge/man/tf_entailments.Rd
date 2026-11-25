@@ -42,15 +42,17 @@ positive sign and \code{decreases} a negative one, and the other relations
 state no sign. The sign of an effect is the product of the signs along each
 directed path from \code{x} to \code{y}, and the sign of a marginal
 association the product along each simple trek, a pair of directed paths
-from a common source to the two constructs that share no other construct. A
-trek through an association has no fixed sign. When every path or trek has
-the same sign, the graph fixes the sign of the quantity, and when none
-exists, the quantity is zero (Wright, 1934). A trek whose two paths share an
-edge adds no term of its own, since the square of that edge's coefficient is
-part of a variance, so when \code{t} causes \code{u} and \code{u}
-increases \code{y}, \code{u} and \code{y} are positively associated. A
-conditional association is zero when the two constructs are m-separated
-given the others and nonzero otherwise.
+from a common source to the two constructs that share no other construct,
+or a directed path from each end of an association to the two constructs
+that share no construct. A trek topped by an association has no fixed sign.
+When every path or trek has the same sign, the graph fixes the sign of the
+quantity, and when none exists, the quantity is zero (Wright, 1934). A trek
+whose two paths share a construct adds no term of its own, since the
+product of the coefficients that lead to the construct they share is part
+of that construct's variance, so when \code{t} causes \code{u} and
+\code{u} increases \code{y}, \code{u} and \code{y} are positively
+associated. A conditional association is zero when the two constructs are
+m-separated given the others and nonzero otherwise.
 
 Each claim is then \code{entailed}, \code{contradicted},
 \code{undetermined} when the graph leaves the sign open, or

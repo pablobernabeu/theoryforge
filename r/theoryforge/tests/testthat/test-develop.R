@@ -260,7 +260,7 @@ test_that("a rescue cleared by a re-analysis of its anomaly is ad hoc", {
   expect_identical(tf_appraise_amendment(new, prior), dv_record(
     verdict = "degenerating", ad_hoc_assumptions = "aux_rescue",
     assumptions = list(list(id = "aux_rescue", added_for = "pred2", class = "ad_hoc1",
-                            independent = list(), added_for_inferred = FALSE))))
+                            independent = list(), added_for_inferred = FALSE, change = "new"))))
 })
 
 test_that("an old corroborated prediction cannot clear a rescue", {
@@ -272,7 +272,7 @@ test_that("an old corroborated prediction cannot clear a rescue", {
   ap <- tf_appraise_amendment(new, prior)
   expect_identical(ap$assumptions, list(list(id = "aux_rescue", added_for = "pred2",
                                              class = "ad_hoc1", independent = list(),
-                                             added_for_inferred = FALSE)))
+                                             added_for_inferred = FALSE, change = "new")))
   expect_identical(ap$verdict, "degenerating")
 })
 
@@ -289,7 +289,7 @@ test_that("a free-text added_for still marks a rescue", {
   ap <- tf_appraise_amendment(new, prior)
   expect_identical(ap$assumptions, list(list(id = "aux_rescue", added_for = "a subgroup explanation",
                                              class = "ad_hoc1", independent = list(),
-                                             added_for_inferred = FALSE)))
+                                             added_for_inferred = FALSE, change = "new")))
   expect_identical(ap$ad_hoc_assumptions, "aux_rescue")
   expect_identical(ap$verdict, "degenerating")
 })
@@ -309,7 +309,7 @@ test_that("a corroborated new prediction clears the assumption that yields it", 
     verdict = "degenerating", new_predictions = "pred5", ad_hoc_assumptions = "aux_baseline",
     assumptions = list(list(id = "aux_baseline", added_for = "pred2", class = "ad_hoc2",
                             independent = list(list(id = "pred5", status = "untested")),
-                            added_for_inferred = FALSE)),
+                            added_for_inferred = FALSE, change = "new")),
     theoretically_progressive = TRUE))
   new <- dv_add(new, "test_outcomes", list(prediction_id = "pred5", passed = TRUE,
                                            registered = "osf.io/x"))
@@ -319,7 +319,7 @@ test_that("a corroborated new prediction clears the assumption that yields it", 
     assumptions = list(list(id = "aux_baseline", added_for = "pred2",
                             class = "independently_corroborated",
                             independent = list(list(id = "pred5", status = "corroborated")),
-                            added_for_inferred = FALSE)),
+                            added_for_inferred = FALSE, change = "new")),
     theoretically_progressive = TRUE, empirically_progressive = TRUE))
 })
 
@@ -340,7 +340,7 @@ test_that("only an assumption added for an anomaly is appraised", {
   ap <- tf_appraise_amendment(new, v1)
   expect_identical(ap$assumptions, list(list(id = "listed", added_for = "pred2",
                                              class = "ad_hoc1", independent = list(),
-                                             added_for_inferred = FALSE)))
+                                             added_for_inferred = FALSE, change = "new")))
   expect_identical(ap$ad_hoc_assumptions, "listed")
 })
 
@@ -350,7 +350,7 @@ test_that("an assumption that protects a failed prediction answers it", {
   prior <- dv_edge("amend-prior")
   new <- dv_edge("amend-inferred")
   rescue <- list(list(id = "x1", added_for = "h1", class = "ad_hoc1", independent = list(),
-                      added_for_inferred = TRUE))
+                      added_for_inferred = TRUE, change = "new"))
   expect_identical(tf_appraise_amendment(new, prior), dv_record(
     verdict = "degenerating", ad_hoc_assumptions = "x1", assumptions = rescue))
   # A mixed status in the prior counts as failed too.
@@ -559,17 +559,18 @@ test_that("an assumption rewritten under its id is appraised", {
   prior <- dv_edge("amend-prior")
   new <- dv_edge("amend-revised-assumption")
   rescue <- list(id = "a1", added_for = "h1", class = "ad_hoc1", independent = list(),
-                 added_for_inferred = FALSE)
+                 added_for_inferred = FALSE, change = "revised")
   expect_identical(tf_appraise_amendment(new, prior), dv_record(
     new_predictions = "h3", corroborated_new = "h3", ad_hoc_assumptions = "a1",
     assumptions = list(rescue), theoretically_progressive = TRUE,
     empirically_progressive = TRUE,
     implications_gained = c("c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3")))
-  # The same rewrite under a new id is appraised the same way.
+  # The same rewrite under a new id is appraised the same way, as new.
   moved <- new
   moved$auxiliary_assumptions[[1]]$id <- "a2"
   moved_rescue <- rescue
   moved_rescue$id <- "a2"
+  moved_rescue$change <- "new"
   expect_identical(tf_appraise_amendment(moved, prior)$assumptions, list(moved_rescue))
   # Without added_for, the refuted h1 it protects is taken as its anomaly.
   inferred <- new
@@ -618,6 +619,18 @@ test_that("an assumption moved to a new id is not appraised", {
   blank <- new
   blank$auxiliary_assumptions[[1]]$statement <- ""
   expect_identical(tf_appraise_amendment(blank, blank_prior)$ad_hoc_assumptions, "a_scale")
+  # Kept under its id, the core assumption a1 is not appraised. Any change of
+  # wording, even one that keeps the meaning, makes it revised and appraised,
+  # and it is then read as answering the refuted h1 it protects.
+  kept <- new
+  kept$auxiliary_assumptions[[1]]$id <- "a1"
+  expect_identical(tf_appraise_amendment(kept, prior)$assumptions, list())
+  kept$auxiliary_assumptions[[1]]$statement <- "The c2 scale measures c2 in each sample."
+  ap <- tf_appraise_amendment(kept, prior)
+  expect_identical(ap$assumptions, list(list(id = "a1", added_for = "h1", class = "ad_hoc1",
+                                             independent = list(), added_for_inferred = TRUE,
+                                             change = "revised")))
+  expect_identical(ap$verdict, "neutral")
 })
 
 test_that("a version whose graph is refused is not compared", {

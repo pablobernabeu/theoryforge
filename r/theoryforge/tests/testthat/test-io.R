@@ -150,6 +150,75 @@ test_that("aliases that expand past the limit refuse the file", {
   expect_identical(ids, c("c1", "c2"))
 })
 
+test_that("an alias that names no node and an anchor given twice are refused", {
+  # yaml read the first two aliases as "_yaml.bad-anchor_" with a warning and
+  # bound an alias to the first of two anchors, where PyYAML refused the file
+  # or read a cycle (API_SPEC.md section 3). The Python suite reads the same
+  # texts.
+  bs <- "\\"
+  many <- paste0(c(sprintf("k%d: &n%d %d\n", 0:299, 0:299, 0:299), sprintf("t%d: text &n%d\n", 0:299, 0:299)),
+                 collapse = "")
+  cases <- list(
+    list("id: x\na: *u\n", "the alias 'u' names no node that ends before it"),
+    list("id: x\na: &p [*p]\n", "the alias 'p' names no node that ends before it"),
+    list("id: x\na: &p {b: *p}\n", "the alias 'p' names no node that ends before it"),
+    list("id: x\na: &x 1\nb: &x 2\nc: *x\n", "the anchor 'x' names two nodes"),
+    list("id: x\na: &x [&x 1]\n", "the anchor 'x' names two nodes"),
+    list("id: x\na: !!str &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
+    list("id: x\na: &x 1 # &x\nb: '&x'\nc: R &x\nd: |\n  &x\ne: *x\n", NULL),
+    # The second &x is text beside a tagged anchor, and the first text in a key
+    # of 1024 characters, the most libyaml allows, which any tag lengthens.
+    list("id: x\na: !!str &x 1\nb: c &x\nc: *x\n", NULL),
+    list(paste0(strrep("k", 1021L), " &x: 1\nb: &x 2\n"), NULL),
+    # A tag that ends the line above an anchor is that node's, and one in a
+    # comment is text.
+    list("c:\n  label: !!str\n    &l1 Alpha\n  def: &l1 x\n", "the anchor 'l1' names two nodes"),
+    list("id: x\n# note !x\n&a k: 1\nb: text &a\n", NULL),
+    # A %TAG directive that redefines !, and a byte-order mark at the start of
+    # a line, which libyaml skips.
+    list("%TAG ! tag:example.com,2000:\n---\nid: s\na: &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
+    list("%TAG ! tag:example.com,2000:\n---\n{id: s, a: &x 1, b: &x 2}\n",
+         "the anchor 'x' names two nodes"),
+    list("id: s\na: [1,\n\ufeff&x 2]\nb: &x 3\n", "the anchor 'x' names two nodes"),
+    # More names than one probe gives a tag each.
+    list(paste0(many, "z: &n257 x\n"), "the anchor 'n257' names two nodes"),
+    list(many, NULL),
+    # A next-line character is a line break to libyaml, and with more than one
+    # anchor given twice, the first by code point is named.
+    list("id: x\na: 1\u0085&x b: 2\u0085&x c: 3\n", "the anchor 'x' names two nodes"),
+    list("id: x\np: &y 1\nq: &y 2\nr: &b 3\ns: &b 4\n", "the anchor 'b' names two nodes"),
+    # As both readers meet them: a repeated key, as its mapping ends, or an
+    # alias that names no node, whichever comes first, then U+0000, then an
+    # anchor given twice.
+    list("id: x\nk: {a: 1, a: 2}\nz: *u\n", "Duplicate map key: 'a'"),
+    # A block mapping ends where the alias after it begins.
+    list("m:\n  a: 1\n  a: 2\n*u : 3\n", "Duplicate map key: 'a'"),
+    list("id: x\nz: *u\nk: {a: 1, a: 2}\n", "the alias 'u' names no node that ends before it"),
+    list(paste0("id: x\nz: *u\nt: \"a", bs, "0b\"\n"), "the alias 'u' names no node that ends before it"),
+    list(paste0("id: x\nt: \"a", bs, "0b\"\na: &x 1\nb: &x 2\n"),
+         "a string holds U+0000, which theoryforge cannot read"),
+    list("id: x\na: &x 1\nb: &x 2\nc: *u\n", "the alias 'u' names no node that ends before it")
+  )
+  for (case in cases) {
+    path <- io_file(case[[1]])
+    if (is.null(case[[2]])) {
+      expect_true(is.list(expect_silent(tf_read(path))), info = case[[1]])
+    } else {
+      expect_error(tf_read(path), sprintf("(%s) %s", path, case[[2]]), fixed = TRUE, info = case[[1]])
+    }
+  }
+})
+
+test_that("no parse of a YAML file runs R code, whatever the options say", {
+  # The probes that look for an anchor given twice parse the file again.
+  op <- options(yaml.eval.expr = TRUE, tf.test.evaluated = NULL)
+  on.exit(options(op), add = TRUE)
+  path <- io_file(paste0("id: x\nnote: !expr options(tf.test.evaluated = TRUE)\n",
+                         "a: !!str &x 1\nb: text &x\nc: more &x\n"))
+  try(suppressWarnings(tf_read(path)), silent = TRUE)
+  expect_null(getOption("tf.test.evaluated"))
+})
+
 test_that("an unquoted date stays a string and writes to JSON", {
   theory <- tf_read(io_file(date_theory))
   expect_identical(theory$test_outcomes[[1]]$date, "2026-05-01")
@@ -252,6 +321,11 @@ test_that("a string R cannot hold is refused with one message", {
     list(".yaml", paste0('id: x\ntitle: "before', bs, 'u0000after"\n'), "U+0000"),
     list(".yaml", paste0('"a', bs, '0b": 1\n"a', bs, '0c": 2\n'), "U+0000"),
     list(".yaml", paste0('"a', bs, '0b": 1\n"a', bs, '0b": 2\n'), "U+0000"),
+    # A key whose value is null or an empty collection, which unlist() would
+    # drop, is searched too.
+    list(".yaml", paste0('id: x\nextra:\n  "a', bs, '0b": ~\n'), "U+0000"),
+    list(".yaml", paste0('id: x\nextra:\n  "a', bs, '0b": []\n'), "U+0000"),
+    list(".yaml", paste0('id: x\nextra:\n  "a', bs, '0b": {}\n'), "U+0000"),
     # A paired surrogate escape is one character, an escaped backslash is no
     # escape, and only a double-quoted YAML scalar has escapes.
     list(".json", paste0('{"id": "x", "title": "a', bs, 'uD83D', bs, 'uDE00b"}'), NULL),
@@ -277,6 +351,11 @@ test_that("a string R cannot hold is refused with one message", {
                "Duplicate map key: 'a'", fixed = TRUE)
   expect_error(tf_read(io_file(paste0('k: {a: 1, a: 2}\nt: "', bs, '0"\n'))),
                "Duplicate map key: 'a'", fixed = TRUE)
+  # Two keys that differ only in which lone surrogate they hold are two keys,
+  # so the repeat reported is the one after them.
+  text <- paste0('{"id": "x", "a": {"', bs, 'ud800": 1, "', bs, 'udbff": 2}, ',
+                 '"b": {"q": 1, "q": 2}}')
+  expect_error(tf_read(io_file(text, ext = ".json")), "Duplicate map key: 'q'", fixed = TRUE)
 })
 
 test_that("JSON comments are refused, as Python's json module refuses them", {
@@ -312,8 +391,10 @@ predictions:
     list(id = "c1", label = "Alpha", definition = "Bodily\tactivation."),
     list(id = "c2", label = "Beta", definition = "Appraised danger.")))
   expect_identical(t$predictions[[1]]$derives_from, list("p1", "p2"))
-  # A tab that indents a line, or follows the dash of a sequence entry, is refused.
-  for (bad in c("id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n")) {
+  # A tab that indents a line, or stands between the dash of a sequence entry
+  # and its content, is refused.
+  for (bad in c("id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n",
+                "id: a\nconstructs:\n  - \tc1\n")) {
     expect_error(tf_read(io_file(bad)), "found character that cannot start any token", fixed = TRUE)
   }
 })
@@ -450,6 +531,24 @@ test_that("tf_write keeps numbers, logicals and one-element arrays", {
   expect_true(grepl("passed: false", yaml_text, fixed = TRUE))
   expect_false(grepl("passed: yes", yaml_text, fixed = TRUE))
   expect_true(grepl("derives_from:\\s*\\n\\s*- p1", yaml_text))
+})
+
+test_that("tf_write escapes a next-line character", {
+  # YAML counts U+0085, U+2028 and U+2029 as line breaks. yaml writes the
+  # first in double quotes as the escape \N, as the Python twin now writes
+  # it, and the escapes of the other two follow in such a string. Alone, those
+  # two are written as they are, and read back.
+  theory <- list(schema_version = "1.1", id = "w", title = "Panic\u0085disorder",
+                 maturity = "building",
+                 constructs = list(list(id = "c1", label = "a\u2028b", definition = "c\u2029d\u0085")))
+  path <- tempfile(fileext = ".yaml")
+  tf_write(theory, path)
+  text <- tf_read_golden(path)
+  expect_true(grepl('title: "Panic\\Ndisorder"', text, fixed = TRUE))
+  expect_true(grepl('definition: "c\\Pd\\N"', text, fixed = TRUE))
+  back <- tf_read(path)
+  expect_identical(back$title, "Panic\u0085disorder")
+  expect_identical(back$constructs, theory$constructs)
 })
 
 test_that("tf_write writes a string array held as one string as an array", {

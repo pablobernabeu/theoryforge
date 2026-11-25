@@ -589,8 +589,7 @@ scopus_corpus_to_tf <- function(sc, id) {
   # The package folds the case of the ASCII letters of a DOI and leaves every
   # other character alone, and so does this fold.
   fold_doi <- function(doi) {
-    doi <- chartr(paste(LETTERS, collapse = ""), paste(letters, collapse = ""),
-                  trimws(doi))
+    doi <- gsub("([A-Z]+)", "\\L\\1", trimws(doi), perl = TRUE)
     sub("^(https?://(dx\\.)?doi\\.org/|doi:)", "", doi)
   }
   present <- function(x) {
