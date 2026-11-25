@@ -1,0 +1,107 @@
+theory,encoder,cycles,source,id,claim,derived,verdict,basis,via
+bilingual-rhm,enc-1,refuse,prediction,pred3,effect SEM->ASYM nonzero,undetermined,entailed,unsigned,p5
+bilingual-rhm,enc-1,refuse,prediction,pred4,effect PROF->ASYM negative,negative,entailed,paths_agree,p2 p4
+bilingual-rhm,enc-1,refuse,prediction,pred5,effect PROF->REL negative,negative,entailed,paths_agree,p1 p3
+bilingual-rhm,enc-1,refuse,prediction,pred7,effect DOM->ASYM positive,positive,entailed,paths_agree,p8
+bilingual-rhm,enc-1,refuse,prediction,pred8,effect DIFF->ASYM positive,positive,entailed,paths_agree,p4 p6
+bilingual-rhm,enc-1,sigma,prediction,pred3,effect SEM->ASYM nonzero,undetermined,entailed,unsigned,p5
+bilingual-rhm,enc-1,sigma,prediction,pred4,effect PROF->ASYM negative,negative,entailed,paths_agree,p2 p4
+bilingual-rhm,enc-1,sigma,prediction,pred5,effect PROF->REL negative,negative,entailed,paths_agree,p1 p3
+bilingual-rhm,enc-1,sigma,prediction,pred7,effect DOM->ASYM positive,positive,entailed,paths_agree,p8
+bilingual-rhm,enc-1,sigma,prediction,pred8,effect DIFF->ASYM positive,positive,entailed,paths_agree,p4 p6
+bilingual-rhm,enc-2,refuse,prediction,rpred2,effect SEM->ASYM nonzero,undetermined,entailed,unsigned,r5
+bilingual-rhm,enc-2,refuse,prediction,rpred3,effect PROF->ASYM negative,negative,entailed,paths_agree,r2 r4
+bilingual-rhm,enc-2,refuse,prediction,rpred4,effect PROF->REL negative,negative,entailed,paths_agree,r1 r3
+bilingual-rhm,enc-2,sigma,prediction,rpred2,effect SEM->ASYM nonzero,undetermined,entailed,unsigned,r5
+bilingual-rhm,enc-2,sigma,prediction,rpred3,effect PROF->ASYM negative,negative,entailed,paths_agree,r2 r4
+bilingual-rhm,enc-2,sigma,prediction,rpred4,effect PROF->REL negative,negative,entailed,paths_agree,r1 r3
+bilingual-rhm,enc-3,refuse,prediction,pr3,effect PROF->ASYM negative,negative,entailed,paths_agree,p2 p4
+bilingual-rhm,enc-3,refuse,prediction,pr4,effect PROF->REL negative,negative,entailed,paths_agree,p1 p3
+bilingual-rhm,enc-3,refuse,prediction,pr6,effect DIFF->ASYM positive,positive,entailed,paths_agree,p6
+bilingual-rhm,enc-3,sigma,prediction,pr3,effect PROF->ASYM negative,negative,entailed,paths_agree,p2 p4
+bilingual-rhm,enc-3,sigma,prediction,pr4,effect PROF->REL negative,negative,entailed,paths_agree,p1 p3
+bilingual-rhm,enc-3,sigma,prediction,pr6,effect DIFF->ASYM positive,positive,entailed,paths_agree,p6
+collaborative-cognitive-load,enc-1,refuse,prediction,r2,effect TL->LRN negative,negative,entailed,paths_agree,q4 q5 q14
+collaborative-cognitive-load,enc-1,refuse,prediction,r3,effect COL->IL negative,negative,entailed,paths_agree,q9 q10
+collaborative-cognitive-load,enc-1,refuse,prediction,r4,effect GUID->TL negative,negative,entailed,paths_agree,q15
+collaborative-cognitive-load,enc-1,refuse,prediction,r5,effect EXP->TL negative,negative,entailed,paths_agree,q16
+collaborative-cognitive-load,enc-1,refuse,prediction,r6,effect SKILL->TL negative,negative,entailed,paths_agree,q17
+collaborative-cognitive-load,enc-1,refuse,prediction,r7,effect ROLE->TL negative,negative,entailed,paths_agree,q18
+collaborative-cognitive-load,enc-1,refuse,prediction,r8,effect COORD->TL negative,negative,entailed,paths_agree,q19
+collaborative-cognitive-load,enc-1,refuse,prediction,r9,effect FAM->TL negative,negative,entailed,paths_agree,q20
+collaborative-cognitive-load,enc-1,refuse,prediction,r10,effect SIZE->TL positive,positive,entailed,paths_agree,q21
+collaborative-cognitive-load,enc-1,refuse,prediction,r11,effect UNEV->TL positive,positive,entailed,paths_agree,q22
+collaborative-cognitive-load,enc-1,refuse,prediction,r14,effect CHAN->TL negative,negative,entailed,paths_agree,q26
+collaborative-cognitive-load,enc-1,refuse,prediction,r15,effect TA->CL positive,positive,entailed,paths_agree,q4 q12 q14
+collaborative-cognitive-load,enc-1,refuse,phenomenon,ph1,effect WE->LRN positive,undetermined,undetermined,unsigned,q1 q3 q4 q5 q6 q7 q24
+collaborative-cognitive-load,enc-1,sigma,prediction,r2,effect TL->LRN negative,negative,entailed,paths_agree,q4 q5 q14
+collaborative-cognitive-load,enc-1,sigma,prediction,r3,effect COL->IL negative,negative,entailed,paths_agree,q9 q10
+collaborative-cognitive-load,enc-1,sigma,prediction,r4,effect GUID->TL negative,negative,entailed,paths_agree,q15
+collaborative-cognitive-load,enc-1,sigma,prediction,r5,effect EXP->TL negative,negative,entailed,paths_agree,q16
+collaborative-cognitive-load,enc-1,sigma,prediction,r6,effect SKILL->TL negative,negative,entailed,paths_agree,q17
+collaborative-cognitive-load,enc-1,sigma,prediction,r7,effect ROLE->TL negative,negative,entailed,paths_agree,q18
+collaborative-cognitive-load,enc-1,sigma,prediction,r8,effect COORD->TL negative,negative,entailed,paths_agree,q19
+collaborative-cognitive-load,enc-1,sigma,prediction,r9,effect FAM->TL negative,negative,entailed,paths_agree,q20
+collaborative-cognitive-load,enc-1,sigma,prediction,r10,effect SIZE->TL positive,positive,entailed,paths_agree,q21
+collaborative-cognitive-load,enc-1,sigma,prediction,r11,effect UNEV->TL positive,positive,entailed,paths_agree,q22
+collaborative-cognitive-load,enc-1,sigma,prediction,r14,effect CHAN->TL negative,negative,entailed,paths_agree,q26
+collaborative-cognitive-load,enc-1,sigma,prediction,r15,effect TA->CL positive,positive,entailed,paths_agree,q4 q12 q14
+collaborative-cognitive-load,enc-1,sigma,phenomenon,ph1,effect WE->LRN positive,undetermined,undetermined,unsigned,q1 q3 q4 q5 q6 q7 q24
+collaborative-cognitive-load,enc-2,refuse,prediction,cpred3,effect TL->LRN negative,negative,entailed,paths_agree,cp4 cp5 cp12
+collaborative-cognitive-load,enc-2,refuse,prediction,cpred6,effect TA->CL positive,positive,entailed,paths_agree,cp4 cp11 cp12
+collaborative-cognitive-load,enc-2,refuse,phenomenon,cph1,effect WE->LRN positive,undetermined,undetermined,unsigned,cp2 cp3 cp4 cp5 cp6 cp7 cp14
+collaborative-cognitive-load,enc-2,sigma,prediction,cpred3,effect TL->LRN negative,negative,entailed,paths_agree,cp4 cp5 cp12
+collaborative-cognitive-load,enc-2,sigma,prediction,cpred6,effect TA->CL positive,positive,entailed,paths_agree,cp4 cp11 cp12
+collaborative-cognitive-load,enc-2,sigma,phenomenon,cph1,effect WE->LRN positive,undetermined,undetermined,unsigned,cp2 cp3 cp4 cp5 cp6 cp7 cp14
+collaborative-cognitive-load,enc-3,refuse,prediction,q2,effect TL->LRN negative,negative,entailed,paths_agree,p5 p9
+collaborative-cognitive-load,enc-3,refuse,prediction,q3,effect SIZE->TL positive,positive,entailed,paths_agree,p19
+collaborative-cognitive-load,enc-3,refuse,prediction,q4,effect GUID->TL negative,negative,entailed,paths_agree,p13
+collaborative-cognitive-load,enc-3,refuse,prediction,q5,effect EXP->TL negative,negative,entailed,paths_agree,p14
+collaborative-cognitive-load,enc-3,refuse,prediction,q6,effect SKILL->TL negative,negative,entailed,paths_agree,p15
+collaborative-cognitive-load,enc-3,refuse,prediction,q7,effect ROLE->TL negative,negative,entailed,paths_agree,p16
+collaborative-cognitive-load,enc-3,refuse,prediction,q8,effect COORD->TL negative,negative,entailed,paths_agree,p17
+collaborative-cognitive-load,enc-3,refuse,prediction,q9,effect FAM->TL negative,negative,entailed,paths_agree,p18
+collaborative-cognitive-load,enc-3,refuse,prediction,q10,effect UNEV->TL positive,positive,entailed,paths_agree,p20
+collaborative-cognitive-load,enc-3,refuse,prediction,q11,effect CHAN->TL negative,negative,entailed,paths_agree,p21
+collaborative-cognitive-load,enc-3,refuse,phenomenon,ph1,effect WE->LRN positive,positive,entailed,paths_agree,p6 p7 p9 p10 p11
+collaborative-cognitive-load,enc-3,sigma,prediction,q2,effect TL->LRN negative,negative,entailed,paths_agree,p5 p9
+collaborative-cognitive-load,enc-3,sigma,prediction,q3,effect SIZE->TL positive,positive,entailed,paths_agree,p19
+collaborative-cognitive-load,enc-3,sigma,prediction,q4,effect GUID->TL negative,negative,entailed,paths_agree,p13
+collaborative-cognitive-load,enc-3,sigma,prediction,q5,effect EXP->TL negative,negative,entailed,paths_agree,p14
+collaborative-cognitive-load,enc-3,sigma,prediction,q6,effect SKILL->TL negative,negative,entailed,paths_agree,p15
+collaborative-cognitive-load,enc-3,sigma,prediction,q7,effect ROLE->TL negative,negative,entailed,paths_agree,p16
+collaborative-cognitive-load,enc-3,sigma,prediction,q8,effect COORD->TL negative,negative,entailed,paths_agree,p17
+collaborative-cognitive-load,enc-3,sigma,prediction,q9,effect FAM->TL negative,negative,entailed,paths_agree,p18
+collaborative-cognitive-load,enc-3,sigma,prediction,q10,effect UNEV->TL positive,positive,entailed,paths_agree,p20
+collaborative-cognitive-load,enc-3,sigma,prediction,q11,effect CHAN->TL negative,negative,entailed,paths_agree,p21
+collaborative-cognitive-load,enc-3,sigma,phenomenon,ph1,effect WE->LRN positive,positive,entailed,paths_agree,p6 p7 p9 p10 p11
+health-habit,enc-1,refuse,prediction,k1,effect HAB->BEH positive,,not_evaluated,feedback_loop,
+health-habit,enc-1,refuse,prediction,k3,effect REP->HAB positive,,not_evaluated,feedback_loop,
+health-habit,enc-1,refuse,prediction,k7,effect MOT->REP positive,,not_evaluated,feedback_loop,
+health-habit,enc-1,refuse,prediction,k8,effect HAB->REP positive,,not_evaluated,feedback_loop,
+health-habit,enc-1,refuse,prediction,k13,effect CTX->BEH negative,,not_evaluated,feedback_loop,
+health-habit,enc-1,sigma,prediction,k1,effect HAB->BEH positive,undetermined,undetermined,unsigned,h6 h7 h9
+health-habit,enc-1,sigma,prediction,k3,effect REP->HAB positive,positive,entailed,paths_agree,h1
+health-habit,enc-1,sigma,prediction,k7,effect MOT->REP positive,positive,entailed,paths_agree,h1 h3 h4
+health-habit,enc-1,sigma,prediction,k8,effect HAB->REP positive,positive,entailed,paths_agree,h4
+health-habit,enc-1,sigma,prediction,k13,effect CTX->BEH negative,negative,entailed,paths_agree,h5 h7 h12
+health-habit,enc-2,refuse,prediction,hpred1,effect HAB->BEH positive,,not_evaluated,feedback_loop,
+health-habit,enc-2,refuse,prediction,hpred3,effect REP->HAB positive,,not_evaluated,feedback_loop,
+health-habit,enc-2,refuse,prediction,hpred4,effect CUE->IMP positive,,not_evaluated,feedback_loop,
+health-habit,enc-2,refuse,prediction,hpred9,effect CTX->BEH negative,,not_evaluated,feedback_loop,
+health-habit,enc-2,sigma,prediction,hpred1,effect HAB->BEH positive,undetermined,undetermined,unsigned,hp4 hp5 hp7
+health-habit,enc-2,sigma,prediction,hpred3,effect REP->HAB positive,positive,entailed,paths_agree,hp1
+health-habit,enc-2,sigma,prediction,hpred4,effect CUE->IMP positive,undetermined,undetermined,unsigned,hp1 hp3 hp4 hp5 hp7 hp12
+health-habit,enc-2,sigma,prediction,hpred9,effect CTX->BEH negative,undetermined,undetermined,unsigned,hp1 hp3 hp4 hp5 hp7 hp12 hp13
+health-habit,enc-3,refuse,prediction,h1,effect HAB->BEH positive,,not_evaluated,feedback_loop,
+health-habit,enc-3,refuse,prediction,h3,effect REP->HAB positive,,not_evaluated,feedback_loop,
+health-habit,enc-3,refuse,prediction,h5,effect INT->HAB positive,,not_evaluated,feedback_loop,
+health-habit,enc-3,refuse,prediction,h6,effect HAB->REP positive,,not_evaluated,feedback_loop,
+health-habit,enc-3,refuse,prediction,h7,effect CUE->IMP positive,,not_evaluated,feedback_loop,
+health-habit,enc-3,refuse,prediction,h11,effect CUE->BEH positive,,not_evaluated,feedback_loop,
+health-habit,enc-3,sigma,prediction,h1,effect HAB->BEH positive,undetermined,undetermined,unsigned,p2 p3 p5
+health-habit,enc-3,sigma,prediction,h3,effect REP->HAB positive,positive,entailed,paths_agree,p12
+health-habit,enc-3,sigma,prediction,h5,effect INT->HAB positive,undetermined,undetermined,unsigned,p2 p3 p4 p5 p7 p8 p11 p12
+health-habit,enc-3,sigma,prediction,h6,effect HAB->REP positive,undetermined,undetermined,unsigned,p2 p3 p5 p11
+health-habit,enc-3,sigma,prediction,h7,effect CUE->IMP positive,undetermined,undetermined,unsigned,p1 p2 p3 p5 p11 p12
+health-habit,enc-3,sigma,prediction,h11,effect CUE->BEH positive,undetermined,undetermined,unsigned,p1 p2 p3 p5 p11 p12
