@@ -418,8 +418,8 @@ def preregister(theory, path=None, cycles: str = "refuse") -> str:
     allow, its claim and what the causal graph says of it, what an
     observational test of an effect claim must adjust for, the auxiliary
     assumptions that protect it (``core`` or ``added for <id>``), the
-    registered rivals it discriminates, with how each rival's own propositions
-    read the claim, and its test record. A hypothesis that a recorded outcome
+    registered rivals it is declared to discriminate, with how each rival's
+    own propositions read the claim, and its test record. A hypothesis that a recorded outcome
     has already tested reads ``already tested: passed (<date>, registered
     <where>)``, one entry per outcome, and any other reads ``untested``.
 
@@ -429,9 +429,10 @@ def preregister(theory, path=None, cycles: str = "refuse") -> str:
     of the planned sample, alpha and sidedness, smallest effect of interest,
     power or decision probability, design analysis and justification. A
     prediction without a plan reads ``no sampling plan stated``. Nothing
-    scores the plan: power does not raise a claim's severity (Meehl, 1967),
-    though it decides how informative a failed test is (Lakens, 2022). A theory
-    without a plan has no such section.
+    scores the plan. The stated power raises no score, since more power
+    weakens the corroboration a directional prediction earns (Meehl, 1967),
+    though it decides how informative a failed test is (Lakens, 2022). A
+    theory without a plan has no such section.
 
     A section then lists the conditional independencies that
     ``implications()`` derives from the causal graph, which are claims the
@@ -535,7 +536,7 @@ def document_lines(data: dict, cycles: str, embedded: bool = False) -> list[str]
                 reads = verdict["rivals"] if verdict is not None else {}
                 shown = [f"{d} ({_RIVAL_READS[reads[d]]})" if reads.get(d) in _RIVAL_READS else d
                          for d in rivals]
-                lines.append(f"{pad}- Rivals it discriminates: {', '.join(shown)}")
+                lines.append(f"{pad}- Rivals it is declared to discriminate: {', '.join(shown)}")
             lines.append(f"{pad}- Test record: {_test_record(pid, tos)}")
         lines += _sampling_plan(preds)
 

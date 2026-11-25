@@ -61,7 +61,7 @@ items:
     severity_if_fail: warning
     citation: "Rohrer (2018); Eronen & Bringmann (2021)"
   - id: diagnosticity
-    criterion: "At least one prediction names a registered alternative it discriminates from (declared, or verified where the claim and the rival's propositions are stated)"
+    criterion: "At least one prediction names a registered alternative it discriminates from (declared, and not shown false where the claim and the rival's propositions are stated)"
     weight: 0.06
     severity_if_fail: warning
     citation: "Platt (1964); Fiedler (2017)"

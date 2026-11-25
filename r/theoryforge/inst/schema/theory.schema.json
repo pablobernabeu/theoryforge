@@ -170,7 +170,7 @@
               "justification": { "type": "string" }
             },
             "dependentRequired": { "power_lo": ["power_hi"], "power_hi": ["power_lo"] },
-            "description": "The sampling plan for testing the prediction, which a Stage 1 Registered Report states for each hypothesis. It is recorded, not scored: power does not raise the severity of a claim (Meehl, 1967), though it decides how informative a failed test is (Lakens, 2022). preregister() lists it after the hypotheses, and so does the preregistration that dossier() appends. Full validation checks its fields, and no checklist item, threshold or severity reads it. The interval a claim allows belongs in bounds."
+            "description": "The sampling plan for testing the prediction, which a Stage 1 Registered Report states for each hypothesis. It is recorded, not scored: the stated power raises no score, since more power weakens the corroboration a directional prediction earns (Meehl, 1967), though it decides how informative a failed test is (Lakens, 2022). preregister() lists it after the hypotheses, and so does the preregistration that dossier() appends. Full validation checks its fields, and no checklist item, threshold or severity reads it. The interval a claim allows belongs in bounds."
           }
         }
       }

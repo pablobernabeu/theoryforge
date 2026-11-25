@@ -22,7 +22,7 @@
 | scope | Boundary conditions explicitly stated | pass | 1.0 | 0.06 |
 | logical_why | Each proposition states a mechanism, not just a correlation | pass | 1.0 | 0.08 |
 | causal_testability | At least one proposition states a causal relation | pass | 1.0 | 0.06 |
-| diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, or verified where the claim and the rival's propositions are stated) | pass | 0.5 | 0.06 |
+| diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, and not shown false where the claim and the rival's propositions are stated) | pass | 0.5 | 0.06 |
 | formalisation | A formal model of a recognised type (ode, abm, network, sem) is declared | pass | 1.0 | 0.05 |
 | derivation_chain | Every prediction cites declared propositions, and the causal graph entails the claim it states, if any | pass | 1.0 | 0.08 |
 
@@ -128,13 +128,13 @@
    - Claim: the effect of c_modality_activation on c_conceptual_access is positive; entailed by the causal graph through p3
    - Adjustment for an observational test: none needed
    - Auxiliary assumptions: aux1 (core)
-   - Rivals it discriminates: alt_grounding_by_interaction (its propositions contradict the claim)
+   - Rivals it is declared to discriminate: alt_grounding_by_interaction (its propositions contradict the claim)
    - Test record: untested
 4. [interval] Across a corpus of concrete nouns matched for length, modality-specific perceptual strength and lexical familiarity correlate no more strongly than 0.10 in absolute value. (pred4; derives from: p1, p4)
    - Region the claim allows: [-0.1, 0.1]
    - Claim: c_sensorimotor_experience and c_lexical_familiarity are independent; entailed by the causal graph
    - Auxiliary assumptions: aux2 (core)
-   - Rivals it discriminates: alt_symbol_interdependency (its propositions contradict the claim)
+   - Rivals it is declared to discriminate: alt_symbol_interdependency (its propositions contradict the claim)
    - Test record: untested
 
 ### Sampling plan (author-recorded; not scored)

@@ -133,7 +133,7 @@ REPLICATED_HYPOTHESES = """\
 ## Hypotheses
 1. [directional] Upsilon rises with Zeta. (h1; derives from: p1, p2)
    - Auxiliary assumptions: a1 (core), x1 (added for h1)
-   - Rivals it discriminates: rival
+   - Rivals it is declared to discriminate: rival
    - Test record: already tested: passed (2026-05-01, registered osf.io/abcde); failed (2026-06-10)
 2. [directional] Upsilon rises with Xi. (h1_2; derives from: p2)
    - Auxiliary assumptions: a1 (core)

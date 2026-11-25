@@ -432,8 +432,8 @@ the rival's own graph does not give its claim the same verdict.
 `preregister()` writes the theory and hypotheses sections of a preregistration as Markdown.
 Its header gives the theory's version and content hash. Each hypothesis is listed with its
 type, its derivation, its claim and what the graph says of it, the adjustment an
-observational test would need, the auxiliary assumptions that protect it, the rivals it
-discriminates and its test record. The hypotheses section of the modality-switching theory
+observational test would need, the auxiliary assumptions that protect it, the rivals it is
+declared to discriminate and its test record. The hypotheses section of the modality-switching theory
 reads as follows.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"

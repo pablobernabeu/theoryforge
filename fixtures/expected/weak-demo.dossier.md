@@ -22,7 +22,7 @@
 | scope | Boundary conditions explicitly stated | warn | 0.0 | 0.06 |
 | logical_why | Each proposition states a mechanism, not just a correlation | warn | 0.0 | 0.08 |
 | causal_testability | At least one proposition states a causal relation | warn | 0.0 | 0.06 |
-| diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, or verified where the claim and the rival's propositions are stated) | warn | 0.0 | 0.06 |
+| diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, and not shown false where the claim and the rival's propositions are stated) | warn | 0.0 | 0.06 |
 | formalisation | A formal model of a recognised type (ode, abm, network, sem) is declared | warn | 0.0 | 0.05 |
 | derivation_chain | Every prediction cites declared propositions, and the causal graph entails the claim it states, if any | fail | 0.0 | 0.08 |
 

@@ -316,7 +316,7 @@ def test_the_preregistration_states_each_claim_and_how_each_rival_reads_it(modal
     assert "- Derivations check: yes" in doc
     assert ("   - Claim: the effect of c_modality_activation on c_conceptual_access is positive; "
             "entailed by the causal graph through p3") in doc
-    assert ("   - Rivals it discriminates: alt_grounding_by_interaction "
+    assert ("   - Rivals it is declared to discriminate: alt_grounding_by_interaction "
             "(its propositions contradict the claim)") in doc
     assert "   - Claim: c_sensorimotor_experience and c_lexical_familiarity are independent; " \
            "entailed by the causal graph\n" in doc
