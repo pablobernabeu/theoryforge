@@ -1,0 +1,688 @@
+{
+  "read": "ok",
+  "validate": true,
+  "validate_full": true,
+  "check": {
+    "aggregate_score": 40.6,
+    "coverage": 0.92,
+    "gate": "blocked",
+    "n_blockers_failed": 1,
+    "items": [
+      {
+        "id": "falsifiability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "precision",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "risk_severity",
+        "status": "warn",
+        "score": 0.3
+      },
+      {
+        "id": "parsimony",
+        "status": "n/a",
+        "score": null
+      },
+      {
+        "id": "non_redundancy",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "construct_clarity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "scope",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "logical_why",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "causal_testability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "diagnosticity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "formalisation",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "derivation_chain",
+        "status": "fail",
+        "score": 0.667
+      }
+    ]
+  },
+  "severity": [
+    {
+      "prediction_id": "h1",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h2",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h3",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    }
+  ],
+  "implications": {
+    "theory_id": "trek-signs",
+    "criterion": "m",
+    "conditioning": "basis",
+    "acyclic": true,
+    "constructs": [
+      "a1",
+      "a2",
+      "a3",
+      "b1",
+      "b2",
+      "b3",
+      "b4",
+      "c1",
+      "c2",
+      "c3"
+    ],
+    "n_edges": 9,
+    "n_bidirected": 0,
+    "feedback": [],
+    "implications": [
+      {
+        "a": "a1",
+        "b": "a3",
+        "given": [
+          "a2"
+        ],
+        "statement": "a1 _||_ a3 | a2"
+      },
+      {
+        "a": "a1",
+        "b": "b1",
+        "given": [],
+        "statement": "a1 _||_ b1"
+      },
+      {
+        "a": "a1",
+        "b": "b2",
+        "given": [
+          "b1",
+          "b3"
+        ],
+        "statement": "a1 _||_ b2 | b1, b3"
+      },
+      {
+        "a": "a1",
+        "b": "b3",
+        "given": [
+          "b1"
+        ],
+        "statement": "a1 _||_ b3 | b1"
+      },
+      {
+        "a": "a1",
+        "b": "b4",
+        "given": [
+          "b2"
+        ],
+        "statement": "a1 _||_ b4 | b2"
+      },
+      {
+        "a": "a1",
+        "b": "c1",
+        "given": [],
+        "statement": "a1 _||_ c1"
+      },
+      {
+        "a": "a1",
+        "b": "c2",
+        "given": [
+          "c1"
+        ],
+        "statement": "a1 _||_ c2 | c1"
+      },
+      {
+        "a": "a1",
+        "b": "c3",
+        "given": [
+          "c1",
+          "c2"
+        ],
+        "statement": "a1 _||_ c3 | c1, c2"
+      },
+      {
+        "a": "a2",
+        "b": "b1",
+        "given": [
+          "a1"
+        ],
+        "statement": "a2 _||_ b1 | a1"
+      },
+      {
+        "a": "a2",
+        "b": "b2",
+        "given": [
+          "a1",
+          "b1",
+          "b3"
+        ],
+        "statement": "a2 _||_ b2 | a1, b1, b3"
+      },
+      {
+        "a": "a2",
+        "b": "b3",
+        "given": [
+          "a1",
+          "b1"
+        ],
+        "statement": "a2 _||_ b3 | a1, b1"
+      },
+      {
+        "a": "a2",
+        "b": "b4",
+        "given": [
+          "a1",
+          "b2"
+        ],
+        "statement": "a2 _||_ b4 | a1, b2"
+      },
+      {
+        "a": "a2",
+        "b": "c1",
+        "given": [
+          "a1"
+        ],
+        "statement": "a2 _||_ c1 | a1"
+      },
+      {
+        "a": "a2",
+        "b": "c2",
+        "given": [
+          "a1",
+          "c1"
+        ],
+        "statement": "a2 _||_ c2 | a1, c1"
+      },
+      {
+        "a": "a2",
+        "b": "c3",
+        "given": [
+          "a1",
+          "c1",
+          "c2"
+        ],
+        "statement": "a2 _||_ c3 | a1, c1, c2"
+      },
+      {
+        "a": "a3",
+        "b": "b1",
+        "given": [
+          "a2"
+        ],
+        "statement": "a3 _||_ b1 | a2"
+      },
+      {
+        "a": "a3",
+        "b": "b2",
+        "given": [
+          "a2",
+          "b1",
+          "b3"
+        ],
+        "statement": "a3 _||_ b2 | a2, b1, b3"
+      },
+      {
+        "a": "a3",
+        "b": "b3",
+        "given": [
+          "a2",
+          "b1"
+        ],
+        "statement": "a3 _||_ b3 | a2, b1"
+      },
+      {
+        "a": "a3",
+        "b": "b4",
+        "given": [
+          "a2",
+          "b2"
+        ],
+        "statement": "a3 _||_ b4 | a2, b2"
+      },
+      {
+        "a": "a3",
+        "b": "c1",
+        "given": [
+          "a2"
+        ],
+        "statement": "a3 _||_ c1 | a2"
+      },
+      {
+        "a": "a3",
+        "b": "c2",
+        "given": [
+          "a2",
+          "c1"
+        ],
+        "statement": "a3 _||_ c2 | a2, c1"
+      },
+      {
+        "a": "a3",
+        "b": "c3",
+        "given": [
+          "a2",
+          "c1",
+          "c2"
+        ],
+        "statement": "a3 _||_ c3 | a2, c1, c2"
+      },
+      {
+        "a": "b1",
+        "b": "b4",
+        "given": [
+          "b2"
+        ],
+        "statement": "b1 _||_ b4 | b2"
+      },
+      {
+        "a": "b1",
+        "b": "c1",
+        "given": [],
+        "statement": "b1 _||_ c1"
+      },
+      {
+        "a": "b1",
+        "b": "c2",
+        "given": [
+          "c1"
+        ],
+        "statement": "b1 _||_ c2 | c1"
+      },
+      {
+        "a": "b1",
+        "b": "c3",
+        "given": [
+          "c1",
+          "c2"
+        ],
+        "statement": "b1 _||_ c3 | c1, c2"
+      },
+      {
+        "a": "b2",
+        "b": "c1",
+        "given": [
+          "b1",
+          "b3"
+        ],
+        "statement": "b2 _||_ c1 | b1, b3"
+      },
+      {
+        "a": "b2",
+        "b": "c2",
+        "given": [
+          "b1",
+          "b3",
+          "c1"
+        ],
+        "statement": "b2 _||_ c2 | b1, b3, c1"
+      },
+      {
+        "a": "b2",
+        "b": "c3",
+        "given": [
+          "b1",
+          "b3",
+          "c1",
+          "c2"
+        ],
+        "statement": "b2 _||_ c3 | b1, b3, c1, c2"
+      },
+      {
+        "a": "b3",
+        "b": "b4",
+        "given": [
+          "b1",
+          "b2"
+        ],
+        "statement": "b3 _||_ b4 | b1, b2"
+      },
+      {
+        "a": "b3",
+        "b": "c1",
+        "given": [
+          "b1"
+        ],
+        "statement": "b3 _||_ c1 | b1"
+      },
+      {
+        "a": "b3",
+        "b": "c2",
+        "given": [
+          "b1",
+          "c1"
+        ],
+        "statement": "b3 _||_ c2 | b1, c1"
+      },
+      {
+        "a": "b3",
+        "b": "c3",
+        "given": [
+          "b1",
+          "c1",
+          "c2"
+        ],
+        "statement": "b3 _||_ c3 | b1, c1, c2"
+      },
+      {
+        "a": "b4",
+        "b": "c1",
+        "given": [
+          "b2"
+        ],
+        "statement": "b4 _||_ c1 | b2"
+      },
+      {
+        "a": "b4",
+        "b": "c2",
+        "given": [
+          "b2",
+          "c1"
+        ],
+        "statement": "b4 _||_ c2 | b2, c1"
+      },
+      {
+        "a": "b4",
+        "b": "c3",
+        "given": [
+          "b2",
+          "c1",
+          "c2"
+        ],
+        "statement": "b4 _||_ c3 | b2, c1, c2"
+      }
+    ],
+    "n_implications": 36,
+    "inseparable": []
+  },
+  "entailments": {
+    "theory_id": "trek-signs",
+    "criterion": "m",
+    "acyclic": true,
+    "feedback": [],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "h1",
+        "kind": "association",
+        "x": "a3",
+        "y": "a2",
+        "given": [],
+        "sign": "positive",
+        "derived": "positive",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p2"
+        ],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h2",
+        "kind": "association",
+        "x": "b2",
+        "y": "b4",
+        "given": [],
+        "sign": "positive",
+        "derived": "positive",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p3",
+          "p4",
+          "p5",
+          "p6"
+        ],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h3",
+        "kind": "association",
+        "x": "c2",
+        "y": "c3",
+        "given": [],
+        "sign": "positive",
+        "derived": "undetermined",
+        "verdict": "undetermined",
+        "basis": "unsigned",
+        "faithfulness": false,
+        "via": [
+          "p7",
+          "p8",
+          "p9"
+        ],
+        "identified": null,
+        "adjustment": null
+      }
+    ],
+    "counts": {
+      "entailed": 2,
+      "contradicted": 0,
+      "undetermined": 1,
+      "not_evaluated": 0
+    }
+  },
+  "equivalent_models": {
+    "theory_id": "trek-signs",
+    "computed": true,
+    "reason": null,
+    "constructs": [
+      "a1",
+      "a2",
+      "a3",
+      "b1",
+      "b2",
+      "b3",
+      "b4",
+      "c1",
+      "c2",
+      "c3"
+    ],
+    "v_structures": [],
+    "edges": [
+      {
+        "from": "a1",
+        "to": "a2",
+        "propositions": [
+          "p1"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "a2",
+        "to": "a3",
+        "propositions": [
+          "p2"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "b1",
+        "to": "b2",
+        "propositions": [
+          "p3"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "b1",
+        "to": "b3",
+        "propositions": [
+          "p4"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "b3",
+        "to": "b2",
+        "propositions": [
+          "p5"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "b2",
+        "to": "b4",
+        "propositions": [
+          "p6"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "c1",
+        "to": "c2",
+        "propositions": [
+          "p7"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "c1",
+        "to": "c3",
+        "propositions": [
+          "p8"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "c2",
+        "to": "c3",
+        "propositions": [
+          "p9"
+        ],
+        "status": "reversible"
+      }
+    ],
+    "n_compelled": 0,
+    "n_reversible": 9
+  },
+  "compile_sem": "# lavaan model generated by theoryforge for trek-signs\n# Written for lavaan::sem(); indicator names are the sanitised measurement entries and must match columns of the data.\n# Measurement model\n# Structural model\na2 ~ b_a1_a2*a1\na3 ~ b_a2_a3*a2\nb2 ~ b_b1_b2*b1\nb3 ~ b_b1_b3*b1\nb2 ~ b_b3_b2*b3\nb4 ~ b_b2_b4*b2\nc2 ~ b_c1_c2*c1\nc3 ~ b_c1_c3*c1\nc3 ~ b_c2_c3*c2\n# Identification: the paths among the constructs form no loop, and no two constructs are joined by both a path and a covariance (a bow). The path coefficients are therefore generically identified if the measurement model identifies the constructs (Brito & Pearl, 2002). Whether it does has to be checked separately.\n# Signs the theory states, which the fit does not impose\n# b_a2_a3 > 0 (p2, increases)\n# b_b1_b2 > 0 (p3, increases)\n# b_b1_b3 > 0 (p4, increases)\n# b_b3_b2 < 0 (p5, decreases)\n# b_b2_b4 > 0 (p6, increases)\n# b_c1_c3 > 0 (p8, increases)\n# b_c2_c3 > 0 (p9, increases)\n# Covariances the theory fixes at zero (lavaan::sem() frees them by default; delete this block to restore its defaults)\na1 ~~ 0*b1\na1 ~~ 0*c1\na3 ~~ 0*b4\na3 ~~ 0*c3\nb1 ~~ 0*c1\nb4 ~~ 0*c3\n",
+  "simulate": {
+    "states": [
+      "a1",
+      "a2",
+      "a3",
+      "b1",
+      "b2",
+      "b3",
+      "b4",
+      "c1",
+      "c2",
+      "c3"
+    ],
+    "dt": 0.1,
+    "steps": 3,
+    "k": 1.0,
+    "damping": 0.5,
+    "init": 1.0,
+    "initial_state": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "method": "euler",
+    "ignored": [],
+    "assumed_positive": [
+      "p1",
+      "p7"
+    ],
+    "opposed": [],
+    "trajectory": [
+      [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        0.95,
+        1.05,
+        1.05,
+        0.95,
+        0.95,
+        1.05,
+        1.05,
+        0.95,
+        1.05,
+        1.15
+      ],
+      [
+        0.9025,
+        1.0925,
+        1.1025,
+        0.9025,
+        0.8925,
+        1.0925,
+        1.0925,
+        0.9025,
+        1.0925,
+        1.2925
+      ],
+      [
+        0.857375,
+        1.128125,
+        1.156625,
+        0.857375,
+        0.828875,
+        1.128125,
+        1.127125,
+        0.857375,
+        1.128125,
+        1.427375
+      ]
+    ]
+  },
+  "preregister": "# Preregistration: Signs of marginal associations\n\n- Theory ID: trek-signs\n- Schema version: 1.1\n- Content hash: sha256:262b5577520962dcf38075660451d54fc8cb59654b5ccce0cc5e8031e549e1a1\n- Maturity: developing\n- Derivations check: no\n\n## Theory\n\n### Constructs\n- a1 (A1): A construct.\n- a2 (A2): A construct.\n- a3 (A3): A construct.\n- b1 (B1): A construct.\n- b2 (B2): A construct.\n- b3 (B3): A construct.\n- b4 (B4): A construct.\n- c1 (C1): A construct.\n- c2 (C2): A construct.\n- c3 (C3): A construct.\n\n### Propositions\n- p1: a1 causes a2. Mechanism: It does.\n- p2: a2 increases a3. Mechanism: It does.\n- p3: b1 increases b2. Mechanism: It does.\n- p4: b1 increases b3. Mechanism: It does.\n- p5: b3 decreases b2. Mechanism: It does.\n- p6: b2 increases b4. Mechanism: It does.\n- p7: c1 causes c2. Mechanism: It does.\n- p8: c1 increases c3. Mechanism: It does.\n- p9: c2 increases c3. Mechanism: It does.\n\n## Hypotheses\n1. [directional] a2 and a3 rise together. (h1; derives from: p2)\n   - Claim: a3 and a2 are positively associated; entailed by the causal graph through p1, p2\n   - Test record: untested\n2. [directional] b2 and b4 rise together. (h2; derives from: p6)\n   - Claim: b2 and b4 are positively associated; entailed by the causal graph through p3, p4, p5, p6\n   - Test record: untested\n3. [directional] c2 and c3 rise together. (h3; derives from: p9)\n   - Claim: c2 and c3 are positively associated; left open by the causal graph, since a route between them passes through a relation that states no sign\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n- `a1 _||_ a3 | a2`\n- `a1 _||_ b1`\n- `a1 _||_ b2 | b1, b3`\n- `a1 _||_ b3 | b1`\n- `a1 _||_ b4 | b2`\n- `a1 _||_ c1`\n- `a1 _||_ c2 | c1`\n- `a1 _||_ c3 | c1, c2`\n- `a2 _||_ b1 | a1`\n- `a2 _||_ b2 | a1, b1, b3`\n- `a2 _||_ b3 | a1, b1`\n- `a2 _||_ b4 | a1, b2`\n- `a2 _||_ c1 | a1`\n- `a2 _||_ c2 | a1, c1`\n- `a2 _||_ c3 | a1, c1, c2`\n- `a3 _||_ b1 | a2`\n- `a3 _||_ b2 | a2, b1, b3`\n- `a3 _||_ b3 | a2, b1`\n- `a3 _||_ b4 | a2, b2`\n- `a3 _||_ c1 | a2`\n- `a3 _||_ c2 | a2, c1`\n- `a3 _||_ c3 | a2, c1, c2`\n- `b1 _||_ b4 | b2`\n- `b1 _||_ c1`\n- `b1 _||_ c2 | c1`\n- `b1 _||_ c3 | c1, c2`\n- `b2 _||_ c1 | b1, b3`\n- `b2 _||_ c2 | b1, b3, c1`\n- `b2 _||_ c3 | b1, b3, c1, c2`\n- `b3 _||_ b4 | b1, b2`\n- `b3 _||_ c1 | b1`\n- `b3 _||_ c2 | b1, c1`\n- `b3 _||_ c3 | b1, c1, c2`\n- `b4 _||_ c1 | b2`\n- `b4 _||_ c2 | b2, c1`\n- `b4 _||_ c3 | b2, c1, c2`\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.3, risk 0.4\n- h3: severity 0.3, risk 0.4\n"
+}

@@ -199,6 +199,116 @@
       "not_evaluated": 5
     }
   },
+  "entailments_sigma": {
+    "theory_id": "edge-sem-labels",
+    "criterion": "sigma",
+    "acyclic": false,
+    "feedback": [
+      [
+        "s"
+      ]
+    ],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "pred1",
+        "kind": "effect",
+        "x": "a",
+        "y": "y",
+        "given": [],
+        "sign": "positive",
+        "derived": "undetermined",
+        "verdict": "undetermined",
+        "basis": "unsigned",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "pred2",
+        "kind": "effect",
+        "x": "y",
+        "y": "a",
+        "given": [],
+        "sign": "zero",
+        "derived": "zero",
+        "verdict": "entailed",
+        "basis": "no_path",
+        "faithfulness": false,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "pred3",
+        "kind": "effect",
+        "x": "a",
+        "y": "y",
+        "given": [],
+        "sign": "nonzero",
+        "derived": "undetermined",
+        "verdict": "entailed",
+        "basis": "unsigned",
+        "faithfulness": true,
+        "via": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "pred4",
+        "kind": "effect",
+        "x": "a",
+        "y": "a",
+        "given": [],
+        "sign": "positive",
+        "derived": "",
+        "verdict": "not_evaluated",
+        "basis": "malformed_claim",
+        "faithfulness": false,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "phenomenon",
+        "id": "ph1",
+        "kind": "effect",
+        "x": "m",
+        "y": "y",
+        "given": [],
+        "sign": "negative",
+        "derived": "negative",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p2"
+        ],
+        "identified": null,
+        "adjustment": null
+      }
+    ],
+    "counts": {
+      "entailed": 3,
+      "contradicted": 0,
+      "undetermined": 1,
+      "not_evaluated": 1
+    }
+  },
   "equivalent_models": {
     "theory_id": "edge-sem-labels",
     "computed": false,

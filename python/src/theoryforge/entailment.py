@@ -11,9 +11,10 @@ the two apart.
 
 The signs come from the path-tracing rules of a linear structural model (Wright,
 1934): an effect is the sum over the directed paths from cause to outcome of the
-product of the coefficients along each, and a covariance the sum over the treks
-between the two constructs. When every term has the same sign, the sum has it
-too, whatever the sizes of the coefficients. VanderWeele and Robins (2010) give
+product of the coefficients along each, and a covariance the sum over the simple
+treks between the two constructs, each weighted by the variance of its source.
+When every term has the same sign, the sum has it too, whatever the sizes of
+the coefficients. VanderWeele and Robins (2010) give
 conditions under which such sign reasoning holds beyond linear models.
 """
 from __future__ import annotations
@@ -56,24 +57,49 @@ def walk_signs(directed: list[list[bool]], sign: list[list[int | None]], k: int,
                start: int, held: bool = False) -> list[int]:
     """For each vertex, the sign set of the directed walks to it from ``start``.
 
-    The empty walk counts, so ``start`` holds POS. Each state (vertex, sign) is
-    visited once, so the search ends on a graph with feedback loops too. With
-    ``held``, no walk returns to ``start``, as when an intervention holds it
-    fixed and so cuts the edges into it.
+    The empty walk counts, so ``start`` holds POS. With ``held``, the edges
+    into ``start`` are left out, so that no walk returns to it, as when an
+    intervention holds it fixed. A strong component whose edges form one
+    simple cycle, a self loop included, has as many edges as vertices, and the
+    effects within it are the path along the cycle times 1 / (1 - g), for the
+    cycle's gain g, which is positive whenever the effects round the loop die
+    out. A walk that enters such a component therefore never closes the cycle
+    back to the vertex where it entered. Other walks may go round a loop. The
+    search runs over the states (vertex, sign, the vertex where the walk
+    entered its simple cycle or -1), each visited once, so it ends on a graph
+    with feedback loops too.
     """
+    d = [[directed[u][v] and not (held and v == start) for v in range(k)] for u in range(k)]
+    comps = strong_components(reach(d, k))
+    comp = [0] * k
+    for c, members in enumerate(comps):
+        for v in members:
+            comp[v] = c
+    simple = [sum(d[u][v] for u in members for v in members) == len(members) for members in comps]
     masks = [0] * k
     masks[start] = POS
-    queue = [(start, POS)]
-    while queue:
-        v, bit = queue.pop()
+    first = (start, POS, start if simple[comp[start]] else -1)
+    seen = {first}
+    stack = [first]
+    while stack:
+        v, bit, entry = stack.pop()
         for w in range(k):
-            if not directed[v][w] or (held and w == start):
+            if not d[v][w]:
                 continue
+            if comp[w] == comp[v]:
+                if w == entry:
+                    continue
+                nxt_entry = entry
+            else:
+                nxt_entry = w if simple[comp[w]] else -1
             nxt = _mul(bit, _EDGE_MASK[sign[v][w]])
             for b in (POS, NEG, UNK):
-                if nxt & b and not masks[w] & b:
+                if nxt & b:
                     masks[w] |= b
-                    queue.append((w, b))
+                    state = (w, b, nxt_entry)
+                    if state not in seen:
+                        seen.add(state)
+                        stack.append(state)
     return masks
 
 
@@ -156,6 +182,7 @@ class _Graph:
         self.sep_r = reach(self.sep_d, self.k)
         self._walks: dict[int, list[int]] = {}
         self._held: dict[int, tuple[list[int], list[list[bool]]]] = {}
+        self._cov: list[list[int]] | None = None
 
     def walks(self, s: int) -> list[int]:
         if s not in self._walks:
@@ -171,6 +198,39 @@ class _Graph:
             self._held[x] = (walk_signs(self.directed, self.sign, self.k, x, held=True),
                              reach(cut, self.k))
         return self._held[x]
+
+    def cov_signs(self) -> list[list[int]]:
+        """The sign sets of the covariances of every pair of vertices of an acyclic graph.
+
+        Wright's (1934) rule: the covariance is a sum over the simple treks
+        between the two, those whose two directed paths share no vertex but
+        their source, each the product of its coefficients and the variance of
+        its source. For b that does not reach a, every simple trek between them
+        ends in an edge p -> b from a parent p of b, or is an association of b
+        with a vertex that reaches a, so the set of (a, b) is the union over
+        the parents p of the edge's sign times the set of (a, p), and it gains
+        UNK for such an association. The pairs are taken with the vertices in
+        an order in which no vertex comes before one that reaches it, and the
+        order does not change the result. A trek whose two paths share a
+        segment, such as u <- t -> u -> y, holds a coefficient squared, so
+        reading its two copies as independent signs would leave a fixed sign
+        open.
+        """
+        if self._cov is None:
+            k, r = self.k, self.r
+            S = [[POS if a == b else 0 for b in range(k)] for a in range(k)]
+            order = sorted(range(k), key=lambda v: (sum(r[u][v] for u in range(k)), v))
+            for j, b in enumerate(order):
+                parents = [p for p in range(k) if self.directed[p][b]]
+                for a in order[:j]:
+                    m = 0
+                    for p in parents:
+                        m |= _mul(_EDGE_MASK[self.sign[p][b]], S[a][p])
+                    if any(self.bidirected[c][b] and r[c][a] for c in range(k)):
+                        m |= UNK
+                    S[a][b] = S[b][a] = m
+            self._cov = S
+        return self._cov
 
     def separated(self, i: int, j: int, given: list[int]) -> bool:
         return m_separated(self.sep_d, self.sep_b, self.sep_r, i, j, given)
@@ -195,12 +255,18 @@ class _Graph:
 
     def association(self, x: int, y: int) -> tuple[str, str, list[str]]:
         k, r = self.k, self.r
-        mask = 0
-        for t in range(k):
-            mask |= _mul(self.walks(t)[x], self.walks(t)[y])
-        for (a, b) in self.assoc_props:
-            if (r[a][x] and r[b][y]) or (r[a][y] and r[b][x]):
-                mask |= UNK
+        if not self.feedback:
+            mask = self.cov_signs()[x][y]
+        else:
+            # With feedback loops, the treks are read as pairs of walks from a
+            # common source, which counts a trek whose two walks share a
+            # segment as well.
+            mask = 0
+            for t in range(k):
+                mask |= _mul(self.walks(t)[x], self.walks(t)[y])
+            for (a, b) in self.assoc_props:
+                if (r[a][x] and r[b][y]) or (r[a][y] and r[b][x]):
+                    mask |= UNK
         derived, basis = _derived(mask)
 
         def common(u: int, e: int) -> bool:
@@ -322,12 +388,16 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     positive sign and ``decreases`` a negative one. The other directed
     relations and ``associates`` state no sign. The sign of an effect is the
     product of the signs along each directed path from ``x`` to ``y``. The
-    sign of a marginal association is the product along each trek, a pair of
-    directed paths from a common source to the two constructs, and a trek that
-    passes through an association has no fixed sign. When every path or trek
-    has the same sign, the graph fixes the sign of the quantity. When none
-    exists, the quantity is zero. A conditional association is zero when the
-    two constructs are m-separated given the others and nonzero otherwise.
+    sign of a marginal association is the product along each simple trek, a
+    pair of directed paths from a common source to the two constructs that
+    share no other construct, and a trek that passes through an association
+    has no fixed sign. When every path or trek has the same sign, the graph
+    fixes the sign of the quantity. When none exists, the quantity is zero. A
+    trek whose two paths share an edge adds no term of its own, since the
+    square of that edge's coefficient is part of a variance, so when ``t``
+    causes ``u`` and ``u`` increases ``y``, ``u`` and ``y`` are positively
+    associated. A conditional association is zero when the two constructs are
+    m-separated given the others and nonzero otherwise.
 
     Each claim is then ``entailed`` when the derived sign implies it,
     ``contradicted`` when it rules it out, ``undetermined`` when the graph
@@ -341,7 +411,12 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     constructs is left out unless an association stands for it. Under
     ``cycles="sigma"``, a graph with feedback loops is read on the assumption
     that each loop settles to a unique equilibrium, and the signs further
-    assume that the effects around each loop die out.
+    assume that the effects around each loop die out. A loop that is one
+    simple cycle then multiplies the effects through it by a positive factor,
+    so the signs through it are those of the paths. The walks round a loop of
+    any other shape are read as they are, and a graph with feedback loops
+    reads each trek as a pair of walks from a common source, so a sign that
+    the graph fixes can be left open there.
 
     For an effect claim on an acyclic graph, ``identified`` says whether
     adjusting for some set of the theory's constructs would identify the

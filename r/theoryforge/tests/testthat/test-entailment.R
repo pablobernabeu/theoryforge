@@ -364,3 +364,64 @@ test_that("a refusal of the causal graph has its own class, and nothing else is 
   expect_error(tf_check(t), "an internal fault")
   expect_error(tf_preregister(t), "an internal fault")
 })
+
+test_that("a marginal association takes the signs of the simple treks alone", {
+  # c0 -> c1 -> c2 is also the trek c1 <- c0 -> c1 -> c2, whose two paths share
+  # c0 -> c1. Its term holds that coefficient squared, so it adds no sign, and
+  # the association of c1 and c2 is positive whatever c0 does to c1 (Wright,
+  # 1934). The Python suite asserts the same records.
+  read <- function(props, cl) {
+    rec <- tf_entailments(small_theory(props, claims = list(cl)))$claims[[1]]
+    paste(rec$derived, rec$verdict, rec$basis)
+  }
+  pos <- claim("association", "c1", "c2", "positive")
+  expect_identical(read(list(c("c0", "c1", "causes"), c("c1", "c2", "increases")), pos),
+                   "positive entailed paths_agree")
+  expect_identical(read(list(c("c0", "c1", "causes"), c("c1", "c2", "increases")),
+                        claim("association", "c2", "c1", "positive")),
+                   "positive entailed paths_agree")
+  expect_identical(read(list(c("c0", "c1", "increases"), c("c0", "c3", "increases"),
+                             c("c3", "c1", "decreases"), c("c1", "c2", "increases")), pos),
+                   "positive entailed paths_agree")
+  expect_identical(read(list(c("c0", "c1", "causes"), c("c1", "c2", "increases"),
+                             c("c1", "c3", "associates")), pos),
+                   "positive entailed paths_agree")
+  # Here c1 <- c0 -> c2 is a simple trek of no fixed sign.
+  expect_identical(read(list(c("c0", "c1", "causes"), c("c0", "c2", "increases"),
+                             c("c1", "c2", "increases")), pos),
+                   "undetermined undetermined unsigned")
+  t <- small_theory(list(c("c0", "c1", "causes"), c("c1", "c2", "increases")), claims = list(pos),
+                    alternatives = list(list(id = "r", label = "r", propositions = list(
+                      list(id = "r1", from = "c1", to = "c2", relation = "increases"),
+                      list(id = "r2", from = "c0", to = "c2", relation = "causes")))))
+  item <- Filter(function(i) i$id == "derivation_chain", tf_check(t)$items)[[1]]
+  expect_identical(item$status, "pass")
+  expect_false(any(vapply(tf_discriminate(t, "r")$associations,
+                          function(a) a$a == "c1" && a$b == "c2", logical(1))))
+})
+
+test_that("a feedback loop that is one simple cycle leaves the signs of the paths through it", {
+  # The loop of c1 and c2 has a negative gain g, and the effects through it are
+  # those of the paths times 1 / (1 - g) > 0. So are those through the negative
+  # self loop of c4. When c2 and c3 also raise each other, the walks from c0 to
+  # c2 take both signs, and the reading stays conservative. The Python suite
+  # asserts the same records.
+  t <- small_theory(list(c("c0", "c1", "increases"), c("c1", "c2", "increases"),
+                         c("c2", "c1", "decreases"), c("c3", "c4", "increases"),
+                         c("c4", "c4", "decreases")),
+                    claims = list(claim("effect", "c0", "c2", "positive"),
+                                  claim("effect", "c0", "c1", "positive"),
+                                  claim("association", "c0", "c2", "positive"),
+                                  claim("association", "c1", "c2", "positive"),
+                                  claim("effect", "c3", "c4", "positive"),
+                                  claim("effect", "c2", "c1", "negative")), k = 5L)
+  got <- vapply(tf_entailments(t, cycles = "sigma")$claims, function(c) paste(c$derived, c$basis), "")
+  expect_identical(got, c("positive paths_agree", "positive paths_agree", "positive paths_agree",
+                          "undetermined opposite_signs", "positive paths_agree",
+                          "negative paths_agree"))
+  shared <- small_theory(list(c("c0", "c1", "increases"), c("c1", "c2", "increases"),
+                              c("c2", "c1", "decreases"), c("c2", "c3", "increases"),
+                              c("c3", "c2", "increases")),
+                         claims = list(claim("effect", "c0", "c2", "positive")))
+  expect_identical(tf_entailments(shared, cycles = "sigma")$claims[[1]]$basis, "opposite_signs")
+})

@@ -1,0 +1,404 @@
+{
+  "read": "ok",
+  "validate": true,
+  "validate_full": true,
+  "check": {
+    "aggregate_score": 43.5,
+    "coverage": 0.92,
+    "gate": "pass",
+    "n_blockers_failed": 0,
+    "items": [
+      {
+        "id": "falsifiability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "precision",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "risk_severity",
+        "status": "warn",
+        "score": 0.3
+      },
+      {
+        "id": "parsimony",
+        "status": "n/a",
+        "score": null
+      },
+      {
+        "id": "non_redundancy",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "construct_clarity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "scope",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "logical_why",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "causal_testability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "diagnosticity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "formalisation",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "derivation_chain",
+        "status": "pass",
+        "score": 1.0
+      }
+    ]
+  },
+  "severity": [
+    {
+      "prediction_id": "h1",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h2",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h3",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h4",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h5",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    }
+  ],
+  "implications": {
+    "error": "implications requires an acyclic causal graph; cycle found: y -> z -> y; set cycles to 'sigma' to derive sigma-separation statements"
+  },
+  "entailments": {
+    "theory_id": "loop-signs",
+    "criterion": "m",
+    "acyclic": false,
+    "feedback": [
+      [
+        "y",
+        "z"
+      ],
+      [
+        "v"
+      ]
+    ],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "h1",
+        "kind": "effect",
+        "x": "x",
+        "y": "z",
+        "given": [],
+        "sign": "positive",
+        "derived": "",
+        "verdict": "not_evaluated",
+        "basis": "feedback_loop",
+        "faithfulness": false,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h2",
+        "kind": "effect",
+        "x": "x",
+        "y": "y",
+        "given": [],
+        "sign": "positive",
+        "derived": "",
+        "verdict": "not_evaluated",
+        "basis": "feedback_loop",
+        "faithfulness": false,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h3",
+        "kind": "association",
+        "x": "x",
+        "y": "z",
+        "given": [],
+        "sign": "positive",
+        "derived": "",
+        "verdict": "not_evaluated",
+        "basis": "feedback_loop",
+        "faithfulness": false,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h4",
+        "kind": "association",
+        "x": "y",
+        "y": "z",
+        "given": [],
+        "sign": "positive",
+        "derived": "",
+        "verdict": "not_evaluated",
+        "basis": "feedback_loop",
+        "faithfulness": false,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h5",
+        "kind": "effect",
+        "x": "s",
+        "y": "v",
+        "given": [],
+        "sign": "positive",
+        "derived": "",
+        "verdict": "not_evaluated",
+        "basis": "feedback_loop",
+        "faithfulness": false,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      }
+    ],
+    "counts": {
+      "entailed": 0,
+      "contradicted": 0,
+      "undetermined": 0,
+      "not_evaluated": 5
+    }
+  },
+  "entailments_sigma": {
+    "theory_id": "loop-signs",
+    "criterion": "sigma",
+    "acyclic": false,
+    "feedback": [
+      [
+        "y",
+        "z"
+      ],
+      [
+        "v"
+      ]
+    ],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "h1",
+        "kind": "effect",
+        "x": "x",
+        "y": "z",
+        "given": [],
+        "sign": "positive",
+        "derived": "positive",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p2",
+          "p3"
+        ],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h2",
+        "kind": "effect",
+        "x": "x",
+        "y": "y",
+        "given": [],
+        "sign": "positive",
+        "derived": "positive",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p2",
+          "p3"
+        ],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h3",
+        "kind": "association",
+        "x": "x",
+        "y": "z",
+        "given": [],
+        "sign": "positive",
+        "derived": "positive",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p2",
+          "p3"
+        ],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h4",
+        "kind": "association",
+        "x": "y",
+        "y": "z",
+        "given": [],
+        "sign": "positive",
+        "derived": "undetermined",
+        "verdict": "undetermined",
+        "basis": "opposite_signs",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p2",
+          "p3"
+        ],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h5",
+        "kind": "effect",
+        "x": "s",
+        "y": "v",
+        "given": [],
+        "sign": "positive",
+        "derived": "positive",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p4",
+          "p5"
+        ],
+        "identified": null,
+        "adjustment": null
+      }
+    ],
+    "counts": {
+      "entailed": 4,
+      "contradicted": 0,
+      "undetermined": 1,
+      "not_evaluated": 0
+    }
+  },
+  "equivalent_models": {
+    "theory_id": "loop-signs",
+    "computed": false,
+    "reason": "feedback_loop",
+    "constructs": [
+      "x",
+      "y",
+      "z",
+      "s",
+      "v"
+    ],
+    "v_structures": [],
+    "edges": [],
+    "n_compelled": 0,
+    "n_reversible": 0
+  },
+  "compile_sem": "# lavaan model generated by theoryforge for loop-signs\n# Written for lavaan::sem(); indicator names are the sanitised measurement entries and must match columns of the data.\n# Measurement model\n# Structural model\ny ~ b_x_y*x\nz ~ b_y_z*y\ny ~ b_z_y*z\nv ~ b_s_v*s\n# Proposition 'p5' relates v to itself and is left out: a regression of a variable on itself only rescales its disturbance, so a linear SEM cannot estimate it.\n# Feedback loop among y, z: a non-recursive model may not be identified. lavaan::sem() leaves these disturbances uncorrelated, and the order and rank conditions (Bollen, 1989) assume they may correlate, so check identification before fitting.\n# Signs the theory states, which the fit does not impose\n# b_x_y > 0 (p1, increases)\n# b_y_z > 0 (p2, increases)\n# b_z_y < 0 (p3, decreases)\n# b_s_v > 0 (p4, increases)\n# Effects the claims are about, each the sum over the directed paths from cause to outcome of the product of the labels along the path\n# h1 claims that the effect of x on z is positive.\n# The paths form a feedback loop, so no parameter is defined.\n# h2 claims that the effect of x on y is positive.\n# The paths form a feedback loop, so no parameter is defined.\n# h5 claims that the effect of s on v is positive.\n# The paths form a feedback loop, so no parameter is defined.\n# Covariances the theory fixes at zero (lavaan::sem() frees them by default; delete this block to restore its defaults)\nx ~~ 0*s\n",
+  "simulate": {
+    "states": [
+      "x",
+      "y",
+      "z",
+      "s",
+      "v"
+    ],
+    "dt": 0.1,
+    "steps": 3,
+    "k": 1.0,
+    "damping": 0.5,
+    "init": 1.0,
+    "initial_state": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "method": "euler",
+    "ignored": [],
+    "assumed_positive": [],
+    "opposed": [],
+    "trajectory": [
+      [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        0.95,
+        0.95,
+        1.05,
+        0.95,
+        0.95
+      ],
+      [
+        0.9025,
+        0.8925,
+        1.0925,
+        0.9025,
+        0.9025
+      ],
+      [
+        0.857375,
+        0.828875,
+        1.127125,
+        0.857375,
+        0.857375
+      ]
+    ]
+  },
+  "preregister": "# Preregistration: Signs through simple feedback loops\n\n- Theory ID: loop-signs\n- Schema version: 1.1\n- Content hash: sha256:b8e3e0bc462f57d039996ed46f3817313f1813d4418c38d603dd612f139582ba\n- Maturity: developing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- x (X): A construct.\n- y (Y): A construct.\n- z (Z): A construct.\n- s (S): A construct.\n- v (V): A construct.\n\n### Propositions\n- p1: x increases y. Mechanism: It does.\n- p2: y increases z. Mechanism: It does.\n- p3: z decreases y. Mechanism: It does.\n- p4: s increases v. Mechanism: It does.\n- p5: v decreases v. Mechanism: It does.\n\n## Hypotheses\n1. [directional] x raises z. (h1; derives from: p1, p2)\n   - Claim: the effect of x on z is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n2. [directional] x raises y. (h2; derives from: p1)\n   - Claim: the effect of x on y is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n3. [directional] x and z rise together. (h3; derives from: p1, p2)\n   - Claim: x and z are positively associated; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n4. [directional] y and z rise together. (h4; derives from: p2)\n   - Claim: y and z are positively associated; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n5. [directional] s raises v. (h5; derives from: p4)\n   - Claim: the effect of s on v is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_Not derived: the causal graph has a feedback loop, y -> z -> y. With cycles = 'sigma', the statements are read by sigma-separation and hold if each loop settles to a unique equilibrium._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.3, risk 0.4\n- h3: severity 0.3, risk 0.4\n- h4: severity 0.3, risk 0.4\n- h5: severity 0.3, risk 0.4\n"
+}

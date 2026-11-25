@@ -138,6 +138,63 @@
       "not_evaluated": 2
     }
   },
+  "entailments_sigma": {
+    "theory_id": "claim-cycle",
+    "criterion": "sigma",
+    "acyclic": false,
+    "feedback": [
+      [
+        "c1",
+        "c2"
+      ]
+    ],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "h1",
+        "kind": "effect",
+        "x": "c1",
+        "y": "c3",
+        "given": [],
+        "sign": "negative",
+        "derived": "negative",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p3"
+        ],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h2",
+        "kind": "effect",
+        "x": "c1",
+        "y": "c3",
+        "given": [],
+        "sign": "positive",
+        "derived": "negative",
+        "verdict": "contradicted",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p3"
+        ],
+        "identified": null,
+        "adjustment": null
+      }
+    ],
+    "counts": {
+      "entailed": 1,
+      "contradicted": 1,
+      "undetermined": 0,
+      "not_evaluated": 0
+    }
+  },
   "equivalent_models": {
     "theory_id": "claim-cycle",
     "computed": false,

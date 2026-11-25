@@ -32,34 +32,95 @@
 }
 
 # For each vertex, the sign set of the directed walks to it from `start`. The
-# empty walk counts, so `start` holds POS. Each state (vertex, sign) is visited
-# once, so the search ends on a graph with feedback loops too. With `held`, no
-# walk returns to `start`, as when an intervention holds it fixed and so cuts
-# the edges into it.
+# empty walk counts, so `start` holds POS. With `held`, the edges into `start`
+# are left out, so that no walk returns to it, as when an intervention holds it
+# fixed. A strong component whose edges form one simple cycle, a self loop
+# included, has as many edges as vertices, and the effects within it are the
+# path along the cycle times 1 / (1 - g), for the cycle's gain g, which is
+# positive whenever the effects round the loop die out. A walk that enters such
+# a component therefore never closes the cycle back to the vertex where it
+# entered. Other walks may go round a loop. The search runs over the states
+# (vertex, sign, the vertex where the walk entered its simple cycle or 0), each
+# visited once, so it ends on a graph with feedback loops too.
 .tf_walk_signs <- function(directed, sign, k, start, held = FALSE) {
+  d <- directed
+  if (held) d[, start] <- FALSE
+  comps <- .tf_strong_components(.tf_reach(d, k))
+  comp <- integer(k)
+  for (c in seq_along(comps)) comp[comps[[c]]] <- c
+  simple <- vapply(comps, function(m) sum(d[m, m]) == length(m), logical(1))
+  bits <- c(.tf_POS, .tf_NEG, .tf_UNK)
   masks <- integer(k)
   masks[[start]] <- .tf_POS
+  e0 <- if (simple[[comp[[start]]]]) start else 0L
+  seen <- array(FALSE, c(k, 3L, k + 1L))
+  seen[start, 1L, e0 + 1L] <- TRUE
   qv <- start
-  qb <- .tf_POS
+  qb <- 1L
+  qe <- e0
   while (length(qv) > 0L) {
     n <- length(qv)
     v <- qv[[n]]
-    bit <- qb[[n]]
+    bit <- bits[[qb[[n]]]]
+    entry <- qe[[n]]
     qv <- qv[-n]
     qb <- qb[-n]
-    for (w in which(directed[v, ])) {
-      if (held && w == start) next
+    qe <- qe[-n]
+    for (w in which(d[v, ])) {
+      if (comp[[w]] == comp[[v]]) {
+        if (w == entry) next
+        ne <- entry
+      } else {
+        ne <- if (simple[[comp[[w]]]]) w else 0L
+      }
       nxt <- .tf_sign_mul(bit, .tf_edge_mask(sign[v, w]))
-      for (b in c(.tf_POS, .tf_NEG, .tf_UNK)) {
-        if (bitwAnd(nxt, b) != 0L && bitwAnd(masks[[w]], b) == 0L) {
-          masks[[w]] <- bitwOr(masks[[w]], b)
+      for (i in 1:3) {
+        if (bitwAnd(nxt, bits[[i]]) == 0L) next
+        masks[[w]] <- bitwOr(masks[[w]], bits[[i]])
+        if (!seen[w, i, ne + 1L]) {
+          seen[w, i, ne + 1L] <- TRUE
           qv <- c(qv, w)
-          qb <- c(qb, b)
+          qb <- c(qb, i)
+          qe <- c(qe, ne)
         }
       }
     }
   }
   masks
+}
+
+# The sign sets of the covariances of every pair of vertices of an acyclic
+# graph, as a k by k matrix, by Wright's (1934) rule: the covariance is a sum
+# over the simple treks between the two, those whose two directed paths share
+# no vertex but their source, each the product of its coefficients and the
+# variance of its source. For b that does not reach a, every simple trek
+# between them ends in an edge p -> b from a parent p of b, or is an association
+# of b with a vertex that reaches a, so the set of (a, b) is the union over the
+# parents p of the edge's sign times the set of (a, p), and it gains UNK for
+# such an association. The pairs are taken with the vertices in an order in
+# which no vertex comes before one that reaches it, and the order does not
+# change the result. A trek whose two paths share a segment, such as
+# u <- t -> u -> y, holds a coefficient squared, so reading its two copies as
+# independent signs would leave a fixed sign open.
+.tf_cov_signs <- function(G) {
+  k <- G$k
+  r <- G$r
+  S <- matrix(0L, nrow = k, ncol = k)
+  diag(S) <- .tf_POS
+  ord <- order(colSums(r), seq_len(k))
+  for (j in seq_len(k)) {
+    b <- ord[[j]]
+    parents <- which(G$directed[, b])
+    joined <- G$bidirected[, b]
+    for (a in ord[seq_len(j - 1L)]) {
+      m <- 0L
+      for (p in parents) m <- bitwOr(m, .tf_sign_mul(.tf_edge_mask(G$sign[p, b]), S[a, p]))
+      if (any(joined & r[, a])) m <- bitwOr(m, .tf_UNK)
+      S[a, b] <- m
+      S[b, a] <- m
+    }
+  }
+  S
 }
 
 # The derived sign of a sign set, and the basis of the derivation.
@@ -184,15 +245,22 @@
 
 .tf_association <- function(G, x, y) {
   r <- G$r
-  mask <- 0L
-  for (t in seq_len(G$k)) {
-    mask <- bitwOr(mask, .tf_sign_mul(.tf_walks(G, t)[[x]], .tf_walks(G, t)[[y]]))
-  }
   na <- nrow(G$assoc)
-  for (row in seq_len(na)) {
-    a <- G$assoc[row, 1L]
-    b <- G$assoc[row, 2L]
-    if ((r[a, x] && r[b, y]) || (r[a, y] && r[b, x])) mask <- bitwOr(mask, .tf_UNK)
+  if (length(G$feedback) == 0L) {
+    if (is.null(G$walk_cache[["cov"]])) G$walk_cache[["cov"]] <- .tf_cov_signs(G)
+    mask <- G$walk_cache[["cov"]][x, y]
+  } else {
+    # With feedback loops, the treks are read as pairs of walks from a common
+    # source, which counts a trek whose two walks share a segment as well.
+    mask <- 0L
+    for (t in seq_len(G$k)) {
+      mask <- bitwOr(mask, .tf_sign_mul(.tf_walks(G, t)[[x]], .tf_walks(G, t)[[y]]))
+    }
+    for (row in seq_len(na)) {
+      a <- G$assoc[row, 1L]
+      b <- G$assoc[row, 2L]
+      if ((r[a, x] && r[b, y]) || (r[a, y] && r[b, x])) mask <- bitwOr(mask, .tf_UNK)
+    }
   }
   d <- .tf_derived(mask)
   common <- function(u, e) any(r[, u] & r[, e])
@@ -324,12 +392,16 @@
 #' positive sign and \code{decreases} a negative one, and the other relations
 #' state no sign. The sign of an effect is the product of the signs along each
 #' directed path from \code{x} to \code{y}, and the sign of a marginal
-#' association the product along each trek, a pair of directed paths from a
-#' common source to the two constructs. A trek through an association has no
-#' fixed sign. When every path or trek has the same sign, the graph fixes the
-#' sign of the quantity, and when none exists, the quantity is zero (Wright,
-#' 1934). A conditional association is zero when the two constructs are
-#' m-separated given the others and nonzero otherwise.
+#' association the product along each simple trek, a pair of directed paths
+#' from a common source to the two constructs that share no other construct. A
+#' trek through an association has no fixed sign. When every path or trek has
+#' the same sign, the graph fixes the sign of the quantity, and when none
+#' exists, the quantity is zero (Wright, 1934). A trek whose two paths share an
+#' edge adds no term of its own, since the square of that edge's coefficient is
+#' part of a variance, so when \code{t} causes \code{u} and \code{u}
+#' increases \code{y}, \code{u} and \code{y} are positively associated. A
+#' conditional association is zero when the two constructs are m-separated
+#' given the others and nonzero otherwise.
 #'
 #' Each claim is then \code{entailed}, \code{contradicted},
 #' \code{undetermined} when the graph leaves the sign open, or
@@ -342,7 +414,12 @@
 #' and that no common cause of two constructs is left out unless an
 #' association stands for it. Under \code{cycles = "sigma"}, each feedback loop
 #' is assumed to settle to a unique equilibrium, and the signs further assume
-#' that the effects around each loop die out.
+#' that the effects around each loop die out. A loop that is one simple cycle
+#' then multiplies the effects through it by a positive factor, so the signs
+#' through it are those of the paths. The walks round a loop of any other
+#' shape are read as they are, and a graph with feedback loops reads each trek
+#' as a pair of walks from a common source, so a sign that the graph fixes can
+#' be left open there.
 #'
 #' @param theory A theory object.
 #' @param cycles \code{"refuse"} (the default) or \code{"sigma"}, as in
