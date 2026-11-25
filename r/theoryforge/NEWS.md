@@ -351,6 +351,18 @@ add the changes that concern the R package alone.
 * `tf_fetch_corpus()` began leaving out a null title, which made the record fail
   `corpus.schema.json`, and asking OpenAlex only for the fields a record maps.
 
+* `tf_preregister()` and `tf_dossier()` write every value on one line, ids,
+  dates, registrations and the messages of a refusal included, where a line break
+  in one of them started a new line of the document.
+
+* The report that `tf_render_report()` writes shows the dossier's text as typed:
+  a statement's emphasis, link or mathematics, `--` and `...` are no longer set as
+  such, though quotation marks still become typographic quotes. An implied
+  conditional independence whose text holds characters other than letters,
+  digits, `_`, `|`, `,`, `.` and spaces is no longer set as code. The slide menu of
+  a revealjs report shows the first words of each slide, and the dossier's title
+  has the anchor `#theoryforge-dossier`.
+
 ## Deprecated
 
 * The `engine` argument of `tf_diagram()` has no effect and will be removed in the
@@ -397,9 +409,51 @@ add the changes that concern the R package alone.
   expanded, with `(<path>) the document holds more than 1000000 values once its
   aliases are expanded`. Merge keys read as before.
 
-* `tf_read()` and `tf_read_corpus()` evaluated R code that a theory file tags
-  `!expr` when `options(yaml.eval.expr = TRUE)` was set. No reading of a file
-  evaluates it now.
+* `tf_read()` and `tf_read_corpus()` evaluated a value tagged `!expr` as R code
+  when the option `yaml.eval.expr` was `TRUE`, so reading a theory file from
+  someone else could run code. They now parse every file with `eval.expr = FALSE`,
+  whatever the option says, and stop with `(<path>) a value is tagged !expr, which
+  theoryforge does not read`, however the tag is spelled, as the Python package
+  refuses it.
+
+* `tf_read()` and `tf_read_corpus()` read the file or downloaded the URL that a
+  `.json` file's whole text named, since `jsonlite::fromJSON()` takes a short text
+  that is not JSON for a file name or a URL. The text is now validated first and
+  parsed with `jsonlite::parse_json()`, so such a file is refused, as in Python.
+
+* `tf_read()`, `tf_read_corpus()` and `tf_write()` chose the format with
+  `tools::file_ext()`, which gives `json` for a file named `.json` alone in some
+  versions of R and nothing in others. A name that begins with its only dot now
+  has no extension in every version of R, so such a file is YAML, as in Python.
+
+* `tf_render_report()` wrote the dossier into the report as it stood, under a
+  header that named no engine. A line break in an id, a date or a registration
+  could start a code chunk that Quarto ran when it rendered the report, and the
+  file's shortcodes, raw HTML, OJS and TeX reached Quarto, Pandoc and the browser
+  as markup, so a theory file from someone else that `tf_validate()` and
+  `tf_check()` accepted could run code or read files. The header now gives
+  `engine: markdown`, `ojs-engine: false`, `html-math-method: plain`, an empty
+  `title-selector` for the revealjs menu and a reader without raw HTML, raw
+  attributes or raw TeX, and the body escapes the punctuation of the dossier's
+  text. A dossier that holds a shortcode in Quarto's encoded form is refused with
+  `render_report refuses text that Quarto reads as an encoded shortcode:
+  '<match>'`. These measures were checked with Quarto 1.11 in the html, revealjs
+  and dashboard formats.
+
+* `tf_render_report()` passed `to` to the shell as it stood, so a value such as
+  `"html; rm x"` ran a command, and wrote it into the header, where a line break
+  added keys. It now stops, before writing anything, unless `to` is a format name
+  or the path of a custom writer, of letters, digits, `_`, `.`, `+`, `/` and `-`
+  that starts with a letter or digit, and it quotes every argument it hands the
+  shell. Quarto is given the absolute path of the report, so one named
+  `-report.qmd` is no longer read as an option that rendered nothing while the
+  call reported success.
+
+* `tf_osf_push(overwrite = TRUE)` sent the token with its `PUT` to whatever upload
+  link the folder listing named. It now stops, before the `PUT`, with
+  `OSF lists <filename> with an upload link outside OSF storage: <link>` unless the
+  link is an https address on the host of `base_url` or on a host ending in
+  `.osf.io`.
 
 * `tf_write()` wrote a missing value (`NA`) in a field that the schema types as an
   array of strings as an array that holds null. It now writes null.
@@ -507,6 +561,15 @@ add the changes that concern the R package alone.
 
 * The help of each browser app says how the amendment appraisal compares auxiliary
   assumptions and lists the works its texts cite, with their DOIs.
+
+* The help of `tf_render_report()` says where its protection stops. The writers of
+  other markup languages, such as `docusaurus-md`, `hugo-md`, `org` and `rst`,
+  write the theory's text back with few escapes or none, so a theory from someone
+  else is to be rendered to `html`, `revealjs`, `dashboard`, `pdf`, `typst`,
+  `docx`, `odt`, `pptx` or `epub`. Quarto also runs the scripts and filters that
+  `_quarto.yml`, `_metadata.yml`, `_brand.yml` and `_extensions` name in the
+  report's folder or any folder above it, so such a report belongs in a folder of
+  the reader's own.
 
 * The methodology article was reorganised by subject, with a section for each group
   of checklist items and sections on the causal reading of claims, equivalent models

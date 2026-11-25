@@ -270,6 +270,16 @@ that concern it alone.
 - `simulate()` began computing with `dt`, `k` and `damping` as doubles, as R does, so a
   NumPy float32 knob gives the trajectory of the double it equals.
 
+- `preregister()` and `dossier()` write every value on one line, ids, dates, registrations
+  and the messages of a refusal included, where a line break in one of them started a new
+  line of the document.
+- The report that `render_report()` writes shows the dossier's text as typed: a
+  statement's emphasis, link or mathematics, `--` and `...` are no longer set as such,
+  though quotation marks still become typographic quotes. An implied conditional
+  independence whose text holds characters other than letters, digits, `_`, `|`, `,`, `.`
+  and spaces is no longer set as code. The slide menu of a revealjs report shows the first
+  words of each slide, and the dossier's title has the anchor `#theoryforge-dossier`.
+
 ### Deprecated
 - Naming the theory argument `T`, as in `check(T=theory)`, gives a `FutureWarning` and will
   stop working in the next minor release. Name it `theory` or pass the theory by position.
@@ -314,6 +324,15 @@ that concern it alone.
   character as it is, which libyaml reads as a line feed and folds into a space, so
   `Panic<NEL>disorder` read back as `Panic disorder` in both packages. Such a string is now
   written in double quotes with the escape `\N`, as R writes it.
+- The readers and writers take a path that begins with `~` from the home directory, as R
+  does, where Python looked for a folder named `~`. A `~user` with no such user stays a
+  relative folder name, as in R.
+- A file named `.json` alone was JSON in R in some versions of R and YAML in Python. Both
+  packages now read the extension by one rule, under which a name that begins with its only
+  dot has none, as for Python's `pathlib`.
+- `render_report(render=True)` passes Quarto the absolute path of the report, with a
+  leading `~` expanded. Quarto read a path that begins with `-` as an option, rendered
+  nothing and exited with status 0, so the call reported a render that had not happened.
 - The `causal_dag` view of `diagram()` wrote an id that ends with a backslash as `"a\"`,
   whose backslash escapes the closing quote, so dagitty could not read the line. The view
   now refuses such an id with `causal_dag cannot export construct id '<id>': dagitty cannot
@@ -349,6 +368,36 @@ that concern it alone.
   alone, and each dialogue added a second banner landmark. Those links are now underlined,
   and the head of a dialogue is no landmark.
 
+### Security
+- `render_report()` wrote the dossier into the report as it stood, under a header that named
+  no engine. A line break in an id, a date or a registration could start a code chunk that
+  Quarto ran when it rendered the report, and the file's shortcodes, raw HTML, OJS and TeX
+  reached Quarto, Pandoc and the browser as markup, so a theory file from someone else that
+  `validate()` and `check()` accepted could run code or read files. The header now gives
+  `engine: markdown`, `ojs-engine: false`, `html-math-method: plain`, an empty
+  `title-selector` for the revealjs menu and a reader without raw HTML, raw attributes or
+  raw TeX, and the body escapes the punctuation of the dossier's text. A dossier that holds
+  a shortcode in Quarto's encoded form is refused with `render_report refuses text that
+  Quarto reads as an encoded shortcode: '<match>'`. These measures were checked with Quarto
+  1.11 in the html, revealjs and dashboard formats.
+- `render_report()` refuses, before writing anything, a `to` that is not a Quarto format
+  name or the path of a custom writer, of letters, digits, `_`, `.`, `+`, `/` and `-`
+  starting with a letter or digit. Both packages wrote `to` into the header, where a line
+  break added keys, and R passed it to the shell as it stood, so a value such as
+  `"html; rm x"` ran a command.
+- R's `tf_read()` and `tf_read_corpus()` evaluated a value tagged `!expr` as R code when
+  the option `yaml.eval.expr` was `TRUE`. Both packages now refuse the tag, however it is
+  spelled, with `(<path>) a value is tagged !expr, which theoryforge does not read`, and R
+  parses with `eval.expr = FALSE` whatever the option says.
+- R's `tf_read()` and `tf_read_corpus()` read the file or downloaded the URL that a `.json`
+  file's whole text named, since `jsonlite::fromJSON()` takes a short text that is not JSON
+  for a file name or a URL. R now validates the text first and parses it with
+  `jsonlite::parse_json()`, so such a file is refused in both packages.
+- `osf_push(overwrite=True)` sent the token with its PUT to whatever upload link the folder
+  listing named. It now refuses, before the PUT, a link that is not an https address on the
+  host of `base_url` or on a host ending in `.osf.io`, with `OSF lists <filename> with an
+  upload link outside OSF storage: <link>`.
+
 ### Documentation
 - The documentation of `landscape()`, the specification, both literature guides and the apps
   were revised to say that its statuses count the accounts that share a word with a theme,
@@ -377,6 +426,13 @@ that concern it alone.
   the two are independent given those causes.
 - The help of each browser app says how the amendment appraisal compares auxiliary
   assumptions and lists the works its texts cite, with their DOIs.
+- The docstring of `render_report()` says where its protection stops. The writers of other
+  markup languages, such as `docusaurus-md`, `hugo-md`, `org` and `rst`, write the theory's
+  text back with few escapes or none, so a theory from someone else is to be rendered to
+  `html`, `revealjs`, `dashboard`, `pdf`, `typst`, `docx`, `odt`, `pptx` or `epub`. Quarto
+  also runs the scripts and filters that `_quarto.yml`, `_metadata.yml`, `_brand.yml` and
+  `_extensions` name in the report's folder or any folder above it, so such a report
+  belongs in a folder of the reader's own.
 
 ## [0.7.1]
 
