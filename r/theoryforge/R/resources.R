@@ -29,9 +29,9 @@ tf_checklist <- function() {
 #' No JSON-Schema engine is involved (API_SPEC.md section 2).
 #' \code{tf_validate} reads only the \code{properties} key set, so the schema
 #' stays the single source of truth for which top-level fields exist, and
-#' \code{tf_write} reads the paths of every field typed as an array of strings
-#' (\code{.tf_string_array_paths()} in utils.R), so that it writes each as an
-#' array.
+#' \code{tf_write} and \code{tf_content_hash} read the paths of every field
+#' typed as an array of strings (\code{.tf_string_array_paths()} in utils.R),
+#' so that each writes such a field as an array.
 #' @keywords internal
 #' @noRd
 tf_theory_schema <- function() {

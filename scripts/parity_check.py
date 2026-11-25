@@ -21,7 +21,8 @@ Five phases, each run through ``scripts/parity_emit.R``:
              files may differ in the two ways API_SPEC section 3 documents: a
              single value in a field the schema types as an array of strings is
              written as a one-element array, and an integer beyond 2^53, which R
-             holds as the nearest double, is written as that double. When
+             holds as the nearest double, is written as that double. Every file
+             must keep the content hash of the theory it was written from. When
              jsonschema is installed each file must also validate against
              schema/theory.schema.json whenever the theory it was written from
              does.
@@ -241,32 +242,15 @@ def schema_validator():
     return validator_class(load_schema())
 
 
-def string_array_paths(schema: dict, path: tuple[str, ...] = ()) -> list[tuple[str, ...]]:
-    """The paths of the schema's array-of-strings fields, ``"[]"`` standing for every entry.
+def as_r_writes(data):
+    """``data`` as R's ``tf_write()`` writes it, a single value in an array-of-strings field boxed.
 
-    The mirror of ``.tf_string_array_paths()`` in R's utils.R, which ``tf_write()``
-    uses to write such a field as an array even when the theory holds one value.
-    """
-    if schema.get("type") == "array":
-        items = schema.get("items")
-        if not isinstance(items, dict):
-            return []
-        if items.get("type") == "string":
-            return [path]
-        return string_array_paths(items, (*path, "[]"))
-    out: list[tuple[str, ...]] = []
-    for name, sub in schema.get("properties", {}).items():
-        out += string_array_paths(sub, (*path, name))
-    return out
-
-
-def as_r_writes(data, paths: list[tuple[str, ...]]):
-    """``data`` as R's ``tf_write()`` writes it, a single value at any of ``paths`` boxed.
-
-    The mirror of ``.tf_box_path()`` in R's utils.R: a scalar found at the end of
-    a path becomes a one-element list, null and containers are left alone, and
-    ``"[]"`` visits every entry of a list or a mapping. An integer beyond 2^53
-    becomes the double nearest it, which is what R holds (API_SPEC section 3).
+    The boxing is the package's own ``hashing.box_string_arrays()``, the mirror
+    of ``.tf_box_path()`` in R's utils.R, which the content hash applies too: a
+    scalar found at the end of a path becomes a one-element list, null and
+    containers are left alone, and ``"[]"`` visits every entry of a list or a
+    mapping. An integer beyond 2^53 becomes the double nearest it, which is what
+    R holds (API_SPEC section 3).
     """
     def as_double(x):
         if isinstance(x, dict):
@@ -280,24 +264,15 @@ def as_r_writes(data, paths: list[tuple[str, ...]]):
                 return math.inf if x > 0 else -math.inf
         return x
 
-    def box(x, path):
-        if not path:
-            return x if x is None or isinstance(x, (list, dict)) else [x]
-        head, rest = path[0], path[1:]
-        if head == "[]":
-            if isinstance(x, list):
-                return [None if item is None else box(item, rest) for item in x]
-            if isinstance(x, dict):
-                return {k: None if v is None else box(v, rest) for k, v in x.items()}
-            return x
-        if isinstance(x, dict) and x.get(head) is not None:
-            return {**x, head: box(x[head], rest)}
-        return x
+    return _gen_golden().tf.hashing.box_string_arrays(as_double(data))
 
-    data = as_double(data)
-    for p in paths:
-        data = box(data, p)
-    return data
+
+def _hash(tf, data) -> str:
+    """The content hash of ``data``, or the refusal's message in its place."""
+    try:
+        return tf.content_hash(data)
+    except (TypeError, ValueError, OverflowError) as err:
+        return f"refused: {err}"
 
 
 def schema_errors(validator, data) -> list[str]:
@@ -356,17 +331,18 @@ def roundtrip_failures(tf, originals: dict[str, dict], dirs: dict[str, Path],
     hold the original theory with its shape, an array still an array whatever its
     length. The one change allowed is the one API_SPEC section 3 documents for the
     writers named in ``boxing``: a single value in a field the schema types as an
-    array of strings comes back as a one-element array. When ``validator`` is
+    array of strings comes back as a one-element array. Either way the file must
+    keep the original's content hash (API_SPEC section 34). When ``validator`` is
     given and the original validates against the schema, the file must validate
     as well.
     """
     failures: list[str] = []
     n = 0
-    paths = string_array_paths(load_schema())
     for name, original in originals.items():
         check_schema = validator is not None and not schema_errors(validator, original)
+        original_hash = _hash(tf, original)
         for writer, out_dir in dirs.items():
-            expected = as_r_writes(original, paths) if writer in boxing else original
+            expected = as_r_writes(original) if writer in boxing else original
             for ext in roundtrip_formats(original):
                 label = f"{name}.theory.{ext} written by {writer}"
                 path = out_dir / f"{name}.theory.{ext}"
@@ -380,6 +356,9 @@ def roundtrip_failures(tf, originals: dict[str, dict], dirs: dict[str, Path],
                     failures.append(f"{label}: unreadable ({err})")
                     continue
                 failures += deep_equal(expected, back, label, unbox=False, exact=True)
+                back_hash = _hash(tf, back)
+                if back_hash != original_hash:
+                    failures.append(f"{label}: content hash {back_hash} != {original_hash}")
                 if check_schema:
                     failures += [f"{label}: schema: {e}" for e in schema_errors(validator, back)]
     return n, failures

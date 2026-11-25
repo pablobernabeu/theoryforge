@@ -501,7 +501,7 @@ NULL
 # The paths of the schema's array-of-strings fields, such as
 # c("predictions", "[]", "derives_from"), where "[]" stands for every entry of a
 # collection. They are read from theory.schema.json, so a field added there is
-# boxed by tf_write() without a change here.
+# boxed by tf_write() and tf_content_hash() without a change here.
 .tf_string_array_paths <- function() {
   if (is.null(.tf_cache$string_array_paths)) {
     .tf_cache$string_array_paths <- .tf_schema_string_arrays(tf_theory_schema(), character(0))
@@ -527,6 +527,9 @@ NULL
 # Hold every array-of-strings field of a theory as a list. jsonlite (under
 # auto_unbox) and yaml write a one-element character vector as a scalar, which
 # fails the package's own schema, while a list is always written as an array.
+# tf_content_hash() boxes the same fields, so that the hash reads a single
+# value as the one-element array tf_write() makes of it. The Python twin's
+# hashing.box_string_arrays() boxes alike.
 .tf_box_string_arrays <- function(theory) {
   for (path in .tf_string_array_paths()) theory <- .tf_box_path(theory, path)
   theory

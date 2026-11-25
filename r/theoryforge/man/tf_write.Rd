@@ -32,8 +32,9 @@ field the schema types as an array of strings (\code{derives_from},
 even when the theory holds it as a single string. A theory that validates
 against the package's own schema therefore still validates once written, and
 it reads back the same in R and in Python. A single string held in such a
-field reads back as a one-element array, which changes the content hash, so
-a hash recorded in \code{version$content_hash} no longer matches it.
+field reads back as a one-element array, which \code{\link[=tf_content_hash]{tf_content_hash()}} reads as
+it reads the string, so a hash recorded in \code{version$content_hash} still
+matches the theory.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory")

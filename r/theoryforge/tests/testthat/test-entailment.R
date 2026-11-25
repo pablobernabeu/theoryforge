@@ -279,6 +279,59 @@ test_that("the content hash is SHA-256 of the canonical form", {
   expect_false(identical(tf_content_hash(t), h))
 })
 
+singletons <- 'schema_version: "1.1"
+id: singletons
+title: A theory with single values in string arrays
+maturity: building
+boundary_conditions: adults
+constructs:
+  - id: c1
+    label: Arousal
+    definition: Bodily activation.
+    measurement: self-report scale
+  - id: c2
+    label: Threat
+    definition: Appraised danger.
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases}
+predictions:
+  - id: h1
+    statement: Threat rises with arousal.
+    type: directional
+    derives_from: p1
+'
+
+test_that("the content hash reads a single string as a one-element array", {
+  # API_SPEC section 34: a single value in a field the schema types as an array
+  # of strings is written as a one-element array, as the singleton rule reads
+  # it, so the theory keeps its hash when tf_write() writes the field as an
+  # array. The Python suite asserts the same digest.
+  scalar <- tempfile(fileext = ".yaml")
+  writeLines(singletons, scalar)
+  boxed <- tempfile(fileext = ".yaml")
+  text <- sub("adults", "[adults]", singletons, fixed = TRUE)
+  text <- sub("self-report scale", "[self-report scale]", text, fixed = TRUE)
+  writeLines(sub("derives_from: p1", "derives_from: [p1]", text, fixed = TRUE), boxed)
+  h <- "sha256:5974774a777a33875a5d94eeebaf466fcd7c41071991d65591d44116699ea71d"
+  expect_identical(tf_content_hash(tf_read(scalar)), h)
+  expect_identical(tf_content_hash(tf_read(boxed)), h)
+  # A theory built in memory holds a one-element character vector there.
+  t <- tf_read(boxed)
+  t$constructs[[1]]$measurement <- "self-report scale"
+  t$predictions[[1]]$derives_from <- "p1"
+  expect_identical(tf_content_hash(t), h)
+  # NA is null and is not boxed, so it hashes as NULL does.
+  t$constructs[[1]]$measurement <- NA
+  na <- tf_content_hash(t)
+  t$constructs[[1]]["measurement"] <- list(NULL)
+  expect_identical(tf_content_hash(t), na)
+  # A version key that only partly matches "version" is not the version.
+  t$version_note <- list(content_hash = "x")
+  t2 <- t
+  t2$version_note$content_hash <- "y"
+  expect_false(identical(tf_content_hash(t), tf_content_hash(t2)))
+})
+
 test_that("the canonical form keeps the shortest digits that read back as the number", {
   # R's parser reads -527.867953 one unit in the last place away, so testing
   # the digits with as.numeric() wrote -527.8679530000001, and it took too few

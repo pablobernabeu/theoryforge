@@ -857,8 +857,9 @@ tf_validate <- function(theory, full = FALSE) {
 #' even when the theory holds it as a single string. A theory that validates
 #' against the package's own schema therefore still validates once written, and
 #' it reads back the same in R and in Python. A single string held in such a
-#' field reads back as a one-element array, which changes the content hash, so
-#' a hash recorded in \code{version$content_hash} no longer matches it.
+#' field reads back as a one-element array, which [tf_content_hash()] reads as
+#' it reads the string, so a hash recorded in \code{version$content_hash} still
+#' matches the theory.
 #'
 #' @param theory A theory object (named list).
 #' @param path Destination path.
@@ -868,7 +869,9 @@ tf_validate <- function(theory, full = FALSE) {
 #' tf_write(theory, tempfile(fileext = ".yaml"))
 #' @export
 tf_write <- function(theory, path) {
-  theory <- .tf_na_as_null(.tf_dates_as_text(.tf_box_string_arrays(theory)))
+  # NA becomes null before the boxing, so that a missing value is written as
+  # null and not as a one-element array holding null.
+  theory <- .tf_box_string_arrays(.tf_na_as_null(.tf_dates_as_text(theory)))
   ext <- tolower(tools::file_ext(path))
   if (identical(ext, "json")) {
     # Each finite double is written as text with the fewest digits that read

@@ -285,20 +285,26 @@ def test_roundtrip_reports_what_a_writer_lost(parity, tmp_path):
     # The scalar derives_from is caught without a validator too: the round trip
     # does not unbox a one-element array (CI's parity job has no jsonschema).
     assert "case.theory.yaml written by R.predictions[0].derives_from: ['p1'] != 'p1'" in failures
-    assert len(failures) == 3
+    # The changed title changes the content hash, while the scalar derives_from,
+    # which the hash reads as the one-element array, does not.
+    lost = tf.content_hash(originals["case"])
+    kept = [f for f in failures if "content hash" in f]
+    assert kept == [f"case.theory.yaml written by R: content hash "
+                    f"{tf.read(r_dir / 'case.theory.yaml').content_hash()} != {lost}"]
+    assert len(failures) == 4
 
 
 def test_roundtrip_expects_r_to_box_a_single_value_and_python_to_keep_it(parity, tmp_path):
     # API_SPEC section 3: R writes a single value in a field the schema types as
     # an array of strings as a one-element array, and Python writes it as held.
-    paths = parity.string_array_paths(parity.load_schema())
-    assert len(paths) == 9
+    tf = parity._gen_golden().tf
+    paths = tf._resources.schema_string_arrays(parity.load_schema())
+    assert len(paths) == 9 and tuple(paths) == tf._resources.string_array_paths()
     assert ("predictions", "[]", "derives_from") in paths and ("boundary_conditions",) in paths
     # As R's .tf_box_path() does: "[]" visits a mapping's entries too, null stays null.
-    assert parity.as_r_writes({"constructs": {"a": {"measurement": "m"}}, "boundary_conditions": None},
-                              paths) == {"constructs": {"a": {"measurement": ["m"]}},
-                                         "boundary_conditions": None}
-    tf = parity._gen_golden().tf
+    assert parity.as_r_writes({"constructs": {"a": {"measurement": "m"}}, "boundary_conditions": None}
+                              ) == {"constructs": {"a": {"measurement": ["m"]}},
+                                    "boundary_conditions": None}
     src = tmp_path / "rt.theory.yaml"
     src.write_text(ROUNDTRIP_THEORY.replace("derives_from: [p1]", "derives_from: p1"), encoding="utf-8")
     py_dir, r_dir = tmp_path / "py", tmp_path / "r"

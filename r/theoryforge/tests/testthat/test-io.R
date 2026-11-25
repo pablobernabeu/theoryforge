@@ -519,14 +519,22 @@ test_that("tf_write keeps dates as text, the shape of an array and the digits be
 test_that("a recorded content hash survives tf_write in both formats", {
   # A number that needs 17 digits, written with 15, read back as another
   # number, so the theory's hash changed and tf_validate(full = TRUE) refused
-  # the hash it had recorded.
+  # the hash it had recorded. A single string in a string array, which
+  # tf_write() writes as an array, changed the hash too, and NA there was
+  # written as an array holding null.
   theory <- tf_read(tf_example_path("modality-switching.theory.yaml"))
   theory$constructs[[1]]$x_scale <- c(6 / sqrt(2), 41.123456789012344)
+  theory$constructs[[1]]$measurement <- "self-report scale"
+  theory$constructs[[2]]$measurement <- NA
+  theory$predictions[[1]]$derives_from <- "p1"
   theory$version$content_hash <- tf_content_hash(theory)
   for (ext in c(".yaml", ".json")) {
     path <- tempfile(fileext = ext)
     tf_write(theory, path)
     back <- tf_read(path)
+    expect_identical(back$constructs[[1]]$measurement, list("self-report scale"), info = ext)
+    expect_true("measurement" %in% names(back$constructs[[2]]), info = ext)
+    expect_null(back$constructs[[2]]$measurement, info = ext)
     expect_identical(tf_content_hash(back), theory$version$content_hash, info = ext)
     expect_true(tf_validate(back, full = TRUE), info = ext)
   }
