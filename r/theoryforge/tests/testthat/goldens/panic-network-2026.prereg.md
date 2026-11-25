@@ -6,7 +6,7 @@
 - Content hash: sha256:4687e71fc5b8e34114d1266d204d8911b6641d152d94b0fa8bcff62cf0755e42
 - Maturity: developing
 - Formal model: ode (models/panic_ode.py)
-- Derivations check: yes
+- Derivations check: not checked (feedback loop)
 
 ## Theory
 

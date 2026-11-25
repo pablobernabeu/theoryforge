@@ -48,7 +48,7 @@ def _item(t, iid):
 
 def test_the_checklist_is_version_3_with_five_default_thresholds():
     spec = _resources.checklist()
-    assert spec["schema_version"] == "3.0"
+    assert spec["schema_version"] == "3.1"
     # parsimony_ratio_max is gone: parsimony no longer counts assumptions.
     assert spec["thresholds"] == {
         "redundancy_similarity_max": 0.85, "redundancy_overlap_max": 0.85,
@@ -65,8 +65,15 @@ def test_the_checklist_is_version_3_with_five_default_thresholds():
     assert items["risk_severity"]["citation"] == "Popper (1959); Meehl (1967, 1990b)"
     assert items["parsimony"]["citation"] == "Lakatos (1970); Meehl (1990a)"
     assert items["derivation_chain"]["criterion"] == (
-        "Every prediction cites declared propositions, and the causal graph entails the claim "
-        "it states, if any")
+        "Every prediction cites declared propositions, the causal graph entails any claim it "
+        "states and contradicts no phenomenon's claim (a claim left unread because of a "
+        "feedback loop warns)")
+    # The criteria say what is checked, which the dossier and the HTML report print.
+    assert items["falsifiability"]["criterion"] == (
+        "At least one prediction is typed point, interval or directional; the label is the "
+        "author's")
+    assert items["logical_why"]["criterion"] == (
+        "Every proposition's mechanism field is filled in; its text is not judged")
 
 
 def test_the_report_gives_coverage_after_the_aggregate(panic_path):
@@ -75,7 +82,7 @@ def test_the_report_gives_coverage_after_the_aggregate(panic_path):
                        "aggregate_score", "aggregate_range", "coverage", "gate",
                        "n_blockers_failed", "items"]
     # parsimony has nothing to assess, and the other eleven items weigh 0.92.
-    assert (r["checklist_version"], r["aggregate_score"], r["coverage"]) == ("3.0", 88.0, 0.92)
+    assert (r["checklist_version"], r["aggregate_score"], r["coverage"]) == ("3.1", 85.9, 0.92)
     assert (_items(r)["parsimony"]["status"], _items(r)["parsimony"]["score"]) == ("n/a", None)
 
 
@@ -112,13 +119,16 @@ def test_mean_severity_counts_every_prediction():
     b.add_construct("c", "C", "second other thing", measurement=["m2"],
                     boundary_conditions=["adults"])
     b.add_proposition("p1", "a", "c", "increases", mechanism="a drives c")
-    b.add_prediction("h1", "C equals 3.", "point", derives_from=["p1"])
-    b.add_prediction("h2", "C lies in [2, 4].", "interval", derives_from=["p1"])
+    b.add_prediction("h1", "C equals 3.", "point", derives_from=["p1"],
+                     bounds={"lower": 2.9, "upper": 3.1})
+    b.add_prediction("h2", "C lies in [2, 4].", "interval", derives_from=["p1"],
+                     bounds={"lower": 2, "upper": 4})
     assert _item(b, "risk_severity") == ("pass", 0.8)
     # A declared value is used where one is given, the rubric elsewhere.
     t = _bare(predictions=[
         {"id": "h1", "statement": "C equals 3.", "type": "point", "severity": 0.3},
-        {"id": "h2", "statement": "C lies in [2, 4].", "type": "interval"},
+        {"id": "h2", "statement": "C lies in [2, 4].", "type": "interval",
+         "bounds": {"lower": 2, "upper": 4}},
     ])
     assert _item(t, "risk_severity") == ("pass", 0.5)
     # Nine undeclared existence predictions no longer leave one declared at 0.9
@@ -132,7 +142,7 @@ def test_a_declared_severity_counts_and_the_dossier_sets_it_beside_the_rubric():
     t = _bare(predictions=[
         {"id": "h1", "statement": "X exists.", "type": "existence", "severity": 0.95},
         {"id": "h2", "statement": "X is positive.", "type": "directional", "severity": 0.5},
-        {"id": "h3", "statement": "X is 3.", "type": "point"},
+        {"id": "h3", "statement": "X is 3.", "type": "point", "bounds": {"lower": 2.9, "upper": 3.1}},
     ])
     assert _item(t, "risk_severity") == ("pass", 0.783)
     d = t.dossier()
@@ -148,7 +158,7 @@ def test_a_declared_severity_counts_and_the_dossier_sets_it_beside_the_rubric():
 def test_add_prediction_stores_a_severity_only_when_given():
     t = (tf.new_theory("b", "B")
          .add_prediction("h1", "C equals 3.", "point", severity=0.95)
-         .add_prediction("h2", "C equals 4.", "point"))
+         .add_prediction("h2", "C equals 4.", "point", bounds={"lower": 3.9, "upper": 4.1}))
     assert t.data["predictions"][0] == {"id": "h1", "statement": "C equals 3.", "type": "point",
                                         "severity": 0.95}
     assert "severity" not in t.data["predictions"][1]
@@ -302,7 +312,9 @@ def test_the_views_and_the_html_report_show_not_applicable_items(weak_path):
     # parsimony is the fourth row, at y = 60 + 24 * 3.
     assert '<rect x="20" y="132" width="16" height="16" rx="3" fill="#9e9e9e"/>' in svg
     assert '<text x="320" y="144">n/a</text>' in svg
-    assert "<tr><td>parsimony</td><td>n/a</td><td>n/a</td>" in t.report(format="html")
+    assert ("<tr><td>parsimony</td><td>No auxiliary assumption added for an anomaly (named in "
+            "added_for) lacks independent corroboration</td><td>n/a</td><td>n/a</td>"
+            ) in t.report(format="html")
 
 
 # -- checklist 3.0 --------------------------------------------------------------
@@ -375,7 +387,7 @@ def test_the_aggregate_range_spans_the_alternative_weightings(panic_path):
     rep = tf.read(panic_path).check()
     lo, hi = rep["aggregate_range"]
     assert lo <= rep["aggregate_score"] <= hi
-    assert (lo, hi) == (84.2, 90.2)
+    assert (lo, hi) == (82.1, 87.9)
     applicable = [(it["weight"], it["score"]) for it in rep["items"] if it["score"] is not None]
     equal = round(sum(x for _, x in applicable) / len(applicable) * 100, 1)
     assert lo <= equal <= hi
@@ -474,3 +486,192 @@ def test_an_unknown_field_names_the_first_of_two_equally_close_fields():
         "p has unknown field: xnote",
         "p has unknown field: abcdef",
     ]
+
+
+# -- checklist 3.1: the derivation chain, the cycles option and the labels ------
+
+def _loop_theory(sign="positive"):
+    """x -> m -> y gives the effect of x on y a negative sign, and an unrelated
+    feedback loop joins u and w. fixtures/edge/derivation-unrelated-loop is the
+    same theory."""
+    return _bare(
+        maturity="developing",
+        constructs=[{"id": c, "label": c.upper(), "definition": f"Construct {c}."}
+                    for c in ("x", "m", "y", "u", "w")],
+        propositions=[
+            {"id": "p1", "from": "x", "to": "m", "relation": "increases", "mechanism": "It does."},
+            {"id": "p2", "from": "m", "to": "y", "relation": "decreases", "mechanism": "It does."},
+            {"id": "q1", "from": "u", "to": "w", "relation": "increases", "mechanism": "It does."},
+            {"id": "q2", "from": "w", "to": "u", "relation": "increases", "mechanism": "It does."},
+        ],
+        predictions=[{"id": "h1", "statement": "x raises y.", "type": "directional",
+                      "derives_from": ["p1", "p2"],
+                      "claim": {"kind": "effect", "x": "x", "y": "y", "sign": sign}}],
+    )
+
+
+def _derivation(t, cycles="refuse"):
+    r = t.check(cycles=cycles)
+    it = _items(r)["derivation_chain"]
+    return it["status"], it["score"], it["not_checked"], r["gate"]
+
+
+def test_check_refuses_an_unknown_cycles_option():
+    for bad in ("acyclic", None, ["sigma"], ""):
+        with pytest.raises(ValueError, match=r"^check requires cycles to be 'refuse' or 'sigma'$"):
+            tf.check(_bare(), cycles=bad)
+    # The option is checked before the theory is read, so a refusal of the
+    # theory does not hide it.
+    bad_outcome = _bare(test_outcomes=[{"prediction_id": "h1", "passed": "true"}])
+    with pytest.raises(ValueError, match="^check requires cycles"):
+        bad_outcome.check(cycles="x")
+
+
+def test_an_unrelated_feedback_loop_leaves_the_claim_not_checked():
+    # The loop u <-> w has no path to the claim, yet under cycles = "refuse"
+    # every claim of the graph is left unread. The prediction is not derived,
+    # the item warns and the gate stays open. It passed at 1.0 under 3.0.
+    t = _loop_theory()
+    assert _derivation(t) == ("warn", 0.0, ["h1"], "pass")
+    assert t.check()["n_blockers_failed"] == 0
+    # Read by sigma-separation, the claim is contradicted and the item fails.
+    assert _derivation(t, "sigma") == ("fail", 0.0, [], "blocked")
+    # A claim the sigma reading entails passes.
+    assert _derivation(_loop_theory("negative"), "sigma") == ("pass", 1.0, [], "pass")
+    assert _derivation(_loop_theory("negative")) == ("warn", 0.0, ["h1"], "pass")
+
+
+def test_only_the_derivation_chain_record_lists_unchecked_claims(panic_path):
+    r = tf.read(panic_path).check()
+    for it in r["items"]:
+        keys = ["id", "status", "score", "weight", "severity_if_fail", "citation"]
+        assert list(it) == (keys + ["not_checked"] if it["id"] == "derivation_chain" else keys)
+    assert _items(r)["derivation_chain"]["not_checked"] == ["pred_indep"]
+    # A not-checked prediction whose references do not resolve still fails
+    # the item, and is still listed.
+    t = _loop_theory()
+    t.data["predictions"][0]["derives_from"] = ["p9"]
+    assert _derivation(t) == ("fail", 0.0, ["h1"], "blocked")
+    # With no prediction the item is n/a and lists nothing.
+    assert _items(_bare().check())["derivation_chain"]["not_checked"] == []
+
+
+def test_a_claim_the_graph_cannot_place_or_read_is_not_derived():
+    base = dict(constructs=TWO_CONSTRUCTS + [{"id": "c3", "label": "Gamma",
+                                              "definition": "A construct no proposition relates."}],
+                propositions=P1)
+    entailed = {"kind": "effect", "x": "c1", "y": "c2", "sign": "positive"}
+    # fixtures/edge/derivation-not-in-graph: a construct outside the graph.
+    t = _bare(**base, predictions=[
+        _pred("h1", "directional", claim=entailed),
+        _pred("h2", "directional", claim={**entailed, "y": "c3"}),
+    ])
+    assert _derivation(t) == ("fail", 0.5, [], "blocked")
+    # A claim that cannot be read as written.
+    t = _bare(**base, predictions=[_pred("h1", "directional", claim={**entailed, "y": "c1"})])
+    assert _derivation(t) == ("fail", 0.0, [], "blocked")
+    # A graph that cannot be built reads no claim, so a stated claim fails,
+    # while a prediction that states none is judged on its references.
+    refused = dict(constructs=TWO_CONSTRUCTS,
+                   propositions=P1 + [{"id": "p2", "from": "c1", "to": "c9",
+                                       "relation": "increases"}])
+    assert _derivation(_bare(**refused, predictions=[_pred("h1", "directional", claim=entailed)])
+                       ) == ("fail", 0.0, [], "blocked")
+    assert _derivation(_bare(**refused, predictions=[_pred("h1", "directional")])
+                       ) == ("pass", 1.0, [], "pass")
+
+
+def test_a_phenomenon_the_graph_contradicts_fails_the_derivation_chain():
+    # fixtures/edge/derivation-phenomenon. A prediction with this claim failed
+    # the item, and a phenomenon with it left the item and the gate as they were.
+    positive = {"kind": "effect", "x": "c1", "y": "c2", "sign": "positive"}
+    negative = {"kind": "association", "x": "c1", "y": "c2", "sign": "negative"}
+    t = _bare(constructs=TWO_CONSTRUCTS, propositions=P1,
+              predictions=[_pred("h1", "directional", claim=positive)],
+              phenomena=[{"id": "ph1", "statement": "s", "claim": negative}])
+    assert _derivation(t) == ("fail", 1.0, [], "blocked")
+    # A phenomenon the graph leaves open or does not evaluate changes nothing.
+    for claim in ({"kind": "effect", "x": "c1", "y": "c9", "sign": "positive"},
+                  {"kind": "effect", "x": "c1", "y": "c2", "sign": "bogus"}):
+        t.data["phenomena"][0]["claim"] = claim
+        assert _derivation(t) == ("pass", 1.0, [], "pass")
+    t.data["propositions"][0]["relation"] = "causes"
+    t.data["predictions"][0].pop("claim")
+    t.data["phenomena"][0]["claim"] = negative
+    assert _derivation(t) == ("pass", 1.0, [], "pass")
+
+
+def test_diagnosticity_reads_the_claims_with_the_same_cycles():
+    # Under "refuse" the theory's graph leaves the claim unread, so the
+    # declared rival stands. Under "sigma" both graphs entail the claim, which
+    # shows the declaration false.
+    t = _loop_theory("negative")
+    t.data["alternatives"] = [{"id": "r", "label": "A rival",
+                               "propositions": copy.deepcopy(t.data["propositions"])}]
+    t.data["predictions"][0]["diagnostic_vs"] = ["r"]
+    assert _item(t, "diagnosticity") == ("pass", 1.0)
+    assert _items(t.check(cycles="sigma"))["diagnosticity"]["score"] == 0.0
+
+
+def test_full_validation_reports_a_directional_claim_that_states_no_direction():
+    nonzero = {"kind": "effect", "x": "c1", "y": "c2", "sign": "nonzero"}
+    t = _bare(constructs=TWO_CONSTRUCTS + [{"id": "c3", "label": "Gamma", "definition": "c3."}],
+              propositions=P1, predictions=[
+                  _pred("h1", "directional", claim=nonzero),
+                  # With bounds too, after the messages about the bounds.
+                  _pred("h2", "directional", bounds={"lower": 0}, claim=nonzero),
+                  # A conditional claim can only be zero or nonzero, so the
+                  # direction stays in the statement and nothing is reported.
+                  _pred("h3", "directional", claim={"kind": "association", "x": "c1", "y": "c2",
+                                                    "given": ["c3"], "sign": "nonzero"}),
+                  # The other types may claim nonzero.
+                  _pred("h4", "existence", claim=nonzero),
+                  _pred("h5", "point", bounds={"lower": 0.2, "upper": 0.3}, claim=nonzero),
+              ])
+    with pytest.raises(ValueError) as exc:
+        t.validate(full=True)
+    assert str(exc.value) == (
+        "invalid theory object: "
+        "prediction[0] is a directional claim, so its claim's sign cannot be nonzero, which "
+        "states no direction; "
+        "prediction[1] claims a nonzero sign, so its bounds must exclude 0; "
+        "prediction[1] is a directional claim, so its claim's sign cannot be nonzero, which "
+        "states no direction")
+    # The falsifiability item still reads the label alone.
+    assert _item(t, "falsifiability") == ("pass", 1.0)
+
+
+def test_the_rubric_rates_a_point_or_interval_label_without_bounds_as_directional():
+    # fixtures/edge/label-without-content. A point label without bounds was
+    # graded 0.9, the highest value, while the precision item gave it nothing.
+    t = _bare(alternatives=[{"id": "alt", "label": "A rival"}], predictions=[
+        _pred("h1", "point"),
+        _pred("h2", "interval", bounds={"lower": 0.2}),
+        _pred("h3", "point", diagnostic_vs=["alt"]),
+        _pred("h4", "point", bounds={"lower": 0.25, "upper": 0.35}),
+        _pred("h5", "interval", bounds={"lower": 0.2, "upper": float("inf")}),
+        _pred("h6", "interval", bounds={"lower": 0.2, "upper": 0.8}),
+    ])
+    assert [(r["type"], r["risk_score"], r["computed_severity"]) for r in t.severity()] == [
+        ("point", 0.4, 0.3), ("interval", 0.4, 0.3), ("point", 0.4, 0.4),
+        ("point", 0.9, 0.9), ("interval", 0.4, 0.3), ("interval", 0.7, 0.7)]
+    assert _item(t, "precision") == ("warn", 0.333)
+
+
+def test_the_html_report_states_what_the_checklist_score_describes(panic_path):
+    html = tf.read(panic_path).report(format="html")
+    assert ("  <p>Checklist score: <strong>85.9</strong> (82.1 to 87.9 with equal weights or one "
+            "weight halved or doubled) &middot; gate: <strong>pass</strong></p>\n") in html
+    assert ("  <p>The checklist score describes how completely the file states what checklist "
+            "3.1 asks for. Most items read whether a field is filled in or how a prediction is "
+            "labelled, and stated claims are checked against the causal graph. Test outcomes "
+            "are read only by the parsimony item, the weights are conventions, and no study has "
+            "established what difference between two scores is meaningful. The score does not "
+            "show that the theory is true or well reasoned.</p>\n") in html
+    assert ("<tr><th>item</th><th>criterion</th><th>status</th><th>score</th>"
+            "<th>source of the criterion</th></tr>") in html
+    assert ("<tr><td>derivation_chain</td><td>Every prediction cites declared propositions, the "
+            "causal graph entails any claim it states and contradicts no phenomenon's claim (a "
+            "claim left unread because of a feedback loop warns)</td><td>warn</td><td>0.75</td>"
+            "<td>Scheel et al. (2021); Szollosi et al. (2020)</td></tr>") in html
+    assert "igour" not in html and "grounding" not in html and "Aggregate" not in html

@@ -30,7 +30,8 @@ from .scoring import severity as _severity
 # derivation_chain item (API_SPEC.md section 11): whether every prediction
 # cites declared propositions and, where it states a claim, whether the causal
 # graph entails it.
-_RESOLVE = {"pass": "yes", "fail": "no", "n/a": "not applicable (no predictions)"}
+_RESOLVE = {"pass": "yes", "fail": "no", "warn": "not checked (feedback loop)",
+            "n/a": "not applicable (no predictions)"}
 
 # How a rival's own propositions read a prediction's claim, beside the rival's id.
 _RIVAL_READS = {"entailed": "its propositions entail the claim too",

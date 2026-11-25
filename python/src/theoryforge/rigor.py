@@ -1,4 +1,4 @@
-"""The theory-rigour checklist engine. Scores a theory against the 12-item checklist it ships."""
+"""The checklist engine. Scores a theory file against the 12-item checklist the package ships."""
 from __future__ import annotations
 
 import json
@@ -17,13 +17,15 @@ from ._access import (
     str_list,
     text,
 )
+from ._causal import causal_graph
 from ._compat import theory_keyword
 from ._num import number, rnd
 from ._relations import DIRECTED
 from ._status import classify_auxiliary
 from ._text import quoted, xml_escape
-from .entailment import prediction_verdicts
+from .entailment import _Graph, check_cycles, prediction_verdicts, read_claim
 from .redundancy import _flagged, tokens
+from .scoring import _bounded
 from .scoring import severity as _rubric
 
 _FORBIDDING = {"point", "interval", "directional"}
@@ -57,15 +59,6 @@ def _ptype(p) -> str | None:
     return enum(field(p, "type"), PRED_TYPE)
 
 
-def _bounded(p) -> bool:
-    """Whether a prediction's ``bounds`` state two finite numbers, a region a test can miss."""
-    b = field(p, "bounds")
-    if not isinstance(b, dict):
-        return False
-    lo, up = number(b.get("lower")), number(b.get("upper"))
-    return lo is not None and up is not None and math.isfinite(lo) and math.isfinite(up)
-
-
 def _refuse_non_boolean_outcomes(T, caller: str) -> None:
     """Refuse a test outcome whose ``passed`` is present and not a boolean.
 
@@ -84,8 +77,88 @@ def _refuse_non_boolean_outcomes(T, caller: str) -> None:
             )
 
 
-def _check_items(T: dict, thr: dict) -> dict:
-    """Each item's ``(status, score)``. An item with nothing to assess is ``("n/a", None)``."""
+def _claim_readings(T: dict, cycles: str) -> tuple[list[tuple[str, str] | None], bool]:
+    """How the theory's causal graph reads the claims, for the derivation chain.
+
+    Returns one entry per prediction in file order, None when the prediction
+    states no claim and ``(verdict, basis)`` otherwise (API_SPEC.md section 31),
+    and whether the graph contradicts the claim of some phenomenon. A graph
+    that cannot be built (section 27, refusals 1 and 2) reads no claim, so each
+    stated claim gets the verdict ``not_evaluated`` with the basis
+    ``graph_refused``, and no phenomenon counts as contradicted.
+    """
+    try:
+        g = _Graph(causal_graph(T, "check"), cycles, items(T, "propositions"))
+    except ValueError:
+        g = None
+    readings: list[tuple[str, str] | None] = []
+    for p in items(T, "predictions"):
+        c = read_claim(field(p, "claim"))
+        if c is None:
+            readings.append(None)
+        elif g is None:
+            readings.append(("not_evaluated", "graph_refused"))
+        else:
+            r = g.read(c)
+            readings.append((r["verdict"], r["basis"]))
+    contradicted = False
+    if g is not None:
+        for ph in items(T, "phenomena"):
+            c = read_claim(field(ph, "claim"))
+            if c is not None and g.read(c)["verdict"] == "contradicted":
+                contradicted = True
+                break
+    return readings, contradicted
+
+
+def _derivation_chain(T: dict, preds: list, prop_ids: set,
+                      cycles: str) -> tuple[str, float | None, list[str]]:
+    """The derivation chain's ``(status, score, not_checked)`` (API_SPEC.md section 4, item 12).
+
+    A prediction is derived when its references resolve and it either states
+    no claim or states one the causal graph entails. A claim that the graph
+    contradicts, leaves open, cannot read as written or cannot place, since it
+    names a construct no proposition relates, is a failure, as is a claim of a
+    theory whose graph cannot be built and an unresolved reference. A claim
+    the graph leaves unread because it has a feedback loop and ``cycles`` is
+    ``"refuse"`` is not checked: the prediction is not derived, its id goes to
+    ``not_checked`` and, failing anything else, the item warns. A phenomenon
+    whose claim the graph contradicts fails the item and leaves the score, the
+    share of predictions derived, as it is.
+    """
+    if not preds:
+        return "n/a", None, []
+    readings, phenomenon_contradicted = _claim_readings(T, cycles)
+    derived = 0
+    failed = phenomenon_contradicted
+    not_checked: list[str] = []
+    for p, reading in zip(preds, readings, strict=True):
+        refs = str_list(field(p, "derives_from"))
+        resolves = bool(refs) and all(d in prop_ids for d in refs)
+        if not resolves:
+            failed = True
+        if reading == ("not_evaluated", "feedback_loop"):
+            not_checked.append(text(field(p, "id")))
+        elif reading is not None and reading[0] != "entailed":
+            failed = True
+        elif resolves:
+            derived += 1
+    if failed:
+        status = "fail"
+    elif derived < len(preds):
+        status = "warn"
+    else:
+        status = "pass"
+    return status, rnd(derived / len(preds), 3), not_checked
+
+
+def _check_items(T: dict, thr: dict, cycles: str) -> tuple[dict, list[str]]:
+    """Each item's ``(status, score)``, and the predictions whose claims were not checked.
+
+    An item with nothing to assess is ``("n/a", None)``. The list holds the ids
+    of the predictions whose claims the derivation chain left unread, since
+    the causal graph has a feedback loop and ``cycles`` is ``"refuse"``.
+    """
     preds = items(T, "predictions")
     cons = items(T, "constructs")
     props = items(T, "propositions")
@@ -219,8 +292,9 @@ def _check_items(T: dict, thr: dict) -> dict:
     # 10 diagnosticity
     # A named rival counts unless its stated propositions give the prediction's
     # claim the same verdict as the theory's do, which shows the declaration
-    # false (API_SPEC.md section 4).
-    verdicts = prediction_verdicts(T)
+    # false (API_SPEC.md section 4). The graphs are read with the same cycles
+    # as the derivation chain's.
+    verdicts = prediction_verdicts(T, cycles)
     if not preds:
         out["diagnosticity"] = ("warn", 0.0)
     else:
@@ -241,22 +315,12 @@ def _check_items(T: dict, thr: dict) -> dict:
 
     # 12 derivation_chain
     # With no prediction there is no derivation to check, and a pass would lift
-    # the empty theory's score.
-    if not preds:
-        out["derivation_chain"] = ("n/a", None)
-    else:
-        # A claim the causal graph contradicts or leaves open does not follow
-        # from the propositions, whatever the prediction cites.
-        valid = [
-            p for p, v in zip(preds, verdicts, strict=True)
-            if _ne_list(field(p, "derives_from"))
-            and all(d in prop_ids for d in str_list(field(p, "derives_from")))
-            and (v is None or v["theory"] not in ("contradicted", "undetermined"))
-        ]
-        frac = len(valid) / len(preds)
-        out["derivation_chain"] = ("pass" if frac == 1.0 else "fail", rnd(frac, 3))
+    # the empty theory's score. A claim the causal graph does not entail does
+    # not follow from the propositions, whatever the prediction cites.
+    status, score, not_checked = _derivation_chain(T, preds, prop_ids, cycles)
+    out["derivation_chain"] = (status, score)
 
-    return out
+    return out, not_checked
 
 
 def _weighted(pairs: list[tuple[float, float]]) -> float:
@@ -287,42 +351,83 @@ def _aggregate_range(scored: list[tuple[float, float]]) -> list[float]:
     return [min(values), max(values)]
 
 
+# What the checklist score describes, in the words the documents and the help
+# use. The HTML report gives it beside the score, with the checklist's version.
+SCOPE = ("The checklist score describes how completely the file states what checklist {version} "
+         "asks for. Most items read whether a field is filled in or how a prediction is "
+         "labelled, and stated claims are checked against the causal graph. Test outcomes are "
+         "read only by the parsimony item, the weights are conventions, and no study has "
+         "established what difference between two scores is meaningful. The score does not "
+         "show that the theory is true or well reasoned.")
+
+
 @theory_keyword
-def check(theory) -> dict:
-    """Compute the full rigour report (dict) for a Theory or theory mapping.
+def check(theory, cycles: str = "refuse") -> dict:
+    """Check a theory file against the checklist and return the report (dict).
+
+    The checklist score describes how completely the file states what
+    checklist 3.1 asks for. Most items read whether a field is filled in or how
+    a prediction is labelled, and stated claims are checked against the causal
+    graph. Test outcomes are read only by the parsimony item, the weights are
+    conventions, and no study has established what difference between two
+    scores is meaningful. The score does not show that the theory is true or
+    well reasoned.
 
     Each item has a status (``pass``, ``warn`` or ``fail``) and a score in
     [0, 1]. An item with nothing to assess, such as the redundancy screen of a
     theory with one construct, has the status ``n/a`` and the score None, and
-    is left out of the aggregate. The aggregate is the weighted mean of the
-    applicable items' scores, times 100, and ``coverage`` is the share of the
-    checklist's weight that was applicable.
+    is left out of the score. The checklist score (``aggregate_score``) is the
+    weighted mean of the applicable items' scores, times 100, and ``coverage``
+    is the share of the checklist's weight that was applicable.
+
+    The derivation chain counts a prediction as derived when the propositions
+    it cites are declared and it states no claim or one that the causal graph
+    entails. It fails when some prediction cites a proposition that is not
+    declared, or none, or states a claim that the graph contradicts, leaves
+    open, cannot read as written or cannot place because it names a construct
+    no proposition relates, and when the graph contradicts the claim of a
+    phenomenon. A claim that the graph leaves unread because it has a feedback
+    loop is not checked: the prediction is not derived, and, failing anything
+    else, the item warns, which does not block the gate.
+
+    Args:
+        cycles: how a causal graph with a feedback loop is read, as in
+            ``entailments()``. ``"refuse"`` (the default) leaves its claims
+            unread, and ``"sigma"`` reads them by sigma-separation, which
+            assumes that each loop settles to a unique equilibrium. The
+            derivation chain and diagnosticity read the claims this way.
 
     Returns:
         A dict with the keys ``theory_id``, ``schema_version`` (the theory's),
-            ``checklist_version`` (the rigour checklist's, whose weights and
-            thresholds produced every number), ``maturity``, ``aggregate_score``,
-            ``aggregate_range``, ``coverage``, ``gate``, ``n_blockers_failed`` and
-            ``items``, in that order. ``aggregate_range`` holds the lowest and
-            highest aggregate under the checklist's weights, equal weights and
-            each applicable item's weight halved or doubled in turn, since the
-            weights are a convention. ``gate`` is ``advisory`` at ``draft``
-            maturity, and otherwise ``blocked`` when a blocker item
-            (falsifiability or derivation_chain) fails and ``pass`` when none
-            does. ``items`` holds one ``{id, status, score, weight,
-            severity_if_fail, citation}`` record per checklist item, in checklist
-            order.
+            ``checklist_version`` (the checklist's, whose weights and
+            thresholds produced every number), ``maturity``,
+            ``aggregate_score``, ``aggregate_range``, ``coverage``, ``gate``,
+            ``n_blockers_failed`` and ``items``, in that order.
+            ``aggregate_range`` holds the lowest and highest score over the
+            checklist's weights, equal weights and each applicable item's
+            weight halved and then doubled with the others unchanged. It is
+            not an interval for the score, and it leaves out the choices made
+            in coding the file and the rubric's constants. ``gate`` is
+            ``advisory`` at ``draft`` maturity, and otherwise ``blocked`` when
+            a blocker item (falsifiability or derivation_chain) fails and
+            ``pass`` when none does. ``items`` holds one ``{id, status, score,
+            weight, severity_if_fail, citation}`` record per checklist item, in
+            checklist order, and the derivation_chain record has a seventh
+            key, ``not_checked``, the ids of the predictions whose claims were
+            not checked.
 
     Raises:
-        ValueError: a test outcome's ``passed`` is present and not a boolean,
-            or a prediction's ``severity`` is not a finite number or lies
-            outside [0, 1]. ``validate(full=True)`` reports both.
+        ValueError: ``cycles`` is not ``"refuse"`` or ``"sigma"``, a test
+            outcome's ``passed`` is present and not a boolean, or a
+            prediction's ``severity`` is not a finite number or lies outside
+            [0, 1]. ``validate(full=True)`` reports the last two.
     """
+    check_cycles(cycles, "check")
     theory = theory.data if hasattr(theory, "data") else theory
     _refuse_non_boolean_outcomes(theory, "check")
     spec = _resources.checklist()
     thr = spec["thresholds"]
-    results = _check_items(theory, thr)
+    results, not_checked = _check_items(theory, thr, cycles)
 
     items = []
     applicable = 0.0
@@ -339,14 +444,19 @@ def check(theory) -> dict:
             scored.append((spec_item["weight"], score))
         if spec_item["severity_if_fail"] == "blocker" and status == "fail":
             n_blockers_failed += 1
-        items.append({
+        item: dict[str, object] = {
             "id": iid,
             "status": status,
             "score": score,
             "weight": spec_item["weight"],
             "severity_if_fail": spec_item["severity_if_fail"],
             "citation": spec_item["citation"],
-        })
+        }
+        # The predictions whose claims a feedback loop left unread, so that a
+        # document can say how many were not checked and why.
+        if iid == "derivation_chain":
+            item["not_checked"] = not_checked
+        items.append(item)
 
     # Nulls, numbers, booleans and mappings in these fields read as "", and so
     # does a sequence unless its first element is a string, in which case it
@@ -379,10 +489,14 @@ def check(theory) -> dict:
 
 @theory_keyword
 def report(theory, format: str = "json") -> str:
-    """Render the rigour report of ``check()`` as a string.
+    """Render the checklist report of ``check()`` as a string.
 
     ``format="json"`` (the default) gives the report as indented JSON, and
     ``format="html"`` an HTML fragment that escapes every value it interpolates.
+    The fragment gives the checklist score with its range and the gate, the
+    statement of what the score describes, and a table of the items with the
+    criterion each applies, its status and score and the works from which the
+    criterion is drawn.
 
     Raises:
         ValueError: for any other ``format``, and when ``check()`` refuses the
@@ -392,22 +506,26 @@ def report(theory, format: str = "json") -> str:
     if format == "json":
         return json.dumps(rep, indent=2, ensure_ascii=False)
     if format == "html":
+        criteria = {it["id"]: it["criterion"] for it in _resources.checklist()["items"]}
         # Every interpolated value is escaped: the schema allows any non-empty id,
         # so '<' or '&' in it would otherwise reach the markup.
         rows = "\n".join(
-            f'    <tr><td>{xml_escape(it["id"])}</td><td>{xml_escape(it["status"])}</td>'
+            f'    <tr><td>{xml_escape(it["id"])}</td><td>{xml_escape(criteria.get(it["id"], ""))}</td>'
+            f'<td>{xml_escape(it["status"])}</td>'
             f'<td>{"n/a" if it["score"] is None else xml_escape(it["score"])}</td>'
             f'<td>{xml_escape(it["citation"])}</td></tr>'
             for it in rep["items"]
         )
+        lo, hi = rep["aggregate_range"]
         return (
             f'<section class="theoryforge-report">\n'
-            f'  <h2>Rigour report: {xml_escape(rep["theory_id"])}</h2>\n'
-            f'  <p>Aggregate score: <strong>{xml_escape(rep["aggregate_score"])}</strong> '
-            f'({xml_escape(rep["aggregate_range"][0])} to {xml_escape(rep["aggregate_range"][1])} '
-            f'under other weightings) &middot; '
-            f'gate: <strong>{xml_escape(rep["gate"])}</strong></p>\n'
-            f'  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n'
+            f'  <h2>Checklist report: {xml_escape(rep["theory_id"])}</h2>\n'
+            f'  <p>Checklist score: <strong>{xml_escape(rep["aggregate_score"])}</strong> '
+            f'({xml_escape(lo)} to {xml_escape(hi)} with equal weights or one weight halved or '
+            f'doubled) &middot; gate: <strong>{xml_escape(rep["gate"])}</strong></p>\n'
+            f'  <p>{xml_escape(SCOPE.format(version=rep["checklist_version"]))}</p>\n'
+            f'  <table>\n    <tr><th>item</th><th>criterion</th><th>status</th><th>score</th>'
+            f'<th>source of the criterion</th></tr>\n'
             f'{rows}\n  </table>\n</section>\n'
         )
     raise ValueError(f"unknown report format: {quoted(format)}")

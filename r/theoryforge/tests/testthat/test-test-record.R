@@ -129,7 +129,10 @@ test_that("the derivation line says whether the references resolve", {
   # propositions, so the line no longer says that a derivation was verified.
   panic <- tf_preregister(tf_read(tf_fixture_path("panic-network.theory.yaml")))
   weak <- tf_preregister(tf_read(tf_fixture_path("weak-theory.theory.yaml")))
-  expect_true(grepl("\n- Derivations check: yes\n", panic, fixed = TRUE))
+  # A feedback loop leaves the claim of pred_indep unread, so it is not checked.
+  expect_true(grepl("\n- Derivations check: not checked (feedback loop)\n", panic, fixed = TRUE))
+  v2 <- tf_preregister(tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml")))
+  expect_true(grepl("\n- Derivations check: yes\n", v2, fixed = TRUE))
   expect_true(grepl("\n- Derivations check: no\n", weak, fixed = TRUE))
   expect_false(grepl("Derivation chain verified", panic, fixed = TRUE))
 })

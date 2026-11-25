@@ -35,7 +35,12 @@ test_that("tf_preregister writes the file when a path is given", {
 test_that("the derivation line reflects the rigour item status", {
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   weak <- tf_read(tf_fixture_path("weak-theory.theory.yaml"))
-  expect_true(grepl("Derivations check: yes", tf_preregister(panic), fixed = TRUE))
+  # The causal graph has feedback loops, so the checklist leaves the claim of
+  # pred_indep unread under the default cycles = "refuse".
+  expect_true(grepl("Derivations check: not checked (feedback loop)", tf_preregister(panic),
+                    fixed = TRUE))
+  v2 <- tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml"))
+  expect_true(grepl("Derivations check: yes", tf_preregister(v2), fixed = TRUE))
   expect_true(grepl("Derivations check: no", tf_preregister(weak), fixed = TRUE))
 })
 

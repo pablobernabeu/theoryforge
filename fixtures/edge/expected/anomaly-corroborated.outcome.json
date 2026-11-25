@@ -80,8 +80,8 @@
     {
       "prediction_id": "h2",
       "type": "point",
-      "risk_score": 0.9,
-      "computed_severity": 0.9
+      "risk_score": 0.4,
+      "computed_severity": 0.3
     }
   ],
   "implications": {
@@ -175,5 +175,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: An assumption corroborated beyond its anomaly\n\n- Theory ID: edge-anomaly-corroborated\n- Schema version: 1.0\n- Content hash: sha256:10b13781eebe0139c903fc1073be499dbd1d6606f360eb970b210d670485ba5a\n- Maturity: testing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- c1 (Arousal): Bodily arousal response.\n- c2 (Threat arousal): Bodily arousal response under threat.\n\n### Propositions\n- p1: c1 mediates c2. Mechanism: Arousal carries the effect of a threat cue.\n\n### Auxiliary assumptions\n- a1 (core): Self-report tracks arousal.\n- x1 (added for h1): The effect needs a calm setting.\n\n## Hypotheses\n1. [directional] Threat arousal rises with arousal. (h1; derives from: p1)\n   - Auxiliary assumptions: x1 (added for h1)\n   - Test record: already tested: failed\n2. [point] Threat arousal peaks one second after arousal. (h2; derives from: p1)\n   - Auxiliary assumptions: x1 (added for h1)\n   - Test record: already tested: passed\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.9, risk 0.9\n"
+  "preregister": "# Preregistration: An assumption corroborated beyond its anomaly\n\n- Theory ID: edge-anomaly-corroborated\n- Schema version: 1.0\n- Content hash: sha256:10b13781eebe0139c903fc1073be499dbd1d6606f360eb970b210d670485ba5a\n- Maturity: testing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- c1 (Arousal): Bodily arousal response.\n- c2 (Threat arousal): Bodily arousal response under threat.\n\n### Propositions\n- p1: c1 mediates c2. Mechanism: Arousal carries the effect of a threat cue.\n\n### Auxiliary assumptions\n- a1 (core): Self-report tracks arousal.\n- x1 (added for h1): The effect needs a calm setting.\n\n## Hypotheses\n1. [directional] Threat arousal rises with arousal. (h1; derives from: p1)\n   - Auxiliary assumptions: x1 (added for h1)\n   - Test record: already tested: failed\n2. [point] Threat arousal peaks one second after arousal. (h2; derives from: p1)\n   - Auxiliary assumptions: x1 (added for h1)\n   - Test record: already tested: passed\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.3, risk 0.4\n"
 }

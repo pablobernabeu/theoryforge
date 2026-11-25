@@ -29,6 +29,19 @@ BASE = {"existence": 0.1, "directional": 0.4, "interval": 0.7, "point": 0.9}
 CRUD = 0.25
 
 
+def _bounded(p) -> bool:
+    """Whether a prediction's ``bounds`` state two finite numbers, a region a test can miss.
+
+    The precision item of the checklist and the rubric below read a point or
+    interval label only together with such bounds (API_SPEC.md sections 4 and 9).
+    """
+    b = field(p, "bounds")
+    if not isinstance(b, dict):
+        return False
+    lo, up = number(b.get("lower")), number(b.get("upper"))
+    return lo is not None and up is not None and math.isfinite(lo) and math.isfinite(up)
+
+
 @theory_keyword
 def severity(theory) -> list[dict]:
     """Per-prediction claim-form riskiness, in file order.
@@ -37,11 +50,15 @@ def severity(theory) -> list[dict]:
     the base riskiness of the declared type: existence 0.1, directional 0.4,
     interval 0.7 and point 0.9. ``computed_severity`` discounts a directional
     prediction by 25 per cent, adds 0.1 when ``diagnostic_vs`` names a registered
-    alternative and is capped at 1. The order of the types follows Popper (1959,
-    sections 31-33) for nested claims about one quantity, and the directional
-    penalty follows Meehl's (1967, 1990b) argument that a sign alone risks little.
-    The base values, the discount and the bonus are the package's conventions,
-    and neither source gives them.
+    alternative and is capped at 1. A point or interval prediction whose
+    ``bounds`` do not give a finite lower and a finite upper value states no
+    region a test could miss, so it is rated as a directional one, with the base
+    0.4 and the discount, as the precision item of ``check()`` gives it no
+    credit. ``type`` still reports the declared label. The order of the types
+    follows Popper (1959, sections 31-33) for nested claims about one quantity,
+    and the directional penalty follows Meehl's (1967, 1990b) argument that a
+    sign alone risks little. The base values, the discount and the bonus are the
+    package's conventions, and neither source gives them.
 
     How severely a claim is tested depends on the design and the data, which the
     rubric does not read. A prediction scores the same however it is tested, and
@@ -62,8 +79,12 @@ def severity(theory) -> list[dict]:
     out = []
     for p in preds:
         typ = enum(field(p, "type"), PRED_TYPE) or ""
-        base = BASE.get(typ, 0.0)
-        discounted = base * (1 - CRUD) if typ == "directional" else base
+        # A point or interval label without the region it claims is rated as a
+        # directional claim, so that the rubric credits the label no more than
+        # the precision item does (API_SPEC.md section 9).
+        form = "directional" if typ in ("point", "interval") and not _bounded(p) else typ
+        base = BASE.get(form, 0.0)
+        discounted = base * (1 - CRUD) if form == "directional" else base
         dv = str_list(field(p, "diagnostic_vs"))
         # A package convention: naming a registered alternative the prediction
         # would discriminate from adds 0.1. The alternative is declared, not
