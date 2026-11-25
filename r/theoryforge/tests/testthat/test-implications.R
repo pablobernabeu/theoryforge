@@ -974,6 +974,67 @@ test_that("sigma and refuse agree on random acyclic graphs", {
   }
 })
 
+test_that("the separation search agrees with the oracle for every conditioning set", {
+  # The search keeps to the ancestors of the pair and of the conditioning set,
+  # and tf_implications() takes the parents of a pair without it when the graph
+  # has no associations. Every set of the other vertices is tried here, on
+  # random acyclic mixed graphs whose vertex order is not a causal order, with
+  # the ancestors found edge by edge and read from the reachability matrix.
+  set.seed(1125)
+  tried <- 0L
+  dags <- 0L
+  for (rep in 1:60) {
+    k <- sample(3:6, 1)
+    perm <- sample(k)
+    p_assoc <- if (stats::runif(1) < 0.6) 0.2 else 0
+    directed <- matrix(FALSE, k, k)
+    bidirected <- matrix(FALSE, k, k)
+    for (i in seq_len(k - 1L)) {
+      for (j in (i + 1L):k) {
+        if (stats::runif(1) < 0.4) directed[perm[[i]], perm[[j]]] <- TRUE
+        if (stats::runif(1) < p_assoc) {
+          bidirected[perm[[i]], perm[[j]]] <- TRUE
+          bidirected[perm[[j]], perm[[i]]] <- TRUE
+        }
+      }
+    }
+    names <- paste0("v", seq_len(k))
+    d_names <- matrix(names[which(directed, arr.ind = TRUE)], ncol = 2L)
+    b_names <- matrix(names[which(bidirected & upper.tri(bidirected), arr.ind = TRUE)], ncol = 2L)
+    by_edges <- theoryforge:::.tf_mixed_graph(directed, bidirected)
+    by_reach <- theoryforge:::.tf_mixed_graph(directed, bidirected,
+                                             theoryforge:::.tf_reach(directed, k))
+    got <- logical(0)
+    got_reach <- logical(0)
+    want <- logical(0)
+    for (pair in utils::combn(k, 2L, simplify = FALSE)) {
+      x <- pair[[1L]]
+      y <- pair[[2L]]
+      others <- setdiff(seq_len(k), pair)
+      sets <- c(list(integer(0)), unlist(lapply(seq_along(others), function(r) {
+        lapply(utils::combn(length(others), r, simplify = FALSE), function(ix) others[ix])
+      }), recursive = FALSE))
+      for (z in sets) {
+        got <- c(got, theoryforge:::.tf_m_separated(by_edges, x, y, z))
+        got_reach <- c(got_reach, theoryforge:::.tf_m_separated(by_reach, x, y, z))
+        want <- c(want, !tf_sigma_connected(d_names, b_names, names[[x]], names[[y]], names[z],
+                                            sigma = FALSE))
+      }
+      if (!any(bidirected) && !directed[x, y] && !directed[y, x]) {
+        parents <- which(directed[, x] | directed[, y])
+        expect_false(tf_sigma_connected(d_names, b_names, names[[x]], names[[y]], names[parents],
+                                        sigma = FALSE))
+      }
+    }
+    expect_identical(got, want)
+    expect_identical(got_reach, want)
+    tried <- tried + length(want)
+    dags <- dags + !any(bidirected)
+  }
+  expect_gt(tried, 1500L)
+  expect_gt(dags, 15L)
+})
+
 test_that("tf_implications reproduces the implications goldens", {
   # scripts/gen_golden.py writes <id>.implications.json with cycles = "sigma"
   # for every fixture from the Python twin.

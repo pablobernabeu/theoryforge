@@ -14,10 +14,12 @@ feedback loops is refused by default, or read by sigma-separation on request
 """
 from __future__ import annotations
 
+from itertools import compress
+
 from ._access import text
 from ._causal import causal_graph
 from ._compat import theory_keyword
-from ._graph import acyclify, first_cycle, m_separated, reach, strong_components
+from ._graph import MixedGraph, acyclify, first_cycle, m_separated, reach, reached, strong_components
 
 # The values of the ``cycles`` and ``given`` options, the default first.
 CYCLES = ("refuse", "sigma")
@@ -240,7 +242,9 @@ def implications(theory, cycles: str = "refuse", given: str = "basis") -> dict:
         directed, bidirected = acyclify(directed, bidirected, comps)
         criterion = "sigma"
 
-    r = reach(directed, k)
+    graph = MixedGraph(directed, bidirected)
+    # The graph is acyclic here, and without bidirected edges it is a DAG.
+    dag = not any(map(any, bidirected))
     out: list[dict] = []
     inseparable: list[dict] = []
     for i in range(k):
@@ -254,17 +258,17 @@ def implications(theory, cycles: str = "refuse", given: str = "basis") -> dict:
             # every vertex on a path that connects the two is a collider and an
             # ancestor of one of them, an inducing path, so no set separates
             # the pair (API_SPEC.md section 27).
-            parents = [v for v in range(k) if directed[v][i] or directed[v][j]]
-            ancestors = [v for v in range(k) if (r[v][i] or r[v][j]) and v not in (i, j)]
-            sep = next((s for s in (parents, ancestors)
-                        if m_separated(directed, bidirected, r, i, j, s)), None)
-            if sep is None:
-                inseparable.append({"a": nodes[i], "b": nodes[j]})
-                continue
+            sep = sorted({*graph.parents[i], *graph.parents[j]})
+            if not dag and not m_separated(graph, i, j, sep):
+                mark = reached(graph.parents, (i, j), k)
+                sep = [v for v in compress(range(k), mark) if v != i and v != j]
+                if not m_separated(graph, i, j, sep):
+                    inseparable.append({"a": nodes[i], "b": nodes[j]})
+                    continue
             if given == "minimal":
                 for v in list(sep):
                     rest = [u for u in sep if u != v]
-                    if m_separated(directed, bidirected, r, i, j, rest):
+                    if m_separated(graph, i, j, rest):
                         sep = rest
             names = [nodes[v] for v in sep]
             out.append({"a": nodes[i], "b": nodes[j], "given": names,

@@ -14,10 +14,6 @@
 .tf_NEG <- 2L
 .tf_UNK <- 4L
 
-.tf_edge_mask <- function(s) {
-  if (is.na(s)) .tf_UNK else if (s > 0L) .tf_POS else .tf_NEG
-}
-
 # The signs of the products of a sign from `a` and a sign from `b`.
 .tf_sign_mul <- function(a, b) {
   if (a == 0L || b == 0L) return(0L)
@@ -32,60 +28,93 @@
   out
 }
 
-# For each vertex, the sign set of the directed walks to it from `start`. The
-# empty walk counts, so `start` holds POS. With `held`, the edges into `start`
-# are left out, so that no walk returns to it, as when an intervention holds it
-# fixed. A strong component whose edges form one simple cycle, a self loop
-# included, has as many edges as vertices, and the effects within it are the
-# path along the cycle times 1 / (1 - g), for the cycle's gain g, which is
-# positive whenever the effects round the loop die out. A walk that enters such
-# a component therefore never closes the cycle back to the vertex where it
-# entered. Other walks may go round a loop. The search runs over the states
-# (vertex, sign, the vertex where the walk entered its simple cycle or 0), each
-# visited once, so it ends on a graph with feedback loops too.
-.tf_walk_signs <- function(directed, sign, k, start, held = FALSE) {
-  d <- directed
-  if (held) d[, start] <- FALSE
-  comps <- .tf_strong_components(.tf_reach(d, k))
-  comp <- integer(k)
-  for (c in seq_along(comps)) comp[comps[[c]]] <- c
-  simple <- vapply(comps, function(m) sum(d[m, m]) == length(m), logical(1))
+# .tf_sign_mul() for every pair of sign sets, so that a product is looked up:
+# .tf_MUL[a + 1, b + 1] holds the product of the sets a and b.
+.tf_MUL <- matrix(vapply(0:63, function(i) .tf_sign_mul(i %% 8L, i %/% 8L), integer(1)),
+                  nrow = 8L, ncol = 8L)
+
+# The strong component of each vertex of the graph G prepared by
+# .tf_prepare_graph(), and whether each component is one simple cycle, as
+# list(comp, simple). With `held` a vertex, the graph is taken without the edges
+# into it. Removing those edges can split the component of `held` and no other,
+# so only that one is found again. A component is one simple cycle, a self loop
+# included, when it has as many edges as vertices.
+.tf_walk_components <- function(G, held = 0L) {
+  if (held == 0L) return(list(comp = G$comp, simple = G$simple))
+  comp <- G$comp
+  simple <- G$simple
+  members <- G$comps[[comp[[held]]]]
+  sub <- G$directed[members, members, drop = FALSE]
+  sub[, members == held] <- FALSE
+  for (part in .tf_strong_components(.tf_reach(sub, length(members)))) {
+    simple <- c(simple, sum(sub[part, part]) == length(part))
+    comp[members[part]] <- length(simple)
+  }
+  list(comp = comp, simple = simple)
+}
+
+# For each vertex, the sign set of the directed walks to it from `start` in the
+# graph G prepared by .tf_prepare_graph(). The empty walk counts, so `start`
+# holds POS. With `held`, the edges into `start` are left out, so that no walk
+# returns to it, as when an intervention holds it fixed. A strong component
+# whose edges form one simple cycle, a self loop included, has as many edges as
+# vertices, and the effects within it are the path along the cycle times
+# 1 / (1 - g), for the cycle's gain g, which is positive whenever the effects
+# round the loop die out. A walk that enters such a component therefore never
+# closes the cycle back to the vertex where it entered. Other walks may go round
+# a loop. The search runs over the states (vertex, sign, the vertex where the
+# walk entered its simple cycle or 0), each visited once, so it ends on a graph
+# with feedback loops too. Each round extends every state the previous round
+# found by one edge.
+.tf_walk_signs <- function(G, start, held = FALSE) {
+  k <- G$k
+  cs <- .tf_walk_components(G, if (held) start else 0L)
+  comp <- cs$comp
+  simple <- cs$simple
   bits <- c(.tf_POS, .tf_NEG, .tf_UNK)
+  # A state is numbered v + k * (i - 1) + 3 * k * (n - 1) for the vertex v, the
+  # sign bits[i] and the entry numbered n: 1 for none, and from 2 on for the
+  # vertices of simple cycles in vertex order.
+  entries <- c(0L, which(simple[comp]))
+  # The part of the state number that the entry e gives, at offset[e + 1].
+  offset <- integer(k + 1L)
+  offset[entries + 1L] <- 3L * k * (seq_along(entries) - 1L)
   masks <- integer(k)
   masks[[start]] <- .tf_POS
-  e0 <- if (simple[[comp[[start]]]]) start else 0L
-  seen <- array(FALSE, c(k, 3L, k + 1L))
-  seen[start, 1L, e0 + 1L] <- TRUE
-  qv <- start
-  qb <- 1L
-  qe <- e0
-  while (length(qv) > 0L) {
-    n <- length(qv)
-    v <- qv[[n]]
-    bit <- bits[[qb[[n]]]]
-    entry <- qe[[n]]
-    qv <- qv[-n]
-    qb <- qb[-n]
-    qe <- qe[-n]
-    for (w in which(d[v, ])) {
-      if (comp[[w]] == comp[[v]]) {
-        if (w == entry) next
-        ne <- entry
-      } else {
-        ne <- if (simple[[comp[[w]]]]) w else 0L
-      }
-      nxt <- .tf_sign_mul(bit, .tf_edge_mask(sign[v, w]))
-      for (i in 1:3) {
-        if (bitwAnd(nxt, bits[[i]]) == 0L) next
-        masks[[w]] <- bitwOr(masks[[w]], bits[[i]])
-        if (!seen[w, i, ne + 1L]) {
-          seen[w, i, ne + 1L] <- TRUE
-          qv <- c(qv, w)
-          qb <- c(qb, i)
-          qe <- c(qe, ne)
-        }
-      }
+  seen <- logical(3L * k * length(entries))
+  state <- start + offset[[(if (simple[[comp[[start]]]]) start else 0L) + 1L]]
+  seen[state] <- TRUE
+  while (length(state) > 0L) {
+    s0 <- state - 1L
+    v <- s0 %% k + 1L
+    n <- lengths(G$children[v])
+    w <- unlist(G$children[v], use.names = FALSE)
+    v <- rep.int(v, n)
+    i <- rep.int((s0 %/% k) %% 3L + 1L, n)
+    entry <- rep.int(entries[s0 %/% (3L * k) + 1L], n)
+    same <- comp[w] == comp[v]
+    keep <- !(same & w == entry)
+    if (held) keep <- keep & w != start
+    w <- w[keep]
+    v <- v[keep]
+    i <- i[keep]
+    entry <- entry[keep]
+    same <- same[keep]
+    # The entry stays within a component, and on leaving it is the vertex
+    # reached when that vertex's component is a simple cycle, or 0.
+    ne <- entry
+    out <- !same
+    ne[out] <- w[out] * simple[comp[w[out]]]
+    nxt <- .tf_MUL[cbind(bits[i] + 1L, G$mask[cbind(v, w)] + 1L)]
+    state <- integer(0)
+    for (j in 1:3) {
+      has <- bitwAnd(nxt, bits[[j]]) != 0L
+      masks[w[has]] <- bitwOr(masks[w[has]], bits[[j]])
+      state <- c(state, w[has] + k * (j - 1L) + offset[ne[has] + 1L])
     }
+    state <- state[!seen[state]]
+    if (length(state) > 1L) state <- unique(state)
+    seen[state] <- TRUE
   }
   masks
 }
@@ -109,17 +138,19 @@
   S <- matrix(0L, nrow = k, ncol = k)
   diag(S) <- .tf_POS
   ord <- order(colSums(r), seq_len(k))
-  for (j in seq_len(k)) {
+  # Each column is filled for all the vertices before b in the order at once.
+  for (j in seq_len(k)[-1L]) {
     b <- ord[[j]]
-    parents <- which(G$directed[, b])
-    joined <- G$bidirected[, b]
-    for (a in ord[seq_len(j - 1L)]) {
-      m <- 0L
-      for (p in parents) m <- bitwOr(m, .tf_sign_mul(.tf_edge_mask(G$sign[p, b]), S[a, p]))
-      if (any(joined & r[, a])) m <- bitwOr(m, .tf_UNK)
-      S[a, b] <- m
-      S[b, a] <- m
+    before <- ord[seq_len(j - 1L)]
+    m <- integer(j - 1L)
+    for (p in G$parents[[b]]) m <- bitwOr(m, .tf_MUL[G$mask[p, b] + 1L, S[before, p] + 1L])
+    joined <- which(G$bidirected[, b])
+    if (length(joined) > 0L) {
+      open <- colSums(r[joined, before, drop = FALSE]) > 0
+      m[open] <- bitwOr(m[open], .tf_UNK)
     }
+    S[before, b] <- m
+    S[b, before] <- m
   }
   S
 }
@@ -174,9 +205,22 @@
   k <- length(g$nodes)
   G <- g
   G$k <- k
-  G$props <- props
+  # The ids of the propositions, each once in file order, from which a claim's
+  # `via` is drawn.
+  pids <- vapply(props, function(p) .tf_str(p, "id"), "")
+  G$pids <- unique(pids[nzchar(pids)])
+  G$children <- lapply(seq_len(k), function(v) which(g$directed[v, ]))
+  G$parents <- lapply(seq_len(k), function(v) which(g$directed[, v]))
+  # The sign set of each directed edge.
+  G$mask <- matrix(.tf_NEG, nrow = k, ncol = k)
+  G$mask[is.na(g$sign)] <- .tf_UNK
+  G$mask[!is.na(g$sign) & g$sign > 0L] <- .tf_POS
   G$r <- .tf_reach(g$directed, k)
   comps <- .tf_strong_components(G$r)
+  G$comps <- comps
+  G$comp <- integer(k)
+  for (c in seq_along(comps)) G$comp[comps[[c]]] <- c
+  G$simple <- vapply(comps, function(m) sum(g$directed[m, m]) == length(m), logical(1))
   feedback <- list()
   for (comp in comps) {
     if (length(comp) > 1L || g$directed[comp[[1L]], comp[[1L]]]) {
@@ -185,7 +229,8 @@
   }
   G$feedback <- feedback
   G$evaluable <- cycles == "sigma" || length(feedback) == 0L
-  if (length(feedback) > 0L && cycles == "sigma") {
+  G$acyclified <- length(feedback) > 0L && cycles == "sigma"
+  if (G$acyclified) {
     acy <- .tf_acyclify(g$directed, g$bidirected, comps)
     G$sep_d <- acy$directed
     G$sep_b <- acy$bidirected
@@ -193,58 +238,66 @@
     G$sep_d <- g$directed
     G$sep_b <- g$bidirected
   }
-  G$sep_r <- .tf_reach(G$sep_d, k)
   G$walk_cache <- new.env(parent = emptyenv())
   G
+}
+
+# The graph that separation is read in, prepared by .tf_mixed_graph() when a
+# claim first needs it.
+.tf_sep_graph <- function(G) {
+  if (is.null(G$walk_cache[["sep"]])) {
+    r <- if (G$acyclified) .tf_reach(G$sep_d, G$k) else G$r
+    G$walk_cache[["sep"]] <- .tf_mixed_graph(G$sep_d, G$sep_b, r)
+  }
+  G$walk_cache[["sep"]]
 }
 
 .tf_walks <- function(G, s) {
   key <- as.character(s)
   if (is.null(G$walk_cache[[key]])) {
-    G$walk_cache[[key]] <- .tf_walk_signs(G$directed, G$sign, G$k, s)
+    G$walk_cache[[key]] <- .tf_walk_signs(G, s)
   }
   G$walk_cache[[key]]
 }
 
-# The ids of the propositions in `on`, in file order, once each.
+# The ids in `on`, in file order.
 .tf_ordered_props <- function(G, on) {
-  out <- character(0)
-  for (p in G$props) {
-    pid <- .tf_str(p, "id")
-    if (nzchar(pid) && !(pid %in% out) && pid %in% on) out <- c(out, pid)
-  }
-  out
+  G$pids[G$pids %in% on]
 }
 
-# The sign sets of the walks from `x` that never return to it, and the
-# reachability of the graph without the edges into `x`: the graph an
-# intervention on `x` leaves.
+# The sign sets of the walks from `x` that never return to it, in the graph
+# without the edges into `x`: the graph an intervention on `x` leaves.
 .tf_held <- function(G, x) {
   key <- paste0("held", x)
   if (is.null(G$walk_cache[[key]])) {
-    cut <- G$directed
-    cut[, x] <- FALSE
-    G$walk_cache[[key]] <- list(masks = .tf_walk_signs(G$directed, G$sign, G$k, x, held = TRUE),
-                                r = .tf_reach(cut, G$k))
+    G$walk_cache[[key]] <- .tf_walk_signs(G, x, held = TRUE)
   }
   G$walk_cache[[key]]
 }
 
-.tf_effect <- function(G, x, y) {
+# The derived sign of the effect of x on y, its basis and, with `via`, the
+# propositions on a directed walk from x to y that does not return to x, a
+# directed path when the graph is acyclic.
+.tf_effect <- function(G, x, y, via = TRUE) {
   # An intervention on x replaces its own equation, so a walk that comes back
   # to x carries nothing to y. In an acyclic graph no walk does.
-  h <- .tf_held(G, x)
-  d <- .tf_derived(h$masks[[y]])
-  on <- character(0)
-  for (e in seq_along(G$edge_from)) {
-    u <- G$edge_from[[e]]
-    v <- G$edge_to[[e]]
-    if (v != x && h$r[x, u] && h$r[v, y]) on <- c(on, G$edge_props[[e]])
-  }
+  d <- .tf_derived(.tf_held(G, x)[[y]])
+  if (!via) return(list(derived = d[[1L]], basis = d[[2L]], via = character(0)))
+  # The paths run in the graph without the edges into x: from x, which reaches
+  # the same vertices there, to y along vertices that reach y without passing
+  # through x.
+  parents <- G$parents
+  parents[[x]] <- integer(0)
+  to_y <- .tf_reached(parents, y, logical(G$k))
+  from_x <- G$r[x, ]
+  hit <- G$edge_to != x & from_x[G$edge_from] & to_y[G$edge_to]
+  on <- unlist(G$edge_props[hit], use.names = FALSE)
   list(derived = d[[1L]], basis = d[[2L]], via = .tf_ordered_props(G, on))
 }
 
-.tf_association <- function(G, x, y) {
+# The derived sign of the association of x and y, its basis and, with `via`,
+# the propositions on a trek between the two.
+.tf_association <- function(G, x, y, via = TRUE) {
   r <- G$r
   na <- nrow(G$assoc)
   if (length(G$feedback) == 0L) {
@@ -252,10 +305,12 @@
     mask <- G$walk_cache[["cov"]][x, y]
   } else {
     # With feedback loops, the treks are read as pairs of walks from a common
-    # source, which counts a trek whose two walks share a segment as well.
+    # source, which counts a trek whose two walks share a segment as well. A
+    # source that does not reach both adds nothing.
     mask <- 0L
-    for (t in seq_len(G$k)) {
-      mask <- bitwOr(mask, .tf_sign_mul(.tf_walks(G, t)[[x]], .tf_walks(G, t)[[y]]))
+    for (t in which(r[, x] & r[, y])) {
+      walks <- .tf_walks(G, t)
+      mask <- bitwOr(mask, .tf_MUL[walks[[x]] + 1L, walks[[y]] + 1L])
     }
     for (row in seq_len(na)) {
       a <- G$assoc[row, 1L]
@@ -264,21 +319,22 @@
     }
   }
   d <- .tf_derived(mask)
-  common <- function(u, e) any(r[, u] & r[, e])
-  on <- character(0)
-  for (e in seq_along(G$edge_from)) {
-    u <- G$edge_from[[e]]
-    v <- G$edge_to[[e]]
-    hit <- (r[v, x] && common(u, y)) || (r[v, y] && common(u, x))
-    for (row in seq_len(na)) {
-      for (pq in list(G$assoc[row, ], rev(G$assoc[row, ]))) {
-        p <- pq[[1L]]
-        q <- pq[[2L]]
-        if (r[p, u] && ((r[v, x] && r[q, y]) || (r[v, y] && r[q, x]))) hit <- TRUE
-      }
-    }
-    if (hit) on <- c(on, G$edge_props[[e]])
-  }
+  if (!via) return(list(derived = d[[1L]], basis = d[[2L]], via = character(0)))
+  # An edge u -> v lies on a trek between x and y when v reaches one of the two
+  # and u is near the other: u has an ancestor in common with it, or descends
+  # from one end of an association whose other end reaches it. near_x marks the
+  # vertices near x, the descendants of x's ancestors and of the ends whose
+  # other end reaches x.
+  to_x <- r[, x]
+  to_y <- r[, y]
+  p <- c(G$assoc[, 1L], G$assoc[, 2L])
+  q <- c(G$assoc[, 2L], G$assoc[, 1L])
+  near_x <- colSums(r[c(which(to_x), p[to_x[q]]), , drop = FALSE]) > 0
+  near_y <- colSums(r[c(which(to_y), p[to_y[q]]), , drop = FALSE]) > 0
+  u <- G$edge_from
+  v <- G$edge_to
+  hit <- (to_x[v] & near_y[u]) | (to_y[v] & near_x[u])
+  on <- unlist(G$edge_props[hit], use.names = FALSE)
   for (row in seq_len(na)) {
     a <- G$assoc[row, 1L]
     b <- G$assoc[row, 2L]
@@ -304,12 +360,12 @@
   k <- G$k
   r <- G$r
   on_path <- which(seq_len(k) != x & r[x, ] & r[, y])
-  forbidden <- unique(c(x, which(apply(r[on_path, , drop = FALSE], 2L, any))))
+  forbidden <- unique(c(x, which(colSums(r[on_path, , drop = FALSE]) > 0)))
   canonical <- setdiff(which((r[, x] | r[, y]) & !G$latent), c(forbidden, y))
-  d <- G$directed
-  d[x, on_path] <- FALSE
-  rd <- .tf_reach(d, k)
-  if (!.tf_m_separated(d, G$bidirected, rd, x, y, canonical)) return(NULL)
+  # The proper back-door graph. Without feedback loops, separation is read in
+  # the theory's own graph.
+  d <- .tf_without_edges(.tf_sep_graph(G), x, on_path)
+  if (!.tf_m_separated(d, x, y, canonical)) return(NULL)
   if (length(canonical) > .tf_ADJUSTMENT_SEARCH) {
     # Every member is an ancestor of x or y in the proper back-door graph, and
     # separation by such sets is separation in one undirected graph, so a
@@ -317,7 +373,7 @@
     z <- canonical
     for (v in canonical) {
       rest <- z[z != v]
-      if (.tf_m_separated(d, G$bidirected, rd, x, y, rest)) z <- rest
+      if (.tf_m_separated(d, x, y, rest)) z <- rest
     }
     return(z)
   }
@@ -332,7 +388,7 @@
       utils::combn(canonical, size, simplify = FALSE)
     }
     for (z in subsets) {
-      if (.tf_m_separated(d, G$bidirected, rd, x, y, z)) return(z)
+      if (.tf_m_separated(d, x, y, z)) return(z)
     }
   }
   canonical
@@ -356,7 +412,7 @@
   y <- match(cl$y, G$nodes)
   if (cl$kind == "association" && length(cl$given) > 0L) {
     z <- match(cl$given, G$nodes)
-    if (.tf_m_separated(G$sep_d, G$sep_b, G$sep_r, x, y, z)) {
+    if (.tf_m_separated(.tf_sep_graph(G), x, y, z)) {
       return(out("zero", .tf_verdict(cl$sign, "zero"), "separated"))
     }
     return(out("nonzero", .tf_verdict(cl$sign, "nonzero"), "connected", faithfulness = TRUE))
@@ -575,16 +631,17 @@ tf_entailments <- function(theory, cycles = "refuse") {
 .tf_v_structures <- function(directed) {
   k <- nrow(directed)
   adj <- .tf_skeleton(directed)
-  out <- matrix(integer(0), ncol = 3L)
+  rows <- vector("list", k)
   for (c in seq_len(k)) {
-    for (a in seq_len(k)) {
-      if (a == k) next
-      for (b in (a + 1L):k) {
-        if (directed[a, c] && directed[b, c] && !adj[a, b]) out <- rbind(out, c(a, c, b))
-      }
-    }
+    parents <- which(directed[, c])
+    if (length(parents) < 2L) next
+    n <- length(parents)
+    a <- parents[rep.int(seq_len(n - 1L), (n - 1L):1)]
+    b <- parents[sequence((n - 1L):1, from = 2:n)]
+    open <- !adj[cbind(a, b)]
+    if (any(open)) rows[[c]] <- c(rbind(a[open], c, b[open]))
   }
-  out
+  matrix(as.integer(unlist(rows)), ncol = 3L, byrow = TRUE)
 }
 
 # Which edges of a DAG keep their direction in every Markov-equivalent DAG:
@@ -600,25 +657,23 @@ tf_entailments <- function(theory, cycles = "refuse") {
     comp[vs[row, 1L], vs[row, 2L]] <- TRUE
     comp[vs[row, 3L], vs[row, 2L]] <- TRUE
   }
-  undirected <- function(a, b) adj[a, b] && !comp[a, b] && !comp[b, a]
+  children <- lapply(seq_len(k), function(v) which(directed[v, ]))
+  parents <- lapply(seq_len(k), function(v) which(directed[, v]))
+  # Only directed edges are ever compelled, so each rule need look only at the
+  # parents or children concerned.
   changed <- TRUE
   while (changed) {
     changed <- FALSE
     for (x in seq_len(k)) {
-      for (y in seq_len(k)) {
-        if (!(directed[x, y] && undirected(x, y))) next
-        others <- setdiff(seq_len(k), y)
-        r1 <- any(vapply(others, function(z) comp[z, x] && !adj[z, y], logical(1)))
-        r2 <- any(comp[x, ] & comp[, y])
-        r3 <- FALSE
-        if (k >= 2L) {
-          for (z1 in seq_len(k - 1L)) {
-            for (z2 in (z1 + 1L):k) {
-              if (undirected(x, z1) && undirected(x, z2) && comp[z1, y] && comp[z2, y] &&
-                  !adj[z1, z2]) r3 <- TRUE
-            }
-          }
-        }
+      for (y in children[[x]]) {
+        if (comp[x, y] || comp[y, x]) next
+        z <- parents[[x]]
+        r1 <- any(comp[z, x] & !adj[z, y] & z != y)
+        z <- children[[x]]
+        r2 <- any(comp[x, z] & comp[z, y])
+        z <- parents[[y]]
+        near <- z[comp[z, y] & adj[x, z] & !comp[x, z] & !comp[z, x]]
+        r3 <- length(near) >= 2L && !all(adj[near, near][upper.tri(diag(length(near)))])
         if (r1 || r2 || r3) {
           comp[x, y] <- TRUE
           changed <- TRUE
@@ -721,61 +776,60 @@ tf_equivalent_models <- function(theory) {
   kept <- match(keep, G$nodes)
   is_kept <- logical(G$k)
   is_kept[kept] <- TRUE
+  # The kept vertices reached from s by a path whose interior is all dropped.
   down <- function(s) {
-    found <- integer(0)
-    seen <- s
-    stack <- s
-    while (length(stack) > 0L) {
-      v <- stack[[length(stack)]]
-      stack <- stack[-length(stack)]
-      for (w in which(G$directed[v, ])) {
-        if (w %in% seen) next
-        seen <- c(seen, w)
-        if (is_kept[[w]]) found <- c(found, w) else stack <- c(stack, w)
-      }
+    seen <- logical(G$k)
+    seen[[s]] <- TRUE
+    found <- logical(G$k)
+    frontier <- s
+    while (length(frontier) > 0L) {
+      w <- unlist(G$children[frontier], use.names = FALSE)
+      w <- unique(w[!seen[w]])
+      seen[w] <- TRUE
+      found[w[is_kept[w]]] <- TRUE
+      frontier <- w[!is_kept[w]]
     }
-    found
+    which(found)
   }
   reach_kept <- lapply(seq_len(G$k), function(v) if (is_kept[[v]]) v else down(v))
   n <- length(kept)
+  pos <- integer(G$k)
+  pos[kept] <- seq_len(n)
   d <- matrix(FALSE, nrow = n, ncol = n)
   b <- matrix(FALSE, nrow = n, ncol = n)
-  for (v in kept) {
-    for (w in down(v)) d[match(v, kept), match(w, kept)] <- TRUE
-  }
+  for (v in kept) d[pos[[v]], pos[down(v)]] <- TRUE
   for (t in seq_len(G$k)) {
     if (is_kept[[t]]) next
-    ends <- reach_kept[[t]]
-    for (i in ends) for (j in ends) if (i != j) b[match(i, kept), match(j, kept)] <- TRUE
+    ends <- pos[reach_kept[[t]]]
+    b[ends, ends] <- TRUE
   }
   for (row in seq_len(nrow(G$assoc))) {
-    for (i in reach_kept[[G$assoc[row, 1L]]]) {
-      for (j in reach_kept[[G$assoc[row, 2L]]]) {
-        if (i != j) {
-          b[match(i, kept), match(j, kept)] <- TRUE
-          b[match(j, kept), match(i, kept)] <- TRUE
-        }
-      }
-    }
+    i <- pos[reach_kept[[G$assoc[row, 1L]]]]
+    j <- pos[reach_kept[[G$assoc[row, 2L]]]]
+    b[i, j] <- TRUE
+    b[j, i] <- TRUE
   }
+  diag(b) <- FALSE
   list(directed = d, bidirected = b)
 }
 
 # The parents of both, or failing that all their other ancestors, when that set
-# separates i and j; NULL otherwise.
-.tf_separating_set <- function(d, bd, r, i, j) {
+# separates i and j; NULL otherwise. `g` is the acyclic graph of `d` and `bd`
+# from .tf_mixed_graph(), and `dag` is TRUE when it has no bidirected edges, in
+# which case the parents always separate the two (API_SPEC.md section 27).
+.tf_separating_set <- function(d, bd, g, dag, i, j) {
   if (d[i, j] || d[j, i] || bd[i, j]) return(NULL)
   parents <- which(d[, i] | d[, j])
-  ancestors <- setdiff(which(r[, i] | r[, j]), c(i, j))
-  for (s in list(parents, ancestors)) {
-    if (.tf_m_separated(d, bd, r, i, j, s)) return(s)
-  }
+  if (dag || .tf_m_separated(g, i, j, parents)) return(parents)
+  ancestors <- setdiff(which(g$reach[, i] | g$reach[, j]), c(i, j))
+  if (.tf_m_separated(g, i, j, ancestors)) return(ancestors)
   NULL
 }
 
 .tf_discriminating_independencies <- function(shared, views) {
   n <- length(shared)
-  reaches <- lapply(views, function(v) .tf_reach(v$directed, n))
+  graphs <- lapply(views, function(v) .tf_mixed_graph(v$directed, v$bidirected, .tf_reach(v$directed, n)))
+  dags <- vapply(views, function(v) !any(v$bidirected), logical(1))
   out <- list()
   if (n < 2L) return(out)
   for (i in seq_len(n - 1L)) {
@@ -784,10 +838,9 @@ tf_equivalent_models <- function(theory) {
         mine <- side[[2L]]
         theirs <- side[[3L]]
         sep <- .tf_separating_set(views[[mine]]$directed, views[[mine]]$bidirected,
-                                  reaches[[mine]], i, j)
+                                  graphs[[mine]], dags[[mine]], i, j)
         if (is.null(sep)) next
-        if (!.tf_m_separated(views[[theirs]]$directed, views[[theirs]]$bidirected,
-                             reaches[[theirs]], i, j, sep)) {
+        if (!.tf_m_separated(graphs[[theirs]], i, j, sep)) {
           given <- shared[sep]
           out[[length(out) + 1L]] <- list(a = shared[[i]], b = shared[[j]], given = as.list(given),
                                           statement = .tf_ci_statement(shared[[i]], shared[[j]], given),
@@ -805,8 +858,8 @@ tf_equivalent_models <- function(theory) {
   for (x in shared) {
     for (y in shared) {
       if (x == y) next
-      a <- .tf_effect(focal, match(x, focal$nodes), match(y, focal$nodes))$derived
-      b <- .tf_effect(other, match(x, other$nodes), match(y, other$nodes))$derived
+      a <- .tf_effect(focal, match(x, focal$nodes), match(y, focal$nodes), via = FALSE)$derived
+      b <- .tf_effect(other, match(x, other$nodes), match(y, other$nodes), via = FALSE)$derived
       if (a != b) {
         effects[[length(effects) + 1L]] <- list(x = x, y = y, theory = a, rival = b,
                                                 decisive = a %in% fixed && b %in% fixed)
@@ -820,8 +873,8 @@ tf_equivalent_models <- function(theory) {
       for (j in (i + 1L):n) {
         x <- shared[[i]]
         y <- shared[[j]]
-        a <- .tf_association(focal, match(x, focal$nodes), match(y, focal$nodes))$derived
-        b <- .tf_association(other, match(x, other$nodes), match(y, other$nodes))$derived
+        a <- .tf_association(focal, match(x, focal$nodes), match(y, focal$nodes), via = FALSE)$derived
+        b <- .tf_association(other, match(x, other$nodes), match(y, other$nodes), via = FALSE)$derived
         if (a != b) {
           associations[[length(associations) + 1L]] <- list(a = x, b = y, theory = a, rival = b,
                                                             decisive = a %in% fixed && b %in% fixed)

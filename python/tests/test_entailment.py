@@ -10,7 +10,7 @@ import pytest
 
 import theoryforge as tf
 from theoryforge._causal import causal_graph
-from theoryforge._graph import m_separated, reach
+from theoryforge._graph import MixedGraph, m_separated
 from theoryforge.entailment import _Graph, _project
 
 np = pytest.importorskip("numpy")
@@ -239,15 +239,14 @@ def test_the_latent_projection_keeps_every_separation_among_the_kept_constructs(
         if g.feedback or g.k < 3:
             continue
         keep = [c for c in g.nodes if rng.random() < 0.7]
-        d, b = _project(g, keep)
-        r = reach(d, len(keep))
+        projected = MixedGraph(*_project(g, keep))
         for i, j in itertools.combinations(range(len(keep)), 2):
             rest = [z for z in range(len(keep)) if z not in (i, j)]
             for n in range(len(rest) + 1):
                 for z in itertools.combinations(rest, n):
-                    full = m_separated(g.directed, g.bidirected, g.r, g.index[keep[i]],
-                                       g.index[keep[j]], [g.index[keep[w]] for w in z])
-                    assert full == m_separated(d, b, r, i, j, list(z))
+                    full = m_separated(g.sep, g.index[keep[i]], g.index[keep[j]],
+                                       [g.index[keep[w]] for w in z])
+                    assert full == m_separated(projected, i, j, list(z))
 
 
 # -- equivalent models and rivals --------------------------------------------
@@ -714,3 +713,109 @@ def test_a_canonical_set_of_more_than_12_constructs_is_pruned_to_a_minimal_one()
     assert "   - Adjustment for an observational test: none needed\n" in direct.preregister()
     confounded = many([(f"a{i}", "c") for i in range(1, 14)] + [("c", "x"), ("c", "y"), ("x", "y")])
     assert confounded.entailments()["claims"][0]["adjustment"] == ["c"]
+
+
+# -- large theories -------------------------------------------------------------
+
+def _large_theory(k, associate_every=0, effects=0, associations=0):
+    """A sparse DAG over the constructs c0001 to c<k>, as the R suite builds it.
+
+    Construct j has the parent j // 2, which increases it when j is even and
+    decreases it otherwise, and also j - 2 when j is a multiple of 3 above 3.
+    With ``associate_every``, every such multiple j is associated with j - 8.
+    Effect claim i is that c<3i> lowers c<6i + 1>, whose one parent it is, and
+    association claim i concerns c<5i> and c<5i + 2>.
+    """
+    ids = [f"c{j:04d}" for j in range(1, k + 1)]
+    props = []
+
+    def add(a, b, relation):
+        props.append({"id": f"p{len(props) + 1}", "from": ids[a - 1], "to": ids[b - 1],
+                      "relation": relation})
+
+    for j in range(2, k + 1):
+        relation = "increases" if j % 2 == 0 else "decreases"
+        add(j // 2, j, relation)
+        if j % 3 == 0 and j > 3:
+            add(j - 2, j, relation)
+    if associate_every:
+        for j in range(associate_every, k + 1, associate_every):
+            add(j, j - 8, "associates")
+    claims = ([_claim("effect", ids[3 * i - 1], ids[6 * i], "negative") for i in range(1, effects + 1)]
+              + [_claim("association", ids[5 * i - 1], ids[5 * i + 1], "positive")
+                 for i in range(1, associations + 1)])
+    rival = [{**p, "id": "r" + p["id"]} for n, p in enumerate(props, start=1) if n % 10]
+    t = _theory([], claims=claims, alternatives=[{"id": "rival", "label": "Rival",
+                                                  "key_constructs": ["x"], "propositions": rival}])
+    t.data["constructs"] = [{"id": c, "label": c, "definition": "d"} for c in ids]
+    t.data["propositions"] = props
+    return t
+
+
+def test_the_causal_reading_finds_the_reachability_of_each_graph_once(monkeypatch):
+    # Finding the reachability of the whole graph again for each claim, or
+    # searching each pair of a DAG, made the causal reading of a large theory
+    # take minutes. The calls are counted, so the test does not depend on the
+    # speed of the machine. The R suite counts the same calls.
+    import importlib
+
+    import theoryforge.entailment as entailment
+    implications = importlib.import_module("theoryforge.implications")
+
+    k = 120
+    t = _large_theory(k, effects=15, associations=10)
+    sizes = []
+    searches = []
+
+    def reach(directed, n):
+        sizes.append(n)
+        return real_reach(directed, n)
+
+    def m_separated(*args):
+        searches.append(args[1:3])
+        return real_m_separated(*args)
+
+    real_reach, real_m_separated = entailment.reach, implications.m_separated
+    monkeypatch.setattr(entailment, "reach", reach)
+    monkeypatch.setattr(implications, "m_separated", m_separated)
+
+    e = t.entailments()
+    assert e["counts"]["not_evaluated"] == 0
+    assert sizes.count(k) == 1
+    sizes.clear()
+    # R reads the ancestors of the two views compared from their reachability
+    # too, so the twins share a bound of four closures of a large graph here.
+    d = t.discriminate("rival")
+    assert d["evaluated"] and d["effects"]
+    assert len([n for n in sizes if n > 100]) <= 4
+    res = t.implications()
+    assert searches == []
+    m = len(t.data["propositions"])
+    assert res["n_implications"] == k * (k - 1) // 2 - m
+
+
+def test_a_theory_of_several_hundred_constructs_is_read_in_full():
+    # Before the search kept to the ancestors and the claims to the reachability
+    # found once, each of these calls took minutes. The R suite asserts the
+    # same records.
+    t = _large_theory(300, associate_every=9)
+    res = t.implications()
+    joined = {frozenset((p["from"], p["to"])) for p in t.data["propositions"]}
+    assert res["n_bidirected"] == 33
+    assert res["n_implications"] + len(res["inseparable"]) == 300 * 299 // 2 - len(joined)
+    big = _large_theory(1000, effects=30, associations=20)
+    claims = big.entailments()["claims"]
+    effects = [c for c in claims if c["kind"] == "effect"]
+    assert len(effects) == 30
+    for c in effects:
+        edge = next(p["id"] for p in big.data["propositions"] if p["to"] == c["y"])
+        assert (c["derived"], c["verdict"], c["via"]) == ("negative", "entailed", [edge])
+        assert (c["identified"], c["adjustment"]) == (True, [])
+    assert all(c["verdict"] != "not_evaluated" for c in claims)
+    eq = big.equivalent_models()
+    # Every multiple j of 3 from 6 on is the collider of c<j // 2> and c<j - 2>.
+    assert len(eq["v_structures"]) == 1000 // 3 - 1
+    assert eq["n_compelled"] + eq["n_reversible"] == len(big.data["propositions"])
+    compelled = {(e["from"], e["to"]) for e in eq["edges"] if e["status"] == "compelled"}
+    for v in eq["v_structures"]:
+        assert {(v["a"], v["collider"]), (v["b"], v["collider"])} <= compelled

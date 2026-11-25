@@ -248,6 +248,9 @@ tf_implications <- function(theory, cycles = "refuse", given = "basis") {
   }
 
   reach <- .tf_reach(directed, k)
+  graph <- .tf_mixed_graph(directed, bidirected, reach)
+  # The graph is acyclic here, and without bidirected edges it is a DAG.
+  dag <- !any(bidirected)
   impl <- list()
   inseparable <- list()
   if (k >= 2L) {
@@ -261,23 +264,18 @@ tf_implications <- function(theory, cycles = "refuse", given = "basis") {
         # path that connects the two is a collider and an ancestor of one of
         # them, an inducing path, so no set separates the pair (API_SPEC.md
         # section 27).
-        parents <- which(directed[, i] | directed[, j])
-        ancestors <- setdiff(which(reach[, i] | reach[, j]), c(i, j))
-        sep <- NULL
-        for (s in list(parents, ancestors)) {
-          if (.tf_m_separated(directed, bidirected, reach, i, j, s)) {
-            sep <- s
-            break
+        sep <- which(directed[, i] | directed[, j])
+        if (!dag && !.tf_m_separated(graph, i, j, sep)) {
+          sep <- setdiff(which(reach[, i] | reach[, j]), c(i, j))
+          if (!.tf_m_separated(graph, i, j, sep)) {
+            inseparable[[length(inseparable) + 1L]] <- list(a = nodes[[i]], b = nodes[[j]])
+            next
           }
-        }
-        if (is.null(sep)) {
-          inseparable[[length(inseparable) + 1L]] <- list(a = nodes[[i]], b = nodes[[j]])
-          next
         }
         if (given == "minimal") {
           for (v in sep) {
             rest <- sep[sep != v]
-            if (.tf_m_separated(directed, bidirected, reach, i, j, rest)) sep <- rest
+            if (.tf_m_separated(graph, i, j, rest)) sep <- rest
           }
         }
         names_given <- nodes[sep]

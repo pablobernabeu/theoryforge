@@ -587,3 +587,111 @@ test_that("a feedback loop that is one simple cycle leaves the signs of the path
                          claims = list(claim("effect", "c0", "c2", "positive")))
   expect_identical(tf_entailments(shared, cycles = "sigma")$claims[[1]]$basis, "opposite_signs")
 })
+
+# -- large theories -------------------------------------------------------------
+
+# A sparse DAG over the constructs c0001 to c<k>, as the Python suite builds it.
+# Construct j has the parent j %/% 2, which increases it when j is even and
+# decreases it otherwise, and also j - 2 when j is a multiple of 3 above 3. With
+# `associate_every`, every such multiple j is associated with j - 8. Effect
+# claim i is that c<3i> lowers c<6i + 1>, whose one parent it is, and
+# association claim i concerns c<5i> and c<5i + 2>.
+large_theory <- function(k, associate_every = 0L, effects = 0L, associations = 0L) {
+  ids <- sprintf("c%04d", seq_len(k))
+  props <- list()
+  add <- function(a, b, relation) {
+    props[[length(props) + 1L]] <<- list(id = paste0("p", length(props) + 1L), from = ids[[a]],
+                                         to = ids[[b]], relation = relation)
+  }
+  for (j in seq_len(k)[-1L]) {
+    relation <- if (j %% 2L == 0L) "increases" else "decreases"
+    add(j %/% 2L, j, relation)
+    if (j %% 3L == 0L && j > 3L) add(j - 2L, j, relation)
+  }
+  if (associate_every > 0L) {
+    for (j in seq(associate_every, k, by = associate_every)) add(j, j - 8L, "associates")
+  }
+  claims <- c(lapply(seq_len(effects), function(i) claim("effect", ids[[3L * i]], ids[[6L * i + 1L]], "negative")),
+              lapply(seq_len(associations), function(i) {
+                claim("association", ids[[5L * i]], ids[[5L * i + 2L]], "positive")
+              }))
+  rival <- lapply(props[seq_along(props) %% 10L != 0L], function(p) {
+    p$id <- paste0("r", p$id)
+    p
+  })
+  t <- small_theory(list(), claims = claims, k = 0L,
+                    alternatives = list(list(id = "rival", label = "Rival", key_constructs = list("x"),
+                                             propositions = rival)))
+  t$constructs <- lapply(ids, function(c) list(id = c, label = c, definition = "d"))
+  t$propositions <- props
+  t
+}
+
+test_that("the causal reading finds the reachability of each graph once", {
+  # Finding the reachability of the whole graph again for each claim, or
+  # searching each pair of a DAG, made the causal reading of a large theory take
+  # minutes. The calls are counted, so the test does not depend on the speed of
+  # the machine. The Python suite counts the same calls.
+  k <- 120L
+  t <- large_theory(k, effects = 15L, associations = 10L)
+  sizes <- integer(0)
+  searches <- 0L
+  reach <- theoryforge:::.tf_reach
+  m_separated <- theoryforge:::.tf_m_separated
+  local_mocked_bindings(
+    .tf_reach = function(directed, k) {
+      sizes <<- c(sizes, k)
+      reach(directed, k)
+    },
+    .tf_m_separated = function(...) {
+      searches <<- searches + 1L
+      m_separated(...)
+    }
+  )
+  e <- tf_entailments(t)
+  expect_identical(e$counts$not_evaluated, 0L)
+  expect_identical(sum(sizes == k), 1L)
+  sizes <- integer(0)
+  # R reads the ancestors of the two views compared from their reachability
+  # too, so a large graph is closed at most four times here.
+  d <- tf_discriminate(t, "rival")
+  expect_true(d$evaluated && length(d$effects) > 0L)
+  expect_lte(sum(sizes > 100L), 4L)
+  searches <- 0L
+  res <- tf_implications(t)
+  expect_identical(searches, 0L)
+  m <- length(t$propositions)
+  expect_identical(res$n_implications, (k * (k - 1L)) %/% 2L - m)
+})
+
+test_that("a theory of several hundred constructs is read in full", {
+  # Before the search kept to the ancestors and the claims to the reachability
+  # found once, each of these calls took minutes. The Python suite asserts the
+  # same records.
+  skip_on_cran()
+  t <- large_theory(300L, associate_every = 9L)
+  res <- tf_implications(t)
+  joined <- unique(vapply(t$propositions, function(p) paste(sort(c(p$from, p$to)), collapse = "~"), ""))
+  expect_identical(res$n_bidirected, 33L)
+  expect_identical(res$n_implications + length(res$inseparable), (300L * 299L) %/% 2L - length(joined))
+  big <- large_theory(1000L, effects = 30L, associations = 20L)
+  claims <- tf_entailments(big)$claims
+  effects <- Filter(function(c) c$kind == "effect", claims)
+  expect_length(effects, 30L)
+  to <- vapply(big$propositions, function(p) p$to, "")
+  for (c in effects) {
+    edge <- big$propositions[[match(c$y, to)]]$id
+    expect_identical(list(c$derived, c$verdict, c$via), list("negative", "entailed", list(edge)))
+    expect_identical(list(c$identified, c$adjustment), list(TRUE, list()))
+  }
+  expect_false(any(vapply(claims, function(c) c$verdict == "not_evaluated", logical(1))))
+  eq <- tf_equivalent_models(big)
+  # Every multiple j of 3 from 6 on is the collider of c<j %/% 2> and c<j - 2>.
+  expect_length(eq$v_structures, 1000L %/% 3L - 1L)
+  expect_identical(eq$n_compelled + eq$n_reversible, length(big$propositions))
+  status <- vapply(eq$edges, function(e) e$status, "")
+  compelled <- vapply(eq$edges, function(e) paste(e$from, e$to), "")[status == "compelled"]
+  for (v in eq$v_structures) {
+    expect_true(all(c(paste(v$a, v$collider), paste(v$b, v$collider)) %in% compelled))
+  }
+})
