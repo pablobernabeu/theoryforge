@@ -317,14 +317,35 @@
       build();
       if (stale) { loading = load(); await loading; }
     }
+    // A new theory has been loaded, so a change still waiting for the timer
+    // belongs to the theory before it and is dropped rather than applied to
+    // the new one.
     function reload() {
+      clearTimeout(timer); timer = null; origin = null; again = false;
+      unlock();
       stale = true;
       if (built && visible()) open();
     }
 
     // ---- syncing with the engine -------------------------------------------
+    // The forms and the source are two views of one theory, and a change in
+    // one reaches the other only once the engine has read it. Until then, the
+    // other pane takes no input, so that an edit there cannot be overwritten by
+    // the change still on its way, or overwrite it: the forms are inert while
+    // a change typed in the source waits or is being read, and the source is
+    // read-only while a change made in the forms does.
+    function lockFor(from) {
+      if (!formsEl || !srcArea) return;
+      if (from === "source") { formsEl.inert = true; formsEl.setAttribute("aria-busy", "true"); }
+      else srcArea.readOnly = true;
+    }
+    function unlock() {
+      if (timer || inflight || again || !formsEl || !srcArea) return;
+      formsEl.inert = false; formsEl.removeAttribute("aria-busy"); srcArea.readOnly = false;
+    }
     function schedule(from) {
-      origin = from === "source" || origin === "source" ? from : "forms";
+      origin = from;
+      lockFor(from);
       clearTimeout(timer);
       timer = setTimeout(() => { timer = null; sync(); }, 450);
     }
@@ -351,14 +372,25 @@
           if (res.ok) {
             srcError = null;
             const t = res.texts[format];
-            if (typeof t === "string" && document.activeElement !== srcArea) { setSource(t); host.setSource(t); }
+            // A source with the focus is rewritten too while it is read-only,
+            // since nothing can have been typed into it, and the caret stays
+            // where it was.
+            if (typeof t === "string" && (srcArea.readOnly || document.activeElement !== srcArea)) {
+              const a = srcArea.selectionStart, b = srcArea.selectionEnd;
+              setSource(t); host.setSource(t);
+              if (document.activeElement === srcArea && typeof srcArea.setSelectionRange === "function") {
+                try { srcArea.setSelectionRange(Math.min(a, t.length), Math.min(b, t.length)); } catch (e) { /* no selection */ }
+              }
+            }
             lint(res.summary);
           } else {
             lint(host.summary(), res.error);
           }
         }
       })();
-      try { await inflight; } finally { inflight = null; }
+      try { await inflight; }
+      catch (e) { again = false; throw e; }
+      finally { inflight = null; unlock(); }
       if (again) { again = false; await sync(); }
     }
     async function flush() {
@@ -376,9 +408,7 @@
     async function newTheory() {
       build();
       await flush();
-      const s = host.summary();
-      if (s && typeof window !== "undefined" && window.confirm && host.isEdited && host.isEdited() &&
-          !window.confirm("Start a new theory? Edits to " + (s.title || s.id || "this theory") + " that you have not saved will be lost.")) return;
+      if (host.mayDiscard && !host.mayDiscard("Start a new theory")) return;
       doc = templateTheory();
       stale = false;
       srcError = null;
@@ -398,7 +428,7 @@
       const name = host.saveName ? host.saveName(doc) : "theory.yaml";
       host.download(name, text, "application/yaml");
       const s = host.summary(), v = s && s.validation;
-      const n = v && !v.ok ? host.problemList(v.message || "").length : 0;
+      const n = v && !v.ok ? host.problemList(v).length : 0;
       host.toast(srcError ? "Saved " + name + " as the package last read it: the source as typed cannot be read."
         : n ? "Saved " + name + ". The theory has " + host.plural(n, "problem") + ", which the file keeps." : "Saved " + name + ".");
     }
@@ -560,7 +590,9 @@
             track(path + "#" + x, cb, false);
             return cb;
           });
-          input = el("div", { class: "checks", role: "group" }, all.map((x, i) =>
+          // The group is named by the field's label, so a screen reader says
+          // which relation a box sets as well as the id beside it.
+          input = el("div", { class: "checks", role: "group", "aria-labelledby": lblId(path) }, all.map((x, i) =>
             el("label", { class: "check" }, [boxes[i], " " + x + (known.includes(x) ? "" : " (not declared)")])));
           return fieldWrap(path, spec.label, input, spec);
         }
@@ -616,7 +648,9 @@
         const w = field(Object.assign({ k }, spec2), path + "." + k);
         w.classList.add("sub");
         w.querySelector(".efl").textContent = label;
-        const inp = inputIndex.get(path + "." + k);
+        // A field of boxes registers no input under its own path, so its
+        // group takes the claim's label in the input's place.
+        const inp = inputIndex.get(path + "." + k) || w.querySelector(".checks");
         if (inp) inp.setAttribute("aria-labelledby", lblId(path) + " " + lblId(path + "." + k));
         return w;
       };
@@ -651,13 +685,13 @@
         const pp = path + "." + j;
         if (!isMap(p)) return el("p", { class: "note", text: "Entry " + (j + 1) + " is not a mapping. Correct it in the source." });
         const del = el("button", { class: "btn ghost sm rm", type: "button", "aria-label": "Remove the rival's proposition " + (p.id || j + 1),
-          onclick: () => { list(getAt(doc, path)).splice(j, 1); if (!list(getAt(doc, path)).length) delAt(doc, path); changed(true); } }, "Remove");
+          onclick: () => { list(getAt(doc, path)).splice(j, 1); if (!list(getAt(doc, path)).length) delAt(doc, path); changed(true); focusAfterRemove(path, j); } }, "Remove");
         const card = el("div", { class: "ecard nested" }, [el("div", { class: "eh" }, [el("span", { class: "et", text: p.id || "(no id)" }), el("span", { class: "grow" }), del]),
           el("div", { class: "efgrid" }, PROP_FIELDS.map((f) => field(f, pp + "." + f.k)))]);
         fieldIndex.set(pp, card);
         return card;
       });
-      const add = el("button", { class: "btn ghost sm", type: "button", onclick: () => {
+      const add = el("button", { class: "btn ghost sm nestadd", type: "button", onclick: () => {
         const cur = Array.isArray(getAt(doc, path)) ? getAt(doc, path) : [];
         const taken = new Set(cur.filter(isMap).map((p) => p.id));
         const altId = String((getAt(doc, path.replace(/\.propositions$/, "")) || {}).id || "r");
@@ -696,7 +730,7 @@
       items.forEach((it, i) => {
         const path = sec.key + "." + i;
         const rm = el("button", { class: "btn ghost sm rm", type: "button", "aria-label": "Remove " + sec.item + " " + (isMap(it) && it.id ? it.id : i + 1),
-          onclick: () => { doc[sec.key].splice(i, 1); changed(true); } }, "Remove");
+          onclick: () => { doc[sec.key].splice(i, 1); changed(true); focusAfterRemove(sec.key, i); } }, "Remove");
         const card = el("div", { class: "ecard", id: "card-" + path.replace(/\./g, "-") }, [
           el("div", { class: "eh" }, [el("span", { class: "et", text: itemTitle(sec, it) }), el("span", { class: "grow" }), rm]),
           isMap(it) ? el("div", { class: "efgrid" }, sec.fields.map((f) => field(f, path + "." + f.k)))
@@ -719,6 +753,19 @@
       det.append(...kids);
       fieldIndex.set(sec.key, det);
       return det;
+    }
+
+    // A removal rebuilds the forms, so the Remove button that had the focus
+    // is gone. The focus goes to the Remove button of the entry now in the
+    // same place, or of the last entry, or else to the list's Add button.
+    // changed(true) rebuilds the forms at once, so the new cards are indexed.
+    function focusAfterRemove(path, i) {
+      const n = list(getAt(doc, path)).length;
+      const card = n ? fieldIndex.get(path + "." + Math.min(i, n - 1)) : null;
+      const wrap = fieldIndex.get(path);
+      const target = card ? card.querySelector(".rm")
+        : wrap && (wrap.querySelector(".add") || wrap.querySelector(".nestadd"));
+      if (target) target.focus();
     }
 
     function render() {
@@ -759,7 +806,7 @@
       if (!lintEl) return;
       const s = summary || {};
       const v = s.validation;
-      problems = v && !v.ok ? host.problemList(v.message || "") : [];
+      problems = v && !v.ok ? host.problemList(v) : [];
       const kids = [];
       const chips = el("div", { class: "chips" });
       if (srcError) chips.append(el("span", { class: "chip invalid", text: "source unreadable" }));
