@@ -41,8 +41,8 @@ NULL
 #' stops with jsonlite's message, since JSON has no comments. A string or key
 #' that holds U+0000 or a lone surrogate, which R would cut short or misread,
 #' stops with \code{(<path>) a string holds U+0000, which theoryforge cannot
-#' read}, or the same message naming \code{a lone surrogate}. A document that is not a
-#' mapping, such as a sequence or an empty YAML file, stops with
+#' read}, or the same message naming \code{a lone surrogate}. A document that
+#' is not a mapping, such as a sequence or an empty YAML file, stops with
 #' \code{Theory data must be a mapping}.
 #'
 #' @param path Path to a \code{.yaml}, \code{.yml} or \code{.json} file.

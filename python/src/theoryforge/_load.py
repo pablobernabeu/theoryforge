@@ -64,7 +64,7 @@ class _DuplicateKey(Exception):
 try:
     from yaml import CSafeLoader as _BaseLoader
 except ImportError:  # pragma: no cover - a PyYAML built without libyaml
-    from yaml import SafeLoader as _BaseLoader  # type: ignore[assignment]
+    from yaml import SafeLoader as _BaseLoader  # type: ignore[assignment,unused-ignore]
 
 
 class _StrictLoader(_BaseLoader):
