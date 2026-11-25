@@ -123,7 +123,7 @@ NULL
 
 # Seconds an outbound request may go without progress before it is abandoned,
 # matching the `timeout=30` the Python twin passes to urlopen, which limits the
-# connection and each read. Without one a stalled service hangs an interactive
+# connection and each read. Without one, a stalled service hangs an interactive
 # session indefinitely.
 .tf_NET_TIMEOUT <- 30
 
@@ -175,11 +175,21 @@ NULL
       if (is.character(body)) body <- charToRaw(enc2utf8(body))
       curl::handle_setopt(handle, postfields = body)
     }
-    res <- tryCatch(curl::curl_fetch_memory(url, handle = handle), error = function(e) {
-      if (!isTRUE(environment(idle)$expired)) stop(e)
+    idle_stop <- function() {
       stop(sprintf("Timeout was reached: nothing was sent or received for %s seconds",
                    format(timeout)), call. = FALSE)
-    })
+    }
+    # curl 6.1.0 and later report a transfer that the callback stopped as a user
+    # interrupt, and earlier versions as an error. Either becomes the timeout
+    # error, while an interrupt from the user, which leaves `expired` FALSE,
+    # still interrupts.
+    res <- tryCatch(
+      withCallingHandlers(
+        curl::curl_fetch_memory(url, handle = handle),
+        interrupt = function(i) if (isTRUE(environment(idle)$expired)) idle_stop()
+      ),
+      error = function(e) if (isTRUE(environment(idle)$expired)) idle_stop() else stop(e)
+    )
     return(list(status = res$status_code, body = .tf_utf8(res$content)))
   }
   if (!identical(method, "GET")) {
