@@ -86,9 +86,12 @@
 # SHA-256 of a raw vector, as 64 lowercase hexadecimal digits (FIPS 180-4).
 # From R 4.5, tools::sha256sum() computes it, and the web app's R has it too.
 # get0() finds the function without a note from R CMD check on the earlier
-# versions, which lack it and use .tf_sha256_r().
+# versions, which lack it and use .tf_sha256_r(). tools is suggested, not
+# imported, since nothing else in the package uses it.
 .tf_sha256 <- function(bytes) {
-  f <- get0("sha256sum", envir = asNamespace("tools"), mode = "function", inherits = FALSE)
+  f <- if (requireNamespace("tools", quietly = TRUE)) {
+    get0("sha256sum", envir = asNamespace("tools"), mode = "function", inherits = FALSE)
+  }
   if (!is.null(f) && "bytes" %in% names(formals(f))) return(unname(f(bytes = bytes)))
   .tf_sha256_r(bytes)
 }
