@@ -156,6 +156,16 @@ def test_the_euler_warning_does_not_depend_on_the_unit_of_init(weak_path, panic_
         warnings.simplefilter("error")
         for init in (100.0, 0.01):
             tf.read(panic_path).simulate(init=init)
+    # The scale is the largest absolute starting value, here that of the one
+    # construct init names, and 1 when every start is 0, which no step moves.
+    chain = tf.new_theory("chain", "Chain").add_construct("a", "A", "d").add_construct("b", "B", "d")
+    chain.add_proposition("p1", "a", "b", "increases")
+    with pytest.warns(UserWarning) as rec:
+        chain.simulate(steps=4, dt=3, init={"a": 0.01})
+    assert [str(w.message) for w in rec] == [EULER_WARNING]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        chain.simulate(steps=4, dt=3, init=0)
 
 
 def test_exact_ignores_the_step_size_for_stability(weak_path):

@@ -76,6 +76,8 @@ IDENTIFIED = ("# Identification: the paths among the constructs form no loop, an
 SIGNS = "# Signs the theory states, which the fit does not impose"
 EFFECTS = ("# Effects the claims are about, each the sum over the directed paths from cause to "
            "outcome of the product of the labels along the path")
+
+
 def effect_loop(x, y):
     return f"# A feedback loop lies on the paths from {x} to {y}, so no parameter is defined."
 
@@ -500,6 +502,11 @@ def test_no_effect_is_defined_across_a_feedback_loop():
     t = _claim_theory([("x", "increases", "a"), ("a", "increases", "b"), ("b", "increases", "a"),
                        ("b", "increases", "y")], [("x", "y", "positive")],
                       constructs=("x", "y", "a", "b"))
+    assert _effects_block(t) == [EFFECTS, claimed("h1", "x", "y", "is positive"),
+                                 effect_loop("x", "y")]
+    # The outcome itself lies on the loop y <-> z of x -> y.
+    t = _claim_theory([("x", "increases", "y"), ("y", "increases", "z"), ("z", "increases", "y")],
+                      [("x", "y", "positive")], constructs=("x", "y", "z"))
     assert _effects_block(t) == [EFFECTS, claimed("h1", "x", "y", "is positive"),
                                  effect_loop("x", "y")]
 

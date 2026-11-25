@@ -635,20 +635,20 @@ NULL
 #' The propositions form the graph that [tf_implications()] reads. Unless an
 #' association joins them, two of its constructs that are both exogenous, with
 #' no proposition pointing into either, are unrelated by the theory's account.
-#' Two that are both terminal, with neither pointing to another construct, are
-#' related only through the causes the theory names: their disturbances are
-#' uncorrelated, so they are independent once those causes are held fixed. By
-#' default, \code{lavaan::sem()} frees the covariance of two exogenous latent
-#' variables and of two terminal variables, and takes that of two exogenous
-#' observed variables from the data. A fit with those defaults could not refute
-#' the claim. In the modality-switching example, two of the six independencies
-#' [tf_implications()] derives would go untested. The syntax therefore ends
-#' with a block that fixes each such covariance at zero (\verb{a ~~ 0*b}),
-#' which for two terminal constructs is the covariance of their disturbances,
-#' and deleting the block restores lavaan's defaults. A pair with a moderator keeps
-#' those defaults, because the product term changes the moderator's role. A
-#' relation from a construct to itself does not count here, since the syntax
-#' writes no path for it.
+#' Unless an association joins them, two that are both terminal, with neither
+#' pointing to another construct, are related only through the causes the theory
+#' names: their disturbances are uncorrelated, so they are independent once
+#' those causes are held fixed. By default, \code{lavaan::sem()} frees the
+#' covariance of two exogenous latent variables and of two terminal variables,
+#' and takes that of two exogenous observed variables from the data. A fit with
+#' those defaults could not refute the claim. In the modality-switching example,
+#' two of the six independencies [tf_implications()] derives would go untested.
+#' The syntax therefore ends with a block that fixes each such covariance at
+#' zero (\verb{a ~~ 0*b}), which for two terminal constructs is the covariance
+#' of their disturbances, and deleting the block restores lavaan's defaults. A
+#' pair with a moderator keeps those defaults, because the product term changes
+#' the moderator's role. A relation from a construct to itself does not count
+#' here, since the syntax writes no path for it.
 #'
 #' lavaan takes the covariances of observed exogenous variables from the data
 #' only until a covariance line names one of them. It then treats that variable
