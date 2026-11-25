@@ -494,6 +494,16 @@ async function wording(page, lang, record, name) {
   if (/\d\.\d{3}(?!\d)/.test(sev.slice(sev.indexOf("Rubric chart")))) fail(`${lang} wording`, "the rubric's chart writes a value with three decimals");
 }
 
+// The shipped amendment of the panic network gives up a sign the prior's
+// graph fixed, and its reading says so, beside a verdict in a neutral pill.
+async function amendment(page, lang, record) {
+  const key = Object.keys(record).find((k) => / :: appraise$/.test(k) && /Signs lost ?effect of c_perceived_threat on c_avoidance: positive/.test(record[k].text || ""));
+  if (!key) { fail(`${lang} amendment`, "no appraisal reports the sign the shipped amendment gives up"); return; }
+  if (!record[key].text.includes("It gives up content the prior held, so it cannot be progressive: 1 signed effect of the prior's graph (effect of c_perceived_threat on c_avoidance: positive).")) {
+    fail(`${lang} amendment`, "the appraisal's reading does not name the content the amendment gives up");
+  }
+}
+
 // ---- main --------------------------------------------------------------------
 const server = await serve();
 const base = `http://127.0.0.1:${server.address().port}/`;
@@ -521,6 +531,7 @@ try {
       if (n === 1) await wording(page, lang, record, name);
       console.log(`${lang}: ${name} done`);
     }
+    if (MAX_EX === Infinity) await amendment(page, lang, record);
     await buildTheory(page, lang);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${lang}-editor.png`) });
     await runAll(page, lang, "edited theory", record);

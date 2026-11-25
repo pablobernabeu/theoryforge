@@ -1437,6 +1437,8 @@ test("the appraisal says what its verdict is to be read with, and leaves out key
   assert.match(about, /the prior must be the version before the new predictions were stated/);
   assert.match(about, /A prediction that only changed its id is a rename\. One derived only from the prior's own propositions is an articulation unless a new or revised assumption lists it in protects, and so is one whose claim the prior's graph entails\. Neither a rename nor an articulation counts as new content\./);
   assert.match(interp, /^The amendment is progressive by fixed rules that borrow Lakatos's terms, applied to what the two files declare\./);
+  assert.match(interp, /It gives up content the prior held, so it cannot be progressive: 1 prediction that it drops untested, weakens or whose claim its graph no longer entails \(h2\) and 1 signed effect of the prior's graph \(effect of a on b: positive\)\./);
+  assert.equal($("#output table.kv .pill").className, "pill plain", "the verdict is a neutral pill");
   assert.match(interp, /One prediction the prior held now fails a test: h1\./);
   assert.match(interp, /One new prediction failed a test: h4\./);
   assert.match(interp, /The lowest post-data severity of each corroborated new prediction's passes is 0\.001 for h3, and it is not computed for h5, whose passes record no estimate and standard error for a claim with bounds\./);
@@ -1461,7 +1463,63 @@ test("the appraisal says what its verdict is to be read with, and leaves out key
   for (const row of ["Signs lost", "Entailments lost", "New predictions that failed a test", "New only through protects", "Lowest post-data severity"]) {
     assert.doesNotMatch(otext, new RegExp(row), row);
   }
-  assert.doesNotMatch(o.$("#output .ri-interp").textContent, /failed a test|post-data severity|pending/);
+  assert.doesNotMatch(o.$("#output .ri-interp").textContent, /failed a test|post-data severity|pending|gives up content|could not be compared/);
+  for (const row of ["Causal graphs compared", "Implications lost, unrefuted"]) assert.doesNotMatch(otext, new RegExp(row), row);
+});
+
+test("the appraisal names the content an amendment gives up, and says when the graphs could not be compared", async () => {
+  const base = { verdict: "neutral", new_predictions: ["h4"], corroborated_new: ["h4"], ad_hoc_assumptions: [], articulated: [], underived: [],
+    corroborated_new_registered: [], renamed: [], dropped: ["pred_indep"], dropped_corroborated: [], content_lost: [], new_anomalies: [], assumptions: [],
+    theoretically_progressive: true, empirically_progressive: true, revised: [], weakened_refuted: [], unresolved: [], implications_compared: true,
+    implications_lost: ["a _||_ c | b"], implications_lost_unrefuted: [], implications_gained: [], entailments_lost: [], signs_lost: [],
+    protected_only: [], refuted_new: [], corroborated_new_severity: [{ id: "h4", severity: null }] };
+  const run = async (extra) => {
+    const { ctx, $ } = await boot({}, lineageRuntime({ appraise: Object.assign({}, base, extra) }));
+    await choose($("#exampleSel"), LINEAGE[1].path);
+    await opButton(ctx, "appraise").click();
+    await $("#runBtn").click();
+    return { ctx, $, interp: $("#output .ri-interp").textContent, text: $("#output").textContent };
+  };
+  // The shipped panic network's amendment: one sign given up.
+  let r = await run({ signs_lost: ["effect of c_perceived_threat on c_avoidance: positive"] });
+  assert.match(r.interp, /It gives up content the prior held, so it cannot be progressive: 1 signed effect of the prior's graph \(effect of c_perceived_threat on c_avoidance: positive\)\./);
+  assert.match(r.text, /Causal graphs comparedyes/);
+  // Lost predictions, an entailment, signs and implications, counted, with
+  // the first three of a long list and the number of the others.
+  const signs = Array.from({ length: 9799 }, (_, i) => "effect of c" + i + " on d: positive");
+  r = await run({ content_lost: ["h1"], entailments_lost: [{ id: "h2", prior: "entailed", new: "undetermined" }], signs_lost: signs,
+    implications_lost_unrefuted: ["a _||_ c | b", "a _||_ d"] });
+  assert.match(r.interp, /It gives up content the prior held, so it cannot be progressive: 2 predictions that it drops untested, weakens or whose claim its graph no longer entails \(h1 and h2\), 9,799 signed effects of the prior's graph \(effect of c0 on d: positive; effect of c1 on d: positive; effect of c2 on d: positive and 9,796 others\) and 2 implied independencies that no failed prediction contradicts \(a _\|\|_ c \| b; a _\|\|_ d\)\./);
+  assert.match(r.text, /Implications lost, unrefuteda _\|\|_ c \| b; a _\|\|_ d/);
+  // Nothing lost, nothing said.
+  r = await run({});
+  assert.doesNotMatch(r.interp, /gives up content|could not be compared/);
+  // A graph the package could not build: no comparison, so no progressive verdict.
+  r = await run({ implications_compared: false, implications_lost: [] });
+  assert.match(r.interp, /The package cannot build the causal graph of at least one of the two versions, as happens when a construct id is repeated or a proposition names a construct the file does not declare\. The two graphs could not be compared, so the amendment cannot be progressive, and the entailments, signs and implications it may give up are not listed\./);
+  assert.match(r.text, /Causal graphs comparedno/);
+});
+
+test("a long list in the appraisal shows its count and first ten entries, and the rest on request", async () => {
+  const signs = Array.from({ length: 9799 }, (_, i) => "effect of c" + i + " on d: positive");
+  const { ctx, $ } = await boot({}, lineageRuntime({ appraise: { verdict: "neutral", new_predictions: Array.from({ length: 10 }, (_, i) => "n" + i), signs_lost: signs } }));
+  await choose($("#exampleSel"), LINEAGE[1].path);
+  await opButton(ctx, "appraise").click();
+  await $("#runBtn").click();
+  const row = (k) => ctx.document.querySelectorAll("#output table.grid tr").find((tr) => tr.querySelector("td") && tr.querySelector("td").textContent === k);
+  const cell = row("Signs lost").querySelectorAll("td")[1];
+  assert.equal(cell.querySelector(".longlist span").textContent,
+    "9,799 in all. The first ten: " + signs.slice(0, 10).join("; ") + ".");
+  const more = cell.querySelector("details.more");
+  assert.equal(more.querySelector("summary").textContent, "Show all 9,799");
+  assert.equal(more.querySelectorAll(".morelist").length, 0, "the full list is built only when asked for");
+  assert.ok(cell.textContent.length < 1000, "the cell holds the first entries only");
+  more.open = true;
+  await more.dispatch("toggle");
+  assert.equal(more.querySelector(".morelist").textContent.split("\n").length, 9799);
+  assert.equal(more.querySelector(".morelist").getAttribute("tabindex"), "0");
+  // Ten entries or fewer are listed in full.
+  assert.equal(row("New predictions").querySelectorAll("td")[1].textContent, Array.from({ length: 10 }, (_, i) => "n" + i).join(", "));
 });
 
 test("a caution on the prior says it must be the version before the new predictions were stated", async () => {

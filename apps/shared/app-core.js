@@ -333,10 +333,13 @@
     const s = num(x);
     return typeof x === "number" && /^-?\d+$/.test(s) ? s + ".0" : s;
   };
+  // A count with its thousands marked, 9,799.
+  const count = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   // A pill takes its colour from its value, as the statuses of the checklist
   // do, unless a tone is given. The tone "plain" is a neutral fill for values
   // that report what a rule found rather than how well the theory fares: the
-  // verdicts of the causal readings and the statuses of the landscape.
+  // verdicts of the causal readings and of the amendment appraisal and the
+  // statuses of the landscape.
   function pill(s, tone) { return el("span", { class: "pill " + (tone || String(s).replace(/[^a-z_]/gi, "_")), text: s }); }
   const PLAIN = "plain";
   const NOT_FLAGGED = "not flagged";
@@ -373,6 +376,25 @@
     const table = el("div", { class: "tablewrap" }, el("table", { class: "grid" + (stack ? " stack" : "") }, [thead, tbody]));
     return { kind: "node", node: wrapSection(title, opts && opts.extra, table) };
   }
+  // A list in a table cell. A long one, such as the signs an amendment gives
+  // up in a graph with feedback loops, which can run to thousands, shows its
+  // count and its first ten entries, and the rest on request, so that the page
+  // stays usable. The full list is built only when it is asked for.
+  const LIST_SHOWN = 10;
+  function listCell(xs, sep) {
+    xs = asArr(xs).map(String);
+    if (xs.length <= LIST_SHOWN) return xs.join(sep) || "—";
+    const more = el("details", { class: "more" }, el("summary", null, "Show all " + count(xs.length)));
+    more.addEventListener("toggle", () => {
+      if (more.open && !more.querySelector(".morelist")) more.append(el("div", { class: "morelist", tabindex: "0", text: xs.join("\n") }));
+    });
+    return el("div", { class: "longlist" }, [
+      el("span", { text: count(xs.length) + " in all. The first ten: " + xs.slice(0, LIST_SHOWN).join(sep) + "." }), more]);
+  }
+  // The first few entries of a long list, for a reading: all of them up to
+  // three, and otherwise the first three and how many others there are.
+  const firstFew = (xs, sep) => (xs.length <= 3 ? (sep === ", " ? listAnd(xs) : xs.join(sep))
+    : xs.slice(0, 3).join(sep) + " and " + count(xs.length - 3) + " others");
   function kvSection(title, items) {
     const tbody = el("tbody", null, items.map(([k, v]) =>
       el("tr", null, [
@@ -826,6 +848,20 @@
       const ar = asArr(r.articulated).length, dr = asArr(r.dropped).length, dc = asArr(r.dropped_corroborated).length;
       let txt = "The amendment is " + r.verdict + " by fixed rules that borrow Lakatos's terms, applied to what the two files declare. It introduces " + plural(np, "new prediction") + ", of which " + cn + (cn === 1 ? " is" : " are") + " corroborated and " + ar + (ar === 1 ? " only articulates" : " only articulate") + " the prior's propositions, and " + plural(ah, "ad hoc assumption") + ".";
       if (dr) txt += " It drops " + plural(dr, "prediction") + " of the prior, " + dc + " of them corroborated.";
+      // Content the prior held that the amendment gives up keeps it from
+      // being progressive, so the reading names it, and says when the two
+      // graphs could not be compared, which has the same consequence. A
+      // package without these keys leaves them out.
+      if (r.implications_compared === false) {
+        txt += " The package cannot build the causal graph of at least one of the two versions, as happens when a construct id is repeated or a proposition names a construct the file does not declare. The two graphs could not be compared, so the amendment cannot be progressive, and the entailments, signs and implications it may give up are not listed.";
+      }
+      const lostPreds = [...new Set(asArr(r.content_lost).map(String).concat(asArr(r.entailments_lost).filter((x) => x && x.id != null).map((x) => String(x.id))))];
+      const lostSigns = asArr(r.signs_lost).map(String), lostImpl = asArr(r.implications_lost_unrefuted).map(String);
+      const lost = [];
+      if (lostPreds.length) lost.push(count(lostPreds.length) + (lostPreds.length === 1 ? " prediction" : " predictions") + " that it drops untested, weakens or whose claim its graph no longer entails (" + firstFew(lostPreds, ", ") + ")");
+      if (lostSigns.length) lost.push(count(lostSigns.length) + (lostSigns.length === 1 ? " signed effect" : " signed effects") + " of the prior's graph (" + firstFew(lostSigns, "; ") + ")");
+      if (lostImpl.length) lost.push(count(lostImpl.length) + (lostImpl.length === 1 ? " implied independence" : " implied independencies") + " that no failed prediction contradicts (" + firstFew(lostImpl, "; ") + ")");
+      if (lost.length) txt += " It gives up content the prior held, so it cannot be progressive: " + listAnd(lost) + ".";
       // What the verdict is to be read with. A package without these keys
       // leaves them out.
       const anomalies = asArr(r.new_anomalies), refuted = asArr(r.refuted_new);
@@ -1069,36 +1105,40 @@
       const r = raw;
       // The reading above the result carries the caution when this is "no".
       const parent = isDeclaredParent(STATE.summary, priorLineage(params.prior));
-      sections.push(kvSection("Appraisal", [["Verdict", pill(r.verdict)], ["Prior version", priorName(params.prior) || "—"],
+      sections.push(kvSection("Appraisal", [["Verdict", pill(r.verdict, PLAIN)], ["Prior version", priorName(params.prior) || "—"],
         ["Declared parent", parent ? "yes" : "no"]]));
       // The keys that newer versions of the package add are shown only when
       // the result holds them, so that an older package's result does not
       // read as having none.
       const has = (k) => Object.prototype.hasOwnProperty.call(r, k);
-      const ids = (v) => asArr(v).join(", ") || "—";
+      // Each list shows its count and its first entries when it is long.
+      const ids = (v) => listCell(v, ", ");
+      const stmts = (v) => listCell(v, "; ");
       const rows = [
         { k: "New predictions", v: ids(r.new_predictions) },
         { k: "Corroborated new", v: ids(r.corroborated_new) },
-        has("corroborated_new_severity") && { k: "Lowest post-data severity of their passes", v: asArr(r.corroborated_new_severity)
-          .map((x) => x.id + " (" + (typeof x.severity === "number" ? sevText(x.severity) : "not computed") + ")").join(", ") || "—" },
+        has("corroborated_new_severity") && { k: "Lowest post-data severity of their passes", v: ids(asArr(r.corroborated_new_severity)
+          .map((x) => x.id + " (" + (typeof x.severity === "number" ? sevText(x.severity) : "not computed") + ")")) },
         { k: "Corroborations with a registration recorded", v: ids(r.corroborated_new_registered) },
         has("refuted_new") && { k: "New predictions that failed a test", v: ids(r.refuted_new) },
         has("protected_only") && { k: "New only through protects", v: ids(r.protected_only) },
         { k: "Articulations of prior content", v: ids(r.articulated) },
         { k: "Derived from no proposition", v: ids(r.underived) },
-        { k: "Renamed", v: asArr(r.renamed).map((p) => p.prior + " → " + p.new).join(", ") || "—" },
-        { k: "Revised", v: asArr(r.revised).map((p) => p.id + " (" + p.change + ")").join(", ") || "—" },
+        { k: "Renamed", v: ids(asArr(r.renamed).map((p) => p.prior + " → " + p.new)) },
+        { k: "Revised", v: ids(asArr(r.revised).map((p) => p.id + " (" + p.change + ")")) },
         { k: "Dropped", v: ids(r.dropped) },
         { k: "Dropped corroborated", v: ids(r.dropped_corroborated) },
         { k: "Content lost", v: ids(r.content_lost) },
-        has("entailments_lost") && { k: "Entailments lost", v: asArr(r.entailments_lost)
-          .map((x) => x.id + " (" + words(x.prior) + " → " + words(x.new) + ")").join(", ") || "—" },
-        has("signs_lost") && { k: "Signs lost", v: asArr(r.signs_lost).join("; ") || "—" },
+        has("entailments_lost") && { k: "Entailments lost", v: ids(asArr(r.entailments_lost)
+          .map((x) => x.id + " (" + words(x.prior) + " → " + words(x.new) + ")")) },
+        has("signs_lost") && { k: "Signs lost", v: stmts(r.signs_lost) },
         { k: "New anomalies", v: ids(r.new_anomalies) },
         { k: "Ad hoc assumptions", v: ids(r.ad_hoc_assumptions) },
-        { k: "Appraised assumptions", v: asArr(r.assumptions).map((a) => a.id + ": " + (ASSUMPTION_CLASS[a.class] || words(a.class))).join("; ") || "—" },
-        { k: "Implications lost", v: asArr(r.implications_lost).join("; ") || "—" },
-        { k: "Implications gained", v: asArr(r.implications_gained).join("; ") || "—" },
+        { k: "Appraised assumptions", v: stmts(asArr(r.assumptions).map((a) => a.id + ": " + (ASSUMPTION_CLASS[a.class] || words(a.class)))) },
+        has("implications_compared") && { k: "Causal graphs compared", v: r.implications_compared === false ? "no" : "yes" },
+        { k: "Implications lost", v: stmts(r.implications_lost) },
+        has("implications_lost_unrefuted") && { k: "Implications lost, unrefuted", v: stmts(r.implications_lost_unrefuted) },
+        { k: "Implications gained", v: stmts(r.implications_gained) },
       ].filter(Boolean);
       sections.push(tableSection("Detail",
         [{ key: "k", label: "category" }, { key: "v", label: "ids", grow: true }],
