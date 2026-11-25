@@ -431,7 +431,8 @@ class _Graph:
             derived, basis, via = self.association(x, y)
         verdict = _verdict(c["sign"], derived)
         # A route of no fixed sign, or routes of opposite signs, make the quantity
-        # nonzero only if they do not cancel exactly, which is faithfulness.
+        # nonzero only if the effects they carry do not cancel exactly, which is
+        # faithfulness.
         faithful = derived == "undetermined" and verdict != "undetermined"
         return out(derived, verdict, basis, faithfulness=faithful, via=via, adjust=adjust)
 
@@ -482,9 +483,10 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     leaves the sign open, and ``not_evaluated`` when the claim is malformed,
     names a construct that no proposition relates to another, or meets a feedback
     loop under ``cycles="refuse"``. ``faithfulness`` is True when the verdict
-    relies on routes of unknown or opposite signs not cancelling exactly, and
-    the claim lines of the preregistration and the dossier then end with
-    ``unless paths cancel exactly``.
+    relies on the effects carried by a route of unknown sign, or by routes of
+    opposite signs, not cancelling exactly, and the claim lines of the
+    preregistration and the dossier then end with ``unless effects cancel
+    exactly``.
 
     The derivations assume that the graph is the causal structure, with no
     common cause of two constructs left out unless an association stands for
@@ -577,8 +579,8 @@ CLAIM_ASSUMPTIONS = (
     "The verdicts on the claims assume that the graph of the propositions is the causal "
     "structure, with no omitted common cause of two of its constructs, that each directed "
     "relation acts in its stated direction whatever the other inputs (as in a linear model "
-    "or a uniformly monotone one), that paths do not cancel exactly where a verdict says "
-    "'unless paths cancel exactly' (faithfulness) and, for feedback loops read by "
+    "or a uniformly monotone one), that effects do not cancel exactly where a verdict says "
+    "'unless effects cancel exactly' (faithfulness) and, for feedback loops read by "
     "sigma-separation, that each loop settles to a unique equilibrium, also once the "
     "intervened construct is held fixed.")
 
@@ -590,8 +592,8 @@ def claim_line(rec: dict) -> str:
     11). ``rec`` is a claim record of ``entailments()``, or a claim read by
     ``read_claim()`` with the verdict ``not_evaluated`` and the basis
     ``graph_refused`` when the graph cannot be built. A verdict whose record
-    carries ``faithfulness`` true holds only if no paths cancel exactly, and
-    its line ends with ``, unless paths cancel exactly``.
+    carries ``faithfulness`` true holds only if no effects cancel exactly, and
+    its line ends with ``, unless effects cancel exactly``.
     """
     if rec["basis"] == "malformed_claim":
         return "incomplete, so not evaluated"
@@ -605,7 +607,7 @@ def claim_line(rec: dict) -> str:
             claim += f" given {', '.join(rec['given'])}"
     v = rec["verdict"]
     # A record built for a graph that cannot be read has no faithfulness key.
-    faith = ", unless paths cancel exactly" if rec.get("faithfulness") is True else ""
+    faith = ", unless effects cancel exactly" if rec.get("faithfulness") is True else ""
     if v == "entailed":
         said = ("entailed by the causal graph"
                 + (f" through {', '.join(rec['via'])}" if rec["via"] else "") + faith)

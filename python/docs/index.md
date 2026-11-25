@@ -74,9 +74,9 @@ stated.
 
 At the testing stage, the causal graph of the propositions is read for the conditional
 independencies it implies, the signs of the effects it entails, the directions no test of
-conditional independence can settle and the results that would tell it from a rival. The package
-then grades each prediction before and after the data, writes the theory and hypotheses
-sections of a preregistration and assembles a dossier for a reviewer.
+conditional independence can settle and the results that would tell it from a rival. The
+package then grades each prediction before and after the data, writes the theory and
+hypotheses sections of a preregistration and assembles a dossier for a reviewer.
 
 [Get started](getting-started.md) covers reading, validating and scoring a theory, and
 [Workflow modes](workflow-modes.md) follows the three stages with a worked example of each

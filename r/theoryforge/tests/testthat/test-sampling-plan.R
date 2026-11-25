@@ -238,14 +238,14 @@ test_that("every other fixture keeps its preregistration", {
 test_that("the dossier carries the plan in its preregistration", {
   t <- tf_read(tf_fixture_path("modality-switching.theory.yaml"))
   d <- tf_dossier(t)
-  expect_true(grepl("\n## Preregistration\n\n## Preregistration: ", d, fixed = TRUE))
-  expect_identical(lengths(regmatches(d, gregexpr(paste0("#", sp_section_heading), d, fixed = TRUE))), 1L)
+  expect_true(grepl("\n## Preregistration\n\n### Preregistration: ", d, fixed = TRUE))
+  expect_identical(lengths(regmatches(d, gregexpr(paste0("##", sp_section_heading), d, fixed = TRUE))), 1L)
   # The embedded preregistration ends with the implied independencies, its
   # severity list being given earlier in the dossier.
   prereg <- tf_preregister(t)
   body <- substring(prereg, 1L, regexpr("\n## Severity (pre-data rubric of claim form)", prereg,
                                         fixed = TRUE) - 1L)
-  expect_true(endsWith(d, sub("^# ", "## ", gsub("\n#", "\n##", body, fixed = TRUE))))
+  expect_true(endsWith(d, sub("^# ", "### ", gsub("\n#", "\n###", body, fixed = TRUE))))
 })
 
 test_that("a written theory reads back with its plan", {

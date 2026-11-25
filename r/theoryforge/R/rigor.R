@@ -521,15 +521,25 @@ tf_check <- function(theory, cycles = "refuse") {
   )
 }
 
+# What the gate checks, in the words the documents use. tf_report() and
+# tf_dossier() give it after the statement of what the score describes.
+.tf_GATE <- paste(
+  "The gate reports whether either blocking item failed: at least one prediction is",
+  "typed point, interval or directional, and every prediction cites declared",
+  "propositions whose graph entails any claim it states, with no stated phenomenon",
+  "contradicted. The labels are the author's and are not checked against the",
+  "statements.")
+
 #' Render the checklist report as a string
 #'
 #' Renders the result of [tf_check()] as a string. \code{format = "json"}
 #' returns valid, pretty-printed JSON. \code{format = "html"} returns an HTML
 #' fragment in which every interpolated value is escaped. It gives the
-#' checklist score with its range and the gate, the statement of what the score
-#' describes, and a table of the items with the criterion each applies, its
-#' status and score and the works from which the criterion is drawn. Any other
-#' \code{format} stops, and so does a theory that [tf_check()] refuses.
+#' checklist score with its range and the gate, then what the score describes
+#' and what the gate checks, then a table of the items with the criterion each
+#' applies, its status and score and the works from which the criterion is
+#' drawn. Any other \code{format} stops, and so does a theory that
+#' [tf_check()] refuses.
 #'
 #' @param theory A theory object (named list).
 #' @param format One of \code{"json"} (default) or \code{"html"}.
@@ -563,13 +573,14 @@ tf_report <- function(theory, format = "json") {
     return(paste0(
       '<section class="theoryforge-report">\n',
       sprintf('  <h2>Checklist report: %s</h2>\n', .tf_xml(rep$theory_id)),
-      sprintf(paste0('  <p>Checklist score: <strong>%s</strong> (%s to %s with equal ',
+      sprintf(paste0('  <p>Checklist score: %s (%s to %s with equal ',
                      'weights or one weight halved or doubled) &middot; gate: ',
-                     '<strong>%s</strong></p>\n'),
+                     '%s</p>\n'),
               .tf_xml(.tf_format_score_html(rep$aggregate_score)),
               .tf_xml(.tf_format_score_html(rep$aggregate_range[[1]])),
               .tf_xml(.tf_format_score_html(rep$aggregate_range[[2]])), .tf_xml(rep$gate)),
       sprintf('  <p>%s</p>\n', .tf_xml(sprintf(.tf_SCOPE, rep$checklist_version))),
+      sprintf('  <p>%s</p>\n', .tf_xml(.tf_GATE)),
       '  <table>\n    <tr><th>item</th><th>criterion</th><th>status</th><th>score</th>',
       '<th>source of the criterion</th></tr>\n',
       rows, '\n  </table>\n</section>\n'

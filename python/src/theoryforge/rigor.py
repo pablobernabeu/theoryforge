@@ -508,16 +508,25 @@ def check(theory, cycles: str = "refuse") -> dict:
     }
 
 
+# What the gate checks, in the words the documents use. The HTML report and
+# the dossier give it after the statement of what the score describes.
+GATE = ("The gate reports whether either blocking item failed: at least one prediction is "
+        "typed point, interval or directional, and every prediction cites declared "
+        "propositions whose graph entails any claim it states, with no stated phenomenon "
+        "contradicted. The labels are the author's and are not checked against the "
+        "statements.")
+
+
 @theory_keyword
 def report(theory, format: str = "json") -> str:
     """Render the checklist report of ``check()`` as a string.
 
     ``format="json"`` (the default) gives the report as indented JSON, and
     ``format="html"`` an HTML fragment that escapes every value it interpolates.
-    The fragment gives the checklist score with its range and the gate, the
-    statement of what the score describes, and a table of the items with the
-    criterion each applies, its status and score and the works from which the
-    criterion is drawn.
+    The fragment gives the checklist score with its range and the gate, then
+    what the score describes and what the gate checks, then a table of the
+    items with the criterion each applies, its status and score and the works
+    from which the criterion is drawn.
 
     Raises:
         ValueError: for any other ``format``, and when ``check()`` refuses the
@@ -541,10 +550,11 @@ def report(theory, format: str = "json") -> str:
         return (
             f'<section class="theoryforge-report">\n'
             f'  <h2>Checklist report: {xml_escape(rep["theory_id"])}</h2>\n'
-            f'  <p>Checklist score: <strong>{xml_escape(rep["aggregate_score"])}</strong> '
+            f'  <p>Checklist score: {xml_escape(rep["aggregate_score"])} '
             f'({xml_escape(lo)} to {xml_escape(hi)} with equal weights or one weight halved or '
-            f'doubled) &middot; gate: <strong>{xml_escape(rep["gate"])}</strong></p>\n'
+            f'doubled) &middot; gate: {xml_escape(rep["gate"])}</p>\n'
             f'  <p>{xml_escape(SCOPE.format(version=rep["checklist_version"]))}</p>\n'
+            f'  <p>{xml_escape(GATE)}</p>\n'
             f'  <table>\n    <tr><th>item</th><th>criterion</th><th>status</th><th>score</th>'
             f'<th>source of the criterion</th></tr>\n'
             f'{rows}\n  </table>\n</section>\n'

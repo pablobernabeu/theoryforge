@@ -339,9 +339,10 @@ def test_the_dossier_reports_claims_equivalent_models_and_rivals(modality):
             "(reversed in some equivalent model)") in doc
     assert ("- alt_symbol_interdependency: claims it discriminates: pred4; independencies one implies "
             "and the other does not: 1; decisive differences in sign: 0 effects, 0 associations") in doc
-    # The preregistration sits under its own level-two heading.
-    assert "\n## Preregistration\n\n## Preregistration: Modality switching" in doc
-    assert "\n# Preregistration" not in doc
+    # The preregistration sits under its own level-two heading, its title a
+    # level below it.
+    assert "\n## Preregistration\n\n### Preregistration: Modality switching" in doc
+    assert "\n# Preregistration" not in doc and "\n## Preregistration:" not in doc
 
 
 def test_a_refused_graph_leaves_the_claims_unread():

@@ -160,7 +160,8 @@ test_that("the preregistration and the dossier report the causal reading", {
                            "alt_grounding_by_interaction (its propositions contradict the claim)"),
                fixed = TRUE)
   dossier <- tf_dossier(t)
-  expect_match(dossier, "\n## Preregistration\n\n## Preregistration: Modality switching", fixed = TRUE)
+  expect_match(dossier, "\n## Preregistration\n\n### Preregistration: Modality switching",
+               fixed = TRUE)
   expect_match(dossier, paste0("- p2: c_modality_activation -> c_switch_cost ",
                                "(reversed in some equivalent model)"), fixed = TRUE)
 })

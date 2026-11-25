@@ -807,14 +807,21 @@ test_that("the rubric rates a point or interval label without bounds as directio
 test_that("the HTML report states what the checklist score describes", {
   html <- tf_report(tf_read(tf_fixture_path("panic-network.theory.yaml")), "html")
   has <- function(s) expect_true(grepl(s, html, fixed = TRUE), info = s)
-  has(paste0("  <p>Checklist score: <strong>88.0</strong> (84.2 to 90.2 with equal weights or ",
-             "one weight halved or doubled) &middot; gate: <strong>pass</strong></p>\n"))
+  # The score and the gate are plain text, not set in bold as a headline.
+  has(paste0("  <p>Checklist score: 88.0 (84.2 to 90.2 with equal weights or ",
+             "one weight halved or doubled) &middot; gate: pass</p>\n"))
+  expect_false(grepl("<strong>|<b>", html))
   has(paste0("  <p>The checklist score describes how completely the file states what checklist ",
              "3.1 asks for. Most items read whether a field is filled in or how a prediction is ",
              "labelled, and stated claims are checked against the causal graph. Test outcomes ",
              "are read only by the parsimony item, the weights are conventions, and no study has ",
              "established what difference between two scores is meaningful. The score does not ",
-             "show that the theory is true or well reasoned.</p>\n"))
+             "show that the theory is true or well reasoned.</p>\n",
+             "  <p>The gate reports whether either blocking item failed: at least one prediction ",
+             "is typed point, interval or directional, and every prediction cites declared ",
+             "propositions whose graph entails any claim it states, with no stated phenomenon ",
+             "contradicted. The labels are the author's and are not checked against the ",
+             "statements.</p>\n  <table>"))
   has(paste0("<tr><th>item</th><th>criterion</th><th>status</th><th>score</th>",
              "<th>source of the criterion</th></tr>"))
   has(paste0("<tr><td>derivation_chain</td><td>Every prediction cites declared propositions, the ",
