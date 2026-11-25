@@ -171,6 +171,21 @@ test_that(".tf_http reads a body with curl", {
   expect_true(res$status < 400L)
 })
 
+test_that("curl's idle limit stops a transfer only after a pause without progress", {
+  # As Python's urlopen(timeout=) does, a slow transfer whose bytes keep coming
+  # runs on, however long it takes in all.
+  idle <- .tf_idle_limit(0.2)
+  expect_true(idle(c(0, 0), c(0, 0)))
+  for (n in 1:3) {
+    Sys.sleep(0.1)
+    expect_true(idle(c(9, n), c(0, 0)))
+  }
+  expect_false(environment(idle)$expired)
+  Sys.sleep(0.3)
+  expect_false(idle(c(9, 3), c(0, 0)))
+  expect_true(environment(idle)$expired)
+})
+
 test_that("tf_fetch_corpus stops when OpenAlex refuses a request", {
   fake <- fake_openalex(function(url, headers) list(status = 429L, body = rate_limit_body))
   local_mocked_bindings(.tf_http = fake$http)

@@ -17,10 +17,9 @@ NULL
 #' is returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 #' both \code{token} and \code{node} (the OSF project id) and performs an
 #' authenticated \code{PUT} through the suggested \pkg{curl} package, which must
-#' be installed. Each request is abandoned after 30 seconds. The dossier is
-#' built first, so the
-#' function stops when [tf_check()] refuses the theory, with
-#' \code{dry_run = TRUE} as well.
+#' be installed. Each request is abandoned after 30 seconds without progress.
+#' The dossier is built first, so the function stops when [tf_check()] refuses
+#' the theory, with \code{dry_run = TRUE} as well.
 #'
 #' OSF storage refuses to create a file whose name already exists in the
 #' project folder (HTTP 409), so depositing the same theory twice under the

@@ -756,8 +756,9 @@ def new_evidence_dois(theory, candidate_dois: list) -> list:
 
 _OPENALEX_WORKS = "https://api.openalex.org/works"
 
-# Seconds every outbound request is allowed before it is abandoned, the timeout
-# the R twin gives curl and url(). Without one, a stalled service hangs an
+# Seconds an outbound request may go without progress before it is abandoned:
+# urlopen applies it to the connection and to each read, as the R twin's curl
+# callback does to the transfer. Without one, a stalled service hangs an
 # interactive session indefinitely.
 _NET_TIMEOUT = 30
 

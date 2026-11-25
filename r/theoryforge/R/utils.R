@@ -121,10 +121,33 @@ NULL
   length(.tf_str_list(v)) > 0L
 }
 
-# Seconds every outbound request is allowed before it is abandoned, matching the
-# `timeout=30` the Python twin passes to urlopen. Without one a stalled service
-# hangs an interactive session indefinitely.
+# Seconds an outbound request may go without progress before it is abandoned,
+# matching the `timeout=30` the Python twin passes to urlopen, which limits the
+# connection and each read. Without one a stalled service hangs an interactive
+# session indefinitely.
 .tf_NET_TIMEOUT <- 30
+
+# A curl progress callback that lets a transfer run while bytes move and stops
+# it once nothing has been sent or received for `timeout` seconds. libcurl's own
+# limits cannot say this: `timeout` bounds the whole transfer, and
+# `low_speed_limit` is a rate of at least one byte a second. libcurl calls the
+# callback about once a second while the transfer is idle, and a return of
+# FALSE aborts it. `expired` in the callback's environment records that it did.
+.tf_idle_limit <- function(timeout) {
+  seen <- -1
+  last <- Sys.time()
+  expired <- FALSE
+  function(down, up) {
+    n <- sum(down) + sum(up)
+    now <- Sys.time()
+    if (n != seen) {
+      seen <<- n
+      last <<- now
+    }
+    expired <<- as.numeric(difftime(now, last, units = "secs")) >= timeout
+    !expired
+  }
+}
 
 # Whether curl (Suggests) is installed. It is a function so that a test can
 # take the base R branch of .tf_http() on a machine that has curl.
@@ -134,22 +157,29 @@ NULL
 # HTTP status and the body as UTF-8 text. A status of 400 or more is returned,
 # not raised, so the caller decides what it means (.tf_http_check() for
 # OpenAlex). `headers` is a named character vector or NULL, and `body` a string
-# or raw vector to send. curl gives a per-request timeout, any method and the
-# body of an error response. Without it, base R's url() connection honours the
-# global `timeout` option, which is restored on exit, so the guarantee holds
-# with no hard dependency. url() sends only GET and cannot read the body of an
-# error response, so .tf_url_failure() turns what it reports into a status
-# with no body.
+# or raw vector to send. curl gives the timeout through .tf_idle_limit(), any
+# method and the body of an error response, and a transfer that the idle limit
+# stops is reported as a timeout. Without curl, base R's url() connection
+# honours the global `timeout` option, which is restored on exit, so a stalled
+# service still fails with no hard dependency. url() sends only GET and cannot
+# read the body of an error response, so .tf_url_failure() turns what it
+# reports into a status with no body.
 .tf_http <- function(method, url, headers = NULL, body = NULL, timeout = .tf_NET_TIMEOUT) {
   if (.tf_has_curl()) {
-    handle <- curl::new_handle(timeout = timeout, connecttimeout = timeout)
+    idle <- .tf_idle_limit(timeout)
+    handle <- curl::new_handle(connecttimeout = timeout, noprogress = FALSE,
+                               progressfunction = idle)
     if (length(headers) > 0L) curl::handle_setheaders(handle, .list = as.list(headers))
     if (!identical(method, "GET")) curl::handle_setopt(handle, customrequest = method)
     if (!is.null(body)) {
       if (is.character(body)) body <- charToRaw(enc2utf8(body))
       curl::handle_setopt(handle, postfields = body)
     }
-    res <- curl::curl_fetch_memory(url, handle = handle)
+    res <- tryCatch(curl::curl_fetch_memory(url, handle = handle), error = function(e) {
+      if (!isTRUE(environment(idle)$expired)) stop(e)
+      stop(sprintf("Timeout was reached: nothing was sent or received for %s seconds",
+                   format(timeout)), call. = FALSE)
+    })
     return(list(status = res$status_code, body = .tf_utf8(res$content)))
   }
   if (!identical(method, "GET")) {
