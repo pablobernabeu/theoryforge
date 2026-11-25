@@ -22,6 +22,8 @@ from __future__ import annotations
 import json
 import math
 import re
+from collections.abc import Iterator
+from itertools import accumulate
 from pathlib import Path
 from typing import Any
 
@@ -96,9 +98,34 @@ class _StrictLoader(_BaseLoader):
         first and lets a later ``<<`` override an earlier one, which would give
         the twins different key orders and, for a repeated ``<<``, different
         values.
+
+        A merged mapping that merges others is resolved first. Each resolution
+        is a generator that yields the mapping it waits for, and the loop below
+        keeps the waiting ones on a stack, so that a long chain of merges cannot
+        exhaust Python's stack. A mapping that merges itself, through an alias
+        of an anchor it is still defining, is refused.
         """
         if not any(key_node.tag == _MERGE for key_node, _ in node.value):
             return
+        waiting = [(node, self._flatten_steps(node))]
+        pending = {id(node)}
+        while waiting:
+            try:
+                source = next(waiting[-1][1])
+            except StopIteration:
+                pending.discard(id(waiting.pop()[0]))
+                continue
+            if any(key_node.tag == _MERGE for key_node, _ in source.value):
+                if id(source) in pending:
+                    raise ConstructorError(
+                        "while constructing a mapping", waiting[-1][0].start_mark,
+                        "found a mapping that merges itself", source.start_mark)
+                waiting.append((source, self._flatten_steps(source)))
+                pending.add(id(source))
+
+    def _flatten_steps(self, node: MappingNode) -> Iterator[MappingNode]:
+        """Resolve the merge keys of ``node``, yielding each merged mapping
+        before its keys are taken, so that the caller can resolve it first."""
         own = []
         merged = []
         for key_node, value_node in node.value:
@@ -119,7 +146,7 @@ class _StrictLoader(_BaseLoader):
                     raise ConstructorError(
                         "while constructing a mapping", node.start_mark,
                         f"expected a mapping for merging, but found {source.id}", source.start_mark)
-                self.flatten_mapping(source)
+                yield source
                 merged.extend(source.value)
         present = {self.construct_object(k) for k, _ in own if isinstance(k, ScalarNode)}
         for key_node, value_node in merged:
@@ -178,7 +205,8 @@ def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
     Python's.
     """
     visited: set[int] = set()
-    # Each entry is a node and whether its children have been visited.
+    # Each entry is a mapping or sequence and whether its children have been
+    # visited. A scalar has no keys to check, so it is never put on the stack.
     stack: list[tuple[Node, bool]] = [(root, False)]
     while stack:
         node, closed = stack.pop()
@@ -197,14 +225,16 @@ def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
         if id(node) in visited:  # an alias of a node already checked
             continue
         visited.add(id(node))
-        if isinstance(node, SequenceNode):
-            children = list(node.value)
-        elif isinstance(node, MappingNode):
+        if isinstance(node, MappingNode):
             stack.append((node, True))
-            children = [child for pair in node.value for child in pair]
-        else:
-            continue
-        stack.extend((child, False) for child in reversed(children))
+            for key_node, value_node in reversed(node.value):
+                if not isinstance(value_node, ScalarNode):
+                    stack.append((value_node, False))
+                if not isinstance(key_node, ScalarNode):
+                    stack.append((key_node, False))
+        elif isinstance(node, SequenceNode):
+            stack.extend((child, False) for child in reversed(node.value)
+                         if not isinstance(child, ScalarNode))
 
 
 def _unique_pairs(pairs: list[tuple[str, Any]]) -> dict:
@@ -256,10 +286,12 @@ MAX_VALUES = 1_000_000
 # readers refuse a document nested deeper than this, the document itself being
 # the first level (API_SPEC.md section 3).
 MAX_DEPTH = 64
-# libyaml's composer, which PyYAML calls in C, also recurses once for every
-# level of the text, and tens of thousands of levels exhaust its stack, so a
-# YAML text nested deeper than this is refused before it is composed.
-_MAX_TEXT_DEPTH = 1000
+# PyYAML's C composer (CParser, which uses libyaml only to parse) recurses once
+# for every level of the text, and tens of thousands of levels exhaust its
+# stack. Its pure-Python composer, used where libyaml is missing, recurses in
+# Python, two frames for every level. A YAML document nested deeper than this in
+# its text is therefore refused before it is composed (API_SPEC.md section 3).
+_MAX_TEXT_DEPTH = 1000 if _BaseLoader is not yaml.SafeLoader else 200
 
 
 def _too_deep(path: Path) -> ValueError:
@@ -299,11 +331,34 @@ def _check_size(data: Any, path: Path) -> None:
         level = nxt
 
 
+def _text_depth_bound(text: str) -> int:
+    """A bound on how deep the collections of a YAML text can nest.
+
+    A flow collection opens with a bracket or a brace, and a single-pair
+    mapping inside a flow sequence adds at most one level more. A block
+    collection nested in another starts in a later column, except a sequence
+    that is the value of a mapping key, which may start in the key's column
+    but holds its entries further right. So block collections nest at most
+    twice as deep as the longest line is long. Splitting at line feeds alone
+    gives lines at least as long as YAML's own.
+    """
+    longest = max(map(len, text.split("\n")))
+    return 2 * (text.count("[") + text.count("{")) + 2 * longest + 2
+
+
 def _text_too_deep(text: str) -> bool:
-    """Whether the collections of a YAML text nest more than ``_MAX_TEXT_DEPTH``
-    levels deep, read from the parser's events, which libyaml gives without
-    recursing. A text the parser refuses is left for the loader to refuse with
-    its own message."""
+    """Whether the first document of a YAML text nests more than
+    ``_MAX_TEXT_DEPTH`` levels deep, read from the parser's events, which
+    libyaml gives without recursing.
+
+    The events are read only until they pass that depth. libyaml's scanner
+    looks at every open flow collection for each token, so reading a document
+    nested tens of thousands of levels to its end would take minutes. A
+    syntax error before that depth, and anything after the first document, are
+    left for the loader to report.
+    """
+    if _text_depth_bound(text) <= _MAX_TEXT_DEPTH:
+        return False
     depth = 0
     try:
         for event in yaml.parse(text, Loader=_BaseLoader):
@@ -314,33 +369,66 @@ def _text_too_deep(text: str) -> bool:
                     return True
             elif kind is yaml.SequenceEndEvent or kind is yaml.MappingEndEvent:
                 depth -= 1
+            elif kind is yaml.DocumentEndEvent:
+                return False
     except yaml.YAMLError:
         return False
     return False
 
 
-# A JSON string, and a token of a JSON text once its strings are replaced: a
-# bracket or a run of the characters of a number or a literal.
-_JSON_STRING = re.compile(r'"(?:[^"\\]|\\.)*"')
-_JSON_TOKEN = re.compile(r"[\[{]|[\]}]|[^\[\]{},: \t\n\r]+")
+# A JSON string as API_SPEC.md section 3 reads it for depth: a backslash
+# escapes any character after it, and a string left open runs to the end of the
+# text. Then the characters that separate values, and a run of the characters
+# of a number or a literal.
+_JSON_STRING = re.compile(r'"(?:[^"\\]+|\\.)*(?:"|\\?\Z)', re.DOTALL)
+_JSON_SEPARATORS = str.maketrans("", "", ",: \t\n\r")
+_JSON_VALUE = re.compile(r"[^\[\]{}]+")
+_JSON_STEP = {"[": 1, "{": 1, "]": -1, "}": -1}
 
 
 def _json_depth(text: str) -> int:
     """The level of the deepest value of a JSON text, the document being the
     first, read from its brackets outside strings, as the R twin's
-    ``.tf_json_depth()`` reads it."""
-    s = _JSON_STRING.sub("0", text)
-    depth = deepest = 0
-    for m in _JSON_TOKEN.finditer(s):
-        t = m.group()
-        if t == "[" or t == "{":
-            depth += 1
-            deepest = max(deepest, depth)
-        elif t == "]" or t == "}":
-            depth -= 1
-        else:
-            deepest = max(deepest, depth + 1)
-    return deepest
+    ``.tf_json_depth()`` reads it.
+
+    Each string becomes a value and each value an empty pair of brackets,
+    which lies at the same level, so the deepest level is the most brackets
+    open at once. When no backslash comes just before a quotation mark, every
+    quotation mark opens or closes a string, and the text is split at them.
+    """
+    if '\\"' in text:
+        outside = _JSON_STRING.sub("0", text)
+    else:
+        pieces = text.split('"')
+        outside = "0".join(pieces[0::2]) + ("0" if len(pieces) % 2 == 0 else "")
+    s = _JSON_VALUE.sub("[]", outside.translate(_JSON_SEPARATORS))
+    return max(0, max(accumulate(map(_JSON_STEP.__getitem__, s)), default=0))
+
+
+# The bytes other than quotation marks and brackets.
+_JSON_NOT_STRUCTURE = bytes(c for c in range(256) if c not in b'"[]{}')
+_JSON_BYTE_STEP = {ord("["): 1, ord("{"): 1, ord("]"): -1, ord("}"): -1}
+
+
+def _json_too_deep(text: str) -> bool:
+    """Whether a JSON text nests more than ``MAX_DEPTH`` levels deep.
+
+    A text with fewer opening brackets than that in all cannot. When no
+    backslash comes just before a quotation mark, every quotation mark opens or
+    closes a string. If, once all but the quotation marks and brackets are
+    dropped, every string is then empty, the brackets left are those outside
+    strings, and a value lies at most one level deeper than they nest. Only a
+    text whose brackets reach the limit, or that has brackets inside strings,
+    is measured in full.
+    """
+    if text.count("[") + text.count("{") < MAX_DEPTH:
+        return False
+    if '\\"' not in text:
+        marks = text.encode("utf-8").translate(None, _JSON_NOT_STRUCTURE).replace(b'""', b"")
+        if (b'"' not in marks and
+                max(accumulate(map(_JSON_BYTE_STEP.__getitem__, marks)), default=0) < MAX_DEPTH):
+            return False
+    return _json_depth(text) > MAX_DEPTH
 
 
 def load_document(path) -> Any:
@@ -364,7 +452,7 @@ def load_document(path) -> Any:
     path = Path(path)
     text = path.read_bytes().decode("utf-8-sig")
     json_file = path.suffix.lower() == ".json"
-    if (_json_depth(text) > MAX_DEPTH) if json_file else _text_too_deep(text):
+    if _json_too_deep(text) if json_file else _text_too_deep(text):
         raise _too_deep(path)
     try:
         if json_file:
@@ -375,10 +463,6 @@ def load_document(path) -> Any:
                 data = loader.get_single_data()
             finally:
                 loader.dispose()
-    except RecursionError:
-        # PyYAML's pure-Python composer, used where libyaml is missing,
-        # recurses in Python.
-        raise _too_deep(path) from None
     except _DuplicateKey as dup:
         what = _unreadable(str(dup.key))
         if what:

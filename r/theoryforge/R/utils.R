@@ -406,7 +406,7 @@ NULL
   text <- .tf_read_text(path)
   # jsonlite recurses in C once for every level, so depth is measured on the
   # text, before anything parses it.
-  if (.tf_json_depth(text) > .tf_MAX_DEPTH) .tf_too_deep(path)
+  if (.tf_json_too_deep(text)) .tf_too_deep(path)
   ok <- jsonlite::validate(text)
   if (!isTRUE(ok)) stop(sprintf("(%s) %s", path, trimws(attr(ok, "err"))), call. = FALSE)
   bad <- .tf_json_unreadable(text)
@@ -424,18 +424,99 @@ NULL
 }
 
 # The level of the deepest value of a JSON text, the document being the first,
-# read from its brackets outside strings: an opening bracket is at the level of
-# the brackets open after it, and any other character of a value one below the
-# brackets open around it. The bytes are compared, which a text that is not
-# valid JSON allows too. Python's _load._json_depth() reads the same levels.
+# read from its brackets outside strings (API_SPEC.md section 3). Outside a
+# string, a quotation mark opens one. Inside, a backslash escapes the character
+# after it and a quotation mark closes it, and a string left open runs to the
+# end of the text. A quotation mark inside a string is therefore escaped when
+# an odd number of backslashes comes just before it. Each string is a value.
+# An opening bracket is at the level of the brackets open after it, and any
+# other character of a value one below the brackets open around it. The bytes
+# are compared, which a text that is not valid JSON allows too, and no regular
+# expression is used, since PCRE gives up on a string of some millions of
+# escapes. Python's _load._json_depth() reads the same levels.
 .tf_json_depth <- function(text) {
-  s <- gsub('"(?:[^"\\\\]|\\\\.)*"', "0", text, perl = TRUE, useBytes = TRUE)
-  b <- as.integer(charToRaw(s))
-  open <- b == 0x5BL | b == 0x7BL
-  close <- b == 0x5DL | b == 0x7DL
-  depth <- cumsum(open - close)
-  value <- !(open | close | b %in% c(0x2CL, 0x3AL, 0x20L, 0x09L, 0x0AL, 0x0DL))
-  max(0L, depth[open], depth[value] + 1L)
+  b <- as.integer(charToRaw(text))
+  n <- length(b)
+  if (n == 0L) return(0L)
+  quotes <- which(b == 0x22L)
+  inside <- logical(n)
+  if (length(quotes)) {
+    # The backslashes just before each quotation mark.
+    other <- seq_len(n)
+    other[b == 0x5CL] <- 0L
+    other <- cummax(other)
+    before <- quotes - 1L
+    run <- before - other[pmax(before, 1L)]
+    run[before == 0L] <- 0L
+    odd <- run %% 2L == 1L
+    # The marks that open or close a string. In valid JSON no backslash comes
+    # outside a string, so the marks after an even run do it and each mark
+    # after an odd run lies inside a string. Otherwise the marks are read one
+    # by one.
+    edges <- quotes[!odd]
+    if (any(odd) && any(findInterval(quotes[odd], edges) %% 2L == 0L)) {
+      open_now <- FALSE
+      keep <- logical(length(quotes))
+      for (k in seq_along(quotes)) {
+        if (!open_now) {
+          open_now <- keep[[k]] <- TRUE
+        } else if (!odd[[k]]) {
+          open_now <- FALSE
+          keep[[k]] <- TRUE
+        }
+      }
+      edges <- quotes[keep]
+    }
+    flip <- integer(n)
+    flip[edges] <- 1L
+    inside <- cumsum(flip) %% 2L == 1L
+  }
+  step <- .tf_JSON_STEP[b + 1L]
+  step[inside] <- 0L
+  depth <- cumsum(step)
+  value <- .tf_JSON_VALUE[b + 1L] | (inside & step == 0L)
+  max(0L, depth[step == 1L], depth[value] + 1L)
+}
+
+# For each byte, +1 for an opening bracket and -1 for a closing one, and
+# whether it belongs to a value outside a string: any byte but a bracket, a
+# comma, a colon, a space, a tab, a line feed and a carriage return.
+.tf_JSON_STEP <- local({
+  x <- integer(256)
+  x[c(0x5B, 0x7B) + 1L] <- 1L
+  x[c(0x5D, 0x7D) + 1L] <- -1L
+  x
+})
+.tf_JSON_VALUE <- local({
+  x <- rep(TRUE, 256)
+  x[c(0x5B, 0x7B, 0x5D, 0x7D, 0x2C, 0x3A, 0x20, 0x09, 0x0A, 0x0D) + 1L] <- FALSE
+  x
+})
+.tf_JSON_MARK <- local({
+  x <- logical(256)
+  x[c(0x22, 0x5B, 0x7B, 0x5D, 0x7D) + 1L] <- TRUE
+  x
+})
+
+# Whether a JSON text nests more than .tf_MAX_DEPTH levels deep. A text with
+# fewer opening brackets than that in all cannot. When no backslash comes just
+# before a quotation mark, every quotation mark opens or closes a string. If,
+# once all but the quotation marks and brackets are dropped, every string is
+# then empty, the brackets left are those outside strings, and a value lies at
+# most one level deeper than they nest. Only a text whose brackets reach the
+# limit, or that has brackets inside strings, is measured in full. Python's
+# _load._json_too_deep() decides the same way.
+.tf_json_too_deep <- function(text) {
+  b <- charToRaw(text)
+  marks <- b[.tf_JSON_MARK[as.integer(b) + 1L]]
+  if (sum(.tf_JSON_STEP[as.integer(marks) + 1L] == 1L) < .tf_MAX_DEPTH) return(FALSE)
+  if (!grepl('\\"', text, fixed = TRUE, useBytes = TRUE)) {
+    bare <- as.integer(charToRaw(gsub('""', "", rawToChar(marks), fixed = TRUE, useBytes = TRUE)))
+    if (!any(bare == 0x22L) && max(0L, cumsum(.tf_JSON_STEP[bare + 1L])) < .tf_MAX_DEPTH) {
+      return(FALSE)
+    }
+  }
+  .tf_json_depth(text) > .tf_MAX_DEPTH
 }
 
 # R cannot hold every string a file can spell. jsonlite and yaml cut a string

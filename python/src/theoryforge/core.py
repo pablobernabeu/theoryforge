@@ -1248,9 +1248,8 @@ def read(path) -> Theory:
     A string or key that holds U+0000 or a lone surrogate, which R cannot hold,
     raises ``ValueError("(<path>) a string holds U+0000, which theoryforge
     cannot read")``, or the same message naming ``a lone surrogate``. JSON has
-    no comments, and
-    ``json`` refuses them. A document that is not a mapping raises
-    ``ValueError("Theory data must be a mapping")``.
+    no comments, and ``json`` refuses them. A document that is not a mapping
+    raises ``ValueError("Theory data must be a mapping")``.
     """
     data = _load_document(path)
     if not isinstance(data, dict):

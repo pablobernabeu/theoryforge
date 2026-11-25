@@ -184,6 +184,31 @@ test_that("a document nested more than 64 levels deep refuses the file", {
   expect_error(tf_read(io_file(nested(2000L))), "nested more than 64 levels deep", fixed = TRUE)
 })
 
+test_that("a long chain of merges reads", {
+  # Each of 1000 mappings merges the one before, in both forms of the merge
+  # key, so the document is three levels deep however long the chain. The
+  # Python suite reads the same text.
+  for (form in c("*m%d", "[*m%d]")) {
+    chain <- paste0(sprintf(paste0("  - &m%d {<<: ", form, "}\n"), 1:999, 0:998), collapse = "")
+    text <- paste0("schema_version: '1.1'\nid: m\ntitle: M\nmaturity: draft\n",
+                   "s:\n  - &m0 {k0: 0}\n", chain, "last: {<<: *m999}\n")
+    t <- tf_read(io_file(text))
+    expect_identical(t$last, list(k0 = 0L))
+    expect_length(t$s, 1000L)
+  }
+})
+
+test_that("a JSON string of millions of characters is measured", {
+  # Its brackets and escaped quotation marks are text. A regular expression
+  # would give up on a string of this many escapes, and the depth is measured
+  # without one. The Python suite reads the same text.
+  note <- strrep('\\"[', 1700000L)
+  text <- paste0('{"schema_version": "1.1", "id": "j", "title": "J", "maturity": "draft", ',
+                 '"x_note": "', note, '"}\n')
+  expect_no_warning(t <- tf_read(io_file(text, ".json")))
+  expect_identical(t$x_note, strrep('"[', 1700000L))
+})
+
 test_that("an unquoted date stays a string and writes to JSON", {
   theory <- tf_read(io_file(date_theory))
   expect_identical(theory$test_outcomes[[1]]$date, "2026-05-01")

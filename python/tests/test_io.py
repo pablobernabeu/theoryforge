@@ -3,6 +3,7 @@ import math
 from pathlib import Path
 
 import pytest
+import yaml
 
 import theoryforge as tf
 
@@ -270,10 +271,47 @@ def test_a_document_nested_more_than_64_levels_deep_refuses_the_file(tmp_path, s
     with pytest.raises(ValueError) as exc:
         tf.read(path)
     assert str(exc.value) == f"({path}) the document is nested more than 64 levels deep"
-    # Text far deeper than that is refused too, where the parsers would raise
-    # RecursionError or, for libyaml's composer, exhaust the C stack.
+    # Text far deeper than that is refused too, where json would raise
+    # RecursionError and PyYAML's C composer exhaust the stack.
     with pytest.raises(ValueError, match="nested more than 64 levels deep"):
         tf.read(_file(tmp_path, "deeper.theory" + suffix, _nested(100000, json)))
+
+
+def test_a_long_chain_of_merges_reads(tmp_path):
+    # Each of 1000 mappings merges the one before, in both forms of the merge
+    # key, so the document is three levels deep however long the chain. The R
+    # suite reads the same text.
+    for form in ("*m{}", "[*m{}]"):
+        chain = "".join(f"  - &m{i} {{<<: {form.format(i - 1)}}}\n" for i in range(1, 1000))
+        text = ("schema_version: '1.1'\nid: m\ntitle: M\nmaturity: draft\n"
+                "s:\n  - &m0 {k0: 0}\n" + chain + "last: {<<: *m999}\n")
+        t = tf.read(_file(tmp_path, "merge.theory.yaml", text))
+        assert t.data["last"] == {"k0": 0}
+        assert len(t.data["s"]) == 1000
+
+
+def test_a_deep_text_is_refused_before_a_later_syntax_error_and_a_later_document(tmp_path):
+    # Python refuses a text nested more than 1000 levels deep as soon as its
+    # events pass that depth, before anything later in it is read (API_SPEC.md
+    # section 3). Only the first document is measured, and a syntax error that
+    # comes before the depth is the parser's to report.
+    head = "schema_version: '1.1'\nid: d\ntitle: D\nmaturity: draft\n"
+    deep = "[" * 1200 + "]" * 1200
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read(_file(tmp_path, "late.theory.yaml", head + "x: " + deep + "\ny: [unclosed\n"))
+    with pytest.raises(yaml.YAMLError, match="while parsing a flow sequence"):
+        tf.read(_file(tmp_path, "early.theory.yaml", head + "y: [unclosed\nx: " + deep + "\n"))
+    with pytest.raises(yaml.YAMLError, match="expected a single document"):
+        tf.read(_file(tmp_path, "second.theory.yaml", head + "---\nx: " + deep + "\n"))
+
+
+def test_a_json_string_of_millions_of_characters_is_measured(tmp_path):
+    # Its brackets and escaped quotation marks are text. The R twin measures
+    # the same string without a regular expression, which PCRE would give up on.
+    note = '\\"[' * 1700000
+    text = ('{"schema_version": "1.1", "id": "j", "title": "J", "maturity": "draft", '
+            f'"x_note": "{note}"}}\n')
+    assert tf.read(_file(tmp_path, "long.theory.json", text)).data["x_note"] == '"[' * 1700000
 
 
 def test_an_alias_counts_at_the_depth_where_it_stands(tmp_path):
