@@ -385,7 +385,8 @@ def test_the_count_on_the_nodes_agrees_with_the_count_on_the_document(monkeypatc
     texts += [
         "a: &a {x: [1, 2], y: {z: 3}}\nb: {<<: *a, x: 0}\nc: [*a, *a, {<<: [*a, *a]}]\n",
         "a: &a {1: x}\nb: &b {yes: y, <<: *a}\nc: {<<: [*b, *a], 1: z}\nd: [*b, *b, *b]\n",
-        "s:\n  - &m0 {k0: [0]}\n" + "".join(f"  - &m{i} {{<<: *m{i - 1}, k{i}: [{i}]}}\n" for i in range(1, 40)),
+        "s:\n  - &m0 {k0: [0]}\n"
+        + "".join(f"  - &m{i} {{<<: *m{i - 1}, k{i}: [{i}]}}\n" for i in range(1, 40)),
     ]
     results = []
     for text in texts:
