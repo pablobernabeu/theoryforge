@@ -62,7 +62,8 @@ the measurement model identifies the constructs. That has to be checked
 separately. Otherwise a comment flags each feedback loop, since a
 non-recursive model may not be identified (Bollen, 1989), and the
 panic-network example is not. A further comment names each bow, whose path
-is not identified without further constraints, such as an instrument.
+may not be identified unless the theory supplies an instrument for its
+cause. Whether it does is not checked.
 }
 
 \section{Effects the claims are about}{

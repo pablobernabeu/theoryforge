@@ -2,7 +2,7 @@
 % Please edit documentation in R/entailment.R
 \name{tf_equivalent_models}
 \alias{tf_equivalent_models}
-\title{Report which causal directions observational data cannot test}
+\title{Report which causal directions no test of conditional independence can settle}
 \usage{
 tf_equivalent_models(theory)
 }
@@ -21,14 +21,18 @@ the theory first states it, is a list of \code{from}, \code{to},
 }
 \description{
 Two causal graphs that imply the same conditional independencies are Markov
-equivalent, and no observational study can tell them apart (Verma & Pearl,
-1990/2022). For an acyclic graph of directed relations, they are the graphs with
-the same skeleton and the same unshielded colliders. An edge is
-\code{compelled} when it points the same way in every graph equivalent to
-the theory's, and \code{reversible} when some equivalent graph reverses it,
-so that testing its direction needs an intervention, a temporal order or
-another assumption. The same problem in structural equation modelling is
-that of equivalent models (MacCallum et al., 1993).
+equivalent, and no test of conditional independence can tell them apart
+(Verma & Pearl, 1990/2022). For an acyclic graph of directed relations, they
+are the graphs with the same skeleton and the same unshielded colliders. An
+edge is \code{compelled} when it points the same way in every graph
+equivalent to the theory's, and \code{reversible} when some equivalent graph
+reverses it. Telling the direction of a reversible edge needs an
+intervention, a temporal order or distributional assumptions, such as
+non-Gaussian errors. The function does not know which constructs a study
+manipulates, so an edge out of a manipulated construct can be listed as
+reversible although the experiment settles its direction. The same problem
+in structural equation modelling is that of equivalent models (MacCallum et
+al., 1993).
 }
 \examples{
 t <- tf_read(tf_example_path("modality-switching.theory.yaml"))

@@ -5,9 +5,9 @@ constructs: the sign of the effect of one on the other, or the sign of their
 association, possibly given others. ``entailments()`` reads each claim against
 the graph the propositions state and reports whether the graph entails it,
 contradicts it or leaves it undetermined. ``equivalent_models()`` reports which
-of the theory's causal directions no observational study can test, and
-``discriminate()`` sets the theory against a rival and lists what would tell
-the two apart.
+of the theory's causal directions no test of conditional independence can
+settle, and ``discriminate()`` sets the theory against a rival and lists what
+would tell the two apart.
 
 The signs come from the path-tracing rules of a linear structural model (Wright,
 1934): an effect is the sum over the directed paths from cause to outcome of the
@@ -482,14 +482,20 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     leaves the sign open, and ``not_evaluated`` when the claim is malformed,
     names a construct that no proposition relates to another, or meets a feedback
     loop under ``cycles="refuse"``. ``faithfulness`` is True when the verdict
-    relies on routes of unknown or opposite signs not cancelling exactly.
+    relies on routes of unknown or opposite signs not cancelling exactly, and
+    the claim lines of the preregistration and the dossier then end with
+    ``unless paths cancel exactly``.
 
-    The derivations assume a linear structural model, or at least that each
-    relation acts in one direction throughout, and that no common cause of two
-    constructs is left out unless an association stands for it. Under
+    The derivations assume that the graph is the causal structure, with no
+    common cause of two constructs left out unless an association stands for
+    it, and that each directed relation acts in its stated direction whatever
+    the other inputs, as in a linear model or a uniformly monotone one. Under
     ``cycles="sigma"``, a graph with feedback loops is read on the assumption
-    that each loop settles to a unique equilibrium, and the signs further
-    assume that the effects around each loop die out. A loop that is one
+    that each loop settles to a unique equilibrium. The sign of an effect
+    further assumes that the system with the intervened construct held fixed
+    is stable, so that the effects round each loop that remains die out.
+    Stability of the system as observed is not enough, since holding a
+    construct fixed can leave a loop that does not settle. A loop that is one
     simple cycle then multiplies the effects through it by a positive factor,
     so the signs through it are those of the paths. The walks round a loop of
     any other shape are read as they are, and a graph with feedback loops
@@ -503,10 +509,12 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     candidates, it gives a minimal set instead, from which none can be
     dropped, though a smaller one may exist. A construct marked
     ``x_latent: true``, as ``read_dagitty()`` marks an unobserved variable, is
-    never adjusted for. ``identified`` concerns adjustment alone, so an effect
-    without an adjustment set may still be identified otherwise, by the
-    front-door criterion for instance, and when ``x`` is not an ancestor of
-    ``y`` the effect is zero. ``identified`` is None for other claims, and
+    never adjusted for. ``identified`` reports identification by adjustment
+    alone, so an effect without an adjustment set may still be identified by
+    other means, by the front-door criterion for instance, and when ``x`` is
+    not an ancestor of ``y`` the effect is zero. When ``x`` or ``y`` is itself
+    marked latent, the set is reported all the same, and using it assumes a
+    measure of that construct. ``identified`` is None for other claims, and
     ``adjustment`` is None unless ``identified`` is True.
 
     Returns ``{theory_id, criterion, acyclic, feedback, claims, counts}``.
@@ -562,13 +570,28 @@ _NOT_EVALUATED = {"malformed_claim": "the claim is incomplete",
                   "graph_refused": "the causal graph cannot be built"}
 
 
+# What the verdicts of the claim lines assume, written once in each section
+# of the preregistration and the dossier that prints them (API_SPEC.md
+# section 31). A verdict that rests on faithfulness says so in its line.
+CLAIM_ASSUMPTIONS = (
+    "The verdicts on the claims assume that the graph of the propositions is the causal "
+    "structure, with no omitted common cause of two of its constructs, that each directed "
+    "relation acts in its stated direction whatever the other inputs (as in a linear model "
+    "or a uniformly monotone one), that paths do not cancel exactly where a verdict says "
+    "'unless paths cancel exactly' (faithfulness) and, for feedback loops read by "
+    "sigma-separation, that each loop settles to a unique equilibrium, also once the "
+    "intervened construct is held fixed.")
+
+
 def claim_line(rec: dict) -> str:
     """A claim and what the causal graph says of it, in words.
 
     The preregistration and the dossier print this line (API_SPEC.md section
     11). ``rec`` is a claim record of ``entailments()``, or a claim read by
     ``read_claim()`` with the verdict ``not_evaluated`` and the basis
-    ``graph_refused`` when the graph cannot be built.
+    ``graph_refused`` when the graph cannot be built. A verdict whose record
+    carries ``faithfulness`` true holds only if no paths cancel exactly, and
+    its line ends with ``, unless paths cancel exactly``.
     """
     if rec["basis"] == "malformed_claim":
         return "incomplete, so not evaluated"
@@ -581,10 +604,13 @@ def claim_line(rec: dict) -> str:
         if rec["given"]:
             claim += f" given {', '.join(rec['given'])}"
     v = rec["verdict"]
+    # A record built for a graph that cannot be read has no faithfulness key.
+    faith = ", unless paths cancel exactly" if rec.get("faithfulness") is True else ""
     if v == "entailed":
-        said = "entailed by the causal graph" + (f" through {', '.join(rec['via'])}" if rec["via"] else "")
+        said = ("entailed by the causal graph"
+                + (f" through {', '.join(rec['via'])}" if rec["via"] else "") + faith)
     elif v == "contradicted":
-        said = "contradicted by the causal graph"
+        said = "contradicted by the causal graph" + faith
     elif v == "undetermined":
         said = f"left open by the causal graph, since {_UNDETERMINED[rec['basis']]}"
     else:
@@ -597,9 +623,10 @@ def prediction_verdicts(T: dict, cycles: str = "refuse") -> list[dict | None]:
     One entry per prediction in file order: None when the prediction states no
     claim, otherwise ``{theory, rivals}``, where ``rivals`` maps the id of each
     alternative that states propositions to the verdict under its graph. The
-    checklist reads the graphs with ``cycles="refuse"``. A graph that would be
-    refused gives no verdicts, so the checklist falls back on the references
-    alone (API_SPEC.md section 4).
+    checklist's diagnosticity item reads the graphs with the checklist's own
+    ``cycles``, ``"refuse"`` by default. A graph that would be refused gives
+    no verdicts, so that item falls back on the declarations alone
+    (API_SPEC.md section 4).
     """
     preds = items(T, "predictions")
     try:
@@ -683,17 +710,21 @@ def _compelled(directed: list[list[bool]], k: int) -> list[list[bool]]:
 
 @theory_keyword
 def equivalent_models(theory) -> dict:
-    """Which causal directions of the theory observational data can and cannot test.
+    """Which causal directions of the theory tests of conditional independence can settle.
 
     Two causal graphs that imply the same conditional independencies are
-    Markov equivalent, and no observational study can tell them apart
-    (Verma & Pearl, 1990/2022). For an acyclic graph of directed relations, they are
-    the graphs with the same skeleton and the same unshielded colliders. An
-    edge is ``compelled`` when it points the same way in every graph
-    equivalent to the theory's, and ``reversible`` when some equivalent graph
-    reverses it, so that testing its direction needs an intervention, a
-    temporal order or another assumption. The same problem in structural
-    equation modelling is that of equivalent models (MacCallum et al., 1993).
+    Markov equivalent, and no test of conditional independence can tell them
+    apart (Verma & Pearl, 1990/2022). For an acyclic graph of directed
+    relations, they are the graphs with the same skeleton and the same
+    unshielded colliders. An edge is ``compelled`` when it points the same way
+    in every graph equivalent to the theory's, and ``reversible`` when some
+    equivalent graph reverses it. Telling the direction of a reversible edge
+    needs an intervention, a temporal order or distributional assumptions,
+    such as non-Gaussian errors. The function does not know which constructs a
+    study manipulates, so an edge out of a manipulated construct can be listed
+    as reversible although the experiment settles its direction. The same
+    problem in structural equation modelling is that of equivalent models
+    (MacCallum et al., 1993).
 
     Returns ``{theory_id, computed, reason, constructs, v_structures, edges,
     n_compelled, n_reversible}``. ``computed`` is False, with ``reason``
@@ -853,7 +884,7 @@ def discriminate(theory, rival, cycles: str = "refuse") -> dict:
     entails the claim and the other contradicts it. ``markov_equivalent`` is
     True when the two are acyclic graphs of directed relations over the same
     constructs with the same skeleton and the same unshielded colliders, in
-    which case no observational test of independence separates them. It is
+    which case no test of conditional independence separates them. It is
     None when that rule does not apply.
 
     A graph with feedback loops is not compared under ``cycles="refuse"``

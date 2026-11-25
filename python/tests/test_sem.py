@@ -55,7 +55,7 @@ def repeat(pid, frm, to, label=None):
 
 def bow(frm, to):
     return (f"# Bow between {frm} and {to}: a path and a covariance join them, so the path "
-            f"from {frm} to {to} is not identified without further constraints, such as an "
+            f"from {frm} to {to} may not be identified unless the theory supplies an "
             f"instrument for {frm}.")
 
 

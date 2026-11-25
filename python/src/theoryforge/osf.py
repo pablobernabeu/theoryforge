@@ -1,6 +1,6 @@
 """Open Science Framework deposit adapter (assistive).
 
-Builds the request to upload a theory's audit dossier to OSF. The default ``dry_run=True``
+Builds the request to upload a theory's dossier to OSF. The default ``dry_run=True``
 constructs the request without sending it. A live push requires the user's OSF token and
 network access, and is never performed automatically.
 """

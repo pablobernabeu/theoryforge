@@ -325,7 +325,8 @@ test_that("tf_embedding_redundancy() defaults to its own threshold", {
 
 test_that("the dossier gives coverage and names the failed blockers", {
   d <- tf_dossier(tf_read(tf_fixture_path("weak-theory.theory.yaml")))
-  expect_true(grepl(paste0("- Aggregate rigour score: 2.2/100 (1.1 to 3.9 under other weightings)\n",
+  expect_true(grepl(paste0("- Checklist score: 2.2 (1.1 to 3.9 with equal weights or one weight ",
+                           "halved or doubled)\n",
                            "- Checklist coverage: 0.92\n",
                            "- Gate: blocked\n",
                            "- Blockers failed: 2 (falsifiability, derivation_chain)\n"),

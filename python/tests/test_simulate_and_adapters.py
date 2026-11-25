@@ -219,8 +219,8 @@ def test_render_report_writes_qmd(panic_path, tmp_path):
     p = tf.read(panic_path).render_report(tmp_path / "report")
     assert p.endswith(".qmd")
     text = open(p, encoding="utf-8").read()
-    assert text.startswith("---\ntitle:")
-    assert "## Rigour checklist" in text
+    assert text.startswith('---\ntitle: "theoryforge dossier: Network theory of panic disorder"')
+    assert "## Checklist\n" in text
     # The text of each heading is escaped as Markdown text (API_SPEC.md section 23).
     assert "# Preregistration\\: Network theory of panic disorder" in text
 

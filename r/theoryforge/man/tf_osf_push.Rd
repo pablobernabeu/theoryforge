@@ -2,7 +2,7 @@
 % Please edit documentation in R/osf.R
 \name{tf_osf_push}
 \alias{tf_osf_push}
-\title{Deposit a theory's audit dossier to OSF storage}
+\title{Deposit a theory's dossier to OSF storage}
 \usage{
 tf_osf_push(
   theory,

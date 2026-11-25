@@ -17,7 +17,7 @@ unless the name begins with that dot, and gains \code{.qmd}. So
 \code{a.tar.qmd}.}
 
 \item{title}{Optional report title. It defaults to
-\code{"theoryforge report: <title-or-id>"}, also when \code{NULL},
+\code{"theoryforge dossier: <title-or-id>"}, also when \code{NULL},
 \code{NA} or empty, with the theory's title or id written on one line and
 escaped as the body is, and with Quarto's shortcode delimiters in their
 escaped forms \code{\{\{\{<} and \code{>\}\}\}}. It is written as a YAML

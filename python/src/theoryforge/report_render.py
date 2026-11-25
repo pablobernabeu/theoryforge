@@ -1,4 +1,4 @@
-"""Render a theory's audit dossier as a standalone Quarto report.
+"""Render a theory's dossier as a standalone Quarto report.
 
 Writes a ``.qmd`` (a YAML header plus the deterministic dossier body) and can optionally
 invoke Quarto to render it. The report content is the deterministic ``dossier`` output, and
@@ -232,7 +232,7 @@ def render_report(theory, path, title: str | None = None, render: bool = False, 
     ``-``, as in ``pdf``, ``gfm+tex_math_dollars`` or ``writers/plain.lua``. Render a
     theory from someone else to one of the formats named above.
 
-    ``title`` defaults to ``"theoryforge report: <title-or-id>"``, also when empty, with the
+    ``title`` defaults to ``"theoryforge dossier: <title-or-id>"``, also when empty, with the
     theory's title or id written on one line and escaped as the body is, and with
     Quarto's shortcode delimiters in their escaped forms ``{{{<`` and ``>}}}``. The
     title is written as a YAML double-quoted scalar with backslashes, double quotes and
@@ -261,7 +261,7 @@ def render_report(theory, path, title: str | None = None, render: bool = False, 
     data = theory.data if hasattr(theory, "data") else theory
     # Fall back to the id when the title is empty as well as absent (matches R's nzchar fallback).
     label = flat(text(data.get("title")) or text(data.get("id")))
-    title = title or f"theoryforge report: {_md_text(_shortcodes(label))}"
+    title = title or f"theoryforge dossier: {_md_text(_shortcodes(label))}"
     path = _qmd_path(os.fspath(path))
     md = _dossier(data)
     # Quarto 1.11 decodes the run in the body, not in the metadata, and the

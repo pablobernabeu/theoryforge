@@ -38,8 +38,8 @@
 }
 .sem_bow <- function(from, to) {
   paste0("# Bow between ", from, " and ", to, ": a path and a covariance join them, so the ",
-         "path from ", from, " to ", to, " is not identified without further constraints, ",
-         "such as an instrument for ", from, ".")
+         "path from ", from, " to ", to, " may not be identified unless the theory supplies ",
+         "an instrument for ", from, ".")
 }
 # The sign block, from c(label, op, proposition, relation) vectors.
 .sem_signs <- function(...) {

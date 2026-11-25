@@ -1165,7 +1165,7 @@ class Theory:
         return _entailments(self.data, cycles=cycles)
 
     def equivalent_models(self) -> dict:
-        """Which causal directions observational data can and cannot test (see
+        """Which causal directions no test of conditional independence can settle (see
         ``theoryforge.equivalent_models``)."""
         return _equivalent_models(self.data)
 
@@ -1224,7 +1224,7 @@ class Theory:
         return _embedding_redundancy(self.data, embedder, threshold=threshold)
 
     def render_report(self, path, title=None, render: bool = False, to: str = "html") -> str:
-        """Write (and optionally render) a Quarto report of the audit dossier (see
+        """Write (and optionally render) a Quarto report of the dossier (see
         ``theoryforge.render_report``)."""
         return _render_report(self.data, path, title=title, render=render, to=to)
 

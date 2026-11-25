@@ -43,7 +43,7 @@ predictions and phenomena under both graphs, as \code{\link[=tf_entailments]{tf_
 other contradicts it. \code{markov_equivalent} is \code{TRUE} when the two
 are acyclic graphs of directed relations over the same constructs with the
 same skeleton and the same unshielded colliders, in which case no
-observational test of independence separates them, and \code{NA} when that
+test of conditional independence separates them, and \code{NA} when that
 rule does not apply.
 
 A graph with feedback loops is not compared under \code{cycles = "refuse"}

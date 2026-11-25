@@ -60,17 +60,24 @@ Each claim is then \code{entailed}, \code{contradicted},
 proposition relates to another, or meets a feedback loop under
 \code{cycles = "refuse"}. \code{faithfulness} is \code{TRUE} when the
 verdict relies on routes of unknown or opposite signs not cancelling
-exactly. The derivations assume a linear structural model, or at least that
-each relation acts in one direction throughout (VanderWeele & Robins, 2010),
-and that no common cause of two constructs is left out unless an
-association stands for it. Under \code{cycles = "sigma"}, each feedback loop
-is assumed to settle to a unique equilibrium, and the signs further assume
-that the effects around each loop die out. A loop that is one simple cycle
-then multiplies the effects through it by a positive factor, so the signs
-through it are those of the paths. The walks round a loop of any other
-shape are read as they are, and a graph with feedback loops reads each trek
-as a pair of walks from a common source, so a sign that the graph fixes can
-be left open there.
+exactly, and the claim lines of the preregistration and the dossier then
+end with \code{unless paths cancel exactly}.
+
+The derivations assume that the graph is the causal structure, with no
+common cause of two constructs left out unless an association stands for
+it, and that each directed relation acts in its stated direction whatever
+the other inputs, as in a linear model or a uniformly monotone one
+(VanderWeele & Robins, 2010). Under \code{cycles = "sigma"}, each feedback
+loop is assumed to settle to a unique equilibrium. The sign of an effect
+further assumes that the system with the intervened construct held fixed is
+stable, so that the effects round each loop that remains die out. Stability
+of the system as observed is not enough, since holding a construct fixed
+can leave a loop that does not settle. A loop that is one simple cycle then
+multiplies the effects through it by a positive factor, so the signs through
+it are those of the paths. The walks round a loop of any other shape are
+read as they are, and a graph with feedback loops reads each trek as a pair
+of walks from a common source, so a sign that the graph fixes can be left
+open there.
 
 For an effect claim on an acyclic graph, \code{identified} says whether
 adjusting for some set of the theory's constructs would identify the effect
@@ -79,10 +86,12 @@ from observational data (van der Zander et al., 2019), and
 are candidates, it gives a minimal set instead, from which none can be
 dropped, though a smaller one may exist. A construct marked
 \code{x_latent: true}, as \code{\link[=tf_read_dagitty]{tf_read_dagitty()}} marks an unobserved variable,
-is never adjusted for. \code{identified} concerns adjustment alone, so an
-effect without an adjustment set may still be identified otherwise, by the
-front-door criterion for instance, and when \code{x} is not an ancestor of
-\code{y} the effect is zero.
+is never adjusted for. \code{identified} reports identification by
+adjustment alone, so an effect without an adjustment set may still be
+identified by other means, by the front-door criterion for instance, and
+when \code{x} is not an ancestor of \code{y} the effect is zero. When
+\code{x} or \code{y} is itself marked latent, the set is reported all the
+same, and using it assumes a measure of that construct.
 }
 \examples{
 t <- tf_read(tf_example_path("modality-switching.theory.yaml"))

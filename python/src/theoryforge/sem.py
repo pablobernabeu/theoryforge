@@ -50,9 +50,11 @@ _IDENTIFIED = ("# Identification: the paths among the constructs form no loop, a
                "coefficients are therefore generically identified if the measurement model "
                "identifies the constructs (Brito & Pearl, 2002). Whether it does has to be "
                "checked separately.")
+# Whether the theory supplies an instrument is not decided here, so the comment
+# says what identification needs (API_SPEC.md section 19).
 _BOW = ("# Bow between {frm} and {to}: a path and a covariance join them, so the path from "
-        "{frm} to {to} is not identified without further constraints, such as an instrument "
-        "for {frm}.")
+        "{frm} to {to} may not be identified unless the theory supplies an instrument for "
+        "{frm}.")
 _MODERATION = ("# moderation: {frm} moderates the paths into {to}; add the product term by hand "
                "({to} ~ <x>:{frm} for an observed predictor <x>; lavaan::sam() or the modsem "
                "package for latent variables)")
@@ -547,8 +549,8 @@ def compile_sem(theory) -> str:
     That has to be checked separately. Otherwise a comment flags each
     feedback loop, since a non-recursive model may not be identified
     (Bollen, 1989), and the panic-network example is not. A further comment
-    names each bow, whose path is not identified without further
-    constraints, such as an instrument.
+    names each bow, whose path may not be identified unless the theory
+    supplies an instrument for its cause. Whether it does is not checked.
 
     Each prediction or phenomenon whose ``claim`` is an effect of ``x`` on
     ``y`` gets a comment that restates it, the claims on one pair together.

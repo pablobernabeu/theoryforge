@@ -481,17 +481,24 @@
 #' proposition relates to another, or meets a feedback loop under
 #' \code{cycles = "refuse"}. \code{faithfulness} is \code{TRUE} when the
 #' verdict relies on routes of unknown or opposite signs not cancelling
-#' exactly. The derivations assume a linear structural model, or at least that
-#' each relation acts in one direction throughout (VanderWeele & Robins, 2010),
-#' and that no common cause of two constructs is left out unless an
-#' association stands for it. Under \code{cycles = "sigma"}, each feedback loop
-#' is assumed to settle to a unique equilibrium, and the signs further assume
-#' that the effects around each loop die out. A loop that is one simple cycle
-#' then multiplies the effects through it by a positive factor, so the signs
-#' through it are those of the paths. The walks round a loop of any other
-#' shape are read as they are, and a graph with feedback loops reads each trek
-#' as a pair of walks from a common source, so a sign that the graph fixes can
-#' be left open there.
+#' exactly, and the claim lines of the preregistration and the dossier then
+#' end with \code{unless paths cancel exactly}.
+#'
+#' The derivations assume that the graph is the causal structure, with no
+#' common cause of two constructs left out unless an association stands for
+#' it, and that each directed relation acts in its stated direction whatever
+#' the other inputs, as in a linear model or a uniformly monotone one
+#' (VanderWeele & Robins, 2010). Under \code{cycles = "sigma"}, each feedback
+#' loop is assumed to settle to a unique equilibrium. The sign of an effect
+#' further assumes that the system with the intervened construct held fixed is
+#' stable, so that the effects round each loop that remains die out. Stability
+#' of the system as observed is not enough, since holding a construct fixed
+#' can leave a loop that does not settle. A loop that is one simple cycle then
+#' multiplies the effects through it by a positive factor, so the signs through
+#' it are those of the paths. The walks round a loop of any other shape are
+#' read as they are, and a graph with feedback loops reads each trek as a pair
+#' of walks from a common source, so a sign that the graph fixes can be left
+#' open there.
 #'
 #' For an effect claim on an acyclic graph, \code{identified} says whether
 #' adjusting for some set of the theory's constructs would identify the effect
@@ -500,10 +507,12 @@
 #' are candidates, it gives a minimal set instead, from which none can be
 #' dropped, though a smaller one may exist. A construct marked
 #' \code{x_latent: true}, as [tf_read_dagitty()] marks an unobserved variable,
-#' is never adjusted for. \code{identified} concerns adjustment alone, so an
-#' effect without an adjustment set may still be identified otherwise, by the
-#' front-door criterion for instance, and when \code{x} is not an ancestor of
-#' \code{y} the effect is zero.
+#' is never adjusted for. \code{identified} reports identification by
+#' adjustment alone, so an effect without an adjustment set may still be
+#' identified by other means, by the front-door criterion for instance, and
+#' when \code{x} is not an ancestor of \code{y} the effect is zero. When
+#' \code{x} or \code{y} is itself marked latent, the set is reported all the
+#' same, and using it assumes a measure of that construct.
 #'
 #' @param theory A theory object.
 #' @param cycles \code{"refuse"} (the default) or \code{"sigma"}, as in
@@ -562,8 +571,9 @@ tf_entailments <- function(theory, cycles = "refuse") {
 
 # The verdict on each prediction's claim, under the theory and under each
 # alternative that states propositions: NULL for a prediction without a claim,
-# otherwise list(theory, rivals). The checklist reads the graphs with cycles =
-# "refuse", and a graph that would be refused gives no verdicts.
+# otherwise list(theory, rivals). The checklist's diagnosticity item reads the
+# graphs with the checklist's own cycles, "refuse" by default, and a graph that
+# would be refused gives no verdicts.
 .tf_prediction_verdicts <- function(T, cycles = "refuse") {
   preds <- .tf_list(T, "predictions")
   focal <- tryCatch(
@@ -599,8 +609,22 @@ tf_entailments <- function(theory, cycles = "refuse") {
                        feedback_loop = "the causal graph has a feedback loop",
                        graph_refused = "the causal graph cannot be built")
 
+# What the verdicts of the claim lines assume, written once in each section of
+# the preregistration and the dossier that prints them (API_SPEC.md section
+# 31). A verdict that rests on faithfulness says so in its line.
+.tf_CLAIM_ASSUMPTIONS <- paste0(
+  "The verdicts on the claims assume that the graph of the propositions is the causal ",
+  "structure, with no omitted common cause of two of its constructs, that each directed ",
+  "relation acts in its stated direction whatever the other inputs (as in a linear model ",
+  "or a uniformly monotone one), that paths do not cancel exactly where a verdict says ",
+  "'unless paths cancel exactly' (faithfulness) and, for feedback loops read by ",
+  "sigma-separation, that each loop settles to a unique equilibrium, also once the ",
+  "intervened construct is held fixed.")
+
 # A claim and what the causal graph says of it, in words, as the
-# preregistration and the dossier print it (API_SPEC.md section 11).
+# preregistration and the dossier print it (API_SPEC.md section 11). A verdict
+# whose record carries faithfulness TRUE holds only if no paths cancel exactly,
+# and its line says so.
 .tf_claim_line <- function(rec) {
   if (rec$basis == "malformed_claim") return("incomplete, so not evaluated")
   x <- rec$x
@@ -615,10 +639,13 @@ tf_entailments <- function(theory, cycles = "refuse") {
     if (length(given)) claim <- paste0(claim, " given ", paste(given, collapse = ", "))
   }
   via <- unlist(rec$via)
+  # A record built for a graph that cannot be read has no faithfulness field.
+  faith <- if (isTRUE(rec$faithfulness)) ", unless paths cancel exactly" else ""
   said <- switch(rec$verdict,
     entailed = paste0("entailed by the causal graph",
-                      if (length(via)) paste0(" through ", paste(via, collapse = ", ")) else ""),
-    contradicted = "contradicted by the causal graph",
+                      if (length(via)) paste0(" through ", paste(via, collapse = ", ")) else "",
+                      faith),
+    contradicted = paste0("contradicted by the causal graph", faith),
     undetermined = paste0("left open by the causal graph, since ", .tf_UNDETERMINED[[rec$basis]]),
     paste0("not evaluated, since ", .tf_NOT_EVALUATED[[rec$basis]]))
   paste0(claim, "; ", said)
@@ -684,17 +711,21 @@ tf_entailments <- function(theory, cycles = "refuse") {
   comp
 }
 
-#' Report which causal directions observational data cannot test
+#' Report which causal directions no test of conditional independence can settle
 #'
 #' Two causal graphs that imply the same conditional independencies are Markov
-#' equivalent, and no observational study can tell them apart (Verma & Pearl,
-#' 1990/2022). For an acyclic graph of directed relations, they are the graphs with
-#' the same skeleton and the same unshielded colliders. An edge is
-#' \code{compelled} when it points the same way in every graph equivalent to
-#' the theory's, and \code{reversible} when some equivalent graph reverses it,
-#' so that testing its direction needs an intervention, a temporal order or
-#' another assumption. The same problem in structural equation modelling is
-#' that of equivalent models (MacCallum et al., 1993).
+#' equivalent, and no test of conditional independence can tell them apart
+#' (Verma & Pearl, 1990/2022). For an acyclic graph of directed relations, they
+#' are the graphs with the same skeleton and the same unshielded colliders. An
+#' edge is \code{compelled} when it points the same way in every graph
+#' equivalent to the theory's, and \code{reversible} when some equivalent graph
+#' reverses it. Telling the direction of a reversible edge needs an
+#' intervention, a temporal order or distributional assumptions, such as
+#' non-Gaussian errors. The function does not know which constructs a study
+#' manipulates, so an edge out of a manipulated construct can be listed as
+#' reversible although the experiment settles its direction. The same problem
+#' in structural equation modelling is that of equivalent models (MacCallum et
+#' al., 1993).
 #'
 #' @param theory A theory object.
 #' @return A list with \code{theory_id}, \code{computed}, \code{reason},
@@ -907,7 +938,7 @@ tf_equivalent_models <- function(theory) {
 #' other contradicts it. \code{markov_equivalent} is \code{TRUE} when the two
 #' are acyclic graphs of directed relations over the same constructs with the
 #' same skeleton and the same unshielded colliders, in which case no
-#' observational test of independence separates them, and \code{NA} when that
+#' test of conditional independence separates them, and \code{NA} when that
 #' rule does not apply.
 #'
 #' A graph with feedback loops is not compared under \code{cycles = "refuse"}

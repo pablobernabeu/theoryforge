@@ -216,20 +216,28 @@ tf_severity <- function(theory) {
 #' declares bounds, the severity with which the claim passed is the smallest of
 #' \eqn{\Phi((estimate - lower) / se)}{Phi((estimate - lower) / se)} and
 #' \eqn{\Phi((upper - estimate) / se)}{Phi((upper - estimate) / se)} over the
-#' finite bounds, rounded to three decimals (Mayo & Spanos, 2006, 2011). It is
-#' the probability that the test would have given a result less in accord with
-#' the claim, had the claim been false at the bound. A one-sided claim, such as
-#' an effect above a smallest effect of interest, is a lower bound with the
-#' upper one open.
-#'
-#' The computation is a normal approximation to the sampling distribution of
-#' the estimate. With two finite bounds, the value equals 1 minus the p value of
-#' the two one-sided tests (TOST) of equivalence. A point claim with lower equal
+#' finite bounds, rounded to three decimals. For a claim with one finite bound,
+#' this is the post-data severity of Mayo and Spanos (2006, 2011): the
+#' probability that the test would have given a result less in accord with the
+#' claim, had the quantity been at the bound. A one-sided claim, such as an
+#' effect above a smallest effect of interest, is a lower bound with the upper
+#' one open. With two finite bounds, the value is the minimum over the two
+#' bounds, which is the package's own extension to the conjunction of the two
+#' one-sided claims. It equals 1 minus the p value of the z-based two one-sided
+#' tests (TOST) of equivalence (Lakens, 2017). A point claim with lower equal
 #' to upper can pass with a severity of at most 0.5, so it needs a tolerance
-#' around its value. Unlike [tf_severity()], which grades the form of a claim
-#' before any data, this value depends on the design and the data. The rigour
-#' checklist does not read it. [tf_dossier()] gives each value in its test
-#' record.
+#' around its value.
+#'
+#' The computation is a normal approximation that treats the standard error as
+#' known, so in small samples it overstates the severity of an estimate inside
+#' the region. The standard error must describe the sampling distribution of
+#' the estimate at the bound, which differs from its value at the estimate when
+#' it depends on the parameter, as for a proportion. The value is nominal: it
+#' does not account for selection, such as a subgroup chosen after seeing the
+#' data, and it does not check the statistical adequacy of the model behind the
+#' estimate. Unlike [tf_severity()], which grades the form of a claim before
+#' any data, this value depends on the design and the data. The checklist does
+#' not read it. [tf_dossier()] gives each value in its test record.
 #'
 #' The function stops at the first outcome, in file order, that cannot be
 #' read, with one of these messages:
@@ -249,6 +257,10 @@ tf_severity <- function(theory) {
 #'   \code{upper} (\code{NA} for an open bound), \code{estimate}, \code{se} and
 #'   \code{severity}.
 #' @references
+#' Lakens, D. (2017). Equivalence tests: A practical primer for t tests,
+#'   correlations, and meta-analyses. \emph{Social Psychological and
+#'   Personality Science}, 8(4), 355-362. \doi{10.1177/1948550617697177}
+#'
 #' Mayo, D. G., & Spanos, A. (2006). Severe testing as a basic concept in a
 #'   Neyman-Pearson philosophy of induction. \emph{The British Journal for the
 #'   Philosophy of Science}, 57(2), 323-357. \doi{10.1093/bjps/axl003}

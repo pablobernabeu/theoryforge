@@ -41,9 +41,11 @@ NULL
                              "bow). The path coefficients are therefore generically identified ",
                              "if the measurement model identifies the constructs (Brito & ",
                              "Pearl, 2002). Whether it does has to be checked separately.")
+# Whether the theory supplies an instrument is not decided here, so the comment
+# says what identification needs (API_SPEC.md section 19).
 .tf_SEM_BOW <- paste0("# Bow between %1$s and %2$s: a path and a covariance join them, so the ",
-                      "path from %1$s to %2$s is not identified without further constraints, ",
-                      "such as an instrument for %1$s.")
+                      "path from %1$s to %2$s may not be identified unless the theory supplies ",
+                      "an instrument for %1$s.")
 .tf_SEM_MODERATION <- paste0("# moderation: %1$s moderates the paths into %2$s; add the product ",
                              "term by hand (%2$s ~ <x>:%1$s for an observed predictor <x>; ",
                              "lavaan::sam() or the modsem package for latent variables)")
@@ -614,7 +616,8 @@ NULL
 #' separately. Otherwise a comment flags each feedback loop, since a
 #' non-recursive model may not be identified (Bollen, 1989), and the
 #' panic-network example is not. A further comment names each bow, whose path
-#' is not identified without further constraints, such as an instrument.
+#' may not be identified unless the theory supplies an instrument for its
+#' cause. Whether it does is not checked.
 #'
 #' @section Effects the claims are about:
 #' Each prediction or phenomenon whose \code{claim} is an effect of \code{x}
