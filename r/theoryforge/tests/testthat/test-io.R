@@ -485,6 +485,24 @@ test_that("tf_write keeps numbers, logicals and one-element arrays", {
   expect_true(grepl("derives_from:\\s*\\n\\s*- p1", yaml_text))
 })
 
+test_that("tf_write escapes a next-line character", {
+  # YAML counts U+0085, U+2028 and U+2029 as line breaks. yaml writes the
+  # first in double quotes as the escape \N, as the Python twin now writes
+  # it, and the escapes of the other two follow in such a string. Alone, those
+  # two are written as they are, and read back.
+  theory <- list(schema_version = "1.1", id = "w", title = "Panic\u0085disorder",
+                 maturity = "building",
+                 constructs = list(list(id = "c1", label = "a\u2028b", definition = "c\u2029d\u0085")))
+  path <- tempfile(fileext = ".yaml")
+  tf_write(theory, path)
+  text <- tf_read_golden(path)
+  expect_true(grepl('title: "Panic\\Ndisorder"', text, fixed = TRUE))
+  expect_true(grepl('definition: "c\\Pd\\N"', text, fixed = TRUE))
+  back <- tf_read(path)
+  expect_identical(back$title, "Panic\u0085disorder")
+  expect_identical(back$constructs, theory$constructs)
+})
+
 test_that("tf_write writes a string array held as one string as an array", {
   # A hand-built theory can hold a one-element character vector where the
   # schema wants an array. jsonlite and yaml both write that as a scalar, which

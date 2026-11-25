@@ -510,6 +510,23 @@ def test_a_written_string_reads_back_as_the_same_string(tmp_path, value):
     assert tf.read(out).data["title"] == value
 
 
+def test_written_yaml_escapes_a_next_line_character(tmp_path):
+    # YAML counts U+0085, U+2028 and U+2029 as line breaks. libyaml read U+0085
+    # written in single quotes as a line feed and folded it into a space, so
+    # it is written in double quotes as \N, as the R twin writes it. The
+    # escapes of the other two follow in such a string. Alone, those two are
+    # written as they are, and read back.
+    t = tf.new_theory("w", "Panic\x85disorder")
+    t.data["constructs"] = [{"id": "c1", "label": "a\u2028b", "definition": "c\u2029d\x85"}]
+    out = tmp_path / "w.theory.yaml"
+    t.write(out)
+    text = out.read_text(encoding="utf-8")
+    assert 'title: "Panic\\Ndisorder"' in text and 'definition: "c\\Pd\\N"' in text
+    back = tf.read(out).data
+    assert back["title"] == "Panic\x85disorder"
+    assert back["constructs"] == t.data["constructs"]
+
+
 def test_written_yaml_quotes_what_r_takes_for_a_number(tmp_path):
     # R's yaml package takes 1,000 and a bare dot for numbers it cannot convert,
     # and theoryforge 0.6.0 in R reads NA for them, so the writer quotes them.

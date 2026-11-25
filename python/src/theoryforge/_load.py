@@ -513,6 +513,19 @@ _Dumper.add_implicit_resolver(
     "tag:yaml.org,2002:null", re.compile(r"^\.na(?:\.real|\.integer|\.character)?$"), ["."])
 _Dumper.add_implicit_resolver("tag:yaml.org,2002:float", _R_NUMBER, list("-+0123456789."))
 
+# YAML counts U+0085 (NEL) as a line break. PyYAML writes a string that holds
+# one in single quotes with the break as it is, which libyaml reads as a line
+# feed, and the fold of a quoted scalar turns that into a space. Double quotes
+# write it as the escape \N, which both twins read back, as the R twin's
+# writer does. U+2028 and U+2029 are line breaks too, but a reader keeps them.
+def _represent_str(dumper: yaml.SafeDumper, data: str) -> yaml.ScalarNode:
+    if "\x85" in data:
+        return dumper.represent_scalar("tag:yaml.org,2002:str", data, style='"')
+    return dumper.represent_str(data)
+
+
+_Dumper.add_representer(str, _represent_str)
+
 
 def dump_yaml(data: Any) -> str:
     """The YAML text ``Theory.write`` puts in a file, keys in the theory's own order."""
