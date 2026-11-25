@@ -68,7 +68,7 @@ that an effect or relation exists, without a direction. A `directional` one asse
 or an order. An `interval` prediction asserts that a quantity lies in a stated range, and a
 `point` prediction asserts one value, with the tolerance that measurement requires.
 `bounds: {lower, upper}` states the region, and the full validation checks that it fits the
-type. The type is declared by the author, and no function checks it against the statement.
+type, so an existence prediction takes none. The type is declared by the author, and no function checks it against the statement.
 
 The provenance log records each step's number, the action and the identifier it affected.
 The action is named after the R function, `tf_theory` for `new_theory()`, so that a log reads

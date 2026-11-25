@@ -222,7 +222,8 @@ asserts that an effect or relation exists, without a direction, and a
 `directional` one asserts a sign or an order. An `interval` prediction asserts
 that a quantity lies in a stated range, and a `point` prediction asserts one
 value, with the tolerance that measurement requires. `bounds` states the region,
-and the full validation checks that it fits the type. A `claim` states the
+and the full validation checks that it fits the type, so an existence prediction
+takes none. A `claim` states the
 prediction in a form the causal reading can check against the propositions, as
 the article 'Developing and testing a theory' shows.
 

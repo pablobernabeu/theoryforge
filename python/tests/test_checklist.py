@@ -404,10 +404,13 @@ def test_full_validation_checks_a_claim_form_and_sign_against_its_bounds():
         _pred("h3", "directional", bounds={"lower": 0.2, "upper": 1}),
         _pred("h4", "existence", bounds={"lower": 0.2, "upper": 0.8}),
         _pred("h5", "interval", bounds={"lower": -1, "upper": 1}, claim=positive),
-        # A sign stated with a bound at 0 on a bounded scale, and an existence
-        # claim on an absolute value, are accepted.
+        # A sign stated with a bound at 0 on a bounded scale is accepted.
         _pred("h6", "directional", bounds={"lower": 0, "upper": 1}, claim=positive),
+        # An existence claim takes no bounds, on one side or on two, and
+        # without them it may state the sign nonzero.
         _pred("h7", "existence", bounds={"lower": 0.2}),
+        _pred("h8", "existence", bounds={"upper": 0.5}),
+        _pred("h9", "existence", claim={**positive, "sign": "nonzero"}),
     ], test_outcomes=[
         # A pass with the estimate outside the region is not invalid: a test
         # that fails to reject a predicted value passes it (Meehl, 1967).
@@ -420,8 +423,13 @@ def test_full_validation_checks_a_claim_form_and_sign_against_its_bounds():
         "prediction[1] is an interval claim, so its bounds need a finite lower and a finite upper; "
         "prediction[2] is a directional claim, so its bounds must leave one side open or end "
         "at 0; "
-        "prediction[3] is an existence claim, so its bounds must leave one side open; "
-        "prediction[4] claims a positive sign, so its lower bound must be 0 or above")
+        "prediction[3] is an existence claim, so it takes no bounds: the region it allows, "
+        "every value but 0, is not one interval; "
+        "prediction[4] claims a positive sign, so its lower bound must be 0 or above; "
+        "prediction[6] is an existence claim, so it takes no bounds: the region it allows, "
+        "every value but 0, is not one interval; "
+        "prediction[7] is an existence claim, so it takes no bounds: the region it allows, "
+        "every value but 0, is not one interval")
 
 
 def test_the_dossier_writes_an_extreme_severity_as_a_bound(panic_path):

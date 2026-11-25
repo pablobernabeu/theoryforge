@@ -136,7 +136,7 @@
               "lower": { "type": ["number", "null"] },
               "upper": { "type": ["number", "null"] }
             },
-            "description": "The region of the quantity the claim allows. A null or infinite bound is open, so a one-sided claim leaves one side null. post_data_severity() reads it with each test outcome's estimate and se. Full validation also requires at least one finite bound and lower not above upper."
+            "description": "The region of the quantity the claim allows. A null or infinite bound is open, so a one-sided claim leaves one side null. post_data_severity() reads it with each test outcome's estimate and se. Full validation also requires at least one finite bound, lower not above upper and a region that fits the prediction's type and the sign of its claim, so an existence prediction takes no bounds."
           },
           "claim": {
             "type": "object",

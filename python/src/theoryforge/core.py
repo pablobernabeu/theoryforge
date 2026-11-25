@@ -708,7 +708,10 @@ class Theory:
         # 16: a claim's form and sign against its bounds, where both are
         # themselves valid. A type or a sign the bounds contradict makes the
         # riskiness rubric, the precision item and the causal reading describe
-        # a different claim from the one post_data_severity() tests.
+        # a different claim from the one post_data_severity() tests. An
+        # existence claim allows every value but 0, which no bounds can state,
+        # and a one-sided region would make post_data_severity() test a
+        # directional claim.
         for i, p in enumerate(preds):
             region = _bounds_region(_field(p, "bounds"))
             if region is None:
@@ -723,9 +726,9 @@ class Theory:
             elif ty == "directional" and both and lo != 0 and up != 0:
                 errors.append(f"prediction[{i}] is a directional claim, so its bounds must leave "
                               "one side open or end at 0")
-            elif ty == "existence" and both:
-                errors.append(f"prediction[{i}] is an existence claim, so its bounds must leave "
-                              "one side open")
+            elif ty == "existence":
+                errors.append(f"prediction[{i}] is an existence claim, so it takes no bounds: the "
+                              "region it allows, every value but 0, is not one interval")
             claim = _field(p, "claim")
             sign = claim.get("sign") if isinstance(claim, dict) else None
             if sign == "positive" and not (lo is not None and lo >= 0):

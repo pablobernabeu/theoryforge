@@ -467,7 +467,10 @@ tf_validate <- function(theory, full = FALSE) {
     # 16: a claim's form and sign against its bounds, where both are
     # themselves valid. A type or a sign the bounds contradict makes the
     # riskiness rubric, the precision item and the causal reading describe a
-    # different claim from the one tf_post_data_severity() tests.
+    # different claim from the one tf_post_data_severity() tests. An existence
+    # claim allows every value but 0, which no bounds can state, and a
+    # one-sided region would make tf_post_data_severity() test a directional
+    # claim.
     for (i in seq_along(preds)) {
       region <- .tf_bounds_region(.tf_get(preds[[i]], "bounds"))
       if (is.null(region)) next
@@ -483,9 +486,10 @@ tf_validate <- function(theory, full = FALSE) {
       } else if (identical(ty, "directional") && both && lo != 0 && up != 0) {
         errors <- c(errors, sprintf(paste0("prediction[%d] is a directional claim, so its bounds ",
                                            "must leave one side open or end at 0"), i - 1L))
-      } else if (identical(ty, "existence") && both) {
-        errors <- c(errors, sprintf(paste0("prediction[%d] is an existence claim, so its bounds ",
-                                           "must leave one side open"), i - 1L))
+      } else if (identical(ty, "existence")) {
+        errors <- c(errors, sprintf(paste0("prediction[%d] is an existence claim, so it takes no ",
+                                           "bounds: the region it allows, every value but 0, is ",
+                                           "not one interval"), i - 1L))
       }
       claim <- .tf_get(preds[[i]], "claim")
       sign <- if (.tf_is_mapping(claim)) .tf_get(claim, "sign") else NULL
