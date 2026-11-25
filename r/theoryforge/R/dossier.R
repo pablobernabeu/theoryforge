@@ -211,7 +211,7 @@ tf_dossier <- function(theory, cycles = "refuse") {
 
 # What the causal graph says of each claim (API_SPEC.md section 20).
 .tf_claims_section <- function(T, cycles) {
-  recs <- tryCatch(tf_entailments(T, cycles = cycles)$claims, error = function(e) e)
+  recs <- tryCatch(tf_entailments(T, cycles = cycles)$claims, tf_refusal = function(e) e)
   if (inherits(recs, "error")) return(paste0("_Not read: ", conditionMessage(recs), "._"))
   if (length(recs) == 0L) return("_No prediction or phenomenon states a claim._")
   vapply(recs, function(r) paste0("- ", r$id, " (", r$source, "): ", .tf_claim_line(r)), "")
@@ -219,7 +219,7 @@ tf_dossier <- function(theory, cycles = "refuse") {
 
 # Which causal directions an equivalent model reverses (API_SPEC.md section 20).
 .tf_equivalence_section <- function(T) {
-  eq <- tryCatch(tf_equivalent_models(T), error = function(e) e)
+  eq <- tryCatch(tf_equivalent_models(T), tf_refusal = function(e) e)
   if (inherits(eq, "error")) return(paste0("_Not read: ", conditionMessage(eq), "._"))
   if (identical(eq$reason, "feedback_loop")) {
     return("_Not determined: the causal graph has a feedback loop._")
@@ -246,7 +246,7 @@ tf_dossier <- function(theory, cycles = "refuse") {
   for (a in .tf_list(T, "alternatives")) {
     aid <- .tf_str(a, "id")
     if (!(.tf_ne_str(aid) && length(.tf_list(a, "propositions")) > 0L)) next
-    d <- tryCatch(tf_discriminate(T, aid, cycles = cycles), error = function(e) e)
+    d <- tryCatch(tf_discriminate(T, aid, cycles = cycles), tf_refusal = function(e) e)
     if (inherits(d, "error")) {
       out <- c(out, paste0("- ", aid, ": not compared: ", conditionMessage(d)))
       next

@@ -3,6 +3,15 @@
 # tf_discriminate() read the same graph, built here once. The Python twin's
 # _causal.py holds the same routine.
 
+# Stops with a refusal of API_SPEC.md sections 27 and 31 to 33: an error of
+# class `tf_refusal`, the counterpart of the Python twin's ValueError. The
+# functions that report a refusal in place of a result catch this class alone,
+# so that any other error surfaces as it does in Python.
+.tf_refuse <- function(...) {
+  stop(structure(class = c("tf_refusal", "error", "condition"),
+                 list(message = paste0(...), call = NULL)))
+}
+
 # The construct ids in file order, refusing a repeated id. A construct without
 # an id cannot be the endpoint of a proposition, so it is skipped, and two of
 # them are no repeat.
@@ -12,8 +21,7 @@
     cid <- .tf_str(c, "id")
     if (!nzchar(cid)) next
     if (cid %in% declared) {
-      stop(caller, " requires unique construct ids; duplicate construct id: ", cid,
-           call. = FALSE)
+      .tf_refuse(caller, " requires unique construct ids; duplicate construct id: ", cid)
     }
     declared <- c(declared, cid)
   }
@@ -30,7 +38,9 @@
 # kept ordered pairs in the order first stated, as vertex indices),
 # `edge_props` (the proposition ids behind each kept pair), `assoc` (one row
 # per bidirected edge, the smaller vertex first, in the order first stated),
-# `assoc_props` and the counts `n_edges` and `n_bidirected`.
+# `assoc_props`, the counts `n_edges` and `n_bidirected` and `latent`, which
+# is TRUE for a vertex whose construct has `x_latent: true`, the mark
+# tf_read_dagitty() keeps for an unobserved variable.
 .tf_causal_graph <- function(T, caller, propositions = NULL) {
   declared <- .tf_declared_constructs(T, caller)
   props <- if (is.null(propositions)) .tf_list(T, "propositions") else propositions
@@ -53,9 +63,8 @@
     for (endpoint in c(frm, to)) {
       if (is.na(match(endpoint, declared))) {
         kind <- if (rel %in% .tf_DIRECTED) "causal propositions" else "associations"
-        stop(caller, " requires ", kind, " between declared constructs; ",
-             "proposition '", pid, "' refers to unknown construct '", endpoint, "'",
-             call. = FALSE)
+        .tf_refuse(caller, " requires ", kind, " between declared constructs; ",
+                   "proposition '", pid, "' refers to unknown construct '", endpoint, "'")
       }
     }
     if (rel %in% .tf_BIDIRECTED) {
@@ -86,6 +95,10 @@
   used <- sort(unique(c(edge_from, edge_to, match(c(assoc_from[distinct], assoc_to[distinct]), declared))))
   nodes <- declared[used]
   k <- length(nodes)
+  latent_ids <- character(0)
+  for (c in .tf_list(T, "constructs")) {
+    if (isTRUE(.tf_get(c, "x_latent"))) latent_ids <- c(latent_ids, .tf_str(c, "id"))
+  }
   rank_of <- integer(length(declared))
   rank_of[used] <- seq_along(used)
   directed <- matrix(FALSE, nrow = k, ncol = k)
@@ -100,9 +113,11 @@
   assoc <- matrix(integer(0), ncol = 2L)
   assoc_props <- list()
   for (e in seq_along(assoc_from)) {
+    # An association of a construct with itself adds nothing, and its construct
+    # is a vertex only when another proposition relates it to another.
+    if (!distinct[[e]]) next
     a <- match(assoc_from[[e]], nodes)
     b <- match(assoc_to[[e]], nodes)
-    if (a == b) next
     lo <- min(a, b)
     hi <- max(a, b)
     if (!bidirected[a, b]) {
@@ -127,6 +142,7 @@
     assoc = assoc,
     assoc_props = assoc_props,
     n_edges = length(edge_from),
-    n_bidirected = nrow(assoc)
+    n_bidirected = nrow(assoc),
+    latent = nodes %in% latent_ids
   )
 }

@@ -130,19 +130,25 @@ suppressWarnings(suppressMessages({
   edge_outcome <- function(path) {
     t <- tryCatch(tf_read(path), error = function(e) e)
     if (inherits(t, "error")) return(list(read = list(error = error_text(t))))
-    list(
+    record <- list(
       read = "ok",
       validate = attempt(isTRUE(tf_validate(t))),
       validate_full = attempt(isTRUE(tf_validate(t, full = TRUE))),
       check = attempt(check_summary(tf_check(t))),
       severity = attempt(tf_severity(t)),
       implications = attempt(tf_implications(t)),
-      entailments = attempt(tf_entailments(t)),
+      entailments = attempt(tf_entailments(t))
+    )
+    # The default leaves every claim on a graph with a feedback loop unread, so
+    # such a graph's claims are read by sigma-separation as well.
+    sigma <- attempt(tf_entailments(t, cycles = "sigma"))
+    if (identical(sigma$acyclic, FALSE)) record$entailments_sigma <- sigma
+    c(record, list(
       equivalent_models = attempt(tf_equivalent_models(t)),
       compile_sem = attempt(tf_compile_sem(t)),
       simulate = attempt(tf_simulate(t, steps = 3)),
       preregister = attempt(tf_preregister(t))
-    )
+    ))
   }
 
   # The record of an edge-case corpus, as corpus_edge_outcome() in

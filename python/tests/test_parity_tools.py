@@ -157,6 +157,22 @@ def test_edge_outcome_records_each_call_in_order(golden, tmp_path):
     json.dumps(out, allow_nan=False)
 
 
+def test_edge_outcome_reads_the_claims_on_a_feedback_loop_by_sigma_separation(golden, tmp_path):
+    path = tmp_path / "loop.theory.yaml"
+    path.write_text(
+        'schema_version: "1.1"\nid: l\ntitle: L\nmaturity: building\n'
+        "constructs:\n  - {id: a, label: A, definition: d}\n  - {id: b, label: B, definition: d}\n"
+        "propositions:\n  - {id: p1, from: a, to: b, relation: increases}\n"
+        "  - {id: p2, from: b, to: a, relation: decreases}\n",
+        encoding="utf-8",
+    )
+    out = golden.edge_outcome(path)
+    keys = OUTCOME_KEYS[:7] + ["entailments_sigma"] + OUTCOME_KEYS[7:]
+    assert list(out) == keys
+    assert out["entailments_sigma"]["criterion"] == "sigma"
+    assert out["entailments_sigma"]["acyclic"] is False
+
+
 def test_edge_outcome_stops_after_a_read_error(golden, tmp_path):
     path = tmp_path / "scalar.theory.yaml"
     path.write_text("just a string\n", encoding="utf-8")

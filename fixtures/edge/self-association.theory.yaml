@@ -1,0 +1,28 @@
+# An association of a construct with itself adds nothing, here and in the
+# rival, and c3 is related to nothing else, so it is no vertex. The graph
+# contradicts h1, so the derivation chain fails, and the rival reads h1 as the
+# theory does, so diagnosticity counts no rival.
+schema_version: "1.1"
+id: "self-association"
+title: "An association of a construct with itself"
+maturity: "developing"
+constructs:
+  - {id: c1, label: "First", definition: "The first construct."}
+  - {id: c2, label: "Second", definition: "The second construct."}
+  - {id: c3, label: "Third", definition: "The third construct."}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: "It does."}
+  - {id: p2, from: c3, to: c3, relation: associates, mechanism: "It does."}
+predictions:
+  - id: h1
+    statement: "c1 lowers c2."
+    type: directional
+    derives_from: [p1]
+    diagnostic_vs: [r]
+    claim: {kind: effect, x: c1, y: c2, sign: negative}
+alternatives:
+  - id: r
+    label: "Rival"
+    propositions:
+      - {id: r1, from: c1, to: c2, relation: increases}
+      - {id: r2, from: c3, to: c3, relation: associates}

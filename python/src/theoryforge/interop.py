@@ -146,9 +146,10 @@ def read_dagitty(text: str, id: str = "dagitty-import",
     as ``[exposure]``, ``[latent]`` or ``pos="0,1"``, and graph settings such
     as ``bb="0,0,1,1"``, are read and ignored, except that a variable marked
     ``[latent]`` keeps the mark as ``x_latent: true``. It stays a construct
-    whose relations the theory states, and a statement that holds it fixed
-    needs a measure of it before data can test it. ``diagram("causal_dag")``
-    writes the mark back.
+    whose relations the theory states. ``entailments()`` never adjusts for
+    it, while ``implications()`` may write a statement that holds it fixed,
+    which needs a measure of it before data can test it.
+    ``diagram("causal_dag")`` writes the mark back.
 
     The theory is at ``draft`` maturity and records the import in its
     provenance. It does not pass validation until each construct has a

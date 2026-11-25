@@ -47,7 +47,7 @@ NULL
 # without a claim. A graph that cannot be built leaves every claim unread.
 .tf_claim_records <- function(T, key, source, cycles) {
   recs <- tryCatch(Filter(function(r) r$source == source, tf_entailments(T, cycles = cycles)$claims),
-                   error = function(e) NULL)
+                   tf_refusal = function(e) NULL)
   refused <- is.null(recs)
   its <- .tf_list(T, key)
   out <- vector("list", length(its))
@@ -303,13 +303,11 @@ NULL
 .tf_CYCLE <- "implications requires an acyclic causal graph; cycle found: "
 
 .tf_implied_lines <- function(T, cycles) {
-  imp <- tryCatch(tf_implications(T, cycles = cycles), error = function(e) {
-    # A refusal is what the section reports: a feedback loop under the default,
-    # a repeated construct id or a directed relation naming an undeclared
-    # construct. Any other error propagates, as it does in the Python twin,
-    # which catches only the ValueError of a refusal.
-    if (startsWith(conditionMessage(e), "implications requires ")) e else stop(e)
-  })
+  # A refusal is what the section reports: a feedback loop under the default,
+  # a repeated construct id or a relation naming an undeclared construct. Any
+  # other error propagates, as it does in the Python twin, which catches only
+  # the ValueError of a refusal.
+  imp <- tryCatch(tf_implications(T, cycles = cycles), tf_refusal = function(e) e)
   if (inherits(imp, "error")) {
     # A loop is described for a reader, and any other reason is reported as it is.
     msg <- conditionMessage(imp)

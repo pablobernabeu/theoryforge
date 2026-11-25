@@ -134,7 +134,9 @@ directed relation naming an undeclared construct would shrink the graph and
 so imply independencies the theory never claimed. With
 \code{cycles = "refuse"}, the default, a cycle among the directed edges is
 refused too, and the message names a cycle that was found and the
-\code{"sigma"} option.
+\code{"sigma"} option. Each refusal is an error of class \code{tf_refusal},
+as are those of \code{\link[=tf_entailments]{tf_entailments()}}, \code{\link[=tf_equivalent_models]{tf_equivalent_models()}} and
+\code{\link[=tf_discriminate]{tf_discriminate()}}, so that a caller can catch a refusal and nothing else.
 }
 
 \examples{

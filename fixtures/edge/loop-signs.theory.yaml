@@ -1,0 +1,27 @@
+# A feedback loop that is one simple cycle scales the effects through it by
+# 1 / (1 - g), which is positive when the effects round it die out, so the
+# signs read under cycles = "sigma" are those of the paths: x raises y and z
+# through the negative loop of y and z, and s raises v despite v's negative
+# self loop. cov(y, z) can take either sign, so h4 stays open.
+schema_version: "1.1"
+id: "loop-signs"
+title: "Signs through simple feedback loops"
+maturity: "developing"
+constructs:
+  - {id: x, label: "X", definition: "A construct."}
+  - {id: y, label: "Y", definition: "A construct."}
+  - {id: z, label: "Z", definition: "A construct."}
+  - {id: s, label: "S", definition: "A construct."}
+  - {id: v, label: "V", definition: "A construct."}
+propositions:
+  - {id: p1, from: x, to: y, relation: increases, mechanism: "It does."}
+  - {id: p2, from: y, to: z, relation: increases, mechanism: "It does."}
+  - {id: p3, from: z, to: y, relation: decreases, mechanism: "It does."}
+  - {id: p4, from: s, to: v, relation: increases, mechanism: "It does."}
+  - {id: p5, from: v, to: v, relation: decreases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "x raises z.", type: directional, derives_from: [p1, p2], claim: {kind: effect, x: x, y: z, sign: positive}}
+  - {id: h2, statement: "x raises y.", type: directional, derives_from: [p1], claim: {kind: effect, x: x, y: y, sign: positive}}
+  - {id: h3, statement: "x and z rise together.", type: directional, derives_from: [p1, p2], claim: {kind: association, x: x, y: z, sign: positive}}
+  - {id: h4, statement: "y and z rise together.", type: directional, derives_from: [p2], claim: {kind: association, x: y, y: z, sign: positive}}
+  - {id: h5, statement: "s raises v.", type: directional, derives_from: [p4], claim: {kind: effect, x: s, y: v, sign: positive}}

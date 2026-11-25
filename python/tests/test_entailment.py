@@ -162,6 +162,16 @@ def test_cycles_is_checked_first():
 
 
 def _stable(rng, g):
+    """The total effects and covariances of a stable linear model with the graph, or None."""
+    m = _coefficients(rng, g)
+    if m is None:
+        return None
+    B, Om = m
+    T = np.linalg.inv(np.eye(g.k) - B)
+    return T, T @ Om @ T.T
+
+
+def _coefficients(rng, g):
     """Coefficients with the graph's signs, error covariances for its associations, or None."""
     k = g.k
     B, Om = np.zeros((k, k)), np.diag([rng.uniform(0.2, 2.0) for _ in range(k)])
@@ -174,8 +184,7 @@ def _stable(rng, g):
         Om[a, b] = Om[b, a] = rng.choice([1, -1]) * rng.uniform(0.01, 0.3) * (Om[a, a] * Om[b, b]) ** 0.5
     if max(abs(np.linalg.eigvals(B))) >= 0.95 or min(np.linalg.eigvalsh(Om)) <= 0:
         return None
-    T = np.linalg.inv(np.eye(k) - B)
-    return T, T @ Om @ T.T
+    return B, Om
 
 
 def _random_theory(rng, k):
@@ -553,3 +562,155 @@ def test_the_content_hash_reads_an_integer_too_large_for_a_double_as_r_does():
     inf["predictions"][1]["bounds"]["upper"] = math.inf
     assert tf.content_hash(t) == tf.content_hash(inf)
     assert t.preregister() and t.dossier()
+
+
+def test_an_association_of_a_construct_with_itself_adds_nothing_though_no_other_proposition_names_it():
+    # c2 is related to no other construct, so it is no vertex. Looking it up
+    # anyway raised KeyError before the association was skipped. The R suite
+    # asserts the same records.
+    rival = {"id": "r", "label": "r", "propositions": [
+        {"id": "r1", "from": "c0", "to": "c1", "relation": "increases"},
+        {"id": "r2", "from": "c2", "to": "c2", "relation": "associates"}]}
+    t = _theory([("c0", "c1", "increases"), ("c2", "c2", "associates")],
+                claims=[_claim("effect", "c0", "c1", "negative")], alternatives=[rival], k=3)
+    t.data["predictions"][0]["diagnostic_vs"] = ["r"]
+    imp = t.implications()
+    assert (imp["constructs"], imp["n_bidirected"], imp["n_implications"]) == (["c0", "c1"], 0, 0)
+    assert t.entailments()["claims"][0]["verdict"] == "contradicted"
+    assert t.equivalent_models()["computed"] is True
+    assert t.discriminate("r")["markov_equivalent"] is True
+
+    def status(t, item):
+        it = next(i for i in t.check()["items"] if i["id"] == item)
+        return it["status"], it["score"]
+
+    assert status(t, "derivation_chain") == ("fail", 0)
+    assert status(t, "diagnosticity") == ("warn", 0)
+    assert "contradicted by the causal graph" in t.preregister()
+    assert "- r: claims it discriminates: none" in t.dossier()
+    assert tf.appraise_amendment(t, t.copy())["implications_compared"] is True
+    # The same association stated by the rival alone.
+    del t.data["propositions"][1]
+    assert status(t, "diagnosticity") == ("warn", 0)
+
+
+def test_a_marginal_association_takes_the_signs_of_the_simple_treks_alone():
+    # c0 -> c1 -> c2 is also the trek c1 <- c0 -> c1 -> c2, whose two paths
+    # share c0 -> c1. Its term holds that coefficient squared, so it adds no
+    # sign, and the association of c1 and c2 is positive whatever c0 does to c1
+    # (Wright, 1934). The R suite asserts the same records.
+    def read(props, claim):
+        rec = _theory(props, claims=[claim]).entailments()["claims"][0]
+        return rec["derived"], rec["verdict"], rec["basis"]
+
+    pos = _claim("association", "c1", "c2", "positive")
+    fixed = ("positive", "entailed", "paths_agree")
+    assert read([("c0", "c1", "causes"), ("c1", "c2", "increases")], pos) == fixed
+    assert read([("c0", "c1", "causes"), ("c1", "c2", "increases")],
+                _claim("association", "c2", "c1", "positive")) == fixed
+    assert read([("c0", "c1", "increases"), ("c0", "c3", "increases"), ("c3", "c1", "decreases"),
+                 ("c1", "c2", "increases")], pos) == fixed
+    assert read([("c0", "c1", "causes"), ("c1", "c2", "increases"), ("c1", "c3", "associates")],
+                pos) == fixed
+    # Here c1 <- c0 -> c2 is a simple trek of no fixed sign.
+    assert read([("c0", "c1", "causes"), ("c0", "c2", "increases"), ("c1", "c2", "increases")],
+                pos) == ("undetermined", "undetermined", "unsigned")
+    rival = {"id": "r", "label": "r", "propositions": [
+        {"id": "r1", "from": "c1", "to": "c2", "relation": "increases"},
+        {"id": "r2", "from": "c0", "to": "c2", "relation": "causes"}]}
+    t = _theory([("c0", "c1", "causes"), ("c1", "c2", "increases")], claims=[pos], alternatives=[rival])
+    assert next(i for i in t.check()["items"] if i["id"] == "derivation_chain")["status"] == "pass"
+    assert not [a for a in t.discriminate("r")["associations"] if (a["a"], a["b"]) == ("c1", "c2")]
+
+
+def test_a_feedback_loop_that_is_one_simple_cycle_leaves_the_signs_of_the_paths_through_it():
+    # The loop of c1 and c2 has a negative gain g, and the effects through it
+    # are those of the paths times 1 / (1 - g) > 0. So are those through the
+    # negative self loop of c4. When c2 and c3 also raise each other, the walks
+    # from c0 to c2 take both signs, and the reading stays conservative. The R
+    # suite asserts the same records.
+    t = _theory([("c0", "c1", "increases"), ("c1", "c2", "increases"), ("c2", "c1", "decreases"),
+                 ("c3", "c4", "increases"), ("c4", "c4", "decreases")],
+                claims=[_claim("effect", "c0", "c2", "positive"), _claim("effect", "c0", "c1", "positive"),
+                        _claim("association", "c0", "c2", "positive"),
+                        _claim("association", "c1", "c2", "positive"),
+                        _claim("effect", "c3", "c4", "positive"), _claim("effect", "c2", "c1", "negative")],
+                k=5)
+    got = [(c["derived"], c["basis"]) for c in t.entailments(cycles="sigma")["claims"]]
+    assert got == [("positive", "paths_agree"), ("positive", "paths_agree"), ("positive", "paths_agree"),
+                   ("undetermined", "opposite_signs"), ("positive", "paths_agree"),
+                   ("negative", "paths_agree")]
+    shared = _theory([("c0", "c1", "increases"), ("c1", "c2", "increases"), ("c2", "c1", "decreases"),
+                      ("c2", "c3", "increases"), ("c3", "c2", "increases")],
+                     claims=[_claim("effect", "c0", "c2", "positive")])
+    assert shared.entailments(cycles="sigma")["claims"][0]["basis"] == "opposite_signs"
+
+
+def test_a_sign_read_through_a_self_loop_or_a_simple_cycle_holds_in_every_stable_linear_model():
+    # Graphs with self loops and two-cycles, each effect taken in the graph
+    # without the edges into the intervened construct, as an intervention
+    # leaves it.
+    rng = random.Random(41)
+    for _ in range(40):
+        k = rng.randint(2, 5)
+        props = []
+        for i, j in itertools.product(range(k), repeat=2):
+            if rng.random() < (0.45 if i < j else 0.12 if i == j else 0.15):
+                props.append((f"c{i}", f"c{j}", rng.choice(["increases", "decreases", "causes"])))
+        t = _theory(props, k=k)
+        g = _Graph(causal_graph(t.data, "t"), "sigma", t.data["propositions"])
+        if g.k < 2:
+            continue
+        for _ in range(25):
+            m = _coefficients(rng, g)
+            if m is None:
+                continue
+            B = m[0]
+            for x, y in itertools.permutations(range(g.k), 2):
+                cut = B.copy()
+                cut[x, :] = 0
+                if max(abs(np.linalg.eigvals(cut))) >= 0.999:
+                    continue
+                value = np.linalg.inv(np.eye(g.k) - cut)[y, x]
+                derived = g.effect(x, y)[0]
+                if derived == "positive":
+                    assert value > 0
+                elif derived == "negative":
+                    assert value < 0
+                elif derived == "zero":
+                    assert abs(value) < 1e-9
+
+
+def test_a_construct_marked_latent_is_never_adjusted_for():
+    # dagitty finds no adjustment set for the first graph and {w} for the
+    # second. The R suite asserts the same records.
+    def read(text):
+        t = tf.read_dagitty(text)
+        t.add_prediction("h1", "x raises y.", "directional",
+                         claim={"kind": "effect", "x": "x", "y": "y", "sign": "positive"})
+        return t, t.entailments()["claims"][0]
+
+    first, rec = read("dag { u [latent]; u -> x; u -> y; x -> y }")
+    assert (rec["identified"], rec["adjustment"]) == (False, None)
+    assert "   - Adjustment for an observational test: none suffices\n" in first.preregister()
+    assert read("dag { u [latent]; u -> w -> x; u -> y; x -> y }")[1]["adjustment"] == ["w"]
+
+
+def test_a_canonical_set_of_more_than_12_constructs_is_pruned_to_a_minimal_one():
+    # The R suite asserts the same records.
+    def many(edges):
+        t = tf.new_theory("m", "M")
+        for n in [f"a{i}" for i in range(1, 14)] + ["c", "x", "y"]:
+            t.add_construct(n, n, "A construct.")
+        for i, (a, b) in enumerate(edges, start=1):
+            t.add_proposition(f"p{i}", a, b, "increases")
+        t.add_prediction("h1", "x raises y.", "directional", derives_from=["p1"],
+                         claim={"kind": "effect", "x": "x", "y": "y", "sign": "positive"})
+        return t
+
+    direct = many([(f"a{i}", "x") for i in range(1, 14)] + [("x", "y")])
+    rec = direct.entailments()["claims"][0]
+    assert (rec["identified"], rec["adjustment"]) == (True, [])
+    assert "   - Adjustment for an observational test: none needed\n" in direct.preregister()
+    confounded = many([(f"a{i}", "c") for i in range(1, 14)] + [("c", "x"), ("c", "y"), ("x", "y")])
+    assert confounded.entailments()["claims"][0]["adjustment"] == ["c"]

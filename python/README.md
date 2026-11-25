@@ -159,7 +159,7 @@ fallible measures is rejected too often, so a latent-variable model is the bette
 `entailments()` reads each claim of a prediction or phenomenon against the graph and says
 whether the graph entails it, contradicts it or leaves it open. For an effect in a graph
 without a feedback loop, it also says whether adjusting for some of the constructs
-identifies the effect in observational data and gives a smallest such set.
+identifies the effect in observational data and names a minimal such set.
 `equivalent_models()` lists the causal directions that no observational study can test.
 `discriminate()` sets the theory against a rival, either an alternative that states its own
 propositions or another theory, and lists the claims, independencies and signs that would

@@ -218,6 +218,8 @@ test_that("an effect claim names a smallest adjustment set", {
 })
 
 test_that("each adjustment set is one dagitty accepts, of the smallest size", {
+  # Some constructs are marked latent, which dagitty reads from the same mark
+  # and neither adjusts for.
   skip_if_not_installed("dagitty")
   set.seed(5)
   for (rep in 1:150) {
@@ -243,19 +245,96 @@ test_that("each adjustment set is one dagitty accepts, of the smallest size", {
     if (length(props) == 0L) next
     xy <- sample(nodes, 2)
     t <- small_theory(props, claims = list(claim("effect", xy[[1]], xy[[2]], "positive")), k = k)
+    latent <- setdiff(nodes[stats::runif(k) < 0.2], xy)
+    for (i in seq_along(t$constructs)) {
+      if (t$constructs[[i]]$id %in% latent) t$constructs[[i]]$x_latent <- TRUE
+    }
     rec <- tf_entailments(t)$claims[[1]]
     if (rec$verdict == "not_evaluated") next
-    g <- dagitty::dagitty(paste0("dag { ", paste(c(nodes, lines), collapse = "; "), " }"))
+    marks <- if (length(latent)) paste(latent, "[latent]") else character(0)
+    g <- dagitty::dagitty(paste0("dag { ", paste(c(nodes, marks, lines), collapse = "; "), " }"))
     sets <- dagitty::adjustmentSets(g, exposure = xy[[1]], outcome = xy[[2]], type = "minimal")
     if (!rec$identified) {
       expect_length(sets, 0L)
     } else {
       z <- unlist(rec$adjustment)
       if (is.null(z)) z <- character(0)
+      expect_false(any(z %in% latent))
       expect_true(dagitty::isAdjustmentSet(g, z, exposure = xy[[1]], outcome = xy[[2]]))
       expect_equal(length(z), min(lengths(sets)))
     }
   }
+})
+
+test_that("a construct marked latent is never adjusted for", {
+  # dagitty finds no adjustment set for the first graph and {w} for the
+  # second. The Python suite asserts the same records.
+  read <- function(text) {
+    t <- tf_add_prediction(tf_read_dagitty(text), "h1", "x raises y.", "directional",
+                           claim = list(kind = "effect", x = "x", y = "y", sign = "positive"))
+    list(t, tf_entailments(t)$claims[[1]])
+  }
+  first <- read("dag { u [latent]; u -> x; u -> y; x -> y }")
+  expect_identical(first[[2]][c("identified", "adjustment")], list(identified = FALSE, adjustment = NA))
+  expect_match(tf_preregister(first[[1]]), "   - Adjustment for an observational test: none suffices\n")
+  second <- read("dag { u [latent]; u -> w -> x; u -> y; x -> y }")
+  expect_identical(unlist(second[[2]]$adjustment), "w")
+})
+
+test_that("a canonical set of more than 12 constructs is pruned to a minimal one", {
+  # The Python suite asserts the same records.
+  many <- function(edges) {
+    names <- c(paste0("a", 1:13), "c", "x", "y")
+    t <- tf_theory("m", "M")
+    for (n in names) t <- tf_add_construct(t, n, n, "A construct.")
+    for (i in seq_along(edges)) {
+      t <- tf_add_proposition(t, paste0("p", i), edges[[i]][[1]], edges[[i]][[2]], "increases")
+    }
+    tf_add_prediction(t, "h1", "x raises y.", "directional", derives_from = "p1",
+                      claim = list(kind = "effect", x = "x", y = "y", sign = "positive"))
+  }
+  direct <- many(c(lapply(1:13, function(i) c(paste0("a", i), "x")), list(c("x", "y"))))
+  rec <- tf_entailments(direct)$claims[[1]]
+  expect_true(rec$identified)
+  expect_length(rec$adjustment, 0L)
+  expect_match(tf_preregister(direct), "   - Adjustment for an observational test: none needed\n")
+  confounded <- many(c(lapply(1:13, function(i) c(paste0("a", i), "c")),
+                       list(c("c", "x"), c("c", "y"), c("x", "y"))))
+  expect_identical(unlist(tf_entailments(confounded)$claims[[1]]$adjustment), "c")
+})
+
+test_that("a pruned adjustment set is one dagitty accepts and none of its members can go", {
+  # Fifteen constructs upstream of x and y give a canonical set of more than 12
+  # members, which is pruned in one pass.
+  skip_if_not_installed("dagitty")
+  set.seed(12)
+  pruned <- 0L
+  for (rep in 1:20) {
+    up <- paste0("c", 0:14)
+    nodes <- c(up, "x", "y")
+    props <- list(c("x", "y", "increases"))
+    for (i in seq_along(up)) {
+      for (j in seq_along(up)) {
+        u <- stats::runif(1)
+        if (i < j && u < 0.15) props[[length(props) + 1L]] <- c(up[[i]], up[[j]], "increases")
+        if (i < j && u > 0.97) props[[length(props) + 1L]] <- c(up[[i]], up[[j]], "associates")
+      }
+      for (end in c("x", "y")) {
+        if (stats::runif(1) < 0.5) props[[length(props) + 1L]] <- c(up[[i]], end, "increases")
+      }
+    }
+    t <- small_theory(props, claims = list(claim("effect", "x", "y", "positive")), k = 0L)
+    t$constructs <- lapply(nodes, function(n) list(id = n, label = n, definition = "d"))
+    rec <- tf_entailments(t)$claims[[1]]
+    if (!isTRUE(rec$identified)) next
+    pruned <- pruned + 1L
+    lines <- vapply(props, function(p) paste(p[[1]], if (p[[3]] == "associates") "<->" else "->", p[[2]]), "")
+    g <- dagitty::dagitty(paste0("dag { ", paste(c(nodes, lines), collapse = "; "), " }"))
+    z <- as.character(unlist(rec$adjustment))
+    expect_true(dagitty::isAdjustmentSet(g, z, exposure = "x", outcome = "y"))
+    for (v in z) expect_false(dagitty::isAdjustmentSet(g, setdiff(z, v), exposure = "x", outcome = "y"))
+  }
+  expect_gt(pruned, 10L)
 })
 
 test_that("the content hash is SHA-256 of the canonical form", {
@@ -374,4 +453,107 @@ test_that("the causal_dag export keeps an association between constructs no arro
     tf_add_proposition("p2", "z", "w", "associates")
   expect_identical(tf_diagram(t, "causal_dag"), "dag {\n  x -> y\n  z <-> w\n}\n")
   expect_identical(unlist(tf_implications(t)$constructs), c("x", "y", "z", "w"))
+})
+
+test_that("an association of a construct with itself adds nothing, though no other proposition names it", {
+  # c2 is related to no other construct, so it is no vertex. Looking it up
+  # anyway failed before the association was skipped. The Python suite asserts
+  # the same records.
+  t <- small_theory(list(c("c0", "c1", "increases"), c("c2", "c2", "associates")),
+                    claims = list(claim("effect", "c0", "c1", "negative")), k = 3L)
+  t$predictions[[1]]$diagnostic_vs <- list("r")
+  t$alternatives <- list(list(id = "r", label = "r", propositions = list(
+    list(id = "r1", from = "c0", to = "c1", relation = "increases"),
+    list(id = "r2", from = "c2", to = "c2", relation = "associates"))))
+  imp <- tf_implications(t)
+  expect_identical(list(unlist(imp$constructs), imp$n_bidirected, imp$n_implications),
+                   list(c("c0", "c1"), 0L, 0L))
+  expect_identical(tf_entailments(t)$claims[[1]]$verdict, "contradicted")
+  expect_true(tf_equivalent_models(t)$computed)
+  expect_true(tf_discriminate(t, "r")$markov_equivalent)
+  status <- function(t, id) Filter(function(i) i$id == id, tf_check(t)$items)[[1]][c("status", "score")]
+  expect_identical(status(t, "derivation_chain"), list(status = "fail", score = 0))
+  expect_identical(status(t, "diagnosticity"), list(status = "warn", score = 0))
+  expect_match(tf_preregister(t), "contradicted by the causal graph", fixed = TRUE)
+  expect_match(tf_dossier(t), "- r: claims it discriminates: none", fixed = TRUE)
+  expect_true(tf_appraise_amendment(t, t)$implications_compared)
+  # The same association stated by the rival alone.
+  t$propositions[[2]] <- NULL
+  expect_identical(status(t, "diagnosticity"), list(status = "warn", score = 0))
+})
+
+test_that("a refusal of the causal graph has its own class, and nothing else is read as one", {
+  # The functions that report a refusal in place of a result catch this class
+  # alone, as the Python twin catches ValueError alone.
+  expect_error(tf_entailments(small_theory(list()), cycles = "loops"), class = "tf_refusal")
+  expect_error(tf_implications(small_theory(list(c("c0", "c9", "causes")))),
+               "proposition 'p0' refers to unknown construct 'c9'", class = "tf_refusal")
+  expect_error(tf_implications(small_theory(list(c("c0", "c1", "causes"), c("c1", "c0", "causes")))),
+               "implications requires an acyclic causal graph", class = "tf_refusal")
+  expect_error(tf_discriminate(small_theory(list()), "r"), class = "tf_refusal")
+  t <- small_theory(list(c("c0", "c1", "increases")), claims = list(claim("effect", "c0", "c1", "positive")))
+  local_mocked_bindings(.tf_read_with = function(G, cl) stop("an internal fault"))
+  expect_error(tf_check(t), "an internal fault")
+  expect_error(tf_preregister(t), "an internal fault")
+})
+
+test_that("a marginal association takes the signs of the simple treks alone", {
+  # c0 -> c1 -> c2 is also the trek c1 <- c0 -> c1 -> c2, whose two paths share
+  # c0 -> c1. Its term holds that coefficient squared, so it adds no sign, and
+  # the association of c1 and c2 is positive whatever c0 does to c1 (Wright,
+  # 1934). The Python suite asserts the same records.
+  read <- function(props, cl) {
+    rec <- tf_entailments(small_theory(props, claims = list(cl)))$claims[[1]]
+    paste(rec$derived, rec$verdict, rec$basis)
+  }
+  pos <- claim("association", "c1", "c2", "positive")
+  expect_identical(read(list(c("c0", "c1", "causes"), c("c1", "c2", "increases")), pos),
+                   "positive entailed paths_agree")
+  expect_identical(read(list(c("c0", "c1", "causes"), c("c1", "c2", "increases")),
+                        claim("association", "c2", "c1", "positive")),
+                   "positive entailed paths_agree")
+  expect_identical(read(list(c("c0", "c1", "increases"), c("c0", "c3", "increases"),
+                             c("c3", "c1", "decreases"), c("c1", "c2", "increases")), pos),
+                   "positive entailed paths_agree")
+  expect_identical(read(list(c("c0", "c1", "causes"), c("c1", "c2", "increases"),
+                             c("c1", "c3", "associates")), pos),
+                   "positive entailed paths_agree")
+  # Here c1 <- c0 -> c2 is a simple trek of no fixed sign.
+  expect_identical(read(list(c("c0", "c1", "causes"), c("c0", "c2", "increases"),
+                             c("c1", "c2", "increases")), pos),
+                   "undetermined undetermined unsigned")
+  t <- small_theory(list(c("c0", "c1", "causes"), c("c1", "c2", "increases")), claims = list(pos),
+                    alternatives = list(list(id = "r", label = "r", propositions = list(
+                      list(id = "r1", from = "c1", to = "c2", relation = "increases"),
+                      list(id = "r2", from = "c0", to = "c2", relation = "causes")))))
+  item <- Filter(function(i) i$id == "derivation_chain", tf_check(t)$items)[[1]]
+  expect_identical(item$status, "pass")
+  expect_false(any(vapply(tf_discriminate(t, "r")$associations,
+                          function(a) a$a == "c1" && a$b == "c2", logical(1))))
+})
+
+test_that("a feedback loop that is one simple cycle leaves the signs of the paths through it", {
+  # The loop of c1 and c2 has a negative gain g, and the effects through it are
+  # those of the paths times 1 / (1 - g) > 0. So are those through the negative
+  # self loop of c4. When c2 and c3 also raise each other, the walks from c0 to
+  # c2 take both signs, and the reading stays conservative. The Python suite
+  # asserts the same records.
+  t <- small_theory(list(c("c0", "c1", "increases"), c("c1", "c2", "increases"),
+                         c("c2", "c1", "decreases"), c("c3", "c4", "increases"),
+                         c("c4", "c4", "decreases")),
+                    claims = list(claim("effect", "c0", "c2", "positive"),
+                                  claim("effect", "c0", "c1", "positive"),
+                                  claim("association", "c0", "c2", "positive"),
+                                  claim("association", "c1", "c2", "positive"),
+                                  claim("effect", "c3", "c4", "positive"),
+                                  claim("effect", "c2", "c1", "negative")), k = 5L)
+  got <- vapply(tf_entailments(t, cycles = "sigma")$claims, function(c) paste(c$derived, c$basis), "")
+  expect_identical(got, c("positive paths_agree", "positive paths_agree", "positive paths_agree",
+                          "undetermined opposite_signs", "positive paths_agree",
+                          "negative paths_agree"))
+  shared <- small_theory(list(c("c0", "c1", "increases"), c("c1", "c2", "increases"),
+                              c("c2", "c1", "decreases"), c("c2", "c3", "increases"),
+                              c("c3", "c2", "increases")),
+                         claims = list(claim("effect", "c0", "c2", "positive")))
+  expect_identical(tf_entailments(shared, cycles = "sigma")$claims[[1]]$basis, "opposite_signs")
 })

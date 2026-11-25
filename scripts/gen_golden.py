@@ -167,7 +167,7 @@ def edge_outcome(path: Path) -> dict:
         t = tf.read(path)
     except Exception as err:
         return {"read": {"error": error_text(err)}}
-    return {
+    record = {
         "read": "ok",
         "validate": _attempt(t.validate),
         "validate_full": _attempt(lambda: t.validate(full=True)),
@@ -175,11 +175,19 @@ def edge_outcome(path: Path) -> dict:
         "severity": _attempt(t.severity),
         "implications": _attempt(t.implications),
         "entailments": _attempt(t.entailments),
+    }
+    # The default leaves every claim on a graph with a feedback loop unread, so
+    # such a graph's claims are read by sigma-separation as well.
+    sigma = _attempt(lambda: t.entailments(cycles="sigma"))
+    if sigma.get("acyclic") is False:
+        record["entailments_sigma"] = sigma
+    record.update({
         "equivalent_models": _attempt(t.equivalent_models),
         "compile_sem": _attempt(t.compile_sem),
         "simulate": _attempt(lambda: t.simulate(steps=3)),
         "preregister": _attempt(t.preregister),
-    }
+    })
+    return record
 
 
 def corpus_edge_outcome(path: Path) -> dict:

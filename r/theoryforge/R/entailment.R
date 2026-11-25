@@ -3,7 +3,8 @@
 
 .tf_CLAIM_KINDS <- c("effect", "association")
 # The largest canonical adjustment set whose subsets are searched for a smallest
-# valid one (API_SPEC.md section 31).
+# valid one. A larger one is pruned to a minimal valid set (API_SPEC.md
+# section 31).
 .tf_ADJUSTMENT_SEARCH <- 12L
 .tf_CLAIM_SIGNS <- c("positive", "negative", "zero", "nonzero")
 
@@ -32,34 +33,95 @@
 }
 
 # For each vertex, the sign set of the directed walks to it from `start`. The
-# empty walk counts, so `start` holds POS. Each state (vertex, sign) is visited
-# once, so the search ends on a graph with feedback loops too. With `held`, no
-# walk returns to `start`, as when an intervention holds it fixed and so cuts
-# the edges into it.
+# empty walk counts, so `start` holds POS. With `held`, the edges into `start`
+# are left out, so that no walk returns to it, as when an intervention holds it
+# fixed. A strong component whose edges form one simple cycle, a self loop
+# included, has as many edges as vertices, and the effects within it are the
+# path along the cycle times 1 / (1 - g), for the cycle's gain g, which is
+# positive whenever the effects round the loop die out. A walk that enters such
+# a component therefore never closes the cycle back to the vertex where it
+# entered. Other walks may go round a loop. The search runs over the states
+# (vertex, sign, the vertex where the walk entered its simple cycle or 0), each
+# visited once, so it ends on a graph with feedback loops too.
 .tf_walk_signs <- function(directed, sign, k, start, held = FALSE) {
+  d <- directed
+  if (held) d[, start] <- FALSE
+  comps <- .tf_strong_components(.tf_reach(d, k))
+  comp <- integer(k)
+  for (c in seq_along(comps)) comp[comps[[c]]] <- c
+  simple <- vapply(comps, function(m) sum(d[m, m]) == length(m), logical(1))
+  bits <- c(.tf_POS, .tf_NEG, .tf_UNK)
   masks <- integer(k)
   masks[[start]] <- .tf_POS
+  e0 <- if (simple[[comp[[start]]]]) start else 0L
+  seen <- array(FALSE, c(k, 3L, k + 1L))
+  seen[start, 1L, e0 + 1L] <- TRUE
   qv <- start
-  qb <- .tf_POS
+  qb <- 1L
+  qe <- e0
   while (length(qv) > 0L) {
     n <- length(qv)
     v <- qv[[n]]
-    bit <- qb[[n]]
+    bit <- bits[[qb[[n]]]]
+    entry <- qe[[n]]
     qv <- qv[-n]
     qb <- qb[-n]
-    for (w in which(directed[v, ])) {
-      if (held && w == start) next
+    qe <- qe[-n]
+    for (w in which(d[v, ])) {
+      if (comp[[w]] == comp[[v]]) {
+        if (w == entry) next
+        ne <- entry
+      } else {
+        ne <- if (simple[[comp[[w]]]]) w else 0L
+      }
       nxt <- .tf_sign_mul(bit, .tf_edge_mask(sign[v, w]))
-      for (b in c(.tf_POS, .tf_NEG, .tf_UNK)) {
-        if (bitwAnd(nxt, b) != 0L && bitwAnd(masks[[w]], b) == 0L) {
-          masks[[w]] <- bitwOr(masks[[w]], b)
+      for (i in 1:3) {
+        if (bitwAnd(nxt, bits[[i]]) == 0L) next
+        masks[[w]] <- bitwOr(masks[[w]], bits[[i]])
+        if (!seen[w, i, ne + 1L]) {
+          seen[w, i, ne + 1L] <- TRUE
           qv <- c(qv, w)
-          qb <- c(qb, b)
+          qb <- c(qb, i)
+          qe <- c(qe, ne)
         }
       }
     }
   }
   masks
+}
+
+# The sign sets of the covariances of every pair of vertices of an acyclic
+# graph, as a k by k matrix, by Wright's (1934) rule: the covariance is a sum
+# over the simple treks between the two, those whose two directed paths share
+# no vertex but their source, each the product of its coefficients and the
+# variance of its source. For b that does not reach a, every simple trek
+# between them ends in an edge p -> b from a parent p of b, or is an association
+# of b with a vertex that reaches a, so the set of (a, b) is the union over the
+# parents p of the edge's sign times the set of (a, p), and it gains UNK for
+# such an association. The pairs are taken with the vertices in an order in
+# which no vertex comes before one that reaches it, and the order does not
+# change the result. A trek whose two paths share a segment, such as
+# u <- t -> u -> y, holds a coefficient squared, so reading its two copies as
+# independent signs would leave a fixed sign open.
+.tf_cov_signs <- function(G) {
+  k <- G$k
+  r <- G$r
+  S <- matrix(0L, nrow = k, ncol = k)
+  diag(S) <- .tf_POS
+  ord <- order(colSums(r), seq_len(k))
+  for (j in seq_len(k)) {
+    b <- ord[[j]]
+    parents <- which(G$directed[, b])
+    joined <- G$bidirected[, b]
+    for (a in ord[seq_len(j - 1L)]) {
+      m <- 0L
+      for (p in parents) m <- bitwOr(m, .tf_sign_mul(.tf_edge_mask(G$sign[p, b]), S[a, p]))
+      if (any(joined & r[, a])) m <- bitwOr(m, .tf_UNK)
+      S[a, b] <- m
+      S[b, a] <- m
+    }
+  }
+  S
 }
 
 # The derived sign of a sign set, and the basis of the derivation.
@@ -184,15 +246,22 @@
 
 .tf_association <- function(G, x, y) {
   r <- G$r
-  mask <- 0L
-  for (t in seq_len(G$k)) {
-    mask <- bitwOr(mask, .tf_sign_mul(.tf_walks(G, t)[[x]], .tf_walks(G, t)[[y]]))
-  }
   na <- nrow(G$assoc)
-  for (row in seq_len(na)) {
-    a <- G$assoc[row, 1L]
-    b <- G$assoc[row, 2L]
-    if ((r[a, x] && r[b, y]) || (r[a, y] && r[b, x])) mask <- bitwOr(mask, .tf_UNK)
+  if (length(G$feedback) == 0L) {
+    if (is.null(G$walk_cache[["cov"]])) G$walk_cache[["cov"]] <- .tf_cov_signs(G)
+    mask <- G$walk_cache[["cov"]][x, y]
+  } else {
+    # With feedback loops, the treks are read as pairs of walks from a common
+    # source, which counts a trek whose two walks share a segment as well.
+    mask <- 0L
+    for (t in seq_len(G$k)) {
+      mask <- bitwOr(mask, .tf_sign_mul(.tf_walks(G, t)[[x]], .tf_walks(G, t)[[y]]))
+    }
+    for (row in seq_len(na)) {
+      a <- G$assoc[row, 1L]
+      b <- G$assoc[row, 2L]
+      if ((r[a, x] && r[b, y]) || (r[a, y] && r[b, x])) mask <- bitwOr(mask, .tf_UNK)
+    }
   }
   d <- .tf_derived(mask)
   common <- function(u, e) any(r[, u] & r[, e])
@@ -218,14 +287,17 @@
   list(derived = d[[1L]], basis = d[[2L]], via = .tf_ordered_props(G, on))
 }
 
-# A smallest set of constructs whose adjustment identifies the effect of x on
-# y, as vertex indices, or NULL. A set is valid when it holds no descendant of
-# a vertex on a proper causal path from x to y and m-separates the two once the
+# A set of constructs whose adjustment identifies the effect of x on y, as
+# vertex indices, or NULL. A set is valid when it holds no descendant of a
+# vertex on a proper causal path from x to y and m-separates the two once the
 # first edge of each such path is removed. The ancestors of x and y that meet
-# the first condition form the canonical set, which is valid if any set is (van
-# der Zander et al., 2019). Its subsets are tried by size and, within a size,
-# in vertex order, and the first valid one is returned. A canonical set of more
-# than .tf_ADJUSTMENT_SEARCH members is returned whole. A graph with feedback
+# the first condition and are not marked latent form the canonical set, which
+# is valid if any set of constructs that are not marked latent is (van der
+# Zander et al., 2019). Its subsets are tried by size and, within a size, in
+# vertex order, and the first valid one, a smallest, is returned. A canonical
+# set of more than .tf_ADJUSTMENT_SEARCH members is pruned instead: each
+# member in turn, in vertex order, is dropped when the others left still
+# separate the two, which leaves a minimal valid set. A graph with feedback
 # loops gets NULL, since the criterion is not established for it.
 .tf_adjustment <- function(G, x, y) {
   if (length(G$feedback) > 0L) return(NULL)
@@ -233,12 +305,22 @@
   r <- G$r
   on_path <- which(seq_len(k) != x & r[x, ] & r[, y])
   forbidden <- unique(c(x, which(apply(r[on_path, , drop = FALSE], 2L, any))))
-  canonical <- setdiff(which(r[, x] | r[, y]), c(forbidden, y))
+  canonical <- setdiff(which((r[, x] | r[, y]) & !G$latent), c(forbidden, y))
   d <- G$directed
   d[x, on_path] <- FALSE
   rd <- .tf_reach(d, k)
   if (!.tf_m_separated(d, G$bidirected, rd, x, y, canonical)) return(NULL)
-  if (length(canonical) > .tf_ADJUSTMENT_SEARCH) return(canonical)
+  if (length(canonical) > .tf_ADJUSTMENT_SEARCH) {
+    # Every member is an ancestor of x or y in the proper back-door graph, and
+    # separation by such sets is separation in one undirected graph, so a
+    # member kept once stays needed and one pass gives a minimal set.
+    z <- canonical
+    for (v in canonical) {
+      rest <- z[z != v]
+      if (.tf_m_separated(d, G$bidirected, rd, x, y, rest)) z <- rest
+    }
+    return(z)
+  }
   for (size in 0:length(canonical)) {
     # combn() reads a single number as the range 1:n, so a one-member set is
     # its own only subset of size one.
@@ -257,8 +339,8 @@
 }
 
 # The derivation of one claim: list(derived, verdict, basis, faithfulness, via,
-# identified, adjustment). The last two are NA and NULL except for an evaluated
-# effect claim on an acyclic graph.
+# identified, adjustment). The last two are NA except for an evaluated effect
+# claim on an acyclic graph, and adjustment is NA too when identified is FALSE.
 .tf_read_with <- function(G, cl) {
   out <- function(derived, verdict, basis, faithfulness = FALSE, via = character(0),
                   adjust = NULL) {
@@ -299,7 +381,7 @@
 .tf_check_cycles <- function(cycles, caller) {
   if (!is.character(cycles) || length(cycles) != 1L || is.na(cycles) ||
       !(cycles %in% c("refuse", "sigma"))) {
-    stop(caller, " requires cycles to be 'refuse' or 'sigma'", call. = FALSE)
+    .tf_refuse(caller, " requires cycles to be 'refuse' or 'sigma'")
   }
 }
 
@@ -324,17 +406,21 @@
 #' positive sign and \code{decreases} a negative one, and the other relations
 #' state no sign. The sign of an effect is the product of the signs along each
 #' directed path from \code{x} to \code{y}, and the sign of a marginal
-#' association the product along each trek, a pair of directed paths from a
-#' common source to the two constructs. A trek through an association has no
-#' fixed sign. When every path or trek has the same sign, the graph fixes the
-#' sign of the quantity, and when none exists, the quantity is zero (Wright,
-#' 1934). A conditional association is zero when the two constructs are
-#' m-separated given the others and nonzero otherwise.
+#' association the product along each simple trek, a pair of directed paths
+#' from a common source to the two constructs that share no other construct. A
+#' trek through an association has no fixed sign. When every path or trek has
+#' the same sign, the graph fixes the sign of the quantity, and when none
+#' exists, the quantity is zero (Wright, 1934). A trek whose two paths share an
+#' edge adds no term of its own, since the square of that edge's coefficient is
+#' part of a variance, so when \code{t} causes \code{u} and \code{u}
+#' increases \code{y}, \code{u} and \code{y} are positively associated. A
+#' conditional association is zero when the two constructs are m-separated
+#' given the others and nonzero otherwise.
 #'
 #' Each claim is then \code{entailed}, \code{contradicted},
 #' \code{undetermined} when the graph leaves the sign open, or
 #' \code{not_evaluated} when the claim is incomplete, names a construct that no
-#' directed relation names, or meets a feedback loop under
+#' proposition relates to another, or meets a feedback loop under
 #' \code{cycles = "refuse"}. \code{faithfulness} is \code{TRUE} when the
 #' verdict relies on routes of unknown or opposite signs not cancelling
 #' exactly. The derivations assume a linear structural model, or at least that
@@ -342,7 +428,24 @@
 #' and that no common cause of two constructs is left out unless an
 #' association stands for it. Under \code{cycles = "sigma"}, each feedback loop
 #' is assumed to settle to a unique equilibrium, and the signs further assume
-#' that the effects around each loop die out.
+#' that the effects around each loop die out. A loop that is one simple cycle
+#' then multiplies the effects through it by a positive factor, so the signs
+#' through it are those of the paths. The walks round a loop of any other
+#' shape are read as they are, and a graph with feedback loops reads each trek
+#' as a pair of walks from a common source, so a sign that the graph fixes can
+#' be left open there.
+#'
+#' For an effect claim on an acyclic graph, \code{identified} says whether
+#' adjusting for some set of the theory's constructs would identify the effect
+#' from observational data (van der Zander et al., 2019), and
+#' \code{adjustment} gives a smallest such set. When more than 12 constructs
+#' are candidates, it gives a minimal set instead, from which none can be
+#' dropped, though a smaller one may exist. A construct marked
+#' \code{x_latent: true}, as [tf_read_dagitty()] marks an unobserved variable,
+#' is never adjusted for. \code{identified} concerns adjustment alone, so an
+#' effect without an adjustment set may still be identified otherwise, by the
+#' front-door criterion for instance, and when \code{x} is not an ancestor of
+#' \code{y} the effect is zero.
 #'
 #' @param theory A theory object.
 #' @param cycles \code{"refuse"} (the default) or \code{"sigma"}, as in
@@ -351,10 +454,20 @@
 #'   \code{feedback}, \code{claims} and \code{counts}. Each claim is a list of
 #'   \code{source}, \code{id}, \code{kind}, \code{x}, \code{y}, \code{given},
 #'   \code{sign}, \code{derived}, \code{verdict}, \code{basis},
-#'   \code{faithfulness} and \code{via}, the propositions on some path or trek
-#'   between the two constructs. The predictions come first and then the
-#'   phenomena, each in file order. \code{counts} tallies the verdicts.
+#'   \code{faithfulness}, \code{via}, \code{identified} and \code{adjustment}.
+#'   \code{via} lists the propositions on some path or trek between the two
+#'   constructs. \code{identified} is \code{TRUE} or \code{FALSE} for an
+#'   evaluated effect claim on an acyclic graph and \code{NA} for any other
+#'   claim, and \code{adjustment} lists the ids of the set when
+#'   \code{identified} is \code{TRUE} and is \code{NA} otherwise. The
+#'   predictions come first and then the phenomena, each in file order.
+#'   \code{counts} tallies the verdicts.
 #' @references
+#' van der Zander, B., Liśkiewicz, M., & Textor, J. (2019). Separators and
+#' adjustment sets in causal graphs: Complete criteria and an algorithmic
+#' framework. \emph{Artificial Intelligence}, \emph{270}, 1--40.
+#' \doi{10.1016/j.artint.2018.12.006}
+#'
 #' VanderWeele, T. J., & Robins, J. M. (2010). Signed directed acyclic graphs
 #' for causal inference. \emph{Journal of the Royal Statistical Society Series
 #' B: Statistical Methodology}, \emph{72}(1), 111--127.
@@ -397,7 +510,7 @@ tf_entailments <- function(theory, cycles = "refuse") {
   preds <- .tf_list(T, "predictions")
   focal <- tryCatch(
     .tf_prepare_graph(.tf_causal_graph(T, "check"), cycles, .tf_list(T, "propositions")),
-    error = function(e) NULL)
+    tf_refusal = function(e) NULL)
   if (is.null(focal)) return(vector("list", length(preds)))
   rivals <- list()
   for (a in .tf_list(T, "alternatives")) {
@@ -406,7 +519,7 @@ tf_entailments <- function(theory, cycles = "refuse") {
     if (!nzchar(aid) || length(props) == 0L || !is.null(rivals[[aid]])) next
     g <- tryCatch(
       .tf_prepare_graph(.tf_causal_graph(T, "check", propositions = props), cycles, props),
-      error = function(e) NULL)
+      tf_refusal = function(e) NULL)
     if (!is.null(g)) rivals[[aid]] <- g
   }
   out <- vector("list", length(preds))
@@ -722,8 +835,9 @@ tf_equivalent_models <- function(theory) {
 #' would tell the two apart. \code{rival} is the id of one of the theory's
 #' alternatives that states \code{propositions} over the theory's constructs,
 #' or a theory object of its own, whose constructs are matched to the theory's
-#' by id. The graphs are compared on the constructs that both name in a
-#' directed relation.
+#' by id. The graphs are compared on the constructs that both graphs contain,
+#' those that some proposition of each, directed or an association, relates to
+#' another construct.
 #'
 #' \code{independencies} lists each conditional independence that one graph
 #' implies and the other does not, with the graph that implies it. When the
@@ -772,10 +886,10 @@ tf_discriminate <- function(theory, rival, cycles = "refuse") {
         break
       }
     }
-    if (is.null(alt)) stop("discriminate found no alternative '", rival, "' in the theory", call. = FALSE)
+    if (is.null(alt)) .tf_refuse("discriminate found no alternative '", rival, "' in the theory")
     props <- .tf_list(alt, "propositions")
     if (length(props) == 0L) {
-      stop("discriminate requires alternative '", rival, "' to state propositions", call. = FALSE)
+      .tf_refuse("discriminate requires alternative '", rival, "' to state propositions")
     }
     other <- .tf_prepare_graph(.tf_causal_graph(T, "discriminate", propositions = props), cycles, props)
     rival_id <- rival

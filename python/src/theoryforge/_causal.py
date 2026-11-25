@@ -40,7 +40,9 @@ def causal_graph(T: dict, caller: str, propositions=None) -> dict:
     proposition ids behind each edge, in file order), the counts
     ``n_edges`` and ``n_bidirected`` and ``edges``, the kept ordered pairs in
     the order first stated. The vertices are the constructs that some
-    proposition relates to another, in construct file order.
+    proposition relates to another, in construct file order. ``latent`` is
+    True for a vertex whose construct has ``x_latent: true``, the mark
+    ``read_dagitty()`` keeps for an unobserved variable.
     """
     declared = declared_constructs(T, caller)
     position = {cid: i for i, cid in enumerate(declared)}
@@ -85,6 +87,7 @@ def causal_graph(T: dict, caller: str, propositions=None) -> dict:
                   | {position[c] for frm, to, _ in associations if frm != to for c in (frm, to)})
     nodes = [declared[i] for i in used]
     k = len(nodes)
+    latent_ids = {text(field(c, "id")) for c in items(T, "constructs") if field(c, "x_latent") is True}
     rank = {i: r for r, i in enumerate(used)}
     directed = [[False] * k for _ in range(k)]
     sign: list[list[int | None]] = [[None] * k for _ in range(k)]
@@ -98,9 +101,11 @@ def causal_graph(T: dict, caller: str, propositions=None) -> dict:
     assoc_props: dict[tuple[int, int], list[str]] = {}
     n_bidirected = 0
     for frm, to, pid in associations:
-        a, b = vertex[frm], vertex[to]
-        if a == b:
+        # An association of a construct with itself adds nothing, and its
+        # construct is a vertex only when another proposition relates it to another.
+        if frm == to:
             continue
+        a, b = vertex[frm], vertex[to]
         key = (min(a, b), max(a, b))
         if not bidirected[a][b]:
             bidirected[a][b] = bidirected[b][a] = True
@@ -118,4 +123,5 @@ def causal_graph(T: dict, caller: str, propositions=None) -> dict:
         "assoc_props": assoc_props,
         "n_edges": len(edges),
         "n_bidirected": n_bidirected,
+        "latent": [cid in latent_ids for cid in nodes],
     }

@@ -1,0 +1,2565 @@
+{
+  "read": "ok",
+  "validate": true,
+  "validate_full": true,
+  "check": {
+    "aggregate_score": 43.5,
+    "coverage": 0.92,
+    "gate": "pass",
+    "n_blockers_failed": 0,
+    "items": [
+      {
+        "id": "falsifiability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "precision",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "risk_severity",
+        "status": "warn",
+        "score": 0.3
+      },
+      {
+        "id": "parsimony",
+        "status": "n/a",
+        "score": null
+      },
+      {
+        "id": "non_redundancy",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "construct_clarity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "scope",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "logical_why",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "causal_testability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "diagnosticity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "formalisation",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "derivation_chain",
+        "status": "pass",
+        "score": 1.0
+      }
+    ]
+  },
+  "severity": [
+    {
+      "prediction_id": "h1",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h2",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "h3",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    }
+  ],
+  "implications": {
+    "theory_id": "adjustment-sets",
+    "criterion": "m",
+    "conditioning": "basis",
+    "acyclic": true,
+    "constructs": [
+      "u1",
+      "x1",
+      "y1",
+      "u2",
+      "w2",
+      "x2",
+      "y2",
+      "a1",
+      "a2",
+      "a3",
+      "a4",
+      "a5",
+      "a6",
+      "a7",
+      "a8",
+      "a9",
+      "a10",
+      "a11",
+      "a12",
+      "a13",
+      "x3",
+      "y3"
+    ],
+    "n_edges": 21,
+    "n_bidirected": 0,
+    "feedback": [],
+    "implications": [
+      {
+        "a": "u1",
+        "b": "u2",
+        "given": [],
+        "statement": "u1 _||_ u2"
+      },
+      {
+        "a": "u1",
+        "b": "w2",
+        "given": [
+          "u2"
+        ],
+        "statement": "u1 _||_ w2 | u2"
+      },
+      {
+        "a": "u1",
+        "b": "x2",
+        "given": [
+          "w2"
+        ],
+        "statement": "u1 _||_ x2 | w2"
+      },
+      {
+        "a": "u1",
+        "b": "y2",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "u1 _||_ y2 | u2, x2"
+      },
+      {
+        "a": "u1",
+        "b": "a1",
+        "given": [],
+        "statement": "u1 _||_ a1"
+      },
+      {
+        "a": "u1",
+        "b": "a2",
+        "given": [],
+        "statement": "u1 _||_ a2"
+      },
+      {
+        "a": "u1",
+        "b": "a3",
+        "given": [],
+        "statement": "u1 _||_ a3"
+      },
+      {
+        "a": "u1",
+        "b": "a4",
+        "given": [],
+        "statement": "u1 _||_ a4"
+      },
+      {
+        "a": "u1",
+        "b": "a5",
+        "given": [],
+        "statement": "u1 _||_ a5"
+      },
+      {
+        "a": "u1",
+        "b": "a6",
+        "given": [],
+        "statement": "u1 _||_ a6"
+      },
+      {
+        "a": "u1",
+        "b": "a7",
+        "given": [],
+        "statement": "u1 _||_ a7"
+      },
+      {
+        "a": "u1",
+        "b": "a8",
+        "given": [],
+        "statement": "u1 _||_ a8"
+      },
+      {
+        "a": "u1",
+        "b": "a9",
+        "given": [],
+        "statement": "u1 _||_ a9"
+      },
+      {
+        "a": "u1",
+        "b": "a10",
+        "given": [],
+        "statement": "u1 _||_ a10"
+      },
+      {
+        "a": "u1",
+        "b": "a11",
+        "given": [],
+        "statement": "u1 _||_ a11"
+      },
+      {
+        "a": "u1",
+        "b": "a12",
+        "given": [],
+        "statement": "u1 _||_ a12"
+      },
+      {
+        "a": "u1",
+        "b": "a13",
+        "given": [],
+        "statement": "u1 _||_ a13"
+      },
+      {
+        "a": "u1",
+        "b": "x3",
+        "given": [
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6",
+          "a7",
+          "a8",
+          "a9",
+          "a10",
+          "a11",
+          "a12",
+          "a13"
+        ],
+        "statement": "u1 _||_ x3 | a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13"
+      },
+      {
+        "a": "u1",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "u1 _||_ y3 | x3"
+      },
+      {
+        "a": "x1",
+        "b": "u2",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ u2 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "w2",
+        "given": [
+          "u1",
+          "u2"
+        ],
+        "statement": "x1 _||_ w2 | u1, u2"
+      },
+      {
+        "a": "x1",
+        "b": "x2",
+        "given": [
+          "u1",
+          "w2"
+        ],
+        "statement": "x1 _||_ x2 | u1, w2"
+      },
+      {
+        "a": "x1",
+        "b": "y2",
+        "given": [
+          "u1",
+          "u2",
+          "x2"
+        ],
+        "statement": "x1 _||_ y2 | u1, u2, x2"
+      },
+      {
+        "a": "x1",
+        "b": "a1",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a1 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a2",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a2 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a3",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a3 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a4",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a4 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a5",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a5 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a6",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a6 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a7",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a7 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a8",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a8 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a9",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a9 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a10",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a10 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a11",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a11 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a12",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a12 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "a13",
+        "given": [
+          "u1"
+        ],
+        "statement": "x1 _||_ a13 | u1"
+      },
+      {
+        "a": "x1",
+        "b": "x3",
+        "given": [
+          "u1",
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6",
+          "a7",
+          "a8",
+          "a9",
+          "a10",
+          "a11",
+          "a12",
+          "a13"
+        ],
+        "statement": "x1 _||_ x3 | u1, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13"
+      },
+      {
+        "a": "x1",
+        "b": "y3",
+        "given": [
+          "u1",
+          "x3"
+        ],
+        "statement": "x1 _||_ y3 | u1, x3"
+      },
+      {
+        "a": "y1",
+        "b": "u2",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ u2 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "w2",
+        "given": [
+          "u1",
+          "x1",
+          "u2"
+        ],
+        "statement": "y1 _||_ w2 | u1, x1, u2"
+      },
+      {
+        "a": "y1",
+        "b": "x2",
+        "given": [
+          "u1",
+          "x1",
+          "w2"
+        ],
+        "statement": "y1 _||_ x2 | u1, x1, w2"
+      },
+      {
+        "a": "y1",
+        "b": "y2",
+        "given": [
+          "u1",
+          "x1",
+          "u2",
+          "x2"
+        ],
+        "statement": "y1 _||_ y2 | u1, x1, u2, x2"
+      },
+      {
+        "a": "y1",
+        "b": "a1",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a1 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a2",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a2 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a3",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a3 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a4",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a4 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a5",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a5 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a6",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a6 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a7",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a7 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a8",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a8 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a9",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a9 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a10",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a10 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a11",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a11 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a12",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a12 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "a13",
+        "given": [
+          "u1",
+          "x1"
+        ],
+        "statement": "y1 _||_ a13 | u1, x1"
+      },
+      {
+        "a": "y1",
+        "b": "x3",
+        "given": [
+          "u1",
+          "x1",
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6",
+          "a7",
+          "a8",
+          "a9",
+          "a10",
+          "a11",
+          "a12",
+          "a13"
+        ],
+        "statement": "y1 _||_ x3 | u1, x1, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13"
+      },
+      {
+        "a": "y1",
+        "b": "y3",
+        "given": [
+          "u1",
+          "x1",
+          "x3"
+        ],
+        "statement": "y1 _||_ y3 | u1, x1, x3"
+      },
+      {
+        "a": "u2",
+        "b": "x2",
+        "given": [
+          "w2"
+        ],
+        "statement": "u2 _||_ x2 | w2"
+      },
+      {
+        "a": "u2",
+        "b": "a1",
+        "given": [],
+        "statement": "u2 _||_ a1"
+      },
+      {
+        "a": "u2",
+        "b": "a2",
+        "given": [],
+        "statement": "u2 _||_ a2"
+      },
+      {
+        "a": "u2",
+        "b": "a3",
+        "given": [],
+        "statement": "u2 _||_ a3"
+      },
+      {
+        "a": "u2",
+        "b": "a4",
+        "given": [],
+        "statement": "u2 _||_ a4"
+      },
+      {
+        "a": "u2",
+        "b": "a5",
+        "given": [],
+        "statement": "u2 _||_ a5"
+      },
+      {
+        "a": "u2",
+        "b": "a6",
+        "given": [],
+        "statement": "u2 _||_ a6"
+      },
+      {
+        "a": "u2",
+        "b": "a7",
+        "given": [],
+        "statement": "u2 _||_ a7"
+      },
+      {
+        "a": "u2",
+        "b": "a8",
+        "given": [],
+        "statement": "u2 _||_ a8"
+      },
+      {
+        "a": "u2",
+        "b": "a9",
+        "given": [],
+        "statement": "u2 _||_ a9"
+      },
+      {
+        "a": "u2",
+        "b": "a10",
+        "given": [],
+        "statement": "u2 _||_ a10"
+      },
+      {
+        "a": "u2",
+        "b": "a11",
+        "given": [],
+        "statement": "u2 _||_ a11"
+      },
+      {
+        "a": "u2",
+        "b": "a12",
+        "given": [],
+        "statement": "u2 _||_ a12"
+      },
+      {
+        "a": "u2",
+        "b": "a13",
+        "given": [],
+        "statement": "u2 _||_ a13"
+      },
+      {
+        "a": "u2",
+        "b": "x3",
+        "given": [
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6",
+          "a7",
+          "a8",
+          "a9",
+          "a10",
+          "a11",
+          "a12",
+          "a13"
+        ],
+        "statement": "u2 _||_ x3 | a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13"
+      },
+      {
+        "a": "u2",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "u2 _||_ y3 | x3"
+      },
+      {
+        "a": "w2",
+        "b": "y2",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "w2 _||_ y2 | u2, x2"
+      },
+      {
+        "a": "w2",
+        "b": "a1",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a1 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a2",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a2 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a3",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a3 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a4",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a4 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a5",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a5 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a6",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a6 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a7",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a7 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a8",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a8 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a9",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a9 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a10",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a10 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a11",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a11 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a12",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a12 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "a13",
+        "given": [
+          "u2"
+        ],
+        "statement": "w2 _||_ a13 | u2"
+      },
+      {
+        "a": "w2",
+        "b": "x3",
+        "given": [
+          "u2",
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6",
+          "a7",
+          "a8",
+          "a9",
+          "a10",
+          "a11",
+          "a12",
+          "a13"
+        ],
+        "statement": "w2 _||_ x3 | u2, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13"
+      },
+      {
+        "a": "w2",
+        "b": "y3",
+        "given": [
+          "u2",
+          "x3"
+        ],
+        "statement": "w2 _||_ y3 | u2, x3"
+      },
+      {
+        "a": "x2",
+        "b": "a1",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a1 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a2",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a2 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a3",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a3 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a4",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a4 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a5",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a5 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a6",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a6 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a7",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a7 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a8",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a8 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a9",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a9 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a10",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a10 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a11",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a11 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a12",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a12 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "a13",
+        "given": [
+          "w2"
+        ],
+        "statement": "x2 _||_ a13 | w2"
+      },
+      {
+        "a": "x2",
+        "b": "x3",
+        "given": [
+          "w2",
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6",
+          "a7",
+          "a8",
+          "a9",
+          "a10",
+          "a11",
+          "a12",
+          "a13"
+        ],
+        "statement": "x2 _||_ x3 | w2, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13"
+      },
+      {
+        "a": "x2",
+        "b": "y3",
+        "given": [
+          "w2",
+          "x3"
+        ],
+        "statement": "x2 _||_ y3 | w2, x3"
+      },
+      {
+        "a": "y2",
+        "b": "a1",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a1 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a2",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a2 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a3",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a3 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a4",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a4 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a5",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a5 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a6",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a6 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a7",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a7 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a8",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a8 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a9",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a9 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a10",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a10 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a11",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a11 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a12",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a12 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "a13",
+        "given": [
+          "u2",
+          "x2"
+        ],
+        "statement": "y2 _||_ a13 | u2, x2"
+      },
+      {
+        "a": "y2",
+        "b": "x3",
+        "given": [
+          "u2",
+          "x2",
+          "a1",
+          "a2",
+          "a3",
+          "a4",
+          "a5",
+          "a6",
+          "a7",
+          "a8",
+          "a9",
+          "a10",
+          "a11",
+          "a12",
+          "a13"
+        ],
+        "statement": "y2 _||_ x3 | u2, x2, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13"
+      },
+      {
+        "a": "y2",
+        "b": "y3",
+        "given": [
+          "u2",
+          "x2",
+          "x3"
+        ],
+        "statement": "y2 _||_ y3 | u2, x2, x3"
+      },
+      {
+        "a": "a1",
+        "b": "a2",
+        "given": [],
+        "statement": "a1 _||_ a2"
+      },
+      {
+        "a": "a1",
+        "b": "a3",
+        "given": [],
+        "statement": "a1 _||_ a3"
+      },
+      {
+        "a": "a1",
+        "b": "a4",
+        "given": [],
+        "statement": "a1 _||_ a4"
+      },
+      {
+        "a": "a1",
+        "b": "a5",
+        "given": [],
+        "statement": "a1 _||_ a5"
+      },
+      {
+        "a": "a1",
+        "b": "a6",
+        "given": [],
+        "statement": "a1 _||_ a6"
+      },
+      {
+        "a": "a1",
+        "b": "a7",
+        "given": [],
+        "statement": "a1 _||_ a7"
+      },
+      {
+        "a": "a1",
+        "b": "a8",
+        "given": [],
+        "statement": "a1 _||_ a8"
+      },
+      {
+        "a": "a1",
+        "b": "a9",
+        "given": [],
+        "statement": "a1 _||_ a9"
+      },
+      {
+        "a": "a1",
+        "b": "a10",
+        "given": [],
+        "statement": "a1 _||_ a10"
+      },
+      {
+        "a": "a1",
+        "b": "a11",
+        "given": [],
+        "statement": "a1 _||_ a11"
+      },
+      {
+        "a": "a1",
+        "b": "a12",
+        "given": [],
+        "statement": "a1 _||_ a12"
+      },
+      {
+        "a": "a1",
+        "b": "a13",
+        "given": [],
+        "statement": "a1 _||_ a13"
+      },
+      {
+        "a": "a1",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a1 _||_ y3 | x3"
+      },
+      {
+        "a": "a2",
+        "b": "a3",
+        "given": [],
+        "statement": "a2 _||_ a3"
+      },
+      {
+        "a": "a2",
+        "b": "a4",
+        "given": [],
+        "statement": "a2 _||_ a4"
+      },
+      {
+        "a": "a2",
+        "b": "a5",
+        "given": [],
+        "statement": "a2 _||_ a5"
+      },
+      {
+        "a": "a2",
+        "b": "a6",
+        "given": [],
+        "statement": "a2 _||_ a6"
+      },
+      {
+        "a": "a2",
+        "b": "a7",
+        "given": [],
+        "statement": "a2 _||_ a7"
+      },
+      {
+        "a": "a2",
+        "b": "a8",
+        "given": [],
+        "statement": "a2 _||_ a8"
+      },
+      {
+        "a": "a2",
+        "b": "a9",
+        "given": [],
+        "statement": "a2 _||_ a9"
+      },
+      {
+        "a": "a2",
+        "b": "a10",
+        "given": [],
+        "statement": "a2 _||_ a10"
+      },
+      {
+        "a": "a2",
+        "b": "a11",
+        "given": [],
+        "statement": "a2 _||_ a11"
+      },
+      {
+        "a": "a2",
+        "b": "a12",
+        "given": [],
+        "statement": "a2 _||_ a12"
+      },
+      {
+        "a": "a2",
+        "b": "a13",
+        "given": [],
+        "statement": "a2 _||_ a13"
+      },
+      {
+        "a": "a2",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a2 _||_ y3 | x3"
+      },
+      {
+        "a": "a3",
+        "b": "a4",
+        "given": [],
+        "statement": "a3 _||_ a4"
+      },
+      {
+        "a": "a3",
+        "b": "a5",
+        "given": [],
+        "statement": "a3 _||_ a5"
+      },
+      {
+        "a": "a3",
+        "b": "a6",
+        "given": [],
+        "statement": "a3 _||_ a6"
+      },
+      {
+        "a": "a3",
+        "b": "a7",
+        "given": [],
+        "statement": "a3 _||_ a7"
+      },
+      {
+        "a": "a3",
+        "b": "a8",
+        "given": [],
+        "statement": "a3 _||_ a8"
+      },
+      {
+        "a": "a3",
+        "b": "a9",
+        "given": [],
+        "statement": "a3 _||_ a9"
+      },
+      {
+        "a": "a3",
+        "b": "a10",
+        "given": [],
+        "statement": "a3 _||_ a10"
+      },
+      {
+        "a": "a3",
+        "b": "a11",
+        "given": [],
+        "statement": "a3 _||_ a11"
+      },
+      {
+        "a": "a3",
+        "b": "a12",
+        "given": [],
+        "statement": "a3 _||_ a12"
+      },
+      {
+        "a": "a3",
+        "b": "a13",
+        "given": [],
+        "statement": "a3 _||_ a13"
+      },
+      {
+        "a": "a3",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a3 _||_ y3 | x3"
+      },
+      {
+        "a": "a4",
+        "b": "a5",
+        "given": [],
+        "statement": "a4 _||_ a5"
+      },
+      {
+        "a": "a4",
+        "b": "a6",
+        "given": [],
+        "statement": "a4 _||_ a6"
+      },
+      {
+        "a": "a4",
+        "b": "a7",
+        "given": [],
+        "statement": "a4 _||_ a7"
+      },
+      {
+        "a": "a4",
+        "b": "a8",
+        "given": [],
+        "statement": "a4 _||_ a8"
+      },
+      {
+        "a": "a4",
+        "b": "a9",
+        "given": [],
+        "statement": "a4 _||_ a9"
+      },
+      {
+        "a": "a4",
+        "b": "a10",
+        "given": [],
+        "statement": "a4 _||_ a10"
+      },
+      {
+        "a": "a4",
+        "b": "a11",
+        "given": [],
+        "statement": "a4 _||_ a11"
+      },
+      {
+        "a": "a4",
+        "b": "a12",
+        "given": [],
+        "statement": "a4 _||_ a12"
+      },
+      {
+        "a": "a4",
+        "b": "a13",
+        "given": [],
+        "statement": "a4 _||_ a13"
+      },
+      {
+        "a": "a4",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a4 _||_ y3 | x3"
+      },
+      {
+        "a": "a5",
+        "b": "a6",
+        "given": [],
+        "statement": "a5 _||_ a6"
+      },
+      {
+        "a": "a5",
+        "b": "a7",
+        "given": [],
+        "statement": "a5 _||_ a7"
+      },
+      {
+        "a": "a5",
+        "b": "a8",
+        "given": [],
+        "statement": "a5 _||_ a8"
+      },
+      {
+        "a": "a5",
+        "b": "a9",
+        "given": [],
+        "statement": "a5 _||_ a9"
+      },
+      {
+        "a": "a5",
+        "b": "a10",
+        "given": [],
+        "statement": "a5 _||_ a10"
+      },
+      {
+        "a": "a5",
+        "b": "a11",
+        "given": [],
+        "statement": "a5 _||_ a11"
+      },
+      {
+        "a": "a5",
+        "b": "a12",
+        "given": [],
+        "statement": "a5 _||_ a12"
+      },
+      {
+        "a": "a5",
+        "b": "a13",
+        "given": [],
+        "statement": "a5 _||_ a13"
+      },
+      {
+        "a": "a5",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a5 _||_ y3 | x3"
+      },
+      {
+        "a": "a6",
+        "b": "a7",
+        "given": [],
+        "statement": "a6 _||_ a7"
+      },
+      {
+        "a": "a6",
+        "b": "a8",
+        "given": [],
+        "statement": "a6 _||_ a8"
+      },
+      {
+        "a": "a6",
+        "b": "a9",
+        "given": [],
+        "statement": "a6 _||_ a9"
+      },
+      {
+        "a": "a6",
+        "b": "a10",
+        "given": [],
+        "statement": "a6 _||_ a10"
+      },
+      {
+        "a": "a6",
+        "b": "a11",
+        "given": [],
+        "statement": "a6 _||_ a11"
+      },
+      {
+        "a": "a6",
+        "b": "a12",
+        "given": [],
+        "statement": "a6 _||_ a12"
+      },
+      {
+        "a": "a6",
+        "b": "a13",
+        "given": [],
+        "statement": "a6 _||_ a13"
+      },
+      {
+        "a": "a6",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a6 _||_ y3 | x3"
+      },
+      {
+        "a": "a7",
+        "b": "a8",
+        "given": [],
+        "statement": "a7 _||_ a8"
+      },
+      {
+        "a": "a7",
+        "b": "a9",
+        "given": [],
+        "statement": "a7 _||_ a9"
+      },
+      {
+        "a": "a7",
+        "b": "a10",
+        "given": [],
+        "statement": "a7 _||_ a10"
+      },
+      {
+        "a": "a7",
+        "b": "a11",
+        "given": [],
+        "statement": "a7 _||_ a11"
+      },
+      {
+        "a": "a7",
+        "b": "a12",
+        "given": [],
+        "statement": "a7 _||_ a12"
+      },
+      {
+        "a": "a7",
+        "b": "a13",
+        "given": [],
+        "statement": "a7 _||_ a13"
+      },
+      {
+        "a": "a7",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a7 _||_ y3 | x3"
+      },
+      {
+        "a": "a8",
+        "b": "a9",
+        "given": [],
+        "statement": "a8 _||_ a9"
+      },
+      {
+        "a": "a8",
+        "b": "a10",
+        "given": [],
+        "statement": "a8 _||_ a10"
+      },
+      {
+        "a": "a8",
+        "b": "a11",
+        "given": [],
+        "statement": "a8 _||_ a11"
+      },
+      {
+        "a": "a8",
+        "b": "a12",
+        "given": [],
+        "statement": "a8 _||_ a12"
+      },
+      {
+        "a": "a8",
+        "b": "a13",
+        "given": [],
+        "statement": "a8 _||_ a13"
+      },
+      {
+        "a": "a8",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a8 _||_ y3 | x3"
+      },
+      {
+        "a": "a9",
+        "b": "a10",
+        "given": [],
+        "statement": "a9 _||_ a10"
+      },
+      {
+        "a": "a9",
+        "b": "a11",
+        "given": [],
+        "statement": "a9 _||_ a11"
+      },
+      {
+        "a": "a9",
+        "b": "a12",
+        "given": [],
+        "statement": "a9 _||_ a12"
+      },
+      {
+        "a": "a9",
+        "b": "a13",
+        "given": [],
+        "statement": "a9 _||_ a13"
+      },
+      {
+        "a": "a9",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a9 _||_ y3 | x3"
+      },
+      {
+        "a": "a10",
+        "b": "a11",
+        "given": [],
+        "statement": "a10 _||_ a11"
+      },
+      {
+        "a": "a10",
+        "b": "a12",
+        "given": [],
+        "statement": "a10 _||_ a12"
+      },
+      {
+        "a": "a10",
+        "b": "a13",
+        "given": [],
+        "statement": "a10 _||_ a13"
+      },
+      {
+        "a": "a10",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a10 _||_ y3 | x3"
+      },
+      {
+        "a": "a11",
+        "b": "a12",
+        "given": [],
+        "statement": "a11 _||_ a12"
+      },
+      {
+        "a": "a11",
+        "b": "a13",
+        "given": [],
+        "statement": "a11 _||_ a13"
+      },
+      {
+        "a": "a11",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a11 _||_ y3 | x3"
+      },
+      {
+        "a": "a12",
+        "b": "a13",
+        "given": [],
+        "statement": "a12 _||_ a13"
+      },
+      {
+        "a": "a12",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a12 _||_ y3 | x3"
+      },
+      {
+        "a": "a13",
+        "b": "y3",
+        "given": [
+          "x3"
+        ],
+        "statement": "a13 _||_ y3 | x3"
+      }
+    ],
+    "n_implications": 210,
+    "inseparable": []
+  },
+  "entailments": {
+    "theory_id": "adjustment-sets",
+    "criterion": "m",
+    "acyclic": true,
+    "feedback": [],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "h1",
+        "kind": "effect",
+        "x": "x1",
+        "y": "y1",
+        "given": [],
+        "sign": "positive",
+        "derived": "positive",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p3"
+        ],
+        "identified": false,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "h2",
+        "kind": "effect",
+        "x": "x2",
+        "y": "y2",
+        "given": [],
+        "sign": "positive",
+        "derived": "positive",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p7"
+        ],
+        "identified": true,
+        "adjustment": [
+          "w2"
+        ]
+      },
+      {
+        "source": "prediction",
+        "id": "h3",
+        "kind": "effect",
+        "x": "x3",
+        "y": "y3",
+        "given": [],
+        "sign": "positive",
+        "derived": "positive",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p21"
+        ],
+        "identified": true,
+        "adjustment": []
+      }
+    ],
+    "counts": {
+      "entailed": 3,
+      "contradicted": 0,
+      "undetermined": 0,
+      "not_evaluated": 0
+    }
+  },
+  "equivalent_models": {
+    "theory_id": "adjustment-sets",
+    "computed": true,
+    "reason": null,
+    "constructs": [
+      "u1",
+      "x1",
+      "y1",
+      "u2",
+      "w2",
+      "x2",
+      "y2",
+      "a1",
+      "a2",
+      "a3",
+      "a4",
+      "a5",
+      "a6",
+      "a7",
+      "a8",
+      "a9",
+      "a10",
+      "a11",
+      "a12",
+      "a13",
+      "x3",
+      "y3"
+    ],
+    "v_structures": [
+      {
+        "a": "u2",
+        "collider": "y2",
+        "b": "x2"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a2"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a3"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a4"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a5"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a6"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a7"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a8"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a9"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a10"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a11"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a1",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a3"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a4"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a5"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a6"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a7"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a8"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a9"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a10"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a11"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a2",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a3",
+        "collider": "x3",
+        "b": "a4"
+      },
+      {
+        "a": "a3",
+        "collider": "x3",
+        "b": "a5"
+      },
+      {
+        "a": "a3",
+        "collider": "x3",
+        "b": "a6"
+      },
+      {
+        "a": "a3",
+        "collider": "x3",
+        "b": "a7"
+      },
+      {
+        "a": "a3",
+        "collider": "x3",
+        "b": "a8"
+      },
+      {
+        "a": "a3",
+        "collider": "x3",
+        "b": "a9"
+      },
+      {
+        "a": "a3",
+        "collider": "x3",
+        "b": "a10"
+      },
+      {
+        "a": "a3",
+        "collider": "x3",
+        "b": "a11"
+      },
+      {
+        "a": "a3",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a3",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a4",
+        "collider": "x3",
+        "b": "a5"
+      },
+      {
+        "a": "a4",
+        "collider": "x3",
+        "b": "a6"
+      },
+      {
+        "a": "a4",
+        "collider": "x3",
+        "b": "a7"
+      },
+      {
+        "a": "a4",
+        "collider": "x3",
+        "b": "a8"
+      },
+      {
+        "a": "a4",
+        "collider": "x3",
+        "b": "a9"
+      },
+      {
+        "a": "a4",
+        "collider": "x3",
+        "b": "a10"
+      },
+      {
+        "a": "a4",
+        "collider": "x3",
+        "b": "a11"
+      },
+      {
+        "a": "a4",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a4",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a5",
+        "collider": "x3",
+        "b": "a6"
+      },
+      {
+        "a": "a5",
+        "collider": "x3",
+        "b": "a7"
+      },
+      {
+        "a": "a5",
+        "collider": "x3",
+        "b": "a8"
+      },
+      {
+        "a": "a5",
+        "collider": "x3",
+        "b": "a9"
+      },
+      {
+        "a": "a5",
+        "collider": "x3",
+        "b": "a10"
+      },
+      {
+        "a": "a5",
+        "collider": "x3",
+        "b": "a11"
+      },
+      {
+        "a": "a5",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a5",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a6",
+        "collider": "x3",
+        "b": "a7"
+      },
+      {
+        "a": "a6",
+        "collider": "x3",
+        "b": "a8"
+      },
+      {
+        "a": "a6",
+        "collider": "x3",
+        "b": "a9"
+      },
+      {
+        "a": "a6",
+        "collider": "x3",
+        "b": "a10"
+      },
+      {
+        "a": "a6",
+        "collider": "x3",
+        "b": "a11"
+      },
+      {
+        "a": "a6",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a6",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a7",
+        "collider": "x3",
+        "b": "a8"
+      },
+      {
+        "a": "a7",
+        "collider": "x3",
+        "b": "a9"
+      },
+      {
+        "a": "a7",
+        "collider": "x3",
+        "b": "a10"
+      },
+      {
+        "a": "a7",
+        "collider": "x3",
+        "b": "a11"
+      },
+      {
+        "a": "a7",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a7",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a8",
+        "collider": "x3",
+        "b": "a9"
+      },
+      {
+        "a": "a8",
+        "collider": "x3",
+        "b": "a10"
+      },
+      {
+        "a": "a8",
+        "collider": "x3",
+        "b": "a11"
+      },
+      {
+        "a": "a8",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a8",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a9",
+        "collider": "x3",
+        "b": "a10"
+      },
+      {
+        "a": "a9",
+        "collider": "x3",
+        "b": "a11"
+      },
+      {
+        "a": "a9",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a9",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a10",
+        "collider": "x3",
+        "b": "a11"
+      },
+      {
+        "a": "a10",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a10",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a11",
+        "collider": "x3",
+        "b": "a12"
+      },
+      {
+        "a": "a11",
+        "collider": "x3",
+        "b": "a13"
+      },
+      {
+        "a": "a12",
+        "collider": "x3",
+        "b": "a13"
+      }
+    ],
+    "edges": [
+      {
+        "from": "u1",
+        "to": "x1",
+        "propositions": [
+          "p1"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "u1",
+        "to": "y1",
+        "propositions": [
+          "p2"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "x1",
+        "to": "y1",
+        "propositions": [
+          "p3"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "u2",
+        "to": "w2",
+        "propositions": [
+          "p4"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "w2",
+        "to": "x2",
+        "propositions": [
+          "p5"
+        ],
+        "status": "reversible"
+      },
+      {
+        "from": "u2",
+        "to": "y2",
+        "propositions": [
+          "p6"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "x2",
+        "to": "y2",
+        "propositions": [
+          "p7"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a1",
+        "to": "x3",
+        "propositions": [
+          "p8"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a2",
+        "to": "x3",
+        "propositions": [
+          "p9"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a3",
+        "to": "x3",
+        "propositions": [
+          "p10"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a4",
+        "to": "x3",
+        "propositions": [
+          "p11"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a5",
+        "to": "x3",
+        "propositions": [
+          "p12"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a6",
+        "to": "x3",
+        "propositions": [
+          "p13"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a7",
+        "to": "x3",
+        "propositions": [
+          "p14"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a8",
+        "to": "x3",
+        "propositions": [
+          "p15"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a9",
+        "to": "x3",
+        "propositions": [
+          "p16"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a10",
+        "to": "x3",
+        "propositions": [
+          "p17"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a11",
+        "to": "x3",
+        "propositions": [
+          "p18"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a12",
+        "to": "x3",
+        "propositions": [
+          "p19"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "a13",
+        "to": "x3",
+        "propositions": [
+          "p20"
+        ],
+        "status": "compelled"
+      },
+      {
+        "from": "x3",
+        "to": "y3",
+        "propositions": [
+          "p21"
+        ],
+        "status": "compelled"
+      }
+    ],
+    "n_compelled": 16,
+    "n_reversible": 5
+  },
+  "compile_sem": "# lavaan model generated by theoryforge for adjustment-sets\n# Written for lavaan::sem(); indicator names are the sanitised measurement entries and must match columns of the data.\n# Measurement model\n# Structural model\nx1 ~ b_u1_x1*u1\ny1 ~ b_u1_y1*u1\ny1 ~ b_x1_y1*x1\nw2 ~ b_u2_w2*u2\nx2 ~ b_w2_x2*w2\ny2 ~ b_u2_y2*u2\ny2 ~ b_x2_y2*x2\nx3 ~ b_a1_x3*a1\nx3 ~ b_a2_x3*a2\nx3 ~ b_a3_x3*a3\nx3 ~ b_a4_x3*a4\nx3 ~ b_a5_x3*a5\nx3 ~ b_a6_x3*a6\nx3 ~ b_a7_x3*a7\nx3 ~ b_a8_x3*a8\nx3 ~ b_a9_x3*a9\nx3 ~ b_a10_x3*a10\nx3 ~ b_a11_x3*a11\nx3 ~ b_a12_x3*a12\nx3 ~ b_a13_x3*a13\ny3 ~ b_x3_y3*x3\n# Identification: the paths among the constructs form no loop, and no two constructs are joined by both a path and a covariance (a bow). The path coefficients are therefore generically identified if the measurement model identifies the constructs (Brito & Pearl, 2002). Whether it does has to be checked separately.\n# Signs the theory states, which the fit does not impose\n# b_u1_x1 > 0 (p1, increases)\n# b_u1_y1 > 0 (p2, increases)\n# b_x1_y1 > 0 (p3, increases)\n# b_u2_w2 > 0 (p4, increases)\n# b_w2_x2 > 0 (p5, increases)\n# b_u2_y2 > 0 (p6, increases)\n# b_x2_y2 > 0 (p7, increases)\n# b_a1_x3 > 0 (p8, increases)\n# b_a2_x3 > 0 (p9, increases)\n# b_a3_x3 > 0 (p10, increases)\n# b_a4_x3 > 0 (p11, increases)\n# b_a5_x3 > 0 (p12, increases)\n# b_a6_x3 > 0 (p13, increases)\n# b_a7_x3 > 0 (p14, increases)\n# b_a8_x3 > 0 (p15, increases)\n# b_a9_x3 > 0 (p16, increases)\n# b_a10_x3 > 0 (p17, increases)\n# b_a11_x3 > 0 (p18, increases)\n# b_a12_x3 > 0 (p19, increases)\n# b_a13_x3 > 0 (p20, increases)\n# b_x3_y3 > 0 (p21, increases)\n# Effects the claims are about, each the sum over the directed paths from cause to outcome of the product of the labels along the path\n# h1 claims that the effect of x1 on y1 is positive.\neffect_x1_y1 := b_x1_y1\n# h2 claims that the effect of x2 on y2 is positive.\neffect_x2_y2 := b_x2_y2\n# h3 claims that the effect of x3 on y3 is positive.\neffect_x3_y3 := b_x3_y3\n# Covariances the theory fixes at zero (lavaan::sem() frees them by default; delete this block to restore its defaults)\nu1 ~~ 0*u2\nu1 ~~ 0*a1\nu1 ~~ 0*a2\nu1 ~~ 0*a3\nu1 ~~ 0*a4\nu1 ~~ 0*a5\nu1 ~~ 0*a6\nu1 ~~ 0*a7\nu1 ~~ 0*a8\nu1 ~~ 0*a9\nu1 ~~ 0*a10\nu1 ~~ 0*a11\nu1 ~~ 0*a12\nu1 ~~ 0*a13\ny1 ~~ 0*y2\ny1 ~~ 0*y3\nu2 ~~ 0*a1\nu2 ~~ 0*a2\nu2 ~~ 0*a3\nu2 ~~ 0*a4\nu2 ~~ 0*a5\nu2 ~~ 0*a6\nu2 ~~ 0*a7\nu2 ~~ 0*a8\nu2 ~~ 0*a9\nu2 ~~ 0*a10\nu2 ~~ 0*a11\nu2 ~~ 0*a12\nu2 ~~ 0*a13\ny2 ~~ 0*y3\na1 ~~ 0*a2\na1 ~~ 0*a3\na1 ~~ 0*a4\na1 ~~ 0*a5\na1 ~~ 0*a6\na1 ~~ 0*a7\na1 ~~ 0*a8\na1 ~~ 0*a9\na1 ~~ 0*a10\na1 ~~ 0*a11\na1 ~~ 0*a12\na1 ~~ 0*a13\na2 ~~ 0*a3\na2 ~~ 0*a4\na2 ~~ 0*a5\na2 ~~ 0*a6\na2 ~~ 0*a7\na2 ~~ 0*a8\na2 ~~ 0*a9\na2 ~~ 0*a10\na2 ~~ 0*a11\na2 ~~ 0*a12\na2 ~~ 0*a13\na3 ~~ 0*a4\na3 ~~ 0*a5\na3 ~~ 0*a6\na3 ~~ 0*a7\na3 ~~ 0*a8\na3 ~~ 0*a9\na3 ~~ 0*a10\na3 ~~ 0*a11\na3 ~~ 0*a12\na3 ~~ 0*a13\na4 ~~ 0*a5\na4 ~~ 0*a6\na4 ~~ 0*a7\na4 ~~ 0*a8\na4 ~~ 0*a9\na4 ~~ 0*a10\na4 ~~ 0*a11\na4 ~~ 0*a12\na4 ~~ 0*a13\na5 ~~ 0*a6\na5 ~~ 0*a7\na5 ~~ 0*a8\na5 ~~ 0*a9\na5 ~~ 0*a10\na5 ~~ 0*a11\na5 ~~ 0*a12\na5 ~~ 0*a13\na6 ~~ 0*a7\na6 ~~ 0*a8\na6 ~~ 0*a9\na6 ~~ 0*a10\na6 ~~ 0*a11\na6 ~~ 0*a12\na6 ~~ 0*a13\na7 ~~ 0*a8\na7 ~~ 0*a9\na7 ~~ 0*a10\na7 ~~ 0*a11\na7 ~~ 0*a12\na7 ~~ 0*a13\na8 ~~ 0*a9\na8 ~~ 0*a10\na8 ~~ 0*a11\na8 ~~ 0*a12\na8 ~~ 0*a13\na9 ~~ 0*a10\na9 ~~ 0*a11\na9 ~~ 0*a12\na9 ~~ 0*a13\na10 ~~ 0*a11\na10 ~~ 0*a12\na10 ~~ 0*a13\na11 ~~ 0*a12\na11 ~~ 0*a13\na12 ~~ 0*a13\n",
+  "simulate": {
+    "states": [
+      "u1",
+      "x1",
+      "y1",
+      "u2",
+      "w2",
+      "x2",
+      "y2",
+      "a1",
+      "a2",
+      "a3",
+      "a4",
+      "a5",
+      "a6",
+      "a7",
+      "a8",
+      "a9",
+      "a10",
+      "a11",
+      "a12",
+      "a13",
+      "x3",
+      "y3"
+    ],
+    "dt": 0.1,
+    "steps": 3,
+    "k": 1.0,
+    "damping": 0.5,
+    "init": 1.0,
+    "initial_state": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "method": "euler",
+    "ignored": [],
+    "assumed_positive": [],
+    "opposed": [],
+    "trajectory": [
+      [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        0.95,
+        1.05,
+        1.15,
+        0.95,
+        1.05,
+        1.05,
+        1.15,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        0.95,
+        2.25,
+        1.05
+      ],
+      [
+        0.9025,
+        1.0925,
+        1.2925,
+        0.9025,
+        1.0925,
+        1.1025,
+        1.2925,
+        0.9025,
+        0.9025,
+        0.9025,
+        0.9025,
+        0.9025,
+        0.9025,
+        0.9025,
+        0.9025,
+        0.9025,
+        0.9025,
+        0.9025,
+        0.9025,
+        0.9025,
+        3.3725,
+        1.2225
+      ],
+      [
+        0.857375,
+        1.128125,
+        1.427375,
+        0.857375,
+        1.128125,
+        1.156625,
+        1.428375,
+        0.857375,
+        0.857375,
+        0.857375,
+        0.857375,
+        0.857375,
+        0.857375,
+        0.857375,
+        0.857375,
+        0.857375,
+        0.857375,
+        0.857375,
+        0.857375,
+        0.857375,
+        4.377125,
+        1.498625
+      ]
+    ]
+  },
+  "preregister": "# Preregistration: Adjustment sets with latent and many candidate constructs\n\n- Theory ID: adjustment-sets\n- Schema version: 1.1\n- Content hash: sha256:f8722383c1a0d391d23c52230ab57eac1155fe6de05e69270df12bb046f5a2fc\n- Maturity: developing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- u1 (U1): An unobserved construct.\n- x1 (X1): A construct.\n- y1 (Y1): A construct.\n- u2 (U2): An unobserved construct.\n- w2 (W2): A construct.\n- x2 (X2): A construct.\n- y2 (Y2): A construct.\n- a1 (A1): A construct.\n- a2 (A2): A construct.\n- a3 (A3): A construct.\n- a4 (A4): A construct.\n- a5 (A5): A construct.\n- a6 (A6): A construct.\n- a7 (A7): A construct.\n- a8 (A8): A construct.\n- a9 (A9): A construct.\n- a10 (A10): A construct.\n- a11 (A11): A construct.\n- a12 (A12): A construct.\n- a13 (A13): A construct.\n- x3 (X3): A construct.\n- y3 (Y3): A construct.\n\n### Propositions\n- p1: u1 increases x1. Mechanism: It does.\n- p2: u1 increases y1. Mechanism: It does.\n- p3: x1 increases y1. Mechanism: It does.\n- p4: u2 increases w2. Mechanism: It does.\n- p5: w2 increases x2. Mechanism: It does.\n- p6: u2 increases y2. Mechanism: It does.\n- p7: x2 increases y2. Mechanism: It does.\n- p8: a1 increases x3. Mechanism: It does.\n- p9: a2 increases x3. Mechanism: It does.\n- p10: a3 increases x3. Mechanism: It does.\n- p11: a4 increases x3. Mechanism: It does.\n- p12: a5 increases x3. Mechanism: It does.\n- p13: a6 increases x3. Mechanism: It does.\n- p14: a7 increases x3. Mechanism: It does.\n- p15: a8 increases x3. Mechanism: It does.\n- p16: a9 increases x3. Mechanism: It does.\n- p17: a10 increases x3. Mechanism: It does.\n- p18: a11 increases x3. Mechanism: It does.\n- p19: a12 increases x3. Mechanism: It does.\n- p20: a13 increases x3. Mechanism: It does.\n- p21: x3 increases y3. Mechanism: It does.\n\n## Hypotheses\n1. [directional] x1 raises y1. (h1; derives from: p3)\n   - Claim: the effect of x1 on y1 is positive; entailed by the causal graph through p3\n   - Adjustment for an observational test: none suffices\n   - Test record: untested\n2. [directional] x2 raises y2. (h2; derives from: p7)\n   - Claim: the effect of x2 on y2 is positive; entailed by the causal graph through p7\n   - Adjustment for an observational test: w2\n   - Test record: untested\n3. [directional] x3 raises y3. (h3; derives from: p21)\n   - Claim: the effect of x3 on y3 is positive; entailed by the causal graph through p21\n   - Adjustment for an observational test: none needed\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n- `u1 _||_ u2`\n- `u1 _||_ w2 | u2`\n- `u1 _||_ x2 | w2`\n- `u1 _||_ y2 | u2, x2`\n- `u1 _||_ a1`\n- `u1 _||_ a2`\n- `u1 _||_ a3`\n- `u1 _||_ a4`\n- `u1 _||_ a5`\n- `u1 _||_ a6`\n- `u1 _||_ a7`\n- `u1 _||_ a8`\n- `u1 _||_ a9`\n- `u1 _||_ a10`\n- `u1 _||_ a11`\n- `u1 _||_ a12`\n- `u1 _||_ a13`\n- `u1 _||_ x3 | a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13`\n- `u1 _||_ y3 | x3`\n- `x1 _||_ u2 | u1`\n- `x1 _||_ w2 | u1, u2`\n- `x1 _||_ x2 | u1, w2`\n- `x1 _||_ y2 | u1, u2, x2`\n- `x1 _||_ a1 | u1`\n- `x1 _||_ a2 | u1`\n- `x1 _||_ a3 | u1`\n- `x1 _||_ a4 | u1`\n- `x1 _||_ a5 | u1`\n- `x1 _||_ a6 | u1`\n- `x1 _||_ a7 | u1`\n- `x1 _||_ a8 | u1`\n- `x1 _||_ a9 | u1`\n- `x1 _||_ a10 | u1`\n- `x1 _||_ a11 | u1`\n- `x1 _||_ a12 | u1`\n- `x1 _||_ a13 | u1`\n- `x1 _||_ x3 | u1, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13`\n- `x1 _||_ y3 | u1, x3`\n- `y1 _||_ u2 | u1, x1`\n- `y1 _||_ w2 | u1, x1, u2`\n- `y1 _||_ x2 | u1, x1, w2`\n- `y1 _||_ y2 | u1, x1, u2, x2`\n- `y1 _||_ a1 | u1, x1`\n- `y1 _||_ a2 | u1, x1`\n- `y1 _||_ a3 | u1, x1`\n- `y1 _||_ a4 | u1, x1`\n- `y1 _||_ a5 | u1, x1`\n- `y1 _||_ a6 | u1, x1`\n- `y1 _||_ a7 | u1, x1`\n- `y1 _||_ a8 | u1, x1`\n- `y1 _||_ a9 | u1, x1`\n- `y1 _||_ a10 | u1, x1`\n- `y1 _||_ a11 | u1, x1`\n- `y1 _||_ a12 | u1, x1`\n- `y1 _||_ a13 | u1, x1`\n- `y1 _||_ x3 | u1, x1, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13`\n- `y1 _||_ y3 | u1, x1, x3`\n- `u2 _||_ x2 | w2`\n- `u2 _||_ a1`\n- `u2 _||_ a2`\n- `u2 _||_ a3`\n- `u2 _||_ a4`\n- `u2 _||_ a5`\n- `u2 _||_ a6`\n- `u2 _||_ a7`\n- `u2 _||_ a8`\n- `u2 _||_ a9`\n- `u2 _||_ a10`\n- `u2 _||_ a11`\n- `u2 _||_ a12`\n- `u2 _||_ a13`\n- `u2 _||_ x3 | a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13`\n- `u2 _||_ y3 | x3`\n- `w2 _||_ y2 | u2, x2`\n- `w2 _||_ a1 | u2`\n- `w2 _||_ a2 | u2`\n- `w2 _||_ a3 | u2`\n- `w2 _||_ a4 | u2`\n- `w2 _||_ a5 | u2`\n- `w2 _||_ a6 | u2`\n- `w2 _||_ a7 | u2`\n- `w2 _||_ a8 | u2`\n- `w2 _||_ a9 | u2`\n- `w2 _||_ a10 | u2`\n- `w2 _||_ a11 | u2`\n- `w2 _||_ a12 | u2`\n- `w2 _||_ a13 | u2`\n- `w2 _||_ x3 | u2, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13`\n- `w2 _||_ y3 | u2, x3`\n- `x2 _||_ a1 | w2`\n- `x2 _||_ a2 | w2`\n- `x2 _||_ a3 | w2`\n- `x2 _||_ a4 | w2`\n- `x2 _||_ a5 | w2`\n- `x2 _||_ a6 | w2`\n- `x2 _||_ a7 | w2`\n- `x2 _||_ a8 | w2`\n- `x2 _||_ a9 | w2`\n- `x2 _||_ a10 | w2`\n- `x2 _||_ a11 | w2`\n- `x2 _||_ a12 | w2`\n- `x2 _||_ a13 | w2`\n- `x2 _||_ x3 | w2, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13`\n- `x2 _||_ y3 | w2, x3`\n- `y2 _||_ a1 | u2, x2`\n- `y2 _||_ a2 | u2, x2`\n- `y2 _||_ a3 | u2, x2`\n- `y2 _||_ a4 | u2, x2`\n- `y2 _||_ a5 | u2, x2`\n- `y2 _||_ a6 | u2, x2`\n- `y2 _||_ a7 | u2, x2`\n- `y2 _||_ a8 | u2, x2`\n- `y2 _||_ a9 | u2, x2`\n- `y2 _||_ a10 | u2, x2`\n- `y2 _||_ a11 | u2, x2`\n- `y2 _||_ a12 | u2, x2`\n- `y2 _||_ a13 | u2, x2`\n- `y2 _||_ x3 | u2, x2, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13`\n- `y2 _||_ y3 | u2, x2, x3`\n- `a1 _||_ a2`\n- `a1 _||_ a3`\n- `a1 _||_ a4`\n- `a1 _||_ a5`\n- `a1 _||_ a6`\n- `a1 _||_ a7`\n- `a1 _||_ a8`\n- `a1 _||_ a9`\n- `a1 _||_ a10`\n- `a1 _||_ a11`\n- `a1 _||_ a12`\n- `a1 _||_ a13`\n- `a1 _||_ y3 | x3`\n- `a2 _||_ a3`\n- `a2 _||_ a4`\n- `a2 _||_ a5`\n- `a2 _||_ a6`\n- `a2 _||_ a7`\n- `a2 _||_ a8`\n- `a2 _||_ a9`\n- `a2 _||_ a10`\n- `a2 _||_ a11`\n- `a2 _||_ a12`\n- `a2 _||_ a13`\n- `a2 _||_ y3 | x3`\n- `a3 _||_ a4`\n- `a3 _||_ a5`\n- `a3 _||_ a6`\n- `a3 _||_ a7`\n- `a3 _||_ a8`\n- `a3 _||_ a9`\n- `a3 _||_ a10`\n- `a3 _||_ a11`\n- `a3 _||_ a12`\n- `a3 _||_ a13`\n- `a3 _||_ y3 | x3`\n- `a4 _||_ a5`\n- `a4 _||_ a6`\n- `a4 _||_ a7`\n- `a4 _||_ a8`\n- `a4 _||_ a9`\n- `a4 _||_ a10`\n- `a4 _||_ a11`\n- `a4 _||_ a12`\n- `a4 _||_ a13`\n- `a4 _||_ y3 | x3`\n- `a5 _||_ a6`\n- `a5 _||_ a7`\n- `a5 _||_ a8`\n- `a5 _||_ a9`\n- `a5 _||_ a10`\n- `a5 _||_ a11`\n- `a5 _||_ a12`\n- `a5 _||_ a13`\n- `a5 _||_ y3 | x3`\n- `a6 _||_ a7`\n- `a6 _||_ a8`\n- `a6 _||_ a9`\n- `a6 _||_ a10`\n- `a6 _||_ a11`\n- `a6 _||_ a12`\n- `a6 _||_ a13`\n- `a6 _||_ y3 | x3`\n- `a7 _||_ a8`\n- `a7 _||_ a9`\n- `a7 _||_ a10`\n- `a7 _||_ a11`\n- `a7 _||_ a12`\n- `a7 _||_ a13`\n- `a7 _||_ y3 | x3`\n- `a8 _||_ a9`\n- `a8 _||_ a10`\n- `a8 _||_ a11`\n- `a8 _||_ a12`\n- `a8 _||_ a13`\n- `a8 _||_ y3 | x3`\n- `a9 _||_ a10`\n- `a9 _||_ a11`\n- `a9 _||_ a12`\n- `a9 _||_ a13`\n- `a9 _||_ y3 | x3`\n- `a10 _||_ a11`\n- `a10 _||_ a12`\n- `a10 _||_ a13`\n- `a10 _||_ y3 | x3`\n- `a11 _||_ a12`\n- `a11 _||_ a13`\n- `a11 _||_ y3 | x3`\n- `a12 _||_ a13`\n- `a12 _||_ y3 | x3`\n- `a13 _||_ y3 | x3`\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.3, risk 0.4\n- h3: severity 0.3, risk 0.4\n"
+}
