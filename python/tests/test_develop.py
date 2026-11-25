@@ -228,7 +228,7 @@ def test_a_rescue_cleared_by_a_reanalysis_of_its_anomaly_is_ad_hoc(fixtures_dir)
     assert tf.appraise_amendment(new, prior) == _record(
         verdict="degenerating", ad_hoc_assumptions=["aux_rescue"],
         assumptions=[{"id": "aux_rescue", "added_for": "pred2", "class": "ad_hoc1", "independent": [],
-                      "added_for_inferred": False}])
+                      "added_for_inferred": False, "change": "new"}])
 
 
 def test_an_old_corroborated_prediction_cannot_clear_a_rescue(fixtures_dir):
@@ -241,7 +241,7 @@ def test_an_old_corroborated_prediction_cannot_clear_a_rescue(fixtures_dir):
     result = tf.appraise_amendment(new, prior)
     assert result["assumptions"] == [
         {"id": "aux_rescue", "added_for": "pred2", "class": "ad_hoc1", "independent": [],
-         "added_for_inferred": False}]
+         "added_for_inferred": False, "change": "new"}]
     assert result["verdict"] == "degenerating"
 
 
@@ -258,7 +258,7 @@ def test_a_free_text_added_for_still_marks_a_rescue(fixtures_dir):
     result = tf.appraise_amendment(new, prior)
     assert result["assumptions"] == [
         {"id": "aux_rescue", "added_for": "a subgroup explanation", "class": "ad_hoc1", "independent": [],
-         "added_for_inferred": False}]
+         "added_for_inferred": False, "change": "new"}]
     assert result["ad_hoc_assumptions"] == ["aux_rescue"]
     assert result["verdict"] == "degenerating"
 
@@ -278,7 +278,8 @@ def test_a_corroborated_new_prediction_clears_the_assumption_that_yields_it(fixt
     assert tf.appraise_amendment(new, prior) == _record(
         verdict="degenerating", new_predictions=["pred5"], ad_hoc_assumptions=["aux_baseline"],
         assumptions=[{"id": "aux_baseline", "added_for": "pred2", "class": "ad_hoc2",
-                      "independent": [{"id": "pred5", "status": "untested"}], "added_for_inferred": False}],
+                      "independent": [{"id": "pred5", "status": "untested"}], "added_for_inferred": False,
+                      "change": "new"}],
         theoretically_progressive=True)
     new["test_outcomes"].append({"prediction_id": "pred5", "passed": True, "registered": "osf.io/x"})
     assert tf.appraise_amendment(new, prior) == _record(
@@ -286,7 +287,7 @@ def test_a_corroborated_new_prediction_clears_the_assumption_that_yields_it(fixt
         corroborated_new_registered=["pred5"],
         assumptions=[{"id": "aux_baseline", "added_for": "pred2", "class": "independently_corroborated",
                       "independent": [{"id": "pred5", "status": "corroborated"}],
-                      "added_for_inferred": False}],
+                      "added_for_inferred": False, "change": "new"}],
         theoretically_progressive=True, empirically_progressive=True)
 
 
@@ -305,7 +306,7 @@ def test_only_an_assumption_added_for_an_anomaly_is_appraised(fixtures_dir):
     result = tf.appraise_amendment(new, v1)
     assert result["assumptions"] == [
         {"id": "listed", "added_for": "pred2", "class": "ad_hoc1", "independent": [],
-         "added_for_inferred": False}]
+         "added_for_inferred": False, "change": "new"}]
     assert result["ad_hoc_assumptions"] == ["listed"]
 
 
@@ -315,7 +316,7 @@ def test_an_assumption_that_protects_a_failed_prediction_answers_it(fixtures_dir
     prior = _edge(fixtures_dir, "amend-prior")
     new = _edge(fixtures_dir, "amend-inferred")
     rescue = [{"id": "x1", "added_for": "h1", "class": "ad_hoc1", "independent": [],
-               "added_for_inferred": True}]
+               "added_for_inferred": True, "change": "new"}]
     assert tf.appraise_amendment(new, prior) == _record(
         verdict="degenerating", ad_hoc_assumptions=["x1"], assumptions=rescue)
     # A mixed status in the prior counts as failed too.
@@ -510,13 +511,14 @@ def test_an_assumption_rewritten_under_its_id_is_appraised(fixtures_dir):
                      theoretically_progressive=True, empirically_progressive=True,
                      implications_gained=["c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3"])
     rescue = {"id": "a1", "added_for": "h1", "class": "ad_hoc1", "independent": [],
-              "added_for_inferred": False}
+              "added_for_inferred": False, "change": "revised"}
     assert tf.appraise_amendment(new, prior) == {
         **record, "ad_hoc_assumptions": ["a1"], "assumptions": [rescue]}
-    # The same rewrite under a new id is appraised the same way.
+    # The same rewrite under a new id is appraised the same way, as new.
     moved = copy.deepcopy(new)
     moved["auxiliary_assumptions"][0]["id"] = "a2"
-    assert tf.appraise_amendment(moved, prior)["assumptions"] == [{**rescue, "id": "a2"}]
+    assert tf.appraise_amendment(moved, prior)["assumptions"] == [
+        {**rescue, "id": "a2", "change": "new"}]
     # Without added_for, the refuted h1 it protects is taken as its anomaly.
     inferred = copy.deepcopy(new)
     inferred["auxiliary_assumptions"][0]["added_for"] = None
@@ -561,6 +563,17 @@ def test_an_assumption_moved_to_a_new_id_is_not_appraised(fixtures_dir):
     blank = copy.deepcopy(new)
     blank["auxiliary_assumptions"][0]["statement"] = ""
     assert tf.appraise_amendment(blank, blank_prior)["ad_hoc_assumptions"] == ["a_scale"]
+    # Kept under its id, the core assumption a1 is not appraised. Any change of
+    # wording, even one that keeps the meaning, makes it revised and appraised,
+    # and it is then read as answering the refuted h1 it protects.
+    kept = copy.deepcopy(new)
+    kept["auxiliary_assumptions"][0]["id"] = "a1"
+    assert tf.appraise_amendment(kept, prior)["assumptions"] == []
+    kept["auxiliary_assumptions"][0]["statement"] = "The c2 scale measures c2 in each sample."
+    result = tf.appraise_amendment(kept, prior)
+    assert result["assumptions"] == [{"id": "a1", "added_for": "h1", "class": "ad_hoc1", "independent": [],
+                                      "added_for_inferred": True, "change": "revised"}]
+    assert result["verdict"] == "neutral"
 
 
 def test_a_version_whose_graph_is_refused_is_not_compared(fixtures_dir):

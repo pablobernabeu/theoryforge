@@ -346,7 +346,7 @@ def test_entries_without_ids_read_as_empty_ids(tmp_path):
         "dropped_corroborated": [], "content_lost": [], "new_anomalies": [],
         "assumptions": [{"id": "", "added_for": "h1 failed at the first test", "class": "ad_hoc2",
                          "independent": [{"id": "h1", "status": "untested"}],
-                         "added_for_inferred": False}],
+                         "added_for_inferred": False, "change": "new"}],
         "theoretically_progressive": True, "empirically_progressive": False, "revised": [],
         "weakened_refuted": [], "unresolved": [], "implications_compared": True,
         "implications_lost": [], "implications_lost_unrefuted": [], "implications_gained": [],

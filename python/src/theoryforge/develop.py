@@ -9,6 +9,7 @@ what two versions of a theory claim, not the ids of their predictions. Meehl
 from __future__ import annotations
 
 import math
+from typing import Any
 
 from ._access import PRED_TYPE, RELATION, enum, field, items, ne_str, str_list, text
 from ._causal import causal_graph
@@ -120,16 +121,17 @@ def _revision(old, new) -> str | None:
     return None
 
 
-def _appraised_assumptions(new, prior) -> list:
-    """The assumptions of ``new`` that the appraisal reads, in file order.
+def _appraised_assumptions(new, prior) -> list[tuple[Any, str]]:
+    """The assumptions of ``new`` that the appraisal reads, in file order, each with its change.
 
-    An assumption kept under a prior id is read when its statement, with
-    whitespace runs squished, differs from that of the first prior assumption
-    with that id. An assumption under an id the prior lacks is read unless its
-    statement is not blank and matches that of a prior assumption whose id the
-    new version no longer holds, which it then takes, so that a renamed
-    assumption is not new. Its ``added_for`` and ``protects`` alone do not
-    decide. R's ``.tf_appraised_assumptions`` holds the same rule.
+    An assumption kept under a prior id is read, as ``revised``, when its
+    statement, with whitespace runs squished, differs from that of the first
+    prior assumption with that id, by any change of wording. An assumption
+    under an id the prior lacks is read, as ``new``, unless its statement is
+    not blank and matches that of a prior assumption whose id the new version
+    no longer holds, which it then takes, so that a renamed assumption is not
+    new. Its ``added_for`` and ``protects`` alone do not decide. R's
+    ``.tf_appraised_assumptions`` holds the same rule.
     """
     prior_aux = items(prior, "auxiliary_assumptions")
     new_aux = items(new, "auxiliary_assumptions")
@@ -145,14 +147,14 @@ def _appraised_assumptions(new, prior) -> list:
         aid, st = text(field(a, "id")), squish(text(field(a, "statement")))
         if aid in first_statement:
             if st != first_statement[aid]:
-                read.append(a)
+                read.append((a, "revised"))
             continue
         for j, qid in enumerate(prior_ids):
             if st and not taken[j] and qid not in new_ids and prior_statements[j] == st:
                 taken[j] = True
                 break
         else:
-            read.append(a)
+            read.append((a, "new"))
     return read
 
 
@@ -227,10 +229,13 @@ def appraise_amendment(new, prior) -> dict:
             ``{id, change}`` record per revised prediction sorted by its new
             id, where ``change`` is ``weakened``, ``strengthened``,
             ``reworded`` or ``changed``. ``assumptions`` holds one ``{id,
-            added_for, class, independent, added_for_inferred}`` record per
-            new or revised assumption added for an anomaly, in file order.
-            ``added_for_inferred`` is True when ``added_for`` was taken from
-            ``protects``. ``independent`` lists, each as ``{id, status}`` and
+            added_for, class, independent, added_for_inferred, change}``
+            record per new or revised assumption added for an anomaly, in file
+            order. ``added_for_inferred`` is True when ``added_for`` was taken
+            from ``protects``. ``change`` is ``new`` for an assumption under an
+            id the prior lacks and ``revised`` for one kept under its id whose
+            statement changed, by any change of wording, even one that keeps
+            its meaning. ``independent`` lists, each as ``{id, status}`` and
             in the order of ``protects``, the distinct predictions the
             assumption protects that are new in this version and differ from
             ``added_for``, with their status in ``new`` (``corroborated``,
@@ -322,13 +327,15 @@ def appraise_amendment(new, prior) -> dict:
     new_predictions = [pid for pid in new_ids if pid not in prior_ids and pid not in renamed_new]
     corroborated_new = [pid for pid in new_predictions if prediction_status(pid, new_tos) == CORROBORATED]
 
+    # The new and revised assumptions, the only ones appraised, each with its
+    # change, and the predictions they protect.
+    appraised = _appraised_assumptions(new, prior)
+    protected = {q for a, _ in appraised for q in str_list(field(a, "protects"))}
+
     # Old content: a proposition whose endpoints and relation the prior holds,
     # under any id, so renaming a proposition adds nothing either. A claim the
     # prior's causal graph entails is old content too, whatever the prediction
     # cites.
-    # The new and revised assumptions, the only ones appraised.
-    new_aux = _appraised_assumptions(new, prior)
-    protected = {q for a in new_aux for q in str_list(field(a, "protects"))}
     old_content = {_proposition_content(p) for p in items(prior, "propositions")}
     content_of: dict[str, tuple[str, str, str]] = {}
     for p in items(new, "propositions"):
@@ -386,7 +393,7 @@ def appraise_amendment(new, prior) -> dict:
 
     assumptions: list[dict] = []
     ad_hoc: list[str] = []
-    for a in new_aux:
+    for a, change in appraised:
         added_for = text(field(a, "added_for"))
         inferred = False
         if not ne_str(added_for):
@@ -400,7 +407,8 @@ def appraise_amendment(new, prior) -> dict:
         aid = text(field(a, "id"))
         cls, independent = classify_auxiliary(a, new_tos, new_predictions, added_for)
         assumptions.append({"id": aid, "added_for": added_for, "class": cls,
-                            "independent": independent, "added_for_inferred": inferred})
+                            "independent": independent, "added_for_inferred": inferred,
+                            "change": change})
         if cls != "independently_corroborated":
             ad_hoc.append(aid)
 

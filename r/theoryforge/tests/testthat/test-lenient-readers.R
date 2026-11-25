@@ -334,7 +334,7 @@ test_that("entries without ids read as empty ids", {
     new_anomalies = character(0),
     assumptions = list(list(id = "", added_for = "h1 failed at the first test", class = "ad_hoc2",
                             independent = list(list(id = "h1", status = "untested")),
-                            added_for_inferred = FALSE)),
+                            added_for_inferred = FALSE, change = "new")),
     theoretically_progressive = TRUE, empirically_progressive = FALSE, revised = list(),
     weakened_refuted = character(0), unresolved = character(0), implications_compared = TRUE,
     implications_lost = character(0), implications_lost_unrefuted = character(0),
