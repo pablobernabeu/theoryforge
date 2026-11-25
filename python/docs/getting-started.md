@@ -1,7 +1,7 @@
 # Get started
 
 This page reads one of the example theories, validates it, identifies it by its content
-hash, scores it with the rigour checklist, draws it and saves it. [Workflow
+hash, scores it with the checklist, draws it and saves it. [Workflow
 modes](workflow-modes.md) continues from there, building a theory and testing it. Every
 printed result and figure on this page is produced by running the code when the page is
 built.
@@ -98,12 +98,18 @@ except ValueError as problem:
     print(problem)
 ```
 
-## Scoring rigour
+## The checklist
 
-`check()` scores the theory against the rigour checklist the package ships, version 3.0,
-whose twelve items each test one criterion from the methodology literature. Each item has
-the status `pass`, `warn`, `fail` or `n/a`, the last for an item with nothing to assess,
-such as the parsimony of a theory that adds no assumption to answer an anomaly.
+```python exec="1" session="getting-started"
+# The version the prose names is the one the package ships.
+from theoryforge._resources import checklist
+
+print(f"""`check()` scores the theory against the checklist the package ships, version
+{checklist()["schema_version"]}, whose twelve items each test one criterion drawn from the
+methodology literature. Each item has the status `pass`, `warn`, `fail` or `n/a`, the last
+for an item with nothing to assess, such as the parsimony of a theory that adds no
+assumption to answer an anomaly.""")
+```
 
 ```python exec="1" source="block" result="text" session="getting-started"
 report = t.check()
@@ -114,14 +120,19 @@ for item in report["items"]:
     print(f'{item["id"]:<19} {item["status"]:<5} {item["score"]}')
 ```
 
-The aggregate score is the weighted mean of the applicable items' scores, on a scale of 0
-to 100, and the coverage is the share of the checklist's weight that applied. The weights
-are a convention, so `aggregate_range` gives the lowest and the highest aggregate under
-other weightings: equal weights, and each applicable item's weight halved and then doubled
-with the others unchanged. A score whose range is wide depends on the convention more than
-one whose range is narrow. The aggregate is compensatory, since a high score on one item
-offsets a low score on another. The gate is not. It is `blocked` when an item marked as a
-blocker fails, `pass` otherwise, and `advisory` for a theory whose maturity is `draft`.
+The checklist score, `aggregate_score`, is the weighted mean of the applicable items'
+scores, on a scale of 0 to 100, and the coverage is the share of the checklist's weight
+that applied. The weights are a convention, so `aggregate_range` gives the lowest and the
+highest score over the checklist's weights, equal weights, and each applicable item's
+weight halved and then doubled with the others unchanged. The range is the extremes of
+these weightings and not an interval for the score, and the choices made in coding the file
+and the constants of the claim-form rubric lie outside it. A score whose range is wide
+depends on the convention more than one whose range is narrow. The score is compensatory,
+since a high score on one item offsets a low score on another. The gate is not. It is
+`blocked` when an item marked as a blocker fails, `pass` otherwise, and `advisory` for a
+theory whose maturity is `draft`. The derivation chain warns, without blocking the gate,
+when a feedback loop leaves a prediction's claim unread, as `check()` does by default, and
+`check(cycles="sigma")` reads such claims by sigma-separation.
 [Methodological foundations](methodology.md) sets out each item, its supporting literature
 and how its score is computed.
 

@@ -500,8 +500,8 @@ does not read it.
 content hash, the checklist version, the aggregate score with its range and the gate.
 Sections on the checklist, the severities, the test record, the evidence, the claims and the
 causal graph, the equivalent models, the rivals and the provenance follow, and the
-preregistration closes it. The same theory always gives the same dossier, so it can be
-committed or attached to a submission.
+preregistration closes it. The same theory file always gives the same dossier, so it can
+be committed or attached to a submission.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 dossier = switching.dossier()

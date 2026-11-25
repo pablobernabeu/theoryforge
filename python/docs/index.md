@@ -13,8 +13,8 @@ from an anomaly.
 ## A worked result
 
 The package includes a deliberately underspecified theory of motivation. Reading it and
-running the rigour checklist gives its score, the range of scores the checklist's other
-weightings would give, its gate and the items it does not pass.
+running the checklist gives its checklist score, the range of scores that equal weights or
+one weight halved or doubled would give, its gate and the items it does not pass.
 
 ```python exec="1" source="block" result="text" session="home"
 import theoryforge as tf
@@ -29,26 +29,39 @@ for item in report["items"]:
 ```
 
 The gate is blocked because two items that the checklist treats as blockers failed. The
-theory's one prediction, 'Motivated people exist', asserts an existence claim, which no
-observation can contradict, and it cites no proposition from which it would follow. To
-unblock the gate, the author would state a prediction that rules out some result, such as a
-direction or a bounded range of an effect, and derive it from a proposition. The warnings
-name the remaining work. Motivation and Drive are defined in nearly the same words and would
-have to be merged or defined apart. Neither construct has a measure or a stated scope, and
-the one proposition is an association without a mechanism. The
-[development roadmap](workflow-modes.md#visualising-the-theory) draws the same list as an
-ordered worklist.
+theory's one prediction, 'Motivated people exist', is typed as an existence claim, and the
+falsifiability item reads that label: no prediction is typed point, interval or directional.
+The prediction also cites no proposition from which it would follow. To unblock the gate,
+the author would state a prediction that rules out some result, such as a direction or a
+bounded range of an effect, type it accordingly and derive it from a proposition. The
+warnings name the remaining work. Motivation and Drive are defined in nearly the same words
+and would have to be merged or defined apart. Neither construct has a measure or a stated
+scope, and the one proposition is an association without a mechanism. The [development
+roadmap](workflow-modes.md#visualising-the-theory) draws the same list as an ordered
+worklist.
 
-The score is a mean of the item scores under conventional weights, and the gate is the
-verdict to act on. A passing gate shows that the theory's file states what a test would
-need, and it does not show that the theory is true.
+```python exec="1" session="home"
+# What the checklist score describes, as the package words it, for the
+# checklist that scored the theory above.
+from theoryforge.rigor import SCOPE
+
+print(SCOPE.format(version=report["checklist_version"]))
+```
+
+The checklist score is a mean of the item scores under conventional weights. The gate
+reports whether either blocking item failed: at least one prediction is typed point,
+interval or directional, and every prediction cites declared propositions whose graph
+entails any claim it states, with no stated phenomenon contradicted. The labels are the
+author's and are not checked against the statements. A passing gate does not show that the
+theory is true or well reasoned. A claim that the graph leaves unread because it has a
+feedback loop is not checked, and the derivation chain then warns without blocking the gate.
 [Methodological foundations](methodology.md) gives the rationale and the computation behind
 each item.
 
 ## From building to testing
 
 A theory's `maturity` field records its stage as `building`, `developing` or `testing`, or
-as `draft`, which makes the rigour checklist's gate advisory. At the building stage, the
+as `draft`, which makes the checklist's gate advisory. At the building stage, the
 builder methods assemble the theory and log each step. `read_dagitty()` starts a draft from
 a causal diagram drawn in DAGitty. Validation checks the file against the schema and every
 cross-reference, and the content hash identifies its content exactly.
@@ -82,7 +95,7 @@ import theoryforge as tf
 
 t = tf.read(tf.example_path("modality-switching.theory.yaml"))
 t.validate(full=True)    # the schema, every cross-reference and the recorded hash
-t.check()                # the rigour checklist: score, range, gate and items
+t.check()                # the checklist: checklist score, range, gate and items
 t.implications()         # the conditional independencies the causal graph implies
 t.entailments()          # whether the graph entails each claim the theory states
 t.discriminate("alt_grounding_by_interaction")   # where data could tell it from a rival
