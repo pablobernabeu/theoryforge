@@ -120,18 +120,22 @@ Reload button. A figure Graphviz cannot draw is replaced by a note that says why
 rest of the result stays, and the next run tries to load Graphviz again. When Graphviz
 refuses the DOT, the note gives its message. The checklist score and the content hash on
 the theory card are computed after each load, each in a call of its own, so neither
-holds up the load or the start. Both wait until the engine has no work the user started,
-so an operation started meanwhile goes first, and both are kept for the text they were
-computed on. Each runtime sets the sizes above which they wait for the user to ask, from
-what its engine was measured to take. The checklist's time grows faster than the theory,
-and in both apps a theory with more than 300 constructs, propositions and predictions is
-scored only on request. On theories of that size, it took up to 2.7 s in webR and 0.3 s
-in Pyodide. The hash reads the whole theory, and its time grows with the length of the
-theory written as JSON, which the load reports. The R app hashes a theory longer than
-100,000 characters only on request, since webR took up to 3.6 s on theories of up to
-150,000, and the Python app one longer than 1,000,000. Both leave a theory with more
-than 20,000 values unmeasured and hash it only on request. An operation that a session
-or a link holds for a theory above either size is not run as the app opens it.
+holds up the load or the start. Each waits until the engine has no work the user
+started, so an operation started meanwhile goes first, or waits at most for the one call
+under way, and both are kept for the text they were computed on. Each runtime sets the
+sizes above which they wait for the user to ask, from what its engine was measured to
+take. The checklist's time grows faster than the theory, and in both apps a theory with
+more than 300 constructs, propositions and predictions is scored only on request. On
+theories of that size, it took up to 2.7 s in webR and 0.3 s in Pyodide. The hash reads
+the whole theory, and its time grows with the length of the theory written as JSON,
+which the load reports as the language's JSON writer gives it, so the two apps can
+differ by a few characters on a theory with decimal numbers. The R app hashes a theory
+longer than 50,000 characters only on request, since webR took up to 2.5 s on 48,000
+characters made mostly of test outcomes, whose numbers cost the most to write, and the
+Python app one longer than 1,000,000, which Pyodide hashed in under half a second. Both
+leave a theory with more than 20,000 values unmeasured and hash it only on request. An
+operation that a session or a link holds for a theory above either size is not run as
+the app opens it.
 
 ## Build and run locally
 

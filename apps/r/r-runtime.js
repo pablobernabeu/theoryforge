@@ -51,10 +51,11 @@ invisible(lapply(.tf_app_files, source))
        version = list(id = .tf_str(v, "id"), parent_id = .tf_str(v, "parent_id")))
 }
 
-# The length of the theory written as JSON, the text the content hash reads,
-# from which the app tells a theory too long to hash as it loads. A theory
-# with more values than .tf_MEASURED_VALUES is not measured, and its length is
-# NULL.
+# The length of the theory as jsonlite writes it, from which the app tells a
+# theory too long to hash as it loads. Python's json module writes some
+# numbers differently, so the two glues can differ by a few characters. A
+# theory with more values than .tf_MEASURED_VALUES is not measured, and its
+# length is NULL.
 .tf_MEASURED_VALUES <- 20000L
 .tf_chars <- function(t) {
   if (length(unlist(unclass(t), use.names = FALSE)) > .tf_MEASURED_VALUES) return(NULL)
@@ -345,9 +346,10 @@ const RT = {
   lang: "r",
   // The size above which the card's score and hash wait for the user to ask
   // (apps/README.md, "Runtimes"). In webR, the checklist took up to 2.7 s on
-  // 300 constructs, propositions and predictions, and the hash up to 3.6 s on
-  // theories of up to 150,000 characters of JSON.
-  limits: { score: 300, hashChars: 100000 },
+  // 300 constructs, propositions and predictions, and the hash up to 2.5 s on
+  // 48,000 characters of JSON made mostly of test outcomes, whose numbers cost
+  // the canonical writer most.
+  limits: { score: 300, hashChars: 50000 },
   langLabel: "R",
   engineLabel: "webR (WebAssembly)",
   accent: "#276DC3",

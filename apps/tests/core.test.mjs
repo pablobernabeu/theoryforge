@@ -933,7 +933,7 @@ test("a large theory is scored only on request, and its last operation is not ru
   assert.equal(scoreChipText($), "not scored score it");
   assert.match($("#summaryScore").getAttribute("title"), /4,000 constructs, propositions and predictions, more than the 300/);
   assert.equal($("#summaryHash").textContent, "Content hash not computed for a theory this long compute it");
-  assert.match($("#summaryHash .hk").getAttribute("title"), /^Written as JSON, this theory takes 200,000 characters, more than the 100,000/);
+  assert.match($("#summaryHash .hk").getAttribute("title"), /^Written as JSON, this theory takes 200,000 characters, more than the 50,000/);
   // Pressed, the button is replaced, and the focus moves to what replaced it.
   const compute = $("#summaryHash button");
   compute.focus();

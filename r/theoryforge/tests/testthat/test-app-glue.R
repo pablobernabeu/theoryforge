@@ -215,9 +215,10 @@ test_that("the summary lists constructs, rivals, the score and the hash", {
   expect_identical(jsonlite::fromJSON(app$.tf_hash_call(), simplifyVector = FALSE),
                    list(hash = tf_content_hash(t)))
   expect_identical(s$counts$phenomena, 1L)
-  # The length of the theory written as JSON, which the app compares with the
-  # length it hashes as it loads. It is the length Python reports.
-  expect_identical(s$chars, nchar(jsonlite::toJSON(unclass(t), auto_unbox = TRUE, null = "null", digits = NA)))
+  # The length of the theory as jsonlite writes it, which the app compares
+  # with the length it hashes as it loads. On this theory, which holds no
+  # decimal number, Python's glue gives the same length.
+  expect_identical(s$chars, 8815L)
 })
 
 test_that("a large theory loads without the checklist", {

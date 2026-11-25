@@ -44,9 +44,11 @@ def _lineage(d):
     return {"id": text(field(d, "id")), "title": text(field(d, "title")),
             "version": {"id": text(field(v, "id")), "parent_id": text(field(v, "parent_id"))}}
 
-# The length of the theory written as JSON, the text the content hash reads,
-# from which the app tells a theory too long to hash as it loads. A theory
-# with more values than MEASURED_VALUES is not measured, and its length is None.
+# The length of the theory as the json module writes it, from which the app
+# tells a theory too long to hash as it loads. R's jsonlite writes some
+# numbers differently, so the two glues can differ by a few characters. A
+# theory with more values than MEASURED_VALUES is not measured, and its length
+# is None.
 MEASURED_VALUES = 20000
 
 def _chars(d):

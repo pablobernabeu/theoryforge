@@ -1529,9 +1529,9 @@
   // theory opens. The checklist's time grows faster than the theory's
   // constructs, propositions and predictions, so its limit counts those. The
   // hash reads the whole theory, so its limit is on the length of the theory
-  // written as JSON, which the load reports, or null for a theory with too
-  // many values to measure at little cost.
-  const LIMITS = { score: 300, hashChars: 100000 };
+  // as the package's JSON writer gives it, which the load reports, or null for
+  // a theory with more values than the glue measures (its MEASURED_VALUES).
+  const LIMITS = { score: 300, hashChars: 50000, values: 20000 };
   const limits = () => Object.assign({}, LIMITS, (RT && RT.limits) || {});
   const theorySize = (s) => {
     const c = (s && s.counts) || {};
