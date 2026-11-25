@@ -335,6 +335,11 @@ test("above the limits, Record the current hash computes it, and 'score it' keep
   await until(() => fieldOf(p, "version.content_hash").value !== "", "the hash to be recorded");
   assert.equal(rt.hashes, 1, "the hash is computed on request");
   assert.equal(fieldOf(p, "version.content_hash").value, "sha256:" + "56".repeat(32));
+  // Recording the hash is an edit, which the engine reads once typing pauses
+  // and which gives a new theory to score. The test waits for that read, so
+  // that the score asked for below is that of the theory then shown.
+  await until(() => rt.reads.some((r) => r[0] === "edit") && p.$("#edSource").readOnly === false && p.$("#edLint button"),
+    "the recorded hash to reach the engine");
   // The editor's 'score it' is replaced by the score, and the focus follows.
   const scoreIt = p.$("#edLint button");
   scoreIt.focus();
