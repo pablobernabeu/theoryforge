@@ -271,7 +271,7 @@
       bodyEl = el("div", { class: "ed-body view-" + view }, [formsEl, srcPane]);
       panel.replaceChildren(el("div", { class: "panel editor" }, [
         el("div", { class: "outhead" }, [el("h2", null, "Theory editor"), el("span", { class: "grow" })]),
-        el("p", { class: "note ed-intro" }, "Build or edit the theory in the forms or in the source. The package reads each change, validates it in full and scores it with the rigour checklist, and the problems appear beside the fields they concern. Save writes the theory as YAML with the package's own writer."),
+        el("p", { class: "note ed-intro" }, "Build or edit the theory in the forms or in the source. The package reads each change, validates it in full and scores it with the checklist, and the problems appear beside the fields they concern. Save writes the theory as YAML with the package's own writer."),
         toolbar, lintEl, bodyEl,
       ]));
     }
@@ -850,20 +850,23 @@
       const kids = [];
       const chips = el("div", { class: "chips" });
       if (srcError) chips.append(el("span", { class: "chip invalid", text: "source unreadable" }));
-      if (v) chips.append(v.ok ? el("span", { class: "chip valid", text: "valid" }) : el("span", { class: "chip invalid", text: host.plural(problems.length, "problem") }));
+      if (v) chips.append(v.ok ? el("span", { class: "chip valid", title: host.wellFormedTitle || "", text: "well-formed" }) : el("span", { class: "chip invalid", text: host.plural(problems.length, "problem") }));
       // The score arrives after the theory, from a call of its own, and a
       // theory too large to be scored as it loads is scored on request.
       const ck = s.check;
       const refused = !!ck && "error" in ck;
       if (ck && !refused) {
-        chips.append(el("span", { class: "chip score", id: "edScore", html: "checklist <b>" + host.esc(String(ck.score)) + "</b> / 100 · gate " + host.esc(ck.gate) }));
+        // As the card shows it: the number unpadded, and the title saying
+        // what the score describes.
+        const n = host.num ? host.num(ck.score) : String(ck.score);
+        chips.append(el("span", { class: "chip score", id: "edScore", title: host.scoreTitle ? host.scoreTitle(ck) : "", html: "checklist <b>" + host.esc(n) + "</b> · gate " + host.esc(ck.gate) }));
         const failed = host.asArr(ck.failed), warned = host.asArr(ck.warned);
         if (failed.length) chips.append(el("span", { class: "chip", text: "fails: " + failed.join(", ") }));
         if (warned.length) chips.append(el("span", { class: "chip", text: "warns: " + warned.join(", ") }));
       } else if (refused) chips.append(el("span", { class: "chip", id: "edScore", title: ck.error, text: "not scored" }));
       else if (s.scoreWait === "asked") {
         chips.append(el("span", { class: "chip unscored", id: "edScore", title: host.largeNote ? host.largeNote(s, "score") : "" }, ["not scored ",
-          el("button", { class: "linklike sm", type: "button", onclick: () => { if (host.score) host.score(); }, "aria-label": "Score the theory with the rigour checklist" }, "score it")]));
+          el("button", { class: "linklike sm", type: "button", onclick: () => { if (host.score) host.score(); }, "aria-label": "Score the theory with the checklist" }, "score it")]));
       } else if (s.scoreWait === "queued") chips.append(el("span", { class: "chip scoring", id: "edScore", text: "scoring…" }));
       kids.push(chips);
       if (srcError) kids.push(host.errorBox("The source cannot be read, so the forms and the score show the last version that could", srcError));

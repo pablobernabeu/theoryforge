@@ -110,9 +110,11 @@ test("a failed upload keeps the active theory and says which it is", async () =>
   assert.equal($("#codeBlock").textContent, "# computed on fixtures/a.theory.yaml");
 });
 
-test("the summary says whether the loaded theory is valid", async () => {
+test("the summary says whether the loaded theory is well-formed", async () => {
   const { $ } = await boot();
-  assert.equal($("#summaryWrap .chip.valid").textContent, "valid");
+  assert.equal($("#summaryWrap .chip.valid").textContent, "well-formed");
+  assert.equal($("#summaryWrap .chip.valid").getAttribute("title"),
+    "Full validation found no problem in the file's structure or references. This says nothing about whether the theory is valid.");
   await upload($("#fileInput"), "mine.theory.yaml", "bad: theory\n");
   assert.equal($("#summaryWrap .chip.valid"), null);
   assert.equal($("#summaryWrap .chip.invalid").textContent, "2 problems");
@@ -136,7 +138,7 @@ test("an operation that fails on an invalid theory says so and points to Validat
   rt.failRun = true;
   await $("#runBtn").click();
   const out = $("#output");
-  assert.match(out.textContent, /invalid theory/);
+  assert.match(out.textContent, /a theory that is not well-formed/);
   assert.match(out.textContent, /2 problems/);
   assert.ok($("#output .error button.linklike"), "a button leads to Validate");
   assert.match($("#output .error .last").textContent, /^AttributeError: 'str' object has no attribute 'get'$/);
@@ -238,7 +240,8 @@ const LINEAGE = [
 ];
 
 // A runtime whose loads report the example's lineage, which records each call
-// it runs and which answers each operation with `answers[op]`.
+// it runs and which answers each operation with `answers[op]`, or with what
+// `answers[op]` gives for the call's parameters when it is a function.
 function lineageRuntime(answers) {
   return stubRuntime({
     calls: [], priorLoads: [],
@@ -262,7 +265,8 @@ function lineageRuntime(answers) {
     },
     async run(op, params) {
       this.calls.push({ op, params });
-      const raw = (answers && answers[op]) || { verdict: "neutral" };
+      const a = answers && answers[op];
+      const raw = (typeof a === "function" ? a(params) : a) || { verdict: "neutral" };
       return { raw, code: "# " + op };
     },
   });
@@ -444,15 +448,61 @@ test("the checklist's guide and reading say what pass, blocked and advisory mean
       { id: "derivation_chain", status: "fail", score: 0, weight: 1, severity_if_fail: "blocker" },
     ],
   };
-  const { $ } = await boot({}, lineageRuntime({ check: { report, svg: "<svg></svg>" } }));
+  const { $ } = await boot({}, lineageRuntime({ check: { report: Object.assign({ checklist_version: "3.1" }, report), svg: "<svg></svg>" } }));
   await $("#runBtn").click();
   const about = $("#output .ri-about").textContent, interp = $("#output .ri-interp").textContent;
-  assert.match(about, /Pass means neither blocking item failed, and blocked means at least one did\./);
-  assert.match(about, /At draft maturity, the gate is always advisory/);
-  assert.doesNotMatch(about, /usable with the noted gaps/);
+  // The guide opens with what the score describes, for the checklist's own
+  // version, and says to read the item statuses first.
+  assert.ok(about.startsWith("The checklist score describes how completely the file states what checklist 3.1 asks for. " +
+    "Most items read whether a field is filled in or how a prediction is labelled, and stated claims are checked against the causal graph. " +
+    "Test outcomes are read only by the parsimony item, the weights are conventions, and no study has established what difference between two scores is meaningful. " +
+    "The score does not show that the theory is true or well reasoned. Read the item statuses first"), about);
+  assert.match(about, /The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted\. The labels are the author's\./);
+  assert.match(about, /The derivation chain reads each stated claim against the causal graph, diagnosticity sets a claim against a rival's propositions where both are stated, precision asks for two finite bounds and non-redundancy compares the words of the construct definitions\./);
+  assert.match(about, /At draft maturity, the gate is advisory/);
+  assert.doesNotMatch(about, /rigour|facets|quality/i);
+  assert.match(interp, /^The checklist score is 12\./);
   assert.match(interp, /draft maturity/);
   assert.match(interp, /falsifiability and derivation_chain/);
-  assert.doesNotMatch(interp, /clears the gate/);
+  assert.doesNotMatch(interp, /clears the gate|out of 100/);
+  // A blocked gate is read as what the blocking items give.
+  const blocked = Object.assign({}, report, { gate: "blocked", maturity: "developing" });
+  const b = await boot({}, lineageRuntime({ check: { report: blocked, svg: "<svg></svg>" } }));
+  await b.$("#runBtn").click();
+  assert.match(b.$("#output .ri-interp").textContent, /The blocking items falsifiability and derivation_chain fail, so the gate is blocked\./);
+  // Without a version, the statement names no number.
+  assert.match(b.$("#output .ri-about").textContent, /^The checklist score describes how completely the file states what the checklist asks for\./);
+});
+
+test("the checklist names the predictions it could not read, and a run under sigma shows no grid", async () => {
+  const report = {
+    aggregate_score: 85.9, aggregate_range: [82.1, 87.9], coverage: 0.92, gate: "pass", n_blockers_failed: 0, maturity: "developing",
+    checklist_version: "3.1",
+    items: [{ id: "derivation_chain", status: "warn", score: 0.75, weight: 0.08, severity_if_fail: "blocker", not_checked: ["pred3"] }],
+  };
+  const rt = lineageRuntime({ check: (params) => ({ report, svg: params.cycles === "sigma" ? null : "<svg></svg>" }) });
+  const { ctx, $ } = await boot({}, rt);
+  await opButton(ctx, "check").click();
+  await $("#runBtn").click();
+  assert.equal(lastCall(rt).params.cycles, "refuse");
+  assert.match($("#output .ri-interp").textContent, /1 prediction \(pred3\) was not checked, since the causal graph has a feedback loop\. Set cycles to sigma/);
+  assert.match($("#output").textContent, /Not checked \(feedback loop\)pred3/);
+  assert.match($("#output").textContent, /Checklist grid/);
+  await $("#param-cycles").dispatch("change", { target: { value: "sigma" } });
+  await $("#runBtn").click();
+  assert.equal(lastCall(rt).params.cycles, "sigma");
+  assert.match($("#output").textContent, /The package draws the grid with cycles refuse, its default, so it is not drawn for cycles sigma\./);
+  assert.match($("#output").textContent, /Cyclessigma/);
+  // A package whose check() takes no cycles reads the default whatever was
+  // asked, and the runtime says so: the grid is drawn and the reading named.
+  const old = lineageRuntime({ check: () => ({ report, svg: "<svg></svg>", cycles: "refuse" }) });
+  const o = await boot({}, old);
+  await opButton(o.ctx, "check").click();
+  await o.$("#param-cycles").dispatch("change", { target: { value: "sigma" } });
+  await o.$("#runBtn").click();
+  assert.match(o.$("#output").textContent, /Checklist grid/);
+  assert.match(o.$("#output").textContent, /Cyclesrefuse/);
+  assert.doesNotMatch(o.$("#output").textContent, /not drawn for cycles sigma/);
 });
 
 test("whole-number parameters are rounded before they are run", async () => {
@@ -527,7 +577,8 @@ test("the help lists each operation as 'Label: description' and the title names 
     assert.match(li.textContent, /^[^:]+: \S/);
     assert.equal(li.querySelector("b"), null, "no label is set in bold");
   }
-  assert.match(items[0].textContent, /^Rigour checklist: Scores the theory against the 12-item rigour checklist/);
+  assert.match(items[0].textContent, /^Checklist: Reads the file against the 12 items of the checklist/);
+  for (const li of items) assert.doesNotMatch(li.textContent, /rigour checklist|Audit dossier|Severity rubric/i);
 });
 
 test("the help lists every work that the help texts and the result guides cite", async () => {
@@ -581,7 +632,12 @@ test("the summary counts in the singular when there is one", async () => {
   assert.match(text, /1 assumption(?!s)/);
   assert.match(text, /1 phenomenon/);
   assert.match(text, /2 predictions/);
-  assert.match(text, /41\.5 \/ 100 · pass/);
+  assert.match(text, /checklist 41\.5 · gate pass/);
+  assert.doesNotMatch(text, /\/ 100/);
+  // The chip's title gives the first and the last sentence of what the score
+  // describes.
+  assert.equal($("#summaryScore").getAttribute("title"),
+    "The checklist score describes how completely the file states what the checklist asks for. The score does not show that the theory is true or well reasoned.");
   assert.match($("#summaryWrap .hash").textContent, /sha256:abababababab…ababab/);
 });
 
@@ -628,8 +684,8 @@ test("a run is announced in a status region, and the result panel is no live reg
   assert.equal($("#output").getAttribute("aria-live"), null);
   assert.equal($("#liveStatus").getAttribute("role"), "status");
   await $("#runBtn").click();
-  await until(() => $("#liveStatus").textContent === "Rigour checklist finished", "the announcement");
-  assert.equal($("#liveStatus").textContent, "Rigour checklist finished");
+  await until(() => $("#liveStatus").textContent === "Checklist finished", "the announcement");
+  assert.equal($("#liveStatus").textContent, "Checklist finished");
 });
 
 test("a fetch that is not ok is refused with the file's name, and Graphviz points convert to pixels", async () => {
@@ -651,11 +707,13 @@ test("a fetch that is not ok is refused with the file's name, and Graphviz point
 
 // ---- the new operations ------------------------------------------------------
 
-test("the check view shows the range of the aggregate where the checklist gives one", async () => {
+test("the check view shows the checklist score and its range, unpadded, where the checklist gives one", async () => {
   const report = { aggregate_score: 87.1, aggregate_range: [83.5, 89.2], coverage: 1, gate: "pass", n_blockers_failed: 0, maturity: "testing", items: [] };
   const { $ } = await boot({}, lineageRuntime({ check: { report, svg: "<svg></svg>" } }));
   await $("#runBtn").click();
-  assert.match($("#output").textContent, /87\.1 \/ 100 \(83\.50 to 89\.20 under other weightings\)|87\.1 \/ 100 \(83\.5 to 89\.2 under other weightings\)/);
+  assert.match($("#output").textContent, /Checklist score87\.1 \(83\.5 to 89\.2 with equal weights or one weight halved or doubled\)/);
+  assert.match($("#output .ri-interp").textContent, /^The checklist score is 87\.1\. .*No blocking item fails, so the gate passes\./);
+  assert.doesNotMatch($("#output").textContent, /87\.10|83\.50|89\.20|\/ 100|Aggregate score|Rigour/);
 });
 
 test("post-data severity reads each outcome in words and writes a value that rounds to 1 as a bound", async () => {
@@ -667,7 +725,7 @@ test("post-data severity reads each outcome in words and writes a value that rou
   const text = $("#output").textContent;
   assert.match(text, /> 0\.999/);
   assert.match(text, /more than 999 times in 1,000/);
-  assert.match(text, /Had the true value lain at the lower bound of 0\.20, an estimate lower than 0\.10 would have come up 15\.9 times in 100\./);
+  assert.match(text, /Had the true value lain at the lower bound of 0\.2, an estimate lower than 0\.1 would have come up 15\.9 times in 100\./);
   assert.match(text, /outside the region the claim allows/);
   assert.match($("#output .ri-interp").textContent, /^2 test outcomes carry an estimate, a standard error and a prediction with bounds\./);
 });
@@ -900,7 +958,10 @@ test("a small negative value is written 0, not -0", async () => {
   await $("#runBtn").click();
   const cells = ctx.document.querySelectorAll("td").map((td) => td.textContent);
   assert.ok(!cells.includes("-0"), cells.join("|"));
-  assert.match($("#output").textContent, /a 0\.00, b 0/);
+  // Values are written as the card writes the score, so -0.004 keeps its
+  // sign and its digits, and a value that rounds to zero is 0.
+  assert.match($("#output").textContent, /a -0\.004, b 0/);
+  assert.doesNotMatch($("#output .figure").textContent, /-0(\.0+)?(?![.\d])/);
 });
 
 // ---- the card's score and hash, reloads, links while busy, refusals, figures --
@@ -938,17 +999,17 @@ test("the card shows before the checklist has run, and each text is scored once"
   await until(() => rt.waiting.length > 0, "the score call");
   assert.deepEqual(rt.scored, [EXAMPLES[0].path], "the score is asked once the card is shown");
   rt.release();
-  await until(() => scoreChipText($) === "61.5 / 100 · pass" && rt.hashed.length === 1, "the first score and hash");
+  await until(() => scoreChipText($) === "checklist 61.5 · gate pass" && rt.hashed.length === 1, "the first score and hash");
   await choose($("#exampleSel"), EXAMPLES[1].path);
   await until(() => rt.waiting.length > 0, "the second score call");
   rt.release();
-  await until(() => scoreChipText($) === "61.5 / 100 · pass" && rt.hashed.length === 2, "the second score and hash");
+  await until(() => scoreChipText($) === "checklist 61.5 · gate pass" && rt.hashed.length === 2, "the second score and hash");
   assert.deepEqual(rt.scored, [EXAMPLES[0].path, EXAMPLES[1].path]);
   // Back on the first example, its score is known.
   await choose($("#exampleSel"), EXAMPLES[0].path);
   await tick(100);
   assert.deepEqual(rt.scored, [EXAMPLES[0].path, EXAMPLES[1].path], "no second score for the same text");
-  assert.equal(scoreChipText($), "61.5 / 100 · pass");
+  assert.equal(scoreChipText($), "checklist 61.5 · gate pass");
   assert.deepEqual(rt.hashed, [EXAMPLES[0].path, EXAMPLES[1].path], "no second hash either");
   assert.match($("#summaryHash").textContent, /sha256:efefefefefef…efefef/);
   assert.ok(ctx);
@@ -959,7 +1020,7 @@ test("a large theory is scored only on request, and its last operation is not ru
   const { ctx, $ } = await boot({}, rt);
   await until(() => rt.waiting.length > 0, "the first score call");
   rt.release();
-  await until(() => scoreChipText($) === "61.5 / 100 · pass" && rt.hashed.length === 1, "the first score and hash");
+  await until(() => scoreChipText($) === "checklist 61.5 · gate pass" && rt.hashed.length === 1, "the first score and hash");
   await upload($("#fileInput"), "large.theory.yaml", "id: large\n");
   await tick(100);
   assert.deepEqual(rt.scored, [EXAMPLES[0].path], "the large theory is not scored unasked");
@@ -982,21 +1043,21 @@ test("a large theory is scored only on request, and its last operation is not ru
   await button.click();
   assert.equal(scoreChipText($), "scoring…");
   assert.equal(ctx.document.activeElement, $("#summaryScore"), "the focus stays on the card");
-  assert.match($(".toast").textContent, /^Scoring Title large\.theory\.yaml with the rigour checklist/);
+  assert.match($(".toast").textContent, /^Scoring Title large\.theory\.yaml with the checklist/);
   await until(() => rt.waiting.length > 0, "the requested score call");
   assert.deepEqual(rt.scored, [EXAMPLES[0].path, "large.theory.yaml"]);
   rt.release();
-  await until(() => $("#liveStatus").textContent === "Checklist score 61.5 / 100, gate pass", "the announcement of the score");
-  assert.equal(scoreChipText($), "61.5 / 100 · pass");
+  await until(() => $("#liveStatus").textContent === "Checklist score 61.5, gate pass", "the announcement of the score");
+  assert.equal(scoreChipText($), "checklist 61.5 · gate pass");
   assert.equal(ctx.document.activeElement, $("#summaryScore"));
-  assert.equal($("#liveStatus").textContent, "Checklist score 61.5 / 100, gate pass");
+  assert.equal($("#liveStatus").textContent, "Checklist score 61.5, gate pass");
   // A session saved with a large theory and a run does not run it as it opens.
   const stored = { "tf-app-py": JSON.stringify({ v: 2, opId: "check", params: {}, ran: true,
     input: { mode: "upload", name: "large.theory.yaml", text: "id: large\n" } }) };
   const rt2 = runsOf(slowScoreRuntime());
   const again = await boot({ stored }, rt2);
   assert.deepEqual(rt2.ran, []);
-  assert.equal(again.$(".toast").textContent, "The theory is large, so the Rigour checklist operation was not run. Press Run to run it");
+  assert.equal(again.$(".toast").textContent, "The theory is large, so the Checklist operation was not run. Press Run to run it");
   await tick(100);
   assert.deepEqual(rt2.scored, []);
 });
@@ -1006,7 +1067,7 @@ test("a user who moves on while a requested score or hash is computed keeps the 
   const { ctx, $ } = await boot({}, rt);
   await until(() => rt.waiting.length > 0, "the first score call");
   rt.release();
-  await until(() => scoreChipText($) === "61.5 / 100 · pass" && rt.hashed.length === 1, "the first score and hash");
+  await until(() => scoreChipText($) === "checklist 61.5 · gate pass" && rt.hashed.length === 1, "the first score and hash");
   await upload($("#fileInput"), "large.theory.yaml", "id: large\n");
   const button = $("#summaryScore button");
   button.focus();
@@ -1015,7 +1076,7 @@ test("a user who moves on while a requested score or hash is computed keeps the 
   // The user goes on to the example selector before the score arrives.
   $("#exampleSel").focus();
   rt.release();
-  await until(() => $("#liveStatus").textContent === "Checklist score 61.5 / 100, gate pass", "the announcement of the score");
+  await until(() => $("#liveStatus").textContent === "Checklist score 61.5, gate pass", "the announcement of the score");
   assert.equal(ctx.document.activeElement, $("#exampleSel"), "the focus stays where the user put it");
   const compute = $("#summaryHash button");
   compute.focus();
@@ -1025,14 +1086,14 @@ test("a user who moves on while a requested score or hash is computed keeps the 
   assert.equal(ctx.document.activeElement, $("#runBtn"));
 });
 
-test("a Rigour checklist run gives the card its score, and the score names an error without a message", async () => {
+test("a Checklist run gives the card its score, and the score names an error without a message", async () => {
   const rt = slowScoreRuntime({ async score() { this.scored.push(this.active); return { error: "" }; } });
   const { $ } = await boot({}, rt);
   await until(() => scoreChipText($) === "not scored", "the refused score");
   assert.equal($("#summaryScore").getAttribute("title"), "the checklist stopped without a message");
   await upload($("#fileInput"), "large.theory.yaml", "id: large\n");
   await $("#runBtn").click();
-  assert.equal(scoreChipText($), "80 / 100 · pass", "the run's report scores the card");
+  assert.equal(scoreChipText($), "checklist 80 · gate pass", "the run's report scores the card");
   assert.deepEqual(rt.scored, [EXAMPLES[0].path]);
 });
 
@@ -1156,9 +1217,9 @@ test("the hash waits for a request when the theory is long, whatever its counts"
     },
   });
   const { $ } = await boot({}, rt);
-  await until(() => rt.hashed === 1 && scoreChipText($) === "50 / 100 · pass", "the first score and hash");
+  await until(() => rt.hashed === 1 && scoreChipText($) === "checklist 50 · gate pass", "the first score and hash");
   await upload($("#fileInput"), "long.theory.yaml", "id: long\n");
-  await until(() => scoreChipText($) === "50 / 100 · pass", "the score, since the theory's counts are small");
+  await until(() => scoreChipText($) === "checklist 50 · gate pass", "the score, since the theory's counts are small");
   await tick(100);
   assert.equal(rt.hashed, 1, "a theory longer than the runtime's limit is not hashed unasked");
   assert.match($("#summaryHash").textContent, /^Content hash not computed for a theory this long/);
@@ -1277,4 +1338,190 @@ test("the appraisal's help says how assumptions are compared", async () => {
   await $("#helpBtn").click();
   assert.match(ctx.document.querySelector("#tfModal").textContent, /Assumptions are compared by statement/);
   assert.match(ctx.TF.OPS.find((o) => o.id === "appraise").help, /moved unchanged to another id is not/);
+});
+
+// ---- what each result says it computes ----------------------------------------
+
+test("the appraisal says what its verdict is to be read with, and leaves out keys an older package lacks", async () => {
+  const full = {
+    verdict: "progressive", new_predictions: ["h3", "h4", "h5"], corroborated_new: ["h3", "h5"], ad_hoc_assumptions: [], articulated: [],
+    underived: [], corroborated_new_registered: ["h3"], renamed: [], dropped: [], dropped_corroborated: [], content_lost: ["h2"],
+    new_anomalies: ["h1"], assumptions: [{ id: "a1", added_for: "h1", class: "pending", independent: [{ id: "h4", status: "untested" }], added_for_inferred: false, change: "new" }],
+    theoretically_progressive: true, empirically_progressive: true, revised: [], weakened_refuted: [], unresolved: [], implications_compared: true,
+    implications_lost: [], implications_lost_unrefuted: [], implications_gained: [],
+    entailments_lost: [{ id: "h2", prior: "entailed", new: "undetermined" }], signs_lost: ["effect of a on b: positive"],
+    protected_only: ["h5"], refuted_new: ["h4"], corroborated_new_severity: [{ id: "h3", severity: 0.0012 }, { id: "h5", severity: null }],
+  };
+  const { ctx, $ } = await boot({}, lineageRuntime({ appraise: full }));
+  await choose($("#exampleSel"), LINEAGE[1].path);
+  await opButton(ctx, "appraise").click();
+  await $("#runBtn").click();
+  const about = $("#output .ri-about").textContent, interp = $("#output .ri-interp").textContent, text = $("#output").textContent;
+  assert.match(about, /^The verdict applies fixed rules that borrow Lakatos's terms to what the two files declare/);
+  assert.match(about, /the prior must be the version before the new predictions were stated/);
+  assert.match(interp, /^The amendment is progressive by fixed rules that borrow Lakatos's terms, applied to what the two files declare\./);
+  assert.match(interp, /One prediction the prior held now fails a test: h1\./);
+  assert.match(interp, /One new prediction failed a test: h4\./);
+  assert.match(interp, /The lowest post-data severity of each corroborated new prediction's passes is 0\.001 for h3, and it is not computed for h5, whose passes record no estimate and standard error for a claim with bounds\./);
+  assert.match(interp, /The novelty of h5 rests on an assumption that lists it in protects\./);
+  assert.match(interp, /The assumption a1 is pending, since its independent predictions are not yet tested\./);
+  assert.match(text, /Corroborations with a registration recordedh3/);
+  assert.match(text, /Lowest post-data severity of their passesh3 \(0\.001\), h5 \(not computed\)/);
+  assert.match(text, /New predictions that failed a testh4/);
+  assert.match(text, /New only through protectsh5/);
+  assert.match(text, /Entailments losth2 \(entailed → undetermined\)/);
+  assert.match(text, /Signs losteffect of a on b: positive/);
+  assert.match(text, /Appraised assumptionsa1: pending \(independent prediction not yet tested\)/);
+  assert.doesNotMatch(text, /Preregistered|in Lakatos's sense/);
+  // An older package's result has none of the new keys, and no row claims
+  // that it found none.
+  const old = { verdict: "neutral", new_predictions: [], corroborated_new: [], ad_hoc_assumptions: [], assumptions: [] };
+  const o = await boot({}, lineageRuntime({ appraise: old }));
+  await choose(o.$("#exampleSel"), LINEAGE[1].path);
+  await opButton(o.ctx, "appraise").click();
+  await o.$("#runBtn").click();
+  const otext = o.$("#output").textContent;
+  for (const row of ["Signs lost", "Entailments lost", "New predictions that failed a test", "New only through protects", "Lowest post-data severity"]) {
+    assert.doesNotMatch(otext, new RegExp(row), row);
+  }
+  assert.doesNotMatch(o.$("#output .ri-interp").textContent, /failed a test|post-data severity|pending/);
+});
+
+test("a caution on the prior says it must be the version before the new predictions were stated", async () => {
+  const { ctx, $ } = await boot({}, lineageRuntime());
+  await choose($("#exampleSel"), LINEAGE[2].path);
+  await opButton(ctx, "appraise").click();
+  await choose($("#param-prior"), LINEAGE[0].path);
+  assert.match($("#priorNote").textContent, /The prior must be the version before the new predictions were stated\.$/);
+});
+
+test("the simulation says that k and the damping decide its course, and its chart carries axis titles and a caption", async () => {
+  const run = (trajectory) => ({ result: { states: ["a", "b"], steps: trajectory.length - 1, dt: 0.1, k: 1, damping: 0.5, method: "exact",
+    initial_state: trajectory[0], assumed_positive: [], ignored: [], opposed: [], trajectory } });
+  const cases = [
+    [[[1, 1], [1.5, 1.6], [2, 2.2]], /At k = 1 and damping = 0\.5, the values grow over this run\. Other settings can reverse this\./],
+    [[[1, 1], [0.6, 0.7], [0.3, 0.2]], /At k = 1 and damping = 0\.5, the values settle over this run\. Other settings can reverse this\./],
+    [[[1, 1], [1, 1], [1, 1]], /At k = 1 and damping = 0\.5, the values change too little over this run to tell whether they grow or settle\./],
+    [[[1, 1]], /change too little over this run to tell/],
+  ];
+  for (const [traj, want] of cases) {
+    const { ctx, $ } = await boot({}, lineageRuntime({ simulate: run(traj) }));
+    await opButton(ctx, "simulate").click();
+    await $("#runBtn").click();
+    assert.match($("#output .ri-interp").textContent, want);
+    const fig = $("#output .figure").textContent;
+    assert.match(fig, /value \(no unit\)/);
+    assert.match(fig, /step \(dt = 0\.1\)/);
+    assert.match(fig, /Linear system, k = 1, damping = 0\.5, exact method\. Not fitted to data\./);
+    assert.match($("#output .ri-about").textContent, /The theory states no parameter values\. The gain k and the damping are free settings that together decide whether a feedback loop grows or settles, unsigned relations are taken as positive, the values have no unit and the trajectory is not fitted to data\. A linear system cannot show bistability\.$/);
+    // The method the run used is the exact solution unless the user chose Euler steps.
+    assert.equal(ctx.TF.OPS.find((o) => o.id === "simulate").params.find((p) => p.id === "method").default, "exact");
+  }
+});
+
+test("the verdicts of the causal readings and the landscape's statuses are neutral pills", async () => {
+  const entail = { result: { theory_id: "t", criterion: "m", acyclic: true, feedback: [], counts: { entailed: 1, contradicted: 1, undetermined: 1, not_evaluated: 0 },
+    claims: ["entailed", "contradicted", "undetermined"].map((v, i) => ({ source: "prediction", id: "pred" + i, kind: "effect", x: "a", y: "b", given: [], sign: "positive",
+      derived: "positive", verdict: v, basis: "paths_agree", faithfulness: false, via: ["p1"], identified: true, adjustment: [] })) } };
+  const disc = { result: { rival_id: "alt_b", criterion: "m", evaluated: true, shared: ["a", "b"], only_theory: [], only_rival: [], markov_equivalent: false,
+    independencies: [], effects: [], associations: [], claims: [{ source: "prediction", id: "pred1", theory: "entailed", rival: "contradicted", discriminates: true }],
+    counts: { discriminating_claims: 1, independencies: 0, decisive_effects: 0, decisive_associations: 0 } } };
+  const equiv = { result: { computed: true, edges: [{ from: "a", to: "b", propositions: ["p1"], status: "compelled" }, { from: "b", to: "c", propositions: ["p2"], status: "reversible" }],
+    v_structures: [], n_compelled: 1, n_reversible: 1 } };
+  const land = { result: { themes: [{ id: "t1", status: "under_theorised", focal: false, keywords: ["x"], alternatives: [], focal_terms: [] },
+    { id: "t2", status: "covered", focal: true, keywords: ["y"], alternatives: [], focal_terms: ["y"] },
+    { id: "t3", status: "crowded", focal: true, keywords: ["z"], alternatives: ["alt"], focal_terms: ["z"] }],
+    under_theorised_fronts: ["t1"], redundancy_risk: ["t3"] } };
+  const red = { rows: [{ a: "a", b: "b", similarity: 0.9, overlap: 0.9, flag: "review", reason: "near-duplicate" }, { a: "a", b: "c", similarity: 0.1, overlap: 0.2, flag: "ok", reason: "" }] };
+  const rt = lineageRuntime({ entailments: entail, discriminate: disc, equivalent: equiv, landscape: land, redundancy: red });
+  const base = rt.loadExample;
+  rt.loadExample = async function (p) { const s = await base.call(this, p); s.alternatives = [{ id: "alt_b", label: "B", propositions: 1 }]; return s; };
+  const { ctx, $ } = await boot({}, rt);
+  const pills = () => ctx.document.querySelectorAll("#output .pill").map((p) => [p.textContent, p.className]);
+  const runOp = async (id) => { await opButton(ctx, id).click(); await $("#runBtn").click(); };
+  await runOp("entailments");
+  assert.deepEqual(pills(), [["entailed", "pill plain"], ["contradicted", "pill plain"], ["undetermined", "pill plain"]]);
+  assert.equal(ctx.document.querySelectorAll("#output table.grid tbody tr").filter((tr) => /pred0/.test(tr.textContent))[0].querySelectorAll("td")[5].textContent, "none needed");
+  assert.match($("#output .ri-about").textContent, /Entailed means the claim follows from the propositions as written, a check of the theory's internal consistency, not evidence that the claim is true\. A claim that restates one proposition is entailed by that proposition alone\./);
+  assert.match($("#output .ri-about").textContent, /each loop settles to a unique equilibrium, also once the construct whose effect is read is held fixed/);
+  await runOp("discriminate");
+  assert.deepEqual(pills(), [["entailed", "pill plain"], ["contradicted", "pill plain"]]);
+  assert.match($("#output .ri-about").textContent, /The comparison shows which results would favour one account over the other\. It does not say which account the data favour\.$/);
+  await runOp("equivalent");
+  assert.deepEqual(pills(), [["compelled", "pill plain"], ["reversible", "pill plain"]]);
+  assert.match($("#output .ri-interp").textContent, /No test of conditional independence can tell the direction of a reversible edge\. An intervention, a temporal order or distributional assumptions such as non-Gaussian errors can\./);
+  assert.match($("#output .ri-about").textContent, /The function does not know which constructs a study manipulates/);
+  assert.doesNotMatch($("#output").textContent, /whatever the sample size|Observational data cannot/);
+  await runOp("landscape");
+  assert.deepEqual(pills(), [["no account shares a word", "pill plain"], ["one account shares a word", "pill plain"], ["several accounts share a word", "pill plain"]]);
+  assert.match($("#output").textContent, /Themes no account shares a word witht1/);
+  assert.match($("#output").textContent, /Themes several accounts share a word witht3/);
+  assert.match($("#output .ri-about").textContent, /does not show that the account explains what the theme's records report, nor that a theme without a match is unexplained/);
+  assert.doesNotMatch($("#output").textContent, /nder-theorised|Crowded/);
+  await runOp("redundancy");
+  assert.deepEqual(pills(), [["review", "pill review"], ["not flagged", "pill plain"]]);
+  assert.match($("#output .ri-about").textContent, /when the two carry the same label or when every measure of one is listed for the other/);
+});
+
+test("the claim-form rubric names every claim at the highest value", async () => {
+  const rows = (vals) => ({ rows: vals.map((v, i) => ({ prediction_id: "p" + (i + 1), type: "directional", risk_score: v, computed_severity: v })), svg: "<svg></svg>" });
+  const cases = [
+    [[0.4, 0.4, 0.3], /the rubric value runs from 0\.3 to 0\.4 \(mean 0\.367\)\. The riskiest claim forms, at 0\.4, are those of p1 and p2\./],
+    [[0.9, 0.4], /The riskiest claim form, at 0\.9, is that of p1\./],
+    [[0.4, 0.4], /Every prediction's claim form has the same value\./],
+    [[0.3], /^The one prediction, p1, has a rubric value of 0\.3\.$/],
+  ];
+  for (const [vals, want] of cases) {
+    const { ctx, $ } = await boot({}, lineageRuntime({ severity: rows(vals) }));
+    await opButton(ctx, "severity").click();
+    await $("#runBtn").click();
+    assert.match($("#output .ri-interp").textContent, want);
+    assert.match($("#output").textContent, /risk scorerubric value/);
+    assert.match($("#output .ri-about").textContent, /predictions that name a registered rival they are declared to discriminate from \(the declaration is not checked\)/);
+  }
+  const { ctx } = await boot({}, lineageRuntime());
+  const op = ctx.TF.OPS.find((o) => o.id === "severity");
+  assert.equal(op.label, "Claim-form rubric");
+  assert.equal(op.desc, "Pre-data riskiness of each claim's form");
+});
+
+test("the dossier, validation, post-data severity and start panel say what they rest on", async () => {
+  const { ctx, $ } = await boot({}, lineageRuntime({ dossier: { text: "# Dossier\n", hash: null }, validate: { ok: true }, post_severity: { result: [] } }));
+  const dossier = ctx.TF.OPS.find((o) => o.id === "dossier");
+  assert.equal(dossier.label, "Dossier");
+  assert.equal(dossier.desc, "The file and its checks, for reviewers");
+  assert.match($("#output").textContent, /theoryforge reads a theory written as structured data and checks what the file states: which fields are filled in, what its propositions imply as a causal graph, how it differs from a rival or an earlier version, and whether an amendment meets fixed rules that borrow Lakatos's terms\. None of these checks shows that a theory is true or well reasoned, and the checklist's weights and thresholds have not been validated against expert judgement\./);
+  await opButton(ctx, "dossier").click();
+  await $("#runBtn").click();
+  assert.equal($("#outTitle").textContent, "Dossier");
+  assert.match($("#output .ri-about").textContent, /^The dossier gathers what the theory file records and what the package derives from it\. The score, gate and verdicts describe the file by fixed rules\. Test outcomes, evidence, registrations and declared severities are as the author entered them, and the package checks only whether a recorded estimate agrees with its pass or failure and whether a declared severity exceeds the rubric\. It is not an independent audit\.$/);
+  await opButton(ctx, "validate").click();
+  await $("#runBtn").click();
+  assert.match($("#output").textContent, /✓ Well-formed\. Full validation found no problem in the file's structure or references\./);
+  assert.match($("#output .ri-about").textContent, /Validate first: other operations run on an invalid file, but their results may not mean what they say\.$/);
+  await opButton(ctx, "post_severity").click();
+  await $("#runBtn").click();
+  assert.match($("#output .ri-about").textContent, /post-data severity of Mayo and Spanos \(2006\)\. With two finite bounds the package takes the smaller of the two one-sided values, its own extension, which equals 1 minus the p value of the two one-sided z-tests of equivalence \(Lakens, 2017\)\./);
+  assert.match($("#output .ri-about").textContent, /It treats the standard error as known, so in small samples it overstates the severity of an estimate inside the region, and it does not account for a subgroup or analysis chosen after seeing the data\. A high value does not show that the claim is true\.$/);
+  for (const op of ctx.TF.OPS) assert.doesNotMatch(op.label + " " + op.desc + " " + (op.help || ""), /rigour checklist|Audit|in Lakatos's sense/i, op.id);
+});
+
+test("a toast about one operation goes when the operation changes or a run starts", async () => {
+  const { ctx, $ } = await boot({}, lineageRuntime());
+  await choose($("#exampleSel"), LINEAGE[2].path);
+  await opButton(ctx, "appraise").click();
+  await $("#runBtn").click();
+  assert.ok($(".toast").classList.contains("show"), "the appraisal waits for a prior and says so");
+  await opButton(ctx, "check").click();
+  assert.ok(!$(".toast").classList.contains("show"), "a change of operation takes the toast away");
+  await opButton(ctx, "appraise").click();
+  await $("#runBtn").click();
+  assert.ok($(".toast").classList.contains("show"));
+  ctx.TF.util.toast("A message about something else");
+  await opButton(ctx, "appraise").click();
+  assert.ok($(".toast").classList.contains("show"), "choosing the same operation again keeps it");
+  await opButton(ctx, "check").click();
+  ctx.TF.util.toast("A message about the last operation");
+  await $("#runBtn").click();
+  assert.ok(!$(".toast").classList.contains("show"), "a run takes the toast away");
 });

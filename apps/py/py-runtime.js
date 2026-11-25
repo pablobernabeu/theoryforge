@@ -17,6 +17,7 @@ const loadEngine = (what, host, url) => import(url).catch((e) => {
 });
 
 const APP_PY = String.raw`
+import inspect
 import json
 import os
 import tempfile
@@ -105,9 +106,23 @@ def _validation(t):
         return {"ok": True}
     return {"ok": False, "message": "invalid theory object: " + "; ".join(problems), "problems": problems}
 
+# Whether check() reads the graph with a cycles setting, as it does from
+# checklist 3.1 on. A package without the argument reads it with the default,
+# and the result says which reading it gives. The package draws the grid with
+# the default, so the grid is drawn only for that reading.
+def check_takes_cycles():
+    return "cycles" in inspect.signature(tf.Theory.check).parameters
+
+def _check(t, cycles="refuse"):
+    takes = check_takes_cycles()
+    read = cycles if takes else "refuse"
+    return {"report": t.check(cycles=cycles) if takes else t.check(),
+            "svg": t.diagram("rigour") if read == "refuse" else None, "cycles": read}
+
 # The checklist's score and gate, which the card and the editor show, or the
 # message of a theory the checklist refuses. An error without a message, such
-# as a MemoryError, is named by its type.
+# as a MemoryError, is named by its type. The card reads the graph with the
+# default cycles.
 def _score(t):
     try:
         r = t.check()
@@ -115,7 +130,8 @@ def _score(t):
         return {"error": str(e) or type(e).__name__}
     return {"score": r["aggregate_score"], "gate": r["gate"],
             "failed": [i["id"] for i in r["items"] if i["status"] == "fail"],
-            "warned": [i["id"] for i in r["items"] if i["status"] == "warn"]}
+            "warned": [i["id"] for i in r["items"] if i["status"] == "warn"],
+            "version": r.get("checklist_version")}
 
 # The score of the loaded theory. It is a call of its own, which the app makes
 # once the theory card has been drawn, so that the checklist, whose time grows
@@ -261,7 +277,7 @@ def run(op, params_json):
         raise RuntimeError("No theory loaded")
     cycles = p.get("cycles", "refuse")
     if op == "check":
-        return json.dumps({"report": t.check(), "svg": t.diagram("rigour")})
+        return json.dumps(_check(t, cycles))
     if op == "validate":
         return json.dumps(_validation(t))
     if op == "severity":
@@ -413,6 +429,7 @@ const RT = {
     pyodide.runPython("import _app");
     this._app = pyodide.pyimport("_app");
     this.canImportDagitty = !!this._app.can_import_dagitty();
+    this.checkTakesCycles = !!this._app.check_takes_cycles();
 
     this.version = "Python " + pyodide.runPython("import platform; platform.python_version()");
     // The version of the Python package, shown in the footer. build.mjs stamps
@@ -472,6 +489,9 @@ const RT = {
 
   // Whether this package version has a DAGitty reader, read at start-up.
   canImportDagitty: false,
+  // Whether its check() takes cycles, read at start-up, so that the code
+  // shown names the setting only where the package reads it.
+  checkTakesCycles: false,
 
   // The theory the package's DAGitty reader makes of `model` replaces the
   // loaded one. `opts` holds the id, title and relation the user chose.
@@ -495,7 +515,7 @@ const RT = {
   async contentHash() { return JSON.parse(this._str(this._app.content_hash())); },
 
   // The checklist's score of the loaded theory, as { score, gate, failed,
-  // warned } or { error }.
+  // warned, version } or { error }.
   async score() { return JSON.parse(this._str(this._app.score())); },
 
   // The loaded theory as the package's writer writes it ("yaml" or "json").
@@ -586,8 +606,12 @@ const RT = {
     const show = (expr) => `print(json.dumps(${expr}, indent=2))`;
     const cycles = `cycles="${p.cycles || "refuse"}"`;
     switch (opId) {
-      case "check":
-        return `${head}\n\nreport = theory.check()\nprint("Aggregate score:", report["aggregate_score"])   # overall 0-100\nprint("Gate:", report["gate"])                        # pass / blocked / advisory\n\n# The rigour grid as SVG:\nwith open("rigour.svg", "w", encoding="utf-8") as fh:\n    fh.write(theory.diagram("rigour"))\nprint("Wrote rigour.svg")`;
+      case "check": {
+        const c = p.cycles || "refuse";
+        const call = this.checkTakesCycles ? `theory.check(${cycles})` : "theory.check()";
+        const grid = c === "refuse" ? `\n\n# The checklist grid as SVG:\nwith open("rigour.svg", "w", encoding="utf-8") as fh:\n    fh.write(theory.diagram("rigour"))\nprint("Wrote rigour.svg")` : "";
+        return `${head}\n\nreport = ${call}\nprint("Checklist score:", report["aggregate_score"])   # 0-100\nprint("Gate:", report["gate"])                        # pass / blocked / advisory${grid}`;
+      }
       case "validate":
         return `${head}\n\n# Raises ValueError listing every problem, or passes:\ntheory.validate(full=True)\nprint("The theory passes full validation.")`;
       case "appraise": {
@@ -639,7 +663,7 @@ const RT = {
       case "litmap":
         return `${head}\n${this._corpusLine(p.corpus)}\n\nlm = tf.litmap(corpus, min_link=${p.min_link}, method="${p.method || "components"}", min_df=${p.min_df === undefined ? 1 : p.min_df}, max_df=${p.max_df === undefined ? 1 : p.max_df})\n${show('lm["themes"]')}\nprint(tf.lit_diagram(lm, "keyword_cooccurrence", max_edges=60))`;
       case "landscape":
-        return `${head}\n${this._corpusLine(p.corpus)}\n\nland = theory.landscape(corpus, min_link=${p.min_link}, method="${p.method || "components"}")\nprint("Under-theorised fronts:", land["under_theorised_fronts"])\nprint("Crowded themes:", land["redundancy_risk"])\nprint(tf.lit_diagram(land, "theme_landscape"))`;
+        return `${head}\n${this._corpusLine(p.corpus)}\n\nland = theory.landscape(corpus, min_link=${p.min_link}, method="${p.method || "components"}")\nprint("Themes no account shares a word with:", land["under_theorised_fronts"])\nprint("Themes several accounts share a word with:", land["redundancy_risk"])\nprint(tf.lit_diagram(land, "theme_landscape"))`;
       default:
         return head;
     }

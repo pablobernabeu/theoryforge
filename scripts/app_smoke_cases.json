@@ -1,7 +1,8 @@
 {
   "description": "The operations scripts/app_smoke.py and scripts/app_smoke.R run on every app example: each operation in apps/shared/app-core.js at the defaults the UI gives it, then once for each other option of a select parameter and of the corpus. The appraisal's prior, the rival and the construct an impulse starts in are chosen by the scripts, as the UI chooses them, and the corpus is mapped from its key to its file. apps/tests/smoke.test.mjs fails when this list and the UI's operations differ.",
   "cases": [
-    { "op": "check", "params": {} },
+    { "op": "check", "params": { "cycles": "refuse" } },
+    { "op": "check", "params": { "cycles": "sigma" } },
     { "op": "validate", "params": {} },
     { "op": "severity", "params": {} },
     { "op": "post_severity", "params": {} },
