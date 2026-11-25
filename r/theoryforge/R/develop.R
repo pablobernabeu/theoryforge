@@ -375,11 +375,12 @@ NULL
 #' \code{FALSE}: a graph that [tf_implications()] refuses, for a repeated
 #' construct id or a proposition that names an undeclared construct, cannot be
 #' read, so the content of the two versions cannot be compared and what the
-#' amendment gives up is unknown. The verdict is \code{"degenerating"} when an assumption is ad hoc or a prediction
-#' refuted or mixed in the prior is weakened, and no prediction adds
-#' corroborated content. It is \code{"neutral"} otherwise. Lakatos has only the
-#' first two. \code{"neutral"} is theoryforge's label for an amendment that
-#' meets neither rule, and the vectors returned tell its cases apart. Only
+#' amendment gives up is unknown. The verdict is \code{"degenerating"} when an
+#' assumption is ad hoc or a prediction refuted or mixed in the prior is
+#' weakened, and no prediction adds corroborated content. It is
+#' \code{"neutral"} otherwise. Lakatos has only the first two.
+#' \code{"neutral"} is theoryforge's label for an amendment that meets neither
+#' rule, and the vectors returned tell its cases apart. Only
 #' \code{corroborated_new_registered} reads a test outcome's
 #' \code{registered}, and only \code{corroborated_new_severity} its
 #' \code{estimate} and \code{se}, and neither decides the verdict. No date or
@@ -446,7 +447,8 @@ NULL
 #'   \code{implications_compared} is \code{FALSE} when [tf_implications()]
 #'   refuses either version, and the three vectors of implications,
 #'   \code{entailments_lost} and \code{signs_lost} are then empty and the
-#'   verdict is not \code{"progressive"}. The elements come in the order \code{verdict}, \code{new_predictions},
+#'   verdict is not \code{"progressive"}. The elements come in the order
+#'   \code{verdict}, \code{new_predictions},
 #'   \code{corroborated_new}, \code{ad_hoc_assumptions}, \code{articulated},
 #'   \code{underived}, \code{corroborated_new_registered}, \code{renamed},
 #'   \code{dropped}, \code{dropped_corroborated}, \code{content_lost},

@@ -332,10 +332,10 @@ def _check_items(T: dict, thr: dict, cycles: str) -> tuple[dict, tuple[list[str]
     # With no prediction there is no derivation to check, and a pass would lift
     # the empty theory's score. A claim the causal graph does not entail does
     # not follow from the propositions, whatever the prediction cites.
-    status, score, not_checked, phenomena_not_checked = _derivation_chain(T, preds, prop_ids, cycles)
+    status, score, not_checked, unread = _derivation_chain(T, preds, prop_ids, cycles)
     out["derivation_chain"] = (status, score)
 
-    return out, (not_checked, phenomena_not_checked)
+    return out, (not_checked, unread)
 
 
 def _weighted(pairs: list[tuple[float, float]]) -> float:
