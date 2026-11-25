@@ -492,10 +492,14 @@ test_that("a refusal of the causal graph has its own class, and nothing else is 
   expect_error(tf_implications(small_theory(list(c("c0", "c1", "causes"), c("c1", "c0", "causes")))),
                "implications requires an acyclic causal graph", class = "tf_refusal")
   expect_error(tf_discriminate(small_theory(list()), "r"), class = "tf_refusal")
+  # .tf_prepare_graph() runs inside the catch of each such function, so an
+  # error it raises that is not a refusal must reach the caller.
   t <- small_theory(list(c("c0", "c1", "increases")), claims = list(claim("effect", "c0", "c1", "positive")))
-  local_mocked_bindings(.tf_read_with = function(G, cl) stop("an internal fault"))
+  local_mocked_bindings(.tf_prepare_graph = function(...) stop("an internal fault"))
   expect_error(tf_check(t), "an internal fault")
   expect_error(tf_preregister(t), "an internal fault")
+  expect_error(tf_dossier(t), "an internal fault")
+  expect_error(tf_appraise_amendment(t, t), "an internal fault")
 })
 
 test_that("a marginal association takes the signs of the simple treks alone", {

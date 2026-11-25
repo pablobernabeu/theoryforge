@@ -193,8 +193,8 @@ between the two constructs decide whether the graph entails the claim,
 contradicts it or leaves it undetermined, and `via` names the propositions the
 verdict rests on. For an effect claim on an acyclic graph, `adjustment` gives a
 smallest set of constructs whose adjustment would identify the effect in
-observational data, here the empty set, or a minimal set when more than 12
-constructs are candidates. For other claims, it is `NA`.
+observational data, or a minimal set when more than 12 constructs are
+candidates. Here it is the empty set. For other claims, it is `NA`.
 
 ```{r entailments}
 entailed <- tf_entailments(switching)

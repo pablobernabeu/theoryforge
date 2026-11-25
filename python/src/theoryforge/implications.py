@@ -132,11 +132,11 @@ def implications(theory, cycles: str = "refuse", given: str = "basis") -> dict:
     Raises:
         ValueError: if ``cycles`` is not ``"refuse"`` or ``"sigma"`` or
             ``given`` is not ``"basis"`` or ``"minimal"``, which are checked
-            before the theory is read, if two constructs share an id
-            or if a directed relation names a construct the theory has not
-            declared. Under ``"refuse"`` it is also raised when the directed
-            edges form a cycle, and the message then names a cycle found and
-            the ``"sigma"`` option.
+            before the theory is read, if two constructs share an id or if a
+            proposition, directed or an association, names a construct the
+            theory has not declared. Under ``"refuse"`` it is also raised when
+            the directed edges form a cycle, and the message then names a
+            cycle found and the ``"sigma"`` option.
 
     References:
         Bongers, S., Forré, P., Peters, J., & Mooij, J. M. (2021). Foundations

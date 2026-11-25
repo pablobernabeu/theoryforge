@@ -130,10 +130,10 @@ The function stops in four cases. A value of \code{cycles} other than
 \code{"refuse"} or \code{"sigma"}, or of \code{given} other than
 \code{"basis"} or \code{"minimal"}, is refused before the theory is read. Two
 constructs sharing an id would give one node two sets of parents, and a
-directed relation naming an undeclared construct would shrink the graph and
-so imply independencies the theory never claimed. With
-\code{cycles = "refuse"}, the default, a cycle among the directed edges is
-refused too, and the message names a cycle that was found and the
+proposition, directed or an association, that names an undeclared construct
+would shrink the graph and so imply independencies the theory never claimed.
+With \code{cycles = "refuse"}, the default, a cycle among the directed edges
+is refused too, and the message names a cycle that was found and the
 \code{"sigma"} option. Each refusal is an error of class \code{tf_refusal},
 as are those of \code{\link[=tf_entailments]{tf_entailments()}}, \code{\link[=tf_equivalent_models]{tf_equivalent_models()}} and
 \code{\link[=tf_discriminate]{tf_discriminate()}}, so that a caller can catch a refusal and nothing else.
