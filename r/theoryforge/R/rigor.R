@@ -160,7 +160,7 @@ NULL
   if (length(cons) < 2L) {
     out$non_redundancy <- item("n/a", NULL)
   } else {
-    flagged <- any(.tf_redundancy_pairs(T, thr)$flag == "review")
+    flagged <- .tf_redundancy_flagged(T, thr)
     undefined <- any(vapply(cons, function(c) length(tf_tokens(.tf_str(c, "definition"))) == 0L,
                             logical(1)))
     out$non_redundancy <- if (flagged || undefined) item("warn", 0.0) else item("pass", 1.0)

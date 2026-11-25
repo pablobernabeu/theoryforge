@@ -78,6 +78,65 @@ tf_jaccard <- function(a, b) {
 # squished.
 .tf_screen_name <- function(x) .tf_squish(.tf_normalise_words(.tf_text(x)))
 
+# What the screen compares of each construct: its id, its definition's tokens,
+# its label and its measures, the last two as the screen names them. Tokens
+# and measures are also given as integer codes, with for each code the
+# constructs that hold it, so that a construct's shared tokens with every other
+# construct can be counted at once.
+.tf_screen_fields <- function(theory) {
+  cons <- .tf_list(theory, "constructs")
+  toks <- lapply(cons, function(c) tf_tokens(.tf_str(c, "definition")))
+  measures <- lapply(cons, function(c) {
+    m <- unique(vapply(.tf_str_list(.tf_get(c, "measurement")), .tf_screen_name, character(1)))
+    m[nzchar(m)]
+  })
+  labels <- vapply(cons, function(c) .tf_screen_name(.tf_get(c, "label")), character(1))
+  codes <- function(sets) {
+    all <- unlist(sets, use.names = FALSE)
+    owner <- rep(seq_along(sets), lengths(sets))
+    code <- match(all, unique(all))
+    list(of = split(code, factor(owner, levels = seq_along(sets))),
+         holders = split(owner, code), size = lengths(sets))
+  }
+  list(n = length(cons), ids = vapply(cons, function(c) .tf_str(c, "id"), character(1)),
+       toks = codes(toks), measures = codes(measures),
+       # Equal labels share a code, as match() compares them.
+       label = ifelse(nzchar(labels), match(labels, labels), NA_integer_))
+}
+
+# The screen's record of construct i paired with each later construct j, as
+# vectors over j: the Jaccard similarity, the overlap coefficient and the
+# reasons a pair is flagged, as a code whose bits 1, 2, 4 and 8 stand for the
+# four reasons in the order .tf_REDUNDANCY_REASONS gives them. Each value is
+# the one tf_jaccard() and .tf_overlap() give for the pair alone.
+.tf_screen_row <- function(f, i, thr) {
+  j <- seq.int(i + 1L, f$n)
+  count <- function(x) {
+    hit <- tabulate(as.integer(unlist(x$holders[x$of[[i]]], use.names = FALSE)), nbins = f$n)
+    hit[j]
+  }
+  inter <- count(f$toks)
+  la <- f$toks$size[[i]]
+  lb <- f$toks$size[j]
+  union <- la + lb - inter
+  sim <- .tf_rnd(inter / union, 3)
+  sim[union == 0L] <- 0.0
+  shorter <- pmin(la, lb)
+  overlap <- .tf_rnd(inter / shorter, 3)
+  overlap[shorter == 0L] <- 0.0
+  ma <- f$measures$size[[i]]
+  mb <- f$measures$size[j]
+  shared <- count(f$measures)
+  code <- (sim >= thr$redundancy_similarity_max) +
+    2L * (la >= .tf_MIN_OVERLAP_TOKENS & lb >= .tf_MIN_OVERLAP_TOKENS &
+            overlap >= thr$redundancy_overlap_max) +
+    4L * (!is.na(f$label[[i]]) & f$label[[i]] == f$label[j] & !is.na(f$label[j])) +
+    8L * (ma > 0L & mb > 0L & (shared == ma | shared == mb))
+  list(j = j, sim = sim, overlap = overlap, code = code)
+}
+
+.tf_REDUNDANCY_REASONS <- c("near duplicate", "contained", "same label", "shared measurement")
+
 # The screen's record of every unordered construct pair, in construct order, as
 # a data frame. A pair is flagged "review" for any of four reasons, given in
 # this order in `reason`: a "near duplicate", when its Jaccard similarity
@@ -88,55 +147,44 @@ tf_jaccard <- function(a, b) {
 # the other too, so that it has no indicator of its own and data from these
 # measures cannot tell the two apart. Constructs that share a method or an
 # inventory but keep measures of their own are not flagged. The checklist's
-# non_redundancy item reads the same flags.
+# non_redundancy item reads the same flags (.tf_redundancy_flagged()).
 .tf_redundancy_pairs <- function(theory, thr) {
-  cons <- .tf_list(theory, "constructs")
-  ids <- vapply(cons, function(c) .tf_str(c, "id"), character(1))
-  toks <- lapply(cons, function(c) tf_tokens(.tf_str(c, "definition")))
-  labels <- vapply(cons, function(c) .tf_screen_name(.tf_get(c, "label")), character(1))
-  measures <- lapply(cons, function(c) {
-    m <- unique(vapply(.tf_str_list(.tf_get(c, "measurement")), .tf_screen_name, character(1)))
-    m[nzchar(m)]
-  })
-
-  a <- character(0)
-  b <- character(0)
-  sim <- numeric(0)
-  overlap <- numeric(0)
-  flag <- character(0)
-  reason <- character(0)
-  n <- length(cons)
-  if (n >= 2L) {
-    for (i in seq_len(n - 1L)) {
-      for (j in (i + 1L):n) {
-        s <- tf_jaccard(toks[[i]], toks[[j]])
-        ov <- .tf_overlap(toks[[i]], toks[[j]])
-        why <- character(0)
-        if (s >= thr$redundancy_similarity_max) why <- c(why, "near duplicate")
-        if (length(toks[[i]]) >= .tf_MIN_OVERLAP_TOKENS &&
-            length(toks[[j]]) >= .tf_MIN_OVERLAP_TOKENS &&
-            ov >= thr$redundancy_overlap_max) {
-          why <- c(why, "contained")
-        }
-        if (nzchar(labels[[i]]) && identical(labels[[i]], labels[[j]])) {
-          why <- c(why, "same label")
-        }
-        mi <- measures[[i]]
-        mj <- measures[[j]]
-        if (length(mi) > 0L && length(mj) > 0L && (all(mi %in% mj) || all(mj %in% mi))) {
-          why <- c(why, "shared measurement")
-        }
-        a <- c(a, ids[[i]])
-        b <- c(b, ids[[j]])
-        sim <- c(sim, s)
-        overlap <- c(overlap, ov)
-        flag <- c(flag, if (length(why)) "review" else "ok")
-        reason <- c(reason, paste(why, collapse = ", "))
-      }
-    }
+  f <- .tf_screen_fields(theory)
+  n <- f$n
+  size <- if (n >= 2L) n * (n - 1) / 2 else 0
+  a <- character(size)
+  b <- character(size)
+  sim <- numeric(size)
+  overlap <- numeric(size)
+  code <- integer(size)
+  at <- 0L
+  for (i in seq_len(max(n - 1L, 0L))) {
+    r <- .tf_screen_row(f, i, thr)
+    k <- at + seq_along(r$j)
+    a[k] <- f$ids[[i]]
+    b[k] <- f$ids[r$j]
+    sim[k] <- r$sim
+    overlap[k] <- r$overlap
+    code[k] <- r$code
+    at <- at + length(r$j)
   }
-  data.frame(a = a, b = b, similarity = sim, overlap = overlap, flag = flag,
-             reason = reason, stringsAsFactors = FALSE)
+  # Each of the sixteen codes as its reasons, joined in their order.
+  reasons <- vapply(0:15, function(x) {
+    paste(.tf_REDUNDANCY_REASONS[bitwAnd(x, c(1L, 2L, 4L, 8L)) > 0L], collapse = ", ")
+  }, character(1))
+  data.frame(a = a, b = b, similarity = sim, overlap = overlap,
+             flag = c("ok", "review")[(code > 0L) + 1L], reason = reasons[code + 1L],
+             stringsAsFactors = FALSE)
+}
+
+# Whether the screen flags any pair, as any(.tf_redundancy_pairs()$flag ==
+# "review") would say, stopping at the first construct that has one.
+.tf_redundancy_flagged <- function(theory, thr) {
+  f <- .tf_screen_fields(theory)
+  for (i in seq_len(max(f$n - 1L, 0L))) {
+    if (any(.tf_screen_row(f, i, thr)$code > 0L)) return(TRUE)
+  }
+  FALSE
 }
 
 #' Pairwise lexical similarity of construct definitions
