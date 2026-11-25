@@ -230,10 +230,10 @@ add the changes that concern the R package alone.
   came out neutral, since it gives up an independence that no test had refuted.
   The revised examples record that refutation, and the amendment is still
   neutral, for another reason. Both versions state that perceived threat causes
-  arousal without a sign, so the new proposition p4, from arousal to avoidance,
+  arousal without a sign, so the new proposition `p4`, from arousal to avoidance,
   opens a route from perceived threat to avoidance whose sign is open. The amended
   version therefore no longer entails the positive effect of perceived threat on
-  avoidance that the first version entails (`signs_lost`). With p3 stated as
+  avoidance that the first version entails (`signs_lost`). With `p3` stated as
   `"increases"` in both versions, the amendment would be progressive.
 
 * `tf_validate(full = TRUE)` began reporting an unknown field in any entry, naming
@@ -613,8 +613,8 @@ add the changes that concern the R package alone.
 
 * The apps' simulation says, at the k and damping of the run, whether the values
   grow or settle and that other settings can reverse this, and its guide says that
-  the theory states no parameter values. Its figure gained the axis titles 'value
-  (no unit)' and 'step (dt = ...)' and a caption that names k, the damping and the
+  the theory states no parameter values. Its figure gained the axis titles `value
+  (no unit)` and `step (dt = ...)` and a caption that names k, the damping and the
   method and says that the trajectory is not fitted to data.
 
 * The descriptions of the apps' examples no longer grade them, and those of the
