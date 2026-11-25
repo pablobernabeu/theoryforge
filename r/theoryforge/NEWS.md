@@ -12,7 +12,8 @@ add the changes that concern the R package alone.
   contradicts it or leaves it open, and it names the propositions the verdict rests
   on. For an effect in a graph without a feedback loop, it says whether adjusting
   for some of the theory's constructs identifies the effect from observational data
-  and gives a smallest such set.
+  and names a minimal such set, which never holds a construct marked
+  `x_latent: true`.
 
 * Added `tf_discriminate()`, which sets the theory against a rival, either an
   alternative that states its own propositions or another theory, and lists the
@@ -25,9 +26,11 @@ add the changes that concern the R package alone.
 
 * Added `tf_content_hash()`, the SHA-256 digest of the theory's canonical form, so
   that two files with the same content have the same hash whatever their layout, key
-  order or format. The preregistration and the dossier give it, and
-  `tf_validate(full = TRUE)` checks a hash recorded in `version$content_hash`. R
-  computes the digest itself, since base R has no SHA-256 before R 4.5.
+  order or format. A single value in a field that holds a list of strings, as in
+  `derives_from: p1`, is hashed as a list of one. The preregistration and the
+  dossier give it, and `tf_validate(full = TRUE)` checks a hash recorded in
+  `version$content_hash`. R computes the digest itself, since base R has no SHA-256
+  before R 4.5.
 
 * Added `tf_read_dagitty()`, which makes a theory of DAGitty model code, such as the
   text that `dagitty::dagitty()` prints. Each variable becomes a construct, `->` a
@@ -75,11 +78,12 @@ add the changes that concern the R package alone.
 * The browser apps gained a theory editor, which shows a theory as forms beside its
   YAML or JSON source and validates and scores each edit with the package. It starts
   a theory from an empty template or from an example, saves it with `tf_write()` and
-  imports DAGitty code through `tf_read_dagitty()`. The apps also gained operations
-  for post-data severity, the entailments, the equivalent models, the comparison
-  with a rival and a simulation from an impulse in one construct, a choice of corpus
-  for the literature operations and a link that carries the theory and the chosen
-  operation.
+  imports DAGitty code through `tf_read_dagitty()`. Choosing an example, uploading a
+  file or opening a link asks first when it would replace a theory edited in the
+  session. The apps also gained operations for post-data severity, the entailments,
+  the equivalent models, the comparison with a rival and a simulation from an
+  impulse in one construct, a choice of corpus for the literature operations and a
+  link that carries the theory and the chosen operation.
 
 ## Changed
 
@@ -89,6 +93,16 @@ add the changes that concern the R package alone.
   that held one lost its recorded content hash when written and read again. A date
   or a date-time is now written as text in YAML too, as in JSON, where YAML held the
   number of days since 1970.
+
+* `tf_read()` and `tf_read_corpus()` began refusing a JSON file that holds a
+  comment, with the message of jsonlite, since JSON has no comments. The R package
+  had read such a file, which the Python package refused.
+
+* `tf_read()` and `tf_read_corpus()` began refusing a file in which a string or a
+  key holds U+0000 or a lone surrogate, with `(<path>) a string holds U+0000, which
+  theoryforge cannot read` or the same message naming `a lone surrogate`. R cut
+  such a string at U+0000, so that a title written `"a\u0000b"` read as `"a"`, and
+  misread a lone surrogate, while the Python package kept both.
 
 * The causal_testability item of the checklist cites Rohrer (2018), on stating causal
   assumptions in a graph, in place of the paper that describes the dagitty software.
@@ -137,11 +151,11 @@ add the changes that concern the R package alone.
 
 * `tf_compile_sem()` began labelling every regression `b_<from>_<to>`, giving as a
   comment the sign of each `increases` or `decreases` proposition and defining with
-  `:=` the total effect that each effect claim concerns, except on a graph with a
-  feedback loop. A note after the structural model names each feedback loop and each
-  pair of constructs joined by both a path and a covariance. When there is none, it
-  says that the paths are generically identified, given a measurement model that
-  identifies the constructs (Brito & Pearl, 2002).
+  `:=` the total effect that each effect claim concerns, unless a feedback loop lies
+  on a path from its cause to its outcome. A note after the structural model names
+  each feedback loop and each pair of constructs joined by both a path and a
+  covariance. When there is none, it says that the paths are generically identified,
+  given a measurement model that identifies the constructs (Brito & Pearl, 2002).
 
 * `tf_compile_sem()` began leaving out a relation from a construct to itself, with a
   comment that names the proposition, and writing a path that two propositions state
@@ -152,6 +166,11 @@ add the changes that concern the R package alone.
   header gained the content hash and the formal model, and each hypothesis gained
   the region its bounds allow, the graph's verdict on its claim, the adjustment set
   for an observational test and how each rival it names reads the claim.
+
+* In `tf_preregister()`, the line that lists the rivals a hypothesis names in
+  `diagnostic_vs` is headed `Rivals it is declared to discriminate`, where it read
+  `Rivals it discriminates`, since a rival's own propositions can contradict the
+  declaration.
 
 * `tf_dossier()` gained the content hash, the range of the aggregate score, each
   checklist item's criterion and sections on the claims, the equivalent models and
@@ -170,6 +189,12 @@ add the changes that concern the R package alone.
   `cannot add to '<key>': the theory holds <what> there, not a list` and leaving the
   theory unchanged, as the Python builders do. A file with, for example,
   `constructs: abc` gave such a value, and the builder appended to it.
+
+* A refusal of the causal graph or of its options, by `tf_implications()` or by the
+  new functions that read the graph, is now an error of class `tf_refusal`, the
+  counterpart of Python's `ValueError`. The preregistration and the dossier catch
+  that class alone, where they caught any error of `tf_implications()`, so another
+  error now stops them, as in Python.
 
 * The apps moved to webR 0.6.1, which runs R 4.6.0.
 
@@ -210,10 +235,20 @@ add the changes that concern the R package alone.
   construct, as it refused such a directed relation.
 
 * `tf_appraise_amendment()` stopped calling an amendment progressive when it loses
-  content, that is when it drops or weakens an untested prediction or gives up an
-  implied independence that no failed prediction contradicted. It began calling an
-  amendment degenerating when it weakens a refuted prediction and none of its new
-  predictions is corroborated.
+  content, that is when it drops an untested prediction, weakens an untested or
+  corroborated one or gives up an implied independence that no failed prediction
+  contradicted. `content_lost` names a weakened prediction under its new id. It
+  began calling an amendment degenerating when it weakens a refuted prediction and
+  none of its new predictions is corroborated.
+
+* `tf_appraise_amendment()` began comparing auxiliary assumptions by their
+  statements, as it compares predictions, where it compared their ids. An
+  assumption kept under its id whose statement changed is appraised as a new one
+  is, so rewriting an assumption in place to answer an anomaly can make an
+  amendment ad hoc. An assumption moved unchanged to a new id, in place of a prior
+  one the amendment drops, is not appraised, so a change of id alone no longer makes
+  an amendment ad hoc. A change of `added_for` or `protects` alone revises no
+  assumption.
 
 * In `tf_appraise_amendment()`, a new prediction began counting as old content when
   the prior's graph already entails its claim or its `derives_from` names a
@@ -228,7 +263,10 @@ add the changes that concern the R package alone.
 
 * `tf_validate(full = TRUE)` began reporting an unknown field in any entry, naming
   the field it most resembles, and bounds that do not fit the prediction's type or
-  its claim's sign. A file that validated under 0.7.0 can fail.
+  its claim's sign. An existence prediction takes no bounds, since the region it
+  allows, every value but 0, is not one interval, and a one-sided region made
+  `tf_post_data_severity()` test a directional claim. A file that validated under
+  0.7.0 can fail.
 
 * `tf_compile_sem()` began holding at zero the covariances of a construct that only
   associations relate to others, which `lavaan::sem()` would free between exogenous
@@ -295,6 +333,84 @@ add the changes that concern the R package alone.
   `mailto=` when `mailto` is empty, and when a page after the first fails, the
   message ends with the number of records fetched before it.
 
+* `tf_fetch_corpus()` and `tf_osf_push()` abandoned a request 30 seconds after it
+  began, however steadily its bytes arrived, so a large OpenAlex page or an upload
+  over a slow connection failed in R where it succeeded in Python. With the curl
+  package, a request is now abandoned once nothing has been sent or received for 30
+  seconds, as in Python, with `Timeout was reached: nothing was sent or received
+  for 30 seconds`. Without curl, base R's `url()` still limits the whole request to
+  30 seconds.
+
+* A YAML file of a few hundred bytes whose aliases (`*a`) stand for billions of
+  values was read at once, and writing it with `tf_write()`, or anything else that
+  walked the whole theory, then ran for hours. `tf_read()` and `tf_read_corpus()`
+  now refuse a document that holds more than 1000000 values once its aliases are
+  expanded, with `(<path>) the document holds more than 1000000 values once its
+  aliases are expanded`. Merge keys read as before.
+
+* `tf_write()` wrote a missing value (`NA`) in a field that the schema types as an
+  array of strings as an array that holds null. It now writes null.
+
+* `tf_check()`, `tf_report()`, `tf_redundancy_check()`, `tf_preregister()`,
+  `tf_dossier()`, `tf_compile_sem()`, `tf_tokens()`, `tf_new_evidence_dois()`,
+  `tf_litmap()` and the views of `tf_diagram()` that score the theory stopped with
+  `invalid input ... in 'utf8towcs'` when a label, definition, statement, id,
+  keyword or DOI held U+FFFE or U+FFFF. Both characters are now kept as text, as in
+  the Python package.
+
+* The `causal_dag` view of `tf_diagram()` wrote an id that ends with a backslash
+  as `"a\"`, whose backslash escapes the closing quote, so dagitty could not read
+  the line. The view now refuses such an id with `causal_dag cannot export
+  construct id '<id>': dagitty cannot read an id that ends with a backslash`, as
+  it refuses the two ids dagitty reserves.
+
+* `tf_diagram()` and `tf_report()` stopped with an empty message when the type or
+  format was `NULL` or `character(0)` and with two messages run together for a
+  vector of two values. `tf_render_diagram()` stopped with
+  `argument is of length zero` for a `NULL` type. Each now gives the message for an
+  unknown type or format. That message, and the one of `tf_lit_diagram()`, writes a
+  value that is not a single string as `deparse()` writes it, so that `NULL` gives
+  `unknown report format: NULL` and `1` is no longer quoted.
+
+* The Euler run of `tf_simulate()` measured its departure from the exact solution
+  against the larger of the exact state and 1, so whether it warned depended on the
+  unit of `init`. A ten-step run of the underspecified example with `dt = 1` that
+  started at 0.2 ended a factor of 7 off without a warning, while the same run
+  started at 1 warned. The departure is now measured against the larger of the
+  exact state and the largest absolute starting value, so runs that start at 1 warn
+  as before.
+
+* In the browser apps, a diagram was inserted into the page as markup, so a link
+  that Graphviz drew from text in a theory could run script in the site's origin,
+  and the SVG download carried it. Each figure is now read as XML and inserted as
+  nodes, with any script, foreign content, style sheet, animation, event handler and
+  link outside the figure taken out. The causal DAG is also converted from dagitty's
+  quoting to that of DOT before Graphviz reads it, so an id such as `a\" [URL=...]`,
+  which dagitty reads as written, stays one node.
+
+* When `webr.r-wasm.org` or `cdn.jsdelivr.net` could not be reached, the apps showed
+  a blank page, and a package or a file that could not be fetched was reported by an
+  unrelated error. The start panel now names what could not be fetched and where
+  from, and offers Reload.
+
+* A Graphviz download that failed once was remembered for the rest of the session,
+  and the whole result, tables included, was replaced by an error that blamed an
+  invalid theory. A figure that cannot be drawn is now replaced by a note that
+  gives the reason, the rest of the result stays, and the next run loads Graphviz
+  again.
+
+* The apps counted and listed a validation problem that quotes a value holding
+  `; `, such as a proposition to `avoidance; escape`, as two problems, and wrote a
+  small negative value in a result table, such as `-0.000159`, as `-0`. They now
+  take the list of problems from the package and write such a value as `0`.
+
+* The R app's error messages began with `Error in unknown source: `, which webR
+  adds. They now begin with `Error: `, as R prints them.
+
+* In the apps, the links in the footer and the help stood out from the text by their
+  colour alone, and each dialogue added a second banner landmark. Those links are
+  now underlined, and the head of a dialogue is no landmark.
+
 ## Documentation
 
 * `?theoryforge` was rewritten to describe the workflow, from building a theory to
@@ -309,6 +425,30 @@ add the changes that concern the R package alone.
   articles to follow a theory from building to testing. The site gained an article
   on the browser apps and one on related tools, which says what neighbouring
   packages do and how a theory moves between them and theoryforge.
+
+* Sixteen help topics that described a source file in one line, such as `?sem`,
+  `?simulate` and `?examples`, were removed. With lavaan attached, `?sem` now
+  opens lavaan's page, and `?simulate` opens that of stats, without a choice
+  between topics.
+
+* `?tf_validate` and the Get started vignette say that the messages of full
+  validation count entries from 0, so that `prediction[0]` is
+  `theory$predictions[[1]]`.
+
+* `?tf_preregister`, the methodology article and the schema's description of the
+  `test` block said that power does not raise a claim's severity. They now say
+  that the stated power raises no value the package computes, that Meehl's (1967)
+  argument concerns a directional prediction tested against a nil null or a claim
+  whose bound is 0, and that for a bound away from zero a more precise test is
+  harder to pass.
+
+* The 0.7.0 notes said that the zero block of `tf_compile_sem()` fixes the
+  covariance of two terminal constructs the theory leaves unrelated, and
+  `?tf_compile_sem` said the same. The theory relates two terminal constructs
+  through the causes it names, and the block fixes the covariance of their
+  disturbances, so that the two are independent given those causes.
+
+* The help of each browser app lists the works its texts cite, with their DOIs.
 
 * The methodology article was reorganised by subject, with a section for each group
   of checklist items and sections on the causal reading of claims, equivalent models

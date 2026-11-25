@@ -23,7 +23,8 @@ that concern it alone.
   propositions. It says whether the graph entails the claim, contradicts it or leaves it
   open, and it names the propositions the verdict rests on. For an effect in a graph without
   a feedback loop, it says whether adjusting for some of the theory's constructs identifies
-  the effect from observational data and gives a smallest such set.
+  the effect from observational data and names a minimal such set, which never holds a
+  construct marked `x_latent: true`.
 - Added `discriminate()`, which sets the theory against a rival, either an alternative that
   states its own propositions or another theory, and lists the claims, conditional
   independencies and signs of effects and associations on which the two causal graphs
@@ -33,8 +34,9 @@ that concern it alone.
   observational study can test the direction of the second kind.
 - Added `content_hash()`, the SHA-256 digest of the theory's canonical form, so that two
   files with the same content have the same hash whatever their layout, key order or format.
-  The preregistration and the dossier give it, and `validate(full=True)` checks a hash
-  recorded in `version.content_hash`.
+  A single value in a field that holds a list of strings, as in `derives_from: p1`, is
+  hashed as a list of one. The preregistration and the dossier give it, and
+  `validate(full=True)` checks a hash recorded in `version.content_hash`.
 - Added `read_dagitty()`, which makes a theory of DAGitty model code. Each variable becomes
   a construct, `->` a proposition with the relation asked for (`causes`, `increases` or
   `decreases`) and `<->` an association. A variable marked `latent` keeps the mark as
@@ -67,7 +69,8 @@ that concern it alone.
 - The browser apps gained a theory editor, which shows a theory as forms beside its YAML or
   JSON source and validates and scores each edit with the package. It starts a theory from
   an empty template or from an example, saves it with the package's writer and imports
-  DAGitty code through `read_dagitty()`.
+  DAGitty code through `read_dagitty()`. Choosing an example, uploading a file or opening a
+  link asks first when it would replace a theory edited in the session.
 - The apps gained operations for post-data severity, the entailments, the equivalent models,
   the comparison with a rival and a simulation from an impulse in one construct. The
   literature operations read the demonstration corpus, the frozen OpenAlex corpus or an
@@ -109,11 +112,11 @@ that concern it alone.
   and its title began saying when only the first three of a theory's constructs are drawn.
 - `compile_sem()` began labelling every regression `b_<from>_<to>`, giving as a comment the
   sign of each `increases` or `decreases` proposition and defining with `:=` the total
-  effect that each effect claim concerns, except on a graph with a feedback loop. A note
-  after the structural model names each feedback loop and each pair of constructs joined by
-  both a path and a covariance. When there is none, it says that the paths are generically
-  identified, given a measurement model that identifies the constructs (Brito & Pearl,
-  2002).
+  effect that each effect claim concerns, unless a feedback loop lies on a path from its
+  cause to its outcome. A note after the structural model names each feedback loop and each
+  pair of constructs joined by both a path and a covariance. When there is none, it says
+  that the paths are generically identified, given a measurement model that identifies the
+  constructs (Brito & Pearl, 2002).
 - `compile_sem()` began leaving out a relation from a construct to itself, with a comment
   that names the proposition, and writing a path that two propositions state only once,
   since lavaan refuses a repeated line.
@@ -122,6 +125,9 @@ that concern it alone.
   content hash and the formal model, and each hypothesis gained the region its bounds allow,
   the graph's verdict on its claim, the adjustment set for an observational test and how
   each rival it names reads the claim.
+- In `preregister()`, the line that lists the rivals a hypothesis names in `diagnostic_vs`
+  is headed `Rivals it is declared to discriminate`, where it read `Rivals it
+  discriminates`, since a rival's own propositions can contradict the declaration.
 - `dossier()` gained the content hash, the range of the aggregate score, each checklist
   item's criterion and sections on the claims, the equivalent models and the rivals. It
   embeds the preregistration without that document's severity section and writes a post-data
@@ -135,6 +141,16 @@ that concern it alone.
   the kind of value, as in `the theory holds a mapping there`, in place of the Python type.
   The builders began replacing NumPy scalars and tuples by Python values and lists before
   storing an entry, and reading an empty mapping as an empty collection, as R does.
+- `read()` and `read_corpus()` began refusing a file in which a string or a key holds U+0000
+  or a lone surrogate, with `(<path>) a string holds U+0000, which theoryforge cannot read`
+  or the same message naming `a lone surrogate`, as R's reader now does. R had cut such a
+  string at U+0000 and misread a lone surrogate, so the two packages read the file
+  differently. R's reader also began refusing a JSON file that holds a comment, which
+  Python's `json` module refused already.
+- The message for an unknown type of `diagram()`, `render_diagram()` or `lit_diagram()`
+  began listing the types separated by commas, as R lists them, in place of a tuple. These
+  messages and that of `report()` began quoting a string between single quotation marks
+  whatever it holds, so `it's` is written `'it's'`.
 - The source distribution was cut to the package and its metadata, since the tests and the
   documentation read files at the root of the repository, which an sdist cannot hold.
 - The apps moved to webR 0.6.1 and to Pyodide 314.0.8, which runs Python 3.14.2.
@@ -163,10 +179,17 @@ that concern it alone.
 - `implications()` began refusing an association that names an undeclared construct, as it
   refused such a directed relation.
 - `appraise_amendment()` stopped calling an amendment progressive when it loses content,
-  that is when it drops or weakens an untested prediction or gives up an implied
-  independence that no failed prediction contradicted. It began calling an amendment
-  degenerating when it weakens a refuted prediction and none of its new predictions is
-  corroborated.
+  that is when it drops an untested prediction, weakens an untested or corroborated one or
+  gives up an implied independence that no failed prediction contradicted. `content_lost`
+  names a weakened prediction under its new id. It began calling an amendment degenerating
+  when it weakens a refuted prediction and none of its new predictions is corroborated.
+- `appraise_amendment()` began comparing auxiliary assumptions by their statements, as it
+  compares predictions, where it compared their ids. An assumption kept under its id whose
+  statement changed is appraised as a new one is, so rewriting an assumption in place to
+  answer an anomaly can make an amendment ad hoc. An assumption moved unchanged to a new
+  id, in place of a prior one the amendment drops, is not appraised, so a change of id alone
+  no longer makes an amendment ad hoc. A change of `added_for` or `protects` alone revises
+  no assumption.
 - In `appraise_amendment()`, a new prediction began counting as old content when the prior's
   graph already entails its claim or its `derives_from` names a proposition the new version
   lacks. An assumption without `added_for` that protects a failed prediction began counting
@@ -177,8 +200,10 @@ that concern it alone.
   up an independence that no test had refuted. The revised examples record that refutation,
   and the amendment is progressive.
 - `validate(full=True)` began reporting an unknown field in any entry, naming the field it
-  most resembles, and bounds that do not fit the prediction's type or its claim's sign. A
-  file that validated under 0.7.0 can fail.
+  most resembles, and bounds that do not fit the prediction's type or its claim's sign. An
+  existence prediction takes no bounds, since the region it allows, every value but 0, is
+  not one interval, and a one-sided region made `post_data_severity()` test a directional
+  claim. A file that validated under 0.7.0 can fail.
 - `compile_sem()` began holding at zero the covariances of a construct that only
   associations relate to others, which `lavaan::sem()` would free between exogenous latent
   variables.
@@ -222,6 +247,55 @@ that concern it alone.
   float, as R does.
 - When a page after the first failed, the message of `fetch_corpus()` did not say how many
   records had been fetched. It now ends with that number.
+- In R, `fetch_corpus()` and `osf_push()` abandoned a request 30 seconds after it began,
+  however steadily its bytes arrived, so a large OpenAlex page or an upload over a slow
+  connection failed in R where it succeeded in Python. With the curl package, R now abandons
+  a request once nothing has been sent or received for 30 seconds, as Python does.
+- `read()` and `read_corpus()` refused a YAML file with a tab that YAML allows as white
+  space, after a value, before a comment, beside a key's colon or in a flow collection, and
+  one with a tab inside an unquoted value, all of which R reads. YAML is now parsed with
+  libyaml (`yaml.CSafeLoader`), the parser R's yaml package bundles, so a tab inside a value
+  is kept as R keeps it. The wheels PyYAML publishes include libyaml, and a build without it
+  falls back on the pure-Python parser, which still refuses such a tab.
+- A YAML file of a few hundred bytes whose aliases (`*a`) stand for billions of values was
+  read at once, and writing it, or anything else that walked the whole theory, then ran for
+  hours or ran out of memory. `read()` and `read_corpus()` now refuse a document that holds
+  more than 1000000 values once its aliases are expanded, with `(<path>) the document holds
+  more than 1000000 values once its aliases are expanded`. Merge keys read as before.
+- The `causal_dag` view of `diagram()` wrote an id that ends with a backslash as `"a\"`,
+  whose backslash escapes the closing quote, so dagitty could not read the line. The view
+  now refuses such an id with `causal_dag cannot export construct id '<id>': dagitty cannot
+  read an id that ends with a backslash`, as it refuses the two ids dagitty reserves.
+- The Euler run of `simulate()` measured its departure from the exact solution against the
+  larger of the exact state and 1, so whether it warned depended on the unit of `init`. A
+  ten-step run of the underspecified example with `dt=1` that started at 0.2 ended a factor
+  of 7 off without a warning, while the same run started at 1 warned. The departure is now
+  measured against the larger of the exact state and the largest absolute starting value,
+  so runs that start at 1 warn as before.
+- In the browser apps, a diagram was inserted into the page as markup, so a link that
+  Graphviz drew from text in a theory could run script in the site's origin, and the SVG
+  download carried it. Each figure is now read as XML and inserted as nodes, with any
+  script, foreign content, style sheet, animation, event handler and link outside the figure
+  taken out. The causal DAG is also converted from dagitty's quoting to that of DOT before
+  Graphviz reads it, so an id such as `a\" [URL=...]`, which dagitty reads as written, stays
+  one node.
+- When `webr.r-wasm.org` or `cdn.jsdelivr.net` could not be reached, the apps showed a blank
+  page, and a package or a file that could not be fetched was reported by an unrelated error
+  or a traceback. The start panel now names what could not be fetched and where from, and
+  offers Reload.
+- A Graphviz download that failed once was remembered for the rest of the session, and the
+  whole result, tables included, was replaced by an error that blamed an invalid theory. A
+  figure that cannot be drawn is now replaced by a note that gives the reason, the rest of
+  the result stays, and the next run loads Graphviz again.
+- The apps counted and listed a validation problem that quotes a value holding `; `, such
+  as a proposition to `avoidance; escape`, as two problems, and wrote a small negative value
+  in a result table, such as `-0.000159`, as `-0`. They now take the list of problems from
+  the package and write such a value as `0`.
+- The R app's error messages began with `Error in unknown source: `, which webR adds. They
+  now begin with `Error: `, as R prints them.
+- In the apps, the links in the footer and the help stood out from the text by their colour
+  alone, and each dialogue added a second banner landmark. Those links are now underlined,
+  and the head of a dialogue is no landmark.
 
 ### Documentation
 - The documentation of `landscape()`, the specification, both literature guides and the apps
@@ -237,8 +311,19 @@ that concern it alone.
   the package when the site is built.
 - The specification gained descriptions of the causal reading of claims, the content hash
   and the DAGitty reader. It says that the normal approximation of `post_data_severity()`
-  overstates the severity in small samples, and that `severity()` grades the form of a claim
-  and says nothing of how severe a test was.
+  overstates the severity of an estimate inside the region in small samples, and that
+  `severity()` grades the form of a claim and says nothing of how severe a test was.
+- The docstring of `preregister()`, the methodology page and the schema's description of the
+  `test` block said that power does not raise a claim's severity. They now say that the
+  stated power raises no value the package computes, that Meehl's (1967) argument concerns
+  a directional prediction tested against a nil null or a claim whose bound is 0, and that
+  for a bound away from zero a more precise test is harder to pass.
+- The 0.7.0 notes said that the zero block of `compile_sem()` fixes the covariance of two
+  terminal constructs the theory leaves unrelated, and the docstring of `compile_sem()` said
+  the same. The theory relates two terminal constructs through the causes it names, and the
+  block fixes the covariance of their disturbances, so that the two are independent given
+  those causes.
+- The help of each browser app lists the works its texts cite, with their DOIs.
 
 ## [0.7.1]
 
