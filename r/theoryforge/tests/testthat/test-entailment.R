@@ -359,6 +359,31 @@ test_that("the content hash is SHA-256 of the canonical form", {
   expect_false(identical(tf_content_hash(t), h))
 })
 
+test_that("the SHA-256 written in R agrees with the one R provides", {
+  # From R 4.5, .tf_sha256() hands the bytes to tools::sha256sum(), so the
+  # version in R alone, which earlier versions use, is checked here: against
+  # the FIPS 180-4 vectors, against .tf_sha256() at the lengths where the
+  # padding takes a second block, and on the canonical form of each example.
+  sha_r <- theoryforge:::.tf_sha256_r
+  expect_equal(sha_r(charToRaw("abc")), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+  expect_equal(sha_r(raw(0)), "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+  expect_equal(sha_r(charToRaw("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq")),
+               "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1")
+  for (n in c(55L, 56L, 63L, 64L, 119L, 120L, 1000L)) {
+    bytes <- as.raw((seq_len(n) * 37L) %% 256L)
+    expect_identical(sha_r(bytes), theoryforge:::.tf_sha256(bytes))
+  }
+  for (f in c("panic-network.theory.yaml", "panic-network-2026-v2.theory.yaml",
+              "modality-switching.theory.yaml", "weak-theory.theory.yaml")) {
+    t <- tf_read(tf_fixture_path(f))
+    data <- t
+    if (is.list(data$version)) data$version$content_hash <- NULL
+    data <- theoryforge:::.tf_box_string_arrays(theoryforge:::.tf_na_as_null(data))
+    bytes <- charToRaw(enc2utf8(theoryforge:::.tf_canonical(data)))
+    expect_identical(paste0("sha256:", sha_r(bytes)), tf_content_hash(t))
+  }
+})
+
 singletons <- 'schema_version: "1.1"
 id: singletons
 title: A theory with single values in string arrays

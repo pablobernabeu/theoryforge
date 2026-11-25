@@ -132,6 +132,7 @@ def dossier(theory, cycles: str = "refuse") -> str:
     check_cycles(cycles, "dossier")
     data = theory.data if hasattr(theory, "data") else theory
     rep = _check(data)
+    digest = content_hash(data)
     criteria = {it["id"]: it["criterion"] for it in _resources.checklist()["items"]}
     failed = [it["id"] for it in rep["items"]
               if it["severity_if_fail"] == "blocker" and it["status"] == "fail"]
@@ -140,7 +141,7 @@ def dossier(theory, cycles: str = "refuse") -> str:
         f"# theoryforge dossier: {flat(text(data.get('title')))}",
         "",
         f"- Theory ID: {text(data.get('id'))}",
-        f"- Content hash: {content_hash(data)}",
+        f"- Content hash: {digest}",
         f"- Maturity: {rep['maturity']}",
         # The score is only interpretable against the checklist that produced
         # it, so a reviewer reading the bundle can see which one that was.
@@ -229,6 +230,6 @@ def dossier(theory, cycles: str = "refuse") -> str:
     # level down to sit under this section. Its severity list is left out, since
     # the dossier gives it above with the declared values.
     prereg = ["#" + line if line.startswith("#") else line
-              for line in document_lines(data, cycles, embedded=True)]
+              for line in document_lines(data, cycles, embedded=True, report=rep, digest=digest)]
     lines += ["", "## Preregistration", "", *prereg]
     return "\n".join(lines) + "\n"

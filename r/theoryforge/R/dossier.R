@@ -76,6 +76,7 @@ tf_dossier <- function(theory, cycles = "refuse") {
   .tf_check_cycles(cycles, "dossier")
   T <- theory
   rep <- tf_check(T)
+  digest <- tf_content_hash(T)
   criteria <- vapply(tf_checklist()$items, function(it) it$criterion, character(1))
   names(criteria) <- vapply(tf_checklist()$items, function(it) it$id, character(1))
   failed <- character(0)
@@ -93,7 +94,7 @@ tf_dossier <- function(theory, cycles = "refuse") {
     sprintf("# theoryforge dossier: %s", .tf_flat(.tf_str(T, "title"))),
     "",
     sprintf("- Theory ID: %s", .tf_str(T, "id")),
-    sprintf("- Content hash: %s", tf_content_hash(T)),
+    sprintf("- Content hash: %s", digest),
     sprintf("- Maturity: %s", rep$maturity),
     # The score is only interpretable against the checklist that produced it,
     # so a reviewer reading the bundle can see which one that was.
@@ -203,7 +204,7 @@ tf_dossier <- function(theory, cycles = "refuse") {
   # The preregistration is a document of its own, so its headings move one level
   # down to sit under this section. Its severity list is left out, since the
   # dossier gives it above with the declared values.
-  prereg <- .tf_document_lines(T, cycles, embedded = TRUE)
+  prereg <- .tf_document_lines(T, cycles, embedded = TRUE, report = rep, digest = digest)
   prereg <- ifelse(startsWith(prereg, "#"), paste0("#", prereg), prereg)
   lines <- c(lines, "", "## Preregistration", "", prereg)
   paste0(paste(lines, collapse = "\n"), "\n")
