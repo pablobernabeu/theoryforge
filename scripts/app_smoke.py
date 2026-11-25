@@ -15,14 +15,15 @@ uploaded prior, rival and corpus, then load() and every operation in
 scripts/app_smoke_cases.json for each example. As in the UI, the appraisal's
 prior is the example the theory declares as its parent when exactly one does,
 and otherwise an example uploaded as a prior through load_prior(). The rival is
-the first alternative that states propositions, and otherwise a theory
-uploaded through load_rival(). An impulse starts in the first construct, and a
-corpus named by its key is read from its file. The editor's call, edit(), must
-read the theory back from the JSON the package's writer gives with the same
-content hash. Where the package has read_dagitty(), import_dagitty() must make
-the theory a small model states. Last, an invalid theory must load with {"ok":
-false, "message": ...} and give the same from validate. Every result must be a
-JSON object.
+the first alternative that states propositions, and otherwise a theory uploaded
+through load_rival(). An impulse starts in the first construct, and a corpus
+named by its key is read from its file. Each example must have a score from
+score() and a content hash from content_hash(), and the editor's call, edit(),
+must read the theory back from the JSON the package's writer gives with the
+same score and content hash. Where the package has read_dagitty(),
+import_dagitty() must make the theory a small model states. Last, an invalid
+theory must load with {"ok": false, "message": ...} and give the same from
+validate. Every result must be a JSON object.
 
 Usage: python scripts/app_smoke.py [APPS_DIR]
 
@@ -167,6 +168,15 @@ def child(plan_path: Path) -> int:
         summary = call(f"{ex['name']}: load", app.load, ex["path"])
         if not isinstance(summary, dict):
             continue
+        # The score and the hash are calls of their own, made after the load.
+        score = call(f"{ex['name']}: score", app.score)
+        if score is not None:
+            want(f"{ex['name']}: score", isinstance(score, dict) and "score" in score and "gate" in score,
+                 f"no score: {score}")
+        digest = call(f"{ex['name']}: content hash", app.content_hash)
+        if digest is not None:
+            want(f"{ex['name']}: content hash", isinstance(digest, dict) and "hash" in digest,
+                 f"no hash: {digest}")
         parents = [e["path"] for j, e in enumerate(examples)
                    if j != i and is_declared_parent(summary, lineage[j])]
         prior = parents[0] if len(parents) == 1 else UPLOADED
@@ -196,7 +206,7 @@ def child(plan_path: Path) -> int:
             continue
         edited = call(label, app.edit, str(written), json.dumps(["yaml", "json"]))
         if isinstance(edited, dict):
-            same = (edited.get("hash") == summary.get("hash")
+            same = (call(label, app.content_hash) == digest and call(label, app.score) == score
                     and edited.get("validation") == summary.get("validation"))
             want(label, same,
                  "the theory read back differs from the theory loaded")

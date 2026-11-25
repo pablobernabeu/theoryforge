@@ -66,7 +66,7 @@
     },
     {
       id: "appraise", group: "compare", label: "Appraise amendment", desc: "Progressive vs degenerating", needsPrior: true,
-      help: "Compares what the current theory, treated as the amendment, claims with what a prior version claims, and classifies the change as progressive or degenerating (Lakatos, 1970). Neutral is theoryforge's label for an amendment that meets neither rule. The prior defaults to the version the theory declares as its parent, an example whose version id is the theory's parent_id and whose id the theory's id begins with. Choose another below or upload one. Predictions are matched by id, or by statement and type when an id has changed, so a version of another theory gives a meaningless verdict.",
+      help: "Compares what the current theory, treated as the amendment, claims with what a prior version claims, and classifies the change as progressive or degenerating (Lakatos, 1970). Neutral is theoryforge's label for an amendment that meets neither rule. The prior defaults to the version the theory declares as its parent, an example whose version id is the theory's parent_id and whose id the theory's id begins with. Choose another below or upload one. Predictions are matched by id, or by statement and type when an id has changed, so a version of another theory gives a meaningless verdict. Assumptions are compared by statement, so one rewritten under its id is appraised as a new one is, and one moved unchanged to another id is not.",
       params: [{ id: "prior", label: "Prior version", type: "theory" }],
     },
     {
@@ -150,11 +150,13 @@
     try { await navigator.clipboard.writeText(t); toast("Copied to clipboard"); }
     catch { toast("Copy failed. Select the text and copy it manually."); }
   }
+  // A longer message stays longer, so that it can be read before it goes.
   let toastTimer;
   function toast(msg) {
     let t = $(".toast"); if (!t) { t = el("div", { class: "toast", role: "status", "aria-live": "polite" }); document.body.append(t); }
     t.textContent = msg; t.classList.add("show");
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
+    const ms = Math.min(10000, Math.max(2400, 60 * String(msg).length));
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), ms);
   }
   // A short status for screen readers. The result panel is replaced whole on
   // each run, so it is no live region itself, and this one says what changed.
@@ -253,7 +255,9 @@
   let _gv = null, _gvPromise = null;
   const GRAPHVIZ_URL = "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm-graphviz@1.22.2/dist/index.js";
   // A load that fails is forgotten, so the next figure tries again rather
-  // than meet the same failure for the rest of the session.
+  // than meet the same failure for the rest of the session. Its error is
+  // marked as a failed load, which another run may get past, unlike a DOT
+  // that Graphviz refuses.
   async function graphviz() {
     if (_gv) return _gv;
     if (!_gvPromise) {
@@ -262,7 +266,12 @@
         const G = mod.Graphviz || (mod.default && mod.default.Graphviz);
         _gv = await G.load();
         return _gv;
-      })().catch((e) => { _gvPromise = null; throw e; });
+      })().catch((e) => {
+        _gvPromise = null;
+        const err = e && typeof e === "object" ? e : new Error(String(e));
+        try { err.gvLoad = true; } catch (x) { /* a frozen error is reported all the same */ }
+        throw err;
+      });
     }
     return _gvPromise;
   }
@@ -277,9 +286,10 @@
   // no bidirected edge, so an association, `a <-> b`, is drawn as a dashed edge
   // with an arrowhead at each end. An identifier may be bare or double-quoted.
   // dagitty reads only \" as an escape inside quotes and keeps any other
-  // backslash, where DOT also reads \\ as one, so `"a\\" [URL=...]` would end
-  // the id early in DOT and leave the rest as attributes. Each quoted id is
-  // therefore read by dagitty's rule and written again by DOT's first.
+  // backslash, where DOT also reads a doubled backslash as an escaped pair, so
+  // `"a\\" [URL=...]` would end the id early in DOT and leave the rest as
+  // attributes. Each quoted id is therefore read by dagitty's rule and written
+  // again by DOT's first.
   const DAGITTY_QUOTED = /"((?:\\"|[^"\\]|\\(?!"))*)"/g;
   const DAG_ID = '("(?:[^"\\\\]|\\\\.)*"|[^\\s"]+)';
   const BIDIRECTED_LINE = new RegExp("^([ \\t]*)" + DAG_ID + " <-> " + DAG_ID + "[ \\t]*$", "gm");
@@ -345,17 +355,26 @@
   // run code or lead elsewhere is taken out first: scripts, foreign content,
   // style sheets, animations, every event-handler attribute and every href or
   // src that points outside the figure. A link is replaced by what it holds,
-  // since the packages make none. The result is the clean node and whether
+  // since the packages make none. XML 1.0 cannot hold most control
+  // characters, U+FFFE or U+FFFF, which a theory's text may carry into the
+  // figure, so these are taken out before the figure is read, written as
+  // characters or as references. The result is the clean node and whether
   // anything was taken out, or null when the text is no SVG.
   const SVG_DROP = new Set(["script", "foreignobject", "iframe", "object", "embed", "style",
     "animate", "animatemotion", "animatetransform", "set", "handler", "listener"]);
+  const XML_BAD_CHAR = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
+  const xmlChar = (n) => n === 0x9 || n === 0xA || n === 0xD || (n >= 0x20 && n <= 0xD7FF) ||
+    (n >= 0xE000 && n <= 0xFFFD) || (n >= 0x10000 && n <= 0x10FFFF);
   function cleanSvg(svgString) {
+    const raw = String(svgString == null ? "" : svgString);
+    const text = raw.replace(XML_BAD_CHAR, "").replace(/&#(x[0-9a-f]+|[0-9]+);/gi, (m, n) =>
+      (xmlChar(n[0] === "x" || n[0] === "X" ? parseInt(n.slice(1), 16) : parseInt(n, 10)) ? m : ""));
     let doc;
-    try { doc = new DOMParser().parseFromString(String(svgString == null ? "" : svgString), "image/svg+xml"); }
+    try { doc = new DOMParser().parseFromString(text, "image/svg+xml"); }
     catch (e) { return null; }
     const root = doc && doc.documentElement;
     if (!root || root.localName !== "svg" || doc.getElementsByTagName("parsererror").length) return null;
-    let changed = false;
+    let changed = text !== raw;
     const scrub = (n) => {
       for (const c of [...n.childNodes]) {
         if (c.nodeType !== 1) continue;
@@ -388,10 +407,16 @@
   }
   // A Graphviz figure. When it cannot be drawn, because Graphviz did not load
   // or refused the DOT, the rest of the result stays and a note takes the
-  // figure's place.
+  // figure's place. Only a failed load is worth another run, since a DOT that
+  // Graphviz refuses is refused each time.
   async function dotFigure(title, dot, baseName) {
     try { return figureSection(title, await renderDot(dot), baseName); }
-    catch (e) { return warningSection(title, "The figure could not be drawn: " + ((e && e.message) || e) + ". Run the operation again to try once more."); }
+    catch (e) {
+      const why = String((e && e.message) || e).trim();
+      return warningSection(title, e && e.gvLoad
+        ? "The figure could not be drawn: " + why + ". Run the operation again to try once more."
+        : "Graphviz could not draw this figure: " + why);
+    }
   }
   function jsonBtn(filename, obj) {
     return el("button", { class: "btn ghost sm", onclick: () => download(filename, JSON.stringify(obj, null, 2), "application/json") }, "JSON");
@@ -549,7 +574,7 @@
     severity: "The rubric grades each prediction by the form of its claim alone, so it can be read before any data exist. The risk score reflects how committal the claim is. The computed severity adjusts it down for merely directional claims and up for claims that discriminate between rival theories. Longer bars mark riskier claims. How severely a claim is tested depends on the design and the data, which the rubric does not read.",
     post_severity: "Each row is a test outcome whose prediction states the region its claim allows. The severity is the probability that the test would have given an estimate less in accord with the claim, had the true value lain at the nearer bound, under a normal approximation with the recorded standard error. A value near 1 means the estimate would rarely have looked this good were the claim false at its edge. A value of 0.5 or below means the estimate lies at the edge of the region or outside it. With two finite bounds the value equals 1 minus the p value of the two one-sided tests of equivalence. It reads the recorded estimate and standard error as they stand, and does not check the design that produced them.",
     redundancy: "Each pair of constructs is compared by the words their definitions share. The Jaccard index divides the shared words by all the words of the two definitions, and the overlap coefficient divides them by the words of the shorter one, so both run from 0 to 1. A pair is flagged for review when its Jaccard index reaches 0.85, a near-duplicate, or when both definitions hold at least three content words and the overlap reaches 0.85, one definition contained in the other. Near-duplicate constructs blur a theory and inflate its apparent scope. The screen compares words only, so it cannot tell whether two constructs are empirically redundant.",
-    appraise: "An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added, no corroborated prediction dropped, no unrefuted content lost and no refuted prediction weakened. It is degenerating when it adds an ad hoc assumption or weakens a refuted prediction without corroborating new content, and neutral otherwise. A prediction is corroborated when some test passes it and none fails it, and an assumption added for an anomaly is ad hoc unless new content it protects is corroborated. A prediction that only changed its id is a rename, and one derived only from the prior's own propositions is an articulation, so neither counts as new content. The verdict and its components appear below.",
+    appraise: "An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added, no corroborated prediction dropped, no unrefuted content lost and no refuted prediction weakened. It is degenerating when it adds an ad hoc assumption or weakens a refuted prediction without corroborating new content, and neutral otherwise. A prediction is corroborated when some test passes it and none fails it, and a new or revised assumption added for an anomaly is ad hoc unless new content it protects is corroborated. A prediction that only changed its id is a rename, and one derived only from the prior's own propositions is an articulation, so neither counts as new content. The verdict and its components appear below.",
     discriminate: "The two causal graphs are compared on the constructs that some proposition of each relates to another construct. An independence listed below is implied by one graph and not by the other, so a test of it bears on the choice between them. A sign difference is decisive when both graphs fix the sign, and a claim discriminates when one graph entails it and the other contradicts it. Both readings assume linear relations, or relations that act in one direction throughout, and no common cause left out. Markov-equivalent graphs imply the same independencies, and only an intervention or another assumption can separate them.",
     sem: "The constructs become a measurement model and the propositions a structural model, in lavaan syntax for lavaan::sem(). A closing block fixes at zero the covariances the theory rules out, which lavaan would otherwise free, and comments flag single indicators, moderations and feedback loops. The syntax is a starting point for an SEM fit: rename indicators to your columns and check identification.",
     implications: "Each statement says that two constructs are independent once the constructs after the bar are held fixed, a claim data can refute, for instance by a partial correlation in a linear model. The statements follow from the edges the theory leaves out, so each omission is read as a claim. A conditional statement tested on observed scores is rejected too often when the constructs held fixed are measured with error. A latent-variable model, such as one built on the SEM operation's measurement model, takes that error into account. A pair that no set of constructs separates is listed apart, since the theory implies no independence for it.",
@@ -1117,10 +1142,12 @@
 
   // Every call into the engine goes through this queue, so a background check
   // from the editor cannot interleave with a load or an operation.
-  let engineChain = Promise.resolve();
+  let engineChain = Promise.resolve(), engineCalls = 0;
   function engine(fn) {
+    engineCalls++;
     const p = engineChain.then(fn);
-    engineChain = p.then(() => {}, () => {});
+    const done = () => { engineCalls--; };
+    engineChain = p.then(done, done);
     return p;
   }
 
@@ -1233,12 +1260,20 @@
   const STATE_FORMAT = 2;
   function stateKey() { return "tf-app-" + (RT ? RT.lang : "x"); }
   let saveTimer = null;
+  // The session is written for the browser, which the next visit restores,
+  // and for this tab, with the fragment the tab's address holds. A reload of
+  // the tab finds its own record and restores that, whatever another tab has
+  // saved since, and even when the address has not yet caught up with the
+  // latest edit. A full or blocked storage is not worth failing over.
+  const tabKey = () => stateKey() + "-tab";
+  function writeSession() {
+    const rec = { v: STATE_FORMAT, opId: STATE.opId, params: STATE.params, input: STATE.input, ran: !!STATE.ran };
+    try { localStorage.setItem(stateKey(), JSON.stringify(rec)); } catch (e) { /* not saved */ }
+    try { sessionStorage.setItem(tabKey(), JSON.stringify(Object.assign({ link: lastLinkHash }, rec))); } catch (e) { /* not saved */ }
+  }
+  function loadTab() { try { return JSON.parse(sessionStorage.getItem(tabKey()) || "null"); } catch (e) { return null; } }
   function saveState() {
-    try {
-      localStorage.setItem(stateKey(), JSON.stringify({
-        v: STATE_FORMAT, opId: STATE.opId, params: STATE.params, input: STATE.input, ran: !!STATE.ran,
-      }));
-    } catch (e) { /* quota exceeded, or private mode; not worth failing over */ }
+    writeSession();
     scheduleLink();
   }
   function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400); }
@@ -1261,8 +1296,15 @@
   // stay behind, since a link cannot carry a second file.
   const LINK_PREFIX = "#s=";
   // lastLinkHash is the fragment the app last wrote, so that a fragment
-  // pasted into the address bar can be told from the app's own.
+  // pasted into the address bar can be told from the app's own, and a reload
+  // from a link opened anew.
   let linkTimer = null, linkInfo = { ok: true, length: 0 }, lastLinkHash = "";
+  // A fragment in the address that the app did not write is a link that
+  // waits to be opened, which the app's own state does not replace.
+  function linkWaiting() {
+    const h = (typeof location !== "undefined" && location.hash) || "";
+    return h.startsWith(LINK_PREFIX) && h !== lastLinkHash;
+  }
   function linkState() {
     const op = OPS.find((o) => o.id === STATE.opId);
     const params = {};
@@ -1291,12 +1333,14 @@
   }
   async function updateLink() {
     try {
+      if (linkWaiting()) return;
       const l = await currentLink();
-      if (!l || typeof history === "undefined" || !history.replaceState) return;
+      if (!l || typeof history === "undefined" || !history.replaceState || linkWaiting()) return;
       linkInfo = l;
       const base = location.pathname + location.search;
       lastLinkHash = l.ok ? LINK_PREFIX + l.enc : "";
       history.replaceState(null, "", base + lastLinkHash);
+      writeSession();
     } catch (e) { /* no compression stream in this browser: no link */ }
   }
   async function copyLink() {
@@ -1318,6 +1362,7 @@
     const base = location.href.split("#")[0];
     lastLinkHash = LINK_PREFIX + l.enc;
     history.replaceState(null, "", location.pathname + location.search + lastLinkHash);
+    writeSession();
     await copyText(base + LINK_PREFIX + l.enc);
   }
   async function readLink() {
@@ -1388,7 +1433,7 @@
       el("h3", null, "How to use"),
       el("ol", { class: "steps" }, [
         li("Pick an example theory, upload your own YAML or JSON file, or start a new theory in the editor."),
-        li("Edit the theory in the editor's forms or in its source. Each change is validated in full by the package, and the problems appear beside the fields they concern, with the checklist score and gate."),
+        li("Edit the theory in the editor's forms or in its source. Each change is validated in full by the package, and the problems appear beside the fields they concern. The checklist score and gate follow, except for a theory larger than the app scores as it loads, which is scored when you ask."),
         li("Choose an operation, adjust any parameters and press Run. Results appear on the right."),
         li("Export the figures (SVG or PNG), the text and JSON results and the " + RT.langLabel + " code that reproduces them. Save writes the theory as YAML with the package's own writer, so the file reads back as the same theory."),
       ]),
@@ -1467,16 +1512,12 @@
     const status = !v ? null : v.ok
       ? el("span", { class: "chip valid", title: "Full validation found no problem", text: "valid" })
       : el("span", { class: "chip invalid", title: "Run Validate to list them", text: plural(problemList(v).length, "problem") });
-    const ck = s.check;
-    const score = !ck ? null : ck.error
-      ? el("span", { class: "chip", title: ck.error, text: "not scored" })
-      : el("span", { class: "chip score", title: "Rigour checklist: aggregate score and gate", html: "<b>" + esc(num(ck.score)) + "</b> / 100 · " + esc(ck.gate) });
     const edited = STATE.input && STATE.input.mode === "edited";
     const kids = [
       el("div", { class: "ttl", text: s.title || s.id || "(untitled)" }),
       el("div", { class: "meta" }, [s.id || "", s.maturity ? " · " + s.maturity : "", s.form ? " · " + s.form : "", edited ? " · edited" : ""].join("")),
       el("div", { class: "chips" }, [
-        status, score,
+        status, scoreChip(s),
         chip(c.constructs || 0, "construct"), chip(c.propositions || 0, "proposition"),
         chip(c.predictions || 0, "prediction"), chip(c.alternatives || 0, "alternative"),
         chip(c.assumptions || 0, "assumption"),
@@ -1489,8 +1530,7 @@
   }
   // The content hash identifies exactly this content, whatever the layout of
   // the file, and the preregistration and dossier print it too. It arrives
-  // after the load (requestHash), so the row is empty until then, and says so
-  // when the package could not compute it.
+  // after the load, and the row says when the package could not compute it.
   function hashRow(s) {
     const row = el("div", { class: "hash", id: "summaryHash" });
     if (s && s.hash) {
@@ -1499,35 +1539,210 @@
         el("button", { class: "linklike sm", onclick: () => copyText(s.hash), "aria-label": "Copy the content hash" }, "copy"));
     } else if (s && s.hashError) {
       row.append(el("span", { class: "hk", title: s.hashError, text: "Content hash not computed: " + s.hashError }));
+    } else if (s && s.hashWait === "asked") {
+      row.append(el("span", { class: "hk", title: largeNote(s, "hash"), text: "Content hash not computed for a theory this long " }),
+        el("button", { class: "linklike sm", type: "button", onclick: () => { requestHash("card"); }, "aria-label": "Compute the content hash" }, "compute it"));
+    } else if (s && s.hashWait === "queued") {
+      row.append(el("span", { class: "hk", text: "Content hash computing…" }));
     } else row.setAttribute("hidden", "");
     return row;
   }
-  // The hash is asked of the engine in a call of its own once a theory has
-  // loaded, so that a slow hash never holds up a load or the start. One
-  // request waits in the engine's queue at a time, and it hashes the theory
-  // loaded when its turn comes. A result for a theory that has since been
-  // replaced is dropped.
-  let hashQueued = false;
-  function requestHash() {
-    if (hashQueued || !RT || typeof RT.contentHash !== "function") return;
-    hashQueued = true;
-    let s = null;
-    const show = () => { const row = $("#summaryHash"); if (row && STATE.summary === s) row.replaceWith(hashRow(s)); };
-    engine(() => {
-      hashQueued = false;
-      s = STATE.summary;
-      return s && !s.hash ? RT.contentHash() : null;
-    }).then((r) => {
-      if (!r || !s || STATE.summary !== s) return;
-      if (typeof r.hash === "string") s.hash = r.hash;
-      else s.hashError = String(r.error || "the package gave no hash");
-      show();
-    }, (err) => {
-      if (!s || STATE.summary !== s) return;
-      s.hashError = cleanMessage((err && err.message) || err);
-      show();
-    });
+
+  // ---- the checklist's score and the content hash on the card ---------------
+  // Both are asked of the engine in calls of their own once a theory has
+  // loaded, so that the card shows at once and neither holds up a load, a
+  // restore or a change in the editor. They run one at a time, each once the
+  // engine has no work the user started and the page has been drawn, so an
+  // operation started meanwhile goes first, and a result for a theory since
+  // replaced is dropped. Both are kept for the text they were computed on, so
+  // the same theory is scored and hashed once in a session, and a Rigour
+  // checklist run gives the score too. Above a size the runtime sets from what
+  // its engine was measured to take (RT.limits), each is computed only when the
+  // user asks, and the operation a session or a link holds is not run as the
+  // theory opens. The checklist's time grows faster than the theory's
+  // constructs, propositions and predictions, so its limit counts those. The
+  // hash reads the whole theory, so its limit is on the length of the theory
+  // as the package's JSON writer gives it, which the load reports, or null for
+  // a theory with more values than the glue measures (its MEASURED_VALUES).
+  const LIMITS = { score: 300, hashChars: 50000, values: 20000 };
+  const limits = () => Object.assign({}, LIMITS, (RT && RT.limits) || {});
+  const theorySize = (s) => {
+    const c = (s && s.counts) || {};
+    return Number(c.constructs || 0) + Number(c.propositions || 0) + Number(c.predictions || 0);
+  };
+  const tooLarge = (s, kind) => (kind === "score" ? theorySize(s) > limits().score
+    : !!s && (s.chars === null || (typeof s.chars === "number" && s.chars > limits().hashChars)));
+  const isLarge = (s) => tooLarge(s, "score") || tooLarge(s, "hash");
+  const largeNote = (s, kind) => (kind === "score"
+    ? "This theory has " + theorySize(s).toLocaleString("en-GB") + " constructs, propositions and predictions, more than the " +
+      limits().score.toLocaleString("en-GB") + " the app scores as it loads, since the checklist can take a while on a theory this large."
+    : typeof s.chars === "number"
+      ? "Written as JSON, this theory takes " + s.chars.toLocaleString("en-GB") + " characters, more than the " +
+        limits().hashChars.toLocaleString("en-GB") + " the app hashes as it loads, since the hash can take a while on a theory this long."
+      : "This theory holds more than " + limits().values.toLocaleString("en-GB") +
+        " values, more than the app measures as it loads, so its hash is computed only when you ask.");
+  // An example is known by its path, and any other theory by its format and
+  // its text.
+  function cardKey(inp) {
+    if (!inp) return null;
+    if (inp.mode === "example") return "example\n" + inp.path;
+    if (typeof inp.text !== "string") return null;
+    return (inp.format || (/\.json$/i.test(inp.name || "") ? "json" : "yaml")) + "\n" + inp.text;
   }
+  // The scores and hashes of the theories seen most recently, as many as fit
+  // in about 4 million characters of theory text.
+  const cardCache = new Map();
+  function keepCard(key, got) {
+    if (key === null) return;
+    const entry = Object.assign({}, cardCache.get(key), got);
+    cardCache.delete(key);
+    cardCache.set(key, entry);
+    let size = 0;
+    for (const k of cardCache.keys()) size += k.length;
+    while (cardCache.size > 1 && (cardCache.size > 32 || size > 4e6)) {
+      const k = cardCache.keys().next().value;
+      size -= k.length;
+      cardCache.delete(k);
+    }
+  }
+  // What the score call gives, read from a Rigour checklist run.
+  const scoreOfReport = (r) => ({
+    score: r.aggregate_score, gate: r.gate,
+    failed: asArr(r.items).filter((i) => i.status === "fail").map((i) => i.id),
+    warned: asArr(r.items).filter((i) => i.status === "warn").map((i) => i.id),
+  });
+  // A short wait that lets the browser draw the page first.
+  const afterPaint = () => new Promise((resolve) => {
+    const later = () => setTimeout(resolve, 0);
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(later); else later();
+  });
+  // The card's calls wait in a queue of their own, and each goes to the engine
+  // only when no other call is queued or running there.
+  const cardJobs = [];
+  let cardPumping = false;
+  function whenIdle(fn) {
+    return new Promise((resolve, reject) => { cardJobs.push({ fn, resolve, reject }); pumpCards(); });
+  }
+  async function pumpCards() {
+    if (cardPumping) return;
+    cardPumping = true;
+    try {
+      while (cardJobs.length) {
+        while (engineCalls > 0) await engineChain;
+        await afterPaint();
+        if (engineCalls > 0) continue;
+        const job = cardJobs.shift();
+        try { job.resolve(await engine(job.fn)); } catch (e) { job.reject(e); }
+      }
+    } finally { cardPumping = false; }
+  }
+  function scoreChip(s) {
+    const ck = s && s.check;
+    let node;
+    if (ck && !("error" in ck)) {
+      node = el("span", { class: "chip score", title: "Rigour checklist: aggregate score and gate", html: "<b>" + esc(num(ck.score)) + "</b> / 100 · " + esc(ck.gate) });
+    } else if (ck) {
+      node = el("span", { class: "chip", title: ck.error, text: "not scored" });
+    } else if (s && s.scoreWait === "asked") {
+      node = el("span", { class: "chip unscored", title: largeNote(s, "score") }, ["not scored ",
+        el("button", { class: "linklike sm", type: "button", onclick: () => { requestScore("card"); }, "aria-label": "Score the theory with the rigour checklist" }, "score it")]);
+    } else if (s && s.scoreWait === "queued") {
+      node = el("span", { class: "chip scoring", title: "The rigour checklist is being computed", text: "scoring…" });
+    } else node = el("span", { hidden: "" });
+    node.setAttribute("id", "summaryScore");
+    return node;
+  }
+  // The two calls, what each gives the summary, where it is shown and what is
+  // said when the user asked for it.
+  const CARD = {
+    score: {
+      call: () => RT.score(), done: (x) => !!x.check, wait: "scoreWait", by: "scoreBy",
+      read: (r) => {
+        const check = r && typeof r === "object" ? r : { error: "the package gave no score" };
+        if ("error" in check) check.error = String(check.error || "the checklist stopped without a message");
+        return { check };
+      },
+      failed: (err) => ({ check: { error: errorHeadline(err) } }),
+      show: (s) => { const chip = $("#summaryScore"); if (chip) chip.replaceWith(scoreChip(s)); if (EDITOR && EDITOR.onSummary) EDITOR.onSummary(s); },
+      focus: () => $("#summaryScore"),
+      said: (s) => ("error" in s.check ? "The checklist could not score the theory: " + s.check.error
+        : "Checklist score " + num(s.check.score) + " / 100, gate " + s.check.gate),
+    },
+    hash: {
+      call: () => RT.contentHash(), done: (x) => !!(x.hash || x.hashError), wait: "hashWait", by: "hashBy",
+      read: (r) => (r && typeof r.hash === "string" ? { hash: r.hash } : { hashError: String((r && r.error) || "the package gave no hash") }),
+      failed: (err) => ({ hashError: errorHeadline(err) }),
+      show: () => { const row = $("#summaryHash"); if (row) row.replaceWith(hashRow(STATE.summary)); },
+      focus: () => $("#summaryHash button") || $("#summaryHash"),
+      said: (s) => (s.hash ? "Content hash computed" : "Content hash not computed: " + s.hashError),
+    },
+  };
+  // After a change the user asked for, the focus moves to what replaced the
+  // control they used, on the card or in the editor, so it does not fall back
+  // to the page. A user who has moved on to something else keeps the focus
+  // there, and the result is only announced.
+  function showCard(s, kind) {
+    const c = CARD[kind];
+    if (STATE.summary !== s) return;
+    c.show(s);
+    const by = s[c.by];
+    const a = document.activeElement;
+    let up = a;
+    while (up && up !== document.body) up = up.parentNode;
+    if (a && a !== document.body && up) return;
+    if (by === "editor" && EDITOR && EDITOR.focusScore && kind === "score") EDITOR.focusScore();
+    else if (by === "card") {
+      const n = c.focus();
+      if (n) { if (n.tagName !== "BUTTON") n.setAttribute("tabindex", "-1"); n.focus(); }
+    }
+  }
+  function takeCard(s, kind, got) {
+    const c = CARD[kind];
+    Object.assign(s, got);
+    delete s[c.wait];
+    showCard(s, kind);
+    if (s[c.by] && STATE.summary === s) announce(c.said(s));
+    delete s[c.by];
+  }
+  // Ask for the loaded theory's score or hash, unless it is known or the
+  // theory is too large to ask for it unbidden. `by` names where the user
+  // asked for it, the card or the editor, and is absent for the automatic
+  // request. The result is a promise of the summary once it holds the answer.
+  function requestCard(kind, by) {
+    const c = CARD[kind], s = STATE.summary;
+    const can = RT && typeof (kind === "score" ? RT.score : RT.contentHash) === "function";
+    if (!s || !can || c.done(s)) return Promise.resolve(s);
+    const key = cardKey(STATE.input), known = key === null ? null : cardCache.get(key);
+    if (by) s[c.by] = by;
+    if (known && c.done(known)) {
+      takeCard(s, kind, kind === "score" ? { check: known.check } : known.hash ? { hash: known.hash } : { hashError: known.hashError });
+      return Promise.resolve(s);
+    }
+    if (!by && tooLarge(s, kind)) { s[c.wait] = "asked"; showCard(s, kind); return Promise.resolve(s); }
+    if (s[c.wait] === "queued" && s[kind + "Job"]) { showCard(s, kind); return s[kind + "Job"]; }
+    s[c.wait] = "queued";
+    showCard(s, kind);
+    if (by && kind === "score") toast("Scoring " + theoryName(s) + " with the rigour checklist, which can take a while for a theory this large");
+    // The user's request is work the user started, so it goes to the engine
+    // at once, and the automatic one waits until the engine is idle.
+    const call = async () => {
+      if (by) await afterPaint();
+      return STATE.summary === s && !c.done(s) ? c.call() : null;
+    };
+    s[kind + "Job"] = (by ? engine(call) : whenIdle(call)).then((r) => {
+      if (r === null || r === undefined) return s;
+      const got = c.read(r);
+      keepCard(key, got);
+      if (STATE.summary === s && !c.done(s)) takeCard(s, kind, got);
+      return s;
+    }, (err) => {
+      if (STATE.summary === s && !c.done(s)) takeCard(s, kind, c.failed(err));
+      return s;
+    });
+    return s[kind + "Job"];
+  }
+  const requestScore = (by) => requestCard("score", by);
+  const requestHash = (by) => requestCard("hash", by);
   function refreshSummary() {
     const w = $("#summaryWrap"); if (w) w.replaceChildren(summaryCard(STATE.summary));
     if (EDITOR && EDITOR.onSummary) EDITOR.onSummary(STATE.summary);
@@ -1914,6 +2129,7 @@
     resetPrior();
     updateExampleDesc(); saveState();
     if (EDITOR) EDITOR.reload();
+    requestScore();
     requestHash();
   }
 
@@ -1992,12 +2208,20 @@
     return lines.length ? lines[lines.length - 1] : "";
   }
   // Engine errors arrive as a whole traceback (Pyodide's PythonError) or as R's
-  // condition text. The box shows the line that names the error and keeps the
-  // full text in a details element. `lead` is an optional node or text placed
-  // between the title and the error.
-  function errorBox(title, err, lead) {
+  // condition text, of which a box or a note shows the line that names the
+  // error.
+  function errorLines(err) {
     const msg = cleanMessage((err && (err.message || err.toString())) || err);
-    const lines = msg.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    return { msg, lines: msg.split(/\r?\n/).map((s) => s.trim()).filter(Boolean) };
+  }
+  function errorHeadline(err) {
+    const { msg, lines } = errorLines(err);
+    return headline(lines) || msg;
+  }
+  // The box keeps the full text in a details element. `lead` is an optional
+  // node or text placed between the title and the error.
+  function errorBox(title, err, lead) {
+    const { msg, lines } = errorLines(err);
     const last = headline(lines) || msg;
     const kids = [el("div", { class: "et", text: title })];
     if (lead) kids.push(el("p", { class: "lead" }, lead));
@@ -2006,7 +2230,9 @@
     return el("div", { class: "error", role: "alert" }, kids);
   }
 
-  let busy = false;
+  // A link pasted while the app is busy waits, and opens once the work in
+  // hand has finished.
+  let busy = false, linkPending = false;
   async function withBusy(label, fn) {
     if (busy) return; busy = true;
     const btn = $("#runBtn"); const prev = btn ? btn.textContent : "";
@@ -2018,6 +2244,7 @@
       busy = false;
       for (const c of controls) { if (c.getAttribute("data-busywas") === "0") c.disabled = false; c.removeAttribute("data-busywas"); }
       if (btn) btn.textContent = prev;
+      if (linkPending) { linkPending = false; setTimeout(() => openLinkInPlace(), 0); }
     }
   }
 
@@ -2042,7 +2269,14 @@
       announce("Running " + op.label);
       try {
         const params = Object.assign({}, STATE.params);
+        const s = STATE.summary, key = cardKey(STATE.input);
         const { raw, code } = await engine(() => RT.run(op.id, params));
+        // A theory loaded in the meantime would have replaced the summary.
+        if (op.id === "check" && raw && raw.report && STATE.summary === s) {
+          const got = { check: scoreOfReport(raw.report) };
+          keepCard(key, got);
+          if (!s.check) takeCard(s, "score", got);
+        }
         const sections = await shapeResult(op.id, raw, params, STATE.summary.id || "theory");
         out.replaceChildren(...sections.map((s) => s.node));
         const cp = $("#codePanel"); cp.style.display = "";
@@ -2098,6 +2332,7 @@
     const op = OPS.find((o) => o.id === STATE.opId);
     if (op && op.params && op.params.some((p) => p.type === "rival" || p.type === "construct")) renderParams();
     saveSoon();
+    requestScore();
     requestHash();
   }
   function editorHost() {
@@ -2162,6 +2397,10 @@
       isEdited: () => !!(STATE.input && STATE.input.mode === "edited"),
       isBusy: () => busy,
       showResultTab: () => showTab("result"),
+      // Score or hash a theory too large to be scored or hashed as it loads.
+      score: () => requestScore("editor"),
+      hash: () => requestHash("editor"),
+      largeNote: (s, kind) => largeNote(s, kind || "score"),
     };
   }
 
@@ -2248,17 +2487,22 @@
   // Restore theory + operation + params from a link or a previous session,
   // then optionally re-run the last operation so a refresh lands back where
   // the user left off. A link wins over the saved session, unless that session
-  // holds edits the link would replace and the user keeps them. init has
-  // already loaded example 0, and a load that fails leaves it loaded, so a
-  // failed restore falls back to it. A link whose theory cannot be loaded is
-  // taken out of the address and is not saved, so the next visit starts from
-  // the session saved before. The returned note says what happened; start()
-  // shows it once the boot overlay, which would hide a toast, is gone.
+  // holds edits the link would replace and the user keeps them, or the link is
+  // the tab's own, whose session is at least as new. init has already loaded
+  // example 0, and a load that fails leaves it loaded, so a failed restore
+  // falls back to it, and the card shows why. A link whose theory cannot be
+  // loaded is taken out of the address and is not saved, so the next visit
+  // starts from the session saved before. The returned note says what
+  // happened; start() shows it once the boot overlay, which would hide a
+  // toast, is gone.
   async function applyRestore(blog) {
-    let saved = loadSaved();
-    let note = null, fromLink = false, linkFailed = false;
+    let note = null, fromLink = false, linkFailed = false, failure = null;
+    const hash = (typeof location !== "undefined" && location.hash) || "";
+    const tab = loadTab();
+    const ownReload = !!tab && tab.link === hash;
+    let saved = ownReload ? tab : loadSaved();
     try {
-      const link = await readLink();
+      const link = ownReload ? null : await readLink();
       if (link) {
         const problem = linkProblem(link);
         if (problem) { note = problem; linkFailed = true; }
@@ -2279,7 +2523,7 @@
           }
         }
       }
-    } catch (e) { note = "The link could not be read, so the saved session is shown instead"; linkFailed = true; }
+    } catch (e) { note = "The link could not be read (" + ((e && e.message) || e) + "), so the saved session is shown instead"; linkFailed = true; }
     const first = RT.examples[0];
     const fallback = (name) => "Could not restore " + name + "; showing " + first.name + " instead";
     STATE.input = STATE.input || { mode: "example", path: first.path };
@@ -2306,7 +2550,8 @@
           if (!(await restoreTheory(inp, blog))) throw new Error("the theory in it cannot be read");
         } catch (e) {
           STATE.input = { mode: "example", path: first.path };
-          note = fallback(inp.mode === "example" ? ((RT.examples.find((x) => x.path === inp.path) || {}).name || String(inp.path).split("/").pop()) : inp.name || "your theory");
+          failure = { title: fallback(inp.mode === "example" ? ((RT.examples.find((x) => x.path === inp.path) || {}).name || String(inp.path).split("/").pop()) : inp.name || "your theory"), err: e };
+          note = failure.title + ": " + errorHeadline(e);
           if (fromLink) linkFailed = true;
         }
       }
@@ -2320,6 +2565,7 @@
     // Reflect the restored selection in the UI.
     updateExampleSel();
     refreshSummary();
+    if (failure) $("#summaryWrap").replaceChildren(errorBox(failure.title, failure.err), summaryCard(STATE.summary));
     for (const b of document.querySelectorAll(".op")) {
       const on = b.getAttribute("data-op") === STATE.opId;
       b.classList.toggle("active", on);
@@ -2330,25 +2576,46 @@
     if (note || (STATE.params.prior !== undefined && !priorValues().includes(STATE.params.prior))) STATE.params.prior = defaultPrior();
     resetTheoryChoices();
     updateExampleDesc(); updateOpHelp(); renderParams();
-    if (linkFailed) dropLinkHash(); else saveState();
+    // The link opened, or the tab's own, is the app's fragment from now on. A
+    // link pasted while the start panel showed is left in the address, and
+    // start() opens it.
+    const pasted = typeof location !== "undefined" && location.hash !== hash;
+    if (linkFailed) { if (!pasted) dropLinkHash(); }
+    else { if (fromLink || ownReload) lastLinkHash = hash; saveState(); }
     const op = OPS.find((o) => o.id === STATE.opId);
-    if (saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op)) await runOp();
+    const rerun = saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op);
+    if (rerun && !isLarge(STATE.summary)) await runOp();
     if (fromLink && !note) note = "Opened the theory and operation from the link";
+    if (rerun && isLarge(STATE.summary)) note = (note ? note + ". " : "") + notRunNote(op);
     return note;
   }
+  // Why an operation saved with a large theory was not run as it opened.
+  const notRunNote = (op) => "The theory is large, so the " + op.label + " operation was not run. Press Run to run it";
 
   // A link pasted into the address bar of a tab that already shows the app
   // changes only the fragment, so the browser keeps the page and the app
   // opens the link here. A fragment the app wrote itself is no link to open.
+  let linkOpening = false;
   async function openLinkInPlace() {
-    const h = (typeof location !== "undefined" && location.hash) || "";
-    if (!h.startsWith(LINK_PREFIX) || h === lastLinkHash || busy) return;
+    if (!linkWaiting()) return;
+    if (busy || linkOpening) { linkPending = true; return; }
+    linkOpening = true;
+    try { await openLink(); } finally {
+      linkOpening = false;
+      if (linkPending && !busy) { linkPending = false; setTimeout(() => openLinkInPlace(), 0); }
+    }
+  }
+  async function openLink() {
+    const h = location.hash;
     let link;
-    try { link = await readLink(); } catch (e) { toast("The link could not be read"); dropLinkHash(); return; }
+    try { link = await readLink(); } catch (e) { toast("The link could not be read: " + ((e && e.message) || e)); dropLinkHash(); return; }
     const problem = linkProblem(link);
     if (problem) { toast(problem.replace(/, so the saved session is shown instead$/, "")); dropLinkHash(); return; }
     const t = link.theory;
     if (EDITOR && EDITOR.flush) await EDITOR.flush();
+    // A link pasted over this one is opened in its place.
+    if (location.hash !== h) return;
+    if (busy) { linkPending = true; return; }
     if (!mayDiscardEdits("Open " + linkName(t) + " from the link")) { dropLinkHash(); return; }
     let ok = false;
     await withBusy("Opening the link…", async () => {
@@ -2356,6 +2623,7 @@
       try {
         if (!(await restoreTheory(inp))) throw new Error("the theory in it cannot be read");
       } catch (err) { loadFailed(t.example || t.name || "the theory in the link", err); dropLinkHash(); return; }
+      lastLinkHash = h;
       if (inp.mode === "example") STATE.source = await exampleSource(inp.path.split("/").pop(), inp.path);
       $("#fileInput").value = "";
       // The change of theory resets the choices that depend on it, and the
@@ -2375,8 +2643,9 @@
     });
     if (!ok) return;
     const op = OPS.find((o) => o.id === STATE.opId);
-    if (link.run && op && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op)) await runOp();
-    toast("Opened the theory and operation from the link");
+    const rerun = link.run && op && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op);
+    if (rerun && !isLarge(STATE.summary)) await runOp();
+    toast("Opened the theory and operation from the link" + (rerun && isLarge(STATE.summary) ? ". " + notRunNote(op) : ""));
   }
 
   async function start(runtime) {
@@ -2423,8 +2692,11 @@
       const note = await applyRestore(onProgress);
       $("#boot").classList.add("hidden");
       if (note) toast(note);
+      requestScore();
       requestHash();
       if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("hashchange", () => openLinkInPlace());
+      // A link pasted while the start panel showed fired no handler.
+      if (linkWaiting()) openLinkInPlace();
     } catch (err) {
       bootFailed(err);
     }

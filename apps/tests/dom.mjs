@@ -3,9 +3,9 @@
 // or a dependency. It models elements, text, attributes, classes and simple
 // selectors (#id, .class, tag, *, [attr], [attr="v"], compounds of these,
 // lists, descendants and ":scope > " children). A pseudo-class, such as the
-// :not() in the query the modal's focus trap runs on Tab, throws. It does not parse HTML: innerHTML is
-// kept as a string and counts as text. DOMParser reads XML, enough for the
-// SVG figures, and XMLSerializer writes it back.
+// :not() in the query the modal's focus trap runs on Tab, throws. It does not
+// parse HTML: innerHTML is kept as a string and counts as text. DOMParser reads
+// XML, enough for the SVG figures, and XMLSerializer writes it back.
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
@@ -150,7 +150,13 @@ export function makeStorage(mode, initial) {
 
 // A small XML reader for DOMParser: declarations, a doctype, comments,
 // elements with quoted attributes, text and the five predefined entities. A
-// document it cannot read holds a parsererror element, as a browser's does.
+// document it cannot read holds a parsererror element, as a browser's does,
+// and so does one that holds a character XML 1.0 does not allow, written as a
+// character or as a reference.
+const xmlChar = (n) => n === 0x9 || n === 0xA || n === 0xD || (n >= 0x20 && n <= 0xD7FF) ||
+  (n >= 0xE000 && n <= 0xFFFD) || (n >= 0x10000 && n <= 0x10FFFF);
+const badXmlChars = (src) => /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/.test(src) ||
+  [...src.matchAll(/&#(x[0-9a-f]+|[0-9]+);/gi)].some((m) => !xmlChar(m[1][0].toLowerCase() === "x" ? parseInt(m[1].slice(1), 16) : parseInt(m[1], 10)));
 const unent = (t) => t.replace(/&(lt|gt|amp|quot|apos|#\d+|#x[0-9a-f]+);/gi, (m, e) =>
   ({ lt: "<", gt: ">", amp: "&", quot: '"', apos: "'" }[e.toLowerCase()] ||
     String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10))));
@@ -173,7 +179,7 @@ function parseXml(src) {
       if (!m[6]) stack.push(e);
     } else if (m[7] !== undefined) { if (stack.length > 1) cur.append(new Text(unent(m[7]))); else if (m[7].trim()) { ok = false; break; } }
   }
-  if (re.lastIndex < src.length || stack.length !== 1) ok = false;
+  if (re.lastIndex < src.length || stack.length !== 1 || badXmlChars(src)) ok = false;
   const root = top.children.find((c) => c instanceof Element) || null;
   if (!ok || !root) {
     const err = new Element("parsererror"); err._name = "parsererror";
@@ -194,7 +200,7 @@ function serializeXml(n) {
 class DOMParser { parseFromString(s) { return parseXml(String(s)); } }
 class XMLSerializer { serializeToString(n) { return serializeXml(n); } }
 
-export function makeWindow({ storage = "ok", stored, prefersDark = false, fetchText, hash = "", confirm } = {}) {
+export function makeWindow({ storage = "ok", stored, session, prefersDark = false, fetchText, hash = "", confirm } = {}) {
   ACTIVE = null;
   const documentElement = new Element("html");
   const body = new Element("body");
@@ -231,13 +237,19 @@ export function makeWindow({ storage = "ok", stored, prefersDark = false, fetchT
   };
   if (confirm) ctx.confirm = confirm;
   ctx.window = ctx; ctx.globalThis = ctx;
+  // localStorage is shared by every tab of a site, and sessionStorage belongs
+  // to one tab and outlives its reloads. A test that shares either between
+  // two windows passes the first window's __storage or __session to the second.
   ctx.__storage = makeStorage(storage, stored).get;
+  ctx.__session = makeStorage(storage, session).get;
   vm.createContext(ctx);
   // Defined from inside the context: a getter installed on the context object
   // from outside reaches page code as a ReferenceError, not the SecurityError
   // a browser throws.
   vm.runInContext(`Object.defineProperty(globalThis, "localStorage", { configurable: true,
-    get() { return __storage(); } });`, ctx);
+    get() { return __storage(); } });
+    Object.defineProperty(globalThis, "sessionStorage", { configurable: true,
+    get() { return __session(); } });`, ctx);
   return ctx;
 }
 

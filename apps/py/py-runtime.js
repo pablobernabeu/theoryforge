@@ -44,6 +44,30 @@ def _lineage(d):
     return {"id": text(field(d, "id")), "title": text(field(d, "title")),
             "version": {"id": text(field(v, "id")), "parent_id": text(field(v, "parent_id"))}}
 
+# The length of the theory as the json module writes it, from which the app
+# tells a theory too long to hash as it loads. R's jsonlite writes some
+# numbers differently, so the two glues can differ by a few characters. A
+# theory with more values than MEASURED_VALUES is not measured, and its length
+# is None.
+MEASURED_VALUES = 20000
+
+def _chars(d):
+    n, stack = 0, [d]
+    while stack:
+        v = stack.pop()
+        if isinstance(v, dict):
+            stack.extend(v.values())
+        elif isinstance(v, list):
+            stack.extend(v)
+        elif v is not None:
+            n += 1
+            if n > MEASURED_VALUES:
+                return None
+    try:
+        return len(json.dumps(d, ensure_ascii=False, separators=(",", ":"), default=str))
+    except (TypeError, ValueError):
+        return None
+
 def _summary(t):
     d = t.data
     def n(k):
@@ -59,6 +83,7 @@ def _summary(t):
             "assumptions": n("auxiliary_assumptions"), "phenomena": n("phenomena"),
             "outcomes": n("test_outcomes"),
         },
+        "chars": _chars(d),
         # The constructs an impulse can start from and the rivals that state
         # propositions of their own, which the app offers as choices.
         "constructs": [{"id": text(field(c, "id")), "label": text(field(c, "label"))}
@@ -80,16 +105,23 @@ def _validation(t):
         return {"ok": True}
     return {"ok": False, "message": "invalid theory object: " + "; ".join(problems), "problems": problems}
 
-# The checklist's score and gate, which the editor shows as the theory changes,
-# or the message of a theory the checklist refuses.
+# The checklist's score and gate, which the card and the editor show, or the
+# message of a theory the checklist refuses. An error without a message, such
+# as a MemoryError, is named by its type.
 def _score(t):
     try:
         r = t.check()
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e) or type(e).__name__}
     return {"score": r["aggregate_score"], "gate": r["gate"],
             "failed": [i["id"] for i in r["items"] if i["status"] == "fail"],
             "warned": [i["id"] for i in r["items"] if i["status"] == "warn"]}
+
+# The score of the loaded theory. It is a call of its own, which the app makes
+# once the theory card has been drawn, so that the checklist, whose time grows
+# faster than the theory, never holds up a load, a restore or the start.
+def score():
+    return json.dumps(_score(_state["theory"]))
 
 def _hash(t):
     try:
@@ -110,7 +142,6 @@ def _loaded(t):
     _state["theory"] = t
     out = _summary(t)
     out["validation"] = _validation(t)
-    out["check"] = _score(t)
     return out
 
 # A file that cannot be read raises, and the previous theory stays loaded. One
@@ -303,6 +334,11 @@ def run(op, params_json):
 
 const RT = {
   lang: "py",
+  // The size above which the card's score and hash wait for the user to ask
+  // (apps/README.md, "Runtimes"). In Pyodide, the checklist took up to 0.3 s on
+  // 300 constructs, propositions and predictions and 1.4 s on 899, and the hash
+  // up to 0.2 s on theories of up to 235,000 characters of JSON.
+  limits: { score: 300, hashChars: 1000000 },
   langLabel: "Python",
   engineLabel: "Pyodide (WebAssembly)",
   accent: "#3776AB",
@@ -457,6 +493,10 @@ const RT = {
 
   // The content hash of the loaded theory, as { hash } or { error }.
   async contentHash() { return JSON.parse(this._str(this._app.content_hash())); },
+
+  // The checklist's score of the loaded theory, as { score, gate, failed,
+  // warned } or { error }.
+  async score() { return JSON.parse(this._str(this._app.score())); },
 
   // The loaded theory as the package's writer writes it ("yaml" or "json").
   async writeText(format) { return this._str(this._app.write_text(format)); },

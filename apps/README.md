@@ -81,19 +81,22 @@ should not hold, so both are left to the installed package.
 ## Links
 
 Copy link writes the theory and the chosen operation into the URL fragment, the part
-after `#`, which browsers do not send to the server. The state is JSON, compressed
-with the browser's `CompressionStream('deflate-raw')` and encoded as base64url. An
-example travels as its path and any other theory as its text. Links are kept below
-16,000 characters so that mail clients and chat programs pass them on whole, and a
-theory too large for that is better sent as a file. An uploaded prior, rival or
-corpus is not carried. A link that opens is read with the same limit, and one that
-decompresses to more than 1 MiB is refused, as is one written by a newer version of
-the app. A link pasted into a tab that already shows the app opens there. A link
-that would replace a theory edited in the session asks first, as choosing an example,
-uploading a file or New theory does, since the session is the only copy of edits that
-Save has not written. While a theory from a link loads, the start panel offers to
-open the app without it, and a link whose theory cannot be loaded is taken out of
-the address and leaves the saved session as it was.
+after `#`, which browsers do not send to the server. The state is JSON, compressed with
+the browser's `CompressionStream('deflate-raw')` and encoded as base64url. An example
+travels as its path and any other theory as its text. Links are kept below 16,000
+characters so that mail clients and chat programs pass them on whole, and a theory too
+large for that is better sent as a file. An uploaded prior, rival or corpus is not
+carried. A link that opens is read with the same limit, and one that decompresses to
+more than 1 MiB is refused, as is one written by a newer version of the app. A link
+pasted into a tab that already shows the app opens there, once the app has started and
+any operation that is running has finished. A link that would replace a theory edited in
+the session asks first, as choosing an example, uploading a file or New theory does,
+since the session is the only copy of edits that Save has not written. A reload asks
+nothing and opens the tab's session as last saved, since each tab keeps its own record
+of the session with the link it wrote, so another tab's work does not take its place.
+While a theory from a link loads, the start panel offers to open the app without it, and
+a link whose theory cannot be loaded is taken out of the address and leaves the saved
+session as it was, with a note above the theory card that says why.
 
 The diagrams are Graphviz's SVG, drawn from text the theory supplies. Each figure is
 read as XML and inserted as nodes, with any script, foreign content, style sheet,
@@ -103,20 +106,36 @@ dagitty's quoting to DOT's before Graphviz reads it.
 
 ## Runtimes
 
-The R app loads webR 0.6.1 (R 4.6.0), and the Python app loads Pyodide 314.0.8
-(Python 3.14.2, with PyYAML 6.0.3). Both releases are pinned in the
-runtimes. A new engine can change the version of the language the package runs under, so
-an engine is updated only after `tests/browser.e2e.mjs` has run every operation on every
-example under it. The CI apps job runs the Python glue under Python 3.14 with PyYAML
-6.0.3 to match. The R app installs jsonlite and yaml from repo.r-wasm.org when it loads.
-These two are not pinned, so each session gets the builds the repository serves that
-day, and the browser console records their versions. The Graphviz renderer,
-`@hpcc-js/wasm-graphviz` 1.22.2, is pinned in `shared/app-core.js`. Each runtime imports
-its engine when it starts, so a host the network blocks gives the start panel's
-message, which names the host, and a Reload button. A figure Graphviz cannot draw is
-replaced by a note that says why, the rest of the result stays, and the next run tries
-to load Graphviz again. The content hash on the theory card is computed after each
-load, in a call of its own, so a slow hash holds up neither the load nor the start.
+The R app loads webR 0.6.1 (R 4.6.0), and the Python app loads Pyodide 314.0.8 (Python
+3.14.2, with PyYAML 6.0.3). Both releases are pinned in the runtimes. A new engine can
+change the version of the language the package runs under, so an engine is updated only
+after `tests/browser.e2e.mjs` has run every operation on every example under it. The CI
+apps job runs the Python glue under Python 3.14 with PyYAML 6.0.3 to match. The R app
+installs jsonlite and yaml from repo.r-wasm.org when it loads. These two are not pinned,
+so each session gets the builds the repository serves that day, and the browser console
+records their versions. The Graphviz renderer, `@hpcc-js/wasm-graphviz` 1.22.2, is
+pinned in `shared/app-core.js`. Each runtime imports its engine when it starts, so a
+host the network blocks gives the start panel's message, which names the host, and a
+Reload button. A figure Graphviz cannot draw is replaced by a note that says why, the
+rest of the result stays, and the next run tries to load Graphviz again. When Graphviz
+refuses the DOT, the note gives its message. The checklist score and the content hash on
+the theory card are computed after each load, each in a call of its own, so neither
+holds up the load or the start. Each waits until the engine has no work the user
+started, so an operation started meanwhile goes first, or waits at most for the one call
+under way, and both are kept for the text they were computed on. Each runtime sets the
+sizes above which they wait for the user to ask, from what its engine was measured to
+take. The checklist's time grows faster than the theory, and in both apps a theory with
+more than 300 constructs, propositions and predictions is scored only on request. On
+theories of that size, it took up to 2.7 s in webR and 0.3 s in Pyodide. The hash reads
+the whole theory, and its time grows with the length of the theory written as JSON,
+which the load reports as the language's JSON writer gives it, so the two apps can
+differ by a few characters on a theory with decimal numbers. The R app hashes a theory
+longer than 50,000 characters only on request, since webR took up to 2.5 s on 48,000
+characters made mostly of test outcomes, whose numbers cost the most to write, and the
+Python app one longer than 1,000,000, which Pyodide hashed in under half a second. Both
+leave a theory with more than 20,000 values unmeasured and hash it only on request. An
+operation that a session or a link holds for a theory above either size is not run as
+the app opens it.
 
 ## Build and run locally
 
@@ -138,27 +157,26 @@ file to be saved beside the script first.
 
 `apps/tests/` holds tests for the UI core, the editor's helpers (including a check that
 the editor leaves DAGitty code to the package's reader), the editor on a page, the
-Markdown renderer, the link,
-the colour contrast of both themes, the two runtimes and their reproducible code,
-`build.mjs` and the site's landing and 404 pages. They run under Node's built-in test
-runner with a small stand-in for the browser DOM (`tests/dom.mjs`), so they need no
-browser and no dependency. `tests/code.test.mjs` also runs every Python snippet the app
-writes under the Python on the path with PyYAML and checks that it prints its result. It
-skips when there is no such Python.
+Markdown renderer, the link, the colour contrast of both themes, the two runtimes and
+their reproducible code, `build.mjs` and the site's landing and 404 pages. They run
+under Node's built-in test runner with a small stand-in for the browser DOM
+(`tests/dom.mjs`), so they need no browser and no dependency. `tests/code.test.mjs` also
+runs every Python snippet the app writes under the Python on the path with PyYAML and
+checks that it prints its result. It skips when there is no such Python.
 
 ```bash
 node --test apps/tests/*.test.mjs   # from the repository root
 ```
 
-`tests/browser.e2e.mjs` drives both apps in Chromium with Playwright. It boots the
-two engines and runs every operation on every example and on a theory it builds in
-the editor. It checks that a link reproduces the view and that a link pasted into an
-open tab opens there, how a source the package cannot read is reported, that recording
-the current content hash leaves a theory valid and that the saved file keeps the hash,
-the layout at 390 and 768 px wide and the contrast of coloured text in both themes. Last, it
+`tests/browser.e2e.mjs` drives both apps in Chromium with Playwright. It boots the two
+engines and runs every operation on every example and on a theory it builds in the
+editor. It checks that a link reproduces the view and that a link pasted into an open
+tab opens there, how a source the package cannot read is reported, that recording the
+current content hash leaves a theory valid and that the saved file keeps the hash, the
+layout at 390 and 768 px wide and the contrast of coloured text in both themes. Last, it
 compares the displayed text of the two apps wherever the packages promise the same
-output. It needs Playwright with its Chromium and network access to the engines'
-hosts, so `node --test` leaves it out:
+output. It needs Playwright with its Chromium and network access to the engines' hosts,
+so `node --test` leaves it out:
 
 ```bash
 node apps/build.mjs

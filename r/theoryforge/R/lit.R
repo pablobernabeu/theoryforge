@@ -45,8 +45,8 @@ NULL
 #' otherwise. The file is read by the rules that [tf_read()] follows, so an
 #' unquoted keyword such as \code{y} or \code{n} stays a string, and a repeated
 #' key, a YAML alias that names no node, an anchor given twice, a YAML document
-#' that its aliases expand past 1000000 values and a document nested more than
-#' 64 levels deep are refused, the first in the order [tf_read()] gives. A
+#' whose aliases expand it past 1,000,000 values and a document nested more
+#' than 64 levels deep are refused, the first in the order [tf_read()] gives. A
 #' document that is not a mapping stops with \code{Corpus data must be a
 #' mapping}. The records themselves are checked by [tf_litmap()] and
 #' [tf_landscape()].

@@ -137,6 +137,15 @@ function editRuntime(extra) {
   }, extra || {});
 }
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// Wait until cond() holds, checking every few milliseconds, and fail after a
+// generous time, so that a test does not depend on the speed of the machine.
+async function until(cond, what, ms = 10000) {
+  const t0 = Date.now();
+  while (!cond()) {
+    if (Date.now() - t0 > ms) throw new Error("timed out waiting for " + (what || "the condition"));
+    await wait(5);
+  }
+}
 async function page(opts, rt) {
   const ctx = makeWindow(opts);
   for (const f of ["app-core.js", "share.js", "editor.js"]) runScript(ctx, path.join(SHARED, f));
@@ -145,7 +154,10 @@ async function page(opts, rt) {
   const $ = (s) => ctx.document.querySelector(s);
   return { ctx, rt, $, $$: (s) => ctx.document.querySelectorAll(s) };
 }
-async function openEditor(p) { await p.$("#tabEditor").click(); await wait(20); }
+async function openEditor(p) {
+  await p.$("#tabEditor").click();
+  await until(() => p.$("#edForms") && p.$("#edForms").inert === false, "the editor to read the theory");
+}
 const fieldOf = (p, k) => p.$$("[data-k]").find((x) => x.getAttribute("data-k") === k);
 const stored = (p) => JSON.parse(p.ctx.localStorage.getItem("tf-app-py") || "null");
 
@@ -158,8 +170,7 @@ test("while a change waits for the engine, the other pane takes no input, and bo
   await src.dispatch("input");
   assert.equal(forms.inert, true, "the forms take no input while the source change waits");
   assert.ok(!src.readOnly);
-  await wait(600);
-  assert.equal(forms.inert, false, "the forms take input again once the engine has read the change");
+  await until(() => forms.inert === false, "the forms to take input again once the engine has read the change");
   assert.equal(p.rt.doc.title, "Typed in the source");
   // The stub keeps a text field's starting value as its attribute.
   assert.equal(fieldOf(p, "title").getAttribute("value"), "Typed in the source", "the forms show the source change");
@@ -169,8 +180,7 @@ test("while a change waits for the engine, the other pane takes no input, and bo
   def.value = "A definition from the forms";
   await def.dispatch("input");
   assert.equal(src.readOnly, true, "the source takes no input while the forms change waits");
-  await wait(600);
-  assert.equal(src.readOnly, false);
+  await until(() => src.readOnly === false, "the source to take input again");
   assert.match(src.value, /A definition from the forms/);
   assert.match(src.value, /Typed in the source/);
   // A box ticked in the forms reaches the source in the same way.
@@ -179,7 +189,7 @@ test("while a change waits for the engine, the other pane takes no input, and bo
   box.value = box.getAttribute("value");   // a browser reflects the attribute; the stub does not
   await box.dispatch("change");
   assert.equal(src.readOnly, true);
-  await wait(600);
+  await until(() => src.readOnly === false, "the source to take input again");
   assert.deepEqual(JSON.parse(JSON.stringify(p.rt.doc.predictions[0].diagnostic_vs)), ["alt1"]);
   assert.match(src.value, /"alt1"/);
   assert.match(src.value, /A definition from the forms/);
@@ -221,8 +231,7 @@ test("choosing an example or uploading a file asks before it replaces an edited 
   await openEditor(p);
   fieldOf(p, "title").value = "My unsaved edit";
   await fieldOf(p, "title").dispatch("input");
-  await wait(1000);
-  assert.equal(stored(p).input.mode, "edited");
+  await until(() => stored(p) && stored(p).input.mode === "edited" && /My unsaved edit/.test(stored(p).input.text), "the edit to be saved");
   await p.$("#exampleSel").dispatch("change", { target: { value: EX[1].path } });
   assert.match(questions[0], /^Load Theory B\? Edits to My unsaved edit that you have not saved will be lost\.$/);
   assert.equal(p.rt.doc.title, "My unsaved edit", "a refusal keeps the edited theory");
@@ -241,7 +250,7 @@ test("after New theory or a DAGitty import, every place names the file after the
   const p = await page();
   await openEditor(p);
   await p.$("#edNew").click();
-  await wait(20);
+  await until(() => /new-theory/.test(p.$("#exampleOwn").textContent), "the new theory");
   assert.deepEqual(p.rt.reads[p.rt.reads.length - 1].slice(0, 2), ["edit", "new-theory.theory.yaml"]);
   assert.match(p.$("#exampleOwn").textContent, /Edited: new-theory\.theory\.yaml/);
   await p.$("#viewSrc").click();
@@ -255,11 +264,11 @@ test("after New theory or a DAGitty import, every place names the file after the
   assert.equal(p.$("#dagCode").textContent, 'write "sleep-and-mood.theory.yaml"');
   p.$("#dagText").value = "dag { stress -> sleep }";
   await p.$("#dagImport").click();
-  await wait(20);
+  await until(() => p.rt.renamed.length > 0, "the import");
   assert.deepEqual(p.rt.renamed, ["sleep-and-mood.theory.yaml"]);
   assert.match(p.$("#exampleOwn").textContent, /Edited: sleep-and-mood\.theory\.yaml/);
   // The link keeps the theory new, so a reload goes on naming it after its id.
-  await wait(500);
+  await until(() => stored(p) && stored(p).input.name === "sleep-and-mood.theory.yaml", "the session to be saved");
   const s = stored(p);
   assert.equal(s.input.isNew, true);
   assert.equal(s.input.name, "sleep-and-mood.theory.yaml");
@@ -303,4 +312,113 @@ test("removing an entry puts the focus on the entry now in its place, or on Add"
   assert.equal(p.ctx.document.activeElement.getAttribute("aria-label"), "Remove the rival's proposition r2");
   await rm("Remove the rival's proposition r2").click();
   assert.equal(p.ctx.document.activeElement.textContent, "Add a proposition of this rival");
+});
+
+test("above the limits, Record the current hash computes it, and 'score it' keeps the focus in the editor", async () => {
+  // Written as JSON, the theory is longer than the app hashes as it loads,
+  // and it has more constructs than it scores.
+  const rt = editRuntime({
+    hashes: 0, scores: 0,
+    summary(validation) {
+      return Object.assign(editRuntime().summary.call(this, validation), { counts: { constructs: 400 }, chars: 500000 });
+    },
+    async contentHash() { this.hashes++; return { hash: "sha256:" + "56".repeat(32) }; },
+    async score() { this.scores++; return { score: 42, gate: "advisory", failed: [], warned: [] }; },
+  });
+  const p = await page({}, rt);
+  await openEditor(p);
+  await wait(20);
+  assert.equal(rt.hashes, 0);
+  assert.equal(rt.scores, 0);
+  const record = p.$$("button").find((b) => b.textContent === "Record the current hash");
+  await record.click();
+  await until(() => fieldOf(p, "version.content_hash").value !== "", "the hash to be recorded");
+  assert.equal(rt.hashes, 1, "the hash is computed on request");
+  assert.equal(fieldOf(p, "version.content_hash").value, "sha256:" + "56".repeat(32));
+  // Recording the hash is an edit, which the engine reads once typing pauses
+  // and which gives a new theory to score. The test waits for that read, so
+  // that the score asked for below is that of the theory then shown.
+  await until(() => rt.reads.some((r) => r[0] === "edit") && p.$("#edSource").readOnly === false && p.$("#edLint button"),
+    "the recorded hash to reach the engine");
+  // The editor's 'score it' is replaced by the score, and the focus follows.
+  const scoreIt = p.$("#edLint button");
+  scoreIt.focus();
+  await scoreIt.click();
+  await until(() => p.$("#liveStatus").textContent === "Checklist score 42 / 100, gate advisory", "the announcement of the score");
+  assert.equal(rt.scores, 1);
+  assert.equal(p.ctx.document.activeElement, p.$("#edScore"));
+  assert.match(p.$("#edScore").textContent.replace(/<\/?b>/g, ""), /checklist 42 \/ 100 · gate advisory/);
+  assert.equal(p.$("#liveStatus").textContent, "Checklist score 42 / 100, gate advisory");
+});
+
+test("Record the current hash records nothing when the theory changes while its hash is computed", async () => {
+  // The hash waits until the test lets it go, and is the hash of the title
+  // the theory had when it was asked for.
+  const rt = editRuntime({
+    held: [],
+    summary(validation) {
+      return Object.assign(editRuntime().summary.call(this, validation), { counts: { constructs: 400 }, chars: 500000 });
+    },
+    async contentHash() {
+      const title = this.doc.title;
+      await new Promise((r) => this.held.push(r));
+      return { hash: "sha256:" + (title === "Title a" ? "07" : "1d").repeat(32) };
+    },
+  });
+  const p = await page({}, rt);
+  await openEditor(p);
+  const record = p.$$("button").find((b) => b.textContent === "Record the current hash");
+  const pressed = record.click();
+  await until(() => rt.held.length === 1, "the hash to be asked for");
+  // An edit typed while the hash is computed.
+  fieldOf(p, "title").value = "Typed meanwhile";
+  await fieldOf(p, "title").dispatch("input");
+  rt.held.shift()();
+  await pressed;
+  assert.equal(p.$(".toast").textContent, "The theory changed while its hash was computed. Press Record again");
+  assert.equal(fieldOf(p, "version.content_hash").value, "", "no hash is recorded");
+  assert.equal(rt.doc.title, "Typed meanwhile");
+});
+
+test("Record the current hash says why it cannot record one, without asking twice", async () => {
+  const rt = editRuntime({
+    hashes: 0,
+    async contentHash() { this.hashes++; return { error: "MemoryError" }; },
+  });
+  const p = await page({}, rt);
+  await openEditor(p);
+  await until(() => rt.hashes === 1 && /not computed/.test(p.$("#summaryHash").textContent), "the hash to fail");
+  const record = p.$$("button").find((b) => b.textContent === "Record the current hash");
+  await record.click();
+  assert.equal(p.$(".toast").textContent, "The content hash could not be computed: MemoryError");
+  assert.equal(rt.hashes, 1, "a hash that failed is not asked for again");
+});
+
+test("while a new theory is read, the forms and the source of the one before take no input", async () => {
+  let release = null;
+  const rt = editRuntime({
+    gate: null,
+    async writeText(fmt) { if (this.gate) await this.gate; return this.text(fmt); },
+  });
+  const p = await page({}, rt);
+  await openEditor(p);
+  await p.$("#tabResult").click();
+  rt.gate = new Promise((r) => (release = r));
+  await p.$("#fileInput").dispatch("change", { target: { files: [{ name: "other.yaml", text: async () => JSON.stringify(baseDoc("o")) }] } });
+  await p.$("#tabEditor").click();
+  const forms = p.$("#edForms"), src = p.$("#edSource");
+  assert.equal(forms.inert, true, "the old forms take no input");
+  assert.equal(src.readOnly, true, "the old source takes no input");
+  // A browser blocks the input, and the stand-in DOM does not, so the change
+  // made to the old forms must also be dropped.
+  const title = fieldOf(p, "title");
+  title.value = "Edit to the theory before";
+  await title.dispatch("input");
+  release();
+  await until(() => forms.inert === false, "the new theory to be read");
+  await wait(700);
+  assert.equal(rt.doc.id, "o");
+  assert.equal(rt.doc.title, "Title o");
+  assert.ok(!rt.reads.some((r) => r[0] === "edit"), "nothing was applied to the theory: " + JSON.stringify(rt.reads));
+  assert.equal(fieldOf(p, "title").getAttribute("value"), "Title o");
 });
