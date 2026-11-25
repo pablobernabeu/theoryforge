@@ -12,5 +12,9 @@ from pathlib import Path
 
 
 def write_lf(path, text: str) -> None:
-    """Write ``text`` to ``path`` as UTF-8 with LF line endings only."""
-    Path(path).write_bytes(text.replace("\r\n", "\n").encode("utf-8"))
+    """Write ``text`` to ``path`` as UTF-8 with LF line endings only.
+
+    A leading ``~`` in ``path`` stands for the home directory, as R's file
+    connections read it.
+    """
+    Path(path).expanduser().write_bytes(text.replace("\r\n", "\n").encode("utf-8"))

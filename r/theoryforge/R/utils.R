@@ -295,7 +295,9 @@ NULL
 
 .tf_yaml_float <- function(x) {
   if (grepl(",", x, fixed = TRUE) || !grepl("[0-9]", sub("[eE].*$", "", x))) return(x)
-  value <- suppressWarnings(yaml::yaml.load(x))
+  # An explicit tag (!!float%23fix "...") hands this any text, which must not
+  # be read as R code whatever the option yaml.eval.expr says.
+  value <- suppressWarnings(yaml::yaml.load(x, eval.expr = FALSE))
   # yaml gives NA when strtod reports a range error: an overflow (+/-Inf), an
   # underflow to 0 or a subnormal result. R's own parser misreads subnormals on
   # a build without long double, so the text is read with jsonlite, whose
@@ -338,10 +340,28 @@ NULL
 # The number handlers cost a callback for every number, so they are used only
 # when yaml warned on the first reading. Any warning left after that is the
 # caller's to see.
+#
+# yaml evaluates a value tagged !expr as R code when the option
+# yaml.eval.expr is TRUE, so a theory file from someone else could run code.
+# eval.expr = FALSE turns that off whatever the option says, and a handler
+# notes the tag, which is then refused as the Python twin's loader refuses it
+# (API_SPEC.md section 3). The handler cannot stop() itself, since yaml
+# catches the error and falls back on its own handler.
 .tf_read_yaml <- function(path) {
   text <- .tf_read_text(path)
   parse <- function(handlers, txt = text) {
-    yaml::yaml.load(txt, handlers = handlers, merge.precedence = "override", error.label = path)
+    tagged <- FALSE
+    expr <- list(expr = function(x) {
+      tagged <<- TRUE
+      x
+    })
+    data <- yaml::yaml.load(txt, handlers = c(handlers, expr), merge.precedence = "override",
+                            error.label = path, eval.expr = FALSE)
+    if (tagged) {
+      stop(sprintf("(%s) a value is tagged !expr, which theoryforge does not read", path),
+           call. = FALSE)
+    }
+    data
   }
   .tf_yaml_refuse_nul(text, path, parse)
   warned <- FALSE
@@ -394,7 +414,9 @@ NULL
   ok <- jsonlite::validate(text)
   if (!isTRUE(ok)) stop(sprintf("(%s) %s", path, trimws(attr(ok, "err"))), call. = FALSE)
   bad <- .tf_json_unreadable(text)
-  data <- jsonlite::fromJSON(if (is.null(bad)) text else bad$probe, simplifyVector = FALSE)
+  # parse_json(), not fromJSON(), which reads a file or downloads a URL that a
+  # short text names when the text is not JSON.
+  data <- jsonlite::parse_json(if (is.null(bad)) text else bad$probe, simplifyVector = FALSE)
   key <- .tf_first_duplicate_key(data)
   if (!is.null(key)) {
     if (!is.null(bad)) {
@@ -543,9 +565,20 @@ NULL
   if (length(dup) > 0L) nms[[dup[[1L]]]] else NULL
 }
 
+# Whether the file at `path` is JSON: its name, the part of the path after the
+# last / or \, has a dot after its first character, and the text after its last
+# dot is json in any letter case. A name that begins with its only dot, such as
+# .json, has no extension, as for Python's pathlib. tools::file_ext(), whose
+# answer for such a name has changed between versions of R, is not used. The
+# Python twin's _load.is_json() follows the same rule.
+.tf_is_json <- function(path) {
+  name <- sub("(?s)^.*[/\\\\]", "", path, perl = TRUE)
+  grepl("(?s)^.+\\.[jJ][sS][oO][nN]\\z", name, perl = TRUE)
+}
+
 # Parse the file at `path`: JSON when the extension is .json, otherwise YAML.
 .tf_read_file <- function(path) {
-  if (identical(tolower(tools::file_ext(path)), "json")) .tf_read_json(path) else .tf_read_yaml(path)
+  if (.tf_is_json(path)) .tf_read_json(path) else .tf_read_yaml(path)
 }
 
 # The paths of the schema's array-of-strings fields, such as

@@ -386,6 +386,63 @@ def test_json_comments_are_refused(tmp_path):
         tf.read(_file(tmp_path, "block.theory.json", '{"id": "x" /* end */}'))
 
 
+def test_a_json_file_whose_text_names_a_file_or_a_url_is_refused(tmp_path):
+    # jsonlite's fromJSON() read the file or downloaded the URL that a short
+    # text named, so R read another theory, or sent a request, where Python
+    # refused the file. test-io.R reads the same two files.
+    other = _file(tmp_path, "other.theory.json", '{"schema_version": "1.1", "id": "other"}')
+    pointer = _file(tmp_path, "pointer.theory.json", str(other))
+    url = _file(tmp_path, "url.theory.json", "http://127.0.0.1:9/x.theory.json")
+    for path in (pointer, url):
+        with pytest.raises(json.JSONDecodeError):
+            tf.read(path)
+        with pytest.raises(json.JSONDecodeError):
+            tf.read_corpus(path)
+
+
+def test_a_value_tagged_expr_is_refused_with_the_r_message(tmp_path):
+    # R's yaml package evaluates !expr as R code when the option yaml.eval.expr
+    # is TRUE. Both twins refuse the tag, on a value or a key, with one message.
+    for name, text in (("value.theory.yaml", 'id: !expr stop("ran")\ntitle: T\n'),
+                       ("key.theory.yaml", 'id: t\n!expr cat("ran"): v\n')):
+        path = _file(tmp_path, name, text)
+        with pytest.raises(ValueError) as err:
+            tf.read(path)
+        assert str(err.value) == f"({path}) a value is tagged !expr, which theoryforge does not read"
+        with pytest.raises(ValueError, match="a value is tagged !expr"):
+            tf.read_corpus(path)
+
+
+def test_the_format_follows_the_extension_of_the_file_name(panic_path, tmp_path):
+    # A name that begins with its only dot has no extension, as for pathlib.
+    # R read and wrote '.json' as JSON or as YAML by the version of R, through
+    # tools::file_ext(). test-io.R writes the same names.
+    t = tf.read(panic_path)
+    for name, as_json in ((".json", False), ("upper.JSON", True), ("..json", True),
+                          ("x.json.yaml", False)):
+        out = tmp_path / name
+        t.write(out)
+        text = out.read_text(encoding="utf-8")
+        assert text.startswith("{") is as_json
+        assert tf.read(out).data == t.data
+
+
+def test_a_leading_tilde_is_the_home_directory(panic_path, tmp_path, monkeypatch):
+    # R's file connections expand ~, and the Python readers and writers now do
+    # too.
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    t = tf.read(panic_path)
+    t.write("~/home.theory.yaml")
+    assert (tmp_path / "home.theory.yaml").exists()
+    assert tf.read("~/home.theory.yaml").data == t.data
+    assert tf.read_corpus("~/home.theory.yaml")["id"] == t.id
+    t.preregister("~/home.prereg.md")
+    assert (tmp_path / "home.prereg.md").exists()
+    assert t.render_report("~/home-report") == "~/home-report.qmd"
+    assert (tmp_path / "home-report.qmd").exists()
+
+
 def test_a_corpus_reads_through_the_same_reader(tmp_path):
     corpus = """\
 schema_version: "1.0"

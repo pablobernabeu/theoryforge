@@ -7,7 +7,10 @@
 tf_read(path)
 }
 \arguments{
-\item{path}{Path to a \code{.yaml}, \code{.yml} or \code{.json} file.}
+\item{path}{Path to a \code{.yaml}, \code{.yml} or \code{.json} file. The
+file is read as JSON when its extension is \code{.json}, in any letter
+case, and as YAML otherwise. A name that begins with its only dot, such
+as \code{.json}, has no extension.}
 }
 \value{
 A named list holding the parsed theory object.
@@ -37,9 +40,12 @@ aliases are expanded}, before anything walks it. A comment in a JSON file
 stops with jsonlite's message, since JSON has no comments. A string or key
 that holds U+0000 or a lone surrogate, which R would cut short or misread,
 stops with \code{(<path>) a string holds U+0000, which theoryforge cannot
-read}, or the same message naming \code{a lone surrogate}. A document that
-is not a mapping, such as a sequence or an empty YAML file, stops with
-\code{Theory data must be a mapping}.
+read}, or the same message naming \code{a lone surrogate}. A value tagged
+\code{!expr}, which the yaml package evaluates as R code when the option
+\code{yaml.eval.expr} is \code{TRUE}, stops with \code{(<path>) a value is
+tagged !expr, which theoryforge does not read}, whatever the option says,
+and no code is run. A document that is not a mapping, such as a sequence or
+an empty YAML file, stops with \code{Theory data must be a mapping}.
 }
 \examples{
 # Round-trip a theory through a temporary file.

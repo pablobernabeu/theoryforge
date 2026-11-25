@@ -41,11 +41,17 @@ NULL
 #' stops with jsonlite's message, since JSON has no comments. A string or key
 #' that holds U+0000 or a lone surrogate, which R would cut short or misread,
 #' stops with \code{(<path>) a string holds U+0000, which theoryforge cannot
-#' read}, or the same message naming \code{a lone surrogate}. A document that
-#' is not a mapping, such as a sequence or an empty YAML file, stops with
-#' \code{Theory data must be a mapping}.
+#' read}, or the same message naming \code{a lone surrogate}. A value tagged
+#' \code{!expr}, which the yaml package evaluates as R code when the option
+#' \code{yaml.eval.expr} is \code{TRUE}, stops with \code{(<path>) a value is
+#' tagged !expr, which theoryforge does not read}, whatever the option says,
+#' and no code is run. A document that is not a mapping, such as a sequence or
+#' an empty YAML file, stops with \code{Theory data must be a mapping}.
 #'
-#' @param path Path to a \code{.yaml}, \code{.yml} or \code{.json} file.
+#' @param path Path to a \code{.yaml}, \code{.yml} or \code{.json} file. The
+#'   file is read as JSON when its extension is \code{.json}, in any letter
+#'   case, and as YAML otherwise. A name that begins with its only dot, such
+#'   as \code{.json}, has no extension.
 #' @return A named list holding the parsed theory object.
 #' @examples
 #' # Round-trip a theory through a temporary file.
@@ -887,8 +893,7 @@ tf_write <- function(theory, path) {
   # NA becomes null before the boxing, so that a missing value is written as
   # null and not as a one-element array holding null.
   theory <- .tf_box_string_arrays(.tf_na_as_null(.tf_dates_as_text(theory)))
-  ext <- tolower(tools::file_ext(path))
-  if (identical(ext, "json")) {
+  if (.tf_is_json(path)) {
     # Each finite double is written as text with the fewest digits that read
     # back as the same double. jsonlite's default rounds to four decimal places,
     # which would write a severity of 0.49996 as 0.5, and digits = NA keeps 15

@@ -43,8 +43,9 @@ NULL
 #' list. The file extension sets the format: JSON for \code{.json} and YAML
 #' otherwise. The file is read by the rules that [tf_read()] follows, so an
 #' unquoted keyword such as \code{y} or \code{n} stays a string, a repeated
-#' key is refused and so is a YAML document that its aliases expand past
-#' 1000000 values. A document that is not a
+#' key is refused, a value tagged \code{!expr} is refused and runs no code and
+#' a YAML document that its aliases expand past 1000000 values is refused. A
+#' document that is not a
 #' mapping stops with \code{Corpus data must be a mapping}. The records
 #' themselves are checked by [tf_litmap()] and [tf_landscape()].
 #'

@@ -39,13 +39,14 @@ def _esc(s) -> str:
 
 
 def read_corpus(path) -> dict:
-    """Read a literature corpus from YAML or JSON (JSON when the suffix is ``.json``).
+    """Read a literature corpus from YAML or JSON (JSON when the extension is ``.json``).
 
     The file is read by the rules that ``read`` follows, so an unquoted keyword such
-    as ``y`` or ``n`` stays a string, a repeated key is refused and so is a YAML document that its
-    aliases expand past 1000000 values. A document that is not a mapping raises
-    ``ValueError("Corpus data must be a mapping")``. The records themselves are checked
-    by ``litmap()`` and ``landscape()``.
+    as ``y`` or ``n`` stays a string, a repeated key is refused, a value tagged ``!expr``
+    is refused and a YAML document that its aliases expand past 1000000 values is
+    refused. A document that is not a mapping raises ``ValueError("Corpus data must be
+    a mapping")``. The records themselves are checked by ``litmap()`` and
+    ``landscape()``.
     """
     data = load_document(path)
     if not isinstance(data, dict):

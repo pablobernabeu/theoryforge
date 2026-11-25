@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -52,6 +53,24 @@ class _DuplicateKey(Exception):
     def __init__(self, key: Any) -> None:
         super().__init__(key)
         self.key = key
+
+
+class _ExprTag(Exception):
+    """A value is tagged ``!expr``. ``load_document`` adds the file's path to the message."""
+
+
+def is_json(path) -> bool:
+    """Whether the file at ``path`` is read and written as JSON.
+
+    It is when its name, the part of the path after the last ``/`` or ``\\``,
+    has a dot after its first character and the text after its last dot is
+    ``json`` in any letter case. A name that begins with its only dot, such as
+    ``.json``, has no extension, as for ``pathlib``. R's ``.tf_is_json()``
+    follows the same rule, in place of ``tools::file_ext()``, whose answer for
+    such a name has changed between versions of R.
+    """
+    name = re.sub(r"(?s)^.*[/\\]", "", os.fspath(path))
+    return re.fullmatch(r"(?s).+\.[jJ][sS][oO][nN]", name) is not None
 
 
 # libyaml is the parser that R's yaml package bundles, so with it both twins
@@ -143,6 +162,18 @@ _StrictLoader.yaml_implicit_resolvers = {
 }
 _StrictLoader.add_implicit_resolver("tag:yaml.org,2002:int", _INT, list("-+0123456789"))
 _StrictLoader.add_implicit_resolver("tag:yaml.org,2002:float", _FLOAT, list("-+0123456789."))
+
+
+def _refuse_expr(loader: _StrictLoader, node: Node) -> Any:
+    """Refuse a value tagged ``!expr``, which R's yaml package can evaluate as R code.
+
+    SafeLoader refuses the tag already, as it refuses any tag it does not know.
+    This gives the refusal the message R's reader gives (API_SPEC.md section 3).
+    """
+    raise _ExprTag
+
+
+_StrictLoader.add_constructor("!expr", _refuse_expr)
 
 
 def _key_text(key: Any) -> str:
@@ -277,23 +308,28 @@ def _check_size(data: Any, path: Path) -> None:
 
 
 def load_document(path) -> Any:
-    """Parse the YAML or JSON file at ``path`` (JSON when its suffix is ``.json``).
+    """Parse the YAML or JSON file at ``path`` (JSON when its extension is ``.json``, by ``is_json``).
 
-    The bytes are decoded as UTF-8 with any byte-order mark dropped. A repeated key
-    in any mapping raises ``ValueError("(<path>) Duplicate map key: '<key>'")``, the
-    message R's reader gives. A YAML document that holds more than ``MAX_VALUES``
-    values once its aliases are expanded raises ``ValueError("(<path>) the document
-    holds more than 1000000 values once its aliases are expanded")``. A string or
-    key that holds U+0000 or a lone surrogate, which R cannot hold, raises
-    ``ValueError("(<path>) a string holds U+0000, which theoryforge cannot read")``,
-    or the same message naming ``a lone surrogate``. A repeated key is reported
-    first, unless the key itself holds one of the two, and the size before either
-    character. JSON has no comments, and ``json`` refuses them.
+    A leading ``~`` stands for the home directory, as in R. The bytes are decoded
+    as UTF-8 with any byte-order mark dropped. A repeated key in any mapping
+    raises ``ValueError("(<path>) Duplicate map key: '<key>'")``, the message R's
+    reader gives. A value tagged ``!expr``, which R's yaml package can evaluate
+    as R code, raises ``ValueError("(<path>) a value is tagged !expr, which
+    theoryforge does not read")``. A YAML document that holds more than
+    ``MAX_VALUES`` values once its aliases are expanded raises
+    ``ValueError("(<path>) the document holds more than 1000000 values once its
+    aliases are expanded")``. A string or key that holds U+0000 or a lone
+    surrogate, which R cannot hold, raises ``ValueError("(<path>) a string holds
+    U+0000, which theoryforge cannot read")``, or the same message naming ``a
+    lone surrogate``. A repeated key is reported first, unless the key itself
+    holds one of the two, and the size before either character. JSON has no
+    comments, and ``json`` refuses them.
     """
+    json_file = is_json(path)
     path = Path(path)
-    text = path.read_bytes().decode("utf-8-sig")
+    text = path.expanduser().read_bytes().decode("utf-8-sig")
     try:
-        if path.suffix.lower() == ".json":
+        if json_file:
             data = json.loads(text, object_pairs_hook=_unique_pairs)
         else:
             loader = _StrictLoader(text)
@@ -306,7 +342,9 @@ def load_document(path) -> Any:
         if what:
             raise ValueError(f"({path}) a string holds {what}, which theoryforge cannot read") from None
         raise ValueError(f"({path}) Duplicate map key: '{dup.key}'") from None
-    if path.suffix.lower() != ".json":
+    except _ExprTag:
+        raise ValueError(f"({path}) a value is tagged !expr, which theoryforge does not read") from None
+    if not json_file:
         _check_size(data, path)
     what = _unreadable(data)
     if what:

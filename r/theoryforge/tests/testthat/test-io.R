@@ -287,6 +287,57 @@ test_that("JSON comments are refused, as Python's json module refuses them", {
                fixed = TRUE)
 })
 
+test_that("a JSON file whose text names a file or a URL is refused", {
+  # jsonlite's fromJSON() read the file or downloaded the URL that a short
+  # text named, so tf_read() returned another theory, or sent a request, where
+  # Python refused the file. test_io.py reads the same two files.
+  other <- io_file('{"schema_version": "1.1", "id": "other"}', ext = ".json")
+  pointer <- io_file(normalizePath(other), ext = ".json")
+  url <- io_file("http://127.0.0.1:9/x.theory.json", ext = ".json")
+  for (path in c(pointer, url)) {
+    expect_error(tf_read(path), "lexical error", fixed = TRUE)
+    expect_error(tf_read_corpus(path), "lexical error", fixed = TRUE)
+  }
+})
+
+test_that("a value tagged !expr is refused and runs no code, whatever the option says", {
+  # yaml evaluates !expr as R code when the option yaml.eval.expr is TRUE, and
+  # the reader did not turn it off. test_io.py pins the same message.
+  old <- options(yaml.eval.expr = TRUE)
+  on.exit(options(old), add = TRUE)
+  flag <- tempfile()
+  for (text in c(sprintf('id: !expr file.create("%s")\ntitle: T\n', flag),
+                 sprintf('id: t\n!expr file.create("%s"): v\n', flag),
+                 sprintf('n: 1,000\ntitle: !expr file.create("%s")\n', flag))) {
+    path <- io_file(text)
+    expect_error(tf_read(path), sprintf("(%s) a value is tagged !expr, which theoryforge does not read", path),
+                 fixed = TRUE)
+    expect_error(tf_read_corpus(path), "a value is tagged !expr", fixed = TRUE)
+  }
+  # An explicit tag hands the number handlers any text, which they read with
+  # yaml again.
+  expect_silent(tf_read(io_file(sprintf('id: t\nx: !!float%%23fix "{1: !expr file.create(\'%s\')}"\n',
+                                        flag))))
+  expect_false(file.exists(flag))
+})
+
+test_that("the format follows the extension of the file name, as in Python", {
+  # A name that begins with its only dot has no extension, as for Python's
+  # pathlib. tools::file_ext() read '.json' as JSON or as YAML by the version
+  # of R. test_io.py writes the same names.
+  t <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  for (cs in list(list(".json", FALSE), list("upper.JSON", TRUE), list("..json", TRUE),
+                  list("x.json.yaml", FALSE))) {
+    path <- file.path(tempfile("ext"), cs[[1L]])
+    dir.create(dirname(path))
+    tf_write(t, path)
+    expect_identical(startsWith(tf_read_golden(path), "{"), cs[[2L]])
+    expect_identical(tf_read(path), tf_read(tf_write(t, tempfile(fileext = ".yaml"))))
+  }
+  expect_identical(.tf_is_json(c("a/b.json", "a\\b.JSON", "a.json/.json", ".json", "json", "a.json.")),
+                   c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE))
+})
+
 test_that("a tab reads as libyaml reads it, in both twins", {
   # The Python twin parses YAML with libyaml, which R's yaml package bundles,
   # since PyYAML's pure-Python scanner refused a tab that YAML allows as
