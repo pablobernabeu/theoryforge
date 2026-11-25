@@ -31,7 +31,8 @@ SIGNS = frozenset({"positive", "negative", "zero", "nonzero"})
 CLAIM_KEYS = ("kind", "x", "y", "given", "sign")
 CYCLES = ("refuse", "sigma")
 # The largest canonical adjustment set whose subsets are searched for a smallest
-# valid one (API_SPEC.md section 31).
+# valid one. A larger one is pruned to a minimal valid set (API_SPEC.md
+# section 31).
 ADJUSTMENT_SEARCH = 12
 
 # Sign sets as bit masks: a set of the signs that the routes between two
@@ -169,6 +170,7 @@ class _Graph:
         self.index = {cid: i for i, cid in enumerate(self.nodes)}
         self.directed, self.bidirected, self.sign = g["directed"], g["bidirected"], g["sign"]
         self.edge_props, self.assoc_props = g["edge_props"], g["assoc_props"]
+        self.latent: list[bool] = g["latent"]
         self.props = props
         self.r = reach(self.directed, self.k)
         comps = strong_components(self.r)
@@ -287,23 +289,28 @@ class _Graph:
         return derived, basis, self._ordered(lambda pid: pid in on)
 
     def adjustment(self, x: int, y: int) -> list[int] | None:
-        """A smallest set of constructs whose adjustment identifies the effect of x on y, or None.
+        """A set of constructs whose adjustment identifies the effect of x on y, or None.
 
         A set is valid when it holds no descendant of a vertex on a proper
         causal path from x to y and m-separates the two once the first edge of
         each such path is removed. The ancestors of x and y that meet the first
-        condition form the canonical set, which is valid if any set is (van der
+        condition and are not marked latent form the canonical set, which is
+        valid if any set of constructs that are not marked latent is (van der
         Zander et al., 2019). Its subsets are tried by size and, within a size,
-        in vertex order, and the first valid one is returned. A canonical set of
-        more than ``ADJUSTMENT_SEARCH`` members is returned whole. A graph with
-        feedback loops gets None, since the criterion is not established for it.
+        in vertex order, and the first valid one, a smallest, is returned. A
+        canonical set of more than ``ADJUSTMENT_SEARCH`` members is pruned
+        instead: each member in turn, in vertex order, is dropped when the
+        others left still separate the two, which leaves a minimal valid set. A
+        graph with feedback loops gets None, since the criterion is not
+        established for it.
         """
         if self.feedback:
             return None
         k, r = self.k, self.r
         on_path = [v for v in range(k) if v != x and r[x][v] and r[v][y]]
         forbidden = {x} | {w for v in on_path for w in range(k) if r[v][w]}
-        canonical = [v for v in range(k) if (r[v][x] or r[v][y]) and v not in forbidden and v != y]
+        canonical = [v for v in range(k)
+                     if (r[v][x] or r[v][y]) and not self.latent[v] and v not in forbidden and v != y]
         d = [row[:] for row in self.directed]
         for v in on_path:
             d[x][v] = False
@@ -311,11 +318,20 @@ class _Graph:
         if not m_separated(d, self.bidirected, rd, x, y, canonical):
             return None
         if len(canonical) > ADJUSTMENT_SEARCH:
-            return canonical
+            # Every member is an ancestor of x or y in the proper back-door
+            # graph, and separation by such sets is separation in one
+            # undirected graph, so a member kept once stays needed and one pass
+            # gives a minimal set.
+            z = list(canonical)
+            for v in canonical:
+                rest = [w for w in z if w != v]
+                if m_separated(d, self.bidirected, rd, x, y, rest):
+                    z = rest
+            return z
         for size in range(len(canonical) + 1):
-            for z in itertools.combinations(canonical, size):
-                if m_separated(d, self.bidirected, rd, x, y, list(z)):
-                    return list(z)
+            for subset in itertools.combinations(canonical, size):
+                if m_separated(d, self.bidirected, rd, x, y, list(subset)):
+                    return list(subset)
         return canonical  # unreachable: the canonical set itself separates
 
     def read(self, c: dict) -> dict:
@@ -421,7 +437,15 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     For an effect claim on an acyclic graph, ``identified`` says whether
     adjusting for some set of the theory's constructs would identify the
     effect from observational data (van der Zander et al., 2019), and
-    ``adjustment`` gives a smallest such set. Both are None for other claims.
+    ``adjustment`` gives a smallest such set. When more than 12 constructs are
+    candidates, it gives a minimal set instead, from which none can be
+    dropped, though a smaller one may exist. A construct marked
+    ``x_latent: true``, as ``read_dagitty()`` marks an unobserved variable, is
+    never adjusted for. ``identified`` concerns adjustment alone, so an effect
+    without an adjustment set may still be identified otherwise, by the
+    front-door criterion for instance, and when ``x`` is not an ancestor of
+    ``y`` the effect is zero. ``identified`` is None for other claims, and
+    ``adjustment`` is None unless ``identified`` is True.
 
     Returns ``{theory_id, criterion, acyclic, feedback, claims, counts}``.
     Each entry of ``claims`` is ``{source, id, kind, x, y, given, sign,
@@ -736,7 +760,9 @@ def discriminate(theory, rival, cycles: str = "refuse") -> dict:
     ``rival`` is the id of one of the theory's alternatives that states
     ``propositions`` over the theory's constructs, or a theory object of its
     own, whose constructs are matched to the theory's by id. The two graphs
-    are compared on the constructs that both name in a directed relation.
+    are compared on the constructs that both graphs contain, those that some
+    proposition of each, directed or an association, relates to another
+    construct.
 
     ``independencies`` lists each conditional independence that one graph
     implies and the other does not, with the graph that implies it. When the

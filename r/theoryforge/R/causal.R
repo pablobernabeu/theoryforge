@@ -38,7 +38,9 @@
 # kept ordered pairs in the order first stated, as vertex indices),
 # `edge_props` (the proposition ids behind each kept pair), `assoc` (one row
 # per bidirected edge, the smaller vertex first, in the order first stated),
-# `assoc_props` and the counts `n_edges` and `n_bidirected`.
+# `assoc_props`, the counts `n_edges` and `n_bidirected` and `latent`, which
+# is TRUE for a vertex whose construct has `x_latent: true`, the mark
+# tf_read_dagitty() keeps for an unobserved variable.
 .tf_causal_graph <- function(T, caller, propositions = NULL) {
   declared <- .tf_declared_constructs(T, caller)
   props <- if (is.null(propositions)) .tf_list(T, "propositions") else propositions
@@ -93,6 +95,10 @@
   used <- sort(unique(c(edge_from, edge_to, match(c(assoc_from[distinct], assoc_to[distinct]), declared))))
   nodes <- declared[used]
   k <- length(nodes)
+  latent_ids <- character(0)
+  for (c in .tf_list(T, "constructs")) {
+    if (isTRUE(.tf_get(c, "x_latent"))) latent_ids <- c(latent_ids, .tf_str(c, "id"))
+  }
   rank_of <- integer(length(declared))
   rank_of[used] <- seq_along(used)
   directed <- matrix(FALSE, nrow = k, ncol = k)
@@ -136,6 +142,7 @@
     assoc = assoc,
     assoc_props = assoc_props,
     n_edges = length(edge_from),
-    n_bidirected = nrow(assoc)
+    n_bidirected = nrow(assoc),
+    latent = nodes %in% latent_ids
   )
 }

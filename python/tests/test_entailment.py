@@ -623,3 +623,38 @@ def test_a_sign_read_through_a_self_loop_or_a_simple_cycle_holds_in_every_stable
                     assert value < 0
                 elif derived == "zero":
                     assert abs(value) < 1e-9
+
+
+def test_a_construct_marked_latent_is_never_adjusted_for():
+    # dagitty finds no adjustment set for the first graph and {w} for the
+    # second. The R suite asserts the same records.
+    def read(text):
+        t = tf.read_dagitty(text)
+        t.add_prediction("h1", "x raises y.", "directional",
+                         claim={"kind": "effect", "x": "x", "y": "y", "sign": "positive"})
+        return t, t.entailments()["claims"][0]
+
+    first, rec = read("dag { u [latent]; u -> x; u -> y; x -> y }")
+    assert (rec["identified"], rec["adjustment"]) == (False, None)
+    assert "   - Adjustment for an observational test: none suffices\n" in first.preregister()
+    assert read("dag { u [latent]; u -> w -> x; u -> y; x -> y }")[1]["adjustment"] == ["w"]
+
+
+def test_a_canonical_set_of_more_than_12_constructs_is_pruned_to_a_minimal_one():
+    # The R suite asserts the same records.
+    def many(edges):
+        t = tf.new_theory("m", "M")
+        for n in [f"a{i}" for i in range(1, 14)] + ["c", "x", "y"]:
+            t.add_construct(n, n, "A construct.")
+        for i, (a, b) in enumerate(edges, start=1):
+            t.add_proposition(f"p{i}", a, b, "increases")
+        t.add_prediction("h1", "x raises y.", "directional", derives_from=["p1"],
+                         claim={"kind": "effect", "x": "x", "y": "y", "sign": "positive"})
+        return t
+
+    direct = many([(f"a{i}", "x") for i in range(1, 14)] + [("x", "y")])
+    rec = direct.entailments()["claims"][0]
+    assert (rec["identified"], rec["adjustment"]) == (True, [])
+    assert "   - Adjustment for an observational test: none needed\n" in direct.preregister()
+    confounded = many([(f"a{i}", "c") for i in range(1, 14)] + [("c", "x"), ("c", "y"), ("x", "y")])
+    assert confounded.entailments()["claims"][0]["adjustment"] == ["c"]

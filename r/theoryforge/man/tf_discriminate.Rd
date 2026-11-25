@@ -26,8 +26,9 @@ Sets the causal graph of a theory against that of a rival and lists what
 would tell the two apart. \code{rival} is the id of one of the theory's
 alternatives that states \code{propositions} over the theory's constructs,
 or a theory object of its own, whose constructs are matched to the theory's
-by id. The graphs are compared on the constructs that both name in a
-directed relation.
+by id. The graphs are compared on the constructs that both graphs contain,
+those that some proposition of each, directed or an association, relates to
+another construct.
 }
 \details{
 \code{independencies} lists each conditional independence that one graph

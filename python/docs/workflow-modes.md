@@ -350,7 +350,8 @@ print(switching.data["predictions"][0]["claim"])
 constructs decide whether the graph entails the claim, contradicts it or leaves it
 undetermined, and `via` names the propositions the verdict rests on. For an effect claim on
 an acyclic graph, `adjustment` gives a smallest set of constructs whose adjustment would
-identify the effect in observational data, here the empty set.
+identify the effect in observational data, here the empty set, or a minimal set when more
+than 12 constructs are candidates.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 entailed = switching.entailments()

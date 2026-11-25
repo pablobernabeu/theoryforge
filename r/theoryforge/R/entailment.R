@@ -3,7 +3,8 @@
 
 .tf_CLAIM_KINDS <- c("effect", "association")
 # The largest canonical adjustment set whose subsets are searched for a smallest
-# valid one (API_SPEC.md section 31).
+# valid one. A larger one is pruned to a minimal valid set (API_SPEC.md
+# section 31).
 .tf_ADJUSTMENT_SEARCH <- 12L
 .tf_CLAIM_SIGNS <- c("positive", "negative", "zero", "nonzero")
 
@@ -286,14 +287,17 @@
   list(derived = d[[1L]], basis = d[[2L]], via = .tf_ordered_props(G, on))
 }
 
-# A smallest set of constructs whose adjustment identifies the effect of x on
-# y, as vertex indices, or NULL. A set is valid when it holds no descendant of
-# a vertex on a proper causal path from x to y and m-separates the two once the
+# A set of constructs whose adjustment identifies the effect of x on y, as
+# vertex indices, or NULL. A set is valid when it holds no descendant of a
+# vertex on a proper causal path from x to y and m-separates the two once the
 # first edge of each such path is removed. The ancestors of x and y that meet
-# the first condition form the canonical set, which is valid if any set is (van
-# der Zander et al., 2019). Its subsets are tried by size and, within a size,
-# in vertex order, and the first valid one is returned. A canonical set of more
-# than .tf_ADJUSTMENT_SEARCH members is returned whole. A graph with feedback
+# the first condition and are not marked latent form the canonical set, which
+# is valid if any set of constructs that are not marked latent is (van der
+# Zander et al., 2019). Its subsets are tried by size and, within a size, in
+# vertex order, and the first valid one, a smallest, is returned. A canonical
+# set of more than .tf_ADJUSTMENT_SEARCH members is pruned instead: each
+# member in turn, in vertex order, is dropped when the others left still
+# separate the two, which leaves a minimal valid set. A graph with feedback
 # loops gets NULL, since the criterion is not established for it.
 .tf_adjustment <- function(G, x, y) {
   if (length(G$feedback) > 0L) return(NULL)
@@ -301,12 +305,22 @@
   r <- G$r
   on_path <- which(seq_len(k) != x & r[x, ] & r[, y])
   forbidden <- unique(c(x, which(apply(r[on_path, , drop = FALSE], 2L, any))))
-  canonical <- setdiff(which(r[, x] | r[, y]), c(forbidden, y))
+  canonical <- setdiff(which((r[, x] | r[, y]) & !G$latent), c(forbidden, y))
   d <- G$directed
   d[x, on_path] <- FALSE
   rd <- .tf_reach(d, k)
   if (!.tf_m_separated(d, G$bidirected, rd, x, y, canonical)) return(NULL)
-  if (length(canonical) > .tf_ADJUSTMENT_SEARCH) return(canonical)
+  if (length(canonical) > .tf_ADJUSTMENT_SEARCH) {
+    # Every member is an ancestor of x or y in the proper back-door graph, and
+    # separation by such sets is separation in one undirected graph, so a
+    # member kept once stays needed and one pass gives a minimal set.
+    z <- canonical
+    for (v in canonical) {
+      rest <- z[z != v]
+      if (.tf_m_separated(d, G$bidirected, rd, x, y, rest)) z <- rest
+    }
+    return(z)
+  }
   for (size in 0:length(canonical)) {
     # combn() reads a single number as the range 1:n, so a one-member set is
     # its own only subset of size one.
@@ -325,8 +339,8 @@
 }
 
 # The derivation of one claim: list(derived, verdict, basis, faithfulness, via,
-# identified, adjustment). The last two are NA and NULL except for an evaluated
-# effect claim on an acyclic graph.
+# identified, adjustment). The last two are NA except for an evaluated effect
+# claim on an acyclic graph, and adjustment is NA too when identified is FALSE.
 .tf_read_with <- function(G, cl) {
   out <- function(derived, verdict, basis, faithfulness = FALSE, via = character(0),
                   adjust = NULL) {
@@ -406,7 +420,7 @@
 #' Each claim is then \code{entailed}, \code{contradicted},
 #' \code{undetermined} when the graph leaves the sign open, or
 #' \code{not_evaluated} when the claim is incomplete, names a construct that no
-#' directed relation names, or meets a feedback loop under
+#' proposition relates to another, or meets a feedback loop under
 #' \code{cycles = "refuse"}. \code{faithfulness} is \code{TRUE} when the
 #' verdict relies on routes of unknown or opposite signs not cancelling
 #' exactly. The derivations assume a linear structural model, or at least that
@@ -421,6 +435,18 @@
 #' as a pair of walks from a common source, so a sign that the graph fixes can
 #' be left open there.
 #'
+#' For an effect claim on an acyclic graph, \code{identified} says whether
+#' adjusting for some set of the theory's constructs would identify the effect
+#' from observational data (van der Zander et al., 2019), and
+#' \code{adjustment} gives a smallest such set. When more than 12 constructs
+#' are candidates, it gives a minimal set instead, from which none can be
+#' dropped, though a smaller one may exist. A construct marked
+#' \code{x_latent: true}, as [tf_read_dagitty()] marks an unobserved variable,
+#' is never adjusted for. \code{identified} concerns adjustment alone, so an
+#' effect without an adjustment set may still be identified otherwise, by the
+#' front-door criterion for instance, and when \code{x} is not an ancestor of
+#' \code{y} the effect is zero.
+#'
 #' @param theory A theory object.
 #' @param cycles \code{"refuse"} (the default) or \code{"sigma"}, as in
 #'   [tf_implications()].
@@ -428,10 +454,20 @@
 #'   \code{feedback}, \code{claims} and \code{counts}. Each claim is a list of
 #'   \code{source}, \code{id}, \code{kind}, \code{x}, \code{y}, \code{given},
 #'   \code{sign}, \code{derived}, \code{verdict}, \code{basis},
-#'   \code{faithfulness} and \code{via}, the propositions on some path or trek
-#'   between the two constructs. The predictions come first and then the
-#'   phenomena, each in file order. \code{counts} tallies the verdicts.
+#'   \code{faithfulness}, \code{via}, \code{identified} and \code{adjustment}.
+#'   \code{via} lists the propositions on some path or trek between the two
+#'   constructs. \code{identified} is \code{TRUE} or \code{FALSE} for an
+#'   evaluated effect claim on an acyclic graph and \code{NA} for any other
+#'   claim, and \code{adjustment} lists the ids of the set when
+#'   \code{identified} is \code{TRUE} and is \code{NA} otherwise. The
+#'   predictions come first and then the phenomena, each in file order.
+#'   \code{counts} tallies the verdicts.
 #' @references
+#' van der Zander, B., Liśkiewicz, M., & Textor, J. (2019). Separators and
+#' adjustment sets in causal graphs: Complete criteria and an algorithmic
+#' framework. \emph{Artificial Intelligence}, \emph{270}, 1--40.
+#' \doi{10.1016/j.artint.2018.12.006}
+#'
 #' VanderWeele, T. J., & Robins, J. M. (2010). Signed directed acyclic graphs
 #' for causal inference. \emph{Journal of the Royal Statistical Society Series
 #' B: Statistical Methodology}, \emph{72}(1), 111--127.
@@ -799,8 +835,9 @@ tf_equivalent_models <- function(theory) {
 #' would tell the two apart. \code{rival} is the id of one of the theory's
 #' alternatives that states \code{propositions} over the theory's constructs,
 #' or a theory object of its own, whose constructs are matched to the theory's
-#' by id. The graphs are compared on the constructs that both name in a
-#' directed relation.
+#' by id. The graphs are compared on the constructs that both graphs contain,
+#' those that some proposition of each, directed or an association, relates to
+#' another construct.
 #'
 #' \code{independencies} lists each conditional independence that one graph
 #' implies and the other does not, with the graph that implies it. When the

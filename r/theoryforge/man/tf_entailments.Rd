@@ -17,9 +17,14 @@ A list with \code{theory_id}, \code{criterion}, \code{acyclic},
 \code{feedback}, \code{claims} and \code{counts}. Each claim is a list of
 \code{source}, \code{id}, \code{kind}, \code{x}, \code{y}, \code{given},
 \code{sign}, \code{derived}, \code{verdict}, \code{basis},
-\code{faithfulness} and \code{via}, the propositions on some path or trek
-between the two constructs. The predictions come first and then the
-phenomena, each in file order. \code{counts} tallies the verdicts.
+\code{faithfulness}, \code{via}, \code{identified} and \code{adjustment}.
+\code{via} lists the propositions on some path or trek between the two
+constructs. \code{identified} is \code{TRUE} or \code{FALSE} for an
+evaluated effect claim on an acyclic graph and \code{NA} for any other
+claim, and \code{adjustment} lists the ids of the set when
+\code{identified} is \code{TRUE} and is \code{NA} otherwise. The
+predictions come first and then the phenomena, each in file order.
+\code{counts} tallies the verdicts.
 }
 \description{
 A prediction or a phenomenon may state a machine-readable \code{claim}
@@ -50,7 +55,7 @@ given the others and nonzero otherwise.
 Each claim is then \code{entailed}, \code{contradicted},
 \code{undetermined} when the graph leaves the sign open, or
 \code{not_evaluated} when the claim is incomplete, names a construct that no
-directed relation names, or meets a feedback loop under
+proposition relates to another, or meets a feedback loop under
 \code{cycles = "refuse"}. \code{faithfulness} is \code{TRUE} when the
 verdict relies on routes of unknown or opposite signs not cancelling
 exactly. The derivations assume a linear structural model, or at least that
@@ -64,6 +69,18 @@ through it are those of the paths. The walks round a loop of any other
 shape are read as they are, and a graph with feedback loops reads each trek
 as a pair of walks from a common source, so a sign that the graph fixes can
 be left open there.
+
+For an effect claim on an acyclic graph, \code{identified} says whether
+adjusting for some set of the theory's constructs would identify the effect
+from observational data (van der Zander et al., 2019), and
+\code{adjustment} gives a smallest such set. When more than 12 constructs
+are candidates, it gives a minimal set instead, from which none can be
+dropped, though a smaller one may exist. A construct marked
+\code{x_latent: true}, as \code{\link[=tf_read_dagitty]{tf_read_dagitty()}} marks an unobserved variable,
+is never adjusted for. \code{identified} concerns adjustment alone, so an
+effect without an adjustment set may still be identified otherwise, by the
+front-door criterion for instance, and when \code{x} is not an ancestor of
+\code{y} the effect is zero.
 }
 \examples{
 t <- tf_read(tf_example_path("modality-switching.theory.yaml"))
@@ -71,6 +88,11 @@ e <- tf_entailments(t)
 vapply(e$claims, function(x) paste(x$id, x$verdict), "")
 }
 \references{
+van der Zander, B., Liśkiewicz, M., & Textor, J. (2019). Separators and
+adjustment sets in causal graphs: Complete criteria and an algorithmic
+framework. \emph{Artificial Intelligence}, \emph{270}, 1--40.
+\doi{10.1016/j.artint.2018.12.006}
+
 VanderWeele, T. J., & Robins, J. M. (2010). Signed directed acyclic graphs
 for causal inference. \emph{Journal of the Royal Statistical Society Series
 B: Statistical Methodology}, \emph{72}(1), 111--127.

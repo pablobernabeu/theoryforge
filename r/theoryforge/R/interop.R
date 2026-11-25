@@ -155,9 +155,10 @@
 #' \code{pos="0,1"}, and graph settings such as \code{bb="0,0,1,1"}, are read
 #' and ignored, except that a variable marked \code{[latent]} keeps the mark as
 #' \code{x_latent: true}. It stays a construct whose relations the theory
-#' states, and a statement that holds it fixed needs a measure of it before
-#' data can test it. [tf_diagram()] with \code{type = "causal_dag"} writes the
-#' mark back.
+#' states. [tf_entailments()] never adjusts for it, while [tf_implications()]
+#' may write a statement that holds it fixed, which needs a measure of it
+#' before data can test it. [tf_diagram()] with \code{type = "causal_dag"}
+#' writes the mark back.
 #'
 #' The theory is at \code{draft} maturity and records the import in its
 #' provenance. It does not pass [tf_validate()] until each construct has a

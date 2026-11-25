@@ -218,6 +218,8 @@ test_that("an effect claim names a smallest adjustment set", {
 })
 
 test_that("each adjustment set is one dagitty accepts, of the smallest size", {
+  # Some constructs are marked latent, which dagitty reads from the same mark
+  # and neither adjusts for.
   skip_if_not_installed("dagitty")
   set.seed(5)
   for (rep in 1:150) {
@@ -243,19 +245,96 @@ test_that("each adjustment set is one dagitty accepts, of the smallest size", {
     if (length(props) == 0L) next
     xy <- sample(nodes, 2)
     t <- small_theory(props, claims = list(claim("effect", xy[[1]], xy[[2]], "positive")), k = k)
+    latent <- setdiff(nodes[stats::runif(k) < 0.2], xy)
+    for (i in seq_along(t$constructs)) {
+      if (t$constructs[[i]]$id %in% latent) t$constructs[[i]]$x_latent <- TRUE
+    }
     rec <- tf_entailments(t)$claims[[1]]
     if (rec$verdict == "not_evaluated") next
-    g <- dagitty::dagitty(paste0("dag { ", paste(c(nodes, lines), collapse = "; "), " }"))
+    marks <- if (length(latent)) paste(latent, "[latent]") else character(0)
+    g <- dagitty::dagitty(paste0("dag { ", paste(c(nodes, marks, lines), collapse = "; "), " }"))
     sets <- dagitty::adjustmentSets(g, exposure = xy[[1]], outcome = xy[[2]], type = "minimal")
     if (!rec$identified) {
       expect_length(sets, 0L)
     } else {
       z <- unlist(rec$adjustment)
       if (is.null(z)) z <- character(0)
+      expect_false(any(z %in% latent))
       expect_true(dagitty::isAdjustmentSet(g, z, exposure = xy[[1]], outcome = xy[[2]]))
       expect_equal(length(z), min(lengths(sets)))
     }
   }
+})
+
+test_that("a construct marked latent is never adjusted for", {
+  # dagitty finds no adjustment set for the first graph and {w} for the
+  # second. The Python suite asserts the same records.
+  read <- function(text) {
+    t <- tf_add_prediction(tf_read_dagitty(text), "h1", "x raises y.", "directional",
+                           claim = list(kind = "effect", x = "x", y = "y", sign = "positive"))
+    list(t, tf_entailments(t)$claims[[1]])
+  }
+  first <- read("dag { u [latent]; u -> x; u -> y; x -> y }")
+  expect_identical(first[[2]][c("identified", "adjustment")], list(identified = FALSE, adjustment = NA))
+  expect_match(tf_preregister(first[[1]]), "   - Adjustment for an observational test: none suffices\n")
+  second <- read("dag { u [latent]; u -> w -> x; u -> y; x -> y }")
+  expect_identical(unlist(second[[2]]$adjustment), "w")
+})
+
+test_that("a canonical set of more than 12 constructs is pruned to a minimal one", {
+  # The Python suite asserts the same records.
+  many <- function(edges) {
+    names <- c(paste0("a", 1:13), "c", "x", "y")
+    t <- tf_theory("m", "M")
+    for (n in names) t <- tf_add_construct(t, n, n, "A construct.")
+    for (i in seq_along(edges)) {
+      t <- tf_add_proposition(t, paste0("p", i), edges[[i]][[1]], edges[[i]][[2]], "increases")
+    }
+    tf_add_prediction(t, "h1", "x raises y.", "directional", derives_from = "p1",
+                      claim = list(kind = "effect", x = "x", y = "y", sign = "positive"))
+  }
+  direct <- many(c(lapply(1:13, function(i) c(paste0("a", i), "x")), list(c("x", "y"))))
+  rec <- tf_entailments(direct)$claims[[1]]
+  expect_true(rec$identified)
+  expect_length(rec$adjustment, 0L)
+  expect_match(tf_preregister(direct), "   - Adjustment for an observational test: none needed\n")
+  confounded <- many(c(lapply(1:13, function(i) c(paste0("a", i), "c")),
+                       list(c("c", "x"), c("c", "y"), c("x", "y"))))
+  expect_identical(unlist(tf_entailments(confounded)$claims[[1]]$adjustment), "c")
+})
+
+test_that("a pruned adjustment set is one dagitty accepts and none of its members can go", {
+  # Fifteen constructs upstream of x and y give a canonical set of more than 12
+  # members, which is pruned in one pass.
+  skip_if_not_installed("dagitty")
+  set.seed(12)
+  pruned <- 0L
+  for (rep in 1:20) {
+    up <- paste0("c", 0:14)
+    nodes <- c(up, "x", "y")
+    props <- list(c("x", "y", "increases"))
+    for (i in seq_along(up)) {
+      for (j in seq_along(up)) {
+        u <- stats::runif(1)
+        if (i < j && u < 0.15) props[[length(props) + 1L]] <- c(up[[i]], up[[j]], "increases")
+        if (i < j && u > 0.97) props[[length(props) + 1L]] <- c(up[[i]], up[[j]], "associates")
+      }
+      for (end in c("x", "y")) {
+        if (stats::runif(1) < 0.5) props[[length(props) + 1L]] <- c(up[[i]], end, "increases")
+      }
+    }
+    t <- small_theory(props, claims = list(claim("effect", "x", "y", "positive")), k = 0L)
+    t$constructs <- lapply(nodes, function(n) list(id = n, label = n, definition = "d"))
+    rec <- tf_entailments(t)$claims[[1]]
+    if (!isTRUE(rec$identified)) next
+    pruned <- pruned + 1L
+    lines <- vapply(props, function(p) paste(p[[1]], if (p[[3]] == "associates") "<->" else "->", p[[2]]), "")
+    g <- dagitty::dagitty(paste0("dag { ", paste(c(nodes, lines), collapse = "; "), " }"))
+    z <- as.character(unlist(rec$adjustment))
+    expect_true(dagitty::isAdjustmentSet(g, z, exposure = "x", outcome = "y"))
+    for (v in z) expect_false(dagitty::isAdjustmentSet(g, setdiff(z, v), exposure = "x", outcome = "y"))
+  }
+  expect_gt(pruned, 10L)
 })
 
 test_that("the content hash is SHA-256 of the canonical form", {
