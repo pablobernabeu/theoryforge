@@ -150,7 +150,13 @@ export function makeStorage(mode, initial) {
 
 // A small XML reader for DOMParser: declarations, a doctype, comments,
 // elements with quoted attributes, text and the five predefined entities. A
-// document it cannot read holds a parsererror element, as a browser's does.
+// document it cannot read holds a parsererror element, as a browser's does,
+// and so does one that holds a character XML 1.0 does not allow, written as a
+// character or as a reference.
+const xmlChar = (n) => n === 0x9 || n === 0xA || n === 0xD || (n >= 0x20 && n <= 0xD7FF) ||
+  (n >= 0xE000 && n <= 0xFFFD) || (n >= 0x10000 && n <= 0x10FFFF);
+const badXmlChars = (src) => /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/.test(src) ||
+  [...src.matchAll(/&#(x[0-9a-f]+|[0-9]+);/gi)].some((m) => !xmlChar(m[1][0].toLowerCase() === "x" ? parseInt(m[1].slice(1), 16) : parseInt(m[1], 10)));
 const unent = (t) => t.replace(/&(lt|gt|amp|quot|apos|#\d+|#x[0-9a-f]+);/gi, (m, e) =>
   ({ lt: "<", gt: ">", amp: "&", quot: '"', apos: "'" }[e.toLowerCase()] ||
     String.fromCodePoint(e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10))));
@@ -173,7 +179,7 @@ function parseXml(src) {
       if (!m[6]) stack.push(e);
     } else if (m[7] !== undefined) { if (stack.length > 1) cur.append(new Text(unent(m[7]))); else if (m[7].trim()) { ok = false; break; } }
   }
-  if (re.lastIndex < src.length || stack.length !== 1) ok = false;
+  if (re.lastIndex < src.length || stack.length !== 1 || badXmlChars(src)) ok = false;
   const root = top.children.find((c) => c instanceof Element) || null;
   if (!ok || !root) {
     const err = new Element("parsererror"); err._name = "parsererror";

@@ -117,13 +117,14 @@ records their versions. The Graphviz renderer, `@hpcc-js/wasm-graphviz` 1.22.2, 
 pinned in `shared/app-core.js`. Each runtime imports its engine when it starts, so a
 host the network blocks gives the start panel's message, which names the host, and a
 Reload button. A figure Graphviz cannot draw is replaced by a note that says why, the
-rest of the result stays, and the next run tries to load Graphviz again. The checklist
-score and the content hash on the theory card are computed after each load, each in a
-call of its own, so neither holds up the load or the start, and a score is kept for the
-text it was computed on. The checklist's time grows faster than the theory, and the hash
-reads all of it, so a theory with more than 300 constructs, propositions and predictions
-is scored and hashed only when the user asks, and an operation that a session or a link
-holds for it is not run as the app opens it.
+rest of the result stays, and the next run tries to load Graphviz again. When Graphviz
+refuses the DOT, the note gives its message. The checklist score and the content hash on
+the theory card are computed after each load, each in a call of its own, so neither
+holds up the load or the start, and a score is kept for the text it was computed on. The
+checklist's time grows faster than the theory, and the hash reads all of it, so a theory
+with more than 300 constructs, propositions and predictions is scored and hashed only
+when the user asks, and an operation that a session or a link holds for it is not run as
+the app opens it.
 
 ## Build and run locally
 

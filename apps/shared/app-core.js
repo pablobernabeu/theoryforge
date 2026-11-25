@@ -255,7 +255,9 @@
   let _gv = null, _gvPromise = null;
   const GRAPHVIZ_URL = "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm-graphviz@1.22.2/dist/index.js";
   // A load that fails is forgotten, so the next figure tries again rather
-  // than meet the same failure for the rest of the session.
+  // than meet the same failure for the rest of the session. Its error is
+  // marked as a failed load, which another run may get past, unlike a DOT
+  // that Graphviz refuses.
   async function graphviz() {
     if (_gv) return _gv;
     if (!_gvPromise) {
@@ -264,7 +266,12 @@
         const G = mod.Graphviz || (mod.default && mod.default.Graphviz);
         _gv = await G.load();
         return _gv;
-      })().catch((e) => { _gvPromise = null; throw e; });
+      })().catch((e) => {
+        _gvPromise = null;
+        const err = e && typeof e === "object" ? e : new Error(String(e));
+        try { err.gvLoad = true; } catch (x) { /* a frozen error is reported all the same */ }
+        throw err;
+      });
     }
     return _gvPromise;
   }
@@ -347,17 +354,26 @@
   // run code or lead elsewhere is taken out first: scripts, foreign content,
   // style sheets, animations, every event-handler attribute and every href or
   // src that points outside the figure. A link is replaced by what it holds,
-  // since the packages make none. The result is the clean node and whether
+  // since the packages make none. XML 1.0 cannot hold most control
+  // characters, U+FFFE or U+FFFF, which a theory's text may carry into the
+  // figure, so these are taken out before the figure is read, written as
+  // characters or as references. The result is the clean node and whether
   // anything was taken out, or null when the text is no SVG.
   const SVG_DROP = new Set(["script", "foreignobject", "iframe", "object", "embed", "style",
     "animate", "animatemotion", "animatetransform", "set", "handler", "listener"]);
+  const XML_BAD_CHAR = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g;
+  const xmlChar = (n) => n === 0x9 || n === 0xA || n === 0xD || (n >= 0x20 && n <= 0xD7FF) ||
+    (n >= 0xE000 && n <= 0xFFFD) || (n >= 0x10000 && n <= 0x10FFFF);
   function cleanSvg(svgString) {
+    const raw = String(svgString == null ? "" : svgString);
+    const text = raw.replace(XML_BAD_CHAR, "").replace(/&#(x[0-9a-f]+|[0-9]+);/gi, (m, n) =>
+      (xmlChar(n[0] === "x" || n[0] === "X" ? parseInt(n.slice(1), 16) : parseInt(n, 10)) ? m : ""));
     let doc;
-    try { doc = new DOMParser().parseFromString(String(svgString == null ? "" : svgString), "image/svg+xml"); }
+    try { doc = new DOMParser().parseFromString(text, "image/svg+xml"); }
     catch (e) { return null; }
     const root = doc && doc.documentElement;
     if (!root || root.localName !== "svg" || doc.getElementsByTagName("parsererror").length) return null;
-    let changed = false;
+    let changed = text !== raw;
     const scrub = (n) => {
       for (const c of [...n.childNodes]) {
         if (c.nodeType !== 1) continue;
@@ -390,10 +406,16 @@
   }
   // A Graphviz figure. When it cannot be drawn, because Graphviz did not load
   // or refused the DOT, the rest of the result stays and a note takes the
-  // figure's place.
+  // figure's place. Only a failed load is worth another run, since a DOT that
+  // Graphviz refuses is refused each time.
   async function dotFigure(title, dot, baseName) {
     try { return figureSection(title, await renderDot(dot), baseName); }
-    catch (e) { return warningSection(title, "The figure could not be drawn: " + ((e && e.message) || e) + ". Run the operation again to try once more."); }
+    catch (e) {
+      const why = String((e && e.message) || e).trim();
+      return warningSection(title, e && e.gvLoad
+        ? "The figure could not be drawn: " + why + ". Run the operation again to try once more."
+        : "Graphviz could not draw this figure: " + why);
+    }
   }
   function jsonBtn(filename, obj) {
     return el("button", { class: "btn ghost sm", onclick: () => download(filename, JSON.stringify(obj, null, 2), "application/json") }, "JSON");

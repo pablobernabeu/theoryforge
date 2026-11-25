@@ -1049,3 +1049,43 @@ test("a refused link says why, in the note and under the card", async () => {
   assert.equal(long.$(".toast").textContent, "The link could not be read (the link is longer than 16000 characters), so the saved session is shown instead");
 });
 
+test("a figure Graphviz refuses says so, and only a failed load asks for another run", async () => {
+  const cases = [
+    [async () => ({ Graphviz: { load: async () => ({ dot: () => { throw new Error("syntax error in line 1 near 'x'"); } }) } }),
+      /Graphviz could not draw this figure: syntax error in line 1 near 'x'$/],
+    [async () => { throw new TypeError("Failed to fetch dynamically imported module"); },
+      /The figure could not be drawn: Failed to fetch dynamically imported module\. Run the operation again to try once more\./],
+  ];
+  for (const [load, want] of cases) {
+    const ctx = makeWindow();
+    let swapped = false;
+    runScript(ctx, CORE, (src) => src.replace("await import(GRAPHVIZ_URL)", () => { swapped = true; return "await __graphvizModule()"; }));
+    assert.ok(swapped, "the test reaches the Graphviz import");
+    ctx.__graphvizModule = load;
+    const rt = stubRuntime({ async run() { return { raw: { ir: "digraph nomological_net {\n}\n" }, code: "#" }; } });
+    await ctx.TF.start(rt);
+    const $ = (s) => ctx.document.querySelector(s);
+    opButton(ctx, "diagram").click();
+    await $("#runBtn").click();
+    const note = $("#output .caution").textContent;
+    assert.match(note, want);
+    if (!/Run the operation again/.test(String(want))) assert.doesNotMatch(note, /Run the operation again/);
+  }
+});
+
+test("a figure whose text holds a character XML cannot hold is shown without it", async () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><text>Panic\u0001 attack&#2;</text></svg>';
+  const rt = stubRuntime({ async run() { return { raw: { report: { aggregate_score: 80, gate: "pass", n_blockers_failed: 0, maturity: "developing", items: [] }, svg }, code: "#" }; } });
+  const { ctx, $ } = await boot({}, rt);
+  const downloads = [];
+  ctx.URL = { createObjectURL: () => "blob:x", revokeObjectURL() {} };
+  ctx.Blob = class { constructor(parts) { downloads.push(parts.join("")); } };
+  await $("#runBtn").click();
+  const fig = $(".figure");
+  assert.ok(fig, "the figure is shown");
+  assert.equal(fig.querySelector("text").textContent, "Panic attack");
+  await fig.parentNode.querySelectorAll("button").find((b) => b.textContent === "SVG").click();
+  assert.equal(downloads.length, 1);
+  assert.doesNotMatch(downloads[0], /\u0001|&#2;/, "the download is the figure as shown");
+});
+
