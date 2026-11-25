@@ -335,11 +335,12 @@ NULL
 #' of them is tested yet, \code{"ad_hoc2"} when some were tested and none is
 #' corroborated, and \code{"independently_corroborated"} otherwise. The labels
 #' \code{"ad_hoc1"} and \code{"ad_hoc2"} borrow Lakatos's terms, and each means
-#' only what its check finds: no new prediction besides the anomaly, or new
-#' predictions tested without a corroboration. No other sense of ad hoc is
-#' assessed. Its \code{added_for} names the anomaly. When that is empty, the
-#' first prediction it protects that was refuted or mixed in the prior is taken
-#' as the anomaly.
+#' only what its check finds: that the assumption protects no new prediction
+#' besides the anomaly, or that some of the new predictions it protects have
+#' been tested and none is corroborated. No other sense of ad hoc is assessed.
+#' Its \code{added_for} names the anomaly. When that is empty, the first
+#' prediction it protects that was refuted or mixed in the prior is taken as
+#' the anomaly.
 #'
 #' A prediction kept from the prior, under its id or renamed, is revised when
 #' its statement, type, bounds or claim changed. When either version states a

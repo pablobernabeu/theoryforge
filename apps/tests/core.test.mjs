@@ -1442,6 +1442,10 @@ test("the appraisal says what its verdict is to be read with, and leaves out key
   const about = $("#output .ri-about").textContent, interp = $("#output .ri-interp").textContent, text = $("#output").textContent;
   assert.match(about, /^The verdict applies fixed rules that borrow Lakatos's terms to what the two files declare/);
   assert.match(about, /the prior must be the version before the new predictions were stated/);
+  // The ad hoc rule and the progressive condition as the packages state them.
+  assert.match(about, /An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added, no corroborated prediction dropped, no unrefuted content lost and no refuted prediction weakened, and when the causal graphs of both versions can be built\./);
+  assert.match(about, /A new or revised assumption added for an anomaly is ad hoc when it protects no new prediction other than its anomaly, or when some of those predictions have been tested and none is corroborated, and pending while all of them are untested\./);
+  assert.doesNotMatch(about, /ad hoc unless/);
   assert.match(about, /A prediction that only changed its id is a rename\. One derived only from the prior's own propositions is an articulation unless a new or revised assumption lists it in protects, and so is one whose claim the prior's graph entails\. Neither a rename nor an articulation counts as new content\./);
   assert.match(interp, /^The amendment is progressive by fixed rules that borrow Lakatos's terms, applied to what the two files declare\./);
   assert.match(interp, /It gives up content the prior held, so it cannot be progressive: 1 prediction that it drops untested, weakens or whose claim its graph no longer entails \(h2\) and 1 signed effect of the prior's graph \(effect of a on b: positive\)\./);
