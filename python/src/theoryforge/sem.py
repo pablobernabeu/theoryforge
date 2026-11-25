@@ -61,7 +61,7 @@ _EFFECTS = ("# Effects the claims are about, each the sum over the directed path
             "to outcome of the product of the labels along the path")
 _CLAIMED = {"positive": "is positive", "negative": "is negative", "zero": "is zero",
             "nonzero": "is not zero"}
-_EFFECT_LOOP = "# The paths form a feedback loop, so no parameter is defined."
+_EFFECT_LOOP = "# A feedback loop lies on the paths from {x} to {y}, so no parameter is defined."
 _NO_PATH = "# No directed path leads from {x} to {y}, so the model fixes this effect at zero."
 _TOO_MANY = ("# More than {n} directed paths lead from {x} to {y}, so no parameter is "
              "defined.")
@@ -361,12 +361,14 @@ def _identification(names: list[str], paths: list[list[bool]], bidirected: list[
 
 def _effect_paths(paths: list[list[bool]], r: list[list[bool]], x: int,
                   y: int) -> list[list[int]] | None:
-    """The directed paths from x to y of an acyclic graph, or None for more than the cap.
+    """The directed paths from x to y, or None for more than the cap.
 
     A depth-first search from x that takes successors in vertex order and
     steps only to a vertex from which y can be reached, so that each branch
     ends in a path and the search stops once the paths outnumber
-    ``MAX_EFFECT_PATHS``.
+    ``MAX_EFFECT_PATHS``. Every vertex it reaches lies on a path from x to y,
+    and the caller makes sure that none of these lies on a feedback loop, so
+    the search ends.
     """
     k = len(paths)
     found: list[list[int]] = []
@@ -394,8 +396,9 @@ def _effect_paths(paths: list[list[bool]], r: list[list[bool]], x: int,
     return found
 
 
-def _effects(T, nodes: list[str], paths: list[list[bool]], r: list[list[bool]], cyclic: bool,
-             labels: dict[tuple[str, str], str], taken: set[str]) -> list[str]:
+def _effects(T, nodes: list[str], paths: list[list[bool]], r: list[list[bool]],
+             loops: list[list[int]], labels: dict[tuple[str, str], str],
+             taken: set[str]) -> list[str]:
     """The defined parameters for the effects the claims are about.
 
     The claims are read as entailments() reads them, the predictions first
@@ -404,9 +407,14 @@ def _effects(T, nodes: list[str], paths: list[list[bool]], r: list[list[bool]], 
     order of their first claim. Each claim gives a comment line, and the group
     then gets ``effect_<x>_<y> := <sum>``, where each term is the product of
     the labels along one directed path, the paths in the order
-    ``_effect_paths`` finds them. A graph with a feedback loop, a pair that no
-    path joins and a pair joined by more than ``MAX_EFFECT_PATHS`` paths each
-    get a comment in its place.
+    ``_effect_paths`` finds them. A pair that no path joins, a pair with a
+    feedback loop on a path between them and a pair joined by more than
+    ``MAX_EFFECT_PATHS`` paths each get a comment in its place. A vertex lies
+    on a path from x to y when x reaches it and it reaches y, x and y
+    included, and it lies on a feedback loop when it belongs to one of
+    ``loops``, the strongly connected components of two or more vertices. A
+    loop elsewhere in the graph leaves the path sum the total effect of a
+    linear model, and one on such a path does not.
     """
     groups: dict[tuple[str, str], list[dict]] = {}
     for c in _claims(T):
@@ -416,16 +424,23 @@ def _effects(T, nodes: list[str], paths: list[list[bool]], r: list[list[bool]], 
         return []
     names = [_construct_name(n) for n in nodes]
     vertex = {cid: i for i, cid in enumerate(nodes)}
+    in_loop = [False] * len(nodes)
+    for comp in loops:
+        for v in comp:
+            in_loop[v] = True
     out = [_EFFECTS]
     for (x, y), claims in groups.items():
         xn, yn = _construct_name(x), _construct_name(y)
         out += [f"# {_comment_text(c['id'])} claims that the effect of {xn} on {yn} "
                 f"{_CLAIMED[c['sign']]}." for c in claims]
-        if cyclic:
-            out.append(_EFFECT_LOOP)
-            continue
-        found = (_effect_paths(paths, r, vertex[x], vertex[y])
-                 if x in vertex and y in vertex else [])
+        xi, yi = vertex.get(x), vertex.get(y)
+        found: list[list[int]] | None = []
+        if xi is not None and yi is not None:
+            on_path = [v in (xi, yi) or (r[xi][v] and r[v][yi]) for v in range(len(nodes))]
+            if r[xi][yi] and any(a and b for a, b in zip(in_loop, on_path, strict=True)):
+                out.append(_EFFECT_LOOP.format(x=xn, y=yn))
+                continue
+            found = _effect_paths(paths, r, xi, yi)
         if found is None:
             out.append(_TOO_MANY.format(n=MAX_EFFECT_PATHS, x=xn, y=yn))
         elif not found:
@@ -537,30 +552,37 @@ def compile_sem(theory) -> str:
 
     Each prediction or phenomenon whose ``claim`` is an effect of ``x`` on
     ``y`` gets a comment that restates it, the claims on one pair together.
-    On a graph without a feedback loop, ``effect_<x>_<y> := <sum>`` then
-    defines the effect as the sum over the directed paths from ``x`` to ``y``
-    of the product of the labels along each path, so that lavaan estimates
-    the quantity the claim is about. The paths are found depth first from
-    ``x``, taking the successors of each construct in construct order. When
-    no path leads from ``x`` to ``y``, a comment says that the model fixes
-    the effect at zero. When more than ``MAX_EFFECT_PATHS`` (100) paths do,
-    or the graph has a feedback loop, a comment says that no parameter is
-    defined. A claim that cannot be evaluated as written is passed over.
+    When no feedback loop lies on a path from ``x`` to ``y``,
+    ``effect_<x>_<y> := <sum>`` then defines the effect as the sum over the
+    directed paths from ``x`` to ``y`` of the product of the labels along
+    each path, so that lavaan estimates the quantity the claim is about. In a
+    linear model, that sum is the total effect, whatever loops the rest of
+    the graph holds. The paths are found depth first from ``x``, taking the
+    successors of each construct in construct order. When no path leads from
+    ``x`` to ``y``, a comment says that the model fixes the effect at zero.
+    When more than ``MAX_EFFECT_PATHS`` (100) paths do, or a construct on a
+    path from ``x`` to ``y``, ``x`` and ``y`` included, lies on a feedback
+    loop, a comment says that no parameter is defined. A claim that cannot
+    be evaluated as written is passed over.
 
-    The propositions form the graph that ``implications()`` reads. Two of its
-    constructs that are both exogenous, with no proposition pointing into
-    either, or both terminal, with neither pointing to another construct, are
-    unrelated by the theory's account unless an association joins them. By
+    The propositions form the graph that ``implications()`` reads. Unless an
+    association joins them, two of its constructs that are both exogenous,
+    with no proposition pointing into either, are unrelated by the theory's
+    account. Two that are both terminal, with neither pointing to another
+    construct, are related only through the causes the theory names: their
+    disturbances are uncorrelated, so they are independent once those causes
+    are held fixed. By
     default, ``lavaan::sem()`` frees the covariance of two exogenous latent
     variables and of two terminal variables, and takes that of two exogenous
     observed variables from the data. A fit with those defaults could not
     refute the claim. In the modality-switching example, two of the six
     independencies ``implications()`` derives would go untested. The syntax
     therefore ends with a block that fixes each such covariance at zero
-    (``a ~~ 0*b``), and deleting the block restores lavaan's defaults. A pair
-    with a moderator keeps those defaults, because the product term changes
-    the moderator's role. A relation from a construct to itself does not
-    count here, since the syntax writes no path for it.
+    (``a ~~ 0*b``), which for two terminal constructs is the covariance of
+    their disturbances, and deleting the block restores lavaan's defaults. A
+    pair with a moderator keeps those defaults, because the product term
+    changes the moderator's role. A relation from a construct to itself does
+    not count here, since the syntax writes no path for it.
 
     lavaan takes the covariances of observed exogenous variables from the
     data only until a covariance line names one of them. It then treats that
@@ -648,6 +670,6 @@ def compile_sem(theory) -> str:
     out += _identification(names, paths, bidirected, loops)
     if signs:
         out += [_SIGNS, *signs]
-    out += _effects(theory, nodes, paths, r, bool(loops), labels, taken)
+    out += _effects(theory, nodes, paths, r, loops, labels, taken)
     out += _covariances(theory, names, paths, bidirected, moderator, set(factors))
     return "\n".join(out) + "\n"

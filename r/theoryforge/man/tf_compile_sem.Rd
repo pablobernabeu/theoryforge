@@ -69,31 +69,36 @@ is not identified without further constraints, such as an instrument.
 
 Each prediction or phenomenon whose \code{claim} is an effect of \code{x}
 on \code{y} gets a comment that restates it, the claims on one pair
-together. On a graph without a feedback loop,
+together. When no feedback loop lies on a path from \code{x} to \code{y},
 \verb{effect_<x>_<y> := <sum>} then defines the effect as the sum over the
 directed paths from \code{x} to \code{y} of the product of the labels
 along each path, so that lavaan estimates the quantity the claim is about.
-The paths are found depth first from \code{x}, taking the successors of
-each construct in construct order. When no path leads from \code{x} to
-\code{y}, a comment says that the model fixes the effect at zero. When more
-than 100 paths do, or the graph has a feedback loop, a comment says that no
-parameter is defined. A claim that cannot be evaluated as written is passed
-over.
+In a linear model, that sum is the total effect, whatever loops the rest of
+the graph holds. The paths are found depth first from \code{x}, taking the
+successors of each construct in construct order. When no path leads from
+\code{x} to \code{y}, a comment says that the model fixes the effect at
+zero. When more than 100 paths do, or a construct on a path from \code{x}
+to \code{y}, \code{x} and \code{y} included, lies on a feedback loop, a
+comment says that no parameter is defined. A claim that cannot be evaluated
+as written is passed over.
 }
 
 \section{Covariances fixed at zero}{
 
-The propositions form the graph that \code{\link[=tf_implications]{tf_implications()}} reads. Two of its
-constructs that are both exogenous, with no proposition pointing into
-either, or both terminal, with neither pointing to another construct, are
-unrelated by the theory's account unless an association joins them. By
+The propositions form the graph that \code{\link[=tf_implications]{tf_implications()}} reads. Unless an
+association joins them, two of its constructs that are both exogenous, with
+no proposition pointing into either, are unrelated by the theory's account.
+Two that are both terminal, with neither pointing to another construct, are
+related only through the causes the theory names: their disturbances are
+uncorrelated, so they are independent once those causes are held fixed. By
 default, \code{lavaan::sem()} frees the covariance of two exogenous latent
 variables and of two terminal variables, and takes that of two exogenous
 observed variables from the data. A fit with those defaults could not refute
 the claim. In the modality-switching example, two of the six independencies
 \code{\link[=tf_implications]{tf_implications()}} derives would go untested. The syntax therefore ends
-with a block that fixes each such covariance at zero (\verb{a ~~ 0*b}), and
-deleting the block restores lavaan's defaults. A pair with a moderator keeps
+with a block that fixes each such covariance at zero (\verb{a ~~ 0*b}),
+which for two terminal constructs is the covariance of their disturbances,
+and deleting the block restores lavaan's defaults. A pair with a moderator keeps
 those defaults, because the product term changes the moderator's role. A
 relation from a construct to itself does not count here, since the syntax
 writes no path for it.
