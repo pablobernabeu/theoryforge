@@ -67,8 +67,8 @@ on panic disorder or an uploaded corpus, with the theme method, min_df and max_d
 `litmap()`'s other settings at their defaults, since `landscape()` takes no min_df or
 max_df.
 
-The checklist takes the cycles setting where the package's `check()` does, and the
-theory card and the editor show the score under the default, refuse. The amendment
+The checklist passes the cycles setting to the package's `check()`, and the theory card
+and the editor show the score under the default, refuse. The amendment
 appraisal defaults to the version the loaded theory declares as its parent and otherwise
 waits for a prior to be chosen or uploaded. The runtimes read each
 example's version record when the app starts.

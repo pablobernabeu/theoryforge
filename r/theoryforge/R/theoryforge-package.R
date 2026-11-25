@@ -56,10 +56,12 @@
 #' conditional independence can settle. [tf_discriminate()] sets the theory
 #' against a rival and lists the claims, independencies and signs that would
 #' tell the two apart. [tf_appraise_amendment()] calls an amendment
-#' progressive, degenerating or neutral, and [tf_simulate()] runs the construct
-#' network as a linear dynamical system. The causal reading assumes that the propositions state
-#' every direct relation among the constructs, with an association for each
-#' common cause they leave unnamed.
+#' progressive, degenerating or neutral by fixed rules that borrow Lakatos's
+#' terms, and the verdict holds only if what the two versions declare is true.
+#' [tf_simulate()] runs the construct network as one linear dynamical system
+#' consistent with the signs the propositions state. The causal reading assumes
+#' that the propositions state every direct relation among the constructs, with
+#' an association for each common cause they leave unnamed.
 #'
 #' @section Testing:
 #' [tf_severity()] grades each prediction by the form of its claim before data.
