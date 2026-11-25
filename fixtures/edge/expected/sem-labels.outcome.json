@@ -2,10 +2,10 @@
   "read": "ok",
   "validate": true,
   "validate_full": {
-    "error": "invalid theory object: prediction[3] claim x and y must differ"
+    "error": "invalid theory object: prediction[3] claim x and y must differ; prediction[2] is a directional claim, so its claim's sign cannot be nonzero, which states no direction"
   },
   "check": {
-    "aggregate_score": 27.7,
+    "aggregate_score": 26.1,
     "coverage": 0.92,
     "gate": "blocked",
     "n_blockers_failed": 1,
@@ -23,7 +23,7 @@
       {
         "id": "risk_severity",
         "status": "warn",
-        "score": 0.45
+        "score": 0.3
       },
       {
         "id": "parsimony",
@@ -82,8 +82,8 @@
     {
       "prediction_id": "pred2",
       "type": "point",
-      "risk_score": 0.9,
-      "computed_severity": 0.9
+      "risk_score": 0.4,
+      "computed_severity": 0.3
     },
     {
       "prediction_id": "pred3",
@@ -413,5 +413,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Labelled paths, a repeated pair, a self loop and defined effects\n\n- Theory ID: edge-sem-labels\n- Schema version: 1.1\n- Content hash: sha256:fb5e2a6cc3ba5680fa35d6c60dd474a1d5a6084a4e533550a2ae41d330bcbfdc\n- Maturity: building\n- Derivations check: no\n\n## Theory\n\n### Constructs\n- a (Activation): The first construct.\n- m (Mediator): The construct between activation and the outcome.\n- y (Outcome): The construct the claims are about.\n- s (Strain): A construct that sustains itself.\n- x (Ex): A construct whose path shares a label.\n- y_z (Wye zed): A construct whose name holds an underscore.\n- x_y (Ex wye): Another construct whose name holds an underscore.\n- z (Zed): The outcome of the second labelled path.\n- effect_a_y (Effect name): A construct named like a defined effect.\n\n### Propositions\n- p1: a increases m.\n- p2: m decreases y.\n- p3: a causes y.\n- p4: a increases y.\n- p5: s causes s.\n- p6: x increases y_z.\n- p7: x_y decreases z.\n- p8: effect_a_y mediates z.\n\n### Phenomena to explain\n- ph1: The mediator lowers the outcome.\n  - Claim: the effect of m on y is negative; not evaluated, since the causal graph has a feedback loop\n\n## Hypotheses\n1. [directional] Activation raises the outcome. (pred1; derives from: \u2014)\n   - Claim: the effect of a on y is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n2. [point] The outcome leaves activation unchanged. (pred2; derives from: \u2014)\n   - Claim: the effect of y on a is zero; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n3. [directional] Activation changes the outcome. (pred3; derives from: \u2014)\n   - Claim: the effect of a on y is not zero; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n4. [directional] A claim about one construct alone, which cannot be evaluated. (pred4; derives from: \u2014)\n   - Claim: incomplete, so not evaluated\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_Not derived: the causal graph has a feedback loop, s -> s. With cycles = 'sigma', the statements are read by sigma-separation and hold if each loop settles to a unique equilibrium._\n\n## Severity (pre-data rubric of claim form)\n- pred1: severity 0.3, risk 0.4\n- pred2: severity 0.9, risk 0.9\n- pred3: severity 0.3, risk 0.4\n- pred4: severity 0.3, risk 0.4\n"
+  "preregister": "# Preregistration: Labelled paths, a repeated pair, a self loop and defined effects\n\n- Theory ID: edge-sem-labels\n- Schema version: 1.1\n- Content hash: sha256:fb5e2a6cc3ba5680fa35d6c60dd474a1d5a6084a4e533550a2ae41d330bcbfdc\n- Maturity: building\n- Derivations check: no\n\n## Theory\n\n### Constructs\n- a (Activation): The first construct.\n- m (Mediator): The construct between activation and the outcome.\n- y (Outcome): The construct the claims are about.\n- s (Strain): A construct that sustains itself.\n- x (Ex): A construct whose path shares a label.\n- y_z (Wye zed): A construct whose name holds an underscore.\n- x_y (Ex wye): Another construct whose name holds an underscore.\n- z (Zed): The outcome of the second labelled path.\n- effect_a_y (Effect name): A construct named like a defined effect.\n\n### Propositions\n- p1: a increases m.\n- p2: m decreases y.\n- p3: a causes y.\n- p4: a increases y.\n- p5: s causes s.\n- p6: x increases y_z.\n- p7: x_y decreases z.\n- p8: effect_a_y mediates z.\n\n### Phenomena to explain\n- ph1: The mediator lowers the outcome.\n  - Claim: the effect of m on y is negative; not evaluated, since the causal graph has a feedback loop\n\n## Hypotheses\n1. [directional] Activation raises the outcome. (pred1; derives from: \u2014)\n   - Claim: the effect of a on y is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n2. [point] The outcome leaves activation unchanged. (pred2; derives from: \u2014)\n   - Claim: the effect of y on a is zero; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n3. [directional] Activation changes the outcome. (pred3; derives from: \u2014)\n   - Claim: the effect of a on y is not zero; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n4. [directional] A claim about one construct alone, which cannot be evaluated. (pred4; derives from: \u2014)\n   - Claim: incomplete, so not evaluated\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_Not derived: the causal graph has a feedback loop, s -> s. With cycles = 'sigma', the statements are read by sigma-separation and hold if each loop settles to a unique equilibrium._\n\n## Severity (pre-data rubric of claim form)\n- pred1: severity 0.3, risk 0.4\n- pred2: severity 0.3, risk 0.4\n- pred3: severity 0.3, risk 0.4\n- pred4: severity 0.3, risk 0.4\n"
 }

@@ -5,7 +5,7 @@
     "error": "invalid theory object: prediction[0] derives_from entry 0 must be a nonempty string; prediction[1] derives_from entry 0 must be a nonempty string; prediction[2] derives_from entry 1 must be a nonempty string"
   },
   "check": {
-    "aggregate_score": 52.2,
+    "aggregate_score": 48.5,
     "coverage": 0.92,
     "gate": "blocked",
     "n_blockers_failed": 1,
@@ -22,8 +22,8 @@
       },
       {
         "id": "risk_severity",
-        "status": "pass",
-        "score": 0.633
+        "status": "warn",
+        "score": 0.3
       },
       {
         "id": "parsimony",
@@ -82,14 +82,14 @@
     {
       "prediction_id": "h2",
       "type": "interval",
-      "risk_score": 0.7,
-      "computed_severity": 0.7
+      "risk_score": 0.4,
+      "computed_severity": 0.3
     },
     {
       "prediction_id": "h3",
       "type": "point",
-      "risk_score": 0.9,
-      "computed_severity": 0.9
+      "risk_score": 0.4,
+      "computed_severity": 0.3
     }
   ],
   "implications": {
@@ -181,5 +181,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Null entries in derives_from\n\n- Theory ID: edge-null-derives\n- Schema version: 1.0\n- Content hash: sha256:ac9b86c5ccbe3b34f924e40b1e7400d64e7406480cce047a70a89240407d4c76\n- Maturity: building\n- Derivations check: no\n\n## Theory\n\n### Constructs\n- c1 (Alpha): The first construct.\n- c2 (Beta): The second construct entirely different.\n\n### Propositions\n- p1: c1 increases c2. Mechanism: Alpha drives Beta.\n\n## Hypotheses\n1. [directional] Beta rises with Alpha. (h1; derives from: \u2014)\n   - Test record: untested\n2. [interval] Beta is above zero. (h2; derives from: \u2014)\n   - Test record: untested\n3. [point] Beta is exactly one. (h3; derives from: p1)\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.7, risk 0.7\n- h3: severity 0.9, risk 0.9\n"
+  "preregister": "# Preregistration: Null entries in derives_from\n\n- Theory ID: edge-null-derives\n- Schema version: 1.0\n- Content hash: sha256:ac9b86c5ccbe3b34f924e40b1e7400d64e7406480cce047a70a89240407d4c76\n- Maturity: building\n- Derivations check: no\n\n## Theory\n\n### Constructs\n- c1 (Alpha): The first construct.\n- c2 (Beta): The second construct entirely different.\n\n### Propositions\n- p1: c1 increases c2. Mechanism: Alpha drives Beta.\n\n## Hypotheses\n1. [directional] Beta rises with Alpha. (h1; derives from: \u2014)\n   - Test record: untested\n2. [interval] Beta is above zero. (h2; derives from: \u2014)\n   - Test record: untested\n3. [point] Beta is exactly one. (h3; derives from: p1)\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_None: every pair of constructs in the causal graph is adjacent._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.3, risk 0.4\n- h3: severity 0.3, risk 0.4\n"
 }

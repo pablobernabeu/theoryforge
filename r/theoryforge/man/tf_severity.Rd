@@ -19,11 +19,15 @@ A pre-data rubric of the form of each prediction's claim. \code{risk_score}
 is the base riskiness of the declared type: existence 0.1, directional 0.4,
 interval 0.7 and point 0.9. \code{computed_severity} discounts a directional
 prediction by 25 per cent, adds 0.1 when \code{diagnostic_vs} names a
-registered alternative and is capped at 1. The order of the types follows
-Popper (1959, sections 31-33) for nested claims about one quantity, and the
-directional penalty follows Meehl's (1967, 1990b) argument that a sign alone
-risks little. The base values, the discount and the bonus are the package's
-conventions, and neither source gives them.
+registered alternative and is capped at 1. A point or interval prediction
+whose \code{bounds} do not give a finite lower and a finite upper value
+states no region a test could miss, so it is rated as a directional one, with
+the base 0.4 and the discount, as the precision item of \code{\link[=tf_check]{tf_check()}} gives it
+no credit. \code{type} still reports the declared label. The order of the
+types follows Popper (1959, sections 31-33) for nested claims about one
+quantity, and the directional penalty follows Meehl's (1967, 1990b) argument
+that a sign alone risks little. The base values, the discount and the bonus
+are the package's conventions, and neither source gives them.
 }
 \details{
 How severely a claim is tested depends on the design and the data, which the
@@ -32,8 +36,10 @@ a failed test leaves the value where it was.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
-  tf_add_prediction("h1", "Effect is exactly 0.30.", "point") |>
-  tf_add_prediction("h2", "Effect is positive.", "directional")
+  tf_add_prediction("h1", "The effect is 0.30, within 0.05.", "point",
+                    bounds = list(lower = 0.25, upper = 0.35)) |>
+  tf_add_prediction("h2", "The effect is positive.", "directional",
+                    bounds = list(lower = 0))
 tf_severity(theory)
 }
 \references{

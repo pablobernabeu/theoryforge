@@ -40,9 +40,9 @@ library(theoryforge)
 
 The package includes a deliberately underspecified theory of motivation.
 `tf_example_path()` gives the path of each example, and `tf_example_names()`
-lists them. Running the rigour checklist on the theory gives its score, the
-range of scores the checklist's other weightings would give, its gate and the
-items it does not pass.
+lists them. Running the checklist on the theory gives its checklist score, the
+range of scores that equal weights or one weight halved or doubled would give,
+its gate and the items it does not pass.
 
 ```{r worked-result}
 weak <- tf_read(tf_example_path("weak-theory.theory.yaml"))
@@ -61,20 +61,33 @@ data.frame(
 ```
 
 The gate is blocked because two items that the checklist treats as blockers
-failed. The theory's one prediction, 'Motivated people exist', asserts an
-existence claim, which no observation can contradict, and it cites no
-proposition from which it would follow. To unblock the gate, the author would
-state a prediction that rules out some result, such as a direction or a bounded
-range of an effect, and derive it from a proposition. The warnings name the
+failed. The theory's one prediction, 'Motivated people exist', is typed as an
+existence claim, and the falsifiability item reads that label: no prediction is
+typed point, interval or directional. The prediction also cites no proposition
+from which it would follow. To unblock the gate, the author would state a
+prediction that rules out some result, such as a direction or a bounded range of
+an effect, type it accordingly and derive it from a proposition. The warnings name the
 remaining work. Motivation and Drive are defined in nearly the same words and
 would have to be merged or defined apart. Neither construct has a measure or a
 stated scope, and the one proposition is an association without a mechanism.
 The `development_roadmap` view of `tf_diagram()` draws the same list as an
 ordered worklist.
 
-The score is a mean of the item scores under conventional weights, and the gate
-is the verdict to act on. A passing gate shows that the file states what a test
-would need, and it does not show that the theory is true.
+The checklist score describes how completely the file states what checklist
+`r report$checklist_version` asks for. Most items read whether a field is filled
+in or how a prediction is labelled, and stated claims are checked against the
+causal graph. Test outcomes are read only by the parsimony item, the weights are
+conventions, and no study has established what difference between two scores is
+meaningful. The score does not show that the theory is true or well reasoned.
+
+The checklist score is a mean of the item scores under conventional weights. The
+gate reports whether either blocking item failed: at least one prediction is
+typed point, interval or directional, and every prediction cites declared
+propositions whose graph entails any claim it states, with no stated phenomenon
+contradicted. The labels are the author's and are not checked against the
+statements. A passing gate does not show that the theory is true or well
+reasoned. A claim that the graph leaves unread because it has a feedback loop is
+not checked, and the derivation chain then warns without blocking the gate.
 
 ## Reading and validating a theory
 
@@ -146,11 +159,11 @@ recorded$constructs[[1]]$definition <- paste(
 tf_validate(recorded, full = TRUE)
 ```
 
-## Scoring rigour
+## The checklist
 
-`tf_check()` scores the theory against the rigour checklist the package ships,
-version 3.0, whose twelve items each test one criterion from the methodology
-literature. Each item has the status `"pass"`, `"warn"`, `"fail"` or `"n/a"`, the
+`tf_check()` scores the theory against the checklist the package ships, version
+`r tf_check(theory)$checklist_version`, whose twelve items each test one
+criterion drawn from the methodology literature. Each item has the status `"pass"`, `"warn"`, `"fail"` or `"n/a"`, the
 last for an item with nothing to assess, such as the parsimony of a theory that
 adds no assumption to answer an anomaly. An `"n/a"` item has a `NULL` score.
 
@@ -172,16 +185,21 @@ data.frame(
 )
 ```
 
-The aggregate score is the weighted mean of the applicable items' scores, on a
-scale of 0 to 100, and the coverage is the share of the checklist's weight that
-applied. The weights are a convention, so `aggregate_range` gives the lowest and
-the highest aggregate under other weightings: equal weights, and each applicable
-item's weight halved and then doubled with the others unchanged. A score whose
-range is wide depends on the convention more than one whose range is narrow. The
-aggregate is compensatory, since a high score on one item offsets a low score on
-another. The gate is not. It is `"blocked"` when an item marked as a blocker
-fails, `"pass"` otherwise, and `"advisory"` for a theory whose maturity is
-`draft`. The article
+The checklist score, `aggregate_score`, is the weighted mean of the applicable
+items' scores, on a scale of 0 to 100, and the coverage is the share of the
+checklist's weight that applied. The weights are a convention, so
+`aggregate_range` gives the lowest and the highest score over the checklist's
+weights, equal weights, and each applicable item's weight halved and then
+doubled with the others unchanged. The range is the extremes of these weightings
+and not an interval for the score, and the choices made in coding the file and
+the constants of the claim-form rubric lie outside it. A score whose range is
+wide depends on the convention more than one whose range is narrow. The score is
+compensatory, since a high score on one item offsets a low score on another. The
+gate is not. It is `"blocked"` when an item marked as a blocker fails, `"pass"`
+otherwise, and `"advisory"` for a theory whose maturity is `draft`. The
+derivation chain warns, without blocking the gate, when a feedback loop leaves a
+prediction's claim unread, as `tf_check()` does by default, and
+`tf_check(theory, cycles = "sigma")` reads such claims by sigma-separation. The article
 [Methodological foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html)
 sets out each item, its supporting literature and how its score is computed.
 

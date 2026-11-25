@@ -114,8 +114,11 @@ tf_read <- function(path) {
 #' outcomes, a logical \code{passed}, the evidence direction and formal-model
 #' type enums, the version block and the \code{schema_version} pattern. It also covers numbers within \[0, 1\] where
 #' the schema asks for them, a prediction's \code{bounds} and \code{test}
-#' block and a test outcome's \code{estimate} and \code{se}. Last, it checks
-#' the type of every other field and of every entry of a string array.
+#' block and a test outcome's \code{estimate} and \code{se}. It compares each
+#' prediction's type and its claim's sign with its bounds, and reports a
+#' directional prediction whose claim, with no \code{given}, has the sign
+#' \code{nonzero}, which states no direction. Last, it checks the type of every
+#' other field and of every entry of a string array.
 #'
 #' Besides the ids and references, which the schema cannot express, the full
 #' check is stricter than a JSON Schema 2020-12 validator in three ways. A
@@ -522,42 +525,52 @@ tf_validate <- function(theory, full = FALSE) {
     # different claim from the one tf_post_data_severity() tests. An existence
     # claim allows every value but 0, which no bounds can state, and a
     # one-sided region would make tf_post_data_severity() test a directional
-    # claim.
+    # claim. Last, with or without bounds, a directional prediction whose claim
+    # has the sign nonzero states no direction, so the label would pass the
+    # falsifiability item for a claim that forbids only zero. A claim with a
+    # given can only be zero or nonzero (item 15), so it is left to the
+    # statement.
     for (i in seq_along(preds)) {
-      region <- .tf_bounds_region(.tf_get(preds[[i]], "bounds"))
-      if (is.null(region)) next
-      lo <- region$lower
-      up <- region$upper
-      both <- !is.null(lo) && !is.null(up)
       ty <- .tf_get(preds[[i]], "type")
       ty <- if (.tf_is_string(ty)) ty else ""
-      if (ty %in% c("point", "interval") && !both) {
-        article <- if (identical(ty, "interval")) "an" else "a"
-        add(sprintf(paste0("prediction[%d] is %s %s claim, so its bounds need a ",
-                           "finite lower and a finite upper"), i - 1L, article, ty))
-      } else if (identical(ty, "directional") && both && lo != 0 && up != 0) {
-        add(sprintf(paste0("prediction[%d] is a directional claim, so its bounds ",
-                           "must leave one side open or end at 0"), i - 1L))
-      } else if (identical(ty, "existence")) {
-        add(sprintf(paste0("prediction[%d] is an existence claim, so it takes no ",
-                           "bounds: the region it allows, every value but 0, is ",
-                           "not one interval"), i - 1L))
-      }
       claim <- .tf_get(preds[[i]], "claim")
       sign <- if (.tf_is_mapping(claim)) .tf_get(claim, "sign") else NULL
       sign <- if (.tf_is_string(sign)) sign else ""
-      if (sign == "positive" && !(!is.null(lo) && lo >= 0)) {
-        add(sprintf(paste0("prediction[%d] claims a positive sign, so its lower ",
-                           "bound must be 0 or above"), i - 1L))
-      } else if (sign == "negative" && !(!is.null(up) && up <= 0)) {
-        add(sprintf(paste0("prediction[%d] claims a negative sign, so its upper ",
-                           "bound must be 0 or below"), i - 1L))
-      } else if (sign == "zero" && !((is.null(lo) || lo <= 0) && (is.null(up) || up >= 0))) {
-        add(sprintf("prediction[%d] claims a zero sign, so its bounds must include 0",
-                    i - 1L))
-      } else if (sign == "nonzero" && !((!is.null(lo) && lo > 0) || (!is.null(up) && up < 0))) {
-        add(sprintf(paste0("prediction[%d] claims a nonzero sign, so its bounds ",
-                           "must exclude 0"), i - 1L))
+      region <- .tf_bounds_region(.tf_get(preds[[i]], "bounds"))
+      if (!is.null(region)) {
+        lo <- region$lower
+        up <- region$upper
+        both <- !is.null(lo) && !is.null(up)
+        if (ty %in% c("point", "interval") && !both) {
+          article <- if (identical(ty, "interval")) "an" else "a"
+          add(sprintf(paste0("prediction[%d] is %s %s claim, so its bounds need a ",
+                             "finite lower and a finite upper"), i - 1L, article, ty))
+        } else if (identical(ty, "directional") && both && lo != 0 && up != 0) {
+          add(sprintf(paste0("prediction[%d] is a directional claim, so its bounds ",
+                             "must leave one side open or end at 0"), i - 1L))
+        } else if (identical(ty, "existence")) {
+          add(sprintf(paste0("prediction[%d] is an existence claim, so it takes no ",
+                             "bounds: the region it allows, every value but 0, is ",
+                             "not one interval"), i - 1L))
+        }
+        if (sign == "positive" && !(!is.null(lo) && lo >= 0)) {
+          add(sprintf(paste0("prediction[%d] claims a positive sign, so its lower ",
+                             "bound must be 0 or above"), i - 1L))
+        } else if (sign == "negative" && !(!is.null(up) && up <= 0)) {
+          add(sprintf(paste0("prediction[%d] claims a negative sign, so its upper ",
+                             "bound must be 0 or below"), i - 1L))
+        } else if (sign == "zero" && !((is.null(lo) || lo <= 0) && (is.null(up) || up >= 0))) {
+          add(sprintf("prediction[%d] claims a zero sign, so its bounds must include 0",
+                      i - 1L))
+        } else if (sign == "nonzero" && !((!is.null(lo) && lo > 0) || (!is.null(up) && up < 0))) {
+          add(sprintf(paste0("prediction[%d] claims a nonzero sign, so its bounds ",
+                             "must exclude 0"), i - 1L))
+        }
+      }
+      if (identical(ty, "directional") && sign == "nonzero" &&
+          length(.tf_str_list(.tf_get(claim, "given"))) == 0L) {
+        add(sprintf(paste0("prediction[%d] is a directional claim, so its claim's sign ",
+                           "cannot be nonzero, which states no direction"), i - 1L))
       }
     }
 

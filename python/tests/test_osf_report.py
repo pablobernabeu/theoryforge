@@ -529,7 +529,7 @@ def test_report_html_escapes_the_id_and_every_cell():
     # The schema allows any non-empty id, and the checklist citations hold a
     # bare '&', so both reached the HTML unescaped.
     html = tf.new_theory("a<b&c", "T").report(format="html")
-    assert "<h2>Rigour report: a&lt;b&amp;c</h2>" in html
+    assert "<h2>Checklist report: a&lt;b&amp;c</h2>" in html
     assert "a<b&c" not in html
     assert re.search(r"&(?!amp;|lt;|gt;|middot;)", html) is None
 

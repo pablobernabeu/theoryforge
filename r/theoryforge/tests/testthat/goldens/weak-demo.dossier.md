@@ -3,7 +3,7 @@
 - Theory ID: weak-demo
 - Content hash: sha256:efcf38ef21fc18fdcc50718943ff878fc53151ab45e744e7271abc31e643f86e
 - Maturity: building
-- Checklist version: 3.0
+- Checklist version: 3.1
 - Aggregate rigour score: 2.2/100 (1.1 to 3.9 under other weightings)
 - Checklist coverage: 0.92
 - Gate: blocked
@@ -13,18 +13,18 @@
 
 | item | criterion | status | score | weight |
 | --- | --- | --- | --- | --- |
-| falsifiability | At least one prediction forbids an observation | fail | 0.0 | 0.15 |
-| precision | Predictions are point or interval claims whose bounds state the region, not merely directional | warn | 0.0 | 0.1 |
+| falsifiability | At least one prediction is typed point, interval or directional; the label is the author's | fail | 0.0 | 0.15 |
+| precision | Share of predictions typed point or interval with a finite lower and upper bound, at or above threshold; the width of the region is not read | warn | 0.0 | 0.1 |
 | risk_severity | Mean prediction riskiness (declared severity, else the claim-form rubric) at or above threshold | warn | 0.2 | 0.1 |
 | parsimony | No auxiliary assumption added for an anomaly (named in added_for) lacks independent corroboration | n/a | n/a | 0.08 |
 | non_redundancy | Every construct is defined, and no two have near-duplicate or contained definitions or one label, and no construct's measures are all listed for another (lexical screen) | warn | 0.0 | 0.1 |
 | construct_clarity | Every construct has definition + measurement + boundary conditions | warn | 0.0 | 0.08 |
 | scope | Boundary conditions explicitly stated | warn | 0.0 | 0.06 |
-| logical_why | Each proposition states a mechanism, not just a correlation | warn | 0.0 | 0.08 |
+| logical_why | Every proposition's mechanism field is filled in; its text is not judged | warn | 0.0 | 0.08 |
 | causal_testability | At least one proposition states a causal relation | warn | 0.0 | 0.06 |
 | diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, and not shown false where the claim and the rival's propositions are stated) | warn | 0.0 | 0.06 |
 | formalisation | A formal model of a recognised type (ode, abm, network, sem) is declared | warn | 0.0 | 0.05 |
-| derivation_chain | Every prediction cites declared propositions, and the causal graph entails the claim it states, if any | fail | 0.0 | 0.08 |
+| derivation_chain | Every prediction cites declared propositions, the causal graph entails any claim it states and contradicts no phenomenon's claim (a claim left unread because of a feedback loop warns) | fail | 0.0 | 0.08 |
 
 ## Severity (pre-data rubric of claim form)
 

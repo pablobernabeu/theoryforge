@@ -1,9 +1,9 @@
-# theoryforge rigour checklist. Shared, versioned specification.
+# theoryforge checklist. Shared, versioned specification.
 # Both the R and Python packages read this file. The scoring algorithm is pinned
 # in API_SPEC.md so that the two implementations produce identical verdicts.
 # Every report records schema_version as checklist_version, since the weights and
 # thresholds below produce every number in it.
-schema_version: "3.0"
+schema_version: "3.1"
 
 # The package's defaults, fixed for reproducibility and not derived from a
 # validation study.
@@ -16,12 +16,12 @@ thresholds:
 
 items:
   - id: falsifiability
-    criterion: "At least one prediction forbids an observation"
+    criterion: "At least one prediction is typed point, interval or directional; the label is the author's"
     weight: 0.15
     severity_if_fail: blocker
     citation: "Popper (1959); Bacharach (1989)"
   - id: precision
-    criterion: "Predictions are point or interval claims whose bounds state the region, not merely directional"
+    criterion: "Share of predictions typed point or interval with a finite lower and upper bound, at or above threshold; the width of the region is not read"
     weight: 0.10
     severity_if_fail: warning
     citation: "Meehl (1967, 1990a)"
@@ -51,7 +51,7 @@ items:
     severity_if_fail: warning
     citation: "Whetten (1989); Bacharach (1989)"
   - id: logical_why
-    criterion: "Each proposition states a mechanism, not just a correlation"
+    criterion: "Every proposition's mechanism field is filled in; its text is not judged"
     weight: 0.08
     severity_if_fail: warning
     citation: "Sutton & Staw (1995); Whetten (1989)"
@@ -71,7 +71,7 @@ items:
     severity_if_fail: warning
     citation: "Robinaugh et al. (2021); Guest & Martin (2021)"
   - id: derivation_chain
-    criterion: "Every prediction cites declared propositions, and the causal graph entails the claim it states, if any"
+    criterion: "Every prediction cites declared propositions, the causal graph entails any claim it states and contradicts no phenomenon's claim (a claim left unread because of a feedback loop warns)"
     weight: 0.08
     severity_if_fail: blocker
     citation: "Scheel et al. (2021); Szollosi et al. (2020)"

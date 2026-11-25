@@ -431,8 +431,11 @@ class Theory:
         formal-model type enums, the version block and the ``schema_version``
         pattern. It also covers numbers within [0, 1] where the schema asks for
         them, a prediction's ``bounds`` and ``test`` block and a test outcome's
-        ``estimate`` and ``se``. Last, it checks the type of every other field
-        and of every entry of a string array.
+        ``estimate`` and ``se``. It compares each prediction's type and its
+        claim's sign with its bounds, and reports a directional prediction
+        whose claim, with no ``given``, has the sign ``nonzero``, which states
+        no direction. Last, it checks the type of every other field and of
+        every entry of a string array.
 
         Besides the ids and references, which the schema cannot express, the
         full check is stricter than a JSON Schema 2020-12 validator in three
@@ -721,38 +724,44 @@ class Theory:
         # a different claim from the one post_data_severity() tests. An
         # existence claim allows every value but 0, which no bounds can state,
         # and a one-sided region would make post_data_severity() test a
-        # directional claim.
+        # directional claim. Last, with or without bounds, a directional
+        # prediction whose claim has the sign nonzero states no direction, so
+        # the label would pass the falsifiability item for a claim that forbids
+        # only zero. A claim with a given can only be zero or nonzero (item
+        # 15), so it is left to the statement.
         for i, p in enumerate(preds):
-            region = _bounds_region(_field(p, "bounds"))
-            if region is None:
-                continue
-            lo, up = region
-            both = lo is not None and up is not None
             ty = _field(p, "type")
-            if ty in ("point", "interval") and not both:
-                article = "an" if ty == "interval" else "a"
-                errors.append(f"prediction[{i}] is {article} {ty} claim, so its bounds need a "
-                              "finite lower and a finite upper")
-            elif ty == "directional" and both and lo != 0 and up != 0:
-                errors.append(f"prediction[{i}] is a directional claim, so its bounds must leave "
-                              "one side open or end at 0")
-            elif ty == "existence":
-                errors.append(f"prediction[{i}] is an existence claim, so it takes no bounds: the "
-                              "region it allows, every value but 0, is not one interval")
             claim = _field(p, "claim")
             sign = claim.get("sign") if isinstance(claim, dict) else None
-            if sign == "positive" and not (lo is not None and lo >= 0):
-                errors.append(f"prediction[{i}] claims a positive sign, so its lower bound must "
-                              "be 0 or above")
-            elif sign == "negative" and not (up is not None and up <= 0):
-                errors.append(f"prediction[{i}] claims a negative sign, so its upper bound must "
-                              "be 0 or below")
-            elif sign == "zero" and not ((lo is None or lo <= 0) and (up is None or up >= 0)):
-                errors.append(f"prediction[{i}] claims a zero sign, so its bounds must include 0")
-            elif sign == "nonzero" and not ((lo is not None and lo > 0)
-                                            or (up is not None and up < 0)):
-                errors.append(f"prediction[{i}] claims a nonzero sign, so its bounds must "
-                              "exclude 0")
+            region = _bounds_region(_field(p, "bounds"))
+            if region is not None:
+                lo, up = region
+                both = lo is not None and up is not None
+                if ty in ("point", "interval") and not both:
+                    article = "an" if ty == "interval" else "a"
+                    errors.append(f"prediction[{i}] is {article} {ty} claim, so its bounds need a "
+                                  "finite lower and a finite upper")
+                elif ty == "directional" and both and lo != 0 and up != 0:
+                    errors.append(f"prediction[{i}] is a directional claim, so its bounds must leave "
+                                  "one side open or end at 0")
+                elif ty == "existence":
+                    errors.append(f"prediction[{i}] is an existence claim, so it takes no bounds: the "
+                                  "region it allows, every value but 0, is not one interval")
+                if sign == "positive" and not (lo is not None and lo >= 0):
+                    errors.append(f"prediction[{i}] claims a positive sign, so its lower bound must "
+                                  "be 0 or above")
+                elif sign == "negative" and not (up is not None and up <= 0):
+                    errors.append(f"prediction[{i}] claims a negative sign, so its upper bound must "
+                                  "be 0 or below")
+                elif sign == "zero" and not ((lo is None or lo <= 0) and (up is None or up >= 0)):
+                    errors.append(f"prediction[{i}] claims a zero sign, so its bounds must include 0")
+                elif sign == "nonzero" and not ((lo is not None and lo > 0)
+                                                or (up is not None and up < 0)):
+                    errors.append(f"prediction[{i}] claims a nonzero sign, so its bounds must "
+                                  "exclude 0")
+            if ty == "directional" and sign == "nonzero" and not _str_list(claim.get("given")):
+                errors.append(f"prediction[{i}] is a directional claim, so its claim's sign cannot "
+                              "be nonzero, which states no direction")
 
         # 17: the fields of each entry, which the schema closes as it closes the
         # top level, since a misspelt severty or derives_form would drop what
@@ -1083,12 +1092,13 @@ class Theory:
         return self
 
     # -- mirrored public API --------------------------------------------------
-    def check(self) -> dict:
-        """The rigour report as a dict (see ``theoryforge.check``)."""
-        return _check(self.data)
+    def check(self, cycles: str = "refuse") -> dict:
+        """The checklist report as a dict (see ``theoryforge.check``). ``cycles="sigma"``
+        reads the claims of a causal graph with feedback loops by sigma-separation."""
+        return _check(self.data, cycles=cycles)
 
     def report(self, format: str = "json") -> str:
-        """The rigour report as a ``"json"`` or ``"html"`` string (see ``theoryforge.report``)."""
+        """The checklist report as a ``"json"`` or ``"html"`` string (see ``theoryforge.report``)."""
         return _report(self.data, format=format)
 
     def redundancy_check(self) -> list[dict]:

@@ -1,4 +1,4 @@
-# The methodology article's table of rigour checks quotes each criterion from
+# The methodology article's table of checks quotes each criterion from
 # the checklist the package ships, read when the article is built, so the table
 # changes with the checklist. These tests evaluate the article's `criteria`
 # chunk, which .Rbuildignore leaves out of the built package with the rest of

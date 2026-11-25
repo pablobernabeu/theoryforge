@@ -64,7 +64,9 @@ def test_appraisal_degenerating(fixtures_dir):
 def test_preregister_doc(panic_path):
     md = tf.read(panic_path).preregister()
     assert md.startswith("# Preregistration: Network theory of panic disorder\n")
-    assert "- Derivations check: yes" in md
+    # The causal graph has feedback loops, so the checklist leaves the claim of
+    # pred_indep unread under the default cycles = "refuse".
+    assert "- Derivations check: not checked (feedback loop)" in md
     assert "1. [point]" in md
     assert "- pred1: severity 1.0, risk 0.9" in md
     assert md.endswith("\n")
@@ -79,13 +81,19 @@ def test_preregister_names_the_rubric_for_what_it_is(panic_path):
 
 
 def test_new_diagrams(panic_path, weak_path):
-    rm_ok = tf.read(panic_path).diagram("development_roadmap")
+    rm_ok = tf.read(panic_path.with_name("panic-network-2026-v2.theory.yaml")).diagram(
+        "development_roadmap")
     assert '"all_checks_pass"' in rm_ok
-    assert 'label="Network theory of\\npanic disorder\\nscore 88.0, gate pass"' in rm_ok
+    assert 'label="Network theory of\\npanic disorder\\nchecklist score 89.8, gate pass"' in rm_ok
+    # A blocker that warns does not block the gate, so it is advisory.
+    rm_loop = tf.read(panic_path).diagram("development_roadmap")
+    assert "\\nloop warns)\\nadvisory\", fillcolor=\"#FBF1DC\"" in rm_loop
+    assert "blocks the gate" not in rm_loop
     rm_weak = tf.read(weak_path).diagram("development_roadmap")
     # The failed blocker leads, numbered first and stating what it costs.
-    assert ('"falsifiability" [label="1. falsifiability\\nAt least one\\nprediction forbids an'
-            '\\nobservation\\nblocks the gate", fillcolor="#F9E5E4"') in rm_weak
+    assert ('"falsifiability" [label="1. falsifiability\\nAt least one\\nprediction is typed'
+            '\\npoint, interval or\\ndirectional; the label\\nis the author\'s\\nblocks the gate", '
+            'fillcolor="#F9E5E4"') in rm_weak
     assert '"roadmap" -> "falsifiability";' in rm_weak
     # The advisories trail the blockers, laid out several to a row. parsimony
     # has nothing to assess and is left out.

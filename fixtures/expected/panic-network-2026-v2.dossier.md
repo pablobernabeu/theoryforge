@@ -3,7 +3,7 @@
 - Theory ID: panic-network-2026-v2
 - Content hash: sha256:f3020cfac6b850fa660d6254c516ac3e8303bcb3207ec9ebd4f1a441cf942ee5
 - Maturity: testing
-- Checklist version: 3.0
+- Checklist version: 3.1
 - Aggregate rigour score: 89.8/100 (87.0 to 91.5 under other weightings)
 - Checklist coverage: 0.92
 - Gate: pass
@@ -13,18 +13,18 @@
 
 | item | criterion | status | score | weight |
 | --- | --- | --- | --- | --- |
-| falsifiability | At least one prediction forbids an observation | pass | 1.0 | 0.15 |
-| precision | Predictions are point or interval claims whose bounds state the region, not merely directional | pass | 0.75 | 0.1 |
+| falsifiability | At least one prediction is typed point, interval or directional; the label is the author's | pass | 1.0 | 0.15 |
+| precision | Share of predictions typed point or interval with a finite lower and upper bound, at or above threshold; the width of the region is not read | pass | 0.75 | 0.1 |
 | risk_severity | Mean prediction riskiness (declared severity, else the claim-form rubric) at or above threshold | pass | 0.613 | 0.1 |
 | parsimony | No auxiliary assumption added for an anomaly (named in added_for) lacks independent corroboration | n/a | n/a | 0.08 |
 | non_redundancy | Every construct is defined, and no two have near-duplicate or contained definitions or one label, and no construct's measures are all listed for another (lexical screen) | pass | 1.0 | 0.1 |
 | construct_clarity | Every construct has definition + measurement + boundary conditions | pass | 1.0 | 0.08 |
 | scope | Boundary conditions explicitly stated | pass | 1.0 | 0.06 |
-| logical_why | Each proposition states a mechanism, not just a correlation | pass | 1.0 | 0.08 |
+| logical_why | Every proposition's mechanism field is filled in; its text is not judged | pass | 1.0 | 0.08 |
 | causal_testability | At least one proposition states a causal relation | pass | 1.0 | 0.06 |
 | diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, and not shown false where the claim and the rival's propositions are stated) | pass | 0.5 | 0.06 |
 | formalisation | A formal model of a recognised type (ode, abm, network, sem) is declared | pass | 1.0 | 0.05 |
-| derivation_chain | Every prediction cites declared propositions, and the causal graph entails the claim it states, if any | pass | 1.0 | 0.08 |
+| derivation_chain | Every prediction cites declared propositions, the causal graph entails any claim it states and contradicts no phenomenon's claim (a claim left unread because of a feedback loop warns) | pass | 1.0 | 0.08 |
 
 ## Severity (pre-data rubric of claim form)
 

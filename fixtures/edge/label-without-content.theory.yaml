@@ -1,0 +1,25 @@
+# Labels that the rest of the prediction does not bear out. Full validation
+# reports h1, a directional prediction whose claim has the sign nonzero and so
+# states no direction, but not h2, whose conditional claim can only be zero or
+# nonzero. It also reports h4, an interval label with one bound. The
+# claim-form rubric rates h3, a point label without bounds, and h4 as
+# directional claims, as the precision item gives them no credit, and h5, a
+# point label with two finite bounds, at the value of its type.
+schema_version: "1.1"
+id: "label-without-content"
+title: "Prediction types that the claim or the bounds do not support"
+maturity: "developing"
+constructs:
+  - {id: x, label: "X", definition: "The cause."}
+  - {id: m, label: "M", definition: "The mediator."}
+  - {id: y, label: "Y", definition: "The outcome."}
+propositions:
+  - {id: p1, from: x, to: m, relation: increases, mechanism: "It does."}
+  - {id: p2, from: m, to: y, relation: increases, mechanism: "It does."}
+  - {id: p3, from: x, to: y, relation: increases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "x changes y.", type: directional, derives_from: [p1, p2], claim: {kind: effect, x: x, y: y, sign: nonzero}}
+  - {id: h2, statement: "x raises y beyond m.", type: directional, derives_from: [p3], claim: {kind: association, x: x, y: y, given: [m], sign: nonzero}}
+  - {id: h3, statement: "The effect of x on y is 0.3.", type: point, derives_from: [p1, p2]}
+  - {id: h4, statement: "The effect of x on y is at least 0.2.", type: interval, derives_from: [p1, p2], bounds: {lower: 0.2}}
+  - {id: h5, statement: "The effect of x on y is 0.3, within 0.05.", type: point, derives_from: [p1, p2], bounds: {lower: 0.25, upper: 0.35}}

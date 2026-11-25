@@ -3,7 +3,7 @@
   "validate": true,
   "validate_full": true,
   "check": {
-    "aggregate_score": 43.5,
+    "aggregate_score": 34.8,
     "coverage": 0.92,
     "gate": "pass",
     "n_blockers_failed": 0,
@@ -65,8 +65,8 @@
       },
       {
         "id": "derivation_chain",
-        "status": "pass",
-        "score": 1.0
+        "status": "warn",
+        "score": 0.0
       }
     ]
   },
@@ -400,5 +400,5 @@
       ]
     ]
   },
-  "preregister": "# Preregistration: Signs through simple feedback loops\n\n- Theory ID: loop-signs\n- Schema version: 1.1\n- Content hash: sha256:b8e3e0bc462f57d039996ed46f3817313f1813d4418c38d603dd612f139582ba\n- Maturity: developing\n- Derivations check: yes\n\n## Theory\n\n### Constructs\n- x (X): A construct.\n- y (Y): A construct.\n- z (Z): A construct.\n- s (S): A construct.\n- v (V): A construct.\n\n### Propositions\n- p1: x increases y. Mechanism: It does.\n- p2: y increases z. Mechanism: It does.\n- p3: z decreases y. Mechanism: It does.\n- p4: s increases v. Mechanism: It does.\n- p5: v decreases v. Mechanism: It does.\n\n## Hypotheses\n1. [directional] x raises z. (h1; derives from: p1, p2)\n   - Claim: the effect of x on z is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n2. [directional] x raises y. (h2; derives from: p1)\n   - Claim: the effect of x on y is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n3. [directional] x and z rise together. (h3; derives from: p1, p2)\n   - Claim: x and z are positively associated; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n4. [directional] y and z rise together. (h4; derives from: p2)\n   - Claim: y and z are positively associated; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n5. [directional] s raises v. (h5; derives from: p4)\n   - Claim: the effect of s on v is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_Not derived: the causal graph has a feedback loop, y -> z -> y. With cycles = 'sigma', the statements are read by sigma-separation and hold if each loop settles to a unique equilibrium._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.3, risk 0.4\n- h3: severity 0.3, risk 0.4\n- h4: severity 0.3, risk 0.4\n- h5: severity 0.3, risk 0.4\n"
+  "preregister": "# Preregistration: Signs through simple feedback loops\n\n- Theory ID: loop-signs\n- Schema version: 1.1\n- Content hash: sha256:b8e3e0bc462f57d039996ed46f3817313f1813d4418c38d603dd612f139582ba\n- Maturity: developing\n- Derivations check: not checked (feedback loop)\n\n## Theory\n\n### Constructs\n- x (X): A construct.\n- y (Y): A construct.\n- z (Z): A construct.\n- s (S): A construct.\n- v (V): A construct.\n\n### Propositions\n- p1: x increases y. Mechanism: It does.\n- p2: y increases z. Mechanism: It does.\n- p3: z decreases y. Mechanism: It does.\n- p4: s increases v. Mechanism: It does.\n- p5: v decreases v. Mechanism: It does.\n\n## Hypotheses\n1. [directional] x raises z. (h1; derives from: p1, p2)\n   - Claim: the effect of x on z is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n2. [directional] x raises y. (h2; derives from: p1)\n   - Claim: the effect of x on y is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n3. [directional] x and z rise together. (h3; derives from: p1, p2)\n   - Claim: x and z are positively associated; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n4. [directional] y and z rise together. (h4; derives from: p2)\n   - Claim: y and z are positively associated; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n5. [directional] s raises v. (h5; derives from: p4)\n   - Claim: the effect of s on v is positive; not evaluated, since the causal graph has a feedback loop\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_Not derived: the causal graph has a feedback loop, y -> z -> y. With cycles = 'sigma', the statements are read by sigma-separation and hold if each loop settles to a unique equilibrium._\n\n## Severity (pre-data rubric of claim form)\n- h1: severity 0.3, risk 0.4\n- h2: severity 0.3, risk 0.4\n- h3: severity 0.3, risk 0.4\n- h4: severity 0.3, risk 0.4\n- h5: severity 0.3, risk 0.4\n"
 }

@@ -73,7 +73,8 @@ NULL
 #'   tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
 #'   tf_add_proposition("p1", "c_arousal", "c_threat", "causes",
 #'                      mechanism = "Activation raises salience of threat cues.") |>
-#'   tf_add_prediction("h1", "Effect is exactly 0.30.", "point")
+#'   tf_add_prediction("h1", "The effect is 0.30, within 0.05.", "point",
+#'                     derives_from = "p1", bounds = list(lower = 0.25, upper = 0.35))
 #' cat(tf_dossier(theory))
 #' @export
 tf_dossier <- function(theory, cycles = "refuse") {

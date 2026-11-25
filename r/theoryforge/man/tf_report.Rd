@@ -2,7 +2,7 @@
 % Please edit documentation in R/rigor.R
 \name{tf_report}
 \alias{tf_report}
-\title{Render the rigour report as a string}
+\title{Render the checklist report as a string}
 \usage{
 tf_report(theory, format = "json")
 }
@@ -17,12 +17,15 @@ A single string.
 \description{
 Renders the result of \code{\link[=tf_check]{tf_check()}} as a string. \code{format = "json"}
 returns valid, pretty-printed JSON. \code{format = "html"} returns an HTML
-fragment in which every interpolated value is escaped. Any other
+fragment in which every interpolated value is escaped. It gives the
+checklist score with its range and the gate, the statement of what the score
+describes, and a table of the items with the criterion each applies, its
+status and score and the works from which the criterion is drawn. Any other
 \code{format} stops, and so does a theory that \code{\link[=tf_check]{tf_check()}} refuses.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
-  tf_add_prediction("h1", "Arousal precedes threat appraisal.", "point")
+  tf_add_prediction("h1", "Arousal precedes threat appraisal.", "directional")
 cat(tf_report(theory, format = "json"))
 }
