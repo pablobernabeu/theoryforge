@@ -26,7 +26,7 @@ invisible(lapply(.tf_app_files, source))
 
 # Pre-seed the resource caches from the vendored files, so the package never
 # needs system.file() (which only resolves for an installed package).
-.tf_cache$checklist <- yaml::read_yaml("/tf/schema/rigor_checklist.yaml")
+.tf_cache$checklist <- yaml::read_yaml("/tf/schema/rigor_checklist.yaml", eval.expr = FALSE)
 .tf_cache$theory_schema <- jsonlite::fromJSON("/tf/schema/theory.schema.json", simplifyVector = FALSE)
 .tf_cache$fold <- .tf_fold_compile(jsonlite::fromJSON("/tf/schema/fold.json", simplifyVector = FALSE))
 
