@@ -27,7 +27,7 @@ The editor shows the theory as forms, one card for each construct, proposition,
 phenomenon, prediction, auxiliary assumption, alternative, evidence entry and test
 outcome, beside a source pane that holds the same theory as YAML or JSON. Either can
 be edited. The app hands each version to the engine, which reads it with the
-package's reader, validates it in full and scores it with the rigour checklist, so
+package's reader, validates it in full and scores it with the checklist, so
 the problems shown beside the fields and the score and gate above them are the
 package's own. A change in the forms rewrites the source with the package's writer,
 which keeps no comments, and a change in the source rebuilds the forms. New theory
@@ -36,7 +36,7 @@ the theory as YAML with `tf_write()` or `Theory.write()`, so the file reads back
 the same theory in either package.
 
 Each load of an example or a file runs the package's full validation, and the theory card
-says whether the theory is valid or how many problems it has. A file that cannot be read
+says whether the file is well-formed or how many problems it has. A file that cannot be read
 leaves the previous theory loaded. The apps keep the session and the theme in the
 browser's storage when it is available and run without it when the browser blocks it.
 
@@ -53,8 +53,8 @@ the reader leaves the button disabled.
 
 ## Operations
 
-The operations are grouped by what they are for. Assess holds the rigour checklist, full
-validation, the severity rubric, post-data severity and the redundancy screen. Derive
+The operations are grouped by what they are for. Assess holds the checklist, full
+validation, the claim-form rubric, post-data severity and the redundancy screen. Derive
 holds the implied independencies, what the causal graph entails, equivalent models and
 the lavaan syntax. Compare sets the theory against a rival (an alternative that states
 propositions, or an uploaded theory) and appraises an amendment against a prior version.
@@ -67,8 +67,10 @@ on panic disorder or an uploaded corpus, with the theme method, min_df and max_d
 `litmap()`'s other settings at their defaults, since `landscape()` takes no min_df or
 max_df.
 
-The amendment appraisal defaults to the version the loaded theory declares as its parent
-and otherwise waits for a prior to be chosen or uploaded. The runtimes read each
+The checklist takes the cycles setting where the package's `check()` does, and the
+theory card and the editor show the score under the default, refuse. The amendment
+appraisal defaults to the version the loaded theory declares as its parent and otherwise
+waits for a prior to be chosen or uploaded. The runtimes read each
 example's version record when the app starts.
 
 The apps make no network request for data. The literature operations read the corpora

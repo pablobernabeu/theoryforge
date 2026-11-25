@@ -39,11 +39,11 @@ const LOGO = path.join(repo, "r", "theoryforge", "man", "figures", "logo.svg");
 // parenthetical in each name is that theory's own `maturity` field.
 const EXAMPLES = [
   { name: "Panic disorder network (developing)", file: "panic-network.theory.yaml", src: FIXTURES,
-    desc: "A well-developed network theory of panic: arousal and perceived threat form a feedback loop that drives avoidance. Every applicable rigour checklist item passes." },
+    desc: "A network theory of panic in which arousal and perceived threat form a feedback loop that drives avoidance. It was invented to show every operation, and its test outcomes and registrations are illustrative." },
   { name: "Panic network, amended v2 (testing)", file: "panic-network-2026-v2.theory.yaml", src: FIXTURES,
-    desc: "An amended version of the panic theory at the testing stage, with a fourth prediction and test outcomes." },
+    desc: "An amended version of the invented panic network, with a fourth prediction derived from a new proposition. Its test outcomes and registrations are illustrative." },
   { name: "Self-determination theory (developing)", file: "self-determination.theory.yaml", src: APP_EXAMPLES,
-    desc: "Three basic needs driving intrinsic motivation, a simplified encoding of Ryan & Deci (2000). The checklist warns on precision and formalisation, and each prediction states a claim the causal graph entails." },
+    desc: "Three basic needs driving intrinsic motivation, a simplified encoding of Ryan & Deci (2000). Each prediction states a machine-readable claim about two constructs." },
   { name: "Effort-recovery regulation (developing)", file: "effort-recovery.theory.yaml", src: APP_EXAMPLES,
     desc: "A negative feedback loop: fatigue overshoots its resting level of zero while recovery peaks, a damped oscillation that keeps the curves distinct. Lower damping to 0.1 and raise steps to 150 to see it cycle." },
   { name: "Happy vowel, Manchester English (testing)", file: "happy-vowel-manchester.theory.yaml", src: APP_EXAMPLES,
@@ -58,7 +58,7 @@ const EXAMPLES = [
   // maturity the checklist runs in advisory mode and the gate can never be
   // blocked, and a blocked gate is the one thing this example exists to show.
   { name: "Deliberately weak theory (building)", file: "weak-theory.theory.yaml", src: FIXTURES,
-    desc: "An underspecified theory kept as a worked example of what the checklist catches. Its gate is blocked." },
+    desc: "A theory that states few of the fields the checklist reads, kept as a worked example of how the checklist reports what is missing." },
   // Appended, so the examples before it keep their places in the list.
   { name: "Modality switching (developing)", file: "modality-switching.theory.yaml", src: FIXTURES,
     desc: "An acyclic theory of grounded conceptual processing. Implied independencies derives six statements from it, among them the independence its fourth prediction tests." },
