@@ -34,21 +34,27 @@ def test_severity_rubric(panic_path):
     assert sev["pred3"]["computed_severity"] == 0.3
 
 
-def test_appraisal_progressive(fixtures_dir):
+def test_appraisal_of_the_shipped_amendment(fixtures_dir):
     # v2 drops pred_indep, which a test refuted, adds proposition p4 and derives
     # pred4 from it, and a registered test corroborates pred4: new content that
-    # survived a test. The one implication p4 withdraws is the refuted one.
+    # survived a test. The one implication p4 withdraws is the refuted one. But
+    # p4 and the unsigned p3 open a route from threat to avoidance through
+    # arousal whose sign is open, so v2 gives up the positive effect of threat
+    # on avoidance that v1 entails, and the amendment is neutral.
     v1 = tf.read(fixtures_dir / "panic-network.theory.yaml")
     v2 = tf.read(fixtures_dir / "panic-network-2026-v2.theory.yaml")
     assert v2.appraise_amendment(v1) == {
-        "verdict": "progressive", "new_predictions": ["pred4"], "corroborated_new": ["pred4"],
+        "verdict": "neutral", "new_predictions": ["pred4"], "corroborated_new": ["pred4"],
         "ad_hoc_assumptions": [], "articulated": [], "underived": [],
         "corroborated_new_registered": ["pred4"], "renamed": [], "dropped": ["pred_indep"],
         "dropped_corroborated": [], "content_lost": [], "new_anomalies": [], "assumptions": [],
         "theoretically_progressive": True, "empirically_progressive": True, "revised": [],
         "weakened_refuted": [], "unresolved": [], "implications_compared": True,
         "implications_lost": ["c_arousal _||_ c_avoidance | c_perceived_threat"],
-        "implications_lost_unrefuted": [], "implications_gained": [],
+        "implications_lost_unrefuted": [], "implications_gained": [], "entailments_lost": [],
+        "signs_lost": ["effect of c_perceived_threat on c_avoidance: positive"],
+        "protected_only": [], "refuted_new": [],
+        "corroborated_new_severity": [{"id": "pred4", "severity": None}],
     }
 
 

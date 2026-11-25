@@ -29,8 +29,8 @@ and test outcomes, and computes what that file commits the theory to. It scores
 the theory against a checklist of rigour criteria drawn from the methodology
 literature, derives the independencies and signed effects its causal graph
 implies, grades how risky each prediction is and how severely it has been
-tested, and appraises whether an amendment adds content or only shields the
-theory from an anomaly.
+tested, and appraises, by fixed rules that borrow Lakatos's terms, whether an
+amendment adds content or only shields the theory from an anomaly.
 
 ```{r setup}
 library(theoryforge)

@@ -18,6 +18,10 @@ S4 = ("Blocking interoceptive feedback lowers avoidance-task scores by 30 per ce
 # arousal to avoidance withdraws it, and the failed test of pred_indep refutes it.
 LOST = "c_arousal _||_ c_avoidance | c_perceived_threat"
 
+# The sign v1 entails and the shipped v2 gives up: with p3 unsigned, the new
+# route from threat through arousal to avoidance leaves the effect open.
+SIGN = "effect of c_perceived_threat on c_avoidance: positive"
+
 # The record of an amendment that changes nothing, keys in the order of API_SPEC.md section 10.
 EMPTY = {
     "verdict": "neutral",
@@ -42,15 +46,39 @@ EMPTY = {
     "implications_lost": [],
     "implications_lost_unrefuted": [],
     "implications_gained": [],
+    "entailments_lost": [],
+    "signs_lost": [],
+    "protected_only": [],
+    "refuted_new": [],
+    "corroborated_new_severity": [],
 }
 
 
 def _record(**changes):
-    return {**EMPTY, **changes}
+    """EMPTY with ``changes``. Unless the changes say otherwise, each corroborated
+    new prediction has no post-data severity, since no outcome records an estimate."""
+    out = {**EMPTY, **changes}
+    if "corroborated_new_severity" not in changes:
+        out["corroborated_new_severity"] = [{"id": i, "severity": None}
+                                            for i in sorted(out["corroborated_new"])]
+    return out
 
 
 def _v1(fixtures_dir):
     return tf.read(fixtures_dir / "panic-network.theory.yaml").data
+
+
+def _signed_p3(theory):
+    """``theory`` with p3, from threat to arousal, stated as ``increases``.
+
+    Adding p4 to the panic example then keeps every sign v1 entails, so the
+    cases built on it test one rule at a time.
+    """
+    t = copy.deepcopy(theory)
+    for p in t["propositions"]:
+        if p["id"] == "p3":
+            p["relation"] = "increases"
+    return t
 
 
 def _edge(fixtures_dir, name):
@@ -59,7 +87,7 @@ def _edge(fixtures_dir, name):
 
 def _with_failed_pred2(fixtures_dir):
     """The panic example with a failed test of pred2, the anomaly the rescue cases answer."""
-    prior = _v1(fixtures_dir)
+    prior = _signed_p3(_v1(fixtures_dir))
     prior["test_outcomes"].append({"prediction_id": "pred2", "passed": False})
     return prior
 
@@ -78,7 +106,8 @@ def _with_p4(theory):
 
 
 def _p4_record(**changes):
-    """The record of ``_with_p4(v1)``: corroborated new content and the refuted independence lost."""
+    """The record of ``_with_p4(v1)`` with p3 signed: corroborated new content and the
+    refuted independence lost."""
     return _record(**{"verdict": "progressive", "new_predictions": ["pred4"],
                       "corroborated_new": ["pred4"], "corroborated_new_registered": ["pred4"],
                       "theoretically_progressive": True, "empirically_progressive": True,
@@ -95,9 +124,17 @@ def test_the_record_keeps_its_fields_in_order(fixtures_dir):
 
 def test_the_shipped_amendment_answers_a_refuted_independence(fixtures_dir):
     # v2 drops pred_indep, which a test refuted, and adds p4 and pred4. The
-    # independence p4 withdraws is the refuted one, so no content is lost.
+    # independence p4 withdraws is the refuted one. But p3 states no sign, so
+    # p4 opens a route from threat to avoidance through arousal whose sign is
+    # open, and v2 no longer entails the positive effect of threat on
+    # avoidance that v1 entails. That is content lost.
     v1 = _v1(fixtures_dir)
     v2 = tf.read(fixtures_dir / "panic-network-2026-v2.theory.yaml").data
+    assert tf.appraise_amendment(v2, v1) == _p4_record(
+        verdict="neutral", dropped=["pred_indep"], signs_lost=[SIGN])
+    # With p3 stated as increases in both versions, no sign is lost and the
+    # amendment is progressive.
+    v1, v2 = _signed_p3(v1), _signed_p3(v2)
     assert tf.appraise_amendment(v2, v1) == _p4_record(dropped=["pred_indep"])
     # Had the test of pred_indep passed, v2 would give up a corroborated
     # prediction and an unrefuted implication.
@@ -164,13 +201,13 @@ def test_a_claim_the_prior_graph_entails_is_an_articulation(fixtures_dir):
 
 def test_failed_replications_leave_a_new_prediction_mixed(fixtures_dir):
     # D1: one pass and two failures make pred4 mixed, which is not corroborated.
-    v1 = _v1(fixtures_dir)
+    v1 = _signed_p3(_v1(fixtures_dir))
     new = _with_p4(v1)
     new["test_outcomes"] += [{"prediction_id": "pred4", "passed": False} for _ in range(2)]
     assert prediction_status("pred4", new["test_outcomes"]) == "mixed"
     assert tf.appraise_amendment(new, v1) == _p4_record(
         verdict="neutral", corroborated_new=[], corroborated_new_registered=[],
-        empirically_progressive=False)
+        empirically_progressive=False, refuted_new=["pred4"])
 
 
 def test_a_renamed_prediction_is_not_new(fixtures_dir):
@@ -265,8 +302,11 @@ def test_a_free_text_added_for_still_marks_a_rescue(fixtures_dir):
 
 def test_a_corroborated_new_prediction_clears_the_assumption_that_yields_it(fixtures_dir):
     # I16 case C. pred5 derives from the unchanged p2 but needs the new
-    # assumption, so it is new content and not an articulation. While pred5 is
-    # untested, the assumption is ad hoc (ad_hoc2), and its corroboration clears it.
+    # assumption, so it is new content and not an articulation, and its
+    # novelty rests on that declaration (protected_only). While pred5 is
+    # untested, the assumption is pending, not ad hoc, and the amendment is
+    # neutral. Its corroboration clears the assumption, and its failure makes
+    # it ad hoc (ad_hoc2).
     prior = _with_failed_pred2(fixtures_dir)
     new = copy.deepcopy(prior)
     new["predictions"].append({
@@ -275,20 +315,28 @@ def test_a_corroborated_new_prediction_clears_the_assumption_that_yields_it(fixt
     new["auxiliary_assumptions"].append({
         "id": "aux_baseline", "statement": "Exposure works through habituation of high avoidance.",
         "added_for": "pred2", "protects": ["pred2", "pred5", "pred5"]})
+
+    def rescue(cls, status):
+        return [{"id": "aux_baseline", "added_for": "pred2", "class": cls,
+                 "independent": [{"id": "pred5", "status": status}], "added_for_inferred": False,
+                 "change": "new"}]
+
     assert tf.appraise_amendment(new, prior) == _record(
-        verdict="degenerating", new_predictions=["pred5"], ad_hoc_assumptions=["aux_baseline"],
-        assumptions=[{"id": "aux_baseline", "added_for": "pred2", "class": "ad_hoc2",
-                      "independent": [{"id": "pred5", "status": "untested"}], "added_for_inferred": False,
-                      "change": "new"}],
-        theoretically_progressive=True)
-    new["test_outcomes"].append({"prediction_id": "pred5", "passed": True, "registered": "osf.io/x"})
-    assert tf.appraise_amendment(new, prior) == _record(
+        new_predictions=["pred5"], assumptions=rescue("pending", "untested"),
+        theoretically_progressive=True, protected_only=["pred5"])
+    passed = copy.deepcopy(new)
+    passed["test_outcomes"].append({"prediction_id": "pred5", "passed": True, "registered": "osf.io/x"})
+    assert tf.appraise_amendment(passed, prior) == _record(
         verdict="progressive", new_predictions=["pred5"], corroborated_new=["pred5"],
         corroborated_new_registered=["pred5"],
-        assumptions=[{"id": "aux_baseline", "added_for": "pred2", "class": "independently_corroborated",
-                      "independent": [{"id": "pred5", "status": "corroborated"}],
-                      "added_for_inferred": False, "change": "new"}],
-        theoretically_progressive=True, empirically_progressive=True)
+        assumptions=rescue("independently_corroborated", "corroborated"),
+        theoretically_progressive=True, empirically_progressive=True, protected_only=["pred5"])
+    failed = copy.deepcopy(new)
+    failed["test_outcomes"].append({"prediction_id": "pred5", "passed": False})
+    assert tf.appraise_amendment(failed, prior) == _record(
+        verdict="degenerating", new_predictions=["pred5"], ad_hoc_assumptions=["aux_baseline"],
+        assumptions=rescue("ad_hoc2", "refuted"), theoretically_progressive=True,
+        protected_only=["pred5"], refuted_new=["pred5"])
 
 
 def test_only_an_assumption_added_for_an_anomaly_is_appraised(fixtures_dir):
@@ -341,7 +389,9 @@ def test_an_assumption_that_protects_a_failed_prediction_answers_it(fixtures_dir
     ({}, None),
     ({"statement": "c2 rises with c1 by half an SD, within 0.1."}, "reworded"),
     ({"statement": "  c2 rises 0.5 SD per SD of c1,\n within 0.1. "}, None),
-    ({"type": "interval"}, "weakened"),
+    ({"type": "interval"}, "changed"),
+    ({"type": "interval", "bounds": {"lower": 0.3, "upper": 0.7}}, "weakened"),
+    ({"type": "existence", "bounds": None}, "weakened"),
     ({"type": "directional", "bounds": None, "claim": None}, "weakened"),
     ({"type": "banana"}, "changed"),
     ({"bounds": {"lower": 0.3, "upper": 0.7}}, "weakened"),
@@ -357,13 +407,14 @@ def test_an_assumption_that_protects_a_failed_prediction_answers_it(fixtures_dir
     ({"claim": {"kind": "effect", "x": "c2", "y": "c1", "sign": "positive"}}, "changed"),
     ({"claim": {"kind": "effect", "x": "c1", "y": "c2", "sign": "upward"}}, "weakened"),
     ({"claim": None}, "weakened"),
-    ({"type": "directional", "bounds": {"lower": 0.45, "upper": 0.55}}, "changed"),
-    ({"type": "interval", "claim": {"kind": "effect", "x": "c1", "y": "c2", "sign": "negative"}}, "weakened"),
+    ({"type": "directional", "bounds": {"lower": 0.45, "upper": 0.55}}, "strengthened"),
+    ({"type": "interval", "claim": {"kind": "effect", "x": "c1", "y": "c2", "sign": "negative"}}, "changed"),
 ])
 def test_a_retained_prediction_is_compared_by_type_bounds_and_claim(fixtures_dir, change, expected):
     # Each case revises h1 of amend-prior, a point prediction with the region
     # [0.4, 0.6] and a positive effect of c1 on c2. A None in `change` removes
-    # the field.
+    # the field. Since h1 states a region, its type label alone neither
+    # weakens nor strengthens it, so relabelling cannot hide a wider region.
     prior = _edge(fixtures_dir, "amend-prior")
     new = copy.deepcopy(prior)
     for key, value in change.items():
@@ -415,6 +466,19 @@ def test_a_claim_is_stronger_than_none_and_a_fixed_sign_than_nonzero(before, aft
     assert tf.appraise_amendment(theory(after), theory(before))["revised"] == revised
 
 
+@pytest.mark.parametrize(("before", "after", "expected"), [
+    ("point", "existence", "weakened"),
+    ("existence", "directional", "strengthened"),
+    ("interval", "banana", "changed"),
+])
+def test_the_type_ranks_only_when_neither_version_states_a_region(before, after, expected):
+    def theory(kind):
+        return {"predictions": [{"id": "h", "statement": "S", "type": kind}]}
+
+    assert tf.appraise_amendment(theory(after), theory(before))["revised"] == [
+        {"id": "h", "change": expected}]
+
+
 def test_a_refuted_prediction_weakened_after_its_test_degenerates(fixtures_dir):
     # amend-weakened rewrites the refuted h1 as an existence claim.
     prior = _edge(fixtures_dir, "amend-prior")
@@ -432,6 +496,12 @@ def test_a_refuted_prediction_weakened_after_its_test_degenerates(fixtures_dir):
     assert tf.appraise_amendment(widened, prior) == _record(
         verdict="degenerating", renamed=[{"prior": "h1", "new": "h1_wide"}],
         revised=[{"id": "h1_wide", "change": "weakened"}], weakened_refuted=["h1_wide"])
+    # D14: relabelling the widened region as an interval does not hide it.
+    relabelled = copy.deepcopy(prior)
+    relabelled["predictions"][0]["bounds"] = {"lower": 0.2, "upper": 0.8}
+    relabelled["predictions"][0]["type"] = "interval"
+    assert tf.appraise_amendment(relabelled, prior) == _record(
+        verdict="degenerating", revised=[{"id": "h1", "change": "weakened"}], weakened_refuted=["h1"])
 
 
 def test_weakening_an_untested_prediction_loses_content(fixtures_dir):
@@ -532,7 +602,9 @@ def test_an_assumption_rewritten_under_its_id_is_appraised(fixtures_dir):
     needs["predictions"].append(h4)
     needs["auxiliary_assumptions"][0]["protects"] = ["h1", "h4"]
     result = tf.appraise_amendment(needs, prior)
-    assert (result["articulated"], result["ad_hoc_assumptions"]) == ([], ["a1"])
+    assert (result["articulated"], result["protected_only"], result["ad_hoc_assumptions"]) == (
+        [], ["h4"], [])
+    assert result["assumptions"][0]["class"] == "pending"
     assert result["assumptions"][0]["independent"] == [{"id": "h4", "status": "untested"}]
     # Whitespace, added_for and protects alone do not revise an assumption.
     kept = copy.deepcopy(needs)
@@ -599,7 +671,7 @@ def test_dropping_untested_predictions_loses_content(fixtures_dir):
 
 
 def test_dropping_a_corroborated_prediction_blocks_a_progressive_verdict(fixtures_dir):
-    v1 = _v1(fixtures_dir)
+    v1 = _signed_p3(_v1(fixtures_dir))
     new = _with_p4(v1)
     new["predictions"] = [p for p in new["predictions"] if p["id"] != "pred1"]
     new["test_outcomes"] = [t for t in new["test_outcomes"] if t["prediction_id"] != "pred1"]
@@ -609,7 +681,7 @@ def test_dropping_a_corroborated_prediction_blocks_a_progressive_verdict(fixture
 
 def test_a_failed_replication_of_retained_content_is_a_new_anomaly(fixtures_dir):
     # D5. An anomaly is reported and never decides the verdict.
-    v1 = _v1(fixtures_dir)
+    v1 = _signed_p3(_v1(fixtures_dir))
     new = copy.deepcopy(v1)
     new["test_outcomes"].append({"prediction_id": "pred1", "passed": False, "registered": "osf.io/klmno"})
     assert tf.appraise_amendment(new, v1) == _record(new_anomalies=["pred1"])
@@ -627,7 +699,7 @@ def test_a_failed_replication_of_retained_content_is_a_new_anomaly(fixtures_dir)
 
 def test_an_unregistered_pass_corroborates_but_is_not_reported_as_registered(fixtures_dir):
     # D7: registered is read for the report key alone.
-    v1 = _v1(fixtures_dir)
+    v1 = _signed_p3(_v1(fixtures_dir))
     for registered in (None, " "):
         new = _with_p4(v1)
         new["test_outcomes"][-1]["registered"] = registered
@@ -656,9 +728,192 @@ def test_propositions_are_compared_by_content_not_by_id(fixtures_dir):
     renamed["test_outcomes"].append({"prediction_id": "pred5", "passed": True})
     result = tf.appraise_amendment(renamed, v1)
     assert (result["verdict"], result["articulated"]) == ("neutral", ["pred5"])
+    # Reversing p2 makes pred5 new content, and gives up the positive effects
+    # of arousal and threat on avoidance that v1 entails, so content is lost.
     changed = copy.deepcopy(v1)
     changed["propositions"][1]["relation"] = "decreases"
     changed["predictions"].append({**pred5, "derives_from": ["p2"]})
     changed["test_outcomes"].append({"prediction_id": "pred5", "passed": True})
     result = tf.appraise_amendment(changed, v1)
-    assert (result["verdict"], result["articulated"]) == ("progressive", [])
+    assert (result["verdict"], result["articulated"], result["signs_lost"]) == (
+        "neutral", [], ["effect of c_arousal on c_avoidance: positive", SIGN])
+
+
+# -- What the amendment gives up and what its new content rests on -------------
+# The cases below amend amend-prior and amend-prior-corroborated in
+# fixtures/edge. GAINED is what adding c4 and p3 from c3 to c4 adds.
+
+GAINED = ["c1 _||_ c4 | c3", "c2 _||_ c4 | c1, c3"]
+
+
+def _new_h3(**changes):
+    """The record of an amendment that adds c4, p3 and a corroborated h3 derived from it."""
+    return _record(**{"new_predictions": ["h3"], "corroborated_new": ["h3"],
+                      "theoretically_progressive": True, "empirically_progressive": True,
+                      "implications_gained": GAINED, **changes})
+
+
+def test_a_reversed_proposition_loses_the_entailment_of_a_corroborated_claim(fixtures_dir):
+    # amend-sign-flip (c1b): p1 now lowers c2, so the new graph contradicts the
+    # corroborated h1, which states that c1 raises c2.
+    prior = _edge(fixtures_dir, "amend-prior-corroborated")
+    new = _edge(fixtures_dir, "amend-sign-flip")
+    signs = ["effect of c1 on c2: positive", "effect of c1 on c3: positive"]
+    assert tf.appraise_amendment(new, prior) == _new_h3(
+        verdict="neutral", content_lost=["h1"], signs_lost=signs,
+        entailments_lost=[{"id": "h1", "prior": "entailed", "new": "contradicted"}])
+    # Under a new id, h1 is renamed and listed under that id.
+    renamed = copy.deepcopy(new)
+    renamed["predictions"][0]["id"] = "h1_v2"
+    renamed["test_outcomes"][0]["prediction_id"] = "h1_v2"
+    result = tf.appraise_amendment(renamed, prior)
+    assert (result["content_lost"], result["entailments_lost"]) == (
+        ["h1_v2"], [{"id": "h1_v2", "prior": "entailed", "new": "contradicted"}])
+    # Untested in the prior, h1 is unrefuted content too.
+    untested = copy.deepcopy(prior)
+    untested["test_outcomes"] = []
+    assert tf.appraise_amendment(new, untested)["content_lost"] == ["h1"]
+    # Refuted in the prior, its claim was refuted content, and so was the sign
+    # of the effect of c1 on c2 that it states. Only the sign of the effect of
+    # c1 on c3 is then lost.
+    refuted = copy.deepcopy(prior)
+    refuted["test_outcomes"][0]["passed"] = False
+    result = tf.appraise_amendment(new, refuted)
+    assert (result["content_lost"], result["entailments_lost"], result["signs_lost"]) == (
+        [], [], ["effect of c1 on c3: positive"])
+    # A failed claim that the effect is nonzero refutes either sign of it.
+    nonzero = copy.deepcopy(refuted)
+    nonzero["predictions"][0]["claim"]["sign"] = "nonzero"
+    assert tf.appraise_amendment(new, nonzero)["signs_lost"] == ["effect of c1 on c3: positive"]
+
+
+def test_a_retained_prediction_is_counted_once_in_content_lost(fixtures_dir):
+    # h1 is both weakened, from a directional claim to an existence claim with
+    # its region dropped, and no longer entailed.
+    prior = _edge(fixtures_dir, "amend-prior-corroborated")
+    new = _edge(fixtures_dir, "amend-sign-flip")
+    new["predictions"][0]["type"] = "existence"
+    del new["predictions"][0]["bounds"]
+    result = tf.appraise_amendment(new, prior)
+    assert (result["content_lost"], result["revised"]) == (["h1"], [{"id": "h1", "change": "weakened"}])
+    assert result["entailments_lost"] == [{"id": "h1", "prior": "entailed", "new": "contradicted"}]
+
+
+def test_an_unsigned_proposition_leaves_a_corroborated_claim_undetermined(fixtures_dir):
+    # amend-weakened-sign (V2): p1 restated as causes.
+    prior = _edge(fixtures_dir, "amend-prior-corroborated")
+    new = _edge(fixtures_dir, "amend-weakened-sign")
+    assert tf.appraise_amendment(new, prior) == _new_h3(
+        verdict="neutral", content_lost=["h1"],
+        signs_lost=["effect of c1 on c2: positive", "effect of c1 on c3: positive"],
+        entailments_lost=[{"id": "h1", "prior": "entailed", "new": "undetermined"}])
+    # Without p1, the new graph no longer relates c1, so the claim is not evaluated.
+    dropped = copy.deepcopy(new)
+    dropped["propositions"] = dropped["propositions"][1:]
+    assert tf.appraise_amendment(dropped, prior)["entailments_lost"] == [
+        {"id": "h1", "prior": "entailed", "new": "not_evaluated"}]
+
+
+def test_a_sign_no_prediction_states_is_content(fixtures_dir):
+    # amend-lost-sign (C4): reversing p2 gives up the positive effects of c1
+    # and c2 on c3, which no prediction states.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-lost-sign")
+    assert tf.appraise_amendment(new, prior) == _new_h3(
+        verdict="neutral", signs_lost=["effect of c1 on c3: positive", "effect of c2 on c3: positive"])
+    # A sign the new graph cannot derive, because no proposition relates c3
+    # once p2 is dropped, is lost too.
+    dropped = copy.deepcopy(prior)
+    dropped["propositions"] = dropped["propositions"][:1]
+    result = tf.appraise_amendment(dropped, prior)
+    assert result["signs_lost"] == ["effect of c1 on c3: positive", "effect of c2 on c3: positive"]
+    assert result["implications_lost_unrefuted"] == ["c1 _||_ c3 | c2"]
+
+
+def test_a_version_whose_graph_is_refused_compares_no_signs(fixtures_dir):
+    # As in amend-lost-sign, with a repeated construct id: the graphs are not
+    # compared, so no sign is lost.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-lost-sign")
+    new["constructs"].append(copy.deepcopy(new["constructs"][0]))
+    assert tf.appraise_amendment(new, prior) == _new_h3(
+        verdict="progressive", implications_compared=False, implications_gained=[])
+
+
+def test_novelty_that_rests_on_protects_is_reported(fixtures_dir):
+    # amend-protects-only (C3): a replication of old content is new content
+    # only because the core assumption a2 lists it in protects.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-protects-only")
+    assert tf.appraise_amendment(new, prior) == _record(
+        verdict="progressive", new_predictions=["h4"], corroborated_new=["h4"],
+        theoretically_progressive=True, empirically_progressive=True, protected_only=["h4"])
+    # Without a2, h4 articulates old content and the amendment is neutral.
+    without = copy.deepcopy(new)
+    without["auxiliary_assumptions"] = without["auxiliary_assumptions"][:1]
+    assert tf.appraise_amendment(without, prior) == _record(
+        new_predictions=["h4"], corroborated_new=["h4"], articulated=["h4"])
+    # A claim the prior's graph entails is old content whatever protects it.
+    entailed = copy.deepcopy(new)
+    entailed["predictions"][2]["claim"] = {"kind": "effect", "x": "c2", "y": "c3", "sign": "positive"}
+    result = tf.appraise_amendment(entailed, prior)
+    assert (result["articulated"], result["protected_only"], result["verdict"]) == (["h4"], [], "neutral")
+
+
+def test_refuted_new_predictions_are_reported(fixtures_dir):
+    # amend-refuted-new: one corroborated new prediction is enough, and the
+    # refuted one is reported beside the verdict.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-refuted-new")
+    assert tf.appraise_amendment(new, prior) == _new_h3(
+        verdict="progressive", new_predictions=["h3", "h4"], refuted_new=["h4"])
+    # A new prediction both passed and failed is mixed, and reported too.
+    new["test_outcomes"].append({"prediction_id": "h4", "passed": True})
+    assert tf.appraise_amendment(new, prior)["refuted_new"] == ["h4"]
+
+
+def test_the_severity_of_each_corroborating_pass_is_reported(fixtures_dir):
+    # amend-low-severity: h3 passed with an estimate below its region.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-low-severity")
+    assert tf.appraise_amendment(new, prior) == _new_h3(
+        verdict="progressive", corroborated_new_severity=[{"id": "h3", "severity": 0.001}])
+    assert tf.post_data_severity(new)[0]["severity"] == 0.001
+    # The smallest severity over the passes is reported.
+    more = copy.deepcopy(new)
+    more["test_outcomes"].append({"prediction_id": "h3", "passed": True, "estimate": 0.3, "se": 0.05})
+    assert tf.appraise_amendment(more, prior)["corroborated_new_severity"] == [
+        {"id": "h3", "severity": 0.001}]
+    more["test_outcomes"][1] = {"prediction_id": "h3", "passed": True}
+    assert tf.appraise_amendment(more, prior)["corroborated_new_severity"] == [
+        {"id": "h3", "severity": 0.977}]
+    # An outcome that post_data_severity() would refuse gives no value, and
+    # neither does a prediction without bounds.
+    refused = copy.deepcopy(new)
+    refused["test_outcomes"][1]["se"] = 0
+    assert tf.appraise_amendment(refused, prior)["corroborated_new_severity"] == [
+        {"id": "h3", "severity": None}]
+    unbounded = copy.deepcopy(new)
+    del unbounded["predictions"][2]["bounds"]
+    assert tf.appraise_amendment(unbounded, prior)["corroborated_new_severity"] == [
+        {"id": "h3", "severity": None}]
+
+
+def test_an_assumption_whose_independent_prediction_is_untested_is_pending(fixtures_dir):
+    # amend-pending (C5): a2 answers the refuted h1 and yields the untested h4.
+    prior = _edge(fixtures_dir, "amend-prior")
+    new = _edge(fixtures_dir, "amend-pending")
+    pending = {"id": "a2", "added_for": "h1", "class": "pending",
+               "independent": [{"id": "h4", "status": "untested"}],
+               "added_for_inferred": False, "change": "new"}
+    assert tf.appraise_amendment(new, prior) == _record(
+        new_predictions=["h4"], assumptions=[pending], theoretically_progressive=True,
+        protected_only=["h4"])
+    # With one independent prediction tested and failed, a2 is ad hoc.
+    new["predictions"].append({**new["predictions"][2], "id": "h5"})
+    new["predictions"][3]["statement"] = "c2 rises with c1 only in a quiet room."
+    new["auxiliary_assumptions"][1]["protects"] = ["h1", "h4", "h5"]
+    new["test_outcomes"].append({"prediction_id": "h5", "passed": False})
+    result = tf.appraise_amendment(new, prior)
+    assert (result["assumptions"][0]["class"], result["ad_hoc_assumptions"], result["verdict"]) == (
+        "ad_hoc2", ["a2"], "degenerating")

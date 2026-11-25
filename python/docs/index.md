@@ -7,8 +7,8 @@ constructs, propositions, predictions, rival accounts and test outcomes, and com
 that file commits the theory to. It scores the theory against a checklist of rigour
 criteria drawn from the methodology literature, derives the independencies and signed
 effects its causal graph implies, grades how risky each prediction is and how severely it
-has been tested, and appraises whether an amendment adds content or only shields the theory
-from an anomaly.
+has been tested, and appraises, by fixed rules that borrow Lakatos's terms, whether an
+amendment adds content or only shields the theory from an anomaly.
 
 ## A worked result
 
@@ -67,7 +67,10 @@ a causal diagram drawn in DAGitty. Validation checks the file against the schema
 cross-reference, and the content hash identifies its content exactly.
 
 At the developing stage, `appraise_amendment()` compares a revision with its prior version
-and classifies it as progressive, degenerating or neutral, the first two in Lakatos's sense.
+and classifies it as progressive, degenerating or neutral, by fixed rules that borrow
+Lakatos's terms. The verdict holds only if what the two files declare is true, and since the
+appraisal reads no dates, the prior must be the version before the new predictions were
+stated.
 
 At the testing stage, the causal graph of the propositions is read for the conditional
 independencies it implies, the signs of the effects it entails, the directions no

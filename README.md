@@ -111,8 +111,9 @@ graph of the propositions implies, `entailments()` reads each stated claim again
 graph, `equivalent_models()` lists the causal directions that no observational study can
 test, `discriminate()` sets the theory against a rival and `simulate()` runs the construct
 network as a linear dynamical system. `appraise_amendment()` calls an amendment progressive
-or degenerating (Lakatos, 1970), or neutral, the package's label for one that meets neither
-rule.
+or degenerating by fixed rules that borrow the terms of Lakatos (1970), or neutral, the
+package's label for one that meets neither rule. The verdict holds only if what the two
+versions declare is true.
 
 To test it, `severity()` grades the riskiness of each prediction's claim before data,
 `compile_sem()` writes lavaan model syntax, `preregister()` writes the theory and hypotheses
