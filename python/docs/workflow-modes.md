@@ -191,9 +191,10 @@ variable marked as latent.
 ## Developing
 
 A theory changes as it meets data, and the question is whether a change strengthens it.
-`appraise_amendment()` compares two versions and classifies the change as progressive or
-degenerating, in the sense of Lakatos's methodology of research programmes. Call it on the
-newer version and pass the prior version. The two must be distinct objects, as they are when
+`appraise_amendment()` compares two versions and classifies the change as progressive,
+degenerating or neutral, by fixed rules that borrow the terms of Lakatos's methodology of
+research programmes. Call it on the newer version and pass the prior version, the version
+before the new predictions were stated. The two must be distinct objects, as they are when
 the amendment starts from `copy()`.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
@@ -203,7 +204,7 @@ v2 = tf.read(tf.example_path("panic-network-2026-v2.theory.yaml"))
 result = v2.appraise_amendment(v1)
 for key in ("verdict", "new_predictions", "corroborated_new", "dropped",
             "ad_hoc_assumptions", "content_lost", "implications_lost",
-            "implications_lost_unrefuted"):
+            "implications_lost_unrefuted", "signs_lost"):
     print(key, result[key])
 ```
 
@@ -211,7 +212,12 @@ The first version implies that arousal and avoidance are independent given perce
 and states that independence as `pred_indep`, which a test refuted. The second drops
 `pred_indep`, adds a direct path from arousal to avoidance and derives from it a new
 prediction that a registered test corroborates. It gives up one implied independence, the
-refuted one, so no unrefuted content is lost.
+refuted one. It also gives up a sign. Both versions say that perceived threat causes
+arousal without saying in which direction, so in the second version the new path opens a
+route from threat to avoidance through arousal whose sign is not stated. The first version
+entails that raising perceived threat raises avoidance, and the second does not, so the
+amendment loses unrefuted content and is `neutral`. Stating that threat increases arousal
+in both versions would make it `progressive`.
 
 The verdict is `progressive` when a corroborated new prediction adds content, no content is
 lost, no ad hoc assumption is added, no corroborated prediction is dropped and no failed
@@ -221,14 +227,22 @@ combination is `neutral`, theoryforge's label for an amendment that meets neithe
 A new prediction adds no content when it derives from no proposition or only articulates
 what the prior version already held, and a prediction under a new id with the same
 statement and type is reported as `renamed`. An assumption added for an anomaly is ad hoc
-unless a new prediction it protects, other than that anomaly, is corroborated. An
+when no new prediction it protects, other than that anomaly, is corroborated and some have
+been tested. While all of them are untested, it is `pending` and not ad hoc. An
 assumption rewritten under its id is appraised as a new one is, and one moved unchanged to
 another id is not appraised. Any change of wording counts, even one that keeps the
 meaning, so a core assumption reworded under its id is appraised and, when it protects a
 prediction that failed in the prior, is read as answering it. Each appraised assumption
 that answers an anomaly is listed in `assumptions` with its `change`, `new` or `revised`.
-The appraisal reads no dates, so deciding which version is the prior is the caller's
-responsibility. The returned dictionary holds further fields, listed in the
+
+The verdict holds only if what the two files declare is true, the test outcomes and the
+`added_for` and `protects` of each assumption above all. The appraisal reads no dates and
+nothing about where the data came from, so it cannot tell a prediction from an
+accommodation of data already seen, and deciding which version is the prior is the
+caller's responsibility. Read `refuted_new` and `corroborated_new_severity` with the
+verdict: one corroborated new prediction among many that failed, or a pass whose own
+estimate lies outside the claimed region, is enough for `progressive`. The returned
+dictionary holds further fields, listed in the
 [API reference](api.md#theoryforge.appraise_amendment), and
 [Methodological foundations](methodology.md) gives the full rule.
 

@@ -31,8 +31,9 @@ DiagrammeR and DiagrammeRsvg packages and are skipped without them.
 
 A theory changes as it meets data, and the question is whether a change
 strengthens it. `tf_appraise_amendment()` compares an amended version with its
-prior version and classifies the change as progressive or degenerating, in the
-sense of Lakatos's methodology of research programmes.
+prior version, the version before the new predictions were stated, and
+classifies the change as progressive, degenerating or neutral, by fixed rules
+that borrow the terms of Lakatos's methodology of research programmes.
 
 ```{r appraise}
 v1 <- tf_read(tf_example_path("panic-network.theory.yaml"))
@@ -41,15 +42,20 @@ v2 <- tf_read(tf_example_path("panic-network-2026-v2.theory.yaml"))
 appraisal <- tf_appraise_amendment(v2, v1)
 str(appraisal[c("verdict", "new_predictions", "corroborated_new", "dropped",
                 "ad_hoc_assumptions", "content_lost", "implications_lost",
-                "implications_lost_unrefuted")])
+                "implications_lost_unrefuted", "signs_lost")])
 ```
 
 The first version implies that arousal and avoidance are independent given
 perceived threat and states that independence as `pred_indep`, which a test
 refuted. The second drops `pred_indep`, adds a direct path from arousal to
 avoidance and derives from it a new prediction that a registered test
-corroborates. It gives up one implied independence, the refuted one, so no
-unrefuted content is lost.
+corroborates. It gives up one implied independence, the refuted one. It also
+gives up a sign. Both versions say that perceived threat causes arousal without
+saying in which direction, so in the second version the new path opens a route
+from threat to avoidance through arousal whose sign is not stated. The first
+version entails that raising perceived threat raises avoidance, and the second
+does not, so the amendment loses unrefuted content and is `neutral`. Stating
+that threat increases arousal in both versions would make it `progressive`.
 
 The verdict is `progressive` when a corroborated new prediction adds content, no
 content is lost, no ad hoc assumption is added, no corroborated prediction is
@@ -59,17 +65,26 @@ prediction adds content. Any other combination is `neutral`, theoryforge's label
 for an amendment that meets neither rule. A new prediction adds no content when
 it derives from no proposition or only articulates what the prior version
 already held, and a prediction under a new id with the same statement and type
-is reported as `renamed`. An assumption added for an anomaly is ad hoc unless a
-new prediction it protects, other than that anomaly, is corroborated. An
-assumption rewritten under its id is appraised as a new one is, and one moved
-unchanged to another id is not appraised. Any change of wording counts, even one
-that keeps the meaning, so a core assumption reworded under its id is appraised
-and, when it protects a prediction that failed in the prior, is read as
-answering it. Each appraised assumption that answers an anomaly is listed in
-`assumptions` with its `change`, `new` or `revised`. The appraisal reads no
-dates, so deciding which version is the prior is the caller's responsibility.
-`?tf_appraise_amendment` lists the other fields of the result, and the article
-'Methodological foundations' gives the full rule.
+is reported as `renamed`. An assumption added for an anomaly is ad hoc when no
+new prediction it protects, other than that anomaly, is corroborated and some
+have been tested. While all of them are untested, it is `pending` and not ad
+hoc. An assumption rewritten under its id is appraised as a new one is, and one
+moved unchanged to another id is not appraised. Any change of wording counts,
+even one that keeps the meaning, so a core assumption reworded under its id is
+appraised and, when it protects a prediction that failed in the prior, is read
+as answering it. Each appraised assumption that answers an anomaly is listed in
+`assumptions` with its `change`, `new` or `revised`.
+
+The verdict holds only if what the two files declare is true, the test outcomes
+and the `added_for` and `protects` of each assumption above all. The appraisal
+reads no dates and nothing about where the data came from, so it cannot tell a
+prediction from an accommodation of data already seen, and deciding which
+version is the prior is the caller's responsibility. Read `refuted_new` and
+`corroborated_new_severity` with the verdict: one corroborated new prediction
+among many that failed, or a pass whose own estimate lies outside the claimed
+region, is enough for `progressive`. `?tf_appraise_amendment` lists the other
+fields of the result, and the article 'Methodological foundations' gives the
+full rule.
 
 ## Testing
 

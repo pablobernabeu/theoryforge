@@ -79,7 +79,7 @@ Diagram intermediate representations, and rendering of them with Graphviz.
 
 ## Developing
 
-Appraise an amendment to a theory as progressive or degenerating, in Lakatos's sense.
+Appraise an amendment to a theory by fixed rules that borrow Lakatos's terms progressive and degenerating.
 
 ::: theoryforge.appraise_amendment
 
