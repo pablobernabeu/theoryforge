@@ -201,7 +201,7 @@ test_that("the rigour grid escapes the gate", {
     rep$gate <- "<a & b>"
     rep
   })
-  expect_true(grepl('<text x="20" y="46">checklist score 85.9, gate &lt;a &amp; b&gt;</text>',
+  expect_true(grepl('<text x="20" y="46">checklist score 88.0, gate &lt;a &amp; b&gt;</text>',
                     tf_diagram(theory, "rigour"), fixed = TRUE))
 })
 

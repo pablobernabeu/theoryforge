@@ -23,7 +23,7 @@ def test_compile_sem_associative(weak_path):
 def test_dossier(panic_path):
     d = tf.read(panic_path).dossier()
     assert d.startswith("# theoryforge dossier: Network theory of panic disorder")
-    assert ("- Checklist score: 85.9 (82.1 to 87.9 with equal weights or one weight halved or "
+    assert ("- Checklist score: 88.0 (84.2 to 90.2 with equal weights or one weight halved or "
             "doubled)\n- Checklist coverage: 0.92\n") in d
     assert "| item | criterion | status | score | weight |" in d
     assert ("| falsifiability | At least one prediction is typed point, interval or directional; "
@@ -65,14 +65,18 @@ def test_the_dossier_names_the_checklist_score_and_says_what_it_is(panic_path):
 
 def test_the_dossier_reads_the_checklist_with_its_own_cycles(panic_path):
     # Under sigma, the loop no longer leaves pred_indep unread, so the
-    # derivation chain passes and the score is that of check(cycles="sigma").
+    # derivation chain passes, and the score is that of check(cycles="sigma").
+    # A claim not checked costs nothing, so the two scores are equal and the
+    # derivation line tells the readings apart.
     t = tf.read(panic_path)
+    answers = {"refuse": 'not checked (feedback loop; use cycles = "sigma")', "sigma": "yes"}
     for cycles in ("refuse", "sigma"):
         rep = t.check(cycles=cycles)
         lo, hi = rep["aggregate_range"]
+        d = t.dossier(cycles=cycles)
         assert (f"\n- Checklist score: {rep['aggregate_score']} ({lo} to {hi} with equal weights or "
-                "one weight halved or doubled)\n") in t.dossier(cycles=cycles)
-    assert t.check()["aggregate_score"] != t.check(cycles="sigma")["aggregate_score"]
+                "one weight halved or doubled)\n") in d
+        assert f"contradicts no claim a phenomenon states: {answers[cycles]}\n" in d
 
 
 def test_the_dossier_flags_a_failure_whose_estimate_lies_inside_the_region(panic_path):

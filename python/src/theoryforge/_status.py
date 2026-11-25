@@ -57,11 +57,10 @@ def classify_auxiliary(a, tos, eligible, added_for: str | None = None) -> tuple[
     ``ad_hoc1`` when there are none, so the assumption adds nothing that could
     be tested apart from the anomaly, ``pending`` when every one is untested,
     ``ad_hoc2`` when some were tested and none is corroborated and
-    ``independently_corroborated`` otherwise. The names of the two ad hoc
-    classes follow the first two of the three senses in which Lakatos calls a
-    hypothesis ad hoc, as the package reads them. The amendment appraisal
-    passes the predictions that are new in the amended version as
-    ``eligible``, so content the prior already held cannot clear an
+    ``independently_corroborated`` otherwise. The labels of the two ad hoc
+    classes borrow Lakatos's terms and mean only what these checks find. The
+    amendment appraisal passes the predictions that are new in the amended
+    version as ``eligible``, so content the prior already held cannot clear an
     assumption. It also passes the anomaly it inferred as ``added_for`` when
     the assumption names none. The checklist's parsimony item passes every
     prediction the assumption protects and fails any class other than

@@ -77,15 +77,17 @@ def _refuse_non_boolean_outcomes(T, caller: str) -> None:
             )
 
 
-def _claim_readings(T: dict, cycles: str) -> tuple[list[tuple[str, str] | None], bool]:
+def _claim_readings(T: dict, cycles: str) -> tuple[list[tuple[str, str] | None], bool, list[str]]:
     """How the theory's causal graph reads the claims, for the derivation chain.
 
     Returns one entry per prediction in file order, None when the prediction
     states no claim and ``(verdict, basis)`` otherwise (API_SPEC.md section 31),
-    and whether the graph contradicts the claim of some phenomenon. A graph
-    that cannot be built (section 27, refusals 1 and 2) reads no claim, so each
-    stated claim gets the verdict ``not_evaluated`` with the basis
-    ``graph_refused``, and no phenomenon counts as contradicted.
+    whether the graph contradicts the claim of some phenomenon, and the ids of
+    the phenomena, in file order, whose claims the graph leaves unread because
+    it has a feedback loop and ``cycles`` is ``"refuse"``. A graph that cannot
+    be built (section 27, refusals 1 and 2) reads no claim, so each stated
+    claim of a prediction gets the verdict ``not_evaluated`` with the basis
+    ``graph_refused``, and no phenomenon counts as contradicted or unread.
     """
     try:
         g = _Graph(causal_graph(T, "check"), cycles, items(T, "propositions"))
@@ -102,33 +104,43 @@ def _claim_readings(T: dict, cycles: str) -> tuple[list[tuple[str, str] | None],
             r = g.read(c)
             readings.append((r["verdict"], r["basis"]))
     contradicted = False
+    unread: list[str] = []
     if g is not None:
         for ph in items(T, "phenomena"):
             c = read_claim(field(ph, "claim"))
-            if c is not None and g.read(c)["verdict"] == "contradicted":
+            if c is None:
+                continue
+            r = g.read(c)
+            if r["verdict"] == "contradicted":
                 contradicted = True
-                break
-    return readings, contradicted
+            elif (r["verdict"], r["basis"]) == ("not_evaluated", "feedback_loop"):
+                unread.append(text(field(ph, "id")))
+    return readings, contradicted, unread
 
 
 def _derivation_chain(T: dict, preds: list, prop_ids: set,
-                      cycles: str) -> tuple[str, float | None, list[str]]:
-    """The derivation chain's ``(status, score, not_checked)`` (API_SPEC.md section 4, item 12).
+                      cycles: str) -> tuple[str, float | None, list[str], list[str]]:
+    """The derivation chain's ``(status, score, not_checked, phenomena_not_checked)``.
 
-    A prediction is derived when its references resolve and it either states
-    no claim or states one the causal graph entails. A claim that the graph
-    contradicts, leaves open, cannot read as written or cannot place, since it
-    names a construct no proposition relates, is a failure, as is a claim of a
-    theory whose graph cannot be built and an unresolved reference. A claim
-    the graph leaves unread because it has a feedback loop and ``cycles`` is
-    ``"refuse"`` is not checked: the prediction is not derived, its id goes to
-    ``not_checked`` and, failing anything else, the item warns. A phenomenon
-    whose claim the graph contradicts fails the item and leaves the score, the
-    share of predictions derived, as it is.
+    API_SPEC.md section 4, item 12. A prediction is derived when its
+    references resolve and it either states no claim or states one the causal
+    graph entails. A claim that the graph contradicts, leaves open, cannot
+    read as written or cannot place, since it names a construct no
+    proposition relates, is a failure, as is a claim of a theory whose graph
+    cannot be built and an unresolved reference. A claim the graph leaves
+    unread because it has a feedback loop and ``cycles`` is ``"refuse"`` is
+    not checked: its id goes to ``not_checked`` and, failing anything else,
+    the item warns. Nothing was found wrong with such a claim, so a
+    prediction not checked whose references resolve counts as derived in the
+    score, and stating a claim the loop leaves unread costs nothing. A
+    phenomenon whose claim the graph contradicts fails the item, and one whose
+    claim it leaves unread for the loop goes to ``phenomena_not_checked`` and,
+    failing anything else, makes the item warn. Neither changes the score, the
+    share of predictions derived.
     """
     if not preds:
-        return "n/a", None, []
-    readings, phenomenon_contradicted = _claim_readings(T, cycles)
+        return "n/a", None, [], []
+    readings, phenomenon_contradicted, phenomena_unread = _claim_readings(T, cycles)
     derived = 0
     failed = phenomenon_contradicted
     not_checked: list[str] = []
@@ -141,23 +153,25 @@ def _derivation_chain(T: dict, preds: list, prop_ids: set,
             not_checked.append(text(field(p, "id")))
         elif reading is not None and reading[0] != "entailed":
             failed = True
-        elif resolves:
+            continue
+        if resolves:
             derived += 1
     if failed:
         status = "fail"
-    elif derived < len(preds):
+    elif not_checked or phenomena_unread:
         status = "warn"
     else:
         status = "pass"
-    return status, rnd(derived / len(preds), 3), not_checked
+    return status, rnd(derived / len(preds), 3), not_checked, phenomena_unread
 
 
-def _check_items(T: dict, thr: dict, cycles: str) -> tuple[dict, list[str]]:
-    """Each item's ``(status, score)``, and the predictions whose claims were not checked.
+def _check_items(T: dict, thr: dict, cycles: str) -> tuple[dict, tuple[list[str], list[str]]]:
+    """Each item's ``(status, score)``, and the claims that were not checked.
 
-    An item with nothing to assess is ``("n/a", None)``. The list holds the ids
-    of the predictions whose claims the derivation chain left unread, since
-    the causal graph has a feedback loop and ``cycles`` is ``"refuse"``.
+    An item with nothing to assess is ``("n/a", None)``. The pair holds the ids
+    of the predictions and then of the phenomena whose claims the derivation
+    chain left unread, since the causal graph has a feedback loop and
+    ``cycles`` is ``"refuse"``.
     """
     preds = items(T, "predictions")
     cons = items(T, "constructs")
@@ -318,10 +332,10 @@ def _check_items(T: dict, thr: dict, cycles: str) -> tuple[dict, list[str]]:
     # With no prediction there is no derivation to check, and a pass would lift
     # the empty theory's score. A claim the causal graph does not entail does
     # not follow from the propositions, whatever the prediction cites.
-    status, score, not_checked = _derivation_chain(T, preds, prop_ids, cycles)
+    status, score, not_checked, unread = _derivation_chain(T, preds, prop_ids, cycles)
     out["derivation_chain"] = (status, score)
 
-    return out, not_checked
+    return out, (not_checked, unread)
 
 
 def _weighted(pairs: list[tuple[float, float]]) -> float:
@@ -387,9 +401,11 @@ def check(theory, cycles: str = "refuse") -> dict:
     declared, or none, or states a claim that the graph contradicts, leaves
     open, cannot read as written or cannot place because it names a construct
     no proposition relates, and when the graph contradicts the claim of a
-    phenomenon. A claim that the graph leaves unread because it has a feedback
-    loop is not checked: the prediction is not derived, and, failing anything
-    else, the item warns, which does not block the gate.
+    phenomenon. A claim of a prediction or a phenomenon that the graph leaves
+    unread because it has a feedback loop is not checked and, failing anything
+    else, makes the item warn, which does not block the gate. A prediction
+    whose claim is not checked counts as derived when the propositions it
+    cites are declared, since nothing was found wrong with it.
 
     Args:
         cycles: how a causal graph with a feedback loop is read, as in
@@ -413,9 +429,11 @@ def check(theory, cycles: str = "refuse") -> dict:
             a blocker item (falsifiability or derivation_chain) fails and
             ``pass`` when none does. ``items`` holds one ``{id, status, score,
             weight, severity_if_fail, citation}`` record per checklist item, in
-            checklist order, and the derivation_chain record has a seventh
-            key, ``not_checked``, the ids of the predictions whose claims were
-            not checked.
+            checklist order. The derivation_chain record has two more keys,
+            ``not_checked`` and ``phenomena_not_checked``, the ids of the
+            predictions and of the phenomena whose claims were not checked. A
+            prediction and a phenomenon may share an id, so the two are listed
+            apart.
 
     Raises:
         ValueError: ``cycles`` is not ``"refuse"`` or ``"sigma"``, a test
@@ -428,7 +446,7 @@ def check(theory, cycles: str = "refuse") -> dict:
     _refuse_non_boolean_outcomes(theory, "check")
     spec = _resources.checklist()
     thr = spec["thresholds"]
-    results, not_checked = _check_items(theory, thr, cycles)
+    results, (not_checked, phenomena_not_checked) = _check_items(theory, thr, cycles)
 
     items = []
     applicable = 0.0
@@ -453,10 +471,12 @@ def check(theory, cycles: str = "refuse") -> dict:
             "severity_if_fail": spec_item["severity_if_fail"],
             "citation": spec_item["citation"],
         }
-        # The predictions whose claims a feedback loop left unread, so that a
-        # document can say how many were not checked and why.
+        # The predictions and the phenomena whose claims a feedback loop left
+        # unread, so that a document can say what was not checked and why. A
+        # prediction and a phenomenon may share an id, so the two are kept apart.
         if iid == "derivation_chain":
             item["not_checked"] = not_checked
+            item["phenomena_not_checked"] = phenomena_not_checked
         items.append(item)
 
     # Nulls, numbers, booleans and mappings in these fields read as "", and so

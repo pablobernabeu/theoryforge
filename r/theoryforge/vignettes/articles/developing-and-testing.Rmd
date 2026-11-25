@@ -59,21 +59,24 @@ that threat increases arousal in both versions would make it `progressive`.
 
 The verdict is `progressive` when a corroborated new prediction adds content, no
 content is lost, no ad hoc assumption is added, no corroborated prediction is
-dropped and no failed prediction is weakened. It is `degenerating` when an ad hoc
-assumption is added or a failed prediction is weakened and no corroborated new
-prediction adds content. Any other combination is `neutral`, theoryforge's label
-for an amendment that meets neither rule. A new prediction adds no content when
-it derives from no proposition or only articulates what the prior version
-already held, and a prediction under a new id with the same statement and type
-is reported as `renamed`. An assumption added for an anomaly is ad hoc when no
-new prediction it protects, other than that anomaly, is corroborated and some
-have been tested. While all of them are untested, it is `pending` and not ad
-hoc. An assumption rewritten under its id is appraised as a new one is, and one
-moved unchanged to another id is not appraised. Any change of wording counts,
-even one that keeps the meaning, so a core assumption reworded under its id is
-appraised and, when it protects a prediction that failed in the prior, is read
-as answering it. Each appraised assumption that answers an anomaly is listed in
-`assumptions` with its `change`, `new` or `revised`.
+dropped and no failed prediction is weakened. It is never `progressive` when the
+causal graph of either version cannot be read, since the content of the two
+cannot then be compared. It is `degenerating` when an ad hoc assumption is added
+or a failed prediction is weakened and no corroborated new prediction adds
+content. Any other combination is `neutral`, theoryforge's label for an
+amendment that meets neither rule. A new prediction adds no content when it
+derives from no proposition or only articulates what the prior version already
+held, and a prediction under a new id with the same statement and type is
+reported as `renamed`. An assumption added for an anomaly is ad hoc when it
+protects no new prediction other than that anomaly, or when some of those
+predictions have been tested and none is corroborated. While all of them are
+untested, it is `pending`. An assumption rewritten under its id is appraised as
+a new one is, and one moved unchanged to another id is not appraised. Any change
+of wording counts, even one that keeps the meaning, so a core assumption
+reworded under its id is appraised and, when it protects a prediction that
+failed in the prior, is read as answering it. Each appraised assumption that
+answers an anomaly is listed in `assumptions` with its `change`, `new` or
+`revised`.
 
 The verdict holds only if what the two files declare is true, the test outcomes
 and the `added_for` and `protects` of each assumption above all. The appraisal

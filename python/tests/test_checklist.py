@@ -82,7 +82,7 @@ def test_the_report_gives_coverage_after_the_aggregate(panic_path):
                        "aggregate_score", "aggregate_range", "coverage", "gate",
                        "n_blockers_failed", "items"]
     # parsimony has nothing to assess, and the other eleven items weigh 0.92.
-    assert (r["checklist_version"], r["aggregate_score"], r["coverage"]) == ("3.1", 85.9, 0.92)
+    assert (r["checklist_version"], r["aggregate_score"], r["coverage"]) == ("3.1", 88.0, 0.92)
     assert (_items(r)["parsimony"]["status"], _items(r)["parsimony"]["score"]) == ("n/a", None)
 
 
@@ -387,7 +387,7 @@ def test_the_aggregate_range_spans_the_alternative_weightings(panic_path):
     rep = tf.read(panic_path).check()
     lo, hi = rep["aggregate_range"]
     assert lo <= rep["aggregate_score"] <= hi
-    assert (lo, hi) == (82.1, 87.9)
+    assert (lo, hi) == (84.2, 90.2)
     applicable = [(it["weight"], it["score"]) for it in rep["items"] if it["score"] is not None]
     equal = round(sum(x for _, x in applicable) / len(applicable) * 100, 1)
     assert lo <= equal <= hi
@@ -529,31 +529,133 @@ def test_check_refuses_an_unknown_cycles_option():
 
 def test_an_unrelated_feedback_loop_leaves_the_claim_not_checked():
     # The loop u <-> w has no path to the claim, yet under cycles = "refuse"
-    # every claim of the graph is left unread. The prediction is not derived,
-    # the item warns and the gate stays open. It passed at 1.0 under 3.0.
+    # every claim of the graph is left unread. The item warns and the gate
+    # stays open. Nothing was found wrong with the claim and the references
+    # resolve, so the prediction counts as derived, as it did under 3.0.
     t = _loop_theory()
-    assert _derivation(t) == ("warn", 0.0, ["h1"], "pass")
+    assert _derivation(t) == ("warn", 1.0, ["h1"], "pass")
     assert t.check()["n_blockers_failed"] == 0
     # Read by sigma-separation, the claim is contradicted and the item fails.
     assert _derivation(t, "sigma") == ("fail", 0.0, [], "blocked")
     # A claim the sigma reading entails passes.
     assert _derivation(_loop_theory("negative"), "sigma") == ("pass", 1.0, [], "pass")
-    assert _derivation(_loop_theory("negative")) == ("warn", 0.0, ["h1"], "pass")
+    assert _derivation(_loop_theory("negative")) == ("warn", 1.0, ["h1"], "pass")
 
 
 def test_only_the_derivation_chain_record_lists_unchecked_claims(panic_path):
     r = tf.read(panic_path).check()
     for it in r["items"]:
         keys = ["id", "status", "score", "weight", "severity_if_fail", "citation"]
-        assert list(it) == (keys + ["not_checked"] if it["id"] == "derivation_chain" else keys)
-    assert _items(r)["derivation_chain"]["not_checked"] == ["pred_indep"]
+        extra = ["not_checked", "phenomena_not_checked"]
+        assert list(it) == (keys + extra if it["id"] == "derivation_chain" else keys)
+    dc = _items(r)["derivation_chain"]
+    assert (dc["not_checked"], dc["phenomena_not_checked"]) == (["pred_indep"], [])
     # A not-checked prediction whose references do not resolve still fails
-    # the item, and is still listed.
+    # the item, is still listed and is not derived.
     t = _loop_theory()
     t.data["predictions"][0]["derives_from"] = ["p9"]
     assert _derivation(t) == ("fail", 0.0, ["h1"], "blocked")
-    # With no prediction the item is n/a and lists nothing.
-    assert _items(_bare().check())["derivation_chain"]["not_checked"] == []
+    # With no prediction the item is n/a and lists nothing, even with a
+    # phenomenon behind a loop.
+    t = _loop_theory()
+    t.data["predictions"] = []
+    t.data["phenomena"] = [{"id": "ph1", "statement": "s",
+                            "claim": {"kind": "effect", "x": "u", "y": "w", "sign": "positive"}}]
+    dc = _items(t.check())["derivation_chain"]
+    assert (dc["status"], dc["not_checked"], dc["phenomena_not_checked"]) == ("n/a", [], [])
+
+
+def test_a_not_checked_prediction_counts_as_derived_when_its_references_resolve():
+    # fixtures/edge/derivation-loop-unresolved: both claims are behind a loop.
+    # h1 cites a declared proposition and counts as derived; h2 cites p9 and
+    # is not derived, so the item fails with 0.5.
+    loop = [{"id": "p1", "from": "c1", "to": "c2", "relation": "increases"},
+            {"id": "p2", "from": "c2", "to": "c1", "relation": "increases"}]
+    up = {"kind": "effect", "x": "c1", "y": "c2", "sign": "positive"}
+    back = {"kind": "effect", "x": "c2", "y": "c1", "sign": "positive"}
+    t = _bare(constructs=TWO_CONSTRUCTS, propositions=loop,
+              predictions=[_pred("h1", "directional", claim=up),
+                           _pred("h2", "directional", derives_from=["p9"], claim=back)])
+    assert _derivation(t) == ("fail", 0.5, ["h1", "h2"], "blocked")
+    t.data["predictions"][1]["derives_from"] = ["p2"]
+    assert _derivation(t) == ("warn", 1.0, ["h1", "h2"], "pass")
+    assert _derivation(t, "sigma") == ("pass", 1.0, [], "pass")
+    # The score is that of the same file without the claims: stating a claim
+    # that the loop leaves unread costs nothing.
+    bare = copy.deepcopy(t)
+    for p in bare.data["predictions"]:
+        p.pop("claim")
+    assert _derivation(bare) == ("pass", 1.0, [], "pass")
+    assert bare.check()["aggregate_score"] == t.check()["aggregate_score"]
+
+
+def test_the_panic_network_scores_the_same_under_both_readings(panic_path):
+    # Its one claim, on pred_indep, is behind a loop under the default. The
+    # item warns and names it, and the score is that of sigma-separation,
+    # which entails the claim.
+    t = tf.read(panic_path)
+    refuse, sigma = t.check(), t.check(cycles="sigma")
+    assert (refuse["aggregate_score"], refuse["aggregate_range"]) == (88.0, [84.2, 90.2])
+    assert (sigma["aggregate_score"], sigma["aggregate_range"]) == (88.0, [84.2, 90.2])
+    assert _derivation(t) == ("warn", 1.0, ["pred_indep"], "pass")
+    assert _derivation(t, "sigma") == ("pass", 1.0, [], "pass")
+
+
+def _phenomenon_loop(claim_id="ph1"):
+    """fixtures/edge/derivation-phenomenon-loop: a loop a <-> b, a phenomenon
+    whose claim is that a lowers b, and one prediction without a claim."""
+    return _bare(
+        maturity="developing",
+        constructs=[{"id": c, "label": c.upper(), "definition": f"Construct {c}."}
+                    for c in ("a", "b", "z")],
+        propositions=[
+            {"id": "p1", "from": "a", "to": "b", "relation": "increases", "mechanism": "It does."},
+            {"id": "p2", "from": "b", "to": "a", "relation": "increases", "mechanism": "It does."},
+        ],
+        phenomena=[
+            {"id": claim_id, "statement": "Raising a lowers b.",
+             "claim": {"kind": "effect", "x": "a", "y": "b", "sign": "negative"}},
+            {"id": "ph2", "statement": "z tracks a.",
+             "claim": {"kind": "association", "x": "a", "y": "z", "sign": "positive"}},
+        ],
+        predictions=[{"id": "h1", "statement": "b rises with a.", "type": "directional",
+                      "derives_from": ["p1"]}],
+    )
+
+
+def test_a_phenomenon_behind_a_feedback_loop_is_not_checked():
+    # Under "refuse" the loop leaves ph1's claim unread. The item warns and
+    # names it, the documents' derivation line says it was not checked, and
+    # the score, which counts predictions, is that of a passing item. ph2
+    # names a construct outside the graph and changes nothing under either
+    # reading.
+    t = _phenomenon_loop()
+    dc = _items(t.check())["derivation_chain"]
+    assert (dc["status"], dc["score"], dc["not_checked"], dc["phenomena_not_checked"]) == (
+        "warn", 1.0, [], ["ph1"])
+    assert t.check()["gate"] == "pass"
+    assert ('contradicts no claim a phenomenon states: not checked (feedback loop; use '
+            'cycles = "sigma")\n') in t.preregister()
+    # Under "sigma" the claim is read and contradicted.
+    dc = _items(t.check(cycles="sigma"))["derivation_chain"]
+    assert (dc["status"], dc["score"], dc["phenomena_not_checked"]) == ("fail", 1.0, [])
+    assert t.check(cycles="sigma")["gate"] == "blocked"
+    # A failure elsewhere takes precedence over the warning, and ph1 is still
+    # listed.
+    t.data["predictions"][0]["derives_from"] = ["p9"]
+    dc = _items(t.check())["derivation_chain"]
+    assert (dc["status"], dc["phenomena_not_checked"]) == ("fail", ["ph1"])
+
+
+def test_a_phenomenon_and_a_prediction_with_one_id_are_listed_apart():
+    # Ids are unique within each collection but not across them, so the two
+    # lists keep a prediction and a phenomenon named h1 apart.
+    t = _phenomenon_loop("h1")
+    t.data["predictions"][0]["claim"] = {"kind": "effect", "x": "a", "y": "b", "sign": "positive"}
+    t.validate(full=True)
+    dc = _items(t.check())["derivation_chain"]
+    assert (dc["status"], dc["not_checked"], dc["phenomena_not_checked"]) == (
+        "warn", ["h1"], ["h1"])
 
 
 def test_a_claim_the_graph_cannot_place_or_read_is_not_derived():
@@ -660,7 +762,7 @@ def test_the_rubric_rates_a_point_or_interval_label_without_bounds_as_directiona
 
 def test_the_html_report_states_what_the_checklist_score_describes(panic_path):
     html = tf.read(panic_path).report(format="html")
-    assert ("  <p>Checklist score: <strong>85.9</strong> (82.1 to 87.9 with equal weights or one "
+    assert ("  <p>Checklist score: <strong>88.0</strong> (84.2 to 90.2 with equal weights or one "
             "weight halved or doubled) &middot; gate: <strong>pass</strong></p>\n") in html
     assert ("  <p>The checklist score describes how completely the file states what checklist "
             "3.1 asks for. Most items read whether a field is filled in or how a prediction is "
@@ -672,6 +774,6 @@ def test_the_html_report_states_what_the_checklist_score_describes(panic_path):
             "<th>source of the criterion</th></tr>") in html
     assert ("<tr><td>derivation_chain</td><td>Every prediction cites declared propositions, the "
             "causal graph entails any claim it states and contradicts no phenomenon's claim (a "
-            "claim left unread because of a feedback loop warns)</td><td>warn</td><td>0.75</td>"
+            "claim left unread because of a feedback loop warns)</td><td>warn</td><td>1.0</td>"
             "<td>Scheel et al. (2021); Szollosi et al. (2020)</td></tr>") in html
     assert "igour" not in html and "grounding" not in html and "Aggregate" not in html

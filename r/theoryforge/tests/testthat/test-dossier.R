@@ -5,7 +5,7 @@ test_that("tf_dossier includes the expected header, table row, and prereg", {
   out <- tf_dossier(panic)
   expect_true(grepl("# theoryforge dossier: Network theory of panic disorder",
                     out, fixed = TRUE))
-  expect_true(grepl(paste0("- Checklist score: 85.9 (82.1 to 87.9 with equal weights or one ",
+  expect_true(grepl(paste0("- Checklist score: 88.0 (84.2 to 90.2 with equal weights or one ",
                            "weight halved or doubled)\n- Checklist coverage: 0.92\n"),
                     out, fixed = TRUE))
   expect_true(grepl(paste0("| falsifiability | At least one prediction is typed point, interval ",
@@ -100,18 +100,22 @@ test_that("the dossier names the checklist score and says what it is", {
 
 test_that("the dossier reads the checklist with its own cycles", {
   # Under sigma, the loop no longer leaves pred_indep unread, so the derivation
-  # chain passes and the score is that of tf_check(cycles = "sigma").
+  # chain passes, and the score is that of tf_check(cycles = "sigma"). A claim
+  # not checked costs nothing, so the two scores are equal and the derivation
+  # line tells the readings apart.
   panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  answers <- c(refuse = 'not checked (feedback loop; use cycles = "sigma")', sigma = "yes")
   for (cycles in c("refuse", "sigma")) {
     rep <- tf_check(panic, cycles = cycles)
     line <- sprintf("\n- Checklist score: %s (%s to %s with equal weights or one weight halved or doubled)\n",
                     theoryforge:::.tf_fmt(rep$aggregate_score),
                     theoryforge:::.tf_fmt(rep$aggregate_range[[1]]),
                     theoryforge:::.tf_fmt(rep$aggregate_range[[2]]))
-    expect_true(grepl(line, tf_dossier(panic, cycles = cycles), fixed = TRUE), info = cycles)
+    d <- tf_dossier(panic, cycles = cycles)
+    expect_true(grepl(line, d, fixed = TRUE), info = cycles)
+    expect_true(grepl(paste0("contradicts no claim a phenomenon states: ", answers[[cycles]], "\n"),
+                      d, fixed = TRUE), info = cycles)
   }
-  expect_false(identical(tf_check(panic)$aggregate_score,
-                         tf_check(panic, cycles = "sigma")$aggregate_score))
 })
 
 test_that("the dossier flags a failure whose estimate lies inside the region", {

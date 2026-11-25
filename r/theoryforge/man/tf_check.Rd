@@ -32,9 +32,11 @@ choices made in coding the file and the rubric's constants. \code{gate} is
 \code{"pass"} when none does. \code{items} holds one list per checklist
 item, in checklist order, with \code{id}, \code{status}, \code{score},
 \code{weight}, \code{severity_if_fail} (\code{"blocker"} or
-\code{"warning"}) and \code{citation}. The derivation_chain item has a
-seventh element, \code{not_checked}, a list of the ids of the predictions
-whose claims were not checked.
+\code{"warning"}) and \code{citation}. The derivation_chain item has two
+more elements, \code{not_checked} and \code{phenomena_not_checked}, lists
+of the ids of the predictions and of the phenomena whose claims were not
+checked. A prediction and a phenomenon may share an id, so the two are
+listed apart.
 }
 \description{
 Runs the 12 items of the checklist over a theory object and returns a
@@ -64,9 +66,11 @@ entails. It fails when some prediction cites a proposition that is not
 declared, or none, or states a claim that the graph contradicts, leaves
 open, cannot read as written or cannot place because it names a construct
 no proposition relates, and when the graph contradicts the claim of a
-phenomenon. A claim that the graph leaves unread because it has a feedback
-loop is not checked: the prediction is not derived, and, failing anything
-else, the item warns, which does not block the gate.
+phenomenon. A claim of a prediction or a phenomenon that the graph leaves
+unread because it has a feedback loop is not checked and, failing anything
+else, makes the item warn, which does not block the gate. A prediction whose
+claim is not checked counts as derived when the propositions it cites are
+declared, since nothing was found wrong with it.
 
 Three values are refused before anything is scored, since no score built
 on them would be defensible. One is a \code{cycles} other than
