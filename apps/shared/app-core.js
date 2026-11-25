@@ -930,7 +930,9 @@
         if (bases.includes("feedback_loop") && params.cycles !== "sigma") txt += " Set cycles to sigma to read a graph with feedback loops, on the assumption that each loop settles to a unique equilibrium.";
       }
       const faith = claims.filter((x) => x.faithfulness === true).length;
-      if (faith) txt += " For " + (faith === 1 ? "one verdict" : faith + " verdicts") + ", the reading assumes that routes of unknown or opposite sign do not cancel exactly.";
+      // The packages' claim lines say 'unless effects cancel exactly', which
+      // covers one route of unknown sign as well as routes that offset.
+      if (faith) txt += " For " + (faith === 1 ? "one verdict" : faith + " verdicts") + ", the reading assumes that effects do not cancel exactly.";
       return txt;
     }
     if (opId === "equivalent") {

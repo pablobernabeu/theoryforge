@@ -818,6 +818,7 @@ test("what the graph entails lists each claim with its verdict", async () => {
   assert.match(text, /effect of a on b: positive/);
   assert.match(text, /association of a and c given b: zero \(assumes no exact cancellation\)/);
   assert.match($("#output .ri-interp").textContent, /state 2 claims\. The causal graph entails 1 and contradicts 1\./);
+  assert.match($("#output .ri-interp").textContent, /For one verdict, the reading assumes that effects do not cancel exactly\.$/);
 });
 
 test("Compare with a rival offers the alternatives that state propositions, and an upload otherwise", async () => {
