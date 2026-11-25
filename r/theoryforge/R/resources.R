@@ -29,9 +29,9 @@ tf_checklist <- function() {
 #' No JSON-Schema engine is involved (API_SPEC.md section 2).
 #' \code{tf_validate} reads only the \code{properties} key set, so the schema
 #' stays the single source of truth for which top-level fields exist, and
-#' \code{tf_write} reads the paths of every field typed as an array of strings
-#' (\code{.tf_string_array_paths()} in utils.R), so that it writes each as an
-#' array.
+#' \code{tf_write} and \code{tf_content_hash} read the paths of every field
+#' typed as an array of strings (\code{.tf_string_array_paths()} in utils.R),
+#' so that each writes such a field as an array.
 #' @keywords internal
 #' @noRd
 tf_theory_schema <- function() {
@@ -47,9 +47,10 @@ tf_theory_schema <- function() {
 
 #' The fold table of schema/fold.json, ready for .tf_fold().
 #'
-#' A list with \code{old} and \code{new}, the one-character entries as the two
-#' strings chartr() takes, \code{multi}, the longer entries as a named list,
-#' and \code{delete}, a PCRE class of the combining marks to remove.
+#' A list with \code{old} and \code{new}, the one-character entries as two
+#' strings, \code{old_cp} and \code{new_cp}, the same entries as code points,
+#' \code{multi}, the longer entries as a named list, and \code{delete}, a PCRE
+#' class of the combining marks to remove.
 #' @keywords internal
 #' @noRd
 tf_fold_table <- function() {
@@ -77,6 +78,8 @@ tf_fold_table <- function() {
                    character(1))
   list(old = paste(keys[one], collapse = ""),
        new = paste(vals[one], collapse = ""),
+       old_cp = vapply(keys[one], utf8ToInt, integer(1), USE.NAMES = FALSE),
+       new_cp = vapply(vals[one], utf8ToInt, integer(1), USE.NAMES = FALSE),
        multi = stats::setNames(as.list(vals[!one]), keys[!one]),
        delete = paste0("[", paste(ranges, collapse = ""), "]"))
 }

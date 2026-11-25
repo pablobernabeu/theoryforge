@@ -17,14 +17,40 @@ def checklist() -> dict:
 
 @lru_cache(maxsize=1)
 def theory_schema() -> dict:
-    """The theory JSON Schema, read for its enumeration of recognised fields.
+    """The theory JSON Schema, read for its recognised fields and its array-of-strings fields.
 
-    No JSON-Schema engine is involved (API_SPEC.md section 2); ``validate`` only
+    No JSON-Schema engine is involved (API_SPEC.md section 2). ``validate`` only
     needs the ``properties`` key set, so the schema stays the single source of
-    truth for which top-level fields exist.
+    truth for which top-level fields exist, and ``content_hash`` reads the paths
+    of every field typed as an array of strings (``string_array_paths``).
     """
     text = (files("theoryforge") / "schema" / "theory.schema.json").read_text(encoding="utf-8")
     return json.loads(text)
+
+
+def schema_string_arrays(schema: dict, path: tuple[str, ...] = ()) -> list[tuple[str, ...]]:
+    """The paths of the array-of-strings fields of ``schema``, ``"[]"`` standing for every entry.
+
+    For example ``("predictions", "[]", "derives_from")``. The mirror of
+    ``.tf_schema_string_arrays()`` in R's utils.R.
+    """
+    if schema.get("type") == "array":
+        items = schema.get("items")
+        if not isinstance(items, dict):
+            return []
+        if items.get("type") == "string":
+            return [path]
+        return schema_string_arrays(items, (*path, "[]"))
+    out: list[tuple[str, ...]] = []
+    for name, sub in schema.get("properties", {}).items():
+        out += schema_string_arrays(sub, (*path, name))
+    return out
+
+
+@lru_cache(maxsize=1)
+def string_array_paths() -> tuple[tuple[str, ...], ...]:
+    """The paths of the fields the theory schema types as an array of strings."""
+    return tuple(schema_string_arrays(theory_schema()))
 
 
 @lru_cache(maxsize=1)

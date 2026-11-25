@@ -13,6 +13,7 @@ import numbers
 
 from ._compat import theory_keyword
 from ._num import number, plain
+from ._resources import string_array_paths
 
 
 def _decimal_up(s: str) -> str:
@@ -101,6 +102,40 @@ def _string(s: str) -> str:
     return '"' + "".join(out) + '"'
 
 
+def _box(x, path: tuple[str, ...]):
+    """``x`` with a single value at the end of ``path`` held as a one-element list.
+
+    A value that is neither None nor a list or mapping is boxed. ``"[]"`` visits
+    every entry of a list and every value of a mapping, as R's ``.tf_box_path()``
+    does, and None is left alone wherever it stands.
+    """
+    if not path:
+        return x if x is None or isinstance(x, (list, dict)) else [x]
+    head, rest = path[0], path[1:]
+    if head == "[]":
+        if isinstance(x, list):
+            return [None if item is None else _box(item, rest) for item in x]
+        if isinstance(x, dict):
+            return {k: None if v is None else _box(v, rest) for k, v in x.items()}
+        return x
+    if isinstance(x, dict) and x.get(head) is not None:
+        return {**x, head: _box(x[head], rest)}
+    return x
+
+
+def box_string_arrays(data):
+    """``data`` with a single value in each field the schema types as an array of strings boxed.
+
+    The singleton rule (API_SPEC.md section 4) reads ``derives_from: p1`` as
+    ``derives_from: [p1]``, and R's ``tf_write()`` writes it so. The canonical
+    form writes the boxed value, so that the two spellings hash alike. ``data``
+    itself is not changed.
+    """
+    for path in string_array_paths():
+        data = _box(data, path)
+    return data
+
+
 def _key(k: str) -> bytes:
     """A key's sort order: its UTF-16 code units, as RFC 8785 sorts them."""
     return k.encode("utf-16-be")
@@ -133,10 +168,14 @@ def content_hash(theory) -> str:
     The canonical form is the theory as JSON with every mapping's keys sorted
     by their UTF-16 code units, no whitespace, strings escaped only where JSON
     requires it and numbers written with the fewest digits that read back as the
-    same double, as RFC 8785 specifies. Two conventions make it the same in R
-    and Python: an empty mapping is written as an empty sequence, since R holds
-    the two alike, and an infinity or a missing number is written as
-    ``Infinity``, ``-Infinity`` or ``NaN``. The theory's own
+    same double, as RFC 8785 specifies. Three conventions make it the same in
+    R and Python: an empty mapping is written as an empty sequence, since R
+    holds the two alike, an infinity or a missing number is written as
+    ``Infinity``, ``-Infinity`` or ``NaN``, and a single value in a field that
+    the schema types as an array of strings, such as ``measurement`` or
+    ``derives_from``, is written as a one-element array, since a reader takes
+    ``derives_from: p1`` for ``[p1]``. R's ``tf_write()`` writes such a field
+    as an array, so a theory keeps its hash when R writes it. The theory's own
     ``version.content_hash`` is left out, so that a file can record the hash of
     its content.
 
@@ -158,4 +197,5 @@ def content_hash(theory) -> str:
     if isinstance(data, dict) and isinstance(data.get("version"), dict):
         version = {k: v for k, v in data["version"].items() if k != "content_hash"}
         data = {**data, "version": version}
+    data = box_string_arrays(data)
     return "sha256:" + hashlib.sha256(canonical(data).encode("utf-8")).hexdigest()

@@ -7,7 +7,7 @@ import warnings
 from ._access import PRED_TYPE, RELATION, enum, field, items, ne_str, str_list, text
 from ._compat import theory_keyword
 from ._relations import BIDIRECTED, DIRECTED
-from ._text import ascii_lower, trim, xml_escape
+from ._text import ascii_lower, quoted, trim, xml_escape
 
 _TYPES = ("nomological_net", "provenance", "causal_dag", "development_roadmap",
           "pipeline", "context", "workflow", "venn", "rigour", "severity")
@@ -621,4 +621,4 @@ def diagram(theory: dict, type: str = "nomological_net", engine: str | None = No
         return _rigor(theory)
     if type == "severity":
         return _severity_chart(theory)
-    raise ValueError(f"unknown diagram type {type!r}; expected one of {_TYPES}")
+    raise ValueError(f"unknown diagram type {quoted(type)}; expected one of {', '.join(_TYPES)}")

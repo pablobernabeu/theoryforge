@@ -110,6 +110,25 @@ def test_tokens_keep_every_script():
     assert tf.tokens("惊恐障碍 恐惧") == {"惊恐障碍"}
 
 
+def test_the_noncharacters_fffe_and_ffff_are_text_like_any_other():
+    # R's chartr() and tolower() refused both, so a label, definition, id or DOI
+    # holding one stopped tf_check() and the functions that read text there.
+    # The R suite asserts the same values.
+    from theoryforge._text import normalise_words
+    assert normalise_words("\u00c5B\ufffe\uffff") == "ab\ufffe\uffff"
+    assert tf.tokens("Arousal \uffff level.") == {"arousal", "level"}
+    t = _theory([{"id": "a\uffff", "label": "Pa\ufffeic", "definition": "Arousal \uffff level."},
+                 {"id": "b", "label": "B", "definition": "Threat appraisal."}],
+                [{"id": "p1", "from": "a\uffff", "to": "b", "relation": "increases"}])
+    assert t.check()["aggregate_score"] == 19.0
+    assert [r["flag"] for r in t.redundancy_check()] == ["ok"]
+    sem = t.compile_sem()
+    assert "# renamed for lavaan: 'a\uffff' -> a\n" in sem and "\nb ~ b_a_b*a\n" in sem
+    assert t.diagram("rigour") and t.diagram("venn") and t.preregister() and t.dossier()
+    dois = ["10.1234/abc", "10.1234/X\uffff"]
+    assert tf.new_evidence_dois(t, dois) == dois
+
+
 def test_identical_cyrillic_definitions_are_flagged():
     d = "Страх перед телесными ощущениями."
     t = _theory([{"id": "a", "label": "A", "definition": d},

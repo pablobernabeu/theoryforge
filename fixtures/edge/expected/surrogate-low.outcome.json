@@ -1,0 +1,5 @@
+{
+  "read": {
+    "error": "a string holds a lone surrogate, which theoryforge cannot read"
+  }
+}

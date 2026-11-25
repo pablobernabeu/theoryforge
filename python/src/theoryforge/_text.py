@@ -43,6 +43,16 @@ def xml_escape(s: object) -> str:
             .replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
+def quoted(v: object) -> str:
+    """``v`` as a refusal message names it: a string between single quotation marks.
+
+    Any other value is written as ``repr()`` writes it, so ``None`` stays
+    ``None``. R's ``.tf_quote_arg()`` quotes a string alike and writes any other
+    value as ``deparse()`` does (API_SPEC.md section 2).
+    """
+    return f"'{v}'" if isinstance(v, str) else repr(v)
+
+
 def ascii_lower(s: str) -> str:
     """``s`` with A-Z lowercased and every other character kept."""
     return s.translate(_ASCII_LOWER)

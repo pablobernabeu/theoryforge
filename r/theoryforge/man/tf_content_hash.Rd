@@ -18,11 +18,15 @@ Returns the SHA-256 digest of the theory's canonical form, as
 theory as JSON with every mapping's keys sorted by their UTF-16 code units,
 no whitespace, strings escaped only where JSON requires it and numbers
 written with the fewest digits that read back as the same double, as RFC
-8785 specifies (Rundgren et al., 2020). Two conventions make it the same in
-R and Python: an empty mapping is written as an empty sequence, and an
+8785 specifies (Rundgren et al., 2020). Three conventions make it the same
+in R and Python: an empty mapping is written as an empty sequence, an
 infinity or a missing number as \code{Infinity}, \code{-Infinity} or
-\code{NaN}. The theory's own \code{version$content_hash} is left out, so
-that a file can record the hash of its content.
+\code{NaN}, and a single value in a field that the schema types as an array
+of strings, such as \code{measurement} or \code{derives_from}, as a
+one-element array, since a reader takes \code{derives_from: p1} for
+\code{[p1]}. \code{\link[=tf_write]{tf_write()}} writes such a field as an array, so a theory keeps
+its hash when R writes it. The theory's own \code{version$content_hash} is
+left out, so that a file can record the hash of its content.
 }
 \details{
 Two theory files with the same content therefore have the same hash

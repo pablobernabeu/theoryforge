@@ -1,0 +1,21 @@
+# Edge case: a NUL escape in a double-quoted scalar. R's yaml package cut the
+# string at U+0000, so the title read as "A title with a NUL ", while Python
+# kept the rest, and the two twins hashed and preregistered different theories.
+# Both refuse the file. The backslash and zero of the unquoted definition are
+# text, not an escape.
+schema_version: "1.1"
+id: edge-nul-yaml
+title: "A title with a NUL \0 in it"
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: A definition that spells \0 as text.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases

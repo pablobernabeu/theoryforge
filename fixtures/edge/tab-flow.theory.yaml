@@ -1,0 +1,19 @@
+# Edge case: tabs in flow collections and before comments: after a comma, after
+# an opening brace or bracket, after a colon and before a "#". libyaml reads
+# each as separating white space, as R's yaml package does.
+schema_version: "1.1"
+id: edge-tab-flow	# a comment after a tab
+title: Tabs in flow collections
+maturity: building
+constructs:
+  - {id: c1,	label: Alpha, definition: The first construct.}	# a comment
+  - {	id: c2, label:	Beta, definition: The second construct.}
+  - {id:	c3, label: Gamma, definition: The third construct.}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases}
+  - {id: p2, from: c2, to: c3, relation: increases}
+predictions:
+  - id: h1
+    statement: Gamma rises with Alpha.
+    type: directional
+    derives_from: [	p1,	p2]

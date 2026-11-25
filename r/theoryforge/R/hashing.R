@@ -158,11 +158,15 @@
 #' theory as JSON with every mapping's keys sorted by their UTF-16 code units,
 #' no whitespace, strings escaped only where JSON requires it and numbers
 #' written with the fewest digits that read back as the same double, as RFC
-#' 8785 specifies (Rundgren et al., 2020). Two conventions make it the same in
-#' R and Python: an empty mapping is written as an empty sequence, and an
+#' 8785 specifies (Rundgren et al., 2020). Three conventions make it the same
+#' in R and Python: an empty mapping is written as an empty sequence, an
 #' infinity or a missing number as \code{Infinity}, \code{-Infinity} or
-#' \code{NaN}. The theory's own \code{version$content_hash} is left out, so
-#' that a file can record the hash of its content.
+#' \code{NaN}, and a single value in a field that the schema types as an array
+#' of strings, such as \code{measurement} or \code{derives_from}, as a
+#' one-element array, since a reader takes \code{derives_from: p1} for
+#' \code{[p1]}. [tf_write()] writes such a field as an array, so a theory keeps
+#' its hash when R writes it. The theory's own \code{version$content_hash} is
+#' left out, so that a file can record the hash of its content.
 #'
 #' Two theory files with the same content therefore have the same hash
 #' whatever their layout, comments, key order or format, and any change to a
@@ -181,9 +185,13 @@
 #' @export
 tf_content_hash <- function(theory) {
   data <- theory
-  if (.tf_is_mapping(data) && .tf_is_mapping(data$version)) {
-    data$version <- data$version[names(data$version) != "content_hash"]
+  if (.tf_is_mapping(data) && .tf_is_mapping(data[["version"]])) {
+    data[["version"]] <- data[["version"]][names(data[["version"]]) != "content_hash"]
   }
+  # A single value in a field the schema types as an array of strings is
+  # written as a one-element array, as the singleton rule reads it and as
+  # tf_write() writes it. NA becomes null first, so that it is not boxed.
+  data <- .tf_box_string_arrays(.tf_na_as_null(data))
   bytes <- charToRaw(enc2utf8(.tf_canonical(data)))
   paste0("sha256:", .tf_sha256(bytes))
 }

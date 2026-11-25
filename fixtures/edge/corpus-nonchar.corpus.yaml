@@ -1,0 +1,13 @@
+# Edge case: the noncharacters U+FFFE and U+FFFF, written as escapes, in a
+# keyword and in references, one of them a DOI. R's chartr(), which lowercased
+# the DOI, refused them, so tf_litmap() stopped in R while Python mapped the
+# corpus. The two records share the keyword and both references.
+schema_version: "1.0"
+id: corpus-nonchar
+records:
+  - id: w1
+    keywords: ["panic", "arousal \uFFFE"]
+    references: ["Smith 2001 10.1234/X\uFFFF", "10.1234/abc"]
+  - id: w2
+    keywords: ["panic", "arousal \uFFFE"]
+    references: ["10.1234/x\uFFFF", "10.1234/ABC"]

@@ -320,6 +320,18 @@ NULL
   "float#exp" = .tf_yaml_float
 )
 
+# `v` as a refusal message names it: a string between single quotation marks,
+# and any other value, NULL, NA or a vector included, as deparse() writes it,
+# so that the message is never empty. The Python twin's _text.quoted() quotes
+# a string alike and writes any other value as repr() does.
+.tf_quote_arg <- function(v) {
+  if (is.character(v) && length(v) == 1L && !is.na(v)) {
+    sprintf("'%s'", v)
+  } else {
+    paste(deparse(v), collapse = "")
+  }
+}
+
 # Parse a YAML file. merge.precedence = "override" lets a mapping's own key win
 # over a merged one (yaml's default keeps the merged value), and a repeated key
 # stops with "(<path>) Duplicate map key: '<key>'", which the Python twin copies.
@@ -328,9 +340,10 @@ NULL
 # caller's to see.
 .tf_read_yaml <- function(path) {
   text <- .tf_read_text(path)
-  parse <- function(handlers) {
-    yaml::yaml.load(text, handlers = handlers, merge.precedence = "override", error.label = path)
+  parse <- function(handlers, txt = text) {
+    yaml::yaml.load(txt, handlers = handlers, merge.precedence = "override", error.label = path)
   }
+  .tf_yaml_refuse_nul(text, path, parse)
   warned <- FALSE
   data <- withCallingHandlers(parse(.tf_yaml_handlers), warning = function(w) {
     warned <<- TRUE
@@ -340,15 +353,142 @@ NULL
   data
 }
 
-# Parse a JSON file. jsonlite keeps both entries of a repeated name, so the
-# document is checked afterwards and refused with the YAML reader's message.
+# Parse a JSON file. jsonlite's parser accepts comments, which JSON does not
+# have and Python's json module refuses, so the text is validated first, and
+# jsonlite's message for invalid JSON is given. jsonlite keeps both entries of a
+# repeated name, so the document is checked afterwards and refused with the
+# YAML reader's message. A string holding U+0000 or a lone surrogate is refused
+# after that (.tf_json_unreadable()).
 .tf_read_json <- function(path) {
-  data <- jsonlite::fromJSON(.tf_read_text(path), simplifyVector = FALSE)
+  text <- .tf_read_text(path)
+  ok <- jsonlite::validate(text)
+  if (!isTRUE(ok)) stop(sprintf("(%s) %s", path, trimws(attr(ok, "err"))), call. = FALSE)
+  bad <- .tf_json_unreadable(text)
+  data <- jsonlite::fromJSON(if (is.null(bad)) text else bad$probe, simplifyVector = FALSE)
   key <- .tf_first_duplicate_key(data)
   if (!is.null(key)) {
+    if (!is.null(bad)) {
+      what <- .tf_marked(key, bad$marks)
+      if (!is.null(what)) .tf_refuse_unreadable(path, what)
+    }
     stop(sprintf("(%s) Duplicate map key: '%s'", path, key), call. = FALSE)
   }
+  if (!is.null(bad)) .tf_refuse_unreadable(path, bad$what)
   data
+}
+
+# R cannot hold every string a file can spell. jsonlite and yaml cut a string
+# at U+0000, so "a\u0000b" reads as "a", and jsonlite reads a lone surrogate
+# escape as "?" or as invalid UTF-8. Python holds both, and cannot write a lone
+# surrogate as UTF-8. Both twins therefore refuse a file whose strings or keys
+# hold either, naming the first in the order of the text (API_SPEC.md section
+# 3). A repeated key is reported before it, as the Python twin's reader meets
+# it while parsing.
+.tf_refuse_unreadable <- function(path, what) {
+  stop(sprintf("(%s) a string holds %s, which theoryforge cannot read", path, what),
+       call. = FALSE)
+}
+
+# Two noncharacters that `text` holds neither as characters nor as escapes,
+# which a probe copy of the text puts in place of the escapes R cannot hold, so
+# that a repeated key can be checked without R cutting the keys short. Both
+# searches match bytes, the second with PCRE, since the TRE engine refuses
+# U+FFFE and U+FFFF, and a text that is not valid UTF-8 is left for the parser
+# to refuse.
+.tf_free_marks <- function(text) {
+  free <- Filter(function(cp) {
+    !grepl(intToUtf8(cp), text, fixed = TRUE, useBytes = TRUE) &&
+      !grepl(sprintf("(?i)%X", cp), text, perl = TRUE, useBytes = TRUE)
+  }, 0xFDD0:0xFDEF)
+  if (length(free) < 2L) free <- c(0xFDD0, 0xFDD1)
+  c("U+0000" = free[[1L]], "a lone surrogate" = free[[2L]])
+}
+
+# Which of `marks` comes first in `key`, by its name, or NULL.
+.tf_marked <- function(key, marks) {
+  cps <- utf8ToInt(enc2utf8(key))
+  hit <- match(marks, cps)
+  if (all(is.na(hit))) return(NULL)
+  names(marks)[[which.min(replace(hit, is.na(hit), .Machine$integer.max))]]
+}
+
+# The escapes of a valid JSON text that R cannot hold: \u0000, a high surrogate
+# escape that the next escape does not pair with a low one, and a low surrogate
+# escape that is not the second of a pair. NULL when there is none, and
+# otherwise a list with `what`, the first in the text, `marks`, and `probe`, the
+# text with each such escape replaced by the escape of its mark. Once the text
+# is valid JSON, every backslash starts an escape inside a string, so the
+# escapes are listed in order by one pattern.
+.tf_json_unreadable <- function(text) {
+  bytes <- charToRaw(text)
+  m <- gregexpr("\\\\(u[0-9A-Fa-f]{4}|.)", text, perl = TRUE, useBytes = TRUE)[[1L]]
+  if (m[[1L]] == -1L) return(NULL)
+  starts <- as.integer(m)
+  unicode <- attr(m, "match.length") == 6L
+  cp <- rep(NA_integer_, length(starts))
+  cp[unicode] <- strtoi(vapply(starts[unicode], function(i) rawToChar(bytes[(i + 2L):(i + 5L)]),
+                               character(1)), 16L)
+  suspect <- which(!is.na(cp) & (cp == 0L | (cp >= 0xD800 & cp <= 0xDFFF)))
+  if (length(suspect) == 0L) return(NULL)
+  bad <- character(0)
+  at <- integer(0)
+  paired <- FALSE
+  for (k in suspect) {
+    if (paired) {
+      paired <- FALSE
+      next
+    }
+    if (cp[[k]] == 0L) {
+      what <- "U+0000"
+    } else if (cp[[k]] <= 0xDBFF && k < length(starts) && starts[[k + 1L]] == starts[[k]] + 6L &&
+               isTRUE(cp[[k + 1L]] >= 0xDC00 && cp[[k + 1L]] <= 0xDFFF)) {
+      paired <- TRUE
+      next
+    } else {
+      what <- "a lone surrogate"
+    }
+    bad <- c(bad, what)
+    at <- c(at, starts[[k]])
+  }
+  if (length(bad) == 0L) return(NULL)
+  marks <- .tf_free_marks(text)
+  for (i in seq_along(at)) {
+    bytes[at[[i]]:(at[[i]] + 5L)] <- charToRaw(sprintf("\\u%04X", marks[[bad[[i]]]]))
+  }
+  probe <- rawToChar(bytes)
+  Encoding(probe) <- "UTF-8"
+  list(what = bad[[1L]], marks = marks, probe = probe)
+}
+
+# Refuse a YAML text that holds U+0000 in a string or key, which yaml would
+# cut short. The NUL escapes (\0, \x00, \u0000 and \U00000000) are escapes only
+# in a double-quoted scalar, and text elsewhere keeps the backslash, so each is
+# replaced by the escape of a mark in a probe copy, which is parsed: the mark
+# appears in a value or a key only where an escape stood in a double-quoted
+# scalar. A repeated key comes first, as in the Python twin, unless the key
+# itself holds U+0000. Any other error of the probe is left to the reading of
+# the file itself, which reports its own positions. libyaml refuses a
+# surrogate escape.
+.tf_yaml_refuse_nul <- function(text, path, parse) {
+  nul <- "(?<!\\\\)((?:\\\\\\\\)*)\\\\(?:0|x00|u0000|U00000000)"
+  if (!grepl(nul, text, perl = TRUE, useBytes = TRUE)) return(invisible())
+  mark <- .tf_free_marks(text)[["U+0000"]]
+  probe <- gsub(nul, sprintf("\\1\\\\u%04X", mark), text, perl = TRUE, useBytes = TRUE)
+  Encoding(probe) <- "UTF-8"
+  data <- tryCatch(suppressWarnings(parse(.tf_yaml_handlers, probe)), error = function(e) e)
+  if (inherits(data, "error")) {
+    msg <- conditionMessage(data)
+    if (grepl("Duplicate map key: '", msg, fixed = TRUE) &&
+        grepl(intToUtf8(mark), msg, fixed = TRUE, useBytes = TRUE)) {
+      .tf_refuse_unreadable(path, "U+0000")
+    }
+    return(invisible())
+  }
+  flat <- unlist(data)
+  if (any(grepl(intToUtf8(mark), c(as.character(flat), names(flat)), fixed = TRUE, useBytes = TRUE))) {
+    .tf_refuse_unreadable(path, "U+0000")
+  }
+  invisible()
 }
 
 # The first repeated name in a parsed document, or NULL. Children are checked
@@ -373,7 +513,7 @@ NULL
 # The paths of the schema's array-of-strings fields, such as
 # c("predictions", "[]", "derives_from"), where "[]" stands for every entry of a
 # collection. They are read from theory.schema.json, so a field added there is
-# boxed by tf_write() without a change here.
+# boxed by tf_write() and tf_content_hash() without a change here.
 .tf_string_array_paths <- function() {
   if (is.null(.tf_cache$string_array_paths)) {
     .tf_cache$string_array_paths <- .tf_schema_string_arrays(tf_theory_schema(), character(0))
@@ -399,6 +539,9 @@ NULL
 # Hold every array-of-strings field of a theory as a list. jsonlite (under
 # auto_unbox) and yaml write a one-element character vector as a scalar, which
 # fails the package's own schema, while a list is always written as an array.
+# tf_content_hash() boxes the same fields, so that the hash reads a single
+# value as the one-element array tf_write() makes of it. The Python twin's
+# hashing.box_string_arrays() boxes alike.
 .tf_box_string_arrays <- function(theory) {
   for (path in .tf_string_array_paths()) theory <- .tf_box_path(theory, path)
   theory

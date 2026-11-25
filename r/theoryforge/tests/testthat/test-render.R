@@ -113,7 +113,10 @@ test_that("causal_dag and unknown types are refused with guidance", {
   th <- render_demo_theory()
   expect_error(tf_render_diagram(th, "causal_dag"), "dagitty")
   expect_error(tf_render_diagram(tf_diagram(th, "causal_dag")), "dagitty")
-  expect_error(tf_render_diagram(th, "no_such_view"), "unknown diagram type")
+  expect_error(tf_render_diagram(th, "no_such_view"), "unknown diagram type 'no_such_view'; ",
+               fixed = TRUE)
+  # NULL stopped with "argument is of length zero" before the message.
+  expect_error(tf_render_diagram(th, NULL), "unknown diagram type NULL; ", fixed = TRUE)
 })
 
 test_that("the report path ends in .qmd by the rule Python follows", {

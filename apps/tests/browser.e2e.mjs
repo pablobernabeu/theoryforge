@@ -9,6 +9,9 @@
 //   - checks that a source the package cannot read is reported by the line
 //     that names the error, with the user's file name in place of the
 //     in-browser path;
+//   - records the current content hash of a theory with a single string in a
+//     string array, and checks that the theory stays valid and that the saved
+//     file keeps the hash;
 //   - checks the layout at 390 and 768 px wide (no sideways scroll, the
 //     header's buttons on screen, the sidebar not sticky) and the contrast of
 //     coloured text in the light and the dark theme.
@@ -27,6 +30,7 @@
 // Exit 0 when every check passes, 1 otherwise.
 import http from "node:http";
 import { promises as fs, existsSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -284,6 +288,73 @@ async function linkRoundTrip(browser, page, base, lang) {
   await ctx.close();
 }
 
+// A recorded content hash: a theory with a single string where the schema
+// types an array of strings. The R app's editor holds the document that
+// tf_write() writes, with that field as a one-element array, and the content
+// hash reads the two alike, so recording the current hash leaves the theory
+// valid, and the saved file reads back with the same hash and stays valid.
+const SINGLETON_THEORY = `schema_version: "1.1"
+id: recorded-hash
+title: A theory whose hash is recorded
+maturity: building
+version:
+  id: v1
+constructs:
+  - id: c1
+    label: Arousal
+    definition: Bodily activation.
+    measurement: self-report scale
+  - id: c2
+    label: Threat
+    definition: Appraised danger.
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases}
+predictions:
+  - id: h1
+    statement: Threat rises with arousal.
+    type: directional
+    derives_from: p1
+`;
+async function recordedHash(page, lang) {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), "tf-e2e-"));
+  const load = async (name, text, title) => {
+    const file = path.join(dir, name);
+    await fs.writeFile(file, text);
+    await page.setInputFiles("#fileInput", file);
+    await page.waitForFunction((t) => document.querySelector("#summaryWrap .ttl")?.textContent === t &&
+      document.querySelector("#summaryWrap .hash code"), title, { timeout: RUN_MS });
+    await idle(page);
+  };
+  const state = () => page.evaluate(() => ({
+    valid: !!document.querySelector("#summaryWrap .chip.valid"),
+    hash: document.querySelector("#summaryWrap .hash code")?.title || "",
+    status: (document.querySelector("#summaryWrap .chips")?.textContent || "").trim(),
+  }));
+  await load("recorded-hash.theory.yaml", SINGLETON_THEORY, "A theory whose hash is recorded");
+  const before = await state();
+  if (!before.valid) fail(`${lang} recorded hash`, "the theory is not valid on loading: " + before.status);
+  await page.click("#tabEditor");
+  await page.click('.ed-toolbar [data-view="both"]');
+  await page.waitForSelector('.ed-sec[data-sec="theory"]');
+  if (!(await page.$eval('.ed-sec[data-sec="theory"]', (d) => d.open))) await page.click('.ed-sec[data-sec="theory"] > summary');
+  await page.click('.ed-sec[data-sec="theory"] button:has-text("Record the current hash")');
+  await page.waitForFunction(() => /content_hash: sha256:/.test(document.querySelector("#edSource").value), null, { timeout: RUN_MS });
+  // The engine reads the change once typing pauses.
+  await page.waitForTimeout(1500);
+  await idle(page);
+  const after = await state();
+  if (!after.valid) fail(`${lang} recorded hash`, "recording the current hash made the theory invalid: " + after.status);
+  if (after.hash !== before.hash) fail(`${lang} recorded hash`, `recording the hash changed it from ${before.hash} to ${after.hash}`);
+  const [dl] = await Promise.all([page.waitForEvent("download"), page.click("#edSave")]);
+  const saved = await fs.readFile(await dl.path(), "utf8");
+  if (!saved.includes("content_hash: " + before.hash)) fail(`${lang} recorded hash`, "the saved file does not record the hash");
+  await load("recorded-hash-saved.theory.yaml", saved, "A theory whose hash is recorded");
+  const back = await state();
+  if (!back.valid || back.hash !== before.hash) fail(`${lang} recorded hash`, "the saved file reads back as " + back.status + " " + back.hash);
+  await fs.rm(dir, { recursive: true, force: true });
+  console.log(`${lang}: a recorded hash kept the theory valid, and the saved file kept the hash`);
+}
+
 // ---- layout and contrast -----------------------------------------------------
 async function layout(page, lang) {
   for (const [tab, width] of [["#tabResult", 390], ["#tabEditor", 390], ["#tabResult", 768], ["#tabEditor", 768]]) {
@@ -389,6 +460,7 @@ try {
     }
     await linkRoundTrip(browser, page, base, lang);
     record["parse error"] = { text: await brokenSource(page, lang) };
+    await recordedHash(page, lang);
     if (!flag("skip-layout")) { await layout(page, lang); await contrast(page, lang); }
     for (const e of page.errors) if (!/favicon|ERR_ABORTED/.test(e)) fail(`${lang} console`, e.slice(0, 300));
     await page.context().close();

@@ -293,6 +293,64 @@ def test_a_duplicate_key_is_refused_with_the_r_message(tmp_path, name, text, key
     assert str(err.value) == f"({path}) Duplicate map key: '{key}'"
 
 
+# Strings R cannot hold (API_SPEC.md section 3). Each entry is (file name, text,
+# what the reader names, or None when the file reads). The R suite reads the
+# same texts.
+BS = "\\"
+UNREADABLE = [
+    ("nul.theory.json", '{"id": "x", "title": "a' + BS + 'u0000b"}', "U+0000"),
+    ("high.theory.json", '{"id": "x", "title": "a' + BS + 'ud800b"}', "a lone surrogate"),
+    ("low.theory.json", '{"id": "x", "title": "a' + BS + 'udc00b"}', "a lone surrogate"),
+    ("twice.theory.json", '{"id": "x", "title": "' + BS + 'ud800' + BS + 'ud800' + BS + 'udc00"}',
+     "a lone surrogate"),
+    ("order.theory.json", '{"t": "' + BS + 'udbff", "u": "' + BS + 'u0000"}', "a lone surrogate"),
+    ("keys.theory.json", '{"a' + BS + 'u0000b": 1, "a' + BS + 'u0000c": 2}', "U+0000"),
+    ("dupkey.theory.json", '{"a' + BS + 'u0000b": 1, "a' + BS + 'u0000b": 2}', "U+0000"),
+    ("nul.theory.yaml", 'id: x\ntitle: "before' + BS + '0after"\n', "U+0000"),
+    ("nulx.theory.yaml", 'id: x\ntitle: "before' + BS + 'x00after"\n', "U+0000"),
+    ("nulu.theory.yaml", 'id: x\ntitle: "before' + BS + 'u0000after"\n', "U+0000"),
+    ("keys.theory.yaml", '"a' + BS + '0b": 1\n"a' + BS + '0c": 2\n', "U+0000"),
+    ("dupkey.theory.yaml", '"a' + BS + '0b": 1\n"a' + BS + '0b": 2\n', "U+0000"),
+    # A paired surrogate escape is one character, an escaped backslash is no
+    # escape, and only a double-quoted YAML scalar has escapes.
+    ("pair.theory.json", '{"id": "x", "title": "a' + BS + 'uD83D' + BS + 'uDE00b"}', None),
+    ("escaped.theory.json", '{"id": "x", "title": "a' + BS + BS + 'u0000b"}', None),
+    ("escaped.theory.yaml", 'id: x\ntitle: "a' + BS + BS + '0b"\n', None),
+    ("plain.theory.yaml", "id: x\ntitle: a" + BS + "0b\n", None),
+    ("single.theory.yaml", "id: x\ntitle: 'a" + BS + "0b'\n", None),
+    ("block.theory.yaml", "id: x\ntitle: |\n  a" + BS + "0b\n", None),
+]
+
+
+@pytest.mark.parametrize(("name", "text", "what"), UNREADABLE, ids=[c[0] for c in UNREADABLE])
+def test_a_string_r_cannot_hold_is_refused(tmp_path, name, text, what):
+    path = _file(tmp_path, name, text)
+    if what is None:
+        assert "x" in json.dumps(tf.read(path).data)
+        return
+    with pytest.raises(ValueError) as err:
+        tf.read(path)
+    assert str(err.value) == f"({path}) a string holds {what}, which theoryforge cannot read"
+
+
+def test_a_repeated_key_is_reported_before_a_string_r_cannot_hold(tmp_path):
+    # As both readers meet them: the repeated key while parsing, the string after.
+    for name, text in [("dup.theory.json", '{"k": {"a": 1, "a": 2}, "t": "' + BS + 'u0000"}'),
+                       ("dup.theory.yaml", 'k: {a: 1, a: 2}\nt: "' + BS + '0"\n')]:
+        with pytest.raises(ValueError, match="Duplicate map key: 'a'"):
+            tf.read(_file(tmp_path, name, text))
+
+
+def test_json_comments_are_refused(tmp_path):
+    # JSON has no comments. R's jsonlite parser accepts them, so R validates the
+    # text first and gives jsonlite's message, and json refuses them here.
+    path = _file(tmp_path, "commented.theory.json", '{\n  // exported by hand\n  "id": "x"\n}\n')
+    with pytest.raises(json.JSONDecodeError):
+        tf.read(path)
+    with pytest.raises(json.JSONDecodeError):
+        tf.read(_file(tmp_path, "block.theory.json", '{"id": "x" /* end */}'))
+
+
 def test_a_corpus_reads_through_the_same_reader(tmp_path):
     corpus = """\
 schema_version: "1.0"
@@ -408,6 +466,49 @@ def test_example_path_reaches_only_the_listed_examples():
     for name in ("expected", "../schema/theory.schema.json", "", "../core.py"):
         with pytest.raises(FileNotFoundError, match="no packaged example named"):
             tf.example_path(name)
+
+
+TABS = """\
+schema_version: "1.1"{T}
+id: tabs
+title: A title{T}
+maturity: building
+constructs:
+  - {{id: c1,{T}label: Alpha, definition: Bodily{T}activation.}}{T}# a comment
+  - {{{T}id: c2, label:{T}Beta, definition: Appraised danger.}}
+predictions:
+  - id: h1
+    statement: Beta rises.
+    type: directional
+    derives_from: [{T}p1,{T}p2]
+""".format(T="\t")
+
+
+def test_yaml_is_parsed_with_libyaml_as_r_parses_it():
+    # R's yaml package bundles libyaml. PyYAML's pure-Python scanner refused a
+    # tab that YAML allows as separating white space.
+    import yaml
+
+    from theoryforge import _load
+    if yaml.__with_libyaml__:
+        assert _load._StrictLoader.__mro__[1] is yaml.CSafeLoader
+
+
+def test_a_tab_reads_as_r_reads_it(tmp_path):
+    yaml = pytest.importorskip("yaml")
+    if not yaml.__with_libyaml__:
+        pytest.skip("PyYAML was built without libyaml")
+    t = tf.read(_file(tmp_path, "tabs.theory.yaml", TABS))
+    assert t.data["schema_version"] == "1.1" and t.data["title"] == "A title"
+    assert t.data["constructs"] == [
+        {"id": "c1", "label": "Alpha", "definition": "Bodily\tactivation."},
+        {"id": "c2", "label": "Beta", "definition": "Appraised danger."}]
+    assert t.data["predictions"][0]["derives_from"] == ["p1", "p2"]
+    # A tab that YAML does not allow is refused by both twins: one that indents
+    # a line, and one right after the dash of a sequence entry.
+    for i, text in enumerate(["id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n"]):
+        with pytest.raises(yaml.YAMLError, match="found character that cannot start any token"):
+            tf.read(_file(tmp_path, f"bad{i}.theory.yaml", text))
 
 
 def test_numpy_scalars_build_validate_write_and_hash_like_python_numbers(tmp_path):

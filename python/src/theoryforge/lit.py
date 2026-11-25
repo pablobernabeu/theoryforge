@@ -19,7 +19,7 @@ from urllib.parse import urlencode
 from ._access import field, items, ne_str, str_list, text
 from ._load import load_document
 from ._num import rnd
-from ._text import find_doi, normalise_doi
+from ._text import find_doi, normalise_doi, quoted
 from .redundancy import tokens
 
 DEFAULT_MIN_LINK = 2
@@ -705,8 +705,8 @@ def lit_diagram(obj: dict, type: str = "keyword_cooccurrence", max_edges: int | 
     if type == "theme_landscape":
         return _theme_landscape(obj)
     raise ValueError(
-        f"unknown lit diagram type {type!r}; expected one of "
-        "('keyword_cooccurrence', 'co_citation', 'theme_landscape')"
+        f"unknown lit diagram type {quoted(type)}; expected one of "
+        "keyword_cooccurrence, co_citation, theme_landscape"
     )
 
 

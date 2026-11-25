@@ -1,0 +1,27 @@
+# Edge case: a tab inside an unquoted value, as text pasted from a spreadsheet
+# carries, a tab after a key's colon and one before it. The tab is kept in the
+# value, so the first definition reads "Bodily<TAB>activation.". A continued
+# plain scalar keeps a tab inside a line and folds the line break to a space.
+schema_version: "1.1"
+id: edge-tab-plain
+title	: A tab inside unquoted text
+maturity: building
+constructs:
+  - id: c1
+    label:	Arousal
+    definition: Bodily	activation.
+  - id: c2
+    label: Perceived threat
+    definition: An appraisal of
+      danger	to the self.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Arousal	is read as a sign of danger.
+predictions:
+  - id: h1
+    statement: Threat rises with arousal.
+    type: directional
+    derives_from: [p1]

@@ -453,6 +453,62 @@ def test_the_content_hash_is_sha256_of_the_canonical_form(modality, tmp_path):
     assert modality.content_hash() != h
 
 
+SINGLETONS = """\
+schema_version: "1.1"
+id: singletons
+title: A theory with single values in string arrays
+maturity: building
+boundary_conditions: adults
+constructs:
+  - id: c1
+    label: Arousal
+    definition: Bodily activation.
+    measurement: self-report scale
+  - id: c2
+    label: Threat
+    definition: Appraised danger.
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases}
+predictions:
+  - id: h1
+    statement: Threat rises with arousal.
+    type: directional
+    derives_from: p1
+"""
+
+
+def test_the_content_hash_reads_a_single_string_as_a_one_element_array(tmp_path):
+    # API_SPEC section 34: a single value in a field the schema types as an array
+    # of strings is written as a one-element array, as the singleton rule reads
+    # it, so the theory keeps its hash when R's tf_write() writes the field as an
+    # array. The R suite asserts the same digest.
+    scalar = tmp_path / "scalar.theory.yaml"
+    scalar.write_text(SINGLETONS, encoding="utf-8")
+    boxed = tmp_path / "boxed.theory.yaml"
+    boxed.write_text(SINGLETONS.replace("adults", "[adults]").replace(
+        "self-report scale", "[self-report scale]").replace("derives_from: p1", "derives_from: [p1]"),
+        encoding="utf-8")
+    h = "sha256:5974774a777a33875a5d94eeebaf466fcd7c41071991d65591d44116699ea71d"
+    assert tf.read(scalar).content_hash() == tf.read(boxed).content_hash() == h
+    # A null is not boxed, nor is a list or a mapping, and "[]" visits the
+    # values of a collection held as a mapping, as R's .tf_box_path() does.
+    from theoryforge.hashing import box_string_arrays
+    data = {"constructs": {"a": {"measurement": "m"}, "b": None, "c": {"measurement": None}},
+            "predictions": [{"derives_from": 1, "claim": {"given": "c1"}}, {"derives_from": {"p": 1}}],
+            "boundary_conditions": [["x"]]}
+    assert box_string_arrays(data) == {
+        "constructs": {"a": {"measurement": ["m"]}, "b": None, "c": {"measurement": None}},
+        "predictions": [{"derives_from": [1], "claim": {"given": ["c1"]}}, {"derives_from": {"p": 1}}],
+        "boundary_conditions": [["x"]]}
+    assert data["constructs"]["a"]["measurement"] == "m"  # the theory itself is not changed
+    # Only the key version is the version, as R now reads it.
+    t = tf.read(scalar)
+    t.data["version_note"] = {"content_hash": "x"}
+    first = t.content_hash()
+    t.data["version_note"]["content_hash"] = "y"
+    assert t.content_hash() != first
+
+
 def test_the_canonical_form_keeps_the_shortest_digits_that_read_back_as_the_number():
     # R's twin tested its digits with a parser that reads -527.867953 one unit
     # in the last place away. The R suite asserts the same text.

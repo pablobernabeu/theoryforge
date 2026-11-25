@@ -133,8 +133,9 @@ node --test apps/tests/*.test.mjs   # from the repository root
 
 `tests/browser.e2e.mjs` drives both apps in Chromium with Playwright. It boots the
 two engines and runs every operation on every example and on a theory it builds in
-the editor. It checks how a source the package cannot read is reported, the layout at
-390 and 768 px wide and the contrast of coloured text in both themes. Last, it
+the editor. It checks how a source the package cannot read is reported, that recording
+the current content hash leaves a theory valid and that the saved file keeps the hash,
+the layout at 390 and 768 px wide and the contrast of coloured text in both themes. Last, it
 compares the displayed text of the two apps wherever the packages promise the same
 output. It needs Playwright with its Chromium and network access to the engines'
 hosts, so `node --test` leaves it out:

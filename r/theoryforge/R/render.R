@@ -5,8 +5,8 @@
 # Suggests. The Python twin offers the same convenience through the 'graphviz'
 # library (render_diagram()).
 
-.tf_DOT_TYPES <- c("nomological_net", "provenance", "development_roadmap",
-                   "pipeline", "context", "workflow")
+# The chart views, which tf_diagram() writes as SVG. The other views of
+# .tf_DIAGRAM_TYPES are Graphviz DOT, apart from causal_dag.
 .tf_SVG_TYPES <- c("venn", "rigour", "severity")
 
 #' Render a diagram in the viewer or as SVG
@@ -60,6 +60,11 @@ tf_render_diagram <- function(x, type = "nomological_net", as = c("widget", "svg
            call. = FALSE)
     }
   } else {
+    # An unknown type, NULL or a vector included, gets tf_diagram()'s message.
+    if (!(is.character(type) && length(type) == 1L && !is.na(type)) ||
+        !type %in% .tf_DIAGRAM_TYPES) {
+      tf_diagram(x, type)
+    }
     if (identical(type, "causal_dag")) {
       stop("the causal_dag view emits dagitty syntax, not Graphviz DOT; ",
            "render tf_diagram(x, \"causal_dag\") with the dagitty package ",
@@ -67,11 +72,6 @@ tf_render_diagram <- function(x, type = "nomological_net", as = c("widget", "svg
     }
     if (type %in% .tf_SVG_TYPES) {
       return(.tf_render_svg(tf_diagram(x, type), as))
-    }
-    if (!type %in% .tf_DOT_TYPES) {
-      stop(sprintf("unknown diagram type '%s'; expected one of %s",
-                   type, paste(.tf_DIAGRAM_TYPES, collapse = ", ")),
-           call. = FALSE)
     }
     ir <- tf_diagram(x, type)
   }

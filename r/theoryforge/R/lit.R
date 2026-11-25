@@ -928,8 +928,8 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence", max_edges = NULL)
   if (identical(type, "theme_landscape")) {
     return(.tf_lit_theme_landscape(obj))
   }
-  stop(sprintf("unknown lit diagram type '%s'; expected one of %s",
-               type,
+  stop(sprintf("unknown lit diagram type %s; expected one of %s",
+               .tf_quote_arg(type),
                "keyword_cooccurrence, co_citation, theme_landscape"),
        call. = FALSE)
 }

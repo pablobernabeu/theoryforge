@@ -120,6 +120,11 @@ def test_lit_diagrams(fixtures_dir, panic_path):
     assert tl.startswith("digraph theme_landscape {\n")
     assert '"focal" -> "theme_2";' in tl
     assert '"alt_biological" -> "theme_2";' in tl
+    # The message R gives too (API_SPEC section 2).
+    with pytest.raises(ValueError) as err:
+        tf.lit_diagram(lm, "mindmap")
+    assert str(err.value) == ("unknown lit diagram type 'mindmap'; expected one of "
+                              "keyword_cooccurrence, co_citation, theme_landscape")
 
 
 # -- validated arguments and corpora (API_SPEC.md section 14) -----------------

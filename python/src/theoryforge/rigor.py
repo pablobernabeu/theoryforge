@@ -21,7 +21,7 @@ from ._compat import theory_keyword
 from ._num import number, rnd
 from ._relations import DIRECTED
 from ._status import classify_auxiliary
-from ._text import xml_escape
+from ._text import quoted, xml_escape
 from .entailment import prediction_verdicts
 from .redundancy import _pairs, tokens
 from .scoring import severity as _rubric
@@ -410,4 +410,4 @@ def report(theory, format: str = "json") -> str:
             f'  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n'
             f'{rows}\n  </table>\n</section>\n'
         )
-    raise ValueError(f"unknown report format: {format!r}")
+    raise ValueError(f"unknown report format: {quoted(format)}")

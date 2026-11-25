@@ -9,6 +9,13 @@ with a byte-order mark. API_SPEC.md section 3 ("Reading and writing files") pins
 the rules both twins follow, with a table of how each plain scalar is read. This
 module is the Python half, and ``utils.R`` (``.tf_read_yaml``, ``.tf_read_json``)
 the R half.
+
+YAML is parsed with libyaml (``yaml.CSafeLoader``), the parser R's yaml package
+bundles, so that a tab used as separating white space or inside a plain scalar
+reads alike in both twins. A PyYAML built without libyaml falls back on its
+pure-Python parser, which refuses such a tab. R cuts a string at U+0000 and
+misreads a lone surrogate, which Python holds but cannot write as UTF-8, so a file
+whose strings hold either is refused in both twins.
 """
 from __future__ import annotations
 
@@ -47,8 +54,21 @@ class _DuplicateKey(Exception):
         self.key = key
 
 
-class _StrictLoader(yaml.SafeLoader):
-    """SafeLoader with R's scalar resolution, duplicate keys refused and R's merge order."""
+# libyaml is the parser that R's yaml package bundles, so with it both twins
+# read the same text alike. PyYAML's pure-Python scanner skips only spaces
+# between tokens and inside a plain scalar, so it refuses a tab that YAML
+# allows there, as in a trailing tab or "title: A<TAB>B", which libyaml reads.
+# The wheels PyYAML publishes, and the one Pyodide ships for the Python app,
+# are built with libyaml. The pure-Python loader is the fallback for a build
+# without it.
+try:
+    from yaml import CSafeLoader as _BaseLoader
+except ImportError:  # pragma: no cover - a PyYAML built without libyaml
+    from yaml import SafeLoader as _BaseLoader  # type: ignore[assignment]
+
+
+class _StrictLoader(_BaseLoader):
+    """A safe loader with R's scalar resolution, duplicate keys refused and R's merge order."""
 
     def construct_document(self, node: Node) -> Any:
         _refuse_duplicate_keys(self, node)
@@ -192,25 +212,67 @@ def _unique_pairs(pairs: list[tuple[str, Any]]) -> dict:
     return dict(pairs)
 
 
+# A character that R cannot hold in a string: it cuts a string at U+0000 and
+# reads a lone surrogate escape as "?" or as bytes that are not UTF-8. A lone
+# surrogate cannot be written as UTF-8 here either, so the hash, the
+# preregistration and the dossier would fail on it.
+_UNREADABLE = re.compile("[\x00\ud800-\udfff]")
+
+
+def _unreadable(x: Any) -> str | None:
+    """What R cannot hold in the first string of ``x`` that holds it, or None.
+
+    The walk follows the order of the text, each key before its value, and names
+    the first such character of the string: ``U+0000`` or ``a lone surrogate``.
+    """
+    if isinstance(x, str):
+        m = _UNREADABLE.search(x)
+        return None if m is None else ("U+0000" if m.group() == "\x00" else "a lone surrogate")
+    if isinstance(x, dict):
+        for key, value in x.items():
+            found = _unreadable(key) or _unreadable(value)
+            if found:
+                return found
+    elif isinstance(x, list):
+        for value in x:
+            found = _unreadable(value)
+            if found:
+                return found
+    return None
+
+
 def load_document(path) -> Any:
     """Parse the YAML or JSON file at ``path`` (JSON when its suffix is ``.json``).
 
     The bytes are decoded as UTF-8 with any byte-order mark dropped. A repeated key
     in any mapping raises ``ValueError("(<path>) Duplicate map key: '<key>'")``, the
-    message R's reader gives.
+    message R's reader gives. A string or key that holds U+0000 or a lone
+    surrogate, which R cannot hold, raises
+    ``ValueError("(<path>) a string holds U+0000, which theoryforge cannot read")``,
+    or the same message naming ``a lone surrogate``. A repeated key is reported
+    first, unless the key itself holds one of the two. JSON has no comments, and
+    ``json`` refuses them.
     """
     path = Path(path)
     text = path.read_bytes().decode("utf-8-sig")
     try:
         if path.suffix.lower() == ".json":
-            return json.loads(text, object_pairs_hook=_unique_pairs)
-        loader = _StrictLoader(text)
-        try:
-            return loader.get_single_data()
-        finally:
-            loader.dispose()
+            data = json.loads(text, object_pairs_hook=_unique_pairs)
+        else:
+            loader = _StrictLoader(text)
+            try:
+                data = loader.get_single_data()
+            finally:
+                loader.dispose()
     except _DuplicateKey as dup:
+        what = _unreadable(str(dup.key))
+        if what:
+            raise ValueError(f"({path}) a string holds {what}, which theoryforge cannot read") from None
         raise ValueError(f"({path}) Duplicate map key: '{dup.key}'") from None
+    what = _unreadable(data)
+    if what:
+        raise ValueError(f"({path}) a string holds {what}, which theoryforge cannot read")
+    return data
 
 
 class _Dumper(yaml.SafeDumper):

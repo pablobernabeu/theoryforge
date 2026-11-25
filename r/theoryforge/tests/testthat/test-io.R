@@ -201,6 +201,91 @@ test_that("a duplicate key is refused with one message in YAML and JSON", {
   }
 })
 
+test_that("a string R cannot hold is refused with one message", {
+  # R cuts a string at U+0000 and reads a lone surrogate escape as "?" or as
+  # bytes that are not UTF-8, while Python kept both (API_SPEC.md section 3).
+  # The Python suite reads the same texts.
+  bs <- "\\"
+  cases <- list(
+    list(".json", paste0('{"id": "x", "title": "a', bs, 'u0000b"}'), "U+0000"),
+    list(".json", paste0('{"id": "x", "title": "a', bs, 'ud800b"}'), "a lone surrogate"),
+    list(".json", paste0('{"id": "x", "title": "a', bs, 'udc00b"}'), "a lone surrogate"),
+    list(".json", paste0('{"id": "x", "title": "', bs, 'ud800', bs, 'ud800', bs, 'udc00"}'),
+         "a lone surrogate"),
+    list(".json", paste0('{"t": "', bs, 'udbff", "u": "', bs, 'u0000"}'), "a lone surrogate"),
+    list(".json", paste0('{"a', bs, 'u0000b": 1, "a', bs, 'u0000c": 2}'), "U+0000"),
+    list(".json", paste0('{"a', bs, 'u0000b": 1, "a', bs, 'u0000b": 2}'), "U+0000"),
+    list(".yaml", paste0('id: x\ntitle: "before', bs, '0after"\n'), "U+0000"),
+    list(".yaml", paste0('id: x\ntitle: "before', bs, 'x00after"\n'), "U+0000"),
+    list(".yaml", paste0('id: x\ntitle: "before', bs, 'u0000after"\n'), "U+0000"),
+    list(".yaml", paste0('"a', bs, '0b": 1\n"a', bs, '0c": 2\n'), "U+0000"),
+    list(".yaml", paste0('"a', bs, '0b": 1\n"a', bs, '0b": 2\n'), "U+0000"),
+    # A paired surrogate escape is one character, an escaped backslash is no
+    # escape, and only a double-quoted YAML scalar has escapes.
+    list(".json", paste0('{"id": "x", "title": "a', bs, 'uD83D', bs, 'uDE00b"}'), NULL),
+    list(".json", paste0('{"id": "x", "title": "a', bs, bs, 'u0000b"}'), NULL),
+    list(".yaml", paste0('id: x\ntitle: "a', bs, bs, '0b"\n'), NULL),
+    list(".yaml", paste0("id: x\ntitle: a", bs, "0b\n"), NULL),
+    list(".yaml", paste0("id: x\ntitle: 'a", bs, "0b'\n"), NULL),
+    list(".yaml", paste0("id: x\ntitle: |\n  a", bs, "0b\n"), NULL)
+  )
+  for (case in cases) {
+    path <- io_file(case[[2]], ext = case[[1]])
+    if (is.null(case[[3]])) {
+      expect_identical(tf_read(path)$id, "x", info = case[[2]])
+    } else {
+      expect_error(tf_read(path), sprintf("(%s) a string holds %s, which theoryforge cannot read",
+                                          path, case[[3]]), fixed = TRUE, info = case[[2]])
+    }
+  }
+  expect_identical(tf_read(io_file(paste0('{"id": "x", "t": "a', bs, 'uD83D', bs, 'uDE00b"}'),
+                                   ext = ".json"))$t, "a\U0001F600b")
+  # As both readers meet them: the repeated key while parsing, the string after.
+  expect_error(tf_read(io_file(paste0('{"k": {"a": 1, "a": 2}, "t": "', bs, 'u0000"}'), ext = ".json")),
+               "Duplicate map key: 'a'", fixed = TRUE)
+  expect_error(tf_read(io_file(paste0('k: {a: 1, a: 2}\nt: "', bs, '0"\n'))),
+               "Duplicate map key: 'a'", fixed = TRUE)
+})
+
+test_that("JSON comments are refused, as Python's json module refuses them", {
+  # jsonlite's parser accepts comments, so the text is validated first.
+  path <- io_file('{\n  // exported by hand\n  "id": "x"\n}\n', ext = ".json")
+  expect_error(tf_read(path), "comments are not enabled", fixed = TRUE)
+  expect_error(tf_read(io_file('{"id": "x" /* end */}', ext = ".json")), "comments are not enabled",
+               fixed = TRUE)
+})
+
+test_that("a tab reads as libyaml reads it, in both twins", {
+  # The Python twin parses YAML with libyaml, which R's yaml package bundles,
+  # since PyYAML's pure-Python scanner refused a tab that YAML allows as
+  # separating white space. The Python suite reads the same text.
+  tab <- "\t"
+  text <- paste0('schema_version: "1.1"', tab, '
+id: tabs
+title: A title', tab, '
+maturity: building
+constructs:
+  - {id: c1,', tab, 'label: Alpha, definition: Bodily', tab, 'activation.}', tab, '# a comment
+  - {', tab, 'id: c2, label:', tab, 'Beta, definition: Appraised danger.}
+predictions:
+  - id: h1
+    statement: Beta rises.
+    type: directional
+    derives_from: [', tab, 'p1,', tab, 'p2]
+')
+  t <- tf_read(io_file(text))
+  expect_identical(t$schema_version, "1.1")
+  expect_identical(t$title, "A title")
+  expect_identical(t$constructs, list(
+    list(id = "c1", label = "Alpha", definition = "Bodily\tactivation."),
+    list(id = "c2", label = "Beta", definition = "Appraised danger.")))
+  expect_identical(t$predictions[[1]]$derives_from, list("p1", "p2"))
+  # A tab that indents a line, or follows the dash of a sequence entry, is refused.
+  for (bad in c("id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n")) {
+    expect_error(tf_read(io_file(bad)), "found character that cannot start any token", fixed = TRUE)
+  }
+})
+
 test_that("a corpus reads through the same reader", {
   corpus <- 'schema_version: "1.0"
 id: yn-corpus
@@ -434,14 +519,22 @@ test_that("tf_write keeps dates as text, the shape of an array and the digits be
 test_that("a recorded content hash survives tf_write in both formats", {
   # A number that needs 17 digits, written with 15, read back as another
   # number, so the theory's hash changed and tf_validate(full = TRUE) refused
-  # the hash it had recorded.
+  # the hash it had recorded. A single string in a string array, which
+  # tf_write() writes as an array, changed the hash too, and NA there was
+  # written as an array holding null.
   theory <- tf_read(tf_example_path("modality-switching.theory.yaml"))
   theory$constructs[[1]]$x_scale <- c(6 / sqrt(2), 41.123456789012344)
+  theory$constructs[[1]]$measurement <- "self-report scale"
+  theory$constructs[[2]]$measurement <- NA
+  theory$predictions[[1]]$derives_from <- "p1"
   theory$version$content_hash <- tf_content_hash(theory)
   for (ext in c(".yaml", ".json")) {
     path <- tempfile(fileext = ext)
     tf_write(theory, path)
     back <- tf_read(path)
+    expect_identical(back$constructs[[1]]$measurement, list("self-report scale"), info = ext)
+    expect_true("measurement" %in% names(back$constructs[[2]]), info = ext)
+    expect_null(back$constructs[[2]]$measurement, info = ext)
     expect_identical(tf_content_hash(back), theory$version$content_hash, info = ext)
     expect_true(tf_validate(back, full = TRUE), info = ext)
   }
