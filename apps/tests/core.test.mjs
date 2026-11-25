@@ -879,7 +879,7 @@ const tick = (ms) => new Promise((r) => setTimeout(r, ms || 5));
 
 // A runtime whose score waits until the test releases it, and which records
 // the theory each score and each hash was asked for. An upload whose text
-// holds "large" counts 4,000 constructs.
+// holds "large" counts 4,000 constructs and takes 200,000 characters as JSON.
 function slowScoreRuntime(extra) {
   const rt = stubRuntime(Object.assign({
     scored: [], hashed: [], waiting: [],
@@ -892,7 +892,7 @@ function slowScoreRuntime(extra) {
     release() { for (const r of this.waiting.splice(0)) r(); },
     async loadTheoryText(text, name) {
       this.active = name;
-      return Object.assign(summaryOf(name, { ok: true }), { counts: { constructs: /large/.test(text) ? 4000 : 3 } });
+      return Object.assign(summaryOf(name, { ok: true }), { counts: { constructs: /large/.test(text) ? 4000 : 3 }, chars: /large/.test(text) ? 200000 : 900 });
     },
   }, extra || {}));
   return rt;
@@ -924,7 +924,7 @@ test("the card shows before the checklist has run, and each text is scored once"
 
 test("a large theory is scored only on request, and its last operation is not run again as it opens", async () => {
   const rt = runsOf(slowScoreRuntime());
-  const { $ } = await boot({}, rt);
+  const { ctx, $ } = await boot({}, rt);
   await tick(); rt.release(); await tick();
   await upload($("#fileInput"), "large.theory.yaml", "id: large\n");
   await tick();
@@ -932,26 +932,36 @@ test("a large theory is scored only on request, and its last operation is not ru
   assert.deepEqual(rt.hashed, [EXAMPLES[0].path], "nor hashed");
   assert.equal(scoreChipText($), "not scored score it");
   assert.match($("#summaryScore").getAttribute("title"), /4,000 constructs, propositions and predictions, more than the 300/);
-  assert.equal($("#summaryHash").textContent, "Content hash not computed for a theory this large compute it");
-  await $("#summaryHash button").click();
-  await tick();
+  assert.equal($("#summaryHash").textContent, "Content hash not computed for a theory this long compute it");
+  assert.match($("#summaryHash .hk").getAttribute("title"), /^Written as JSON, this theory takes 200,000 characters, more than the 100,000/);
+  // Pressed, the button is replaced, and the focus moves to what replaced it.
+  const compute = $("#summaryHash button");
+  compute.focus();
+  await compute.click();
+  await tick(60);
   assert.deepEqual(rt.hashed, [EXAMPLES[0].path, "large.theory.yaml"]);
   assert.match($("#summaryHash").textContent, /^Content hash sha256:efef/);
+  assert.equal(ctx.document.activeElement, $("#summaryHash button"), "the focus is on the hash's copy button");
+  assert.equal($("#liveStatus").textContent, "Content hash computed");
   const button = $("#summaryScore button");
+  button.focus();
   await button.click();
   assert.equal(scoreChipText($), "scoring…");
+  assert.equal(ctx.document.activeElement, $("#summaryScore"), "the focus stays on the card");
   assert.match($(".toast").textContent, /^Scoring Title large\.theory\.yaml with the rigour checklist/);
   await tick();
   assert.deepEqual(rt.scored, [EXAMPLES[0].path, "large.theory.yaml"]);
-  rt.release(); await tick();
+  rt.release(); await tick(60);
   assert.equal(scoreChipText($), "61.5 / 100 · pass");
+  assert.equal(ctx.document.activeElement, $("#summaryScore"));
+  assert.equal($("#liveStatus").textContent, "Checklist score 61.5 / 100, gate pass");
   // A session saved with a large theory and a run does not run it as it opens.
   const stored = { "tf-app-py": JSON.stringify({ v: 2, opId: "check", params: {}, ran: true,
     input: { mode: "upload", name: "large.theory.yaml", text: "id: large\n" } }) };
   const rt2 = runsOf(slowScoreRuntime());
   const again = await boot({ stored }, rt2);
   assert.deepEqual(rt2.ran, []);
-  assert.equal(again.$(".toast").textContent, "The theory is large, so Rigour checklist was not run. Press Run to run it");
+  assert.equal(again.$(".toast").textContent, "The theory is large, so the Rigour checklist operation was not run. Press Run to run it");
   await tick();
   assert.deepEqual(rt2.scored, []);
 });
@@ -1008,6 +1018,54 @@ test("a reload soon after an edit opens the latest edit and asks nothing", async
   await bootAt(first, { stored: { "tf-app-py": session }, confirm: (q) => { asked.push(q); return true; } }, rt2);
   assert.equal(asked.length, 1);
   assert.deepEqual(rt2.texts, ["title: First edit\n"]);
+});
+
+test("an operation the user starts goes ahead of the card's score and hash", async () => {
+  const order = [];
+  const rt = stubRuntime({
+    async score() { order.push("score"); return { score: 50, gate: "pass", failed: [], warned: [] }; },
+    async contentHash() { order.push("hash"); return { hash: "sha256:" + "12".repeat(32) }; },
+  });
+  const run = rt.run;
+  rt.run = async function (op, p) { order.push("run " + op); return run.call(this, op, p); };
+  const { $ } = await boot({}, rt);
+  // The card's calls wait for an idle engine, so a Run pressed at once goes first.
+  await $("#runBtn").click();
+  await tick(30);
+  assert.deepEqual(order, ["run check", "hash"], "the run went first, and gave the card its score");
+});
+
+test("the hash waits for a request when the theory is long, whatever its counts", async () => {
+  const rt = stubRuntime({
+    hashed: 0,
+    async contentHash() { this.hashed++; return { hash: "sha256:" + "34".repeat(32) }; },
+    async score() { return { score: 50, gate: "pass", failed: [], warned: [] }; },
+    async loadTheoryText(text, name) {
+      this.active = name;
+      const chars = /long/.test(text) ? 150000 : /unmeasured/.test(text) ? null : 900;
+      return Object.assign(summaryOf(name, { ok: true }), { counts: { constructs: 3, outcomes: 1000 }, chars });
+    },
+  });
+  const { $ } = await boot({}, rt);
+  await tick(20);
+  const before = rt.hashed;
+  await upload($("#fileInput"), "long.theory.yaml", "id: long\n");
+  await tick(20);
+  assert.equal(rt.hashed, before, "a theory longer than the runtime's limit is not hashed unasked");
+  assert.match($("#summaryHash").textContent, /^Content hash not computed for a theory this long/);
+  assert.equal(scoreChipText($), "50 / 100 · pass", "its counts are small, so it is scored");
+  await upload($("#fileInput"), "unmeasured.theory.yaml", "id: unmeasured\n");
+  await tick(20);
+  assert.equal(rt.hashed, before);
+  assert.match($("#summaryHash .hk").getAttribute("title"), /^This theory holds too many values to measure as it loads/);
+  // A runtime with a higher limit hashes the same theory unasked.
+  const roomy = stubRuntime(Object.assign({}, rt, { limits: { score: 300, hashChars: 1000000 }, hashed: 0 }));
+  const again = await boot({}, roomy);
+  await tick(20);
+  const atStart = roomy.hashed;
+  await upload(again.$("#fileInput"), "long.theory.yaml", "id: long\n");
+  await tick(20);
+  assert.equal(roomy.hashed, atStart + 1);
 });
 
 test("a link pasted while an operation runs opens once the run has finished", async () => {

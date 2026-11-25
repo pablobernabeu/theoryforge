@@ -202,6 +202,9 @@ def test_the_summary_lists_constructs_rivals_score_and_hash(app, modality_path):
     assert score["failed"] == [i["id"] for i in report["items"] if i["status"] == "fail"]
     assert json.loads(app.content_hash()) == {"hash": t.content_hash()}
     assert s["counts"]["phenomena"] == 1
+    # The length of the theory written as JSON, which the app compares with
+    # the length it hashes as it loads.
+    assert s["chars"] == len(json.dumps(t.data, ensure_ascii=False, separators=(",", ":")))
 
 
 def test_a_large_theory_loads_without_the_checklist(app, tmp_path, monkeypatch):
@@ -209,7 +212,7 @@ def test_a_large_theory_loads_without_the_checklist(app, tmp_path, monkeypatch):
     # constructs, and the checklist's time grows faster than the theory. The
     # load reads, validates and summarises such a theory without running the
     # checklist, which the app asks for in a call of its own.
-    n = 3000
+    n = 7000
     text = ('schema_version: "1.1"\nid: big\ntitle: Big\nmaturity: draft\n'
             "_c: &c {id: a, label: A, definition: D}\nconstructs: [" + ", ".join(["*c"] * n) + "]\n")
 
@@ -220,6 +223,8 @@ def test_a_large_theory_loads_without_the_checklist(app, tmp_path, monkeypatch):
     s = json.loads(app.load(_write(tmp_path, "big.theory.yaml", text)))
     assert s["counts"]["constructs"] == n
     assert "check" not in s
+    # Its 21,000 or so values are more than the glue measures.
+    assert s["chars"] is None
     assert s["validation"]["ok"] is False
     assert "duplicate construct id: a" in s["validation"]["problems"]
     # An error without a message, such as a MemoryError, is named by its type.

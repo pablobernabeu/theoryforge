@@ -15,15 +15,15 @@ uploaded prior, rival and corpus, then load() and every operation in
 scripts/app_smoke_cases.json for each example. As in the UI, the appraisal's
 prior is the example the theory declares as its parent when exactly one does,
 and otherwise an example uploaded as a prior through load_prior(). The rival is
-the first alternative that states propositions, and otherwise a theory
-uploaded through load_rival(). An impulse starts in the first construct, and a
-corpus named by its key is read from its file. Each example must have a score
-from score() and a content hash from content_hash(), and the editor's call,
-edit(), must read the theory back from the JSON the package's writer gives
-with the same score and content hash. Where the package has read_dagitty(), import_dagitty() must make
-the theory a small model states. Last, an invalid theory must load with {"ok":
-false, "message": ...} and give the same from validate. Every result must be a
-JSON object.
+the first alternative that states propositions, and otherwise a theory uploaded
+through load_rival(). An impulse starts in the first construct, and a corpus
+named by its key is read from its file. Each example must have a score from
+score() and a content hash from content_hash(), and the editor's call, edit(),
+must read the theory back from the JSON the package's writer gives with the
+same score and content hash. Where the package has read_dagitty(),
+import_dagitty() must make the theory a small model states. Last, an invalid
+theory must load with {"ok": false, "message": ...} and give the same from
+validate. Every result must be a JSON object.
 
 Usage: python scripts/app_smoke.py [APPS_DIR]
 

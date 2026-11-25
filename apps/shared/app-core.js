@@ -1142,10 +1142,12 @@
 
   // Every call into the engine goes through this queue, so a background check
   // from the editor cannot interleave with a load or an operation.
-  let engineChain = Promise.resolve();
+  let engineChain = Promise.resolve(), engineCalls = 0;
   function engine(fn) {
+    engineCalls++;
     const p = engineChain.then(fn);
-    engineChain = p.then(() => {}, () => {});
+    const done = () => { engineCalls--; };
+    engineChain = p.then(done, done);
     return p;
   }
 
@@ -1410,7 +1412,7 @@
       el("h3", null, "How to use"),
       el("ol", { class: "steps" }, [
         li("Pick an example theory, upload your own YAML or JSON file, or start a new theory in the editor."),
-        li("Edit the theory in the editor's forms or in its source. Each change is validated in full by the package, and the problems appear beside the fields they concern, with the checklist score and gate."),
+        li("Edit the theory in the editor's forms or in its source. Each change is validated in full by the package, and the problems appear beside the fields they concern. The checklist score and gate follow, except for a theory larger than the app scores as it loads, which is scored when you ask."),
         li("Choose an operation, adjust any parameters and press Run. Results appear on the right."),
         li("Export the figures (SVG or PNG), the text and JSON results and the " + RT.langLabel + " code that reproduces them. Save writes the theory as YAML with the package's own writer, so the file reads back as the same theory."),
       ]),
@@ -1515,8 +1517,8 @@
     } else if (s && s.hashError) {
       row.append(el("span", { class: "hk", title: s.hashError, text: "Content hash not computed: " + s.hashError }));
     } else if (s && s.hashWait === "asked") {
-      row.append(el("span", { class: "hk", title: largeNote(s), text: "Content hash not computed for a theory this large " }),
-        el("button", { class: "linklike sm", type: "button", onclick: () => requestHash(true), "aria-label": "Compute the content hash" }, "compute it"));
+      row.append(el("span", { class: "hk", title: largeNote(s, "hash"), text: "Content hash not computed for a theory this long " }),
+        el("button", { class: "linklike sm", type: "button", onclick: () => { requestHash("card"); }, "aria-label": "Compute the content hash" }, "compute it"));
     } else if (s && s.hashWait === "queued") {
       row.append(el("span", { class: "hk", text: "Content hash computing…" }));
     } else row.setAttribute("hidden", "");
@@ -1526,26 +1528,33 @@
   // ---- the checklist's score and the content hash on the card ---------------
   // Both are asked of the engine in calls of their own once a theory has
   // loaded, so that the card shows at once and neither holds up a load, a
-  // restore or a change in the editor. Each call waits until the page has been
-  // drawn, since the Python engine runs on the page's own thread, and a result
-  // for a theory that has since been replaced is dropped. Both are kept for
-  // the text they were computed on, so the same theory is scored and hashed
-  // once in a session, and a Rigour checklist run gives the score too. The
-  // checklist compares every pair of constructs and reads each claim against
-  // the causal graph, so its time grows faster than the theory, and the hash
-  // reads every value of it. A theory with more constructs, propositions and
-  // predictions than SCORE_LIMIT is therefore scored and hashed only when the
-  // user asks, and the operation a session or a link holds for it is not run
-  // as it opens.
-  const SCORE_LIMIT = 300;
+  // restore or a change in the editor. They run one at a time, each once the
+  // engine has no work the user started and the page has been drawn, so an
+  // operation started meanwhile goes first, and a result for a theory since
+  // replaced is dropped. Both are kept for the text they were computed on, so
+  // the same theory is scored and hashed once in a session, and a Rigour
+  // checklist run gives the score too. Above a size the runtime sets from what
+  // its engine was measured to take (RT.limits), each is computed only when the
+  // user asks, and the operation a session or a link holds is not run as the
+  // theory opens. The checklist's time grows faster than the theory's
+  // constructs, propositions and predictions, so its limit counts those. The
+  // hash reads the whole theory, so its limit is on the length of the theory
+  // written as JSON, which the load reports, or null for a theory with too
+  // many values to measure at little cost.
+  const LIMITS = { score: 300, hashChars: 100000 };
+  const limits = () => Object.assign({}, LIMITS, (RT && RT.limits) || {});
   const theorySize = (s) => {
     const c = (s && s.counts) || {};
     return Number(c.constructs || 0) + Number(c.propositions || 0) + Number(c.predictions || 0);
   };
-  const isLarge = (s) => theorySize(s) > SCORE_LIMIT;
-  const largeNote = (s) => "This theory has " + theorySize(s).toLocaleString("en-GB") +
-    " constructs, propositions and predictions, more than the " + SCORE_LIMIT +
-    " the app scores and hashes as it loads, since either can take a while on a theory this large.";
+  const tooLarge = (s, kind) => (kind === "score" ? theorySize(s) > limits().score
+    : !!s && (s.chars === null || (typeof s.chars === "number" && s.chars > limits().hashChars)));
+  const isLarge = (s) => tooLarge(s, "score") || tooLarge(s, "hash");
+  const largeNote = (s, kind) => (kind === "score"
+    ? "This theory has " + theorySize(s).toLocaleString("en-GB") + " constructs, propositions and predictions, more than the " +
+      limits().score.toLocaleString("en-GB") + " the app scores as it loads, since the checklist can take a while on a theory this large."
+    : (typeof s.chars === "number" ? "Written as JSON, this theory takes " + s.chars.toLocaleString("en-GB") + " characters" : "This theory holds too many values to measure as it loads") +
+      ", more than the " + limits().hashChars.toLocaleString("en-GB") + " characters the app hashes as it loads, since the hash can take a while on a theory this long.");
   // An example is known by its path, and any other theory by its format and
   // its text.
   function cardKey(inp) {
@@ -1581,6 +1590,26 @@
     const later = () => setTimeout(resolve, 0);
     if (typeof requestAnimationFrame === "function") requestAnimationFrame(later); else later();
   });
+  // The card's calls wait in a queue of their own, and each goes to the engine
+  // only when no other call is queued or running there.
+  const cardJobs = [];
+  let cardPumping = false;
+  function whenIdle(fn) {
+    return new Promise((resolve, reject) => { cardJobs.push({ fn, resolve, reject }); pumpCards(); });
+  }
+  async function pumpCards() {
+    if (cardPumping) return;
+    cardPumping = true;
+    try {
+      while (cardJobs.length) {
+        while (engineCalls > 0) await engineChain;
+        await afterPaint();
+        if (engineCalls > 0) continue;
+        const job = cardJobs.shift();
+        try { job.resolve(await engine(job.fn)); } catch (e) { job.reject(e); }
+      }
+    } finally { cardPumping = false; }
+  }
   function scoreChip(s) {
     const ck = s && s.check;
     let node;
@@ -1589,18 +1618,19 @@
     } else if (ck) {
       node = el("span", { class: "chip", title: ck.error, text: "not scored" });
     } else if (s && s.scoreWait === "asked") {
-      node = el("span", { class: "chip unscored", title: largeNote(s) }, ["not scored ",
-        el("button", { class: "linklike sm", type: "button", onclick: () => requestScore(true), "aria-label": "Score the theory with the rigour checklist" }, "score it")]);
+      node = el("span", { class: "chip unscored", title: largeNote(s, "score") }, ["not scored ",
+        el("button", { class: "linklike sm", type: "button", onclick: () => { requestScore("card"); }, "aria-label": "Score the theory with the rigour checklist" }, "score it")]);
     } else if (s && s.scoreWait === "queued") {
       node = el("span", { class: "chip scoring", title: "The rigour checklist is being computed", text: "scoring…" });
     } else node = el("span", { hidden: "" });
     node.setAttribute("id", "summaryScore");
     return node;
   }
-  // The two calls, what each gives the summary and where it is shown.
+  // The two calls, what each gives the summary, where it is shown and what is
+  // said when the user asked for it.
   const CARD = {
     score: {
-      call: () => RT.score(), done: (x) => !!x.check, wait: "scoreWait",
+      call: () => RT.score(), done: (x) => !!x.check, wait: "scoreWait", by: "scoreBy",
       read: (r) => {
         const check = r && typeof r === "object" ? r : { error: "the package gave no score" };
         if ("error" in check) check.error = String(check.error || "the checklist stopped without a message");
@@ -1608,49 +1638,80 @@
       },
       failed: (err) => ({ check: { error: errorHeadline(err) } }),
       show: (s) => { const chip = $("#summaryScore"); if (chip) chip.replaceWith(scoreChip(s)); if (EDITOR && EDITOR.onSummary) EDITOR.onSummary(s); },
+      focus: () => $("#summaryScore"),
+      said: (s) => ("error" in s.check ? "The checklist could not score the theory: " + s.check.error
+        : "Checklist score " + num(s.check.score) + " / 100, gate " + s.check.gate),
     },
     hash: {
-      call: () => RT.contentHash(), done: (x) => !!(x.hash || x.hashError), wait: "hashWait",
+      call: () => RT.contentHash(), done: (x) => !!(x.hash || x.hashError), wait: "hashWait", by: "hashBy",
       read: (r) => (r && typeof r.hash === "string" ? { hash: r.hash } : { hashError: String((r && r.error) || "the package gave no hash") }),
       failed: (err) => ({ hashError: errorHeadline(err) }),
       show: () => { const row = $("#summaryHash"); if (row) row.replaceWith(hashRow(STATE.summary)); },
+      focus: () => $("#summaryHash button") || $("#summaryHash"),
+      said: (s) => (s.hash ? "Content hash computed" : "Content hash not computed: " + s.hashError),
     },
   };
+  // After a change the user asked for, the focus moves to what replaced the
+  // control they used, on the card or in the editor, so it does not fall back
+  // to the page.
+  function showCard(s, kind) {
+    const c = CARD[kind];
+    if (STATE.summary !== s) return;
+    c.show(s);
+    const by = s[c.by];
+    if (by === "editor" && EDITOR && EDITOR.focusScore && kind === "score") EDITOR.focusScore();
+    else if (by === "card") {
+      const n = c.focus();
+      if (n) { if (n.tagName !== "BUTTON") n.setAttribute("tabindex", "-1"); n.focus(); }
+    }
+  }
   function takeCard(s, kind, got) {
+    const c = CARD[kind];
     Object.assign(s, got);
-    delete s[CARD[kind].wait];
-    if (STATE.summary === s) CARD[kind].show(s);
+    delete s[c.wait];
+    showCard(s, kind);
+    if (s[c.by] && STATE.summary === s) announce(c.said(s));
+    delete s[c.by];
   }
   // Ask for the loaded theory's score or hash, unless it is known or the
-  // theory is too large to ask for it unbidden. `force` is the user's request.
-  function requestCard(kind, force) {
+  // theory is too large to ask for it unbidden. `by` names where the user
+  // asked for it, the card or the editor, and is absent for the automatic
+  // request. The result is a promise of the summary once it holds the answer.
+  function requestCard(kind, by) {
     const c = CARD[kind], s = STATE.summary;
     const can = RT && typeof (kind === "score" ? RT.score : RT.contentHash) === "function";
-    if (!s || !can || c.done(s)) return;
+    if (!s || !can || c.done(s)) return Promise.resolve(s);
     const key = cardKey(STATE.input), known = key === null ? null : cardCache.get(key);
+    if (by) s[c.by] = by;
     if (known && c.done(known)) {
       takeCard(s, kind, kind === "score" ? { check: known.check } : known.hash ? { hash: known.hash } : { hashError: known.hashError });
-      return;
+      return Promise.resolve(s);
     }
-    if (!force && isLarge(s)) { s[c.wait] = "asked"; c.show(s); return; }
-    if (s[c.wait] === "queued") return;
+    if (!by && tooLarge(s, kind)) { s[c.wait] = "asked"; showCard(s, kind); return Promise.resolve(s); }
+    if (s[c.wait] === "queued" && s[kind + "Job"]) { showCard(s, kind); return s[kind + "Job"]; }
     s[c.wait] = "queued";
-    c.show(s);
-    if (force && kind === "score") toast("Scoring " + theoryName(s) + " with the rigour checklist, which can take a while for a theory this large");
-    engine(async () => {
-      await afterPaint();
+    showCard(s, kind);
+    if (by && kind === "score") toast("Scoring " + theoryName(s) + " with the rigour checklist, which can take a while for a theory this large");
+    // The user's request is work the user started, so it goes to the engine
+    // at once, and the automatic one waits until the engine is idle.
+    const call = async () => {
+      if (by) await afterPaint();
       return STATE.summary === s && !c.done(s) ? c.call() : null;
-    }).then((r) => {
-      if (r === null || r === undefined) return;
+    };
+    s[kind + "Job"] = (by ? engine(call) : whenIdle(call)).then((r) => {
+      if (r === null || r === undefined) return s;
       const got = c.read(r);
       keepCard(key, got);
       if (STATE.summary === s && !c.done(s)) takeCard(s, kind, got);
+      return s;
     }, (err) => {
       if (STATE.summary === s && !c.done(s)) takeCard(s, kind, c.failed(err));
+      return s;
     });
+    return s[kind + "Job"];
   }
-  const requestScore = (force) => requestCard("score", force);
-  const requestHash = (force) => requestCard("hash", force);
+  const requestScore = (by) => requestCard("score", by);
+  const requestHash = (by) => requestCard("hash", by);
   function refreshSummary() {
     const w = $("#summaryWrap"); if (w) w.replaceChildren(summaryCard(STATE.summary));
     if (EDITOR && EDITOR.onSummary) EDITOR.onSummary(STATE.summary);
@@ -2305,9 +2366,10 @@
       isEdited: () => !!(STATE.input && STATE.input.mode === "edited"),
       isBusy: () => busy,
       showResultTab: () => showTab("result"),
-      // Score a theory too large to be scored as it loads.
-      score: () => requestScore(true),
-      largeNote: (s) => largeNote(s),
+      // Score or hash a theory too large to be scored or hashed as it loads.
+      score: () => requestScore("editor"),
+      hash: () => requestHash("editor"),
+      largeNote: (s, kind) => largeNote(s, kind || "score"),
     };
   }
 
@@ -2493,7 +2555,7 @@
     return note;
   }
   // Why an operation saved with a large theory was not run as it opened.
-  const notRunNote = (op) => "The theory is large, so " + op.label + " was not run. Press Run to run it";
+  const notRunNote = (op) => "The theory is large, so the " + op.label + " operation was not run. Press Run to run it";
 
   // A link pasted into the address bar of a tab that already shows the app
   // changes only the fragment, so the browser keeps the page and the app

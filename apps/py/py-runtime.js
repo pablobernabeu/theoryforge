@@ -44,6 +44,28 @@ def _lineage(d):
     return {"id": text(field(d, "id")), "title": text(field(d, "title")),
             "version": {"id": text(field(v, "id")), "parent_id": text(field(v, "parent_id"))}}
 
+# The length of the theory written as JSON, the text the content hash reads,
+# from which the app tells a theory too long to hash as it loads. A theory
+# with more values than MEASURED_VALUES is not measured, and its length is None.
+MEASURED_VALUES = 20000
+
+def _chars(d):
+    n, stack = 0, [d]
+    while stack:
+        v = stack.pop()
+        if isinstance(v, dict):
+            stack.extend(v.values())
+        elif isinstance(v, list):
+            stack.extend(v)
+        elif v is not None:
+            n += 1
+            if n > MEASURED_VALUES:
+                return None
+    try:
+        return len(json.dumps(d, ensure_ascii=False, separators=(",", ":"), default=str))
+    except (TypeError, ValueError):
+        return None
+
 def _summary(t):
     d = t.data
     def n(k):
@@ -59,6 +81,7 @@ def _summary(t):
             "assumptions": n("auxiliary_assumptions"), "phenomena": n("phenomena"),
             "outcomes": n("test_outcomes"),
         },
+        "chars": _chars(d),
         # The constructs an impulse can start from and the rivals that state
         # propositions of their own, which the app offers as choices.
         "constructs": [{"id": text(field(c, "id")), "label": text(field(c, "label"))}
@@ -309,6 +332,11 @@ def run(op, params_json):
 
 const RT = {
   lang: "py",
+  // The size above which the card's score and hash wait for the user to ask
+  // (apps/README.md, "Runtimes"). In Pyodide, the checklist took up to 0.3 s on
+  // 300 constructs, propositions and predictions and 1.4 s on 899, and the hash
+  // up to 0.2 s on theories of up to 235,000 characters of JSON.
+  limits: { score: 300, hashChars: 1000000 },
   langLabel: "Python",
   engineLabel: "Pyodide (WebAssembly)",
   accent: "#3776AB",

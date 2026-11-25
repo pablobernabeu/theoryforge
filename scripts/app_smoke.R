@@ -22,11 +22,10 @@
 # must have a score from .tf_score_call() and a content hash from
 # .tf_hash_call(), and the editor's call, .tf_edit_call(), must read the
 # theory back from the JSON the package's writer gives with the same score and
-# content hash. Where the package has
-# tf_read_dagitty(), .tf_import_dagitty_call() must make the theory a small
-# model states. Last, an invalid theory must load with {"ok": false,
-# "message": ...} and give the same from validate. Every result must be a
-# JSON object.
+# content hash. Where the package has tf_read_dagitty(),
+# .tf_import_dagitty_call() must make the theory a small model states. Last,
+# an invalid theory must load with {"ok": false, "message": ...} and give the
+# same from validate. Every result must be a JSON object.
 #
 # Usage: Rscript scripts/app_smoke.R [<apps_dir>]
 #

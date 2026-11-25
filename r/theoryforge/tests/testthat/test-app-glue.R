@@ -215,6 +215,9 @@ test_that("the summary lists constructs, rivals, the score and the hash", {
   expect_identical(jsonlite::fromJSON(app$.tf_hash_call(), simplifyVector = FALSE),
                    list(hash = tf_content_hash(t)))
   expect_identical(s$counts$phenomena, 1L)
+  # The length of the theory written as JSON, which the app compares with the
+  # length it hashes as it loads. It is the length Python reports.
+  expect_identical(s$chars, nchar(jsonlite::toJSON(unclass(t), auto_unbox = TRUE, null = "null", digits = NA)))
 })
 
 test_that("a large theory loads without the checklist", {
@@ -223,7 +226,7 @@ test_that("a large theory loads without the checklist", {
   # load reads, validates and summarises such a theory without running the
   # checklist, which the app asks for in a call of its own.
   app <- app_glue()
-  n <- 3000L
+  n <- 7000L
   text <- paste0("schema_version: \"1.1\"\nid: big\ntitle: Big\nmaturity: draft\n",
                  "_c: &c {id: a, label: A, definition: D}\nconstructs: [",
                  paste(rep("*c", n), collapse = ", "), "]")
@@ -231,6 +234,9 @@ test_that("a large theory loads without the checklist", {
   s <- jsonlite::fromJSON(app$.tf_load(write_theory(text)), simplifyVector = FALSE)
   expect_identical(s$counts$constructs, n)
   expect_null(s$check)
+  # Its 21,000 or so values are more than the glue measures.
+  expect_true("chars" %in% names(s))
+  expect_null(s$chars)
   expect_false(isTRUE(s$validation$ok))
   expect_true("duplicate construct id: a" %in% unlist(s$validation$problems))
   # An error without a message is named by its class.

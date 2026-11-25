@@ -51,6 +51,17 @@ invisible(lapply(.tf_app_files, source))
        version = list(id = .tf_str(v, "id"), parent_id = .tf_str(v, "parent_id")))
 }
 
+# The length of the theory written as JSON, the text the content hash reads,
+# from which the app tells a theory too long to hash as it loads. A theory
+# with more values than .tf_MEASURED_VALUES is not measured, and its length is
+# NULL.
+.tf_MEASURED_VALUES <- 20000L
+.tf_chars <- function(t) {
+  if (length(unlist(unclass(t), use.names = FALSE)) > .tf_MEASURED_VALUES) return(NULL)
+  tryCatch(nchar(jsonlite::toJSON(unclass(t), auto_unbox = TRUE, null = "null", digits = NA), type = "chars"),
+           error = function(e) NULL)
+}
+
 .tf_summary <- function(t) {
   list(
     id = .tf_get(t, "id"), title = .tf_get(t, "title"),
@@ -65,6 +76,7 @@ invisible(lapply(.tf_app_files, source))
       phenomena = length(.tf_list(t, "phenomena")),
       outcomes = length(.tf_list(t, "test_outcomes"))
     ),
+    chars = .tf_chars(t),
     # The constructs an impulse can start from and the rivals that state
     # propositions of their own, which the app offers as choices.
     constructs = lapply(.tf_list(t, "constructs"), function(c) {
@@ -331,6 +343,11 @@ invisible(lapply(.tf_app_files, source))
 
 const RT = {
   lang: "r",
+  // The size above which the card's score and hash wait for the user to ask
+  // (apps/README.md, "Runtimes"). In webR, the checklist took up to 2.7 s on
+  // 300 constructs, propositions and predictions, and the hash up to 3.6 s on
+  // theories of up to 150,000 characters of JSON.
+  limits: { score: 300, hashChars: 100000 },
   langLabel: "R",
   engineLabel: "webR (WebAssembly)",
   accent: "#276DC3",

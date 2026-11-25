@@ -533,9 +533,18 @@
           const box = el("input", { type: "text", value: textValue(v), placeholder: "none recorded" });
           track(path, box);
           box.addEventListener("input", () => { if (box.value === "") del(); else set(box.value); changed(false); });
-          const use = el("button", { class: "btn ghost sm", type: "button", onclick: () => {
-            const s = host.summary();
-            if (!s || !s.hash) { host.toast("The current hash is not known yet"); return; }
+          // A hash not computed yet, as for a theory too long to hash as it
+          // loads, is computed first, and recorded if the theory is still the
+          // one it was computed for.
+          const use = el("button", { class: "btn ghost sm", type: "button", onclick: async () => {
+            let s = host.summary();
+            if (s && !s.hash && host.hash) {
+              host.toast("Computing the content hash, which can take a while for a theory this long");
+              const asked = await host.hash();
+              s = host.summary();
+              if (asked !== s) { host.toast("The theory changed while its hash was computed. Press Record again"); return; }
+            }
+            if (!s || !s.hash) { host.toast(s && s.hashError ? "The content hash could not be computed: " + s.hashError : "The current hash is not known yet"); return; }
             box.value = s.hash; set(s.hash); changed(false);
           } }, "Record the current hash");
           return fieldWrap(path, spec.label, el("div", { class: "efrow" }, [box, use]), spec);
@@ -816,15 +825,15 @@
       const ck = s.check;
       const refused = !!ck && "error" in ck;
       if (ck && !refused) {
-        chips.append(el("span", { class: "chip score", html: "checklist <b>" + host.esc(String(ck.score)) + "</b> / 100 · gate " + host.esc(ck.gate) }));
+        chips.append(el("span", { class: "chip score", id: "edScore", html: "checklist <b>" + host.esc(String(ck.score)) + "</b> / 100 · gate " + host.esc(ck.gate) }));
         const failed = host.asArr(ck.failed), warned = host.asArr(ck.warned);
         if (failed.length) chips.append(el("span", { class: "chip", text: "fails: " + failed.join(", ") }));
         if (warned.length) chips.append(el("span", { class: "chip", text: "warns: " + warned.join(", ") }));
-      } else if (refused) chips.append(el("span", { class: "chip", title: ck.error, text: "not scored" }));
+      } else if (refused) chips.append(el("span", { class: "chip", id: "edScore", title: ck.error, text: "not scored" }));
       else if (s.scoreWait === "asked") {
-        chips.append(el("span", { class: "chip unscored", title: host.largeNote ? host.largeNote(s) : "" }, ["not scored ",
-          el("button", { class: "linklike sm", type: "button", onclick: () => host.score && host.score(), "aria-label": "Score the theory with the rigour checklist" }, "score it")]));
-      } else if (s.scoreWait === "queued") chips.append(el("span", { class: "chip scoring", text: "scoring…" }));
+        chips.append(el("span", { class: "chip unscored", id: "edScore", title: host.largeNote ? host.largeNote(s, "score") : "" }, ["not scored ",
+          el("button", { class: "linklike sm", type: "button", onclick: () => { if (host.score) host.score(); }, "aria-label": "Score the theory with the rigour checklist" }, "score it")]));
+      } else if (s.scoreWait === "queued") chips.append(el("span", { class: "chip scoring", id: "edScore", text: "scoring…" }));
       kids.push(chips);
       if (srcError) kids.push(host.errorBox("The source cannot be read, so the forms and the score show the last version that could", srcError));
       else if (applyErr) kids.push(host.errorBox("The package could not read the theory", applyErr));
@@ -895,6 +904,11 @@
     return {
       open, reload, newTheory, flush,
       onSummary(s) { if (built && !inflight) lint(s); },
+      // After 'score it' here, the focus moves to the chip that replaced it.
+      focusScore() {
+        const n = lintEl && lintEl.querySelector("#edScore");
+        if (n) { n.setAttribute("tabindex", "-1"); n.focus(); }
+      },
       sourceText: () => (built && srcArea ? srcArea.value : null),
     };
   }

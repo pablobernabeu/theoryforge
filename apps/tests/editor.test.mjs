@@ -304,3 +304,35 @@ test("removing an entry puts the focus on the entry now in its place, or on Add"
   await rm("Remove the rival's proposition r2").click();
   assert.equal(p.ctx.document.activeElement.textContent, "Add a proposition of this rival");
 });
+
+test("above the limits, Record the current hash computes it, and 'score it' keeps the focus in the editor", async () => {
+  // Written as JSON, the theory is longer than the app hashes as it loads,
+  // and it has more constructs than it scores.
+  const rt = editRuntime({
+    hashes: 0, scores: 0,
+    summary(validation) {
+      return Object.assign(editRuntime().summary.call(this, validation), { counts: { constructs: 400 }, chars: 500000 });
+    },
+    async contentHash() { this.hashes++; return { hash: "sha256:" + "56".repeat(32) }; },
+    async score() { this.scores++; return { score: 42, gate: "advisory", failed: [], warned: [] }; },
+  });
+  const p = await page({}, rt);
+  await openEditor(p);
+  await wait(20);
+  assert.equal(rt.hashes, 0);
+  assert.equal(rt.scores, 0);
+  const record = p.$$("button").find((b) => b.textContent === "Record the current hash");
+  await record.click();
+  await wait(20);
+  assert.equal(rt.hashes, 1, "the hash is computed on request");
+  assert.equal(fieldOf(p, "version.content_hash").value, "sha256:" + "56".repeat(32));
+  // The editor's 'score it' is replaced by the score, and the focus follows.
+  const scoreIt = p.$("#edLint button");
+  scoreIt.focus();
+  await scoreIt.click();
+  await wait(60);
+  assert.equal(rt.scores, 1);
+  assert.equal(p.ctx.document.activeElement, p.$("#edScore"));
+  assert.match(p.$("#edScore").textContent.replace(/<\/?b>/g, ""), /checklist 42 \/ 100 · gate advisory/);
+  assert.equal(p.$("#liveStatus").textContent, "Checklist score 42 / 100, gate advisory");
+});
