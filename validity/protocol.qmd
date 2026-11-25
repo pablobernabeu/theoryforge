@@ -1,0 +1,1962 @@
+---
+title: "Encoding reliability, validity and reading of theoryforge outputs"
+subtitle: "Protocol for three preregistered studies with human participants"
+author:
+  - name: Pablo Bernabeu
+    affiliation: University of Oxford
+date: last-modified
+lang: en-GB
+bibliography: references.bib
+csl: apa.csl
+link-citations: true
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    embed-resources: true
+    html-math-method: mathml
+    code-fold: true
+    code-summary: "R code"
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+knitr::opts_chunk$set(comment = "")
+suppressPackageStartupMessages(library(lme4))
+
+# Formatting helpers for numbers printed in the text.
+f <- function(x, d = 2) formatC(x, format = "f", digits = d, big.mark = ",")
+pct <- function(x, d = 0) {
+  paste(formatC(100 * x, format = "f", digits = d), "per cent")
+}
+nw <- function(n) {
+  words <- c("one", "two", "three", "four", "five", "six", "seven", "eight",
+             "nine", "ten")
+  if (n >= 1 && n <= 10 && n == round(n)) words[n] else
+    formatC(n, format = "d", big.mark = ",")
+}
+and_list <- function(x) {
+  if (length(x) <= 1) return(x)
+  paste(paste(x[-length(x)], collapse = ", "), "and", x[length(x)])
+}
+```
+
+# Summary {.unnumbered}
+
+theoryforge reads a scientific theory written as a structured file and
+computes from it what the stated causal graph implies, how completely the file
+states what its checklist asks for and how a later version of the file compares
+with an earlier one. Its computations on a given file are correct. What has not
+been studied is everything that happens before and after the file: whether
+different researchers encode the same verbal theory into files that give the
+same results, whether the checklist score and the item statuses agree with
+expert judgements of how completely and how testably a theory is specified,
+whether the verdicts of `appraise_amendment()` agree with expert appraisals of
+the same amendments, and whether readers take the outputs to mean what they
+say.
+
+This protocol describes three studies that would decide what can be claimed.
+Study 1 measures how reliably trained coders encode published verbal theories,
+from the elements of the file to the derived implications and the checklist
+score, and compares that agreement with human and agent baselines. Study 2
+compares the checklist and the appraisal with blind expert ratings and tests
+whether known groups of corroborated, refuted and pseudoscientific theories
+differ as they should. Study 3 is a randomised reader study that compares the
+rate at which researchers and editors misread the score, the gate, the dossier
+and the appraisal in the wording of version 0.7.0 and of version 0.8.0. A last
+section outlines a later cliometric study of predictive validity. Every number
+in this document is computed by the R code it contains, from inputs stated in
+that code or read from the repository, so that a change of assumption changes
+every number that depends on it.
+
+# Background {#sec-background}
+
+## What the package computes and what it does not
+
+```{r}
+#| label: inputs-external
+# Values reported by published sources, as stated in the place named.
+external <- list(
+  # Bornmann, Mutz and Daniel (2010), abstract and Table 1: mean reliability
+  # between reviewers of the same manuscript on the intraclass correlation
+  # scale (random-effects model; product-moment correlations were squared to
+  # that scale), and mean Cohen's kappa.
+  reviewer_icc = 0.34, reviewer_kappa = 0.17,
+  # Hoekstra et al. (2014), abstract: researchers and students endorsed, on
+  # average, more than three of six false statements about a confidence
+  # interval.
+  false_endorsed = 3, false_items = 6,
+  # Hale et al. (2020), abstract: theories represented and sent to authors or
+  # experts for feedback, and those finalised only after changes to their
+  # constructs, relations or both.
+  hale_theories = 71, hale_changed = 36,
+  # Juni et al. (1999), abstract: quality scales used to identify
+  # high-quality trials in one meta-analysis.
+  juni_scales = 25
+)
+```
+
+theoryforge takes as input a file that lists a theory's constructs,
+propositions, predictions, phenomena, rivals, assumptions and test outcomes.
+From the file it derives the conditional independencies and the signs of
+effects that the causal graph of the propositions implies, scores the file
+against a checklist, compares the theory with rivals and appraises an amended
+version against an earlier one by fixed rules that borrow the terms of
+@lakatos1970. Checks made before the 0.8.0 release found the deductive
+computations correct: they agree with independent implementations on every
+file examined. The same checks found three gaps that no computation on a file
+can close.
+
+The first gap is encoding. A verbal theory does not determine its file. In an
+encoding pilot (@sec-pilot), encoders given the same source texts produced
+files that agreed on the plain statements of a theory and differed on what the
+texts leave open, and the derived implications followed the files.
+@hale2020 report a similar difficulty for a related representation: of
+`r external$hale_theories` behaviour change theories represented as
+construct-relationship triples, `r external$hale_changed` were finalised only
+after changes to their constructs, their relations or both, following feedback
+from the theories' authors or other experts. Whatever the package derives is
+therefore a property of an encoding. Whether it is also a property of the
+theory depends on how much encodings agree, which is unknown for human
+encoders.
+
+The second gap is the checklist score. The checklist reads whether fields are
+filled in, how predictions are labelled and whether stated claims agree with
+the causal graph. Version 0.8.0 calls the result the checklist score and
+states that it describes how completely the file states what the checklist
+asks for, that no study has established what difference between two scores is
+meaningful and that the score does not show that the theory is true or well
+reasoned. That statement describes the file correctly. It leaves open whether
+the score, or the item statuses behind it, track what methodologists mean by a
+completely and testably specified theory. Summary quality scores have a poor
+record elsewhere: when @juni1999 used `r external$juni_scales` quality scales
+to identify the high-quality trials in one meta-analysis, some scales showed an
+effect only in the high-quality trials and others only in the low-quality ones,
+and the summary scores were not significantly associated with the estimated
+treatment effects. Validity
+concerns the inferences drawn from scores, and @messick1995 distinguishes
+content, substantive, structural, generalizability, external and consequential
+aspects of the evidence for them. For this score, none has been examined.
+
+The third gap is the appraisal. `appraise_amendment()` labels an amendment
+progressive, degenerating or neutral by rules applied to what the two files
+declare. The rules are explicit and reproducible, but their agreement with the
+appraisals that researchers or historians would make of the same episodes
+[@lakatos1970; @meehl1990] has never been measured.
+
+Formalising a theory also leaves untouched what @eronen2021 identify as reasons
+why good psychological theories are hard to develop: the lack of robust
+phenomena, the doubtful validity of constructs and the difficulty of finding
+causal relations. The studies below do not address these. They address whether
+the package's own outputs mean what its documentation says they mean. In
+Messick's terms, Study 1 bears on the generalizability aspect of validity, here
+across encoders, Study 2 on the external aspect and Study 3 on the
+consequential aspect.
+
+## The encoding pilot {#sec-pilot}
+
+```{r}
+#| label: inputs-pilot
+# Encoding pilot: agent encoders of one model family each encoded the same
+# verbal theories from summaries of about 600 words, analysed at commit
+# f72ce4c. The values below are copied from the pilot's analysis tables; the
+# table and column are named beside each.
+pilot <- list(
+  # tables/units_agreement.csv, row 'all': statements segmented from the
+  # sources, statements made into the same kind of element by every encoder,
+  # and Fleiss' kappa on the element type (fleiss_fine) and on whether the
+  # statement carries a machine-readable claim (fleiss_claim)
+  units = 73, units_same_element = 41,
+  kappa_element = 0.643, kappa_claim = 0.559,
+  # same table, rows per theory, fleiss_fine
+  kappa_element_by_theory = c(0.671, 0.588, 0.658),
+  # same table, codes_enc-1 to codes_enc-3, summed over encoders: P proposition,
+  # PRc prediction with a claim, PRn prediction without one, PH phenomenon,
+  # A assumption, B boundary condition, EV evidence, ALT rival, FF only in a
+  # definition, mechanism or functional form
+  codes = c(A = 27, ALT = 3, B = 24, EV = 3, FF = 12, P = 53, PH = 13,
+            PRc = 50, PRn = 34),
+  # tables/checklist_by_encoder.csv, aggregate (rows theories, columns encoders)
+  scores = matrix(c(55.4, 60.9, 60.9,
+                    57.2, 58.1, 56.3,
+                    58.5, 60.2, 60.7), nrow = 3, byrow = TRUE,
+                  dimnames = list(c("bilingual-rhm", "collaborative-cognitive-load",
+                                    "health-habit"),
+                                  c("enc-1", "enc-2", "enc-3"))),
+  # tables/implications_agreement.csv, J_literal_basis for the pairs of files
+  impl_jaccard = matrix(c(0.207, 0.077, 0.233,
+                          0.659, 0.396, 0.396,
+                          0.145, 0.052, 0.200), nrow = 3, byrow = TRUE),
+  # tables/edge_agreement.csv, level 'directed', scope 'all', pairwise J
+  edge_jaccard = matrix(c(0.556, 0.400, 0.714,
+                          0.923, 0.586, 0.643,
+                          0.471, 0.471, 0.857), nrow = 3, byrow = TRUE),
+  # tables/structure.csv: constructs and propositions per file, and the
+  # relation types of all propositions
+  constructs = c(8, 7, 8, 19, 19, 17, 11, 11, 10),
+  propositions = c(8, 6, 6, 26, 25, 21, 12, 13, 13),
+  relation_types = c(increases = 64, decreases = 49, causes = 3, moderates = 14),
+  # tables/checklist_item_spread.csv: item-by-theory cells with the same
+  # status in every file
+  item_cells_same = 34, item_cells = 36
+)
+n_pilot_enc <- ncol(pilot$scores)
+n_pilot_th <- nrow(pilot$scores)
+stopifnot(sum(pilot$codes) == n_pilot_enc * pilot$units,
+          sum(pilot$relation_types) == sum(pilot$propositions),
+          length(pilot$constructs) == length(pilot$scores))
+
+# One-way analysis of variance of the scores, theories as groups.
+oneway <- function(m) {
+  k <- ncol(m); n <- nrow(m); gm <- mean(m)
+  msb <- k * sum((rowMeans(m) - gm)^2) / (n - 1)
+  msw <- sum((m - rowMeans(m))^2) / (n * (k - 1))
+  list(icc1 = (msb - msw) / (msb + (k - 1) * msw), msb = msb, msw = msw)
+}
+pil <- oneway(pilot$scores)
+```
+
+The pilot asked `r nw(n_pilot_enc)` encoders to encode `r nw(n_pilot_th)` verbal
+theories, the Revised Hierarchical Model of bilingual memory [@kroll2010],
+collaborative cognitive load theory [@kirschner2018] and habit in health
+behaviour [@gardner2015], from summaries of each source. Of the `r pilot$units`
+statements segmented from the summaries, `r pilot$units_same_element` became the
+same kind of element in all `r nw(n_pilot_enc)` files, with a Fleiss' kappa
+[@fleiss1971] of `r f(pilot$kappa_element)`, and agreement on whether a
+statement carried a machine-readable claim was lower (kappa
+`r f(pilot$kappa_claim)`). Literal agreement on the implied conditional
+independencies, after matching constructs, ranged from a Jaccard index of
+`r f(min(pilot$impl_jaccard))` to `r f(max(pilot$impl_jaccard))` between pairs
+of files. The checklist scores of the `r nw(length(pilot$scores))` files ranged
+from `r f(min(pilot$scores), 1)` to `r f(max(pilot$scores), 1)`, and only
+`r pct(pil$icc1)` of their variance lay between theories (ICC(1) =
+`r f(pil$icc1, 3)`). The files had the same status on `r pilot$item_cells_same`
+of `r pilot$item_cells` item-by-theory cells, mostly because the texts lacked
+what several items ask for.
+
+These values describe agents of one model family that read the same
+documentation, working from summaries written by one author, with statements
+segmented and constructs matched by one analyst. They say nothing about how
+human researchers encode theories, and they offer no standard against which to
+judge whether any encoding is faithful. They are used below as one input among
+stated alternatives, never as the only basis of a sample size.
+
+## Registration and structure
+
+Each study is described under the headings that a preregistration needs: aims
+and hypotheses, design, materials, participants and recruitment, procedure,
+measures, analysis plan, sample size, inference criteria and limitations. The
+plan of each study will be entered into the PRP-QUANT template of the Joint
+Psychological Societies Preregistration Task Force [@bosnjak2022] and
+registered before its data collection begins. Studies 1 and 2 share their
+sample of theories and their coders and will be registered together. Study 3
+is independent of the others and can run first. The analysis scripts will be
+registered with the plans, and any deviation will be reported with its reason.
+
+The author of this protocol maintains theoryforge and has an interest in
+favourable results. To limit the consequences, the classification of known
+groups, the expert ratings and the reader responses are collected by people who
+do not see the package's outputs, the confirmatory analyses are run by an
+analyst who does not maintain the package, from the registered scripts, on data
+whose group labels and conditions are masked until the scripts have been run on
+them, and every result is reported whatever its direction.
+
+# Shared materials and methods {#sec-shared}
+
+## Design constants
+
+The constants below fix the design. They are choices, and the sample-size
+sections show what follows from them.
+
+```{r}
+#| label: inputs-design
+design <- list(
+  coder_pool = 9,               # trained human coders
+  coders_per_theory = 3,        # independent human encodings of each theory
+  agent_runs = 3,               # independent agent encodings of each theory
+  max_words = 3000,             # longest source passage, figures included
+  unitise_check = 0.25,         # share of passages segmented twice
+  classifiers = 3,              # panel that assigns the known groups
+  hours_per_file = c(low = 4, mid = 6, high = 9),   # coder hours per file
+  boot_reps = 2000,             # bootstrap resamples in the analyses
+  experts_per_theory = 3,
+  expert_pool = 15,
+  experts_per_episode = 4,
+  rating_scale = c(0, 10),      # expert ratings of each theory
+  confidence_scale = c(1, 5),   # expert confidence in a verdict
+  hours_per_rating = c(theory = 1, episode = 1.5),  # expert hours
+  theories_per_reader = 2,      # Study 3 example theories per participant
+  misread_items = 16,           # Study 3 statements that state a misreading
+  correct_items = 8,            # Study 3 statements that state a correct reading
+  output_types = 4,             # score, gate, dossier, appraisal
+  attention_items = 2,
+  alpha = 0.05,                 # two-sided; one-sided tests use alpha / 2
+  power = 0.80,
+  halfwidth = 0.10,             # target half-width of agreement coefficients
+  rel_halfwidth = 0.25,         # target half-width of the SEM, relative to it
+  icc_threshold = 0.50,         # theories account for half the score variance
+  agree_level = 0.80,           # agreement at which a file may stand for the theory
+  rho_null = 0.30,              # correlation the score must exceed (H2.1)
+  rho_true = c(0.5, 0.7),       # true correlations considered for H2.1
+  expert_icc_alt = 0.6,         # expert ICC above the reviewer value
+  expert_kappa_design = 0.4,    # expert-expert kappa of the design scenario
+  expert_kappa_high = 0.6,
+  truth_tolerance = 0.20,       # tolerated rate of reading the score as truth
+  ni_margin_or = 0.80,          # non-inferiority margin for correct readings
+  sd_theory_logit = c(0.5, 1),  # Study 1: theory differences in coding accuracy
+  sd_coder_logit = 0.3,         # Study 1: coder differences in coding accuracy
+  coder_share = 0.25,           # share of encoding variance due to coders
+  sd_expert_logit = 0.3,        # Study 2: expert differences in accuracy
+  verdict_share = c(progressive = 1, neutral = 1, degenerating = 1) / 3,
+  p0_low = 0.25,                # Study 3: lower baseline misreading probability
+  or_design = 0.67,             # Study 3: design effect of the 0.8.0 wording
+  or_large = 0.5,               # Study 3: larger alternative effect
+  sd_reader = 1.0,              # Study 3: participant SD, logit scale
+  sd_item = 0.8,                # Study 3: statement SD, logit scale
+  sd_item_slope = 0.3,          # Study 3: SD of the wording effect over statements
+  editor_share = 0.25,          # Study 3: share of editors sought
+  reps_alpha = 500, reps_score = 200, reps_episode = 1000, reps_reader = 150,
+  n_grid = c(24, 36, 48, 60, 72),      # theories, multiples of the 12 blocks
+  ng_grid = 4:100,                     # theories per known group
+  ep_grid = c(20, 30, 40, 60, 80),     # amendment episodes
+  arm_grid = seq(50, 400, by = 25)     # readers per arm
+)
+known_groups <- c("corroborated", "refuted", "pseudoscientific")
+ci_lab <- paste(100 * (1 - design$alpha), "per cent")
+z_crit <- qnorm(1 - design$alpha / 2)
+```
+
+## Software versions
+
+```{r}
+#| label: inputs-repository
+# Read from the repository at render time.
+checklist <- yaml::read_yaml("../schema/rigor_checklist.yaml")
+item_ids <- vapply(checklist$items, function(i) i$id, "")
+blockers <- item_ids[vapply(checklist$items,
+                            function(i) identical(i$severity_if_fail, "blocker"),
+                            logical(1))]
+pkg_version <- unname(read.dcf("../r/theoryforge/DESCRIPTION",
+                               fields = "Version")[1, 1])
+suppressMessages(pkgload::load_all("../r/theoryforge", quiet = TRUE))
+example_files <- sort(list.files("../apps/examples", pattern = "[.]theory[.]yaml$",
+                                 full.names = TRUE))
+example_scores <- vapply(example_files,
+                         function(p) tf_check(tf_read(p))$aggregate_score,
+                         numeric(1))
+names(example_scores) <- sub("[.]theory[.]yaml$", "", basename(example_files))
+```
+
+All encodings are run through one frozen release of the package, version
+`r pkg_version` when this document was rendered, identified in each
+registration by its commit. The checklist in the repository at rendering was
+version `r checklist$schema_version`, with `r length(item_ids)` items of which
+`r nw(length(blockers))` (`r and_list(paste0("'", blockers, "'"))`) can block
+the gate. Study 3 also uses the release tagged v0.7.0. Outputs are computed in
+R and checked in Python, since the two packages are specified to give the same
+results.
+
+## Sample of theories {#sec-sample}
+
+Studies 1 and 2 use one sample of published verbal theories in the behavioural
+sciences, drawn from three sources.
+
+The first source is the database of behaviour change theories of @hale2020,
+which lists theories with their primary sources and gives an independent
+representation of each as construct-relationship triples. Theories are drawn
+from it at random. The second source is a set of journals that publish
+theoretical articles in psychology, searched over a span of years fixed at
+registration for articles that propose or revise a named verbal theory. Two
+screeners judge eligibility independently, and a third resolves disagreements.
+Eligible articles are drawn at random. The third source supplies the known
+groups (@sec-known-groups).
+
+A theory is eligible when all of the following hold.
+
+- A primary source by the theory's proponents states it in prose, with at least
+  two constructs and at least one stated relation between them.
+- The statement can be confined to a passage of at most
+  `r f(design$max_words, 0)` words, including its figures and tables, on whose
+  boundaries two screeners agree (a third resolves disagreements).
+- The source is in English and can be given to every coder and expert.
+- The theory has not been stated as a set of equations or as a computational
+  model, since the question concerns verbal theories.
+- The theory is not one of the pilot theories or the package's shipped
+  examples, which serve for training.
+- No member of the study team, coder or expert assigned to it is an author of
+  the source.
+
+## Known groups {#sec-known-groups}
+
+Groups of `r and_list(known_groups)` theories are added to the sample, with
+equal numbers in each (the number is set in @sec-s2-size).
+
+- Corroborated: theories whose central risky prediction passed tests by groups
+  independent of its proponents, documented in a systematic review, a
+  multi-laboratory study or a registered replication published before sampling,
+  with no unresolved failure of that prediction in tests of comparable quality.
+- Refuted: theories whose central prediction failed in a high-powered
+  registered or multi-laboratory test or in a systematic review, and which later
+  reviews describe as refuted or as abandoned in its original form.
+- Pseudoscientific: doctrines presented by their proponents as scientific
+  explanations of behaviour, which a scientific body's statement or a
+  peer-reviewed review describes as lacking scientific support, and whose
+  proponents have met reported failures by changing the doctrine without
+  stating new tests or by rejecting the tests. A written statement by the
+  proponents of a length comparable with the other sources must exist.
+
+Candidates for each group are listed from structured searches of review
+literature, with search strings fixed at registration. A panel of
+`r nw(design$classifiers)` methodologists, who are neither coders nor Study 2
+experts, assigns each candidate to a group or to none by the criteria above,
+independently and before any candidate is encoded. A candidate enters a group
+only when a majority of the panel assigns it there, and the panel's agreement
+is reported. The classification rests on the empirical and historical record of
+each theory and is made without reference to how completely its source
+specifies it, so that the groups are not defined by the quantity they are used
+to validate.
+
+## Source passages and statements
+
+For each theory, two screeners fix the passage of the primary source that
+states it. A trained unitiser segments the passage into statements, each
+stating one construct, relation, condition, prediction or assumption. A second
+unitiser independently segments a random `r pct(design$unitise_check)` of the
+passages, and the agreement between the two segmentations is reported. The
+coders then work from the segmented passages, so that disagreement about where
+a statement begins does not enter the agreement on what it became.
+
+## Written encoding protocol and coder training {#sec-encoding-protocol}
+
+Before Study 1 begins, the encoding protocol will be written down and frozen.
+It states conventions for the choices that produced most disagreement in the
+pilot:
+
+- when a stated relation also becomes a prediction;
+- how an interaction is encoded, since encoding it as `moderates` leaves the
+  moderated relation unsigned;
+- how a feedback loop is encoded;
+- that a mechanism field is filled only when the text gives a reason;
+- that no bound, measure or rival is written that the text does not state.
+
+For each statement, the coder records which
+element or elements of the file it became, using the pilot's categories
+(proposition, prediction with or without a machine-readable claim, phenomenon,
+assumption, boundary condition, evidence, rival, wording only) and a further
+category for a statement left out.
+
+Coders train on the pilot theories. They receive feedback on the format of
+their files and on the use of the protocol, and none on content, since feedback
+on content would teach them the trainers' readings and raise their agreement
+above what independent users of the protocol would reach. A coder is admitted
+after completing the training files with full validation passing. The
+reliability estimated in Study 1 therefore applies to researchers trained with
+a written protocol, which is more than most users of the package receive.
+
+## Construct matching
+
+Comparing two files requires deciding which construct in one corresponds to
+which construct in the other. Two adjudicators, who are not coders, match the
+constructs of the files of each theory independently, without knowing which
+coder produced which file. Their agreement is reported, disagreements are
+resolved by discussion, and every analysis that depends on matching is repeated
+with each adjudicator's own matching.
+
+## Agent encoders {#sec-agents}
+
+Each theory is also encoded `r nw(design$agent_runs)` times by an agent: a
+language model given the source passage, the written encoding protocol and the
+package's documentation, with the package available to validate its files. Each
+run starts in a fresh session and sees no human encoding and no other run. The
+model's identifier and version, the date and the full instructions are fixed at
+registration and archived. The pilot's encoders were agents of one model
+family, which may share readings that independent humans would not, so
+agreement among agent runs is reported separately and is not treated as
+exchangeable with agreement among humans.
+
+## Inputs for the sample-size calculations {#sec-inputs}
+
+The sample sizes below are justified by the precision they give and, for the
+hypotheses that are tested, by their power [@lakens2022]. Where no closed form
+fits the design, the operating characteristics are estimated by simulation with
+fixed seeds, and Monte Carlo standard errors are reported [@morris2019]. The
+pilot inputs are in @sec-pilot and the external ones in @sec-background. Two
+further inputs come from analyses of the shipped example files.
+
+```{r}
+#| label: inputs-encoding
+encoding_sd <- list(
+  # Standard deviation of the checklist score over combinations of encoding
+  # choices that leave one theory's statements unchanged, for the shipped
+  # panic-network v1 and modality-switching files: with content-preserving
+  # choices only, and with all choices, including one that deletes
+  # construct-level boundary conditions.
+  content = c(panic_v1 = 3.32, modality = 3.36),
+  all = c(panic_v1 = 4.81, modality = 5.49)
+)
+```
+
+```{r}
+#| label: inputs-derived
+sd_theory <- c(
+  pilot = sqrt(max(0, (pil$msb - pil$msw) / n_pilot_enc)),
+  examples = sd(example_scores),
+  pooled = sd(c(rowMeans(pilot$scores), example_scores)))
+sem_in <- c(pilot = sqrt(pil$msw),
+            content = mean(encoding_sd$content),
+            all = mean(encoding_sd$all))
+sdd <- function(sem) z_crit * sqrt(2) * sem
+sb <- function(icc, k) k * icc / (1 + (k - 1) * icc)
+icc_mid <- sd_theory[["examples"]]^2 /
+  (sd_theory[["examples"]]^2 + sem_in[["content"]]^2)
+units_per_theory <- round(pilot$units / n_pilot_th)
+code_share <- pilot$codes / sum(pilot$codes)
+pairs_total <- sum(choose(pilot$constructs, 2))
+edge_joined <- sum(pilot$propositions) / pairs_total
+edge_share <- c(none = 1 - edge_joined,
+                rep(edge_joined * pilot$relation_types /
+                      sum(pilot$relation_types) / 2, each = 2))
+edge_units <- round(pairs_total / length(pilot$constructs))
+impl_sd <- sd(rowMeans(pilot$impl_jaccard))
+edge_sd <- sd(rowMeans(pilot$edge_jaccard))
+p_hoekstra <- external$false_endorsed / external$false_items
+```
+
+Three inputs need comment. First, the spread of checklist scores between
+theories. The pilot's analysis of variance gives a between-theory standard
+deviation of `r f(sd_theory[["pilot"]])` points. The
+`r nw(length(example_scores))` example theories shipped with the apps, each a
+published theory encoded by one person, have scores from
+`r f(min(example_scores), 1)` to `r f(max(example_scores), 1)` with a standard
+deviation of `r f(sd_theory[["examples"]])` points, which includes that
+person's encoding noise. Pooling the pilot theories' means with the examples
+gives `r f(sd_theory[["pooled"]])` points, which mixes encoders as well as
+theories and is used as the widest plausible spread. Second, the encoding
+noise. The pilot's within-theory standard deviation is
+`r f(sem_in[["pilot"]])` points. Over combinations of content-preserving
+encoding choices for two shipped theories it is `r f(sem_in[["content"]])`
+points on average, and `r f(sem_in[["all"]])` when a choice that deletes
+construct-level boundary conditions is included. The middle values,
+`r f(sd_theory[["examples"]])` and `r f(sem_in[["content"]])`, define the
+design scenario, under which theories would account for `r pct(icc_mid)` of the
+variance of a single encoding's score. Third, the human baselines.
+@bornmann2010 found a mean reliability of `r f(external$reviewer_icc)` on the
+intraclass correlation scale and a mean Cohen's kappa of
+`r f(external$reviewer_kappa)` between journal reviewers judging the same
+manuscript. These values concern recommendations on manuscripts, not encodings
+of theories, and serve as a floor: an encoding procedure whose agreement did
+not exceed them would be no more reproducible than unstructured expert
+judgement of scientific documents.
+
+## Coder assignment {#sec-assignment}
+
+```{r}
+#| label: coder-design
+# Steiner triple system on 9 coders: 12 blocks of 3, every pair of coders
+# together in exactly one block. Theories are assigned to blocks at random.
+sts9 <- rbind(c(1, 2, 3), c(4, 5, 6), c(7, 8, 9), c(1, 4, 7), c(2, 5, 8),
+              c(3, 6, 9), c(1, 5, 9), c(2, 6, 7), c(3, 4, 8), c(1, 6, 8),
+              c(2, 4, 9), c(3, 5, 7))
+# Balanced incomplete block design on 6 coders: 10 blocks of 3, every pair
+# together in exactly two blocks (used only for comparison).
+bibd6 <- rbind(c(1, 2, 3), c(1, 2, 4), c(1, 3, 5), c(1, 4, 6), c(1, 5, 6),
+               c(2, 3, 6), c(2, 4, 5), c(2, 5, 6), c(3, 4, 5), c(3, 4, 6))
+pair_lambda <- function(b) {
+  unique(as.vector(table(apply(b, 1, function(r)
+    combn(sort(r), 2, paste, collapse = "-")))))
+}
+stopifnot(max(sts9) == design$coder_pool,
+          ncol(sts9) == design$coders_per_theory,
+          length(pair_lambda(sts9)) == 1, length(pair_lambda(bibd6)) == 1,
+          length(unique(as.vector(table(sts9)))) == 1,
+          all(design$n_grid %% nrow(sts9) == 0))
+```
+
+Each theory is encoded independently by `r nw(design$coders_per_theory)` of
+`r nw(design$coder_pool)` coders. The assignment follows a Steiner triple
+system: the `r nrow(sts9)` triples of coders are used equally often, so that
+every coder encodes the same number of theories and every pair of coders shares
+the same number of theories (`r nw(pair_lambda(sts9))` in each cycle of
+`r nrow(sts9)` theories). Coders are thus crossed with theories in an
+incomplete design, for which @tenhove2024 give guidance on choosing and
+estimating intraclass correlations. A pool of `r nw(design$coder_pool)` rather
+than `r nw(max(bibd6))` coders spreads the work and estimates stable
+differences between coders from more coders, and @sec-s1-size shows how much
+that changes the precision.
+
+# Claims and hypotheses {#sec-claims}
+
+@tbl-claims lists the claims that the studies examine and the result that would
+count against each. They are claims that a reader of the documentation could
+reasonably take the package to make, including some that version 0.8.0 no
+longer makes in so many words, because the outputs invite them.
+
+```{r}
+#| label: tbl-claims
+#| tbl-cap: "Claims examined, the study that examines each and the result that would count against it."
+claims <- data.frame(
+  Claim = c(
+    "C1. A file encodes the theory, so that what the package derives from it belongs to the theory and not to one encoder's choices.",
+    "C2. Differences between the checklist scores of two theories reflect the theories rather than their encoders.",
+    "C3. The checklist score and the item statuses track how completely and how testably experts judge a theory to be specified.",
+    "C4. The labels progressive, degenerating and neutral correspond to what an expert applying Lakatos's terms would conclude about the same amendment.",
+    "C5. In the 0.8.0 wording, readers do not take the score, the gate, the dossier or the appraisal for judgements of truth or quality."),
+  Study = c("1", "1", "2", "2", "3"),
+  `Counts against it` = c(
+    paste0("Agreement among independent human coders on the elements or the signed edges whose ", ci_lab, " interval lies below ", f(design$agree_level), " (H1.1 and H1.2)."),
+    paste0("A ", ci_lab, " interval for ICC(A,1), the share of score variance due to theories, that lies below ", f(design$icc_threshold), ", or a smallest detectable difference larger than the differences users are told to read (H1.3)."),
+    paste0("A correlation with expert ratings of completeness whose ", ci_lab, " interval lies below ", f(design$rho_null), ", or pseudoscientific theories that score no lower than corroborated and refuted ones (H2.1 and H2.2)."),
+    "Agreement of the package's verdicts with experts that is reliably lower than the agreement of experts with each other (H2.3).",
+    paste0("An odds ratio of misreading, 0.8.0 against 0.7.0 wording, whose ", ci_lab, " interval lies wholly above the design effect of ", f(design$or_design), ", or a rate of reading the score as truth whose lower limit exceeds ", pct(design$truth_tolerance), " (H3.1 and H3.2).")),
+  check.names = FALSE)
+knitr::kable(claims)
+```
+
+# Study 1: encoding reliability {#sec-study1}
+
+## Aims and hypotheses
+
+Study 1 estimates how far independent human coders who follow the written
+protocol produce the same file from the same verbal theory, at each level at
+which the package reads the file: the elements each statement becomes, the
+signed edges of the causal graph, the predictions with machine-readable claims,
+the derived implications and claim verdicts, the checklist item statuses and
+the checklist score. It compares this agreement with the reviewer baseline,
+with the agreement of Study 2's experts on the same theories and with agent
+encoders. The study is reported following the GRRAS guidelines
+[@kottner2011].
+
+The primary hypotheses are:
+
+- H1.1: agreement among human coders on the element each statement becomes,
+  measured by Krippendorff's alpha, exceeds the reviewer kappa of
+  `r f(external$reviewer_kappa)`.
+- H1.2: agreement among human coders on the status of each pair of shared
+  constructs in the causal graph (no edge, or an edge with its direction and
+  sign) exceeds the reviewer kappa.
+- H1.3: the share of the variance of the checklist score due to theories,
+  ICC(A,1) in the notation of @mcgraw1996, exceeds the reviewer reliability of
+  `r f(external$reviewer_icc)`.
+
+The hypotheses state a floor. The claims of @tbl-claims need more, and the
+inference criteria (@sec-s1-inference) state what each result would mean for
+them. Claim C1 is supported only if agreement on elements and edges reaches
+`r f(design$agree_level)`, the level at which we take a file to stand for the
+theory, and is contradicted if the upper `r ci_lab` limit lies below that
+level. Claim C2 is supported only if the lower limit of ICC(A,1) exceeds
+`r f(design$icc_threshold)`, so that theories account for more than half of
+the variance of a single encoding's score, and is contradicted if the upper
+limit lies below it. These levels are our conventions, stated in advance, and
+other readers may set them elsewhere. At an alpha of `r f(design$agree_level)`
+on the element types, with the pilot's distribution of types, about
+`r pct((1 - design$agree_level) * (1 - sum(code_share^2)))` of pairs of codings
+of a statement would disagree.
+
+## Design
+
+Study 1 is a reliability study in which `r nw(design$coders_per_theory)`
+human coders and `r nw(design$agent_runs)` agent runs encode each theory of the
+shared sample independently, with coders crossed with theories in the incomplete
+design of @sec-assignment. There is no manipulation.
+
+## Materials
+
+The materials are the segmented source passages of the sample of theories
+(@sec-sample and @sec-known-groups), the written encoding protocol, the
+package's documentation at the frozen release and a spreadsheet in which coders
+record, for each statement, the element or elements it became.
+
+## Participants and recruitment
+
+Coders are doctoral students, postdoctoral researchers or research assistants
+with training in a behavioural science and in research methods, recruited by
+advertisement in the University of Oxford and in partner institutions. They are
+paid for their time at the University's rate for research assistance. People
+who have contributed to theoryforge, or who have used it before, are not
+eligible. The agent encoders are described in @sec-agents.
+
+## Procedure
+
+After training (@sec-encoding-protocol), each coder receives the passages
+assigned to them in a random order. A coder works alone, may consult the
+package's documentation and the written protocol and may run the package to
+validate the file, and may not consult other coders or any other encoding of
+the theory. For each passage the coder writes a theory file, records the
+element each statement became, records the time spent and, for each element,
+how confident they are that the text supports it. A file is submitted once full
+validation passes or once the coder has recorded why it does not. Questions
+about the protocol go to a coordinator, who answers them in writing to all
+coders at once, and the questions and answers are archived.
+
+## Measures {#sec-s1-measures}
+
+All outputs are computed with the frozen release from each submitted file.
+
+- Element type. For each statement, the category of the element it became
+  (@sec-encoding-protocol). Agreement is measured by Krippendorff's alpha for
+  nominal data [@hayes2007] over statements, and by Fleiss' kappa for
+  comparison with the pilot.
+- Signed edges. For each unordered pair of constructs that the coders of a
+  theory share after matching, its status: no edge, an edge in either direction
+  with sign increases, decreases or unsigned causes, or a moderation. Agreement
+  is measured by alpha over pairs, and by the mean pairwise Jaccard index of the
+  sets of signed edges.
+- Predictions with claims. The set of claims (cause, effect, kind and sign)
+  stated by each file, compared by the mean pairwise Jaccard index.
+- Derived implications. The basis set of implied conditional independencies,
+  compared literally by the Jaccard index after matching constructs, and the
+  independence model over the constructs that all coders of a theory share,
+  compared by alpha over triples (independent or not, given each conditioning
+  set), as in the pilot.
+- Claim verdicts. For each claim stated in at least two files of a theory, the
+  verdict of `entailments()` (entailed, contradicted, left open or not
+  evaluated), compared by alpha with missing values for files that do not state
+  the claim.
+- Checklist item statuses. For each item, the status in each file (pass, warn,
+  fail or not applicable), compared by alpha and by Gwet's AC1, which behaves
+  better than kappa when one status is far more common than the others
+  [@gwet2008; @feinstein1990].
+- Checklist score. The score of each file, analysed as a continuous measure.
+- Secondary measures: the agreement of the two unitisers, the time per file,
+  the share of files that pass full validation, the coders' confidence and, for
+  the theories drawn from @hale2020, the agreement of each file's
+  construct-relationship pairs with that study's representation.
+
+## Analysis plan {#sec-s1-analysis}
+
+Agreement coefficients are computed over all theories, with statements, pairs
+or triples as units and coders as raters. Krippendorff's alpha accommodates
+any number of coders and missing values [@hayes2007]. Because units are nested
+in theories and coders are crossed with theories, intervals come from a
+bootstrap that resamples theories and coders independently, the pigeonhole
+bootstrap of @owen2007, with `r f(design$boot_reps, 0)` resamples. Jaccard
+indices are averaged over coder pairs within a theory and then over theories,
+with intervals from the same bootstrap.
+
+The checklist score is analysed with a linear mixed model with crossed random
+intercepts for theories and coders, fitted by restricted maximum likelihood
+with lme4 [@bates2015]:
+
+$$y_{ij} = \mu + t_i + c_j + e_{ij}, \quad t_i \sim N(0, \sigma_t^2), \quad
+c_j \sim N(0, \sigma_c^2), \quad e_{ij} \sim N(0, \sigma_e^2).$$
+
+Coders are treated as random, as @tenhove2024 recommend for interrater
+reliability. From the variance components the analysis reports three
+quantities.
+
+- ICC(A,1) $= \sigma_t^2 / (\sigma_t^2 + \sigma_c^2 + \sigma_e^2)$, the
+  agreement form in the terms of @shrout1979 and @mcgraw1996, which fits
+  because readers compare the scores of theories encoded by different people.
+- The standard error of measurement of a single encoding,
+  SEM $= \sqrt{\sigma_c^2 + \sigma_e^2}$.
+- The smallest detectable difference between two theories encoded by different
+  coders, SDD $= z\sqrt{2}\,\mathrm{SEM}$ with $z$ = `r f(z_crit)`.
+ Intervals
+come from a parametric bootstrap of the fitted model with
+`r f(design$boot_reps, 0)` replicates, and from the pigeonhole bootstrap as a
+check. The model is refitted with fixed effects for the known groups and the
+sampling source, so that the ICC is also reported within groups.
+
+Human-human agreement is compared with the reviewer baseline as H1.1 to H1.3
+state. It is compared with the agreement of Study 2's experts on the same
+theories by the difference between the ICC of the score across coders and the
+ICC of the experts' completeness ratings across experts, and between the alpha
+of each item status across coders and the alpha of the experts' judgements of
+the corresponding item, with intervals from a bootstrap that resamples
+theories, coders and experts. Agent encodings are compared with human ones by
+the difference between agent-human and human-human agreement on each measure,
+and agent-agent agreement is reported separately.
+
+A coder who leaves is replaced, and their unfinished theories are reassigned so
+that each theory keeps `r nw(design$coders_per_theory)` human encodings. The
+mixed model and alpha both use all available encodings and assume that
+encodings are missing at random given the theory and the coder. A file that
+never passes full validation is analysed as submitted, and the share of such
+files is reported. A statement left without a category is coded as left out.
+
+## Sample size {#sec-s1-size}
+
+The number of theories is set by the precision of the agreement coefficients
+and of the SEM. Agreement on element types and on edges is simulated by a model
+in which each coder reproduces a statement's true category with a probability
+that varies between theories and between coders on the logit scale (standard
+deviations `r and_list(f(design$sd_theory_logit, 1))` for theories and
+`r f(design$sd_coder_logit, 1)` for coders) and otherwise picks a category at
+random from the observed distribution. The intercept is calibrated so that the
+population value of alpha equals each target: the pilot's kappa on element
+types (`r f(pilot$kappa_element)`), its lower kappa on claims
+(`r f(pilot$kappa_claim)`) and the level claim C1 needs
+(`r f(design$agree_level)`). Element types follow the pilot's distribution with
+`r units_per_theory` statements per theory. Edges follow the pilot's
+structure: of the `r f(pairs_total, 0)` pairs of constructs in the pilot files,
+`r pct(edge_joined)` were joined by a proposition, and each theory contributes
+`r edge_units` pairs.
+
+```{r}
+#| label: functions-agreement
+# Gauss-Hermite nodes and weights for a standard normal (Golub-Welsch).
+gh_nodes <- function(n = 40) {
+  i <- seq_len(n - 1)
+  J <- matrix(0, n, n)
+  J[cbind(i, i + 1)] <- sqrt(i)
+  J[cbind(i + 1, i)] <- sqrt(i)
+  e <- eigen(J, symmetric = TRUE)
+  list(x = e$values, w = e$vectors[1, ]^2)
+}
+GH <- gh_nodes()
+# With accuracy q and errors drawn from the category distribution, two coders
+# agree beyond chance by q * q', so the population alpha is E[q q'] for two
+# coders of the same theory.
+pop_alpha <- function(eta, sd_t, sd_c) {
+  inner <- vapply(GH$x * sd_t,
+                  function(b) sum(GH$w * plogis(eta + b + GH$x * sd_c)), 0)
+  sum(GH$w * inner^2)
+}
+calibrate_eta <- function(target, sd_t, sd_c) {
+  uniroot(function(e) pop_alpha(e, sd_t, sd_c) - target, c(-8, 12))$root
+}
+# Krippendorff's alpha, nominal, every unit coded by every column.
+alpha_nominal <- function(codes) {
+  m <- ncol(codes)
+  agree <- 0
+  for (a in 1:(m - 1)) for (b in (a + 1):m) {
+    agree <- agree + sum(codes[, a] == codes[, b])
+  }
+  d_obs <- 1 - 2 * agree / (nrow(codes) * m * (m - 1))
+  nc <- tabulate(codes, nbins = max(codes))
+  n <- sum(nc)
+  d_exp <- 1 - sum(nc * (nc - 1)) / (n * (n - 1))
+  1 - d_obs / d_exp
+}
+sim_alpha <- function(n_t, units, share, target, sd_t, sd_c, blocks, reps) {
+  eta <- calibrate_eta(target, sd_t, sd_c)
+  ncat <- length(share); K <- max(blocks); m <- ncol(blocks)
+  assign <- blocks[rep_len(seq_len(nrow(blocks)), n_t), , drop = FALSE]
+  theory <- rep(seq_len(n_t), each = units)
+  est <- replicate(reps, {
+    b <- rnorm(n_t, 0, sd_t)
+    d <- rnorm(K, 0, sd_c)
+    truth <- sample.int(ncat, n_t * units, TRUE, share)
+    codes <- vapply(seq_len(m), function(k) {
+      q <- plogis(eta + b[theory] + d[assign[theory, k]])
+      ifelse(runif(length(q)) < q, truth,
+             sample.int(ncat, length(q), TRUE, share))
+    }, integer(n_t * units))
+    alpha_nominal(codes)
+  })
+  c(mean = mean(est), sd = sd(est))
+}
+```
+
+```{r}
+#| label: sim-agreement
+set.seed(20261125)
+# Sampling noise of one theory's coefficient in the pilot's setting: one
+# theory, its statements, three encoders with equal accuracy.
+pilot_noise <- sim_alpha(1, units_per_theory, code_share, pilot$kappa_element,
+                         0, 0, matrix(seq_len(n_pilot_enc), nrow = 1),
+                         design$reps_alpha)[["sd"]]
+grid_a <- expand.grid(n = design$n_grid,
+                      target = c(pilot$kappa_claim, pilot$kappa_element,
+                                 design$agree_level),
+                      sd_t = design$sd_theory_logit,
+                      kind = c("element", "edge"), stringsAsFactors = FALSE)
+res_a <- t(vapply(seq_len(nrow(grid_a)), function(i) {
+  g <- grid_a[i, ]
+  if (g$kind == "element") {
+    sim_alpha(g$n, units_per_theory, code_share, g$target, g$sd_t,
+              design$sd_coder_logit, sts9, design$reps_alpha)
+  } else {
+    sim_alpha(g$n, edge_units, edge_share, g$target, g$sd_t,
+              design$sd_coder_logit, sts9, design$reps_alpha)
+  }
+}, numeric(2)))
+grid_a$mean <- res_a[, "mean"]
+grid_a$sd <- res_a[, "sd"]
+grid_a$halfwidth <- z_crit * grid_a$sd
+# Monte Carlo standard error of a standard deviation estimated from R replicates.
+grid_a$mcse_hw <- z_crit * grid_a$sd / sqrt(2 * (design$reps_alpha - 1))
+ok_a <- with(grid_a, aggregate(halfwidth <= design$halfwidth,
+                               list(n = n, kind = kind, sd_t = sd_t), all))
+first_ok <- function(kind) {
+  n_ok <- ok_a$n[ok_a$kind == kind & ok_a$sd_t == min(design$sd_theory_logit) &
+                   ok_a$x]
+  if (length(n_ok)) min(n_ok) else max(design$n_grid)
+}
+n_alpha <- first_ok("element")
+n_alpha_edge <- first_ok("edge")
+```
+
+The pilot's per-theory kappas had a standard deviation of
+`r f(sd(pilot$kappa_element_by_theory), 3)`. Sampling alone would give about
+`r f(pilot_noise, 3)` for one theory of `r units_per_theory` statements coded
+by `r nw(n_pilot_enc)` equally accurate encoders, so the pilot shows
+`r if (sd(pilot$kappa_element_by_theory) <= pilot_noise) "no" else "some"`
+difference between theories beyond noise, and the theory standard deviations
+assumed here allow for more than the pilot shows, as a more varied sample would
+need.
+
+```{r}
+#| label: tbl-alpha
+#| tbl-cap: "Expected half-width of the interval for alpha, the critical value times the standard deviation of the estimates over replicates, by number of theories, target alpha and theory standard deviation on the logit scale."
+tab_a <- reshape(grid_a[, c("kind", "sd_t", "target", "n", "halfwidth")],
+                 idvar = c("kind", "sd_t", "target"), timevar = "n",
+                 direction = "wide")
+names(tab_a) <- c("Units", "Theory SD", "Target alpha",
+                  paste(design$n_grid, "theories"))
+tab_a[, -(1:3)] <- lapply(tab_a[, -(1:3)], f, d = 3)
+tab_a$`Target alpha` <- f(tab_a$`Target alpha`)
+knitr::kable(tab_a, row.names = FALSE)
+```
+
+With `r nw(design$coder_pool)` coders, the coder effects do not average out as
+theories are added, so the half-width falls more slowly than the inverse square
+root of the number of theories. Under the smaller theory standard deviation,
+the half-width of alpha on element types is at most `r f(design$halfwidth)` at
+every target with `r n_alpha` theories, and the half-width on edges with
+`r n_alpha_edge` theories. The Monte Carlo standard errors of the half-widths
+are at most `r f(max(grid_a$mcse_hw), 4)`.
+
+The Jaccard indices have no chance correction and are summarised by their mean
+over theories, whose standard error is dominated by differences between
+theories. Here a closed form fits: with a between-theory standard deviation
+$s$, a half-width $h$ needs $n = (z\,s/h)^2$ theories. The pilot gives
+$s$ = `r f(impl_sd, 3)` for the implied independencies and `r f(edge_sd, 3)`
+for the signed edges. Half and one and a half times the implications value are
+used as alternatives.
+
+```{r}
+#| label: tbl-jaccard
+#| tbl-cap: "Theories needed for a given half-width h of the mean Jaccard index, by between-theory standard deviation."
+n_jacc <- function(s, h) ceiling((z_crit * s / h)^2)
+s_alt <- c(`pilot, signed edges` = edge_sd, `pilot, implications` = impl_sd,
+           `half the implications value` = impl_sd / 2,
+           `one and a half times it` = 1.5 * impl_sd)
+h_alt <- c(design$halfwidth / 2, design$halfwidth)
+tab_j <- data.frame(names(s_alt), f(s_alt, 3),
+                    vapply(h_alt, function(h) n_jacc(s_alt, h),
+                           numeric(length(s_alt))))
+names(tab_j) <- c("Standard deviation", "s", paste("h =", f(h_alt)))
+knitr::kable(tab_j, row.names = FALSE)
+n_impl <- n_jacc(impl_sd, design$halfwidth)
+```
+
+The checklist score is simulated from the mixed model of @sec-s1-analysis in
+the incomplete design, for every combination of the three between-theory
+standard deviations and the three encoding standard deviations of
+@sec-inputs, with `r pct(design$coder_share)` of the encoding variance due to
+stable differences between coders. Each replicate is analysed as the real data
+will be, by restricted maximum likelihood, and the distribution of the
+estimates over `r design$reps_score` replicates gives the precision. Fits that
+raise a warning are kept and counted.
+
+```{r}
+#| label: functions-score
+ctrl <- lmerControl(check.conv.singular = .makeCC(action = "ignore", tol = 1e-4))
+sim_score <- function(n_t, sd_t, sem, coder_share, blocks, reps) {
+  K <- max(blocks)
+  assign <- blocks[rep_len(seq_len(nrow(blocks)), n_t), , drop = FALSE]
+  d <- data.frame(theory = factor(rep(seq_len(n_t), each = ncol(blocks))),
+                  coder = factor(as.vector(t(assign)), levels = seq_len(K)))
+  sd_c <- sqrt(coder_share) * sem
+  sd_e <- sqrt(1 - coder_share) * sem
+  gen <- function() {
+    rnorm(n_t, 0, sd_t)[d$theory] + rnorm(K, 0, sd_c)[d$coder] +
+      rnorm(nrow(d), 0, sd_e)
+  }
+  d$y <- gen()
+  fit <- lmer(y ~ 1 + (1 | theory) + (1 | coder), data = d, REML = TRUE,
+              control = ctrl)
+  est <- t(replicate(reps, {
+    warned <- FALSE
+    f_r <- withCallingHandlers(refit(fit, gen()), warning = function(w) {
+      warned <<- TRUE
+      invokeRestart("muffleWarning")
+    })
+    v <- as.data.frame(VarCorr(f_r))
+    v <- setNames(v$vcov, v$grp)
+    c(icc = unname(v["theory"] / sum(v)),
+      sem = unname(sqrt(v["coder"] + v["Residual"])), warned = warned)
+  }))
+  icc_sd <- sd(est[, "icc"])
+  c(n = n_t, true_icc = sd_t^2 / (sd_t^2 + sem^2),
+    icc_mean = mean(est[, "icc"]), icc_sd = icc_sd,
+    icc_lo = unname(quantile(est[, "icc"], design$alpha / 2)),
+    icc_hi = unname(quantile(est[, "icc"], 1 - design$alpha / 2)),
+    sem_mean = mean(est[, "sem"]), sem_sd = sd(est[, "sem"]),
+    sem_rel_hw = z_crit * sd(est[, "sem"]) / sem,
+    p_floor = mean(est[, "icc"] - z_crit * icc_sd > external$reviewer_icc),
+    p_half = mean(est[, "icc"] - z_crit * icc_sd > design$icc_threshold),
+    warned = sum(est[, "warned"]))
+}
+```
+
+```{r}
+#| label: sim-score
+set.seed(20261126)
+grid_s <- expand.grid(n = design$n_grid, sd_t = names(sd_theory),
+                      sem = names(sem_in), stringsAsFactors = FALSE)
+res_s <- t(vapply(seq_len(nrow(grid_s)), function(i) {
+  g <- grid_s[i, ]
+  sim_score(g$n, sd_theory[[g$sd_t]], sem_in[[g$sem]], design$coder_share,
+            sts9, design$reps_score)
+}, numeric(12)))
+grid_s <- cbind(grid_s, res_s[, -1])
+mid <- grid_s$sd_t == "examples" & grid_s$sem == "content"
+n_sem_ok <- grid_s$n[mid & grid_s$sem_rel_hw <= design$rel_halfwidth]
+n_sem <- if (length(n_sem_ok)) min(n_sem_ok) else max(design$n_grid)
+# The smaller coder pool, for comparison, at the largest number in the grid
+# that both designs' block counts divide.
+n_cmp <- max(design$n_grid[design$n_grid %% nrow(bibd6) == 0])
+cmp <- rbind(
+  nine = unlist(grid_s[mid & grid_s$n == n_cmp, c("icc_sd", "sem_rel_hw")]),
+  six = sim_score(n_cmp, sd_theory[["examples"]], sem_in[["content"]],
+                  design$coder_share, bibd6,
+                  design$reps_score)[c("icc_sd", "sem_rel_hw")])
+# Monte Carlo standard error of the difference between two such SDs.
+cmp_mcse <- sqrt(sum(cmp[, "icc_sd"]^2 / (2 * (design$reps_score - 1))))
+pool_sentence <- if (abs(cmp["nine", "icc_sd"] - cmp["six", "icc_sd"]) <
+                     2 * cmp_mcse) {
+  paste("The difference in the ICC is within twice its Monte Carlo standard",
+        "error, so under this scenario the larger pool serves mainly to spread",
+        "the work and to estimate coder differences from more coders, which",
+        "would matter more if they were larger than assumed.")
+} else {
+  paste("The larger pool estimates coder differences from more coders, which",
+        "narrows the interval.")
+}
+```
+
+```{r}
+#| label: tbl-score
+#| tbl-cap: "Simulated estimation of the checklist score's reliability. True ICC is the share of variance due to theories; the range column holds the central estimates at the interval's level; the SEM half-width is relative to the true SEM; the last two columns give the approximate probability that the lower interval limit exceeds the reviewer reliability and one half."
+tab_s <- data.frame(
+  `Theory SD` = paste0(grid_s$sd_t, " (", f(sd_theory[grid_s$sd_t]), ")"),
+  `Encoding SD` = paste0(grid_s$sem, " (", f(sem_in[grid_s$sem]), ")"),
+  Theories = grid_s$n, `True ICC` = f(grid_s$true_icc),
+  `ICC SD` = f(grid_s$icc_sd, 3),
+  `Range of estimates` = paste(f(grid_s$icc_lo), "to", f(grid_s$icc_hi)),
+  `SEM half-width` = f(grid_s$sem_rel_hw),
+  `P(> reviewer)` = f(grid_s$p_floor),
+  `P(> one half)` = f(grid_s$p_half), check.names = FALSE)
+knitr::kable(tab_s, row.names = FALSE)
+```
+
+Three things follow from @tbl-score. First, the reliability of the score depends
+mostly on how much the theories in the sample differ, which no sample size can
+change. If published verbal theories differ as little as the pilot theories or
+the app examples, the score's ICC will be low whatever the number of coders, and
+the study will show that. Second, under the design scenario, the SEM is
+estimated within `r pct(design$rel_halfwidth)` of its value with `r n_sem`
+theories. Third, at `r n_cmp` theories under the design scenario, the standard
+deviation of the ICC estimate is `r f(cmp["nine", "icc_sd"], 3)` with
+`r nw(design$coder_pool)` coders and `r f(cmp["six", "icc_sd"], 3)` with
+`r nw(max(bibd6))`, and the relative half-width of the SEM is
+`r f(cmp["nine", "sem_rel_hw"])` against `r f(cmp["six", "sem_rel_hw"])`.
+`r pool_sentence` The power columns treat the replication standard deviation as
+a known standard error and are approximate. Of the
+`r f(nrow(grid_s) * design$reps_score, 0)` simulated fits,
+`r sum(grid_s$warned)` raised a warning.
+
+```{r}
+#| label: n-study1
+round_up <- function(x, k) k * ceiling(x / k)
+n_study1 <- round_up(max(n_alpha, n_sem, n_impl), nrow(sts9))
+```
+
+Study 1 needs the largest of the numbers of theories required for alpha on
+element types (`r n_alpha`), for the SEM (`r n_sem`) and for the mean Jaccard
+index of the implications (`r n_impl`), rounded up to a multiple of the
+`r nrow(sts9)` blocks of the coder design, which is `r n_study1`. Study 2 may
+need more, and the final number is set in @sec-final-n.
+
+## Inference criteria {#sec-s1-inference}
+
+H1.1 to H1.3 are tested one-sided at level `r f(design$alpha / 2, 3)` with the
+Holm procedure across the family: the $p$ values are ordered from the smallest,
+the $k$-th smallest is compared with `r f(design$alpha / 2, 3)` divided by
+$m + 1 - k$, where $m$ is the number of hypotheses in the family, and testing
+stops at the first that is not below its threshold. Whatever the tests show,
+each coefficient is reported with its `r ci_lab` interval and read against the
+levels of @tbl-claims. For alpha on elements and on edges, a lower limit at or
+above `r f(design$agree_level)` supports claim C1, an upper limit below it
+contradicts C1, and anything else leaves C1 open. For the score, a lower limit
+of ICC(A,1) above `r f(design$icc_threshold)` supports claim C2, an upper limit
+below it contradicts C2, and the SDD with its interval is reported as the
+smallest difference between two theories' scores that the data allow a reader
+to interpret. If C1 is contradicted, the documentation must present every
+derived output as a property of one encoding, and if C2 is contradicted, it
+must advise against comparing the scores of theories encoded by different
+people.
+
+## Limitations
+
+The theories are a sample of verbal theories in the behavioural sciences, and
+the estimates may not transfer to other fields or to theories stated formally.
+The ICC is a property of the sample as well as of the procedure, so the SEM and
+the SDD, which do not depend on how much the sampled theories differ, are the
+more transferable results. Coders follow a written protocol and receive
+training, so agreement among untrained users is likely to be lower. Matching
+constructs and segmenting statements are judgements, and their own agreement
+limits what the coefficients can show. Agreement is not accuracy: coders could
+agree on a reading the theory's authors would reject, which only the
+comparison with @hale2020 for a subset, and Study 2, address. Agent encoders
+change quickly, so their results describe one model at one date.
+
+# Study 2: criterion and known-groups validity {#sec-study2}
+
+## Aims and hypotheses
+
+Study 2 asks whether the checklist and the appraisal agree with experts who
+judge the same theories and amendments without seeing the package's outputs.
+Part A concerns theories: the checklist score, the item statuses and a revised
+profile are compared with blind expert ratings of how completely and how
+testably each theory is specified, and the scores of known groups are
+compared. Part B concerns amendment episodes: the verdicts of
+`appraise_amendment()` are compared with blind expert appraisals.
+
+The primary hypotheses are:
+
+- H2.1: the correlation between a theory's checklist score (the mean over its
+  `r nw(design$coders_per_theory)` encodings) and the experts' mean rating of
+  how completely it is specified is positive. Claim C3 needs more than that.
+  Even a correlation of `r f(design$rho_null)` would leave
+  `r pct(1 - design$rho_null^2)` of the variance of the expert rating
+  unexplained, so C3 is supported only if the lower `r ci_lab` limit exceeds
+  `r f(design$rho_null)`, and it is contradicted if the upper limit lies below
+  that value.
+- H2.2: pseudoscientific theories have lower checklist scores than corroborated
+  and refuted theories taken together. A refuted theory was testable enough to
+  be refuted, so both scientific groups are expected to score higher than
+  doctrines whose proponents avoid tests. If the pseudoscientific group scores
+  no lower, the items that read testability do not track it even coarsely.
+- H2.3: the agreement of `appraise_amendment()` verdicts with individual
+  experts is lower than the agreement of experts with each other. The test is
+  framed so that it can count against claim C4: rejecting its null hypothesis
+  means the rules agree with experts reliably less well than experts agree
+  among themselves. C4 is supported if the lower limit of the difference lies
+  above minus half the expert-expert kappa, that is, if any shortfall is
+  reliably smaller than half of the experts' own agreement.
+
+No directional hypothesis is made about corroborated against refuted theories.
+The 0.8.0 documentation says that the score does not show that a theory is true,
+and a better specified theory may be easier to refute as well as easier to
+corroborate. The difference is estimated, and the two one-sided tests
+procedure [@lakens2017] is applied with equivalence bounds of plus and minus
+the SDD estimated in Study 1.
+
+The secondary questions are these.
+
+- How well does each item status agree with the experts' judgement of the
+  corresponding item?
+- Do items whose credit the package checks (against the graph, numeric bounds
+  or the lexical screen) agree with experts better than items credited from a
+  label or a filled field?
+- Does the revised profile agree with experts better than the item statuses?
+- How does the score correlate with expert-rated testability and with
+  expert-rated empirical standing? The second correlation should be lower than
+  the correlation with completeness if the score indexes specification rather
+  than standing.
+- Do the experts' testability ratings separate the known groups? This checks
+  the classification.
+
+## Design
+
+Part A is a correlational validation study with known groups, in which every
+theory of the shared sample is rated by `r nw(design$experts_per_theory)`
+experts drawn from a pool of `r design$expert_pool`, assigned so that each
+expert rates the same number of theories. Part B is an agreement study in which
+each amendment episode is encoded by `r nw(design$coders_per_theory)` coders
+and appraised by `r nw(design$experts_per_episode)` experts.
+
+## Materials
+
+Part A uses the segmented source passages of Study 1, with author names, theory
+names and dates removed where the text allows. For each theory the experts
+answer one question for each checklist item, phrased about the theory rather
+than the file (@tbl-expert-items), with the answers 'yes', 'partly', 'no' and
+'cannot tell'. They give three ratings from `r design$rating_scale[1]` to
+`r design$rating_scale[2]`: how completely the theory is specified, how
+testable it is as stated and how well supported it is by evidence. They also
+say whether they knew the theory before.
+
+```{r}
+#| label: tbl-expert-items
+#| tbl-cap: "Questions the experts answer about each theory, matched to the checklist items read from the repository."
+questions <- c(
+  falsifiability = "Does the passage state at least one prediction that rules out some possible result?",
+  precision = "Does it state the size or the range of an expected value or effect?",
+  risk_severity = "Do its predictions forbid a large part of the results that were possible before the study?",
+  parsimony = "Does it add an assumption to protect a prediction that failed, without independent support for the assumption?",
+  non_redundancy = "Are any two of its constructs defined so that they cannot be told apart?",
+  construct_clarity = "Is each construct defined, with how it is measured and where it applies?",
+  scope = "Does it state the conditions under which it applies?",
+  logical_why = "Does each stated relation come with a reason or a mechanism?",
+  causal_testability = "Does it state at least one causal relation?",
+  diagnosticity = "Does it name a rival account and a result that would favour one over the other?",
+  formalisation = "Is any part of it stated as a formal or computational model?",
+  derivation_chain = "Do its predictions follow from its stated relations?")
+stopifnot(length(setdiff(item_ids, names(questions))) == 0)
+knitr::kable(data.frame(Item = item_ids, Question = unname(questions[item_ids])),
+             row.names = FALSE)
+```
+
+Part B uses documented amendment episodes. An episode is eligible when a
+published theory (the prior version) was revised in a later publication by
+members of the same research programme (the amended version), when the later
+publication states that the revision responds to at least one stated empirical
+result, when that result is reported in a source published between the two
+versions, and when both versions can be confined to passages that meet the
+criteria of @sec-sample. Episodes are found by a search, fixed at registration,
+for articles whose title or abstract presents a revised, extended or updated
+version of a named theory in the behavioural sciences, and by a search for
+published case studies that appraise an amendment in Lakatos's terms. Eligible
+episodes are drawn at random. Experts receive the two passages and the report
+of the result, with names and dates removed where possible, and a one-page
+summary of the concepts of progressive and degenerating problemshifts written
+from @lakatos1970 without reference to the package's rules. For each episode
+they give a verdict (progressive, neutral or degenerating), their confidence
+from `r design$confidence_scale[1]` to `r design$confidence_scale[2]`, the
+reasons for the verdict and whether they recognise the episode.
+
+The revised profile is the item-wise report in which each item's credit is
+marked as checked by the package, declared by the author or not assessed, with
+counts. Its definition will be fixed as code, registered with the analysis
+scripts and applied to the files before any expert rating is unmasked.
+
+## Participants and recruitment
+
+Experts are researchers with a doctorate and publications either in the area of
+the theories they rate or in research methods or the philosophy of science.
+They are recruited through professional networks, the mailing lists of learned
+societies and invitations to authors of methodological reviews, and receive an
+honorarium. Experts do not take part as coders, classifiers or Study 3
+participants, and none rates a theory or episode of which they are an author.
+Amendment episodes are encoded by the Study 1 coders, under the same protocol
+and the same assignment design, with each file recording the test outcomes that
+the sources report as of the amended version.
+
+## Procedure
+
+Experts work online, alone and at their own pace. Each receives the passages
+assigned to them in a random order, answers the item questions and the ratings
+for each theory, and appraises the episodes assigned to them. They never see a
+theory file, a package output, a group label or another expert's ratings. The
+package's outputs are computed by the analyst from the coders' files and are
+not joined to the expert data until the analysis scripts have been registered
+and run on data with the group labels masked.
+
+## Measures
+
+- From the package, for each file: the checklist score, the status of each
+  item and the revised profile.
+- From the package, for each episode and coder: the verdict of
+  `appraise_amendment()` on the coder's prior and amended files, with the other
+  keys it reports.
+- From the experts: the item answers, the three ratings and prior knowledge of
+  each theory, and for each episode the verdict, confidence, reasons and
+  recognition.
+- From the classification panel: each theory's group.
+
+## Analysis plan {#sec-s2-analysis}
+
+For H2.1, the correlation between the theory-level mean score and the
+theory-level mean completeness rating is estimated by Pearson's $r$ with a
+Fisher $z$ interval, and by a bivariate mixed model with crossed random effects
+for coders and experts as a check. Because the known groups widen the range of
+theories, the correlation is also reported within the typical theories.
+
+For H2.2, the theory-level mean scores of the pseudoscientific group are
+compared with those of the corroborated and refuted groups by a one-sided
+Welch test, and by a mixed model of the encodings with a fixed effect of group
+and crossed random intercepts for theories and coders, whose group contrast is
+reported with its interval.
+
+For H2.3, Cohen's kappa [@cohen1960] is computed between the package's verdict
+on each coder's encoding and each expert's verdict, and averaged over coders
+and experts, and between each pair of experts, and averaged over pairs. The
+difference between the two averages is the estimand. Its interval comes from a
+bootstrap that resamples episodes, experts and coders. Linear weighted kappa,
+with the verdicts ordered from degenerating to progressive, is reported as a
+check. The agreement of the package's verdicts across the coders' encodings of
+the same episode is reported separately, since it shows how much the verdict
+depends on the encoding.
+
+Item-level agreement between each item status (pass against any other status)
+and the expert majority answer ('yes' against 'partly' or 'no') is reported by
+kappa and Gwet's AC1 with bootstrap intervals over theories. 'Cannot tell' is
+treated as missing for that item and, in a sensitivity analysis, as 'no'. A
+theory with fewer than two expert ratings is left out of the analyses of
+ratings, and the number left out is reported. The analyses assume that missing
+ratings are missing at random given the theory and the expert.
+
+## Sample size {#sec-s2-size}
+
+For H2.2, the difference of interest is the smallest detectable difference of
+the design scenario, `r f(sdd(sem_in[["content"]]), 1)` points: a smaller
+average difference between groups would leave most individual theories of the
+two groups indistinguishable by their scores. The within-group standard
+deviation of a theory's mean score over its encodings is
+$\sqrt{\sigma_t^2 + \mathrm{SEM}^2/m}$ with $m$ =
+`r design$coders_per_theory`, and the noncentral $t$ distribution gives the
+power of the one-sided comparison of one group with the other two taken
+together.
+
+```{r}
+#| label: power-groups
+power_groups <- function(n_g, delta, sd_w, alpha) {
+  n1 <- n_g; n2 <- 2 * n_g; df <- n1 + n2 - 2
+  ncp <- delta / sd_w / sqrt(1 / n1 + 1 / n2)
+  1 - pt(qt(1 - alpha / 2, df), df, ncp)
+}
+sd_within <- function(sd_t, sem) sqrt(sd_t^2 + sem^2 / design$coders_per_theory)
+delta_mult <- c(`the SDD` = 1, `half the SDD` = 0.5)
+grid_g <- expand.grid(n_g = design$ng_grid, sd_t = c("examples", "pooled"),
+                      delta = names(delta_mult), stringsAsFactors = FALSE)
+grid_g$delta_pts <- delta_mult[grid_g$delta] * sdd(sem_in[["content"]])
+grid_g$power <- power_groups(grid_g$n_g, grid_g$delta_pts,
+                             sd_within(sd_theory[grid_g$sd_t], sem_in[["content"]]),
+                             design$alpha)
+need_g <- aggregate(n_g ~ sd_t + delta,
+                    data = grid_g[grid_g$power >= design$power, ], FUN = min)
+n_group <- need_g$n_g[need_g$sd_t == "pooled" & need_g$delta == "the SDD"]
+stopifnot(length(n_group) == 1)
+```
+
+```{r}
+#| label: tbl-groups
+#| tbl-cap: "Theories needed in each known group for the stated power in H2.2."
+knitr::kable(data.frame(
+  `Theory SD` = paste0(need_g$sd_t, " (", f(sd_theory[need_g$sd_t]), ")"),
+  Difference = paste0(need_g$delta, " (",
+                      f(delta_mult[need_g$delta] * sdd(sem_in[["content"]]), 1),
+                      " points)"),
+  `Per group` = need_g$n_g, check.names = FALSE), row.names = FALSE)
+```
+
+Under the widest spread of theories and a difference equal to the SDD,
+`r n_group` theories per group give a power of at least `r pct(design$power)`.
+The sample therefore needs at least `r length(known_groups) * n_group` theories
+in the known groups and, so that the typical theories are not outnumbered by
+any group, at least `r n_group` typical theories.
+
+For H2.1, the correlation that can be observed is attenuated by the
+unreliability of both measures. With the design scenario's ICC of
+`r f(icc_mid)` for a single encoding, the mean of
+`r nw(design$coders_per_theory)` encodings has a reliability of
+`r f(sb(icc_mid, design$coders_per_theory))`. The reliability of the mean of
+`r nw(design$experts_per_theory)` expert ratings is computed from an expert ICC
+equal to the reviewer reliability and from a higher value of
+`r f(design$expert_icc_alt)`. The power at the final sample size is given in
+@sec-final-n.
+
+```{r}
+#| label: power-correlation
+# Probability that the lower limit of the Fisher z interval exceeds rho0.
+power_rho <- function(n, rho, rho0, alpha) {
+  pnorm((atanh(rho) - atanh(rho0)) * sqrt(n - 3) - qnorm(1 - alpha / 2))
+}
+```
+
+For H2.3, the agreement of `appraise_amendment()` with experts is simulated.
+Each episode has a true verdict drawn with equal probabilities, which is an
+assumption, since the distribution of verdicts among published amendments is
+unknown. Each expert reproduces it with an accuracy that varies between experts
+(standard deviation `r f(design$sd_expert_logit, 1)` on the logit scale) and
+otherwise picks a verdict at random, and the package does the same for each
+coder's encoding with its own accuracy. The expert accuracy is calibrated so
+that the expected expert-expert kappa equals the reviewer kappa
+(`r f(external$reviewer_kappa)`), `r f(design$expert_kappa_design)` or
+`r f(design$expert_kappa_high)`, and the package's accuracy so that its
+expected kappa with an expert equals the expert-expert kappa or falls short of
+it by half.
+
+```{r}
+#| label: sim-episodes
+kappa_fast <- function(a, b, ncat) {
+  tab <- matrix(tabulate((a - 1) * ncat + b, ncat * ncat) / length(a), ncat,
+                byrow = TRUE)
+  po <- sum(diag(tab)); pe <- sum(rowSums(tab) * colSums(tab))
+  (po - pe) / (1 - pe)
+}
+calibrate_mean_acc <- function(target_mean, sd) {
+  uniroot(function(e) sum(GH$w * plogis(e + sd * GH$x)) - target_mean,
+          c(-10, 10))$root
+}
+sim_episodes <- function(n_ep, kap_e, shortfall, reps) {
+  share <- design$verdict_share; ncat <- length(share)
+  mean_acc <- sqrt(kap_e)
+  eta <- calibrate_mean_acc(mean_acc, design$sd_expert_logit)
+  acc_p <- (kap_e - shortfall) / mean_acc
+  n_exp <- design$experts_per_episode; n_enc <- design$coders_per_theory
+  pr <- combn(n_exp, 2)
+  est <- replicate(reps, {
+    truth <- sample.int(ncat, n_ep, TRUE, share)
+    rate <- function(a) ifelse(runif(n_ep) < a, truth,
+                               sample.int(ncat, n_ep, TRUE, share))
+    acc_e <- plogis(eta + rnorm(n_exp, 0, design$sd_expert_logit))
+    E <- vapply(acc_e, rate, integer(n_ep))
+    P <- vapply(rep(acc_p, n_enc), rate, integer(n_ep))
+    k_ee <- mean(apply(pr, 2, function(p) kappa_fast(E[, p[1]], E[, p[2]], ncat)))
+    k_pe <- mean(vapply(seq_len(n_enc), function(k)
+      mean(vapply(seq_len(n_exp), function(e) kappa_fast(P[, k], E[, e], ncat), 0)),
+      0))
+    k_pe - k_ee
+  })
+  c(mean = mean(est), sd = sd(est))
+}
+set.seed(20261127)
+kap_levels <- c(external$reviewer_kappa, design$expert_kappa_design,
+                design$expert_kappa_high)
+grid_e <- expand.grid(n_ep = design$ep_grid, kap_e = kap_levels,
+                      shortfall = c("none", "half"), stringsAsFactors = FALSE)
+res_e <- t(vapply(seq_len(nrow(grid_e)), function(i) {
+  g <- grid_e[i, ]
+  sim_episodes(g$n_ep, g$kap_e, if (g$shortfall == "half") g$kap_e / 2 else 0,
+               design$reps_episode)
+}, numeric(2)))
+grid_e$mean <- res_e[, "mean"]
+grid_e$sd <- res_e[, "sd"]
+# Power to find the shortfall (upper interval limit below zero), treating the
+# replication standard deviation as the standard error.
+alt <- grid_e[grid_e$shortfall == "half", ]
+alt$power <- pnorm(-alt$mean / alt$sd - z_crit)
+alt$halfwidth_null <- z_crit * grid_e$sd[grid_e$shortfall == "none"]
+ep_ok <- alt$n_ep[alt$kap_e == design$expert_kappa_design &
+                    alt$power >= design$power]
+n_episodes <- if (length(ep_ok)) min(ep_ok) else max(design$ep_grid)
+```
+
+```{r}
+#| label: tbl-episodes
+#| tbl-cap: "Amendment episodes: power to detect a package-expert agreement that falls short of expert-expert agreement by half, and the half-width of the interval for the difference when there is no shortfall."
+knitr::kable(data.frame(
+  `Expert-expert kappa` = f(alt$kap_e), Episodes = alt$n_ep,
+  Shortfall = f(alt$kap_e / 2), Power = f(alt$power),
+  `Half-width, no shortfall` = f(alt$halfwidth_null), check.names = FALSE),
+  row.names = FALSE)
+```
+
+If experts agree with each other no better than journal reviewers do, no
+feasible number of episodes can show that the package falls short of them, and
+the study would instead show that expert appraisal of amendments is too
+unreliable to serve as a criterion. With an expert-expert kappa of
+`r f(design$expert_kappa_design)`, `r n_episodes` episodes give a power of at
+least `r pct(design$power)` to detect a shortfall of half that value.
+
+## Inference criteria
+
+H2.1 is tested by the Fisher $z$ test of $\rho \le 0$, H2.2 by the one-sided
+Welch test and H2.3 by the bootstrap interval for the
+difference in kappa, each one-sided at level `r f(design$alpha / 2, 3)` with
+the Holm procedure across the three. Claim C3 is supported if the lower limit of
+the correlation exceeds `r f(design$rho_null)` and H2.2 is supported,
+contradicted if the upper limit of the correlation lies below
+`r f(design$rho_null)` or the pseudoscientific group's mean score is not below
+the others', and otherwise open. Claim C4 is contradicted if H2.3 is
+supported, supported if the lower limit of the difference lies above minus half
+the expert-expert kappa, and otherwise open.
+
+## Limitations
+
+The criterion is expert judgement, which is itself fallible, and experts asked
+to rate completeness may be swayed by what they know of a theory's standing.
+Recording prior knowledge and the rating of empirical standing allows this to be
+examined but not removed. Pseudoscientific doctrines are often well known, so
+masking may fail, and their sources differ in genre from journal articles. The
+known groups rest on the record available now, which may change. Part B gives
+the experts a summary of Lakatos's concepts, so it tests whether the rules
+reproduce what experts conclude with the same concepts, not whether the
+concepts are the right ones. Encodings of episodes record outcomes as of the
+amended version, while experts may know the later history of a well-known
+episode, which the package does not read. Amendment episodes with both versions
+in print may over-represent programmes that survived.
+
+# Study 3: a randomised reader study {#sec-study3}
+
+## Aims and hypotheses
+
+Study 3 measures how often researchers and editors misread
+`r nw(design$output_types)` outputs, the checklist score, the gate, the
+dossier and the appraisal, and whether the wording of version 0.8.0 lowers that
+rate relative to the wording of version 0.7.0. A misreading is endorsing a
+statement about an output that the output does not support, for example that a
+theory with a higher checklist score is more likely to be true, that a passing
+gate shows that the predictions have been tested, that the dossier's test
+outcomes were verified by the package or that a progressive verdict shows the
+amendment predicted facts not used in building it. Automation bias, the
+tendency to over-rely on automation [@goddard2012], occurs in naive and expert
+users alike and is not prevented by training or instructions
+[@parasuraman2010], while design factors such as where advice appears on the
+screen are among the reported mitigators [@goddard2012]. The wording of a
+display is therefore a plausible lever and an uncertain one.
+
+- H3.1: the probability of endorsing a misreading is lower in the 0.8.0 wording
+  than in the 0.7.0 wording.
+- H3.2: in the 0.8.0 wording, the rate at which participants endorse the
+  statements that read the score as a judgement of truth is below
+  `r pct(design$truth_tolerance)`, a tolerance that is our value judgement.
+- H3.3: the 0.8.0 wording does not lower the odds of endorsing correct readings
+  by more than an odds ratio of `r f(design$ni_margin_or)`, so that a lower
+  misreading rate is not bought by making readers reject everything.
+
+Claim C5 is contradicted if the `r ci_lab` interval for the odds ratio of H3.1
+lies wholly above the design effect of `r f(design$or_design)`, so that any
+reduction is reliably smaller than the one the study is designed to detect, or
+if the lower limit of the rate in H3.2 lies above the tolerance.
+
+## Design
+
+Study 3 is a two-arm parallel randomised experiment. Participants are
+randomised to the 0.7.0 or the 0.8.0 wording, stratified by role (researcher or
+editor), in permuted blocks generated by a script whose seed is held by someone
+outside the study team. Each participant sees all
+`r nw(design$output_types)` outputs for `r nw(design$theories_per_reader)`
+example theories and judges
+`r design$misread_items + design$correct_items` statements, of which
+`r design$misread_items` state misreadings and `r nw(design$correct_items)`
+state correct readings, in a random order. Statements are crossed with the
+wording conditions, and participants are nested in them.
+
+## Materials
+
+The outputs are produced by the frozen releases from the package's shipped
+example theories: the app's checklist card and result text, the gate's
+explanation, the dossier and the appraisal of the panic-network amendment. The
+two arms show the same theories and the same numbers and differ only in the
+wording that each release prints. The statements are written by the study team
+and reviewed by two people outside it for whether each is unambiguously
+supported or unsupported by both versions of the output. A statement that
+either reviewer judges ambiguous is rewritten or dropped before registration.
+The statements are piloted for comprehension with readers who do not take part
+in the main study. `r design$attention_items |> nw() |> tools::toTitleCase()`
+instructed-response items check attention.
+
+## Participants and recruitment
+
+Researchers are people who hold or are studying for a doctorate in a
+behavioural or social science, recruited through mailing lists of learned
+societies, departmental lists and social media. Editors are people who serve or
+have served as editors or associate editors of journals in those fields,
+invited individually from public listings of editorial boards. Editors are
+sought until they make up `r pct(design$editor_share)` of the sample or
+recruitment closes. Participants receive a voucher for their time. People who
+have used theoryforge, or who took part in Studies 1 and 2, are excluded.
+
+## Procedure
+
+The study runs online. After consent, participants answer questions about their
+role, field and experience with preregistration and theory appraisal, read the
+outputs of the first theory, judge its statements as 'supported by what is
+shown' or 'not supported by what is shown' and rate their confidence, and then
+do the same for the next theory. The outputs stay visible while they answer.
+Participants are told that they are helping to evaluate how a research tool's
+outputs are read. They are not told that two wordings are compared until the
+debriefing, which explains the comparison and shows both versions.
+
+## Measures
+
+The primary outcome is, for each participant and misreading statement, whether
+the participant endorsed the misreading. Secondary outcomes are the endorsement
+of correct statements, the endorsement of the statements that read the score as
+truth, confidence, time spent and, by output type, the misreading rate.
+
+## Analysis plan
+
+The primary model is a logistic mixed model of endorsement on the misreading
+statements with fixed effects of wording and role and random effects for
+participants and for statements, with a random slope of wording over
+statements, as the design justifies [@barr2013]. The odds ratio for wording is
+reported with its Wald and profile likelihood intervals, and the marginal
+difference in misreading rates with an interval from a parametric bootstrap of
+the model. H3.2 is analysed by a logistic mixed model of the truth statements in
+the 0.8.0 arm alone, whose marginal rate is reported with a bootstrap interval.
+H3.3 uses the model of H3.1 on the correct statements and is tested against
+the margin by a one-sided test [@lakens2017]. Interactions of wording with role
+and with output type are exploratory. Participants who fail every attention
+item are excluded, and a sensitivity analysis includes them. Unanswered
+statements are treated as missing at random given the participant and the
+statement, which the mixed model accommodates.
+
+## Sample size {#sec-s3-size}
+
+The power for H3.1 is first computed from an approximation and then checked by
+simulating and fitting the planned model. In the approximation, with the arms
+coded $x = \pm\tfrac{1}{2}$, $n$ participants per arm and $I$ misreading
+statements, the variance of the estimated log odds ratio is
+
+$$\operatorname{Var}(\hat\beta) \approx \frac{2\sigma_u^2}{n} +
+\frac{\sigma_v^2}{I} + \frac{2}{nI\,\bar w},$$
+
+where $\sigma_u$ is the participant standard deviation, $\sigma_v$ the standard
+deviation of the wording effect over statements and $\bar w$ the mean of
+$p(1-p)$ over participants and statements. The middle term does not shrink as
+participants are added, so with a fixed set of statements the power does not
+approach one as the number of participants grows [@westfall2014]. The baseline
+probability of a misreading under the 0.7.0 wording, for a typical participant
+and statement, is taken as `r f(p_hoekstra)`, from the finding of
+@hoekstra2014 that researchers and students endorsed, on average, more than
+`r nw(external$false_endorsed)` of `r nw(external$false_items)` false
+statements about a confidence interval, and as `r f(design$p0_low)` as a lower
+alternative. The design effect is an odds ratio of `r f(design$or_design)`,
+which at a baseline of `r f(p_hoekstra)` lowers the misreading probability to
+`r f(plogis(qlogis(p_hoekstra) + log(design$or_design)))`, with
+`r f(design$or_large)` as a larger alternative.
+
+```{r}
+#| label: power-reader
+w_bar <- function(mu, sd) {
+  p <- plogis(mu + sd * GH$x)
+  sum(GH$w * p * (1 - p))
+}
+power_reader <- function(n, p0, or) {
+  b1 <- log(or)
+  w <- w_bar(qlogis(p0) + b1 / 2, sqrt(design$sd_reader^2 + design$sd_item^2))
+  v <- 2 * design$sd_reader^2 / n + design$sd_item_slope^2 / design$misread_items +
+    2 / (n * design$misread_items * w)
+  pnorm(abs(b1) / sqrt(v) - z_crit)
+}
+grid_r <- expand.grid(n = design$arm_grid, p0 = c(design$p0_low, p_hoekstra),
+                      or = c(design$or_large, design$or_design))
+grid_r$power <- mapply(power_reader, grid_r$n, grid_r$p0, grid_r$or)
+design_rows <- grid_r$p0 == p_hoekstra & grid_r$or == design$or_design
+arm_ok <- grid_r$n[design_rows & grid_r$power >= design$power]
+n_arm_cf <- if (length(arm_ok)) min(arm_ok) else max(design$arm_grid)
+```
+
+```{r}
+#| label: sim-reader
+sim_reader <- function(n, p0, or, reps) {
+  I <- design$misread_items
+  d <- expand.grid(item = factor(seq_len(I)), pid = factor(seq_len(2 * n)))
+  d$x <- ifelse(as.integer(d$pid) <= n, -0.5, 0.5)
+  gen <- function() {
+    u <- rnorm(2 * n, 0, design$sd_reader)
+    w <- rnorm(I, 0, design$sd_item)
+    v <- rnorm(I, 0, design$sd_item_slope)
+    eta <- qlogis(p0) + log(or) / 2 + log(or) * d$x + u[d$pid] + w[d$item] +
+      v[d$item] * d$x
+    rbinom(nrow(d), 1, plogis(eta))
+  }
+  d$y <- gen()
+  fit <- glmer(y ~ x + (1 | pid) + (1 + x | item), data = d, family = binomial,
+               nAGQ = 0, control = glmerControl(
+                 check.conv.singular = .makeCC(action = "ignore", tol = 1e-4)))
+  z <- t(replicate(reps, {
+    warned <- FALSE
+    f_r <- withCallingHandlers(refit(fit, gen()), warning = function(w) {
+      warned <<- TRUE
+      invokeRestart("muffleWarning")
+    })
+    s <- summary(f_r)$coefficients
+    c(z = s["x", "Estimate"] / s["x", "Std. Error"], warned = warned)
+  }))
+  p <- mean(z[, "z"] < -z_crit)
+  c(power = p, mcse = sqrt(p * (1 - p) / reps), warned = sum(z[, "warned"]))
+}
+set.seed(20261128)
+n_arm <- n_arm_cf
+step <- diff(design$arm_grid)[1]
+repeat {
+  sim_r <- sim_reader(n_arm, p_hoekstra, design$or_design, design$reps_reader)
+  if (sim_r[["power"]] >= design$power || n_arm >= max(design$arm_grid)) break
+  n_arm <- n_arm + step
+}
+warn_sentence <- if (sim_r[["warned"]] == 0) {
+  "None of these fits raised a convergence warning."
+} else {
+  paste0("Of these fits, ", sim_r[["warned"]], " raised a convergence warning, ",
+         "and all were kept.")
+}
+```
+
+```{r}
+#| label: tbl-reader
+#| tbl-cap: "Approximate power for H3.1 by participants per arm, baseline misreading probability and odds ratio."
+show_n <- design$arm_grid[seq(1, length(design$arm_grid), by = 2)]
+tab_r <- reshape(grid_r[grid_r$n %in% show_n, ], idvar = c("p0", "or"),
+                 timevar = "n", direction = "wide")
+names(tab_r) <- c("Baseline", "Odds ratio", paste(show_n, "per arm"))
+tab_r[, -(1:2)] <- lapply(tab_r[, -(1:2)], f)
+tab_r$Baseline <- f(tab_r$Baseline)
+tab_r$`Odds ratio` <- f(tab_r$`Odds ratio`)
+knitr::kable(tab_r, row.names = FALSE)
+```
+
+The approximation reaches a power of `r pct(design$power)` in the design
+scenario with `r n_arm_cf` participants per arm. Fitting the planned model to
+`r design$reps_reader` simulated data sets with `r n_arm` participants per arm
+gave a power of `r f(sim_r[["power"]])` (Monte Carlo standard error
+`r f(sim_r[["mcse"]], 3)`). `r warn_sentence` The planned sample is `r n_arm`
+per arm, `r 2 * n_arm` in all. The simulation uses the fast approximation of the
+likelihood that lme4 offers (`nAGQ = 0`), while the analysis will use the
+Laplace approximation. The decision rests on the simulation, because the closed
+form summarises the spread of statement difficulties by one mean and can
+misstate the power. Recruitment closes when `r 2 * n_arm` participants have
+completed the study or when the recruitment period in @sec-timeline ends,
+whichever comes first, and a shortfall is reported with the power it implies.
+
+## Inference criteria
+
+H3.1 is tested by the one-sided Wald test of the wording coefficient at level
+`r f(design$alpha / 2, 3)`. H3.2 and H3.3 are secondary and are each tested
+one-sided at the same level, with the Holm procedure across the two. Claim C5
+is read as stated under the hypotheses.
+
+## Limitations
+
+The study measures reading in an online task with the outputs in view, which
+is not how outputs are read in a review or in a decision about a grant, and the
+statements are a sample of possible misreadings written by the study team.
+Participants who volunteer may be more careful readers than average. The
+comparison concerns two wordings of the same outputs, so it cannot show whether
+a display that leads with item statuses and leaves out the aggregate would be
+read better, which is a question for a later study.
+
+# Predictive validity: a later cliometric study {#sec-cliometric}
+
+The studies above relate the package's outputs to encodings, experts and
+readers at one time. Whether the checklist profile, or the record of amendments,
+carries information about the later fate of theories is a question of
+predictive validity. @meehl2002 argued that the history of science shows
+scientists appraising theories by attributes such as parsimony, the number,
+qualitative diversity, novelty and numerical precision of the facts derived and
+the number of facts misderived, and that a statistical composite of such
+attributes could give an actuarial basis for theory appraisal, which he called
+cliometric metatheory. Faust and Meehl [-@faust1992; -@faust2002] proposed
+studying the
+historical track record of scientific episodes and judgements by the methods of
+empirical science. A cliometric study of theoryforge would apply that proposal
+to the package's outputs.
+
+In outline, a sample of theories with dated versions is drawn from the
+historical record of a defined field. Each version is encoded from the sources
+available at its date, by coders who follow the written protocol and are kept
+as far as possible from the theory's later history: names and dates are
+masked, sources are limited to those available at the date, and recognition is
+recorded. The outputs at each date, including the item statuses, the revised
+profile, the attributes in Meehl's list that a file can record and the
+appraisals of successive amendments, are computed by a registered script and
+frozen. Separately, historians or domain experts who do not see the encodings
+classify the fate of each theory a fixed number of years after the version's
+date, by registered criteria (retained and corroborated, retained after
+amendment, absorbed into another theory, abandoned). The registered analysis
+then asks whether a prespecified composite, fixed before the outcomes are
+joined, predicts fate better than simple baselines, such as the theory's age,
+the number of studies citing it at the date and prediction from the base rates
+alone, by discrimination and calibration under cross-validation, with versions
+nested in theories. A prospective variant would register theories encoded now
+and follow them.
+
+The study is not powered here. Its size depends on how many theories have dated
+versions and recorded fates, which a scoping review must establish first, and
+on base rates of abandonment that are unknown. Its main threats are already
+clear: survivorship in the historical record, hindsight entering the encoding
+however carefully coders are kept from it, fates that are themselves contested
+and the possibility that any association reflects a field's fashions rather than
+the theories.
+
+# Final sample sizes and workload {#sec-final-n}
+
+```{r}
+#| label: final-n
+by_groups <- (length(known_groups) + 1) * n_group > n_study1
+n_sentence <- if (by_groups) {
+  paste0("The number of theories is set by H2.2. Study 1 alone would need ",
+         n_study1, ", and the larger sample buys precision elsewhere, though ",
+         "less than its size suggests.")
+} else {
+  "The number of theories is set by Study 1."
+}
+n_theories <- round_up(max(n_study1, (length(known_groups) + 1) * n_group),
+                       nrow(sts9))
+n_typical <- n_theories - length(known_groups) * n_group
+files_theory <- n_theories * design$coders_per_theory
+files_episode <- n_episodes * 2 * design$coders_per_theory
+coder_hours <- (files_theory + files_episode) * design$hours_per_file
+expert_ratings <- n_theories * design$experts_per_theory
+expert_appraisals <- n_episodes * design$experts_per_episode
+expert_hours <- expert_ratings * design$hours_per_rating[["theory"]] +
+  expert_appraisals * design$hours_per_rating[["episode"]]
+agent_files <- (n_theories + 2 * n_episodes) * design$agent_runs
+rel_score <- sb(icc_mid, design$coders_per_theory)
+h21 <- expand.grid(rho = design$rho_true,
+                   icc_e = c(external$reviewer_icc, design$expert_icc_alt))
+h21$rho_obs <- h21$rho * sqrt(rel_score *
+                                sb(h21$icc_e, design$experts_per_theory))
+h21$power <- power_rho(n_theories, h21$rho_obs, 0, design$alpha)
+h21$support <- power_rho(n_theories, h21$rho_obs, design$rho_null, design$alpha)
+# H1.3 at the largest grid value not above the final number of theories.
+n_h13 <- max(design$n_grid[design$n_grid <= n_theories])
+h13 <- setNames(grid_s$p_floor[grid_s$n == n_h13 & grid_s$sem == "content"],
+                grid_s$sd_t[grid_s$n == n_h13 & grid_s$sem == "content"])
+# Per-item agreement on a pass or not-pass status, one unit per theory.
+set.seed(20261129)
+item_pass <- c(balanced = 0.5, skewed = 0.9)
+item_hw <- vapply(item_pass, function(pass) {
+  z_crit * sim_alpha(n_theories, 1, c(pass, 1 - pass), pilot$kappa_element,
+                     min(design$sd_theory_logit), design$sd_coder_logit, sts9,
+                     design$reps_alpha)[["sd"]]
+}, numeric(1))
+```
+
+The planned sample for Studies 1 and 2 is `r n_theories` theories:
+`r n_group` in each of the `r nw(length(known_groups))` known groups and
+`r n_typical` typical theories from the two sampling frames, each encoded by
+`r nw(design$coders_per_theory)` human coders and run
+`r nw(design$agent_runs)` times by the agent, and `r n_episodes` amendment
+episodes, each encoded as a prior and an amended file by
+`r nw(design$coders_per_theory)` coders. The coders write
+`r f(files_theory + files_episode, 0)` files, which at
+`r f(design$hours_per_file[["low"]], 0)` to
+`r f(design$hours_per_file[["high"]], 0)` hours a file
+(`r f(design$hours_per_file[["mid"]], 0)` in the middle estimate) is
+`r f(coder_hours[["mid"]], 0)` hours, or
+`r f((files_theory + files_episode) / design$coder_pool, 0)` files and
+`r f(coder_hours[["mid"]] / design$coder_pool, 0)` hours for each of the
+`r nw(design$coder_pool)` coders
+(`r f(coder_hours[["low"]] / design$coder_pool, 0)` to
+`r f(coder_hours[["high"]] / design$coder_pool, 0)`). The experts give
+`r expert_ratings` theory ratings and `r expert_appraisals` episode
+appraisals, about `r f(expert_hours / design$expert_pool, 0)` hours for each of
+`r design$expert_pool` experts. The agent writes `r agent_files` files. If the
+funds available cannot pay for these hours, the number of theories will be
+reduced before registration and the precision recomputed with this document's
+code.
+
+`r n_sentence`
+@tbl-h21 gives, for H2.1, the correlation that can be observed once the
+unreliability of the score (the design scenario's ICC, averaged over
+`r nw(design$coders_per_theory)` encodings) and of the experts' mean rating is
+taken into account, the power of the test for a positive correlation and the
+probability that the lower limit exceeds `r f(design$rho_null)`, which claim C3
+needs. The power to detect a positive association ranges from
+`r f(min(h21$power))` to `r f(max(h21$power))` over these scenarios, while the
+probability of supporting C3 is at most `r f(max(h21$support))`, even with a
+high true correlation and experts who agree well. For H1.3, the approximate
+power at `r n_h13` theories is `r f(h13[["examples"]])` under the design
+scenario, whose true ICC of `r f(icc_mid)` is close to the reviewer value, and
+`r f(h13[["pooled"]])` under the widest spread of theories. The ICC that the
+study will estimate depends on how much the sampled theories differ, which the
+known groups increase. Agreement on a single checklist item, with one unit per
+theory, is estimated with a half-width of about `r f(item_hw[["balanced"]])`
+when `r pct(item_pass[["balanced"]])` of the files pass the item and
+`r f(item_hw[["skewed"]])` when `r pct(item_pass[["skewed"]])` do, so
+item-level results are descriptive. Study 3 needs
+`r 2 * n_arm` participants.
+
+```{r}
+#| label: tbl-h21
+#| tbl-cap: "H2.1 at the final number of theories: observable correlation, power of the test for a positive correlation and probability that the lower interval limit exceeds the level claim C3 needs."
+knitr::kable(data.frame(
+  `True correlation` = f(h21$rho), `Expert ICC` = f(h21$icc_e),
+  `Observable correlation` = f(h21$rho_obs), `Power, H2.1` = f(h21$power),
+  `P(lower limit above level)` = f(h21$support), check.names = FALSE),
+  row.names = FALSE)
+```
+
+# Data management {#sec-data}
+
+The data are the segmented source passages, the theory files and statement
+codes written by coders and agents, the package's outputs, the classification
+panel's assignments, the expert item answers, ratings and appraisals, and the
+reader study's responses. During collection they are held on storage managed by
+the University of Oxford, with access limited to the study team. Participants
+are identified by codes, and the key linking codes to names and contact details
+is held separately, used only to pay participants and to send the debriefing,
+and deleted when it is no longer needed for those purposes. Theory files,
+statement codes, outputs, ratings and responses are stored in open formats
+(YAML, CSV and JSON) with a codebook. Personal data are processed under UK data
+protection law and the University's policies, and kept for the period those
+policies set. The pseudonymised data are deposited, under a licence that allows
+reuse with attribution, in a public repository with a persistent identifier
+when the results are reported. Free-text answers are screened for identifying
+details before deposit. Source passages under copyright are not deposited, but
+their bibliographic details and page ranges are.
+
+# Ethics {#sec-ethics}
+
+Each study will be submitted for review under the University of Oxford's
+research ethics process, overseen by its Central University Research Ethics
+Committee, through the research ethics committee responsible for the
+investigator's department, and no participant will be recruited before
+approval. The approval references will be added to each registration when they
+are issued. All participants give informed consent and may withdraw without
+giving a reason until their data have been pseudonymised and analysed. The
+studies carry minimal risk. Coders' agreement is a property of the procedure
+under study and not an assessment of the coders, and no result will be reported
+for a named coder or expert. Editors' responses are not linked to their
+journals. Study 3 does not tell participants before they take part that two
+wordings are compared, because knowing it would change how they read, and the
+debriefing explains the comparison and offers withdrawal. The investigator's
+interest as the package's maintainer is declared in the application and in
+every report.
+
+# Open materials and registration {#sec-open}
+
+The following will be made public at registration or, for data, when the
+results are reported.
+
+- This protocol and its code.
+- The written encoding protocol, the training materials and the coordinator's
+  archived answers.
+- The search strings, the screening decisions and the list of sampled theories
+  and episodes, with their sources and page ranges.
+- The classification criteria and the panel's assignments.
+- The expert instrument and the one-page summary of Lakatos's concepts.
+- The reader-study materials, statements and randomisation script.
+- The agent's instructions and model identifier.
+- The frozen package releases, by commit.
+- The analysis scripts, run first on simulated data of the registered shape.
+- The data described in @sec-data.
+
+# Timeline {#sec-timeline}
+
+```{r}
+#| label: tbl-timeline
+#| tbl-cap: "Planned timeline in months from the start of funding."
+timeline <- data.frame(
+  Task = c("Ethics review and registration of Study 3",
+           "Study 3 materials, piloting of statements and data collection",
+           "Study 3 analysis and report",
+           "Encoding protocol, searches, screening and classification panel",
+           "Ethics review and registration of Studies 1 and 2",
+           "Coder recruitment and training",
+           "Study 1 encoding of theories, and agent runs",
+           "Study 2 expert ratings of theories",
+           "Encoding and expert appraisal of amendment episodes",
+           "Analysis of Studies 1 and 2 by the registered scripts",
+           "Reports and deposit of data"),
+  start = c(1, 3, 8, 1, 4, 5, 7, 9, 11, 16, 18),
+  end = c(3, 7, 9, 6, 6, 7, 15, 16, 17, 18, 20))
+stopifnot(all(timeline$end >= timeline$start))
+knitr::kable(data.frame(Task = timeline$Task,
+                        Months = paste(timeline$start, "to", timeline$end)),
+             row.names = FALSE)
+```
+
+The programme takes `r max(timeline$end)` months, and Study 3 can be reported
+by month `r timeline$end[timeline$Task == "Study 3 analysis and report"]`.
+
+# Computational details {.unnumbered}
+
+The numbers in this document were computed with the code above and rendered
+with Quarto, in the environment below. The simulations use the seeds set in
+their chunks.
+
+```{r}
+#| label: session
+#| code-fold: false
+sessionInfo()
+```
+
+# References {.unnumbered}
+
+::: {#refs}
+:::
