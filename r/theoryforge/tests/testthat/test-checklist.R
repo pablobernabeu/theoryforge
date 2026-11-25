@@ -74,7 +74,7 @@ test_that("the report gives coverage after the aggregate", {
                                  "gate", "n_blockers_failed", "items"))
   # parsimony has nothing to assess, and the other eleven items weigh 0.92.
   expect_identical(rep$checklist_version, "3.1")
-  expect_equal(rep$aggregate_score, 85.9)
+  expect_equal(rep$aggregate_score, 88.0)
   expect_equal(rep$coverage, 0.92)
   parsimony <- rep$items[[4L]]
   expect_identical(parsimony$status, "n/a")
@@ -429,7 +429,7 @@ test_that("non_redundancy cannot pass while a definition is empty", {
 
 test_that("the aggregate range spans the alternative weightings", {
   rep <- tf_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
-  expect_identical(rep$aggregate_range, c(82.1, 87.9))
+  expect_identical(rep$aggregate_range, c(84.2, 90.2))
   expect_true(rep$aggregate_range[[1]] <= rep$aggregate_score &&
                 rep$aggregate_score <= rep$aggregate_range[[2]])
   # When every applicable item has one score, no weighting can move it.
@@ -563,33 +563,135 @@ test_that("check refuses an unknown cycles option", {
 
 test_that("an unrelated feedback loop leaves the claim not checked", {
   # The loop u <-> w has no path to the claim, yet under cycles = "refuse"
-  # every claim of the graph is left unread. The prediction is not derived,
-  # the item warns and the gate stays open. It passed at 1.0 under 3.0.
+  # every claim of the graph is left unread. The item warns and the gate
+  # stays open. Nothing was found wrong with the claim and the references
+  # resolve, so the prediction counts as derived, as it did under 3.0.
   t <- ck_loop_theory()
-  expect_identical(ck_derivation(t), list("warn", 0.0, "h1", "pass"))
+  expect_identical(ck_derivation(t), list("warn", 1.0, "h1", "pass"))
   expect_identical(tf_check(t)$n_blockers_failed, 0L)
   # Read by sigma-separation, the claim is contradicted and the item fails.
   expect_identical(ck_derivation(t, "sigma"), list("fail", 0.0, NULL, "blocked"))
   # A claim the sigma reading entails passes.
   expect_identical(ck_derivation(ck_loop_theory("negative"), "sigma"),
                    list("pass", 1.0, NULL, "pass"))
-  expect_identical(ck_derivation(ck_loop_theory("negative")), list("warn", 0.0, "h1", "pass"))
+  expect_identical(ck_derivation(ck_loop_theory("negative")), list("warn", 1.0, "h1", "pass"))
 })
 
 test_that("only the derivation chain record lists unchecked claims", {
   rep <- tf_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
   keys <- c("id", "status", "score", "weight", "severity_if_fail", "citation")
+  extra <- c("not_checked", "phenomena_not_checked")
   for (it in rep$items) {
-    expect_identical(names(it), if (it$id == "derivation_chain") c(keys, "not_checked") else keys)
+    expect_identical(names(it), if (it$id == "derivation_chain") c(keys, extra) else keys)
   }
   expect_identical(rep$items[[12L]]$not_checked, list("pred_indep"))
+  expect_identical(rep$items[[12L]]$phenomena_not_checked, list())
   # A not-checked prediction whose references do not resolve still fails the
-  # item, and is still listed.
+  # item, is still listed and is not derived.
   t <- ck_loop_theory()
   t$predictions[[1L]]$derives_from <- list("p9")
   expect_identical(ck_derivation(t), list("fail", 0.0, "h1", "blocked"))
-  # With no prediction the item is n/a and lists nothing.
-  expect_identical(tf_check(ck_bare())$items[[12L]]$not_checked, list())
+  # With no prediction the item is n/a and lists nothing, even with a
+  # phenomenon behind a loop.
+  t <- ck_loop_theory()
+  t$predictions <- list()
+  t$phenomena <- list(list(id = "ph1", statement = "s",
+                           claim = list(kind = "effect", x = "u", y = "w", sign = "positive")))
+  dc <- tf_check(t)$items[[12L]]
+  expect_identical(list(dc$status, dc$not_checked, dc$phenomena_not_checked),
+                   list("n/a", list(), list()))
+})
+
+test_that("a not-checked prediction counts as derived when its references resolve", {
+  # fixtures/edge/derivation-loop-unresolved: both claims are behind a loop.
+  # h1 cites a declared proposition and counts as derived; h2 cites p9 and is
+  # not derived, so the item fails with 0.5.
+  loop <- list(list(id = "p1", from = "c1", to = "c2", relation = "increases"),
+               list(id = "p2", from = "c2", to = "c1", relation = "increases"))
+  up <- list(kind = "effect", x = "c1", y = "c2", sign = "positive")
+  back <- list(kind = "effect", x = "c2", y = "c1", sign = "positive")
+  h2 <- ck_pred("h2", "directional", claim = back)
+  h2$derives_from <- list("p9")
+  t <- ck_bare(constructs = ck_two_constructs, propositions = loop,
+               predictions = list(ck_pred("h1", "directional", claim = up), h2))
+  expect_identical(ck_derivation(t), list("fail", 0.5, c("h1", "h2"), "blocked"))
+  t$predictions[[2L]]$derives_from <- list("p2")
+  expect_identical(ck_derivation(t), list("warn", 1.0, c("h1", "h2"), "pass"))
+  expect_identical(ck_derivation(t, "sigma"), list("pass", 1.0, NULL, "pass"))
+  # The score is that of the same file without the claims: stating a claim
+  # that the loop leaves unread costs nothing.
+  bare <- t
+  for (i in seq_along(bare$predictions)) bare$predictions[[i]]$claim <- NULL
+  expect_identical(ck_derivation(bare), list("pass", 1.0, NULL, "pass"))
+  expect_identical(tf_check(bare)$aggregate_score, tf_check(t)$aggregate_score)
+})
+
+test_that("the panic network scores the same under both readings", {
+  # Its one claim, on pred_indep, is behind a loop under the default. The item
+  # warns and names it, and the score is that of sigma-separation, which
+  # entails the claim.
+  t <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  refuse <- tf_check(t)
+  sigma <- tf_check(t, cycles = "sigma")
+  expect_identical(list(refuse$aggregate_score, refuse$aggregate_range), list(88.0, c(84.2, 90.2)))
+  expect_identical(list(sigma$aggregate_score, sigma$aggregate_range), list(88.0, c(84.2, 90.2)))
+  expect_identical(ck_derivation(t), list("warn", 1.0, "pred_indep", "pass"))
+  expect_identical(ck_derivation(t, "sigma"), list("pass", 1.0, NULL, "pass"))
+})
+
+# fixtures/edge/derivation-phenomenon-loop: a loop a <-> b, a phenomenon whose
+# claim is that a lowers b, and one prediction without a claim.
+ck_phenomenon_loop <- function(claim_id = "ph1") {
+  prop <- function(id, from, to) {
+    list(id = id, from = from, to = to, relation = "increases", mechanism = "It does.")
+  }
+  ck_bare(
+    maturity = "developing",
+    constructs = lapply(c("a", "b", "z"), function(c) {
+      list(id = c, label = toupper(c), definition = paste0("Construct ", c, "."))
+    }),
+    propositions = list(prop("p1", "a", "b"), prop("p2", "b", "a")),
+    phenomena = list(
+      list(id = claim_id, statement = "Raising a lowers b.",
+           claim = list(kind = "effect", x = "a", y = "b", sign = "negative")),
+      list(id = "ph2", statement = "z tracks a.",
+           claim = list(kind = "association", x = "a", y = "z", sign = "positive"))),
+    predictions = list(list(id = "h1", statement = "b rises with a.", type = "directional",
+                            derives_from = list("p1")))
+  )
+}
+
+ck_chain <- function(theory, cycles = "refuse") {
+  dc <- tf_check(theory, cycles = cycles)$items[[12L]]
+  list(dc$status, dc$score, unlist(dc$not_checked), unlist(dc$phenomena_not_checked))
+}
+
+test_that("a phenomenon behind a feedback loop is not checked", {
+  # Under "refuse" the loop leaves ph1's claim unread. The item warns and
+  # names it, the documents' derivation line says it was not checked, and the
+  # score, which counts predictions, is that of a passing item. ph2 names a
+  # construct outside the graph and changes nothing under either reading.
+  t <- ck_phenomenon_loop()
+  expect_identical(ck_chain(t), list("warn", 1.0, NULL, "ph1"))
+  expect_identical(tf_check(t)$gate, "pass")
+  expect_true(grepl(paste0("contradicts no claim a phenomenon states: not checked (feedback ",
+                           "loop; use cycles = \"sigma\")\n"), tf_preregister(t), fixed = TRUE))
+  # Under "sigma" the claim is read and contradicted.
+  expect_identical(ck_chain(t, "sigma"), list("fail", 1.0, NULL, NULL))
+  expect_identical(tf_check(t, cycles = "sigma")$gate, "blocked")
+  # A failure elsewhere takes precedence over the warning, and ph1 is still
+  # listed.
+  t$predictions[[1L]]$derives_from <- list("p9")
+  expect_identical(ck_chain(t)[c(1L, 4L)], list("fail", "ph1"))
+})
+
+test_that("a phenomenon and a prediction with one id are listed apart", {
+  # Ids are unique within each collection but not across them, so the two
+  # lists keep a prediction and a phenomenon named h1 apart.
+  t <- ck_phenomenon_loop("h1")
+  t$predictions[[1L]]$claim <- list(kind = "effect", x = "a", y = "b", sign = "positive")
+  expect_true(isTRUE(tf_validate(t, full = TRUE)))
+  expect_identical(ck_chain(t), list("warn", 1.0, "h1", "h1"))
 })
 
 test_that("a claim the graph cannot place or read is not derived", {
@@ -705,7 +807,7 @@ test_that("the rubric rates a point or interval label without bounds as directio
 test_that("the HTML report states what the checklist score describes", {
   html <- tf_report(tf_read(tf_fixture_path("panic-network.theory.yaml")), "html")
   has <- function(s) expect_true(grepl(s, html, fixed = TRUE), info = s)
-  has(paste0("  <p>Checklist score: <strong>85.9</strong> (82.1 to 87.9 with equal weights or ",
+  has(paste0("  <p>Checklist score: <strong>88.0</strong> (84.2 to 90.2 with equal weights or ",
              "one weight halved or doubled) &middot; gate: <strong>pass</strong></p>\n"))
   has(paste0("  <p>The checklist score describes how completely the file states what checklist ",
              "3.1 asks for. Most items read whether a field is filled in or how a prediction is ",
@@ -717,7 +819,7 @@ test_that("the HTML report states what the checklist score describes", {
              "<th>source of the criterion</th></tr>"))
   has(paste0("<tr><td>derivation_chain</td><td>Every prediction cites declared propositions, the ",
              "causal graph entails any claim it states and contradicts no phenomenon's claim (a ",
-             "claim left unread because of a feedback loop warns)</td><td>warn</td><td>0.75</td>",
+             "claim left unread because of a feedback loop warns)</td><td>warn</td><td>1.0</td>",
              "<td>Scheel et al. (2021); Szollosi et al. (2020)</td></tr>"))
   expect_false(grepl("igour|grounding|Aggregate", html))
 })

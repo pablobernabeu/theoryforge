@@ -163,7 +163,7 @@ def test_rigour_escapes_the_gate(panic_path, monkeypatch):
     check = theoryforge.rigor.check
     monkeypatch.setattr(theoryforge.rigor, "check", lambda T: {**check(T), "gate": "<a & b>"})
     svg = tf.read(panic_path).diagram("rigour")
-    assert '<text x="20" y="46">checklist score 85.9, gate &lt;a &amp; b&gt;</text>' in svg
+    assert '<text x="20" y="46">checklist score 88.0, gate &lt;a &amp; b&gt;</text>' in svg
 
 
 def test_severity_chart(panic_path):

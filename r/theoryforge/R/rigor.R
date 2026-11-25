@@ -42,13 +42,16 @@ NULL
 }
 
 # How the theory's causal graph reads the claims, for the derivation chain:
-# list(readings, contradicted). `readings` has one entry per prediction in file
-# order, NULL when the prediction states no claim and list(verdict, basis)
-# otherwise (API_SPEC.md section 31). `contradicted` says whether the graph
-# contradicts the claim of some phenomenon. A graph that cannot be built
-# (section 27, refusals 1 and 2) reads no claim, so each stated claim gets the
-# verdict not_evaluated with the basis graph_refused, and no phenomenon counts
-# as contradicted. The Python twin's _claim_readings() reads them alike.
+# list(readings, contradicted, unread). `readings` has one entry per prediction
+# in file order, NULL when the prediction states no claim and list(verdict,
+# basis) otherwise (API_SPEC.md section 31). `contradicted` says whether the
+# graph contradicts the claim of some phenomenon, and `unread` holds the ids of
+# the phenomena, in file order, whose claims the graph leaves unread because it
+# has a feedback loop and `cycles` is "refuse". A graph that cannot be built
+# (section 27, refusals 1 and 2) reads no claim, so each stated claim of a
+# prediction gets the verdict not_evaluated with the basis graph_refused, and
+# no phenomenon counts as contradicted or unread. The Python twin's
+# _claim_readings() reads them alike.
 .tf_claim_readings <- function(T, cycles) {
   g <- tryCatch(
     .tf_prepare_graph(.tf_causal_graph(T, "check"), cycles, .tf_list(T, "propositions")),
@@ -66,31 +69,42 @@ NULL
     }
   }
   contradicted <- FALSE
+  unread <- character(0)
   if (!is.null(g)) {
     for (ph in .tf_list(T, "phenomena")) {
       cl <- .tf_read_claim(.tf_get(ph, "claim"))
-      if (!is.null(cl) && identical(.tf_read_with(g, cl)$verdict, "contradicted")) {
+      if (is.null(cl)) next
+      r <- .tf_read_with(g, cl)
+      if (identical(r$verdict, "contradicted")) {
         contradicted <- TRUE
-        break
+      } else if (identical(r$verdict, "not_evaluated") && identical(r$basis, "feedback_loop")) {
+        unread <- c(unread, .tf_str(ph, "id"))
       }
     }
   }
-  list(readings = readings, contradicted = contradicted)
+  list(readings = readings, contradicted = contradicted, unread = unread)
 }
 
-# The derivation chain's list(status, score, not_checked) (API_SPEC.md section
-# 4, item 12). A prediction is derived when its references resolve and it
-# either states no claim or states one the causal graph entails. A claim that
-# the graph contradicts, leaves open, cannot read as written or cannot place,
-# since it names a construct no proposition relates, is a failure, as is a
-# claim of a theory whose graph cannot be built and an unresolved reference. A
-# claim the graph leaves unread because it has a feedback loop and `cycles` is
-# "refuse" is not checked: the prediction is not derived, its id goes to
-# `not_checked` and, failing anything else, the item warns. A phenomenon whose
-# claim the graph contradicts fails the item and leaves the score, the share of
-# predictions derived, as it is.
+# The derivation chain's list(status, score, not_checked,
+# phenomena_not_checked) (API_SPEC.md section 4, item 12). A prediction is
+# derived when its references resolve and it either states no claim or states
+# one the causal graph entails. A claim that the graph contradicts, leaves
+# open, cannot read as written or cannot place, since it names a construct no
+# proposition relates, is a failure, as is a claim of a theory whose graph
+# cannot be built and an unresolved reference. A claim the graph leaves unread
+# because it has a feedback loop and `cycles` is "refuse" is not checked: its
+# id goes to `not_checked` and, failing anything else, the item warns. Nothing
+# was found wrong with such a claim, so a prediction not checked whose
+# references resolve counts as derived in the score, and stating a claim the
+# loop leaves unread costs nothing. A phenomenon whose claim the graph
+# contradicts fails the item, and one whose claim it leaves unread for the loop
+# goes to `phenomena_not_checked` and, failing anything else, makes the item
+# warn. Neither changes the score, the share of predictions derived.
 .tf_derivation_chain <- function(T, preds, prop_ids, cycles) {
-  if (length(preds) == 0L) return(list(status = "n/a", score = NULL, not_checked = character(0)))
+  if (length(preds) == 0L) {
+    return(list(status = "n/a", score = NULL, not_checked = character(0),
+                phenomena_not_checked = character(0)))
+  }
   read <- .tf_claim_readings(T, cycles)
   derived <- 0L
   failed <- read$contradicted
@@ -104,19 +118,27 @@ NULL
       not_checked <- c(not_checked, .tf_str(preds[[i]], "id"))
     } else if (!is.null(r) && r$verdict != "entailed") {
       failed <- TRUE
-    } else if (resolves) {
-      derived <- derived + 1L
+      next
     }
+    if (resolves) derived <- derived + 1L
   }
-  status <- if (failed) "fail" else if (derived < length(preds)) "warn" else "pass"
-  list(status = status, score = .tf_rnd(derived / length(preds), 3), not_checked = not_checked)
+  status <- if (failed) {
+    "fail"
+  } else if (length(not_checked) > 0L || length(read$unread) > 0L) {
+    "warn"
+  } else {
+    "pass"
+  }
+  list(status = status, score = .tf_rnd(derived / length(preds), 3), not_checked = not_checked,
+       phenomena_not_checked = read$unread)
 }
 
-# Compute (status, score) for each checklist item; returns list(items, not_checked),
-# where `items` is a named list of list(status, score) per item id and
-# `not_checked` holds the ids of the predictions whose claims the derivation
-# chain left unread, since the causal graph has a feedback loop and `cycles` is
-# "refuse". An item with nothing to assess is list(status = "n/a", score = NULL).
+# Compute (status, score) for each checklist item; returns list(items,
+# not_checked, phenomena_not_checked), where `items` is a named list of
+# list(status, score) per item id and the other two hold the ids of the
+# predictions and of the phenomena whose claims the derivation chain left
+# unread, since the causal graph has a feedback loop and `cycles` is "refuse".
+# An item with nothing to assess is list(status = "n/a", score = NULL).
 .tf_check_items <- function(T, thr, cycles) {
   preds <- .tf_list(T, "predictions")
   cons <- .tf_list(T, "constructs")
@@ -300,7 +322,7 @@ NULL
   dc <- .tf_derivation_chain(T, preds, prop_ids, cycles)
   out$derivation_chain <- item(dc$status, dc$score)
 
-  list(items = out, not_checked = dc$not_checked)
+  list(items = out, not_checked = dc$not_checked, phenomena_not_checked = dc$phenomena_not_checked)
 }
 
 # The weighted mean of the scores `x` under the weights `w`, times 100 and
@@ -370,9 +392,11 @@ NULL
 #' declared, or none, or states a claim that the graph contradicts, leaves
 #' open, cannot read as written or cannot place because it names a construct
 #' no proposition relates, and when the graph contradicts the claim of a
-#' phenomenon. A claim that the graph leaves unread because it has a feedback
-#' loop is not checked: the prediction is not derived, and, failing anything
-#' else, the item warns, which does not block the gate.
+#' phenomenon. A claim of a prediction or a phenomenon that the graph leaves
+#' unread because it has a feedback loop is not checked and, failing anything
+#' else, makes the item warn, which does not block the gate. A prediction whose
+#' claim is not checked counts as derived when the propositions it cites are
+#' declared, since nothing was found wrong with it.
 #'
 #' Three values are refused before anything is scored, since no score built
 #' on them would be defensible. One is a \code{cycles} other than
@@ -404,9 +428,11 @@ NULL
 #'   \code{"pass"} when none does. \code{items} holds one list per checklist
 #'   item, in checklist order, with \code{id}, \code{status}, \code{score},
 #'   \code{weight}, \code{severity_if_fail} (\code{"blocker"} or
-#'   \code{"warning"}) and \code{citation}. The derivation_chain item has a
-#'   seventh element, \code{not_checked}, a list of the ids of the predictions
-#'   whose claims were not checked.
+#'   \code{"warning"}) and \code{citation}. The derivation_chain item has two
+#'   more elements, \code{not_checked} and \code{phenomena_not_checked}, lists
+#'   of the ids of the predictions and of the phenomena whose claims were not
+#'   checked. A prediction and a phenomenon may share an id, so the two are
+#'   listed apart.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
@@ -458,11 +484,13 @@ tf_check <- function(theory, cycles = "refuse") {
       severity_if_fail = spec_item$severity_if_fail,
       citation = spec_item$citation
     )
-    # The predictions whose claims a feedback loop left unread, so that a
-    # document can say how many were not checked and why. A list, so that one
-    # id is still written as a JSON array.
+    # The predictions and the phenomena whose claims a feedback loop left
+    # unread, so that a document can say what was not checked and why. A
+    # prediction and a phenomenon may share an id, so the two are kept apart.
+    # Lists, so that one id is still written as a JSON array.
     if (identical(iid, "derivation_chain")) {
       items[[k]]$not_checked <- as.list(checked$not_checked)
+      items[[k]]$phenomena_not_checked <- as.list(checked$phenomena_not_checked)
     }
   }
 

@@ -28,7 +28,7 @@ test_that("the dossier header names the checklist version", {
 
 test_that("panic-network rigor matches exact targets", {
   rep <- tf_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
-  expect_equal(rep$aggregate_score, 85.9)
+  expect_equal(rep$aggregate_score, 88.0)
   expect_equal(rep$coverage, 0.92)
   expect_identical(rep$gate, "pass")
   expect_identical(rep$n_blockers_failed, 0L)
@@ -46,7 +46,7 @@ test_that("panic-network rigor matches exact targets", {
     causal_testability = list("pass", 1.0),
     diagnosticity      = list("pass", 0.25),
     formalisation      = list("pass", 1.0),
-    derivation_chain   = list("warn", 0.75)
+    derivation_chain   = list("warn", 1.0)
   )
   for (id in names(expected)) {
     expect_identical(item_status(rep, id), expected[[id]][[1]], info = id)
@@ -214,9 +214,11 @@ test_that("tf_report returns valid JSON", {
   out <- tf_report(tf_read(tf_fixture_path("panic-network.theory.yaml")), "json")
   expect_true(jsonlite::validate(out))
   parsed <- jsonlite::fromJSON(out, simplifyVector = FALSE)
-  expect_equal(parsed$aggregate_score, 85.9, tolerance = 1e-9)
-  # One id is still written as an array, as Python writes it.
+  expect_equal(parsed$aggregate_score, 88.0, tolerance = 1e-9)
+  # One id is still written as an array, and none as an empty one, as Python
+  # writes them.
   expect_true(grepl('"not_checked": [\n        "pred_indep"\n      ]', out, fixed = TRUE))
+  expect_true(grepl('"phenomena_not_checked": []', out, fixed = TRUE))
   # A NULL score is written as null, the value Python's None gives.
   expect_null(parsed$items[[4]]$score)
   expect_true(grepl('"score": null', out, fixed = TRUE))
