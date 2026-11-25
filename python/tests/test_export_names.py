@@ -74,6 +74,24 @@ def test_causal_dag_refuses_the_two_ids_dagitty_reserves():
         t.diagram("causal_dag")
 
 
+def test_causal_dag_refuses_an_id_that_ends_with_a_backslash():
+    # Quoted, `a\` would be written "a\", whose backslash escapes the closing
+    # quote. dagitty cannot read the line, and Graphviz, which the apps draw the
+    # view with, would read the next id as DOT, attributes included. A
+    # backslash elsewhere in an id is kept, as the quoting test shows.
+    t = _theory([(c, None) for c in ("a\\", "b")], [("p1", "b", "a\\", "causes")])
+    with pytest.raises(ValueError) as exc:
+        t.diagram("causal_dag")
+    assert str(exc.value) == (
+        "causal_dag cannot export construct id 'a\\': dagitty cannot read an id that ends with a backslash")
+    # The id an association names is refused as well, and the nomological
+    # net, whose DOT strings double every backslash, still draws the theory.
+    t = _theory([(c, None) for c in ("x", "y\\")], [("p1", "x", "y\\", "associates")])
+    with pytest.raises(ValueError, match="dagitty cannot read an id that ends with a backslash"):
+        t.diagram("causal_dag")
+    assert '"y\\\\"' in t.diagram("nomological_net")
+
+
 def test_causal_dag_quotes_an_empty_endpoint():
     # A missing `from` reads as "" (API_SPEC.md section 3), which is no bare
     # identifier, so the line stays one that dagitty can parse.

@@ -153,6 +153,55 @@ test("the causal DAG renders an association as a dashed edge with two arrowheads
   assert.equal(dagToDigraph('dag {\n  "self-efficacy" <-> "task \\"persistence\\""\n}\n'),
     "digraph causal_dag {\n  rankdir=LR;\n  node [shape=box, style=rounded];\n" +
     '  "self-efficacy" -> "task \\"persistence\\"" [dir=both, style=dashed]\n}\n');
+  // dagitty keeps a backslash that does not escape a quote, and DOT reads one
+  // as an escape, so each quoted id is written again by DOT's rule. An id that
+  // holds `\\" [URL=...]` stays one id rather than end early and leave the
+  // rest as attributes.
+  const attack = 'dag {\n  "a\\\\" [URL=<javascript:alert(1)> label=<X>] //" -> b\n  "x\\y" <-> c\n}\n';
+  assert.equal(dagToDigraph(attack),
+    "digraph causal_dag {\n  rankdir=LR;\n  node [shape=box, style=rounded];\n" +
+    '  "a\\\\\\" [URL=<javascript:alert(1)> label=<X>] //" -> b\n  "x\\\\y" -> c [dir=both, style=dashed]\n}\n');
+});
+
+test("a figure is inserted as clean nodes, with no script, handler or link, and downloads as shown", async () => {
+  const evil = '<?xml version="1.0"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "x.dtd">\n' +
+    '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" onload="alert(1)">' +
+    '<script>alert(2)</script><style>body{display:none}</style><foreignObject><div>x</div></foreignObject>' +
+    '<g id="node1"><a xlink:href="javascript:alert(3)" xlink:title="CLICK"><polygon points="0,0 1,1" onclick="alert(4)"/>' +
+    '<text>CLICK ME</text></a><use href="#node1"/><image href="https://example.org/x.png"/></g>' +
+    '<animate attributeName="href" to="javascript:alert(5)"/></svg>';
+  const rt = stubRuntime({ async run() { return { raw: { report: { aggregate_score: 80, gate: "pass", n_blockers_failed: 0, maturity: "developing", items: [] }, svg: evil }, code: "#" }; } });
+  const { ctx, $ } = await boot({}, rt);
+  const downloads = [];
+  ctx.URL = { createObjectURL: () => "blob:x", revokeObjectURL() {} };
+  ctx.Blob = class { constructor(parts) { downloads.push(parts.join("")); } };
+  await $("#runBtn").click();
+  const fig = $(".figure");
+  const svg = fig.querySelector("svg");
+  assert.ok(svg, "the figure holds the SVG");
+  assert.equal(fig.innerHTML, "", "the SVG is not inserted as markup");
+  for (const tag of ["script", "style", "foreignObject", "a", "animate"]) assert.equal(fig.querySelectorAll(tag).length, 0, tag);
+  const attrs = [svg, ...svg.querySelectorAll("*")].flatMap((n) => n.getAttributeNames().map((k) => k + "=" + n.getAttribute(k)));
+  assert.ok(!attrs.some((a) => /^on/i.test(a)), "no event handler: " + attrs.join(" "));
+  assert.ok(!attrs.some((a) => /javascript:|example\.org/.test(a)), "no link outside the figure: " + attrs.join(" "));
+  assert.ok(attrs.includes("href=#node1"), "a reference inside the figure stays");
+  assert.match(fig.textContent, /CLICK ME/, "a link's text stays as text");
+  // The download is the figure as shown, since something was taken out.
+  const btn = fig.parentNode.querySelectorAll("button").find((b) => b.textContent === "SVG");
+  await btn.click();
+  assert.equal(downloads.length, 1);
+  assert.doesNotMatch(downloads[0], /script|onload|javascript/);
+  // A figure the package wrote cleanly downloads as it wrote it, and text
+  // that is no SVG is shown as a note.
+  const plain = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect x="0" y="0" width="1" height="1"/></svg>\n';
+  rt.run = async () => ({ raw: { report: { aggregate_score: 80, gate: "pass", n_blockers_failed: 0, maturity: "developing", items: [] }, svg: plain }, code: "#" });
+  await $("#runBtn").click();
+  await $(".figure").parentNode.querySelectorAll("button").find((b) => b.textContent === "SVG").click();
+  assert.equal(downloads[1], plain);
+  rt.run = async () => ({ raw: { report: { aggregate_score: 80, gate: "pass", n_blockers_failed: 0, maturity: "developing", items: [] }, svg: "<svg><g></svg>" }, code: "#" });
+  await $("#runBtn").click();
+  assert.equal($(".figure"), null);
+  assert.match($("#output").textContent, /The figure could not be shown/);
 });
 
 test("a failed restore of an example falls back to the first example and says so", async () => {
@@ -535,6 +584,13 @@ test("an error's headline names the error and the user's file, not a caret or an
   assert.equal(headline(["Error in tf_read(p) :", "(input.yaml) Scanner error: mapping values are not allowed in this context at line 2, column 9"]),
     "Error in tf_read(p) : (input.yaml) Scanner error: mapping values are not allowed in this context at line 2, column 9");
   assert.equal(headline(["something went wrong", "^"]), "something went wrong");
+  // webR words a condition raised with call. = FALSE as "Error in unknown
+  // source: ", where R prints "Error: ", which the headline still finds on a
+  // message of several lines.
+  const { cleanMessage } = (await boot()).ctx.TF.util;
+  const parse = cleanMessage("Error in unknown source: parse error: invalid object key (must be a string)\n  {\"a\": 1,}\n  (right here) ------^");
+  assert.equal(headline(parse.split("\n").map((l) => l.trim())), "Error: parse error: invalid object key (must be a string)");
+  assert.equal(cleanMessage("Error in unknown source: check requires boolean test outcomes"), "Error: check requires boolean test outcomes");
 });
 
 test("a run is announced in a status region, and the result panel is no live region", async () => {
@@ -552,6 +608,9 @@ test("a fetch that is not ok is refused with the file's name, and Graphviz point
   ctx.fetch = async () => ({ ok: false, status: 404, json: async () => ({}), arrayBuffer: async () => new ArrayBuffer(0) });
   await assert.rejects(ctx.TF.util.fetchJson("vendor/manifest.json"), /Could not fetch vendor\/manifest\.json \(HTTP 404\)/);
   await assert.rejects(ctx.TF.util.fetchBytes("vendor/R/core.R"), /HTTP 404/);
+  // A request that fails before any answer names the file too.
+  ctx.fetch = async () => { throw new TypeError("Failed to fetch"); };
+  await assert.rejects(ctx.TF.util.fetchJson("vendor/manifest.json"), /^Error: Could not fetch vendor\/manifest\.json \(Failed to fetch\)$/);
   const { cssPx } = ctx.TF.util;
   assert.equal(cssPx("72pt"), 96);
   assert.equal(cssPx("1in"), 96);
@@ -669,4 +728,147 @@ test("the literature operations offer both bundled corpora and an upload", async
   const before = rt.calls.length;
   await $("#runBtn").click();
   assert.equal(rt.calls.length, before, "Run waits for the upload");
+});
+
+// ---- links, the content hash, figures that fail and small numbers -----------
+
+const SHARE = path.join(here, "..", "shared", "share.js");
+async function bootWithLink(state, opts, rt) {
+  const enc = makeWindow();
+  runScript(enc, SHARE);
+  const hash = "#s=" + await enc.__tfShare.encode(state);
+  const ctx = makeWindow(Object.assign({ hash }, opts || {}));
+  runScript(ctx, CORE);
+  runScript(ctx, SHARE);
+  rt = rt || stubRuntime();
+  await ctx.TF.start(rt);
+  return { ctx, rt, $: (s) => ctx.document.querySelector(s), enc: (st) => enc.__tfShare.encode(st) };
+}
+const runsOf = (rt) => { rt.ran = []; const run = rt.run.bind(rt); rt.run = async (op, p) => { rt.ran.push(op); return run(op, p); }; return rt; };
+
+test("a link whose theory cannot be used, or of a newer format, says so and runs nothing", async () => {
+  for (const [theory, note] of [
+    [{ name: "x.yaml", text: 5 }, /Could not restore x\.yaml; showing Theory A instead/],
+    [{}, /Could not restore your theory/],
+    [{ example: "" }, /Could not restore your theory/],
+    [{ name: "x.yaml", text: null }, /Could not restore x\.yaml/],
+  ]) {
+    const rt = runsOf(stubRuntime({ async editText() { throw new Error("cannot read"); } }));
+    const { ctx, $ } = await bootWithLink({ v: 1, op: "check", run: true, theory }, {}, rt);
+    assert.match($(".toast").textContent, note, JSON.stringify(theory));
+    assert.deepEqual(rt.ran, [], "nothing runs on the default example");
+    assert.equal(ctx.location.hash, "", "the link is taken out of the address");
+  }
+  const rt = runsOf(stubRuntime());
+  const { $ } = await bootWithLink({ v: 2, op: "check", run: true, theory: { example: EXAMPLES[1].path } }, {}, rt);
+  assert.equal($(".toast").textContent, "This link was made by a newer version of the app, so the saved session is shown instead");
+  assert.deepEqual(rt.ran, []);
+});
+
+test("a link asks before it replaces an edited theory, and a reload of the tab's own link does not", async () => {
+  const edited = { v: 2, opId: "check", params: {}, ran: false, input: { mode: "edited", name: "mine.yaml", format: "yaml", text: "id: mine\n" } };
+  const stored = { "tf-app-py": JSON.stringify(edited) };
+  const rt = stubRuntime({ async editText(text, f, name) { this.active = name; return Object.assign(summaryOf("mine", { ok: true }), { texts: {} }); },
+    async writeText() { return "id: mine\n"; } });
+  const questions = [];
+  const { ctx, $ } = await bootWithLink({ v: 1, op: "check", run: false, theory: { example: EXAMPLES[1].path } },
+    { stored, confirm: (q) => { questions.push(q); return false; } }, rt);
+  assert.equal(questions[0], "This link opens Theory B. Edits to mine.yaml that you have not saved will be lost. Open the link?");
+  assert.equal($(".toast").textContent, "The link was not opened, so your edited theory is shown");
+  assert.equal(rt.active, "mine.yaml");
+  assert.equal(JSON.parse(ctx.localStorage.getItem("tf-app-py")).input.text, "id: mine\n", "the saved edits are kept");
+  assert.equal(ctx.location.hash, "");
+  // The tab's own link holds the saved text, so a reload asks nothing.
+  const again = [];
+  const rt2 = stubRuntime({ async editText(text, f, name) { this.active = name; return Object.assign(summaryOf("mine", { ok: true }), { texts: {} }); },
+    async writeText() { return "id: mine\n"; } });
+  await bootWithLink({ v: 1, op: "check", run: false, theory: { name: "mine.yaml", format: "yaml", text: "id: mine\n" } },
+    { stored, confirm: (q) => { again.push(q); return false; } }, rt2);
+  assert.deepEqual(again, []);
+  assert.equal(rt2.active, "mine.yaml");
+});
+
+test("a link pasted into an open tab opens there, and the skip link leaves the address alone", async () => {
+  const { ctx, rt, $, enc } = await bootWithLink({ v: 1, op: "check", run: false, theory: { example: EXAMPLES[0].path } });
+  runsOf(rt);
+  ctx.location.hash = "#s=" + await enc({ v: 1, op: "validate", run: true, theory: { example: EXAMPLES[1].path } });
+  await ctx.__fire("hashchange");
+  assert.equal(rt.active, EXAMPLES[1].path);
+  assert.equal($("#exampleSel").value, EXAMPLES[1].path);
+  assert.equal(ctx.document.querySelectorAll(".op.active")[0].getAttribute("data-op"), "validate");
+  assert.deepEqual(rt.ran, ["validate"]);
+  // A fragment the app wrote itself opens nothing.
+  await new Promise((r) => setTimeout(r, 800));
+  const own = ctx.location.hash;
+  rt.ran = [];
+  await ctx.__fire("hashchange");
+  assert.equal(ctx.location.hash, own);
+  assert.deepEqual(rt.ran, []);
+  // The skip link moves the focus and keeps the link in the address.
+  let prevented = false;
+  await $(".skip-link").dispatch("click", { preventDefault() { prevented = true; } });
+  assert.ok(prevented);
+  assert.equal(ctx.document.activeElement, $("#main"));
+  assert.equal(ctx.location.hash, own);
+});
+
+test("the content hash arrives after the load, from a call of its own, and an error is shown", async () => {
+  const rt = stubRuntime({ hashes: 0, async contentHash() { this.hashes++; return this.active === EXAMPLES[1].path ? { error: "MemoryError" } : { hash: "sha256:" + "cd".repeat(32) }; } });
+  const { ctx, $ } = await boot({}, rt);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(rt.hashes, 1);
+  assert.match($("#summaryHash").textContent, /sha256:cdcdcdcdcdcd…cdcdcd/);
+  await choose($("#exampleSel"), EXAMPLES[1].path);
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal($("#summaryHash").textContent, "Content hash not computed: MemoryError");
+  assert.ok(ctx);
+});
+
+test("a figure Graphviz cannot draw leaves the rest of the result and says why", async () => {
+  const rt = stubRuntime({ async run() { return { raw: { ir: "digraph nomological_net {\n}\n" }, code: "#" }; } });
+  const { ctx, $ } = await boot({}, rt);
+  opButton(ctx, "diagram").click();
+  await $("#runBtn").click();
+  const out = $("#output").textContent;
+  assert.match(out, /The figure could not be drawn: .*Run the operation again to try once more\./);
+  assert.match(out, /Intermediate representation \(Graphviz DOT\)/, "the IR is still shown");
+  assert.doesNotMatch(out, /Operation failed/);
+});
+
+test("problems are counted from the packages' list, so a value with a semicolon stays one problem", async () => {
+  const one = { ok: false, message: "invalid theory object: proposition[0] to 'a; b' is not a known construct",
+    problems: ["proposition[0] to 'a; b' is not a known construct"] };
+  const rt = stubRuntime({ async loadExample(p) { this.active = p; return summaryOf("a", one); },
+    async run(op) { return { raw: op === "validate" ? one : {}, code: "#" }; } });
+  const { ctx, $ } = await boot({}, rt);
+  assert.equal($("#summaryWrap .chip.invalid").textContent, "1 problem");
+  opButton(ctx, "validate").click();
+  await $("#runBtn").click();
+  assert.deepEqual($("#output .err-list").querySelectorAll("li").map((li) => li.textContent), ["proposition[0] to 'a; b' is not a known construct"]);
+  // Without a list, the message is split at "; " only, so "x;y" stays whole.
+  assert.deepEqual([...ctx.TF.util.problemList("invalid theory object: duplicate construct id: x;y; construct[1] missing/empty label")],
+    ["duplicate construct id: x;y", "construct[1] missing/empty label"]);
+});
+
+test("the help dialog has one banner, an h2 title and headings that follow it", async () => {
+  const { $ } = await boot();
+  await $("#helpBtn").click();
+  const modal = $("#tfModal .modal");
+  assert.equal(modal.querySelectorAll("header").length, 0, "the dialog's head is no banner landmark");
+  assert.equal($("#tfModalTitle").tagName, "H2");
+  assert.equal(modal.querySelectorAll("h4").length, 6, "the groups are h4 under the h3 sections");
+  assert.equal(modal.querySelectorAll("h3").length, 3);
+  assert.equal(modal.querySelectorAll("h5").length, 0);
+});
+
+test("a small negative value is written 0, not -0", async () => {
+  const rt = stubRuntime({ async run() {
+    return { raw: { result: { states: ["a", "b"], trajectory: [[1, 0], [0.951, -0.000159]], steps: 1, dt: 0.1, method: "exact", initial_state: [-0.004, 0] } }, code: "#" };
+  } });
+  const { ctx, $ } = await boot({}, rt);
+  opButton(ctx, "simulate").click();
+  await $("#runBtn").click();
+  const cells = ctx.document.querySelectorAll("td").map((td) => td.textContent);
+  assert.ok(!cells.includes("-0"), cells.join("|"));
+  assert.match($("#output").textContent, /a 0\.00, b 0/);
 });

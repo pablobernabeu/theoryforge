@@ -6,6 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { randomBytes } from "node:crypto";
+import zlib from "node:zlib";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
@@ -47,4 +48,20 @@ test("a theory too large for a link is longer than the limit once encoded", asyn
   const text = randomBytes(20000).toString("base64");
   const enc = await share.encode({ v: 1, theory: { text } });
   assert.ok(enc.length > share.LIMIT);
+});
+
+// A link is refused before it is decompressed whole: one longer than the
+// limit at once, and one within the limit that would decompress past
+// MAX_BYTES as soon as its text passes that size. 12 MB of one letter
+// compresses to about 15,700 characters.
+test("a link longer than the limit, or one that decompresses past MAX_BYTES, is refused", async () => {
+  const b64url = (buf) => buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  await assert.rejects(share.decode("A".repeat(share.LIMIT + 1)), /longer than 16000 characters/);
+  const bomb = b64url(zlib.deflateRawSync(Buffer.from(JSON.stringify({ v: 1, theory: { text: "title: " + "a".repeat(12e6) } }))));
+  assert.ok(bomb.length <= share.LIMIT, `the bomb takes ${bomb.length} characters`);
+  await assert.rejects(share.decode(bomb), /holds more than 1048576 bytes/);
+  // A link just under the cap still reads.
+  const big = { v: 1, theory: { text: "a".repeat(share.MAX_BYTES - 100) } };
+  const enc = b64url(zlib.deflateRawSync(Buffer.from(JSON.stringify(big))));
+  assert.equal((await share.decode(enc)).theory.text.length, share.MAX_BYTES - 100);
 });

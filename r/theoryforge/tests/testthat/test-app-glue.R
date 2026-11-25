@@ -60,6 +60,43 @@ test_that("the app's load keeps an invalid theory and names its problems", {
     expect_match(summary$validation$message, cs$problem, fixed = TRUE, info = cs$problem)
     expect_identical(jsonlite::fromJSON(app$.tf_run("validate", list()), simplifyVector = FALSE),
                      summary$validation, info = cs$problem)
+    # The problems also come as a list, which joined gives the message.
+    problems <- unlist(summary$validation$problems)
+    expect_identical(summary$validation$message,
+                     paste0("invalid theory object: ", paste(problems, collapse = "; ")), info = cs$problem)
+  }
+})
+
+test_that("a problem that quotes a semicolon stays one problem", {
+  # A message quotes the value it concerns, and a value can hold "; ", so the
+  # app reads the list rather than split the joined message. A single problem
+  # stays a list in the JSON. The Python glue gives the same list.
+  app <- app_glue()
+  text <- paste0("schema_version: '1.0'\nid: x\ntitle: X\nmaturity: draft\n",
+                 "constructs:\n  - {id: a, label: A, definition: D}\n",
+                 "propositions:\n  - {id: p1, from: a, to: 'avoidance; escape', relation: increases}")
+  v <- jsonlite::fromJSON(app$.tf_load(write_theory(text)), simplifyVector = FALSE)$validation
+  expect_identical(v$problems, list("proposition[0] to 'avoidance; escape' is not a known construct"))
+  ok <- jsonlite::fromJSON(app$.tf_load(write_theory(sub("avoidance; escape", "a", text, fixed = TRUE))),
+                           simplifyVector = FALSE)$validation
+  expect_identical(ok, list(ok = TRUE))
+})
+
+test_that(".tf_validation_problems() lists what tf_validate() joins on every edge case", {
+  edge <- testthat::test_path("..", "..", "..", "..", "fixtures", "edge")
+  paths <- sort(Sys.glob(file.path(edge, "*.theory.*")))
+  if (!length(paths)) testthat::skip("fixtures/edge is not reachable from this test run")
+  for (path in paths) {
+    t <- tryCatch(tf_read(path), error = function(e) NULL)
+    if (is.null(t)) next
+    problems <- .tf_validation_problems(t, TRUE)
+    msg <- tryCatch({ tf_validate(t, full = TRUE); NULL }, error = conditionMessage)
+    if (is.null(msg)) {
+      expect_identical(problems, character(0), info = basename(path))
+    } else {
+      expect_identical(msg, paste0("invalid theory object: ", paste(problems, collapse = "; ")),
+                       info = basename(path))
+    }
   }
 })
 
@@ -166,17 +203,21 @@ test_that("the summary lists constructs, rivals, the score and the hash", {
     list(id = "alt_grounding_by_interaction", label = "Grounding by interaction", propositions = 4L),
     list(id = "alt_symbol_interdependency", label = "Symbol interdependency", propositions = 5L)))
   expect_identical(s$check$score, tf_check(t)$aggregate_score)
-  expect_identical(s$hash, tf_content_hash(t))
+  # The hash is a call of its own, so a slow hash cannot hold up a load.
+  expect_null(s$hash)
+  expect_identical(jsonlite::fromJSON(app$.tf_hash_call(), simplifyVector = FALSE),
+                   list(hash = tf_content_hash(t)))
   expect_identical(s$counts$phenomena, 1L)
 })
 
 test_that("the editor reads back what the writer writes", {
   app <- app_glue()
-  loaded <- jsonlite::fromJSON(app$.tf_load(tf_fixture_path("panic-network.theory.yaml")), simplifyVector = FALSE)
+  app$.tf_load(tf_fixture_path("panic-network.theory.yaml"))
+  loaded <- jsonlite::fromJSON(app$.tf_hash_call(), simplifyVector = FALSE)
   written <- tempfile(fileext = ".json")
   writeBin(charToRaw(enc2utf8(app$.tf_write_text("json"))), written)
   out <- jsonlite::fromJSON(app$.tf_edit(written, c("yaml", "json")), simplifyVector = FALSE)
-  expect_identical(out$hash, loaded$hash)
+  expect_identical(jsonlite::fromJSON(app$.tf_hash_call(), simplifyVector = FALSE)$hash, loaded$hash)
   expect_setequal(names(out$texts), c("yaml", "json"))
   back <- tempfile(fileext = ".yaml")
   writeBin(charToRaw(enc2utf8(out$texts$yaml)), back)

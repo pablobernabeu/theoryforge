@@ -9,7 +9,14 @@
 // py-runtime.js, because the "latest" address serves webR's development build,
 // which can change the R under the app with nothing changed here. The two
 // engines are updated deliberately (apps/README.md, "Runtimes").
-import { WebR } from "https://webr.r-wasm.org/v0.6.1/webr.mjs";
+const WEBR_URL = "https://webr.r-wasm.org/v0.6.1/webr.mjs";
+
+// The engine is imported inside init rather than at the top of this module.
+// A module whose static import fails never runs, so the page would stay blank,
+// where a failure inside init reaches the app's panel with a Reload button.
+const loadEngine = (what, host, url) => import(url).catch((e) => {
+  throw new Error(`Could not download ${what} from ${host}. Check that your network allows it, then reload. (${(e && e.message) || e})`);
+});
 
 // R bootstrap, sourced once into the global environment so all definitions and
 // persistent state (.tf_app) survive across calls.
@@ -69,9 +76,17 @@ invisible(lapply(.tf_app_files, source))
     }))
 }
 
+# Full validation, with the problems as a list as well as the package's joined
+# message: a message may quote a value of the theory that holds "; " itself, so
+# the app counts and lists the problems from the list. as.list() keeps a single
+# problem an array in the JSON.
 .tf_validation <- function(t) {
-  tryCatch({ tf_validate(t, full = TRUE); list(ok = TRUE) },
-           error = function(e) list(ok = FALSE, message = conditionMessage(e)))
+  tryCatch({
+    p <- .tf_validation_problems(t, TRUE)
+    if (!length(p)) list(ok = TRUE) else
+      list(ok = FALSE, message = paste0("invalid theory object: ", paste(p, collapse = "; ")),
+           problems = as.list(p))
+  }, error = function(e) list(ok = FALSE, message = conditionMessage(e)))
 }
 
 # The checklist's score and gate, which the editor shows as the theory changes,
@@ -88,12 +103,19 @@ invisible(lapply(.tf_app_files, source))
 
 .tf_hash <- function(t) tryCatch(tf_content_hash(t), error = function(e) NULL)
 
+# The content hash of the loaded theory, or the message of the error that
+# stopped it. It is a call of its own, which the app makes once a load has
+# finished, so that a slow hash never holds up a load or the start.
+.tf_hash_call <- function() {
+  .tf_json(tryCatch(list(hash = tf_content_hash(.tf_app$theory)),
+                    error = function(e) list(error = conditionMessage(e))))
+}
+
 .tf_loaded <- function(t) {
   .tf_app$theory <- t
   out <- .tf_summary(t)
   out$validation <- .tf_validation(t)
   out$check <- .tf_score(t)
-  out$hash <- .tf_hash(t)
   out
 }
 
@@ -330,6 +352,9 @@ const RT = {
   hasCorpus() { return this.corpora.length > 0; },
 
   async init(onProgress) {
+    // The engine downloads while the manifest and the package files are fetched.
+    const engine = loadEngine("the R engine (webR)", "webr.r-wasm.org", WEBR_URL);
+    engine.catch(() => {});   // a failure is reported where it is awaited
     onProgress("Fetching package manifest…");
     const manifest = await window.TF.util.fetchJson("vendor/manifest.json");
 
@@ -344,12 +369,24 @@ const RT = {
     fetched.catch(() => {});   // a failure is reported where it is awaited
 
     onProgress("Downloading the R runtime (webR)… this can take ~20s the first time.");
+    const { WebR } = await engine;
     const webR = new WebR();
     this._webR = webR;
     await webR.init();
 
     onProgress("Installing R dependencies (jsonlite, yaml)…");
     await webR.installPackages(["jsonlite", "yaml"]);
+    // installPackages() only warns when the repository cannot be reached, and
+    // the first error would then name a package R cannot find, so what was
+    // installed is checked here.
+    const missing = [];
+    for (const p of ["jsonlite", "yaml"]) {
+      if (!await webR.evalRBoolean(`requireNamespace("${p}", quietly = TRUE)`)) missing.push(p);
+    }
+    if (missing.length) {
+      throw new Error("Could not install the R package" + (missing.length > 1 ? "s " : " ") + missing.join(" and ") +
+        " from repo.r-wasm.org. Check the connection and reload.");
+    }
     // repo.r-wasm.org serves its current builds of the two, which are not
     // pinned, so the console records the versions this session installed.
     try {
@@ -451,11 +488,14 @@ const RT = {
   // The code that makes the same theory with the installed package.
   importCode(opts) {
     const args = ["id", "title", "relation"].filter((k) => opts[k]).map((k) => `, ${k} = ${JSON.stringify(String(opts[k]))}`).join("");
-    return `library(theoryforge)\nmodel <- paste(readLines("model.dag", encoding = "UTF-8"), collapse = "\\n")   # the DAGitty model code\ntheory <- tf_read_dagitty(model${args})\ntf_write(theory, ${JSON.stringify((opts.id || "dagitty-import") + ".theory.yaml")})`;
+    return `library(theoryforge)\nmodel <- paste(readLines("model.dag", encoding = "UTF-8"), collapse = "\\n")   # the DAGitty model code\ntheory <- tf_read_dagitty(model${args})\ntf_write(theory, ${JSON.stringify(opts.file || (opts.id || "dagitty-import") + ".theory.yaml")})`;
   },
 
   // The name the code panel reads the theory from, when the app renames it.
   renameTheory(filename) { this._theoryFile = filename; },
+
+  // The content hash of the loaded theory, as { hash } or { error }.
+  async contentHash() { return JSON.parse(await this._webR.evalRString(".tf_hash_call()")); },
 
   // The loaded theory as the package's writer writes it ("yaml" or "json").
   async writeText(format) {

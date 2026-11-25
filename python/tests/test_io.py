@@ -214,6 +214,41 @@ test_outcomes:
 """
 
 
+def _aliased(repeats: int, tail: int) -> str:
+    """A theory whose aliases repeat a 1000-item sequence ``repeats`` times.
+
+    The document holds 1008 + 1001 * repeats + tail values once its aliases are
+    expanded: the mapping, its four header scalars, the three keyed sequences,
+    1000 scalars in the first, its repeats in the second and ``tail`` scalars
+    in the third.
+    """
+    return ("schema_version: '1.1'\nid: b\ntitle: B\nmaturity: draft\n"
+            "a: &a [" + ", ".join(["s"] * 1000) + "]\n"
+            "b: [" + ", ".join(["*a"] * repeats) + "]\n"
+            "c: [" + ", ".join(["s"] * tail) + "]\n")
+
+
+def test_aliases_that_expand_past_the_limit_refuse_the_file(tmp_path):
+    # 1008 + 1001 * 997 + 995 is the limit itself, and one more value passes
+    # it. The R twin counts the same values and gives the same message.
+    assert tf.read(_file(tmp_path, "at.theory.yaml", _aliased(997, 995))).data["id"] == "b"
+    path = _file(tmp_path, "over.theory.yaml", _aliased(997, 996))
+    with pytest.raises(ValueError) as exc:
+        tf.read(path)
+    assert str(exc.value) == (
+        f"({path}) the document holds more than 1000000 values once its aliases are expanded")
+    # A file of about a kilobyte that stands for ten billion values is refused
+    # at once, as a theory and as a corpus, and merge keys still read.
+    bomb = "x0: &a0 [" + ", ".join(["ha"] * 10) + "]\n" + "".join(
+        f"x{i}: &a{i} [" + ", ".join([f"*a{i - 1}"] * 10) + "]\n" for i in range(1, 10))
+    with pytest.raises(ValueError, match="once its aliases are expanded"):
+        tf.read(_file(tmp_path, "bomb.theory.yaml", bomb))
+    with pytest.raises(ValueError, match="once its aliases are expanded"):
+        tf.read_corpus(_file(tmp_path, "bomb.corpus.yaml", bomb))
+    t = tf.read(_file(tmp_path, "merge.theory.yaml", MERGE_THEORY))
+    assert [c["id"] for c in t.data["constructs"]] == ["c1", "c2"]
+
+
 def test_an_unquoted_date_stays_a_string_and_writes_to_json(tmp_path):
     t = tf.read(_file(tmp_path, "date.theory.yaml", DATE_THEORY))
     outcome = t.data["test_outcomes"][0]

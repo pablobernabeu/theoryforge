@@ -59,3 +59,15 @@ test("every golden preregistration and dossier renders with the allowed tags and
     assert.equal((html.match(/<h\d>/g) || []).length, headings, f);
   }
 });
+
+test("an address in quotes or angle brackets links to itself and leaves the quote or bracket as text", () => {
+  const html = toHtml('See "https://example.org/x" and <https://osf.io/xyz>, (\'https://osf.io/abc\') and https://a.org/?a=1&b=2.');
+  assert.match(html, /&quot;<a href="https:\/\/example\.org\/x" target="_blank" rel="noopener noreferrer">https:\/\/example\.org\/x<\/a>&quot;/);
+  assert.match(html, /&lt;<a href="https:\/\/osf\.io\/xyz" target="_blank" rel="noopener noreferrer">https:\/\/osf\.io\/xyz<\/a>&gt;,/);
+  assert.match(html, /&#39;<a href="https:\/\/osf\.io\/abc"[^>]*>https:\/\/osf\.io\/abc<\/a>&#39;\)/);
+  assert.match(html, /href="https:\/\/a\.org\/\?a=1&amp;b=2"/);
+  assert.doesNotMatch(html, /&quot"|&gt"|&#39"|<\/a>;/);
+  // An apostrophe inside an address stays in it, and a bare scheme is no link.
+  assert.match(toHtml("https://en.wikipedia.org/wiki/Hick's_law."), /href="https:\/\/en\.wikipedia\.org\/wiki\/Hick&#39;s_law"/);
+  assert.doesNotMatch(toHtml("see https://."), /<a /);
+});

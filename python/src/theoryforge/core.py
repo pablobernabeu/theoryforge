@@ -455,6 +455,19 @@ class Theory:
                 found, joined by ``"; "``, in a fixed order. The R package's
                 ``tf_validate()`` gives the same message.
         """
+        errors = self._problems(full=full)
+        if errors:
+            raise ValueError("invalid theory object: " + "; ".join(errors))
+        return True
+
+    def _problems(self, *, full: bool = False) -> list[str]:
+        """The problems ``validate`` reports, one message each, in its order.
+
+        ``validate`` joins them with ``"; "``. A message may quote a value of
+        the theory, which can hold ``"; "`` itself, so the apps read this list
+        rather than split the joined text. The R twin's
+        ``.tf_validation_problems()`` returns the same messages.
+        """
         errors: list[str] = []
         d = self.data
         for req in ("schema_version", "id", "title", "maturity"):
@@ -501,10 +514,7 @@ class Theory:
 
         if full:
             self._full_errors(errors)
-
-        if errors:
-            raise ValueError("invalid theory object: " + "; ".join(errors))
-        return True
+        return errors
 
     def _full_errors(self, errors: list[str]) -> None:
         """Append the problems only ``validate(full=True)`` looks for.
@@ -1229,7 +1239,10 @@ def read(path) -> Theory:
     YAML allows it: as white space after a value, before a comment and in a
     flow collection, and as text inside an unquoted value. A merge key lets the
     mapping's own keys win. A repeated key anywhere raises
-    ``ValueError("(<path>) Duplicate map key: '<key>'")``. A string or key that
+    ``ValueError("(<path>) Duplicate map key: '<key>'")``. A YAML document that
+    holds more than 1000000 values once its aliases (``*a``) are expanded raises
+    ``ValueError("(<path>) the document holds more than 1000000 values once its
+    aliases are expanded")`` before anything walks it. A string or key that
     holds U+0000 or a lone surrogate, which R cannot hold, raises
     ``ValueError("(<path>) a string holds U+0000, which theoryforge cannot read")``,
     or the same message naming ``a lone surrogate``. JSON has no comments, and

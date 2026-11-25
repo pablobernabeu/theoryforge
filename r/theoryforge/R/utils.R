@@ -350,7 +350,37 @@ NULL
     invokeRestart("muffleWarning")
   })
   if (warned) data <- parse(c(.tf_yaml_handlers, .tf_yaml_number_handlers))
+  .tf_check_size(data, path)
   data
+}
+
+# A YAML alias repeats the content its anchor names without repeating the
+# text, so a file of a few hundred bytes can stand for a document of billions
+# of values, which every function that walks the theory, the content hash
+# first, would then walk. The YAML reader refuses a document that holds more
+# values than this once its aliases are expanded (API_SPEC.md section 3).
+.tf_MAX_VALUES <- 1000000L
+
+# Stop when `data` holds more than .tf_MAX_VALUES values. Each mapping,
+# sequence and scalar counts once for every place it appears, so a node an
+# alias repeats counts each time, and a mapping's keys do not count. The walk
+# goes one level at a time and stops before a level would pass the limit, so
+# its cost is bounded by the limit and not by the size the aliases stand for.
+# Python's _load._check_size() counts the same way.
+.tf_check_size <- function(data, path) {
+  n <- 0
+  level <- list(data)
+  while (length(level) > 0L) {
+    n <- n + length(level)
+    level <- level[vapply(level, is.list, logical(1L))]
+    if (n + sum(lengths(level)) > .tf_MAX_VALUES) {
+      stop(sprintf("(%s) the document holds more than %d values once its aliases are expanded",
+                   path, .tf_MAX_VALUES), call. = FALSE)
+    }
+    level <- unlist(level, recursive = FALSE, use.names = FALSE)
+    if (is.null(level)) level <- list()
+  }
+  invisible(NULL)
 }
 
 # Parse a JSON file. jsonlite's parser accepts comments, which JSON does not
@@ -484,11 +514,19 @@ NULL
     }
     return(invisible())
   }
-  flat <- unlist(data)
-  if (any(grepl(intToUtf8(mark), c(as.character(flat), names(flat)), fixed = TRUE, useBytes = TRUE))) {
-    .tf_refuse_unreadable(path, "U+0000")
-  }
+  .tf_check_size(data, path)
+  if (.tf_holds_text(data, intToUtf8(mark))) .tf_refuse_unreadable(path, "U+0000")
   invisible()
+}
+
+# Whether a string or a name anywhere in `x` holds `s`. A key whose value is
+# NULL or an empty container is searched too, which unlist() would drop.
+.tf_holds_text <- function(x, s) {
+  if (is.character(x)) return(any(grepl(s, x, fixed = TRUE, useBytes = TRUE)))
+  if (!is.list(x)) return(FALSE)
+  if (any(grepl(s, names(x), fixed = TRUE, useBytes = TRUE))) return(TRUE)
+  for (v in x) if (.tf_holds_text(v, s)) return(TRUE)
+  FALSE
 }
 
 # The first repeated name in a parsed document, or NULL. Children are checked

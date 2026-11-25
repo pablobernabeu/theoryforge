@@ -64,6 +64,41 @@ def test_load_keeps_an_invalid_theory_and_names_its_problems(app, tmp_path, text
     assert summary["validation"]["message"].startswith("invalid theory object: ")
     assert problem in summary["validation"]["message"]
     assert json.loads(app.run("validate", "{}")) == summary["validation"]
+    # The problems also come as a list, which joined gives the message.
+    problems = summary["validation"]["problems"]
+    assert summary["validation"]["message"] == "invalid theory object: " + "; ".join(problems)
+
+
+def test_a_problem_that_quotes_a_semicolon_stays_one_problem(app, tmp_path):
+    # A message quotes the value it concerns, and a value can hold "; ", so
+    # the app reads the list rather than split the joined message. The R
+    # glue gives the same list.
+    text = ("schema_version: '1.0'\nid: x\ntitle: X\nmaturity: draft\n"
+            "constructs:\n  - {id: a, label: A, definition: D}\n"
+            "propositions:\n  - {id: p1, from: a, to: 'avoidance; escape', relation: increases}\n")
+    v = json.loads(app.load(_write(tmp_path, "semi.theory.yaml", text)))["validation"]
+    assert v["problems"] == ["proposition[0] to 'avoidance; escape' is not a known construct"]
+    assert json.loads(app.load(_write(tmp_path, "ok.theory.yaml", text.replace("avoidance; escape", "a"))))[
+        "validation"] == {"ok": True}
+
+
+def test_problems_list_what_validate_joins_on_every_edge_case(fixtures_dir):
+    # Theory._problems() is the list validate() joins, for every edge case
+    # that reads, valid or not.
+    paths = sorted((fixtures_dir / "edge").glob("*.theory.*"))
+    if not paths:
+        pytest.skip("fixtures/edge is not reachable from this test run")
+    for path in paths:
+        try:
+            t = tf.read(path)
+        except ValueError:
+            continue
+        problems = t._problems(full=True)
+        try:
+            t.validate(full=True)
+            assert problems == [], path.name
+        except ValueError as err:
+            assert str(err) == "invalid theory object: " + "; ".join(problems), path.name
 
 
 def test_a_file_that_cannot_be_read_leaves_the_previous_theory(app, panic_path, tmp_path):
@@ -159,15 +194,18 @@ def test_the_summary_lists_constructs_rivals_score_and_hash(app, modality_path):
     report = t.check()
     assert s["check"]["score"] == report["aggregate_score"]
     assert s["check"]["gate"] == report["gate"]
-    assert s["hash"] == t.content_hash()
+    # The hash is a call of its own, so a slow hash cannot hold up a load.
+    assert "hash" not in s
+    assert json.loads(app.content_hash()) == {"hash": t.content_hash()}
     assert s["counts"]["phenomena"] == 1
 
 
 def test_the_editor_reads_back_what_the_writer_writes(app, panic_path, tmp_path):
-    loaded = json.loads(app.load(str(panic_path)))
+    app.load(str(panic_path))
+    loaded = json.loads(app.content_hash())
     written = _write(tmp_path, "edit.json", app.write_text("json"))
     out = json.loads(app.edit(written, json.dumps(["yaml", "json"])))
-    assert out["hash"] == loaded["hash"]
+    assert json.loads(app.content_hash())["hash"] == loaded["hash"]
     assert set(out["texts"]) == {"yaml", "json"}
     # The YAML text is the package's writer's, so it reads back as the theory.
     back = tf.read(_write(tmp_path, "back.theory.yaml", out["texts"]["yaml"]))
