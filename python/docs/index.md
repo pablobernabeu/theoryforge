@@ -53,8 +53,9 @@ reports whether either blocking item failed: at least one prediction is typed po
 interval or directional, and every prediction cites declared propositions whose graph
 entails any claim it states, with no stated phenomenon contradicted. The labels are the
 author's and are not checked against the statements. A passing gate does not show that the
-theory is true or well reasoned. A claim that the graph leaves unread because it has a
-feedback loop is not checked, and the derivation chain then warns without blocking the gate.
+theory is true or well reasoned. A claim that names a construct on a feedback loop or
+downstream of one is left unread by default and not checked, and the derivation chain then
+warns without blocking the gate.
 [Methodological foundations](methodology.md) gives the rationale and the computation behind
 each item.
 

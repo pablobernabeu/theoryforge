@@ -47,9 +47,10 @@ test of conditional independence separates them, and \code{NA} when that
 rule does not apply.
 
 A graph with feedback loops is not compared under \code{cycles = "refuse"}
-(\code{evaluated} is \code{FALSE}). Under \code{cycles = "sigma"}, it is
-read as in \code{\link[=tf_entailments]{tf_entailments()}}, and its independencies are compared only
-when the two graphs name the same constructs.
+(\code{evaluated} is \code{FALSE}), though the claims are read as
+\code{\link[=tf_entailments]{tf_entailments()}} reads them. Under \code{cycles = "sigma"}, it is read as
+in \code{\link[=tf_entailments]{tf_entailments()}}, and its independencies are compared only when the two
+graphs name the same constructs.
 }
 \examples{
 t <- tf_read(tf_example_path("modality-switching.theory.yaml"))

@@ -46,12 +46,12 @@ NULL
 # in file order, NULL when the prediction states no claim and list(verdict,
 # basis) otherwise (API_SPEC.md section 31). `contradicted` says whether the
 # graph contradicts the claim of some phenomenon, and `unread` holds the ids of
-# the phenomena, in file order, whose claims the graph leaves unread because it
-# has a feedback loop and `cycles` is "refuse". A graph that cannot be built
-# (section 27, refusals 1 and 2) reads no claim, so each stated claim of a
-# prediction gets the verdict not_evaluated with the basis graph_refused, and
-# no phenomenon counts as contradicted or unread. The Python twin's
-# _claim_readings() reads them alike.
+# the phenomena, in file order, whose claims the graph leaves unread because
+# `cycles` is "refuse" and they name a construct behind a feedback loop. A graph
+# that cannot be built (section 27, refusals 1 and 2) reads no claim, so each
+# stated claim of a prediction gets the verdict not_evaluated with the basis
+# graph_refused, and no phenomenon counts as contradicted or unread. The Python
+# twin's _claim_readings() reads them alike.
 .tf_claim_readings <- function(T, cycles) {
   g <- tryCatch(
     .tf_prepare_graph(.tf_causal_graph(T, "check"), cycles, .tf_list(T, "propositions")),
@@ -92,14 +92,14 @@ NULL
 # open, cannot read as written or cannot place, since it names a construct no
 # proposition relates, is a failure, as is a claim of a theory whose graph
 # cannot be built and an unresolved reference. A claim the graph leaves unread
-# because it has a feedback loop and `cycles` is "refuse" is not checked: its
-# id goes to `not_checked` and, failing anything else, the item warns. Nothing
-# was found wrong with such a claim, so a prediction not checked whose
-# references resolve counts as derived in the score, and stating a claim the
-# loop leaves unread costs nothing. A phenomenon whose claim the graph
-# contradicts fails the item, and one whose claim it leaves unread for the loop
-# goes to `phenomena_not_checked` and, failing anything else, makes the item
-# warn. Neither changes the score, the share of predictions derived.
+# because `cycles` is "refuse" and it names a construct behind a feedback loop
+# is not checked: its id goes to `not_checked` and, failing anything else, the
+# item warns. Nothing was found wrong with such a claim, so a prediction not
+# checked whose references resolve counts as derived in the score, and stating
+# a claim the loop leaves unread costs nothing. A phenomenon whose claim the
+# graph contradicts fails the item, and one whose claim it leaves unread for
+# the loop goes to `phenomena_not_checked` and, failing anything else, makes
+# the item warn. Neither changes the score, the share of predictions derived.
 .tf_derivation_chain <- function(T, preds, prop_ids, cycles) {
   if (length(preds) == 0L) {
     return(list(status = "n/a", score = NULL, not_checked = character(0),
@@ -137,7 +137,8 @@ NULL
 # not_checked, phenomena_not_checked), where `items` is a named list of
 # list(status, score) per item id and the other two hold the ids of the
 # predictions and of the phenomena whose claims the derivation chain left
-# unread, since the causal graph has a feedback loop and `cycles` is "refuse".
+# unread, since `cycles` is "refuse" and they name a construct behind a feedback
+# loop.
 # An item with nothing to assess is list(status = "n/a", score = NULL).
 .tf_check_items <- function(T, thr, cycles) {
   preds <- .tf_list(T, "predictions")
@@ -392,11 +393,15 @@ NULL
 #' declared, or none, or states a claim that the graph contradicts, leaves
 #' open, cannot read as written or cannot place because it names a construct
 #' no proposition relates, and when the graph contradicts the claim of a
-#' phenomenon. A claim of a prediction or a phenomenon that the graph leaves
-#' unread because it has a feedback loop is not checked and, failing anything
-#' else, makes the item warn, which does not block the gate. A prediction whose
-#' claim is not checked counts as derived when the propositions it cites are
-#' declared, since nothing was found wrong with it.
+#' phenomenon. Under the default, a claim of a prediction or a phenomenon that
+#' names a construct on a feedback loop or downstream of one is left unread. It
+#' is not checked and, failing anything else, makes the item warn, which does
+#' not block the gate. A prediction whose claim is not checked counts as
+#' derived when the propositions it cites are declared, since nothing was found
+#' wrong with it. Such a claim therefore gets full credit and leaves the gate
+#' open whatever the graph would say of it read by sigma-separation, so a file
+#' whose claims a loop reaches is checked in full only with
+#' \code{cycles = "sigma"}. A loop that reaches no claim changes nothing.
 #'
 #' Three values are refused before anything is scored, since no score built
 #' on them would be defensible. One is a \code{cycles} other than
@@ -408,9 +413,10 @@ NULL
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param cycles How a causal graph with a feedback loop is read, as in
-#'   [tf_entailments()]. \code{"refuse"} (the default) leaves its claims
-#'   unread, and \code{"sigma"} reads them by sigma-separation, which assumes
-#'   that each loop settles to a unique equilibrium. The derivation chain and
+#'   [tf_entailments()]. \code{"refuse"} (the default) leaves unread the
+#'   claims that name a construct on a loop or downstream of one, and
+#'   \code{"sigma"} reads every claim by sigma-separation, which assumes that
+#'   each loop settles to a unique equilibrium. The derivation chain and
 #'   diagnosticity read the claims this way.
 #' @return A named list with elements \code{theory_id}, \code{schema_version}
 #'   (the theory's), \code{checklist_version} (the checklist's, which is what
@@ -527,8 +533,9 @@ tf_check <- function(theory, cycles = "refuse") {
   "The gate reports whether either blocking item failed: at least one prediction is",
   "typed point, interval or directional, and every prediction cites declared",
   "propositions whose graph entails any claim it states, with no stated phenomenon",
-  "contradicted. The labels are the author's and are not checked against the",
-  "statements.")
+  "contradicted. Under the default reading of feedback loops, a claim that names a",
+  "construct on a loop or downstream of one is not read and blocks nothing. The",
+  "labels are the author's and are not checked against the statements.")
 
 #' Render the checklist report as a string
 #'

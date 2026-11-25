@@ -510,6 +510,17 @@ def _loop_theory(sign="positive"):
     )
 
 
+def _behind_loop_theory(sign="positive"):
+    """The theory of ``_loop_theory`` with the loop moved onto the claim's
+    outcome: y and w raise each other, so the claim on y is behind the loop."""
+    t = _loop_theory(sign)
+    t.data["propositions"][2:] = [
+        {"id": "q1", "from": "y", "to": "w", "relation": "increases", "mechanism": "It does."},
+        {"id": "q2", "from": "w", "to": "y", "relation": "increases", "mechanism": "It does."},
+    ]
+    return t
+
+
 def _derivation(t, cycles="refuse"):
     r = t.check(cycles=cycles)
     it = _items(r)["derivation_chain"]
@@ -527,19 +538,35 @@ def test_check_refuses_an_unknown_cycles_option():
         bad_outcome.check(cycles="x")
 
 
-def test_an_unrelated_feedback_loop_leaves_the_claim_not_checked():
-    # The loop u <-> w has no path to the claim, yet under cycles = "refuse"
-    # every claim of the graph is left unread. The item warns and the gate
-    # stays open. Nothing was found wrong with the claim and the references
-    # resolve, so the prediction counts as derived, as it did under 3.0.
+def test_an_unrelated_feedback_loop_leaves_the_claim_read():
+    # The loop u <-> w reaches neither x nor y, so cycles = "refuse" reads the
+    # claim as "sigma" does: the graph contradicts it, the item fails and the
+    # gate is blocked, as it is without the loop
+    # (fixtures/edge/derivation-unrelated-loop).
     t = _loop_theory()
+    for cycles in ("refuse", "sigma"):
+        assert _derivation(t, cycles) == ("fail", 0.0, [], "blocked")
+    acyclic = copy.deepcopy(t)
+    del acyclic.data["propositions"][3]
+    assert _derivation(acyclic) == ("fail", 0.0, [], "blocked")
+    assert t.check()["aggregate_score"] == acyclic.check()["aggregate_score"]
+    # A claim the graph entails passes under both readings.
+    for cycles in ("refuse", "sigma"):
+        assert _derivation(_loop_theory("negative"), cycles) == ("pass", 1.0, [], "pass")
+
+
+def test_a_claim_behind_a_feedback_loop_is_not_checked_under_refuse():
+    # The loop y <-> w runs through the claim's outcome. Under cycles =
+    # "refuse" the claim is left unread: the item warns and the gate stays
+    # open. Nothing was found wrong with the claim and the references resolve,
+    # so the prediction counts as derived, whatever sigma-separation makes of
+    # it: the claim is contradicted there, and the item fails.
+    t = _behind_loop_theory()
     assert _derivation(t) == ("warn", 1.0, ["h1"], "pass")
     assert t.check()["n_blockers_failed"] == 0
-    # Read by sigma-separation, the claim is contradicted and the item fails.
     assert _derivation(t, "sigma") == ("fail", 0.0, [], "blocked")
-    # A claim the sigma reading entails passes.
-    assert _derivation(_loop_theory("negative"), "sigma") == ("pass", 1.0, [], "pass")
-    assert _derivation(_loop_theory("negative")) == ("warn", 1.0, ["h1"], "pass")
+    assert _derivation(_behind_loop_theory("negative"), "sigma") == ("pass", 1.0, [], "pass")
+    assert _derivation(_behind_loop_theory("negative")) == ("warn", 1.0, ["h1"], "pass")
 
 
 def test_only_the_derivation_chain_record_lists_unchecked_claims(panic_path):
@@ -552,7 +579,7 @@ def test_only_the_derivation_chain_record_lists_unchecked_claims(panic_path):
     assert (dc["not_checked"], dc["phenomena_not_checked"]) == (["pred_indep"], [])
     # A not-checked prediction whose references do not resolve still fails
     # the item, is still listed and is not derived.
-    t = _loop_theory()
+    t = _behind_loop_theory()
     t.data["predictions"][0]["derives_from"] = ["p9"]
     assert _derivation(t) == ("fail", 0.0, ["h1"], "blocked")
     # With no prediction the item is n/a and lists nothing, even with a
@@ -704,10 +731,17 @@ def test_a_phenomenon_the_graph_contradicts_fails_the_derivation_chain():
 
 
 def test_diagnosticity_reads_the_claims_with_the_same_cycles():
-    # Under "refuse" the theory's graph leaves the claim unread, so the
-    # declared rival stands. Under "sigma" both graphs entail the claim, which
-    # shows the declaration false.
-    t = _loop_theory("negative")
+    # Under "refuse" the theory's graph leaves the claim, which is behind a
+    # loop, unread, so the declared rival stands. Under "sigma" both graphs
+    # entail the claim, which shows the declaration false. A loop that does not
+    # reach the claim leaves it read under both, and the declaration false.
+    unrelated = _loop_theory("negative")
+    unrelated.data["alternatives"] = [{"id": "r", "label": "A rival",
+                                       "propositions": copy.deepcopy(unrelated.data["propositions"])}]
+    unrelated.data["predictions"][0]["diagnostic_vs"] = ["r"]
+    for cycles in ("refuse", "sigma"):
+        assert _items(unrelated.check(cycles=cycles))["diagnosticity"]["score"] == 0.0
+    t = _behind_loop_theory("negative")
     t.data["alternatives"] = [{"id": "r", "label": "A rival",
                                "propositions": copy.deepcopy(t.data["propositions"])}]
     t.data["predictions"][0]["diagnostic_vs"] = ["r"]
@@ -775,8 +809,10 @@ def test_the_html_report_states_what_the_checklist_score_describes(panic_path):
             "  <p>The gate reports whether either blocking item failed: at least one prediction "
             "is typed point, interval or directional, and every prediction cites declared "
             "propositions whose graph entails any claim it states, with no stated phenomenon "
-            "contradicted. The labels are the author's and are not checked against the "
-            "statements.</p>\n  <table>") in html
+            "contradicted. Under the default reading of feedback loops, a claim that names a "
+            "construct on a loop or downstream of one is not read and blocks nothing. The "
+            "labels are the author's and are not checked against the statements.</p>\n"
+            "  <table>") in html
     assert ("<tr><th>item</th><th>criterion</th><th>status</th><th>score</th>"
             "<th>source of the criterion</th></tr>") in html
     assert ("<tr><td>derivation_chain</td><td>Every prediction cites declared propositions, the "

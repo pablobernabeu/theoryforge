@@ -672,14 +672,14 @@
       "The score does not show that the theory is true or well reasoned.",
     ];
   }
-  const GATE_TEXT = "The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted. The labels are the author's and are not checked against the statements.";
+  const GATE_TEXT = "The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted. Under the default reading of feedback loops, a claim that names a construct on a loop or downstream of one is not read and blocks nothing. The labels are the author's and are not checked against the statements.";
 
   // General "how to read" guidance shown at the top of each operation's result.
   // It complements the sidebar help (what the operation does) by explaining how
   // to read the output that follows. The checklist's guide follows its scope
   // statement (aboutText).
   const RESULT_GUIDE = {
-    check: "Read the item statuses first, in the grid and the table below: each item passes, warns or fails on its own criterion. Some items check more than whether a field is filled in. The derivation chain reads each stated claim against the causal graph, diagnosticity sets a claim against a rival's propositions where both are stated, precision asks for two finite bounds and non-redundancy compares the words of the construct definitions. " + GATE_TEXT + " A claim that a feedback loop leaves unread under cycles refuse is not checked, and the derivation chain then warns without blocking. A prediction whose claim is not checked still counts as derived in the score when the propositions it cites are declared. At draft maturity, the gate is advisory: the checklist reports but never blocks. An item with nothing to assess, such as redundancy in a theory with one construct, is marked n/a and left out of the score, which is the weighted mean of the applicable items. The coverage is their share of the checklist's weight. The range beside the score gives the lowest and the highest score with equal weights or with one weight halved or doubled in turn. It is not an interval, and how the file was coded and the rubric's constants lie outside it.",
+    check: "Read the item statuses first, in the grid and the table below: each item passes, warns or fails on its own criterion. Some items check more than whether a field is filled in. The derivation chain reads each stated claim against the causal graph, diagnosticity sets a claim against a rival's propositions where both are stated, precision asks for two finite bounds and non-redundancy compares the words of the construct definitions. " + GATE_TEXT + " A claim that is not read is not checked, and the derivation chain then warns without blocking. A prediction whose claim is not checked still counts as derived in the score when the propositions it cites are declared, whatever sigma-separation would make of the claim, so set cycles to sigma to check such a file in full. A loop that reaches no claim changes nothing. At draft maturity, the gate is advisory: the checklist reports but never blocks. An item with nothing to assess, such as redundancy in a theory with one construct, is marked n/a and left out of the score, which is the weighted mean of the applicable items. The coverage is their share of the checklist's weight. The range beside the score gives the lowest and the highest score with equal weights or with one weight halved or doubled in turn. It is not an interval, and how the file was coded and the rubric's constants lie outside it.",
     validate: "Validation reports structural and referential problems: missing required fields, values of the wrong type or outside the allowed set, duplicate identifiers and cross-references that point to nothing. Validate first: other operations run on an invalid file, but their results may not mean what they say.",
     diagram: "The diagram is rendered from the package's intermediate representation, shown below the figure. Export the figure as SVG or PNG, or copy the representation to render it elsewhere.",
     severity: "The rubric grades each prediction by the form of its claim alone, so it can be read before any data exist. The risk score reflects how much the form of the claim rules out, from an existence claim up to a point. The rubric value lowers it for a directional claim and raises it for predictions that name a registered rival they are declared to discriminate from (the declaration is not checked). A point or interval label without two finite bounds is rated as a directional claim. Longer bars mark riskier claim forms. The values are conventions of the package. How severely a claim is tested depends on the design and the data, which the rubric does not read and post-data severity does.",
@@ -800,7 +800,7 @@
         if (unread.predictions.length) who.push(plural(unread.predictions.length, "prediction") + " (" + unread.predictions.join(", ") + ")");
         if (unread.phenomena.length) who.push(plural(unread.phenomena.length, "phenomenon", "phenomena") + " (" + unread.phenomena.join(", ") + ")");
         txt += " " + listAnd(who) + (nu === 1 ? " was" : " were") +
-          " not checked, since the causal graph has a feedback loop" + (checkReading(raw, params) !== "sigma" ? ". Set cycles to sigma to read the graph on the assumption that each loop settles to a unique equilibrium." : ".");
+          " not checked, since " + (nu === 1 ? "it names" : "each names") + " a construct on a feedback loop or downstream of one" + (checkReading(raw, params) !== "sigma" ? ". Set cycles to sigma to read the graph on the assumption that each loop settles to a unique equilibrium." : ".");
       }
       // Items with nothing to assess are left out of the score, which then
       // covers less than the whole checklist.
@@ -921,12 +921,12 @@
         (parts.length ? "The causal graph " + listAnd(parts) + "." : "The causal graph gives none of them a verdict.");
       // The reasons are the package's own, as the preregistration words them.
       const why = { malformed_claim: "the claim is incomplete", not_in_graph: "it names a construct that no proposition relates to another",
-        feedback_loop: "the causal graph has a feedback loop", graph_refused: "the causal graph cannot be built" };
+        feedback_loop: "a construct it names is on a feedback loop or downstream of one", graph_refused: "the causal graph cannot be built" };
       const unread = claims.filter((x) => x.verdict === "not_evaluated");
       const bases = [...new Set(unread.map((x) => x.basis))];
       if (unread.length) {
         txt += " " + (unread.length === 1 ? "One claim was" : unread.length + " claims were") + " not evaluated" +
-          (bases.length === 1 && why[bases[0]] ? ", since " + (unread.length === 1 ? why[bases[0]] : why[bases[0]].replace(/^it names/, "each names").replace(/^the claim is/, "each claim is")) : "") + ".";
+          (bases.length === 1 && why[bases[0]] ? ", since " + (unread.length === 1 ? why[bases[0]] : why[bases[0]].replace(/^it names/, "each names").replace(/^a construct it names/, "a construct each names").replace(/^the claim is/, "each claim is")) : "") + ".";
         if (bases.includes("feedback_loop") && params.cycles !== "sigma") txt += " Set cycles to sigma to read a graph with feedback loops, on the assumption that each loop settles to a unique equilibrium.";
       }
       const faith = claims.filter((x) => x.faithfulness === true).length;

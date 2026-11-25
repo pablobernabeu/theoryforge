@@ -544,6 +544,16 @@ ck_loop_theory <- function(sign = "positive") {
   )
 }
 
+# The same theory with the loop moved onto the claim's outcome: y and w raise
+# each other, so the claim on y is behind the loop.
+ck_behind_loop_theory <- function(sign = "positive") {
+  t <- ck_loop_theory(sign)
+  t$propositions[3:4] <- list(
+    list(id = "q1", from = "y", to = "w", relation = "increases", mechanism = "It does."),
+    list(id = "q2", from = "w", to = "y", relation = "increases", mechanism = "It does."))
+  t
+}
+
 ck_derivation <- function(theory, cycles = "refuse") {
   rep <- tf_check(theory, cycles = cycles)
   it <- rep$items[[12L]]
@@ -561,20 +571,40 @@ test_that("check refuses an unknown cycles option", {
   expect_error(tf_check(bad_outcome, cycles = "x"), "^check requires cycles")
 })
 
-test_that("an unrelated feedback loop leaves the claim not checked", {
-  # The loop u <-> w has no path to the claim, yet under cycles = "refuse"
-  # every claim of the graph is left unread. The item warns and the gate
-  # stays open. Nothing was found wrong with the claim and the references
-  # resolve, so the prediction counts as derived, as it did under 3.0.
+test_that("an unrelated feedback loop leaves the claim read", {
+  # The loop u <-> w reaches neither x nor y, so cycles = "refuse" reads the
+  # claim as "sigma" does: the graph contradicts it, the item fails and the
+  # gate is blocked, as it is without the loop
+  # (fixtures/edge/derivation-unrelated-loop).
   t <- ck_loop_theory()
+  for (cycles in c("refuse", "sigma")) {
+    expect_identical(ck_derivation(t, cycles), list("fail", 0.0, NULL, "blocked"))
+  }
+  acyclic <- t
+  acyclic$propositions[[4L]] <- NULL
+  expect_identical(ck_derivation(acyclic), list("fail", 0.0, NULL, "blocked"))
+  expect_identical(tf_check(t)$aggregate_score, tf_check(acyclic)$aggregate_score)
+  # A claim the graph entails passes under both readings.
+  for (cycles in c("refuse", "sigma")) {
+    expect_identical(ck_derivation(ck_loop_theory("negative"), cycles),
+                     list("pass", 1.0, NULL, "pass"))
+  }
+})
+
+test_that("a claim behind a feedback loop is not checked under refuse", {
+  # The loop y <-> w runs through the claim's outcome. Under cycles =
+  # "refuse" the claim is left unread: the item warns and the gate stays
+  # open. Nothing was found wrong with the claim and the references resolve,
+  # so the prediction counts as derived, whatever sigma-separation makes of
+  # it: the claim is contradicted there, and the item fails.
+  t <- ck_behind_loop_theory()
   expect_identical(ck_derivation(t), list("warn", 1.0, "h1", "pass"))
   expect_identical(tf_check(t)$n_blockers_failed, 0L)
-  # Read by sigma-separation, the claim is contradicted and the item fails.
   expect_identical(ck_derivation(t, "sigma"), list("fail", 0.0, NULL, "blocked"))
-  # A claim the sigma reading entails passes.
-  expect_identical(ck_derivation(ck_loop_theory("negative"), "sigma"),
+  expect_identical(ck_derivation(ck_behind_loop_theory("negative"), "sigma"),
                    list("pass", 1.0, NULL, "pass"))
-  expect_identical(ck_derivation(ck_loop_theory("negative")), list("warn", 1.0, "h1", "pass"))
+  expect_identical(ck_derivation(ck_behind_loop_theory("negative")),
+                   list("warn", 1.0, "h1", "pass"))
 })
 
 test_that("only the derivation chain record lists unchecked claims", {
@@ -588,7 +618,7 @@ test_that("only the derivation chain record lists unchecked claims", {
   expect_identical(rep$items[[12L]]$phenomena_not_checked, list())
   # A not-checked prediction whose references do not resolve still fails the
   # item, is still listed and is not derived.
-  t <- ck_loop_theory()
+  t <- ck_behind_loop_theory()
   t$predictions[[1L]]$derives_from <- list("p9")
   expect_identical(ck_derivation(t), list("fail", 0.0, "h1", "blocked"))
   # With no prediction the item is n/a and lists nothing, even with a
@@ -747,10 +777,18 @@ test_that("a phenomenon the graph contradicts fails the derivation chain", {
 })
 
 test_that("diagnosticity reads the claims with the same cycles", {
-  # Under "refuse" the theory's graph leaves the claim unread, so the declared
-  # rival stands. Under "sigma" both graphs entail the claim, which shows the
-  # declaration false.
-  t <- ck_loop_theory("negative")
+  # Under "refuse" the theory's graph leaves the claim, which is behind a loop,
+  # unread, so the declared rival stands. Under "sigma" both graphs entail the
+  # claim, which shows the declaration false. A loop that does not reach the
+  # claim leaves it read under both, and the declaration false.
+  unrelated <- ck_loop_theory("negative")
+  unrelated$alternatives <- list(list(id = "r", label = "A rival",
+                                      propositions = unrelated$propositions))
+  unrelated$predictions[[1L]]$diagnostic_vs <- list("r")
+  for (cycles in c("refuse", "sigma")) {
+    expect_identical(tf_check(unrelated, cycles = cycles)$items[[10L]]$score, 0.0)
+  }
+  t <- ck_behind_loop_theory("negative")
   t$alternatives <- list(list(id = "r", label = "A rival", propositions = t$propositions))
   t$predictions[[1L]]$diagnostic_vs <- list("r")
   expect_identical(ck_item(t, "diagnosticity"), list(status = "pass", score = 1.0))
@@ -820,8 +858,10 @@ test_that("the HTML report states what the checklist score describes", {
              "  <p>The gate reports whether either blocking item failed: at least one prediction ",
              "is typed point, interval or directional, and every prediction cites declared ",
              "propositions whose graph entails any claim it states, with no stated phenomenon ",
-             "contradicted. The labels are the author's and are not checked against the ",
-             "statements.</p>\n  <table>"))
+             "contradicted. Under the default reading of feedback loops, a claim that names a ",
+             "construct on a loop or downstream of one is not read and blocks nothing. The ",
+             "labels are the author's and are not checked against the statements.</p>\n",
+             "  <table>"))
   has(paste0("<tr><th>item</th><th>criterion</th><th>status</th><th>score</th>",
              "<th>source of the criterion</th></tr>"))
   has(paste0("<tr><td>derivation_chain</td><td>Every prediction cites declared propositions, the ",

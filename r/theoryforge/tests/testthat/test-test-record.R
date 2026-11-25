@@ -164,8 +164,9 @@ test_that("the derivation line reads the graph as the claim lines do", {
   expect_true(grepl(paste0("   - Claim: c_arousal and c_avoidance are independent given ",
                            "c_perceived_threat; entailed by the causal graph\n"), sigma, fixed = TRUE))
   expect_true(grepl(paste0("   - Claim: c_arousal and c_avoidance are independent given ",
-                           "c_perceived_threat; not evaluated, since the causal graph has a ",
-                           "feedback loop\n"), tf_preregister(panic), fixed = TRUE))
+                           "c_perceived_threat; not evaluated, since a construct it names is on ",
+                           "a feedback loop or downstream of one\n"), tf_preregister(panic),
+                    fixed = TRUE))
   # A loop whose sigma reading contradicts the claim gives no under sigma.
   t <- tf_theory("loop", "A loop") |>
     tf_add_construct("x", "X", "The first quantity.") |>

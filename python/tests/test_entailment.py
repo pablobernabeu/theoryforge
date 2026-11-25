@@ -149,6 +149,50 @@ def test_a_claim_that_cannot_be_read_is_not_evaluated():
     assert (sigma["derived"], sigma["verdict"]) == ("positive", "entailed")
 
 
+def test_under_refuse_only_a_claim_behind_a_feedback_loop_is_left_unread():
+    # c0 -> c1 -> c2 -> c3 <-> c4 -> c5: the loop of c3 and c4 reaches c3, c4
+    # and c5. A claim naming one of them, as x, y or in given, is left unread
+    # under "refuse", and any other claim is read, with the record "sigma"
+    # gives it. The R suite asserts the same records.
+    props = [("c0", "c1", "causes"), ("c1", "c2", "increases"), ("c2", "c3", "increases"),
+             ("c3", "c4", "increases"), ("c4", "c3", "increases"), ("c4", "c5", "increases")]
+    claims = [_claim("effect", "c1", "c2", "positive"),
+              _claim("association", "c1", "c2", "positive"),
+              _claim("association", "c0", "c1", "nonzero", given=["c2"]),
+              _claim("effect", "c2", "c3", "positive"),
+              _claim("effect", "c4", "c5", "positive"),
+              _claim("association", "c0", "c2", "nonzero", given=["c5"]),
+              _claim("effect", "c5", "c1", "zero")]
+    t = _theory(props, claims=claims, k=6)
+    refuse, sigma = t.entailments()["claims"], t.entailments(cycles="sigma")["claims"]
+    assert [c["basis"] == "feedback_loop" for c in refuse] == [False] * 3 + [True] * 4
+    for r, g in zip(refuse, sigma, strict=True):
+        if r["basis"] != "feedback_loop":
+            assert r == g
+        else:
+            assert (r["verdict"], r["derived"], r["via"]) == ("not_evaluated", "", [])
+    # The trek of c1 and c2 shares the edge c0 -> c1 with the walks from c0,
+    # so the association is positive under both readings, as on a graph
+    # without the loop, though c0 causes c1 with no sign.
+    assert (refuse[1]["derived"], refuse[1]["verdict"]) == ("positive", "entailed")
+    acyclic = _theory(props[:3] + props[5:], claims=claims, k=6).entailments()["claims"]
+    assert [(c["derived"], c["verdict"]) for c in acyclic[:3]] == \
+        [(c["derived"], c["verdict"]) for c in refuse[:3]]
+    # The checklist then reads them alike.
+    chain = next(i for i in t.check()["items"] if i["id"] == "derivation_chain")
+    assert chain["not_checked"] == ["q3", "q4", "q5", "q6"]
+
+
+def test_a_claim_behind_a_loop_reads_in_words_why_it_is_not_evaluated():
+    t = _theory([("c0", "c1", "increases"), ("c1", "c0", "increases"), ("c2", "c3", "increases")],
+                claims=[_claim("effect", "c0", "c1", "positive"), _claim("effect", "c2", "c3", "positive")])
+    lines = [tf.entailment.claim_line(c) for c in t.entailments()["claims"]]
+    assert lines == [
+        "the effect of c0 on c1 is positive; not evaluated, since a construct it names is on a "
+        "feedback loop or downstream of one",
+        "the effect of c2 on c3 is positive; entailed by the causal graph through p2"]
+
+
 def test_an_empty_claim_is_no_claim():
     t = _theory([("c0", "c1", "increases")], claims=[{}, []])
     assert t.entailments()["claims"] == []

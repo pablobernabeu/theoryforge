@@ -84,10 +84,11 @@ def _claim_readings(T: dict, cycles: str) -> tuple[list[tuple[str, str] | None],
     states no claim and ``(verdict, basis)`` otherwise (API_SPEC.md section 31),
     whether the graph contradicts the claim of some phenomenon, and the ids of
     the phenomena, in file order, whose claims the graph leaves unread because
-    it has a feedback loop and ``cycles`` is ``"refuse"``. A graph that cannot
-    be built (section 27, refusals 1 and 2) reads no claim, so each stated
-    claim of a prediction gets the verdict ``not_evaluated`` with the basis
-    ``graph_refused``, and no phenomenon counts as contradicted or unread.
+    ``cycles`` is ``"refuse"`` and they name a construct behind a feedback
+    loop. A graph that cannot be built (section 27, refusals 1 and 2) reads no
+    claim, so each stated claim of a prediction gets the verdict
+    ``not_evaluated`` with the basis ``graph_refused``, and no phenomenon
+    counts as contradicted or unread.
     """
     try:
         g = _Graph(causal_graph(T, "check"), cycles, items(T, "propositions"))
@@ -128,15 +129,15 @@ def _derivation_chain(T: dict, preds: list, prop_ids: set,
     read as written or cannot place, since it names a construct no
     proposition relates, is a failure, as is a claim of a theory whose graph
     cannot be built and an unresolved reference. A claim the graph leaves
-    unread because it has a feedback loop and ``cycles`` is ``"refuse"`` is
-    not checked: its id goes to ``not_checked`` and, failing anything else,
-    the item warns. Nothing was found wrong with such a claim, so a
-    prediction not checked whose references resolve counts as derived in the
-    score, and stating a claim the loop leaves unread costs nothing. A
-    phenomenon whose claim the graph contradicts fails the item, and one whose
-    claim it leaves unread for the loop goes to ``phenomena_not_checked`` and,
-    failing anything else, makes the item warn. Neither changes the score, the
-    share of predictions derived.
+    unread because ``cycles`` is ``"refuse"`` and it names a construct behind
+    a feedback loop is not checked: its id goes to ``not_checked`` and,
+    failing anything else, the item warns. Nothing was found wrong with such a
+    claim, so a prediction not checked whose references resolve counts as
+    derived in the score, and stating a claim the loop leaves unread costs
+    nothing. A phenomenon whose claim the graph contradicts fails the item,
+    and one whose claim it leaves unread for the loop goes to
+    ``phenomena_not_checked`` and, failing anything else, makes the item warn.
+    Neither changes the score, the share of predictions derived.
     """
     if not preds:
         return "n/a", None, [], []
@@ -170,8 +171,8 @@ def _check_items(T: dict, thr: dict, cycles: str) -> tuple[dict, tuple[list[str]
 
     An item with nothing to assess is ``("n/a", None)``. The pair holds the ids
     of the predictions and then of the phenomena whose claims the derivation
-    chain left unread, since the causal graph has a feedback loop and
-    ``cycles`` is ``"refuse"``.
+    chain left unread, since ``cycles`` is ``"refuse"`` and they name a
+    construct behind a feedback loop.
     """
     preds = items(T, "predictions")
     cons = items(T, "constructs")
@@ -401,18 +402,24 @@ def check(theory, cycles: str = "refuse") -> dict:
     declared, or none, or states a claim that the graph contradicts, leaves
     open, cannot read as written or cannot place because it names a construct
     no proposition relates, and when the graph contradicts the claim of a
-    phenomenon. A claim of a prediction or a phenomenon that the graph leaves
-    unread because it has a feedback loop is not checked and, failing anything
-    else, makes the item warn, which does not block the gate. A prediction
-    whose claim is not checked counts as derived when the propositions it
-    cites are declared, since nothing was found wrong with it.
+    phenomenon. Under the default, a claim of a prediction or a phenomenon
+    that names a construct on a feedback loop or downstream of one is left
+    unread. It is not checked and, failing anything else, makes the item
+    warn, which does not block the gate. A prediction whose claim is not
+    checked counts as derived when the propositions it cites are declared,
+    since nothing was found wrong with it. Such a claim therefore gets full
+    credit and leaves the gate open whatever the graph would say of it read
+    by sigma-separation, so a file whose claims a loop reaches is checked in
+    full only with ``cycles="sigma"``. A loop that reaches no claim changes
+    nothing.
 
     Args:
         cycles: how a causal graph with a feedback loop is read, as in
-            ``entailments()``. ``"refuse"`` (the default) leaves its claims
-            unread, and ``"sigma"`` reads them by sigma-separation, which
-            assumes that each loop settles to a unique equilibrium. The
-            derivation chain and diagnosticity read the claims this way.
+            ``entailments()``. ``"refuse"`` (the default) leaves unread the
+            claims that name a construct on a loop or downstream of one, and
+            ``"sigma"`` reads every claim by sigma-separation, which assumes
+            that each loop settles to a unique equilibrium. The derivation
+            chain and diagnosticity read the claims this way.
 
     Returns:
         A dict with the keys ``theory_id``, ``schema_version`` (the theory's),
@@ -513,8 +520,9 @@ def check(theory, cycles: str = "refuse") -> dict:
 GATE = ("The gate reports whether either blocking item failed: at least one prediction is "
         "typed point, interval or directional, and every prediction cites declared "
         "propositions whose graph entails any claim it states, with no stated phenomenon "
-        "contradicted. The labels are the author's and are not checked against the "
-        "statements.")
+        "contradicted. Under the default reading of feedback loops, a claim that names a "
+        "construct on a loop or downstream of one is not read and blocks nothing. The "
+        "labels are the author's and are not checked against the statements.")
 
 
 @theory_keyword

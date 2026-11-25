@@ -101,6 +101,58 @@ test_that("a claim that cannot be read is not evaluated", {
   expect_error(tf_entailments(t, cycles = "loops"), "requires cycles to be 'refuse' or 'sigma'")
 })
 
+test_that("under refuse only a claim behind a feedback loop is left unread", {
+  # c0 -> c1 -> c2 -> c3 <-> c4 -> c5: the loop of c3 and c4 reaches c3, c4 and
+  # c5. A claim naming one of them, as x, y or in given, is left unread under
+  # "refuse", and any other claim is read, with the record "sigma" gives it.
+  # The Python suite asserts the same records.
+  props <- list(c("c0", "c1", "causes"), c("c1", "c2", "increases"), c("c2", "c3", "increases"),
+                c("c3", "c4", "increases"), c("c4", "c3", "increases"), c("c4", "c5", "increases"))
+  claims <- list(claim("effect", "c1", "c2", "positive"),
+                 claim("association", "c1", "c2", "positive"),
+                 claim("association", "c0", "c1", "nonzero", given = "c2"),
+                 claim("effect", "c2", "c3", "positive"),
+                 claim("effect", "c4", "c5", "positive"),
+                 claim("association", "c0", "c2", "nonzero", given = "c5"),
+                 claim("effect", "c5", "c1", "zero"))
+  t <- small_theory(props, claims = claims, k = 6L)
+  refuse <- tf_entailments(t)$claims
+  sigma <- tf_entailments(t, cycles = "sigma")$claims
+  unread <- vapply(refuse, function(c) identical(c$basis, "feedback_loop"), logical(1))
+  expect_identical(unread, c(rep(FALSE, 3L), rep(TRUE, 4L)))
+  for (i in seq_along(refuse)) {
+    if (!unread[[i]]) {
+      expect_identical(refuse[[i]], sigma[[i]])
+    } else {
+      expect_identical(list(refuse[[i]]$verdict, refuse[[i]]$derived, refuse[[i]]$via),
+                       list("not_evaluated", "", list()))
+    }
+  }
+  # The trek of c1 and c2 shares the edge c0 -> c1 with the walks from c0, so
+  # the association is positive under both readings, as on a graph without the
+  # loop, though c0 causes c1 with no sign.
+  expect_identical(list(refuse[[2]]$derived, refuse[[2]]$verdict), list("positive", "entailed"))
+  acyclic <- tf_entailments(small_theory(props[c(1:3, 6L)], claims = claims, k = 6L))$claims
+  for (i in 1:3) {
+    expect_identical(list(acyclic[[i]]$derived, acyclic[[i]]$verdict),
+                     list(refuse[[i]]$derived, refuse[[i]]$verdict))
+  }
+  # The checklist then reads them alike.
+  expect_identical(tf_check(t)$items[[12L]]$not_checked, list("q3", "q4", "q5", "q6"))
+})
+
+test_that("a claim behind a loop reads in words why it is not evaluated", {
+  t <- small_theory(list(c("c0", "c1", "increases"), c("c1", "c0", "increases"),
+                         c("c2", "c3", "increases")),
+                    claims = list(claim("effect", "c0", "c1", "positive"),
+                                  claim("effect", "c2", "c3", "positive")))
+  lines <- vapply(tf_entailments(t)$claims, theoryforge:::.tf_claim_line, "")
+  expect_identical(lines, c(
+    paste0("the effect of c0 on c1 is positive; not evaluated, since a construct it names is on a ",
+           "feedback loop or downstream of one"),
+    "the effect of c2 on c3 is positive; entailed by the causal graph through p2"))
+})
+
 test_that("a reversed chain is Markov equivalent but differs in its effects", {
   t <- small_theory(list(c("c0", "c1", "increases"), c("c1", "c2", "increases")),
                     alternatives = list(list(id = "a", label = "r", propositions = list(

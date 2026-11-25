@@ -86,8 +86,9 @@ typed point, interval or directional, and every prediction cites declared
 propositions whose graph entails any claim it states, with no stated phenomenon
 contradicted. The labels are the author's and are not checked against the
 statements. A passing gate does not show that the theory is true or well
-reasoned. A claim that the graph leaves unread because it has a feedback loop is
-not checked, and the derivation chain then warns without blocking the gate.
+reasoned. A claim that names a construct on a feedback loop or downstream of one
+is left unread by default and not checked, and the derivation chain then warns
+without blocking the gate.
 
 ## Reading and validating a theory
 
@@ -198,9 +199,10 @@ wide depends on the convention more than one whose range is narrow. The score is
 compensatory, since a high score on one item offsets a low score on another. The
 gate is not. It is `"blocked"` when an item marked as a blocker fails, `"pass"`
 otherwise, and `"advisory"` for a theory whose maturity is `draft`. The
-derivation chain warns, without blocking the gate, when a feedback loop leaves a
-prediction's or a phenomenon's claim unread, as `tf_check()` does by default,
-and `tf_check(theory, cycles = "sigma")` reads such claims by sigma-separation.
+derivation chain warns, without blocking the gate, when a prediction's or a
+phenomenon's claim names a construct on a feedback loop or downstream of one,
+which `tf_check()` leaves unread by default, and
+`tf_check(theory, cycles = "sigma")` reads such claims by sigma-separation.
 The article
 [Methodological foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html)
 sets out each item, its supporting literature and how its score is computed.

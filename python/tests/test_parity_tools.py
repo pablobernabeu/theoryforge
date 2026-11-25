@@ -167,10 +167,11 @@ def test_edge_outcome_reads_the_claims_on_a_feedback_loop_by_sigma_separation(go
         encoding="utf-8",
     )
     out = golden.edge_outcome(path)
-    keys = OUTCOME_KEYS[:7] + ["entailments_sigma"] + OUTCOME_KEYS[7:]
+    keys = OUTCOME_KEYS[:7] + ["entailments_sigma", "check_sigma"] + OUTCOME_KEYS[7:]
     assert list(out) == keys
     assert out["entailments_sigma"]["criterion"] == "sigma"
     assert out["entailments_sigma"]["acyclic"] is False
+    assert out["check_sigma"] == golden._check_summary(golden.tf.read(path).check(cycles="sigma"))
 
 
 def test_edge_outcome_stops_after_a_read_error(golden, tmp_path):

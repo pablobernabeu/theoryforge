@@ -457,11 +457,11 @@ test("the checklist's guide and reading say what pass, blocked and advisory mean
     "Most items read whether a field is filled in or how a prediction is labelled, and stated claims are checked against the causal graph. " +
     "Test outcomes are read only by the parsimony item, the weights are conventions, and no study has established what difference between two scores is meaningful. " +
     "The score does not show that the theory is true or well reasoned. Read the item statuses first"), about);
-  assert.match(about, /The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted\. The labels are the author's and are not checked against the statements\./);
+  assert.match(about, /The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted\. Under the default reading of feedback loops, a claim that names a construct on a loop or downstream of one is not read and blocks nothing\. The labels are the author's and are not checked against the statements\./);
   assert.match(about, /The derivation chain reads each stated claim against the causal graph, diagnosticity sets a claim against a rival's propositions where both are stated, precision asks for two finite bounds and non-redundancy compares the words of the construct definitions\./);
   assert.match(about, /At draft maturity, the gate is advisory/);
   // An unread claim costs its prediction nothing in the score.
-  assert.match(about, /A prediction whose claim is not checked still counts as derived in the score when the propositions it cites are declared\./);
+  assert.match(about, /A prediction whose claim is not checked still counts as derived in the score when the propositions it cites are declared, whatever sigma-separation would make of the claim, so set cycles to sigma to check such a file in full\. A loop that reaches no claim changes nothing\./);
   assert.doesNotMatch(about, /rigour|facets|quality/i);
   assert.match(interp, /^The checklist score is 12\./);
   assert.match(interp, /draft maturity/);
@@ -487,7 +487,7 @@ test("the checklist names the predictions it could not read, and a run under sig
   await opButton(ctx, "check").click();
   await $("#runBtn").click();
   assert.equal(lastCall(rt).params.cycles, "refuse");
-  assert.match($("#output .ri-interp").textContent, /1 prediction \(pred3\) was not checked, since the causal graph has a feedback loop\. Set cycles to sigma/);
+  assert.match($("#output .ri-interp").textContent, /1 prediction \(pred3\) was not checked, since it names a construct on a feedback loop or downstream of one\. Set cycles to sigma/);
   assert.match($("#output").textContent, /Predictions not checkedpred3/);
   // A package that reports no unread phenomena gives no row for them.
   assert.doesNotMatch($("#output").textContent, /Phenomena not checked/);
@@ -512,10 +512,10 @@ test("the checklist names the predictions it could not read, and a run under sig
 test("the checklist names the phenomena it could not read beside the predictions", async () => {
   const chain = (nc, pnc) => ({ id: "derivation_chain", status: "warn", score: 1, weight: 0.08, severity_if_fail: "blocker", not_checked: nc, phenomena_not_checked: pnc });
   const cases = [
-    [chain(["pred_indep"], ["ph1"]), /1 prediction \(pred_indep\) and 1 phenomenon \(ph1\) were not checked, since the causal graph has a feedback loop\./],
-    [chain([], ["ph1", "ph2"]), /2 phenomena \(ph1, ph2\) were not checked, since the causal graph has a feedback loop\./],
+    [chain(["pred_indep"], ["ph1"]), /1 prediction \(pred_indep\) and 1 phenomenon \(ph1\) were not checked, since each names a construct on a feedback loop or downstream of one\./],
+    [chain([], ["ph1", "ph2"]), /2 phenomena \(ph1, ph2\) were not checked, since each names a construct on a feedback loop or downstream of one\./],
     // R's JSON writer gives a list of one as a scalar.
-    [chain([], "ph1"), /1 phenomenon \(ph1\) was not checked, since the causal graph has a feedback loop\./],
+    [chain([], "ph1"), /1 phenomenon \(ph1\) was not checked, since it names a construct on a feedback loop or downstream of one\./],
   ];
   for (const [item, want] of cases) {
     const report = { aggregate_score: 88, coverage: 0.92, gate: "pass", n_blockers_failed: 0, maturity: "developing", checklist_version: "3.1", items: [item] };

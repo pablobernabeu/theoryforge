@@ -131,15 +131,20 @@
 # which no vertex comes before one that reaches it, and the order does not
 # change the result. A trek whose two paths share a segment, such as
 # u <- t -> u -> y, holds a coefficient squared, so reading its two copies as
-# independent signs would leave a fixed sign open.
+# independent signs would leave a fixed sign open. On a graph with feedback
+# loops, the sets are found for the pairs of vertices that are not behind a
+# loop. Every ancestor of such a vertex is one too, and none lies on a loop, so
+# the recursion over them reads the acyclic graph that they and their edges
+# form.
 .tf_cov_signs <- function(G) {
   k <- G$k
   r <- G$r
   S <- matrix(0L, nrow = k, ncol = k)
   diag(S) <- .tf_POS
   ord <- order(colSums(r), seq_len(k))
+  ord <- ord[!G$behind[ord]]
   # Each column is filled for all the vertices before b in the order at once.
-  for (j in seq_len(k)[-1L]) {
+  for (j in seq_along(ord)[-1L]) {
     b <- ord[[j]]
     before <- ord[seq_len(j - 1L)]
     m <- integer(j - 1L)
@@ -228,6 +233,15 @@
     }
   }
   G$feedback <- feedback
+  # A vertex is behind a feedback loop when a vertex of a loop reaches it, the
+  # members of a loop included. A vertex that is not has no ancestor on a loop,
+  # so what holds among such vertices is fixed by an acyclic part of the graph,
+  # whatever the loops do.
+  on_loop <- logical(k)
+  for (comp in comps) {
+    if (length(comp) > 1L || g$directed[comp[[1L]], comp[[1L]]]) on_loop[comp] <- TRUE
+  }
+  G$behind <- colSums(G$r[on_loop, , drop = FALSE]) > 0
   G$evaluable <- cycles == "sigma" || length(feedback) == 0L
   G$acyclified <- length(feedback) > 0L && cycles == "sigma"
   if (G$acyclified) {
@@ -300,13 +314,15 @@
 .tf_association <- function(G, x, y, via = TRUE) {
   r <- G$r
   na <- nrow(G$assoc)
-  if (length(G$feedback) == 0L) {
+  if (!(G$behind[[x]] || G$behind[[y]])) {
+    # No loop reaches either, so every trek between them lies in the acyclic
+    # graph of their ancestors.
     if (is.null(G$walk_cache[["cov"]])) G$walk_cache[["cov"]] <- .tf_cov_signs(G)
     mask <- G$walk_cache[["cov"]][x, y]
   } else {
-    # With feedback loops, the treks are read as pairs of walks from a common
-    # source, which counts a trek whose two walks share a segment as well. A
-    # source that does not reach both adds nothing.
+    # Behind a feedback loop, the treks are read as pairs of walks from a
+    # common source, which counts a trek whose two walks share a segment as
+    # well. A source that does not reach both adds nothing.
     mask <- 0L
     for (t in which(r[, x] & r[, y])) {
       walks <- .tf_walks(G, t)
@@ -407,7 +423,13 @@
   }
   if (!cl$ok) return(out("", "not_evaluated", "malformed_claim"))
   if (!all(c(cl$x, cl$y, cl$given) %in% G$nodes)) return(out("", "not_evaluated", "not_in_graph"))
-  if (!G$evaluable) return(out("", "not_evaluated", "feedback_loop"))
+  # Under cycles = "refuse", a claim is left unread when a construct it names is
+  # behind a feedback loop, since what the graph says of it then depends on how
+  # the loop settles. A claim no loop reaches is read as under "sigma", and its
+  # record is the one "sigma" gives.
+  if (!G$evaluable && any(G$behind[match(c(cl$x, cl$y, cl$given), G$nodes)])) {
+    return(out("", "not_evaluated", "feedback_loop"))
+  }
   x <- match(cl$x, G$nodes)
   y <- match(cl$y, G$nodes)
   if (cl$kind == "association" && length(cl$given) > 0L) {
@@ -479,12 +501,15 @@
 #' Each claim is then \code{entailed}, \code{contradicted},
 #' \code{undetermined} when the graph leaves the sign open, or
 #' \code{not_evaluated} when the claim is incomplete, names a construct that no
-#' proposition relates to another, or meets a feedback loop under
-#' \code{cycles = "refuse"}. \code{faithfulness} is \code{TRUE} when the
-#' verdict relies on the effects carried by a route of unknown sign, or by
-#' routes of opposite signs, not cancelling exactly, and the claim lines of the
-#' preregistration and the dossier then end with \code{unless effects cancel
-#' exactly}.
+#' proposition relates to another, or, under \code{cycles = "refuse"}, names a
+#' construct on a feedback loop or downstream of one, since what the graph says
+#' of it then depends on how the loop settles. A claim that no loop reaches
+#' gets the same record under both values of \code{cycles}, so a loop elsewhere
+#' in the graph neither hides nor changes its verdict. \code{faithfulness} is
+#' \code{TRUE} when the verdict relies on the effects carried by a route of
+#' unknown sign, or by routes of opposite signs, not cancelling exactly, and the
+#' claim lines of the preregistration and the dossier then end with
+#' \code{unless effects cancel exactly}.
 #'
 #' The derivations assume that the graph is the causal structure, with no
 #' common cause of two constructs left out unless an association stands for
@@ -498,9 +523,9 @@
 #' can leave a loop that does not settle. A loop that is one simple cycle then
 #' multiplies the effects through it by a positive factor, so the signs through
 #' it are those of the paths. The walks round a loop of any other shape are
-#' read as they are, and a graph with feedback loops reads each trek as a pair
-#' of walks from a common source, so a sign that the graph fixes can be left
-#' open there.
+#' read as they are, and the association of two constructs that a loop reaches
+#' is read off pairs of walks from a common source, so a sign that the graph
+#' fixes can be left open there.
 #'
 #' For an effect claim on an acyclic graph, \code{identified} says whether
 #' adjusting for some set of the theory's constructs would identify the effect
@@ -608,7 +633,7 @@ tf_entailments <- function(theory, cycles = "refuse") {
                       opposite_signs = "routes between them have opposite signs")
 .tf_NOT_EVALUATED <- c(malformed_claim = "the claim is incomplete",
                        not_in_graph = "it names a construct that no proposition relates to another",
-                       feedback_loop = "the causal graph has a feedback loop",
+                       feedback_loop = "a construct it names is on a feedback loop or downstream of one",
                        graph_refused = "the causal graph cannot be built")
 
 # What the verdicts of the claim lines assume, written once in each section of
@@ -944,9 +969,10 @@ tf_equivalent_models <- function(theory) {
 #' rule does not apply.
 #'
 #' A graph with feedback loops is not compared under \code{cycles = "refuse"}
-#' (\code{evaluated} is \code{FALSE}). Under \code{cycles = "sigma"}, it is
-#' read as in [tf_entailments()], and its independencies are compared only
-#' when the two graphs name the same constructs.
+#' (\code{evaluated} is \code{FALSE}), though the claims are read as
+#' [tf_entailments()] reads them. Under \code{cycles = "sigma"}, it is read as
+#' in [tf_entailments()], and its independencies are compared only when the two
+#' graphs name the same constructs.
 #'
 #' @param theory A theory object.
 #' @param rival The id of an alternative of \code{theory} that states
