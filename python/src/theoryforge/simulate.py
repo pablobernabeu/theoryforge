@@ -4,9 +4,9 @@ Each construct is a state variable, and each proposition whose relation is ``inc
 ``decreases``, ``causes`` or ``mediates`` contributes a linear coupling term with the sign
 the relation table (API_SPEC.md section 28) gives it. ``causes`` and ``mediates`` state no
 sign and are coupled positively, an assumption the result records. The system
-dX/dt = (A - damping*I) X is propagated either with fixed-step (Euler) updates or exactly, with
-the matrix exponential of (A - damping*I)*dt. Both are deterministic and computed with
-explicit loops in a fixed order, so the R package gives the same values to the last bit.
+dX/dt = (A - damping*I) X is propagated exactly, with the matrix exponential of
+(A - damping*I)*dt, or with fixed-step (Euler) updates. Both are deterministic and computed
+with explicit loops in a fixed order, so the R package gives the same values to the last bit.
 """
 from __future__ import annotations
 
@@ -212,8 +212,20 @@ def _apply(rows: list, X: list) -> list:
 @theory_keyword
 def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
              damping: float = 0.5, init: float | Mapping[str, float] = 1.0,
-             method: str = "euler") -> dict:
+             method: str = "exact") -> dict:
     """Propagate the theory's construct network as a linear dynamical system.
+
+    A theory states no parameter values, so the trajectory is that of one
+    linear model consistent with the signs the propositions state, with one
+    gain ``k`` for every coupling and unsigned relations taken as positive. It
+    is not fitted to data and does not show what the propositions imply. Every
+    state decays at rate ``damping`` in the absence of couplings, and whether a
+    feedback loop grows or settles is set by ``k`` against ``damping``. Time is
+    in units of ``1/k``, and the window that ``steps`` and ``dt`` choose
+    decides what is seen: the last construct of a chain that decays in the long
+    run can show only a rise in a short window. A linear system has one
+    equilibrium, or a continuum of them when its matrix is singular, and never
+    two separate ones, so it cannot show bistability.
 
     Returns {states, dt, steps, k, damping, init, initial_state, method, ignored,
     assumed_positive, opposed, trajectory}, where trajectory[t] is the state vector
@@ -241,19 +253,19 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     an impulse in that construct. A key that is not a declared construct id
     raises ValueError.
 
-    ``method = "exact"`` multiplies the state by the matrix exponential of
-    (A - damping*I)*dt at every step, computed by scaling and squaring a degree-18
-    Taylor polynomial (Moler & Van Loan, 2003, method 3), so the trajectory is the
-    solution of the linear system at those times whatever ``dt`` is.
-    ``method = "euler"`` (the default for this release) takes fixed explicit steps,
-    which are stable only when |1 + dt*lambda| < 1 for every eigenvalue lambda of
-    A - damping*I. A theory that decays at rate ``damping`` therefore grows without
-    bound, alternating in sign, once dt*damping exceeds 2, and the steps turn a
-    sustained oscillation into growth. The Euler run warns (UserWarning) when it
-    departs from the exact solution, at any step, by more than 5 per cent of the
-    larger of |exact| and the largest absolute starting value (1 when every
-    starting value is 0), so that the warning does not depend on the unit of
-    ``init``. The default will change to ``"exact"`` in the next minor release.
+    ``method = "exact"``, the default, multiplies the state by the matrix
+    exponential of (A - damping*I)*dt at every step, computed by scaling and
+    squaring a degree-18 Taylor polynomial (Moler & Van Loan, 2003, method 3),
+    so the trajectory is the solution of the linear system at those times
+    whatever ``dt`` is. ``method = "euler"`` takes fixed explicit steps, which
+    are stable only when |1 + dt*lambda| < 1 for every eigenvalue lambda of
+    A - damping*I. A theory that decays at rate ``damping`` therefore grows
+    without bound, alternating in sign, once dt*damping exceeds 2, and the
+    steps turn a sustained oscillation into growth. The Euler run warns
+    (UserWarning) when it departs from the exact solution, at any step, by
+    more than 5 per cent of the larger of |exact| and the largest absolute
+    starting value (1 when every starting value is 0), so that the warning
+    does not depend on the unit of ``init``.
 
     ``steps`` must be a whole number of at least 0 and ``dt`` a finite number
     above 0. ``k`` and ``damping`` must be finite numbers, ``init`` as above and
@@ -265,9 +277,7 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
 
     The model is deliberately simple: one gain ``k`` for every coupling,
     ``causes`` and ``mediates`` taken as positive, ``moderates`` and
-    ``associates`` coupling nothing and ``functional_form`` not read. A linear
-    system has one equilibrium, or a continuum of them when its matrix is
-    singular, and never two separate ones, so it cannot show bistability.
+    ``associates`` coupling nothing and ``functional_form`` not read.
 
     References:
         Moler, C., & Van Loan, C. (2003). Nineteen dubious ways to compute the

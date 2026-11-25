@@ -51,11 +51,12 @@ def test_simulate_records_the_method_and_what_it_leaves_out(panic_path):
     r = t.simulate(steps=2)
     assert list(r) == ["states", "dt", "steps", "k", "damping", "init", "initial_state", "method",
                        "ignored", "assumed_positive", "opposed", "trajectory"]
-    assert (r["method"], r["ignored"], r["opposed"]) == ("euler", [], [])
+    # The default method is the exact solution.
+    assert (r["method"], r["ignored"], r["opposed"]) == ("exact", [], [])
     # p3 states that perceived threat causes arousal, without a sign. The
     # coupling is positive by assumption, and that alone makes the loop grow.
     assert r["assumed_positive"] == ["p3"]
-    assert t.simulate(steps=2, method="exact")["method"] == "exact"
+    assert t.simulate(steps=2, method="euler")["method"] == "euler"
 
 
 def _fan():
@@ -117,7 +118,7 @@ def test_exact_decays_where_euler_explodes(weak_path):
     exact = t.simulate(steps=3, dt=1, damping=2.5, method="exact")["trajectory"]
     assert [row[0] for row in exact] == [1.0, 0.082085, 0.006738, 0.000553]
     with pytest.warns(UserWarning) as rec:
-        euler = t.simulate(steps=3, dt=1, damping=2.5)["trajectory"]
+        euler = t.simulate(steps=3, dt=1, damping=2.5, method="euler")["trajectory"]
     assert [str(w.message) for w in rec] == [EULER_WARNING]
     assert [row[0] for row in euler] == [1.0, -1.5, 2.25, -3.375]
 
@@ -130,15 +131,15 @@ def test_exact_keeps_the_oscillation_that_euler_inflates():
     exact = t.simulate(steps=500, method="exact")["trajectory"]
     assert max(abs(x) for row in exact[-73:] for x in row) < 1.4
     with pytest.warns(UserWarning, match="depart from the exact solution"):
-        euler = t.simulate(steps=500)["trajectory"]
+        euler = t.simulate(steps=500, method="euler")["trajectory"]
     assert max(abs(x) for row in euler[-73:] for x in row) > 8
 
 
 def test_euler_does_not_warn_when_it_tracks_the_exact_solution(panic_path):
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        tf.read(panic_path).simulate()
-        _regulation().simulate(steps=5)
+        tf.read(panic_path).simulate(method="euler")
+        _regulation().simulate(steps=5, method="euler")
 
 
 def test_the_euler_warning_does_not_depend_on_the_unit_of_init(weak_path, panic_path):
@@ -149,24 +150,24 @@ def test_the_euler_warning_does_not_depend_on_the_unit_of_init(weak_path, panic_
     t = tf.read(weak_path)
     for init in (1.0, 0.2, -0.01):
         with pytest.warns(UserWarning) as rec:
-            t.simulate(steps=10, dt=1, init=init)
+            t.simulate(steps=10, dt=1, init=init, method="euler")
         assert [str(w.message) for w in rec] == [EULER_WARNING]
     # A run that tracks the exact solution stays silent at any scale.
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         for init in (100.0, 0.01):
-            tf.read(panic_path).simulate(init=init)
+            tf.read(panic_path).simulate(init=init, method="euler")
     # The scale is the largest absolute starting value, here that of the one
     # construct init names. A run that starts at 0 everywhere stays at 0 and
     # gives no warning.
     chain = tf.new_theory("chain", "Chain").add_construct("a", "A", "d").add_construct("b", "B", "d")
     chain.add_proposition("p1", "a", "b", "increases")
     with pytest.warns(UserWarning) as rec:
-        chain.simulate(steps=4, dt=3, init={"a": 0.01})
+        chain.simulate(steps=4, dt=3, init={"a": 0.01}, method="euler")
     assert [str(w.message) for w in rec] == [EULER_WARNING]
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        chain.simulate(steps=4, dt=3, init=0)
+        chain.simulate(steps=4, dt=3, init=0, method="euler")
 
 
 def test_exact_ignores_the_step_size_for_stability(weak_path):
@@ -292,12 +293,12 @@ def test_a_theory_of_400_constructs_simulates():
         t = t.add_construct(f"c{i}", f"C{i}", "A state.")
     for i in range(399):
         t = t.add_proposition(f"p{i}", f"c{i}", f"c{i + 1}", "increases")
-    exact = t.simulate(method="exact")["trajectory"]
+    exact = t.simulate()["trajectory"]
     assert [row[0] for row in exact] == pytest.approx([math.exp(-0.05 * s) for s in range(11)],
                                                       abs=1e-6)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        euler = t.simulate()["trajectory"]
+        euler = t.simulate(method="euler")["trajectory"]
     assert [row[0] for row in euler] == pytest.approx([0.95 ** s for s in range(11)], abs=1e-6)
     assert len(euler) == 11 and len(euler[10]) == 400
 

@@ -5,8 +5,8 @@
 #' contributes a linear coupling term with the sign the relation table gives
 #' it. \code{causes} and \code{mediates} state no sign and are coupled
 #' positively, an assumption the result records. The system is propagated
-#' either with fixed-step (Euler) updates or exactly, with the matrix
-#' exponential of the coupling matrix, so the trajectory is deterministic.
+#' exactly, with the matrix exponential of the coupling matrix, or with
+#' fixed-step (Euler) updates, so the trajectory is deterministic.
 #' @name simulate
 #' @noRd
 #' @keywords internal
@@ -36,11 +36,24 @@ NULL
 #' proposition between two declared constructs whose relation is
 #' \code{increases}, \code{decreases}, \code{causes} or \code{mediates} as a
 #' linear coupling term. It then propagates \code{dX/dt = A X - damping * X}
-#' either with fixed-step (Euler) updates or exactly, with the matrix
-#' exponential of \code{(A - damping * I) * dt}. The result is deterministic.
-#' Construct ids must be unique, and duplicates are refused rather than
-#' assigned to an arbitrary state. A construct without an id is a state with no
-#' couplings, and two of them do not count as duplicates.
+#' exactly, with the matrix exponential of \code{(A - damping * I) * dt}, or
+#' with fixed-step (Euler) updates. The result is deterministic. Construct ids
+#' must be unique, and duplicates are refused rather than assigned to an
+#' arbitrary state. A construct without an id is a state with no couplings,
+#' and two of them do not count as duplicates.
+#'
+#' A theory states no parameter values, so the trajectory is that of one
+#' linear model consistent with the signs the propositions state, with one
+#' gain \code{k} for every coupling and unsigned relations taken as positive.
+#' It is not fitted to data and does not show what the propositions imply.
+#' Every state decays at rate \code{damping} in the absence of couplings, and
+#' whether a feedback loop grows or settles is set by \code{k} against
+#' \code{damping}. Time is in units of \code{1/k}, and the window that
+#' \code{steps} and \code{dt} choose decides what is seen: the last construct
+#' of a chain that decays in the long run can show only a rise in a short
+#' window. A linear system has one equilibrium, or a continuum of them when its
+#' matrix is singular, and never two separate ones, so it cannot show
+#' bistability.
 #'
 #' @section Couplings:
 #' Each such proposition adds \code{k} times the sign of its relation to the
@@ -60,23 +73,22 @@ NULL
 #' construct. A name that is not a declared construct id is refused.
 #'
 #' @section Methods:
-#' With \code{method = "exact"}, each step multiplies the state by the matrix
-#' exponential, computed by scaling and squaring a degree-18 Taylor polynomial
-#' (Moler and Van Loan, 2003, method 3), so the trajectory is the solution of
-#' the linear system at times \code{0, dt, 2 * dt, ...} whatever \code{dt} is.
+#' With \code{method = "exact"}, the default, each step multiplies the state by
+#' the matrix exponential, computed by scaling and squaring a degree-18 Taylor
+#' polynomial (Moler and Van Loan, 2003, method 3), so the trajectory is the
+#' solution of the linear system at times \code{0, dt, 2 * dt, ...} whatever
+#' \code{dt} is.
 #'
-#' With \code{method = "euler"}, the default for this release, the explicit
-#' step is stable only when \eqn{|1 + dt \lambda| < 1} for every eigenvalue
-#' \eqn{\lambda} of \code{A - damping * I}. A theory that decays at rate
-#' \code{damping} therefore grows without bound, alternating in sign, once
-#' \code{dt * damping} exceeds 2, and the steps turn a sustained oscillation
-#' into growth. Raising \code{damping} can cause a divergence as well as fail
-#' to stop one. The function warns when the Euler trajectory departs from the
-#' exact one, at any step, by more than 5 per cent of the larger of
-#' \code{|exact|} and the largest absolute starting value (1 when every
-#' starting value is 0), so that the warning does not depend on the unit of
-#' \code{init}. The default will change to \code{"exact"} in the next minor
-#' release.
+#' With \code{method = "euler"}, the explicit step is stable only when
+#' \eqn{|1 + dt \lambda| < 1} for every eigenvalue \eqn{\lambda} of
+#' \code{A - damping * I}. A theory that decays at rate \code{damping}
+#' therefore grows without bound, alternating in sign, once \code{dt * damping}
+#' exceeds 2, and the steps turn a sustained oscillation into growth. Raising
+#' \code{damping} can cause a divergence as well as fail to stop one. The
+#' function warns when the Euler trajectory departs from the exact one, at any
+#' step, by more than 5 per cent of the larger of \code{|exact|} and the
+#' largest absolute starting value (1 when every starting value is 0), so that
+#' the warning does not depend on the unit of \code{init}.
 #'
 #' When a state grows so large that a million times it is not a finite number,
 #' the function stops with a message naming the step and the state. The initial
@@ -85,9 +97,7 @@ NULL
 #'
 #' The model is deliberately simple: one gain \code{k} for every coupling,
 #' \code{causes} and \code{mediates} taken as positive, \code{moderates} and
-#' \code{associates} coupling nothing and \code{functional_form} not read. A
-#' linear system has one equilibrium, or a continuum of them when its matrix is
-#' singular, and never two separate ones, so it cannot show bistability.
+#' \code{associates} coupling nothing and \code{functional_form} not read.
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param steps Number of steps, a whole number of at least 0 (default
@@ -101,8 +111,7 @@ NULL
 #' @param init Initial value of every state, a single finite number (default
 #'   \code{1.0}), or a named numeric vector or named list giving the initial
 #'   value of the constructs it names, the others starting from 0.
-#' @param method \code{"euler"} (the default for this release) or
-#'   \code{"exact"}.
+#' @param method \code{"exact"} (the default) or \code{"euler"}.
 #' @return A named list
 #'   \code{list(states, dt, steps, k, damping, init, initial_state, method,
 #'   ignored, assumed_positive, opposed, trajectory)}, where \code{states} are
@@ -126,16 +135,16 @@ NULL
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
 #'   tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
 #'   tf_add_proposition("p1", "c_arousal", "c_threat", "increases")
-#' sim <- tf_simulate(theory, steps = 5, method = "exact")
+#' sim <- tf_simulate(theory, steps = 5)
 #' sim$states
 #' sim$trajectory[[1]] # the common initial state
 #' sim$trajectory[[length(sim$trajectory)]] # at time 5 * dt
 #' # The response to an impulse in arousal, threat starting from 0
-#' impulse <- tf_simulate(theory, steps = 5, init = c(c_arousal = 1), method = "exact")
+#' impulse <- tf_simulate(theory, steps = 5, init = c(c_arousal = 1))
 #' impulse$initial_state
 #' @export
 tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
-                        damping = 0.5, init = 1.0, method = "euler") {
+                        damping = 0.5, init = 1.0, method = "exact") {
   .tf_sim_check_knobs(steps, dt, k, damping, init, method)
   T <- theory
   cons <- .tf_list(T, "constructs")
@@ -399,7 +408,7 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
 # Refuses invalid knobs with the Python twin's messages (API_SPEC section 22).
 # Logicals are refused, as Python refuses bool. A whole double such as 3 counts
 # as a number of steps, as an integral float does in Python.
-.tf_sim_check_knobs <- function(steps, dt, k, damping, init, method = "euler") {
+.tf_sim_check_knobs <- function(steps, dt, k, damping, init, method = "exact") {
   finite1 <- function(x) is.numeric(x) && length(x) == 1L && is.finite(x)
   if (!(finite1(steps) && steps >= 0 && steps == floor(steps))) {
     stop("simulate requires steps to be a whole number of at least 0", call. = FALSE)

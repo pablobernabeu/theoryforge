@@ -1201,19 +1201,20 @@ class Theory:
         return _compile_sem(self.data)
 
     def dossier(self, cycles: str = "refuse") -> str:
-        """A reviewer-facing audit bundle of the rigour report, severity, test record, evidence,
-        claims and causal graph, equivalent models, rivals, provenance and preregistration
+        """The dossier: the checklist report, severity, test record, evidence, claims and
+        causal graph, equivalent models, rivals, provenance and preregistration of the file
         (see ``theoryforge.dossier.dossier``).
         ``cycles="sigma"`` reads a causal graph with feedback loops by sigma-separation."""
         return _dossier(self.data, cycles=cycles)
 
     def simulate(self, steps: int = 10, dt: float = 0.1, k: float = 1.0,
                  damping: float = 0.5, init: float | Mapping[str, float] = 1.0,
-                 method: str = "euler") -> dict:
+                 method: str = "exact") -> dict:
         """Propagate the construct network as a linear dynamical system (see ``theoryforge.simulate``).
 
-        ``causes`` and ``mediates`` state no sign and are coupled positively,
-        and the result lists them under ``assumed_positive``.
+        The trajectory is that of one linear model consistent with the stated
+        signs. ``causes`` and ``mediates`` state no sign and are coupled
+        positively, and the result lists them under ``assumed_positive``.
         """
         return _simulate(self.data, steps=steps, dt=dt, k=k, damping=damping, init=init,
                          method=method)
