@@ -174,20 +174,15 @@ def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
     first in the text. The walk therefore visits a node's children before the node,
     and it runs on the composed document before any merge is resolved, so a merged
     key never counts as a repeat. Merge keys themselves are skipped, as R does.
+    The walk keeps its own stack, so that a deep document cannot exhaust
+    Python's.
     """
     visited: set[int] = set()
-
-    def visit(node: Node) -> None:
-        if id(node) in visited:  # an alias of a node already checked
-            return
-        visited.add(id(node))
-        if isinstance(node, SequenceNode):
-            for child in node.value:
-                visit(child)
-        elif isinstance(node, MappingNode):
-            for key_node, value_node in node.value:
-                visit(key_node)
-                visit(value_node)
+    # Each entry is a node and whether its children have been visited.
+    stack: list[tuple[Node, bool]] = [(root, False)]
+    while stack:
+        node, closed = stack.pop()
+        if closed:
             seen = set()
             for key_node, _ in node.value:
                 if key_node.tag == _MERGE or not isinstance(key_node, ScalarNode):
@@ -198,8 +193,18 @@ def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
                 if key in seen:
                     raise _DuplicateKey(key)
                 seen.add(key)
-
-    visit(root)
+            continue
+        if id(node) in visited:  # an alias of a node already checked
+            continue
+        visited.add(id(node))
+        if isinstance(node, SequenceNode):
+            children = list(node.value)
+        elif isinstance(node, MappingNode):
+            stack.append((node, True))
+            children = [child for pair in node.value for child in pair]
+        else:
+            continue
+        stack.extend((child, False) for child in reversed(children))
 
 
 def _unique_pairs(pairs: list[tuple[str, Any]]) -> dict:
@@ -247,20 +252,38 @@ def _unreadable(x: Any) -> str | None:
 # first, would then walk. The YAML reader refuses a document that holds more
 # values than this once its aliases are expanded (API_SPEC.md section 3).
 MAX_VALUES = 1_000_000
+# The functions that walk a theory recurse once for every level of it, so the
+# readers refuse a document nested deeper than this, the document itself being
+# the first level (API_SPEC.md section 3).
+MAX_DEPTH = 64
+# libyaml's composer, which PyYAML calls in C, also recurses once for every
+# level of the text, and tens of thousands of levels exhaust its stack, so a
+# YAML text nested deeper than this is refused before it is composed.
+_MAX_TEXT_DEPTH = 1000
+
+
+def _too_deep(path: Path) -> ValueError:
+    return ValueError(f"({path}) the document is nested more than {MAX_DEPTH} levels deep")
 
 
 def _check_size(data: Any, path: Path) -> None:
-    """Refuse ``data`` when it holds more than ``MAX_VALUES`` values.
+    """Refuse ``data`` when it holds more than ``MAX_VALUES`` values or is
+    nested more than ``MAX_DEPTH`` levels deep.
 
     Each mapping, sequence and scalar counts once for every place it appears,
     so a node an alias repeats counts each time, and a mapping's keys do not
-    count. The walk goes one level at a time and stops as soon as the count
-    passes the limit, so its cost is bounded by the limit and not by the size
-    the aliases stand for. The R twin's ``.tf_check_size()`` counts the same way.
+    count. The walk goes one level at a time and stops at the first level that
+    passes either limit, so its cost is bounded by the limits and not by the
+    size the aliases stand for. The R twin's ``.tf_check_size()`` counts the
+    same way.
     """
     n = 0
+    depth = 0
     level = [data]
     while level:
+        depth += 1
+        if depth > MAX_DEPTH:
+            raise _too_deep(path)
         n += len(level)
         nxt: list[Any] = []
         for x in level:
@@ -276,6 +299,50 @@ def _check_size(data: Any, path: Path) -> None:
         level = nxt
 
 
+def _text_too_deep(text: str) -> bool:
+    """Whether the collections of a YAML text nest more than ``_MAX_TEXT_DEPTH``
+    levels deep, read from the parser's events, which libyaml gives without
+    recursing. A text the parser refuses is left for the loader to refuse with
+    its own message."""
+    depth = 0
+    try:
+        for event in yaml.parse(text, Loader=_BaseLoader):
+            kind = type(event)
+            if kind is yaml.SequenceStartEvent or kind is yaml.MappingStartEvent:
+                depth += 1
+                if depth > _MAX_TEXT_DEPTH:
+                    return True
+            elif kind is yaml.SequenceEndEvent or kind is yaml.MappingEndEvent:
+                depth -= 1
+    except yaml.YAMLError:
+        return False
+    return False
+
+
+# A JSON string, and a token of a JSON text once its strings are replaced: a
+# bracket or a run of the characters of a number or a literal.
+_JSON_STRING = re.compile(r'"(?:[^"\\]|\\.)*"')
+_JSON_TOKEN = re.compile(r"[\[{]|[\]}]|[^\[\]{},: \t\n\r]+")
+
+
+def _json_depth(text: str) -> int:
+    """The level of the deepest value of a JSON text, the document being the
+    first, read from its brackets outside strings, as the R twin's
+    ``.tf_json_depth()`` reads it."""
+    s = _JSON_STRING.sub("0", text)
+    depth = deepest = 0
+    for m in _JSON_TOKEN.finditer(s):
+        t = m.group()
+        if t == "[" or t == "{":
+            depth += 1
+            deepest = max(deepest, depth)
+        elif t == "]" or t == "}":
+            depth -= 1
+        else:
+            deepest = max(deepest, depth + 1)
+    return deepest
+
+
 def load_document(path) -> Any:
     """Parse the YAML or JSON file at ``path`` (JSON when its suffix is ``.json``).
 
@@ -283,8 +350,12 @@ def load_document(path) -> Any:
     in any mapping raises ``ValueError("(<path>) Duplicate map key: '<key>'")``, the
     message R's reader gives. A YAML document that holds more than ``MAX_VALUES``
     values once its aliases are expanded raises ``ValueError("(<path>) the document
-    holds more than 1000000 values once its aliases are expanded")``. A string or
-    key that holds U+0000 or a lone surrogate, which R cannot hold, raises
+    holds more than 1000000 values once its aliases are expanded")``, and a
+    document nested more than ``MAX_DEPTH`` levels deep raises
+    ``ValueError("(<path>) the document is nested more than 64 levels deep")``,
+    which a JSON text gets before it is parsed and a YAML text whose collections
+    nest more than 1000 levels deep before it is composed. A string or key that
+    holds U+0000 or a lone surrogate, which R cannot hold, raises
     ``ValueError("(<path>) a string holds U+0000, which theoryforge cannot read")``,
     or the same message naming ``a lone surrogate``. A repeated key is reported
     first, unless the key itself holds one of the two, and the size before either
@@ -292,8 +363,11 @@ def load_document(path) -> Any:
     """
     path = Path(path)
     text = path.read_bytes().decode("utf-8-sig")
+    json_file = path.suffix.lower() == ".json"
+    if (_json_depth(text) > MAX_DEPTH) if json_file else _text_too_deep(text):
+        raise _too_deep(path)
     try:
-        if path.suffix.lower() == ".json":
+        if json_file:
             data = json.loads(text, object_pairs_hook=_unique_pairs)
         else:
             loader = _StrictLoader(text)
@@ -301,12 +375,16 @@ def load_document(path) -> Any:
                 data = loader.get_single_data()
             finally:
                 loader.dispose()
+    except RecursionError:
+        # PyYAML's pure-Python composer, used where libyaml is missing,
+        # recurses in Python.
+        raise _too_deep(path) from None
     except _DuplicateKey as dup:
         what = _unreadable(str(dup.key))
         if what:
             raise ValueError(f"({path}) a string holds {what}, which theoryforge cannot read") from None
         raise ValueError(f"({path}) Duplicate map key: '{dup.key}'") from None
-    if path.suffix.lower() != ".json":
+    if not json_file:
         _check_size(data, path)
     what = _unreadable(data)
     if what:

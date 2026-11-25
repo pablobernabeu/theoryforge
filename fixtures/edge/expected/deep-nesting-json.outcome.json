@@ -1,0 +1,5 @@
+{
+  "read": {
+    "error": "the document is nested more than 64 levels deep"
+  }
+}

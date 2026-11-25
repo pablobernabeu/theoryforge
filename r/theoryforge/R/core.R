@@ -37,13 +37,15 @@ NULL
 #' \code{(<path>) Duplicate map key: '<key>'}. A YAML document that holds
 #' more than 1000000 values once its aliases (\code{*a}) are expanded stops
 #' with \code{(<path>) the document holds more than 1000000 values once its
-#' aliases are expanded}, before anything walks it. A comment in a JSON file
-#' stops with jsonlite's message, since JSON has no comments. A string or key
-#' that holds U+0000 or a lone surrogate, which R would cut short or misread,
-#' stops with \code{(<path>) a string holds U+0000, which theoryforge cannot
-#' read}, or the same message naming \code{a lone surrogate}. A document that
-#' is not a mapping, such as a sequence or an empty YAML file, stops with
-#' \code{Theory data must be a mapping}.
+#' aliases are expanded}, before anything walks it, and a document nested more
+#' than 64 levels deep, the document being the first, stops with
+#' \code{(<path>) the document is nested more than 64 levels deep}. A comment
+#' in a JSON file stops with jsonlite's message, since JSON has no comments. A
+#' string or key that holds U+0000 or a lone surrogate, which R would cut short
+#' or misread, stops with \code{(<path>) a string holds U+0000, which
+#' theoryforge cannot read}, or the same message naming \code{a lone
+#' surrogate}. A document that is not a mapping, such as a sequence or an empty
+#' YAML file, stops with \code{Theory data must be a mapping}.
 #'
 #' @param path Path to a \code{.yaml}, \code{.yml} or \code{.json} file.
 #' @return A named list holding the parsed theory object.

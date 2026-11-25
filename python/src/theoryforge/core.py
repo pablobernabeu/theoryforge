@@ -1242,10 +1242,13 @@ def read(path) -> Theory:
     ``ValueError("(<path>) Duplicate map key: '<key>'")``. A YAML document that
     holds more than 1000000 values once its aliases (``*a``) are expanded raises
     ``ValueError("(<path>) the document holds more than 1000000 values once its
-    aliases are expanded")`` before anything walks it. A string or key that
-    holds U+0000 or a lone surrogate, which R cannot hold, raises
-    ``ValueError("(<path>) a string holds U+0000, which theoryforge cannot read")``,
-    or the same message naming ``a lone surrogate``. JSON has no comments, and
+    aliases are expanded")`` before anything walks it, and a document nested
+    more than 64 levels deep, the document being the first, raises
+    ``ValueError("(<path>) the document is nested more than 64 levels deep")``.
+    A string or key that holds U+0000 or a lone surrogate, which R cannot hold,
+    raises ``ValueError("(<path>) a string holds U+0000, which theoryforge
+    cannot read")``, or the same message naming ``a lone surrogate``. JSON has
+    no comments, and
     ``json`` refuses them. A document that is not a mapping raises
     ``ValueError("Theory data must be a mapping")``.
     """
