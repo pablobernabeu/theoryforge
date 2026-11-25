@@ -194,7 +194,9 @@ test_that("literature diagrams are byte-identical to the golden files", {
 test_that("tf_lit_diagram rejects unknown types", {
   corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
   lm <- tf_litmap(corpus)
-  expect_error(tf_lit_diagram(lm, "mindmap"), "unknown lit diagram type")
+  expect_error(tf_lit_diagram(lm, "mindmap"), paste0(
+    "unknown lit diagram type 'mindmap'; expected one of ",
+    "keyword_cooccurrence, co_citation, theme_landscape"), fixed = TRUE)
 })
 
 # -- validated arguments and corpora (API_SPEC.md section 14) -----------------

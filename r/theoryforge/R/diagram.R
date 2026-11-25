@@ -705,6 +705,6 @@ tf_diagram <- function(theory, type = "nomological_net", engine = NULL) {
   if (identical(type, "severity")) {
     return(.tf_severity_chart(T))
   }
-  stop(sprintf("unknown diagram type '%s'; expected one of %s",
-               type, paste(.tf_DIAGRAM_TYPES, collapse = ", ")), call. = FALSE)
+  stop(sprintf("unknown diagram type %s; expected one of %s",
+               .tf_quote_arg(type), paste(.tf_DIAGRAM_TYPES, collapse = ", ")), call. = FALSE)
 }

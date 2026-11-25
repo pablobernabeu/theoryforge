@@ -320,6 +320,18 @@ NULL
   "float#exp" = .tf_yaml_float
 )
 
+# `v` as a refusal message names it: a string between single quotation marks,
+# and any other value, NULL, NA or a vector included, as deparse() writes it,
+# so that the message is never empty. The Python twin's _text.quoted() quotes
+# a string alike and writes any other value as repr() does.
+.tf_quote_arg <- function(v) {
+  if (is.character(v) && length(v) == 1L && !is.na(v)) {
+    sprintf("'%s'", v)
+  } else {
+    paste(deparse(v), collapse = "")
+  }
+}
+
 # Parse a YAML file. merge.precedence = "override" lets a mapping's own key win
 # over a merged one (yaml's default keeps the merged value), and a repeated key
 # stops with "(<path>) Duplicate map key: '<key>'", which the Python twin copies.

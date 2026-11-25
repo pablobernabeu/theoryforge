@@ -176,9 +176,26 @@ def test_severity_chart(panic_path):
     assert ">pred1<" in svg
 
 
+DIAGRAM_TYPES = ("nomological_net, provenance, causal_dag, development_roadmap, pipeline, context, "
+                 "workflow, venn, rigour, severity")
+
+
 def test_unknown_diagram_raises(panic_path):
-    with pytest.raises(ValueError):
-        tf.read(panic_path).diagram("nope")
+    # API_SPEC section 2: the message R gives too, with the value quoted as R
+    # quotes it, an apostrophe included. A value that is not a string is written
+    # in Python's notation, where R writes NULL or c("a", "b").
+    t = tf.read(panic_path)
+    for value, shown in [("causal-dag", "'causal-dag'"), ("it's", "'it's'"), (None, "None"), (1, "1")]:
+        with pytest.raises(ValueError) as err:
+            t.diagram(value)
+        assert str(err.value) == f"unknown diagram type {shown}; expected one of {DIAGRAM_TYPES}"
+    with pytest.raises(ValueError) as err:
+        t.report("xml")
+    assert str(err.value) == "unknown report format: 'xml'"
+    for value, shown in [("it's", "'it's'"), (None, "None"), (1, "1")]:
+        with pytest.raises(ValueError) as err:
+            t.report(value)
+        assert str(err.value) == f"unknown report format: {shown}"
 
 
 def test_the_engine_argument_is_deprecated(panic_path):

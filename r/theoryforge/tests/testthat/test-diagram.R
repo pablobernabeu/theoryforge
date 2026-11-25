@@ -232,9 +232,21 @@ test_that("causal_dag exports the graph tf_implications() reads", {
                    "dag {\n  a -> b\n  c -> b\n  a <-> c\n  k <-> a\n  b -> d\n}\n")
 })
 
-test_that("tf_diagram rejects unknown types", {
+test_that("tf_diagram and tf_report reject unknown values with the Python twin's message", {
+  # API_SPEC section 2. NULL and a vector gave an empty message, and a vector
+  # one message per element. A value that is not a string is written in R's
+  # notation, where Python writes None.
   theory <- tf_read(tf_fixture_path("weak-theory.theory.yaml"))
-  expect_error(tf_diagram(theory, "mindmap"), "unknown diagram type")
+  types <- "nomological_net, provenance, causal_dag, development_roadmap, pipeline, context, workflow, venn, rigour, severity"
+  cases <- list(list("causal-dag", "'causal-dag'"), list("it's", "'it's'"), list(NULL, "NULL"),
+                list(c("a", "b"), 'c("a", "b")'), list(1, "1"))
+  for (case in cases) {
+    expect_error(tf_diagram(theory, case[[1]]),
+                 sprintf("unknown diagram type %s; expected one of %s", case[[2]], types), fixed = TRUE)
+    expect_error(tf_report(theory, case[[1]]), paste0("unknown report format: ", case[[2]]),
+                 fixed = TRUE)
+  }
+  expect_error(tf_report(theory, "xml"), "^unknown report format: 'xml'$")
 })
 
 test_that("DOT labels escape backslash then double-quote, then wrap", {

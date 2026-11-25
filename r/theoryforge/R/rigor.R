@@ -436,7 +436,7 @@ tf_report <- function(theory, format = "json") {
       rows, '\n  </table>\n</section>\n'
     ))
   }
-  stop(sprintf("unknown report format: '%s'", format), call. = FALSE)
+  stop(paste0("unknown report format: ", .tf_quote_arg(format)), call. = FALSE)
 }
 
 # Render a numeric score the way Python's str() would for the HTML table
