@@ -58,10 +58,11 @@ pip install "git+https://github.com/pablobernabeu/theoryforge.git#subdirectory=p
 
 ## Quick start
 
-The package includes four example theories and two literature corpora, and `example_path()`
-gives the path of each, so the code below runs straight after `pip install`. It builds a
-small theory, checks it and asks what its causal graph says, then takes a bundled theory of
-panic disorder through the rest of the workflow.
+The code below needs the development version, installed from GitHub as shown above. The
+package includes four example theories and two literature corpora, and `example_path()`
+gives the path of each, so the code needs no files of your own. It builds a small theory,
+checks it and asks what its causal graph says, then takes a bundled theory of panic disorder
+through the rest of the workflow.
 
 ```python
 import theoryforge as tf
@@ -164,9 +165,10 @@ identifies the effect in observational data and names a minimal such set.
 `discriminate()` sets the theory against a rival, either an alternative that states its own
 propositions or another theory, and lists the claims, independencies and signs that would
 tell the two apart. `appraise_amendment()` compares two versions of a theory and calls the
-amendment progressive, degenerating or neutral in the sense of Lakatos (1970). `simulate()`
-runs the construct network as a linear dynamical system with one coupling gain. Its
-trajectory shows what the propositions imply under that model and is not fitted to data.
+amendment progressive or degenerating in the sense of Lakatos (1970), or neutral, the
+package's label for one that meets neither rule. `simulate()` runs the construct network as
+a linear dynamical system with one coupling gain. Its trajectory shows what the propositions
+imply under that model and is not fitted to data.
 
 ### Test
 

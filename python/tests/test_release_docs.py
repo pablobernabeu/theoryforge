@@ -7,10 +7,13 @@ wheel. PyPI shows the page away from GitHub, so the logo needs an absolute addre
 changelog must date the release that CITATION.cff cites as CITATION.cff does. Those two
 files sit at the root of the repository, outside the Python project, so that test skips
 where they are absent. One test reads pyproject.toml with tomllib, or on Python 3.10 with
-tomli, which pytest itself requires there. The last checks that pyproject.toml,
-DESCRIPTION, mkdocs.yml and API_SPEC.md give the same version, and that CITATION.cff cites
-the newest release CHANGELOG.md dates, no later than that version: between a release's
-submission and its publication, CITATION.cff still cites the one before.
+tomli, which pytest itself requires there. The last checks the records of the version. In a
+release, pyproject.toml, DESCRIPTION, mkdocs.yml and API_SPEC.md give the same version.
+Between releases, mkdocs.yml still gives the newest release, DESCRIPTION gives that version
+followed by .9000, pyproject.toml a .devN version of a later release and API_SPEC.md
+'(development version)'. In both, CITATION.cff cites the newest release CHANGELOG.md dates,
+no later than the newest release: between a release's submission and its publication,
+CITATION.cff still cites the one before.
 """
 
 import re
@@ -94,7 +97,11 @@ def test_pyproject_has_no_obsolete_backend_cap_or_licence_classifier():
 
 
 def _release(version: str) -> tuple[int, ...]:
-    return tuple(int(part) for part in version.split("."))
+    # Trailing zeros are dropped, so 0.7.1.0 ranks with 0.7.1, as in PEP 440.
+    parts = [int(part) for part in version.split(".")]
+    while len(parts) > 1 and parts[-1] == 0:
+        parts.pop()
+    return tuple(parts)
 
 
 def test_every_record_of_the_version_agrees():
@@ -105,16 +112,30 @@ def test_every_record_of_the_version_agrees():
         "DESCRIPTION": re.search(r"^Version: (\S+)", _text(REPO / "r" / "theoryforge" / "DESCRIPTION"),
                                  re.M),
         "mkdocs.yml": re.search(r'^  version: "([^"]+)"', _text(PYTHON_DIR / "mkdocs.yml"), re.M),
-        "API_SPEC.md": re.search(r"^# .*\(v([^)]+)\)$", _text(REPO / "API_SPEC.md"), re.M),
+        "API_SPEC.md": re.search(r"^# .*\((v[^)]+|development version)\)$", _text(REPO / "API_SPEC.md"),
+                                 re.M),
     }
     assert all(found.values()), [name for name, m in found.items() if m is None]
     versions = {name: m.group(1) for name, m in found.items()}
-    assert len(set(versions.values())) == 1, versions
+    # mkdocs.yml shows the newest release beside the site's title, so it names
+    # the release in both states.
+    released = versions["mkdocs.yml"]
+    changelog = _text(CHANGELOG)
+    if versions["DESCRIPTION"].endswith(".9000"):
+        # The development line after a release, which CHANGELOG.md records.
+        assert re.search(rf"^## \[{re.escape(released)}\]", changelog, flags=re.M), released
+        assert versions["DESCRIPTION"] == released + ".9000", versions
+        dev = re.fullmatch(r"(\d+(?:\.\d+)*)\.dev\d+", versions["pyproject.toml"])
+        assert dev and _release(dev.group(1)) > _release(released), versions
+        assert versions["API_SPEC.md"] == "development version", versions
+    else:
+        versions["API_SPEC.md"] = versions["API_SPEC.md"].removeprefix("v")
+        assert len(set(versions.values())) == 1, versions
     # CITATION.cff cites the newest published release, the newest that
     # CHANGELOG.md dates, and moves to a new version only once that version is
     # published, so between a release's submission and its publication it cites
     # the one before.
     cited = str(yaml.safe_load(_text(CITATION))["version"])
-    dated = re.findall(r"^## \[([^\]]+)\] - \d{4}-\d{2}-\d{2}[ \t]*$", _text(CHANGELOG), flags=re.M)
+    dated = re.findall(r"^## \[([^\]]+)\] - \d{4}-\d{2}-\d{2}[ \t]*$", changelog, flags=re.M)
     assert dated and cited == dated[0], (cited, dated[:1])
-    assert _release(cited) <= _release(versions["DESCRIPTION"]), (cited, versions["DESCRIPTION"])
+    assert _release(cited) <= _release(released), (cited, released)

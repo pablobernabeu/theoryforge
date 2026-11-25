@@ -43,6 +43,7 @@ CHECKS = {
     ),
     "non_redundancy": (
         "Construct non-redundancy",
+        "Kelley (1927), "
         "[Le et al. (2010)](https://doi.org/10.1016/j.obhdp.2010.02.003), "
         "[Lawson & Robins (2021)](https://doi.org/10.1177/10888683211047101)",
     ),
@@ -458,6 +459,8 @@ The causal reading takes the propositions as stated. Its verdicts say what the s
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Guest, O., &amp; Martin, A. E. (2021). How computational modeling can force theory building in psychological science. <em>Perspectives on Psychological Science</em>, <em>16</em>(4), 789–802. <a href="https://doi.org/10.1177/1745691620970585">https://doi.org/10.1177/1745691620970585</a></p>
 
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Kelley, T. L. (1927). <em>Interpretation of educational measurements</em>. World Book Company.</p>
+
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Lakatos, I. (1970). Falsification and the methodology of scientific research programmes. In I. Lakatos &amp; A. Musgrave (Eds.), <em>Criticism and the growth of knowledge</em> (pp. 91–196). Cambridge University Press. <a href="https://doi.org/10.1017/cbo9781139171434.009">https://doi.org/10.1017/cbo9781139171434.009</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Lakens, D. (2017). Equivalence tests: A practical primer for <em>t</em> tests, correlations, and meta-analyses. <em>Social Psychological and Personality Science</em>, <em>8</em>(4), 355–362. <a href="https://doi.org/10.1177/1948550617697177">https://doi.org/10.1177/1948550617697177</a></p>
@@ -496,7 +499,10 @@ The causal reading takes the propositions as stated. Its verdicts say what the s
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Rohrer, J. M. (2018). Thinking clearly about correlations and causation: Graphical causal models for observational data. <em>Advances in Methods and Practices in Psychological Science</em>, <em>1</em>(1), 27–42. <a href="https://doi.org/10.1177/2515245917745629">https://doi.org/10.1177/2515245917745629</a></p>
 
-<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Rönkkö, M., &amp; Cho, E. (2022). An updated guideline for assessing discriminant validity. <em>Organizational Research Methods</em>, <em>25</em>(1), 6–14. <a href="https://doi.org/10.1177/1094428120968614">https://doi.org/10.1177/1094428120968614</a></p>
+<!-- Crossref gives the pages of Rönkkö and Cho (2022) as 6-14, but the article runs to
+page 47: the next article in the issue starts on page 48. -->
+
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Rönkkö, M., &amp; Cho, E. (2022). An updated guideline for assessing discriminant validity. <em>Organizational Research Methods</em>, <em>25</em>(1), 6–47. <a href="https://doi.org/10.1177/1094428120968614">https://doi.org/10.1177/1094428120968614</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Rundgren, A., Jordan, B., &amp; Erdtman, S. (2020). <em>JSON Canonicalization Scheme (JCS)</em> (RFC 8785). RFC Editor. <a href="https://doi.org/10.17487/RFC8785">https://doi.org/10.17487/RFC8785</a></p>
 

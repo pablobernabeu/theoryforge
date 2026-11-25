@@ -2,6 +2,7 @@
 #'
 #' Deterministic output.
 #' @name sem
+#' @noRd
 #' @keywords internal
 NULL
 

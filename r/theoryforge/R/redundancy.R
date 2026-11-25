@@ -2,6 +2,7 @@
 #'
 #' Tokenisation and Jaccard similarity over construct definitions.
 #' @name redundancy
+#' @noRd
 #' @keywords internal
 NULL
 

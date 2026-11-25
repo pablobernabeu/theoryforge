@@ -192,17 +192,18 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     raises ValueError.
 
     ``method = "exact"`` multiplies the state by the matrix exponential of
-    (A - damping*I)*dt at every step, so the trajectory is the solution of the
-    linear system at those times whatever ``dt`` is. ``method = "euler"`` (the
-    default for this release) takes fixed explicit steps, which are stable only
-    when |1 + dt*lambda| < 1 for every eigenvalue lambda of A - damping*I. A theory
-    that decays at rate ``damping`` therefore grows without bound, alternating in
-    sign, once dt*damping exceeds 2, and the steps turn a sustained oscillation
-    into growth. The Euler run warns (UserWarning) when it departs from the exact
-    solution, at any step, by more than 5 per cent of the larger of |exact| and
-    the largest absolute starting value (1 when every starting value is 0), so
-    that the warning does not depend on the unit of ``init``. The default will
-    change to ``"exact"`` in the next minor release.
+    (A - damping*I)*dt at every step, computed by scaling and squaring a degree-18
+    Taylor polynomial (Moler & Van Loan, 2003, method 3), so the trajectory is the
+    solution of the linear system at those times whatever ``dt`` is.
+    ``method = "euler"`` (the default for this release) takes fixed explicit steps,
+    which are stable only when |1 + dt*lambda| < 1 for every eigenvalue lambda of
+    A - damping*I. A theory that decays at rate ``damping`` therefore grows without
+    bound, alternating in sign, once dt*damping exceeds 2, and the steps turn a
+    sustained oscillation into growth. The Euler run warns (UserWarning) when it
+    departs from the exact solution, at any step, by more than 5 per cent of the
+    larger of |exact| and the largest absolute starting value (1 when every
+    starting value is 0), so that the warning does not depend on the unit of
+    ``init``. The default will change to ``"exact"`` in the next minor release.
 
     ``steps`` must be a whole number of at least 0 and ``dt`` a finite number
     above 0. ``k`` and ``damping`` must be finite numbers, ``init`` as above and
@@ -217,6 +218,11 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     ``associates`` coupling nothing and ``functional_form`` not read. A linear
     system has one equilibrium, or a continuum of them when its matrix is
     singular, and never two separate ones, so it cannot show bistability.
+
+    References:
+        Moler, C., & Van Loan, C. (2003). Nineteen dubious ways to compute the
+        exponential of a matrix, twenty-five years later. SIAM Review, 45(1),
+        3-49. https://doi.org/10.1137/S00361445024180
     """
     n_steps = _check_knobs(steps, dt, k, damping, init, method)
     theory = theory.data if hasattr(theory, "data") else theory

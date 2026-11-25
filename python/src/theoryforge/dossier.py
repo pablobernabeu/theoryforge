@@ -1,8 +1,9 @@
 """Assemble a reviewer-facing audit bundle as a single Markdown document.
 
 Composes the deterministic outputs (rigour report, severity table, test record,
-evidence, provenance and the hypotheses section of a preregistration), so the
-bundle is itself deterministic.
+evidence, claims and causal graph, equivalent models, rivals, provenance and the
+theory and hypotheses sections of a preregistration), so the bundle is itself
+deterministic.
 """
 from __future__ import annotations
 
@@ -120,8 +121,12 @@ def dossier(theory, cycles: str = "refuse") -> str:
     the post-data severity of ``post_data_severity()`` where it can be
     computed, an open bound written as ``-inf`` or ``inf``. The
     evidence lists the prediction each entry supports, its direction and its
-    DOI. The provenance and the preregistration follow, and the implied
-    independencies appear once, in the preregistration.
+    DOI. The claims and the causal graph, the equivalent models, the rivals and
+    the provenance follow, and the preregistration (its theory and hypotheses
+    sections, without the severity section) closes it. The implied
+    independencies appear once, in the preregistration. ``cycles`` ("refuse" or
+    "sigma") is passed to ``entailments()``, ``discriminate()`` and
+    ``preregister()``.
 
     Raises:
         ValueError: when ``check()`` refuses the theory, because a test

@@ -50,10 +50,9 @@ OSF storage. With \code{dry_run = TRUE} (the default), the planned request
 is returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 both \code{token} and \code{node} (the OSF project id) and performs an
 authenticated \code{PUT} through the suggested \pkg{curl} package, which must
-be installed. Each request is abandoned after 30 seconds. The dossier is
-built first, so the
-function stops when \code{\link[=tf_check]{tf_check()}} refuses the theory, with
-\code{dry_run = TRUE} as well.
+be installed. Each request is abandoned after 30 seconds without progress.
+The dossier is built first, so the function stops when \code{\link[=tf_check]{tf_check()}} refuses
+the theory, with \code{dry_run = TRUE} as well.
 }
 \details{
 OSF storage refuses to create a file whose name already exists in the

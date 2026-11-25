@@ -1,6 +1,5 @@
 ---
 title: "Mapping the literature"
-output: rmarkdown::html_vignette
 ---
 
 ```{r, include = FALSE}

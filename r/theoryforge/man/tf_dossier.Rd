@@ -17,10 +17,12 @@ The dossier Markdown as a single string (LF line endings, single
 trailing newline).
 }
 \description{
-Assembles a reviewer-facing audit bundle: the header, the rigour-checklist
-table, the severity list, the test record, the evidence, the provenance list
-and, appended, the hypotheses section of a preregistration. The output is
-deterministic, so the same theory always yields the same dossier.
+Assembles a reviewer-facing audit bundle. The header is followed by the
+rigour-checklist table, the severity list, the test record, the evidence,
+the claims and the causal graph, the equivalent models, the rivals and the
+provenance, and the preregistration (its theory and hypotheses sections,
+without the severity section) closes it. The output is deterministic, so the
+same theory always yields the same dossier.
 }
 \details{
 The header gives the checklist version, the aggregate score, the checklist

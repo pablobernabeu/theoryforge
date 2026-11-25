@@ -4,6 +4,7 @@
 #' prediction's declared \code{type} and its \code{diagnostic_vs} ids, and
 #' neither the statement nor any test, outcome or data.
 #' @name scoring
+#' @noRd
 #' @keywords internal
 NULL
 

@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use theoryforge, please cite it as below."
 title: "theoryforge: Systematic theory development"
-abstract: "A rigorous, reproducible workflow for building, developing and testing scientific theories, delivered as twin, feature-parity R and Python packages. A theory is treated as a versioned, machine-checkable object, scored against a twelve-item rigour checklist and connected to the bibliometric literature."
+abstract: "A reproducible workflow for building, developing and testing scientific theories, in twin R and Python packages that give the same results. A theory is held as a versioned, machine-checkable object, scored against a 12-item rigour checklist and mapped onto the themes of a literature corpus."
 type: software
 authors:
   - family-names: Bernabeu

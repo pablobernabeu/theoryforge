@@ -417,6 +417,8 @@ footer.app a, .help p a, .note a { text-decoration: underline; }
 .help ol.steps li { margin-bottom: 5px; }
 .help ul.help-ops { margin: 0; padding-left: 1.1rem; }
 .help ul.help-ops li { margin-bottom: 5px; }
+.help ul.help-refs { margin: 0; padding-left: 0; list-style: none; }
+.help ul.help-refs li { margin-bottom: 5px; padding-left: 1.8em; text-indent: -1.8em; overflow-wrap: anywhere; }
 .help h4 { margin: 12px 0 4px; font-size: .86rem; }
 
 /* ---- the main column's two tabs ---- */

@@ -1,6 +1,5 @@
 ---
 title: "Developing and testing a theory"
-output: rmarkdown::html_vignette
 ---
 
 ```{r setup, include = FALSE}
@@ -21,12 +20,12 @@ library(theoryforge)
 The Get started vignette reads, validates, scores and builds a theory. This
 article continues with the stages of developing and testing it. It appraises an
 amendment, derives what the theory's causal graph commits it to, compares the
-theory with a rival, writes the hypotheses section of a preregistration, grades
-a test after the data and assembles the audit dossier. The examples read the
-theories that ship with the package through `tf_example_path()`, so every chunk
-needs only `theoryforge`, apart from those that draw a diagram with
-`tf_render_diagram()`, which also need the optional DiagrammeR and DiagrammeRsvg
-packages and are skipped without them.
+theory with a rival, writes the theory and hypotheses sections of a
+preregistration, grades a test after the data and assembles the audit dossier.
+The examples read the theories that ship with the package through
+`tf_example_path()`, so every chunk needs only `theoryforge`, apart from those
+that draw a diagram with `tf_render_diagram()`, which also need the optional
+DiagrammeR and DiagrammeRsvg packages and are skipped without them.
 
 ## Developing: appraising an amendment
 

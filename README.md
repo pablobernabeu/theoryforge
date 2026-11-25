@@ -63,7 +63,8 @@ pip install "git+https://github.com/pablobernabeu/theoryforge.git#subdirectory=p
 
 ## Quick start
 
-Both packages include four example theories and two literature corpora. The lines below read
+The code below needs the development versions, installed from GitHub as shown above. Both
+packages include four example theories and two literature corpora, and the lines below read
 the bundled network theory of panic disorder, score it against the checklist and list the
 independencies its causal graph implies. The graph has a feedback loop between arousal and
 perceived threat, so it is read by sigma-separation.
@@ -109,9 +110,10 @@ definitions, with the same label or with every measure of one listed for the oth
 To derive and compare, `implications()` lists the conditional independencies that the causal
 graph of the propositions implies, `entailments()` reads each stated claim against that
 graph, `equivalent_models()` lists the causal directions that no observational study can
-test, `discriminate()` sets the theory against a rival, `appraise_amendment()` calls an
-amendment progressive, degenerating or neutral (Lakatos, 1970) and `simulate()` runs the
-construct network as a linear dynamical system.
+test, `discriminate()` sets the theory against a rival and `simulate()` runs the construct
+network as a linear dynamical system. `appraise_amendment()` calls an amendment progressive
+or degenerating (Lakatos, 1970), or neutral, the package's label for one that meets neither
+rule.
 
 To test it, `severity()` grades the riskiness of each prediction's claim before data,
 `compile_sem()` writes lavaan model syntax, `preregister()` writes the theory and hypotheses
@@ -181,7 +183,7 @@ on the embedding model and `render_diagram()` on the renderer.
 
 ```bash
 # Python
-cd python && pip install -e ".[dev]" && pytest
+(cd python && pip install -e ".[dev]" && pytest)
 
 # R
 Rscript -e "devtools::test('r/theoryforge')"

@@ -65,7 +65,8 @@ package is installed, OpenAlex's own message. The request is not retried.
 When a page after the first fails, the works fetched before it are not
 returned, and the message ends with the number of them, as in
 \code{(after 200 records were fetched)}. Every request is abandoned after
-30 seconds.
+30 seconds without progress, or, without the suggested \pkg{curl} package,
+after 30 seconds in all.
 
 The arguments are checked before any request. \code{query} must be a single
 string with at least one character left after trimming, \code{per_page} a

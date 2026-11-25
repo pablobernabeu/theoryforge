@@ -4,6 +4,7 @@
 #' deterministic for a given corpus. Only the OpenAlex fetch,
 #' [tf_fetch_corpus()], depends on a live network service.
 #' @name lit
+#' @noRd
 #' @keywords internal
 NULL
 
@@ -1022,7 +1023,8 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #' When a page after the first fails, the works fetched before it are not
 #' returned, and the message ends with the number of them, as in
 #' \code{(after 200 records were fetched)}. Every request is abandoned after
-#' 30 seconds.
+#' 30 seconds without progress, or, without the suggested \pkg{curl} package,
+#' after 30 seconds in all.
 #'
 #' The arguments are checked before any request. \code{query} must be a single
 #' string with at least one character left after trimming, \code{per_page} a

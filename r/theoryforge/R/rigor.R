@@ -2,6 +2,7 @@
 #'
 #' Scores a theory against the 12-item checklist installed with the package.
 #' @name rigor
+#' @noRd
 #' @keywords internal
 NULL
 

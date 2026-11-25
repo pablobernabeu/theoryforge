@@ -4,6 +4,7 @@
 #' \code{system.file()}. The Python package offers the same files through
 #' \code{example_path()} and \code{example_names()}.
 #' @name examples
+#' @noRd
 #' @keywords internal
 NULL
 

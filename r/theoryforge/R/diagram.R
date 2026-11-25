@@ -2,6 +2,7 @@
 #'
 #' Deterministic string renderers for every diagram type.
 #' @name diagram
+#' @noRd
 #' @keywords internal
 NULL
 

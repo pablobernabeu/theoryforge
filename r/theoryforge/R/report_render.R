@@ -5,6 +5,7 @@
 #' deterministic \code{tf_dossier} output, and only the rendering step depends
 #' on the environment.
 #' @name report_render
+#' @noRd
 #' @keywords internal
 NULL
 

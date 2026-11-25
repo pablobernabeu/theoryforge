@@ -197,7 +197,7 @@ e0152719. \doi{10.1371/journal.pone.0152719}
 }
 \seealso{
 \code{\link[=tf_diagram]{tf_diagram()}} with \code{type = "causal_dag"}, which exports the
-same graph as dagitty syntax without reading it, and the methodological
-foundations article for the literature behind the causal-testability
-criterion.
+same graph as dagitty syntax without reading it, and the
+\href{https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html}{methodological foundations article}
+for the literature behind the causal-testability criterion.
 }

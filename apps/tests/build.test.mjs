@@ -8,7 +8,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildPy, manifestCorpora, manifestExamples } from "../build.mjs";
+import { buildPy, manifestCorpora, manifestExamples, versionsAgree } from "../build.mjs";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -85,4 +85,17 @@ test("the effort-recovery example promises what its default run shows", async ()
   assert.doesNotMatch(header, /oscillating trajectories/);
   assert.match(header, /fatigue overshoots its resting level of zero/);
   assert.match(header, /damping to 0\.1 and raise steps to 150/);
+});
+
+test("the build accepts a release or a development line of the two package versions", () => {
+  assert.ok(versionsAgree("0.7.1", "0.7.1"));
+  assert.ok(versionsAgree("0.7.1.9000", "0.8.0.dev0"));
+  assert.ok(versionsAgree("0.7.1.9000", "0.7.2.dev3"));
+  assert.ok(versionsAgree("0.7.1.9000", "1.0.dev0"));
+  assert.ok(!versionsAgree("0.7.1", "0.8.0"));
+  assert.ok(!versionsAgree("0.7.1.9000", "0.7.1"));
+  assert.ok(!versionsAgree("0.7.1.9000", "0.7.1.dev0"));
+  assert.ok(!versionsAgree("0.7.1", "0.8.0.dev0"));
+  assert.ok(!versionsAgree("0.7.1.9000", "0.7.1.9000"));
+  assert.ok(!versionsAgree("0.7.1.9000", "0.7.1.0.dev0"));
 });

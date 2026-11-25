@@ -47,20 +47,20 @@ each item.
 
 ## From building to testing
 
-A theory's `maturity` field records where it stands, as `building`, `developing` or
-`testing`. In building, the builder methods assemble the theory and log each step, or
-`read_dagitty()` starts it from a causal diagram drawn in DAGitty. Validation checks the
-file against the schema and every cross-reference, and the content hash identifies its
-content exactly.
+A theory's `maturity` field records its stage as `building`, `developing` or `testing`, or
+as `draft`, which makes the rigour checklist's gate advisory. At the building stage, the
+builder methods assemble the theory and log each step. `read_dagitty()` starts a draft from
+a causal diagram drawn in DAGitty. Validation checks the file against the schema and every
+cross-reference, and the content hash identifies its content exactly.
 
-In developing, `appraise_amendment()` compares a revision with its prior version and
-classifies it as progressive, degenerating or neutral, the first two in Lakatos's sense.
+At the developing stage, `appraise_amendment()` compares a revision with its prior version
+and classifies it as progressive, degenerating or neutral, the first two in Lakatos's sense.
 
-In testing, the causal graph of the propositions is read for the conditional independencies
-it implies, the signs of the effects it entails, the directions no observational study can
-settle and the results that would tell it from a rival. The package then grades each
-prediction before and after the data, writes the theory and hypotheses sections of a
-preregistration and assembles an audit dossier for a reviewer.
+At the testing stage, the causal graph of the propositions is read for the conditional
+independencies it implies, the signs of the effects it entails, the directions no
+observational study can settle and the results that would tell it from a rival. The package
+then grades each prediction before and after the data, writes the theory and hypotheses
+sections of a preregistration and assembles an audit dossier for a reviewer.
 
 [Get started](getting-started.md) covers reading, validating and scoring a theory, and
 [Workflow modes](workflow-modes.md) follows the three stages with a worked example of each
