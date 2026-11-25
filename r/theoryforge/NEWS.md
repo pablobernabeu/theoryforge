@@ -29,8 +29,8 @@ add the changes that concern the R package alone.
   order or format. A single value in a field that holds a list of strings, as in
   `derives_from: p1`, is hashed as a list of one. The preregistration and the
   dossier give it, and `tf_validate(full = TRUE)` checks a hash recorded in
-  `version$content_hash`. R computes the digest itself, since base R has no SHA-256
-  before R 4.5.
+  `version$content_hash`. R 4.5 and later compute the digest with
+  `tools::sha256sum()`, and earlier versions compute it in R.
 
 * Added `tf_read_dagitty()`, which makes a theory of DAGitty model code, such as the
   text that `dagitty::dagitty()` prints. Each variable becomes a construct, `->` a
@@ -83,7 +83,11 @@ add the changes that concern the R package alone.
   session. The apps also gained operations for post-data severity, the entailments,
   the equivalent models, the comparison with a rival and a simulation from an
   impulse in one construct, a choice of corpus for the literature operations and a
-  link that carries the theory and the chosen operation.
+  link that carries the theory and the chosen operation. The theory card gained the
+  score and the content hash, which follow the card once the work the user started
+  has run. The apps compute the score unasked for a theory with at most 300
+  constructs, propositions and predictions, and the hash for one whose JSON is at
+  most 50,000 characters long in the R app and 1,000,000 in the Python app.
 
 ## Changed
 
@@ -103,6 +107,41 @@ add the changes that concern the R package alone.
   theoryforge cannot read` or the same message naming `a lone surrogate`. R cut
   such a string at U+0000, so that a title written `"a\u0000b"` read as `"a"`, and
   misread a lone surrogate, while the Python package kept both.
+
+* `tf_read()` and `tf_read_corpus()` began refusing a YAML file with an alias whose
+  anchor is undefined, or that lies inside the node its anchor names, with
+  `(<path>) the alias '<name>' names no node that ends before it`, and one that
+  gives an anchor to two nodes, with `(<path>) the anchor '<name>' names two
+  nodes`. yaml read such an alias as the text `_yaml.bad-anchor_`, with a warning,
+  and bound an alias to the first of two nodes that share an anchor, where YAML
+  binds it to the last, while the Python package refused the file or read a list
+  that holds itself.
+
+* `tf_read()` and `tf_read_corpus()` began refusing a document nested more than 64
+  levels deep, the document being the first, with `(<path>) the document is nested
+  more than 64 levels deep`, as the Python package does. R read such a YAML file
+  without limit and stopped at its C stack on a JSON file some thousands of levels
+  deep. A YAML document is measured as its aliases expand it.
+
+* `tf_fetch_corpus()` began refusing a page whose results hold a value that is not
+  an object, with `OpenAlex response has a work that is not an object`. It read a
+  null work as a record of nulls and stopped with `subscript out of bounds` on a
+  string. Keyword and concept entries without a name given as text, references that
+  are not text and a field that is not an array now give no entries, where a null
+  reference stopped the fetch.
+
+* `tf_redundancy_check()`, `tf_check()`, `tf_preregister()` and `tf_dossier()`
+  screen many constructs much faster. At 400 constructs, `tf_redundancy_check()`
+  takes about half a second where it took a minute and a half, and `tf_check()`
+  screens 4000 constructs in a few seconds. The results are unchanged.
+
+* `tf_simulate()` skips only the terms of its sums that cannot change them, so every
+  value keeps its bits, and at 200 constructs the default run takes under a second
+  where it took about 13.
+
+* `tf_validate()` gathers its messages without copying them at every check and
+  looks references up in a set of ids, so a theory of 20000 constructs validates in
+  seconds where it took nearly a minute. Every message and its order are unchanged.
 
 * The causal_testability item of the checklist cites Rohrer (2018), on stating causal
   assumptions in a graph, in place of the paper that describes the dagitty software.
@@ -256,6 +295,8 @@ add the changes that concern the R package alone.
   a failed prediction began counting as an answer to that failure. The record gained
   `theoretically_progressive`, `empirically_progressive`, `revised`,
   `weakened_refuted`, `unresolved` and the comparison of implied independencies.
+  Each entry of `assumptions` gained `added_for_inferred`, which says whether
+  `added_for` was read from `protects`, and `change`, `"new"` or `"revised"`.
 
 * Read from the 0.7.0 example files, the shipped amendment came out neutral, since
   it gives up an independence that no test had refuted. The revised examples record
@@ -348,6 +389,10 @@ add the changes that concern the R package alone.
   expanded, with `(<path>) the document holds more than 1000000 values once its
   aliases are expanded`. Merge keys read as before.
 
+* `tf_read()` and `tf_read_corpus()` evaluated R code that a theory file tags
+  `!expr` when `options(yaml.eval.expr = TRUE)` was set. No reading of a file
+  evaluates it now.
+
 * `tf_write()` wrote a missing value (`NA`) in a field that the schema types as an
   array of strings as an array that holds null. It now writes null.
 
@@ -367,9 +412,11 @@ add the changes that concern the R package alone.
 * `tf_diagram()` and `tf_report()` stopped with an empty message when the type or
   format was `NULL` or `character(0)` and with two messages run together for a
   vector of two values. `tf_render_diagram()` stopped with
-  `argument is of length zero` for a `NULL` type. Each now gives the message for an
-  unknown type or format. That message, and the one of `tf_lit_diagram()`, writes a
-  value that is not a single string as `deparse()` writes it, so that `NULL` gives
+  `argument is of length zero` for a `NULL` type, and `tf_lit_diagram()` did so for
+  a `NULL` or `character(0)` type and stopped with `the condition has length > 1`
+  for two strings. Each now gives the message for an unknown type or format. That
+  message, and the one of `tf_lit_diagram()`, writes a value that is not a single
+  string as `deparse()` writes it, so that `NULL` gives
   `unknown report format: NULL` and `1` is no longer quoted.
 
 * The Euler run of `tf_simulate()` measured its departure from the exact solution
@@ -384,9 +431,10 @@ add the changes that concern the R package alone.
   that Graphviz drew from text in a theory could run script in the site's origin,
   and the SVG download carried it. Each figure is now read as XML and inserted as
   nodes, with any script, foreign content, style sheet, animation, event handler and
-  link outside the figure taken out. The causal DAG is also converted from dagitty's
-  quoting to that of DOT before Graphviz reads it, so an id such as `a\" [URL=...]`,
-  which dagitty reads as written, stays one node.
+  link outside the figure taken out, and so is a character that XML cannot hold. The
+  causal DAG is also converted from dagitty's quoting to that of DOT before Graphviz
+  reads it, so an id such as `a\" [URL=...]`, which dagitty reads as written, stays
+  one node.
 
 * When `webr.r-wasm.org` or `cdn.jsdelivr.net` could not be reached, the apps showed
   a blank page, and a package or a file that could not be fetched was reported by an
@@ -444,11 +492,13 @@ add the changes that concern the R package alone.
 
 * The 0.7.0 notes said that the zero block of `tf_compile_sem()` fixes the
   covariance of two terminal constructs the theory leaves unrelated, and
-  `?tf_compile_sem` said the same. The theory relates two terminal constructs
-  through the causes it names, and the block fixes the covariance of their
-  disturbances, so that the two are independent given those causes.
+  `?tf_compile_sem` said the same. The theory relates two terminal constructs that
+  no association joins through the causes it names, and the block fixes the
+  covariance of their disturbances, so that the two are independent given those
+  causes.
 
-* The help of each browser app lists the works its texts cite, with their DOIs.
+* The help of each browser app says how the amendment appraisal compares auxiliary
+  assumptions and lists the works its texts cite, with their DOIs.
 
 * The methodology article was reorganised by subject, with a section for each group
   of checklist items and sections on the causal reading of claims, equivalent models

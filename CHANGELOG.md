@@ -76,7 +76,10 @@ that concern it alone.
   literature operations read the demonstration corpus, the frozen OpenAlex corpus or an
   uploaded one, with the method, `min_df` and `max_df` of `litmap()`. The preregistration
   and the dossier are shown formatted, and a link carries the theory and the chosen
-  operation.
+  operation. The theory card gained the score and the content hash, which follow the card
+  once the work the user started has run. The apps compute the score unasked for a theory
+  with at most 300 constructs, propositions and predictions, and the hash for one whose
+  JSON is at most 50,000 characters long in the R app and 1,000,000 in the Python app.
 
 ### Changed
 - The causal_testability item of the checklist cites Rohrer (2018), on stating causal
@@ -147,6 +150,32 @@ that concern it alone.
   string at U+0000 and misread a lone surrogate, so the two packages read the file
   differently. R's reader also began refusing a JSON file that holds a comment, which
   Python's `json` module refused already.
+- `read()` and `read_corpus()` began refusing a YAML file with an alias whose anchor is
+  undefined, or that lies inside the node its anchor names, with `(<path>) the alias
+  '<name>' names no node that ends before it`, and one that gives an anchor to two nodes,
+  with `(<path>) the anchor '<name>' names two nodes`, as R's reader now does. PyYAML
+  raised its own `ComposerError` for the first and the third and read the second as a list
+  that holds itself, which `content_hash()`, `write()` and `dossier()` could not walk,
+  while R read all three.
+- `read()` and `read_corpus()` began refusing a document nested more than 64 levels deep,
+  the document being the first, with `(<path>) the document is nested more than 64 levels
+  deep`, in both packages. Python raised `RecursionError` on a document about a thousand
+  levels deep, or crashed in PyYAML's C composer at some tens of thousands, and R stopped
+  at its C stack on such a JSON file. A YAML document is measured as its aliases expand
+  it.
+- `fetch_corpus()` began refusing a page whose results hold a value that is not an object,
+  with `ValueError("OpenAlex response has a work that is not an object")`, where it raised
+  `AttributeError`. Keyword and concept entries without a name given as text, references
+  that are not text and a field that is not an array now give no entries, where a string
+  of keywords raised `AttributeError`, concepts given as an object raised `KeyError` and a
+  keyword named by a number was kept as a number.
+- `redundancy_check()`, `check()`, `preregister()` and `dossier()` screen many constructs
+  much faster in both packages. At 4000 constructs, the screen of `check()` takes about a
+  third of a second in Python and a few seconds in R, where it took a minute and well over
+  ten minutes. The results are unchanged.
+- `simulate()` skips only the terms of its sums that cannot change them, so every value
+  keeps its bits in both packages, and at 200 constructs the default run takes under a
+  second where it took 6 to 13.
 - The message for an unknown type of `diagram()`, `render_diagram()` or `lit_diagram()`
   began listing the types separated by commas, as R lists them, in place of a tuple. These
   messages and that of `report()` began quoting a string between single quotation marks
@@ -195,7 +224,8 @@ that concern it alone.
   lacks. An assumption without `added_for` that protects a failed prediction began counting
   as an answer to that failure. The record gained `theoretically_progressive`,
   `empirically_progressive`, `revised`, `weakened_refuted`, `unresolved` and the comparison
-  of implied independencies.
+  of implied independencies. Each entry of `assumptions` gained `added_for_inferred`, which
+  says whether `added_for` was read from `protects`, and `change`, `new` or `revised`.
 - Read from the 0.7.0 example files, the shipped amendment came out neutral, since it gives
   up an independence that no test had refuted. The revised examples record that refutation,
   and the amendment is progressive.
@@ -230,6 +260,8 @@ that concern it alone.
   the first 10,000 results still uses a cursor.
 - `fetch_corpus()` began leaving out a null title, which made the record fail
   `corpus.schema.json`, and asking OpenAlex only for the fields a record maps.
+- `simulate()` began computing with `dt`, `k` and `damping` as doubles, as R does, so a
+  NumPy float32 knob gives the trajectory of the double it equals.
 
 ### Deprecated
 - Naming the theory argument `T`, as in `check(T=theory)`, gives a `FutureWarning` and will
@@ -246,7 +278,10 @@ that concern it alone.
   `query must be a non-empty string`. It also accepts a `per_page` given as a whole-numbered
   float, as R does.
 - When a page after the first failed, the message of `fetch_corpus()` did not say how many
-  records had been fetched. It now ends with that number.
+  records had been fetched. It now ends with that number. A connection reset, or a reply cut
+  short, while a reply or an error reply was read let urllib's own error through, such as
+  `ConnectionResetError` or `IncompleteRead`. It is now a `urllib.error.URLError`, which
+  carries the note.
 - In R, `fetch_corpus()` and `osf_push()` abandoned a request 30 seconds after it began,
   however steadily its bytes arrived, so a large OpenAlex page or an upload over a slow
   connection failed in R where it succeeded in Python. With the curl package, R now abandons
@@ -262,6 +297,16 @@ that concern it alone.
   hours or ran out of memory. `read()` and `read_corpus()` now refuse a document that holds
   more than 1000000 values once its aliases are expanded, with `(<path>) the document holds
   more than 1000000 values once its aliases are expanded`. Merge keys read as before.
+- A YAML file with a long chain of merge keys, in which each mapping merges the one before,
+  raised `RecursionError` from about a thousand links. It now reads, as in R.
+- When a YAML file repeated a key in a mapping that ends before a syntax error, `read()`
+  reported the syntax error, and in JSON it reported a repeated key that comes before a
+  syntax error. R reported the other fault in both cases. The two readers now report the
+  first of several faults in one order, which the specification gives.
+- `write()` wrote a string that holds U+0085 (NEL) to YAML in single quotes with the
+  character as it is, which libyaml reads as a line feed and folds into a space, so
+  `Panic<NEL>disorder` read back as `Panic disorder` in both packages. Such a string is now
+  written in double quotes with the escape `\N`, as R writes it.
 - The `causal_dag` view of `diagram()` wrote an id that ends with a backslash as `"a\"`,
   whose backslash escapes the closing quote, so dagitty could not read the line. The view
   now refuses such an id with `causal_dag cannot export construct id '<id>': dagitty cannot
@@ -276,9 +321,9 @@ that concern it alone.
   Graphviz drew from text in a theory could run script in the site's origin, and the SVG
   download carried it. Each figure is now read as XML and inserted as nodes, with any
   script, foreign content, style sheet, animation, event handler and link outside the figure
-  taken out. The causal DAG is also converted from dagitty's quoting to that of DOT before
-  Graphviz reads it, so an id such as `a\" [URL=...]`, which dagitty reads as written, stays
-  one node.
+  taken out, and so is a character that XML cannot hold. The causal DAG is also converted
+  from dagitty's quoting to that of DOT before Graphviz reads it, so an id such as
+  `a\" [URL=...]`, which dagitty reads as written, stays one node.
 - When `webr.r-wasm.org` or `cdn.jsdelivr.net` could not be reached, the apps showed a blank
   page, and a package or a file that could not be fetched was reported by an unrelated error
   or a traceback. The start panel now names what could not be fetched and where from, and
@@ -320,10 +365,11 @@ that concern it alone.
   for a bound away from zero a more precise test is harder to pass.
 - The 0.7.0 notes said that the zero block of `compile_sem()` fixes the covariance of two
   terminal constructs the theory leaves unrelated, and the docstring of `compile_sem()` said
-  the same. The theory relates two terminal constructs through the causes it names, and the
-  block fixes the covariance of their disturbances, so that the two are independent given
-  those causes.
-- The help of each browser app lists the works its texts cite, with their DOIs.
+  the same. The theory relates two terminal constructs that no association joins through
+  the causes it names, and the block fixes the covariance of their disturbances, so that
+  the two are independent given those causes.
+- The help of each browser app says how the amendment appraisal compares auxiliary
+  assumptions and lists the works its texts cite, with their DOIs.
 
 ## [0.7.1]
 
