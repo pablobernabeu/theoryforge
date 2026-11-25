@@ -624,9 +624,10 @@ def _v_structures(directed: list[list[bool]], k: int) -> list[tuple[int, int, in
     adj = _skeleton(directed, k)
     out = []
     for c in range(k):
-        for a in range(k):
-            for b in range(a + 1, k):
-                if directed[a][c] and directed[b][c] and not adj[a][b]:
+        parents = [a for a in range(k) if directed[a][c]]
+        for i, a in enumerate(parents):
+            for b in parents[i + 1:]:
+                if not adj[a][b]:
                     out.append((a, c, b))
     return out
 
@@ -639,6 +640,11 @@ def _compelled(directed: list[list[bool]], k: int) -> list[list[bool]]:
     (Andersson et al., 1997), whatever order the rules are applied in.
     """
     adj = _skeleton(directed, k)
+    children = [list(compress(range(k), row)) for row in directed]
+    parents: list[list[int]] = [[] for _ in range(k)]
+    for u in range(k):
+        for v in children[u]:
+            parents[v].append(u)
     comp = [[False] * k for _ in range(k)]
     for a, c, b in _v_structures(directed, k):
         comp[a][c] = comp[b][c] = True
@@ -646,18 +652,19 @@ def _compelled(directed: list[list[bool]], k: int) -> list[list[bool]]:
     def undirected(a: int, b: int) -> bool:
         return adj[a][b] and not comp[a][b] and not comp[b][a]
 
+    # Only directed edges are ever compelled, so each rule need look only at the
+    # parents or children concerned.
     changed = True
     while changed:
         changed = False
         for x in range(k):
-            for y in range(k):
-                if not (directed[x][y] and undirected(x, y)):
+            for y in children[x]:
+                if not undirected(x, y):
                     continue
-                r1 = any(comp[z][x] and not adj[z][y] for z in range(k) if z != y)
-                r2 = any(comp[x][z] and comp[z][y] for z in range(k))
-                r3 = any(undirected(x, z1) and undirected(x, z2) and comp[z1][y] and comp[z2][y]
-                         and not adj[z1][z2]
-                         for z1 in range(k) for z2 in range(z1 + 1, k))
+                r1 = any(comp[z][x] and not adj[z][y] for z in parents[x] if z != y)
+                r2 = any(comp[x][z] and comp[z][y] for z in children[x])
+                near = [z for z in parents[y] if comp[z][y] and undirected(x, z)]
+                r3 = any(not adj[z1][z2] for i, z1 in enumerate(near) for z2 in near[i + 1:])
                 if r1 or r2 or r3:
                     comp[x][y] = True
                     changed = True

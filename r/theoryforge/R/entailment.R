@@ -614,16 +614,17 @@ tf_entailments <- function(theory, cycles = "refuse") {
 .tf_v_structures <- function(directed) {
   k <- nrow(directed)
   adj <- .tf_skeleton(directed)
-  out <- matrix(integer(0), ncol = 3L)
+  rows <- vector("list", k)
   for (c in seq_len(k)) {
-    for (a in seq_len(k)) {
-      if (a == k) next
-      for (b in (a + 1L):k) {
-        if (directed[a, c] && directed[b, c] && !adj[a, b]) out <- rbind(out, c(a, c, b))
-      }
-    }
+    parents <- which(directed[, c])
+    if (length(parents) < 2L) next
+    pairs <- utils::combn(length(parents), 2L)
+    a <- parents[pairs[1L, ]]
+    b <- parents[pairs[2L, ]]
+    open <- !adj[cbind(a, b)]
+    if (any(open)) rows[[c]] <- c(rbind(a[open], c, b[open]))
   }
-  out
+  matrix(as.integer(unlist(rows)), ncol = 3L, byrow = TRUE)
 }
 
 # Which edges of a DAG keep their direction in every Markov-equivalent DAG:
@@ -639,25 +640,23 @@ tf_entailments <- function(theory, cycles = "refuse") {
     comp[vs[row, 1L], vs[row, 2L]] <- TRUE
     comp[vs[row, 3L], vs[row, 2L]] <- TRUE
   }
-  undirected <- function(a, b) adj[a, b] && !comp[a, b] && !comp[b, a]
+  children <- lapply(seq_len(k), function(v) which(directed[v, ]))
+  parents <- lapply(seq_len(k), function(v) which(directed[, v]))
+  # Only directed edges are ever compelled, so each rule need look only at the
+  # parents or children concerned.
   changed <- TRUE
   while (changed) {
     changed <- FALSE
     for (x in seq_len(k)) {
-      for (y in seq_len(k)) {
-        if (!(directed[x, y] && undirected(x, y))) next
-        others <- setdiff(seq_len(k), y)
-        r1 <- any(vapply(others, function(z) comp[z, x] && !adj[z, y], logical(1)))
-        r2 <- any(comp[x, ] & comp[, y])
-        r3 <- FALSE
-        if (k >= 2L) {
-          for (z1 in seq_len(k - 1L)) {
-            for (z2 in (z1 + 1L):k) {
-              if (undirected(x, z1) && undirected(x, z2) && comp[z1, y] && comp[z2, y] &&
-                  !adj[z1, z2]) r3 <- TRUE
-            }
-          }
-        }
+      for (y in children[[x]]) {
+        if (comp[x, y] || comp[y, x]) next
+        z <- parents[[x]]
+        r1 <- any(comp[z, x] & !adj[z, y] & z != y)
+        z <- children[[x]]
+        r2 <- any(comp[x, z] & comp[z, y])
+        z <- parents[[y]]
+        near <- z[comp[z, y] & adj[x, z] & !comp[x, z] & !comp[z, x]]
+        r3 <- length(near) >= 2L && !all(adj[near, near][upper.tri(diag(length(near)))])
         if (r1 || r2 || r3) {
           comp[x, y] <- TRUE
           changed <- TRUE
