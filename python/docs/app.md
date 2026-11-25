@@ -77,11 +77,12 @@ asks first.
 
 The apps fetch no research data over the network. The literature operations read the corpora
 listed above, so `fetch_corpus()` is not offered: run it in the package and upload the file
-it writes. Three other functions stay in the installed package. The embedding screen needs
-an embedding model, and rendering a report with `render_report()` needs Quarto. The OSF
-deposit needs a personal access token, which a web page should not hold. Each engine is a
-fixed release, so the package runs under the language version that release provides, which
-can differ from yours. The R app also downloads the jsonlite and yaml packages from the webR
-package repository when it starts. The repository's
+it writes. Four other functions stay in the installed package. The embedding screen needs an
+embedding model, and rendering a report with `render_report()` needs Quarto. The OSF deposit
+needs a personal access token, which a web page should not hold, and `new_evidence_dois()`
+checks DOIs from a fresh literature search. Each engine is a fixed release, so the package
+runs under the language version that release provides, which can differ from yours. The R
+app also downloads the jsonlite and yaml packages from the webR package repository when it
+starts. The repository's
 [apps/README.md](https://github.com/pablobernabeu/theoryforge/blob/main/apps/README.md)
 gives the engine versions and how the apps are built and tested.

@@ -182,7 +182,7 @@ on the embedding model and `render_diagram()` on the renderer.
 
 ```bash
 # Python
-cd python && pip install -e ".[dev]" && pytest
+(cd python && pip install -e ".[dev]" && pytest)
 
 # R
 Rscript -e "devtools::test('r/theoryforge')"

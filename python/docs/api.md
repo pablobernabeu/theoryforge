@@ -98,8 +98,8 @@ observational data cannot test, and what would tell the theory from a rival.
 
 ## Testing and review
 
-The hypotheses section of a preregistration, lavaan syntax and the audit dossier for a
-reviewer.
+The theory and hypotheses sections of a preregistration, lavaan syntax and the audit dossier
+for a reviewer.
 
 ::: theoryforge.preregister
 

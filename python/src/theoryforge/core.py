@@ -1163,8 +1163,8 @@ class Theory:
         return _discriminate(self.data, rival, cycles=cycles)
 
     def preregister(self, path=None, cycles: str = "refuse") -> str:
-        """Render the hypotheses section of a preregistration, writing it to ``path``
-        when one is given (see ``theoryforge.preregister``). ``cycles="sigma"``
+        """Render the theory and hypotheses sections of a preregistration, writing them
+        to ``path`` when one is given (see ``theoryforge.preregister``). ``cycles="sigma"``
         reads a causal graph with feedback loops by sigma-separation."""
         return _preregister(self.data, path, cycles=cycles)
 
@@ -1191,7 +1191,8 @@ class Theory:
 
     def dossier(self, cycles: str = "refuse") -> str:
         """A reviewer-facing audit bundle of the rigour report, severity, test record, evidence,
-        provenance and preregistration (see ``theoryforge.dossier.dossier``).
+        claims and causal graph, equivalent models, rivals, provenance and preregistration
+        (see ``theoryforge.dossier.dossier``).
         ``cycles="sigma"`` reads a causal graph with feedback loops by sigma-separation."""
         return _dossier(self.data, cycles=cycles)
 

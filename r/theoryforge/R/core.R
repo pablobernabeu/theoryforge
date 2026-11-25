@@ -111,7 +111,8 @@ tf_read <- function(path) {
 #'   of the schema.
 #' @return \code{TRUE} (invisibly) on success. Otherwise, it stops with
 #'   \code{"invalid theory object: "} followed by every problem found, joined
-#'   by \code{"; "}.
+#'   by \code{"; "}. The messages count entries from 0, as the Python package
+#'   does, so \code{prediction[0]} is \code{theory$predictions[[1]]}.
 #' @examples
 #' theory <- tf_read(tf_example_path("panic-network.theory.yaml"))
 #' isTRUE(tf_validate(theory))              # required fields and enums

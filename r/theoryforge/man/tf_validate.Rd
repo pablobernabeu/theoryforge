@@ -15,7 +15,8 @@ of the schema.}
 \value{
 \code{TRUE} (invisibly) on success. Otherwise, it stops with
 \code{"invalid theory object: "} followed by every problem found, joined
-by \code{"; "}.
+by \code{"; "}. The messages count entries from 0, as the Python package
+does, so \code{prediction[0]} is \code{theory$predictions[[1]]}.
 }
 \description{
 Checks a theory against the package's schema, \code{theory.schema.json},

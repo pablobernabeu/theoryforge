@@ -57,11 +57,12 @@ t = (
 
 The positional arguments follow the schema. `add_construct(id, label, definition)` takes
 optional `measurement` and `boundary_conditions`. `add_proposition(id, frm, to, relation)`
-takes an optional `mechanism`, and `frm` stands in for the schema's `from`, a reserved word
-in Python. The relation is one of `increases`, `decreases`, `moderates`, `mediates`, `causes`
-or `associates`. `add_prediction(id, statement, type)` takes optional `derives_from`,
-`diagnostic_vs`, `bounds` and `claim`. A single string given where a list is expected is
-stored as a one-element list, so `derives_from="p1"` means `["p1"]`.
+takes optional `mechanism` and `functional_form`, and `frm` stands in for the schema's
+`from`, a reserved word in Python. The relation is one of `increases`, `decreases`,
+`moderates`, `mediates`, `causes` or `associates`. `add_prediction(id, statement, type)`
+takes optional `derives_from`, `diagnostic_vs`, `severity`, `test`, `bounds` and `claim`. A
+single string given where a list is expected is stored as a one-element list, so
+`derives_from="p1"` means `["p1"]`.
 
 The `type` of a prediction names the form of its claim. An `existence` prediction asserts
 that an effect or relation exists, without a direction. A `directional` one asserts a sign

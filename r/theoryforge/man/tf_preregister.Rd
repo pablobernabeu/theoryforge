@@ -19,8 +19,9 @@ written with LF line endings.}
 The preregistration Markdown as a single string.
 }
 \description{
-Produces a deterministic preregistration Markdown string for a theory and,
-if \code{path} is given, writes it (LF, single trailing newline).
+Returns the theory and hypotheses sections of a preregistration as a
+deterministic Markdown string and, if \code{path} is given, writes it to that
+file (LF, single trailing newline).
 }
 \details{
 The header gives the theory id, the version when it has an id (with its

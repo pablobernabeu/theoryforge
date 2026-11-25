@@ -90,14 +90,15 @@ theory <- tf_read(tf_example_path("modality-switching.theory.yaml"))
 ```
 
 `tf_validate()` returns `TRUE` invisibly when the theory is valid and otherwise
-stops with a message that lists every problem. Without arguments, it checks the
-structure: the required fields, the allowed values of each enumerated field,
-that every top-level field is one the schema defines and that each collection is
-a list. `full = TRUE` adds the referential checks, that ids are unique and that
-every reference between constructs, propositions, predictions, alternatives,
-assumptions, evidence and test outcomes names a declared id, and then checks
-the type of every other field, the form of each claim and whether the bounds of
-each prediction fit its type. The calls below wrap it in `isTRUE()` to show the result.
+stops with a message that lists every problem. With the default `full = FALSE`,
+it checks the structure: the required fields, the allowed values of each
+enumerated field, that every top-level field is one the schema defines and that
+each collection is a list. `full = TRUE` adds the referential checks, that ids
+are unique and that every reference between constructs, propositions,
+predictions, alternatives, assumptions, evidence and test outcomes names a
+declared id, and then checks the type of every other field, the form of each
+claim and whether the bounds of each prediction fit its type. The calls below
+wrap it in `isTRUE()` to show the result.
 
 ```{r validate}
 isTRUE(tf_validate(theory))
@@ -106,7 +107,8 @@ isTRUE(tf_validate(theory, full = TRUE))
 
 A prediction that cites a proposition the theory never declares passes the
 structural check, since every required field is present, and only the full pass
-reports it.
+reports it. The message counts entries from 0, so `prediction[0]` is the first
+prediction.
 
 ```{r validate-failure, error = TRUE}
 broken <- theory
@@ -179,8 +181,9 @@ range is wide depends on the convention more than one whose range is narrow. The
 aggregate is compensatory, since a high score on one item offsets a low score on
 another. The gate is not. It is `"blocked"` when an item marked as a blocker
 fails, `"pass"` otherwise, and `"advisory"` for a theory whose maturity is
-`draft`. The article 'Methodological foundations' sets out each item, its
-supporting literature and how its score is computed.
+`draft`. The article
+[Methodological foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html)
+sets out each item, its supporting literature and how its score is computed.
 
 `tf_report()` returns the same result as a string, in JSON by default or as an
 HTML fragment for a web page with `format = "html"`.
@@ -188,13 +191,13 @@ HTML fragment for a web page with `format = "html"`.
 ## Building a theory
 
 A theory's `maturity` field records its stage as `building`, `developing` or
-`testing`. `tf_theory()` starts an empty theory, and the builders
-`tf_add_construct()`, `tf_add_proposition()`, `tf_add_prediction()`,
-`tf_add_phenomenon()`, `tf_add_alternative()`, `tf_add_assumption()`,
-`tf_add_evidence()`, `tf_add_test_outcome()` and `tf_set_formal_model()` add to
-it. Each returns a modified copy and records a step in the theory's provenance
-log, so the steps compose with the native pipe and the original object stays as
-it was.
+`testing`, or as `draft`, which makes the checklist's gate advisory.
+`tf_theory()` starts an empty theory, and the builders `tf_add_construct()`,
+`tf_add_proposition()`, `tf_add_prediction()`, `tf_add_phenomenon()`,
+`tf_add_alternative()`, `tf_add_assumption()`, `tf_add_evidence()`,
+`tf_add_test_outcome()` and `tf_set_formal_model()` add to it. Each returns a
+modified copy and records a step in the theory's provenance log, so the steps
+compose with the native pipe and the original object stays as it was.
 
 ```{r build}
 built <- tf_theory("panic-demo", "A demonstration theory of panic") |>
@@ -225,7 +228,9 @@ value, with the tolerance that measurement requires. `bounds` states the region,
 and the full validation checks that it fits the type, so an existence prediction
 takes none. A `claim` states the
 prediction in a form the causal reading can check against the propositions, as
-the article 'Developing and testing a theory' shows.
+the article
+[Developing and testing a theory](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
+shows.
 
 `tf_add_alternative()` registers a rival account, which can state propositions
 of its own over the theory's constructs. A prediction that names the rival in
@@ -335,7 +340,8 @@ Filter(function(item) item$status != "pass", imported_report$items) |>
 
 The graph alone already commits the imported theory to the conditional
 independencies and the untestable causal directions that the article
-'Developing and testing a theory' derives for the full modality-switching
+[Developing and testing a theory](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
+derives for the full modality-switching
 theory, since the two share a graph. The `causal_dag` view of `tf_diagram()`
 writes a theory back in DAGitty's syntax, keeping its directed edges, its
 associations and any variable marked as latent.
@@ -403,11 +409,14 @@ cat(tf_diagram(theory, type = "causal_dag"))
 
 ## Next steps
 
-The article 'Developing and testing a theory' appraises an amendment and
-derives what a theory's causal graph commits it to, from its implied
-independencies to the results that would tell it from a rival, and then
-preregisters it, grades its tests and assembles the audit dossier. 'Mapping the
-literature' maps a corpus of publications against a theory, and 'Browser apps'
+The article
+[Developing and testing a theory](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
+appraises an amendment and derives what a theory's causal graph commits it to,
+from its implied independencies to the results that would tell it from a rival,
+and then preregisters it, grades its tests and assembles the audit dossier.
+[Mapping the literature](https://pablobernabeu.github.io/theoryforge/r/articles/literature.html)
+maps a corpus of publications against a theory, and
+[Browser apps](https://pablobernabeu.github.io/theoryforge/r/articles/app.html)
 describes the two apps that run the packages without an installation.
 
 ## Two languages, one specification
