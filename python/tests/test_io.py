@@ -402,9 +402,15 @@ def test_a_json_file_whose_text_names_a_file_or_a_url_is_refused(tmp_path):
 
 def test_a_value_tagged_expr_is_refused_with_the_r_message(tmp_path):
     # R's yaml package evaluates !expr as R code when the option yaml.eval.expr
-    # is TRUE. Both twins refuse the tag, on a value or a key, with one message.
+    # is TRUE. Both twins refuse the tag, on a value or a key and in each of its
+    # spellings, with one message.
     for name, text in (("value.theory.yaml", 'id: !expr stop("ran")\ntitle: T\n'),
-                       ("key.theory.yaml", 'id: t\n!expr cat("ran"): v\n')):
+                       ("key.theory.yaml", 'id: t\n!expr cat("ran"): v\n'),
+                       ("secondary.theory.yaml", 'id: !!expr stop("ran")\n'),
+                       ("verbatim.theory.yaml", 'id: !<tag:yaml.org,2002:expr> stop("ran")\n'),
+                       ("local.theory.yaml", 'id: !<!expr> stop("ran")\n'),
+                       ("handle.theory.yaml",
+                        '%TAG !e! tag:yaml.org,2002:\n---\nid: !e!expr stop("ran")\n')):
         path = _file(tmp_path, name, text)
         with pytest.raises(ValueError) as err:
             tf.read(path)
@@ -441,6 +447,19 @@ def test_a_leading_tilde_is_the_home_directory(panic_path, tmp_path, monkeypatch
     assert (tmp_path / "home.prereg.md").exists()
     assert t.render_report("~/home-report") == "~/home-report.qmd"
     assert (tmp_path / "home-report.qmd").exists()
+
+
+def test_a_tilde_before_an_unknown_user_names_a_relative_folder(panic_path, tmp_path, monkeypatch):
+    # os.path.expanduser leaves '~nosuchuser' as it is, as R's path.expand()
+    # does, where Path.expanduser raised RuntimeError.
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "~nosuchuser").mkdir()
+    t = tf.read(panic_path)
+    t.write("~nosuchuser/x.theory.yaml")
+    assert (tmp_path / "~nosuchuser" / "x.theory.yaml").exists()
+    assert tf.read("~nosuchuser/x.theory.yaml").data == t.data
+    assert t.render_report("~nosuchuser/r.qmd") == "~nosuchuser/r.qmd"
+    assert (tmp_path / "~nosuchuser" / "r.qmd").exists()
 
 
 def test_a_corpus_reads_through_the_same_reader(tmp_path):

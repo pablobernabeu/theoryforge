@@ -302,13 +302,18 @@ test_that("a JSON file whose text names a file or a URL is refused", {
 
 test_that("a value tagged !expr is refused and runs no code, whatever the option says", {
   # yaml evaluates !expr as R code when the option yaml.eval.expr is TRUE, and
-  # the reader did not turn it off. test_io.py pins the same message.
+  # the reader did not turn it off. Each spelling of the tag ran code.
+  # test_io.py pins the same message.
   old <- options(yaml.eval.expr = TRUE)
   on.exit(options(old), add = TRUE)
   flag <- tempfile()
   for (text in c(sprintf('id: !expr file.create("%s")\ntitle: T\n', flag),
                  sprintf('id: t\n!expr file.create("%s"): v\n', flag),
-                 sprintf('n: 1,000\ntitle: !expr file.create("%s")\n', flag))) {
+                 sprintf('n: 1,000\ntitle: !expr file.create("%s")\n', flag),
+                 sprintf('id: !!expr file.create("%s")\n', flag),
+                 sprintf('id: !<tag:yaml.org,2002:expr> file.create("%s")\n', flag),
+                 sprintf('id: !<!expr> file.create("%s")\n', flag),
+                 sprintf('%%TAG !e! tag:yaml.org,2002:\n---\nid: !e!expr file.create("%s")\n', flag))) {
     path <- io_file(text)
     expect_error(tf_read(path), sprintf("(%s) a value is tagged !expr, which theoryforge does not read", path),
                  fixed = TRUE)

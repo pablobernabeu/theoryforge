@@ -168,12 +168,16 @@ def _refuse_expr(loader: _StrictLoader, node: Node) -> Any:
     """Refuse a value tagged ``!expr``, which R's yaml package can evaluate as R code.
 
     SafeLoader refuses the tag already, as it refuses any tag it does not know.
-    This gives the refusal the message R's reader gives (API_SPEC.md section 3).
+    This gives the refusal the message R's reader gives (API_SPEC.md section 3),
+    for the local tag ``!expr`` and for ``tag:yaml.org,2002:expr``, which R's
+    yaml package reads as the same tag. ``!!expr``, the verbatim forms and a
+    ``%TAG`` handle resolve to one of the two.
     """
     raise _ExprTag
 
 
 _StrictLoader.add_constructor("!expr", _refuse_expr)
+_StrictLoader.add_constructor("tag:yaml.org,2002:expr", _refuse_expr)
 
 
 def _key_text(key: Any) -> str:
@@ -327,7 +331,9 @@ def load_document(path) -> Any:
     """
     json_file = is_json(path)
     path = Path(path)
-    text = path.expanduser().read_bytes().decode("utf-8-sig")
+    # os.path.expanduser leaves '~user' as it is when there is no such user, as
+    # R does, where Path.expanduser raises.
+    text = Path(os.path.expanduser(path)).read_bytes().decode("utf-8-sig")
     try:
         if json_file:
             data = json.loads(text, object_pairs_hook=_unique_pairs)
