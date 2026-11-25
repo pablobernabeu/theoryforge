@@ -25,10 +25,10 @@ Theories in the behavioural sciences often define their constructs too loosely
 to measure, state claims that no result could contradict and survive a failed
 test by adding an assumption that protects them. `theoryforge` holds a theory
 as a structured file of constructs, propositions, predictions, rival accounts
-and test outcomes, and computes what that file commits the theory to. It scores
-the theory against a checklist of rigour criteria drawn from the methodology
-literature, derives the independencies and signed effects its causal graph
-implies, grades how risky each prediction is and how severely it has been
+and test outcomes, and computes what that file commits the theory to. It checks
+how completely the file states what a checklist of criteria drawn from the
+methodology literature asks for, derives the independencies and signed effects
+its causal graph implies, grades how risky each prediction is and how severely it has been
 tested, and appraises whether an amendment adds content or only shields the
 theory from an anomaly.
 
@@ -135,7 +135,7 @@ tf_validate(broken, full = TRUE)
 `tf_content_hash()` returns the SHA-256 digest of the theory's content written
 in a canonical form. Two files that hold the same theory have the same hash,
 whatever their layout, comments, key order or format, and any change to a value
-changes it. The preregistration and the audit dossier both print it, so a reader
+changes it. The preregistration and the dossier both print it, so a reader
 can check that the theory file in hand is the one a document describes. The
 Python package's `content_hash()` gives the same digest.
 
@@ -248,6 +248,20 @@ takes none. A `claim` states the prediction in a form the causal reading can
 check against the propositions, as the article
 [Developing and testing a theory](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
 shows.
+
+How a theory is encoded decides what the package derives from it. A `moderates`
+proposition states that its `from` modifies the effect of other causes on its
+`to`, and the causal graph reads it as an edge without a sign from the
+moderator to the outcome. The relation it modifies keeps its sign, but every
+effect of the moderator on that outcome is left open, including a main effect
+the theory also states, even when that main effect is encoded as a signed
+proposition of its own, since an edge has a sign only when every proposition
+that states it gives it one. A theory whose main effect matters can record the
+interaction in the `functional_form` of the proposition it modifies, or in a
+prediction's statement, at the cost of a graph that does not show it. Whether a
+relation that a proposition states is also entered as a prediction is the
+encoder's choice too, and it changes the hypotheses that the preregistration
+lists.
 
 `tf_add_alternative()` registers a rival account, which can state propositions
 of its own over the theory's constructs. A prediction that names the rival in
@@ -429,7 +443,7 @@ The article
 [Developing and testing a theory](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
 appraises an amendment and derives what a theory's causal graph commits it to,
 from its implied independencies to the results that would tell it from a rival,
-and then preregisters it, grades its tests and assembles the audit dossier.
+and then preregisters it, grades its tests and assembles the dossier.
 [Mapping the literature](https://pablobernabeu.github.io/theoryforge/r/articles/literature.html)
 maps a corpus of publications against a theory, and
 [Browser apps](https://pablobernabeu.github.io/theoryforge/r/articles/app.html)

@@ -186,9 +186,9 @@ reference:
   - tf_add_evidence
   - tf_add_test_outcome
   - tf_set_formal_model
-- title: Rigour
+- title: Checklist and severity
   desc: >
-    Score a theory against the versioned rigour checklist. Grade the form of
+    Run the versioned checklist on a theory file. Grade the form of
     each prediction's claim before any data, and report how severely each
     bounded prediction passed its test.
   contents:
@@ -216,15 +216,15 @@ reference:
 - title: The causal reading
   desc: >
     What the causal graph a theory states implies and entails, the directions
-    observational data cannot test, and what would tell the theory from a
-    rival.
+    no test of conditional independence can settle, and what would tell the
+    theory from a rival.
   contents:
   - tf_implications
   - tf_entailments
   - tf_equivalent_models
   - tf_discriminate
 - title: Testing and review
-  desc: Preregistration, SEM compilation and the audit dossier.
+  desc: Preregistration, SEM compilation and the dossier.
   contents:
   - tf_preregister
   - tf_compile_sem

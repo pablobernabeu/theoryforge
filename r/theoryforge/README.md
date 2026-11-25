@@ -17,8 +17,8 @@ the predictions derived from those propositions, its auxiliary assumptions, its 
 accounts and its record of tests. From that file, the package computes what can be checked
 mechanically.
 
-It scores the theory against a 12-item rigour checklist and reads the propositions as a
-causal graph, from which it derives the conditional independencies the graph implies and
+It checks how completely the theory file states what a 12-item checklist asks for, and it
+reads the propositions as a causal graph, from which it derives the conditional independencies the graph implies and
 whether the graph entails each claim the theory states. It compares the theory with a rival
 account or with an earlier version of itself, grades how risky each prediction's claim is
 before data and how severely a recorded test probed it, and writes the theory and hypotheses
@@ -27,8 +27,13 @@ bibliographic corpus into keyword themes and shows which of them share words wit
 and its rivals.
 
 These are checks of what the file states, and none of them shows that a theory is true. The
-checklist's weights are a convention, so the report gives the range of the score under other
-weightings. The causal reading assumes that the propositions state every direct relation
+checklist score describes how completely the file states what checklist 3.1 asks for. Most
+items read whether a field is filled in or how a prediction is labelled, and stated claims
+are checked against the causal graph. Test outcomes are read only by the parsimony item, the
+weights are conventions, and no study has established what difference between two scores is
+meaningful. The score does not show that the theory is true or well reasoned. The report
+therefore gives the lowest and highest score with equal weights or with one weight halved or
+doubled. The causal reading assumes that the propositions state every direct relation
 among the constructs, with an association for each common cause they leave unnamed. A word
 that a theory shares with a literature theme does not show that the theory accounts for what
 the theme's records report.
@@ -77,7 +82,7 @@ theory <- tf_theory("panic_demo", "A demonstration theory of panic") |>
                                  sign = "positive"))
 tf_validate(theory, full = TRUE)  # stops with every problem it finds
 
-# Check it against the rigour checklist and list the items that do not pass.
+# Run the checklist and list the items that do not pass.
 report <- tf_check(theory)
 report[c("aggregate_score", "aggregate_range", "gate")]
 status <- vapply(report$items, `[[`, "", "status")
@@ -136,10 +141,10 @@ so that a reader can confirm which file they describe. `tf_example_names()` and
 ### Check
 
 `tf_validate()` checks the fields the schema requires and their allowed values, and with
-`full = TRUE` also every type, reference, claim and unknown field. `tf_check()` scores the
-theory against the rigour checklist. Each of its 12 items has a status, a score and a
-weight, and the report adds a weighted aggregate, its range under other weightings and a
-gate that blocks when a blocker item fails. `tf_report()` gives the same as JSON or as an
+`full = TRUE` also every type, reference, claim and unknown field. `tf_check()` runs the
+checklist. Each of its 12 items has a status, a score and a weight, and the report adds the
+checklist score, a weighted mean of the item scores, its range with equal weights or one
+weight halved or doubled and a gate that blocks when a blocker item fails. `tf_report()` gives the same as JSON or as an
 HTML fragment. `tf_redundancy_check()` flags a pair of constructs when their definitions are
 near duplicates, when one definition is contained in the other, when the two carry the same
 label or when every measure of one is listed for the other. `tf_embedding_redundancy()`
@@ -159,14 +164,17 @@ fallible measures is rejected too often, so a latent-variable model is the bette
 whether the graph entails it, contradicts it or leaves it open. For an effect in a graph
 without a feedback loop, it also says whether adjusting for some of the constructs
 identifies the effect in observational data and names a minimal such set.
-`tf_equivalent_models()` lists the causal directions that no observational study can test.
+`tf_equivalent_models()` lists the causal directions that no test of conditional
+independence can settle.
 `tf_discriminate()` sets the theory against a rival, either an alternative that states its
 own propositions or another theory, and lists the claims, independencies and signs that
 would tell the two apart. `tf_appraise_amendment()` compares two versions of a theory and
 calls the amendment progressive or degenerating in the sense of Lakatos (1970), or neutral,
 the package's label for one that meets neither rule. `tf_simulate()` runs the construct
-network as a linear dynamical system with one coupling gain. Its trajectory shows what the
-propositions imply under that model and is not fitted to data.
+network as one linear dynamical system consistent with the signs the propositions state,
+with one coupling gain and unsigned relations taken as positive. Whether a feedback loop
+grows or settles is set by the gain against the damping, which the theory does not state,
+and the trajectory is not fitted to data.
 
 ### Test
 
@@ -179,8 +187,10 @@ Markdown, with the sampling plan the file records, the implied independencies an
 hypothesis, its claim, adjustment set and rivals. The study design, the analysis plan and
 the inference criteria are left to the author. Once a test outcome records an estimate and
 its standard error, `tf_post_data_severity()` computes how severely a bounded prediction
-passed (Mayo & Spanos, 2006). It uses a normal approximation, which overstates the severity
-of an estimate inside the region when the standard error comes from a small sample.
+passed (Mayo & Spanos, 2006), the minimum over two bounds being the package's own extension.
+It uses a normal approximation, which overstates the severity of an estimate inside the
+region when the standard error comes from a small sample, and it does not account for
+selection.
 
 ### Document
 
@@ -188,7 +198,7 @@ of an estimate inside the region when the standard error comes from a small samp
 nomological network, the causal graph, the provenance, a roadmap of the checklist items
 still to meet, the pipeline from predictions to test results, the theory's constructs, scope
 and rivals, the workflow from constructs to tests, the overlap of construct scopes, the
-rigour checklist and the riskiness of each prediction. `tf_render_diagram()` draws a view in
+checklist and the riskiness of each prediction. `tf_render_diagram()` draws a view in
 the viewer, or returns it as SVG with `as = "svg"`. Its DOT views need the suggested package
 DiagrammeR, and SVG output also DiagrammeRsvg. `tf_dossier()` gathers the checklist, the
 severities, the test record, the causal reading, the rivals, the provenance and the

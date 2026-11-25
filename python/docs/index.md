@@ -4,11 +4,11 @@ Theories in the behavioural sciences often define their constructs too loosely t
 measure, state claims that no result could contradict and survive a failed test by adding
 an assumption that protects them. theoryforge holds a theory as a structured file of
 constructs, propositions, predictions, rival accounts and test outcomes, and computes what
-that file commits the theory to. It scores the theory against a checklist of rigour
-criteria drawn from the methodology literature, derives the independencies and signed
-effects its causal graph implies, grades how risky each prediction is and how severely it
-has been tested, and appraises whether an amendment adds content or only shields the theory
-from an anomaly.
+that file commits the theory to. It checks how completely the file states what a checklist
+of criteria drawn from the methodology literature asks for, derives the independencies and
+signed effects its causal graph implies, grades how risky each prediction is and how
+severely it has been tested, and appraises whether an amendment adds content or only shields
+the theory from an anomaly.
 
 ## A worked result
 
@@ -70,10 +70,10 @@ At the developing stage, `appraise_amendment()` compares a revision with its pri
 and classifies it as progressive, degenerating or neutral, the first two in Lakatos's sense.
 
 At the testing stage, the causal graph of the propositions is read for the conditional
-independencies it implies, the signs of the effects it entails, the directions no
-observational study can settle and the results that would tell it from a rival. The package
+independencies it implies, the signs of the effects it entails, the directions no test of
+conditional independence can settle and the results that would tell it from a rival. The package
 then grades each prediction before and after the data, writes the theory and hypotheses
-sections of a preregistration and assembles an audit dossier for a reviewer.
+sections of a preregistration and assembles a dossier for a reviewer.
 
 [Get started](getting-started.md) covers reading, validating and scoring a theory, and
 [Workflow modes](workflow-modes.md) follows the three stages with a worked example of each
@@ -99,7 +99,7 @@ t.check()                # the checklist: checklist score, range, gate and items
 t.implications()         # the conditional independencies the causal graph implies
 t.entailments()          # whether the graph entails each claim the theory states
 t.discriminate("alt_grounding_by_interaction")   # where data could tell it from a rival
-t.dossier()              # the audit dossier for a reviewer, as Markdown
+t.dossier()              # the dossier for a reviewer, as Markdown
 ```
 
 ## Browser apps

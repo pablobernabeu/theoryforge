@@ -20,9 +20,9 @@ accounts and its record of tests. Twin packages for R and Python compute from th
 can be checked mechanically, and their deterministic functions give the same results for the
 same file.
 
-The packages score a theory against a 12-item rigour checklist and read its propositions as
-a causal graph, from which they derive the conditional independencies the graph implies and
-whether the graph entails each claim the theory states. They compare the theory with a rival
+The packages check how completely a theory file states what a 12-item checklist asks for,
+and they read its propositions as a causal graph, from which they derive the conditional
+independencies the graph implies and whether the graph entails each claim the theory states. They compare the theory with a rival
 account or with an earlier version of itself, grade how risky each prediction's claim is
 before data and how severely a recorded test probed it, and write the theory and hypotheses
 sections of a preregistration and a dossier for reviewers. A literature layer maps a
@@ -30,8 +30,13 @@ bibliographic corpus into keyword themes and shows which of them share words wit
 and its rivals.
 
 These are checks of what the file states, and none of them shows that a theory is true. The
-checklist's weights are a convention, so the report gives the range of the score under other
-weightings. The causal reading assumes that the propositions state every direct relation
+checklist score describes how completely the file states what checklist 3.1 asks for. Most
+items read whether a field is filled in or how a prediction is labelled, and stated claims
+are checked against the causal graph. Test outcomes are read only by the parsimony item, the
+weights are conventions, and no study has established what difference between two scores is
+meaningful. The score does not show that the theory is true or well reasoned. The report
+therefore gives the lowest and highest score with equal weights or with one weight halved or
+doubled. The causal reading assumes that the propositions state every direct relation
 among the constructs, with an association for each common cause they leave unnamed. A word
 that a theory shares with a literature theme does not show that the theory accounts for what
 the theme's records report.
@@ -101,16 +106,18 @@ JSON, `read_dagitty()` makes a theory of a DAGitty diagram and `content_hash()` 
 theory by its content.
 
 To check it, `validate()` tests the file against the schema and its references, and
-`check()` scores it against the rigour checklist. The report gives a weighted aggregate, its
-range under other weightings and a gate that blocks when a blocker item fails.
+`check()` runs the checklist. The report gives the checklist score, a weighted mean of the
+item scores, its range with equal weights or one weight halved or doubled and a gate that
+blocks when a blocker item fails.
 `redundancy_check()` flags pairs of constructs with near-duplicate or contained
 definitions, with the same label or with every measure of one listed for the other.
 
 To derive and compare, `implications()` lists the conditional independencies that the causal
 graph of the propositions implies, `entailments()` reads each stated claim against that
-graph, `equivalent_models()` lists the causal directions that no observational study can
-test, `discriminate()` sets the theory against a rival and `simulate()` runs the construct
-network as a linear dynamical system. `appraise_amendment()` calls an amendment progressive
+graph, `equivalent_models()` lists the causal directions that no test of conditional
+independence can settle, `discriminate()` sets the theory against a rival and `simulate()`
+runs the construct network as one linear dynamical system consistent with the signs the
+propositions state. `appraise_amendment()` calls an amendment progressive
 or degenerating (Lakatos, 1970), or neutral, the package's label for one that meets neither
 rule.
 
@@ -171,7 +178,7 @@ on the embedding model and `render_diagram()` on the renderer.
 | Path | Contents |
 |---|---|
 | [`API_SPEC.md`](API_SPEC.md) | the specification both packages follow |
-| [`schema/`](schema/) | the theory schema, the rigour checklist, the text fold table and the corpus schema |
+| [`schema/`](schema/) | the theory schema, the checklist, the text fold table and the corpus schema |
 | [`fixtures/`](fixtures/) | the example theories and corpora, the golden outputs and the edge cases |
 | [`r/theoryforge/`](r/theoryforge/) | the R package |
 | [`python/`](python/) | the Python package |

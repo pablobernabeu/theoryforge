@@ -1,7 +1,7 @@
 # Workflow modes
 
 A theory's `maturity` field records its stage as `building`, `developing` or `testing`, or
-as `draft`, which makes the rigour checklist's gate advisory. Each stage has its own set of
+as `draft`, which makes the checklist's gate advisory. Each stage has its own set of
 methods on the `Theory` object, so a theory built with the builders can be appraised as it
 develops and tested without conversion. This page follows the three stages with the example
 theories that ship with the package, read through `tf.example_path()` as on
@@ -70,6 +70,18 @@ or an order. An `interval` prediction asserts that a quantity lies in a stated r
 `point` prediction asserts one value, with the tolerance that measurement requires.
 `bounds: {lower, upper}` states the region, and the full validation checks that it fits the
 type, so an existence prediction takes none. The type is declared by the author, and no function checks it against the statement.
+
+How a theory is encoded decides what the package derives from it. A `moderates` proposition
+states that its `from` modifies the effect of other causes on its `to`, and the causal graph
+reads it as an edge without a sign from the moderator to the outcome. The relation it
+modifies keeps its sign, but every effect of the moderator on that outcome is left open,
+including a main effect the theory also states, even when that main effect is encoded as a
+signed proposition of its own, since an edge has a sign only when every proposition that
+states it gives it one. A theory whose main effect matters can record the interaction in the
+`functional_form` of the proposition it modifies, or in a prediction's statement, at the
+cost of a graph that does not show it. Whether a relation that a proposition states is also
+entered as a prediction is the encoder's choice too, and it changes the hypotheses that the
+preregistration lists.
 
 The provenance log records each step's number, the action and the identifier it affected.
 The action is named after the R function, `tf_theory` for `new_theory()`, so that a log reads
@@ -263,13 +275,17 @@ about how severely a claim has been tested, which depends on the design and the 
 
 ### What the causal graph implies
 
-A causal theory commits itself to claims it never states, because its propositions together
-form a graph, and the graph implies conditional independencies. `implications()` derives
-them. Each directed relation is an arrow, and an association is a bidirected edge, covariance
-the theory leaves unexplained. Every pair of constructs with no edge between them yields one
-statement when some set of other constructs separates them, usually the parents of both.
-When every relation is directed, these statements are the basis set, from which every other
-independence the graph implies follows.
+A theory's propositions together form a graph, and the graph implies conditional
+independencies that the theory does not state. `implications()` derives them. Each directed
+relation is an arrow, and an association is a bidirected edge, covariance the theory leaves
+unexplained. The graph is read as complete: every pair of constructs in it that no
+proposition joins is read as having no direct effect on each other and no unexplained
+association. Every such pair yields one statement when some set of other constructs separates it, usually the
+parents of both. The statements are consequences of the graph as encoded, so they are the
+theory's commitments only if its authors meant those omissions. When every relation is
+directed, these statements are the basis set, from which every other independence the graph
+implies follows when the distribution has the composition property, as a multivariate normal
+one does.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 implied = switching.implications()
@@ -282,7 +298,8 @@ the theory says that their correlation is due to that shared cause and vanishes 
 held fixed. Sensorimotor experience and lexical familiarity meet only at the collider at
 conceptual access, so the theory says they are unrelated with nothing held fixed. The first
 statement is not among the theory's predictions, whereas the second is stated as `pred4`.
-Evidence against either would count against the theory.
+Evidence against either would count against the theory as encoded, including the omissions
+the statement rests on.
 
 The basis set conditions on the parents of both constructs, which can be more than a single
 test needs. `given="minimal"` prunes each conditioning set until none of its members can be
@@ -357,7 +374,10 @@ constructs decide whether the graph entails the claim, contradicts it or leaves 
 undetermined, and `via` names the propositions the verdict rests on. For an effect claim on
 an acyclic graph, `adjustment` gives a smallest set of constructs whose adjustment would
 identify the effect in observational data, or a minimal set when more than 12 constructs
-are candidates. Here it is the empty set.
+are candidates. Here it is the empty set. `identified` reports identification by adjustment
+alone, so an effect without such a set may still be identified by other means, such as the
+front-door criterion, and a set for a cause or an outcome marked latent assumes a measure of
+it.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 entailed = switching.entailments()
@@ -366,17 +386,22 @@ for c in entailed["claims"]:
 print(entailed["counts"])
 ```
 
-The derived signs hold in a linear model with the theory's graph, or at least in one in
-which each relation acts in one direction throughout, and in which no common cause of two
-constructs is left out unless an association stands for it. The function shows what the
-propositions commit the theory to and does not show whether a claim holds in data. The
+The derived signs hold when the graph is the causal structure, with no common cause of two
+constructs left out unless an association stands for it, and when each directed relation acts
+in its stated direction whatever the other inputs, as in a linear model or a uniformly
+monotone one. A verdict whose `faithfulness` is true also assumes that paths do not cancel
+exactly, and the preregistration and the dossier end its line with `unless paths cancel
+exactly`. Under `cycles="sigma"`, the sign of an effect further assumes that the system with
+the intervened construct held fixed settles, which the stability of the system as observed
+does not ensure. The function shows what the propositions commit the theory to and does not
+show whether a claim holds in data. The
 checklist's derivation-chain item counts a prediction whose claim the graph contradicts or
 leaves open as not derived from the propositions it cites.
 
 ### Equivalent models
 
-Graphs that imply the same conditional independencies are Markov equivalent, and no
-observational study can tell them apart
+Graphs that imply the same conditional independencies are Markov equivalent, and no test of
+conditional independence can tell them apart
 ([Andersson et al., 1997](https://doi.org/10.1214/aos/1031833662)). In structural
 equation modelling, this is the problem of equivalent models
 ([MacCallum et al., 1993](https://doi.org/10.1037/0033-2909.114.1.185)).
@@ -391,11 +416,13 @@ for edge in equivalent["edges"]:
 ```
 
 The collider at conceptual access compels the two edges into it. The other two edges are
-reversible, so no observational study can tell whether sensorimotor experience drives
-modality activation or the reverse. Testing such a direction needs an intervention, a
-temporal order or another assumption. The rule covers acyclic graphs of directed relations,
-so for a theory with a feedback loop or an association the record says why it was not
-computed.
+reversible, so no test of conditional independence can tell whether sensorimotor experience
+drives modality activation or the reverse. Telling the direction apart needs an
+intervention, a temporal order or distributional assumptions such as non-Gaussian errors.
+The function does not know which constructs a study manipulates, so an edge out of a
+construct that an experiment sets is listed as reversible all the same. The rule covers
+acyclic graphs of directed relations, so for a theory with a feedback loop or an association
+the record says why it was not computed.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 print(panic.equivalent_models()["reason"])
@@ -436,19 +463,23 @@ the rival's own graph does not give its claim the same verdict.
 ### Preregistration
 
 `preregister()` writes the theory and hypotheses sections of a preregistration as Markdown.
-Its header gives the theory's version and content hash. Each hypothesis is listed with its
+Its header gives the theory's version and content hash and the status of the checklist's
+derivation chain, read with the document's `cycles`, and a line in italics says what the
+document holds and what must be added before registration. The hypotheses section opens with
+the assumptions that the verdicts on the claims rest on. Each hypothesis is listed with its
 type, its derivation, its claim and what the graph says of it, the adjustment an
 observational test would need, the auxiliary assumptions that protect it, the rivals it is
-declared to discriminate and its test record. The hypotheses section of the modality-switching theory
-reads as follows.
+declared to discriminate and its test record. The hypotheses section of the
+modality-switching theory reads as follows.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 text = switching.preregister()
 print(text[text.index("## Hypotheses"):text.index("## Sampling plan")])
 ```
 
-A sampling plan section, the implied conditional independencies and a severity line for
-each prediction follow. A registry also needs the study design, the analysis plan and the
+A sampling plan section, the implied conditional independencies, with a line that says
+they rest on the omissions of the graph, and a severity line for each prediction follow. A
+registry also needs the study design, the analysis plan and the
 inference criteria, which a theory file does not hold, and a template such as PRP-QUANT
 sets them out ([Bosnjak et al., 2022](https://doi.org/10.1037/amp0000879)). Passing a path,
 as in `switching.preregister("prereg.md")`, also writes the document to disk.
@@ -457,11 +488,13 @@ as in `switching.preregister("prereg.md")`, also writes the document to disk.
 
 A prediction with `bounds` states the region of a quantity its claim allows, and a test
 outcome can record the estimate the test observed and its standard error.
-`post_data_severity()` computes, for each such outcome, how severely the claim passed: the
-probability that the test would have given a result less in accord with the claim, had the
-quantity been at the nearer bound ([Mayo & Spanos, 2006](https://doi.org/10.1093/bjps/axl003)).
+`post_data_severity()` computes, for each such outcome, how severely the claim passed. For a
+claim with one bound, it is the post-data severity of
+[Mayo and Spanos (2006)](https://doi.org/10.1093/bjps/axl003): the probability that the test
+would have given a result less in accord with the claim, had the quantity been at the bound.
 For a claim with two bounds, it takes the smaller of the two one-sided values, the package's
-own extension, which equals 1 minus the p value of the two one-sided tests of equivalence.
+own extension, which equals 1 minus the p value of the z-based two one-sided tests of
+equivalence ([Lakens, 2017](https://doi.org/10.1177/1948550617697177)).
 
 The theory's interval prediction for the switch cost records one outcome, with illustrative
 values. A second outcome is added below, as a replication whose estimate falls above the
@@ -479,10 +512,10 @@ for row in replicated.post_data_severity():
     print(row["outcome"], row["lower"], row["upper"], row["estimate"], row["se"], row["severity"])
 ```
 
-The audit dossier writes each value beside its outcome in its test record. It writes a
-value that rounds to 1 as `> 0.999` and one that rounds to 0 as `< 0.001`, since a test
-cannot give certainty, and it marks an outcome recorded as passed whose estimate lies
-outside the region.
+The dossier writes each value beside its outcome in its test record. It writes a value that
+rounds to 1 as `> 0.999` and one that rounds to 0 as `< 0.001`, since a test cannot give
+certainty, and it marks an outcome recorded as passed whose estimate lies outside the region
+and one recorded as failed whose estimate lies inside it.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 dossier = replicated.dossier()
@@ -491,21 +524,27 @@ print(dossier[dossier.index("## Test record"):dossier.index("## Evidence")])
 
 The computation uses a normal approximation and treats the standard error as known, so it
 overstates the severity of an estimate inside the region when the standard error comes from
-a small sample. A high value does not show that the claim is true, and the rigour checklist
+a small sample. The standard error must describe the sampling distribution of the estimate
+at the bound. The value is nominal, so it does not account for selection, such as a subgroup
+chosen after seeing the data, and it does not check the statistical adequacy of the model
+behind the estimate. A high value does not show that the claim is true, and the checklist
 does not read it.
 
-### The audit dossier
+### The dossier
 
 `dossier()` assembles one Markdown document for a reviewer or an editor. Its header gives the
-content hash, the checklist version, the aggregate score with its range and the gate.
-Sections on the checklist, the severities, the test record, the evidence, the claims and the
-causal graph, the equivalent models, the rivals and the provenance follow, and the
-preregistration closes it. The same theory file always gives the same dossier, so it can
-be committed or attached to a submission.
+content hash, the checklist version, the checklist score with its range and the gate. A
+paragraph in italics then says what the score describes and what the dossier is: the test
+outcomes, evidence, registrations and declared severities are as the author recorded them,
+and the dossier checks none of them beyond the inconsistencies it flags, so it is not an
+independent audit. Sections on the checklist, the severities, the test record, the evidence,
+the claims and the causal graph, the equivalent models for observational data, the rivals and
+the provenance follow, and the preregistration closes it. The same theory file always gives
+the same dossier, so it can be committed or attached to a submission.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 dossier = switching.dossier()
-print(dossier[:dossier.index("## Rigour checklist")])
+print(dossier[:dossier.index("## Checklist")])
 print([line for line in dossier.splitlines() if line.startswith("## ")])
 ```
 
@@ -513,8 +552,9 @@ print([line for line in dossier.splitlines() if line.startswith("## ")])
 
 `compile_sem()` writes lavaan model syntax for `lavaan::sem()`. Constructs with indicators
 become latent variables with `=~`, directed propositions labelled paths with `~` and
-associations covariances with `~~`. Comments say whether the paths are identified and list
-the sign each `increases` or `decreases` proposition states, and the effect each claim is
+associations covariances with `~~`. Comments say whether the paths are identified, or what
+identifying them would need, and list the sign each `increases` or `decreases` proposition
+states, and the effect each claim is
 about is defined with `:=`, so that lavaan estimates the quantity the claim concerns.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
@@ -648,8 +688,10 @@ The [API reference](api.md#theoryforge.diagram.diagram) documents each view.
 propositions as a linear dynamical system. `increases` couples positively and `decreases`
 negatively. `causes` and `mediates` state no sign, so they are coupled positively by an
 assumption the record lists under `assumed_positive`, and `moderates` and `associates` are
-not coupled. With `method="exact"`, each row is the solution of the system at its time,
-computed with the matrix exponential, whatever the step size.
+not coupled. A theory states no parameter values, so the trajectory is that of one linear
+model consistent with the signs the propositions state, with one gain `k` for every coupling
+and a decay at the rate `damping` for every state. Each row is the solution of the system at
+its time, computed with the matrix exponential, whatever the step size.
 
 The example closes a loop in which avoidance lowers arousal. The run covers 20 time units in
 steps of 0.5 and prints the state every two time units.
@@ -665,7 +707,7 @@ s = (
       .add_proposition("p3", "avoidance", "arousal", "decreases")
 )
 
-sim = s.simulate(steps=40, dt=0.5, method="exact")
+sim = s.simulate(steps=40, dt=0.5)
 print(sim["states"])
 for step, row in enumerate(sim["trajectory"]):
     if step % 4 == 0:
@@ -677,11 +719,34 @@ follow it down, each later than the one before, and arousal later climbs back ab
 starting value. The three constructs keep cycling, and at the default gain of 1 and damping
 of 0.5 the swings neither grow nor fade.
 
-The default `method="euler"` takes fixed explicit steps, which stay close to the solution
-only while `dt` is small against the network's rates. On this loop, they inflate the
-oscillation, and `simulate()` warns when an Euler trajectory departs from the exact one by
-more than 5 per cent of the larger of the exact value and the largest absolute starting
-value. `init` sets the starting values, one number for every construct or a
-mapping such as `{"arousal": 1}`, which starts the constructs it leaves out at 0 and so
-traces the response to an impulse. The trajectory follows from the linear system that the
-propositions define, and no data enter it.
+Whether a feedback loop grows or settles is set by the gain against the damping, neither of
+which the theory states. The loop of arousal and perceived threat in the panic-network theory,
+closed by a `causes` proposition coupled positively by assumption, grows at the defaults, a gain of 1 and a damping of 0.5, holds its level at a damping of 1 and
+settles above it. Time is in units of `1/k`, and the window that `steps` and `dt` choose
+decides what is seen. The last construct of a chain of five, which decays in the long run,
+shows only a rise in the default window of one time unit.
+
+```python exec="1" source="block" result="text" session="workflow-modes"
+for damping in (0.5, 1.0, 1.5):
+    print("damping", damping, panic.simulate(steps=30, damping=damping)["trajectory"][-1])
+
+chain = tf.new_theory("chain", "A chain of five constructs")
+for i in range(5):
+    chain.add_construct(f"c{i}", f"C{i}", "A state.")
+for i in range(4):
+    chain.add_proposition(f"p{i}", f"c{i}", f"c{i + 1}", "increases")
+for steps in (10, 400):
+    last = [row[-1] for row in chain.simulate(steps=steps)["trajectory"]]
+    print("time", steps * 0.1, "end", last[-1], "peak", max(last))
+```
+
+A linear system has one equilibrium, or a continuum of them, and never two separate ones, so
+it cannot show the alternative stable states that some theories posit. `method="euler"` takes
+fixed explicit steps, which stay close to the solution only while `dt` is small against the
+network's rates. On the regulation loop above, they inflate the oscillation, and `simulate()`
+warns when an Euler trajectory departs from the exact one by more than 5 per cent of the
+larger of the exact value and the largest absolute starting value. `init` sets the starting
+values, one number for every construct or a mapping such as `{"arousal": 1}`, which starts
+the constructs it leaves out at 0 and so traces the response to an impulse. No data enter the
+trajectory, and it does not show what the propositions imply beyond the signs it was built
+from.
