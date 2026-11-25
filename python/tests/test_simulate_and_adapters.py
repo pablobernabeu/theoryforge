@@ -220,7 +220,8 @@ def test_render_report_writes_qmd(panic_path, tmp_path):
     text = open(p, encoding="utf-8").read()
     assert text.startswith("---\ntitle:")
     assert "## Rigour checklist" in text
-    assert "# Preregistration:" in text
+    # The text of each heading is escaped as Markdown text (API_SPEC.md section 23).
+    assert "# Preregistration\\: Network theory of panic disorder" in text
 
 
 def test_embedding_redundancy_refuses_a_vector_without_a_direction_and_a_bad_threshold():

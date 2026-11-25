@@ -285,6 +285,7 @@ test_that("a file with two faults is refused for the one that comes first", {
   count <- "the document holds more than 1000000 values once its aliases are expanded"
   dup <- "Duplicate map key: 'a'"
   alias <- "the alias 'u' names no node that ends before it"
+  expr <- "a value is tagged !expr, which theoryforge does not read"
   cases <- list(
     list("yaml", paste0("k: {a: 1, a: 2}\nx: ", deep(70L), "\n"), dup),
     list("yaml", paste0("x: ", deep(70L), "\nk: {a: 1, a: 2}\n"), dup),
@@ -310,6 +311,18 @@ test_that("a file with two faults is refused for the one that comes first", {
     list("yaml", "k: {a: 1, a: 2}\nz: &u [*u]\n", dup),
     list("yaml", "z: &u [*u]\nk: {a: 1, a: 2}\n", alias),
     list("yaml", "z: &u {a: 1, a: 2, b: *u}\n", alias),
+    # A value tagged !expr, refused once the whole text has been parsed, and a
+    # key so tagged, which counts by its text as a repeated key.
+    list("yaml", "a: !expr 1\nk: {a: 1, a: 2}\n", dup),
+    list("yaml", "k: {a: 1, a: 2}\na: !expr 1\n", dup),
+    list("yaml", "a: !expr 1\ny: [unclosed\n", "syntax"),
+    list("yaml", "a: !expr 1\nz: *u\n", alias),
+    list("yaml", "z: *u\na: !expr 1\n", alias),
+    list("yaml", "!expr k: 1\nk: 2\n", "Duplicate map key: 'k'"),
+    list("yaml", paste0("a: !expr 1\nx: ", deep(70L), "\n"), expr),
+    list("yaml", paste0("a: !expr 1\n", bomb(), "\n"), expr),
+    list("yaml", "a: !expr 1\nt: \"a\\0b\"\n", expr),
+    list("yaml", "a: !expr 1\np: &x 1\nq: &x 2\n", expr),
     # A text nested more than 1000 levels deep, which Python composes without
     # recursion, and one just under that, which it may compose twice.
     list("yaml", paste0("x: ", deep(1100L), "\ny: [unclosed\n"), "syntax"),
@@ -494,6 +507,62 @@ test_that("JSON comments are refused, as Python's json module refuses them", {
   expect_error(tf_read(path), "comments are not enabled", fixed = TRUE)
   expect_error(tf_read(io_file('{"id": "x" /* end */}', ext = ".json")), "comments are not enabled",
                fixed = TRUE)
+})
+
+test_that("a JSON file whose text names a file or a URL is refused", {
+  # jsonlite's fromJSON() read the file or downloaded the URL that a short
+  # text named, so tf_read() returned another theory, or sent a request, where
+  # Python refused the file. test_io.py reads the same two files.
+  other <- io_file('{"schema_version": "1.1", "id": "other"}', ext = ".json")
+  pointer <- io_file(normalizePath(other), ext = ".json")
+  url <- io_file("http://127.0.0.1:9/x.theory.json", ext = ".json")
+  for (path in c(pointer, url)) {
+    expect_error(tf_read(path), "lexical error", fixed = TRUE)
+    expect_error(tf_read_corpus(path), "lexical error", fixed = TRUE)
+  }
+})
+
+test_that("a value tagged !expr is refused and runs no code, whatever the option says", {
+  # yaml evaluates !expr as R code when the option yaml.eval.expr is TRUE, and
+  # the reader did not turn it off. Each spelling of the tag ran code.
+  # test_io.py pins the same message.
+  old <- options(yaml.eval.expr = TRUE)
+  on.exit(options(old), add = TRUE)
+  flag <- tempfile()
+  for (text in c(sprintf('id: !expr file.create("%s")\ntitle: T\n', flag),
+                 sprintf('id: t\n!expr file.create("%s"): v\n', flag),
+                 sprintf('n: 1,000\ntitle: !expr file.create("%s")\n', flag),
+                 sprintf('id: !!expr file.create("%s")\n', flag),
+                 sprintf('id: !<tag:yaml.org,2002:expr> file.create("%s")\n', flag),
+                 sprintf('id: !<!expr> file.create("%s")\n', flag),
+                 sprintf('%%TAG !e! tag:yaml.org,2002:\n---\nid: !e!expr file.create("%s")\n', flag))) {
+    path <- io_file(text)
+    expect_error(tf_read(path), sprintf("(%s) a value is tagged !expr, which theoryforge does not read", path),
+                 fixed = TRUE)
+    expect_error(tf_read_corpus(path), "a value is tagged !expr", fixed = TRUE)
+  }
+  # An explicit tag hands the number handlers any text, which they read with
+  # yaml again.
+  expect_silent(tf_read(io_file(sprintf('id: t\nx: !!float%%23fix "{1: !expr file.create(\'%s\')}"\n',
+                                        flag))))
+  expect_false(file.exists(flag))
+})
+
+test_that("the format follows the extension of the file name, as in Python", {
+  # A name that begins with its only dot has no extension, as for Python's
+  # pathlib. tools::file_ext() read '.json' as JSON or as YAML by the version
+  # of R. test_io.py writes the same names.
+  t <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  for (cs in list(list(".json", FALSE), list("upper.JSON", TRUE), list("..json", TRUE),
+                  list("x.json.yaml", FALSE))) {
+    path <- file.path(tempfile("ext"), cs[[1L]])
+    dir.create(dirname(path))
+    tf_write(t, path)
+    expect_identical(startsWith(tf_read_golden(path), "{"), cs[[2L]])
+    expect_identical(tf_read(path), tf_read(tf_write(t, tempfile(fileext = ".yaml"))))
+  }
+  expect_identical(.tf_is_json(c("a/b.json", "a\\b.JSON", "a.json/.json", ".json", "json", "a.json.")),
+                   c(TRUE, TRUE, FALSE, FALSE, FALSE, FALSE))
 })
 
 test_that("a tab reads as libyaml reads it, in both twins", {

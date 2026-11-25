@@ -71,6 +71,7 @@ Lowercases
 López
 MacCallum
 Madigan
+MathJax
 Meehl
 Meehl's
 Meshcheryakov
@@ -78,6 +79,7 @@ Modeling
 Moler
 Mooij
 Nak
+OJS
 ORCID
 OSF
 OpenAlex
@@ -86,6 +88,7 @@ Operationalises
 PAG
 PLOS
 PRP
+Pandoc
 Perlman
 PsychoModels
 PubMed
@@ -186,11 +189,14 @@ problemshift
 problemshifts
 px
 rescoring
+revealjs
 scienceverse
 scopusflow
 scopusflow's
 sem
 semopy
+shortcode
+shortcodes
 standalone
 stopwords
 theoryforge's

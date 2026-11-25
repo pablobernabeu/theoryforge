@@ -1,0 +1,60 @@
+# Edge case: ids, a label, a statement, a date and a registration that hold
+# line breaks, code fences, knitr and Jupyter chunks, inline R code, YAML
+# header lines and a Quarto shortcode. The preregistration and the dossier
+# wrote ids, dates and registrations as they stood, so a fence began a line of
+# its own and Quarto ran the chunk when render_report() rendered the dossier.
+# Every line now passes through flat() (API_SPEC.md section 11), and the
+# report escapes the text within it (section 23). The scope holds the form in
+# which Quarto encodes {{< env HOME >}}, which it decodes once its escapes are
+# removed, so render_report() refuses the theory.
+schema_version: "1.1"
+id: |-
+  edge-markdown-injection
+  ```{r}
+  writeLines("ran", "PWNED.txt")
+  ```
+  ---
+  engine: knitr
+  ---
+title: "Injection `r writeLines('ran', 'PWNED.txt')` {{< env HOME >}} <b>bold</b>"
+maturity: developing
+boundary_conditions:
+  - "b58fc729-690b-4000-b19f-365a4093b2ff;7B7B3C20656E7620484F4D45203E7D7D;"
+constructs:
+  - id: c_a
+    label: |-
+      Arousal `r 1 + 1`
+      ---
+      title: injected
+    definition: First construct.
+  - id: c_b
+    label: Threat
+    definition: Second construct.
+  - id: "r writeLines('ran', 'PWNED.txt')"
+    label: Avoidance
+    definition: Third construct.
+propositions:
+  - id: "p1\n```{python}\nopen('PWNED.txt', 'w')\n```"
+    from: c_a
+    to: c_b
+    relation: increases
+  - id: p2
+    from: c_b
+    to: "r writeLines('ran', 'PWNED.txt')"
+    relation: increases
+predictions:
+  - id: "h1\n```{r}\nstop('ran')\n```"
+    derives_from: ["p1\n```{python}\nopen('PWNED.txt', 'w')\n```"]
+    statement: |-
+      Arousal raises threat.
+      ```{r}
+      stop("ran")
+      ```
+      ---
+      `{r} 1 + 1` and [link](javascript:alert(1)){onmouseover="alert(2)"}
+    type: directional
+test_outcomes:
+  - prediction_id: "h1\n```{r}\nstop('ran')\n```"
+    passed: true
+    date: "2026-05-01\n---"
+    registered: "osf.io/abcde\n```{r}\nstop('ran')\n```\n{{< include secret.txt >}}"

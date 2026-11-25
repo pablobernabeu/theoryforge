@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 from collections import OrderedDict
 from collections.abc import Iterator
@@ -84,6 +85,24 @@ class _AliasFault(Exception):
     def __init__(self, anchor: str) -> None:
         super().__init__(anchor)
         self.anchor = anchor
+
+
+class _ExprTag(Exception):
+    """A value is tagged ``!expr``. ``load_document`` adds the file's path to the message."""
+
+
+def is_json(path) -> bool:
+    """Whether the file at ``path`` is read and written as JSON.
+
+    It is when its name, the part of the path after the last ``/`` or ``\\``,
+    has a dot after its first character and the text after its last dot is
+    ``json`` in any letter case. A name that begins with its only dot, such as
+    ``.json``, has no extension, as for ``pathlib``. R's ``.tf_is_json()``
+    follows the same rule, in place of ``tools::file_ext()``, whose answer for
+    such a name has changed between versions of R.
+    """
+    name = re.sub(r"(?s)^.*[/\\]", "", os.fspath(path))
+    return re.fullmatch(r"(?s).+\.[jJ][sS][oO][nN]", name) is not None
 
 
 # libyaml is the parser that R's yaml package bundles, so with it both twins
@@ -202,6 +221,23 @@ _StrictLoader.add_implicit_resolver("tag:yaml.org,2002:int", _INT, list("-+01234
 _StrictLoader.add_implicit_resolver("tag:yaml.org,2002:float", _FLOAT, list("-+0123456789."))
 
 
+def _refuse_expr(loader: _StrictLoader, node: Node) -> Any:
+    """Refuse a value tagged ``!expr``, which R's yaml package can evaluate as R code.
+
+    SafeLoader refuses the tag already, as it refuses any tag it does not know.
+    This gives the refusal the message R's reader gives (API_SPEC.md section 3),
+    for the local tag ``!expr`` and for ``tag:yaml.org,2002:expr``, which R's
+    yaml package reads as the same tag. ``!!expr``, the verbatim forms and a
+    ``%TAG`` handle resolve to one of the two.
+    """
+    raise _ExprTag
+
+
+_EXPR_TAGS = ("!expr", "tag:yaml.org,2002:expr")
+for _tag in _EXPR_TAGS:
+    _StrictLoader.add_constructor(_tag, _refuse_expr)
+
+
 def _key_text(key: Any) -> str:
     """A mapping key as the text R's yaml package names it.
 
@@ -232,7 +268,12 @@ def _repeated_key(loader: Any, node: MappingNode) -> str | None:
             continue
         if key_node.tag == _VALUE:  # an explicit !!value key, which PyYAML reads as text
             key_node.tag = "tag:yaml.org,2002:str"
-        key = _key_text(loader.construct_object(key_node))
+        if key_node.tag in _EXPR_TAGS:
+            # R's reader names such a key by its text and refuses the tag once
+            # the whole text has been parsed.
+            key = key_node.value
+        else:
+            key = _key_text(loader.construct_object(key_node))
         if key in seen:
             return key
         seen.add(key)
@@ -544,6 +585,12 @@ def _read_as_r(text: str, loader_class: type[_TolerantLoader]) -> tuple[Any, set
             if tolerant.unknown is not None and (mark is None or tolerant.unknown[1] < mark.index + after):
                 raise _AliasFault(tolerant.unknown[0]) from None
             raise
+        except _ExprTag:
+            # A value tagged !expr is refused once the whole text has been
+            # parsed, so an alias that names no node comes first wherever it is.
+            if tolerant.unknown is not None:
+                raise _AliasFault(tolerant.unknown[0]) from None
+            raise
     finally:
         tolerant.dispose()
     if tolerant.unknown is not None:
@@ -746,37 +793,43 @@ def _json_too_deep(text: str) -> bool:
 
 
 def load_document(path) -> Any:
-    """Parse the YAML or JSON file at ``path`` (JSON when its suffix is ``.json``).
+    """Parse the YAML or JSON file at ``path`` (JSON when its extension is ``.json``, by ``is_json``).
 
-    The bytes are decoded as UTF-8 with any byte-order mark dropped. A repeated key
-    in any mapping raises ``ValueError("(<path>) Duplicate map key: '<key>'")``, the
-    message R's reader gives. A YAML document that holds more than ``MAX_VALUES``
-    values once its aliases are expanded raises ``ValueError("(<path>) the document
-    holds more than 1000000 values once its aliases are expanded")``, and a
-    document nested more than ``MAX_DEPTH`` levels deep raises
-    ``ValueError("(<path>) the document is nested more than 64 levels deep")``. A
-    YAML alias that names no node that ends before it, because its anchor is
-    undefined or because the alias lies inside the node its anchor names, raises
-    ``ValueError("(<path>) the alias '<name>' names no node that ends before
-    it")``, and an anchor given to two nodes raises ``ValueError("(<path>) the
-    anchor '<name>' names two nodes")``, naming the first such anchor by code
-    point. A string or key that holds U+0000 or a lone surrogate, which R cannot
-    hold, raises ``ValueError("(<path>) a string holds U+0000, which theoryforge
-    cannot read")``, or the same message naming ``a lone surrogate``. JSON has no
-    comments, and ``json`` refuses them.
+    A leading ``~`` stands for the home directory, as in R. The bytes are decoded
+    as UTF-8 with any byte-order mark dropped. A repeated key in any mapping
+    raises ``ValueError("(<path>) Duplicate map key: '<key>'")``, the message R's
+    reader gives. A value tagged ``!expr``, which R's yaml package can evaluate
+    as R code, raises ``ValueError("(<path>) a value is tagged !expr, which
+    theoryforge does not read")``. A YAML document that holds more than
+    ``MAX_VALUES`` values once its aliases are expanded raises
+    ``ValueError("(<path>) the document holds more than 1000000 values once its
+    aliases are expanded")``, and a document nested more than ``MAX_DEPTH``
+    levels deep raises ``ValueError("(<path>) the document is nested more than 64
+    levels deep")``. A YAML alias that names no node that ends before it, because
+    its anchor is undefined or because the alias lies inside the node its anchor
+    names, raises ``ValueError("(<path>) the alias '<name>' names no node that
+    ends before it")``, and an anchor given to two nodes raises
+    ``ValueError("(<path>) the anchor '<name>' names two nodes")``, naming the
+    first such anchor by code point. A string or key that holds U+0000 or a lone
+    surrogate, which R cannot hold, raises ``ValueError("(<path>) a string holds
+    U+0000, which theoryforge cannot read")``, or the same message naming ``a
+    lone surrogate``. JSON has no comments, and ``json`` refuses them.
 
     A file with more than one of these faults is refused for the first in the
     order of API_SPEC.md section 3, which R's reader follows too. A JSON text is
     measured for depth before it is parsed, and a syntax error anywhere in it
     comes before a repeated key. In YAML, a syntax error, a repeated key and an
     alias that names no node come in the order the parser meets them, a repeated
-    key where its mapping ends. The depth and the count of values come next,
-    then U+0000 or a lone surrogate, unless a repeated key holds one, and last
-    an anchor given twice.
+    key where its mapping ends, and a value tagged ``!expr`` once the whole text
+    has been parsed, after any alias that names no node. The depth and the count
+    of values come next, then U+0000 or a lone surrogate, unless a repeated key
+    holds one, and last an anchor given twice.
     """
+    json_file = is_json(path)
     path = Path(path)
-    text = path.read_bytes().decode("utf-8-sig")
-    json_file = path.suffix.lower() == ".json"
+    # os.path.expanduser leaves '~user' as it is when there is no such user, as
+    # R does, where Path.expanduser raises.
+    text = Path(os.path.expanduser(path)).read_bytes().decode("utf-8-sig")
     if json_file and _json_too_deep(text):
         raise _too_deep(path)
     twice: set[str] = set()
@@ -796,6 +849,8 @@ def load_document(path) -> Any:
         raise ValueError(f"({path}) Duplicate map key: '{dup.key}'") from None
     except _AliasFault as fault:
         raise ValueError(f"({path}) the alias '{fault.anchor}' names no node that ends before it") from None
+    except _ExprTag:
+        raise ValueError(f"({path}) a value is tagged !expr, which theoryforge does not read") from None
     if not json_file:
         _check_size(data, path)
     what = _unreadable(data)

@@ -7,7 +7,6 @@ import numbers
 import re
 from collections.abc import Mapping
 from copy import deepcopy
-from pathlib import Path
 
 from . import _resources
 from ._access import EVIDENCE_DIRECTION as _DIRECTION
@@ -24,6 +23,7 @@ from ._access import str_list as _str_list
 from ._access import text as _text
 from ._io import write_lf as _write_lf
 from ._load import dump_yaml as _dump_yaml
+from ._load import is_json as _is_json
 from ._load import load_document as _load_document
 from ._num import number as _number
 from ._num import plain as _plain
@@ -781,17 +781,18 @@ class Theory:
 
     # -- serialisation ---------------------------------------------------------
     def write(self, path) -> None:
-        """Write the theory to ``path`` as JSON (a ``.json`` suffix) or YAML (anything else).
+        """Write the theory to ``path`` as JSON (a ``.json`` extension) or YAML (anything else).
 
-        The file is UTF-8 with LF line endings and ends with a newline. YAML keeps
-        the theory's key order and quotes every string a reader could take for
-        something else, ``y``, ``Y``, ``n`` and ``N`` included, which theoryforge
-        0.6.0 for R reads as logicals. The file therefore reads back as the same
-        theory in R and in Python.
+        The letter case of ``.json`` does not matter, and a file named ``.json``
+        alone has no extension and is YAML, as in R. A leading ``~`` stands for
+        the home directory. The file is UTF-8 with LF line endings and ends with a
+        newline. YAML keeps the theory's key order and quotes every string a
+        reader could take for something else, ``y``, ``Y``, ``n`` and ``N``
+        included, which theoryforge 0.6.0 for R reads as logicals. The file
+        therefore reads back as the same theory in R and in Python.
         """
-        path = Path(path)
         data = _plain(self.data)
-        if path.suffix.lower() == ".json":
+        if _is_json(path):
             text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
         else:
             text = _dump_yaml(data)
@@ -1231,15 +1232,16 @@ class Theory:
 
 
 def read(path) -> Theory:
-    """Read a theory object from a YAML or JSON file (JSON when the suffix is ``.json``).
+    """Read a theory object from a YAML or JSON file (JSON when the extension is ``.json``).
 
-    The file is read as the R package's ``tf_read()`` reads it. A byte-order
-    mark is ignored. Dates and ``y``, ``Y``, ``n`` and ``N`` stay strings, and
-    integers are decimal, octal or hexadecimal only, so ``1:30`` and ``1_000``
-    are strings too. YAML is parsed with libyaml, as in R, so a tab is read as
-    YAML allows it: as white space after a value, before a comment and in a flow
-    collection, and as text inside an unquoted value. A merge key lets the
-    mapping's own keys win. A repeated key anywhere raises
+    The file is read as the R package's ``tf_read()`` reads it. The letter case
+    of ``.json`` does not matter, and a leading ``~`` stands for the home
+    directory. A byte-order mark is ignored. Dates and ``y``, ``Y``, ``n`` and
+    ``N`` stay strings, and integers are decimal, octal or hexadecimal only, so
+    ``1:30`` and ``1_000`` are strings too. YAML is parsed with libyaml, as in
+    R, so a tab is read as YAML allows it: as white space after a value, before
+    a comment and in a flow collection, and as text inside an unquoted value. A
+    merge key lets the mapping's own keys win. A repeated key anywhere raises
     ``ValueError("(<path>) Duplicate map key: '<key>'")``. A YAML document that
     holds more than 1000000 values once its aliases (``*a``) are expanded raises
     ``ValueError("(<path>) the document holds more than 1000000 values once its
@@ -1251,17 +1253,21 @@ def read(path) -> Theory:
     ends before it")``, and an anchor given to two nodes raises
     ``ValueError("(<path>) the anchor '<name>' names two nodes")``, which R's
     yaml package would read as a placeholder or as the first of the two nodes.
-    A string or key that holds U+0000 or a lone surrogate, which R cannot hold,
-    raises ``ValueError("(<path>) a string holds U+0000, which theoryforge
-    cannot read")``, or the same message naming ``a lone surrogate``. JSON has
-    no comments, and ``json`` refuses them. A file with more than one of these
-    faults is refused for the first in this order. A JSON text is measured for
-    depth before it is parsed, and a syntax error anywhere in it comes before a
-    repeated key. In YAML, a syntax error, a repeated key and an alias that
-    names no node come in the order the parser meets them, a repeated key where
-    its mapping ends. The depth and the count of values come next, then U+0000
-    or a lone surrogate and last an anchor given twice. A document that is not
-    a mapping raises ``ValueError("Theory data must be a mapping")``.
+    A value tagged ``!expr``, which R's yaml package can evaluate as R code,
+    raises ``ValueError("(<path>) a value is tagged !expr, which theoryforge
+    does not read")``. A string or key that holds U+0000 or a lone surrogate,
+    which R cannot hold, raises ``ValueError("(<path>) a string holds U+0000,
+    which theoryforge cannot read")``, or the same message naming ``a lone
+    surrogate``. JSON has no comments, and ``json`` refuses them. A file with
+    more than one of these faults is refused for the first in this order. A
+    JSON text is measured for depth before it is parsed, and a syntax error
+    anywhere in it comes before a repeated key. In YAML, a syntax error, a
+    repeated key and an alias that names no node come in the order the parser
+    meets them, a repeated key where its mapping ends, and a value tagged
+    ``!expr`` once the whole text has been parsed, after any alias that names
+    no node. The depth and the count of values come next, then U+0000 or a lone
+    surrogate and last an anchor given twice. A document that is not a mapping
+    raises ``ValueError("Theory data must be a mapping")``.
     """
     data = _load_document(path)
     if not isinstance(data, dict):
@@ -1270,7 +1276,7 @@ def read(path) -> Theory:
 
 
 def write(theory: Theory, path) -> None:
-    """Write a ``Theory`` to ``path``, as JSON when the suffix is ``.json`` and as YAML otherwise.
+    """Write a ``Theory`` to ``path``, as JSON when the extension is ``.json`` and as YAML otherwise.
 
     See ``Theory.write()`` for the encoding and quoting rules.
     """

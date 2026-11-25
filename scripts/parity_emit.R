@@ -81,6 +81,7 @@ suppressWarnings(suppressMessages({
     write_raw(tf_preregister(t), file.path(out_dir, paste0(id, ".prereg.md")))
     write_raw(tf_compile_sem(t), file.path(out_dir, paste0(id, ".sem.lavaan")))
     write_raw(tf_dossier(t), file.path(out_dir, paste0(id, ".dossier.md")))
+    tf_render_report(t, file.path(out_dir, paste0(id, ".dossier.qmd")))
     write_raw(paste0(jsonlite::toJSON(tf_simulate(t), auto_unbox = TRUE, digits = 10, pretty = TRUE), "\n"),
               file.path(out_dir, paste0(id, ".simulate.json")))
     write_raw(paste0(jsonlite::toJSON(tf_simulate(t, method = "exact"), auto_unbox = TRUE,

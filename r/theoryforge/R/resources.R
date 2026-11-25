@@ -18,7 +18,7 @@ tf_checklist <- function() {
     if (!nzchar(path)) {
       stop("could not locate vendored rigor_checklist.yaml", call. = FALSE)
     }
-    .tf_cache$checklist <- yaml::read_yaml(path)
+    .tf_cache$checklist <- yaml::read_yaml(path, eval.expr = FALSE)
   }
   .tf_cache$checklist
 }

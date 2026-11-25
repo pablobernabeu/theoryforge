@@ -35,7 +35,8 @@ it found and the observation, date and registration it records, and with
 the post-data severity of \code{\link[=tf_post_data_severity]{tf_post_data_severity()}} where it can be
 computed, an open bound written as \code{-inf} or \code{inf}. The
 evidence lists the prediction each entry supports, its direction and its
-DOI. The implied independencies appear once, in the preregistration.
+DOI. The implied independencies appear once, in the preregistration. Every
+value is written on one line, ids and dates included.
 
 It stops, as \code{\link[=tf_check]{tf_check()}} does, when a test outcome's \code{passed} is
 present and not \code{TRUE} or \code{FALSE}, or when a prediction's

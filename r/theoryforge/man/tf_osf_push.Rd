@@ -61,7 +61,12 @@ default filename fails. Pass a version-specific \code{filename}, or
 \code{overwrite = TRUE} to add a new version of the existing file: the
 folder is listed first and the dossier is sent to that file's upload link,
 the WaterButler route that records a new OSF version. When the folder holds
-no file of that name, \code{overwrite = TRUE} creates it as usual.
+no file of that name, \code{overwrite = TRUE} creates it as usual. The
+token goes with that \code{PUT}, so the link must be an https address on the
+host of \code{base_url} or on a host ending in \code{.osf.io}, where
+WaterButler keeps its regional storage. Any other link stops with
+\code{OSF lists <filename> with an upload link outside OSF storage: <link>}
+before anything is sent.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory")

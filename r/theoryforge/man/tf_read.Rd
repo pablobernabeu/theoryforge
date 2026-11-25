@@ -7,7 +7,10 @@
 tf_read(path)
 }
 \arguments{
-\item{path}{Path to a \code{.yaml}, \code{.yml} or \code{.json} file.}
+\item{path}{Path to a \code{.yaml}, \code{.yml} or \code{.json} file. The
+file is read as JSON when its extension is \code{.json}, in any letter
+case, and as YAML otherwise. A name that begins with its only dot, such
+as \code{.json}, has no extension.}
 }
 \value{
 A named list holding the parsed theory object.
@@ -39,19 +42,24 @@ levels deep}. An alias whose anchor is undefined, or that lies inside the
 node its anchor names, stops with \code{(<path>) the alias '<name>' names no
 node that ends before it}, and an anchor given to two nodes with
 \code{(<path>) the anchor '<name>' names two nodes}, where yaml would read a
-placeholder or the first of the two nodes. A comment in a JSON file stops
-with the message of the JSON parser, since JSON has no comments. A string or
-key that holds U+0000 or a lone surrogate, which R would cut short or
-misread, stops with \code{(<path>) a string holds U+0000, which theoryforge
-cannot read}, or the same message naming \code{a lone surrogate}. A file
-with more than one of these faults is refused for the first in this order.
-A JSON text is measured for depth before it is parsed, and a syntax error
-anywhere in it comes before a repeated key. In YAML, a syntax error, a
-repeated key and an alias that names no node come in the order the parser
-meets them, a repeated key where its mapping ends. The depth and the count
-of values come next, then U+0000 or a lone surrogate and last an anchor
-given twice. A document that is not a mapping, such as a sequence or
-an empty YAML file, stops with \code{Theory data must be a mapping}.
+placeholder or the first of the two nodes. A value tagged \code{!expr}, which
+the yaml package evaluates as R code when the option \code{yaml.eval.expr} is
+\code{TRUE}, stops with \code{(<path>) a value is tagged !expr, which
+theoryforge does not read}, whatever the option says, and no code is run. A
+comment in a JSON file stops with the message of the JSON parser, since JSON
+has no comments. A string or key that holds U+0000 or a lone surrogate, which
+R would cut short or misread, stops with \code{(<path>) a string holds
+U+0000, which theoryforge cannot read}, or the same message naming \code{a
+lone surrogate}. A file with more than one of these faults is refused for
+the first in this order. A JSON text is measured for depth before it is
+parsed, and a syntax error anywhere in it comes before a repeated key. In
+YAML, a syntax error, a repeated key and an alias that names no node come in
+the order the parser meets them, a repeated key where its mapping ends, and
+a value tagged \code{!expr} once the whole text has been parsed, after any
+alias that names no node. The depth and the count of values come next, then
+U+0000 or a lone surrogate and last an anchor given twice. A document that
+is not a mapping, such as a sequence or an empty YAML file, stops with
+\code{Theory data must be a mapping}.
 }
 \examples{
 # Round-trip a theory through a temporary file.

@@ -35,7 +35,10 @@ NULL
 
 # A line break inside a value would end the Markdown list item it is written
 # into, so every run of them, with the spaces and tabs around it, becomes one
-# space (API_SPEC.md section 11).
+# space (API_SPEC.md section 11). Each line of the document goes through
+# .tf_flat() once it is built, so that no value, an id or a date included, can
+# start a line of its own, where Markdown would read a heading, a code fence or
+# a YAML header in it.
 .tf_flat <- function(s) gsub("[ \t]*[\r\n]+[ \t]*", " ", s, perl = TRUE)
 
 # `s` ending in a full stop, a question mark or an exclamation mark.
@@ -385,8 +388,9 @@ NULL
 #' \code{cycles} is passed to it and to [tf_entailments()]: under the default,
 #' a graph with a feedback loop is not read, and with \code{"sigma"} it is read
 #' by sigma-separation. The claim-form severity rubric closes the document.
-#' Values are written on one line, so a line break inside a statement cannot end
-#' the list item it belongs to.
+#' Values are written on one line, ids and dates included, so a line break
+#' inside a statement cannot end the list item it belongs to or start a line of
+#' its own.
 #'
 #' The document is the part of a preregistration that the theory file holds. It
 #' is to be completed with the study design, the analysis plan, the inference
@@ -430,9 +434,10 @@ tf_preregister <- function(theory, path = NULL, cycles = "refuse") {
   text
 }
 
-# The lines of the preregistration. `embedded` leaves out the severity section,
-# which the dossier gives with the declared values beside it. The dossier
-# passes the checklist report and the content hash it has computed already.
+# The lines of the preregistration, each written on one line by .tf_flat().
+# `embedded` leaves out the severity section, which the dossier gives with the
+# declared values beside it. The dossier passes the checklist report and the
+# content hash it has computed already.
 .tf_document_lines <- function(T, cycles, embedded = FALSE, report = tf_check(T),
                                digest = tf_content_hash(T)) {
   rep <- report
@@ -514,7 +519,7 @@ tf_preregister <- function(theory, path = NULL, cycles = "refuse") {
   }
 
   lines <- c(lines, "", .tf_IMPLIED_HEADING, .tf_implied_lines(T, cycles))
-  if (embedded) return(lines)
+  if (embedded) return(.tf_flat(lines))
 
   # The values grade the form of each claim before any data (API_SPEC section
   # 9). They say nothing of how severely a claim is tested, and the heading
@@ -532,5 +537,5 @@ tf_preregister <- function(theory, path = NULL, cycles = "refuse") {
     }
   }
 
-  lines
+  .tf_flat(lines)
 }

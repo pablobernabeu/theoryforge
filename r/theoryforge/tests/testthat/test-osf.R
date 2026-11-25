@@ -169,7 +169,7 @@ osf_listing <- paste0(
   ' "links": {"upload": "https://files.example/other"}},',
   '{"type": "files", "attributes": {"kind": "file", "name": "t.dossier.md"},',
   ' "links": {"upload":',
-  ' "https://files.example/v1/resources/abc12/providers/osfstorage/f1?kind=file"}}',
+  ' "https://files.de-1.osf.io/v1/resources/abc12/providers/osfstorage/f1?kind=file"}}',
   ']}'
 )
 
@@ -186,7 +186,41 @@ test_that("overwrite = TRUE puts a new version to the existing file's upload lin
   expect_null(mock$calls[[1L]]$body)
   expect_identical(mock$calls[[2L]]$method, "PUT")
   expect_identical(mock$calls[[2L]]$url,
-                   "https://files.example/v1/resources/abc12/providers/osfstorage/f1?kind=file")
+                   "https://files.de-1.osf.io/v1/resources/abc12/providers/osfstorage/f1?kind=file")
+})
+
+osf_one_link <- function(link) {
+  sprintf('{"data": [{"attributes": {"kind": "file", "name": "t.dossier.md"}, "links": {"upload": "%s"}}]}',
+          link)
+}
+
+test_that("overwrite = TRUE refuses an upload link outside OSF storage", {
+  # The token goes with the PUT, so a listing that named another server, or an
+  # address in clear text, would have handed it over. The Python twin pins the
+  # same links and message.
+  for (link in c("http://files.osf.io/v1/f1", "https://example.org/x",
+                 "https://files.osf.io.example.org/x", "https://osf.io@example.org/x",
+                 "file:///tmp/x", "https://[::1]/x")) {
+    mock <- osf_mock(list(status = 200L, body = osf_one_link(link)))
+    local_mocked_bindings(.tf_http = mock$fn)
+    expect_error(tf_osf_push(tf_theory("t", "T"), token = "secret", node = "abc12",
+                             dry_run = FALSE, overwrite = TRUE),
+                 paste0("OSF lists t.dossier.md with an upload link outside OSF storage: ", link),
+                 fixed = TRUE)
+    expect_identical(vapply(mock$calls, function(c) c$method, ""), "GET")
+  }
+})
+
+test_that("overwrite = TRUE takes an upload link on the storage host or osf.io", {
+  for (cs in list(c("HTTPS://Files.US.OSF.IO:443/f1", osf_base),
+                  c("https://storage.example/v1/f1", "https://storage.example/v1/resources/"))) {
+    mock <- osf_mock(list(status = 200L, body = osf_one_link(cs[[1L]])),
+                     list(status = 200L, body = "{}"))
+    local_mocked_bindings(.tf_http = mock$fn)
+    tf_osf_push(tf_theory("t", "T"), token = "secret", node = "abc12", dry_run = FALSE,
+                overwrite = TRUE, base_url = cs[[2L]])
+    expect_identical(vapply(mock$calls, function(c) c$method, ""), c("GET", "PUT"))
+  }
 })
 
 test_that("an upload link without a query gains kind=file", {

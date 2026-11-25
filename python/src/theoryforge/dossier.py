@@ -124,9 +124,9 @@ def dossier(theory, cycles: str = "refuse") -> str:
     DOI. The claims and the causal graph, the equivalent models, the rivals and
     the provenance follow, and the preregistration (its theory and hypotheses
     sections, without the severity section) closes it. The implied
-    independencies appear once, in the preregistration. ``cycles`` ("refuse" or
-    "sigma") is passed to ``entailments()``, ``discriminate()`` and
-    ``preregister()``.
+    independencies appear once, in the preregistration. Every value is written
+    on one line, ids and dates included. ``cycles`` ("refuse" or "sigma") is
+    passed to ``entailments()``, ``discriminate()`` and ``preregister()``.
 
     Raises:
         ValueError: when ``check()`` refuses the theory, because a test
@@ -237,4 +237,5 @@ def dossier(theory, cycles: str = "refuse") -> str:
     prereg = ["#" + line if line.startswith("#") else line
               for line in document_lines(data, cycles, embedded=True, report=rep, digest=digest)]
     lines += ["", "## Preregistration", "", *prereg]
-    return "\n".join(lines) + "\n"
+    # Each line on one line, whatever its values hold (API_SPEC.md section 11).
+    return "\n".join(flat(line) for line in lines) + "\n"

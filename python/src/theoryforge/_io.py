@@ -8,9 +8,15 @@ encoded bytes bypasses the platform's newline translation entirely.
 """
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 
 def write_lf(path, text: str) -> None:
-    """Write ``text`` to ``path`` as UTF-8 with LF line endings only."""
-    Path(path).write_bytes(text.replace("\r\n", "\n").encode("utf-8"))
+    """Write ``text`` to ``path`` as UTF-8 with LF line endings only.
+
+    A leading ``~`` in ``path`` stands for the home directory, as R's file
+    connections read it. ``os.path.expanduser`` leaves ``~user`` as it is when
+    there is no such user, as R does, where ``Path.expanduser`` raises.
+    """
+    Path(os.path.expanduser(path)).write_bytes(text.replace("\r\n", "\n").encode("utf-8"))
