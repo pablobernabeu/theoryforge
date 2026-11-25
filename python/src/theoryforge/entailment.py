@@ -55,9 +55,33 @@ def _mul(a: int, b: int) -> int:
     return out
 
 
-def walk_signs(directed: list[list[bool]], sign: list[list[int | None]], k: int,
-               start: int, held: bool = False) -> list[int]:
-    """For each vertex, the sign set of the directed walks to it from ``start``.
+# _mul for every pair of sign sets, so that a product is looked up.
+_MUL = [[_mul(a, b) for b in range(8)] for a in range(8)]
+
+
+def _walk_components(graph: _Graph, held: int | None) -> tuple[list[int], list[bool]]:
+    """The strong component of each vertex, and whether each component is one simple cycle.
+
+    The graph is ``graph``'s directed edges, without the edges into ``held``
+    when it is given. Removing those edges can split the component of
+    ``held`` and no other, so only that one is found again. A component is
+    one simple cycle, a self loop included, when it has as many edges as
+    vertices.
+    """
+    if held is None:
+        return graph.comp, graph.simple
+    comp, simple = list(graph.comp), list(graph.simple)
+    members = graph.comps[graph.comp[held]]
+    sub = [[graph.directed[u][v] and v != held for v in members] for u in members]
+    for part in strong_components(reach(sub, len(members))):
+        simple.append(sum(sub[a][b] for a in part for b in part) == len(part))
+        for a in part:
+            comp[members[a]] = len(simple) - 1
+    return comp, simple
+
+
+def walk_signs(graph: _Graph, start: int, held: bool = False) -> list[int]:
+    """For each vertex of ``graph``, the sign set of the directed walks to it from ``start``.
 
     The empty walk counts, so ``start`` holds POS. With ``held``, the edges
     into ``start`` are left out, so that no walk returns to it, as when an
@@ -71,22 +95,17 @@ def walk_signs(directed: list[list[bool]], sign: list[list[int | None]], k: int,
     entered its simple cycle or -1), each visited once, so it ends on a graph
     with feedback loops too.
     """
-    d = [[directed[u][v] and not (held and v == start) for v in range(k)] for u in range(k)]
-    comps = strong_components(reach(d, k))
-    comp = [0] * k
-    for c, members in enumerate(comps):
-        for v in members:
-            comp[v] = c
-    simple = [sum(d[u][v] for u in members for v in members) == len(members) for members in comps]
-    masks = [0] * k
+    comp, simple = _walk_components(graph, start if held else None)
+    children, sign = graph.children, graph.sign
+    masks = [0] * graph.k
     masks[start] = POS
     first = (start, POS, start if simple[comp[start]] else -1)
     seen = {first}
     stack = [first]
     while stack:
         v, bit, entry = stack.pop()
-        for w in range(k):
-            if not d[v][w]:
+        for w in children[v]:
+            if held and w == start:
                 continue
             if comp[w] == comp[v]:
                 if w == entry:
@@ -94,7 +113,7 @@ def walk_signs(directed: list[list[bool]], sign: list[list[int | None]], k: int,
                 nxt_entry = entry
             else:
                 nxt_entry = w if simple[comp[w]] else -1
-            nxt = _mul(bit, _EDGE_MASK[sign[v][w]])
+            nxt = _MUL[bit][_EDGE_MASK[sign[v][w]]]
             for b in (POS, NEG, UNK):
                 if nxt & b:
                     masks[w] |= b
@@ -167,39 +186,54 @@ class _Graph:
 
     def __init__(self, g: dict, cycles: str, props: list) -> None:
         self.nodes = g["nodes"]
-        self.k = len(self.nodes)
+        self.k = k = len(self.nodes)
         self.index = {cid: i for i, cid in enumerate(self.nodes)}
         self.directed, self.bidirected, self.sign = g["directed"], g["bidirected"], g["sign"]
         self.edge_props, self.assoc_props = g["edge_props"], g["assoc_props"]
         self.latent: list[bool] = g["latent"]
-        self.props = props
-        self.r = reach(self.directed, self.k)
-        comps = strong_components(self.r)
-        self.feedback = [[self.nodes[v] for v in comp] for comp in comps
+        # The ids of the propositions, each once in file order, from which a
+        # claim's ``via`` is drawn.
+        self.pids = list(dict.fromkeys(pid for pid in (text(field(p, "id")) for p in props) if pid))
+        self.children = [list(compress(range(k), row)) for row in self.directed]
+        self.parents: list[list[int]] = [[] for _ in range(k)]
+        for u in range(k):
+            for v in self.children[u]:
+                self.parents[v].append(u)
+        self.r = reach(self.directed, k)
+        self.comps = strong_components(self.r)
+        self.comp = [0] * k
+        for c, members in enumerate(self.comps):
+            for v in members:
+                self.comp[v] = c
+        inner = [0] * len(self.comps)
+        for u in range(k):
+            for v in self.children[u]:
+                if self.comp[u] == self.comp[v]:
+                    inner[self.comp[u]] += 1
+        self.simple = [inner[c] == len(members) for c, members in enumerate(self.comps)]
+        self.feedback = [[self.nodes[v] for v in comp] for comp in self.comps
                          if len(comp) > 1 or self.directed[comp[0]][comp[0]]]
         self.evaluable = cycles == "sigma" or not self.feedback
         if self.feedback and cycles == "sigma":
-            self.sep_d, self.sep_b = acyclify(self.directed, self.bidirected, comps)
+            self.sep_d, self.sep_b = acyclify(self.directed, self.bidirected, self.comps)
         else:
             self.sep_d, self.sep_b = self.directed, self.bidirected
         self.sep = MixedGraph(self.sep_d, self.sep_b)
         self._walks: dict[int, list[int]] = {}
-        self._held: dict[int, tuple[list[int], list[list[bool]]]] = {}
+        self._held: dict[int, list[int]] = {}
         self._cov: list[list[int]] | None = None
 
     def walks(self, s: int) -> list[int]:
         if s not in self._walks:
-            self._walks[s] = walk_signs(self.directed, self.sign, self.k, s)
+            self._walks[s] = walk_signs(self, s)
         return self._walks[s]
 
-    def held(self, x: int) -> tuple[list[int], list[list[bool]]]:
-        """The sign sets of the walks from ``x`` that never return to it, and the
-        reachability of the graph without the edges into ``x``: the graph an
-        intervention on ``x`` leaves."""
+    def held(self, x: int) -> list[int]:
+        """The sign sets of the walks from ``x`` that never return to it, in the
+        graph without the edges into ``x``: the graph an intervention on ``x``
+        leaves."""
         if x not in self._held:
-            cut = [[self.directed[u][v] and v != x for v in range(self.k)] for u in range(self.k)]
-            self._held[x] = (walk_signs(self.directed, self.sign, self.k, x, held=True),
-                             reach(cut, self.k))
+            self._held[x] = walk_signs(self, x, held=True)
         return self._held[x]
 
     def cov_signs(self) -> list[list[int]]:
@@ -222,72 +256,89 @@ class _Graph:
         if self._cov is None:
             k, r = self.k, self.r
             S = [[POS if a == b else 0 for b in range(k)] for a in range(k)]
-            order = sorted(range(k), key=lambda v: (sum(r[u][v] for u in range(k)), v))
+            n_ancestors = [sum(column) for column in zip(*r, strict=True)]
+            order = sorted(range(k), key=lambda v: (n_ancestors[v], v))
             for j, b in enumerate(order):
-                parents = [p for p in range(k) if self.directed[p][b]]
+                into = [(p, _EDGE_MASK[self.sign[p][b]]) for p in self.parents[b]]
+                joined = list(compress(range(k), self.bidirected[b]))
                 for a in order[:j]:
+                    Sa = S[a]
                     m = 0
-                    for p in parents:
-                        m |= _mul(_EDGE_MASK[self.sign[p][b]], S[a][p])
-                    if any(self.bidirected[c][b] and r[c][a] for c in range(k)):
+                    for p, e in into:
+                        m |= _MUL[e][Sa[p]]
+                    if any(r[c][a] for c in joined):
                         m |= UNK
-                    S[a][b] = S[b][a] = m
+                    Sa[b] = S[b][a] = m
             self._cov = S
         return self._cov
 
     def separated(self, i: int, j: int, given: list[int]) -> bool:
         return m_separated(self.sep, i, j, given)
 
-    def _ordered(self, keep) -> list[str]:
-        """The ids of the propositions that ``keep`` selects, in file order, once each."""
-        out: list[str] = []
-        for p in self.props:
-            pid = text(field(p, "id"))
-            if pid and pid not in out and keep(pid):
-                out.append(pid)
-        return out
+    def _ordered(self, on: set[str]) -> list[str]:
+        """The ids in ``on``, in file order."""
+        return [pid for pid in self.pids if pid in on]
 
-    def effect(self, x: int, y: int) -> tuple[str, str, list[str]]:
+    def effect(self, x: int, y: int, via: bool = True) -> tuple[str, str, list[str]]:
+        """The derived sign of the effect of x on y, its basis and, with ``via``, the
+        propositions on a directed path from x to y."""
         # An intervention on x replaces its own equation, so a walk that comes
         # back to x carries nothing to y. In an acyclic graph no walk does.
-        masks, r = self.held(x)
-        derived, basis = _derived(masks[y])
+        derived, basis = _derived(self.held(x)[y])
+        if not via:
+            return derived, basis, []
+        # The paths run in the graph without the edges into x: from x, which
+        # reaches the same vertices there, to y along vertices that reach y
+        # without passing through x.
+        parents = list(self.parents)
+        parents[x] = []
+        to_y = reached(parents, (y,), self.k)
+        from_x = self.r[x]
         on = {pid for (u, v), ps in self.edge_props.items()
-              if v != x and r[x][u] and r[v][y] for pid in ps}
-        return derived, basis, self._ordered(lambda pid: pid in on)
+              if v != x and from_x[u] and to_y[v] for pid in ps}
+        return derived, basis, self._ordered(on)
 
-    def association(self, x: int, y: int) -> tuple[str, str, list[str]]:
+    def association(self, x: int, y: int, via: bool = True) -> tuple[str, str, list[str]]:
+        """The derived sign of the association of x and y, its basis and, with
+        ``via``, the propositions on a trek between the two."""
         k, r = self.k, self.r
         if not self.feedback:
             mask = self.cov_signs()[x][y]
         else:
             # With feedback loops, the treks are read as pairs of walks from a
             # common source, which counts a trek whose two walks share a
-            # segment as well.
+            # segment as well. A source that does not reach both adds nothing.
             mask = 0
             for t in range(k):
-                mask |= _mul(self.walks(t)[x], self.walks(t)[y])
+                if r[t][x] and r[t][y]:
+                    walks = self.walks(t)
+                    mask |= _MUL[walks[x]][walks[y]]
             for (a, b) in self.assoc_props:
                 if (r[a][x] and r[b][y]) or (r[a][y] and r[b][x]):
                     mask |= UNK
         derived, basis = _derived(mask)
-
-        def common(u: int, e: int) -> bool:
-            return any(r[s][u] and r[s][e] for s in range(k))
-
+        if not via:
+            return derived, basis, []
+        # An edge u -> v lies on a trek between x and y when v reaches one of
+        # the two and u is near the other: u has an ancestor in common with it,
+        # or descends from one end of an association whose other end reaches
+        # it. near_x marks the vertices near x, the descendants of x's
+        # ancestors and of the ends whose other end reaches x.
+        to_x = [r[s][x] for s in range(k)]
+        to_y = [r[s][y] for s in range(k)]
+        ends = [e for (a, b) in self.assoc_props for e in ((a, b), (b, a))]
+        near_x = reached(self.children, [s for s in range(k) if to_x[s]]
+                         + [p for p, q in ends if to_x[q]], k)
+        near_y = reached(self.children, [s for s in range(k) if to_y[s]]
+                         + [p for p, q in ends if to_y[q]], k)
         on: set[str] = set()
         for (u, v), ps in self.edge_props.items():
-            hit = (r[v][x] and common(u, y)) or (r[v][y] and common(u, x))
-            for (a, b) in self.assoc_props:
-                for (p, q) in ((a, b), (b, a)):
-                    if r[p][u] and ((r[v][x] and r[q][y]) or (r[v][y] and r[q][x])):
-                        hit = True
-            if hit:
+            if (to_x[v] and near_y[u]) or (to_y[v] and near_x[u]):
                 on.update(ps)
         for (a, b), ps in self.assoc_props.items():
             if (r[a][x] and r[b][y]) or (r[a][y] and r[b][x]):
                 on.update(ps)
-        return derived, basis, self._ordered(lambda pid: pid in on)
+        return derived, basis, self._ordered(on)
 
     def adjustment(self, x: int, y: int) -> list[int] | None:
         """A set of constructs whose adjustment identifies the effect of x on y, or None.
@@ -309,9 +360,10 @@ class _Graph:
             return None
         k, r = self.k, self.r
         on_path = [v for v in range(k) if v != x and r[x][v] and r[v][y]]
-        forbidden = {x} | {w for v in on_path for w in range(k) if r[v][w]}
+        forbidden = reached(self.children, on_path, k)
+        forbidden[x] = 1
         canonical = [v for v in range(k)
-                     if (r[v][x] or r[v][y]) and not self.latent[v] and v not in forbidden and v != y]
+                     if (r[v][x] or r[v][y]) and not self.latent[v] and not forbidden[v] and v != y]
         # The proper back-door graph. Without feedback loops, separation is read
         # in the theory's own graph.
         d = self.sep.without_edges(x, on_path)
@@ -706,8 +758,8 @@ def _project(G: _Graph, keep: list[str]) -> tuple[list[list[bool]], list[list[bo
         found, stack, seen = set(), [s], {s}
         while stack:
             v = stack.pop()
-            for w in range(G.k):
-                if G.directed[v][w] and w not in seen:
+            for w in G.children[v]:
+                if w not in seen:
                     seen.add(w)
                     if is_kept[w]:
                         found.add(w)
@@ -912,16 +964,16 @@ def _sign_differences(shared: list[str], focal: _Graph, other: _Graph) -> tuple[
         for y in shared:
             if x == y:
                 continue
-            a = focal.effect(focal.index[x], focal.index[y])[0]
-            b = other.effect(other.index[x], other.index[y])[0]
+            a = focal.effect(focal.index[x], focal.index[y], via=False)[0]
+            b = other.effect(other.index[x], other.index[y], via=False)[0]
             if a != b:
                 effects.append({"x": x, "y": y, "theory": a, "rival": b,
                                 "decisive": a in fixed and b in fixed})
     associations: list[dict] = []
     for i, x in enumerate(shared):
         for y in shared[i + 1:]:
-            a = focal.association(focal.index[x], focal.index[y])[0]
-            b = other.association(other.index[x], other.index[y])[0]
+            a = focal.association(focal.index[x], focal.index[y], via=False)[0]
+            b = other.association(other.index[x], other.index[y], via=False)[0]
             if a != b:
                 associations.append({"a": x, "b": y, "theory": a, "rival": b,
                                      "decisive": a in fixed and b in fixed})
