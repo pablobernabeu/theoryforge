@@ -663,7 +663,8 @@ of 0.5 the swings neither grow nor fade.
 The default `method="euler"` takes fixed explicit steps, which stay close to the solution
 only while `dt` is small against the network's rates. On this loop, they inflate the
 oscillation, and `simulate()` warns when an Euler trajectory departs from the exact one by
-more than 5 per cent. `init` sets the starting values, one number for every construct or a
+more than 5 per cent of the larger of the exact value and the largest absolute starting
+value. `init` sets the starting values, one number for every construct or a
 mapping such as `{"arousal": 1}`, which starts the constructs it leaves out at 0 and so
 traces the response to an impulse. The trajectory follows from the linear system that the
 propositions define, and no data enter it.

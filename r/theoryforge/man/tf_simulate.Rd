@@ -99,8 +99,11 @@ step is stable only when \eqn{|1 + dt \lambda| < 1} for every eigenvalue
 \code{dt * damping} exceeds 2, and the steps turn a sustained oscillation
 into growth. Raising \code{damping} can cause a divergence as well as fail
 to stop one. The function warns when the Euler trajectory departs from the
-exact one by more than 5 per cent of \code{max(1, |exact|)} at any step. The
-default will change to \code{"exact"} in the next minor release.
+exact one, at any step, by more than 5 per cent of the larger of
+\code{|exact|} and the largest absolute starting value (1 when every
+starting value is 0), so that the warning does not depend on the unit of
+\code{init}. The default will change to \code{"exact"} in the next minor
+release.
 
 When a state grows so large that a million times it is not a finite number,
 the function stops with a message naming the step and the state. The initial

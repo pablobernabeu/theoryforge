@@ -199,8 +199,10 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     that decays at rate ``damping`` therefore grows without bound, alternating in
     sign, once dt*damping exceeds 2, and the steps turn a sustained oscillation
     into growth. The Euler run warns (UserWarning) when it departs from the exact
-    solution by more than 5 per cent of max(1, |exact|) at any step. The default
-    will change to ``"exact"`` in the next minor release.
+    solution, at any step, by more than 5 per cent of the larger of |exact| and
+    the largest absolute starting value (1 when every starting value is 0), so
+    that the warning does not depend on the unit of ``init``. The default will
+    change to ``"exact"`` in the next minor release.
 
     ``steps`` must be a whole number of at least 0 and ``dt`` a finite number
     above 0. ``k`` and ``damping`` must be finite numbers, ``init`` as above and
@@ -277,6 +279,15 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
     # round (about 1.8e302 or more), and only init shapes this row.
     _check_finite(X, states, 0, "reduce init")
     Y = list(X)  # the exact state the Euler run is compared with
+    # The departure is measured against the larger of |exact| and the largest
+    # absolute starting value, so that it does not depend on the unit of init.
+    # A run that starts at 0 everywhere takes 1. R computes the same scale.
+    scale = 0.0
+    for x in X:
+        if abs(x) > scale:
+            scale = abs(x)
+    if scale == 0.0:
+        scale = 1.0
     departed = False
     traj = [[rnd(x, 6) for x in X]]
     for step in range(1, n_steps + 1):
@@ -300,7 +311,7 @@ def simulate(theory, steps: int = 10, dt: float = 0.1, k: float = 1.0,
                 # An exact state beyond the double range is a departure too,
                 # since the Euler state is still finite here.
                 if (not math.isfinite(Y[i])
-                        or abs(X[i] - Y[i]) > _DEPARTURE * max(1.0, abs(Y[i]))):
+                        or abs(X[i] - Y[i]) > _DEPARTURE * max(scale, abs(Y[i]))):
                     departed = True
                     break
         traj.append([rnd(x, 6) for x in X])

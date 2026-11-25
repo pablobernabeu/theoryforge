@@ -141,6 +141,23 @@ def test_euler_does_not_warn_when_it_tracks_the_exact_solution(panic_path):
         _regulation().simulate(steps=5)
 
 
+def test_the_euler_warning_does_not_depend_on_the_unit_of_init(weak_path, panic_path):
+    # With dt = 1, the Euler run of weak-demo is 18 per cent off the exact one
+    # at the first step and a factor of 7 off at the tenth, whatever init is.
+    # The departure is measured against the largest absolute starting value
+    # as well as the exact state, so a start at 0.2 warns as a start at 1 does.
+    t = tf.read(weak_path)
+    for init in (1.0, 0.2, -0.01):
+        with pytest.warns(UserWarning) as rec:
+            t.simulate(steps=10, dt=1, init=init)
+        assert [str(w.message) for w in rec] == [EULER_WARNING]
+    # A run that tracks the exact solution stays silent at any scale.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        for init in (100.0, 0.01):
+            tf.read(panic_path).simulate(init=init)
+
+
 def test_exact_ignores_the_step_size_for_stability(weak_path):
     # Inside the app's ranges (dt 2, damping 5), where Euler multiplies by -9.
     r = tf.read(weak_path).simulate(steps=4, dt=2, damping=5, method="exact")
