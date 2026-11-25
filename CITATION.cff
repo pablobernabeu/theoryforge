@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use theoryforge, please cite it as below."
 title: "theoryforge: Systematic theory development"
-abstract: "Twin R and Python packages that give the same results and help researchers state scientific theories as structured, versioned files, derive what their causal graphs imply, check how completely they are specified against a 12-item checklist, and prepare and record their tests. A theory can also be compared with a rival or an earlier version of itself and mapped onto the themes of a literature corpus."
+abstract: "Twin R and Python packages that help researchers state scientific theories as structured, versioned files, derive what their causal graphs imply, prepare and record their tests and check how completely they are specified against a 12-item checklist. A theory can also be compared with a rival or an earlier version of itself and mapped onto the themes of a literature corpus. For the same file and settings, the two packages give the same results."
 type: software
 authors:
   - family-names: Bernabeu

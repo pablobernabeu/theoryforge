@@ -12,16 +12,16 @@ while, and the browser keeps it for later visits.
 ## What the apps do
 
 A theory comes from the list of examples, from a YAML or JSON file uploaded from your
-computer or from the editor. A card beside it shows whether the package finds it valid, its
-checklist score and gate, the number of its constructs, propositions and predictions, and its
-content hash. The score and the hash follow once nothing you started is waiting, so an
-operation you run goes first. A theory with more than 300 constructs, propositions and
-predictions is scored only when you ask, and one longer than 1,000,000 characters written as
-JSON, or with more than 20,000 values, is hashed only when you ask, since either can take a
-long time on a theory that size. You choose an operation, set its parameters and run it, and
-the result appears with a note on what it shows. Figures can be saved as SVG or PNG, text
-and JSON results as files, and the preregistration and the dossier are shown as formatted
-pages with their Markdown a click away.
+computer or from the editor. A card beside it shows whether full validation finds the file
+well-formed, its checklist score and gate, the number of its constructs, propositions and
+predictions, and its content hash. The score and the hash follow once nothing you started is
+waiting, so an operation you run goes first. A theory with more than 300 constructs,
+propositions and predictions is scored only when you ask, and one longer than 1,000,000
+characters written as JSON, or with more than 20,000 values, is hashed only when you ask,
+since either can take a long time on a theory that size. You choose an operation, set its
+parameters and run it, and the result appears with a note on what it shows. Figures can be
+saved as SVG or PNG, text and JSON results as files, and the preregistration and the dossier
+are shown as formatted pages with their Markdown a click away.
 
 The operations are grouped by purpose. Assess holds the checklist, the full
 validation, the claim-form rubric, post-data severity and the redundancy screen. Derive holds
@@ -49,8 +49,8 @@ an empty template, and the version fields offer to record the current content ha
 Import DAGitty takes model code copied from [dagitty.net](https://dagitty.net) or from the
 dagitty R package and reads it with `read_dagitty()`, as
 [Workflow modes](workflow-modes.md#starting-from-a-dagitty-diagram) describes. Each variable
-becomes a construct and each edge a proposition, and the import window shows the Python code that
-makes the same theory. The imported theory replaces the one in the editor and needs a
+becomes a construct and each edge a proposition, and the import window shows the Python code
+that makes the same theory. The imported theory replaces the one in the editor and needs a
 definition for each construct before it validates.
 
 ## Saving a theory and reproducing a result

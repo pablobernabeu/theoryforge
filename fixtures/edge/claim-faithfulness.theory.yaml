@@ -2,7 +2,7 @@
 # raises y through m1 and lowers it through m2, so the sign of the effect is
 # open. A claimed zero is contradicted, and a claimed nonzero entailed, only if
 # the two paths do not cancel exactly, and both claim lines end with 'unless
-# paths cancel exactly'. So does the contradicted claim that m1 and m2 are
+# effects cancel exactly'. So does the contradicted claim that m1 and m2 are
 # independent given y, a collider that connects them. A claimed positive is
 # left open, and the claim that m1 and m2 are independent given x, which
 # separates them, is entailed without any cancellation, so neither line ends

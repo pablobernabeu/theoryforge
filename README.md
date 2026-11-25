@@ -22,24 +22,24 @@ same file.
 
 The packages check how completely a theory file states what a 12-item checklist asks for,
 and they read its propositions as a causal graph, from which they derive the conditional
-independencies the graph implies and whether the graph entails each claim the theory states. They compare the theory with a rival
-account or with an earlier version of itself, grade how risky each prediction's claim is
-before data and how severely a recorded test probed it, and write the theory and hypotheses
-sections of a preregistration and a dossier for reviewers. A literature layer maps a
-bibliographic corpus into keyword themes and shows which of them share words with the theory
-and its rivals.
+independencies the graph implies and whether the graph entails each claim the theory states.
+They compare the theory with a rival account or with an earlier version of itself, grade how
+risky each prediction's claim is before data and how severely a recorded test probed it, and
+write the theory and hypotheses sections of a preregistration and a dossier for reviewers. A
+literature layer maps a bibliographic corpus into keyword themes and shows which of them
+share words with the theory and its rivals.
 
 These are checks of what the file states, and none of them shows that a theory is true. The
 checklist score describes how completely the file states what checklist 3.1 asks for. Most
 items read whether a field is filled in or how a prediction is labelled, and stated claims
 are checked against the causal graph. Test outcomes are read only by the parsimony item, the
 weights are conventions, and no study has established what difference between two scores is
-meaningful. The score does not show that the theory is true or well reasoned. The report
-therefore gives the lowest and highest score with equal weights or with one weight halved or
-doubled. The causal reading assumes that the propositions state every direct relation
-among the constructs, with an association for each common cause they leave unnamed. A word
-that a theory shares with a literature theme does not show that the theory accounts for what
-the theme's records report.
+meaningful. The score does not show that the theory is true or well reasoned. Since the
+weights are conventions, the report also gives the lowest and highest score with equal
+weights or with one weight halved or doubled. The causal reading assumes that the
+propositions state every direct relation among the constructs, with an association for each
+common cause they leave unnamed. A word that a theory shares with a literature theme does
+not show that the theory accounts for what the theme's records report.
 
 ## Installation
 

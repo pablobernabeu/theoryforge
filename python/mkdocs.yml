@@ -1,5 +1,5 @@
 site_name: theoryforge (Python)
-site_description: Systematic theory development. A reproducible workflow for building, developing and testing scientific theories.
+site_description: Systematic theory development. Helps researchers state scientific theories as structured, versioned files of constructs, propositions, predictions, rival accounts and test records. Functions check how completely a theory is specified against a versioned checklist, derive what its causal graph implies, compare it with a rival or an earlier version of itself and write the theory and hypotheses sections of a preregistration and a dossier for reviewers. An R package of the same name gives the same results for the same file and settings.
 site_author: Pablo Bernabeu
 site_url: https://pablobernabeu.github.io/theoryforge/python/
 repo_url: https://github.com/pablobernabeu/theoryforge
