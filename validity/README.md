@@ -1,18 +1,41 @@
-# Validity of theoryforge: register, demonstrations and pilot data
+# Validity of theoryforge: report, protocol and data
 
-This folder holds the data behind the validity report on theoryforge. The
+This folder holds the validity report on theoryforge, the data it reads and
+the protocol of the studies that would test what the report leaves open. The
 report rests on an audit of the packages and apps at commit f72ce4c, whose code
-is the same as that of the 0.8.0 release candidate (b5ebf84). Eight lenses
-examined the code and documentation: the claims register, causal verification,
-statistics and simulation, a red team of the checklist score, metascience and
-related tools, communication and apps, philosophy of science and measurement.
-An independent second reader rechecked each lens, and three encoders encoded
-three verbal theories in a pilot. The folder lies outside both packages:
-neither the R build, the Python distributions nor any CI job reads it.
+is the same as that of b5ebf84, the release candidate before the corrections
+made for version 0.8.0. Eight lenses examined the code and documentation: the
+claims register, causal verification, statistics and simulation, a red team of
+the checklist score, metascience and related tools, communication and apps,
+philosophy of science and measurement. An independent second reader rechecked
+each lens, and three encoders encoded three verbal theories in a pilot. Every
+auditor, second reader and encoder was an AI agent. The folder lies outside
+both packages: neither the R build, the Python distributions nor any CI job
+reads it.
 
 The audit's own files, the scripts, inputs and outputs of each lens, of each
 second reader and of the pilot, are kept outside the repository. Every path
 into them, here and in the register, is relative to that audit directory.
+
+## The report and the protocol
+
+- `report.qmd`: the validity report. It reads every number from `data/`,
+  reruns `demonstrations/run.R` against `r/theoryforge` in the working tree
+  and says whether that run equals `data/demonstrations-0.8.0.csv`.
+- `protocol.qmd`: the protocol of three preregistered studies with human
+  participants (encoding reliability, agreement with expert judgement and
+  known groups, and a reader study), with sample sizes computed from stated
+  inputs.
+- `references.bib` and `apa.csl`: the references of both documents, each
+  checked against Crossref or PubMed, and the APA style that sets them.
+
+Either document renders from this folder with Quarto and R, given knitr,
+rmarkdown, jsonlite and pkgload (and lme4 for the protocol) and the R
+package's dependencies:
+
+    LANG=C.utf8 quarto render report.qmd
+
+The rendered HTML is not kept in the repository.
 
 ## The register
 
@@ -50,6 +73,22 @@ reader changed them. Two verdicts the reader split by part carry both readings.
 once per DOI: `doi`, `citation`, `verified_how` (each account, separated by
 ' | '), `lenses` (those that cite it) and `second_readers` (those whose
 Crossref or PubMed checks name it).
+
+`data/status-0.8.0.csv` has one row per finding and per verdict (`kind` and
+`id`). `status_080` says what version 0.8.0 does about it: `fixed` (the
+behaviour or rule is corrected), `reported` (the problem is reported beside
+the result, which is unchanged), `reworded` (the outputs and documents say
+what is computed, the behaviour is unchanged), `unchanged`, `deferred`
+(unchanged, with the remedy listed for 0.9.0), `withdrawn` or `not
+applicable` (a verdict of sound, or sound with caveats, whose recommendation
+is to keep). `basis` names the file or the rerun on 0.8.0 that shows it.
+
+`data/verification.csv` has one row per independent check of the deductive
+and numerical core by the causal-verification and statistics-and-simulation
+lenses and their second readers: `component`, `quantity` (which names the
+unit of the cases), `comparator`, `cases`, `agreements` and `discrepancies`
+(blank where the check measures a rate or the size of an approximation),
+`note` and `evidence_path`.
 
 `scripts/build_register.py` writes the three files from the two results of
 the audit (the formal and the conceptual group, each a JSON file holding the
@@ -95,8 +134,9 @@ code in the working tree:
     LANG=C.utf8 Rscript validity/demonstrations/run.R
 
 which writes `data/demonstrations.csv`. `data/demonstrations-f72ce4c.csv` is
-the same run on the code at f72ce4c (run on b5ebf84, which has the same code),
-kept so that the report can compare the two.
+the same run on the code at f72ce4c (run on b5ebf84, which has the same code)
+and `data/demonstrations-0.8.0.csv` the run on version 0.8.0, kept so that the
+report can compare them.
 
 ## The pilot's tables
 
