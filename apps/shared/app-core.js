@@ -1260,16 +1260,18 @@
   const STATE_FORMAT = 2;
   function stateKey() { return "tf-app-" + (RT ? RT.lang : "x"); }
   let saveTimer = null;
-  // Whether the session could be written, which is false when the storage is
-  // full or blocked.
+  // The session is written for the browser, which the next visit restores,
+  // and for this tab, with the fragment the tab's address holds. A reload of
+  // the tab finds its own record and restores that, whatever another tab has
+  // saved since, and even when the address has not yet caught up with the
+  // latest edit. A full or blocked storage is not worth failing over.
+  const tabKey = () => stateKey() + "-tab";
   function writeSession() {
-    try {
-      localStorage.setItem(stateKey(), JSON.stringify({
-        v: STATE_FORMAT, opId: STATE.opId, params: STATE.params, input: STATE.input, ran: !!STATE.ran,
-      }));
-      return true;
-    } catch (e) { return false; /* quota exceeded, or private mode; not worth failing over */ }
+    const rec = { v: STATE_FORMAT, opId: STATE.opId, params: STATE.params, input: STATE.input, ran: !!STATE.ran };
+    try { localStorage.setItem(stateKey(), JSON.stringify(rec)); } catch (e) { /* not saved */ }
+    try { sessionStorage.setItem(tabKey(), JSON.stringify(Object.assign({ link: lastLinkHash }, rec))); } catch (e) { /* not saved */ }
   }
+  function loadTab() { try { return JSON.parse(sessionStorage.getItem(tabKey()) || "null"); } catch (e) { return null; } }
   function saveState() {
     writeSession();
     scheduleLink();
@@ -1294,20 +1296,9 @@
   // stay behind, since a link cannot carry a second file.
   const LINK_PREFIX = "#s=";
   // lastLinkHash is the fragment the app last wrote, so that a fragment
-  // pasted into the address bar can be told from the app's own. The app also
-  // keeps it beside the saved session, with the session written from the same
-  // state just before, so that a reload, whose address still holds the
-  // fragment, is told from a link opened anew. The session is then at least
-  // as new as the fragment, even when an edit has not reached the address yet.
+  // pasted into the address bar can be told from the app's own, and a reload
+  // from a link opened anew.
   let linkTimer = null, linkInfo = { ok: true, length: 0 }, lastLinkHash = "";
-  const ownLinkKey = () => stateKey() + "-link";
-  function rememberOwnLink(sessionWritten) {
-    try {
-      if (sessionWritten && lastLinkHash) localStorage.setItem(ownLinkKey(), lastLinkHash);
-      else localStorage.removeItem(ownLinkKey());
-    } catch (e) { /* storage blocked: a reload is then read as a link */ }
-  }
-  function ownLink() { try { return localStorage.getItem(ownLinkKey()) || ""; } catch (e) { return ""; } }
   // A fragment in the address that the app did not write is a link that
   // waits to be opened, which the app's own state does not replace.
   function linkWaiting() {
@@ -1343,14 +1334,13 @@
   async function updateLink() {
     try {
       if (linkWaiting()) return;
-      const written = writeSession();
       const l = await currentLink();
       if (!l || typeof history === "undefined" || !history.replaceState || linkWaiting()) return;
       linkInfo = l;
       const base = location.pathname + location.search;
       lastLinkHash = l.ok ? LINK_PREFIX + l.enc : "";
       history.replaceState(null, "", base + lastLinkHash);
-      rememberOwnLink(written);
+      writeSession();
     } catch (e) { /* no compression stream in this browser: no link */ }
   }
   async function copyLink() {
@@ -1359,8 +1349,8 @@
     // An edit typed just before the click is applied first, so the link
     // carries it.
     if (EDITOR && EDITOR.flush) await EDITOR.flush();
-    let l, written = false;
-    try { written = writeSession(); l = await currentLink(); } catch (e) { toast("This browser cannot compress the theory for a link"); return; }
+    let l;
+    try { l = await currentLink(); } catch (e) { toast("This browser cannot compress the theory for a link"); return; }
     if (!l) return;
     if (!l.ok) {
       openModal("The theory is too large for a link", el("div", { class: "help" }, [
@@ -1372,7 +1362,7 @@
     const base = location.href.split("#")[0];
     lastLinkHash = LINK_PREFIX + l.enc;
     history.replaceState(null, "", location.pathname + location.search + lastLinkHash);
-    rememberOwnLink(written);
+    writeSession();
     await copyText(base + LINK_PREFIX + l.enc);
   }
   async function readLink() {
@@ -2465,10 +2455,11 @@
   // happened; start() shows it once the boot overlay, which would hide a
   // toast, is gone.
   async function applyRestore(blog) {
-    let saved = loadSaved();
     let note = null, fromLink = false, linkFailed = false, failure = null;
     const hash = (typeof location !== "undefined" && location.hash) || "";
-    const ownReload = !!saved && hash.startsWith(LINK_PREFIX) && hash === ownLink();
+    const tab = loadTab();
+    const ownReload = !!tab && tab.link === hash;
+    let saved = ownReload ? tab : loadSaved();
     try {
       const link = ownReload ? null : await readLink();
       if (link) {
@@ -2544,8 +2535,11 @@
     if (note || (STATE.params.prior !== undefined && !priorValues().includes(STATE.params.prior))) STATE.params.prior = defaultPrior();
     resetTheoryChoices();
     updateExampleDesc(); updateOpHelp(); renderParams();
-    // The link opened, or the tab's own, is the app's fragment from now on.
-    if (linkFailed) dropLinkHash();
+    // The link opened, or the tab's own, is the app's fragment from now on. A
+    // link pasted while the start panel showed is left in the address, and
+    // start() opens it.
+    const pasted = typeof location !== "undefined" && location.hash !== hash;
+    if (linkFailed) { if (!pasted) dropLinkHash(); }
     else { if (fromLink || ownReload) lastLinkHash = hash; saveState(); }
     const op = OPS.find((o) => o.id === STATE.opId);
     const rerun = saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op);
@@ -2560,9 +2554,17 @@
   // A link pasted into the address bar of a tab that already shows the app
   // changes only the fragment, so the browser keeps the page and the app
   // opens the link here. A fragment the app wrote itself is no link to open.
+  let linkOpening = false;
   async function openLinkInPlace() {
     if (!linkWaiting()) return;
-    if (busy) { linkPending = true; return; }
+    if (busy || linkOpening) { linkPending = true; return; }
+    linkOpening = true;
+    try { await openLink(); } finally {
+      linkOpening = false;
+      if (linkPending && !busy) { linkPending = false; setTimeout(() => openLinkInPlace(), 0); }
+    }
+  }
+  async function openLink() {
     const h = location.hash;
     let link;
     try { link = await readLink(); } catch (e) { toast("The link could not be read: " + ((e && e.message) || e)); dropLinkHash(); return; }
@@ -2651,6 +2653,8 @@
       requestScore();
       requestHash();
       if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("hashchange", () => openLinkInPlace());
+      // A link pasted while the start panel showed fired no handler.
+      if (linkWaiting()) openLinkInPlace();
     } catch (err) {
       bootFailed(err);
     }

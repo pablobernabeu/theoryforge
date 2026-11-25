@@ -998,26 +998,75 @@ const editedRuntime = () => stubRuntime({
 });
 
 test("a reload soon after an edit opens the latest edit and asks nothing", async () => {
-  // The tab wrote the link of its first edit, and its session already holds a
-  // second edit that has not reached the address.
+  // The tab wrote the link of its first edit, and its own record of the
+  // session already holds a second edit that has not reached the address.
   const first = await encodeLink({ v: 1, op: "check", params: {}, run: false, theory: { name: "mine.yaml", text: "title: First edit\n", format: "yaml" } });
-  const session = JSON.stringify({ v: 2, opId: "check", params: {}, ran: false, input: { mode: "edited", name: "mine.yaml", format: "yaml", text: "title: Second edit\n" } });
+  const record = { v: 2, opId: "check", params: {}, ran: false, input: { mode: "edited", name: "mine.yaml", format: "yaml", text: "title: Second edit\n" } };
+  const session = JSON.stringify(record);
   const questions = [];
   const rt = editedRuntime();
-  const { ctx } = await bootAt(first, { stored: { "tf-app-py": session, "tf-app-py-link": first }, confirm: (q) => { questions.push(q); return true; } }, rt);
+  const { ctx } = await bootAt(first, { stored: { "tf-app-py": session }, session: { "tf-app-py-tab": JSON.stringify(Object.assign({ link: first }, record)) },
+    confirm: (q) => { questions.push(q); return true; } }, rt);
   assert.deepEqual(questions, []);
   assert.deepEqual(rt.texts, ["title: Second edit\n"]);
-  assert.equal(ctx.localStorage.getItem("tf-app-py") === session || JSON.parse(ctx.localStorage.getItem("tf-app-py")).input.text === "title: Second edit\n", true);
   // The address then catches up with the session, and the tab records it as its own.
   await tick(800);
   assert.notEqual(ctx.location.hash, first);
-  assert.equal(ctx.localStorage.getItem("tf-app-py-link"), ctx.location.hash);
+  assert.equal(JSON.parse(ctx.sessionStorage.getItem("tf-app-py-tab")).link, ctx.location.hash);
   // The same fragment, not written by this tab, is a link like any other and asks first.
   const rt2 = editedRuntime();
   const asked = [];
   await bootAt(first, { stored: { "tf-app-py": session }, confirm: (q) => { asked.push(q); return true; } }, rt2);
   assert.equal(asked.length, 1);
   assert.deepEqual(rt2.texts, ["title: First edit\n"]);
+});
+
+test("a reload of one tab opens its own theory, whatever another tab has saved since", async () => {
+  // Two tabs share the browser's storage, and each keeps its own record.
+  const A = await bootAt("", {}, stubRuntime());
+  await A.$("#exampleSel").dispatch("change", { target: { value: EXAMPLES[1].path } });
+  await tick(900);
+  const linkA = A.ctx.location.hash;
+  assert.ok(linkA.startsWith("#s="));
+  const B = makeWindow({});
+  B.__storage = A.ctx.__storage;
+  runScript(B, CORE); runScript(B, SHARE);
+  await B.TF.start(stubRuntime());
+  await upload(B.document.querySelector("#fileInput"), "other.theory.yaml", "id: other\n");
+  await tick(100);
+  // Tab A is reloaded: same address, same tab record, the shared session now B's.
+  const asked = [];
+  const A2 = makeWindow({ hash: linkA, confirm: (q) => { asked.push(q); return true; } });
+  A2.__storage = A.ctx.__storage;
+  A2.__session = A.ctx.__session;
+  runScript(A2, CORE); runScript(A2, SHARE);
+  const rt = stubRuntime();
+  await A2.TF.start(rt);
+  assert.equal(rt.active, EXAMPLES[1].path);
+  assert.deepEqual(asked, []);
+});
+
+test("a link pasted while the start panel restores a session opens once the app has started", async () => {
+  const stored = { "tf-app-py": JSON.stringify({ v: 2, opId: "check", params: {}, ran: false, input: { mode: "upload", name: "mine.yaml", text: "id: mine\n" } }) };
+  const ctx = makeWindow({ stored, confirm: () => true });
+  runScript(ctx, CORE); runScript(ctx, SHARE);
+  let release;
+  const gate = new Promise((r) => (release = r));
+  const rt = stubRuntime({ async loadTheoryText(text, name) { await gate; this.active = name; return summaryOf(name, { ok: true }); } });
+  const started = ctx.TF.start(rt);
+  await tick(20);
+  const pasted = await encodeLink({ v: 1, op: "validate", run: false, theory: { example: EXAMPLES[1].path } });
+  ctx.location.hash = pasted;
+  await ctx.__fire("hashchange");
+  release();
+  await started;
+  await tick(20);
+  assert.equal(rt.active, EXAMPLES[1].path, "the pasted link opened");
+  // The app writes its own link again after the next change.
+  await ctx.document.querySelector("#exampleSel").dispatch("change", { target: { value: EXAMPLES[0].path } });
+  await tick(900);
+  assert.notEqual(ctx.location.hash, pasted);
+  assert.equal(JSON.parse(ctx.sessionStorage.getItem("tf-app-py-tab")).link, ctx.location.hash);
 });
 
 test("an operation the user starts goes ahead of the card's score and hash", async () => {

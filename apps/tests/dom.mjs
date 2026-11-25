@@ -200,7 +200,7 @@ function serializeXml(n) {
 class DOMParser { parseFromString(s) { return parseXml(String(s)); } }
 class XMLSerializer { serializeToString(n) { return serializeXml(n); } }
 
-export function makeWindow({ storage = "ok", stored, prefersDark = false, fetchText, hash = "", confirm } = {}) {
+export function makeWindow({ storage = "ok", stored, session, prefersDark = false, fetchText, hash = "", confirm } = {}) {
   ACTIVE = null;
   const documentElement = new Element("html");
   const body = new Element("body");
@@ -237,13 +237,19 @@ export function makeWindow({ storage = "ok", stored, prefersDark = false, fetchT
   };
   if (confirm) ctx.confirm = confirm;
   ctx.window = ctx; ctx.globalThis = ctx;
+  // localStorage is shared by every tab of a site, and sessionStorage belongs
+  // to one tab and outlives its reloads. A test that shares either between
+  // two windows passes the first window's __storage or __session to the second.
   ctx.__storage = makeStorage(storage, stored).get;
+  ctx.__session = makeStorage(storage, session).get;
   vm.createContext(ctx);
   // Defined from inside the context: a getter installed on the context object
   // from outside reaches page code as a ReferenceError, not the SecurityError
   // a browser throws.
   vm.runInContext(`Object.defineProperty(globalThis, "localStorage", { configurable: true,
-    get() { return __storage(); } });`, ctx);
+    get() { return __storage(); } });
+    Object.defineProperty(globalThis, "sessionStorage", { configurable: true,
+    get() { return __session(); } });`, ctx);
   return ctx;
 }
 
