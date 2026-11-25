@@ -58,11 +58,10 @@ pip install "git+https://github.com/pablobernabeu/theoryforge.git#subdirectory=p
 
 ## Quick start
 
-The code below needs the development version, installed from GitHub as shown above. The
-package includes four example theories and two literature corpora, and `example_path()`
-gives the path of each, so the code needs no files of your own. It builds a small theory,
-checks it and asks what its causal graph says, then takes a bundled theory of panic disorder
-through the rest of the workflow.
+The package includes four example theories and two literature corpora, and `example_path()`
+gives the path of each, so the code below runs straight after `pip install`. It builds a
+small theory, checks it and asks what its causal graph says, then takes a bundled theory of
+panic disorder through the rest of the workflow.
 
 ```python
 import theoryforge as tf

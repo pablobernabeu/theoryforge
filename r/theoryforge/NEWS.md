@@ -1,4 +1,4 @@
-# theoryforge (development version)
+# theoryforge 0.8.0
 
 The repository's [changelog](https://github.com/pablobernabeu/theoryforge/blob/main/CHANGELOG.md)
 records the same changes with the Python names. The notes below use the R names and
@@ -381,6 +381,11 @@ add the changes that concern the R package alone.
 * The `engine` argument of `tf_diagram()` has no effect and will be removed in the
   next minor release. Passing it gives a warning.
 
+* The default `method = "euler"` of `tf_simulate()`, which the 0.7.0 notes said
+  would change to `"exact"` in this release, is kept in 0.8.0 and will change in
+  the next minor release. Pass `method = "euler"` to keep the current
+  trajectories.
+
 ## Fixed
 
 * The YAML reader summed an octal or hexadecimal integer beyond 2^53 digit by digit,
@@ -592,6 +597,9 @@ add the changes that concern the R package alone.
   computed from the package when the site is built.
 
 # theoryforge 0.7.1
+
+This version was not released on CRAN or PyPI, and its changes are part
+of 0.8.0.
 
 ## Tests
 

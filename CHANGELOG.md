@@ -15,7 +15,7 @@ that concern it alone.
 -->
 
 
-## [Unreleased]
+## [0.8.0] - 2026-11-25
 
 ### Added
 - Added `entailments()`, which reads each claim of a prediction or phenomenon (an effect or
@@ -274,7 +274,6 @@ that concern it alone.
   `corpus.schema.json`, and asking OpenAlex only for the fields a record maps.
 - `simulate()` began computing with `dt`, `k` and `damping` as doubles, as R does, so a
   NumPy float32 knob gives the trajectory of the double it equals.
-
 - `preregister()` and `dossier()` write every value on one line, ids, dates, registrations
   and the messages of a refusal included, where a line break in one of them started a new
   line of the document.
@@ -290,6 +289,9 @@ that concern it alone.
   stop working in the next minor release. Name it `theory` or pass the theory by position.
 - The `engine` argument of `diagram()` has no effect and will be removed in the next minor
   release. Passing it gives a `FutureWarning`.
+- The default `method="euler"` of `simulate()`, which the 0.7.0 notes said would change to
+  `"exact"` in this release, is kept in 0.8.0 and will change in the next minor release.
+  Pass `method="euler"` to keep the current trajectories.
 
 ### Fixed
 - The YAML reader began naming a key that YAML reads as a boolean, a number or a date by
@@ -451,6 +453,8 @@ that concern it alone.
   belongs in a folder of the reader's own.
 
 ## [0.7.1]
+
+This version was not released on CRAN or PyPI, and its changes are part of 0.8.0.
 
 ### Tests
 - A test of the R package's severity mean failed on R built without long double, the
@@ -1195,7 +1199,8 @@ package reached CRAN with 0.6.0.
 - A live OSF upload requires the user's own token. `osf_push` ships with a dry-run default.
 - Richer (nonlinear / agent-based) computational-model runners, and built-in embedding-model integrations beyond the pluggable `embedding_redundancy` interface.
 
-[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/pablobernabeu/theoryforge/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/pablobernabeu/theoryforge/compare/v0.4.0...v0.5.0

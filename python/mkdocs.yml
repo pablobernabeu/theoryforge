@@ -118,4 +118,4 @@ markdown_extensions:
 
 # The released version shown beside the title in the header (updated on release).
 extra:
-  version: "0.7.1"
+  version: "0.8.0"
