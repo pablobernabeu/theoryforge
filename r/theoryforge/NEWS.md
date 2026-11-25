@@ -22,7 +22,9 @@ add the changes that concern the R package alone.
 
 * Added `tf_equivalent_models()`, which lists the directed relations that point the
   same way in every Markov-equivalent graph and those that some equivalent graph
-  reverses. No observational study can test the direction of the second kind.
+  reverses. No test of conditional independence can tell the direction of the
+  second kind, which needs an intervention, a temporal order or distributional
+  assumptions such as non-Gaussian errors.
 
 * Added `tf_content_hash()`, the SHA-256 digest of the theory's canonical form, so
   that two files with the same content have the same hash whatever their layout, key
@@ -59,7 +61,14 @@ add the changes that concern the R package alone.
 
 * `tf_preregister()` and `tf_dossier()` gained `cycles`, so that a theory with a
   feedback loop can be preregistered with its independencies read by
-  sigma-separation.
+  sigma-separation. They pass it to `tf_check()`, so that the header of a document
+  reads the graph as its claim lines do.
+
+* `tf_check()` gained `cycles = "refuse"`, checked as in the other functions
+  (`check requires cycles to be 'refuse' or 'sigma'`). The derivation chain and
+  diagnosticity read the claims with it. With `cycles = "sigma"`, the claims of a
+  graph with feedback loops are read by sigma-separation, on the assumption that
+  each loop settles to a unique equilibrium.
 
 * `tf_litmap()` gained `min_df`, the fewest records a keyword must be in to enter
   the simple-centres map, so that rare keywords cannot seed a theme. Its default of
@@ -71,9 +80,10 @@ add the changes that concern the R package alone.
   `assumed_positive`, which lists the `causes` and `mediates` propositions that the
   simulation couples positively although their relation states no sign.
 
-* The checklist report gained `aggregate_range`, the lowest and highest aggregate
-  score under other weightings: equal weights and each applicable item's weight
-  halved or doubled in turn.
+* The checklist report gained `aggregate_range`, the lowest and highest checklist
+  score with equal weights and with each applicable item's weight halved or
+  doubled in turn. It is not an interval, and the choices made in coding the file
+  and the rubric's constants lie outside it.
 
 * The browser apps gained a theory editor, which shows a theory as forms beside its
   YAML or JSON source and validates and scores each edit with the package. It starts
@@ -84,11 +94,213 @@ add the changes that concern the R package alone.
   the equivalent models, the comparison with a rival and a simulation from an
   impulse in one construct, a choice of corpus for the literature operations and a
   link that carries the theory and the chosen operation. The theory card gained the
-  score and the content hash, which follow the card once the work the user started
-  has run. The apps compute the score unasked for a theory with at most 300
-  constructs, propositions and predictions, and the hash for one whose JSON is at
-  most 50,000 characters long in the R app and 1,000,000 in the Python app and that
-  holds at most 20,000 values.
+  checklist score and the content hash, which follow the card once the work the
+  user started has run. The apps compute the score unasked for a theory with at
+  most 300 constructs, propositions and predictions, and the hash for one whose
+  JSON is at most 50,000 characters long in the R app and 1,000,000 in the Python
+  app and that holds at most 20,000 values.
+
+## Changed results
+
+* `tf_check()` moved to checklist 3.1, which changes four items and the claim-form
+  rubric (below), so scores, statuses and gates can change.
+
+* Precision began counting a point or interval prediction only when its bounds give
+  a finite lower and upper end.
+
+* Non-redundancy stopped passing while a construct has no definition, and it began
+  reading the redundancy screen's two new reasons (below).
+
+* Diagnosticity stopped counting a rival named in `diagnostic_vs` when the rival
+  states propositions and its graph gives the prediction's claim the same verdict as
+  the theory's. It reads the claims with the `cycles` of `tf_check()`.
+
+* The derivation chain began reading the claims of predictions and phenomena. A
+  prediction counts as derived only when the propositions it cites are declared
+  and it states no claim or one that the causal graph entails. A claim that the
+  graph contradicts or leaves open, that names a construct no proposition relates,
+  that cannot be read as written or that belongs to a theory whose graph cannot be
+  built fails the item, and so does a phenomenon's claim that the graph
+  contradicts. A phenomenon whose claim the graph leaves open changes nothing, and
+  phenomena do not enter the item's score.
+
+* Under the default `cycles = "refuse"`, a feedback loop anywhere in the
+  propositions leaves every claim unread. Such a claim is not checked: its
+  prediction is not derived, which lowers the score, and the derivation chain
+  warns, which does not block the gate. The item's record gained a seventh
+  element, `not_checked`, which lists those predictions. With `cycles = "sigma"`,
+  the claims are read and decide the item.
+
+* The claim-form rubric of `tf_severity()` rates a point or interval prediction
+  whose bounds do not give a finite lower and a finite upper value as a
+  directional claim (`risk_score` 0.4, `computed_severity` 0.3, or 0.4 with a
+  named rival), where it gave 0.9 or 0.7, so that it agrees with the precision
+  item, which gives such a prediction no credit. The `type` column still reports
+  the declared label. Through risk_severity this moves the score of a theory whose
+  undeclared severities rested on such labels.
+
+* The bundled panic network's score moved from 87.3 to 85.9 and the
+  modality-switching theory's from 89.8 to 87.1. A feedback loop leaves the claim
+  of the panic network's `pred_indep` unread, so its derivation chain warns at
+  0.75 and its gate passes. With `cycles = "sigma"`, it scores 88.0. The rubric
+  grades the modality-switching theory's `pred3`, a point label without bounds,
+  0.4 where it graded it 1.0, which does not move the score, since `pred3`
+  declares its severity. The amended panic network (89.8) and the underspecified
+  example (2.2) kept their scores and gates. Read from the 0.7.0 example files,
+  checklist 3.1 gives the panic network 80.1, since none of its point or interval
+  predictions stated bounds.
+
+* `tf_redundancy_check()` began flagging two constructs with one label and a
+  construct whose measures are all listed for another, and it gained a column,
+  `reason`, that says why each pair was flagged.
+
+* `tf_implications()` began reading a construct that only associations relate to
+  others as a vertex, so a theory with such a construct implies more statements. The
+  record for the underspecified example gained its two constructs and one bidirected
+  edge.
+
+* `tf_implications()` began refusing an association that names an undeclared
+  construct, as it refused such a directed relation.
+
+* `tf_appraise_amendment()` stopped calling an amendment progressive when it loses
+  content, that is when it drops an untested prediction, weakens an untested or
+  corroborated one or gives up an implied independence that no failed prediction
+  contradicted. `content_lost` names a weakened prediction under its new id. It
+  began calling an amendment degenerating when it weakens a refuted prediction and
+  none of its new predictions is corroborated.
+
+* `tf_appraise_amendment()` began comparing auxiliary assumptions by their
+  statements, as it compares predictions, where it compared their ids. An
+  assumption kept under its id whose statement changed is appraised as a new one
+  is, so rewriting an assumption in place to answer an anomaly can make an
+  amendment ad hoc. An assumption moved unchanged to a new id, in place of a prior
+  one the amendment drops, is not appraised, so a change of id alone no longer makes
+  an amendment ad hoc. A change of `added_for` or `protects` alone revises no
+  assumption.
+
+* In `tf_appraise_amendment()`, a new prediction began counting as old content when
+  the prior's graph already entails its claim or its `derives_from` names a
+  proposition the new version lacks. An assumption without `added_for` that protects
+  a failed prediction began counting as an answer to that failure. The record gained
+  `theoretically_progressive`, `empirically_progressive`, `revised`,
+  `weakened_refuted`, `unresolved` and the comparison of implied independencies.
+  Each entry of `assumptions` gained `added_for_inferred`, which says whether
+  `added_for` was read from `protects`, and `change`, `"new"` or `"revised"`.
+
+* `tf_appraise_amendment()` began comparing the signs that the two causal graphs
+  entail, both read with `cycles = "sigma"`. A retained prediction, untested or
+  corroborated in the prior, whose prior claim the prior's graph entails and the
+  new graph does not is listed in the new field `entailments_lost`, with the two
+  verdicts, and joins `content_lost`. A total effect that the prior's graph signs
+  positive or negative and the new graph does not sign the same way, also because a
+  construct left the graph, is listed in `signs_lost`, unless a prediction that
+  failed in the prior stated that sign or `"nonzero"`, and a nonempty `signs_lost`
+  counts as content lost. An amendment that reverses the proposition behind a
+  corroborated prediction, or replaces it by one that states no sign, is therefore
+  not progressive, and neither is one that reverses a sign the prior's graph
+  entails though no prediction states it. Both fields are empty when either graph
+  is refused.
+
+* `tf_appraise_amendment()` gained three fields that are reported beside the
+  verdict and do not decide it: `protected_only`, the new predictions that count as
+  new content only because an appraised assumption lists them in `protects`,
+  `refuted_new`, the new predictions refuted or mixed in the amended version, and
+  `corroborated_new_severity`, the smallest post-data severity of
+  `tf_post_data_severity()` over the passes of each corroborated new prediction,
+  `NA` when no pass records an estimate and a standard error for a prediction with
+  bounds. The five new fields follow `implications_gained`, in the order
+  `entailments_lost`, `signs_lost`, `protected_only`, `refuted_new` and
+  `corroborated_new_severity`.
+
+* `tf_appraise_amendment()` gained the assumption class `"pending"`, for an
+  assumption added for an anomaly whose independent predictions are all untested.
+  It is not ad hoc, so an amendment that adds an independently testable assumption
+  is not degenerating before its prediction is tested. `"ad_hoc2"` needs some
+  independent prediction to have been tested. The checklist's parsimony item uses
+  the same classes and fails a pending assumption, since it asks whether something
+  the assumption protects has been corroborated.
+
+* `tf_appraise_amendment()` stopped judging a revised prediction weaker or stronger
+  by its type label when either version states a region with a finite end: the
+  regions and the claims decide, so widening a refuted region while relabelling it
+  does not escape `weakened_refuted`. A change of label alone is reported as
+  `"changed"`.
+
+* Read from the 0.7.0 example files, the shipped amendment of the panic network
+  came out neutral, since it gives up an independence that no test had refuted.
+  The revised examples record that refutation, and the amendment is still
+  neutral, for another reason. Both versions state that perceived threat causes
+  arousal without a sign, so the new proposition p4, from arousal to avoidance,
+  opens a route from perceived threat to avoidance whose sign is open. The amended
+  version therefore no longer entails the positive effect of perceived threat on
+  avoidance that the first version entails (`signs_lost`). With p3 stated as
+  `"increases"` in both versions, the amendment would be progressive.
+
+* `tf_validate(full = TRUE)` began reporting an unknown field in any entry, naming
+  the field it most resembles, and bounds that do not fit the prediction's type or
+  its claim's sign. An existence prediction takes no bounds, since the region it
+  allows, every value but 0, is not one interval, and a one-sided region made
+  `tf_post_data_severity()` test a directional claim. A file that validated under
+  0.7.0 can fail.
+
+* `tf_validate(full = TRUE)` reports a directional prediction whose claim has the
+  sign `"nonzero"` and no `given`, since that sign states no direction and the
+  label alone would pass the falsifiability item. A conditional claim can only be
+  zero or nonzero, so a directional prediction about a conditional association is
+  not reported.
+
+* `tf_simulate()` began propagating the system exactly by default
+  (`method = "exact"`), as the 0.7.0 notes announced. Pass `method = "euler"` for
+  the fixed explicit steps, which still warn when they depart from the exact
+  solution by more than 5 per cent. The trajectory of a run with the default
+  method changes: the bundled panic network's first step gives 1.051271 for every
+  state, where the Euler step gave 1.05.
+
+* `tf_compile_sem()` began holding at zero the covariances of a construct that only
+  associations relate to others, which `lavaan::sem()` would free between exogenous
+  latent variables.
+
+* With `method = "simple_centres"`, a theme became high on centrality or density
+  only when its value lies above the median, and `quadrant` became `NA` when every
+  theme has the same value of either measure. A value at the median had counted as
+  high. The four unlinked themes of the demo corpus lost their quadrant, and two
+  themes of the frozen OpenAlex corpus moved, one from `"basic"` to
+  `"emerging_or_declining"` and one from `"motor"` to `"basic"`.
+
+* `tf_landscape()` began counting an alternative id that the theory repeats as one
+  account, so two entries with one id no longer make a theme crowded.
+
+* `tf_litmap()` and `tf_landscape()` began giving the giant-theme warning only for a
+  map of ten or more linked keywords, so a corpus whose only link is one pair no
+  longer warns.
+
+* The DOI normaliser began making a double slash after the prefix single, as in
+  `10.1037//0033-2909.99.1.20`, which doi.org redirects to the DOI with one slash.
+  `tf_new_evidence_dois()` and the co-citation map of `tf_litmap()` read the two
+  forms as one work.
+
+* `tf_new_evidence_dois()` began skipping a candidate that is not a string or holds
+  only whitespace, as it skipped `NA`.
+
+* `tf_fetch_corpus()` began asking OpenAlex for pages by number, which need no key,
+  when the records asked for lie within the first 10,000 results. It used a cursor,
+  which needs a key after the first page, so a `max_records` above `per_page` needed
+  a key. A request beyond the first 10,000 results still uses a cursor.
+
+* `tf_fetch_corpus()` began leaving out a null title, which made the record fail
+  `corpus.schema.json`, and asking OpenAlex only for the fields a record maps.
+
+* `tf_preregister()` and `tf_dossier()` write every value on one line, ids,
+  dates, registrations and the messages of a refusal included, where a line break
+  in one of them started a new line of the document.
+
+* The report that `tf_render_report()` writes shows the dossier's text as typed:
+  a statement's emphasis, link or mathematics, `--` and `...` are no longer set as
+  such, though quotation marks still become typographic quotes. An implied
+  conditional independence whose text holds characters other than letters,
+  digits, `_`, `|`, `,`, `.` and spaces is no longer set as code. The slide menu of
+  a revealjs report shows the first words of each slide, and the dossier's title
+  has the anchor `#theoryforge-dossier`.
 
 ## Changed
 
@@ -158,6 +370,11 @@ add the changes that concern the R package alone.
   theory of 400 constructs, each caused by two chosen at random among those before
   it, and five associations, `tf_implications()` takes about 8 seconds where it
   took about 7.5 minutes. The results are unchanged.
+
+* `tf_appraise_amendment()` matches the implied independencies of the two
+  versions by key, where it compared the two lists pair by pair, so a theory of
+  300 constructs is appraised in about 8 seconds where it took over three minutes.
+  The results are unchanged.
 
 * `tf_validate()` gathers its messages without copying them at every check and
   looks references up in a set of ids, so a theory of 20,000 constructs joined by a
@@ -232,7 +449,7 @@ add the changes that concern the R package alone.
   `Rivals it discriminates`, since a rival's own propositions can contradict the
   declaration.
 
-* `tf_dossier()` gained the content hash, the range of the aggregate score, each
+* `tf_dossier()` gained the content hash, the range of the checklist score, each
   checklist item's criterion and sections on the claims, the equivalent models and
   the rivals. It embeds the preregistration without that document's severity section
   and writes a post-data severity that rounds to 1 or 0 as `> 0.999` or `< 0.001`.
@@ -256,135 +473,162 @@ add the changes that concern the R package alone.
   that class alone, where they caught any error of `tf_implications()`, so another
   error now stops them, as in Python.
 
+* The aggregate of `tf_check()` is called the checklist score wherever it is shown:
+  in the dossier, the HTML report, the `rigour` and `development_roadmap` views of
+  `tf_diagram()`, the apps, the help and the articles. Each of them, and the help
+  of `tf_check()`, says what it describes: how completely the file states what
+  checklist 3.1 asks for, read mostly from whether fields are filled in and how
+  predictions are labelled, with stated claims checked against the causal graph.
+  The weights are conventions, and the score does not show that a theory is true
+  or well reasoned. The list element stays `aggregate_score`.
+
+* `tf_report(format = "html")` heads the number 'Checklist score', gives its range
+  as '(lo to hi with equal weights or one weight halved or doubled)', adds the
+  statement of what the score describes and gives each item's criterion. The
+  column of works is headed 'source of the criterion', and the section heading
+  reads 'Checklist report'.
+
+* The criteria of falsifiability, precision, logical_why and derivation_chain in
+  the checklist file say what each item checks, for example 'At least one
+  prediction is typed point, interval or directional; the label is the author's'.
+  The dossier and the HTML report print them.
+
+* The `rigour` view of `tf_diagram()` is titled 'Checklist' and gives the
+  checklist score, and the `development_roadmap` view gives the checklist score in
+  its hub. The roadmap calls a step 'blocks the gate' only for a blocker that
+  fails, so the derivation chain's warning is advisory there.
+
+* The dossier writes the score as 'Checklist score: <score> (<lo> to <hi> with
+  equal weights or one weight halved or doubled)', without `/100`. A fixed
+  paragraph in italics follows the header. It says that the dossier was generated
+  from the file with the content hash above, what the checklist score describes,
+  that test outcomes, evidence, registrations and declared severities are as the
+  author recorded them, which inconsistencies the dossier flags and that it is not
+  an independent audit. The sections 'Rigour checklist' and 'Equivalent models'
+  are now headed 'Checklist' and 'Equivalent models (observational data)'.
+
+* The dossier's test record flags a recorded failure whose estimate lies inside
+  the claimed region, a bound included, with `; recorded as failed, with the
+  estimate inside that region`, as it flags a recorded pass whose estimate lies
+  outside it.
+
+* The preregistration's header line `Derivations check: <status>` is now
+  `Derivation references resolve, the causal graph entails every claim a
+  prediction states and contradicts no claim a phenomenon states: <status>`,
+  which names what the checklist's derivation chain checks. Its value for a claim
+  that a feedback loop leaves unread is `not checked (feedback loop; use
+  cycles = "sigma")`. With `cycles = "sigma"`, the bundled panic network's line
+  reads `yes` and its dossier gives the checklist score 88.0. A fixed line in
+  italics after the header says that the document was generated from the theory
+  file, that the study design, the analysis plan, the inference criteria and
+  whatever the sampling plan leaves out must be added before registration, and
+  that the content hash identifies the file and is not a time stamp.
+
+* When a document states any claim, its hypotheses section, and the dossier's
+  section on the claims, open with one sentence naming the assumptions the
+  verdicts rest on: the graph is the causal structure, with no omitted common
+  cause, each directed relation acts in its stated direction whatever the other
+  inputs, paths do not cancel exactly where a verdict says so, and under
+  `cycles = "sigma"` each loop settles to a unique equilibrium, also with the
+  intervened construct held fixed. A claim line whose verdict rests on
+  faithfulness ends with `, unless paths cancel exactly`, as in `contradicted by
+  the causal graph, unless paths cancel exactly`.
+
+* The preregistration's implied independencies are introduced by a line that says
+  they follow from the graph as encoded, which reads every pair of its constructs
+  that no proposition joins as having no direct effect and no unexplained
+  association, so that they are the theory's commitments only if its authors
+  meant those omissions.
+
+* `tf_render_report()` titles the report `theoryforge dossier: <title>`, as its
+  body is headed, where it wrote `theoryforge report: <title>`.
+
+* The comment that `tf_compile_sem()` writes for a bow says that the path may not
+  be identified unless the theory supplies an instrument for its cause. It said
+  that the path was not identified, which was false when the theory supplied one.
+
 * The apps moved to webR 0.6.1, which runs R 4.6.0.
 
-## Changed results
+* The browser apps call the aggregate the checklist score. The theory card shows
+  `checklist <score> · gate <gate>` in place of `<score> / 100 · <gate>`, with a
+  title that says what the score describes, and the editor's lint bar shows the
+  same. The checklist's result opens with that statement in full and says to read
+  the item statuses first, and it no longer calls the checklist twelve facets of
+  rigour. The score, its range and every other number in a reading are written as
+  the card writes them, so a score of 87.1 no longer reads 87.10, and the range is
+  described as the lowest and highest score with equal weights or with one weight
+  halved or doubled in turn.
 
-* `tf_check()` moved to rigour checklist 3.0, which changes four items (below), so
-  scores and statuses can change.
+* The apps' Checklist operation, formerly Rigour checklist, takes the cycles
+  setting and passes it to `tf_check()`. Its result says which predictions a
+  feedback loop left unchecked under `cycles = "refuse"`. The grid figure, which
+  the package draws under the default, is shown only for that setting, and the
+  theory card and the editor show the score under the default.
 
-* Precision began counting a point or interval prediction only when its bounds give
-  a finite lower and upper end.
+* The apps describe the gate by the rule of its two blocking items: at least one
+  prediction typed point, interval or directional, and every prediction citing
+  declared propositions whose graph entails any claim it states, with no stated
+  phenomenon contradicted. The checklist's reading says that the gate passes
+  because no blocking item fails, or is blocked because the named items fail.
 
-* Non-redundancy stopped passing while a construct has no definition, and it began
-  reading the redundancy screen's two new reasons (below).
+* The apps' start panel says what the package checks and that none of the checks
+  shows that a theory is true or well reasoned, and the description of every
+  operation that spoke of rigour or of an audit was reworded. Severity rubric is
+  now Claim-form rubric, with its `computed_severity` shown as the rubric value,
+  and Audit dossier is now Dossier, whose guide says that test outcomes, evidence,
+  registrations and declared severities are as the author entered them. The
+  theory card and the editor say that a file is well-formed where they said
+  valid.
 
-* Diagnosticity stopped counting a rival named in `diagnostic_vs` when the rival
-  states propositions and its graph gives the prediction's claim the same verdict as
-  the theory's.
+* The apps show what `tf_appraise_amendment()` reports beside its verdict: the
+  lost entailments and signs, the new predictions that count as new only through
+  `protects`, the new predictions that failed a test, the lowest post-data
+  severity of each corroborated new prediction's passes and the class of each
+  appraised assumption, with `pending` explained. A row is shown only when the
+  result holds its key. The reading says that the verdict applies fixed rules that
+  borrow Lakatos's terms to what the two files declare and reports new anomalies,
+  refuted new predictions and those severities. The caution on a prior that is not
+  the declared parent says that the prior must be the version before the new
+  predictions were stated, and the row formerly called Preregistered
+  corroborations is now Corroborations with a registration recorded.
 
-* Derivation chain stopped counting a prediction as derived when the causal graph
-  contradicts its claim or leaves it open.
+* The apps show the verdicts of the entailments and of the comparison with a
+  rival, the compelled and reversible edges and the statuses of the theory
+  landscape in neutral pills, where entailed and contradicted were green and red.
+  The landscape's statuses read 'no account shares a word', 'one account shares a
+  word' and 'several accounts share a word', and its guide gives the package's
+  caveat that a shared word does not show that an account explains a theme, nor a
+  theme without one that it is unexplained. The entailments write 'none needed'
+  where no adjustment is needed, and the redundancy screen shows a pair it does
+  not flag as 'not flagged'.
 
-* The bundled panic network's score moved from 87.3 to 88.0 and the
-  modality-switching theory's from 89.8 to 87.1. The amended panic network (89.8)
-  and the underspecified example (2.2) kept theirs. Read from the 0.7.0 example
-  files, checklist 3.0 alone gives the panic network 80.1, since none of its point
-  or interval predictions stated bounds.
+* The apps' guides say that an entailed claim follows from the propositions as
+  written and is no evidence that the claim is true, what a graph with feedback
+  loops is assumed to do under `cycles = "sigma"`, that no test of conditional
+  independence can tell the direction of a reversible edge while an intervention,
+  a temporal order or distributional assumptions can, that post-data severity
+  treats the standard error as known and so overstates the severity in small
+  samples, that its value for a claim with two finite bounds is the package's own
+  extension, and all four reasons the redundancy screen flags a pair.
 
-* `tf_redundancy_check()` began flagging two constructs with one label and a
-  construct whose measures are all listed for another, and it gained a column,
-  `reason`, that says why each pair was flagged.
+* The apps' simulation says, at the k and damping of the run, whether the values
+  grow or settle and that other settings can reverse this, and its guide says that
+  the theory states no parameter values. Its figure gained the axis titles 'value
+  (no unit)' and 'step (dt = ...)' and a caption that names k, the damping and the
+  method and says that the trajectory is not fitted to data.
 
-* `tf_implications()` began reading a construct that only associations relate to
-  others as a vertex, so a theory with such a construct implies more statements. The
-  record for the underspecified example gained its two constructs and one bidirected
-  edge.
+* The descriptions of the apps' examples no longer grade them, and those of the
+  two panic networks say that the networks were invented to show every operation
+  and that their test outcomes and registrations are illustrative.
 
-* `tf_implications()` began refusing an association that names an undeclared
-  construct, as it refused such a directed relation.
-
-* `tf_appraise_amendment()` stopped calling an amendment progressive when it loses
-  content, that is when it drops an untested prediction, weakens an untested or
-  corroborated one or gives up an implied independence that no failed prediction
-  contradicted. `content_lost` names a weakened prediction under its new id. It
-  began calling an amendment degenerating when it weakens a refuted prediction and
-  none of its new predictions is corroborated.
-
-* `tf_appraise_amendment()` began comparing auxiliary assumptions by their
-  statements, as it compares predictions, where it compared their ids. An
-  assumption kept under its id whose statement changed is appraised as a new one
-  is, so rewriting an assumption in place to answer an anomaly can make an
-  amendment ad hoc. An assumption moved unchanged to a new id, in place of a prior
-  one the amendment drops, is not appraised, so a change of id alone no longer makes
-  an amendment ad hoc. A change of `added_for` or `protects` alone revises no
-  assumption.
-
-* In `tf_appraise_amendment()`, a new prediction began counting as old content when
-  the prior's graph already entails its claim or its `derives_from` names a
-  proposition the new version lacks. An assumption without `added_for` that protects
-  a failed prediction began counting as an answer to that failure. The record gained
-  `theoretically_progressive`, `empirically_progressive`, `revised`,
-  `weakened_refuted`, `unresolved` and the comparison of implied independencies.
-  Each entry of `assumptions` gained `added_for_inferred`, which says whether
-  `added_for` was read from `protects`, and `change`, `"new"` or `"revised"`.
-
-* Read from the 0.7.0 example files, the shipped amendment came out neutral, since
-  it gives up an independence that no test had refuted. The revised examples record
-  that refutation, and the amendment is progressive.
-
-* `tf_validate(full = TRUE)` began reporting an unknown field in any entry, naming
-  the field it most resembles, and bounds that do not fit the prediction's type or
-  its claim's sign. An existence prediction takes no bounds, since the region it
-  allows, every value but 0, is not one interval, and a one-sided region made
-  `tf_post_data_severity()` test a directional claim. A file that validated under
-  0.7.0 can fail.
-
-* `tf_compile_sem()` began holding at zero the covariances of a construct that only
-  associations relate to others, which `lavaan::sem()` would free between exogenous
-  latent variables.
-
-* With `method = "simple_centres"`, a theme became high on centrality or density
-  only when its value lies above the median, and `quadrant` became `NA` when every
-  theme has the same value of either measure. A value at the median had counted as
-  high. The four unlinked themes of the demo corpus lost their quadrant, and two
-  themes of the frozen OpenAlex corpus moved, one from `"basic"` to
-  `"emerging_or_declining"` and one from `"motor"` to `"basic"`.
-
-* `tf_landscape()` began counting an alternative id that the theory repeats as one
-  account, so two entries with one id no longer make a theme crowded.
-
-* `tf_litmap()` and `tf_landscape()` began giving the giant-theme warning only for a
-  map of ten or more linked keywords, so a corpus whose only link is one pair no
-  longer warns.
-
-* The DOI normaliser began making a double slash after the prefix single, as in
-  `10.1037//0033-2909.99.1.20`, which doi.org redirects to the DOI with one slash.
-  `tf_new_evidence_dois()` and the co-citation map of `tf_litmap()` read the two
-  forms as one work.
-
-* `tf_new_evidence_dois()` began skipping a candidate that is not a string or holds
-  only whitespace, as it skipped `NA`.
-
-* `tf_fetch_corpus()` began asking OpenAlex for pages by number, which need no key,
-  when the records asked for lie within the first 10,000 results. It used a cursor,
-  which needs a key after the first page, so a `max_records` above `per_page` needed
-  a key. A request beyond the first 10,000 results still uses a cursor.
-
-* `tf_fetch_corpus()` began leaving out a null title, which made the record fail
-  `corpus.schema.json`, and asking OpenAlex only for the fields a record maps.
-
-* `tf_preregister()` and `tf_dossier()` write every value on one line, ids,
-  dates, registrations and the messages of a refusal included, where a line break
-  in one of them started a new line of the document.
-
-* The report that `tf_render_report()` writes shows the dossier's text as typed:
-  a statement's emphasis, link or mathematics, `--` and `...` are no longer set as
-  such, though quotation marks still become typographic quotes. An implied
-  conditional independence whose text holds characters other than letters,
-  digits, `_`, `|`, `,`, `.` and spaces is no longer set as code. The slide menu of
-  a revealjs report shows the first words of each slide, and the dossier's title
-  has the anchor `#theoryforge-dossier`.
+* In the apps, a message about one operation is taken away when the operation
+  changes or a run starts, and words no longer break inside the cells of the
+  rendered dossier's tables.
 
 ## Deprecated
 
 * The `engine` argument of `tf_diagram()` has no effect and will be removed in the
   next minor release. Passing it gives a warning.
-
-* The default `method = "euler"` of `tf_simulate()`, which the 0.7.0 notes said
-  would change to `"exact"` in this release, is kept in 0.8.0 and will change in
-  the next minor release. Pass `method = "euler"` to keep the current
-  trajectories.
 
 ## Fixed
 
@@ -595,6 +839,77 @@ add the changes that concern the R package alone.
   of checklist items and sections on the causal reading of claims, equivalent models
   and rivals, the content hash and the DAGitty reader. The values it quotes are
   computed from the package when the site is built.
+
+* The help of `tf_check()` states what the checklist score describes, gives the
+  derivation chain's rule and describes `aggregate_range` as the extremes of equal
+  weights and each weight halved or doubled in turn, not an interval, with the
+  choices made in coding the file and the rubric's constants outside it. The
+  examples of `tf_check()` and `tf_report()` type an order claim as directional,
+  and those of `tf_severity()`, `tf_dossier()` and `tf_preregister()` give point
+  claims explicit bounds.
+
+* The Get started vignette and the methodology article call the aggregate the
+  checklist score, describe the gate as reporting whether either blocking item
+  failed and say that the labels are the author's and are not checked against the
+  statements. The methodology article no longer lists the outcomes of tests among
+  what a score difference reflects, since the checklist reads them only in the
+  parsimony item. The sentences on determinism say 'the same theory file'.
+
+* The help of `tf_appraise_amendment()` and the articles say that the verdict
+  applies fixed rules, which borrow Lakatos's terms, to what the two files declare
+  and holds only if the declarations are true, that it cannot tell a prediction
+  from an accommodation and reads no dates, that the prior must be the version
+  before the new predictions were stated and that it does not distinguish a
+  programme's hard core from its protective belt. `ad_hoc1` and `ad_hoc2` follow
+  the first two of Lakatos's senses of ad hoc as the package reads them, and the
+  third is not assessed.
+
+* `?tf_post_data_severity` attributes the one-sided computation to Mayo and
+  Spanos and says that the minimum over two bounds is the package's own
+  extension, equal to 1 minus the p value of the z-based two one-sided tests
+  (Lakens, 2017). It also says that the standard error is treated as known, so
+  that the severity of an estimate inside the region is overstated in small
+  samples, that the standard error must describe the sampling distribution at the
+  bound, that the value is nominal and does not account for selection, and that it
+  does not check the statistical adequacy of the model behind the estimate.
+
+* `?tf_simulate` says that a theory states no parameter values, so the trajectory
+  is one linear model consistent with the stated signs, with unsigned relations
+  taken as positive, that whether a feedback loop grows or settles is set by `k`
+  against the damping, that time is in units of `1/k` and the window decides what
+  is seen, and that a linear system cannot show bistability.
+
+* `?tf_equivalent_models` and the pages that describe it say that no test of
+  conditional independence can tell the members of an equivalence class apart,
+  where they said that no observational study could, and that telling a
+  reversible direction apart needs an intervention, a temporal order or
+  distributional assumptions such as non-Gaussian errors. The function does not
+  know which constructs a study manipulates.
+
+* `?tf_entailments` says that the sign of an effect on a graph with feedback loops
+  assumes that the system with the intervened construct held fixed is stable,
+  which stability of the observed system does not ensure, that `identified`
+  reports identification by adjustment alone, and that an adjustment set for a
+  cause or an outcome marked latent assumes a measure of it. `?tf_implications`
+  says that the statements rest on the omissions of the graph.
+
+* `?tf_dossier` calls the operation a dossier and says what it does and does not
+  check. The package description says that theoryforge helps researchers state
+  theories as structured files, derive what their causal graphs imply, check how
+  completely they are specified and prepare and record their tests.
+
+* The methodology article says that theoryforge addresses how a theory is
+  specified, not the robustness of its phenomena, the validity of its constructs
+  or the identification of causal effects (Eronen & Bringmann, 2021), and that
+  effect claims assume interventions that change only the targeted construct. The
+  article on developing and testing a theory and the Get started vignette say that
+  the basis set implies the other independencies under composition, how a
+  `moderates` proposition leaves a stated main effect open, and that entering a
+  relation as a prediction changes the preregistered hypotheses. The related-tools
+  article adds computed theory appraisal (ECHO, IMEC and Meehl's actuarial
+  proposal), the behaviour-change theory ontology and loop analysis, and routes
+  the tests of a theory with associations to `dagitty::localTests()`, since
+  pgmpy's tests fail for it.
 
 # theoryforge 0.7.1
 
