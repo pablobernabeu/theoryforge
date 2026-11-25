@@ -13,7 +13,12 @@ add the changes that concern the R package alone.
   on. For an effect in a graph without a feedback loop, it says whether adjusting
   for some of the theory's constructs identifies the effect from observational data
   and names a minimal such set, which never holds a construct marked
-  `x_latent: true`.
+  `x_latent: true`. Under the default `cycles = "refuse"`, it leaves unread a claim
+  that names a construct on a feedback loop or downstream of one, and it reads
+  every other claim as `cycles = "sigma"` does, so a loop that reaches none of a
+  claim's constructs neither hides nor changes its verdict. The marginal
+  association of two constructs that no loop reaches takes the signs of the
+  simple treks between them under either setting.
 
 * Added `tf_discriminate()`, which sets the theory against a rival, either an
   alternative that states its own propositions or another theory, and lists the
@@ -125,17 +130,22 @@ add the changes that concern the R package alone.
   evaluate for a reason other than a feedback loop, changes nothing, and
   phenomena do not enter the item's score.
 
-* Under the default `cycles = "refuse"`, a feedback loop anywhere in the
-  propositions leaves every claim unread, a prediction's or a phenomenon's. Such
-  a claim is not checked, and the derivation chain then warns unless it fails for
+* Under the default `cycles = "refuse"`, the derivation chain leaves a claim
+  unread, a prediction's or a phenomenon's, when a construct it names is on a
+  feedback loop or downstream of one, as `tf_entailments()` does. A loop that
+  reaches none of a claim's constructs changes nothing, so a claim the graph
+  contradicts fails the item whether or not a loop elsewhere is added. An unread
+  claim is not checked, and the derivation chain then warns unless it fails for
   another reason. A warning does not block the gate. A prediction whose claim is
-  not checked counts as derived when the propositions it cites are declared,
-  since nothing was found wrong with it, so stating a claim that a loop leaves
-  unread does not lower the score. The item's record gained two elements,
+  not checked counts as derived when the propositions it cites are declared, since
+  nothing was found wrong with it, so stating a claim that a loop leaves unread
+  does not lower the score, and it leaves the gate open whatever sigma-separation
+  would make of the claim. A file whose claims a loop reaches is checked in full
+  only with `cycles = "sigma"`. The item's record gained two elements,
   `not_checked` and `phenomena_not_checked`, which list the predictions and the
-  phenomena whose claims were not checked. A prediction and a phenomenon may
-  share an id, so the two are listed apart. With `cycles = "sigma"`, the claims
-  are read and decide the item.
+  phenomena whose claims were not checked. A prediction and a phenomenon may share
+  an id, so the two are listed apart. With `cycles = "sigma"`, the claims are read
+  and decide the item.
 
 * The claim-form rubric of `tf_severity()` rates a point or interval prediction
   whose bounds do not give a finite lower and a finite upper value as a
@@ -146,16 +156,16 @@ add the changes that concern the R package alone.
   whose undeclared severities rested on such labels.
 
 * The bundled panic network's score moved from 87.3 to 88.0 and the
-  modality-switching theory's from 89.8 to 87.1. A feedback loop leaves the claim
-  of the panic network's `pred_indep` unread, so its derivation chain warns, with
-  a score of 1.0, and its gate passes. With `cycles = "sigma"`, it scores the
-  same, and the derivation chain passes. The rubric grades the
-  modality-switching theory's `pred3`, a point label without bounds, 0.4 where it
-  graded it 1.0, which does not move the score, since `pred3` declares its
-  severity. The amended panic network (89.8) and the underspecified example (2.2)
-  kept their scores and gates. Read from the 0.7.0 example files, checklist 3.1
-  gives the panic network 80.1, since none of its point or interval predictions
-  stated bounds.
+  modality-switching theory's from 89.8 to 87.1. The panic network's loop of
+  arousal and perceived threat reaches the constructs of `pred_indep`, so its
+  claim is left unread, its derivation chain warns, with a score of 1.0, and its
+  gate passes. With `cycles = "sigma"`, it scores the same, and the derivation
+  chain passes. The rubric grades the modality-switching theory's `pred3`, a point
+  label without bounds, 0.4 where it graded it 1.0, which does not move the score,
+  since `pred3` declares its severity. The amended panic network (89.8) and the
+  underspecified example (2.2) kept their scores and gates. Read from the 0.7.0
+  example files, checklist 3.1 gives the panic network 80.1, since none of its
+  point or interval predictions stated bounds.
 
 * `tf_redundancy_check()` began flagging two constructs with one label and a
   construct whose measures are all listed for another, and it gained a column,
@@ -502,18 +512,22 @@ add the changes that concern the R package alone.
 * `tf_report(format = "html")` heads the number 'Checklist score', gives its range
   as '(lo to hi with equal weights or one weight halved or doubled)', adds the
   statement of what the score describes and one of what the gate checks, and gives
-  each item's criterion. The score and the gate are plain text, not bold. The
-  column of works is headed 'source of the criterion', and the section heading
-  reads 'Checklist report'.
+  each item's criterion. The two items whose failure blocks the gate have
+  `(blocker)` after their ids, as in the dossier. The score and the gate are plain
+  text, not bold. The column of works is headed 'source of the criterion', and
+  the section heading reads 'Checklist report'.
 
 * The criteria of falsifiability, precision, logical_why and derivation_chain in
   the checklist file say what each item checks, for example 'At least one
   prediction is typed point, interval or directional; the label is the author's'.
   The dossier and the HTML report print them.
 
-* The `rigour` view of `tf_diagram()` is titled 'Checklist' and gives the
-  checklist score, and the `development_roadmap` view gives the checklist score in
-  its hub. The roadmap calls a step 'blocks the gate' only for a blocker that
+* The `rigour` view of `tf_diagram()` is titled 'Checklist' with the checklist's
+  version, as in 'Checklist 3.1', and gives the checklist score, and the
+  `development_roadmap` view gives the checklist's version and the checklist score
+  in its hub, so that each says which criteria the score describes. The `severity`
+  view writes each rubric value with one decimal, as the dossier does, where it
+  wrote three. The roadmap calls a step 'blocks the gate' only for a blocker that
   fails, so the derivation chain's warning is advisory there.
 
 * The dossier writes the score as 'Checklist score: <score> (<lo> to <hi> with
@@ -523,15 +537,16 @@ add the changes that concern the R package alone.
   what the gate checks ('The gate reports whether either blocking item failed: at
   least one prediction is typed point, interval or directional, and every
   prediction cites declared propositions whose graph entails any claim it states,
-  with no stated phenomenon contradicted. The labels are the author's and are not
-  checked against the statements.'), that test outcomes, evidence, registrations
-  and declared severities are as the author recorded them, which inconsistencies
-  the dossier flags, a declared severity more than 0.2 above the rubric among
-  them, and that it is not an independent audit. The checklist table marks the
-  two items whose failure blocks the gate, falsifiability and derivation_chain,
-  with `(blocker)` beside their ids. The sections 'Rigour checklist' and
-  'Equivalent models' are now headed 'Checklist' and 'Equivalent models
-  (observational data)'.
+  with no stated phenomenon contradicted. Under the default reading of feedback
+  loops, a claim that names a construct on a loop or downstream of one is not read
+  and blocks nothing. The labels are the author's and are not checked against the
+  statements.'), that test outcomes, evidence, registrations and declared
+  severities are as the author recorded them, which inconsistencies the dossier
+  flags, a declared severity more than 0.2 above the rubric among them, and that
+  it is not an independent audit. The checklist table marks the two items whose
+  failure blocks the gate, falsifiability and derivation_chain, with `(blocker)`
+  beside their ids. The sections 'Rigour checklist' and 'Equivalent models' are
+  now headed 'Checklist' and 'Equivalent models (observational data)'.
 
 * The dossier's test record flags a recorded failure whose estimate lies inside
   the claimed region, a bound included, with `; recorded as failed, with the
@@ -552,12 +567,13 @@ add the changes that concern the R package alone.
 
 * When the causal graph has a feedback loop, the header of `tf_preregister()` and
   of `tf_dossier()` ends with a line that says how the document read it:
-  `- Feedback loops: refused (no claim is read against the causal graph)` under
-  the default, or `- Feedback loops: read by sigma-separation (each loop is
-  assumed to settle to a unique equilibrium)` with `cycles = "sigma"`. Two
-  documents made from one file with different `cycles` can then be told apart. A
-  graph without a loop, or one that cannot be built, gets no such line, so the
-  documents of an acyclic theory keep their header.
+  `- Feedback loops: refused (a claim that names a construct on a loop or
+  downstream of one is not read)` under the default, or `- Feedback loops: read
+  by sigma-separation (each loop is assumed to settle to a unique equilibrium)`
+  with `cycles = "sigma"`. Two documents made from one file with different
+  `cycles` can then be told apart. A graph without a loop, or one that cannot be
+  built, gets no such line, so the documents of an acyclic theory keep their
+  header.
 
 * The preregistration that closes the dossier sits one heading level lower than
   before, with its title at level three under the dossier's '## Preregistration'
@@ -573,7 +589,9 @@ add the changes that concern the R package alone.
   faithfulness ends with `, unless effects cancel exactly`, as in `contradicted by
   the causal graph, unless effects cancel exactly`. The clause covers offsetting
   routes and a single route of no fixed sign, whose effect can cancel itself when
-  the relations are not linear.
+  the relations are not linear. A claim left unread for a feedback loop reads
+  `not evaluated, since a construct it names is on a feedback loop or downstream
+  of one`.
 
 * The preregistration's implied independencies are introduced by a line that says
   they follow from the graph as encoded, which reads every pair of its constructs
@@ -604,16 +622,18 @@ add the changes that concern the R package alone.
 
 * The apps' Checklist operation, formerly Rigour checklist, takes the cycles
   setting and passes it to `tf_check()`. Its result says which predictions and
-  which phenomena a feedback loop left unchecked under `cycles = "refuse"`, in
-  the reading and in a row of its own for each, and its guide says that such a
-  prediction still counts as derived when the propositions it cites are
-  declared. The grid figure, which the package draws under the default, is shown
-  only for that setting, and the theory card and the editor show the score under
-  the default. The table of items shows each item's criterion, as the package's
-  checklist states it, below the item's id, so that an id such as falsifiability
-  or logical_why is read for no more than its item checks. On a narrow screen,
-  each item of the table is laid out as a block, which can be read at 390 pixels
-  without scrolling sideways.
+  which phenomena a feedback loop left unchecked under `cycles = "refuse"`, in the
+  reading and in a row of its own for each, and its guide says that such a
+  prediction still counts as derived when the propositions it cites are declared,
+  whatever sigma-separation would make of the claim, and that a loop that reaches
+  no claim changes nothing. An item's score is written as the dossier writes it,
+  1.0 where the table wrote 1. The grid figure, which the package draws under the
+  default, is shown only for that setting, and the theory card and the editor show
+  the score under the default. The table of items shows each item's criterion, as
+  the package's checklist states it, below the item's id, so that an id such as
+  falsifiability or logical_why is read for no more than its item checks. On a
+  narrow screen, each item of the table is laid out as a block, which can be read
+  at 390 pixels without scrolling sideways.
 
 * The apps offer the package's `rigour` view as the diagram type 'Checklist
   grid' and save it, from the diagram and from the checklist's result, as
@@ -623,10 +643,14 @@ add the changes that concern the R package alone.
 * The apps describe the gate by the rule of its two blocking items: at least one
   prediction typed point, interval or directional, and every prediction citing
   declared propositions whose graph entails any claim it states, with no stated
-  phenomenon contradicted, and say that the labels are the author's and are not
-  checked against the statements, as the dossier and the HTML report do. The
-  checklist's reading says that the gate passes because no blocking item fails,
-  or is blocked because the named items fail.
+  phenomenon contradicted, that under the default a claim that names a construct
+  on a feedback loop or downstream of one is not read and blocks nothing, and that
+  the labels are the author's and are not checked against the statements, as the
+  dossier and the HTML report do. A claim the checklist or the entailments leave
+  unread is said to name a construct on a feedback loop or downstream of one,
+  where the apps said that the causal graph has a feedback loop. The checklist's
+  reading says that the gate passes because no blocking item fails, or is blocked
+  because the named items fail.
 
 * The apps' start panel says what the package checks and that none of the checks
   shows that a theory is true or well reasoned, and the description of every
@@ -661,7 +685,12 @@ add the changes that concern the R package alone.
   loops can give up leave the page usable. The guide says that a prediction
   derived only from the prior's propositions is an articulation unless a new or
   revised assumption lists it in `protects`, and that one whose claim the prior's
-  graph entails is one too.
+  graph entails is one too. It says that an amendment is progressive only when the
+  causal graphs of both versions can be built, and that an assumption added for an
+  anomaly is ad hoc when it protects no new prediction other than its anomaly, or
+  when some of those predictions have been tested and none is corroborated, and
+  pending while all of them are untested, where it said that such an assumption is
+  ad hoc unless new content it protects is corroborated.
 
 * The apps show the verdicts of the entailments, of the comparison with a rival
   and of the amendment appraisal, the compelled and reversible edges and the
@@ -944,9 +973,9 @@ add the changes that concern the R package alone.
   before the new predictions were stated and that it does not distinguish a
   programme's hard core from its protective belt. The labels `ad_hoc1` and
   `ad_hoc2` borrow Lakatos's terms, and each means only what its check finds: an
-  assumption that protects no new prediction besides its anomaly, or one whose new
-  predictions have been tested without a corroboration. No other sense of ad hoc
-  is assessed.
+  assumption that protects no new prediction besides its anomaly, or one some of
+  whose new predictions have been tested and none is corroborated. No other sense
+  of ad hoc is assessed.
 
 * The help of `tf_appraise_amendment()` and API_SPEC.md say that `signs_lost`
   lists ordered pairs, so it can grow with the square of the number of
