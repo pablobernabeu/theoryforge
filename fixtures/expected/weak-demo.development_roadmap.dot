@@ -2,7 +2,7 @@ digraph development_roadmap {
   graph [rankdir=TB, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
   node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
   edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
-  "roadmap" [shape=ellipse, label="An underspecified\nmotivation theory\nchecklist score 2.2, gate blocked", fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
+  "roadmap" [shape=ellipse, label="An underspecified\nmotivation theory\nchecklist 3.1\nchecklist score 2.2, gate blocked", fillcolor="#12283A", color="#12283A", fontcolor="#FFFFFF"];
   "falsifiability" [label="1. falsifiability\nAt least one\nprediction is typed\npoint, interval or\ndirectional; the label\nis the author's\nblocks the gate", fillcolor="#F9E5E4", color="#B2453C"];
   "derivation_chain" [label="2. derivation_chain\nEvery prediction cites\ndeclared propositions,\nthe causal graph\nentails any claim it\nstates and contradicts\nno phenomenon's claim\n(a claim left unread\nbecause of a feedback\nloop warns)\nblocks the gate", fillcolor="#F9E5E4", color="#B2453C"];
   "precision" [label="3. precision\nShare of predictions\ntyped point or\ninterval with a finite\nlower and upper bound,\nat or above threshold;\nthe width of the\nregion is not read\nadvisory", fillcolor="#FBF1DC", color="#9C6B14"];
