@@ -79,14 +79,23 @@ Crossref or PubMed checks name it).
 `data/status-0.8.0.csv` has one row per finding and per verdict (`kind` and
 `id`). `status_080` says what version 0.8.0 does about it: `fixed` (the
 behaviour or rule is corrected), `reported` (the problem is reported beside
-the result, which is unchanged), `reworded` (the outputs and documents say
-what is computed, the behaviour is unchanged), `unchanged`, `deferred`
-(unchanged, the remedy being one of the expansions the maintainer plans for
-0.9.0, for which no plan is published), `withdrawn` or `not applicable` (a
-verdict of sound whose recommendation is to keep). A verdict of sound with
-caveats is `reworded` where 0.8.0 states its caveat in more places, and
-`unchanged` otherwise. `basis` names the file or the rerun on 0.8.0 that shows
-it and, after 'Remaining:', what is left of a finding classed as fixed.
+the result, without changing the verdict or the gate the finding concerns),
+`reworded` (the outputs and documents say what is computed, the behaviour is
+unchanged), `unchanged`, `deferred` (unchanged, the remedy being one of the
+expansions the maintainer plans for 0.9.0, for which no plan is published),
+`withdrawn` or `not applicable` (a verdict of sound whose recommendation is to
+keep). A verdict of sound with caveats whose recommendation is to keep is
+`reworded` where 0.8.0 states its caveat in more places, and `unchanged`
+otherwise. Other verdicts are classed as findings are. `checked` says who
+checked the row again after the agent that classified it: `drafter` (the
+agents that drafted and revised the report), `reviewer` (a reviewer of the
+draft), `both` or `none`. `revised` is `status` where the status differs from
+the classifying agent's, `basis` where the status was kept and the basis
+qualified after a check, and `none` otherwise. `basis` names the file or the
+rerun on 0.8.0 that shows the status and, after 'Remaining:', what is left of a
+finding classed as fixed. For a verdict of sound with caveats kept unchanged,
+it says whether the documentation already stated the caveat, the caveat
+concerns the auditors' own reading of a source or it is not documented.
 
 `data/verification.csv` has one row per independent check of the deductive
 and numerical core by the causal-verification and statistics-and-simulation
