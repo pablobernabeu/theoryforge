@@ -660,14 +660,21 @@ def test_the_rubric_rates_a_point_or_interval_label_without_bounds_as_directiona
 
 def test_the_html_report_states_what_the_checklist_score_describes(panic_path):
     html = tf.read(panic_path).report(format="html")
-    assert ("  <p>Checklist score: <strong>85.9</strong> (82.1 to 87.9 with equal weights or one "
-            "weight halved or doubled) &middot; gate: <strong>pass</strong></p>\n") in html
+    # The score and the gate are plain text, not set in bold as a headline.
+    assert ("  <p>Checklist score: 85.9 (82.1 to 87.9 with equal weights or one "
+            "weight halved or doubled) &middot; gate: pass</p>\n") in html
+    assert "<strong>" not in html and "<b>" not in html
     assert ("  <p>The checklist score describes how completely the file states what checklist "
             "3.1 asks for. Most items read whether a field is filled in or how a prediction is "
             "labelled, and stated claims are checked against the causal graph. Test outcomes "
             "are read only by the parsimony item, the weights are conventions, and no study has "
             "established what difference between two scores is meaningful. The score does not "
-            "show that the theory is true or well reasoned.</p>\n") in html
+            "show that the theory is true or well reasoned.</p>\n"
+            "  <p>The gate reports whether either blocking item failed: at least one prediction "
+            "is typed point, interval or directional, and every prediction cites declared "
+            "propositions whose graph entails any claim it states, with no stated phenomenon "
+            "contradicted. The labels are the author's and are not checked against the "
+            "statements.</p>\n  <table>") in html
     assert ("<tr><th>item</th><th>criterion</th><th>status</th><th>score</th>"
             "<th>source of the criterion</th></tr>") in html
     assert ("<tr><td>derivation_chain</td><td>Every prediction cites declared propositions, the "

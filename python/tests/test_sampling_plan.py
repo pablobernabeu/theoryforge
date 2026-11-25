@@ -254,13 +254,13 @@ def test_every_other_fixture_keeps_its_preregistration(fixtures_dir, fixture, go
 
 def test_the_dossier_carries_the_plan_in_its_preregistration(modality_path):
     d = tf.read(modality_path).dossier()
-    assert "\n## Preregistration\n\n## Preregistration: " in d
-    assert d.count("#" + SECTION) == 1
+    assert "\n## Preregistration\n\n### Preregistration: " in d
+    assert d.count("##" + SECTION) == 1
     # The embedded preregistration ends with the implied independencies, its
     # severity list being given earlier in the dossier.
     prereg = tf.read(modality_path).preregister()
     body = prereg[:prereg.index("\n## Severity (pre-data rubric of claim form)")]
-    assert d.endswith(body.replace("\n#", "\n##").replace("# ", "## ", 1))
+    assert d.endswith(body.replace("\n#", "\n###").replace("# ", "### ", 1))
 
 
 def test_a_written_theory_reads_back_with_its_plan(tmp_path, modality_path):

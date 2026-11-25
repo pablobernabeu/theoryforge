@@ -429,7 +429,8 @@
   }
   verdict <- .tf_verdict(cl$sign, d$derived)
   # A route of no fixed sign, or routes of opposite signs, make the quantity
-  # nonzero only if they do not cancel exactly, which is faithfulness.
+  # nonzero only if the effects they carry do not cancel exactly, which is
+  # faithfulness.
   faithful <- d$derived == "undetermined" && verdict != "undetermined"
   out(d$derived, verdict, d$basis, faithfulness = faithful, via = d$via, adjust = adjust)
 }
@@ -480,9 +481,10 @@
 #' \code{not_evaluated} when the claim is incomplete, names a construct that no
 #' proposition relates to another, or meets a feedback loop under
 #' \code{cycles = "refuse"}. \code{faithfulness} is \code{TRUE} when the
-#' verdict relies on routes of unknown or opposite signs not cancelling
-#' exactly, and the claim lines of the preregistration and the dossier then
-#' end with \code{unless paths cancel exactly}.
+#' verdict relies on the effects carried by a route of unknown sign, or by
+#' routes of opposite signs, not cancelling exactly, and the claim lines of the
+#' preregistration and the dossier then end with \code{unless effects cancel
+#' exactly}.
 #'
 #' The derivations assume that the graph is the causal structure, with no
 #' common cause of two constructs left out unless an association stands for
@@ -616,15 +618,15 @@ tf_entailments <- function(theory, cycles = "refuse") {
   "The verdicts on the claims assume that the graph of the propositions is the causal ",
   "structure, with no omitted common cause of two of its constructs, that each directed ",
   "relation acts in its stated direction whatever the other inputs (as in a linear model ",
-  "or a uniformly monotone one), that paths do not cancel exactly where a verdict says ",
-  "'unless paths cancel exactly' (faithfulness) and, for feedback loops read by ",
+  "or a uniformly monotone one), that effects do not cancel exactly where a verdict says ",
+  "'unless effects cancel exactly' (faithfulness) and, for feedback loops read by ",
   "sigma-separation, that each loop settles to a unique equilibrium, also once the ",
   "intervened construct is held fixed.")
 
 # A claim and what the causal graph says of it, in words, as the
 # preregistration and the dossier print it (API_SPEC.md section 11). A verdict
-# whose record carries faithfulness TRUE holds only if no paths cancel exactly,
-# and its line says so.
+# whose record carries faithfulness TRUE holds only if no effects cancel
+# exactly, and its line says so.
 .tf_claim_line <- function(rec) {
   if (rec$basis == "malformed_claim") return("incomplete, so not evaluated")
   x <- rec$x
@@ -640,7 +642,7 @@ tf_entailments <- function(theory, cycles = "refuse") {
   }
   via <- unlist(rec$via)
   # A record built for a graph that cannot be read has no faithfulness field.
-  faith <- if (isTRUE(rec$faithfulness)) ", unless paths cancel exactly" else ""
+  faith <- if (isTRUE(rec$faithfulness)) ", unless effects cancel exactly" else ""
   said <- switch(rec$verdict,
     entailed = paste0("entailed by the causal graph",
                       if (length(via)) paste0(" through ", paste(via, collapse = ", ")) else "",

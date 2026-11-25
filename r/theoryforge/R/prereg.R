@@ -19,12 +19,32 @@ NULL
 # names what the item checks: every prediction cites declared propositions,
 # the causal graph entails each claim a prediction states and contradicts no
 # claim a phenomenon states. The item warns only when a feedback loop leaves
-# some prediction's claim unread under cycles = "refuse".
+# claims unread under cycles = "refuse".
 .tf_DERIVATION <- paste0("- Derivation references resolve, the causal graph entails every claim a ",
                          "prediction states and contradicts no claim a phenomenon states: ")
 .tf_RESOLVE <- c(pass = "yes", fail = "no",
                  warn = 'not checked (feedback loop; use cycles = "sigma")',
                  "n/a" = "not applicable (no predictions)")
+
+# How the document reads a causal graph with a feedback loop, the last line of
+# its header when the graph has one (API_SPEC.md sections 11 and 20). Under
+# cycles = "refuse" a loop anywhere leaves every claim unread, and under
+# "sigma" every claim is read on the assumption stated.
+.tf_FEEDBACK <- c(
+  refuse = "- Feedback loops: refused (no claim is read against the causal graph)",
+  sigma = paste0("- Feedback loops: read by sigma-separation (each loop is assumed to ",
+                 "settle to a unique equilibrium)"))
+
+# The header line on feedback loops, or none when the graph has no loop. A
+# graph that cannot be built, for a repeated construct id or a relation naming
+# an undeclared construct, is read by no claim, and the line is left out too.
+.tf_feedback_line <- function(T, cycles) {
+  g <- tryCatch(.tf_causal_graph(T, "preregister"), tf_refusal = function(e) NULL)
+  if (is.null(g) || is.null(.tf_first_cycle(g$directed, length(g$nodes)))) {
+    return(character(0))
+  }
+  .tf_FEEDBACK[[cycles]]
+}
 
 # What the document is, in italics after its header (API_SPEC.md section 11).
 .tf_GENERATED <- paste0(
@@ -376,13 +396,18 @@ NULL
 #' states what the item checks, that the derivation references resolve and
 #' that the causal graph entails every claim a prediction states and
 #' contradicts no claim a phenomenon states, and answers \code{yes},
-#' \code{no}, \code{not checked (feedback loop; use cycles = "sigma")} when a
-#' feedback loop leaves a prediction's claim unread, or \code{not applicable
-#' (no predictions)}. A fixed line in italics then says that the document was
-#' generated from the theory file, that the study design, the analysis plan,
-#' the inference criteria and whatever the sampling plan leaves out must be
-#' added before registration, and that the content hash identifies the file
-#' and is not a time stamp.
+#' \code{no}, \code{not checked (feedback loop; use cycles = "sigma")} when the
+#' item warns because a feedback loop leaves claims unread, or
+#' \code{not applicable (no predictions)}. When the causal graph has a feedback
+#' loop, the header ends with a line saying how the document reads it:
+#' \code{Feedback loops: refused (no claim is read against the causal graph)}
+#' under the default, and \code{Feedback loops: read by sigma-separation (each
+#' loop is assumed to settle to a unique equilibrium)} with
+#' \code{cycles = "sigma"}. A graph without a loop gets no such line. A fixed
+#' line in italics then says that the document was generated from the theory
+#' file, that the study design, the analysis plan, the inference criteria and
+#' whatever the sampling plan leaves out must be added before registration, and
+#' that the content hash identifies the file and is not a time stamp.
 #'
 #' A theory section follows, so that the document can be read without the
 #' theory file: each construct with its label, definition, measures and
@@ -395,8 +420,8 @@ NULL
 #' sentence naming the assumptions the verdicts on the claims rest on: the
 #' graph is the causal structure, with no omitted common cause of two of its
 #' constructs, each directed relation acts in its stated direction whatever
-#' the other inputs, paths do not cancel exactly where a claim line ends
-#' \code{unless paths cancel exactly} (faithfulness), and under
+#' the other inputs, effects do not cancel exactly where a claim line ends
+#' \code{unless effects cancel exactly} (faithfulness), and under
 #' \code{cycles = "sigma"} each feedback loop settles to a unique equilibrium,
 #' also once the intervened construct is held fixed. Each hypothesis is then
 #' listed in file order with its claim type, statement,
@@ -505,6 +530,7 @@ tf_preregister <- function(theory, path = NULL, cycles = "refuse") {
     sprintf("- Maturity: %s", .tf_enum_str(T, "maturity", .tf_MATURITY)),
     .tf_formal_model_line(T),
     paste0(.tf_DERIVATION, resolve),
+    .tf_feedback_line(T, cycles),
     "",
     .tf_GENERATED,
     .tf_theory_section(T, cycles),

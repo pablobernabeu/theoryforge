@@ -59,9 +59,10 @@ Each claim is then \code{entailed}, \code{contradicted},
 \code{not_evaluated} when the claim is incomplete, names a construct that no
 proposition relates to another, or meets a feedback loop under
 \code{cycles = "refuse"}. \code{faithfulness} is \code{TRUE} when the
-verdict relies on routes of unknown or opposite signs not cancelling
-exactly, and the claim lines of the preregistration and the dossier then
-end with \code{unless paths cancel exactly}.
+verdict relies on the effects carried by a route of unknown sign, or by
+routes of opposite signs, not cancelling exactly, and the claim lines of the
+preregistration and the dossier then end with \code{unless effects cancel
+exactly}.
 
 The derivations assume that the graph is the causal structure, with no
 common cause of two constructs left out unless an association stands for
