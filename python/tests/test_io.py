@@ -405,6 +405,11 @@ ORDER_FAULTS = [
     ("yaml", "y: [unclosed\nk: {a: 1, a: 2}\n", _SYNTAX),
     ("yaml", "k: {a: 1, a: 2}\nz: *u\ny: [unclosed\n", _DUP),
     ("yaml", "z: *u\ny: [unclosed\n", _ALIAS),
+    # An alias inside the node its anchor names, which PyYAML composes as a
+    # cycle, beside a repeated key.
+    ("yaml", "k: {a: 1, a: 2}\nz: &u [*u]\n", _DUP),
+    ("yaml", "z: &u [*u]\nk: {a: 1, a: 2}\n", _ALIAS),
+    ("yaml", "z: &u {a: 1, a: 2, b: *u}\n", _ALIAS),
     # A text nested more than 1000 levels deep, which Python composes without
     # recursion, and one just under that, which it may compose twice.
     ("yaml", "x: " + _deep(1100) + "\ny: [unclosed\n", _SYNTAX),

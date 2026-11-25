@@ -305,6 +305,11 @@ test_that("a file with two faults is refused for the one that comes first", {
     list("yaml", "y: [unclosed\nk: {a: 1, a: 2}\n", "syntax"),
     list("yaml", "k: {a: 1, a: 2}\nz: *u\ny: [unclosed\n", dup),
     list("yaml", "z: *u\ny: [unclosed\n", alias),
+    # An alias inside the node its anchor names, which PyYAML composes as a
+    # cycle, beside a repeated key.
+    list("yaml", "k: {a: 1, a: 2}\nz: &u [*u]\n", dup),
+    list("yaml", "z: &u [*u]\nk: {a: 1, a: 2}\n", alias),
+    list("yaml", "z: &u {a: 1, a: 2, b: *u}\n", alias),
     # A text nested more than 1000 levels deep, which Python composes without
     # recursion, and one just under that, which it may compose twice.
     list("yaml", paste0("x: ", deep(1100L), "\ny: [unclosed\n"), "syntax"),
