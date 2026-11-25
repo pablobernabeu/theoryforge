@@ -1,0 +1,5 @@
+{
+  "read": {
+    "error": "the document holds more than 1000000 values once its aliases are expanded"
+  }
+}

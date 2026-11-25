@@ -159,10 +159,15 @@ def _dag_id(s: str) -> str:
     Bare when DOT reads it bare, and otherwise double-quoted with each double
     quote escaped by a backslash. Other backslashes are kept as they are,
     because dagitty does not unescape them, so the id reads back as written.
-    The two ids dagitty reserves cannot be written at all.
+    The two ids dagitty reserves cannot be written at all, and nor can an id
+    that ends with a backslash, which would escape its own closing quote: dagitty
+    cannot read the line, and Graphviz would read the rest of it as DOT.
     """
     if s in _DAGITTY_RESERVED:
         raise ValueError(f"causal_dag cannot export construct id '{s}': dagitty reserves it")
+    if s.endswith("\\"):
+        raise ValueError(f"causal_dag cannot export construct id '{s}': "
+                         "dagitty cannot read an id that ends with a backslash")
     if _DAG_BARE.fullmatch(s) and ascii_lower(s) not in _DOT_KEYWORDS:
         return s
     return '"' + s.replace('"', '\\"') + '"'

@@ -72,6 +72,26 @@ test_that("causal_dag refuses the two ids dagitty reserves", {
                "causal_dag cannot export construct id 'node': dagitty reserves it", fixed = TRUE)
 })
 
+test_that("causal_dag refuses an id that ends with a backslash", {
+  # Quoted, `a\` would be written "a\", whose backslash escapes the closing
+  # quote. dagitty cannot read the line, and Graphviz, which the apps draw the
+  # view with, would read the next id as DOT, attributes included. A backslash
+  # elsewhere in an id is kept, as the quoting test shows.
+  theory <- .ids_theory(list(list("a\\", NULL), list("b", NULL)),
+                        list(list("p1", "b", "a\\", "causes")))
+  expect_error(tf_diagram(theory, "causal_dag"),
+               paste0("causal_dag cannot export construct id 'a\\': ",
+                      "dagitty cannot read an id that ends with a backslash"),
+               fixed = TRUE)
+  # The id an association names is refused as well, and the nomological net,
+  # whose DOT strings double every backslash, still draws the theory.
+  theory <- .ids_theory(list(list("x", NULL), list("y\\", NULL)),
+                        list(list("p1", "x", "y\\", "associates")))
+  expect_error(tf_diagram(theory, "causal_dag"),
+               "dagitty cannot read an id that ends with a backslash", fixed = TRUE)
+  expect_true(grepl('"y\\\\"', tf_diagram(theory, "nomological_net"), fixed = TRUE))
+})
+
 test_that("causal_dag quotes an empty endpoint", {
   # A missing `from` reads as "" (API_SPEC.md section 3), which is no bare
   # identifier, so the line stays one that dagitty can parse.

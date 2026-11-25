@@ -32,7 +32,10 @@ NULL
 #' comma (\code{1,000}). An integer too large for an R integer is read as a
 #' double. A merge key (\code{<<}) lets the mapping's own keys win. A key
 #' repeated in any mapping, in YAML or JSON, stops with
-#' \code{(<path>) Duplicate map key: '<key>'}. A document that is not a
+#' \code{(<path>) Duplicate map key: '<key>'}. A YAML document that holds
+#' more than 1000000 values once its aliases (\code{*a}) are expanded stops
+#' with \code{(<path>) the document holds more than 1000000 values once its
+#' aliases are expanded}, before anything walks it. A document that is not a
 #' mapping, such as a sequence or an empty YAML file, stops with
 #' \code{Theory data must be a mapping}.
 #'
@@ -114,6 +117,18 @@ tf_read <- function(path) {
 #' tryCatch(tf_validate(broken, full = TRUE), error = conditionMessage)
 #' @export
 tf_validate <- function(theory, full = FALSE) {
+  errors <- .tf_validation_problems(theory, full)
+  if (length(errors) > 0L) {
+    stop("invalid theory object: ", paste(errors, collapse = "; "), call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+# The problems tf_validate() reports, one message each, in its order.
+# tf_validate() joins them with "; ". A message may quote a value of the
+# theory, which can hold "; " itself, so the apps read this vector rather than
+# split the joined text. Python's Theory._problems() returns the same messages.
+.tf_validation_problems <- function(theory, full = FALSE) {
   d <- theory
   errors <- character(0)
 
@@ -538,11 +553,7 @@ tf_validate <- function(theory, full = FALSE) {
                                              keys(props$provenance$items)))
     }
   }
-
-  if (length(errors) > 0L) {
-    stop("invalid theory object: ", paste(errors, collapse = "; "), call. = FALSE)
-  }
-  invisible(TRUE)
+  errors
 }
 
 # -- validation helpers (API_SPEC.md section 2) ------------------------------

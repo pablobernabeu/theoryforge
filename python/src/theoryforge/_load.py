@@ -192,12 +192,49 @@ def _unique_pairs(pairs: list[tuple[str, Any]]) -> dict:
     return dict(pairs)
 
 
+# A YAML alias repeats the content its anchor names without repeating the
+# text, so a file of a few hundred bytes can stand for a document of billions
+# of values, which every function that walks the theory, the content hash
+# first, would then walk. The YAML reader refuses a document that holds more
+# values than this once its aliases are expanded (API_SPEC.md section 3).
+MAX_VALUES = 1_000_000
+
+
+def _check_size(data: Any, path: Path) -> None:
+    """Refuse ``data`` when it holds more than ``MAX_VALUES`` values.
+
+    Each mapping, sequence and scalar counts once for every place it appears,
+    so a node an alias repeats counts each time, and a mapping's keys do not
+    count. The walk goes one level at a time and stops as soon as the count
+    passes the limit, so its cost is bounded by the limit and not by the size
+    the aliases stand for. The R twin's ``.tf_check_size()`` counts the same way.
+    """
+    n = 0
+    level = [data]
+    while level:
+        n += len(level)
+        nxt: list[Any] = []
+        for x in level:
+            if n + len(nxt) > MAX_VALUES:
+                break
+            if isinstance(x, dict):
+                nxt.extend(x.values())
+            elif isinstance(x, list):
+                nxt.extend(x)
+        if n + len(nxt) > MAX_VALUES:
+            raise ValueError(
+                f"({path}) the document holds more than {MAX_VALUES} values once its aliases are expanded")
+        level = nxt
+
+
 def load_document(path) -> Any:
     """Parse the YAML or JSON file at ``path`` (JSON when its suffix is ``.json``).
 
     The bytes are decoded as UTF-8 with any byte-order mark dropped. A repeated key
     in any mapping raises ``ValueError("(<path>) Duplicate map key: '<key>'")``, the
-    message R's reader gives.
+    message R's reader gives. A YAML document that holds more than ``MAX_VALUES``
+    values once its aliases are expanded raises ``ValueError("(<path>) the document
+    holds more than 1000000 values once its aliases are expanded")``.
     """
     path = Path(path)
     text = path.read_bytes().decode("utf-8-sig")
@@ -206,11 +243,13 @@ def load_document(path) -> Any:
             return json.loads(text, object_pairs_hook=_unique_pairs)
         loader = _StrictLoader(text)
         try:
-            return loader.get_single_data()
+            data = loader.get_single_data()
         finally:
             loader.dispose()
     except _DuplicateKey as dup:
         raise ValueError(f"({path}) Duplicate map key: '{dup.key}'") from None
+    _check_size(data, path)
+    return data
 
 
 class _Dumper(yaml.SafeDumper):

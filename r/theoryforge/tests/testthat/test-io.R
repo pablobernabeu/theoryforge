@@ -118,6 +118,38 @@ test_outcomes:
     date: 2026-05-01
 '
 
+# A theory whose aliases repeat a 1000-item sequence `repeats` times. The
+# document holds 1008 + 1001 * repeats + tail values once its aliases are
+# expanded: the mapping, its four header scalars, the three keyed sequences,
+# 1000 scalars in the first, its repeats in the second and `tail` scalars in
+# the third.
+aliased <- function(repeats, tail) {
+  paste0("schema_version: '1.1'\nid: b\ntitle: B\nmaturity: draft\n",
+         "a: &a [", paste(rep("s", 1000L), collapse = ", "), "]\n",
+         "b: [", paste(rep("*a", repeats), collapse = ", "), "]\n",
+         "c: [", paste(rep("s", tail), collapse = ", "), "]\n")
+}
+
+test_that("aliases that expand past the limit refuse the file", {
+  # 1008 + 1001 * 997 + 995 is the limit itself, and one more value passes it.
+  # The Python twin counts the same values and gives the same message.
+  expect_identical(tf_read(io_file(aliased(997L, 995L)))$id, "b")
+  path <- io_file(aliased(997L, 996L))
+  expect_error(tf_read(path),
+               sprintf("(%s) the document holds more than 1000000 values once its aliases are expanded",
+                       path), fixed = TRUE)
+  # A file of about a kilobyte that stands for ten billion values is refused at
+  # once, as a theory and as a corpus, and merge keys still read.
+  bomb <- paste0("x0: &a0 [", paste(rep("ha", 10L), collapse = ", "), "]\n",
+                 paste0(sprintf("x%d: &a%d [%s]\n", 1:9, 1:9,
+                                vapply(0:8, function(i) paste(rep(sprintf("*a%d", i), 10L), collapse = ", "), "")),
+                        collapse = ""))
+  expect_error(tf_read(io_file(bomb)), "once its aliases are expanded", fixed = TRUE)
+  expect_error(tf_read_corpus(io_file(bomb)), "once its aliases are expanded", fixed = TRUE)
+  ids <- vapply(tf_read(io_file(merge_theory))$constructs, function(c) c$id, "")
+  expect_identical(ids, c("c1", "c2"))
+})
+
 test_that("an unquoted date stays a string and writes to JSON", {
   theory <- tf_read(io_file(date_theory))
   expect_identical(theory$test_outcomes[[1]]$date, "2026-05-01")

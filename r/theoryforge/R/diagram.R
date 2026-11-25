@@ -178,10 +178,17 @@ NULL
 # otherwise double-quoted with each double quote escaped by a backslash. Other
 # backslashes are kept as they are, because dagitty does not unescape them, so
 # the id reads back as written. The two ids dagitty reserves cannot be written
-# at all.
+# at all, and nor can an id that ends with a backslash, which would escape its
+# own closing quote: dagitty cannot read the line, and Graphviz would read the
+# rest of it as DOT.
 .tf_dag_id <- function(s) {
   if (s %in% .tf_DAGITTY_RESERVED) {
     stop(sprintf("causal_dag cannot export construct id '%s': dagitty reserves it", s),
+         call. = FALSE)
+  }
+  if (endsWith(s, "\\")) {
+    stop(sprintf(paste0("causal_dag cannot export construct id '%s': ",
+                        "dagitty cannot read an id that ends with a backslash"), s),
          call. = FALSE)
   }
   if (grepl(.tf_DAG_BARE, s, perl = TRUE) && !(.tf_ascii_lower(s) %in% .tf_DOT_KEYWORDS)) {
