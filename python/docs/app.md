@@ -67,11 +67,11 @@ which browsers do not send to the server. An example travels as its name and any
 theory as its text, compressed. Links are kept below 16,000 characters so that mail and chat
 programs pass them on whole, and a larger theory is better sent as a file. A prior version,
 rival or corpus that you uploaded is not carried by the link. A link pasted into a tab that
-already shows the app opens there. The apps keep the session and the colour theme in the
-browser's storage where the browser allows it, and run without it where it does not. The
-session is the only copy of edits that Save YAML has not written, so choosing an example,
-uploading a file, starting a new theory or opening a link that would replace an edited theory
-asks first.
+already shows the app opens there, once an operation that is running has finished. The apps
+keep the session and the colour theme in the browser's storage where the browser allows it,
+and run without it where it does not. The session is the only copy of edits that Save YAML
+has not written, so choosing an example, uploading a file, starting a new theory or opening
+a link that would replace an edited theory asks first.
 
 ## Limits
 

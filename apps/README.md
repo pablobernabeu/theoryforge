@@ -88,12 +88,15 @@ example travels as its path and any other theory as its text. Links are kept bel
 theory too large for that is better sent as a file. An uploaded prior, rival or
 corpus is not carried. A link that opens is read with the same limit, and one that
 decompresses to more than 1 MiB is refused, as is one written by a newer version of
-the app. A link pasted into a tab that already shows the app opens there. A link
-that would replace a theory edited in the session asks first, as choosing an example,
-uploading a file or New theory does, since the session is the only copy of edits that
-Save has not written. While a theory from a link loads, the start panel offers to
-open the app without it, and a link whose theory cannot be loaded is taken out of
-the address and leaves the saved session as it was.
+the app. A link pasted into a tab that already shows the app opens there, once an
+operation that is running has finished. A link that would replace a theory edited in
+the session asks first, as choosing an example, uploading a file or New theory does,
+since the session is the only copy of edits that Save has not written. A reload asks
+nothing and opens the session as last saved, since the app keeps the link it wrote
+beside the session. While a theory from a link loads, the start panel offers to open
+the app without it, and a link whose theory cannot be loaded is taken out of the
+address and leaves the saved session as it was, with a note under the theory card
+that says why.
 
 The diagrams are Graphviz's SVG, drawn from text the theory supplies. Each figure is
 read as XML and inserted as nodes, with any script, foreign content, style sheet,

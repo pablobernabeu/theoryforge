@@ -872,3 +872,89 @@ test("a small negative value is written 0, not -0", async () => {
   assert.ok(!cells.includes("-0"), cells.join("|"));
   assert.match($("#output").textContent, /a 0\.00, b 0/);
 });
+
+// ---- the card's score and hash, reloads, links while busy, refusals, figures --
+
+const tick = (ms) => new Promise((r) => setTimeout(r, ms || 5));
+
+async function bootAt(hash, opts, rt) {
+  const ctx = makeWindow(Object.assign({ hash }, opts || {}));
+  runScript(ctx, CORE);
+  runScript(ctx, SHARE);
+  rt = rt || stubRuntime();
+  await ctx.TF.start(rt);
+  return { ctx, rt, $: (s) => ctx.document.querySelector(s) };
+}
+async function encodeLink(state) {
+  const enc = makeWindow();
+  runScript(enc, SHARE);
+  return "#s=" + await enc.__tfShare.encode(state);
+}
+const editedRuntime = () => stubRuntime({
+  texts: [],
+  async editText(text, f, name) { this.active = name; this.texts.push(text); return Object.assign(summaryOf("mine", { ok: true }), { texts: {} }); },
+  async writeText() { return this.texts[this.texts.length - 1] || ""; },
+});
+
+test("a reload soon after an edit opens the latest edit and asks nothing", async () => {
+  // The tab wrote the link of its first edit, and its session already holds a
+  // second edit that has not reached the address.
+  const first = await encodeLink({ v: 1, op: "check", params: {}, run: false, theory: { name: "mine.yaml", text: "title: First edit\n", format: "yaml" } });
+  const session = JSON.stringify({ v: 2, opId: "check", params: {}, ran: false, input: { mode: "edited", name: "mine.yaml", format: "yaml", text: "title: Second edit\n" } });
+  const questions = [];
+  const rt = editedRuntime();
+  const { ctx } = await bootAt(first, { stored: { "tf-app-py": session, "tf-app-py-link": first }, confirm: (q) => { questions.push(q); return true; } }, rt);
+  assert.deepEqual(questions, []);
+  assert.deepEqual(rt.texts, ["title: Second edit\n"]);
+  assert.equal(ctx.localStorage.getItem("tf-app-py") === session || JSON.parse(ctx.localStorage.getItem("tf-app-py")).input.text === "title: Second edit\n", true);
+  // The address then catches up with the session, and the tab records it as its own.
+  await tick(800);
+  assert.notEqual(ctx.location.hash, first);
+  assert.equal(ctx.localStorage.getItem("tf-app-py-link"), ctx.location.hash);
+  // The same fragment, not written by this tab, is a link like any other and asks first.
+  const rt2 = editedRuntime();
+  const asked = [];
+  await bootAt(first, { stored: { "tf-app-py": session }, confirm: (q) => { asked.push(q); return true; } }, rt2);
+  assert.equal(asked.length, 1);
+  assert.deepEqual(rt2.texts, ["title: First edit\n"]);
+});
+
+test("a link pasted while an operation runs opens once the run has finished", async () => {
+  const { ctx, rt, $, enc } = await bootWithLink({ v: 1, op: "check", run: false, theory: { example: EXAMPLES[0].path } });
+  runsOf(rt);
+  let release;
+  const run = rt.run;
+  rt.run = async (op, p) => { if (op === "check") await new Promise((r) => (release = r)); return run(op, p); };
+  const running = $("#runBtn").click();
+  await tick();
+  const pasted = "#s=" + await enc({ v: 1, op: "validate", run: true, theory: { example: EXAMPLES[1].path } });
+  ctx.location.hash = pasted;
+  await ctx.__fire("hashchange");
+  assert.equal(rt.active, EXAMPLES[0].path, "nothing opens while the run goes on");
+  await tick(800);
+  assert.equal(ctx.location.hash, pasted, "the app's own state leaves the pasted link alone");
+  release();
+  await running;
+  await tick(20);
+  assert.equal(rt.active, EXAMPLES[1].path);
+  assert.equal($("#exampleSel").value, EXAMPLES[1].path);
+  assert.deepEqual(rt.ran, ["check", "validate"]);
+  assert.match($(".toast").textContent, /Opened the theory and operation from the link/);
+});
+
+test("a refused link says why, in the note and under the card", async () => {
+  const refusal = "PythonError: Traceback (most recent call last):\n  File \"/pkg/_app.py\", line 140, in edit\n" +
+    "ValueError: (/pkg/edit.yaml) the document holds more than 1000000 values once its aliases are expanded";
+  const rt = stubRuntime({ fileNames: { "/pkg/edit.yaml": "laughs.theory.yaml" }, async editText() { throw new Error(refusal); } });
+  const { ctx, $ } = await bootWithLink({ v: 1, op: "check", run: false, theory: { name: "laughs.theory.yaml", text: "a: &a [x]\n", format: "yaml" } }, {}, rt);
+  assert.equal($(".toast").textContent, "Could not restore laughs.theory.yaml; showing Theory A instead: " +
+    "ValueError: (laughs.theory.yaml) the document holds more than 1000000 values once its aliases are expanded");
+  assert.match($("#summaryWrap .error .et").textContent, /^Could not restore laughs\.theory\.yaml; showing Theory A instead$/);
+  assert.match($("#summaryWrap .error .last").textContent, /holds more than 1000000 values/);
+  assert.ok($("#summaryWrap .summary"), "the card of the theory shown stays");
+  assert.equal(ctx.location.hash, "");
+  // A link too long to read says so too.
+  const long = await bootAt("#s=" + "A".repeat(16001));
+  assert.equal(long.$(".toast").textContent, "The link could not be read (the link is longer than 16000 characters), so the saved session is shown instead");
+});
+

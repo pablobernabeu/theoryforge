@@ -150,11 +150,13 @@
     try { await navigator.clipboard.writeText(t); toast("Copied to clipboard"); }
     catch { toast("Copy failed. Select the text and copy it manually."); }
   }
+  // A longer message stays longer, so that it can be read before it goes.
   let toastTimer;
   function toast(msg) {
     let t = $(".toast"); if (!t) { t = el("div", { class: "toast", role: "status", "aria-live": "polite" }); document.body.append(t); }
     t.textContent = msg; t.classList.add("show");
-    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2400);
+    const ms = Math.min(10000, Math.max(2400, 60 * String(msg).length));
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), ms);
   }
   // A short status for screen readers. The result panel is replaced whole on
   // each run, so it is no live region itself, and this one says what changed.
@@ -1233,12 +1235,18 @@
   const STATE_FORMAT = 2;
   function stateKey() { return "tf-app-" + (RT ? RT.lang : "x"); }
   let saveTimer = null;
-  function saveState() {
+  // Whether the session could be written, which is false when the storage is
+  // full or blocked.
+  function writeSession() {
     try {
       localStorage.setItem(stateKey(), JSON.stringify({
         v: STATE_FORMAT, opId: STATE.opId, params: STATE.params, input: STATE.input, ran: !!STATE.ran,
       }));
-    } catch (e) { /* quota exceeded, or private mode; not worth failing over */ }
+      return true;
+    } catch (e) { return false; /* quota exceeded, or private mode; not worth failing over */ }
+  }
+  function saveState() {
+    writeSession();
     scheduleLink();
   }
   function saveSoon() { clearTimeout(saveTimer); saveTimer = setTimeout(saveState, 400); }
@@ -1261,8 +1269,26 @@
   // stay behind, since a link cannot carry a second file.
   const LINK_PREFIX = "#s=";
   // lastLinkHash is the fragment the app last wrote, so that a fragment
-  // pasted into the address bar can be told from the app's own.
+  // pasted into the address bar can be told from the app's own. The app also
+  // keeps it beside the saved session, with the session written from the same
+  // state just before, so that a reload, whose address still holds the
+  // fragment, is told from a link opened anew. The session is then at least
+  // as new as the fragment, even when an edit has not reached the address yet.
   let linkTimer = null, linkInfo = { ok: true, length: 0 }, lastLinkHash = "";
+  const ownLinkKey = () => stateKey() + "-link";
+  function rememberOwnLink(sessionWritten) {
+    try {
+      if (sessionWritten && lastLinkHash) localStorage.setItem(ownLinkKey(), lastLinkHash);
+      else localStorage.removeItem(ownLinkKey());
+    } catch (e) { /* storage blocked: a reload is then read as a link */ }
+  }
+  function ownLink() { try { return localStorage.getItem(ownLinkKey()) || ""; } catch (e) { return ""; } }
+  // A fragment in the address that the app did not write is a link that
+  // waits to be opened, which the app's own state does not replace.
+  function linkWaiting() {
+    const h = (typeof location !== "undefined" && location.hash) || "";
+    return h.startsWith(LINK_PREFIX) && h !== lastLinkHash;
+  }
   function linkState() {
     const op = OPS.find((o) => o.id === STATE.opId);
     const params = {};
@@ -1291,12 +1317,15 @@
   }
   async function updateLink() {
     try {
+      if (linkWaiting()) return;
+      const written = writeSession();
       const l = await currentLink();
-      if (!l || typeof history === "undefined" || !history.replaceState) return;
+      if (!l || typeof history === "undefined" || !history.replaceState || linkWaiting()) return;
       linkInfo = l;
       const base = location.pathname + location.search;
       lastLinkHash = l.ok ? LINK_PREFIX + l.enc : "";
       history.replaceState(null, "", base + lastLinkHash);
+      rememberOwnLink(written);
     } catch (e) { /* no compression stream in this browser: no link */ }
   }
   async function copyLink() {
@@ -1305,8 +1334,8 @@
     // An edit typed just before the click is applied first, so the link
     // carries it.
     if (EDITOR && EDITOR.flush) await EDITOR.flush();
-    let l;
-    try { l = await currentLink(); } catch (e) { toast("This browser cannot compress the theory for a link"); return; }
+    let l, written = false;
+    try { written = writeSession(); l = await currentLink(); } catch (e) { toast("This browser cannot compress the theory for a link"); return; }
     if (!l) return;
     if (!l.ok) {
       openModal("The theory is too large for a link", el("div", { class: "help" }, [
@@ -1318,6 +1347,7 @@
     const base = location.href.split("#")[0];
     lastLinkHash = LINK_PREFIX + l.enc;
     history.replaceState(null, "", location.pathname + location.search + lastLinkHash);
+    rememberOwnLink(written);
     await copyText(base + LINK_PREFIX + l.enc);
   }
   async function readLink() {
@@ -1959,12 +1989,20 @@
     return lines.length ? lines[lines.length - 1] : "";
   }
   // Engine errors arrive as a whole traceback (Pyodide's PythonError) or as R's
-  // condition text. The box shows the line that names the error and keeps the
-  // full text in a details element. `lead` is an optional node or text placed
-  // between the title and the error.
-  function errorBox(title, err, lead) {
+  // condition text, of which a box or a note shows the line that names the
+  // error.
+  function errorLines(err) {
     const msg = cleanMessage((err && (err.message || err.toString())) || err);
-    const lines = msg.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+    return { msg, lines: msg.split(/\r?\n/).map((s) => s.trim()).filter(Boolean) };
+  }
+  function errorHeadline(err) {
+    const { msg, lines } = errorLines(err);
+    return headline(lines) || msg;
+  }
+  // The box keeps the full text in a details element. `lead` is an optional
+  // node or text placed between the title and the error.
+  function errorBox(title, err, lead) {
+    const { msg, lines } = errorLines(err);
     const last = headline(lines) || msg;
     const kids = [el("div", { class: "et", text: title })];
     if (lead) kids.push(el("p", { class: "lead" }, lead));
@@ -1973,7 +2011,9 @@
     return el("div", { class: "error", role: "alert" }, kids);
   }
 
-  let busy = false;
+  // A link pasted while the app is busy waits, and opens once the work in
+  // hand has finished.
+  let busy = false, linkPending = false;
   async function withBusy(label, fn) {
     if (busy) return; busy = true;
     const btn = $("#runBtn"); const prev = btn ? btn.textContent : "";
@@ -1985,6 +2025,7 @@
       busy = false;
       for (const c of controls) { if (c.getAttribute("data-busywas") === "0") c.disabled = false; c.removeAttribute("data-busywas"); }
       if (btn) btn.textContent = prev;
+      if (linkPending) { linkPending = false; setTimeout(() => openLinkInPlace(), 0); }
     }
   }
 
@@ -2215,17 +2256,21 @@
   // Restore theory + operation + params from a link or a previous session,
   // then optionally re-run the last operation so a refresh lands back where
   // the user left off. A link wins over the saved session, unless that session
-  // holds edits the link would replace and the user keeps them. init has
-  // already loaded example 0, and a load that fails leaves it loaded, so a
-  // failed restore falls back to it. A link whose theory cannot be loaded is
-  // taken out of the address and is not saved, so the next visit starts from
-  // the session saved before. The returned note says what happened; start()
-  // shows it once the boot overlay, which would hide a toast, is gone.
+  // holds edits the link would replace and the user keeps them, or the link is
+  // the tab's own, whose session is at least as new. init has already loaded
+  // example 0, and a load that fails leaves it loaded, so a failed restore
+  // falls back to it, and the card shows why. A link whose theory cannot be
+  // loaded is taken out of the address and is not saved, so the next visit
+  // starts from the session saved before. The returned note says what
+  // happened; start() shows it once the boot overlay, which would hide a
+  // toast, is gone.
   async function applyRestore(blog) {
     let saved = loadSaved();
-    let note = null, fromLink = false, linkFailed = false;
+    let note = null, fromLink = false, linkFailed = false, failure = null;
+    const hash = (typeof location !== "undefined" && location.hash) || "";
+    const ownReload = !!saved && hash.startsWith(LINK_PREFIX) && hash === ownLink();
     try {
-      const link = await readLink();
+      const link = ownReload ? null : await readLink();
       if (link) {
         const problem = linkProblem(link);
         if (problem) { note = problem; linkFailed = true; }
@@ -2246,7 +2291,7 @@
           }
         }
       }
-    } catch (e) { note = "The link could not be read, so the saved session is shown instead"; linkFailed = true; }
+    } catch (e) { note = "The link could not be read (" + ((e && e.message) || e) + "), so the saved session is shown instead"; linkFailed = true; }
     const first = RT.examples[0];
     const fallback = (name) => "Could not restore " + name + "; showing " + first.name + " instead";
     STATE.input = STATE.input || { mode: "example", path: first.path };
@@ -2273,7 +2318,8 @@
           if (!(await restoreTheory(inp, blog))) throw new Error("the theory in it cannot be read");
         } catch (e) {
           STATE.input = { mode: "example", path: first.path };
-          note = fallback(inp.mode === "example" ? ((RT.examples.find((x) => x.path === inp.path) || {}).name || String(inp.path).split("/").pop()) : inp.name || "your theory");
+          failure = { title: fallback(inp.mode === "example" ? ((RT.examples.find((x) => x.path === inp.path) || {}).name || String(inp.path).split("/").pop()) : inp.name || "your theory"), err: e };
+          note = failure.title + ": " + errorHeadline(e);
           if (fromLink) linkFailed = true;
         }
       }
@@ -2287,6 +2333,7 @@
     // Reflect the restored selection in the UI.
     updateExampleSel();
     refreshSummary();
+    if (failure) $("#summaryWrap").replaceChildren(errorBox(failure.title, failure.err), summaryCard(STATE.summary));
     for (const b of document.querySelectorAll(".op")) {
       const on = b.getAttribute("data-op") === STATE.opId;
       b.classList.toggle("active", on);
@@ -2297,7 +2344,9 @@
     if (note || (STATE.params.prior !== undefined && !priorValues().includes(STATE.params.prior))) STATE.params.prior = defaultPrior();
     resetTheoryChoices();
     updateExampleDesc(); updateOpHelp(); renderParams();
-    if (linkFailed) dropLinkHash(); else saveState();
+    // The link opened, or the tab's own, is the app's fragment from now on.
+    if (linkFailed) dropLinkHash();
+    else { if (fromLink || ownReload) lastLinkHash = hash; saveState(); }
     const op = OPS.find((o) => o.id === STATE.opId);
     if (saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op)) await runOp();
     if (fromLink && !note) note = "Opened the theory and operation from the link";
@@ -2308,14 +2357,18 @@
   // changes only the fragment, so the browser keeps the page and the app
   // opens the link here. A fragment the app wrote itself is no link to open.
   async function openLinkInPlace() {
-    const h = (typeof location !== "undefined" && location.hash) || "";
-    if (!h.startsWith(LINK_PREFIX) || h === lastLinkHash || busy) return;
+    if (!linkWaiting()) return;
+    if (busy) { linkPending = true; return; }
+    const h = location.hash;
     let link;
-    try { link = await readLink(); } catch (e) { toast("The link could not be read"); dropLinkHash(); return; }
+    try { link = await readLink(); } catch (e) { toast("The link could not be read: " + ((e && e.message) || e)); dropLinkHash(); return; }
     const problem = linkProblem(link);
     if (problem) { toast(problem.replace(/, so the saved session is shown instead$/, "")); dropLinkHash(); return; }
     const t = link.theory;
     if (EDITOR && EDITOR.flush) await EDITOR.flush();
+    // A link pasted over this one is opened in its place.
+    if (location.hash !== h) return;
+    if (busy) { linkPending = true; return; }
     if (!mayDiscardEdits("Open " + linkName(t) + " from the link")) { dropLinkHash(); return; }
     let ok = false;
     await withBusy("Opening the link…", async () => {
@@ -2323,6 +2376,7 @@
       try {
         if (!(await restoreTheory(inp))) throw new Error("the theory in it cannot be read");
       } catch (err) { loadFailed(t.example || t.name || "the theory in the link", err); dropLinkHash(); return; }
+      lastLinkHash = h;
       if (inp.mode === "example") STATE.source = await exampleSource(inp.path.split("/").pop(), inp.path);
       $("#fileInput").value = "";
       // The change of theory resets the choices that depend on it, and the
