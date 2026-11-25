@@ -91,7 +91,8 @@ def test_new_diagrams(panic_path, weak_path):
     rm_ok = tf.read(panic_path.with_name("panic-network-2026-v2.theory.yaml")).diagram(
         "development_roadmap")
     assert '"all_checks_pass"' in rm_ok
-    assert 'label="Network theory of\\npanic disorder\\nchecklist score 89.8, gate pass"' in rm_ok
+    assert ('label="Network theory of\\npanic disorder\\nchecklist 3.1\\nchecklist score 89.8, '
+            'gate pass"') in rm_ok
     # A blocker that warns does not block the gate, so it is advisory.
     rm_loop = tf.read(panic_path).diagram("development_roadmap")
     assert "\\nloop warns)\\nadvisory\", fillcolor=\"#FBF1DC\"" in rm_loop

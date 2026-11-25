@@ -534,7 +534,8 @@ def report(theory, format: str = "json") -> str:
     The fragment gives the checklist score with its range and the gate, then
     what the score describes and what the gate checks, then a table of the
     items with the criterion each applies, its status and score and the works
-    from which the criterion is drawn.
+    from which the criterion is drawn. The two items whose failure blocks the
+    gate have ``(blocker)`` after their ids, as in the dossier.
 
     Raises:
         ValueError: for any other ``format``, and when ``check()`` refuses the
@@ -546,9 +547,12 @@ def report(theory, format: str = "json") -> str:
     if format == "html":
         criteria = {it["id"]: it["criterion"] for it in _resources.checklist()["items"]}
         # Every interpolated value is escaped: the schema allows any non-empty id,
-        # so '<' or '&' in it would otherwise reach the markup.
+        # so '<' or '&' in it would otherwise reach the markup. A blocking item
+        # is marked as the dossier marks it, so that the table shows the two
+        # items the gate reads.
         rows = "\n".join(
-            f'    <tr><td>{xml_escape(it["id"])}</td><td>{xml_escape(criteria.get(it["id"], ""))}</td>'
+            f'    <tr><td>{xml_escape(it["id"])}{" (blocker)" if it["severity_if_fail"] == "blocker" else ""}'
+            f'</td><td>{xml_escape(criteria.get(it["id"], ""))}</td>'
             f'<td>{xml_escape(it["status"])}</td>'
             f'<td>{"n/a" if it["score"] is None else xml_escape(it["score"])}</td>'
             f'<td>{xml_escape(it["citation"])}</td></tr>'

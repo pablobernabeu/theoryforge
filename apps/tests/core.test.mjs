@@ -549,6 +549,10 @@ test("the checklist writes the score with its decimal and shows each item's crit
   // header row is not shown.
   const tds = table.querySelector("tbody tr").querySelectorAll("td");
   assert.deepEqual(tds.map((td) => td.getAttribute("data-label")), [null, null, "score", "weight", "severity if fail"]);
+  // An item's whole score keeps its decimal, as the dossier writes it, and an
+  // item with nothing to assess reads n/a.
+  const scores = table.querySelectorAll("tbody tr").map((tr) => tr.querySelectorAll("td")[2].textContent);
+  assert.deepEqual(scores, ["1.0", "n/a"]);
   // A runtime that gives no criteria shows the ids alone.
   const o = await boot({}, lineageRuntime({ check: { report, svg: "<svg></svg>" } }));
   await opButton(o.ctx, "check").click();

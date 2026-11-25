@@ -1080,14 +1080,14 @@
       // Each item is shown with its criterion, as the package's checklist
       // states it, below its id, so that the id is not read for more than the
       // item checks. An item with nothing to assess has a null score, shown
-      // as n/a.
+      // as n/a, and a whole score keeps its decimal (1.0), as in the dossier.
       const crit = raw.criteria && typeof raw.criteria === "object" ? raw.criteria : {};
       const checkRows = asArr(rep.items).map((it) => Object.assign({}, it, {
         item: crit[it.id] ? el("span", null, [el("span", { class: "iid", text: it.id }), el("span", { class: "crit", text: String(crit[it.id]) })]) : it.id,
         score: it.score == null ? "n/a" : it.score }));
       sections.push(tableSection("Checklist items",
         [{ key: "item", label: "item", grow: true }, { key: "status", label: "status", pill: true },
-         { key: "score", label: "score", num: true, tag: true }, { key: "weight", label: "weight", num: true, tag: true },
+         { key: "score", label: "score", num: true, tag: true, fmt: oneDec }, { key: "weight", label: "weight", num: true, tag: true },
          { key: "severity_if_fail", label: "severity if fail", tag: true }],
         checkRows, { stack: true, extra: [jsonBtn(theoryId + ".report.json", rep)] }));
     } else if (opId === "validate") {

@@ -21,8 +21,9 @@ fragment in which every interpolated value is escaped. It gives the
 checklist score with its range and the gate, then what the score describes
 and what the gate checks, then a table of the items with the criterion each
 applies, its status and score and the works from which the criterion is
-drawn. Any other \code{format} stops, and so does a theory that
-\code{\link[=tf_check]{tf_check()}} refuses.
+drawn. The two items whose failure blocks the gate have \code{(blocker)}
+after their ids, as in the dossier. Any other \code{format} stops, and so
+does a theory that \code{\link[=tf_check]{tf_check()}} refuses.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

@@ -50,8 +50,11 @@ test_that("new diagram types are byte-identical to the golden files", {
 test_that("development_roadmap collapses to a single node when all checks pass", {
   theory <- tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml"))
   out <- tf_diagram(theory, "development_roadmap")
-  expect_true(grepl('label="Network theory of\\npanic disorder\\nchecklist score 89.8, gate pass"',
-                    out, fixed = TRUE))
+  expect_true(grepl(paste0('label="Network theory of\\npanic disorder\\nchecklist 3.1\\n',
+                           'checklist score 89.8, gate pass"'), out, fixed = TRUE))
+  # The checklist grid names the checklist's version in its title.
+  grid <- tf_diagram(theory, "rigour")
+  expect_true(grepl('<text x="20" y="28" font-size="15">Checklist 3.1</text>', grid, fixed = TRUE))
   expect_true(grepl('"all_checks_pass" [label="all checks pass", fillcolor="#E5F2E7", color="#3E7A46"];',
                     out, fixed = TRUE))
   expect_true(grepl('"roadmap" -> "all_checks_pass";', out, fixed = TRUE))

@@ -152,7 +152,9 @@ def test_venn_wraps_names_and_says_when_constructs_are_left_out(modality_path):
 def test_rigour(panic_path):
     svg = tf.read(panic_path).diagram("rigour")
     assert svg.startswith("<svg ") and svg.endswith("</svg>\n")
-    assert '<text x="20" y="28" font-size="15">Checklist</text>' in svg and "gate pass" in svg
+    # The title names the checklist's version, which says which criteria the
+    # score describes.
+    assert '<text x="20" y="28" font-size="15">Checklist 3.1</text>' in svg and "gate pass" in svg
     assert svg.count("<rect ") == 12          # one swatch per checklist item
     assert 'fill="#4caf50"' in svg            # at least one pass (green)
 

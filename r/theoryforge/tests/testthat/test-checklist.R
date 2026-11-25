@@ -864,7 +864,10 @@ test_that("the HTML report states what the checklist score describes", {
              "  <table>"))
   has(paste0("<tr><th>item</th><th>criterion</th><th>status</th><th>score</th>",
              "<th>source of the criterion</th></tr>"))
-  has(paste0("<tr><td>derivation_chain</td><td>Every prediction cites declared propositions, the ",
+  # The two blocking items are marked as the dossier marks them, and no other.
+  expect_identical(lengths(regmatches(html, gregexpr(" (blocker)</td>", html, fixed = TRUE))), 2L)
+  has("<tr><td>falsifiability (blocker)</td>")
+  has(paste0("<tr><td>derivation_chain (blocker)</td><td>Every prediction cites declared propositions, the ",
              "causal graph entails any claim it states and contradicts no phenomenon's claim (a ",
              "claim left unread because of a feedback loop warns)</td><td>warn</td><td>1.0</td>",
              "<td>Scheel et al. (2021); Szollosi et al. (2020)</td></tr>"))

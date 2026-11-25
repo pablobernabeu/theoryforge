@@ -545,8 +545,9 @@ tf_check <- function(theory, cycles = "refuse") {
 #' checklist score with its range and the gate, then what the score describes
 #' and what the gate checks, then a table of the items with the criterion each
 #' applies, its status and score and the works from which the criterion is
-#' drawn. Any other \code{format} stops, and so does a theory that
-#' [tf_check()] refuses.
+#' drawn. The two items whose failure blocks the gate have \code{(blocker)}
+#' after their ids, as in the dossier. Any other \code{format} stops, and so
+#' does a theory that [tf_check()] refuses.
 #'
 #' @param theory A theory object (named list).
 #' @param format One of \code{"json"} (default) or \code{"html"}.
@@ -569,11 +570,14 @@ tf_report <- function(theory, format = "json") {
     criteria <- vapply(spec_items, function(it) .tf_str(it, "criterion"), character(1))
     names(criteria) <- vapply(spec_items, function(it) .tf_str(it, "id"), character(1))
     # Every interpolated value is escaped: the schema allows any non-empty id,
-    # so '<' or '&' in it would otherwise reach the markup.
+    # so '<' or '&' in it would otherwise reach the markup. A blocking item is
+    # marked as the dossier marks it, so that the table shows the two items the
+    # gate reads.
     rows <- vapply(rep$items, function(it) {
       criterion <- if (it$id %in% names(criteria)) criteria[[it$id]] else ""
-      sprintf('    <tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
-              .tf_xml(it$id), .tf_xml(criterion), .tf_xml(it$status),
+      blocker <- if (identical(it$severity_if_fail, "blocker")) " (blocker)" else ""
+      sprintf('    <tr><td>%s%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
+              .tf_xml(it$id), blocker, .tf_xml(criterion), .tf_xml(it$status),
               .tf_xml(.tf_format_score_html(it$score)), .tf_xml(it$citation))
     }, character(1))
     rows <- paste(rows, collapse = "\n")

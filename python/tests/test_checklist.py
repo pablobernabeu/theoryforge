@@ -815,7 +815,10 @@ def test_the_html_report_states_what_the_checklist_score_describes(panic_path):
             "  <table>") in html
     assert ("<tr><th>item</th><th>criterion</th><th>status</th><th>score</th>"
             "<th>source of the criterion</th></tr>") in html
-    assert ("<tr><td>derivation_chain</td><td>Every prediction cites declared propositions, the "
+    # The two blocking items are marked as the dossier marks them, and no other.
+    assert html.count(" (blocker)</td>") == 2
+    assert "<tr><td>falsifiability (blocker)</td>" in html
+    assert ("<tr><td>derivation_chain (blocker)</td><td>Every prediction cites declared propositions, the "
             "causal graph entails any claim it states and contradicts no phenomenon's claim (a "
             "claim left unread because of a feedback loop warns)</td><td>warn</td><td>1.0</td>"
             "<td>Scheel et al. (2021); Szollosi et al. (2020)</td></tr>") in html
