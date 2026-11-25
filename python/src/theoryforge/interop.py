@@ -179,12 +179,17 @@ def read_dagitty(text: str, id: str = "dagitty-import",
         raise _fail(f"reads dag and pdag diagrams, not a {refused.group(1)}")
     tokens = _body(_tokens(text))
 
+    # Each list keeps the order in which its entries first appear, and the set
+    # beside it answers whether an entry is already there.
     names: list[str] = []
+    named: set[str] = set()
     latent: set[str] = set()
     edges: list[tuple[str, str, str]] = []
+    joined: set[tuple[str, str, str]] = set()
 
     def declare(name: str) -> None:
-        if name not in names:
+        if name not in named:
+            named.add(name)
             names.append(name)
 
     def group(k: int) -> tuple[list[str], int, list[str]]:
@@ -247,7 +252,8 @@ def read_dagitty(text: str, id: str = "dagitty-import",
                 for b in right:
                     edge = ((a, b, relation) if op == "->" else (b, a, relation) if op == "<-"
                             else (a, b, "associates"))
-                    if edge not in edges:
+                    if edge not in joined:
+                        joined.add(edge)
                         edges.append(edge)
             left = right
 
