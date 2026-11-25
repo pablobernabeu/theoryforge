@@ -91,6 +91,15 @@ class _ExprTag(Exception):
     """A value is tagged ``!expr``. ``load_document`` adds the file's path to the message."""
 
 
+class _Limit(Exception):
+    """A YAML document passes ``MAX_DEPTH`` (``what`` is "depth") or
+    ``MAX_VALUES`` ("count"). ``load_document`` words the message."""
+
+    def __init__(self, what: str) -> None:
+        super().__init__(what)
+        self.what = what
+
+
 def is_json(path) -> bool:
     """Whether the file at ``path`` is read and written as JSON.
 
@@ -122,8 +131,29 @@ class _StrictLoader(_BaseLoader):
     """A safe loader with R's scalar resolution, duplicate keys refused and R's merge order."""
 
     def construct_document(self, node: Node) -> Any:
+        """The document, once the composed nodes have passed R's checks in R's
+        order: a repeated key or an illegal merge, as each mapping ends; an
+        alias that names no node; a value tagged ``!expr``; and the depth and
+        the count of values, measured on the nodes with every merge resolved
+        but nothing built, so that a long chain of merges is refused at once."""
         _refuse_duplicate_keys(self, node)
+        unknown = getattr(self, "unknown", None)
+        if unknown is not None:
+            raise _AliasFault(unknown[0])
+        _refuse_expr_tags(node)
+        _check_nodes(self, node)
         return super().construct_document(node)
+
+    def construct_object(self, node: Node, deep: bool = False) -> Any:
+        """``SafeConstructor.construct_object``, with the ``KeyError``,
+        ``AttributeError``, ``TypeError`` and ``ValueError`` that some explicit
+        tags raise (``!!bool maybe``, ``!!timestamp xyz``, ``!!int abc``) given
+        as the ``ConstructorError`` of the node."""
+        try:
+            return super().construct_object(node, deep=deep)
+        except (KeyError, AttributeError, TypeError, ValueError) as err:
+            raise ConstructorError(None, None, f"could not read {node.tag} {node.value!r} ({err})",
+                                   node.start_mark) from None
 
     def construct_mapping(self, node: MappingNode, deep: bool = False) -> dict:
         """A mapping whose keys are the text R's yaml package names them by (``_key_text``).
@@ -131,6 +161,9 @@ class _StrictLoader(_BaseLoader):
         Converting each key as it is read keeps ``yes:`` and ``1:`` apart, which
         a Python dict would hold as the one key True == 1.
         """
+        if not isinstance(node, MappingNode):
+            raise ConstructorError(None, None, f"expected a mapping node, but found {node.id}",
+                                   node.start_mark)
         self.flatten_mapping(node)
         mapping: dict = {}
         for key_node, value_node in node.value:
@@ -197,10 +230,13 @@ class _StrictLoader(_BaseLoader):
                         f"expected a mapping for merging, but found {source.id}", source.start_mark)
                 yield source
                 merged.extend(source.value)
-        present = {self.construct_object(k) for k, _ in own if isinstance(k, ScalarNode)}
+        # Keys are compared by the text R names them by, so that a merged 1
+        # neither replaces the mapping's own 'yes' (True == 1) nor is dropped
+        # beside its own "1".
+        present = {_key_text(self.construct_object(k)) for k, _ in own if isinstance(k, ScalarNode)}
         for key_node, value_node in merged:
             if isinstance(key_node, ScalarNode):
-                key = self.construct_object(key_node)
+                key = _key_text(self.construct_object(key_node))
                 if key in present:
                     continue
                 present.add(key)
@@ -280,8 +316,37 @@ def _repeated_key(loader: Any, node: MappingNode) -> str | None:
     return None
 
 
+def _illegal_merge(node: MappingNode) -> ConstructorError | None:
+    """The error for a merge key of ``node`` whose value is neither a mapping
+    nor a sequence of mappings, or None. R's yaml package checks the merges of
+    a mapping as the mapping ends, after its keys, so the error is marked at
+    the end of the mapping."""
+    for key_node, value_node in node.value:
+        if key_node.tag != _MERGE:
+            continue
+        sources = value_node.value if isinstance(value_node, SequenceNode) else [value_node]
+        for source in sources:
+            if not isinstance(source, MappingNode):
+                return ConstructorError(
+                    "while constructing a mapping", node.start_mark,
+                    f"expected a mapping or list of mappings for merging, but found {source.id}",
+                    node.end_mark)
+    return None
+
+
+def _mapping_fault(loader: Any, node: MappingNode) -> Exception | None:
+    """What R's yaml package refuses in ``node`` as it ends: a repeated key,
+    then an illegal merge. None when there is neither."""
+    key = _repeated_key(loader, node)
+    if key is not None:
+        return _DuplicateKey(key, node.end_mark)
+    return _illegal_merge(node)
+
+
 def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
-    """Raise ``_DuplicateKey`` for the first mapping, in the order mappings close, that repeats a key.
+    """Raise ``_DuplicateKey`` for the first mapping, in the order mappings close,
+    that repeats a key, or the ``ConstructorError`` of an illegal merge
+    (``_mapping_fault``) when that mapping comes first.
 
     R's yaml package checks each mapping as it closes, so an item's repeated key is
     reported before a repeated top-level key even when the top-level one comes
@@ -300,7 +365,7 @@ def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
     # The collections whose children are being visited: those on the way from
     # the root to the node at hand.
     open_now: set[int] = set()
-    repeats: list[_DuplicateKey] = []
+    repeats: list[Exception] = []
     # Each entry is a mapping or sequence and whether its children have been
     # visited. A scalar has no keys to check and holds no alias, so it is never
     # put on the stack.
@@ -310,9 +375,9 @@ def _refuse_duplicate_keys(loader: _StrictLoader, root: Node) -> None:
         if closed:
             open_now.discard(id(node))
             if isinstance(node, MappingNode) and not repeats:
-                key = _repeated_key(loader, node)
-                if key is not None:
-                    repeats.append(_DuplicateKey(key, node.end_mark))
+                fault = _mapping_fault(loader, node)
+                if fault is not None:
+                    repeats.append(fault)
             continue
         if id(node) in open_now:  # an alias inside the node it names
             raise _Recursive()
@@ -444,9 +509,9 @@ class _TolerantComposer:
                 collection.end_mark = loader.get_event().end_mark
                 stack.pop()
                 if isinstance(collection, MappingNode):
-                    key = _repeated_key(self, collection)
-                    if key is not None:
-                        raise _DuplicateKey(key, collection.end_mark)
+                    fault = _mapping_fault(self, collection)
+                    if fault is not None:
+                        raise fault
                 node = self._end(collection, anchor)
 
     def _end(self, node: Node, anchor: str | None) -> Node:
@@ -660,6 +725,100 @@ def _too_deep(path: Path) -> ValueError:
     return ValueError(f"({path}) the document is nested more than {MAX_DEPTH} levels deep")
 
 
+def _refuse_expr_tags(root: Node) -> None:
+    """Raise ``_ExprTag`` when any node of the composed document is tagged
+    ``!expr``, which R's reader refuses once the whole text has been parsed."""
+    seen: set[int] = set()
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        if id(node) in seen:
+            continue
+        seen.add(id(node))
+        if node.tag in _EXPR_TAGS:
+            raise _ExprTag
+        if isinstance(node, MappingNode):
+            for key_node, value_node in node.value:
+                stack.append(value_node)
+                stack.append(key_node)
+        elif isinstance(node, SequenceNode):
+            stack.extend(node.value)
+
+
+def _merge_sources(node: MappingNode) -> list[MappingNode]:
+    """The mappings that the merge keys of ``node`` name, in order. Their
+    values are mappings, as ``_illegal_merge`` has checked."""
+    sources: list[MappingNode] = []
+    for key_node, value_node in node.value:
+        if key_node.tag == _MERGE:
+            sources.extend(value_node.value if isinstance(value_node, SequenceNode) else [value_node])
+    return sources
+
+
+def _flat_values(loader: Any, node: MappingNode, memo: dict[int, list]) -> list:
+    """The pairs that ``node`` holds once its merge keys are resolved as
+    ``flatten_mapping`` resolves them, by key text, without building any
+    value. A mapping without a merge key gives its own pairs. The merged
+    mappings are resolved first, with a stack of their own, and each result
+    is kept in ``memo`` by the node's identity, so that a chain of merges
+    costs the size of its result."""
+    if not any(k.tag == _MERGE for k, _ in node.value):
+        return node.value
+    stack: list[tuple[MappingNode, bool]] = [(node, False)]
+    while stack:
+        m, ready = stack.pop()
+        if id(m) in memo:
+            continue
+        sources = _merge_sources(m)
+        if not ready:
+            stack.append((m, True))
+            stack.extend((src, False) for src in reversed(sources)
+                         if id(src) not in memo and any(k.tag == _MERGE for k, _ in src.value))
+            continue
+        own = [(k, v) for k, v in m.value if k.tag != _MERGE]
+        present = {_key_text(loader.construct_object(k)) for k, _ in own if isinstance(k, ScalarNode)}
+        for src in sources:
+            for key_node, value_node in memo.get(id(src), src.value):
+                if isinstance(key_node, ScalarNode):
+                    key = _key_text(loader.construct_object(key_node))
+                    if key in present:
+                        continue
+                    present.add(key)
+                own.append((key_node, value_node))
+        memo[id(m)] = own
+    return memo[id(node)]
+
+
+def _check_nodes(loader: Any, root: Node) -> None:
+    """Raise ``_Limit`` when the document that ``root`` composes would be
+    nested more than ``MAX_DEPTH`` levels deep or hold more than
+    ``MAX_VALUES`` values. This is ``_check_size`` measured on the nodes, a
+    node that aliases repeat counting each time it appears and a mapping
+    counting the values its merge keys give it (``_flat_values``), so that
+    neither the aliases nor the merges are built before the limits are
+    known."""
+    memo: dict[int, list] = {}
+    n = 0
+    depth = 0
+    level: list[Node] = [root]
+    while level:
+        depth += 1
+        if depth > MAX_DEPTH:
+            raise _Limit("depth")
+        n += len(level)
+        nxt: list[Node] = []
+        for x in level:
+            if n + len(nxt) > MAX_VALUES:
+                break
+            if isinstance(x, MappingNode):
+                nxt.extend(v for _, v in _flat_values(loader, x, memo))
+            elif isinstance(x, SequenceNode):
+                nxt.extend(x.value)
+        if n + len(nxt) > MAX_VALUES:
+            raise _Limit("count")
+        level = nxt
+
+
 def _check_size(data: Any, path: Path) -> None:
     """Refuse ``data`` when it holds more than ``MAX_VALUES`` values or is
     nested more than ``MAX_DEPTH`` levels deep.
@@ -669,7 +828,8 @@ def _check_size(data: Any, path: Path) -> None:
     count. The walk goes one level at a time and stops at the first level that
     passes either limit, so its cost is bounded by the limits and not by the
     size the aliases stand for. The R twin's ``.tf_check_size()`` counts the
-    same way.
+    same way. The reader applies this rule to the composed nodes, before they
+    are built (``_check_nodes``), and the tests hold the two to one result.
     """
     n = 0
     depth = 0
@@ -815,10 +975,14 @@ def load_document(path) -> Any:
     U+0000, which theoryforge cannot read")``, or the same message naming ``a
     lone surrogate``. JSON has no comments, and ``json`` refuses them.
 
-    A file with more than one of these faults is refused for the first in the
-    order of API_SPEC.md section 3, which R's reader follows too. A JSON text is
-    measured for depth before it is parsed, and a syntax error anywhere in it
-    comes before a repeated key. In YAML, a syntax error, a repeated key and an
+    A file that is not valid UTF-8 raises ``ValueError("(<path>) the file is not
+    valid UTF-8")``, and one that holds a NUL byte ``ValueError("(<path>) the file
+    holds a NUL byte, which theoryforge cannot read")``. A file with more than one
+    of these faults is refused for the first in the order of API_SPEC.md section
+    3, which R's reader follows too. A JSON text is measured for depth on its
+    bytes before it is decoded, a file that is not valid UTF-8 or holds a NUL
+    byte is refused next, or first in YAML, and a syntax error anywhere in a JSON
+    text comes before a repeated key. In YAML, a syntax error, a repeated key and an
     alias that names no node come in the order the parser meets them, a repeated
     key where its mapping ends, and a value tagged ``!expr`` once the whole text
     has been parsed, after any alias that names no node. The depth and the count
@@ -829,9 +993,19 @@ def load_document(path) -> Any:
     path = Path(path)
     # os.path.expanduser leaves '~user' as it is when there is no such user, as
     # R does, where Path.expanduser raises.
-    text = Path(os.path.expanduser(path)).read_bytes().decode("utf-8-sig")
-    if json_file and _json_too_deep(text):
+    raw = Path(os.path.expanduser(path)).read_bytes()
+    if raw.startswith(b"\xef\xbb\xbf"):
+        raw = raw[3:]
+    # The depth of a JSON text is read from its bytes, before they are decoded,
+    # as R reads it; Latin-1 gives each byte its own character.
+    if json_file and _json_too_deep(raw.decode("latin-1")):
         raise _too_deep(path)
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise ValueError(f"({path}) the file is not valid UTF-8") from None
+    if "\x00" in text:
+        raise ValueError(f"({path}) the file holds a NUL byte, which theoryforge cannot read")
     twice: set[str] = set()
     try:
         if json_file:
@@ -851,8 +1025,11 @@ def load_document(path) -> Any:
         raise ValueError(f"({path}) the alias '{fault.anchor}' names no node that ends before it") from None
     except _ExprTag:
         raise ValueError(f"({path}) a value is tagged !expr, which theoryforge does not read") from None
-    if not json_file:
-        _check_size(data, path)
+    except _Limit as limit:
+        if limit.what == "depth":
+            raise _too_deep(path) from None
+        message = f"the document holds more than {MAX_VALUES} values once its aliases are expanded"
+        raise ValueError(f"({path}) {message}") from None
     what = _unreadable(data)
     if what:
         raise ValueError(f"({path}) a string holds {what}, which theoryforge cannot read")

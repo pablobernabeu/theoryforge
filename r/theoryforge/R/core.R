@@ -23,7 +23,10 @@ NULL
 #' into a named list.
 #'
 #' The file is read as the Python package's \code{theoryforge.read()} reads
-#' it. The text is UTF-8, and a byte-order mark is ignored. A YAML or JSON
+#' it. The text is UTF-8, and a byte-order mark is ignored. A file that is not
+#' valid UTF-8 stops with \code{(<path>) the file is not valid UTF-8}, and one
+#' that holds a NUL byte with \code{(<path>) the file holds a NUL byte, which
+#' theoryforge cannot read}. A YAML or JSON
 #' sequence is always a list, even with one element, so [tf_validate()] refuses
 #' \code{maturity: [draft]}.
 #' Unquoted \code{y}, \code{Y}, \code{n} and \code{N} stay strings, as do
@@ -54,7 +57,9 @@ NULL
 #' U+0000, which theoryforge cannot read}, or the same message naming \code{a
 #' lone surrogate}. A file with more than one of these faults is refused for
 #' the first in this order. A JSON text is measured for depth before it is
-#' parsed, and a syntax error anywhere in it comes before a repeated key. In
+#' parsed, a file that is not valid UTF-8 or holds a NUL byte is refused next,
+#' or first in YAML, and a syntax error anywhere in a JSON text comes before a
+#' repeated key. In
 #' YAML, a syntax error, a repeated key and an alias that names no node come in
 #' the order the parser meets them, a repeated key where its mapping ends, and
 #' a value tagged \code{!expr} once the whole text has been parsed, after any

@@ -1236,7 +1236,10 @@ def read(path) -> Theory:
 
     The file is read as the R package's ``tf_read()`` reads it. The letter case
     of ``.json`` does not matter, and a leading ``~`` stands for the home
-    directory. A byte-order mark is ignored. Dates and ``y``, ``Y``, ``n`` and
+    directory. A byte-order mark is ignored. A file that is not valid UTF-8
+    raises ``ValueError("(<path>) the file is not valid UTF-8")``, and one that
+    holds a NUL byte ``ValueError("(<path>) the file holds a NUL byte, which
+    theoryforge cannot read")``. Dates and ``y``, ``Y``, ``n`` and
     ``N`` stay strings, and integers are decimal, octal or hexadecimal only, so
     ``1:30`` and ``1_000`` are strings too. YAML is parsed with libyaml, as in
     R, so a tab is read as YAML allows it: as white space after a value, before
@@ -1260,8 +1263,9 @@ def read(path) -> Theory:
     which theoryforge cannot read")``, or the same message naming ``a lone
     surrogate``. JSON has no comments, and ``json`` refuses them. A file with
     more than one of these faults is refused for the first in this order. A
-    JSON text is measured for depth before it is parsed, and a syntax error
-    anywhere in it comes before a repeated key. In YAML, a syntax error, a
+    JSON text is measured for depth before it is parsed, a file that is not
+    valid UTF-8 or holds a NUL byte is refused next, or first in YAML, and a
+    syntax error anywhere in a JSON text comes before a repeated key. In YAML, a syntax error, a
     repeated key and an alias that names no node come in the order the parser
     meets them, a repeated key where its mapping ends, and a value tagged
     ``!expr`` once the whole text has been parsed, after any alias that names

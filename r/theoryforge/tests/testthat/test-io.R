@@ -247,7 +247,9 @@ test_that("a document nested more than 64 levels deep refuses the file", {
   expect_error(tf_read(path), "nested more than 64 levels deep", fixed = TRUE)
   expect_error(tf_read_corpus(path), "nested more than 64 levels deep", fixed = TRUE)
   # Text far deeper than that is refused too, without exhausting the stack:
-  # jsonlite would recurse once for every level.
+  # jsonlite would recurse once for every level. The Python suite also reads
+  # a YAML text 100,000 levels deep, which takes R some 13 seconds, so this
+  # one is 2000 levels deep.
   expect_error(tf_read(io_file(nested(20000L, TRUE), ".json")), "nested more than 64 levels deep",
                fixed = TRUE)
   expect_error(tf_read(io_file(nested(2000L))), "nested more than 64 levels deep", fixed = TRUE)
@@ -264,6 +266,60 @@ test_that("a long chain of merges reads", {
     t <- tf_read(io_file(text))
     expect_identical(t$last, list(k0 = 0L))
     expect_length(t$s, 1000L)
+  }
+})
+
+test_that("a chain of merges too large is refused before it is built", {
+  # Mapping i merges mapping i - 1 and adds a key, so 5000 links, 175 kB of
+  # text, stand for some 12.5 million values. The count resolves the merges
+  # in a probe copy without building them (API_SPEC.md section 3). The Python
+  # suite reads the same text.
+  chain <- paste0(sprintf("  - &m%d {<<: *m%d, k%d: %d}\n", 1:4999, 0:4998, 1:4999, 1:4999),
+                  collapse = "")
+  path <- io_file(paste0("s:\n  - &m0 {k0: 0}\n", chain))
+  took <- system.time(expect_error(
+    tf_read(path),
+    sprintf("(%s) the document holds more than 1000000 values once its aliases are expanded", path),
+    fixed = TRUE
+  ))[["elapsed"]]
+  expect_lt(took, 30)
+})
+
+test_that("a merged key is compared with the mapping's own by its text", {
+  # A merged "1" gives way to the mapping's own 1, and a merged 1 neither
+  # replaces the mapping's own yes nor is dropped beside it (API_SPEC.md
+  # section 3). The Python suite reads the same texts.
+  cases <- list(
+    list('a: &a {"1": x}\nb: {1: y, <<: *a}\n', list("1" = "y")),
+    list("a: &a {1: x}\nb: {yes: y, <<: *a}\n", list("TRUE" = "y", "1" = "x")),
+    list("a: &a {0: x}\nb: {no: y, <<: *a}\n", list("FALSE" = "y", "0" = "x")),
+    list('a: &a {"": x}\nb: {~: y, <<: *a}\n', stats::setNames(list("y"), "")),
+    list("b: {<<: [{1: x}, {true: y}]}\n", list("1" = "x", "TRUE" = "y"))
+  )
+  for (case in cases) {
+    # yaml warns about the empty name it gives a null key.
+    expect_identical(suppressWarnings(tf_read(io_file(case[[1]])))$b, case[[2]], info = case[[1]])
+  }
+})
+
+test_that("bytes that are not UTF-8 or a NUL byte refuse the file after a JSON depth", {
+  # A JSON text is measured for depth on its bytes first, then the bytes must
+  # be UTF-8 without NUL (API_SPEC.md section 3). The Python suite reads the
+  # same bytes.
+  deep <- c(charToRaw('"b": '), charToRaw(strrep("[", 70L)), charToRaw(strrep("]", 70L)))
+  b <- function(...) unlist(lapply(list(...), function(x) if (is.character(x)) charToRaw(x) else as.raw(x)))
+  cases <- list(
+    list(b('{"a": "x', 0xff, 'y", ', deep, "}"), ".json", "the document is nested more than 64 levels deep"),
+    list(b('{"a": "x', 0x00, 'y", ', deep, "}"), ".json", "the document is nested more than 64 levels deep"),
+    list(b('{"a": "x', 0xff, "y", 0x00, '"}'), ".json", "the file is not valid UTF-8"),
+    list(b('{"a": "x', 0x00, 'y"}'), ".json", "the file holds a NUL byte, which theoryforge cannot read"),
+    list(b("a: x", 0xff, "y\n"), ".yaml", "the file is not valid UTF-8"),
+    list(b("a: x", 0x00, "y\nb: [\n"), ".yaml", "the file holds a NUL byte, which theoryforge cannot read")
+  )
+  for (case in cases) {
+    path <- tempfile(fileext = case[[2]])
+    writeBin(case[[1]], path)
+    expect_error(tf_read(path), sprintf("(%s) %s", path, case[[3]]), fixed = TRUE)
   }
 })
 
@@ -286,6 +342,7 @@ test_that("a file with two faults is refused for the one that comes first", {
   dup <- "Duplicate map key: 'a'"
   alias <- "the alias 'u' names no node that ends before it"
   expr <- "a value is tagged !expr, which theoryforge does not read"
+  nul <- "a string holds U+0000, which theoryforge cannot read"
   cases <- list(
     list("yaml", paste0("k: {a: 1, a: 2}\nx: ", deep(70L), "\n"), dup),
     list("yaml", paste0("x: ", deep(70L), "\nk: {a: 1, a: 2}\n"), dup),
@@ -337,13 +394,29 @@ test_that("a file with two faults is refused for the one that comes first", {
     list("json", paste0('{"k": {"a": 1, "a": 2}, "x": ', deep(70L, TRUE), "}"), depth),
     list("json", paste0('{"t": "a\\u0000b", "x": ', deep(70L, TRUE), "}"), depth),
     list("json", paste0('{"t": "\\ud800", "x": ', deep(70L, TRUE), "}"), depth),
-    list("json", '{"k": {"a": 1, "a": 2},}', "syntax")
+    list("json", '{"k": {"a": 1, "a": 2},}', "syntax"),
+    # A form feed or a vertical tab between tokens, which jsonlite reads.
+    list("json", '{"a":\f1}', "syntax"),
+    list("json", '{"a":\v1}', "syntax"),
+    list("json", '{"k": {"a": 1, "a": 2},\f"b": 1}', "syntax"),
+    # A merge key with a value that is not a mapping is refused as its mapping
+    # ends, after a repeated key in it and after an alias inside it.
+    list("yaml", "b: {<<: 1, x: *u}\n", alias),
+    list("yaml", "b:\n  <<: 1\n  x: *u\n", alias),
+    list("yaml", "b: {<<: [1], x: *u}\n", alias),
+    list("yaml", "b: {<<: 1}\nk: {a: 1, a: 2}\n", "merge"),
+    list("yaml", "b: {<<: 1, a: 1, a: 2}\n", dup),
+    # A key of 1021 characters with a NUL escape, which the probe keeps within
+    # the 1024 characters libyaml allows a key.
+    list("yaml", paste0('"', strrep("k", 1017L), '\\0": 1\n'), nul)
   )
   for (case in cases) {
     path <- io_file(case[[2]], paste0(".", case[[1]]))
     if (identical(case[[3]], "syntax")) {
-      expect_error(tf_read(path), if (case[[1]] == "json") "parse error" else "Parser error",
-                   fixed = TRUE, info = case[[2]])
+      expect_error(tf_read(path), if (case[[1]] == "json") "(parse|lexical) error" else "Parser error",
+                   info = case[[2]])
+    } else if (identical(case[[3]], "merge")) {
+      expect_error(tf_read(path), "Illegal merge", fixed = TRUE, info = case[[2]])
     } else {
       expect_error(tf_read(path), sprintf("(%s) %s", path, case[[3]]), fixed = TRUE,
                    info = substr(case[[2]], 1L, 200L))

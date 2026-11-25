@@ -257,12 +257,33 @@ NULL
 # about a missing final newline or re-encodes for the session locale. A UTF-8
 # byte-order mark is dropped, as Python's "utf-8-sig" codec drops it, since
 # jsonlite warns about one and Python's json module refuses one.
-.tf_read_text <- function(path) {
+.tf_read_text <- function(path) .tf_bytes_text(.tf_read_bytes(path), path)
+
+# The bytes of a file, without a leading UTF-8 byte-order mark.
+.tf_read_bytes <- function(path) {
   con <- file(path, open = "rb")
   on.exit(close(con))
   bytes <- readBin(con, "raw", n = file.size(path))
   if (length(bytes) >= 3L && identical(bytes[1:3], as.raw(c(0xef, 0xbb, 0xbf)))) {
     bytes <- bytes[-(1:3)]
+  }
+  bytes
+}
+
+# The bytes as UTF-8 text. A file that is not valid UTF-8 stops with
+# "(<path>) the file is not valid UTF-8", and then one that holds a NUL byte,
+# which no R string can hold and neither YAML nor JSON allows as it stands,
+# with "(<path>) the file holds a NUL byte, which theoryforge cannot read", as
+# in the Python twin (API_SPEC.md section 3).
+.tf_bytes_text <- function(bytes, path) {
+  nul <- bytes == as.raw(0L)
+  check <- bytes
+  check[nul] <- as.raw(0x20L)
+  if (!validUTF8(rawToChar(check))) {
+    stop(sprintf("(%s) the file is not valid UTF-8", path), call. = FALSE)
+  }
+  if (any(nul)) {
+    stop(sprintf("(%s) the file holds a NUL byte, which theoryforge cannot read", path), call. = FALSE)
   }
   text <- rawToChar(bytes)
   Encoding(text) <- "UTF-8"
@@ -417,6 +438,7 @@ NULL
     }
     data
   }
+  .tf_yaml_count_merges(text, path, parse)
   .tf_yaml_refuse_nul(text, path, parse)
   warned <- FALSE
   unknown <- character(0)
@@ -437,6 +459,106 @@ NULL
   if (warned) data <- parse(c(.tf_yaml_handlers, .tf_yaml_number_handlers))
   .tf_yaml_refuse_twice(text, path, parse)
   data
+}
+
+# A long chain of merge keys, each mapping merging the one before, stands for
+# a document whose size grows with the square of the chain, and yaml resolves
+# the merges in C before anything can count them, which took minutes for a
+# text of a few hundred kilobytes. So when the text has a plain merge key, a
+# probe copy in which each `<<` is renamed to a two-character key the text
+# never holds is parsed first, without merges, with a handler that numbers each
+# mapping (an alias keeps its node's number). The values are then counted, and
+# the depth measured, as .tf_check_size() counts them, each mapping with the
+# values its merges give it resolved by name here, the merged mappings first
+# and each result kept by its number. A probe that yaml refuses, one with an
+# alias that names no node and one whose merge has a value other than a
+# mapping or a list of mappings are left to the reading itself, which reports
+# what is wrong. The Python twin measures the composed nodes in the same way
+# (_load._check_nodes()).
+.tf_yaml_count_merges <- function(text, path, parse) {
+  plain <- "(?<![^\\s\\[{,?-])<<(?=[ \\t]*:)"
+  if (!grepl(plain, text, perl = TRUE, useBytes = TRUE)) return(invisible())
+  keys <- c("<=", "<~", "<^", "<|", "<+", "<;", "<!", "<%")
+  mk <- keys[!vapply(keys, grepl, logical(1L), x = text, fixed = TRUE)]
+  if (length(mk) == 0L) return(invisible())
+  mk <- mk[[1L]]
+  probe <- gsub(plain, mk, text, perl = TRUE, useBytes = TRUE)
+  Encoding(probe) <- "UTF-8"
+  number <- 0L
+  # The handlers of the reading, the number handlers included, give the keys
+  # the names the reading gives them, by which merged keys are compared.
+  handlers <- c(.tf_yaml_handlers, .tf_yaml_number_handlers, list(map = function(x) {
+    number <<- number + 1L
+    attr(x, "tf_map") <- number
+    x
+  }))
+  unknown <- FALSE
+  data <- tryCatch(withCallingHandlers(parse(handlers, probe), warning = function(w) {
+    if (startsWith(conditionMessage(w), "Unknown anchor: ")) unknown <<- TRUE
+    invokeRestart("muffleWarning")
+  }), error = function(e) NULL)
+  if (is.null(data) || unknown) return(invisible())
+  is_map <- function(x) !is.null(attr(x, "tf_map"))
+  merges <- function(m) !is.null(names(m)) && any(names(m) == mk)
+  sources <- function(m) {
+    out <- list()
+    for (v in m[names(m) == mk]) out <- c(out, if (is_map(v)) list(v) else v)
+    if (!all(vapply(out, is_map, logical(1L)))) stop("illegal merge")
+    out
+  }
+  memo <- new.env(hash = TRUE, parent = emptyenv())
+  id <- function(m) as.character(attr(m, "tf_map"))
+  flat <- function(m) {
+    stack <- list(m)
+    while (length(stack) > 0L) {
+      top <- stack[[length(stack)]]
+      if (!is.null(memo[[id(top)]])) {
+        stack[[length(stack)]] <- NULL
+        next
+      }
+      srcs <- sources(top)
+      todo <- Filter(function(s) merges(s) && is.null(memo[[id(s)]]), srcs)
+      if (length(todo) > 0L) {
+        stack <- c(stack, rev(todo))
+        next
+      }
+      out <- top[names(top) != mk]
+      for (s in srcs) {
+        given <- if (merges(s)) memo[[id(s)]] else s
+        out <- c(out, given[!(names(given) %in% names(out))])
+      }
+      memo[[id(top)]] <- out
+      stack[[length(stack)]] <- NULL
+    }
+    memo[[id(m)]]
+  }
+  counted <- tryCatch({
+    n <- 0
+    depth <- 0L
+    level <- list(data)
+    while (length(level) > 0L) {
+      depth <- depth + 1L
+      if (depth > .tf_MAX_DEPTH) .tf_too_deep(path)
+      n <- n + length(level)
+      level <- level[vapply(level, is.list, logical(1L))]
+      merged <- which(vapply(level, function(x) is_map(x) && merges(x), logical(1L)))
+      total <- n + sum(lengths(level[-merged]))
+      if (length(merged) == 0L) total <- n + sum(lengths(level))
+      for (k in merged) {
+        level[[k]] <- flat(level[[k]])
+        total <- total + length(level[[k]])
+        if (total > .tf_MAX_VALUES) break
+      }
+      if (total > .tf_MAX_VALUES) {
+        stop(sprintf("(%s) the document holds more than %d values once its aliases are expanded",
+                     path, .tf_MAX_VALUES), call. = FALSE)
+      }
+      level <- unlist(level, recursive = FALSE, use.names = FALSE)
+      if (is.null(level)) level <- list()
+    }
+    TRUE
+  }, error = function(e) if (identical(conditionMessage(e), "illegal merge")) FALSE else stop(e))
+  invisible(counted)
 }
 
 # What libyaml can read as an anchor: an ampersand at the start of the text or
@@ -621,12 +743,19 @@ NULL
 # YAML reader's message. A string holding U+0000 or a lone surrogate is refused
 # after that (.tf_json_unreadable()).
 .tf_read_json <- function(path) {
-  text <- .tf_read_text(path)
+  bytes <- .tf_read_bytes(path)
   # jsonlite recurses in C once for every level, so depth is measured on the
-  # text, before anything parses it.
-  if (.tf_json_too_deep(text)) .tf_too_deep(path)
+  # bytes, before anything parses them.
+  if (.tf_json_too_deep(bytes)) .tf_too_deep(path)
+  text <- .tf_bytes_text(bytes, path)
   ok <- jsonlite::validate(text)
   if (!isTRUE(ok)) stop(sprintf("(%s) %s", path, trimws(attr(ok, "err"))), call. = FALSE)
+  # yajl takes a form feed or a vertical tab for white space between tokens,
+  # which JSON and the Python twin's json do not. validate() refuses either
+  # inside a string, so one left in the text stands between tokens.
+  if (any(bytes == as.raw(0x0BL) | bytes == as.raw(0x0CL))) {
+    stop(sprintf("(%s) lexical error: invalid char in json text.", path), call. = FALSE)
+  }
   bad <- .tf_json_unreadable(text)
   # parse_json(), not fromJSON(), which reads a file or downloads a URL that a
   # short text names when the text is not JSON.
@@ -654,8 +783,8 @@ NULL
 # are compared, which a text that is not valid JSON allows too, and no regular
 # expression is used, since PCRE gives up on a string of some millions of
 # escapes. Python's _load._json_depth() reads the same levels.
-.tf_json_depth <- function(text) {
-  b <- as.integer(charToRaw(text))
+.tf_json_depth <- function(bytes) {
+  b <- as.integer(bytes)
   n <- length(b)
   if (n == 0L) return(0L)
   quotes <- which(b == 0x22L)
@@ -726,17 +855,19 @@ NULL
 # most one level deeper than they nest. Only a text whose brackets reach the
 # limit, or that has brackets inside strings, is measured in full. Python's
 # _load._json_too_deep() decides the same way.
-.tf_json_too_deep <- function(text) {
-  b <- charToRaw(text)
+.tf_json_too_deep <- function(bytes) {
+  b <- bytes
   marks <- b[.tf_JSON_MARK[as.integer(b) + 1L]]
   if (sum(.tf_JSON_STEP[as.integer(marks) + 1L] == 1L) < .tf_MAX_DEPTH) return(FALSE)
-  if (!grepl('\\"', text, fixed = TRUE, useBytes = TRUE)) {
+  n <- length(b)
+  escaped_quote <- n > 1L && any(b[-1L] == as.raw(0x22L) & b[-n] == as.raw(0x5CL))
+  if (!escaped_quote) {
     bare <- as.integer(charToRaw(gsub('""', "", rawToChar(marks), fixed = TRUE, useBytes = TRUE)))
     if (!any(bare == 0x22L) && max(0L, cumsum(.tf_JSON_STEP[bare + 1L])) < .tf_MAX_DEPTH) {
       return(FALSE)
     }
   }
-  .tf_json_depth(text) > .tf_MAX_DEPTH
+  .tf_json_depth(b) > .tf_MAX_DEPTH
 }
 
 # R cannot hold every string a file can spell. jsonlite and yaml cut a string
@@ -834,17 +965,43 @@ NULL
 # Refuse a YAML text that holds U+0000 in a string or key, which yaml would
 # cut short. The NUL escapes (\0, \x00, \u0000 and \U00000000) are escapes only
 # in a double-quoted scalar, and text elsewhere keeps the backslash, so each is
-# replaced by the escape of a mark in a probe copy, which is parsed: the mark
-# appears in a value or a key only where an escape stood in a double-quoted
-# scalar. A repeated key comes first, as in the Python twin, unless the key
-# itself holds U+0000. Any other error of the probe, and an alias that names no
-# node, are left to the reading of the file itself, which reports its own
-# positions. libyaml refuses a surrogate escape.
+# replaced by an escape of the same length for a mark in a probe copy, which is
+# parsed: the mark appears in a value or a key only where an escape stood in a
+# double-quoted scalar. The mark is a control character that the text writes
+# in no escape and that libyaml refuses as it stands, and the escapes keep
+# their length, so that no key of the probe passes the 1024 characters libyaml
+# allows a key that the file keeps within them. A repeated key comes first, as
+# in the Python twin, unless the key itself holds U+0000. Any other error of
+# the probe, and an alias that names no node, are left to the reading of the
+# file itself, which reports its own positions. libyaml refuses a surrogate
+# escape. A text that writes all five control characters below in escapes gets
+# a noncharacter as its mark, whose escape is longer than \0 and \x00.
 .tf_yaml_refuse_nul <- function(text, path, parse) {
-  nul <- "(?<!\\\\)((?:\\\\\\\\)*)\\\\(?:0|x00|u0000|U00000000)"
+  lead <- "(?<!\\\\)((?:\\\\\\\\)*)\\\\"
+  nul <- paste0(lead, "(?:0|x00|u0000|U00000000)")
   if (!grepl(nul, text, perl = TRUE, useBytes = TRUE)) return(invisible())
-  mark <- .tf_free_marks(text)[["U+0000"]]
-  probe <- gsub(nul, sprintf("\\1\\\\u%04X", mark), text, perl = TRUE, useBytes = TRUE)
+  # BEL, backspace, escape, vertical tab and form feed, each with a short escape.
+  short <- c(a = 0x07, b = 0x08, e = 0x1B, v = 0x0B, f = 0x0C)
+  used <- vapply(seq_along(short), function(i) {
+    cp <- short[[i]]
+    grepl(paste0("\\", names(short)[[i]]), text, fixed = TRUE, useBytes = TRUE) ||
+      grepl(sprintf("(?i)\\\\(?:x%02X|u%04X|U%08X)", cp, cp, cp), text, perl = TRUE, useBytes = TRUE)
+  }, logical(1L))
+  if (all(used)) {
+    mark <- .tf_free_marks(text)[["U+0000"]]
+    probe <- gsub(nul, sprintf("\\1\\\\u%04X", mark), text, perl = TRUE, useBytes = TRUE)
+  } else {
+    k <- which(!used)[[1L]]
+    mark <- short[[k]]
+    probe <- gsub(paste0(lead, "0"), paste0("\\1\\\\", names(short)[[k]]), text, perl = TRUE,
+                  useBytes = TRUE)
+    probe <- gsub(paste0(lead, "x00"), sprintf("\\1\\\\x%02X", mark), probe, perl = TRUE,
+                  useBytes = TRUE)
+    probe <- gsub(paste0(lead, "u0000"), sprintf("\\1\\\\u%04X", mark), probe, perl = TRUE,
+                  useBytes = TRUE)
+    probe <- gsub(paste0(lead, "U00000000"), sprintf("\\1\\\\U%08X", mark), probe, perl = TRUE,
+                  useBytes = TRUE)
+  }
   Encoding(probe) <- "UTF-8"
   unknown <- FALSE
   data <- tryCatch(withCallingHandlers(parse(.tf_yaml_handlers, probe), warning = function(w) {

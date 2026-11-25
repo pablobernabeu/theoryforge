@@ -1,5 +1,9 @@
 import json
 import math
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -352,6 +356,125 @@ def test_a_long_chain_of_merges_reads(tmp_path):
         assert len(t.data["s"]) == 1000
 
 
+def test_a_chain_of_merges_too_large_is_refused_before_it_is_built(tmp_path):
+    # Mapping i merges mapping i - 1 and adds a key, so 5000 links, 175 kB of
+    # text, stand for some 12.5 million values. The count resolves the merges
+    # without building them (API_SPEC.md section 3). The R suite reads the
+    # same text.
+    chain = "".join(f"  - &m{i} {{<<: *m{i - 1}, k{i}: {i}}}\n" for i in range(1, 5000))
+    path = _file(tmp_path, "chain.theory.yaml", "s:\n  - &m0 {k0: 0}\n" + chain)
+    start = time.perf_counter()
+    with pytest.raises(ValueError) as err:
+        tf.read(path)
+    assert time.perf_counter() - start < 10
+    assert str(err.value) == (
+        f"({path}) the document holds more than 1000000 values once its aliases are expanded")
+
+
+@pytest.mark.parametrize(("max_values", "max_depth"), [(30, 4), (200, 8), (5000, 64)])
+def test_the_count_on_the_nodes_agrees_with_the_count_on_the_document(monkeypatch, max_values, max_depth):
+    # The reader counts the values and measures the depth on the composed
+    # nodes, merges resolved but not built (_check_nodes). The rule is that of
+    # _check_size on the document read, and the two give one result on every
+    # fixture and on texts with aliases and merges, at limits low enough to
+    # refuse many of them.
+    from theoryforge import _load
+    root = Path(__file__).resolve().parents[2] / "fixtures"
+    texts = [p.read_bytes().decode("utf-8-sig") for p in sorted(root.rglob("*.yaml"))]
+    texts = [t for t in texts if "\t" not in t and "\ufeff" not in t]
+    texts += [
+        "a: &a {x: [1, 2], y: {z: 3}}\nb: {<<: *a, x: 0}\nc: [*a, *a, {<<: [*a, *a]}]\n",
+        "a: &a {1: x}\nb: &b {yes: y, <<: *a}\nc: {<<: [*b, *a], 1: z}\nd: [*b, *b, *b]\n",
+        "s:\n  - &m0 {k0: [0]}\n" + "".join(f"  - &m{i} {{<<: *m{i - 1}, k{i}: [{i}]}}\n" for i in range(1, 40)),
+    ]
+    results = []
+    for text in texts:
+        try:
+            data, _ = _load._load_yaml(text)
+        except Exception:
+            continue
+        monkeypatch.setattr(_load, "MAX_VALUES", max_values)
+        monkeypatch.setattr(_load, "MAX_DEPTH", max_depth)
+        try:
+            _load._check_size(data, Path("x"))
+            want = "fits"
+        except ValueError as err:
+            want = "deep" if "nested" in str(err) else "many"
+        loader = _load._TolerantLoader(text)
+        try:
+            root_node = loader.get_single_node()
+            _load._check_nodes(loader, root_node)
+            got = "fits"
+        except _load._Limit as limit:
+            got = "deep" if limit.what == "depth" else "many"
+        finally:
+            loader.dispose()
+        monkeypatch.undo()
+        results.append(got)
+        assert got == want, text[:200]
+    assert len(results) > 50
+
+
+def test_a_merged_key_is_compared_with_the_mapping_s_own_by_its_text(tmp_path):
+    # A merged "1" gives way to the mapping's own 1, and a merged 1 neither
+    # replaces the mapping's own yes nor is dropped beside it, since R names
+    # the keys 1 and TRUE (API_SPEC.md section 3). The R suite reads the same
+    # texts.
+    cases = [('a: &a {"1": x}\nb: {1: y, <<: *a}\n', {"1": "y"}),
+             ("a: &a {1: x}\nb: {yes: y, <<: *a}\n", {"TRUE": "y", "1": "x"}),
+             ("a: &a {0: x}\nb: {no: y, <<: *a}\n", {"FALSE": "y", "0": "x"}),
+             ('a: &a {"": x}\nb: {~: y, <<: *a}\n', {"": "y"}),
+             ("b: {<<: [{1: x}, {true: y}]}\n", {"1": "x", "TRUE": "y"})]
+    for text, b in cases:
+        assert tf.read(_file(tmp_path, "merge.theory.yaml", text)).data["b"] == b, text
+
+
+def test_bytes_that_are_not_utf8_or_a_nul_byte_refuse_the_file_after_a_json_depth(tmp_path):
+    # A JSON text is measured for depth on its bytes first, then the bytes
+    # must be UTF-8 without NUL (API_SPEC.md section 3). The R suite reads
+    # the same bytes.
+    deep = b'"b": ' + b"[" * 70 + b"]" * 70
+    cases = [(b'{"a": "x\xffy", ' + deep + b"}", ".json", "the document is nested more than 64 levels deep"),
+             (b'{"a": "x\x00y", ' + deep + b"}", ".json", "the document is nested more than 64 levels deep"),
+             (b'{"a": "x\xffy\x00"}', ".json", "the file is not valid UTF-8"),
+             (b'{"a": "x\x00y"}', ".json", "the file holds a NUL byte, which theoryforge cannot read"),
+             (b"a: x\xffy\n", ".yaml", "the file is not valid UTF-8"),
+             (b"a: x\x00y\nb: [\n", ".yaml", "the file holds a NUL byte, which theoryforge cannot read")]
+    for raw, suffix, message in cases:
+        path = tmp_path / ("bytes.theory" + suffix)
+        path.write_bytes(raw)
+        with pytest.raises(ValueError) as err:
+            tf.read(path)
+        assert str(err.value) == f"({path}) {message}", raw
+
+
+def test_a_text_too_deep_for_pyyaml_s_composers_is_refused_in_a_fresh_interpreter(tmp_path):
+    # PyYAML's C composer recurses once for each level and, without the
+    # reader's guard (_load._text_too_deep), would exhaust the C stack on this
+    # block sequence 100,000 levels deep and kill the interpreter. So the
+    # reading runs in a subprocess, whose crash fails the test rather than the
+    # run. The R suite reads a text 2000 levels deep, since R takes some 13
+    # seconds on this one.
+    path = _file(tmp_path, "deep.theory.yaml", "x:\n  " + "- " * 100000 + "s\n")
+    code = ("import sys\nimport theoryforge as tf\ntry:\n    tf.read(sys.argv[1])\n"
+            "except ValueError as err:\n    print(err)\n")
+    src = str(Path(tf.__file__).resolve().parents[1])
+    res = subprocess.run([sys.executable, "-c", code, str(path)], capture_output=True, text=True,
+                         timeout=600, env={**os.environ, "PYTHONPATH": src})
+    assert res.returncode == 0, res.stderr
+    assert res.stdout.strip() == f"({path}) the document is nested more than 64 levels deep"
+
+
+@pytest.mark.parametrize("text", ["a: !!bool maybe\n", "a: !!timestamp xyz\n", "a: !!map [1, 2]\n",
+                                  "a: !!int abc\n", "a: !!float abc\n"])
+def test_an_explicit_tag_python_cannot_read_raises_a_constructor_error(tmp_path, text):
+    # Explicit tags are outside the contract, and R reads these as NA or text.
+    # Python refuses them as YAML errors, not with KeyError, AttributeError,
+    # TypeError or a bare ValueError.
+    with pytest.raises(yaml.constructor.ConstructorError):
+        tf.read(_file(tmp_path, "tag.theory.yaml", text))
+
+
 def test_a_deep_text_is_refused_after_a_syntax_error_and_beside_a_later_document(tmp_path):
     # Python composes a text nested more than 1000 levels deep without
     # PyYAML's composers, which recurse, so a syntax error later in it is
@@ -386,6 +509,8 @@ _DUP = "Duplicate map key: 'a'"
 _ALIAS = "the alias 'u' names no node that ends before it"
 _SYNTAX = "syntax"
 _EXPR = "a value is tagged !expr, which theoryforge does not read"
+_MERGE_FAULT = "merge"
+_NUL = "a string holds U+0000, which theoryforge cannot read"
 
 # Files with two faults, and the one both readers report (API_SPEC.md section
 # 3, "Order of refusals"). _SYNTAX stands for the parser's own error. The R
@@ -442,6 +567,20 @@ ORDER_FAULTS = [
     ("json", '{"t": "a\\u0000b", "x": ' + _deep(70, True) + "}", _DEPTH),
     ("json", '{"t": "\\ud800", "x": ' + _deep(70, True) + "}", _DEPTH),
     ("json", '{"k": {"a": 1, "a": 2},}', _SYNTAX),
+    # A form feed or a vertical tab between tokens, which jsonlite reads.
+    ("json", '{"a":\f1}', _SYNTAX),
+    ("json", '{"a":\v1}', _SYNTAX),
+    ("json", '{"k": {"a": 1, "a": 2},\f"b": 1}', _SYNTAX),
+    # A merge key with a value that is not a mapping is refused as its mapping
+    # ends, after a repeated key in it and after an alias inside it.
+    ("yaml", "b: {<<: 1, x: *u}\n", _ALIAS),
+    ("yaml", "b:\n  <<: 1\n  x: *u\n", _ALIAS),
+    ("yaml", "b: {<<: [1], x: *u}\n", _ALIAS),
+    ("yaml", "b: {<<: 1}\nk: {a: 1, a: 2}\n", _MERGE_FAULT),
+    ("yaml", "b: {<<: 1, a: 1, a: 2}\n", _DUP),
+    # A key of 1021 characters with a NUL escape, which R's probe keeps within
+    # the 1024 characters libyaml allows a key.
+    ("yaml", '"' + "k" * 1017 + '\\0": 1\n', _NUL),
 ]
 
 
@@ -452,6 +591,11 @@ def test_a_file_with_two_faults_is_refused_for_the_one_that_comes_first(tmp_path
         # The parser's own error, which R gives as a 'Parser error', and not
         # the refusal of a text nested deeper than libyaml allows.
         with pytest.raises(json.JSONDecodeError if suffix == "json" else yaml.parser.ParserError):
+            tf.read(path)
+        return
+    if message == _MERGE_FAULT:
+        # R gives yaml's 'Illegal merge'.
+        with pytest.raises(yaml.constructor.ConstructorError, match="for merging"):
             tf.read(path)
         return
     with pytest.raises(ValueError) as err:
