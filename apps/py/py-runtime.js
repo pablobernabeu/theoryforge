@@ -23,7 +23,7 @@ import tempfile
 import warnings
 
 import theoryforge as tf
-from theoryforge import lit_diagram, litmap, read_corpus
+from theoryforge import _resources, lit_diagram, litmap, read_corpus
 from theoryforge._access import field, items, text
 
 _state = {"corpora": {}}
@@ -107,10 +107,13 @@ def _validation(t):
 
 # The checklist with the app's cycles setting. The result says which reading it
 # gives. The package draws the grid with the default, so the grid is drawn only
-# for that reading.
+# for that reading. Each item's criterion comes from the checklist the package
+# reads, so that the app shows it beside the item's id.
 def _check(t, cycles="refuse"):
+    criteria = {text(field(it, "id")): text(field(it, "criterion")) for it in items(_resources.checklist(), "items")}
     return {"report": t.check(cycles=cycles),
-            "svg": t.diagram("rigour") if cycles == "refuse" else None, "cycles": cycles}
+            "svg": t.diagram("rigour") if cycles == "refuse" else None, "cycles": cycles,
+            "criteria": criteria}
 
 # The checklist's score and gate, which the card and the editor show, or the
 # message of a theory the checklist refuses. An error without a message, such
@@ -544,6 +547,12 @@ const RT = {
     return !!(e && e.shipped);
   },
 
+  // The name a diagram's file takes, as the app saves it: the view "rigour"
+  // is saved as checklist.svg.
+  _diagFile(type) {
+    return ((window.TF && window.TF.DIAG_FILE) || {})[type] || type;
+  },
+
   async run(opId, params) {
     const out = this._app.run(opId, JSON.stringify(this._mapParams(opId, params) || {}));
     return { raw: JSON.parse(this._str(out)), code: this.code(opId, params) };
@@ -598,7 +607,8 @@ const RT = {
       case "check": {
         const c = p.cycles || "refuse";
         const call = `theory.check(${cycles})`;
-        const grid = c === "refuse" ? `\n\n# The checklist grid as SVG:\nwith open("rigour.svg", "w", encoding="utf-8") as fh:\n    fh.write(theory.diagram("rigour"))\nprint("Wrote rigour.svg")` : "";
+        const f = this._diagFile("rigour") + ".svg";
+        const grid = c === "refuse" ? `\n\n# The checklist grid as SVG:\nwith open("${f}", "w", encoding="utf-8") as fh:\n    fh.write(theory.diagram("rigour"))\nprint("Wrote ${f}")` : "";
         return `${head}\n\nreport = ${call}\nprint("Checklist score:", report["aggregate_score"])   # 0-100\nprint("Gate:", report["gate"])                        # pass / blocked / advisory${grid}`;
       }
       case "validate":
@@ -620,7 +630,8 @@ const RT = {
       case "diagram": {
         const t = p.type;
         if (window.TF.DIAG_SVG.includes(t)) {
-          return `${head}\n\nir = theory.diagram("${t}")\n# '${t}' is emitted directly as SVG:\nwith open("${t}.svg", "w", encoding="utf-8") as fh:\n    fh.write(ir)\nprint("Wrote ${t}.svg")`;
+          const f = this._diagFile(t) + ".svg";
+          return `${head}\n\nir = theory.diagram("${t}")\n# '${t}' is emitted directly as SVG:\nwith open("${f}", "w", encoding="utf-8") as fh:\n    fh.write(ir)\nprint("Wrote ${f}")`;
         }
         if (t === "causal_dag") {
           return `${head}\n\nir = theory.diagram("causal_dag")\nprint(ir)\n# This is dagitty model code, which Graphviz cannot read. Paste it into\n# https://dagitty.net to draw the graph and examine it there.`;

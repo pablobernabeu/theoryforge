@@ -16,7 +16,8 @@
 //     string array, and checks that the theory stays valid and that the saved
 //     file keeps the hash;
 //   - checks the layout at 390 and 768 px wide (no sideways scroll, the
-//     header's buttons on screen, the sidebar not sticky) and the contrast of
+//     header's buttons on screen, the sidebar not sticky, the checklist's
+//     table readable without scrolling sideways) and the contrast of
 //     coloured text in the light and the dark theme.
 // The displayed text of the two apps is then compared, operation by
 // operation, where the packages promise the same output: the readings, the
@@ -227,7 +228,7 @@ async function buildTheory(page, lang) {
   const lint = await page.textContent("#edLint");
   const summary = await page.textContent("#summaryWrap");
   if (!/well-formed/.test(summary) || /problem/.test(summary)) fail(`${lang} editor`, "the built theory is not well-formed: " + lint.slice(0, 400));
-  if (!/checklist \d+(\.\d+)? · gate (pass|blocked|advisory)/.test(lint)) fail(`${lang} editor`, "the lint bar shows no checklist score: " + lint.slice(0, 200));
+  if (!/checklist \d+\.\d · gate (pass|blocked|advisory)/.test(lint)) fail(`${lang} editor`, "the lint bar shows no checklist score with its decimal: " + lint.slice(0, 200));
   const src = await page.inputValue("#edSource");
   if (!/edited-demo/.test(src) || !/Task demand/.test(src)) fail(`${lang} editor`, "the source pane does not follow the forms");
   // An empty definition is reported beside the field.
@@ -391,6 +392,20 @@ async function layout(page, lang) {
     });
     const where = `${lang} ${width}px ${tab.slice(4).toLowerCase()}`;
     if (m.sw > m.cw + 1) fail(where, `the page scrolls sideways (${m.sw} > ${m.cw})`);
+    // The checklist's table, with each item's criterion, fits the result
+    // panel, so that a criterion is read without scrolling sideways.
+    if (tab === "#tabResult") {
+      await page.click('.op[data-op="check"]'); await page.click("#runBtn"); await idle(page);
+      const t = await page.evaluate(() => {
+        const w = [...document.querySelectorAll("#output .tablewrap")].find((x) => x.querySelector("table.stack"));
+        return w ? { sw: w.scrollWidth, cw: w.clientWidth, crit: w.querySelectorAll(".crit").length } : null;
+      });
+      if (!t) fail(where, "the checklist shows no item table");
+      else {
+        if (t.sw > t.cw + 1) fail(where, `the checklist's table scrolls sideways (${t.sw} > ${t.cw})`);
+        if (t.crit !== 12) fail(where, `the checklist's table shows ${t.crit} criteria for twelve items`);
+      }
+    }
     for (const k of ["help", "theme"]) if (!m[k] || m[k].r > m.cw || m[k].l < 0) fail(where, `the ${k} button is off screen`);
     if (m.sidebar === "sticky") fail(where, "the sidebar is still sticky");
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${lang}-${width}-${tab.slice(4).toLowerCase()}.png`), fullPage: false });
@@ -426,7 +441,7 @@ async function contrast(page, lang) {
         return out;
       };
       const sel = [".op.active .on", ".linklike", "main a", "footer a", ".error .et", "ul.fp li", ".ed-sec .sp",
-        ".chip", ".note", ".tabs [role=tab]", "label.field > span", ".result-intro p"];
+        ".chip", ".note", ".tabs [role=tab]", "label.field > span", ".result-intro p", "table.grid .crit"];
       const out = [];
       for (const s of sel) for (const e of document.querySelectorAll(s)) {
         if (!e.offsetParent || !e.textContent.trim()) continue;
@@ -457,8 +472,12 @@ async function wording(page, lang, record, name) {
   // The app's own text: the guide and the reading, which come first. The grid
   // is the package's figure.
   if (/rigour|out of 100|\/ 100/i.test(check.split("\n")[0])) fail(`${lang} wording`, "the checklist's guide or reading still names rigour or a score out of 100");
-  const chip = await page.evaluate(() => { const c = document.querySelector("#summaryScore"); return c ? [c.textContent, c.getAttribute("title") || ""] : ["", ""]; });
-  if (!/^checklist \d+(\.\d)? · gate (pass|blocked|advisory)$/.test(chip[0])) fail(`${lang} wording`, "the card's chip reads " + chip[0]);
+  if (!/The checklist score is \d+\.\d\./.test(check)) fail(`${lang} wording`, "the checklist's reading does not write the score with its decimal");
+  // Each item's criterion, as the package's checklist states it, stands
+  // below its id.
+  if (!check.includes("At least one prediction is typed point, interval or directional")) fail(`${lang} wording`, "the checklist's table does not show the criteria");
+  const chip = await page.evaluate(() => { const c = document.querySelector("#summaryScore"); return c ? [c.innerHTML, c.getAttribute("title") || ""] : ["", ""]; });
+  if (!/^checklist \d+\.\d · gate (pass|blocked|advisory)$/.test(chip[0])) fail(`${lang} wording`, "the card's chip reads " + chip[0]);
   if (!/^The checklist score describes how completely the file states what checklist \d+\.\d+ asks for\. The score does not show that the theory is true or well reasoned\.$/.test(chip[1])) {
     fail(`${lang} wording`, "the chip's title is " + chip[1]);
   }
@@ -467,6 +486,22 @@ async function wording(page, lang, record, name) {
     fail(`${lang} wording`, "the simulation's figure lacks its caption or axis titles");
   }
   if (!/At k = 1 and damping = 0\.5, the values (grow|settle|change too little)/.test(sim)) fail(`${lang} wording`, "the simulation's reading does not name k and the damping");
+  // The checklist grid is offered under that name, and the claim-form
+  // rubric's chart writes its values with one decimal.
+  const label = await page.evaluate(() => window.TF.OPS.find((o) => o.id === "diagram").params[0].labels.rigour);
+  if (label !== "Checklist grid") fail(`${lang} wording`, "the diagram option for the checklist grid reads " + label);
+  const sev = (record[name + " :: severity"] || {}).text || "";
+  if (/\d\.\d{3}(?!\d)/.test(sev.slice(sev.indexOf("Rubric chart")))) fail(`${lang} wording`, "the rubric's chart writes a value with three decimals");
+}
+
+// The shipped amendment of the panic network gives up a sign the prior's
+// graph fixed, and its reading says so, beside a verdict in a neutral pill.
+async function amendment(page, lang, record) {
+  const key = Object.keys(record).find((k) => / :: appraise$/.test(k) && /Signs lost ?effect of c_perceived_threat on c_avoidance: positive/.test(record[k].text || ""));
+  if (!key) { fail(`${lang} amendment`, "no appraisal reports the sign the shipped amendment gives up"); return; }
+  if (!record[key].text.includes("It gives up content the prior held, so it cannot be progressive: 1 signed effect of the prior's graph (effect of c_perceived_threat on c_avoidance: positive).")) {
+    fail(`${lang} amendment`, "the appraisal's reading does not name the content the amendment gives up");
+  }
 }
 
 // ---- main --------------------------------------------------------------------
@@ -496,6 +531,7 @@ try {
       if (n === 1) await wording(page, lang, record, name);
       console.log(`${lang}: ${name} done`);
     }
+    if (MAX_EX === Infinity) await amendment(page, lang, record);
     await buildTheory(page, lang);
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, `${lang}-editor.png`) });
     await runAll(page, lang, "edited theory", record);
