@@ -918,7 +918,10 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5,
 #' @export
 tf_lit_diagram <- function(obj, type = "keyword_cooccurrence", max_edges = NULL) {
   if (!is.null(max_edges)) max_edges <- .tf_positive_int(max_edges, "max_edges")
-  if (type %in% c("keyword_cooccurrence", "co_citation")) {
+  # A type that is not one string falls through to the refusal below, so
+  # that NULL and a vector give its message.
+  if (is.character(type) && length(type) == 1L &&
+      type %in% c("keyword_cooccurrence", "co_citation")) {
     edges <- obj[[type]]
     if (is.null(edges)) edges <- list()
     if (!is.null(max_edges) && length(edges) > max_edges) {

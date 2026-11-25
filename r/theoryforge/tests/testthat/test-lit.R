@@ -197,6 +197,15 @@ test_that("tf_lit_diagram rejects unknown types", {
   expect_error(tf_lit_diagram(lm, "mindmap"), paste0(
     "unknown lit diagram type 'mindmap'; expected one of ",
     "keyword_cooccurrence, co_citation, theme_landscape"), fixed = TRUE)
+  # A value that is not one string is written as deparse() writes it. NULL and
+  # character(0) stopped with 'argument is of length zero', and two strings
+  # with 'the condition has length > 1'. Python writes None alike.
+  for (case in list(list(NULL, "NULL"), list(character(0), "character(0)"),
+                    list(c("co_citation", "x"), 'c("co_citation", "x")'))) {
+    expect_error(tf_lit_diagram(lm, case[[1]]), paste0(
+      "unknown lit diagram type ", case[[2]], "; expected one of ",
+      "keyword_cooccurrence, co_citation, theme_landscape"), fixed = TRUE)
+  }
 })
 
 # -- validated arguments and corpora (API_SPEC.md section 14) -----------------
