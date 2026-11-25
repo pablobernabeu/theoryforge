@@ -198,10 +198,10 @@ NULL
   # prior version the checklist cannot tell an assumption made before the test
   # from one made after it, and tf_appraise_amendment(), which compares
   # versions, infers the anomaly an undeclared addition answers. An assessed
-  # assumption is ad hoc, and fails the item, when nothing it protects besides
-  # the anomaly is corroborated, by the rule of the amendment appraisal
-  # (.tf_classify_auxiliary() in develop.R). With no prior version to compare,
-  # every prediction it protects counts. Core assumptions are not counted:
+  # assumption fails the item when nothing it protects besides the anomaly is
+  # corroborated, which the amendment appraisal (.tf_classify_auxiliary() in
+  # develop.R) classes as ad hoc or, while all of it is untested, as pending.
+  # With no prior version to compare, every prediction it protects counts. Core assumptions are not counted:
   # every derivation uses auxiliaries (Meehl, 1990a), and a ratio of
   # assumptions to propositions would penalise declaring them.
   defensive <- Filter(function(x) .tf_ne_str(.tf_str(x, "added_for")), aux)

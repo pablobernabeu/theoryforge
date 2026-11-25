@@ -15,8 +15,8 @@ The submission also brings the changes of 0.8.0 that NEWS.md lists. Among
 them are new functions that read a theory's claims against its causal graph,
 set the theory against a rival, list its equivalent models, hash its content
 and read DAGitty model code. Some results change, and NEWS.md lists those
-changes under 'Changed results'. In particular, tf_check() uses version 3.0 of
-the package's rigour checklist, so the same theory can get a different score.
+changes under 'Changed results'. In particular, tf_check() uses version 3.1 of
+the package's checklist, so the same theory file can get a different score.
 NEWS.md also keeps the section of 0.7.1, a patch with the fix alone that was
 prepared but not submitted, and whose changes are part of 0.8.0.
 

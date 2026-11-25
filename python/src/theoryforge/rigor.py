@@ -228,12 +228,13 @@ def _check_items(T: dict, thr: dict, cycles: str) -> tuple[dict, list[str]]:
     # no prior version the checklist cannot tell an assumption made before the
     # test from one made after it, and appraise_amendment(), which compares
     # versions, infers the anomaly an undeclared addition answers. An assessed
-    # assumption is ad hoc, and fails the item, when nothing it protects
-    # besides the anomaly is corroborated, by the rule of the amendment
-    # appraisal (_status.classify_auxiliary). With no prior version to compare,
-    # every prediction it protects counts. Core assumptions are not counted:
-    # every derivation uses auxiliaries (Meehl, 1990a), and a ratio of
-    # assumptions to propositions would penalise declaring them.
+    # assumption fails the item when nothing it protects besides the anomaly is
+    # corroborated, which the amendment appraisal (_status.classify_auxiliary)
+    # classes as ad hoc or, while all of it is untested, as pending. With no
+    # prior version to compare, every prediction it protects counts. Core
+    # assumptions are not counted: every derivation uses auxiliaries (Meehl,
+    # 1990a), and a ratio of assumptions to propositions would penalise
+    # declaring them.
     defensive = [x for x in aux if ne_str(text(field(x, "added_for")))]
     if not defensive:
         out["parsimony"] = ("n/a", None)
