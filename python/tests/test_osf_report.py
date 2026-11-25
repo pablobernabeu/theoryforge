@@ -157,7 +157,7 @@ LISTING = json.dumps({"data": [
      "links": {"upload": "https://files.example/other"}},
     {"type": "files", "attributes": {"kind": "file", "name": "t.dossier.md"},
      "links": {"upload":
-               "https://files.example/v1/resources/abc12/providers/osfstorage/f1?kind=file"}},
+               "https://files.de-1.osf.io/v1/resources/abc12/providers/osfstorage/f1?kind=file"}},
 ]}).encode("utf-8")
 
 
@@ -170,7 +170,35 @@ def test_overwrite_puts_a_new_version_to_the_existing_files_upload_link(transpor
     assert t.calls[0].get_header("Authorization") == "Bearer secret"
     assert t.calls[0].data is None
     assert t.calls[1].full_url == (
-        "https://files.example/v1/resources/abc12/providers/osfstorage/f1?kind=file")
+        "https://files.de-1.osf.io/v1/resources/abc12/providers/osfstorage/f1?kind=file")
+
+
+def _listing(link):
+    return json.dumps({"data": [{"attributes": {"kind": "file", "name": "t.dossier.md"},
+                                 "links": {"upload": link}}]}).encode("utf-8")
+
+
+@pytest.mark.parametrize("link", ["http://files.osf.io/v1/f1", "https://example.org/x",
+                                  "https://files.osf.io.example.org/x", "https://osf.io@example.org/x",
+                                  "file:///tmp/x", "https://[::1]/x"])
+def test_overwrite_refuses_an_upload_link_outside_osf_storage(transport, link):
+    # The token goes with the PUT, so a listing that named another server, or
+    # an address in clear text, would have handed it over. test-osf.R pins
+    # the same links and message.
+    t = transport((200, _listing(link)))
+    with pytest.raises(ValueError) as err:
+        _theory().osf_push(token="secret", node="abc12", dry_run=False, overwrite=True)
+    assert str(err.value) == f"OSF lists t.dossier.md with an upload link outside OSF storage: {link}"
+    assert [r.get_method() for r in t.calls] == ["GET"]
+
+
+def test_overwrite_takes_an_upload_link_on_the_storage_host_or_osf_io(transport):
+    for link, base in (("HTTPS://Files.US.OSF.IO:443/f1", BASE),
+                       ("https://storage.example/v1/f1", "https://storage.example/v1/resources/")):
+        t = transport((200, _listing(link)), (200, b"{}"))
+        _theory().osf_push(token="secret", node="abc12", dry_run=False, overwrite=True,
+                           base_url=base)
+        assert [r.get_method() for r in t.calls] == ["GET", "PUT"]
 
 
 def test_an_upload_link_without_a_query_gains_kind_file():

@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import io
 import json
+import re
 import urllib.error
 from urllib.parse import quote as _quote
 
 from ._access import text
 from ._compat import theory_keyword
+from ._text import ascii_lower
 from .dossier import dossier as _dossier
 
 _DEFAULT_BASE = "https://files.osf.io/v1/resources/"
@@ -118,6 +120,36 @@ def _upload_link(body: bytes, fname: str) -> str | None:
     return None
 
 
+_HTTPS = re.compile(r"[Hh][Tt][Tt][Pp][Ss]://([^/?#]*)")
+
+
+def _https_host(url: str) -> str | None:
+    """The host of an https address, in lower case, or None.
+
+    The host is what follows ``https://`` up to the first ``/``, ``?`` or ``#``,
+    without the user information before its last ``@`` or a port. An address
+    that is not https, or whose host is not a name of letters, digits, dots
+    and hyphens, has none. R's ``.tf_https_host()`` reads it alike.
+    """
+    m = _HTTPS.match(url)
+    if m is None:
+        return None
+    host = ascii_lower(re.sub(r":[0-9]*\Z", "", re.sub(r"(?s)^.*@", "", m.group(1))))
+    return host if re.fullmatch(r"[a-z0-9.-]+", host) else None
+
+
+def _check_upload_link(link: str, fname: str, base_url: str) -> None:
+    """Refuse an upload link that is not https on the storage host or on osf.io.
+
+    The token goes with the PUT, so a listing that named another server, or an
+    address in clear text, would hand it over. WaterButler's regional storage
+    hosts end in ``.osf.io``.
+    """
+    host = _https_host(link)
+    if host is None or not (host == _https_host(base_url) or host.endswith(".osf.io")):
+        raise ValueError(f"OSF lists {fname} with an upload link outside OSF storage: {link}")
+
+
 def _update_url(link: str) -> str:
     """WaterButler updates a file with ``PUT <upload link>?kind=file``.
 
@@ -148,7 +180,10 @@ def osf_push(theory, token: str | None = None, node: str | None = None,
     version-specific ``filename``, or ``overwrite=True`` to add a new version of the existing
     file: the folder is listed first and the dossier is sent to that file's upload link, the
     WaterButler route that records a new OSF version. When the folder holds no file of that
-    name, ``overwrite=True`` creates it as usual.
+    name, ``overwrite=True`` creates it as usual. The token goes with that PUT, so the link
+    must be an https address on the host of ``base_url`` or on a host ending in ``.osf.io``,
+    where WaterButler keeps its regional storage, and any other link is refused before
+    anything is sent.
 
     Returns:
         With ``dry_run=True``, ``{dry_run: True, request: {method, url, filename,
@@ -165,7 +200,9 @@ def osf_push(theory, token: str | None = None, node: str | None = None,
         ValueError: when ``overwrite`` is not a bool or a live push lacks ``token`` or
             ``node``, when ``check()`` refuses the theory (the dossier is built first, so with
             ``dry_run=True`` as well) and when the folder listing that ``overwrite=True`` reads
-            cannot be read or lists the file without an upload link.
+            cannot be read, lists the file without an upload link or with one outside OSF
+            storage (``OSF lists <filename> with an upload link outside OSF storage:
+            <link>``).
     """
     if not isinstance(overwrite, bool):
         raise ValueError("overwrite must be True or False")
@@ -204,6 +241,7 @@ def osf_push(theory, token: str | None = None, node: str | None = None,
         _, listing = _send("GET", lookup_url, token, None, "OSF folder listing")
         link = _upload_link(listing, fname)
         if link is not None:
+            _check_upload_link(link, fname, base_url)
             put_url = _update_url(link)
     status, _ = _send("PUT", put_url, token, content.encode("utf-8"), "OSF upload")
     return {"dry_run": False, "status": status, "filename": fname}
