@@ -139,8 +139,8 @@ depends on the convention more than one whose range is narrow. The score is comp
 since a high score on one item offsets a low score on another. The gate is not. It is
 `blocked` when an item marked as a blocker fails, `pass` otherwise, and `advisory` for a
 theory whose maturity is `draft`. The derivation chain warns, without blocking the gate,
-when a feedback loop leaves a prediction's claim unread, as `check()` does by default, and
-`check(cycles="sigma")` reads such claims by sigma-separation.
+when a feedback loop leaves a prediction's or a phenomenon's claim unread, as `check()` does
+by default, and `check(cycles="sigma")` reads such claims by sigma-separation.
 [Methodological foundations](methodology.md) sets out each item, its supporting literature
 and how its score is computed.
 

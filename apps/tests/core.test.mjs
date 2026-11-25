@@ -460,6 +460,8 @@ test("the checklist's guide and reading say what pass, blocked and advisory mean
   assert.match(about, /The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted\. The labels are the author's and are not checked against the statements\./);
   assert.match(about, /The derivation chain reads each stated claim against the causal graph, diagnosticity sets a claim against a rival's propositions where both are stated, precision asks for two finite bounds and non-redundancy compares the words of the construct definitions\./);
   assert.match(about, /At draft maturity, the gate is advisory/);
+  // An unread claim costs its prediction nothing in the score.
+  assert.match(about, /A prediction whose claim is not checked still counts as derived in the score when the propositions it cites are declared\./);
   assert.doesNotMatch(about, /rigour|facets|quality/i);
   assert.match(interp, /^The checklist score is 12\./);
   assert.match(interp, /draft maturity/);
@@ -476,9 +478,9 @@ test("the checklist's guide and reading say what pass, blocked and advisory mean
 
 test("the checklist names the predictions it could not read, and a run under sigma shows no grid", async () => {
   const report = {
-    aggregate_score: 85.9, aggregate_range: [82.1, 87.9], coverage: 0.92, gate: "pass", n_blockers_failed: 0, maturity: "developing",
+    aggregate_score: 88, aggregate_range: [84.2, 90.2], coverage: 0.92, gate: "pass", n_blockers_failed: 0, maturity: "developing",
     checklist_version: "3.1",
-    items: [{ id: "derivation_chain", status: "warn", score: 0.75, weight: 0.08, severity_if_fail: "blocker", not_checked: ["pred3"] }],
+    items: [{ id: "derivation_chain", status: "warn", score: 1, weight: 0.08, severity_if_fail: "blocker", not_checked: ["pred3"] }],
   };
   const rt = lineageRuntime({ check: (params) => ({ report, svg: params.cycles === "sigma" ? null : "<svg></svg>" }) });
   const { ctx, $ } = await boot({}, rt);
