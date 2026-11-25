@@ -225,9 +225,9 @@ assumption rewritten under its id is appraised as a new one is, and one moved un
 another id is not appraised. Any change of wording counts, even one that keeps the
 meaning, so a core assumption reworded under its id is appraised and, when it protects a
 prediction that failed in the prior, is read as answering it. Each appraised assumption
-reports its `change`, `new` or `revised`. The appraisal reads no dates, so deciding which
-version is the prior is the caller's responsibility. The returned dictionary holds further
-fields, listed in the
+that answers an anomaly is listed in `assumptions` with its `change`, `new` or `revised`.
+The appraisal reads no dates, so deciding which version is the prior is the caller's
+responsibility. The returned dictionary holds further fields, listed in the
 [API reference](api.md#theoryforge.appraise_amendment), and
 [Methodological foundations](methodology.md) gives the full rule.
 

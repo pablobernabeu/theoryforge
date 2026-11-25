@@ -1,5 +1,5 @@
 # Edge case: one anchor given to two nodes. YAML binds a later alias to the
-# last of them, R's yaml package bound it to the first, so the second label
+# last of them. R's yaml package bound it to the first, so the third label
 # read as Alpha, and Python refused the file. Both twins refuse it (API_SPEC.md
 # section 3). The &name in the comment, in the definition and in the quoted
 # title is text, not an anchor.
