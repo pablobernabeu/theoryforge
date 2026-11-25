@@ -339,8 +339,9 @@ that concern it alone.
   `Panic<NEL>disorder` read back as `Panic disorder` in both packages. Such a string is now
   written in double quotes with the escape `\N`, as R writes it.
 - The readers and writers take a path that begins with `~` from the home directory, as R
-  does, where Python looked for a folder named `~`. A `~user` with no such user stays a
-  relative folder name, as in R.
+  does, where Python looked for a folder named `~`. A `~user` names that user's home
+  directory on POSIX systems, where an unknown user stays a relative folder name, and stays
+  as written on Windows, as in R.
 - A file named `.json` alone was JSON in R in some versions of R and YAML in Python. Both
   packages now read the extension by one rule, under which a name that begins with its only
   dot has none, as for Python's `pathlib`.
