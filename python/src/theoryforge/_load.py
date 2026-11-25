@@ -45,6 +45,8 @@ from yaml.parser import Parser
 from yaml.reader import Reader
 from yaml.scanner import Scanner, ScannerError
 
+from ._io import expand_home
+
 _MERGE = "tag:yaml.org,2002:merge"
 _VALUE = "tag:yaml.org,2002:value"
 
@@ -955,7 +957,7 @@ def _json_too_deep(text: str) -> bool:
 def load_document(path) -> Any:
     """Parse the YAML or JSON file at ``path`` (JSON when its extension is ``.json``, by ``is_json``).
 
-    A leading ``~`` stands for the home directory, as in R. The bytes are decoded
+    A leading ``~`` is expanded as R expands it (``_io.expand_home``). The bytes are decoded
     as UTF-8 with any byte-order mark dropped. A repeated key in any mapping
     raises ``ValueError("(<path>) Duplicate map key: '<key>'")``, the message R's
     reader gives. A value tagged ``!expr``, which R's yaml package can evaluate
@@ -991,9 +993,7 @@ def load_document(path) -> Any:
     """
     json_file = is_json(path)
     path = Path(path)
-    # os.path.expanduser leaves '~user' as it is when there is no such user, as
-    # R does, where Path.expanduser raises.
-    raw = Path(os.path.expanduser(path)).read_bytes()
+    raw = Path(expand_home(path)).read_bytes()
     if raw.startswith(b"\xef\xbb\xbf"):
         raw = raw[3:]
     # The depth of a JSON text is read from its bytes, before they are decoded,

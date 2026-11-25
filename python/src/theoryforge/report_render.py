@@ -19,6 +19,7 @@ import subprocess
 
 from ._access import text
 from ._compat import theory_keyword
+from ._io import expand_home
 from ._io import write_lf as _write_lf
 from ._text import quoted
 from .dossier import dossier as _dossier
@@ -224,7 +225,7 @@ def render_report(theory, path, title: str | None = None, render: bool = False, 
     A file name that does not end in ``.qmd`` (in any letter case) loses everything from its
     last dot, unless the name begins with that dot, and gains ``.qmd``. So ``report.md`` is
     written as ``report.qmd``, ``report`` and ``.hidden`` gain the suffix and ``a.tar.gz``
-    becomes ``a.tar.qmd``. A leading ``~`` stands for the home directory, as in R.
+    becomes ``a.tar.qmd``. A leading ``~`` is expanded as R expands it (see ``read``).
     ``to`` is the Quarto output format, ``"html"`` by default, written into the header and
     passed to ``quarto render --to``. It must be a format name or the path of a custom
     writer: a letter or digit followed by letters, digits, ``_``, ``.``, ``+``, ``/`` and
@@ -272,6 +273,6 @@ def render_report(theory, path, title: str | None = None, render: bool = False, 
     header = f'---\ntitle: "{_yaml_dq(title)}"\nformat: {to}\n' + _HEADER_TAIL
     _write_lf(path, header + _qmd_body(md))
     if render:
-        target = os.path.abspath(os.path.expanduser(path))
+        target = os.path.abspath(expand_home(path))
         subprocess.run(["quarto", "render", target, "--to", to], check=True)  # pragma: no cover
     return str(path)

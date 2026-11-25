@@ -71,7 +71,11 @@ NULL
 #' @param path Path to a \code{.yaml}, \code{.yml} or \code{.json} file. The
 #'   file is read as JSON when its extension is \code{.json}, in any letter
 #'   case, and as YAML otherwise. A name that begins with its only dot, such
-#'   as \code{.json}, has no extension.
+#'   as \code{.json}, has no extension. A leading \code{~} is expanded as
+#'   [path.expand()] expands it: \code{~} alone or before a separator is the
+#'   home directory, and \code{~user} is that user's home directory on Unix,
+#'   an unknown user being left as written, and is left as written on
+#'   Windows. The Python package follows the same rule.
 #' @return A named list holding the parsed theory object.
 #' @examples
 #' # Round-trip a theory through a temporary file.

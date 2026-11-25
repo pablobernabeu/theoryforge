@@ -784,8 +784,8 @@ class Theory:
         """Write the theory to ``path`` as JSON (a ``.json`` extension) or YAML (anything else).
 
         The letter case of ``.json`` does not matter, and a file named ``.json``
-        alone has no extension and is YAML, as in R. A leading ``~`` stands for
-        the home directory. The file is UTF-8 with LF line endings and ends with a
+        alone has no extension and is YAML, as in R. A leading ``~`` is expanded
+        as in ``read``. The file is UTF-8 with LF line endings and ends with a
         newline. YAML keeps the theory's key order and quotes every string a
         reader could take for something else, ``y``, ``Y``, ``n`` and ``N``
         included, which theoryforge 0.6.0 for R reads as logicals. The file
@@ -1235,8 +1235,11 @@ def read(path) -> Theory:
     """Read a theory object from a YAML or JSON file (JSON when the extension is ``.json``).
 
     The file is read as the R package's ``tf_read()`` reads it. The letter case
-    of ``.json`` does not matter, and a leading ``~`` stands for the home
-    directory. A byte-order mark is ignored. A file that is not valid UTF-8
+    of ``.json`` does not matter. A leading ``~`` is expanded as R's
+    ``path.expand()`` expands it: ``~`` alone or before a separator (``/``, or
+    ``\\`` on Windows) is the home directory, and ``~user`` is that user's home
+    directory on POSIX systems, an unknown user being left as written, and is
+    left as written on Windows. A byte-order mark is ignored. A file that is not valid UTF-8
     raises ``ValueError("(<path>) the file is not valid UTF-8")``, and one that
     holds a NUL byte ``ValueError("(<path>) the file holds a NUL byte, which
     theoryforge cannot read")``. Dates and ``y``, ``Y``, ``n`` and

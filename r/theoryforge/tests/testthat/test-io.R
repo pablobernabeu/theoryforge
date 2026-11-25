@@ -601,7 +601,9 @@ test_that("a value tagged !expr is refused and runs no code, whatever the option
   # test_io.py pins the same message.
   old <- options(yaml.eval.expr = TRUE)
   on.exit(options(old), add = TRUE)
-  flag <- tempfile()
+  # Forward slashes, so that a Windows path in the double-quoted scalar below
+  # holds no backslash that YAML would read as an escape.
+  flag <- normalizePath(tempfile(), winslash = "/", mustWork = FALSE)
   for (text in c(sprintf('id: !expr file.create("%s")\ntitle: T\n', flag),
                  sprintf('id: t\n!expr file.create("%s"): v\n', flag),
                  sprintf('n: 1,000\ntitle: !expr file.create("%s")\n', flag),

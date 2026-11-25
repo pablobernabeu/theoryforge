@@ -879,8 +879,10 @@ def test_a_leading_tilde_is_the_home_directory(panic_path, tmp_path, monkeypatch
 
 
 def test_a_tilde_before_an_unknown_user_names_a_relative_folder(panic_path, tmp_path, monkeypatch):
-    # os.path.expanduser leaves '~nosuchuser' as it is, as R's path.expand()
-    # does, where Path.expanduser raised RuntimeError.
+    # R's path.expand() leaves '~nosuchuser' as it is, on POSIX systems because
+    # there is no such user and on Windows because it never expands '~user',
+    # and so does the Python package, where Path.expanduser raised
+    # RuntimeError (API_SPEC.md section 3).
     monkeypatch.chdir(tmp_path)
     (tmp_path / "~nosuchuser").mkdir()
     t = tf.read(panic_path)
@@ -889,6 +891,35 @@ def test_a_tilde_before_an_unknown_user_names_a_relative_folder(panic_path, tmp_
     assert tf.read("~nosuchuser/x.theory.yaml").data == t.data
     assert t.render_report("~nosuchuser/r.qmd") == "~nosuchuser/r.qmd"
     assert (tmp_path / "~nosuchuser" / "r.qmd").exists()
+
+
+def test_a_tilde_is_expanded_as_r_expands_it_on_each_platform(tmp_path, monkeypatch):
+    # '~' alone or before a separator is the home directory everywhere, and
+    # '~user' is expanded on POSIX systems only, as R's path.expand() does it.
+    from theoryforge._io import expand_home
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    assert expand_home("~") == str(tmp_path)
+    assert Path(expand_home("~/a.yaml")) == tmp_path / "a.yaml"
+    assert expand_home("a/~/b") == "a/~/b"
+    assert expand_home("~nosuchuser/x") == "~nosuchuser/x"
+    if os.name == "nt":
+        assert Path(expand_home("~\\a.yaml")) == tmp_path / "a.yaml"
+        assert expand_home("~" + os.environ.get("USERNAME", "u") + "/x").startswith("~")
+    else:
+        import pwd
+
+        user = pwd.getpwuid(os.getuid())
+        assert expand_home(f"~{user.pw_name}/x") == os.path.join(user.pw_dir, "x")
+        # A backslash is no separator here, so '~\\a' names a user.
+        assert expand_home("~\\a") == "~\\a"
+    # The Windows rule, taken with this platform's expanduser. Path() is not
+    # used while os.name is changed, since pathlib reads it.
+    home = expand_home("~")
+    monkeypatch.setattr(os, "name", "nt")
+    assert expand_home("~nosuchuser/x") == "~nosuchuser/x"
+    assert expand_home("~root/x") == "~root/x"
+    assert expand_home("~") == home
 
 
 def test_a_corpus_reads_through_the_same_reader(tmp_path):

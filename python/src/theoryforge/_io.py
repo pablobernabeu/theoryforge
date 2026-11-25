@@ -12,11 +12,26 @@ import os
 from pathlib import Path
 
 
+def expand_home(path) -> str:
+    """``path`` with a leading ``~`` expanded as R's ``path.expand()`` expands it.
+
+    A ``~`` alone, or followed by a separator (``/``, or ``\\`` on Windows),
+    stands for the home directory on every platform. A ``~user`` names that
+    user's home directory on POSIX systems, where an unknown user is left as
+    written, as R leaves it, and ``Path.expanduser`` would raise. R on Windows
+    never expands ``~user``, so it is left as written there.
+    """
+    p = os.fspath(path)
+    if not p.startswith("~"):
+        return p
+    if os.name != "nt" or len(p) == 1 or p[1] in "/\\":
+        return os.path.expanduser(p)
+    return p
+
+
 def write_lf(path, text: str) -> None:
     """Write ``text`` to ``path`` as UTF-8 with LF line endings only.
 
-    A leading ``~`` in ``path`` stands for the home directory, as R's file
-    connections read it. ``os.path.expanduser`` leaves ``~user`` as it is when
-    there is no such user, as R does, where ``Path.expanduser`` raises.
+    A leading ``~`` in ``path`` is expanded as R expands it (``expand_home``).
     """
-    Path(os.path.expanduser(path)).write_bytes(text.replace("\r\n", "\n").encode("utf-8"))
+    Path(expand_home(path)).write_bytes(text.replace("\r\n", "\n").encode("utf-8"))
