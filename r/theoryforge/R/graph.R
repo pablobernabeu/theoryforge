@@ -181,11 +181,11 @@
 # enumerated. A walk that passes the tests at every step can be shortened, and
 # detoured through Z at each collider outside Z, into a path that passes them,
 # so the walk reaches y exactly when a connecting path exists. Every vertex of a
-# connecting path is an ancestor of x, y or a member of Z, since from a vertex
-# that is not a collider the path leads along its edges' directions to x, y or a
-# collider. The walk therefore keeps to those ancestors, which leaves its result
-# unchanged. Each round extends every state the previous round found by one
-# edge.
+# connecting path is an ancestor of x, y or a member of Z. From a vertex that is
+# not a collider, the path leads along the directions of its edges to x, y or a
+# collider, and every collider on it is in Z or an ancestor of a member of Z. The
+# walk therefore keeps to those ancestors, which leaves its result unchanged.
+# Each round extends every state the previous round found by one edge.
 .tf_m_separated <- function(g, x, y, given) {
   k <- g$k
   in_z <- logical(k)

@@ -281,7 +281,8 @@ class _Graph:
 
     def effect(self, x: int, y: int, via: bool = True) -> tuple[str, str, list[str]]:
         """The derived sign of the effect of x on y, its basis and, with ``via``, the
-        propositions on a directed path from x to y."""
+        propositions on a directed walk from x to y that does not return to x, a
+        directed path when the graph is acyclic."""
         # An intervention on x replaces its own equation, so a walk that comes
         # back to x carries nothing to y. In an acyclic graph no walk does.
         derived, basis = _derived(self.held(x)[y])
