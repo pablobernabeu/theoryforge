@@ -37,13 +37,13 @@ walks it. An alias whose anchor is undefined, or that lies inside the node
 its anchor names, stops with \code{(<path>) the alias '<name>' names no node
 that ends before it}, and an anchor given to two nodes with \code{(<path>)
 the anchor '<name>' names two nodes}, where yaml would read a placeholder or
-the first of the two nodes. A comment in a JSON file stops with jsonlite's
-message, since JSON has no comments. A string or key that holds U+0000 or a
-lone surrogate, which R would cut short or misread, stops with \code{(<path>)
-a string holds U+0000, which theoryforge cannot read}, or the same message
-naming \code{a lone surrogate}. A document that is not a mapping, such as a
-sequence or an empty YAML file, stops with \code{Theory data must be a
-mapping}.
+the first of the two nodes. A comment in a JSON file stops with the message
+jsonlite gives, since JSON has no comments. A string or key that holds U+0000
+or a lone surrogate, which R would cut short or misread, stops with
+\code{(<path>) a string holds U+0000, which theoryforge cannot read}, or the
+same message naming \code{a lone surrogate}. A document that is not a
+mapping, such as a sequence or an empty YAML file, stops with \code{Theory
+data must be a mapping}.
 }
 \examples{
 # Round-trip a theory through a temporary file.
