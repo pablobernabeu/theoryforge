@@ -10,7 +10,7 @@ import pytest
 
 import theoryforge as tf
 from theoryforge._causal import causal_graph
-from theoryforge._graph import m_separated, reach
+from theoryforge._graph import MixedGraph, m_separated
 from theoryforge.entailment import _Graph, _project
 
 np = pytest.importorskip("numpy")
@@ -239,15 +239,14 @@ def test_the_latent_projection_keeps_every_separation_among_the_kept_constructs(
         if g.feedback or g.k < 3:
             continue
         keep = [c for c in g.nodes if rng.random() < 0.7]
-        d, b = _project(g, keep)
-        r = reach(d, len(keep))
+        projected = MixedGraph(*_project(g, keep))
         for i, j in itertools.combinations(range(len(keep)), 2):
             rest = [z for z in range(len(keep)) if z not in (i, j)]
             for n in range(len(rest) + 1):
                 for z in itertools.combinations(rest, n):
-                    full = m_separated(g.directed, g.bidirected, g.r, g.index[keep[i]],
-                                       g.index[keep[j]], [g.index[keep[w]] for w in z])
-                    assert full == m_separated(d, b, r, i, j, list(z))
+                    full = m_separated(g.sep, g.index[keep[i]], g.index[keep[j]],
+                                       [g.index[keep[w]] for w in z])
+                    assert full == m_separated(projected, i, j, list(z))
 
 
 # -- equivalent models and rivals --------------------------------------------

@@ -20,11 +20,12 @@ conditions under which such sign reasoning holds beyond linear models.
 from __future__ import annotations
 
 import itertools
+from itertools import compress
 
 from ._access import enum, field, items, str_list, text
 from ._causal import causal_graph
 from ._compat import theory_keyword
-from ._graph import acyclify, m_separated, reach, strong_components
+from ._graph import MixedGraph, acyclify, m_separated, reach, reached, strong_components
 
 KINDS = frozenset({"effect", "association"})
 SIGNS = frozenset({"positive", "negative", "zero", "nonzero"})
@@ -181,7 +182,7 @@ class _Graph:
             self.sep_d, self.sep_b = acyclify(self.directed, self.bidirected, comps)
         else:
             self.sep_d, self.sep_b = self.directed, self.bidirected
-        self.sep_r = reach(self.sep_d, self.k)
+        self.sep = MixedGraph(self.sep_d, self.sep_b)
         self._walks: dict[int, list[int]] = {}
         self._held: dict[int, tuple[list[int], list[list[bool]]]] = {}
         self._cov: list[list[int]] | None = None
@@ -235,7 +236,7 @@ class _Graph:
         return self._cov
 
     def separated(self, i: int, j: int, given: list[int]) -> bool:
-        return m_separated(self.sep_d, self.sep_b, self.sep_r, i, j, given)
+        return m_separated(self.sep, i, j, given)
 
     def _ordered(self, keep) -> list[str]:
         """The ids of the propositions that ``keep`` selects, in file order, once each."""
@@ -311,11 +312,10 @@ class _Graph:
         forbidden = {x} | {w for v in on_path for w in range(k) if r[v][w]}
         canonical = [v for v in range(k)
                      if (r[v][x] or r[v][y]) and not self.latent[v] and v not in forbidden and v != y]
-        d = [row[:] for row in self.directed]
-        for v in on_path:
-            d[x][v] = False
-        rd = reach(d, k)
-        if not m_separated(d, self.bidirected, rd, x, y, canonical):
+        # The proper back-door graph. Without feedback loops, separation is read
+        # in the theory's own graph.
+        d = self.sep.without_edges(x, on_path)
+        if not m_separated(d, x, y, canonical):
             return None
         if len(canonical) > ADJUSTMENT_SEARCH:
             # Every member is an ancestor of x or y in the proper back-door
@@ -325,12 +325,12 @@ class _Graph:
             z = list(canonical)
             for v in canonical:
                 rest = [w for w in z if w != v]
-                if m_separated(d, self.bidirected, rd, x, y, rest):
+                if m_separated(d, x, y, rest):
                     z = rest
             return z
         for size in range(len(canonical) + 1):
             for subset in itertools.combinations(canonical, size):
-                if m_separated(d, self.bidirected, rd, x, y, list(subset)):
+                if m_separated(d, x, y, list(subset)):
                     return list(subset)
         return canonical  # unreachable: the canonical set itself separates
 
@@ -739,14 +739,21 @@ def _project(G: _Graph, keep: list[str]) -> tuple[list[list[bool]], list[list[bo
     return d, b
 
 
-def _separating_set(d, bd, r, i: int, j: int) -> list[int] | None:
-    """The parents of both, or failing that all their other ancestors, when that set separates i and j."""
-    k = len(d)
+def _separating_set(d, bd, g: MixedGraph, dag: bool, i: int, j: int) -> list[int] | None:
+    """The parents of both, or failing that all their other ancestors, when that set separates i and j.
+
+    ``g`` is the acyclic graph of ``d`` and ``bd`` prepared for separation
+    queries, and ``dag`` is True when it has no bidirected edges, in which case
+    the parents always separate the two (API_SPEC.md section 27).
+    """
     if d[i][j] or d[j][i] or bd[i][j]:
         return None
-    parents = [g for g in range(k) if d[g][i] or d[g][j]]
-    ancestors = [g for g in range(k) if (r[g][i] or r[g][j]) and g not in (i, j)]
-    return next((s for s in (parents, ancestors) if m_separated(d, bd, r, i, j, s)), None)
+    parents = sorted({*g.parents[i], *g.parents[j]})
+    if dag or m_separated(g, i, j, parents):
+        return parents
+    mark = reached(g.parents, (i, j), g.k)
+    ancestors = [v for v in compress(range(g.k), mark) if v != i and v != j]
+    return ancestors if m_separated(g, i, j, ancestors) else None
 
 
 def _statement(a: str, b: str, given: list[str]) -> str:
@@ -879,17 +886,17 @@ def discriminate(theory, rival, cycles: str = "refuse") -> dict:
 def _discriminating_independencies(shared: list[str], views: list) -> list[dict]:
     """The independencies one view implies and the other does not, pair by pair."""
     n = len(shared)
-    reaches = [reach(d, n) for d, _ in views]
+    graphs = [MixedGraph(d, bd) for d, bd in views]
+    dags = [not any(map(any, bd)) for _, bd in views]
     out: list[dict] = []
     for i in range(n):
         for j in range(i + 1, n):
             for who, mine, theirs in (("theory", 0, 1), ("rival", 1, 0)):
                 d, bd = views[mine]
-                sep = _separating_set(d, bd, reaches[mine], i, j)
+                sep = _separating_set(d, bd, graphs[mine], dags[mine], i, j)
                 if sep is None:
                     continue
-                od, obd = views[theirs]
-                if not m_separated(od, obd, reaches[theirs], i, j, sep):
+                if not m_separated(graphs[theirs], i, j, sep):
                     given = [shared[g] for g in sep]
                     out.append({"a": shared[i], "b": shared[j], "given": given,
                                 "statement": _statement(shared[i], shared[j], given),

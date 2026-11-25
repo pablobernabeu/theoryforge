@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import theoryforge as tf
+from theoryforge._graph import MixedGraph, m_separated
 from theoryforge._relations import DIRECTED
 
 APP_EXAMPLES = Path(__file__).resolve().parents[2] / "apps" / "examples"
@@ -533,6 +534,40 @@ def test_every_statement_and_inseparable_pair_agrees_with_a_brute_force_oracle()
         inseparable += len(want_inseparable)
     assert stated > 200
     assert inseparable > 20
+
+
+def test_the_separation_search_agrees_with_the_oracle_for_every_conditioning_set():
+    # The search keeps to the ancestors of the pair and of the conditioning
+    # set, and implications() takes the parents of a pair without it when the
+    # graph has no associations. Every set of the other vertices is tried here,
+    # on random acyclic mixed graphs whose vertex order is not a causal order.
+    rng = random.Random(1125)
+    tried = dags = 0
+    for _ in range(80):
+        k = rng.randint(3, 6)
+        perm = list(range(k))
+        rng.shuffle(perm)
+        directed = [(perm[i], perm[j]) for i in range(k) for j in range(i + 1, k) if rng.random() < 0.4]
+        bidirected = [(perm[i], perm[j]) for i in range(k) for j in range(i + 1, k)
+                      if rng.random() < (0.2 if rng.random() < 0.6 else 0)]
+        d = [[(u, v) in directed for v in range(k)] for u in range(k)]
+        b = [[(u, v) in bidirected or (v, u) in bidirected for v in range(k)] for u in range(k)]
+        g = MixedGraph(d, b)
+        got, want = [], []
+        for x, y in itertools.combinations(range(k), 2):
+            others = [v for v in range(k) if v not in (x, y)]
+            for r in range(len(others) + 1):
+                for z in itertools.combinations(others, r):
+                    got.append(m_separated(g, x, y, list(z)))
+                    want.append(not _m_connected(directed, bidirected, x, y, z))
+            if not bidirected and not d[x][y] and not d[y][x]:
+                parents = [v for v in range(k) if d[v][x] or d[v][y]]
+                assert not _m_connected(directed, bidirected, x, y, parents)
+        assert got == want
+        tried += len(got)
+        dags += not bidirected
+    assert tried > 2000
+    assert dags > 20
 
 
 def _corr(x, y):

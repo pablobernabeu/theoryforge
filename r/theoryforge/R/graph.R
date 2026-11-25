@@ -50,19 +50,9 @@
 # an ancestor of v".
 .tf_reach <- function(directed, k) {
   reach <- matrix(FALSE, nrow = k, ncol = k)
+  children <- lapply(seq_len(k), function(u) which(directed[u, ]))
   for (s in seq_len(k)) {
-    reach[s, s] <- TRUE
-    stack <- s
-    while (length(stack) > 0L) {
-      u <- stack[[length(stack)]]
-      stack <- stack[-length(stack)]
-      for (v in which(directed[u, ])) {
-        if (!reach[s, v]) {
-          reach[s, v] <- TRUE
-          stack <- c(stack, v)
-        }
-      }
-    }
+    reach[s, ] <- .tf_reached(children, s, logical(k))
   }
   reach
 }
@@ -120,66 +110,115 @@
   list(directed = d_acy, bidirected = b_acy)
 }
 
-# The edges at v as rows (w, arrowhead at v, arrowhead at w), with 1 for an
-# arrowhead and 0 for a tail.
-.tf_ends <- function(directed, bidirected, v) {
-  out <- matrix(integer(0), ncol = 3L)
-  for (w in seq_len(nrow(directed))) {
-    if (directed[v, w]) out <- rbind(out, c(w, 0L, 1L))
-    if (directed[w, v]) out <- rbind(out, c(w, 1L, 0L))
-    if (bidirected[v, w]) out <- rbind(out, c(w, 1L, 1L))
+# A directed mixed graph prepared for m-separation queries. `parents[[v]]` holds
+# the parents of v in vertex order, and `ends_w[[v]]`, `ends_hv[[v]]` and
+# `ends_hw[[v]]` the edges at v: the vertex w at the other end, whether the edge
+# has an arrowhead at v and whether it has one at w (1 or 0). Both are built
+# once, so that a query reads the edges at a vertex without scanning every
+# vertex. `reach`, when given, is .tf_reach() of the directed edges, from which
+# a query reads ancestors directly.
+.tf_mixed_graph <- function(directed, bidirected, reach = NULL) {
+  k <- nrow(directed)
+  children <- lapply(seq_len(k), function(v) which(directed[v, ]))
+  parents <- lapply(seq_len(k), function(v) which(directed[, v]))
+  ends_w <- ends_hv <- ends_hw <- vector("list", k)
+  for (v in seq_len(k)) {
+    joined <- which(bidirected[v, ])
+    nc <- length(children[[v]])
+    np <- length(parents[[v]])
+    nb <- length(joined)
+    ends_w[[v]] <- c(children[[v]], parents[[v]], joined)
+    ends_hv[[v]] <- c(logical(nc), rep(TRUE, np + nb))
+    ends_hw[[v]] <- c(rep(1L, nc), integer(np), rep(1L, nb))
   }
-  out
+  list(k = k, parents = parents, ends_w = ends_w, ends_hv = ends_hv, ends_hw = ends_hw,
+       ends_n = lengths(ends_w), reach = reach)
 }
 
-# Whether x and y are m-separated given the vertices in `given`. A path between
-# x and y connects them given Z when every collider on it, a vertex into which
-# both of its edges on the path point, is in Z or an ancestor of a member of Z,
-# and no other vertex on it is in Z (Richardson, 2003). Without bidirected edges,
-# this is d-separation. `reach` is .tf_reach() of the directed edges, and
-# `given` holds neither x nor y.
+# `g` without the directed edges from u to the vertices in `targets`.
+.tf_without_edges <- function(g, u, targets) {
+  drop <- g$ends_w[[u]] %in% targets & !g$ends_hv[[u]] & g$ends_hw[[u]] == 1L
+  g$ends_w[[u]] <- g$ends_w[[u]][!drop]
+  g$ends_hv[[u]] <- g$ends_hv[[u]][!drop]
+  g$ends_hw[[u]] <- g$ends_hw[[u]][!drop]
+  for (v in unique(targets)) {
+    g$parents[[v]] <- g$parents[[v]][g$parents[[v]] != u]
+    drop <- g$ends_w[[v]] == u & g$ends_hv[[v]] & g$ends_hw[[v]] == 0L
+    g$ends_w[[v]] <- g$ends_w[[v]][!drop]
+    g$ends_hv[[v]] <- g$ends_hv[[v]][!drop]
+    g$ends_hw[[v]] <- g$ends_hw[[v]][!drop]
+  }
+  g$ends_n <- lengths(g$ends_w)
+  g["reach"] <- list(NULL)
+  g
+}
+
+# Marks the seeds and every vertex the lists in `adjacent` lead to from one, on
+# top of the logical vector `mark`. With each vertex's parents in `adjacent`,
+# the marks are the seeds and their ancestors, and with its children, the seeds
+# and their descendants. Every vertex that a vertex marked in `mark` leads to
+# must be marked there too, as in a result of this function.
+.tf_reached <- function(adjacent, seeds, mark) {
+  new <- unique(seeds[!mark[seeds]])
+  mark[new] <- TRUE
+  while (length(new) > 0L) {
+    nxt <- unlist(adjacent[new], use.names = FALSE)
+    new <- unique(nxt[!mark[nxt]])
+    mark[new] <- TRUE
+  }
+  mark
+}
+
+# Whether x and y are m-separated given the vertices in `given`, in the graph
+# `g` of .tf_mixed_graph(). A path between x and y connects them given Z when
+# every collider on it, a vertex into which both of its edges on the path point,
+# is in Z or an ancestor of a member of Z, and no other vertex on it is in Z
+# (Richardson, 2003). Without bidirected edges, this is d-separation. `given`
+# holds neither x nor y.
 #
 # The search walks the graph over the states (vertex, whether the walk arrived
 # through an arrowhead), so each state is visited once and no path is
 # enumerated. A walk that passes the tests at every step can be shortened, and
 # detoured through Z at each collider outside Z, into a path that passes them,
-# so the walk reaches y exactly when a connecting path exists.
-.tf_m_separated <- function(directed, bidirected, reach, x, y, given) {
-  k <- nrow(directed)
+# so the walk reaches y exactly when a connecting path exists. Every vertex of a
+# connecting path is an ancestor of x, y or a member of Z, since from a vertex
+# that is not a collider the path leads along its edges' directions to x, y or a
+# collider. The walk therefore keeps to those ancestors, which leaves its result
+# unchanged. Each round extends every state the previous round found by one
+# edge.
+.tf_m_separated <- function(g, x, y, given) {
+  k <- g$k
   in_z <- logical(k)
   in_z[given] <- TRUE
-  ancestor_of_z <- if (length(given) > 0L) {
-    apply(reach[, given, drop = FALSE], 1L, any)
+  if (is.null(g$reach)) {
+    ancestor_of_z <- .tf_reached(g$parents, given, logical(k))
+    region <- .tf_reached(g$parents, c(x, y), ancestor_of_z)
   } else {
-    logical(k)
+    ancestor_of_z <- logical(k)
+    for (z in given) ancestor_of_z <- ancestor_of_z | g$reach[, z]
+    region <- ancestor_of_z | g$reach[, x] | g$reach[, y]
   }
-  seen <- matrix(FALSE, nrow = k, ncol = 2L)  # column 1 arrived by a tail, 2 by an arrowhead
-  start <- .tf_ends(directed, bidirected, x)
-  stack_v <- start[, 1L]
-  stack_h <- start[, 3L]
-  while (length(stack_v) > 0L) {
-    top <- length(stack_v)
-    v <- stack_v[[top]]
-    head_in <- stack_h[[top]]
-    stack_v <- stack_v[-top]
-    stack_h <- stack_h[-top]
-    if (seen[v, head_in + 1L]) next
-    seen[v, head_in + 1L] <- TRUE
-    if (v == y) return(FALSE)
-    ends <- .tf_ends(directed, bidirected, v)
-    for (e in seq_len(nrow(ends))) {
-      w <- ends[e, 1L]
-      # A walk that returns to x can start from x afresh, and those starts are
-      # already on the stack.
-      if (w == x) next
-      if (head_in == 1L && ends[e, 2L] == 1L) {
-        if (!ancestor_of_z[[v]]) next
-      } else if (in_z[[v]]) {
-        next
-      }
-      stack_v <- c(stack_v, w)
-      stack_h <- c(stack_h, ends[e, 3L])
-    }
+  # The state (v, arrived by a tail) is numbered v, and (v, by an arrowhead)
+  # k + v.
+  seen <- logical(2L * k)
+  w <- g$ends_w[[x]]
+  keep <- region[w]
+  state <- w[keep] + k * g$ends_hw[[x]][keep]
+  while (length(state) > 0L) {
+    state <- unique(state[!seen[state]])
+    seen[state] <- TRUE
+    head_in <- state > k
+    v <- state - k * head_in
+    if (any(v == y)) return(FALSE)
+    n <- g$ends_n[v]
+    w <- unlist(g$ends_w[v], use.names = FALSE)
+    from <- rep.int(v, n)
+    collider <- rep.int(head_in, n) & unlist(g$ends_hv[v], use.names = FALSE)
+    # A walk that returns to x can start from x afresh, and those starts are
+    # already taken.
+    keep <- w != x & region[w] &
+      ((collider & ancestor_of_z[from]) | (!collider & !in_z[from]))
+    state <- w[keep] + k * unlist(g$ends_hw[v], use.names = FALSE)[keep]
   }
   TRUE
 }

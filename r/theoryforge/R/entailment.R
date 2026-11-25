@@ -189,11 +189,12 @@
     acy <- .tf_acyclify(g$directed, g$bidirected, comps)
     G$sep_d <- acy$directed
     G$sep_b <- acy$bidirected
+    G$sep <- .tf_mixed_graph(G$sep_d, G$sep_b, .tf_reach(G$sep_d, k))
   } else {
     G$sep_d <- g$directed
     G$sep_b <- g$bidirected
+    G$sep <- .tf_mixed_graph(G$sep_d, G$sep_b, G$r)
   }
-  G$sep_r <- .tf_reach(G$sep_d, k)
   G$walk_cache <- new.env(parent = emptyenv())
   G
 }
@@ -306,10 +307,10 @@
   on_path <- which(seq_len(k) != x & r[x, ] & r[, y])
   forbidden <- unique(c(x, which(apply(r[on_path, , drop = FALSE], 2L, any))))
   canonical <- setdiff(which((r[, x] | r[, y]) & !G$latent), c(forbidden, y))
-  d <- G$directed
-  d[x, on_path] <- FALSE
-  rd <- .tf_reach(d, k)
-  if (!.tf_m_separated(d, G$bidirected, rd, x, y, canonical)) return(NULL)
+  # The proper back-door graph. Without feedback loops, separation is read in
+  # the theory's own graph.
+  d <- .tf_without_edges(G$sep, x, on_path)
+  if (!.tf_m_separated(d, x, y, canonical)) return(NULL)
   if (length(canonical) > .tf_ADJUSTMENT_SEARCH) {
     # Every member is an ancestor of x or y in the proper back-door graph, and
     # separation by such sets is separation in one undirected graph, so a
@@ -317,7 +318,7 @@
     z <- canonical
     for (v in canonical) {
       rest <- z[z != v]
-      if (.tf_m_separated(d, G$bidirected, rd, x, y, rest)) z <- rest
+      if (.tf_m_separated(d, x, y, rest)) z <- rest
     }
     return(z)
   }
@@ -332,7 +333,7 @@
       utils::combn(canonical, size, simplify = FALSE)
     }
     for (z in subsets) {
-      if (.tf_m_separated(d, G$bidirected, rd, x, y, z)) return(z)
+      if (.tf_m_separated(d, x, y, z)) return(z)
     }
   }
   canonical
@@ -356,7 +357,7 @@
   y <- match(cl$y, G$nodes)
   if (cl$kind == "association" && length(cl$given) > 0L) {
     z <- match(cl$given, G$nodes)
-    if (.tf_m_separated(G$sep_d, G$sep_b, G$sep_r, x, y, z)) {
+    if (.tf_m_separated(G$sep, x, y, z)) {
       return(out("zero", .tf_verdict(cl$sign, "zero"), "separated"))
     }
     return(out("nonzero", .tf_verdict(cl$sign, "nonzero"), "connected", faithfulness = TRUE))
@@ -759,20 +760,22 @@ tf_equivalent_models <- function(theory) {
 }
 
 # The parents of both, or failing that all their other ancestors, when that set
-# separates i and j; NULL otherwise.
-.tf_separating_set <- function(d, bd, r, i, j) {
+# separates i and j; NULL otherwise. `g` is the acyclic graph of `d` and `bd`
+# from .tf_mixed_graph(), and `dag` is TRUE when it has no bidirected edges, in
+# which case the parents always separate the two (API_SPEC.md section 27).
+.tf_separating_set <- function(d, bd, g, dag, i, j) {
   if (d[i, j] || d[j, i] || bd[i, j]) return(NULL)
   parents <- which(d[, i] | d[, j])
-  ancestors <- setdiff(which(r[, i] | r[, j]), c(i, j))
-  for (s in list(parents, ancestors)) {
-    if (.tf_m_separated(d, bd, r, i, j, s)) return(s)
-  }
+  if (dag || .tf_m_separated(g, i, j, parents)) return(parents)
+  ancestors <- setdiff(which(g$reach[, i] | g$reach[, j]), c(i, j))
+  if (.tf_m_separated(g, i, j, ancestors)) return(ancestors)
   NULL
 }
 
 .tf_discriminating_independencies <- function(shared, views) {
   n <- length(shared)
-  reaches <- lapply(views, function(v) .tf_reach(v$directed, n))
+  graphs <- lapply(views, function(v) .tf_mixed_graph(v$directed, v$bidirected, .tf_reach(v$directed, n)))
+  dags <- vapply(views, function(v) !any(v$bidirected), logical(1))
   out <- list()
   if (n < 2L) return(out)
   for (i in seq_len(n - 1L)) {
@@ -781,10 +784,9 @@ tf_equivalent_models <- function(theory) {
         mine <- side[[2L]]
         theirs <- side[[3L]]
         sep <- .tf_separating_set(views[[mine]]$directed, views[[mine]]$bidirected,
-                                  reaches[[mine]], i, j)
+                                  graphs[[mine]], dags[[mine]], i, j)
         if (is.null(sep)) next
-        if (!.tf_m_separated(views[[theirs]]$directed, views[[theirs]]$bidirected,
-                             reaches[[theirs]], i, j, sep)) {
+        if (!.tf_m_separated(graphs[[theirs]], i, j, sep)) {
           given <- shared[sep]
           out[[length(out) + 1L]] <- list(a = shared[[i]], b = shared[[j]], given = as.list(given),
                                           statement = .tf_ci_statement(shared[[i]], shared[[j]], given),
