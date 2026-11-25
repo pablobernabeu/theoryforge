@@ -11,17 +11,23 @@ def _items(report):
 
 
 def test_panic_passes(panic_path):
+    # The panic network's graph has feedback loops, so under the default
+    # cycles="refuse" its one claim is not checked and the derivation chain
+    # warns without blocking the gate. Read by sigma-separation, it passes.
     r = tf.read(panic_path).check()
     assert len(r["items"]) == 12
     assert r["gate"] == "pass"
     assert r["n_blockers_failed"] == 0
     it = _items(r)
     assert it["falsifiability"]["status"] == "pass"
-    assert it["derivation_chain"]["status"] == "pass"
+    assert it["derivation_chain"]["status"] == "warn"
+    assert it["derivation_chain"]["not_checked"] == ["pred_indep"]
     assert it["causal_testability"]["status"] == "pass"
     assert it["diagnosticity"]["status"] == "pass"
     # aggregate is a sane bounded number
     assert 0.0 <= r["aggregate_score"] <= 100.0
+    sigma = _items(tf.read(panic_path).check(cycles="sigma"))["derivation_chain"]
+    assert (sigma["status"], sigma["score"], sigma["not_checked"]) == ("pass", 1.0, [])
 
 
 def test_report_records_the_checklist_version(panic_path):
@@ -57,15 +63,18 @@ def _statuses(report):
 def test_panic_network_matches_exact_targets(panic_path):
     r = tf.read(panic_path).check()
     assert (r["aggregate_score"], r["coverage"], r["gate"], r["n_blockers_failed"]) == (
-        88.0, 0.92, "pass", 0)
+        85.9, 0.92, "pass", 0)
     assert _statuses(r) == {
         "falsifiability": ("pass", 1.0), "precision": ("pass", 0.75),
         "risk_severity": ("pass", 0.6), "parsimony": ("n/a", None),
         "non_redundancy": ("pass", 1.0), "construct_clarity": ("pass", 1.0),
         "scope": ("pass", 1.0), "logical_why": ("pass", 1.0),
         "causal_testability": ("pass", 1.0), "diagnosticity": ("pass", 0.25),
-        "formalisation": ("pass", 1.0), "derivation_chain": ("pass", 1.0),
+        "formalisation": ("pass", 1.0), "derivation_chain": ("warn", 0.75),
     }
+    r = tf.read(panic_path).check(cycles="sigma")
+    assert (r["aggregate_score"], r["gate"]) == (88.0, "pass")
+    assert _statuses(r)["derivation_chain"] == ("pass", 1.0)
 
 
 def test_weak_demo_matches_exact_targets(weak_path):
@@ -191,4 +200,4 @@ def test_report_json_roundtrips(panic_path):
 
 def test_report_html(panic_path):
     html = tf.read(panic_path).report(format="html")
-    assert "<table>" in html and "Rigour report" in html
+    assert "<table>" in html and "<h2>Checklist report: panic-network-2026</h2>" in html

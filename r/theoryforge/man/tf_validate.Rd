@@ -40,8 +40,11 @@ the required fields of assumptions, alternatives, evidence and test
 outcomes, a logical \code{passed}, the evidence direction and formal-model
 type enums, the version block and the \code{schema_version} pattern. It also covers numbers within [0, 1] where
 the schema asks for them, a prediction's \code{bounds} and \code{test}
-block and a test outcome's \code{estimate} and \code{se}. Last, it checks
-the type of every other field and of every entry of a string array.
+block and a test outcome's \code{estimate} and \code{se}. It compares each
+prediction's type and its claim's sign with its bounds, and reports a
+directional prediction whose claim, with no \code{given}, has the sign
+\code{nonzero}, which states no direction. Last, it checks the type of every
+other field and of every entry of a string array.
 
 Besides the ids and references, which the schema cannot express, the full
 check is stricter than a JSON Schema 2020-12 validator in three ways. A

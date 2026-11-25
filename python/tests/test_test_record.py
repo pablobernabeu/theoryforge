@@ -156,7 +156,10 @@ def test_the_derivation_line_says_whether_references_resolve(panic_path, weak_pa
     # The checklist item checks only that each prediction cites declared
     # propositions, so the line no longer says that a derivation was verified.
     panic = tf.read(panic_path).preregister()
-    assert "\n- Derivations check: yes\n" in panic
+    # A feedback loop leaves the claim of pred_indep unread, so it is not checked.
+    assert "\n- Derivations check: not checked (feedback loop)\n" in panic
+    v2 = tf.read(panic_path.with_name("panic-network-2026-v2.theory.yaml")).preregister()
+    assert "\n- Derivations check: yes\n" in v2
     assert "\n- Derivations check: no\n" in tf.read(weak_path).preregister()
     assert "Derivation chain verified" not in panic
 

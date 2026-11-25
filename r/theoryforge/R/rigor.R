@@ -1,6 +1,7 @@
-#' The theory-rigour checklist engine.
+#' The checklist engine.
 #'
-#' Scores a theory against the 12-item checklist installed with the package.
+#' Scores a theory file against the 12-item checklist installed with the
+#' package.
 #' @name rigor
 #' @noRd
 #' @keywords internal
@@ -40,20 +41,83 @@ NULL
   }
 }
 
-# Whether a prediction's bounds state two finite numbers, a region a test can
-# miss.
-.tf_bounded <- function(p) {
-  b <- .tf_get(p, "bounds")
-  if (!.tf_is_mapping(b)) return(FALSE)
-  lo <- .tf_number(.tf_get(b, "lower"))
-  up <- .tf_number(.tf_get(b, "upper"))
-  !is.null(lo) && !is.null(up) && is.finite(lo) && is.finite(up)
+# How the theory's causal graph reads the claims, for the derivation chain:
+# list(readings, contradicted). `readings` has one entry per prediction in file
+# order, NULL when the prediction states no claim and list(verdict, basis)
+# otherwise (API_SPEC.md section 31). `contradicted` says whether the graph
+# contradicts the claim of some phenomenon. A graph that cannot be built
+# (section 27, refusals 1 and 2) reads no claim, so each stated claim gets the
+# verdict not_evaluated with the basis graph_refused, and no phenomenon counts
+# as contradicted. The Python twin's _claim_readings() reads them alike.
+.tf_claim_readings <- function(T, cycles) {
+  g <- tryCatch(
+    .tf_prepare_graph(.tf_causal_graph(T, "check"), cycles, .tf_list(T, "propositions")),
+    tf_refusal = function(e) NULL)
+  preds <- .tf_list(T, "predictions")
+  readings <- vector("list", length(preds))
+  for (i in seq_along(preds)) {
+    cl <- .tf_read_claim(.tf_get(preds[[i]], "claim"))
+    if (is.null(cl)) next
+    readings[[i]] <- if (is.null(g)) {
+      list(verdict = "not_evaluated", basis = "graph_refused")
+    } else {
+      r <- .tf_read_with(g, cl)
+      list(verdict = r$verdict, basis = r$basis)
+    }
+  }
+  contradicted <- FALSE
+  if (!is.null(g)) {
+    for (ph in .tf_list(T, "phenomena")) {
+      cl <- .tf_read_claim(.tf_get(ph, "claim"))
+      if (!is.null(cl) && identical(.tf_read_with(g, cl)$verdict, "contradicted")) {
+        contradicted <- TRUE
+        break
+      }
+    }
+  }
+  list(readings = readings, contradicted = contradicted)
 }
 
-# Compute (status, score) for each checklist item; returns a named list of
-# list(status, score) per item id. An item with nothing to assess is
-# list(status = "n/a", score = NULL).
-.tf_check_items <- function(T, thr) {
+# The derivation chain's list(status, score, not_checked) (API_SPEC.md section
+# 4, item 12). A prediction is derived when its references resolve and it
+# either states no claim or states one the causal graph entails. A claim that
+# the graph contradicts, leaves open, cannot read as written or cannot place,
+# since it names a construct no proposition relates, is a failure, as is a
+# claim of a theory whose graph cannot be built and an unresolved reference. A
+# claim the graph leaves unread because it has a feedback loop and `cycles` is
+# "refuse" is not checked: the prediction is not derived, its id goes to
+# `not_checked` and, failing anything else, the item warns. A phenomenon whose
+# claim the graph contradicts fails the item and leaves the score, the share of
+# predictions derived, as it is.
+.tf_derivation_chain <- function(T, preds, prop_ids, cycles) {
+  if (length(preds) == 0L) return(list(status = "n/a", score = NULL, not_checked = character(0)))
+  read <- .tf_claim_readings(T, cycles)
+  derived <- 0L
+  failed <- read$contradicted
+  not_checked <- character(0)
+  for (i in seq_along(preds)) {
+    refs <- .tf_str_list(.tf_get(preds[[i]], "derives_from"))
+    resolves <- length(refs) > 0L && all(refs %in% prop_ids)
+    if (!resolves) failed <- TRUE
+    r <- read$readings[[i]]
+    if (!is.null(r) && r$verdict == "not_evaluated" && r$basis == "feedback_loop") {
+      not_checked <- c(not_checked, .tf_str(preds[[i]], "id"))
+    } else if (!is.null(r) && r$verdict != "entailed") {
+      failed <- TRUE
+    } else if (resolves) {
+      derived <- derived + 1L
+    }
+  }
+  status <- if (failed) "fail" else if (derived < length(preds)) "warn" else "pass"
+  list(status = status, score = .tf_rnd(derived / length(preds), 3), not_checked = not_checked)
+}
+
+# Compute (status, score) for each checklist item; returns list(items, not_checked),
+# where `items` is a named list of list(status, score) per item id and
+# `not_checked` holds the ids of the predictions whose claims the derivation
+# chain left unread, since the causal graph has a feedback loop and `cycles` is
+# "refuse". An item with nothing to assess is list(status = "n/a", score = NULL).
+.tf_check_items <- function(T, thr, cycles) {
   preds <- .tf_list(T, "predictions")
   cons <- .tf_list(T, "constructs")
   props <- .tf_list(T, "propositions")
@@ -207,8 +271,9 @@ NULL
   # 10 diagnosticity
   # A named rival counts unless its stated propositions give the prediction's
   # claim the same verdict as the theory's do, which shows the declaration
-  # false (API_SPEC.md section 4).
-  verdicts <- .tf_prediction_verdicts(T)
+  # false (API_SPEC.md section 4). The graphs are read with the same cycles as
+  # the derivation chain's.
+  verdicts <- .tf_prediction_verdicts(T, cycles)
   discriminates <- function(v, d) {
     if (is.null(v) || v$theory == "not_evaluated" || is.null(v$rivals[[d]])) return(TRUE)
     v$rivals[[d]] != v$theory
@@ -230,23 +295,12 @@ NULL
 
   # 12 derivation_chain
   # With no prediction there is no derivation to check, and a pass would lift
-  # the empty theory's score.
-  if (length(preds) == 0L) {
-    out$derivation_chain <- item("n/a", NULL)
-  } else {
-    # A claim the causal graph contradicts or leaves open does not follow from
-    # the propositions, whatever the prediction cites.
-    n_valid <- sum(vapply(seq_along(preds), function(i) {
-      df <- .tf_str_list(.tf_get(preds[[i]], "derives_from"))
-      v <- verdicts[[i]]
-      length(df) > 0L && all(df %in% prop_ids) &&
-        (is.null(v) || !(v$theory %in% c("contradicted", "undetermined")))
-    }, logical(1)))
-    frac <- n_valid / length(preds)
-    out$derivation_chain <- item(if (frac == 1.0) "pass" else "fail", .tf_rnd(frac, 3))
-  }
+  # the empty theory's score. A claim the causal graph does not entail does not
+  # follow from the propositions, whatever the prediction cites.
+  dc <- .tf_derivation_chain(T, preds, prop_ids, cycles)
+  out$derivation_chain <- item(dc$status, dc$score)
 
-  out
+  list(items = out, not_checked = dc$not_checked)
 }
 
 # The weighted mean of the scores `x` under the weights `w`, times 100 and
@@ -278,61 +332,101 @@ NULL
   c(min(values), max(values))
 }
 
-#' Compute the rigour checklist report
+# What the checklist score describes, in the words the documents and the help
+# use. tf_report() gives it beside the score, with the checklist's version.
+.tf_SCOPE <- paste(
+  "The checklist score describes how completely the file states what checklist %s",
+  "asks for. Most items read whether a field is filled in or how a prediction is",
+  "labelled, and stated claims are checked against the causal graph. Test outcomes are",
+  "read only by the parsimony item, the weights are conventions, and no study has",
+  "established what difference between two scores is meaningful. The score does not",
+  "show that the theory is true or well reasoned.")
+
+#' Check a theory file against the checklist
 #'
-#' Runs the full rigour checklist (12 items) over a theory object and returns a
+#' Runs the 12 items of the checklist over a theory object and returns a
 #' report, with the items in checklist order.
+#'
+#' The checklist score describes how completely the file states what checklist
+#' 3.1 asks for. Most items read whether a field is filled in or how a
+#' prediction is labelled, and stated claims are checked against the causal
+#' graph. Test outcomes are read only by the parsimony item, the weights are
+#' conventions, and no study has established what difference between two
+#' scores is meaningful. The score does not show that the theory is true or
+#' well reasoned.
 #'
 #' Each item has a status (\code{"pass"}, \code{"warn"} or \code{"fail"}) and
 #' a score from 0 to 1. An item with nothing to assess has the status
 #' \code{"n/a"} and a \code{NULL} score: the redundancy screen with fewer than
 #' two constructs, the derivation chain with no prediction and parsimony when
 #' no auxiliary assumption names, in \code{added_for}, an anomaly it was added
-#' to answer. The aggregate
-#' score is the weighted mean of the applicable items' scores, times 100, and
-#' \code{coverage} is the share of the checklist's weight that was applicable.
+#' to answer. The checklist score (\code{aggregate_score}) is the weighted mean
+#' of the applicable items' scores, times 100, and \code{coverage} is the share
+#' of the checklist's weight that was applicable.
 #'
-#' Two values are refused before anything is scored, since no score built on
-#' them would be defensible. One is a test outcome whose \code{passed} is
-#' present and not \code{TRUE} or \code{FALSE}, such as the quoted string
-#' \code{"true"}. The other is a prediction \code{severity} that is present and
-#' not a finite number from 0 to 1. Both stop with an error, and
-#' [tf_validate()] with \code{full = TRUE} reports both.
+#' The derivation chain counts a prediction as derived when the propositions
+#' it cites are declared and it states no claim or one that the causal graph
+#' entails. It fails when some prediction cites a proposition that is not
+#' declared, or none, or states a claim that the graph contradicts, leaves
+#' open, cannot read as written or cannot place because it names a construct
+#' no proposition relates, and when the graph contradicts the claim of a
+#' phenomenon. A claim that the graph leaves unread because it has a feedback
+#' loop is not checked: the prediction is not derived, and, failing anything
+#' else, the item warns, which does not block the gate.
+#'
+#' Three values are refused before anything is scored, since no score built
+#' on them would be defensible. One is a \code{cycles} other than
+#' \code{"refuse"} or \code{"sigma"}. Another is a test outcome whose
+#' \code{passed} is present and not \code{TRUE} or \code{FALSE}, such as the
+#' quoted string \code{"true"}. The third is a prediction \code{severity} that
+#' is present and not a finite number from 0 to 1. Each stops with an error,
+#' and [tf_validate()] with \code{full = TRUE} reports the last two.
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
+#' @param cycles How a causal graph with a feedback loop is read, as in
+#'   [tf_entailments()]. \code{"refuse"} (the default) leaves its claims
+#'   unread, and \code{"sigma"} reads them by sigma-separation, which assumes
+#'   that each loop settles to a unique equilibrium. The derivation chain and
+#'   diagnosticity read the claims this way.
 #' @return A named list with elements \code{theory_id}, \code{schema_version}
-#'   (the theory's), \code{checklist_version} (the rigour checklist's, which is
-#'   what the weights and thresholds came from), \code{maturity},
-#'   \code{aggregate_score} (0 to 100, to one decimal), \code{aggregate_range},
-#'   \code{coverage}, \code{gate}, \code{n_blockers_failed} and \code{items}.
-#'   \code{aggregate_range} holds the lowest and highest aggregate under the
-#'   checklist's weights, equal weights and each applicable item's weight
-#'   halved or doubled in turn, since the weights are a convention. \code{gate} is
-#'   \code{"advisory"} at \code{draft} maturity, and otherwise \code{"blocked"}
-#'   when an item whose \code{severity_if_fail} is \code{"blocker"}
-#'   (falsifiability or derivation_chain) fails and \code{"pass"} when none
-#'   does. \code{items} holds one list per checklist item, in checklist order,
-#'   with \code{id}, \code{status}, \code{score}, \code{weight},
-#'   \code{severity_if_fail} (\code{"blocker"} or \code{"warning"}) and
-#'   \code{citation}. An error is raised for a prediction severity that is not
-#'   a finite number or is below 0 or above 1.
+#'   (the theory's), \code{checklist_version} (the checklist's, which is what
+#'   the weights and thresholds came from), \code{maturity},
+#'   \code{aggregate_score} (the checklist score, 0 to 100, to one decimal),
+#'   \code{aggregate_range}, \code{coverage}, \code{gate},
+#'   \code{n_blockers_failed} and \code{items}. \code{aggregate_range} holds
+#'   the lowest and highest score over the checklist's weights, equal weights
+#'   and each applicable item's weight halved and then doubled with the others
+#'   unchanged. It is not an interval for the score, and it leaves out the
+#'   choices made in coding the file and the rubric's constants. \code{gate} is
+#'   \code{"advisory"} at \code{draft} maturity, and otherwise
+#'   \code{"blocked"} when an item whose \code{severity_if_fail} is
+#'   \code{"blocker"} (falsifiability or derivation_chain) fails and
+#'   \code{"pass"} when none does. \code{items} holds one list per checklist
+#'   item, in checklist order, with \code{id}, \code{status}, \code{score},
+#'   \code{weight}, \code{severity_if_fail} (\code{"blocker"} or
+#'   \code{"warning"}) and \code{citation}. The derivation_chain item has a
+#'   seventh element, \code{not_checked}, a list of the ids of the predictions
+#'   whose claims were not checked.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
 #'   tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
 #'   tf_add_proposition("p1", "c_arousal", "c_threat", "causes",
 #'                      mechanism = "Activation raises salience of threat cues.") |>
-#'   tf_add_prediction("h1", "Arousal precedes threat appraisal.", "point")
+#'   tf_add_prediction("h1", "Arousal precedes threat appraisal.", "directional",
+#'                     derives_from = "p1")
 #' report <- tf_check(theory)
 #' report$aggregate_score
 #' report$gate
 #' @export
-tf_check <- function(theory) {
+tf_check <- function(theory, cycles = "refuse") {
+  .tf_check_cycles(cycles, "check")
   T <- theory
   .tf_refuse_non_boolean_outcomes(T, "check")
   spec <- tf_checklist()
   thr <- spec$thresholds
-  results <- .tf_check_items(T, thr)
+  checked <- .tf_check_items(T, thr, cycles)
+  results <- checked$items
 
   items <- vector("list", length(spec$items))
   applicable <- 0.0
@@ -364,6 +458,12 @@ tf_check <- function(theory) {
       severity_if_fail = spec_item$severity_if_fail,
       citation = spec_item$citation
     )
+    # The predictions whose claims a feedback loop left unread, so that a
+    # document can say how many were not checked and why. A list, so that one
+    # id is still written as a JSON array.
+    if (identical(iid, "derivation_chain")) {
+      items[[k]]$not_checked <- as.list(checked$not_checked)
+    }
   }
 
   # A maturity outside its enum, a sequence included, is absent (API_SPEC.md
@@ -393,11 +493,14 @@ tf_check <- function(theory) {
   )
 }
 
-#' Render the rigour report as a string
+#' Render the checklist report as a string
 #'
 #' Renders the result of [tf_check()] as a string. \code{format = "json"}
 #' returns valid, pretty-printed JSON. \code{format = "html"} returns an HTML
-#' fragment in which every interpolated value is escaped. Any other
+#' fragment in which every interpolated value is escaped. It gives the
+#' checklist score with its range and the gate, the statement of what the score
+#' describes, and a table of the items with the criterion each applies, its
+#' status and score and the works from which the criterion is drawn. Any other
 #' \code{format} stops, and so does a theory that [tf_check()] refuses.
 #'
 #' @param theory A theory object (named list).
@@ -406,7 +509,7 @@ tf_check <- function(theory) {
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
-#'   tf_add_prediction("h1", "Arousal precedes threat appraisal.", "point")
+#'   tf_add_prediction("h1", "Arousal precedes threat appraisal.", "directional")
 #' cat(tf_report(theory, format = "json"))
 #' @export
 tf_report <- function(theory, format = "json") {
@@ -417,23 +520,30 @@ tf_report <- function(theory, format = "json") {
     return(as.character(json))
   }
   if (identical(format, "html")) {
+    spec_items <- tf_checklist()$items
+    criteria <- vapply(spec_items, function(it) .tf_str(it, "criterion"), character(1))
+    names(criteria) <- vapply(spec_items, function(it) .tf_str(it, "id"), character(1))
     # Every interpolated value is escaped: the schema allows any non-empty id,
     # so '<' or '&' in it would otherwise reach the markup.
     rows <- vapply(rep$items, function(it) {
-      sprintf('    <tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
-              .tf_xml(it$id), .tf_xml(it$status),
+      criterion <- if (it$id %in% names(criteria)) criteria[[it$id]] else ""
+      sprintf('    <tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>',
+              .tf_xml(it$id), .tf_xml(criterion), .tf_xml(it$status),
               .tf_xml(.tf_format_score_html(it$score)), .tf_xml(it$citation))
     }, character(1))
     rows <- paste(rows, collapse = "\n")
     return(paste0(
       '<section class="theoryforge-report">\n',
-      sprintf('  <h2>Rigour report: %s</h2>\n', .tf_xml(rep$theory_id)),
-      sprintf(paste0('  <p>Aggregate score: <strong>%s</strong> (%s to %s under other ',
-                     'weightings) &middot; gate: <strong>%s</strong></p>\n'),
+      sprintf('  <h2>Checklist report: %s</h2>\n', .tf_xml(rep$theory_id)),
+      sprintf(paste0('  <p>Checklist score: <strong>%s</strong> (%s to %s with equal ',
+                     'weights or one weight halved or doubled) &middot; gate: ',
+                     '<strong>%s</strong></p>\n'),
               .tf_xml(.tf_format_score_html(rep$aggregate_score)),
               .tf_xml(.tf_format_score_html(rep$aggregate_range[[1]])),
               .tf_xml(.tf_format_score_html(rep$aggregate_range[[2]])), .tf_xml(rep$gate)),
-      '  <table>\n    <tr><th>item</th><th>status</th><th>score</th><th>grounding</th></tr>\n',
+      sprintf('  <p>%s</p>\n', .tf_xml(sprintf(.tf_SCOPE, rep$checklist_version))),
+      '  <table>\n    <tr><th>item</th><th>criterion</th><th>status</th><th>score</th>',
+      '<th>source of the criterion</th></tr>\n',
       rows, '\n  </table>\n</section>\n'
     ))
   }

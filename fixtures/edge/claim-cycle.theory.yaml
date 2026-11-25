@@ -1,6 +1,7 @@
-# A feedback loop leaves every claim unread under cycles = "refuse", which the
-# checklist and the preregistration use, so the references alone decide the
-# derivation chain.
+# A feedback loop leaves every claim unread under cycles = "refuse", the
+# default of the checklist and the preregistration, so the derivation chain
+# reports both predictions as not checked and warns. Under cycles = "sigma", h1
+# is entailed and h2 contradicted.
 schema_version: "1.1"
 id: "claim-cycle"
 title: "Claims on a feedback loop"

@@ -241,12 +241,15 @@ NULL
   # An item with nothing to assess asks for no work, so only failed and warned
   # items are steps.
   todo <- Filter(function(it) it$status %in% c("fail", "warn"), rep$items)
-  # Blockers before advisories, and heavier checks before lighter ones. The
-  # order is the recommendation: a reader who works down the column addresses
-  # what gates the theory first, rather than whatever the checklist happens to
-  # list first.
+  # Only a failed blocker blocks the gate. The derivation chain warns, and
+  # leaves the gate open, when a feedback loop leaves claims unread.
+  gates <- function(it) identical(it$severity_if_fail, "blocker") && identical(it$status, "fail")
+  # Failed blockers before the rest, and heavier checks before lighter ones.
+  # The order is the recommendation: a reader who works down the column
+  # addresses what gates the theory first, rather than whatever the checklist
+  # happens to list first.
   if (length(todo) > 0L) {
-    blocks <- vapply(todo, function(it) identical(it$severity_if_fail, "blocker"), logical(1L))
+    blocks <- vapply(todo, gates, logical(1L))
     weight <- vapply(todo, function(it) as.numeric(it$weight), numeric(1L))
     todo <- todo[order(ifelse(blocks, 0L, 1L), -weight, seq_along(todo))]
   }
@@ -254,7 +257,7 @@ NULL
   # The hub names the theory and its standing, so the column beneath it reads
   # as this theory's outstanding work rather than an anonymous list.
   lines <- c(lines, sprintf(
-    '  "roadmap" [shape=ellipse, label="%s\\nscore %s, gate %s", fillcolor="%s", color="%s", fontcolor="#FFFFFF"];',
+    '  "roadmap" [shape=ellipse, label="%s\\nchecklist score %s, gate %s", fillcolor="%s", color="%s", fontcolor="#FFFFFF"];',
     .tf_wrap(.tf_str(T, "title"), 20L), .tf_fmt(rep$aggregate_score), .tf_esc(rep$gate),
     .tf_INK, .tf_INK))
   if (length(todo) == 0L) {
@@ -264,7 +267,7 @@ NULL
   } else {
     for (i in seq_along(todo)) {
       it <- todo[[i]]
-      consequence <- if (identical(it$severity_if_fail, "blocker")) "blocks the gate" else "advisory"
+      consequence <- if (gates(it)) "blocks the gate" else "advisory"
       lines <- c(lines, sprintf('  "%s" [label="%d. %s\\n%s\\n%s", %s];',
                                 .tf_esc(it$id), i, .tf_esc(it$id),
                                 .tf_wrap(criterion[[as.character(it$id)]], 22L),
@@ -273,8 +276,8 @@ NULL
     # What gates the theory runs down the spine one step at a time; the
     # advisories that follow are laid out several abreast, which keeps a
     # long list from growing into a strip too tall to take in at once.
-    blockers <- Filter(function(it) identical(it$severity_if_fail, "blocker"), todo)
-    advisories <- Filter(function(it) !identical(it$severity_if_fail, "blocker"), todo)
+    blockers <- Filter(gates, todo)
+    advisories <- Filter(Negate(gates), todo)
     prev <- "roadmap"
     for (it in blockers) {
       lines <- c(lines, sprintf('  "%s" -> "%s";', prev, .tf_esc(it$id)))
@@ -563,8 +566,8 @@ NULL
   items <- rep$items
   h <- 60L + length(items) * 24L + 12L
   out <- c(.tf_svg_open(460L, h),
-           '  <text x="20" y="28" font-size="15">Rigour checklist</text>',
-           sprintf('  <text x="20" y="46">aggregate score %.1f, gate %s</text>',
+           '  <text x="20" y="28" font-size="15">Checklist</text>',
+           sprintf('  <text x="20" y="46">checklist score %.1f, gate %s</text>',
                    rep$aggregate_score, .tf_xml(rep$gate)))
   for (i in seq_along(items)) {
     it <- items[[i]]

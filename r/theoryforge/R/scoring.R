@@ -22,17 +22,32 @@ NULL
 # discount.
 .tf_SEV_CRUD <- 0.25
 
+# Whether a prediction's bounds state two finite numbers, a region a test can
+# miss. The precision item of the checklist and the rubric below read a point or
+# interval label only together with such bounds (API_SPEC.md sections 4 and 9).
+.tf_bounded <- function(p) {
+  b <- .tf_get(p, "bounds")
+  if (!.tf_is_mapping(b)) return(FALSE)
+  lo <- .tf_number(.tf_get(b, "lower"))
+  up <- .tf_number(.tf_get(b, "upper"))
+  !is.null(lo) && !is.null(up) && is.finite(lo) && is.finite(up)
+}
+
 #' Per-prediction claim-form riskiness
 #'
 #' A pre-data rubric of the form of each prediction's claim. \code{risk_score}
 #' is the base riskiness of the declared type: existence 0.1, directional 0.4,
 #' interval 0.7 and point 0.9. \code{computed_severity} discounts a directional
 #' prediction by 25 per cent, adds 0.1 when \code{diagnostic_vs} names a
-#' registered alternative and is capped at 1. The order of the types follows
-#' Popper (1959, sections 31-33) for nested claims about one quantity, and the
-#' directional penalty follows Meehl's (1967, 1990b) argument that a sign alone
-#' risks little. The base values, the discount and the bonus are the package's
-#' conventions, and neither source gives them.
+#' registered alternative and is capped at 1. A point or interval prediction
+#' whose \code{bounds} do not give a finite lower and a finite upper value
+#' states no region a test could miss, so it is rated as a directional one, with
+#' the base 0.4 and the discount, as the precision item of [tf_check()] gives it
+#' no credit. \code{type} still reports the declared label. The order of the
+#' types follows Popper (1959, sections 31-33) for nested claims about one
+#' quantity, and the directional penalty follows Meehl's (1967, 1990b) argument
+#' that a sign alone risks little. The base values, the discount and the bonus
+#' are the package's conventions, and neither source gives them.
 #'
 #' How severely a claim is tested depends on the design and the data, which the
 #' rubric does not read. A prediction scores the same however it is tested, and
@@ -54,8 +69,10 @@ NULL
 #' Popper, K. R. (1959). \emph{The logic of scientific discovery}. Hutchinson.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
-#'   tf_add_prediction("h1", "Effect is exactly 0.30.", "point") |>
-#'   tf_add_prediction("h2", "Effect is positive.", "directional")
+#'   tf_add_prediction("h1", "The effect is 0.30, within 0.05.", "point",
+#'                     bounds = list(lower = 0.25, upper = 0.35)) |>
+#'   tf_add_prediction("h2", "The effect is positive.", "directional",
+#'                     bounds = list(lower = 0))
 #' tf_severity(theory)
 #' @export
 tf_severity <- function(theory) {
@@ -73,8 +90,12 @@ tf_severity <- function(theory) {
   for (i in seq_len(n)) {
     p <- preds[[i]]
     typ <- .tf_enum_str(p, "type", .tf_PRED_TYPE)
-    base <- if (typ %in% names(.tf_SEV_BASE)) .tf_SEV_BASE[[typ]] else 0.0
-    discounted <- if (identical(typ, "directional")) base * (1 - .tf_SEV_CRUD) else base
+    # A point or interval label without the region it claims is rated as a
+    # directional claim, so that the rubric credits the label no more than the
+    # precision item does (API_SPEC.md section 9).
+    form <- if (typ %in% c("point", "interval") && !.tf_bounded(p)) "directional" else typ
+    base <- if (form %in% names(.tf_SEV_BASE)) .tf_SEV_BASE[[form]] else 0.0
+    discounted <- if (identical(form, "directional")) base * (1 - .tf_SEV_CRUD) else base
     dv <- .tf_str_list(.tf_get(p, "diagnostic_vs"))
     # A package convention: naming a registered alternative the prediction
     # would discriminate from adds 0.1. The alternative is declared, not

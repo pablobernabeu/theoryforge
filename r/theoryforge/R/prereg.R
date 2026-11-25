@@ -18,7 +18,8 @@ NULL
 # derivation_chain item (API_SPEC.md section 11): whether every prediction
 # cites declared propositions and, where it states a claim, whether the causal
 # graph entails it.
-.tf_RESOLVE <- c(pass = "yes", fail = "no", "n/a" = "not applicable (no predictions)")
+.tf_RESOLVE <- c(pass = "yes", fail = "no", warn = "not checked (feedback loop)",
+                 "n/a" = "not applicable (no predictions)")
 
 # How a rival's own propositions read a prediction's claim, beside the rival's id.
 .tf_RIVAL_READS <- c(entailed = "its propositions entail the claim too",
@@ -422,7 +423,8 @@ NULL
 #'   \doi{10.1086/288135}
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
-#'   tf_add_prediction("h1", "Effect is exactly 0.30.", "point")
+#'   tf_add_prediction("h1", "The effect is 0.30, within 0.05.", "point",
+#'                     bounds = list(lower = 0.25, upper = 0.35))
 #' cat(tf_preregister(theory))
 #' @export
 tf_preregister <- function(theory, path = NULL, cycles = "refuse") {

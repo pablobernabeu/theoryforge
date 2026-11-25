@@ -80,7 +80,8 @@ present and not \code{TRUE} or \code{FALSE}, or when a prediction's
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
-  tf_add_prediction("h1", "Effect is exactly 0.30.", "point")
+  tf_add_prediction("h1", "The effect is 0.30, within 0.05.", "point",
+                    bounds = list(lower = 0.25, upper = 0.35))
 cat(tf_preregister(theory))
 }
 \references{

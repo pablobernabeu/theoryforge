@@ -2,51 +2,79 @@
 % Please edit documentation in R/rigor.R
 \name{tf_check}
 \alias{tf_check}
-\title{Compute the rigour checklist report}
+\title{Check a theory file against the checklist}
 \usage{
-tf_check(theory)
+tf_check(theory, cycles = "refuse")
 }
 \arguments{
 \item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
+
+\item{cycles}{How a causal graph with a feedback loop is read, as in
+\code{\link[=tf_entailments]{tf_entailments()}}. \code{"refuse"} (the default) leaves its claims
+unread, and \code{"sigma"} reads them by sigma-separation, which assumes
+that each loop settles to a unique equilibrium. The derivation chain and
+diagnosticity read the claims this way.}
 }
 \value{
 A named list with elements \code{theory_id}, \code{schema_version}
-(the theory's), \code{checklist_version} (the rigour checklist's, which is
-what the weights and thresholds came from), \code{maturity},
-\code{aggregate_score} (0 to 100, to one decimal), \code{aggregate_range},
-\code{coverage}, \code{gate}, \code{n_blockers_failed} and \code{items}.
-\code{aggregate_range} holds the lowest and highest aggregate under the
-checklist's weights, equal weights and each applicable item's weight
-halved or doubled in turn, since the weights are a convention. \code{gate} is
-\code{"advisory"} at \code{draft} maturity, and otherwise \code{"blocked"}
-when an item whose \code{severity_if_fail} is \code{"blocker"}
-(falsifiability or derivation_chain) fails and \code{"pass"} when none
-does. \code{items} holds one list per checklist item, in checklist order,
-with \code{id}, \code{status}, \code{score}, \code{weight},
-\code{severity_if_fail} (\code{"blocker"} or \code{"warning"}) and
-\code{citation}. An error is raised for a prediction severity that is not
-a finite number or is below 0 or above 1.
+(the theory's), \code{checklist_version} (the checklist's, which is what
+the weights and thresholds came from), \code{maturity},
+\code{aggregate_score} (the checklist score, 0 to 100, to one decimal),
+\code{aggregate_range}, \code{coverage}, \code{gate},
+\code{n_blockers_failed} and \code{items}. \code{aggregate_range} holds
+the lowest and highest score over the checklist's weights, equal weights
+and each applicable item's weight halved and then doubled with the others
+unchanged. It is not an interval for the score, and it leaves out the
+choices made in coding the file and the rubric's constants. \code{gate} is
+\code{"advisory"} at \code{draft} maturity, and otherwise
+\code{"blocked"} when an item whose \code{severity_if_fail} is
+\code{"blocker"} (falsifiability or derivation_chain) fails and
+\code{"pass"} when none does. \code{items} holds one list per checklist
+item, in checklist order, with \code{id}, \code{status}, \code{score},
+\code{weight}, \code{severity_if_fail} (\code{"blocker"} or
+\code{"warning"}) and \code{citation}. The derivation_chain item has a
+seventh element, \code{not_checked}, a list of the ids of the predictions
+whose claims were not checked.
 }
 \description{
-Runs the full rigour checklist (12 items) over a theory object and returns a
+Runs the 12 items of the checklist over a theory object and returns a
 report, with the items in checklist order.
 }
 \details{
+The checklist score describes how completely the file states what checklist
+3.1 asks for. Most items read whether a field is filled in or how a
+prediction is labelled, and stated claims are checked against the causal
+graph. Test outcomes are read only by the parsimony item, the weights are
+conventions, and no study has established what difference between two
+scores is meaningful. The score does not show that the theory is true or
+well reasoned.
+
 Each item has a status (\code{"pass"}, \code{"warn"} or \code{"fail"}) and
 a score from 0 to 1. An item with nothing to assess has the status
 \code{"n/a"} and a \code{NULL} score: the redundancy screen with fewer than
 two constructs, the derivation chain with no prediction and parsimony when
 no auxiliary assumption names, in \code{added_for}, an anomaly it was added
-to answer. The aggregate
-score is the weighted mean of the applicable items' scores, times 100, and
-\code{coverage} is the share of the checklist's weight that was applicable.
+to answer. The checklist score (\code{aggregate_score}) is the weighted mean
+of the applicable items' scores, times 100, and \code{coverage} is the share
+of the checklist's weight that was applicable.
 
-Two values are refused before anything is scored, since no score built on
-them would be defensible. One is a test outcome whose \code{passed} is
-present and not \code{TRUE} or \code{FALSE}, such as the quoted string
-\code{"true"}. The other is a prediction \code{severity} that is present and
-not a finite number from 0 to 1. Both stop with an error, and
-\code{\link[=tf_validate]{tf_validate()}} with \code{full = TRUE} reports both.
+The derivation chain counts a prediction as derived when the propositions
+it cites are declared and it states no claim or one that the causal graph
+entails. It fails when some prediction cites a proposition that is not
+declared, or none, or states a claim that the graph contradicts, leaves
+open, cannot read as written or cannot place because it names a construct
+no proposition relates, and when the graph contradicts the claim of a
+phenomenon. A claim that the graph leaves unread because it has a feedback
+loop is not checked: the prediction is not derived, and, failing anything
+else, the item warns, which does not block the gate.
+
+Three values are refused before anything is scored, since no score built
+on them would be defensible. One is a \code{cycles} other than
+\code{"refuse"} or \code{"sigma"}. Another is a test outcome whose
+\code{passed} is present and not \code{TRUE} or \code{FALSE}, such as the
+quoted string \code{"true"}. The third is a prediction \code{severity} that
+is present and not a finite number from 0 to 1. Each stops with an error,
+and \code{\link[=tf_validate]{tf_validate()}} with \code{full = TRUE} reports the last two.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
@@ -54,7 +82,8 @@ theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
   tf_add_proposition("p1", "c_arousal", "c_threat", "causes",
                      mechanism = "Activation raises salience of threat cues.") |>
-  tf_add_prediction("h1", "Arousal precedes threat appraisal.", "point")
+  tf_add_prediction("h1", "Arousal precedes threat appraisal.", "directional",
+                    derives_from = "p1")
 report <- tf_check(theory)
 report$aggregate_score
 report$gate

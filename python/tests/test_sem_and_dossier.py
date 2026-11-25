@@ -23,11 +23,11 @@ def test_compile_sem_associative(weak_path):
 def test_dossier(panic_path):
     d = tf.read(panic_path).dossier()
     assert d.startswith("# theoryforge dossier: Network theory of panic disorder")
-    assert ("- Aggregate rigour score: 88.0/100 (84.2 to 90.2 under other weightings)\n"
+    assert ("- Aggregate rigour score: 85.9/100 (82.1 to 87.9 under other weightings)\n"
             "- Checklist coverage: 0.92\n") in d
     assert "| item | criterion | status | score | weight |" in d
-    assert ("| falsifiability | At least one prediction forbids an observation | pass | 1.0 | "
-            "0.15 |") in d
+    assert ("| falsifiability | At least one prediction is typed point, interval or directional; "
+            "the label is the author's | pass | 1.0 | 0.15 |") in d
     assert "## Preregistration" in d
     assert "# Preregistration: Network theory of panic disorder" in d
 

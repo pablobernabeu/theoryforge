@@ -48,9 +48,9 @@ test_that("new diagram types are byte-identical to the golden files", {
 })
 
 test_that("development_roadmap collapses to a single node when all checks pass", {
-  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  theory <- tf_read(tf_fixture_path("panic-network-2026-v2.theory.yaml"))
   out <- tf_diagram(theory, "development_roadmap")
-  expect_true(grepl('label="Network theory of\\npanic disorder\\nscore 88.0, gate pass"',
+  expect_true(grepl('label="Network theory of\\npanic disorder\\nchecklist score 89.8, gate pass"',
                     out, fixed = TRUE))
   expect_true(grepl('"all_checks_pass" [label="all checks pass", fillcolor="#E5F2E7", color="#3E7A46"];',
                     out, fixed = TRUE))
@@ -62,8 +62,8 @@ test_that("development_roadmap leads on blockers and rows up the advisories", {
   out <- tf_diagram(theory, "development_roadmap")
   # The failed blocker is step 1 and says what it costs.
   expect_true(grepl(paste0('"falsifiability" [label="1. falsifiability\\nAt least one\\n',
-                           'prediction forbids an\\nobservation\\nblocks the gate", ',
-                           'fillcolor="#F9E5E4"'),
+                           'prediction is typed\\npoint, interval or\\ndirectional; the label',
+                           '\\nis the author\'s\\nblocks the gate", fillcolor="#F9E5E4"'),
                     out, fixed = TRUE))
   expect_true(grepl('"roadmap" -> "falsifiability";', out, fixed = TRUE))
   # Advisories follow, pinned three to a row. parsimony has nothing to assess
@@ -201,8 +201,16 @@ test_that("the rigour grid escapes the gate", {
     rep$gate <- "<a & b>"
     rep
   })
-  expect_true(grepl('<text x="20" y="46">aggregate score 88.0, gate &lt;a &amp; b&gt;</text>',
+  expect_true(grepl('<text x="20" y="46">checklist score 85.9, gate &lt;a &amp; b&gt;</text>',
                     tf_diagram(theory, "rigour"), fixed = TRUE))
+})
+
+test_that("development_roadmap leaves a blocker that warns out of the gate", {
+  # A feedback loop leaves the panic network's claim unread, so the derivation
+  # chain warns, which does not block the gate.
+  out <- tf_diagram(tf_read(tf_fixture_path("panic-network.theory.yaml")), "development_roadmap")
+  expect_true(grepl('\\nloop warns)\\nadvisory", fillcolor="#FBF1DC"', out, fixed = TRUE))
+  expect_false(grepl("blocks the gate", out, fixed = TRUE))
 })
 
 test_that("the engine argument is deprecated", {

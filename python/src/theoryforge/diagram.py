@@ -213,18 +213,24 @@ def _development_roadmap(T: dict) -> str:
     # An item with nothing to assess asks for no work, so only failed and
     # warned items are steps.
     todo = [it for it in rep["items"] if it["status"] in ("fail", "warn")]
-    # Blockers before advisories, and heavier checks before lighter ones. The
-    # order is the recommendation: a reader who works down the column addresses
-    # what gates the theory first, rather than whatever the checklist happens to
-    # list first.
+
+    def gates(it: dict) -> bool:
+        # Only a failed blocker blocks the gate. The derivation chain warns,
+        # and leaves the gate open, when a feedback loop leaves claims unread.
+        return it["severity_if_fail"] == "blocker" and it["status"] == "fail"
+
+    # Failed blockers before the rest, and heavier checks before lighter ones.
+    # The order is the recommendation: a reader who works down the column
+    # addresses what gates the theory first, rather than whatever the checklist
+    # happens to list first.
     rank = sorted(range(len(todo)), key=lambda i: (
-        0 if todo[i]["severity_if_fail"] == "blocker" else 1, -todo[i]["weight"], i))
+        0 if gates(todo[i]) else 1, -todo[i]["weight"], i))
     todo = [todo[i] for i in rank]
     lines = _prelude("development_roadmap", "TB")
     # The hub names the theory and its standing, so the column beneath it reads
     # as this theory's outstanding work rather than an anonymous list.
     lines.append(f'  "roadmap" [shape=ellipse, label="{_wrap(text(T.get("title")), 20)}\\n'
-                 f'score {_fmt(rep["aggregate_score"])}, gate {_esc(rep["gate"])}", '
+                 f'checklist score {_fmt(rep["aggregate_score"])}, gate {_esc(rep["gate"])}", '
                  f'fillcolor="{_INK}", color="{_INK}", fontcolor="#FFFFFF"];')
     if not todo:
         lines.append(f'  "all_checks_pass" [label="all checks pass", {_fill("passed")}];')
@@ -232,14 +238,14 @@ def _development_roadmap(T: dict) -> str:
     else:
         for n, it in enumerate(todo, start=1):
             iid = _esc(it["id"])
-            consequence = "blocks the gate" if it["severity_if_fail"] == "blocker" else "advisory"
+            consequence = "blocks the gate" if gates(it) else "advisory"
             lines.append(f'  "{iid}" [label="{n}. {iid}\\n{_wrap(criterion.get(it["id"], ""), 22)}'
                          f'\\n{consequence}", {_fill(it["status"])}];')
         # What gates the theory runs down the spine one step at a time; the
         # advisories that follow are laid out several abreast, which keeps a
         # long list from growing into a strip too tall to take in at once.
-        blockers = [it for it in todo if it["severity_if_fail"] == "blocker"]
-        advisories = [it for it in todo if it["severity_if_fail"] != "blocker"]
+        blockers = [it for it in todo if gates(it)]
+        advisories = [it for it in todo if not gates(it)]
         prev = "roadmap"
         for it in blockers:
             lines.append(f'  "{prev}" -> "{_esc(it["id"])}";')
@@ -492,14 +498,14 @@ _STATUS_COLOUR = {"pass": "#4caf50", "warn": "#ff9800", "fail": "#f44336", "n/a"
 
 
 def _rigor(T: dict) -> str:
-    """The rigour checklist as a colour-coded status grid (SVG)."""
+    """The checklist report as a colour-coded status grid (SVG)."""
     from .rigor import check as _check
     rep = _check(T)
     items = rep["items"]
     h = 60 + len(items) * 24 + 12
     out = [_svg_open(460, h),
-           '  <text x="20" y="28" font-size="15">Rigour checklist</text>',
-           f'  <text x="20" y="46">aggregate score {rep["aggregate_score"]:.1f}, '
+           '  <text x="20" y="28" font-size="15">Checklist</text>',
+           f'  <text x="20" y="46">checklist score {rep["aggregate_score"]:.1f}, '
            f'gate {xml_escape(rep["gate"])}</text>']
     for i, it in enumerate(items):
         y = 60 + i * 24

@@ -34,7 +34,8 @@ test_that("existence predictions and missing diagnostics score the base", {
 test_that("diagnostic bonus only fires against a registered alternative", {
   t <- tf_theory("sev-1", "Severity coverage")
   # diagnostic_vs points at an unregistered alternative -> no bonus.
-  t <- tf_add_prediction(t, "p1", "stmt", "point", diagnostic_vs = c("not_registered"))
+  t <- tf_add_prediction(t, "p1", "stmt", "point", diagnostic_vs = c("not_registered"),
+                         bounds = list(lower = 0.2, upper = 0.3))
   sev <- tf_severity(t)
   expect_equal(sev$computed_severity[1], 0.9)
 })
