@@ -479,6 +479,51 @@ def test_the_type_ranks_only_when_neither_version_states_a_region(before, after,
         {"id": "h", "change": expected}]
 
 
+@pytest.mark.parametrize(("before", "after"), [
+    ({"type": "point"}, {"type": "directional"}),
+    ({"type": "interval"}, {"type": "point"}),
+    ({"type": "directional"}, {"type": "interval"}),
+    ({"type": "point", "bounds": {"lower": 0}}, {"type": "directional", "bounds": {"lower": 0}}),
+    ({"type": "directional", "bounds": {"upper": 1}}, {"type": "interval", "bounds": {"upper": 1}}),
+])
+def test_a_point_or_interval_label_without_two_bounds_reads_as_directional(before, after):
+    # As the claim-form rubric reads it (API_SPEC.md section 9, step 0): the
+    # label alone states nothing a test could miss, so relabelling changes
+    # nothing.
+    def theory(fields):
+        return {"predictions": [{"id": "h", "statement": "S", **fields}]}
+
+    assert tf.appraise_amendment(theory(after), theory(before))["revised"] == []
+    assert tf.appraise_amendment(theory(before), theory(after))["revised"] == []
+
+
+def test_relabelling_an_unbounded_point_prediction_loses_nothing(fixtures_dir):
+    # amend-relabel-unbounded: the refuted h1, typed point without bounds, is
+    # relabelled directional, which neither weakens nor revises it.
+    prior = _edge(fixtures_dir, "amend-prior-unbounded")
+    new = _edge(fixtures_dir, "amend-relabel-unbounded")
+    assert tf.appraise_amendment(new, prior) == _record(verdict="neutral")
+    # Untested in the prior, with a corroborated new prediction beside it, the
+    # relabelling loses no content and the amendment is progressive.
+    untested = copy.deepcopy(prior)
+    untested["test_outcomes"] = []
+    added = copy.deepcopy(new)
+    added["test_outcomes"] = [{"prediction_id": "h3", "passed": True}]
+    added["constructs"].append({"id": "c4", "label": "Fourth", "definition": "The fourth construct."})
+    added["propositions"].append({"id": "p3", "from": "c3", "to": "c4", "relation": "increases",
+                                  "mechanism": "It does."})
+    added["predictions"].append({"id": "h3", "statement": "c4 rises with c3.", "type": "directional",
+                                 "derives_from": ["p3"]})
+    assert tf.appraise_amendment(added, untested) == _new_h3(verdict="progressive")
+    # Relabelled existence, h1 is weakened, since a directional claim ranks
+    # above an existence claim.
+    weaker = copy.deepcopy(new)
+    weaker["predictions"][0]["type"] = "existence"
+    result = tf.appraise_amendment(weaker, prior)
+    assert (result["revised"], result["weakened_refuted"], result["verdict"]) == (
+        [{"id": "h1", "change": "weakened"}], ["h1"], "degenerating")
+
+
 def test_a_refuted_prediction_weakened_after_its_test_degenerates(fixtures_dir):
     # amend-weakened rewrites the refuted h1 as an existence claim.
     prior = _edge(fixtures_dir, "amend-prior")
@@ -650,11 +695,13 @@ def test_an_assumption_moved_to_a_new_id_is_not_appraised(fixtures_dir):
 
 def test_a_version_whose_graph_is_refused_is_not_compared(fixtures_dir):
     # A repeated construct id makes implications() refuse the new version.
+    # What the amendment gives up cannot then be read, so it is not
+    # appraised as progressive, though it is theoretically and empirically so.
     prior = _edge(fixtures_dir, "amend-prior")
     new = _edge(fixtures_dir, "amend-lost-implication")
     new["constructs"].append(copy.deepcopy(new["constructs"][0]))
     assert tf.appraise_amendment(new, prior) == _record(
-        verdict="progressive", new_predictions=["h3"], corroborated_new=["h3"],
+        verdict="neutral", new_predictions=["h3"], corroborated_new=["h3"],
         theoretically_progressive=True, empirically_progressive=True,
         implications_compared=False)
 
@@ -832,12 +879,46 @@ def test_a_sign_no_prediction_states_is_content(fixtures_dir):
 
 def test_a_version_whose_graph_is_refused_compares_no_signs(fixtures_dir):
     # As in amend-lost-sign, with a repeated construct id: the graphs are not
-    # compared, so no sign is lost.
+    # compared, so no sign is listed as lost, and the amendment, which gives
+    # up signs that cannot be read, is not progressive.
     prior = _edge(fixtures_dir, "amend-prior")
     new = _edge(fixtures_dir, "amend-lost-sign")
     new["constructs"].append(copy.deepcopy(new["constructs"][0]))
     assert tf.appraise_amendment(new, prior) == _new_h3(
-        verdict="progressive", implications_compared=False, implications_gained=[])
+        verdict="neutral", implications_compared=False, implications_gained=[])
+
+
+def test_a_refused_graph_withholds_a_progressive_verdict(fixtures_dir):
+    # amend-refused-graph: amend-sign-flip with a proposition to the
+    # undeclared c5. The reversal of the corroborated h1 cannot be read.
+    prior = _edge(fixtures_dir, "amend-prior-corroborated")
+    new = _edge(fixtures_dir, "amend-refused-graph")
+    assert tf.appraise_amendment(new, prior) == _record(
+        verdict="neutral", new_predictions=["h3"], corroborated_new=["h3"],
+        theoretically_progressive=True, empirically_progressive=True,
+        implications_compared=False)
+    # Without p4 the graph is read, and h1 is lost content.
+    read = copy.deepcopy(new)
+    read["propositions"] = read["propositions"][:3]
+    result = tf.appraise_amendment(read, prior)
+    assert (result["verdict"], result["implications_compared"], result["content_lost"]) == (
+        "neutral", True, ["h1"])
+    # Without the reversal too, the amendment is progressive.
+    read["propositions"][0]["relation"] = "increases"
+    assert tf.appraise_amendment(read, prior)["verdict"] == "progressive"
+    # A refused prior graph withholds it as well.
+    broken = copy.deepcopy(prior)
+    broken["propositions"].append({"id": "p9", "from": "c1", "to": "c_typo", "relation": "increases"})
+    result = tf.appraise_amendment(read, broken)
+    assert (result["verdict"], result["implications_compared"]) == ("neutral", False)
+    # It is degenerating as before when an assumption is ad hoc and nothing
+    # new is corroborated.
+    adhoc = copy.deepcopy(new)
+    adhoc["test_outcomes"] = adhoc["test_outcomes"][:1]
+    adhoc["auxiliary_assumptions"] = [{"id": "a9", "statement": "s", "added_for": "h1",
+                                       "protects": ["h1"]}]
+    result = tf.appraise_amendment(adhoc, prior)
+    assert (result["verdict"], result["ad_hoc_assumptions"]) == ("degenerating", ["a9"])
 
 
 def test_novelty_that_rests_on_protects_is_reported(fixtures_dir):

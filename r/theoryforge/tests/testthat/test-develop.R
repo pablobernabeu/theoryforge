@@ -512,6 +512,27 @@ test_that("the type ranks only when neither version states a region", {
   }
 })
 
+test_that("a point or interval label without two bounds reads as directional", {
+  # As the claim-form rubric reads it (API_SPEC.md section 9, step 0): the
+  # label alone states nothing a test could miss, so relabelling changes
+  # nothing.
+  theory <- function(fields) {
+    list(predictions = list(c(list(id = "h", statement = "S"), fields)))
+  }
+  cases <- list(
+    list(list(type = "point"), list(type = "directional")),
+    list(list(type = "interval"), list(type = "point")),
+    list(list(type = "directional"), list(type = "interval")),
+    list(list(type = "point", bounds = list(lower = 0)),
+         list(type = "directional", bounds = list(lower = 0))),
+    list(list(type = "directional", bounds = list(upper = 1)),
+         list(type = "interval", bounds = list(upper = 1))))
+  for (case in cases) {
+    expect_identical(tf_appraise_amendment(theory(case[[2]]), theory(case[[1]]))$revised, list())
+    expect_identical(tf_appraise_amendment(theory(case[[1]]), theory(case[[2]]))$revised, list())
+  }
+})
+
 test_that("a refuted prediction weakened after its test degenerates", {
   # amend-weakened rewrites the refuted h1 as an existence claim.
   prior <- dv_edge("amend-prior")
@@ -696,11 +717,13 @@ test_that("an assumption moved to a new id is not appraised", {
 
 test_that("a version whose graph is refused is not compared", {
   # A repeated construct id makes tf_implications() refuse the new version.
+  # What the amendment gives up cannot then be read, so it is not appraised
+  # as progressive, though it is theoretically and empirically so.
   prior <- dv_edge("amend-prior")
   new <- dv_edge("amend-lost-implication")
   new <- dv_add(new, "constructs", new$constructs[[1]])
   expect_identical(tf_appraise_amendment(new, prior), dv_record(
-    verdict = "progressive", new_predictions = "h3", corroborated_new = "h3",
+    verdict = "neutral", new_predictions = "h3", corroborated_new = "h3",
     theoretically_progressive = TRUE, empirically_progressive = TRUE,
     implications_compared = FALSE))
 })
@@ -894,12 +917,74 @@ test_that("a sign no prediction states is content", {
 
 test_that("a version whose graph is refused compares no signs", {
   # As in amend-lost-sign, with a repeated construct id: the graphs are not
-  # compared, so no sign is lost.
+  # compared, so no sign is listed as lost, and the amendment, which gives up
+  # signs that cannot be read, is not progressive.
   prior <- dv_edge("amend-prior")
   new <- dv_edge("amend-lost-sign")
   new$constructs <- c(new$constructs, new$constructs[1])
   expect_identical(tf_appraise_amendment(new, prior), dv_new_h3(
-    verdict = "progressive", implications_compared = FALSE, implications_gained = character(0)))
+    verdict = "neutral", implications_compared = FALSE, implications_gained = character(0)))
+})
+
+test_that("a refused graph withholds a progressive verdict", {
+  # amend-refused-graph: amend-sign-flip with a proposition to the undeclared
+  # c5. The reversal of the corroborated h1 cannot be read.
+  prior <- dv_edge("amend-prior-corroborated")
+  new <- dv_edge("amend-refused-graph")
+  expect_identical(tf_appraise_amendment(new, prior), dv_record(
+    verdict = "neutral", new_predictions = "h3", corroborated_new = "h3",
+    theoretically_progressive = TRUE, empirically_progressive = TRUE,
+    implications_compared = FALSE))
+  # Without p4 the graph is read, and h1 is lost content.
+  read <- new
+  read$propositions <- read$propositions[1:3]
+  ap <- tf_appraise_amendment(read, prior)
+  expect_identical(list(ap$verdict, ap$implications_compared, ap$content_lost),
+                   list("neutral", TRUE, "h1"))
+  # Without the reversal too, the amendment is progressive.
+  read$propositions[[1]]$relation <- "increases"
+  expect_identical(tf_appraise_amendment(read, prior)$verdict, "progressive")
+  # A refused prior graph withholds it as well.
+  broken <- dv_add(prior, "propositions",
+                   list(id = "p9", from = "c1", to = "c_typo", relation = "increases"))
+  ap <- tf_appraise_amendment(read, broken)
+  expect_identical(list(ap$verdict, ap$implications_compared), list("neutral", FALSE))
+  # It is degenerating as before when an assumption is ad hoc and nothing new
+  # is corroborated.
+  adhoc <- new
+  adhoc$test_outcomes <- adhoc$test_outcomes[1]
+  adhoc$auxiliary_assumptions <- list(list(id = "a9", statement = "s", added_for = "h1",
+                                           protects = list("h1")))
+  ap <- tf_appraise_amendment(adhoc, prior)
+  expect_identical(list(ap$verdict, ap$ad_hoc_assumptions), list("degenerating", "a9"))
+})
+
+test_that("relabelling an unbounded point prediction loses nothing", {
+  # amend-relabel-unbounded: the refuted h1, typed point without bounds, is
+  # relabelled directional, which neither weakens nor revises it.
+  prior <- dv_edge("amend-prior-unbounded")
+  new <- dv_edge("amend-relabel-unbounded")
+  expect_identical(tf_appraise_amendment(new, prior), dv_record(verdict = "neutral"))
+  # Untested in the prior, with a corroborated new prediction beside it, the
+  # relabelling loses no content and the amendment is progressive.
+  untested <- prior
+  untested$test_outcomes <- list()
+  added <- new
+  added$test_outcomes <- list(list(prediction_id = "h3", passed = TRUE))
+  added <- dv_add(added, "constructs",
+                  list(id = "c4", label = "Fourth", definition = "The fourth construct."))
+  added <- dv_add(added, "propositions", list(id = "p3", from = "c3", to = "c4",
+                                              relation = "increases", mechanism = "It does."))
+  added <- dv_add(added, "predictions", list(id = "h3", statement = "c4 rises with c3.",
+                                             type = "directional", derives_from = list("p3")))
+  expect_identical(tf_appraise_amendment(added, untested), dv_new_h3(verdict = "progressive"))
+  # Relabelled existence, h1 is weakened, since a directional claim ranks
+  # above an existence claim.
+  weaker <- new
+  weaker$predictions[[1]]$type <- "existence"
+  ap <- tf_appraise_amendment(weaker, prior)
+  expect_identical(list(ap$revised, ap$weakened_refuted, ap$verdict),
+                   list(list(list(id = "h1", change = "weakened")), "h1", "degenerating"))
 })
 
 test_that("novelty that rests on protects is reported", {
