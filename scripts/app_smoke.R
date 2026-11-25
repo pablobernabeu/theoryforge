@@ -18,9 +18,11 @@
 # does, and otherwise an example uploaded as a prior through .tf_load_prior().
 # The rival is the first alternative that states propositions, and otherwise a
 # theory uploaded through .tf_load_rival(). An impulse starts in the first
-# construct, and a corpus named by its key is read from its file. The
-# editor's call, .tf_edit_call(), must read the theory back from the JSON the
-# package's writer gives with the same content hash. Where the package has
+# construct, and a corpus named by its key is read from its file. Each example
+# must have a score from .tf_score_call() and a content hash from
+# .tf_hash_call(), and the editor's call, .tf_edit_call(), must read the
+# theory back from the JSON the package's writer gives with the same score and
+# content hash. Where the package has
 # tf_read_dagitty(), .tf_import_dagitty_call() must make the theory a small
 # model states. Last, an invalid theory must load with {"ok": false,
 # "message": ...} and give the same from validate. Every result must be a
@@ -179,6 +181,15 @@ local({
       ex <- examples[[i]]
       summary <- call_json(paste0(ex$name, ": load"), function() .tf_load(ex$path))
       if (!is.list(summary)) next
+      # The score and the hash are calls of their own, made after the load.
+      score <- call_json(paste0(ex$name, ": score"), function() .tf_score_call())
+      if (!is.null(score) && (is.null(score$score) || is.null(score$gate))) {
+        fail(paste0(ex$name, ": score"), paste("no score:", as_json(score)))
+      }
+      digest <- call_json(paste0(ex$name, ": content hash"), function() .tf_hash_call())
+      if (!is.null(digest) && is.null(digest$hash)) {
+        fail(paste0(ex$name, ": content hash"), paste("no hash:", as_json(digest)))
+      }
       parents <- paths[vapply(seq_along(examples), function(j) {
         j != i && is_declared_parent(summary, lineage[[j]])
       }, logical(1))]
@@ -212,7 +223,10 @@ local({
         .tf_edit_call()
       })
       if (is.list(edited)) {
-        if (!identical(edited$hash, summary$hash) || !identical(edited$validation, summary$validation)) {
+        same <- identical(call_json(label, function() .tf_hash_call()), digest) &&
+          identical(call_json(label, function() .tf_score_call()), score) &&
+          identical(edited$validation, summary$validation)
+        if (!same) {
           fail(label, "the theory read back differs from the theory loaded")
         }
         if (!setequal(names(edited$texts), c("yaml", "json"))) fail(label, "the writer's texts are missing")

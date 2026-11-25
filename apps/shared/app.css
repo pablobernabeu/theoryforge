@@ -203,6 +203,8 @@ button.btn.sm { padding: 5px 11px; font-size: .82rem; }
 .chip.valid { border-color: var(--ok); color: var(--ink); font-weight: 600; }
 .chip.invalid { border-color: var(--danger); color: var(--ink); font-weight: 600; }
 .chip.score { color: var(--ink); }
+/* The button that scores a theory too large to be scored as it loads. */
+.chip .linklike { font-size: inherit; }
 .summary .hash { margin-top: 8px; font-size: .76rem; color: var(--ink-soft); display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
 .summary .hash code { font-family: var(--mono); color: var(--ink); overflow-wrap: anywhere; }
 

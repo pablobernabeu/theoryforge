@@ -877,6 +877,97 @@ test("a small negative value is written 0, not -0", async () => {
 
 const tick = (ms) => new Promise((r) => setTimeout(r, ms || 5));
 
+// A runtime whose score waits until the test releases it, and which records
+// the theory each score and each hash was asked for. An upload whose text
+// holds "large" counts 4,000 constructs.
+function slowScoreRuntime(extra) {
+  const rt = stubRuntime(Object.assign({
+    scored: [], hashed: [], waiting: [],
+    async contentHash() { this.hashed.push(this.active); return { hash: "sha256:" + "ef".repeat(32) }; },
+    async score() {
+      this.scored.push(this.active);
+      await new Promise((r) => this.waiting.push(r));
+      return { score: 61.5, gate: "pass", failed: [], warned: ["precision"] };
+    },
+    release() { for (const r of this.waiting.splice(0)) r(); },
+    async loadTheoryText(text, name) {
+      this.active = name;
+      return Object.assign(summaryOf(name, { ok: true }), { counts: { constructs: /large/.test(text) ? 4000 : 3 } });
+    },
+  }, extra || {}));
+  return rt;
+}
+const scoreChipText = ($) => ($("#summaryScore") ? $("#summaryScore").textContent.replace(/<\/?b>/g, "") : "");
+
+test("the card shows before the checklist has run, and each text is scored once", async () => {
+  const rt = slowScoreRuntime();
+  const { ctx, $ } = await boot({}, rt);
+  assert.ok($("#boot").classList.contains("hidden"), "the start did not wait for the score");
+  assert.match($("#summaryWrap .ttl").textContent, /Title a\.theory\.yaml/);
+  assert.equal(scoreChipText($), "scoring…");
+  await tick();
+  assert.deepEqual(rt.scored, [EXAMPLES[0].path], "the score is asked once the card is shown");
+  rt.release(); await tick();
+  assert.equal(scoreChipText($), "61.5 / 100 · pass");
+  await choose($("#exampleSel"), EXAMPLES[1].path);
+  await tick(); rt.release(); await tick();
+  assert.deepEqual(rt.scored, [EXAMPLES[0].path, EXAMPLES[1].path]);
+  // Back on the first example, its score is known.
+  await choose($("#exampleSel"), EXAMPLES[0].path);
+  await tick();
+  assert.deepEqual(rt.scored, [EXAMPLES[0].path, EXAMPLES[1].path], "no second score for the same text");
+  assert.equal(scoreChipText($), "61.5 / 100 · pass");
+  assert.deepEqual(rt.hashed, [EXAMPLES[0].path, EXAMPLES[1].path], "no second hash either");
+  assert.match($("#summaryHash").textContent, /sha256:efefefefefef…efefef/);
+  assert.ok(ctx);
+});
+
+test("a large theory is scored only on request, and its last operation is not run again as it opens", async () => {
+  const rt = runsOf(slowScoreRuntime());
+  const { $ } = await boot({}, rt);
+  await tick(); rt.release(); await tick();
+  await upload($("#fileInput"), "large.theory.yaml", "id: large\n");
+  await tick();
+  assert.deepEqual(rt.scored, [EXAMPLES[0].path], "the large theory is not scored unasked");
+  assert.deepEqual(rt.hashed, [EXAMPLES[0].path], "nor hashed");
+  assert.equal(scoreChipText($), "not scored score it");
+  assert.match($("#summaryScore").getAttribute("title"), /4,000 constructs, propositions and predictions, more than the 300/);
+  assert.equal($("#summaryHash").textContent, "Content hash not computed for a theory this large compute it");
+  await $("#summaryHash button").click();
+  await tick();
+  assert.deepEqual(rt.hashed, [EXAMPLES[0].path, "large.theory.yaml"]);
+  assert.match($("#summaryHash").textContent, /^Content hash sha256:efef/);
+  const button = $("#summaryScore button");
+  await button.click();
+  assert.equal(scoreChipText($), "scoring…");
+  assert.match($(".toast").textContent, /^Scoring Title large\.theory\.yaml with the rigour checklist/);
+  await tick();
+  assert.deepEqual(rt.scored, [EXAMPLES[0].path, "large.theory.yaml"]);
+  rt.release(); await tick();
+  assert.equal(scoreChipText($), "61.5 / 100 · pass");
+  // A session saved with a large theory and a run does not run it as it opens.
+  const stored = { "tf-app-py": JSON.stringify({ v: 2, opId: "check", params: {}, ran: true,
+    input: { mode: "upload", name: "large.theory.yaml", text: "id: large\n" } }) };
+  const rt2 = runsOf(slowScoreRuntime());
+  const again = await boot({ stored }, rt2);
+  assert.deepEqual(rt2.ran, []);
+  assert.equal(again.$(".toast").textContent, "The theory is large, so Rigour checklist was not run. Press Run to run it");
+  await tick();
+  assert.deepEqual(rt2.scored, []);
+});
+
+test("a Rigour checklist run gives the card its score, and the score names an error without a message", async () => {
+  const rt = slowScoreRuntime({ async score() { this.scored.push(this.active); return { error: "" }; } });
+  const { $ } = await boot({}, rt);
+  await tick();
+  assert.equal(scoreChipText($), "not scored");
+  assert.equal($("#summaryScore").getAttribute("title"), "the checklist stopped without a message");
+  await upload($("#fileInput"), "large.theory.yaml", "id: large\n");
+  await $("#runBtn").click();
+  assert.equal(scoreChipText($), "80 / 100 · pass", "the run's report scores the card");
+  assert.deepEqual(rt.scored, [EXAMPLES[0].path]);
+});
+
 async function bootAt(hash, opts, rt) {
   const ctx = makeWindow(Object.assign({ hash }, opts || {}));
   runScript(ctx, CORE);

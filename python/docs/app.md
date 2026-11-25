@@ -14,10 +14,12 @@ while, and the browser keeps it for later visits.
 A theory comes from the list of examples, from a YAML or JSON file uploaded from your
 computer or from the editor. A card beside it shows whether the package finds it valid, its
 rigour score and gate, the number of its constructs, propositions and predictions, and its
-content hash. You choose an operation, set its parameters and run it, and the result appears
-with a note on what it shows. Figures can be saved as SVG or PNG, text and JSON results as
-files, and the preregistration and the dossier are shown as formatted pages with their
-Markdown a click away.
+content hash. The score and the hash follow a moment after the rest, and a theory with more
+than 300 constructs, propositions and predictions is scored and hashed only when you ask,
+since either can take a long time on a theory that size. You choose an operation, set its
+parameters and run it, and the result appears with a note on what it shows. Figures can be
+saved as SVG or PNG, text and JSON results as files, and the preregistration and the dossier
+are shown as formatted pages with their Markdown a click away.
 
 The operations are grouped by purpose. Assess holds the rigour checklist, the full
 validation, the claim-form rubric, post-data severity and the redundancy screen. Derive holds

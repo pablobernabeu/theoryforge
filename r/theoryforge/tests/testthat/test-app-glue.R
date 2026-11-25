@@ -202,12 +202,42 @@ test_that("the summary lists constructs, rivals, the score and the hash", {
   expect_identical(s$alternatives, list(
     list(id = "alt_grounding_by_interaction", label = "Grounding by interaction", propositions = 4L),
     list(id = "alt_symbol_interdependency", label = "Symbol interdependency", propositions = 5L)))
-  expect_identical(s$check$score, tf_check(t)$aggregate_score)
-  # The hash is a call of its own, so a slow hash cannot hold up a load.
+  # The score and the hash are calls of their own, so neither can hold up a
+  # load.
+  expect_null(s$check)
   expect_null(s$hash)
+  report <- tf_check(t)
+  score <- jsonlite::fromJSON(app$.tf_score_call(), simplifyVector = FALSE)
+  expect_identical(score$score, report$aggregate_score)
+  expect_identical(score$gate, report$gate)
+  failed <- unlist(lapply(report$items, function(i) if (identical(i$status, "fail")) i$id))
+  expect_identical(unlist(score$failed), failed)
   expect_identical(jsonlite::fromJSON(app$.tf_hash_call(), simplifyVector = FALSE),
                    list(hash = tf_content_hash(t)))
   expect_identical(s$counts$phenomena, 1L)
+})
+
+test_that("a large theory loads without the checklist", {
+  # Aliases let a link of a few hundred characters hold thousands of
+  # constructs, and the checklist's time grows faster than the theory. The
+  # load reads, validates and summarises such a theory without running the
+  # checklist, which the app asks for in a call of its own.
+  app <- app_glue()
+  n <- 3000L
+  text <- paste0("schema_version: \"1.1\"\nid: big\ntitle: Big\nmaturity: draft\n",
+                 "_c: &c {id: a, label: A, definition: D}\nconstructs: [",
+                 paste(rep("*c", n), collapse = ", "), "]")
+  app$tf_check <- function(...) stop("the load ran the checklist", call. = FALSE)
+  s <- jsonlite::fromJSON(app$.tf_load(write_theory(text)), simplifyVector = FALSE)
+  expect_identical(s$counts$constructs, n)
+  expect_null(s$check)
+  expect_false(isTRUE(s$validation$ok))
+  expect_true("duplicate construct id: a" %in% unlist(s$validation$problems))
+  # An error without a message is named by its class.
+  app$tf_check <- function(...) stop(structure(class = c("memoryError", "error", "condition"),
+                                               list(message = "", call = NULL)))
+  expect_identical(jsonlite::fromJSON(app$.tf_score_call(), simplifyVector = FALSE),
+                   list(error = "memoryError"))
 })
 
 test_that("the editor reads back what the writer writes", {

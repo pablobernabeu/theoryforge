@@ -89,8 +89,9 @@ invisible(lapply(.tf_app_files, source))
   }, error = function(e) list(ok = FALSE, message = conditionMessage(e)))
 }
 
-# The checklist's score and gate, which the editor shows as the theory changes,
-# or the message of a theory the checklist refuses.
+# The checklist's score and gate, which the card and the editor show, or the
+# message of a theory the checklist refuses. An error without a message is
+# named by its class.
 .tf_score <- function(t) {
   tryCatch({
     r <- tf_check(t)
@@ -98,8 +99,16 @@ invisible(lapply(.tf_app_files, source))
       as.character(unlist(lapply(r$items, function(i) if (identical(i$status, status)) i$id)))
     }
     list(score = r$aggregate_score, gate = r$gate, failed = I(ids("fail")), warned = I(ids("warn")))
-  }, error = function(e) list(error = conditionMessage(e)))
+  }, error = function(e) {
+    msg <- conditionMessage(e)
+    list(error = if (nzchar(msg)) msg else class(e)[[1L]])
+  })
 }
+
+# The score of the loaded theory. It is a call of its own, which the app makes
+# once the theory card has been drawn, so that the checklist, whose time grows
+# faster than the theory, never holds up a load, a restore or the start.
+.tf_score_call <- function() .tf_json(.tf_score(.tf_app$theory))
 
 .tf_hash <- function(t) tryCatch(tf_content_hash(t), error = function(e) NULL)
 
@@ -115,7 +124,6 @@ invisible(lapply(.tf_app_files, source))
   .tf_app$theory <- t
   out <- .tf_summary(t)
   out$validation <- .tf_validation(t)
-  out$check <- .tf_score(t)
   out
 }
 
@@ -496,6 +504,10 @@ const RT = {
 
   // The content hash of the loaded theory, as { hash } or { error }.
   async contentHash() { return JSON.parse(await this._webR.evalRString(".tf_hash_call()")); },
+
+  // The checklist's score of the loaded theory, as { score, gate, failed,
+  // warned } or { error }.
+  async score() { return JSON.parse(await this._webR.evalRString(".tf_score_call()")); },
 
   // The loaded theory as the package's writer writes it ("yaml" or "json").
   async writeText(format) {

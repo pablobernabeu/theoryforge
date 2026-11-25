@@ -191,13 +191,44 @@ def test_the_summary_lists_constructs_rivals_score_and_hash(app, modality_path):
     assert s["alternatives"] == [
         {"id": "alt_grounding_by_interaction", "label": "Grounding by interaction", "propositions": 4},
         {"id": "alt_symbol_interdependency", "label": "Symbol interdependency", "propositions": 5}]
-    report = t.check()
-    assert s["check"]["score"] == report["aggregate_score"]
-    assert s["check"]["gate"] == report["gate"]
-    # The hash is a call of its own, so a slow hash cannot hold up a load.
+    # The score and the hash are calls of their own, so neither can hold up a
+    # load.
+    assert "check" not in s
     assert "hash" not in s
+    report = t.check()
+    score = json.loads(app.score())
+    assert score["score"] == report["aggregate_score"]
+    assert score["gate"] == report["gate"]
+    assert score["failed"] == [i["id"] for i in report["items"] if i["status"] == "fail"]
     assert json.loads(app.content_hash()) == {"hash": t.content_hash()}
     assert s["counts"]["phenomena"] == 1
+
+
+def test_a_large_theory_loads_without_the_checklist(app, tmp_path, monkeypatch):
+    # Aliases let a link of a few hundred characters hold thousands of
+    # constructs, and the checklist's time grows faster than the theory. The
+    # load reads, validates and summarises such a theory without running the
+    # checklist, which the app asks for in a call of its own.
+    n = 3000
+    text = ('schema_version: "1.1"\nid: big\ntitle: Big\nmaturity: draft\n'
+            "_c: &c {id: a, label: A, definition: D}\nconstructs: [" + ", ".join(["*c"] * n) + "]\n")
+
+    def refuse(self, *args, **kwargs):
+        raise AssertionError("the load ran the checklist")
+
+    monkeypatch.setattr(tf.Theory, "check", refuse)
+    s = json.loads(app.load(_write(tmp_path, "big.theory.yaml", text)))
+    assert s["counts"]["constructs"] == n
+    assert "check" not in s
+    assert s["validation"]["ok"] is False
+    assert "duplicate construct id: a" in s["validation"]["problems"]
+    # An error without a message, such as a MemoryError, is named by its type.
+
+    def out_of_memory(self, *args, **kwargs):
+        raise MemoryError
+
+    monkeypatch.setattr(tf.Theory, "check", out_of_memory)
+    assert json.loads(app.score()) == {"error": "MemoryError"}
 
 
 def test_the_editor_reads_back_what_the_writer_writes(app, panic_path, tmp_path):

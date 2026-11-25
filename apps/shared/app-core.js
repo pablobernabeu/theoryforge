@@ -1464,16 +1464,12 @@
     const status = !v ? null : v.ok
       ? el("span", { class: "chip valid", title: "Full validation found no problem", text: "valid" })
       : el("span", { class: "chip invalid", title: "Run Validate to list them", text: plural(problemList(v).length, "problem") });
-    const ck = s.check;
-    const score = !ck ? null : ck.error
-      ? el("span", { class: "chip", title: ck.error, text: "not scored" })
-      : el("span", { class: "chip score", title: "Rigour checklist: aggregate score and gate", html: "<b>" + esc(num(ck.score)) + "</b> / 100 · " + esc(ck.gate) });
     const edited = STATE.input && STATE.input.mode === "edited";
     const kids = [
       el("div", { class: "ttl", text: s.title || s.id || "(untitled)" }),
       el("div", { class: "meta" }, [s.id || "", s.maturity ? " · " + s.maturity : "", s.form ? " · " + s.form : "", edited ? " · edited" : ""].join("")),
       el("div", { class: "chips" }, [
-        status, score,
+        status, scoreChip(s),
         chip(c.constructs || 0, "construct"), chip(c.propositions || 0, "proposition"),
         chip(c.predictions || 0, "prediction"), chip(c.alternatives || 0, "alternative"),
         chip(c.assumptions || 0, "assumption"),
@@ -1486,8 +1482,7 @@
   }
   // The content hash identifies exactly this content, whatever the layout of
   // the file, and the preregistration and dossier print it too. It arrives
-  // after the load (requestHash), so the row is empty until then, and says so
-  // when the package could not compute it.
+  // after the load, and the row says when the package could not compute it.
   function hashRow(s) {
     const row = el("div", { class: "hash", id: "summaryHash" });
     if (s && s.hash) {
@@ -1496,35 +1491,143 @@
         el("button", { class: "linklike sm", onclick: () => copyText(s.hash), "aria-label": "Copy the content hash" }, "copy"));
     } else if (s && s.hashError) {
       row.append(el("span", { class: "hk", title: s.hashError, text: "Content hash not computed: " + s.hashError }));
+    } else if (s && s.hashWait === "asked") {
+      row.append(el("span", { class: "hk", title: largeNote(s), text: "Content hash not computed for a theory this large " }),
+        el("button", { class: "linklike sm", type: "button", onclick: () => requestHash(true), "aria-label": "Compute the content hash" }, "compute it"));
+    } else if (s && s.hashWait === "queued") {
+      row.append(el("span", { class: "hk", text: "Content hash computing…" }));
     } else row.setAttribute("hidden", "");
     return row;
   }
-  // The hash is asked of the engine in a call of its own once a theory has
-  // loaded, so that a slow hash never holds up a load or the start. One
-  // request waits in the engine's queue at a time, and it hashes the theory
-  // loaded when its turn comes. A result for a theory that has since been
-  // replaced is dropped.
-  let hashQueued = false;
-  function requestHash() {
-    if (hashQueued || !RT || typeof RT.contentHash !== "function") return;
-    hashQueued = true;
-    let s = null;
-    const show = () => { const row = $("#summaryHash"); if (row && STATE.summary === s) row.replaceWith(hashRow(s)); };
-    engine(() => {
-      hashQueued = false;
-      s = STATE.summary;
-      return s && !s.hash ? RT.contentHash() : null;
+
+  // ---- the checklist's score and the content hash on the card ---------------
+  // Both are asked of the engine in calls of their own once a theory has
+  // loaded, so that the card shows at once and neither holds up a load, a
+  // restore or a change in the editor. Each call waits until the page has been
+  // drawn, since the Python engine runs on the page's own thread, and a result
+  // for a theory that has since been replaced is dropped. Both are kept for
+  // the text they were computed on, so the same theory is scored and hashed
+  // once in a session, and a Rigour checklist run gives the score too. The
+  // checklist compares every pair of constructs and reads each claim against
+  // the causal graph, so its time grows faster than the theory, and the hash
+  // reads every value of it. A theory with more constructs, propositions and
+  // predictions than SCORE_LIMIT is therefore scored and hashed only when the
+  // user asks, and the operation a session or a link holds for it is not run
+  // as it opens.
+  const SCORE_LIMIT = 300;
+  const theorySize = (s) => {
+    const c = (s && s.counts) || {};
+    return Number(c.constructs || 0) + Number(c.propositions || 0) + Number(c.predictions || 0);
+  };
+  const isLarge = (s) => theorySize(s) > SCORE_LIMIT;
+  const largeNote = (s) => "This theory has " + theorySize(s).toLocaleString("en-GB") +
+    " constructs, propositions and predictions, more than the " + SCORE_LIMIT +
+    " the app scores and hashes as it loads, since either can take a while on a theory this large.";
+  // An example is known by its path, and any other theory by its format and
+  // its text.
+  function cardKey(inp) {
+    if (!inp) return null;
+    if (inp.mode === "example") return "example\n" + inp.path;
+    if (typeof inp.text !== "string") return null;
+    return (inp.format || (/\.json$/i.test(inp.name || "") ? "json" : "yaml")) + "\n" + inp.text;
+  }
+  // The scores and hashes of the theories seen most recently, as many as fit
+  // in about 4 million characters of theory text.
+  const cardCache = new Map();
+  function keepCard(key, got) {
+    if (key === null) return;
+    const entry = Object.assign({}, cardCache.get(key), got);
+    cardCache.delete(key);
+    cardCache.set(key, entry);
+    let size = 0;
+    for (const k of cardCache.keys()) size += k.length;
+    while (cardCache.size > 1 && (cardCache.size > 32 || size > 4e6)) {
+      const k = cardCache.keys().next().value;
+      size -= k.length;
+      cardCache.delete(k);
+    }
+  }
+  // What the score call gives, read from a Rigour checklist run.
+  const scoreOfReport = (r) => ({
+    score: r.aggregate_score, gate: r.gate,
+    failed: asArr(r.items).filter((i) => i.status === "fail").map((i) => i.id),
+    warned: asArr(r.items).filter((i) => i.status === "warn").map((i) => i.id),
+  });
+  // A short wait that lets the browser draw the page first.
+  const afterPaint = () => new Promise((resolve) => {
+    const later = () => setTimeout(resolve, 0);
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(later); else later();
+  });
+  function scoreChip(s) {
+    const ck = s && s.check;
+    let node;
+    if (ck && !("error" in ck)) {
+      node = el("span", { class: "chip score", title: "Rigour checklist: aggregate score and gate", html: "<b>" + esc(num(ck.score)) + "</b> / 100 · " + esc(ck.gate) });
+    } else if (ck) {
+      node = el("span", { class: "chip", title: ck.error, text: "not scored" });
+    } else if (s && s.scoreWait === "asked") {
+      node = el("span", { class: "chip unscored", title: largeNote(s) }, ["not scored ",
+        el("button", { class: "linklike sm", type: "button", onclick: () => requestScore(true), "aria-label": "Score the theory with the rigour checklist" }, "score it")]);
+    } else if (s && s.scoreWait === "queued") {
+      node = el("span", { class: "chip scoring", title: "The rigour checklist is being computed", text: "scoring…" });
+    } else node = el("span", { hidden: "" });
+    node.setAttribute("id", "summaryScore");
+    return node;
+  }
+  // The two calls, what each gives the summary and where it is shown.
+  const CARD = {
+    score: {
+      call: () => RT.score(), done: (x) => !!x.check, wait: "scoreWait",
+      read: (r) => {
+        const check = r && typeof r === "object" ? r : { error: "the package gave no score" };
+        if ("error" in check) check.error = String(check.error || "the checklist stopped without a message");
+        return { check };
+      },
+      failed: (err) => ({ check: { error: errorHeadline(err) } }),
+      show: (s) => { const chip = $("#summaryScore"); if (chip) chip.replaceWith(scoreChip(s)); if (EDITOR && EDITOR.onSummary) EDITOR.onSummary(s); },
+    },
+    hash: {
+      call: () => RT.contentHash(), done: (x) => !!(x.hash || x.hashError), wait: "hashWait",
+      read: (r) => (r && typeof r.hash === "string" ? { hash: r.hash } : { hashError: String((r && r.error) || "the package gave no hash") }),
+      failed: (err) => ({ hashError: errorHeadline(err) }),
+      show: () => { const row = $("#summaryHash"); if (row) row.replaceWith(hashRow(STATE.summary)); },
+    },
+  };
+  function takeCard(s, kind, got) {
+    Object.assign(s, got);
+    delete s[CARD[kind].wait];
+    if (STATE.summary === s) CARD[kind].show(s);
+  }
+  // Ask for the loaded theory's score or hash, unless it is known or the
+  // theory is too large to ask for it unbidden. `force` is the user's request.
+  function requestCard(kind, force) {
+    const c = CARD[kind], s = STATE.summary;
+    const can = RT && typeof (kind === "score" ? RT.score : RT.contentHash) === "function";
+    if (!s || !can || c.done(s)) return;
+    const key = cardKey(STATE.input), known = key === null ? null : cardCache.get(key);
+    if (known && c.done(known)) {
+      takeCard(s, kind, kind === "score" ? { check: known.check } : known.hash ? { hash: known.hash } : { hashError: known.hashError });
+      return;
+    }
+    if (!force && isLarge(s)) { s[c.wait] = "asked"; c.show(s); return; }
+    if (s[c.wait] === "queued") return;
+    s[c.wait] = "queued";
+    c.show(s);
+    if (force && kind === "score") toast("Scoring " + theoryName(s) + " with the rigour checklist, which can take a while for a theory this large");
+    engine(async () => {
+      await afterPaint();
+      return STATE.summary === s && !c.done(s) ? c.call() : null;
     }).then((r) => {
-      if (!r || !s || STATE.summary !== s) return;
-      if (typeof r.hash === "string") s.hash = r.hash;
-      else s.hashError = String(r.error || "the package gave no hash");
-      show();
+      if (r === null || r === undefined) return;
+      const got = c.read(r);
+      keepCard(key, got);
+      if (STATE.summary === s && !c.done(s)) takeCard(s, kind, got);
     }, (err) => {
-      if (!s || STATE.summary !== s) return;
-      s.hashError = cleanMessage((err && err.message) || err);
-      show();
+      if (STATE.summary === s && !c.done(s)) takeCard(s, kind, c.failed(err));
     });
   }
+  const requestScore = (force) => requestCard("score", force);
+  const requestHash = (force) => requestCard("hash", force);
   function refreshSummary() {
     const w = $("#summaryWrap"); if (w) w.replaceChildren(summaryCard(STATE.summary));
     if (EDITOR && EDITOR.onSummary) EDITOR.onSummary(STATE.summary);
@@ -1911,6 +2014,7 @@
     resetPrior();
     updateExampleDesc(); saveState();
     if (EDITOR) EDITOR.reload();
+    requestScore();
     requestHash();
   }
 
@@ -2050,7 +2154,14 @@
       announce("Running " + op.label);
       try {
         const params = Object.assign({}, STATE.params);
+        const s = STATE.summary, key = cardKey(STATE.input);
         const { raw, code } = await engine(() => RT.run(op.id, params));
+        // A theory loaded in the meantime would have replaced the summary.
+        if (op.id === "check" && raw && raw.report && STATE.summary === s) {
+          const got = { check: scoreOfReport(raw.report) };
+          keepCard(key, got);
+          if (!s.check) takeCard(s, "score", got);
+        }
         const sections = await shapeResult(op.id, raw, params, STATE.summary.id || "theory");
         out.replaceChildren(...sections.map((s) => s.node));
         const cp = $("#codePanel"); cp.style.display = "";
@@ -2106,6 +2217,7 @@
     const op = OPS.find((o) => o.id === STATE.opId);
     if (op && op.params && op.params.some((p) => p.type === "rival" || p.type === "construct")) renderParams();
     saveSoon();
+    requestScore();
     requestHash();
   }
   function editorHost() {
@@ -2170,6 +2282,9 @@
       isEdited: () => !!(STATE.input && STATE.input.mode === "edited"),
       isBusy: () => busy,
       showResultTab: () => showTab("result"),
+      // Score a theory too large to be scored as it loads.
+      score: () => requestScore(true),
+      largeNote: (s) => largeNote(s),
     };
   }
 
@@ -2348,10 +2463,14 @@
     if (linkFailed) dropLinkHash();
     else { if (fromLink || ownReload) lastLinkHash = hash; saveState(); }
     const op = OPS.find((o) => o.id === STATE.opId);
-    if (saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op)) await runOp();
+    const rerun = saved && saved.ran && op && !note && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op);
+    if (rerun && !isLarge(STATE.summary)) await runOp();
     if (fromLink && !note) note = "Opened the theory and operation from the link";
+    if (rerun && isLarge(STATE.summary)) note = (note ? note + ". " : "") + notRunNote(op);
     return note;
   }
+  // Why an operation saved with a large theory was not run as it opened.
+  const notRunNote = (op) => "The theory is large, so " + op.label + " was not run. Press Run to run it";
 
   // A link pasted into the address bar of a tab that already shows the app
   // changes only the fragment, so the browser keeps the page and the app
@@ -2396,8 +2515,9 @@
     });
     if (!ok) return;
     const op = OPS.find((o) => o.id === STATE.opId);
-    if (link.run && op && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op)) await runOp();
-    toast("Opened the theory and operation from the link");
+    const rerun = link.run && op && !(op.corpus && !RT.hasCorpus()) && !whyNotRunnable(op);
+    if (rerun && !isLarge(STATE.summary)) await runOp();
+    toast("Opened the theory and operation from the link" + (rerun && isLarge(STATE.summary) ? ". " + notRunNote(op) : ""));
   }
 
   async function start(runtime) {
@@ -2443,6 +2563,7 @@
       const note = await applyRestore(onProgress);
       $("#boot").classList.add("hidden");
       if (note) toast(note);
+      requestScore();
       requestHash();
       if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("hashchange", () => openLinkInPlace());
     } catch (err) {

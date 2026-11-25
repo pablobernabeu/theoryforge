@@ -106,20 +106,24 @@ dagitty's quoting to DOT's before Graphviz reads it.
 
 ## Runtimes
 
-The R app loads webR 0.6.1 (R 4.6.0), and the Python app loads Pyodide 314.0.8
-(Python 3.14.2, with PyYAML 6.0.3). Both releases are pinned in the
-runtimes. A new engine can change the version of the language the package runs under, so
-an engine is updated only after `tests/browser.e2e.mjs` has run every operation on every
-example under it. The CI apps job runs the Python glue under Python 3.14 with PyYAML
-6.0.3 to match. The R app installs jsonlite and yaml from repo.r-wasm.org when it loads.
-These two are not pinned, so each session gets the builds the repository serves that
-day, and the browser console records their versions. The Graphviz renderer,
-`@hpcc-js/wasm-graphviz` 1.22.2, is pinned in `shared/app-core.js`. Each runtime imports
-its engine when it starts, so a host the network blocks gives the start panel's
-message, which names the host, and a Reload button. A figure Graphviz cannot draw is
-replaced by a note that says why, the rest of the result stays, and the next run tries
-to load Graphviz again. The content hash on the theory card is computed after each
-load, in a call of its own, so a slow hash holds up neither the load nor the start.
+The R app loads webR 0.6.1 (R 4.6.0), and the Python app loads Pyodide 314.0.8 (Python
+3.14.2, with PyYAML 6.0.3). Both releases are pinned in the runtimes. A new engine can
+change the version of the language the package runs under, so an engine is updated only
+after `tests/browser.e2e.mjs` has run every operation on every example under it. The CI
+apps job runs the Python glue under Python 3.14 with PyYAML 6.0.3 to match. The R app
+installs jsonlite and yaml from repo.r-wasm.org when it loads. These two are not pinned,
+so each session gets the builds the repository serves that day, and the browser console
+records their versions. The Graphviz renderer, `@hpcc-js/wasm-graphviz` 1.22.2, is
+pinned in `shared/app-core.js`. Each runtime imports its engine when it starts, so a
+host the network blocks gives the start panel's message, which names the host, and a
+Reload button. A figure Graphviz cannot draw is replaced by a note that says why, the
+rest of the result stays, and the next run tries to load Graphviz again. The checklist
+score and the content hash on the theory card are computed after each load, each in a
+call of its own, so neither holds up the load or the start, and a score is kept for the
+text it was computed on. The checklist's time grows faster than the theory, and the hash
+reads all of it, so a theory with more than 300 constructs, propositions and predictions
+is scored and hashed only when the user asks, and an operation that a session or a link
+holds for it is not run as the app opens it.
 
 ## Build and run locally
 
