@@ -131,22 +131,37 @@ async function writeJson(p, obj) {
 }
 
 // The package version is declared in two places, r/theoryforge/DESCRIPTION and
-// python/pyproject.toml, and the apps show it in their footers. Read both at
-// build time rather than hard-coding a copy here that would drift on release,
-// and fail the build outright if the two halves disagree: a mismatch means the
-// release process went wrong, and stamping either number into the apps would
-// ship a lie about the other half.
-async function readPackageVersion() {
+// python/pyproject.toml, and each app shows its own package's version in its
+// footer. Read both at build time rather than hard-coding a copy here that
+// would drift on release, and fail the build outright if the two halves
+// disagree: a mismatch means the release process went wrong. A release gives
+// both the same version. Between releases, DESCRIPTION gives the newest release
+// followed by .9000 and pyproject.toml a .devN version of a later release.
+function compareRelease(a, b) {
+  const x = a.split(".").map(Number), y = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] || 0) - (y[i] || 0);
+    if (d) return Math.sign(d);
+  }
+  return 0;
+}
+export function versionsAgree(rV, pyV) {
+  if (rV === pyV) return true;
+  const r = rV.match(/^(\d+(?:\.\d+)*)\.9000$/);
+  const py = pyV.match(/^(\d+(?:\.\d+)*)\.dev\d+$/);
+  return Boolean(r && py) && compareRelease(py[1], r[1]) > 0;
+}
+async function readPackageVersions() {
   const desc = await fs.readFile(path.join(repo, "r", "theoryforge", "DESCRIPTION"), "utf8");
   const toml = await fs.readFile(path.join(repo, "python", "pyproject.toml"), "utf8");
   const rV = (desc.match(/^Version:\s*(\S+)\s*$/m) || [])[1];
   const pyV = (toml.match(/^version\s*=\s*"([^"]+)"/m) || [])[1];
   if (!rV) throw new Error("could not read Version from r/theoryforge/DESCRIPTION");
   if (!pyV) throw new Error("could not read version from python/pyproject.toml");
-  if (rV !== pyV) {
+  if (!versionsAgree(rV, pyV)) {
     throw new Error(`package version mismatch: DESCRIPTION says ${rV} but pyproject.toml says ${pyV}; align the two halves before building the apps`);
   }
-  return rV;
+  return { r: rV, py: pyV };
 }
 
 async function buildR(vendor = path.join(here, "r", "vendor"), pkgVersion = "") {
@@ -191,10 +206,10 @@ export async function buildPy(vendor = path.join(here, "py", "vendor"), src = PY
 
 // Build only when run as a script, so the tests can import buildPy.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const PKG_VERSION = await readPackageVersion();
-  const nR = await buildR(undefined, PKG_VERSION);
-  const nPy = await buildPy(undefined, undefined, PKG_VERSION);
-  console.log(`package version: ${PKG_VERSION} (DESCRIPTION and pyproject.toml agree)`);
+  const versions = await readPackageVersions();
+  const nR = await buildR(undefined, versions.r);
+  const nPy = await buildPy(undefined, undefined, versions.py);
+  console.log(`package versions: R ${versions.r}, Python ${versions.py} (DESCRIPTION and pyproject.toml agree)`);
   console.log(`vendored R: ${nR} source files -> apps/r/vendor`);
   console.log(`vendored Python: ${nPy} package files -> apps/py/vendor`);
 }

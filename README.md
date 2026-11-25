@@ -63,7 +63,8 @@ pip install "git+https://github.com/pablobernabeu/theoryforge.git#subdirectory=p
 
 ## Quick start
 
-Both packages include four example theories and two literature corpora. The lines below read
+The code below needs the development versions, installed from GitHub as shown above. Both
+packages include four example theories and two literature corpora, and the lines below read
 the bundled network theory of panic disorder, score it against the checklist and list the
 independencies its causal graph implies. The graph has a feedback loop between arousal and
 perceived threat, so it is read by sigma-separation.
