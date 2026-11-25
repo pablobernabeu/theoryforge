@@ -14,6 +14,7 @@ import yaml
 
 import theoryforge as tf
 from theoryforge import osf as osf_module
+from theoryforge import report_render
 
 BASE = "https://files.osf.io/v1/resources/"
 
@@ -222,6 +223,142 @@ def test_render_report_escapes_the_noncharacters_fffe_and_ffff(tmp_path):
     lines = open(out, encoding="utf-8", newline="").read().split("\n")
     assert lines[1] == 'title: "a\\uFFFEb\\uFFFF"'
     assert yaml.safe_load("\n".join(lines[1:3]))["title"] == title
+
+
+# A theory whose ids, label, statement, date and registration hold line
+# breaks, code fences, knitr and Jupyter chunks, inline R code, YAML header
+# lines, a shortcode, a link and a span with an event handler. It validates
+# and passes the gate, and rendering its report ran the chunks. test-render.R
+# reads the same text, and fixtures/edge/markdown-injection.theory.yaml holds
+# it too.
+HOSTILE = """\
+schema_version: "1.1"
+id: |-
+  edge-markdown-injection
+  ```{r}
+  writeLines("ran", "PWNED.txt")
+  ```
+  ---
+  engine: knitr
+  ---
+title: "Injection `r writeLines('ran', 'PWNED.txt')` {{< env HOME >}} <b>bold</b>"
+maturity: developing
+constructs:
+  - id: c_a
+    label: |-
+      Arousal `r 1 + 1`
+      ---
+      title: injected
+    definition: First construct.
+  - id: c_b
+    label: Threat
+    definition: Second construct.
+  - id: "r writeLines('ran', 'PWNED.txt')"
+    label: Avoidance
+    definition: Third construct.
+propositions:
+  - id: "p1\\n```{python}\\nopen('PWNED.txt', 'w')\\n```"
+    from: c_a
+    to: c_b
+    relation: increases
+  - id: p2
+    from: c_b
+    to: "r writeLines('ran', 'PWNED.txt')"
+    relation: increases
+predictions:
+  - id: "h1\\n```{r}\\nstop('ran')\\n```"
+    derives_from: ["p1\\n```{python}\\nopen('PWNED.txt', 'w')\\n```"]
+    statement: |-
+      Arousal raises threat.
+      ```{r}
+      stop("ran")
+      ```
+      ---
+      `{r} 1 + 1` and [link](javascript:alert(1)){onmouseover="alert(2)"}
+    type: directional
+test_outcomes:
+  - prediction_id: "h1\\n```{r}\\nstop('ran')\\n```"
+    passed: true
+    date: "2026-05-01\\n---"
+    registered: "osf.io/abcde\\n```{r}\\nstop('ran')\\n```\\n{{< include secret.txt >}}"
+"""
+
+_FENCE = re.compile(r"^[\t >]*(```|~~~)|^ {0,3}(```|~~~)")
+
+
+def _hostile(tmp_path):
+    path = tmp_path / "hostile.theory.yaml"
+    path.write_bytes(HOSTILE.encode("utf-8"))
+    t = tf.read(path)
+    assert t.validate() is True and t.check()["gate"] == "pass"
+    return t
+
+
+def test_dossier_and_preregister_write_every_value_on_one_line(tmp_path):
+    t = _hostile(tmp_path)
+    for doc in (t.dossier(), t.preregister()):
+        lines = doc.split("\n")
+        assert not [line for line in lines if _FENCE.match(line) or line == "---"]
+        assert ("- Theory ID: edge-markdown-injection ```{r} writeLines(\"ran\", \"PWNED.txt\") "
+                "``` --- engine: knitr ---") in lines
+    prereg = t.preregister().split("\n")
+    assert ("   - Test record: already tested: passed (2026-05-01 ---, registered osf.io/abcde "
+            "```{r} stop('ran') ``` {{< include secret.txt >}})") in prereg
+
+
+def test_render_report_writes_the_theory_text_as_text(tmp_path):
+    # The header runs no engine and reads no raw markup, and the body escapes
+    # every punctuation character of the text, so Quarto ran no chunk and
+    # expanded no shortcode once the fix was in.
+    t = _hostile(tmp_path)
+    out = t.render_report(tmp_path / "r.qmd")
+    lines = open(out, encoding="utf-8", newline="").read().split("\n")
+    assert lines[0] == "---" and lines[2:7] == [
+        "format: html", "engine: markdown", "from: markdown-raw_html-raw_attribute-raw_tex", "---", ""]
+    assert yaml.safe_load("\n".join(lines[1:2]))["title"] == (
+        r"theoryforge report: Injection &#96;r writeLines\(\'ran\'\, \'PWNED\.txt\'\)&#96; "
+        r"\{\{\{\< env HOME \>\}\}\} \<b\>bold\<\/b\>")
+    body = lines[7:]
+    assert len(body) == len(t.dossier().split("\n"))
+    assert not [line for line in body if _FENCE.match(line) or line == "---"]
+    assert not [line for line in body if "`" in line or "{{<" in line or "](" in line]
+    theory_id = (r"- Theory ID\: edge\-markdown\-injection &#96;&#96;&#96;\{r\} "
+                 r"writeLines\(\"ran\"\, \"PWNED\.txt\"\) &#96;&#96;&#96; \-\-\- engine\: knitr \-\-\-")
+    assert body.count(theory_id) == 2
+    assert r"- c\_a \_\|\|\_ r writeLines\(\'ran\'\, \'PWNED\.txt\'\) \| c\_b" in body
+    assert (r"   - Test record\: already tested\: passed \(2026\-05\-01 \-\-\-\, registered "
+            r"osf\.io\/abcde &#96;&#96;&#96;\{r\} stop\(\'ran\'\) &#96;&#96;&#96; "
+            r"\{\{\< include secret\.txt \>\}\}\)") in body
+    assert "_No alternative states propositions\\._" in body
+    assert "| item | criterion | status | score | weight |" in body
+
+
+@pytest.mark.parametrize("to", ["html; echo ran > ran.txt", "html\nengine: knitr", "-o", "", "pdf "])
+def test_render_report_refuses_a_format_that_is_not_a_name(tmp_path, to):
+    # A format was written into the header and, in R, passed to the shell as
+    # it stood. test-render.R pins the same message.
+    with pytest.raises(ValueError) as err:
+        _theory().render_report(tmp_path / "r.qmd", to=to)
+    assert str(err.value) == ("render_report requires `to` to be a Quarto format name of letters, "
+                              f"digits, '_', '+' and '-' that starts with a letter or digit, not '{to}'")
+    assert not (tmp_path / "r.qmd").exists()
+    with pytest.raises(ValueError, match="not None$"):
+        _theory().render_report(tmp_path / "r.qmd", to=None)
+
+
+def test_render_report_takes_a_format_with_extensions(tmp_path):
+    for to in ("pdf", "gfm+tex_math_dollars", "acm-pdf"):
+        out = _theory().render_report(tmp_path / "r.qmd", to=to)
+        assert open(out, encoding="utf-8").read().split("\n")[2] == f"format: {to}"
+
+
+def test_render_report_passes_quarto_the_expanded_path(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(report_render.subprocess, "run", lambda args, check: calls.append(args))
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    assert _theory().render_report("~/r", render=True, to="pdf") == "~/r.qmd"
+    assert calls == [["quarto", "render", str(tmp_path / "r.qmd"), "--to", "pdf"]]
 
 
 def test_render_report_escapes_a_nul_character(tmp_path):

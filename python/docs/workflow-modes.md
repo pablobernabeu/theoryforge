@@ -528,8 +528,9 @@ a fit.
 ## Rendering and depositing
 
 `render_report()` writes the dossier as a Quarto source document, ready to render to HTML or
-PDF. With `render=False`, the default, it writes the `.qmd` without calling Quarto, and it
-returns the path of the file it wrote.
+PDF. Quarto runs no code in it and reads the theory's text as text, so a reviewer can render
+the report of a theory file that someone else wrote. With `render=False`, the default, it
+writes the `.qmd` without calling Quarto, and it returns the path of the file it wrote.
 
 ```python
 # Shown and not run when the page is built: it writes a file, and rendering

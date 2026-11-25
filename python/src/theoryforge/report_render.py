@@ -3,16 +3,38 @@
 Writes a ``.qmd`` (a YAML header plus the deterministic dossier body) and can optionally
 invoke Quarto to render it. The report content is the deterministic ``dossier`` output, and
 only the rendering step depends on the environment.
+
+A theory file may come from someone else, and Quarto runs the code chunks and
+inline code of a document, expands its shortcodes (which can read files and
+environment variables) and passes on its raw HTML. The report is therefore
+written so that the theory's text reaches Quarto as text alone (API_SPEC.md
+section 23).
 """
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 
 from ._access import text
 from ._compat import theory_keyword
 from ._io import write_lf as _write_lf
+from ._text import quoted
 from .dossier import dossier as _dossier
+from .prereg import flat
+
+# A Quarto format name, with any extensions added or removed (html, pdf,
+# gfm+tex_math_dollars, acm-pdf). Anything else could add keys to the header
+# or options to the command line.
+_FORMAT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_+-]*")
+
+# The ASCII punctuation characters, the only characters that Markdown and
+# Quarto read as markup, less the backtick, which is written as an entity.
+_PUNCT = re.compile(r"[!-/:-@\[-_{-~]")
+
+# The marker that opens a heading or a list item of the dossier: spaces, then
+# one to six number signs, a hyphen or a number with a full stop, then a space.
+_MARKER = re.compile(r" *(?:#{1,6}|-|[0-9]+\.) ")
 
 _YAML_DQ_ESCAPES = {"\\": "\\\\", '"': '\\"', "\n": "\\n", "\t": "\\t"}
 
@@ -41,6 +63,57 @@ def _yaml_dq(s: str) -> str:
     return "".join(out)
 
 
+def _md_text(s: str) -> str:
+    """``s`` written so that Quarto reads each of its characters as text.
+
+    Every ASCII punctuation character gains a backslash, which Pandoc's
+    Markdown reads as the character itself, so that no emphasis, link, span,
+    attribute, raw HTML, mathematics or shortcode can open. A backtick becomes
+    the entity ``&#96;``, since knitr finds inline code by its backticks
+    whatever precedes them.
+    """
+    return _PUNCT.sub(lambda m: "\\" + m.group(), s).replace("`", "&#96;")
+
+
+def _shortcodes(s: str) -> str:
+    """``s`` with each Quarto shortcode delimiter in its escaped form.
+
+    Quarto finds the shortcodes of the title once it has read the title as
+    Markdown, so a backslash before the brace does not stop them there, and
+    ``{{{<`` and ``>}}}`` are its own escapes.
+    """
+    return s.replace("{{<", "{{{<").replace(">}}", ">}}}")
+
+
+def _qmd_body(md: str) -> str:
+    """The dossier ``md`` as the report's body, its text escaped by ``_md_text``.
+
+    A blank line and a row of the checklist table, which holds the checklist's
+    own text alone, are kept as they are. Every other line keeps the marker of
+    its heading or list item. A line without a marker that is set in italics
+    keeps its two underscores. A list item that is a code span alone (an
+    implied independency) loses its backticks, since the escaped text needs no
+    code span to keep its underscores. The rest of the line is escaped.
+    """
+    out = []
+    for line in md.split("\n"):
+        if line == "" or line.startswith("|"):
+            out.append(line)
+            continue
+        m = _MARKER.match(line)
+        marker = m.group() if m else ""
+        rest = line[len(marker):]
+        if (marker.strip() == "-" and len(rest) > 1 and rest[0] == rest[-1] == "`"
+                and "`" not in rest[1:-1]):
+            rest = _md_text(rest[1:-1])
+        elif not marker and len(rest) > 1 and rest[0] == rest[-1] == "_":
+            rest = "_" + _md_text(rest[1:-1]) + "_"
+        else:
+            rest = _md_text(rest)
+        out.append(marker + rest)
+    return "\n".join(out)
+
+
 def _qmd_path(path: str) -> str:
     """``path`` with its file name ending in ``.qmd``, by the rule ``render_report()`` states.
 
@@ -61,33 +134,55 @@ def _qmd_path(path: str) -> str:
 def render_report(theory, path, title: str | None = None, render: bool = False, to: str = "html") -> str:
     """Write a Quarto report for the theory, and render it with Quarto when ``render=True``.
 
-    The report is a YAML header (``title`` and ``format``) followed by the ``dossier()`` body.
+    The report is a YAML header followed by the ``dossier()`` body. The header gives
+    ``title`` and ``format``, ``engine: markdown``, so that Quarto runs no code, and
+    ``from: markdown-raw_html-raw_attribute-raw_tex``, so that it passes on no raw
+    HTML, raw attribute or raw TeX. In the body, every ASCII punctuation character
+    of the dossier's text gains a backslash and a backtick becomes ``&#96;``, so
+    that Quarto reads the theory's text as text: no code chunk, inline code,
+    shortcode, link, span or tag can open. The marker of each heading and list item,
+    the underscores of a line in italics and the checklist table are kept, and an
+    implied independency is written without its code span.
+
     A file name that does not end in ``.qmd`` (in any letter case) loses everything from its
     last dot, unless the name begins with that dot, and gains ``.qmd``. So ``report.md`` is
     written as ``report.qmd``, ``report`` and ``.hidden`` gain the suffix and ``a.tar.gz``
-    becomes ``a.tar.qmd``.
+    becomes ``a.tar.qmd``. A leading ``~`` stands for the home directory, as in R.
     ``to`` is the Quarto output format, ``"html"`` by default, written into the header and
-    passed to ``quarto render --to``.
+    passed to ``quarto render --to``. It must be a format name: a letter or digit
+    followed by letters, digits, ``_``, ``+`` and ``-``, as in ``pdf`` or
+    ``gfm+tex_math_dollars``.
 
-    ``title`` defaults to ``"theoryforge report: <title-or-id>"``, also when empty. It is
-    written as a YAML double-quoted scalar with backslashes, double quotes and control
-    characters escaped, so a YAML parser reads back exactly the string passed. Quarto then
-    reads the title as Markdown, so raw TeX such as ``\\emph{}`` is dropped from HTML output
-    and ``$\\alpha$`` becomes mathematics.
+    ``title`` defaults to ``"theoryforge report: <title-or-id>"``, also when empty, with the
+    theory's title or id written on one line and escaped as the body is, and with
+    Quarto's shortcode delimiters in their escaped forms ``{{{<`` and ``>}}}``. The
+    title is written as a YAML double-quoted scalar with backslashes, double quotes and
+    control characters escaped, so a YAML parser reads back exactly the string passed.
+    Quarto then reads the title as Markdown, so in a title passed by the caller raw TeX
+    such as ``\\emph{}`` is dropped from HTML output and ``$\\alpha$`` becomes
+    mathematics.
 
-    When ``check()`` refuses the theory, ``ValueError`` is raised before anything is written.
-    With ``render=True``, the ``quarto`` command must be on the PATH. A failed render raises
+    When ``to`` is not a format name, or when ``check()`` refuses the theory,
+    ``ValueError`` is raised before anything is written. With ``render=True``, the
+    ``quarto`` command must be on the PATH. A failed render raises
     ``subprocess.CalledProcessError`` and a missing Quarto ``FileNotFoundError``, after the
     ``.qmd`` has been written.
 
     Returns the path of the written ``.qmd``.
     """
+    if not (isinstance(to, str) and _FORMAT.fullmatch(to)):
+        raise ValueError("render_report requires `to` to be a Quarto format name of letters, "
+                         "digits, '_', '+' and '-' that starts with a letter or digit, "
+                         f"not {quoted(to)}")
     data = theory.data if hasattr(theory, "data") else theory
     # Fall back to the id when the title is empty as well as absent (matches R's nzchar fallback).
-    title = title or f"theoryforge report: {text(data.get('title')) or text(data.get('id'))}"
+    label = text(data.get("title")) or text(data.get("id"))
+    title = title or f"theoryforge report: {_md_text(_shortcodes(flat(label)))}"
     path = _qmd_path(os.fspath(path))
-    header = f'---\ntitle: "{_yaml_dq(title)}"\nformat: {to}\n---\n\n'
-    _write_lf(path, header + _dossier(data))
+    header = (f'---\ntitle: "{_yaml_dq(title)}"\nformat: {to}\nengine: markdown\n'
+              "from: markdown-raw_html-raw_attribute-raw_tex\n---\n\n")
+    _write_lf(path, header + _qmd_body(_dossier(data)))
     if render:
-        subprocess.run(["quarto", "render", str(path), "--to", to], check=True)  # pragma: no cover
+        subprocess.run(["quarto", "render", os.path.expanduser(path), "--to", to],  # pragma: no cover
+                       check=True)
     return str(path)

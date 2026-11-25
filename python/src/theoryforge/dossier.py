@@ -121,7 +121,8 @@ def dossier(theory, cycles: str = "refuse") -> str:
     computed, an open bound written as ``-inf`` or ``inf``. The
     evidence lists the prediction each entry supports, its direction and its
     DOI. The provenance and the preregistration follow, and the implied
-    independencies appear once, in the preregistration.
+    independencies appear once, in the preregistration. Every value is written
+    on one line, ids and dates included.
 
     Raises:
         ValueError: when ``check()`` refuses the theory, because a test
@@ -231,4 +232,5 @@ def dossier(theory, cycles: str = "refuse") -> str:
     prereg = ["#" + line if line.startswith("#") else line
               for line in document_lines(data, cycles, embedded=True)]
     lines += ["", "## Preregistration", "", *prereg]
-    return "\n".join(lines) + "\n"
+    # Each line on one line, whatever its values hold (API_SPEC.md section 11).
+    return "\n".join(flat(line) for line in lines) + "\n"

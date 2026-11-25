@@ -52,7 +52,8 @@ NULL
 #' the post-data severity of [tf_post_data_severity()] where it can be
 #' computed, an open bound written as \code{-inf} or \code{inf}. The
 #' evidence lists the prediction each entry supports, its direction and its
-#' DOI. The implied independencies appear once, in the preregistration.
+#' DOI. The implied independencies appear once, in the preregistration. Every
+#' value is written on one line, ids and dates included.
 #'
 #' It stops, as [tf_check()] does, when a test outcome's \code{passed} is
 #' present and not \code{TRUE} or \code{FALSE}, or when a prediction's
@@ -206,7 +207,8 @@ tf_dossier <- function(theory, cycles = "refuse") {
   prereg <- .tf_document_lines(T, cycles, embedded = TRUE)
   prereg <- ifelse(startsWith(prereg, "#"), paste0("#", prereg), prereg)
   lines <- c(lines, "", "## Preregistration", "", prereg)
-  paste0(paste(lines, collapse = "\n"), "\n")
+  # Each line on one line, whatever its values hold (API_SPEC.md section 11).
+  paste0(paste(.tf_flat(lines), collapse = "\n"), "\n")
 }
 
 # What the causal graph says of each claim (API_SPEC.md section 20).

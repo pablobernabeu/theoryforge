@@ -18,27 +18,45 @@ unless the name begins with that dot, and gains \code{.qmd}. So
 
 \item{title}{Optional report title. It defaults to
 \code{"theoryforge report: <title-or-id>"}, also when \code{NULL},
-\code{NA} or empty. It is written as a YAML double-quoted scalar with
-backslashes, double quotes and control characters escaped, so a YAML
-parser reads back exactly the string passed. Quarto then reads the title as Markdown, so
-raw TeX such as \verb{\\emph\{\}} is dropped from HTML output and \verb{$\\alpha$}
-becomes mathematics.}
+\code{NA} or empty, with the theory's title or id written on one line and
+escaped as the body is, and with Quarto's shortcode delimiters in their
+escaped forms \code{\{\{\{<} and \code{>\}\}\}}. It is written as a YAML
+double-quoted scalar with backslashes, double quotes and control
+characters escaped, so a YAML parser reads back exactly the string passed.
+Quarto then reads the title as Markdown, so in a title passed by the
+caller raw TeX such as \verb{\\emph\{\}} is dropped from HTML output and
+\verb{$\\alpha$} becomes mathematics.}
 
 \item{render}{When \code{TRUE}, run \code{quarto render} on the written file
 and stop if it exits non-zero.}
 
-\item{to}{Quarto output format (default \code{"html"}).}
+\item{to}{Quarto output format (default \code{"html"}). It must be a format
+name: a letter or digit followed by letters, digits, \code{_}, \code{+}
+and \code{-}, as in \code{"pdf"} or \code{"gfm+tex_math_dollars"}.}
 }
 \value{
 The path of the written \code{.qmd} file.
 }
 \description{
 Writes a standalone Quarto report to \code{path} (forced to a \code{.qmd}
-suffix): a YAML header (\code{title}, \code{format}) followed by the
-deterministic \code{tf_dossier(theory)} body. Returns the written path. When
+suffix): a YAML header followed by the deterministic
+\code{tf_dossier(theory)} body. Returns the written path. When
 \code{render = TRUE}, invokes \code{quarto render}, which requires a Quarto
 installation, and stops if that render fails. It stops before writing
-anything when \code{\link[=tf_check]{tf_check()}} refuses the theory.
+anything when \code{to} is not a format name or when \code{\link[=tf_check]{tf_check()}} refuses
+the theory.
+}
+\details{
+The header gives \code{title} and \code{format}, \code{engine: markdown},
+so that Quarto runs no code, and
+\code{from: markdown-raw_html-raw_attribute-raw_tex}, so that it passes on
+no raw HTML, raw attribute or raw TeX. In the body, every ASCII punctuation
+character of the dossier's text gains a backslash and a backtick becomes
+\code{&#96;}, so that Quarto reads the theory's text as text: no code
+chunk, inline code, shortcode, link, span or tag can open. The marker of
+each heading and list item, the underscores of a line in italics and the
+checklist table are kept, and an implied independency is written without
+its code span.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

@@ -99,6 +99,9 @@ def emit_theory(t: tf.Theory, out_dir: Path) -> list[str]:
     written.append(f"{tid}.sem.lavaan")
     (out_dir / f"{tid}.dossier.md").write_bytes(t.dossier().encode("utf-8"))
     written.append(f"{tid}.dossier.md")
+    # The Quarto report, whose body is the dossier escaped (API_SPEC.md section 23).
+    t.render_report(out_dir / f"{tid}.dossier.qmd")
+    written.append(f"{tid}.dossier.qmd")
     (out_dir / f"{tid}.simulate.json").write_bytes(
         (json.dumps(t.simulate(), indent=2) + "\n").encode("utf-8"))
     written.append(f"{tid}.simulate.json")

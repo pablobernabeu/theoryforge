@@ -1,0 +1,125 @@
+---
+title: "theoryforge report: Network theory of panic disorder"
+format: html
+engine: markdown
+from: markdown-raw_html-raw_attribute-raw_tex
+---
+
+# theoryforge dossier\: Network theory of panic disorder
+
+- Theory ID\: panic\-network\-2026\-v2
+- Content hash\: sha256\:f3020cfac6b850fa660d6254c516ac3e8303bcb3207ec9ebd4f1a441cf942ee5
+- Maturity\: testing
+- Checklist version\: 3\.0
+- Aggregate rigour score\: 89\.8\/100 \(87\.0 to 91\.5 under other weightings\)
+- Checklist coverage\: 0\.92
+- Gate\: pass
+- Blockers failed\: 0
+
+## Rigour checklist
+
+| item | criterion | status | score | weight |
+| --- | --- | --- | --- | --- |
+| falsifiability | At least one prediction forbids an observation | pass | 1.0 | 0.15 |
+| precision | Predictions are point or interval claims whose bounds state the region, not merely directional | pass | 0.75 | 0.1 |
+| risk_severity | Mean prediction riskiness (declared severity, else the claim-form rubric) at or above threshold | pass | 0.613 | 0.1 |
+| parsimony | No auxiliary assumption added for an anomaly (named in added_for) lacks independent corroboration | n/a | n/a | 0.08 |
+| non_redundancy | Every construct is defined, and no two have near-duplicate or contained definitions or one label, and no construct's measures are all listed for another (lexical screen) | pass | 1.0 | 0.1 |
+| construct_clarity | Every construct has definition + measurement + boundary conditions | pass | 1.0 | 0.08 |
+| scope | Boundary conditions explicitly stated | pass | 1.0 | 0.06 |
+| logical_why | Each proposition states a mechanism, not just a correlation | pass | 1.0 | 0.08 |
+| causal_testability | At least one proposition states a causal relation | pass | 1.0 | 0.06 |
+| diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, and not shown false where the claim and the rival's propositions are stated) | pass | 0.5 | 0.06 |
+| formalisation | A formal model of a recognised type (ode, abm, network, sem) is declared | pass | 1.0 | 0.05 |
+| derivation_chain | Every prediction cites declared propositions, and the causal graph entails the claim it states, if any | pass | 1.0 | 0.08 |
+
+## Severity \(pre\-data rubric of claim form\)
+
+- pred1\: severity 1\.0\, risk 0\.9\, declared 0\.7
+- pred2\: severity 0\.7\, risk 0\.7\, declared 0\.6
+- pred3\: severity 0\.3\, risk 0\.4\, declared 0\.4
+- pred4\: severity 1\.0\, risk 0\.9\, declared 0\.75
+
+## Test record
+
+- pred1\: passed\; observed\: Illustrative values\, not a reported result\: arousal reached the predicted band in 78\% of trials\.\; date\: 2026\-05\-01\; registered\: osf\.io\/abcde
+- pred4\: passed\; observed\: Illustrative values\, not a reported result\: avoidance dropped into the predicted band in 71\% of cases\.\; date\: 2026\-06\-10\; registered\: osf\.io\/fghij
+
+## Evidence
+
+- supports pred4\: corroborates
+
+## Claims and the causal graph
+
+_No prediction or phenomenon states a claim\._
+
+## Equivalent models
+
+_Not determined\: the causal graph has a feedback loop\._
+
+## Rivals
+
+_No alternative states propositions\._
+
+## Provenance
+
+1. tf\_add\_proposition\: p4
+2. tf\_add\_prediction\: pred4
+
+## Preregistration
+
+## Preregistration\: Network theory of panic disorder
+
+- Theory ID\: panic\-network\-2026\-v2
+- Version\: v2 \(parent v1\)
+- Schema version\: 1\.0
+- Content hash\: sha256\:f3020cfac6b850fa660d6254c516ac3e8303bcb3207ec9ebd4f1a441cf942ee5
+- Maturity\: testing
+- Formal model\: ode \(models\/panic\_ode\.py\)
+- Derivations check\: yes
+
+### Theory
+
+#### Constructs
+- c\_arousal \(Physiological arousal\)\: Bodily activation indexed by heart rate\, respiration and electrodermal response\. Measures\: heart\-rate variability\; self\-reported arousal\. Boundary conditions\: adults\; non\-clinical baseline\; no beta\-blocker medication\.
+- c\_perceived\_threat \(Perceived threat\)\: The appraised dangerousness of internal sensations and external context\. Measures\: threat appraisal questionnaire\. Boundary conditions\: adults\; non\-clinical baseline\; waking hours\.
+- c\_avoidance \(Avoidance behaviour\)\: Acts that reduce exposure to feared situations or sensations\. Measures\: behavioural avoidance task\; diary counts\. Boundary conditions\: adults\; waking hours\; community sample\.
+
+#### Propositions
+- p1\: c\_arousal increases c\_perceived\_threat\. Mechanism\: Interoceptive feedback\: rising arousal is detected and appraised as danger\.
+- p2\: c\_perceived\_threat increases c\_avoidance\. Mechanism\: Threat appraisal motivates protective withdrawal\.
+- p3\: c\_perceived\_threat causes c\_arousal\. Mechanism\: Catastrophic appraisal triggers sympathetic activation\, closing a positive loop\.
+- p4\: c\_arousal increases c\_avoidance\. Mechanism\: Bodily sensations are themselves feared\, so activities that raise arousal are avoided directly\, not only through the appraisal of threat\.
+
+#### Auxiliary assumptions
+- aux1 \(core\)\: Self\-report indexes the latent appraisal construct\.
+
+#### Rival accounts
+- alt\_cognitive\: Cognitive model of panic \(doi\: 10\.1016\/0005\-7967\(86\)90011\-2\)
+- alt\_biological\: Biological model of panic \(doi\: 10\.1176\/ajp\.146\.2\.148\)
+
+#### Scope
+- adults
+- non\-clinical baseline
+- no beta\-blocker medication
+- waking hours
+- community sample
+
+### Hypotheses
+1. \[point\] An interoceptive challenge raises heart rate 20 beats per minute above baseline\, within a measurement tolerance of 5\, within 90 seconds\. \(pred1\; derives from\: p1\, p3\)
+   - Region the claim allows\: \[15\, 25\]
+   - Auxiliary assumptions\: aux1 \(core\)
+   - Rivals it is declared to discriminate\: alt\_cognitive
+   - Test record\: already tested\: passed \(2026\-05\-01\, registered osf\.io\/abcde\)
+2. \[interval\] Avoidance frequency falls within a 20\-35\% band after exposure therapy\. \(pred2\; derives from\: p2\)
+   - Region the claim allows\: \[20\, 35\]
+   - Test record\: untested
+3. \[directional\] Higher perceived threat is associated with more avoidance\. \(pred3\; derives from\: p2\)
+   - Test record\: untested
+4. \[point\] Blocking interoceptive feedback lowers avoidance\-task scores by 30 per cent\, within a tolerance of 5 percentage points\, within two weeks\. \(pred4\; derives from\: p4\)
+   - Region the claim allows\: \[25\, 35\]
+   - Rivals it is declared to discriminate\: alt\_cognitive
+   - Test record\: already tested\: passed \(2026\-06\-10\, registered osf\.io\/fghij\)
+
+### Implied conditional independencies \(derived from the causal graph\, not predictions\)
+_Not derived\: the causal graph has a feedback loop\, c\_arousal \-\> c\_perceived\_threat \-\> c\_arousal\. With cycles \= \'sigma\'\, the statements are read by sigma\-separation and hold if each loop settles to a unique equilibrium\._

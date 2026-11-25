@@ -45,7 +45,10 @@ _SIDED = ("two", "one")
 
 # A line break inside a value would end the Markdown list item it is written
 # into, so every run of them, with the spaces and tabs around it, becomes one
-# space (API_SPEC.md section 11).
+# space (API_SPEC.md section 11). Each line of the document goes through flat()
+# once it is built, so that no value, an id or a date included, can start a
+# line of its own, where Markdown would read a heading, a code fence or a YAML
+# header in it.
 _BREAKS = re.compile(r"[ \t]*[\r\n]+[ \t]*")
 
 
@@ -440,8 +443,9 @@ def preregister(theory, path=None, cycles: str = "refuse") -> str:
     is passed to it and to ``entailments()``: under the default, a graph with a
     feedback loop is not read, and with ``"sigma"`` it is read by
     sigma-separation. The claim-form severity rubric closes the document.
-    Values are written on one line, so a line break inside a statement cannot
-    end the list item it belongs to.
+    Values are written on one line, ids and dates included, so a line break
+    inside a statement cannot end the list item it belongs to or start a line
+    of its own.
 
     The document is the part of a preregistration that the theory file holds.
     It is to be completed with the study design, the analysis plan, the
@@ -478,8 +482,9 @@ def preregister(theory, path=None, cycles: str = "refuse") -> str:
 
 
 def document_lines(data: dict, cycles: str, embedded: bool = False) -> list[str]:
-    """The lines of the preregistration. ``embedded`` leaves out the severity
-    section, which the dossier gives with the declared values beside it."""
+    """The lines of the preregistration, each written on one line by ``flat``.
+    ``embedded`` leaves out the severity section, which the dossier gives with
+    the declared values beside it."""
     rep = _check(data)
     deriv = next((it for it in rep["items"] if it["id"] == "derivation_chain"), None)
     resolve = _RESOLVE[deriv["status"]] if deriv else "no"
@@ -542,7 +547,7 @@ def document_lines(data: dict, cycles: str, embedded: bool = False) -> list[str]
 
     lines += ["", _IMPLIED_HEADING, *_implied(data, cycles)]
     if embedded:
-        return lines
+        return [flat(line) for line in lines]
 
     # The values grade the form of each claim before any data (API_SPEC section
     # 9). They say nothing of how severely a claim is tested, and the heading
@@ -556,4 +561,4 @@ def document_lines(data: dict, cycles: str, embedded: bool = False) -> list[str]
             pid, cs, rk = s["prediction_id"], _fmt(s["computed_severity"]), _fmt(s["risk_score"])
             lines.append(f"- {pid}: severity {cs}, risk {rk}")
 
-    return lines
+    return [flat(line) for line in lines]

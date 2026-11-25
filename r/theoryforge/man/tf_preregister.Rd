@@ -64,8 +64,9 @@ theory makes without stating them, or says why there are none.
 \code{cycles} is passed to it and to \code{\link[=tf_entailments]{tf_entailments()}}: under the default,
 a graph with a feedback loop is not read, and with \code{"sigma"} it is read
 by sigma-separation. The claim-form severity rubric closes the document.
-Values are written on one line, so a line break inside a statement cannot end
-the list item it belongs to.
+Values are written on one line, ids and dates included, so a line break
+inside a statement cannot end the list item it belongs to or start a line of
+its own.
 
 The document is the part of a preregistration that the theory file holds. It
 is to be completed with the study design, the analysis plan, the inference

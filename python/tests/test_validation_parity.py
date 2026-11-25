@@ -179,8 +179,9 @@ def test_osf_push_base_url_override():
 
 
 def test_render_report_falls_back_to_id_on_empty_title(tmp_path):
+    # The id is escaped as Markdown text, and the backslash then for YAML.
     out = tf.new_theory("the-id", "").render_report(tmp_path / "r.qmd")
-    assert "theoryforge report: the-id" in open(out, encoding="utf-8").read()
+    assert 'title: "theoryforge report: the\\\\-id"' in open(out, encoding="utf-8").read()
 
 
 def test_mistyped_enum_values_are_refused_not_crashed_on():
