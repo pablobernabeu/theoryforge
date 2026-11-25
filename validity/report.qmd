@@ -1,11 +1,13 @@
 ---
 title: "How far can theoryforge be trusted?"
-subtitle: "A validity report on the packages and apps, with the changes made in version 0.8.0"
+subtitle: "A validity report on the packages and apps, with the changes made in version `r read.dcf(file.path('..', 'r', 'theoryforge', 'DESCRIPTION'), fields = 'Version')[1, 1]`"
 author:
   - name: Pablo Bernabeu
     affiliation: University of Oxford
 date: last-modified
 lang: en-GB
+language:
+  title-block-author-single: "Prepared for"
 bibliography: references.bib
 csl: apa.csl
 link-citations: true
@@ -33,9 +35,11 @@ execute:
 knitr::opts_chunk$set(comment = "")
 suppressPackageStartupMessages(library(jsonlite))
 
-# Formatting helpers for numbers printed in the text.
-num <- function(x, d = 1) formatC(x, format = "f", digits = d, big.mark = ",")
-int <- function(x) formatC(round(x), format = "d", big.mark = ",")
+# Formatting helpers for numbers printed in the text. A negative number is
+# printed with a minus sign rather than a hyphen.
+minus <- function(s) sub("^-", "−", s)
+num <- function(x, d = 1) minus(formatC(x, format = "f", digits = d, big.mark = ","))
+int <- function(x) minus(formatC(round(x), format = "d", big.mark = ","))
 nw <- function(n) {
   words <- c("one", "two", "three", "four", "five", "six", "seven", "eight",
              "nine", "ten", "eleven", "twelve")
@@ -47,6 +51,13 @@ Nw <- function(n) {
 }
 pct <- function(x, d = 0) {
   paste(formatC(100 * x, format = "f", digits = d), "per cent")
+}
+# A number written in a note of data/verification.csv, found by the text
+# around it, so that the prose can quote the note without typing the number.
+note_num <- function(row, pattern) {
+  m <- regmatches(row$note, regexec(pattern, row$note))[[1]]
+  stopifnot(length(m) == 2)
+  as.numeric(gsub(",", "", m[2]))
 }
 and_list <- function(x) {
   if (length(x) <= 1) return(x)
@@ -83,12 +94,17 @@ ci_level <- 0.95
 all_or <- function(k, n) if (k == n) "all" else paste(nw(k), "of the", nw(n))
 cap <- function(x) paste0(toupper(substr(x, 1, 1)), substr(x, 2, nchar(x)))
 n_studies <- sum(grepl("^# Study [0-9]+:", readLines("protocol.qmd")))
+# Counts written in one phrase: in words when all are small, otherwise all in
+# numerals, so that counts compared in one sentence share a style.
+counts <- function(n) {
+  if (all(n >= 1 & n <= 12 & n == round(n))) vapply(n, nw, character(1)) else int(n)
+}
 # Counts of statuses as a phrase, for the statuses that occur.
 status_phrase <- function(s) {
   tab <- table(factor(s, levels = c("fixed", "reported", "reworded", "unchanged",
                                     "deferred", "withdrawn", "not applicable")))
   tab <- tab[tab > 0]
-  and_list(paste(vapply(as.integer(tab), nw, character(1)), names(tab)))
+  and_list(paste(counts(as.integer(tab)), names(tab)))
 }
 rd <- function(f) {
   read.csv(file.path("data", f), stringsAsFactors = FALSE,
@@ -130,12 +146,26 @@ n_find_reader <- sum(fd$raised_by == "second reader")
 n_find_pilot <- sum(fd$lens == "pilot")
 n_checked <- sum(fd$upheld != "")
 n_upheld <- sum(fd$upheld == "true")
-both <- fd$severity_lens != "" & fd$severity_verified != ""
+# The lenses' own findings, apart from the pilot's, which had no second reader.
+lens_rows <- fd$raised_by == "lens" & fd$lens != "pilot"
+n_lens_np <- sum(lens_rows)
+n_lens_checked <- sum(lens_rows & fd$upheld != "")
+unchecked_sev <- unique(fd$severity_lens[lens_rows & fd$upheld == ""])
+# A withdrawn finding (graded 'none') is counted as withdrawn, not as lowered.
+both <- fd$severity_lens != "" & fd$severity_verified %in% c("minor", "major", "critical")
 n_down <- sum(both & match(fd$severity_verified, sev_levels) <
                 match(fd$severity_lens, sev_levels))
 n_up <- sum(both & match(fd$severity_verified, sev_levels) >
               match(fd$severity_lens, sev_levels))
 n_withdrawn <- sum(fd$severity_verified == "none")
+# Findings the readers did not uphold as stated but kept, at a lower grade or
+# as a narrower defect.
+notup <- fd$upheld == "false" & fd$severity_verified != "none"
+n_notup <- sum(notup)
+n_notup_lowered <- sum(notup & both & match(fd$severity_verified, sev_levels) <
+                         match(fd$severity_lens, sev_levels))
+n_reader_ungraded <- sum(fd$raised_by == "second reader" & fd$sev == "ungraded")
+n_ungraded <- sum(fd$sev == "ungraded")
 n_crit <- sum(fd$sev == "critical")
 n_major <- sum(fd$sev == "major")
 n_minor <- sum(fd$sev == "minor")
@@ -232,17 +262,33 @@ nf <- function(s, rows = TRUE) sum(fd$status[rows] %in% s)
 nv <- function(s, rows = TRUE) sum(vd$status[rows] %in% s)
 changed_behaviour <- c("fixed", "reported")
 not_changed <- c("unchanged", "deferred")
+# Reworded verdicts whose recommendation was to rework the component, and
+# verdicts of sound with caveats left unchanged because the documentation
+# already stated the caveat.
+n_rw_rework <- sum(vd$status == "reworded" & vd$rec == "rework")
+n_caveat_unch <- sum(vd$status %in% not_changed & vd$v == "sound with caveats" &
+                       vd$rec == "keep")
+n_basis_rerun <- sum(grepl("rerun|reran", st$basis, ignore.case = TRUE))
 
-# Checks of the deductive and numerical core.
+# Checks of the deductive and numerical core. 'package' compares an output of
+# the package with independent software, the auditors' own implementation of
+# a definition or an analytic or published value, 'parity' compares the twins,
+# and 'other' checks a sentence of the documentation, a design argument, a
+# reference implementation or the package against itself.
+stopifnot(all(ver$kind %in% c("package", "parity", "other")))
 vrow <- function(pattern) {
   r <- ver[grepl(pattern, ver$quantity, fixed = TRUE), ]
   stopifnot(nrow(r) == 1)
   r
 }
 n_checks <- nrow(ver)
-n_checks_disc <- sum(!is.na(ver$discrepancies) & ver$discrepancies > 0)
-n_checks_clean <- sum(!is.na(ver$discrepancies) & ver$discrepancies == 0)
-n_checks_size <- sum(is.na(ver$discrepancies))
+vk <- function(kind, what = c("all", "clean", "disc", "size")) {
+  r <- ver[ver$kind == kind, ]
+  switch(match.arg(what), all = nrow(r),
+         clean = sum(!is.na(r$discrepancies) & r$discrepancies == 0),
+         disc = sum(!is.na(r$discrepancies) & r$discrepancies > 0),
+         size = sum(is.na(r$discrepancies)))
+}
 n_rerun <- sum(grepl("Rerun on 0.8.0: same result.", ver$note, fixed = TRUE))
 ```
 
@@ -252,6 +298,27 @@ n_rerun <- sum(grepl("Rerun on 0.8.0: same result.", ver$note, fixed = TRUE))
 # loads r/theoryforge with pkgload::load_all() and writes one row per file.
 pkg_dir <- normalizePath(file.path("..", "r", "theoryforge"))
 pkg_version <- read.dcf(file.path(pkg_dir, "DESCRIPTION"), fields = "Version")[1, 1]
+# The version string does not tell apart code that carries the same version,
+# so the report also prints a hash of the package's source: the MD5 of the
+# sorted list of MD5 sums of DESCRIPTION, NAMESPACE and the files under R/ and
+# inst/.
+src_files <- c(file.path(pkg_dir, c("DESCRIPTION", "NAMESPACE")),
+               list.files(file.path(pkg_dir, c("R", "inst")), recursive = TRUE,
+                          full.names = TRUE))
+src_files <- sort(src_files[file.exists(src_files)])
+src_sums <- paste(substring(src_files, nchar(pkg_dir) + 2),
+                  unname(tools::md5sum(src_files)), collapse = "\n")
+src_tmp <- tempfile()
+writeLines(src_sums, src_tmp)
+pkg_hash <- substr(unname(tools::md5sum(src_tmp)), 1, 12)
+# The commit, when the report is rendered in a git checkout.
+pkg_commit <- tryCatch(
+  suppressWarnings(system2("git", c("-C", shQuote(pkg_dir), "rev-parse", "--short=7",
+                                    "HEAD"), stdout = TRUE, stderr = FALSE)),
+  error = function(e) character(0))
+pkg_commit <- if (length(pkg_commit) == 1 && grepl("^[0-9a-f]{7}$", pkg_commit)) {
+  paste0(", at commit ", pkg_commit)
+} else ""
 live_csv <- tempfile(fileext = ".csv")
 run_log <- system2(file.path(R.home("bin"), "Rscript"),
                    c(shQuote(file.path("demonstrations", "run.R")),
@@ -295,7 +362,8 @@ n_other <- nf(c("withdrawn", "not applicable")) + nv(c("withdrawn", "not applica
 # Words in each pilot source, without its first line, which names its origin.
 src_words <- sapply(list.files(file.path("demonstrations", "pilot", "sources"),
                                full.names = TRUE), function(p) {
-  length(strsplit(paste(readLines(p, warn = FALSE)[-1], collapse = " "), "\\s+")[[1]])
+  w <- strsplit(trimws(paste(readLines(p, warn = FALSE)[-1], collapse = " ")), "\\s+")[[1]]
+  sum(nzchar(w))
 })
 ```
 
@@ -344,6 +412,30 @@ width_ratio <- sapply(rw_files, function(f) {
 rt1 <- "adversarial/rt1-tautology.theory.yaml"
 s1c <- "strong/s1-light-deflection-conscientious.theory.yaml"
 p_rt1_over_s1c <- mean(rw[, rt1] > rw[, s1c])
+# A file that passes every item that applies to it scores 100 under any
+# positive weights, and a file with an applicable item below 1 scores less.
+all_pass <- function(f) all(items[[f]]$s[!is.na(items[[f]]$s)] == 1)
+full_adv <- adv[vapply(adv, all_pass, logical(1))]
+strong_below <- all(!vapply(strong_all, all_pass, logical(1)))
+```
+
+```{r}
+#| label: summary-numbers
+# Agreement of the pilot encoders' independence models over the constructs all
+# three used, needed in the summary.
+indep <- rd("pilot/independence_model_common.csv")
+kap <- setNames(indep$fleiss_kappa, indep$theory)
+kap_hi <- sort(kap[kap > 0])
+kap_lo <- kap[kap <= 0]
+kappa_text <- if (length(kap_hi) == 2 && length(kap_lo) == 1) {
+  paste0("agreed beyond chance for two theories (Fleiss' kappa ",
+         and_list(num(kap_hi, 2)), ") and not for the third (",
+         num(kap_lo, 2), "), whose source left open a choice that changes ",
+         "most of the statements")
+} else {
+  paste0("agreed with Fleiss' kappa of ", and_list(num(kap, 2)),
+         " for the three theories")
+}
 ```
 
 # Summary {.unnumbered}
@@ -352,28 +444,52 @@ The maintainer of theoryforge asked whether its R and Python packages and the
 two browser apps that run them are trustworthy and scientifically valid, and
 doubted that appraising scientific theories, a matter of human judgement for
 decades, can be done automatically. This report draws on an audit of the code at
-commit f72ce4c by `r nw(n_lens)` lenses, each rechecked by an independent second
-reader, on an encoding pilot and on reruns of the same evidence on version
-`r pkg_version`. Every auditor, second reader and encoder was an AI agent, and
-no human expert took part. That limits what the evidence can show, and the
-limits are set out in @sec-limits.
+commit f72ce4c by `r nw(n_lens)` auditors, each examining the package from one
+point of view (a lens) and each rechecked by an independent second reader, on an
+encoding pilot and on reruns of the same evidence on version `r pkg_version`.
+Every auditor, second reader and encoder was an AI agent, as was the drafter of
+this report and of its status register, written for the maintainer. No human
+expert took part. That limits what the evidence can show, and the limits are set
+out in @sec-limits.
 
-The answer differs by component. What the package deduces from a stated causal
-graph can be trusted as deduction. Its implied conditional independencies, the
-signs of effects and associations, its adjustment sets, its equivalence classes,
-its post-data severity, its compiled structural equation models and its exact
-simulation were compared with independent implementations and published values
-in `r int(n_checks)` checks (@sec-core). In `r int(n_checks_clean)` of them the
-package agreed in every case, `r nw(n_checks_size)` measured the size of an
-approximation, and each of the `r nw(n_checks_disc)` that found a discrepancy
-lies outside an assumption the documentation states, concerns the wording of a
-document or was graded minor. That trust is conditional twice over. The
-deductions hold under assumptions the package cannot check (linear or uniformly
-monotone relations, no omitted common causes, faithfulness for some verdicts
-and, for feedback loops, stability with the intervened construct held fixed),
-and they describe the file, not the theory: in the pilot, defensible encodings
-of the same short text gave files whose implied independencies overlapped
-little.
+The answer differs by component. The package's deductions from a stated causal
+graph, its implied conditional independencies, the signs of effects and
+associations, its adjustment sets and its equivalence classes, can be trusted as
+deduction. Its numerical routines, post-data severity, the compilation of
+structural equation models and the exact simulation, compute what they are
+specified to compute. In `r int(vk("package"))` checks, an output of the package
+was compared with independent software, the auditors' own implementations of
+the definitions or analytic and published values (@sec-core). The package
+agreed in every case in `r int(vk("package", "clean"))` of them,
+`r int(vk("package", "size"))` measured a rate, a coverage or the size of an
+approximation, and each of the `r int(vk("package", "disc"))` that found a
+discrepancy lies outside an assumption the documentation states, concerns the
+wording of a document or was graded minor. The R and Python twins gave the same
+results in all `r int(vk("parity"))` comparisons of their outputs, and
+`r int(vk("other"))` further checks examined sentences of the documentation,
+design arguments and a reference implementation.
+
+The deductions hold under assumptions the package cannot check. The graph must
+be the causal structure among the constructs, and every pair of constructs that
+no proposition joins is read as having no direct effect and no unexplained
+association, so the deductions are commitments of the theory only if its
+authors meant those omissions. Each relation must act in its stated direction
+whatever the other inputs, as in a linear or uniformly monotone model, some
+verdicts assume faithfulness, and a construct marked latent is read as if it
+were measured. For feedback loops read by sigma-separation, each loop must
+settle to a unique equilibrium, the system must be stable with the intervened
+construct held fixed for the signs of effects and as observed for the signs of
+associations, and a conditional association called 'nonzero' assumes a
+nonlinear model. The numerical routines carry conditions of their own.
+Post-data severity treats the standard error as known and as describing the
+sampling distribution at the bound, and it takes no account of selection. A
+simulation run is one linear system consistent with the stated signs, with gains
+and damping that the theory does not state. A compiled model fixes at zero the
+covariances the theory omits, so a small omitted correlation can make the global
+fit reject a model whose propositions are all true. Every output, finally,
+describes the file and not the theory. In the pilot, the independence models
+that encoders of the same short text produced, compared over the constructs all
+three used, `r kappa_text`.
 
 The checklist score cannot be trusted to mean what its earlier name, a rigour
 score, suggested. It describes how completely a file fills in what the checklist
@@ -383,31 +499,40 @@ and score above every established theory as first encoded from its source, and
 `r nw(n_adv_above_consc)` of the `r nw(n_adv)` score above every one of those
 theories re-encoded with all the fields their sources allow. The amendment
 appraisal applies fixed rules to what two versions of a file declare. It cannot
-tell a prediction from an accommodation, it does not weigh how good a test was,
-and its verdicts have not been compared with any expert's.
+tell a prediction from an accommodation and does not weigh how good a test was.
+Its verdicts have not been compared with any expert's.
 
-Of the `r int(n_find + n_verd)` findings and verdicts in the register, version
-`r pkg_version` fixed `r int(nf("fixed") + nv("fixed"))`, now reports
-`r int(nf("reported") + nv("reported"))` beside the result, met
-`r int(nf("reworded") + nv("reworded"))` by rewording what the outputs and
-documents say and left `r int(nf(not_changed) + nv(not_changed))` unchanged,
-`r int(nf("deferred") + nv("deferred"))` of them listed for a later release. The
-other `r int(n_other)` were withdrawn or needed no change. The behavioural
-corrections are real: the amendment appraisal now reads the signs the two graphs
+Of the `r int(n_find)` findings in the register, version `r pkg_version` fixed
+`r int(nf("fixed"))` and now reports `r int(nf("reported"))` beside a result it
+leaves unchanged. It answered `r int(nf("reworded"))` by rewording what the
+outputs and documents say, with the behaviour unchanged, and left
+`r int(nf(not_changed))` unchanged, `r int(nf("deferred"))` of them for
+expansions the maintainer plans for version 0.9.0 but has not published. Of the
+`r int(n_verd)` verdicts on components and claims, the status register counts
+`r status_phrase(vd$status)`. Not applicable marks verdicts of sound that needed
+no change. The reworded verdicts include
+`r int(n_rw_rework)` whose recommendation was to rework the component, and the
+unchanged ones include `r int(n_caveat_unch)` verdicts of sound with caveats
+whose caveat the documentation already stated. The main behavioural corrections
+concern two rules. The amendment appraisal now reads the signs the two graphs
 entail, so an amendment that reverses a corroborated prediction is no longer
-called progressive, and the checklist no longer counts a claim it could not read
-as derived. But the score still rates empty, circular and refuted files highly.
-Apart from the derivation chain and a few narrower rules, the release changed
-what the score is called and what is said about it, not what it computes.
+called progressive, provided the new version's graph can be built. And the
+checklist no longer counts a claim it could not read as derived. The score
+still rates empty, circular and refuted files highly. Apart from the derivation
+chain and a few narrower rules, the release changed what the score is called and
+what is said about it, not what it computes. Rerunning the evidence also showed
+problems in the corrected rules that the register does not list
+(@sec-changes).
 
-Whether automated appraisal of theories is feasible, this evidence answers in
-part. Deduction from a stated graph can be automated soundly, and a fixed rule
-can describe how complete a file is and apply declared outcomes consistently. No
-part of the package has shown that it can judge a theory's quality, truth or
-fruitfulness, or tell a prediction from an accommodation, and no study yet links
-its outputs to human judgement. The protocol in this folder (`protocol.qmd`)
-describes `r nw(n_studies)` studies with human participants that would settle
-the open questions.
+This evidence answers in part whether automated appraisal of theories is
+feasible. Deduction from a stated graph can be automated soundly, and a fixed
+rule can describe how complete a file is and apply declared outcomes
+consistently. No part of the package has shown that it can judge a theory's
+quality, truth or fruitfulness, or tell a prediction from an accommodation, and
+no study yet links its outputs to human judgement. The protocol in this folder
+(`protocol.qmd`) describes `r nw(n_studies)` studies with human participants
+that would measure what the audit could not, with expert judgement, itself
+fallible, as the criterion for the checklist and the appraisal.
 
 # How the audit was done {#sec-method}
 
@@ -415,22 +540,23 @@ the open questions.
 
 The audit examined the code and documentation at commit f72ce4c, whose code is
 the same as that of b5ebf84, the release candidate before the corrections
-described in @sec-changes. It was organised by lens. `r Nw(n_formal)` formal
-lenses examined the claims the package and its documents make (the claims
-register), the causal deductions, the statistics and the simulation, and the
-checklist score under attack (a red team). `r Nw(n_conceptual)` conceptual
-lenses examined the package from the philosophy of science, from measurement
-theory, from metascience and the related tools, and from the communication of
-results in the documents and apps. Each lens wrote its own scripts, ran them on
-a detached checkout of the commit, and reported verdicts on components and
-graded findings.
+described in @sec-changes. It was organised by lens, each lens being one auditor
+that examined the package from one point of view. `r Nw(n_formal)` formal lenses
+examined the claims the package and its documents make (the claims register),
+the causal deductions, the statistics and the simulation, and the checklist
+score, tested by files built to score highly without content (a red team).
+`r Nw(n_conceptual)` conceptual lenses examined the package from the philosophy
+of science, from measurement theory, from metascience and the related tools, and
+from the communication of results in the documents and apps. Each lens wrote its
+own scripts, ran them on a detached checkout of the commit and reported verdicts
+on components and graded findings.
 
 An independent second reader then rechecked each lens. The second reader reran
-the lens's scripts on a fresh checkout, compared the outputs, rechecked the
-references, upheld, regraded or withdrew each finding, changed verdicts where
-the evidence called for it and added defects the lens had missed. The register
-in `data/` keeps both readings, and where they differ this report follows the
-second reader.
+the lens's scripts on a fresh checkout, compared the outputs and rechecked the
+references. It upheld, regraded or withdrew the findings it checked, changed
+verdicts where the evidence called for it and added defects the lens had missed.
+The register in `data/` keeps both readings, and where they differ, this report
+follows the second reader.
 
 In a pilot, `r nw(length(unique(rd("pilot/checklist_by_encoder.csv")$encoder)))`
 encoders each encoded the same
@@ -438,9 +564,9 @@ encoders each encoded the same
 theories into theory files: the Revised Hierarchical Model of bilingual memory
 [@kroll2010], collaborative cognitive load theory [@kirschner2018] and an
 account of habit in health behaviour [@gardner2015]. Each encoder worked from a
-summary of `r int(min(src_words))` to `r int(max(src_words))` words written by
-one author, and one analyst matched constructs and coded the statements. The
-pilot had no second reader.
+summary of `r int(min(src_words))` to `r int(max(src_words))` words that one
+agent wrote from the published sources, and one agent, as analyst, matched
+constructs and coded the statements. The pilot had no second reader.
 
 ## Rules of evidence and grading
 
@@ -465,8 +591,10 @@ conclusions), major or minor.
 ## Who did the audit
 
 Every lens, every second reader and every pilot encoder was an AI agent, an
-instance of a Claude model working from written instructions. No human expert
-took part. The maintainer commissioned the work and reads this report. This
+instance of a Claude model working from written instructions, and so were the
+writer of the pilot's source summaries and its analyst. No human expert took
+part. The maintainer commissioned the work and reads this report. An AI agent of
+the same family drafted the report and the status register of @sec-status. This
 bounds what the audit can show. The agents share training and are likely to
 share blind spots, so a second reader is independent of a lens in the sense that
 it reran the evidence, not in the sense that a second human expert would be. The
@@ -481,17 +609,26 @@ experts is a judgement of the auditors and has not been measured.
 The register holds `r int(n_find)` findings: `r int(n_find_lens)` raised by the
 lenses and the pilot (`r int(n_find_pilot)` of them by the pilot) and
 `r int(n_find_reader)` that the second readers said the lenses had missed. The
-second readers checked `r int(n_checked)` of the lenses' findings and upheld
-`r int(n_upheld)`. They lowered the grade of `r int(n_down)` and raised
-`r nw(n_up)`, and they withdrew `r nw(n_withdrawn)`. @tbl-findings counts the
-findings by lens and severity. The `r nw(n_crit)` critical findings concern the
-amendment appraisal, what the checklist score measures and how it is presented,
-and the effect of feedback loops on the derivation check. They are listed with
-their status in @tbl-critical.
+second readers rechecked `r int(n_lens_checked)` of the `r int(n_lens_np)`
+findings the lenses raised. The other
+`r int(n_lens_np - n_lens_checked)`, all graded `r and_list(unchecked_sev)` by
+their lens, were not rechecked. Of those rechecked, the readers upheld
+`r int(n_upheld)`, some at another grade. In all, they lowered the grade of
+`r int(n_down)`, raised `r nw(n_up)` and withdrew `r nw(n_withdrawn)`. They
+marked `r nw(n_notup)` further findings as not upheld without withdrawing them
+and kept them as narrower or lesser defects, `r nw(n_notup_lowered)` of them
+lowered from major to minor. Of the `r int(n_find_reader)` defects the second
+readers added, `r int(n_reader_ungraded)` carry no grade, and no one rechecked
+them. @tbl-findings counts the findings by lens and severity, with the ungraded
+ones under 'Other', so the counts of critical and major findings leave them out.
+The `r nw(n_crit)` critical findings concern the amendment appraisal, what the
+checklist score measures and how it is presented, and the effect of feedback
+loops on the derivation check. They are listed with their status in
+@tbl-critical.
 
 ```{r}
 #| label: tbl-findings
-#| tbl-cap: "Findings by lens and severity (the second reader's grade where there is one). 'Other' counts the finding the second reader withdrew and defects added without a grade."
+#| tbl-cap: "Findings by lens and severity (the second reader's grade where there is one). 'Other' counts the finding the second reader withdrew and the defects added without a grade."
 sev_tab <- function(rows) {
   c(Critical = sum(rows$sev == "critical"), Major = sum(rows$sev == "major"),
     Minor = sum(rows$sev == "minor"),
@@ -503,13 +640,29 @@ t1 <- data.frame(Lens = c(unname(lens_short), "All"), t1, check.names = FALSE)
 kab(t1)
 ```
 
+```{r}
+#| label: verdict-pattern
+# Verdicts of questionable, unsupported or wrong on the deductive core against
+# those on the checklist, the appraisal and their presentation.
+against <- vd$v %in% c("questionable", "unsupported", "wrong")
+core_groups <- c("Deductive core", "Post-data severity and test plans",
+                 "SEM compilation", "Simulation")
+judged_groups <- c("Checklist and score", "Amendment appraisal",
+                   "Fixed rules as appraisal", "Documents and framing", "Apps")
+n_against <- sum(against)
+n_against_judged <- sum(against & vd$group %in% judged_groups)
+core_ok <- sum(vd$group %in% core_groups & vd$v %in% c("sound", "sound with caveats"))
+core_n <- sum(vd$group %in% core_groups)
+```
+
 The `r int(n_verd)` verdicts cover components and claims across the packages,
 the documents and the apps. The second readers checked `r int(n_verd_checked)`
 of them and changed `r int(n_verd_changed)`. @tbl-verdicts groups them by the
-component they concern. The pattern is plain. The deductive parts are mostly
-sound or sound with caveats, while the checklist, the appraisal and the way both
-are presented collect most of the verdicts of questionable, unsupported or
-wrong.
+component they concern. Of the `r int(core_n)` verdicts on the deductive and
+numerical core, `r int(core_ok)` are sound or sound with caveats, while
+`r int(n_against_judged)` of the `r int(n_against)` verdicts of questionable,
+unsupported or wrong concern the checklist, the appraisal and the way the
+documents and apps present them.
 
 ```{r}
 #| label: tbl-verdicts
@@ -529,23 +682,37 @@ vt <- rbind(vt, data.frame(Component = "All", Sound = sum(vd$v == "sound"),
 kab(vt)
 ```
 
-## Status in version `r pkg_version`
+## Status in version `r pkg_version` {#sec-status}
 
 For each finding and verdict, `data/status-0.8.0.csv` records what version
 `r pkg_version` does about it, with the file or rerun that shows it. Fixed means
 that the behaviour or rule was corrected. Reported means that the package now
 reports the problem beside its result without changing the result. Reworded
 means that the outputs and documentation now say what is computed while the
-behaviour is unchanged. Unchanged means that nothing was done, and deferred that
-nothing was done in this release while the remedy is listed for version 0.9.0 (a
-list that is not yet a published plan, so a deferred finding is best read as
-unchanged). Withdrawn marks the finding the second reader withdrew, and not
-applicable marks verdicts of sound, or sound with caveats, whose recommendation
-was to keep the component as it is. The status was established by rerunning the
-audit's scripts against the code of this repository, not from commit messages,
-and partial changes were classed by the part that bears on the finding as the
-second reader stated it. A further round of corrections may follow before
-release. The counts in this report are read from the file, so they follow it.
+behaviour is unchanged. Unchanged means that nothing was done. Deferred marks a
+finding left unchanged whose remedy is one of the expansions the maintainer
+plans for version 0.9.0, data tests of implications, ensemble simulation,
+interoperability and a teaching mode. The register records that plan in its
+verdicts on planned features, but no document publishes it, so a deferred
+finding is best read as unchanged. Remedies that the audit recommended for a
+later release and that the plan does not include count as unchanged. Withdrawn
+marks the finding the second reader withdrew, and not applicable marks verdicts
+of sound whose recommendation was to keep the component as it is. A verdict of
+sound with caveats counts as reworded where version `r pkg_version` states its
+caveat in more places than before, and as unchanged where the documentation
+already stated it.
+
+A finding is classed by the part of it that the second reader stated, and where
+part of what its title names remains, the basis says so. The status was
+established by rerunning the audit's evidence against the code of this
+repository where a script exists, as `r int(n_basis_rerun)` of the
+`r int(nrow(st))` bases record, and otherwise by reading the files at this
+commit, never from commit messages alone. AI agents assigned the status of each
+row. The drafter of this report rechecked a sample of rows, reviewers of the
+draft, also AI agents, reran the evidence for a further sample, and the rows
+they found misclassified were corrected. The other rows rest on the classifying
+agent's reading alone. A further round of corrections may follow before release.
+The counts in this report are read from the file, so they follow it.
 
 # The deductive core {#sec-core}
 
@@ -554,6 +721,8 @@ release. The counts in this report are read from the file, so they follow it.
 r_basis <- vrow("Basis statements on acyclic graphs are d-separations")
 r_min <- vrow("Minimal statements on acyclic graphs are d-separations")
 r_sig <- vrow("Basis statements under cycles = 'sigma' are sigma-separations")
+r_sig_cyc <- vrow("Sigma statements on cyclic graphs are also d-separations")
+r_sig_lin <- vrow("Sigma statements on cyclic graphs hold in linear models")
 r_insep <- vrow("Inseparable pairs on acyclic graphs have no separating set")
 r_dense <- vrow("Basis statements on 160 dense acyclic graphs")
 r_reader <- vrow("Basis statements on the second reader's random theories")
@@ -561,6 +730,11 @@ r_parity <- vrow("Entailment, implication and equivalence records under refuse a
 r_latent <- vrow("Testable independencies among observed constructs when some constructs are latent")
 r_comp <- vrow("Documented sentence that every other independence follows")
 r_eff <- vrow("Effect signs on acyclic graphs (effect claims)")
+eff_signed <- note_num(r_eff, "Positive \\(([0-9,]+)\\)") +
+  note_num(r_eff, "negative \\(([0-9,]+)\\)")
+eff_zero <- note_num(r_eff, "zero \\(([0-9,]+)\\)")
+eff_open <- note_num(r_eff, "all ([0-9,]+) 'undetermined'")
+stopifnot(eff_signed + eff_zero + eff_open == r_eff$cases)
 r_ass <- vrow("Marginal association signs on acyclic graphs")
 r_cond <- vrow("Conditional associations on acyclic graphs")
 r_nonlin <- vrow("Effect and association signs on acyclic graphs in monotone nonlinear models")
@@ -578,6 +752,9 @@ r_eq <- vrow("Compelled edges equal dagitty::equivalenceClass()")
 r_eq_cl <- vrow("Compelled edges equal causal-learn's dag2cpdag")
 r_dir <- vrow("Documented claim that no observational study can tell a reversible direction apart")
 r_spanos <- vrow("One-bound severity against a published table")
+r_spanos_r <- vrow("Residual against Spanos (2024), Table 1")
+spanos_tol <- note_num(r_spanos, "within ([0-9]*\\.[0-9]+)")
+spanos_tol_r <- note_num(r_spanos_r, "within ([0-9]*\\.[0-9]+)")
 r_toster <- vrow("Two-bound severity equals 1 minus the TOSTmeta() p value")
 r_sevpar <- vrow("post_data_severity() (random one- and two-bound cases)")
 r_sem_id <- vrow("Compiled model is locally identified")
@@ -590,30 +767,44 @@ r_ode <- vrow("Exact method against an ODE solver (runs)")
 r_lsoda <- vrow("Exact method (R) against an ODE solver (runs)")
 r_simpar <- vrow("simulate() trajectories, exact and Euler (runs)")
 r_euler <- vrow("Euler departure warning against the documented rule (runs)")
+ode_text <- if (r_ode$cases == r_lsoda$cases) {
+  paste(int(r_ode$cases), "runs of each solver")
+} else paste(int(r_ode$cases), "and", int(r_lsoda$cases), "runs")
 ```
 
 The deductive core is the part of the package that derives consequences from the
 causal graph that a file's propositions state, and the numerical functions built
 on it. The causal-verification and statistics lenses and their second readers
-compared it with independent implementations on random theories and published
-values. @tbl-verification summarises the `r int(n_checks)` checks in
-`data/verification.csv` by component, and @tbl-discrepancies in the appendix
-lists every check that found a discrepancy. The `r int(n_rerun)` checks whose
-notes end 'Rerun on 0.8.0: same result.' were rerun on version `r pkg_version`
-and gave the audit's numbers. The R and Python engines gave identical causal
-records on the `r int(r_parity$cases)` random theories of the causal test bed,
-and the status register records the same for a rerun at `r pkg_version`.
+compared it with independent implementations on random theories and with
+published values. @tbl-verification summarises the `r int(n_checks)` checks in
+`data/verification.csv`. Of these, `r int(vk("package"))` compare an output of
+the package with independent software, the auditors' own implementation of a
+definition or an analytic or published value, and they are counted by
+component. The `r int(vk("parity"))` comparisons of the R and Python twins and
+the `r int(vk("other"))` checks of sentences of the documentation, of design
+arguments, of a reference implementation and of the package against itself are
+counted apart. @tbl-discrepancies in the appendix lists every check that found a
+discrepancy. The `r int(n_rerun)` checks whose notes end 'Rerun on 0.8.0: same
+result.' were rerun on version `r pkg_version` and gave the audit's numbers. The
+R and Python engines gave identical causal records on the
+`r int(r_parity$cases)` random theories of the causal verification, and the
+status register records the same for a rerun at `r pkg_version`.
 
 ```{r}
 #| label: tbl-verification
-#| tbl-cap: "Independent checks of the deductive and numerical core, by component. A check measures one quantity against one comparator. 'Size only' counts checks that measure a rate or the size of an approximation rather than agreement."
-vt2 <- do.call(rbind, lapply(unique(ver$component), function(cmp) {
-  r <- ver[ver$component == cmp, ]
-  data.frame(Component = cmp, Checks = nrow(r),
+#| tbl-cap: "Checks of the deductive and numerical core. A check measures one quantity against one comparator. The rows by component count comparisons of the package's output with an independent implementation or value. 'Size only' counts checks that measure a rate, a coverage or the size of an approximation rather than agreement."
+vt_row <- function(label, r) {
+  data.frame(Component = label, Checks = nrow(r),
              Agree = sum(!is.na(r$discrepancies) & r$discrepancies == 0),
              Differ = sum(!is.na(r$discrepancies) & r$discrepancies > 0),
              "Size only" = sum(is.na(r$discrepancies)), check.names = FALSE)
+}
+pk <- ver[ver$kind == "package", ]
+vt2 <- do.call(rbind, lapply(unique(pk$component), function(cmp) {
+  vt_row(cap(cmp), pk[pk$component == cmp, ])
 }))
+vt2 <- rbind(vt2, vt_row("R and Python twins", ver[ver$kind == "parity", ]),
+             vt_row("Documentation, design and comparators", ver[ver$kind == "other", ]))
 vt2 <- rbind(vt2, data.frame(Component = "All", Checks = sum(vt2$Checks),
                              Agree = sum(vt2$Agree), Differ = sum(vt2$Differ),
                              "Size only" = sum(vt2[["Size only"]]),
@@ -625,13 +816,18 @@ kab(vt2)
 
 On acyclic graphs, every one of the `r int(r_basis$cases)` basis statements and
 `r int(r_min$cases)` minimal statements that `implications()` gave for the
-random theories was a d-separation according to networkx, a search written from
-the definition and dagitty, and every pair the package called inseparable (`r
-int(r_insep$cases)`) had no separating set. The same held on dense graphs (`r
-int(r_dense$cases)` statements), under sigma-separation for graphs with feedback
-loops (`r int(r_sig$cases)` statements) and on the second reader's own generator
-(`r int(r_reader$cases)` statements). In exact linear models every statement had
-a partial covariance of zero.
+random theories was a d-separation according to networkx, dagitty and a search
+written from the definition, and every pair the package called inseparable
+(`r int(r_insep$cases)`) had no separating set. The same held on dense graphs
+(`r int(r_dense$cases)` statements) and on the second reader's own generator
+(`r int(r_reader$cases)` statements). Under `cycles = "sigma"`, all
+`r int(r_sig$cases)` basis statements were sigma-separations according to a
+search written from the definition. Only the `r int(r_sig_cyc$cases)` of them on
+graphs with feedback loops test the sigma reading, since on an acyclic graph it
+equals d-separation. In exact linear models, every statement had a partial
+covariance of zero, on graphs with loops when the spectral radius of the
+absolute coefficient matrix was below one (`r int(r_sig_lin$cases)`
+statements).
 
 Some qualifications remain. The sentence that every other independence follows
 from the basis set needs the distribution to have the composition property, as a
@@ -640,22 +836,25 @@ documents now say so. A construct marked latent is read like any other, so for
 `r int(r_latent$discrepancies)` of the `r int(r_latent$cases)` pairs that
 dagitty can test among observed constructs, the package's statement holds a
 latent construct fixed and no observed alternative is sought. The help now says
-this, and projecting latent constructs out is planned for 0.9.0. Most important
-for users, every pair of constructs that no proposition joins becomes an implied
-independence. The statements are commitments of the theory only if its authors
-meant those omissions, which the help and the preregistration now say.
+this. Projecting latent constructs out was left for a later release, for which
+no plan is published. Most important for users, every pair of constructs that no
+proposition joins becomes an implied independence. The statements are
+commitments of the theory only if its authors meant those omissions, which the
+help and the preregistration now say.
 
 ## Sign entailments and their assumptions
 
-On acyclic graphs in linear models, the derived signs held for
+On acyclic graphs in linear models, the derived verdicts held for all
 `r int(r_eff$cases)` effect claims, `r int(r_ass$cases)` marginal associations
-and `r int(r_cond$cases)` conditional associations, with no exception. In random
-monotone nonlinear models they held for `r int(r_nonlin$cases)` model-claims,
-where 'positive' then means non-negative. The second reader recomputed the
-verdict and faithfulness rules for `r int(r_rules$cases)` claims with every
-claimed sign and found no mismatch, and checked `r int(r_vwr$cases)` signed
-associations against the published sufficient condition of VanderWeele and
-Robins [-@vanderweele2010].
+and `r int(r_cond$cases)` conditional associations. Of the effect claims,
+`r int(eff_signed)` were derived as positive or negative and `r int(eff_zero)`
+as zero, and the `r int(eff_open)` left undetermined took both signs. In random
+monotone nonlinear models, the verdicts held for `r int(r_nonlin$cases)`
+model-claims, where 'positive' then means non-negative. The second reader
+recomputed the verdict and faithfulness rules for `r int(r_rules$cases)` claims
+with every claimed sign and found no mismatch, and checked `r int(r_vwr$cases)`
+signed associations against the published sufficient condition of VanderWeele
+and Robins [-@vanderweele2010].
 
 Feedback loops need more. Under sigma-separation with the spectral radius of the
 absolute coefficient matrix below one, the `r int(r_regA$cases)` effect claims
@@ -672,7 +871,8 @@ The signs therefore rest on assumptions the package cannot check: that the graph
 is the causal structure among the constructs, that each signed relation acts in
 its direction whatever the other inputs, which a moderator that reverses an
 effect breaks, that errors are independent apart from the stated associations
-and, for loops, stability with the intervened construct held fixed. Some
+and, for loops, stability with the intervened construct held fixed for effects
+and of the system as observed for associations. Some
 verdicts rest on faithfulness as well, with two consequences. A conditional
 association called 'nonzero' under sigma-separation can be zero in every linear
 cyclic model with the graph, as `r int(r_sig_nz$discrepancies)` of
@@ -702,10 +902,11 @@ assumes. The preregistration still prints the set without that caveat.
 ## Equivalence classes
 
 The compelled and reversible edges equalled those of dagitty, ggm and
-causal-learn in all `r int(r_eq$cases)` acyclic theories. The class is right for
+causal-learn in all `r int(r_eq$cases)` acyclic theories without associations
+(those of two or more constructs). The class is right for
 tests of conditional independence. The documents at f72ce4c said that no
 observational study could tell a reversible direction apart, which is wrong as
-worded: in a demonstration with non-Gaussian errors a test of residual
+worded: in a demonstration with non-Gaussian errors, a test of residual
 dependence chose the true direction. Version `r pkg_version` says instead that
 no test of conditional independence can settle the direction, which needs an
 intervention, a temporal order or distributional assumptions.
@@ -715,26 +916,27 @@ direction fixed by experiment can still be listed as reversible.
 ## Post-data severity
 
 `post_data_severity()` reproduced the published one-sided values the audit
-compared it with, all `r nw(r_spanos$cases)` values of Table 1 of @spanos2024
-within rounding, and the two-bound value equalled one minus the p value of the
-z-based two one-sided tests [@lakens2017] in all `r int(r_toster$cases)` random
-intervals checked with TOSTER. The R and Python twins agreed in all
-`r int(r_sevpar$cases)` random cases. The value treats the standard error as
-known, so in small samples it overstates severity. That standard error must
-describe the sampling distribution at the bound, which the standard error at the
-estimate does not do for a proportion near zero. And the value is nominal,
-taking no account of selection, such as a subgroup chosen after seeing the data.
-The help now states all three limits and the apps the first and the last. Both
-attribute the one-bound value to Mayo and Spanos [-@mayo2006] and call the
-two-bound minimum the package's own extension. Whether the error-statistical
-explication of severity is the right one is itself disputed [@vandongen2023],
-which no document of the package mentions.
+compared it with, all `r nw(r_spanos$cases)` values of Table 1 of @spanos2024 to
+within `r num(spanos_tol, 3)` (within `r num(spanos_tol_r, 3)` with the mean
+rounded as in the source), and the two-bound value equalled one minus the p
+value of the z-based two one-sided tests [@lakens2017] in all
+`r int(r_toster$cases)` random intervals checked with TOSTER. The R and Python
+twins agreed in all `r int(r_sevpar$cases)` random cases. The value treats the
+standard error as known, so in small samples, it overstates severity. That
+standard error must describe the sampling distribution at the bound, which the
+standard error at the estimate does not do for a proportion near zero. And the
+value is nominal, taking no account of selection, such as a subgroup chosen
+after seeing the data. The help now states all three limits and the apps the
+first and the last. Both attribute the one-bound value to Mayo and Spanos
+[-@mayo2006] and call the two-bound minimum the package's own extension. Whether
+the error-statistical explication of severity is the right one is itself
+disputed [@vandongen2023], which no document of the package mentions.
 
 ## SEM compilation
 
 `compile_sem()` wrote byte-identical lavaan syntax in R and Python for
 `r int(r_semparity$cases)` random theories. In `r int(r_sem_id$cases)` random
-acyclic theories without bows every compiled model was locally identified, and
+acyclic theories without bows, every compiled model was locally identified, and
 `r int(r_sem_eq$agreements)` of them equalled the theory's model written out in
 full. The others contain a measured construct that no proposition names, which
 lavaan's defaults then free. Every defined effect equalled the total effect from
@@ -750,9 +952,9 @@ propositions are all true. That is unchanged.
 ## The exact simulation and what it does not show
 
 The exact method of `simulate()` agreed with the matrix exponential in all
-`r int(r_expm$cases)` random runs and with ODE solvers, DOP853 in Python and
-lsoda in R, in all `r int(r_ode$cases)` and `r int(r_lsoda$cases)` runs whose
-solution stays finite, and the twins agreed to the last bit in
+`r int(r_expm$cases)` random runs. It agreed with ODE solvers, DOP853 in Python
+and lsoda in R, in all `r ode_text` whose reference solution stays below
+10^12^ in absolute value, and the twins gave bit-identical trajectories in
 `r int(r_simpar$cases)` runs. The Euler warning followed its documented rule in
 all `r int(r_euler$cases)` runs. Version `r pkg_version` makes the exact method
 the default, as the 0.7.0 notes had promised.
@@ -760,11 +962,13 @@ the default, as the 0.7.0 notes had promised.
 The computation is correct, but a run shows less than the propositions might
 suggest. The file states no gains or damping, so whether a feedback loop grows
 or settles is set by the gain against the damping, both defaults the theory does
-not state. An acyclic theory decays for any positive damping. A relation that
-states no sign is coupled positively, and over the default time window a chain
-that decays in the long run shows only a rise. The trajectory is one linear
-system consistent with the stated signs, among many that the theory allows. The
-help and the apps now say so, and the apps name the settings beside each run.
+not state. An acyclic theory decays for any positive damping. A relation stated
+as 'causes' or 'mediates', which gives no sign, is coupled positively, while
+'moderates' and 'associates' couple nothing. Over the default time window, a
+chain that decays in the long run shows only a rise. The trajectory is one
+linear system consistent with the stated signs, among many that the theory
+allows. The help and the apps now say so, and the apps name the settings beside
+each run.
 
 # The checklist and its score {#sec-checklist}
 
@@ -803,6 +1007,13 @@ s1_enc <- strong_enc[grepl("s1-", strong_enc)]
 s3_enc <- strong_enc[grepl("s3-", strong_enc)]
 moved_text <- if (n_adv_moved == 0) "No adversarial file moved, so a" else
   paste0(Nw(n_adv_moved), " adversarial files moved. A")
+# Why no weighting helps: a file that passes every applicable item scores 100
+# under any positive weights, and every strong file has an item below 1.
+bound_text <- if (hollow %in% full_adv && strong_below) {
+  paste0("No positive weighting of the items can rank a strong theory at or ",
+         "above the hollow file, which passes every item that applies to it ",
+         "and so scores ", sc(dm(hollow, "score")), " under any weights.")
+} else ""
 ```
 
 The audit built files that should score low if the score measured the quality of
@@ -814,23 +1025,24 @@ package in this repository (@tbl-demos).
 ## Live run
 The demonstrations below were recomputed when this report was rendered, by
 `demonstrations/run.R` with theoryforge `r pkg_version` loaded from
-`r/theoryforge` in this repository, which read checklist `r checklist_live`. The
-live run `r if (live_same) "is identical to" else "differs from"` the stored run
-in `data/demonstrations-0.8.0.csv`. The run on f72ce4c read checklist
+`r/theoryforge` in this repository`r pkg_commit` (source hash `r pkg_hash`),
+which read checklist `r checklist_live`. The live run
+`r if (live_same) "is identical to" else "differs from"` the stored run in
+`data/demonstrations-0.8.0.csv`. The run on f72ce4c read checklist
 `r checklist_old`.
 :::
 
 The `r nw(n_adv)` adversarial files are a tautological theory whose predictions
 are true by definition, a vague one whose constructs cannot be observed, an
 astrological theory whose every recorded test failed, a hollow file whose
-mechanism reads 'because', a file whose every text field is the letter 'x', and
+mechanism reads 'because', a file whose every text field is the letter 'x' and
 an implausible theory in which blue socks raise exam marks, as written and with
 every test failed. `r cap(all_or(n_adv_valid, n_adv))` of them pass full
 validation and `r all_or(n_adv_pass, n_adv)` pass the gate. They score from
 `r sc(min(adv_scores))` to `r sc(max(adv_scores))`. The hollow file scores
 `r sc(dm(hollow, "score"))` and the 'x' file `r sc(dm(xfile, "score"))`. The
 `r nw(length(strong_enc))` strong theories, light deflection, prospect theory,
-Hick's law and Michaelis-Menten kinetics, encoded only from their sources, score
+Hick's law and Michaelis–Menten kinetics, encoded only from their sources, score
 from `r sc(min(enc_scores))` to `r sc(max(enc_scores))`, and
 `r all_or(n_adv_above_enc, n_adv)` adversarial files outscore every one of them.
 Re-encoded with every field the sources allow, they score from
@@ -839,7 +1051,8 @@ Re-encoded with every field the sources allow, they score from
 above all of them. Agents who knew the checklist wrote all these files, so they
 demonstrate what the score rewards rather than measure how real theories fare.
 
-The score ignores the test record. The blue-socks file scores
+Apart from the parsimony item, the score does not read the test record. The
+blue-socks file scores
 `r sc(dm(bs, "score"))` with its tests passed and `r sc(dm(bsr, "score"))` with
 every test failed, and the astrological theory, refuted by every recorded test,
 scores `r sc(dm(rt3, "score"))`. In the red team's files, flipping or removing
@@ -875,8 +1088,7 @@ Every adversarial file outscored every strong theory as first encoded in
 outscored the most completely re-encoded theory, light deflection, in
 `r pct(p_rt1_over_s1c)` of them. The weights thus decide the order of files with
 similar scores but hardly change the gap between the adversarial files and the
-theories as first encoded. No weighting of what the items read makes the score
-track the quality of the theories.
+theories as first encoded. `r bound_text`
 
 ## The gate and the derivation chain with loops
 
@@ -897,26 +1109,29 @@ falsifiability, which asks that some prediction be typed as a claim that rules a
 result out, and the derivation chain, which asks that every prediction cite
 declared propositions whose graph entails any claim it states. A file marked as
 a draft makes the gate advisory. The gate's labels are the author's, so a file
-can pass on a label: the second readers showed a prediction that 'motivated
-people exist' opening the gate once it was labelled directional.
+can pass on a label. The philosophy lens showed that a prediction saying that x
+'may raise or lower y, depending on context' passes the falsifiability item and
+the gate once it is labelled directional, and a rerun on version `r pkg_version`
+gives the same.
 
 At f72ce4c, the derivation chain read claims as if the graph had no loops and
 counted a claim it could not read as derived. Any feedback loop anywhere in the
-propositions therefore switched off every claim check and could open a blocked
-gate. The loops demonstrations show the change. A contradicted claim in an
-acyclic graph scores `r sc(dm(acyc, "score"))` with the gate
-`r dm(acyc, "gate")`. Adding a loop through the claim, or a loop between two
-constructs unrelated to it, gave `r sc(dm(thru, "score", "old"))` and a passing
-derivation chain at f72ce4c, and now gives `r loop_now`, with the item at
-`r dm(unrel, "derivation_chain")`. An unread claim now earns no credit, but a
-warning does not block, so under the default reading the gate `r gate_now`.
-Reading the graph by sigma-separation (`check(cycles = "sigma")`) checks such
-claims and blocks the gate when they fail, on the assumption that each loop
-settles to a unique equilibrium.
+propositions therefore made every claim check pass, so that a loop could let a
+file through a gate that its claims would block. The loops demonstrations show
+the change. A contradicted claim in an acyclic graph scores
+`r sc(dm(acyc, "score"))` with the gate `r dm(acyc, "gate")`. Adding a loop
+through the claim, or a loop between two constructs unrelated to it, gave
+`r sc(dm(thru, "score", "old"))` and a passing derivation chain at f72ce4c, and
+now gives `r loop_now`, with the item at `r dm(unrel, "derivation_chain")`. An
+unread claim now earns no credit, but a warning does not block, so under the
+default reading, the gate `r gate_now`. Reading the graph by sigma-separation
+(`check(cycles = "sigma")`) reads such claims and blocks the gate when the graph
+contradicts them or leaves them open, on the assumption that each loop settles
+to a unique equilibrium.
 
 The derivation chain checks agreement with the graph. It does not ask how far a
 prediction goes beyond the propositions: a prediction that restates its one
-proposition is entailed, and in the communication lens's count most of the
+proposition is entailed, and in the communication lens's count, most of the
 entailed verdicts in the shipped examples rest on a single proposition. Stating
 a checkable claim can only expose an error and cost points, while leaving claims
 out costs nothing, and a claim the graph cannot read now costs as much as a
@@ -928,8 +1143,10 @@ less, remains.
 At f72ce4c, a phenomenon whose claim the theory's own graph contradicts left
 score and gate unchanged, while the same claim stated as a prediction blocked
 the gate. Version `r pkg_version` fails the derivation chain for such a
-phenomenon, so the gate is now
-`r dm("phenomena/contradicted-phenomenon.theory.yaml", "gate")` in both cases.
+phenomenon in an acyclic graph, or in any graph read by sigma-separation, so the
+gate is now `r dm("phenomena/contradicted-phenomenon.theory.yaml", "gate")` in
+both cases. Behind a feedback loop under the default reading, neither claim is
+read (@sec-changes).
 The score still counts only predictions:
 `r sc(dm("phenomena/contradicted-phenomenon.theory.yaml", "score"))` with the
 contradicted phenomenon and
@@ -944,11 +1161,22 @@ flip <- "amendments/sign-flip.theory.yaml"
 weak <- "amendments/weakened-sign.theory.yaml"
 prot <- "amendments/protects-only.theory.yaml"
 app_rows <- vd$group == "Amendment appraisal"
+# A new version whose graph cannot be built: the sign reversal with one more
+# proposition, to a construct the file does not declare.
+flip_th <- tf_read(file.path("demonstrations", flip))
+flip_prior <- tf_read(file.path("demonstrations", live$prior[live$file == flip]))
+undeclared <- flip_th
+undeclared$propositions <- c(undeclared$propositions, list(list(
+  id = "p_undeclared", from = flip_th$constructs[[1]]$id,
+  to = "undeclared_construct", relation = "increases", mechanism = "m.")))
+ap_undeclared <- tf_appraise_amendment(undeclared, flip_prior)
+undeclared_lost <- if (length(ap_undeclared$content_lost) == 0) "no content lost" else
+  paste("content lost", and_list(unlist(ap_undeclared$content_lost)))
 ```
 
 `appraise_amendment()` compares two versions of a file and calls the amendment
 progressive, degenerating or neutral by rules that borrow the terms of
-@lakatos1970. At f72ce4c the rules compared implied independencies and stated
+@lakatos1970. At f72ce4c, the rules compared implied independencies and stated
 predictions but not the signs the two graphs entail. An amendment that reversed
 the proposition behind a corroborated prediction, so that the new graph
 contradicts it, was called `r dm(flip, "verdict", "old")`. Version
@@ -961,8 +1189,8 @@ assumption whose independent predictions are all untested is now classed as
 pending rather than ad hoc, so a bold amendment is no longer called degenerating
 before its prediction has been tested.
 
-What remains is larger than what changed. The appraisal reads what the two files
-declare and cannot check it. It cannot tell a prediction from an accommodation:
+Most limits remain. The appraisal reads what the two files declare and cannot
+check it. It cannot tell a prediction from an accommodation:
 a subgroup re-description of the anomalous data, recorded as a new prediction
 that passed, makes an amendment progressive, and so does an old result listed in
 the 'protects' field of a trivial new assumption. The live run shows the second
@@ -972,9 +1200,14 @@ as an articulation of old content depends on whether it states a
 machine-readable claim. A single pass counts as corroboration whatever its
 estimate, the severity of the test or the number of failed new predictions
 beside it. Appraised one version at a time, a prediction made in one version and
-corroborated in the next is never credited. And the appraisal has no notion of a
-theory's hard core, so reversing its central claim can count as a progressive
-problemshift.
+corroborated in the next is never credited. The appraisal has no field that
+marks which propositions are central to a theory, so it cannot tell a change to
+them from a change at the periphery, which in the auditors' reading is the
+distinction Lakatos's term 'hard core' draws. And when the new version's graph
+cannot be built, the new rules are skipped. Adding to the sign reversal above
+one proposition to a construct the file does not declare turns
+`r dm(flip, "verdict")` into `r ap_undeclared$verdict`, with
+`r undeclared_lost`.
 
 Version `r pkg_version` reports several of these beside the verdict without
 letting them decide it: the new predictions that count as new only through
@@ -985,7 +1218,8 @@ cannot tell a prediction from an accommodation. Of the `r nw(sum(app_rows))`
 verdicts on the appraisal, the status register counts
 `r status_phrase(vd$status[app_rows])`. A function that appraises a chain of
 versions, fields for the provenance of data and a severity threshold for
-corroboration are planned for 0.9.0. Even those would rest on the author's
+corroboration were recommended for a later release, for which no plan is
+published. Even those would rest on the author's
 declarations, so the most the appraisal can claim is conditional: if the
 declarations are true, these rules give this verdict.
 
@@ -996,10 +1230,29 @@ declarations are true, these rules give this verdict.
 doc_rows <- vd$group == "Documents and framing"
 app_vrows <- vd$group == "Apps"
 comm_f <- fd$lens == "communication-and-apps"
+# What the dossier's preamble says it flags, against the margin it applies,
+# and whether the dossier says anything about the gate beyond its result.
+tf_ns <- asNamespace("theoryforge")
+margin <- get(".tf_DECLARED_MARGIN", envir = tf_ns)
+preamble_says_above <- grepl("a declared severity above the rubric",
+                             get(".tf_PREAMBLE", envir = tf_ns), fixed = TRUE)
+dossier_lines <- strsplit(tf_dossier(tf_read(file.path("demonstrations", hollow))),
+                          "\n")[[1]]
+gate_lines <- grep("gate|blocker", dossier_lines, ignore.case = TRUE, value = TRUE)
+gate_unexplained <- all(grepl("^- (Gate|Blockers failed):", gate_lines))
+flaw_text <- c(
+  if (preamble_says_above) paste0(
+    "The dossier's preamble says that it flags a declared severity above the ",
+    "rubric, but it flags only one more than ", num(margin, 1), " above it."),
+  if (gate_unexplained) paste0(
+    "The dossier prints the gate's result and the number of blockers that ",
+    "failed without saying what the gate checks."))
+flaw_text <- paste(flaw_text, collapse = " ")
 ```
 
-The preregistration, the dossier, the HTML report and the apps carry the
-package's results to readers, and at f72ce4c they presented them as judgements.
+The preregistration, the dossier, the HTML report and the apps present the
+package's results to readers, and at f72ce4c, they presented them as
+judgements.
 The score was an 'aggregate rigour score' out of 100, the app said that the
 checklist 'scores twelve facets of rigour', the dossier was called an audit,
 'Derivations check: yes' headed preregistrations whose claims had not been read,
@@ -1009,22 +1262,29 @@ completely a theory is specified and says nothing about whether it is true, was
 accurate but appeared only on the methodology page and in the READMEs.
 
 Version `r pkg_version` calls the number the checklist score wherever it is
-shown, prints the same scope statement beside it in the help, the dossier, the
-HTML report and the apps, opens the dossier with what is author-entered and what
-is derived and the preregistration with what it holds and what must be added
-before registration, takes the derivation line from the derivation chain read
-with the document's own setting for loops, and uses neutral colours for the
-causal readings and the rival comparison. Of the `r int(sum(comm_f))` findings
+shown. It prints the same scope statement beside the score in the help, the
+dossier and the HTML report and with the checklist result in the apps, while the
+score on the apps' theory card and in their editor carries only the statement's
+first and last sentences, as a hover title that a phone does not show. It opens
+the dossier with what is author-entered and what is derived and the
+preregistration with what it holds and what must be added before registration,
+takes the derivation line from the derivation chain read with the document's own
+setting for loops, and uses neutral colours for the causal readings and the
+rival comparison. `r flaw_text` Of the `r int(sum(comm_f))` findings
 of the communication lens and its second reader, the status register counts
 `r status_phrase(fd$status[comm_f])`. The two apps agree with each other and
 with the packages. The lens's comparison of their displayed results found a
 difference only in the help, which names the language.
 
-Text beside a number may not change how it is read: automation bias occurs in
-naive and expert users alike and cannot be prevented by training or instructions
-[@parasuraman2010]. Moreover, every grading of a communication finding, the
-lenses' and their second readers', is a judgement about likely misreading, not a
-measurement of it. Study 3 of the protocol measures it.
+Evidence on automated decision aids suggests that text beside a number may not
+change how the number is read. In a review of studies of such aids, automation
+bias occurred in naive and expert participants and was not prevented by
+training or instructions [@parasuraman2010], although a systematic review lists
+training, emphasis on users' accountability and the design of the display, such
+as where advice appears on the screen, among its reported mitigators
+[@goddard2012]. Every grading of a communication finding, the lenses' and their
+second readers', judges how likely a misreading is, and none has been measured.
+Study 3 of the protocol would measure it.
 
 # Dependence on the encoding {#sec-encoding}
 
@@ -1080,7 +1340,7 @@ parity_text <- if (summ$parity_total_differences == 0) {
   "with no difference in any output compared"
 } else paste("apart from", int(summ$parity_total_differences), "differences")
 claims_text <- if (length(unique(claims$in_all_three)) == 1) {
-  paste("only", nw(claims$in_all_three[1]), "in each case")
+  paste("only", int(claims$in_all_three[1]), "in each case")
 } else and_list(int(claims$in_all_three))
 reversal_text <- if (reversals == 0) {
   "No derived sign ever reversed between encoders. The"
@@ -1092,6 +1352,58 @@ spread_old_text <- and_list(paste(num(spread_old), "points for",
                                   th_lab[names(spread_old)]))
 spread_new_text <- and_list(paste(num(spread_new), "points for",
                                   th_lab[names(spread_new)]))
+# Sources of the disagreements over the kind of element, as the analyst
+# attributed them.
+src_tab <- strsplit(strsplit(u_all$disagreements_by_source, "; ")[[1]], "=")
+src_n <- setNames(as.numeric(vapply(src_tab, `[`, "", 2)),
+                  vapply(src_tab, `[`, "", 1))
+stopifnot(setequal(names(src_n), c("encoder", "format", "verbal")),
+          sum(src_n) == u_n - u_k)
+# Agreement of the independence models over the constructs all three encoders
+# of a theory used, and a pair of encodings with the same independence model
+# whose literal basis statements differ.
+im <- indep[match(names(th_lab), indep$theory), ]
+pairs <- c("enc-1/enc-2", "enc-1/enc-3", "enc-2/enc-3")
+same_model <- do.call(rbind, lapply(seq_len(nrow(im)), function(i) {
+  j <- unlist(im[i, paste0("J_indep_", pairs)])
+  l <- unlist(impl[impl$theory == im$theory[i], paste0("J_literal_basis_", pairs)])
+  data.frame(theory = im$theory[i], pair = pairs, j = j, lit = l)
+}))
+same_model <- same_model[same_model$j == 1, ]
+same_text <- if (nrow(same_model) >= 1) {
+  s <- same_model[which.min(same_model$lit), ]
+  paste0("Two encoders of ", th_lab[s$theory], " had the same independence ",
+         "model over their shared constructs and a literal Jaccard index of ",
+         num(s$lit, 2), ".")
+} else ""
+hb <- im[im$theory == "health-habit", ]
+hb_share <- unlist(hb[, paste0("share_independent_enc-", 1:3)])
+two <- im[im$theory != "health-habit", ]
+# What filling the form without changing a statement does at this version:
+# every empty mechanism restates its relation, every construct takes the
+# theory's boundary conditions and a construct without a measure gets 'a
+# rating of' its label (perturbation 1e of the pilot).
+fill_form <- function(th) {
+  bc <- th$boundary_conditions
+  th$propositions <- lapply(th$propositions, function(p) {
+    if (is.null(p$mechanism) || !nzchar(trimws(paste(p$mechanism, collapse = "")))) {
+      p$mechanism <- paste0(p$from, " ", p$relation, " ", p$to, ".")
+    }
+    p
+  })
+  th$constructs <- lapply(th$constructs, function(k) {
+    k$boundary_conditions <- bc
+    if (length(k$measurement) == 0) {
+      k$measurement <- list(paste("a rating of", tolower(k$label)))
+    }
+    k
+  })
+  th
+}
+fill_now <- vapply(pl$file, function(f) {
+  tf_check(fill_form(tf_read(file.path("demonstrations", f))))$aggregate_score
+}, numeric(1))
+fill_low <- unique(pl$theory[fill_now < max(fill_now)])
 ```
 
 Every output of the package describes a file, and a verbal theory can be written
@@ -1112,55 +1424,77 @@ with Fleiss' kappa `r num(u_all$fleiss_fine, 2)` for the kind of element and
 `r num(u_all$fleiss_claim, 2)` for whether a statement carries a claim the
 package can check. Of the claims stated by any encoder (`r claims_union`), every
 encoder stated `r claims_text`. Of the directed edges any encoder drew, every
-encoder drew `r edges_common`. Literal agreement on the implied independencies,
-as Jaccard indices between pairs of encoders, ranged from `r num(min(lit), 2)`
-to `r num(max(lit), 2)`. Over the constructs that all the habit encoders used,
-their independence models agreed less than chance would predict (Fleiss' kappa
-`r num(habit_kappa, 2)`), because one choice the text leaves open, whether habit
-prompts repetition directly or through behaviour, changes most of the
-statements. `r reversal_text` disagreements were between zero and nonzero, or
-between a fixed and an open sign. From the same text of collaborative cognitive
-load theory the encoders produced `r and_list(int(hyp_cclt))` preregistered
-hypotheses, because the format does not say when a stated relation should also
-be a prediction.
+encoder drew `r edges_common`. `r reversal_text` disagreements were between
+zero and nonzero, or between a fixed and an open sign. From the same text of
+collaborative cognitive load theory, the encoders produced
+`r and_list(int(hyp_cclt))` preregistered hypotheses, because the format does
+not say when a stated relation should also be a prediction. The analyst
+attributed the `r int(u_n - u_k)` statements that did not become the same kind
+of element to the encoders' conventions (`r int(src_n["encoder"])`), the format
+(`r int(src_n["format"])`) and the source text (`r int(src_n["verbal"])`), so
+most of that disagreement is of a kind that a written encoding protocol, as in
+Study 1 of the protocol, could address. The kappas and the interval above treat
+the statements as independent, although they are nested in `r nw(n_th)`
+theories and one agent segmented and coded them all.
 
-Changing one element at a time traced each disagreement in the derivations to
-ambiguity in the source text, to the format (an interaction encoded with the
-'moderates' relation becomes an unsigned edge and leaves open a main effect the
-theory states) or to the package's conservative reading of signs in loops of
-more than one cycle, which left open
+Literal agreement on the implied independencies, as Jaccard indices between the
+basis statements of pairs of encoders, ranged from `r num(min(lit), 2)` to
+`r num(max(lit), 2)`. That measure falls whenever encoders use different
+constructs or choose different conditioning sets, even when their graphs imply
+the same independencies. `r same_text` Over the constructs that all three
+encoders of a theory used, the independence models agreed with Fleiss' kappa of
+`r and_list(num(two$fleiss_kappa, 2))` for `r and_list(th_lab[two$theory])`,
+and all three encoders agreed on `r and_list(pct(two$all_three_agree))` of the
+statements compared. For habit, all three agreed on
+`r pct(hb$all_three_agree)` of them, but kappa was `r num(hb$fleiss_kappa, 2)`.
+One choice the text leaves open, whether habit prompts repetition directly or
+through behaviour, changes most of the statements: the share of statements of
+independence was `r and_list(pct(hb_share, 1))` in the three encodings. Kappa is
+unstable when the shares differ this much, and no interval is given for any of
+these kappas, since the statements of one theory are not independent units.
+
+The perturbations, which change one element at a time, traced the disagreements
+in the derivations that they examined to ambiguity in the source text, to the
+format (an interaction encoded with the 'moderates' relation becomes an unsigned
+edge and leaves open a main effect the theory states) or to the package's
+conservative reading of signs in loops of more than one cycle, which left open
 `r and_list(int(lin_habit$package_open_sampling_one_sign))` signs in the habit
-files that every stable linear draw fixed.
+files that every sampled stable linear model fixed.
 
 The checklist scores of the encoders of one theory lay within
 `r spread_old_text` at f72ce4c, and within `r spread_new_text` at
 `r pkg_version`. That closeness says little about reliability. Most items were
 the same in every file because the texts lack what they ask for, numbers,
 measures, rivals and formal models, and the spread came almost entirely from
-whether an encoder filled in the mechanism field. Filling the form without
-changing any statement of a theory moved every file to between
-`r sc(min(fill_after))` and `r sc(max(fill_after))`. The share of the variance
-of the score that lay between theories, ICC(1), was `r num(icc_old["icc"], 2)`
-at f72ce4c, with a `r pct(ci_level)` interval from `r num(icc_old["lower"], 2)`
-to `r num(icc_old["upper"], 2)`, and is `r num(icc_new["icc"], 2)` (`r
-num(icc_new["lower"], 2)` to `r num(icc_new["upper"], 2)`) at `r pkg_version`.
-With `r nw(n_th)` theories the interval spans almost every possible value, so
+whether an encoder filled in the mechanism field. At f72ce4c, filling the form
+without changing any statement of a theory moved every file to between
+`r sc(min(fill_after))` and `r sc(max(fill_after))`. At `r pkg_version`, the
+same filling moves the files to between `r sc(min(fill_now))` and
+`r sc(max(fill_now))`, the `r and_list(th_lab[fill_low])` files staying lower
+because the derivation chain no longer credits their unread claims. The share
+of the variance of the score that lay between theories, ICC(1), was
+`r num(icc_old["icc"], 2)` at f72ce4c, with a `r pct(ci_level)` interval from
+`r num(icc_old["lower"], 2)` to `r num(icc_old["upper"], 2)`, and is
+`r num(icc_new["icc"], 2)` (`r num(icc_new["lower"], 2)` to
+`r num(icc_new["upper"], 2)`) at `r pkg_version`. With `r nw(n_th)` theories,
+the interval spans almost every possible value, so
 the pilot cannot say whether the score separates theories at all. At
 `r pkg_version`, `r nw(n_invalid_pilot)` of the files that passed full
 validation at f72ce4c no longer do, because their encoders labelled a prediction
 directional while its claim states no direction, which the release now refuses.
 
 The pilot's limits are severe. The encoders were agents of one model family that
-read the same documentation, the sources were short summaries by one author, and
-one analyst matched the constructs. It says nothing about how far human
-researchers would agree and gives no standard for whether any encoding is
-faithful. What it does show is that the package's derivations can be trusted as
+read the same documentation, the sources were short summaries that one agent
+wrote, and one agent matched the constructs. The pilot says nothing about how
+far human researchers would agree and gives no standard for whether any encoding
+is faithful. It does show that the package's derivations can be trusted as
 computations on a file, while the file is one of several defensible encodings,
-and the scores and derivations describe the encoding rather than the theory.
-Expert encoding does not remove the problem: when one research group encoded a
-large set of behaviour-change theories, many of the encodings needed changes to
-their constructs, their relations or both after feedback from the theories'
-authors or other experts [@hale2020].
+and that the scores and derivations describe the encoding rather than the
+theory. Expert encoding does not remove the problem. When one research group
+encoded a large set of behaviour-change theories, every theory could be
+represented, but about half of the encodings were changed in their constructs,
+their relations or both after feedback from the theories' authors or other
+experts [@hale2020].
 
 # What version `r pkg_version` changed {#sec-changes}
 
@@ -1168,53 +1502,179 @@ authors or other experts [@hale2020].
 #| label: status-numbers
 crit_f <- fd$sev == "critical"
 maj_f <- fd$sev == "major"
+# What remains of the critical findings classed fixed, as their bases say.
+crit_fixed <- st[st$kind == "finding" & st$id %in% fd$id[crit_f] &
+                   st$status_080 == "fixed" & grepl("Remaining: ", st$basis), ]
+remain_items <- sub(" \\(report, section [0-9]+\\)", "",
+                    sub("\\.$", "", sub(".*Remaining: ", "", crit_fixed$basis)))
+remain_items <- paste0("- ", crit_fixed$id, ": ", remain_items, ".")
+
+# The habit files read by sigma-separation: the claims of predictions that the
+# graph does not entail, those of them to which the pilot's sampled stable
+# linear models gave one sign, and the gate once the relation 'habit moderates
+# behaviour' is stated as 'increases'.
+lcp <- rd("pilot/linear_check_pairs.csv")
 habit_files <- sort(live$file[grepl("health-habit", live$file)])
-sigma_gate <- vapply(habit_files, function(f) {
-  tf_check(tf_read(file.path("demonstrations", f)), cycles = "sigma")$gate
-}, character(1))
-names(sigma_gate) <- basename(dirname(habit_files))
-refuse_gate <- live$gate[match(habit_files, live$file)]
-sigma_text <- if (length(unique(sigma_gate)) == 1) {
-  paste(unique(sigma_gate), "for all", nw(length(sigma_gate)), "habit files")
-} else and_list(paste(sigma_gate, "for", names(sigma_gate)))
-refuse_text <- if (all(refuse_gate == "pass")) "passes" else and_list(refuse_gate)
+open_claims <- function(th) {
+  Filter(function(c) c$source == "prediction" && c$verdict != "entailed",
+         tf_entailments(th, cycles = "sigma")$claims)
+}
+hab <- do.call(rbind, lapply(habit_files, function(f) {
+  enc <- basename(dirname(f))
+  th <- tf_read(file.path("demonstrations", f))
+  oc <- open_claims(th)
+  one <- vapply(oc, function(c) {
+    any(lcp$encoder == enc & lcp$theory == "health-habit" & lcp$kind == c$kind &
+          lcp$x == c$x & lcp$y == c$y &
+          lcp$verdict == "package_open_sampling_one_sign")
+  }, logical(1))
+  mod <- vapply(th$propositions, function(p) {
+    identical(p$relation, "moderates") && grepl("habit", p$from) &&
+      grepl("behaviour", p$to)
+  }, logical(1))
+  th_inc <- th
+  th_inc$propositions[mod] <- lapply(th_inc$propositions[mod], function(p) {
+    p$relation <- "increases"
+    p
+  })
+  data.frame(enc = enc, gate = tf_check(th, cycles = "sigma")$gate,
+             refuse_gate = live$gate[live$file == f], open = length(oc),
+             one_sign = sum(one), n_mod = sum(mod),
+             gate_inc = tf_check(th_inc, cycles = "sigma")$gate,
+             open_inc = length(open_claims(th_inc)))
+}))
+sigma_text <- if (length(unique(hab$gate)) == 1) {
+  paste(unique(hab$gate), "for all", nw(nrow(hab)), "habit files")
+} else and_list(paste(hab$gate, "for", hab$enc))
+refuse_text <- if (all(hab$refuse_gate == "pass")) "passes" else
+  and_list(hab$refuse_gate)
+both_signs_all <- all(hab$open > hab$one_sign)
+moderates_text <- if (both_signs_all) paste(
+  "In each habit file, the graph leaves open at least one claim to which the",
+  "pilot's sampled stable linear models gave both signs, the effect of habit on",
+  "behaviour, because the encoders wrote the interaction of habit and intention",
+  "as 'habit moderates behaviour', which the package reads as an unsigned edge",
+  "(finding pilot-4). That verdict is correct for the files as encoded.") else ""
+n_files_one <- sum(hab$one_sign > 0)
+gate_phrase <- function(g) ifelse(g == "pass", "passes", paste("is", g))
+chain_phrase <- function(s) c(pass = "passes", fail = "fails", warn = "warns")[[s]]
+inc_text <- if (all(hab$n_mod == 1) && all(hab$open_inc == 0) &&
+                length(unique(hab$gate_inc)) == 1) {
+  paste0("Stating that one relation as 'increases' makes every claim entailed, ",
+         "and the gate then ", gate_phrase(unique(hab$gate_inc)), " in all ",
+         nw(nrow(hab)), " files.")
+} else ""
+
+# Problems of the corrected rules that the register does not list, rerun
+# here. A phenomenon behind a feedback loop, beside a prediction that states
+# no claim.
+k_list <- function(ids) lapply(ids, function(i) {
+  list(id = i, label = i, definition = paste("Construct", i, "as defined here."),
+       measurement = list(paste0("m_", i)), boundary_conditions = list("adults"))
+})
+ph_th <- list(
+  schema_version = "1.1", id = "phenomenon-loop", title = "Phenomenon behind a loop",
+  maturity = "testing", constructs = k_list(c("a", "b")),
+  propositions = list(
+    list(id = "p1", from = "a", to = "b", relation = "increases", mechanism = "m."),
+    list(id = "p2", from = "b", to = "a", relation = "increases", mechanism = "m.")),
+  predictions = list(list(id = "h1", statement = "a raises b", type = "directional",
+                          derives_from = list("p1"))),
+  phenomena = list(list(id = "ph1", statement = "a lowers b",
+                        claim = list(kind = "effect", x = "a", y = "b",
+                                     sign = "negative"))))
+ph_line <- function(cy) {
+  l <- grep("phenomenon states", strsplit(tf_preregister(ph_th, cycles = cy), "\n")[[1]],
+            value = TRUE)
+  stopifnot(length(l) == 1)
+  sub(".*: ", "", l)
+}
+ph_rep <- function(cy) {
+  r <- tf_check(ph_th, cycles = cy)
+  list(gate = r$gate,
+       chain = Filter(function(i) i$id == "derivation_chain", r$items)[[1]]$status,
+       line = ph_line(cy))
+}
+# Table captions that name the version.
+cap_status <- paste0("Status in version ", pkg_version, " of every finding and verdict in the register.")
+cap_critical <- paste0("The critical findings and their status in version ", pkg_version, ".")
+cap_demos <- paste0("Demonstrations at f72ce4c and in the live run of version ", pkg_version, ": score, gate and derivation chain, with 'a → b' where the value changed.")
+cap_demos_other <- paste0("Other results of the demonstrations that changed between f72ce4c and the live run of version ", pkg_version, ". An empty list is written 'none'.")
+ph_refuse <- ph_rep("refuse")
+ph_sigma <- ph_rep("sigma")
+rv <- c(
+  phenomenon = if (ph_refuse$chain == "pass" && ph_refuse$line == "yes") paste0(
+    "Under the default reading, a phenomenon whose claim the graph contradicts ",
+    "is not read when the graph has a feedback loop, and nothing says so. In a ",
+    "constructed theory of two constructs that raise each other, beside a ",
+    "prediction that states no claim, the derivation chain ",
+    chain_phrase(ph_refuse$chain), ", the gate ", gate_phrase(ph_refuse$gate),
+    " and the preregistration answers '", ph_refuse$line, "' to whether the ",
+    "graph contradicts no claim a phenomenon states. Read by sigma-separation, ",
+    "the same file's derivation chain ", chain_phrase(ph_sigma$chain),
+    ", its gate ", gate_phrase(ph_sigma$gate), " and the answer is '",
+    ph_sigma$line, "'.") else NULL,
+  appraisal = if (ap_undeclared$verdict == "progressive") paste0(
+    "An amendment whose new graph cannot be built skips the new rules of the ",
+    "appraisal, as @sec-appraisal shows with one proposition to an undeclared ",
+    "construct.") else NULL,
+  dossier = if (preamble_says_above) paste0(
+    "The dossier's preamble overstates what it flags (@sec-outputs).") else NULL)
+rv_text <- if (length(rv) == 0) {
+  "None of the problems that review reported holds at this commit."
+} else paste0(Nw(length(rv)), " of the problems that review reported hold at ",
+              "this commit, as this report checks when it is rendered, and the ",
+              "register, built from the audit of f72ce4c, does not list them. ",
+              paste(rv, collapse = " "))
 ```
 
 @tbl-status counts the status of every finding and verdict. Of the
 `r int(n_find)` findings, `r int(nf("fixed"))` were fixed and
-`r int(nf("reported"))` are now reported beside the result. Rewording met
-`r int(nf("reworded"))`, while `r int(nf("unchanged"))` are unchanged and
-`r int(nf("deferred"))` deferred. For the `r nw(n_crit)` critical findings the
-counts are `r status_phrase(fd$status[crit_f])` (@tbl-critical), and for the
-`r int(n_major)` major findings `r status_phrase(fd$status[maj_f])`.
+`r int(nf("reported"))` are now reported beside the result. In all,
+`r int(nf("reworded"))` were reworded with the behaviour unchanged,
+`r int(nf("unchanged"))` are unchanged and `r int(nf("deferred"))` deferred.
+For the `r nw(n_crit)` critical findings, the counts are
+`r status_phrase(fd$status[crit_f])` (@tbl-critical), and for the
+`r int(n_major)` major findings, they are `r status_phrase(fd$status[maj_f])`.
 
 ```{r}
 #| label: tbl-status
-#| tbl-cap: "Status in version 0.8.0 of every finding and verdict in the register."
+#| tbl-cap: !expr cap_status
 stt <- data.frame(
-  Status = status_order,
+  Status = cap(status_order),
   Findings = sapply(status_order, function(s) sum(fd$status == s)),
   Verdicts = sapply(status_order, function(s) sum(vd$status == s)))
 stt$All <- stt$Findings + stt$Verdicts
-stt <- rbind(stt, data.frame(Status = "total", Findings = nrow(fd),
+stt <- rbind(stt, data.frame(Status = "All", Findings = nrow(fd),
                              Verdicts = nrow(vd), All = nrow(fd) + nrow(vd)))
 kab(stt)
 ```
 
 ```{r}
 #| label: tbl-critical
-#| tbl-cap: "The critical findings and their status in version 0.8.0."
+#| tbl-cap: !expr cap_critical
 ct <- fd[crit_f, c("id", "title", "status")]
 ct$title <- sub("\\.$", "", ct$title)
-kab(data.frame(Finding = ct$title, Status = ct$status))
+kab(data.frame(Finding = ct$title, Status = cap(ct$status)))
+```
+
+Fixed and reported refer to the part of a finding that its second reader
+stated. Where part of a critical finding classed as fixed remains, the status
+file says what:
+
+```{r}
+#| label: critical-remaining
+#| results: asis
+cat(remain_items, sep = "\n")
 ```
 
 @tbl-demos sets the demonstrations at f72ce4c beside the live run. Where a value
-did not change, one value is shown.
+did not change, one value is shown. @tbl-demos-other lists the other changes in
+the stored results: the appraisal of the amendments and full validation.
 
 ```{r}
 #| label: tbl-demos
-#| tbl-cap: "Demonstrations at f72ce4c and in the live run of version 0.8.0: score, gate and derivation chain, with 'a → b' where the value changed."
+#| tbl-cap: !expr cap_demos
 arrow <- function(a, b) ifelse(a == b, a, paste(a, "→", b))
 dt <- data.frame(
   File = short(live$file),
@@ -1222,6 +1682,34 @@ dt <- data.frame(
   Gate = arrow(old$gate, live$gate),
   Chain = arrow(old$derivation_chain, live$derivation_chain))
 kab(dt)
+```
+
+```{r}
+#| label: tbl-demos-other
+#| tbl-cap: !expr cap_demos_other
+val <- function(x) ifelse(is.na(x) | x == "", "none", x)
+other_cols <- c(valid_full = "full validation", verdict = "verdict",
+                content_lost = "content lost", entailments_lost = "entailments lost",
+                signs_lost = "signs lost", protected_only = "new only through protects")
+change_text <- vapply(seq_len(nrow(live)), function(i) {
+  parts <- character(0)
+  for (cl in names(other_cols)) {
+    a <- val(as.character(old[[cl]][i]))
+    b <- val(as.character(live[[cl]][i]))
+    if (cl == "valid_full") {
+      a <- ifelse(a == "TRUE", "passed", "failed")
+      b <- ifelse(b == "TRUE", "passed", "failed")
+    }
+    if (a != b) parts <- c(parts, paste0(cap(other_cols[[cl]]), ": ", a, " → ", b))
+  }
+  # A lost entailment is written as the claim, its verdict under the prior
+  # and its verdict under the new version.
+  parts <- gsub("(\\S+) (entailed|contradicted|undetermined) (entailed|contradicted|undetermined)",
+                "\\1 (\\2, now \\3)", parts)
+  paste(parts, collapse = ". ")
+}, character(1))
+keep <- nzchar(change_text)
+kab(data.frame(File = short(live$file)[keep], Change = change_text[keep]))
 ```
 
 Some rules were corrected: the amendment appraisal reads signs and lost
@@ -1232,31 +1720,37 @@ the same reading of loops as their body, the rubric no longer rates a point
 label without bounds as precise, and the simulation defaults to the exact
 method. Some problems are now reported beside the result: the appraisal lists
 novelty that rests on 'protects' alone, refuted new predictions and the
-severities of the passes behind a progressive verdict, and the dossier flags a
-recorded failure whose estimate lies inside its region. Most of the rest was
-rewording, and it is substantial: every display now calls the number a checklist
-score and says what it describes, the gate is described by what its blocking
-items check, and the documents state the assumptions of the signs, what
-'identified' means and what the simulation does not show.
+severities of the passes behind a progressive verdict, the derivation chain
+lists the claims a loop leaves unread, and the dossier flags a recorded failure
+whose estimate lies inside its region. Most of the rest was rewording: every
+display now calls the number a checklist score and says what it describes, the
+help and the apps describe the gate by what its blocking items check, and the
+documents state the assumptions of the signs, what 'identified' means and what
+the simulation does not show.
 
-What did not change matters more for the maintainer's question. The score still
-rates empty, circular and refuted files highly and passes their gate, as
-@tbl-demos shows. Apart from the derivation chain and the narrower rules above,
-version `r pkg_version` changed what the score is called and what is said about
-it, not what it computes. Declared severities still override the rubric, a rival
-named without propositions still earns diagnosticity, labels still decide the
-falsifiability blocker, and disclosing more still costs points. The appraisal
-still cannot tell a prediction from an accommodation.
+The score still rates empty, circular and refuted files highly and passes their
+gate, as @tbl-demos shows. Apart from the derivation chain and the narrower
+rules above, version `r pkg_version` changed what the score is called and what
+is said about it, not what it computes. Declared severities still override the
+rubric, a rival named without propositions still earns diagnosticity, labels
+still decide the falsifiability blocker and disclosing more still costs points.
+The appraisal still cannot tell a prediction from an accommodation.
 
-Rerunning the evidence on `r pkg_version` also showed one consequence of the new
-rules that the register does not list. Under `check(cycles = "sigma")`, the
-conservative reading of signs in loops of more than one cycle leaves open claims
-that every stable linear model signs, and those claims now fail the derivation
-chain. When this report was rendered, the gate under sigma-separation was
-`r sigma_text`, while under the default reading their claims are not read and
-the gate `r refuse_text`. A user who follows the preregistration's advice to
-read loops by sigma-separation can thus see a theory blocked for claims that its
-graph signs in every stable linear model.
+Two of the pilot's findings bear on the new option `check(cycles = "sigma")`,
+under which a claim that the graph leaves open fails the derivation chain. When
+this report was rendered, the gate under sigma-separation was `r sigma_text`,
+while under the default reading, their claims are not read and the gate
+`r refuse_text`. `r moderates_text`
+In `r nw(n_files_one)` of the files, `r nw(sum(hab$one_sign))` further claims
+fail although the pilot's sampled stable linear models gave each of them one
+sign, because of the conservative reading of signs in loops of more than one
+cycle (finding pilot-5). `r inc_text` A user who follows the preregistration's
+advice to read loops by sigma-separation thus sees these files blocked, mainly
+for a choice of encoding that the register already records.
+
+The changes made in the release were themselves reviewed before this report, by
+AI agents who tested the new rules with random, malformed and constructed
+inputs. `r rv_text`
 
 # Is automated appraisal of theories feasible? {#sec-feasibility}
 
@@ -1270,43 +1764,51 @@ small graph are easy to get wrong by hand.
 
 A fixed rule can describe a file. It can say how completely a file states what a
 checklist asks for, and it can apply declared outcomes consistently, as the
-amendment appraisal does. Mechanical combination of information is not in itself
-the weakness: across studies of human health and behaviour, mechanical
-prediction was on average about as accurate as clinical prediction or more
-[@grove2000], and human appraisals are not a perfect standard either, since
-independent peer reviews of the same manuscript agree poorly [@bornmann2010].
-The weakness lies in what the rules read. The checklist reads labels and the
+amendment appraisal does. Mechanical combination of information can match or
+exceed human judgement. Across studies of human health and behaviour,
+mechanical prediction was on average about 10 per cent more accurate than
+clinical prediction, and equal or superior to it in a wide range of
+circumstances [@grove2000]. Human appraisals are not a perfect standard either,
+since independent peer reviews of the same manuscript agree poorly
+[@bornmann2010]. The checklist is limited by what its rules read: labels and the
 presence of fields, which an author controls and which say nothing about whether
-the theory is true. Summary scores of quality have behaved inconsistently in a
-related field: in a meta-analysis of clinical trials, the conclusion changed
+the theory is true. Summary scores of quality have behaved inconsistently in
+another field. In a meta-analysis of clinical trials, the conclusion changed
 with the quality scale used to pick out the trials of high quality, and the
 authors recommended assessing the relevant methodological aspects one by one
 [@juni1999].
 
 No part of the package has shown that it can judge a theory's quality, truth or
 fruitfulness, or tell a prediction from an accommodation. Precedents for
-computed appraisal exist. Explanatory coherence computes which of competing
-hypotheses to accept from the explanatory relations a user encodes
-[@thagard1989], and IMEC implements it as a model that psychologists can run in
-R [@maier2024]. @meehl2002 proposed that a statistical composite of attributes
-such as the number, diversity, novelty and numerical precision of the facts a
-theory derives, and the number it misderives, could give an actuarial basis for
-theory appraisal. Those attributes concern what a theory has derived and how its
-derivations have fared. The checklist reads neither, and no rule of the package
-has been calibrated against the later fate of theories, which an actuarial basis
-of the kind Meehl proposed would need. The reasons why good psychological
-theories are hard to develop that Eronen and Bringmann [-@eronen2021] give, the
-scarcity of robust phenomena, the doubtful validity of constructs and the
-difficulty of discovering causal relations between psychological variables,
-arise before a theory is written into a file, and checking the file does not
-address them.
+computed appraisal exist. ECHO, Thagard's connectionist implementation of the
+theory of explanatory coherence, computes which of competing hypotheses to
+accept from the explanatory relations a user encodes [@thagard1989], and IMEC
+implements explanatory coherence as a model that psychologists can run in R
+[@maier2024]. @meehl2002 noted that scientists appraising competing theories use
+such attributes as aspects of parsimony, the number, qualitative diversity,
+novelty and numerical precision of the facts a theory derives, the number of
+facts it misderives and its reducibility to other accepted theories, and
+proposed that a statistical composite of these attributes could give an
+actuarial basis for theory appraisal. The checklist reads the declared form of
+some of them but not their record. It counts no derived or misderived fact. Its
+parsimony item reads test outcomes only for auxiliary assumptions added for an
+anomaly, its precision item reads declared bounds rather than confirmed
+precision, and its derivation chain asks whether stated claims follow from the
+graph, not how they fared. No rule of the package has been calibrated against
+the later fate of theories, which an actuarial basis of the kind Meehl proposed
+would need. Eronen and Bringmann [-@eronen2021] give three reasons why good
+psychological theories are hard to develop: the scarcity of robust phenomena,
+the doubtful validity of constructs and the difficulty of discovering causal
+relations between psychological variables. All three arise before a theory is
+written into a file, and checking the file does not address them.
 
 So, as far as this evidence goes, automated appraisal of theories is feasible in
 a narrow and conditional sense: the package can derive what an encoded theory
-implies and describe how completely and consistently it is stated. It is not
-feasible in the sense the maintainer doubted, of replacing a judgement of a
-theory's merit, and nothing in the audit suggests that wording or weights would
-make it so.
+implies and describe how completely and consistently it is stated. This evidence
+gives no support for automated appraisal in the sense the maintainer doubted.
+No part of the package has shown that it can replace a judgement of a theory's
+merit, and nothing in the audit suggests that wording or weights would make it
+do so.
 
 # What remains unvalidated {#sec-unvalidated}
 
@@ -1315,18 +1817,22 @@ make it so.
 noval <- c("measurement-9", "metascience-and-related-tools-3", "pilot-10")
 ```
 
-What has not been measured is how reliably different researchers encode the same
+No study has measured how reliably different researchers encode the same
 theory, whether the checklist and the appraisal agree with experts who judge the
-same theories and amendments, and how readers read the outputs. The register's
+same theories and amendments, or how readers read the outputs. The register's
 findings on these (for example `r and_list(noval)`) are all
-`r and_list(unique(fd$status[fd$id %in% noval]))`, because no study has been
-run. `protocol.qmd` in this folder describes `r nw(n_studies)` preregistered
-studies with human participants that would settle them. Study 1 measures how far
+`r and_list(unique(fd$status[fd$id %in% noval]))`, because no such study has
+been run. `protocol.qmd` in this folder describes `r nw(n_studies)`
+preregistered studies with human participants that would measure them. Study 1
+measures how far
 trained coders following a written protocol produce the same file from the same
 published theory, at every level the package reads, beside human and agent
 baselines. Study 2 compares the checklist and the appraisal with blind expert
 ratings and tests whether known groups of corroborated, refuted and
-pseudoscientific theories differ as they should. Study 3 is a randomised reader
+pseudoscientific theories differ as they should. Its criterion, expert
+judgement, is itself fallible, and it tests whether the rules reproduce what
+experts conclude with the same concepts, not whether the concepts are the right
+ones. Study 3 is a randomised reader
 study of how often researchers and editors misread the score, the gate, the
 dossier and the appraisal in the 0.7.0 and 0.8.0 wording. A later cliometric
 study would ask whether the outputs carry information about the later fate of
@@ -1338,26 +1844,33 @@ should be read as descriptions of a file.
 The audit has limits of its own, and they bear on its findings in both
 directions.
 
-All auditors, second readers and encoders were AI agents of one model family.
-Their agreement may reflect shared training rather than independent
-confirmation, and defects that all of them would miss are not in the register.
-Where they judged how a reader would understand a display, they judged without
-readers.
+All auditors, second readers and encoders were AI agents of one model family,
+and so were the drafter of this report and the agents that classified the
+status of each finding and verdict in version `r pkg_version`. Their agreement
+may reflect shared training rather than independent confirmation, and defects
+that all of them would miss are not in the register. Where they judged how a
+reader would understand a display, they judged without readers. The status
+register was checked only in samples, so some of its rows may still be
+misclassified.
 
-The audit examined one commit, and the status of 0.8.0 was established by
-rerunning the audit's evidence, not by a new audit. Changes made in the release
-were not themselves audited beyond those reruns, which is why the consequence of
-the sigma reading in @sec-changes was found only now.
+The audit examined one commit, and the status of `r pkg_version` was
+established by rerunning the audit's evidence and reading the files, not by a
+new audit. The changes made in the release were reviewed separately by AI
+agents before this report, and the problems of that review that hold at this
+commit are reported in @sec-changes. Neither the review nor this report is a
+full audit of the new code.
 
 The lenses were chosen in advance. Others, such as an audit of security, of
 accessibility or of the performance of the apps on large theories, were not part
 of this audit.
 
 Several positions were attributed to authors without their texts. The primary
-texts of @lakatos1970, of Popper and of Mayo and Spanos [-@mayo2006] could not
-be read, and the register marks where a verdict rests on the auditors' reasoning
-or on secondary sources instead. This report attributes positions only to
-sources whose abstracts or texts were read.
+texts of @lakatos1970, of the works of Popper that the register cites and of
+Mayo and Spanos [-@mayo2006] could not be read, and the register marks where a
+verdict rests on the auditors' reasoning or on secondary sources instead. This
+report attributes positions only to sources whose abstracts or texts were read,
+and its use of Lakatos's terms in @sec-appraisal is the auditors' reading of
+them.
 
 The demonstrations were built to probe what the score rewards. They were written
 by agents who knew the checklist, the strong theories were encoded from short
@@ -1380,6 +1893,6 @@ establishes that they do.
 #| label: tbl-discrepancies
 #| tbl-cap: "Checks of the deductive and numerical core that found a discrepancy. Each lies outside an assumption the documentation states, concerns the wording of a document or was graded minor. The notes in data/verification.csv say which."
 dd <- ver[!is.na(ver$discrepancies) & ver$discrepancies > 0, ]
-kab(data.frame(Component = dd$component, Check = dd$quantity,
+kab(data.frame(Component = cap(dd$component), Check = dd$quantity,
                Differ = paste(int(dd$discrepancies), "of", int(dd$cases))))
 ```
