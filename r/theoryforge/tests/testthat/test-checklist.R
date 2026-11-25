@@ -439,10 +439,13 @@ test_that("full validation checks a claim form and sign against its bounds", {
     ck_pred("h3", "directional", bounds = list(lower = 0.2, upper = 1)),
     ck_pred("h4", "existence", bounds = list(lower = 0.2, upper = 0.8)),
     ck_pred("h5", "interval", bounds = list(lower = -1, upper = 1), claim = positive),
-    # A sign stated with a bound at 0 on a bounded scale, and an existence
-    # claim on an absolute value, are accepted.
+    # A sign stated with a bound at 0 on a bounded scale is accepted.
     ck_pred("h6", "directional", bounds = list(lower = 0, upper = 1), claim = positive),
-    ck_pred("h7", "existence", bounds = list(lower = 0.2))
+    # An existence claim takes no bounds, on one side or on two, and without
+    # them it may state the sign nonzero.
+    ck_pred("h7", "existence", bounds = list(lower = 0.2)),
+    ck_pred("h8", "existence", bounds = list(upper = 0.5)),
+    ck_pred("h9", "existence", claim = utils::modifyList(positive, list(sign = "nonzero")))
   ), test_outcomes = list(
     # A pass with the estimate outside the region is not invalid: a test that
     # fails to reject a predicted value passes it (Meehl, 1967).
@@ -456,8 +459,13 @@ test_that("full validation checks a claim form and sign against its bounds", {
     "prediction[0] is a point claim, so its bounds need a finite lower and a finite upper; ",
     "prediction[1] is an interval claim, so its bounds need a finite lower and a finite upper; ",
     "prediction[2] is a directional claim, so its bounds must leave one side open or end at 0; ",
-    "prediction[3] is an existence claim, so its bounds must leave one side open; ",
-    "prediction[4] claims a positive sign, so its lower bound must be 0 or above")))
+    "prediction[3] is an existence claim, so it takes no bounds: the region it allows, ",
+    "every value but 0, is not one interval; ",
+    "prediction[4] claims a positive sign, so its lower bound must be 0 or above; ",
+    "prediction[6] is an existence claim, so it takes no bounds: the region it allows, ",
+    "every value but 0, is not one interval; ",
+    "prediction[7] is an existence claim, so it takes no bounds: the region it allows, ",
+    "every value but 0, is not one interval")))
 })
 
 test_that("the dossier writes an extreme severity as a bound", {

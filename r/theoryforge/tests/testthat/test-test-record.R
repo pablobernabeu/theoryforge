@@ -109,7 +109,7 @@ tr_replicated_hypotheses <- paste0(
   "## Hypotheses\n",
   "1. [directional] Upsilon rises with Zeta. (h1; derives from: p1, p2)\n",
   "   - Auxiliary assumptions: a1 (core), x1 (added for h1)\n",
-  "   - Rivals it discriminates: rival\n",
+  "   - Rivals it is declared to discriminate: rival\n",
   "   - Test record: already tested: passed (2026-05-01, registered osf.io/abcde); ",
   "failed (2026-06-10)\n",
   "2. [directional] Upsilon rises with Xi. (h1_2; derives from: p2)\n",

@@ -369,6 +369,21 @@ test_that("tf_simulate's Euler steps do not warn while they track the exact solu
   expect_no_warning(tf_simulate(regulation_theory(), steps = 5))
 })
 
+test_that("tf_simulate's Euler warning does not depend on the unit of init", {
+  # With dt = 1, the Euler run of weak-demo is 18 per cent off the exact one at
+  # the first step and a factor of 7 off at the tenth, whatever init is. The
+  # departure is measured against the largest absolute starting value as well
+  # as the exact state, so a start at 0.2 warns as a start at 1 does.
+  theory <- tf_read(tf_fixture_path("weak-theory.theory.yaml"))
+  for (init in c(1, 0.2, -0.01)) {
+    expect_warning(tf_simulate(theory, steps = 10, dt = 1, init = init), euler_warning,
+                   fixed = TRUE)
+  }
+  # A run that tracks the exact solution stays silent at any scale.
+  panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  for (init in c(100, 0.01)) expect_no_warning(tf_simulate(panic, init = init))
+})
+
 test_that("tf_simulate's exact method has no step-size limit", {
   # Inside the app's ranges (dt 2, damping 5), where Euler multiplies by -9.
   theory <- tf_read(tf_fixture_path("weak-theory.theory.yaml"))

@@ -360,11 +360,11 @@ NULL
 #' prediction id and derivation, followed by the region its bounds allow, its
 #' claim and what the causal graph says of it, what an observational test of an
 #' effect claim must adjust for, the auxiliary assumptions that protect it
-#' (`core` or `added for <id>`), the registered rivals it discriminates, with
-#' how each rival's own propositions read the claim, and its test record. A
-#' hypothesis that a recorded outcome has already tested reads `already tested:
-#' passed (<date>, registered <where>)`, one entry per outcome, and any other
-#' reads `untested`.
+#' (`core` or `added for <id>`), the registered rivals it is declared to
+#' discriminate, with how each rival's own propositions read the claim, and its
+#' test record. A hypothesis that a recorded outcome has already tested reads
+#' `already tested: passed (<date>, registered <where>)`, one entry per outcome,
+#' and any other reads `untested`.
 #'
 #' When at least one prediction states a sampling plan in its \code{test}
 #' block, a section headed `Sampling plan (author-recorded; not scored)`
@@ -372,9 +372,10 @@ NULL
 #' recorded of the planned sample, alpha and sidedness, smallest effect of
 #' interest, power or decision probability, design analysis and justification.
 #' A prediction without a plan reads `no sampling plan stated`. Nothing scores
-#' the plan: power does not raise a claim's severity (Meehl, 1967), though it
-#' decides how informative a failed test is (Lakens, 2022). A theory without a
-#' plan has no such section.
+#' the plan. The stated power raises no score, since more power weakens the
+#' corroboration a directional prediction earns (Meehl, 1967), though it decides
+#' how informative a failed test is (Lakens, 2022). A theory without a plan has
+#' no such section.
 #'
 #' A section then lists the conditional independencies that
 #' [tf_implications()] derives from the causal graph, which are claims the
@@ -500,7 +501,8 @@ tf_preregister <- function(theory, path = NULL, cycles = "refuse") {
             d
           }
         }, character(1))
-        lines <- c(lines, paste0(pad, "- Rivals it discriminates: ", paste(shown, collapse = ", ")))
+        lines <- c(lines, paste0(pad, "- Rivals it is declared to discriminate: ",
+                                 paste(shown, collapse = ", ")))
       }
       lines <- c(lines, paste0(pad, "- Test record: ", .tf_test_record(pid, tos)))
     }

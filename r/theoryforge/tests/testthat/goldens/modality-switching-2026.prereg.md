@@ -58,13 +58,13 @@
    - Claim: the effect of c_modality_activation on c_conceptual_access is positive; entailed by the causal graph through p3
    - Adjustment for an observational test: none needed
    - Auxiliary assumptions: aux1 (core)
-   - Rivals it discriminates: alt_grounding_by_interaction (its propositions contradict the claim)
+   - Rivals it is declared to discriminate: alt_grounding_by_interaction (its propositions contradict the claim)
    - Test record: untested
 4. [interval] Across a corpus of concrete nouns matched for length, modality-specific perceptual strength and lexical familiarity correlate no more strongly than 0.10 in absolute value. (pred4; derives from: p1, p4)
    - Region the claim allows: [-0.1, 0.1]
    - Claim: c_sensorimotor_experience and c_lexical_familiarity are independent; entailed by the causal graph
    - Auxiliary assumptions: aux2 (core)
-   - Rivals it discriminates: alt_symbol_interdependency (its propositions contradict the claim)
+   - Rivals it is declared to discriminate: alt_symbol_interdependency (its propositions contradict the claim)
    - Test record: untested
 
 ## Sampling plan (author-recorded; not scored)

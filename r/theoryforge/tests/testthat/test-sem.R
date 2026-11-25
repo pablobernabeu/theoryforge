@@ -57,7 +57,10 @@
 .SEM_SIGNS <- "# Signs the theory states, which the fit does not impose"
 .SEM_EFFECTS <- paste0("# Effects the claims are about, each the sum over the directed paths ",
                        "from cause to outcome of the product of the labels along the path")
-.SEM_EFFECT_LOOP <- "# The paths form a feedback loop, so no parameter is defined."
+.sem_effect_loop <- function(x, y) {
+  paste0("# A feedback loop lies on the paths from ", x, " to ", y,
+         ", so no parameter is defined.")
+}
 .SEM_ZERO <- paste0("# Covariances the theory fixes at zero (lavaan::sem() frees them by ",
                     "default; delete this block to restore its defaults)")
 .SEM_FREE <- paste0("# Covariances with a moderator, left free (once a covariance names an ",
@@ -520,12 +523,40 @@ test_that("an effect names a construct that no path names", {
     "# No directed path leads from a to q, so the model fixes this effect at zero."))
 })
 
-test_that("no effect is defined on a graph with a feedback loop", {
+test_that("no effect is defined across a feedback loop", {
+  # The cause lies on the loop a <-> m. A pair that no path joins still has its
+  # effect fixed at zero, loop or not.
   theory <- .claim_theory(list(c("a", "increases", "m"), c("m", "increases", "a"),
                                c("a", "causes", "y")),
-                          list(c("a", "y", "positive")))
+                          list(c("a", "y", "positive"), c("m", "y", "positive"),
+                               c("y", "a", "zero")))
   expect_identical(.effects_block(theory), c(
-    .SEM_EFFECTS, .sem_claimed("h1", "a", "y", "is positive"), .SEM_EFFECT_LOOP))
+    .SEM_EFFECTS, .sem_claimed("h1", "a", "y", "is positive"), .sem_effect_loop("a", "y"),
+    .sem_claimed("h2", "m", "y", "is positive"), .sem_effect_loop("m", "y"),
+    .sem_claimed("h3", "y", "a", "is zero"),
+    "# No directed path leads from y to a, so the model fixes this effect at zero."))
+  # A loop between the two ends of the paths, a <-> b on x -> a -> b -> y.
+  theory <- .claim_theory(list(c("x", "increases", "a"), c("a", "increases", "b"),
+                               c("b", "increases", "a"), c("b", "increases", "y")),
+                          list(c("x", "y", "positive")), constructs = c("x", "y", "a", "b"))
+  expect_identical(.effects_block(theory), c(
+    .SEM_EFFECTS, .sem_claimed("h1", "x", "y", "is positive"), .sem_effect_loop("x", "y")))
+})
+
+test_that("an effect is defined when the feedback loop lies off its paths", {
+  # The loop a <-> b touches no path from x to y, so the path sum is the total
+  # effect of x on y in a linear model.
+  theory <- .claim_theory(list(c("x", "increases", "y"), c("a", "causes", "b"),
+                               c("b", "causes", "a")),
+                          list(c("x", "y", "positive")), constructs = c("x", "y", "a", "b"))
+  expect_identical(.effects_block(theory), c(
+    .SEM_EFFECTS, .sem_claimed("h1", "x", "y", "is positive"), "effect_x_y := b_x_y"))
+  # A loop that only feeds the outcome lies on no path from x either.
+  theory <- .claim_theory(list(c("x", "increases", "y"), c("a", "causes", "b"),
+                               c("b", "causes", "a"), c("a", "increases", "y")),
+                          list(c("x", "y", "positive")), constructs = c("x", "y", "a", "b"))
+  expect_identical(.effects_block(theory)[1:3], c(
+    .SEM_EFFECTS, .sem_claimed("h1", "x", "y", "is positive"), "effect_x_y := b_x_y"))
 })
 
 test_that("an effect name avoids the names already taken", {

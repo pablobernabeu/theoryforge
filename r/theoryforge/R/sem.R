@@ -51,7 +51,8 @@ NULL
                           "from cause to outcome of the product of the labels along the path")
 .tf_SEM_CLAIMED <- c(positive = "is positive", negative = "is negative", zero = "is zero",
                      nonzero = "is not zero")
-.tf_SEM_EFFECT_LOOP <- "# The paths form a feedback loop, so no parameter is defined."
+.tf_SEM_EFFECT_LOOP <- paste0("# A feedback loop lies on the paths from %s to %s, so no parameter ",
+                              "is defined.")
 .tf_SEM_NO_PATH <- paste0("# No directed path leads from %s to %s, so the model fixes this ",
                           "effect at zero.")
 .tf_SEM_TOO_MANY <- paste0("# More than %d directed paths lead from %s to %s, so no parameter ",
@@ -385,12 +386,13 @@ NULL
     bows)
 }
 
-# The directed paths from x to y of an acyclic graph, as a list of vertex
-# vectors, or NULL for more than the cap. A depth-first search from x that
-# takes successors in vertex order and steps only to a vertex from which y can
-# be reached, so that each branch ends in a path and the search stops once the
-# paths outnumber .tf_SEM_MAX_EFFECT_PATHS. Mirrors Python's
-# sem._effect_paths().
+# The directed paths from x to y, as a list of vertex vectors, or NULL for more
+# than the cap. A depth-first search from x that takes successors in vertex
+# order and steps only to a vertex from which y can be reached, so that each
+# branch ends in a path and the search stops once the paths outnumber
+# .tf_SEM_MAX_EFFECT_PATHS. Every vertex it reaches lies on a path from x to y,
+# and the caller makes sure that none of these lies on a feedback loop, so the
+# search ends. Mirrors Python's sem._effect_paths().
 .tf_sem_effect_paths <- function(paths, r, x, y) {
   k <- nrow(paths)
   found <- list()
@@ -432,10 +434,15 @@ NULL
 # first claim. Each claim gives a comment line, and the group then gets
 # `effect_<x>_<y> := <sum>`, where each term is the product of the labels along
 # one directed path, the paths in the order .tf_sem_effect_paths() finds them.
-# A graph with a feedback loop, a pair that no path joins and a pair joined by
-# more than .tf_SEM_MAX_EFFECT_PATHS paths each get a comment in its place.
-# Mirrors Python's sem._effects().
-.tf_sem_effects <- function(T, nodes, paths, r, cyclic, labels, taken) {
+# A pair that no path joins, a pair with a feedback loop on a path between them
+# and a pair joined by more than .tf_SEM_MAX_EFFECT_PATHS paths each get a
+# comment in its place. A vertex lies on a path from x to y when x reaches it
+# and it reaches y, x and y included, and it lies on a feedback loop when it
+# belongs to one of `loops`, the strongly connected components of two or more
+# vertices. A loop elsewhere in the graph leaves the path sum the total effect
+# of a linear model, and one on such a path does not. Mirrors Python's
+# sem._effects().
+.tf_sem_effects <- function(T, nodes, paths, r, loops, labels, taken) {
   gx <- character(0)
   gy <- character(0)
   groups <- list()
@@ -452,6 +459,8 @@ NULL
   }
   if (length(gx) == 0L) return(character(0))
   cnames <- vapply(nodes, .tf_lavaan_construct, character(1), USE.NAMES = FALSE)
+  in_loop <- rep(FALSE, length(nodes))
+  for (comp in loops) in_loop[comp] <- TRUE
   out <- .tf_SEM_EFFECTS
   for (g in seq_along(gx)) {
     xn <- .tf_lavaan_construct(gx[[g]])
@@ -460,12 +469,15 @@ NULL
       out <- c(out, sprintf("# %s claims that the effect of %s on %s %s.",
                             .tf_sem_comment_text(cl$id), xn, yn, .tf_SEM_CLAIMED[[cl$sign]]))
     }
-    if (cyclic) {
-      out <- c(out, .tf_SEM_EFFECT_LOOP)
-      next
-    }
     i <- match(gx[[g]], nodes)
     j <- match(gy[[g]], nodes)
+    if (!is.na(i) && !is.na(j) && r[i, j]) {
+      on_path <- seq_along(nodes) %in% c(i, j) | (r[i, ] & r[, j])
+      if (any(in_loop & on_path)) {
+        out <- c(out, sprintf(.tf_SEM_EFFECT_LOOP, xn, yn))
+        next
+      }
+    }
     found <- if (is.na(i) || is.na(j)) list() else .tf_sem_effect_paths(paths, r, i, j)
     if (is.null(found)) {
       out <- c(out, sprintf(.tf_SEM_TOO_MANY, .tf_SEM_MAX_EFFECT_PATHS, xn, yn))
@@ -606,29 +618,34 @@ NULL
 #' @section Effects the claims are about:
 #' Each prediction or phenomenon whose \code{claim} is an effect of \code{x}
 #' on \code{y} gets a comment that restates it, the claims on one pair
-#' together. On a graph without a feedback loop,
+#' together. When no feedback loop lies on a path from \code{x} to \code{y},
 #' \verb{effect_<x>_<y> := <sum>} then defines the effect as the sum over the
 #' directed paths from \code{x} to \code{y} of the product of the labels
 #' along each path, so that lavaan estimates the quantity the claim is about.
-#' The paths are found depth first from \code{x}, taking the successors of
-#' each construct in construct order. When no path leads from \code{x} to
-#' \code{y}, a comment says that the model fixes the effect at zero. When more
-#' than 100 paths do, or the graph has a feedback loop, a comment says that no
-#' parameter is defined. A claim that cannot be evaluated as written is passed
-#' over.
+#' In a linear model, that sum is the total effect, whatever loops the rest of
+#' the graph holds. The paths are found depth first from \code{x}, taking the
+#' successors of each construct in construct order. When no path leads from
+#' \code{x} to \code{y}, a comment says that the model fixes the effect at
+#' zero. When more than 100 paths do, or a construct on a path from \code{x}
+#' to \code{y}, \code{x} and \code{y} included, lies on a feedback loop, a
+#' comment says that no parameter is defined. A claim that cannot be evaluated
+#' as written is passed over.
 #'
 #' @section Covariances fixed at zero:
-#' The propositions form the graph that [tf_implications()] reads. Two of its
-#' constructs that are both exogenous, with no proposition pointing into
-#' either, or both terminal, with neither pointing to another construct, are
-#' unrelated by the theory's account unless an association joins them. By
+#' The propositions form the graph that [tf_implications()] reads. Unless an
+#' association joins them, two of its constructs that are both exogenous, with
+#' no proposition pointing into either, are unrelated by the theory's account.
+#' Two that are both terminal, with neither pointing to another construct, are
+#' related only through the causes the theory names: their disturbances are
+#' uncorrelated, so they are independent once those causes are held fixed. By
 #' default, \code{lavaan::sem()} frees the covariance of two exogenous latent
 #' variables and of two terminal variables, and takes that of two exogenous
 #' observed variables from the data. A fit with those defaults could not refute
 #' the claim. In the modality-switching example, two of the six independencies
 #' [tf_implications()] derives would go untested. The syntax therefore ends
-#' with a block that fixes each such covariance at zero (\verb{a ~~ 0*b}), and
-#' deleting the block restores lavaan's defaults. A pair with a moderator keeps
+#' with a block that fixes each such covariance at zero (\verb{a ~~ 0*b}),
+#' which for two terminal constructs is the covariance of their disturbances,
+#' and deleting the block restores lavaan's defaults. A pair with a moderator keeps
 #' those defaults, because the product term changes the moderator's role. A
 #' relation from a construct to itself does not count here, since the syntax
 #' writes no path for it.
@@ -753,7 +770,7 @@ tf_compile_sem <- function(theory) {
   loops <- Filter(function(comp) length(comp) > 1L, .tf_strong_components(r))
   lines <- c(lines, .tf_sem_identification(cnames, paths, g$bidirected, loops))
   if (length(st$signs) > 0L) lines <- c(lines, .tf_SEM_SIGNS, st$signs)
-  lines <- c(lines, .tf_sem_effects(T, g$nodes, paths, r, length(loops) > 0L, st$labels,
+  lines <- c(lines, .tf_sem_effects(T, g$nodes, paths, r, loops, st$labels,
                                     st$taken))
   lines <- c(lines, .tf_sem_covariances(T, cnames, paths, g$bidirected, g$moderator,
                                         factor_names))

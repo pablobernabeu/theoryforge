@@ -1,6 +1,7 @@
-# Edge case: the prior version that the four amend-* cases amend. Its chain c1
-# -> c2 -> c3 implies c1 _||_ c3 | c2, and no prediction states that
+# Edge case: the prior version that the other amend-* cases amend. Its chain
+# c1 -> c2 -> c3 implies c1 _||_ c3 | c2, and no prediction states that
 # independence. A test refuted the point prediction h1, and h2 is untested.
+# The core assumption a1 protects h1 and names no anomaly.
 schema_version: "1.1"
 id: edge-amend-prior
 title: The prior version of the amendment cases
@@ -23,6 +24,11 @@ predictions:
     statement: c3 rises with c2.
     type: directional
     derives_from: [p2]
+auxiliary_assumptions:
+  - id: a1
+    statement: The c2 scale measures c2 in every sample.
+    added_for: ~
+    protects: [h1]
 test_outcomes:
   - prediction_id: h1
     passed: false

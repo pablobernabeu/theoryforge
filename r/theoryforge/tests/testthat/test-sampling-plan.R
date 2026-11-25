@@ -263,8 +263,8 @@ test_that("a written theory reads back with its plan", {
 # -- recorded, not scored -----------------------------------------------------
 
 test_that("the block moves no score", {
-  # Power must not raise a prediction's severity (Meehl, 1967), so nothing
-  # reads the block but validation and the preregistration.
+  # The stated power raises no score (Meehl, 1967, for directional claims), so
+  # nothing reads the block but validation and the preregistration.
   with_plan <- tf_read(tf_fixture_path("modality-switching.theory.yaml"))
   without <- with_plan
   without$predictions[[2]]$test <- NULL

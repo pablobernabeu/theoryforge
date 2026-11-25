@@ -67,8 +67,11 @@ NULL
 #' \code{dt * damping} exceeds 2, and the steps turn a sustained oscillation
 #' into growth. Raising \code{damping} can cause a divergence as well as fail
 #' to stop one. The function warns when the Euler trajectory departs from the
-#' exact one by more than 5 per cent of \code{max(1, |exact|)} at any step. The
-#' default will change to \code{"exact"} in the next minor release.
+#' exact one, at any step, by more than 5 per cent of the larger of
+#' \code{|exact|} and the largest absolute starting value (1 when every
+#' starting value is 0), so that the warning does not depend on the unit of
+#' \code{init}. The default will change to \code{"exact"} in the next minor
+#' release.
 #'
 #' When a state grows so large that a million times it is not a finite number,
 #' the function stops with a message naming the step and the state. The initial
@@ -227,6 +230,11 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
   # round (about 1.8e302 or more), and only init shapes this row.
   .tf_sim_check_finite(X, states, 0L, "reduce init")
   Y <- X # the exact state the Euler run is compared with
+  # The departure is measured against the larger of |exact| and the largest
+  # absolute starting value, so that it does not depend on the unit of init. A
+  # run that starts at 0 everywhere takes 1. Python computes the same scale.
+  dep_scale <- if (n > 0L) max(abs(X)) else 0
+  if (dep_scale == 0) dep_scale <- 1
   departed <- FALSE
   traj <- vector("list", steps + 1L)
   traj[[1L]] <- if (n == 0L) numeric(0) else .tf_rnd(X, 6)
@@ -254,7 +262,7 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
           # An exact state beyond the double range is a departure too, since
           # the Euler state is still finite here.
           if (!is.finite(Y[i]) ||
-              abs(X[i] - Y[i]) > .tf_SIM_DEPARTURE * max(1, abs(Y[i]))) {
+              abs(X[i] - Y[i]) > .tf_SIM_DEPARTURE * max(dep_scale, abs(Y[i]))) {
             departed <- TRUE
             break
           }

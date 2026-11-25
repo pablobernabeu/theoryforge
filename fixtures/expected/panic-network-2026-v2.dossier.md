@@ -22,7 +22,7 @@
 | scope | Boundary conditions explicitly stated | pass | 1.0 | 0.06 |
 | logical_why | Each proposition states a mechanism, not just a correlation | pass | 1.0 | 0.08 |
 | causal_testability | At least one proposition states a causal relation | pass | 1.0 | 0.06 |
-| diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, or verified where the claim and the rival's propositions are stated) | pass | 0.5 | 0.06 |
+| diagnosticity | At least one prediction names a registered alternative it discriminates from (declared, and not shown false where the claim and the rival's propositions are stated) | pass | 0.5 | 0.06 |
 | formalisation | A formal model of a recognised type (ode, abm, network, sem) is declared | pass | 1.0 | 0.05 |
 | derivation_chain | Every prediction cites declared propositions, and the causal graph entails the claim it states, if any | pass | 1.0 | 0.08 |
 
@@ -102,7 +102,7 @@ _No alternative states propositions._
 1. [point] An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds. (pred1; derives from: p1, p3)
    - Region the claim allows: [15, 25]
    - Auxiliary assumptions: aux1 (core)
-   - Rivals it discriminates: alt_cognitive
+   - Rivals it is declared to discriminate: alt_cognitive
    - Test record: already tested: passed (2026-05-01, registered osf.io/abcde)
 2. [interval] Avoidance frequency falls within a 20-35% band after exposure therapy. (pred2; derives from: p2)
    - Region the claim allows: [20, 35]
@@ -111,7 +111,7 @@ _No alternative states propositions._
    - Test record: untested
 4. [point] Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks. (pred4; derives from: p4)
    - Region the claim allows: [25, 35]
-   - Rivals it discriminates: alt_cognitive
+   - Rivals it is declared to discriminate: alt_cognitive
    - Test record: already tested: passed (2026-06-10, registered osf.io/fghij)
 
 ### Implied conditional independencies (derived from the causal graph, not predictions)

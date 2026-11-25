@@ -76,7 +76,8 @@ IDENTIFIED = ("# Identification: the paths among the constructs form no loop, an
 SIGNS = "# Signs the theory states, which the fit does not impose"
 EFFECTS = ("# Effects the claims are about, each the sum over the directed paths from cause to "
            "outcome of the product of the labels along the path")
-EFFECT_LOOP = "# The paths form a feedback loop, so no parameter is defined."
+def effect_loop(x, y):
+    return f"# A feedback loop lies on the paths from {x} to {y}, so no parameter is defined."
 
 
 ZERO = ("# Covariances the theory fixes at zero (lavaan::sem() frees them by default; delete "
@@ -485,10 +486,37 @@ def test_an_effect_names_a_construct_that_no_path_names():
         "# No directed path leads from a to q, so the model fixes this effect at zero."]
 
 
-def test_no_effect_is_defined_on_a_graph_with_a_feedback_loop():
+def test_no_effect_is_defined_across_a_feedback_loop():
+    # The cause lies on the loop a <-> m. A pair that no path joins still has
+    # its effect fixed at zero, loop or not.
     t = _claim_theory([("a", "increases", "m"), ("m", "increases", "a"), ("a", "causes", "y")],
-                      [("a", "y", "positive")])
-    assert _effects_block(t) == [EFFECTS, claimed("h1", "a", "y", "is positive"), EFFECT_LOOP]
+                      [("a", "y", "positive"), ("m", "y", "positive"), ("y", "a", "zero")])
+    assert _effects_block(t) == [
+        EFFECTS, claimed("h1", "a", "y", "is positive"), effect_loop("a", "y"),
+        claimed("h2", "m", "y", "is positive"), effect_loop("m", "y"),
+        claimed("h3", "y", "a", "is zero"),
+        "# No directed path leads from y to a, so the model fixes this effect at zero."]
+    # A loop between the two ends of the paths, a <-> b on x -> a -> b -> y.
+    t = _claim_theory([("x", "increases", "a"), ("a", "increases", "b"), ("b", "increases", "a"),
+                       ("b", "increases", "y")], [("x", "y", "positive")],
+                      constructs=("x", "y", "a", "b"))
+    assert _effects_block(t) == [EFFECTS, claimed("h1", "x", "y", "is positive"),
+                                 effect_loop("x", "y")]
+
+
+def test_an_effect_is_defined_when_the_feedback_loop_lies_off_its_paths():
+    # The loop a <-> b touches no path from x to y, so the path sum is the
+    # total effect of x on y in a linear model.
+    t = _claim_theory([("x", "increases", "y"), ("a", "causes", "b"), ("b", "causes", "a")],
+                      [("x", "y", "positive")], constructs=("x", "y", "a", "b"))
+    assert _effects_block(t) == [EFFECTS, claimed("h1", "x", "y", "is positive"),
+                                 "effect_x_y := b_x_y"]
+    # A loop that only feeds the outcome lies on no path from x either.
+    t = _claim_theory([("x", "increases", "y"), ("a", "causes", "b"), ("b", "causes", "a"),
+                       ("a", "increases", "y")], [("x", "y", "positive")],
+                      constructs=("x", "y", "a", "b"))
+    assert _effects_block(t)[:3] == [EFFECTS, claimed("h1", "x", "y", "is positive"),
+                                     "effect_x_y := b_x_y"]
 
 
 def test_an_effect_name_avoids_the_names_already_taken():

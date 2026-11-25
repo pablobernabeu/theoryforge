@@ -68,7 +68,7 @@ that an effect or relation exists, without a direction. A `directional` one asse
 or an order. An `interval` prediction asserts that a quantity lies in a stated range, and a
 `point` prediction asserts one value, with the tolerance that measurement requires.
 `bounds: {lower, upper}` states the region, and the full validation checks that it fits the
-type. The type is declared by the author, and no function checks it against the statement.
+type, so an existence prediction takes none. The type is declared by the author, and no function checks it against the statement.
 
 The provenance log records each step's number, the action and the identifier it affected.
 The action is named after the R function, `tf_theory` for `new_theory()`, so that a log reads
@@ -220,8 +220,9 @@ combination is `neutral`, theoryforge's label for an amendment that meets neithe
 A new prediction adds no content when it derives from no proposition or only articulates
 what the prior version already held, and a prediction under a new id with the same
 statement and type is reported as `renamed`. An assumption added for an anomaly is ad hoc
-unless a new prediction it protects, other than that anomaly, is corroborated. The
-appraisal reads no dates, so deciding which version is the prior is the caller's
+unless a new prediction it protects, other than that anomaly, is corroborated. An
+assumption rewritten under its id is appraised as a new one is, and one moved unchanged to
+another id is not appraised. The appraisal reads no dates, so deciding which version is the prior is the caller's
 responsibility. The returned dictionary holds further fields, listed in the
 [API reference](api.md#theoryforge.appraise_amendment), and
 [Methodological foundations](methodology.md) gives the full rule.
@@ -432,8 +433,8 @@ the rival's own graph does not give its claim the same verdict.
 `preregister()` writes the theory and hypotheses sections of a preregistration as Markdown.
 Its header gives the theory's version and content hash. Each hypothesis is listed with its
 type, its derivation, its claim and what the graph says of it, the adjustment an
-observational test would need, the auxiliary assumptions that protect it, the rivals it
-discriminates and its test record. The hypotheses section of the modality-switching theory
+observational test would need, the auxiliary assumptions that protect it, the rivals it is
+declared to discriminate and its test record. The hypotheses section of the modality-switching theory
 reads as follows.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
@@ -663,7 +664,8 @@ of 0.5 the swings neither grow nor fade.
 The default `method="euler"` takes fixed explicit steps, which stay close to the solution
 only while `dt` is small against the network's rates. On this loop, they inflate the
 oscillation, and `simulate()` warns when an Euler trajectory departs from the exact one by
-more than 5 per cent. `init` sets the starting values, one number for every construct or a
+more than 5 per cent of the larger of the exact value and the largest absolute starting
+value. `init` sets the starting values, one number for every construct or a
 mapping such as `{"arousal": 1}`, which starts the constructs it leaves out at 0 and so
 traces the response to an impulse. The trajectory follows from the linear system that the
 propositions define, and no data enter it.

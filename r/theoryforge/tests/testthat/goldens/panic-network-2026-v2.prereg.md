@@ -39,7 +39,7 @@
 1. [point] An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds. (pred1; derives from: p1, p3)
    - Region the claim allows: [15, 25]
    - Auxiliary assumptions: aux1 (core)
-   - Rivals it discriminates: alt_cognitive
+   - Rivals it is declared to discriminate: alt_cognitive
    - Test record: already tested: passed (2026-05-01, registered osf.io/abcde)
 2. [interval] Avoidance frequency falls within a 20-35% band after exposure therapy. (pred2; derives from: p2)
    - Region the claim allows: [20, 35]
@@ -48,7 +48,7 @@
    - Test record: untested
 4. [point] Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks. (pred4; derives from: p4)
    - Region the claim allows: [25, 35]
-   - Rivals it discriminates: alt_cognitive
+   - Rivals it is declared to discriminate: alt_cognitive
    - Test record: already tested: passed (2026-06-10, registered osf.io/fghij)
 
 ## Implied conditional independencies (derived from the causal graph, not predictions)

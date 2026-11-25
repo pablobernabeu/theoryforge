@@ -61,8 +61,9 @@ for an amendment that meets neither rule. A new prediction adds no content when
 it derives from no proposition or only articulates what the prior version
 already held, and a prediction under a new id with the same statement and type
 is reported as `renamed`. An assumption added for an anomaly is ad hoc unless a
-new prediction it protects, other than that anomaly, is corroborated. The
-appraisal reads no dates, so deciding which version is the prior is the
+new prediction it protects, other than that anomaly, is corroborated. An
+assumption rewritten under its id is appraised as a new one is, and one moved
+unchanged to another id is not appraised. The appraisal reads no dates, so deciding which version is the prior is the
 caller's responsibility. `?tf_appraise_amendment` lists the other fields of the
 result, and the article 'Methodological foundations' gives the full rule.
 
@@ -286,8 +287,8 @@ counts only when the rival's own graph does not give its claim the same verdict.
 preregistration as Markdown. Its header gives the theory's version and content
 hash. Each hypothesis is listed with its type, its derivation, its claim and
 what the graph says of it, the adjustment an observational test would need, the
-auxiliary assumptions that protect it, the rivals it discriminates and its test
-record. The hypotheses section of the modality-switching theory reads as
+auxiliary assumptions that protect it, the rivals it is declared to
+discriminate and its test record. The hypotheses section of the modality-switching theory reads as
 follows.
 
 ```{r prereg}
@@ -513,7 +514,8 @@ the default gain of 1 and damping of 0.5 the swings neither grow nor fade.
 The default `method = "euler"` takes fixed explicit steps, which stay close to
 the solution only while `dt` is small against the network's rates. On this loop,
 they inflate the oscillation, and `tf_simulate()` warns when an Euler trajectory
-departs from the exact one by more than 5 per cent. `init` sets the starting
+departs from the exact one by more than 5 per cent of the larger of the exact
+value and the largest absolute starting value. `init` sets the starting
 values, one number for every construct or a named list such as
 `list(arousal = 1)`, which starts the constructs it leaves out at 0 and so
 traces the response to an impulse. The trajectory follows from the linear system

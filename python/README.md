@@ -179,8 +179,8 @@ with the sampling plan the file records, the implied independencies and, for eac
 hypothesis, its claim, adjustment set and rivals. The study design, the analysis plan and
 the inference criteria are left to the author. Once a test outcome records an estimate and
 its standard error, `post_data_severity()` computes how severely a bounded prediction passed
-(Mayo & Spanos, 2006). It uses a normal approximation, which overstates the severity in
-small samples.
+(Mayo & Spanos, 2006). It uses a normal approximation, which overstates the severity of an
+estimate inside the region when the standard error comes from a small sample.
 
 ### Document
 

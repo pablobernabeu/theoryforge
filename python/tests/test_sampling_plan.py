@@ -275,8 +275,8 @@ def test_a_written_theory_reads_back_with_its_plan(tmp_path, modality_path):
 # -- recorded, not scored -------------------------------------------------------------
 
 def test_the_block_moves_no_score(modality_path):
-    # Power must not raise a prediction's severity (Meehl, 1967), so nothing
-    # reads the block but validation and the preregistration.
+    # The stated power raises no score (Meehl, 1967, for directional claims),
+    # so nothing reads the block but validation and the preregistration.
     with_plan = tf.read(modality_path)
     without = copy.deepcopy(with_plan)
     del without.data["predictions"][1]["test"]

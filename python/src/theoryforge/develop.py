@@ -14,6 +14,7 @@ from ._access import PRED_TYPE, RELATION, enum, field, items, ne_str, str_list, 
 from ._causal import causal_graph
 from ._num import number
 from ._status import CORROBORATED, classify_auxiliary, content_key, prediction_status
+from ._text import squish
 from .entailment import _Graph, read_claim
 from .implications import implications
 from .rigor import _refuse_non_boolean_outcomes
@@ -119,21 +120,62 @@ def _revision(old, new) -> str | None:
     return None
 
 
+def _appraised_assumptions(new, prior) -> list:
+    """The assumptions of ``new`` that the appraisal reads, in file order.
+
+    An assumption kept under a prior id is read when its statement, with
+    whitespace runs squished, differs from that of the first prior assumption
+    with that id. An assumption under an id the prior lacks is read unless its
+    statement is not blank and matches that of a prior assumption whose id the
+    new version no longer holds, which it then takes, so that a renamed
+    assumption is not new. Its ``added_for`` and ``protects`` alone do not
+    decide. R's ``.tf_appraised_assumptions`` holds the same rule.
+    """
+    prior_aux = items(prior, "auxiliary_assumptions")
+    new_aux = items(new, "auxiliary_assumptions")
+    prior_ids = [text(field(a, "id")) for a in prior_aux]
+    prior_statements = [squish(text(field(a, "statement"))) for a in prior_aux]
+    new_ids = {text(field(a, "id")) for a in new_aux}
+    first_statement: dict[str, str] = {}
+    for aid, st in zip(prior_ids, prior_statements, strict=True):
+        first_statement.setdefault(aid, st)
+    taken = [False] * len(prior_aux)
+    read = []
+    for a in new_aux:
+        aid, st = text(field(a, "id")), squish(text(field(a, "statement")))
+        if aid in first_statement:
+            if st != first_statement[aid]:
+                read.append(a)
+            continue
+        for j, qid in enumerate(prior_ids):
+            if st and not taken[j] and qid not in new_ids and prior_statements[j] == st:
+                taken[j] = True
+                break
+        else:
+            read.append(a)
+    return read
+
+
 def appraise_amendment(new, prior) -> dict:
     """Appraise an amendment as progressive, degenerating or neutral relative to a prior version.
 
     The two versions are compared by content. A new prediction whose statement
     and type match a prediction the amendment dropped is that prediction
-    renamed. A new prediction articulates old content when it derives only
-    from propositions the prior already held and needs no new assumption, or
-    when the prior's causal graph already entails its claim. It is underived
-    when it cites no proposition and unresolved when it cites an id that names
-    no proposition of the new version. A prediction is corroborated when at
-    least one test outcome passes it and none fails it. An assumption added
-    for an anomaly is ad hoc unless a prediction it protects that is new in
-    this version, other than the anomaly, is corroborated. Its ``added_for``
-    names the anomaly. When that is empty, the first prediction it protects
-    that was refuted or mixed in the prior is taken as the anomaly.
+    renamed. Assumptions are compared by statement too. An assumption kept
+    under its id is revised when its statement changed, and one under a new
+    id whose statement matches that of an assumption the amendment dropped is
+    that assumption renamed, so only a new or revised assumption is
+    appraised. A new prediction articulates old content when it derives only
+    from propositions the prior already held and needs no new or revised
+    assumption, or when the prior's causal graph already entails its claim.
+    It is underived when it cites no proposition and unresolved when it cites
+    an id that names no proposition of the new version. A prediction is
+    corroborated when at least one test outcome passes it and none fails it.
+    A new or revised assumption added for an anomaly is ad hoc unless a
+    prediction it protects that is new in this version, other than the
+    anomaly, is corroborated. Its ``added_for`` names the anomaly. When that
+    is empty, the first prediction it protects that was refuted or mixed in
+    the prior is taken as the anomaly.
 
     A prediction kept from the prior, under its id or renamed, is revised when
     its statement, type, bounds or claim changed. Its content is weaker when
@@ -151,15 +193,16 @@ def appraise_amendment(new, prior) -> dict:
     ``progressive`` when it is both, no assumption is ad hoc, no corroborated
     prediction is dropped, no content is lost and no prediction refuted or
     mixed in the prior is weakened. Content is lost when an untested
-    prediction is dropped or weakened or an implication is lost without being
-    refuted. The rule follows Lakatos (1970, p. 118), who considers series in
-    which 'each theory [has] at least as much content as the unrefuted content
-    of its predecessor'. The verdict is ``degenerating`` when an assumption
-    is ad hoc or a prediction refuted or mixed in the prior is weakened, and
-    no prediction adds corroborated content. It is ``neutral`` otherwise.
-    Lakatos has only the first two. ``neutral`` is theoryforge's label for an
-    amendment that meets neither rule, and the lists returned tell its cases
-    apart. API_SPEC.md section 10 states every rule in full.
+    prediction is dropped, an untested or corroborated prediction is weakened
+    or an implication is lost without being refuted. The rule follows Lakatos
+    (1970, p. 118), who considers series in which 'each theory [has] at least
+    as much content as the unrefuted content of its predecessor'. The verdict
+    is ``degenerating`` when an assumption is ad hoc or a prediction refuted
+    or mixed in the prior is weakened, and no prediction adds corroborated
+    content. It is ``neutral`` otherwise. Lakatos has only the first two.
+    ``neutral`` is theoryforge's label for an amendment that meets neither
+    rule, and the lists returned tell its cases apart. API_SPEC.md section 10
+    states every rule in full.
 
     Returns:
         A dict whose keys come in the order
@@ -176,15 +219,16 @@ def appraise_amendment(new, prior) -> dict:
             ``dropped``, ``dropped_corroborated``, ``content_lost``,
             ``new_anomalies``, ``weakened_refuted`` and ``unresolved`` are
             sorted id lists. ``content_lost`` holds the untested predictions
-            the amendment drops, under their prior ids, and those it weakens,
-            under their new ids. ``weakened_refuted`` holds the predictions
-            refuted or mixed in the prior that it weakens. ``renamed`` holds
-            ``{prior, new}`` pairs sorted by ``new``, and ``revised`` one
+            the amendment drops, under their prior ids, and the untested or
+            corroborated predictions it weakens, under their new ids.
+            ``weakened_refuted`` holds the predictions refuted or mixed in the
+            prior that it weakens. ``renamed`` holds ``{prior, new}`` pairs
+            sorted by ``new``, and ``revised`` one
             ``{id, change}`` record per revised prediction sorted by its new
             id, where ``change`` is ``weakened``, ``strengthened``,
             ``reworded`` or ``changed``. ``assumptions`` holds one ``{id,
             added_for, class, independent, added_for_inferred}`` record per
-            new assumption added for an anomaly, in file order.
+            new or revised assumption added for an anomaly, in file order.
             ``added_for_inferred`` is True when ``added_for`` was taken from
             ``protects``. ``independent`` lists, each as ``{id, status}`` and
             in the order of ``protects``, the distinct predictions the
@@ -282,8 +326,8 @@ def appraise_amendment(new, prior) -> dict:
     # under any id, so renaming a proposition adds nothing either. A claim the
     # prior's causal graph entails is old content too, whatever the prediction
     # cites.
-    prior_aux_ids = {text(field(a, "id")) for a in items(prior, "auxiliary_assumptions")}
-    new_aux = [a for a in items(new, "auxiliary_assumptions") if text(field(a, "id")) not in prior_aux_ids]
+    # The new and revised assumptions, the only ones appraised.
+    new_aux = _appraised_assumptions(new, prior)
     protected = {q for a in new_aux for q in str_list(field(a, "protects"))}
     old_content = {_proposition_content(p) for p in items(prior, "propositions")}
     content_of: dict[str, tuple[str, str, str]] = {}
@@ -323,8 +367,9 @@ def appraise_amendment(new, prior) -> dict:
                      if prediction_status(now, new_tos) in _FAILED
                      and prediction_status(was, prior_tos) in (CORROBORATED, "untested")]
 
-    # A weakened prediction loses content when it was untested, and retreats
-    # from a refutation when it was refuted or mixed.
+    # A weakened prediction loses content when it was unrefuted (untested or
+    # corroborated), and retreats from a refutation when it was refuted or
+    # mixed.
     revised: list[dict[str, str]] = []
     weakened_refuted: list[str] = []
     for was, now, old, cur in retained:
@@ -334,7 +379,7 @@ def appraise_amendment(new, prior) -> dict:
         revised.append({"id": now, "change": change})
         if change == "weakened":
             status = prediction_status(was, prior_tos)
-            if status == "untested":
+            if status in ("untested", CORROBORATED):
                 content_lost.append(now)
             elif status in _FAILED:
                 weakened_refuted.append(now)
