@@ -1089,3 +1089,27 @@ test("a figure whose text holds a character XML cannot hold is shown without it"
   assert.doesNotMatch(downloads[0], /\u0001|&#2;/, "the download is the figure as shown");
 });
 
+test("the entailments table says when no adjustment suffices, and why a claim was not evaluated", async () => {
+  const result = { theory_id: "t", criterion: "m", acyclic: true, feedback: [], counts: { entailed: 1, contradicted: 0, undetermined: 0, not_evaluated: 1 },
+    claims: [
+      { source: "prediction", id: "pred1", kind: "effect", x: "a", y: "b", given: [], sign: "positive", derived: "positive", verdict: "entailed", basis: "paths_agree", faithfulness: false, via: ["p1"], identified: false, adjustment: null },
+      { source: "prediction", id: "pred2", kind: "effect", x: "a", y: "z", given: [], sign: "positive", derived: null, verdict: "not_evaluated", basis: "not_in_graph", faithfulness: false, via: [], identified: null, adjustment: null },
+    ] };
+  const { ctx, $ } = await boot({}, lineageRuntime({ entailments: { result } }));
+  await opButton(ctx, "entailments").click();
+  await $("#runBtn").click();
+  const rows = ctx.document.querySelectorAll("#output table.grid tbody tr").filter((tr) => /pred1|pred2/.test(tr.textContent));
+  const cell = (tr, i) => tr.querySelectorAll("td")[i].textContent;
+  assert.equal(cell(rows[0], 5), "none suffices");
+  assert.equal(cell(rows[1], 4), "not in graph");
+  assert.match($("#output .ri-interp").textContent, /One claim was not evaluated, since it names a construct that no proposition relates to another\./);
+});
+
+test("the appraisal's help says how assumptions are compared", async () => {
+  const { ctx, $ } = await boot({}, lineageRuntime());
+  await opButton(ctx, "appraise").click();
+  assert.match($("#opHelp").textContent, /Assumptions are compared by statement, so one rewritten under its id is appraised as a new one is, and one moved unchanged to another id is not\./);
+  await $("#helpBtn").click();
+  assert.match(ctx.document.querySelector("#tfModal").textContent, /Assumptions are compared by statement/);
+  assert.match(ctx.TF.OPS.find((o) => o.id === "appraise").help, /moved unchanged to another id is not/);
+});

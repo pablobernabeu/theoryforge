@@ -3,9 +3,9 @@
 // or a dependency. It models elements, text, attributes, classes and simple
 // selectors (#id, .class, tag, *, [attr], [attr="v"], compounds of these,
 // lists, descendants and ":scope > " children). A pseudo-class, such as the
-// :not() in the query the modal's focus trap runs on Tab, throws. It does not parse HTML: innerHTML is
-// kept as a string and counts as text. DOMParser reads XML, enough for the
-// SVG figures, and XMLSerializer writes it back.
+// :not() in the query the modal's focus trap runs on Tab, throws. It does not
+// parse HTML: innerHTML is kept as a string and counts as text. DOMParser reads
+// XML, enough for the SVG figures, and XMLSerializer writes it back.
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 

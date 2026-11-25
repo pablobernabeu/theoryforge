@@ -146,27 +146,26 @@ file to be saved beside the script first.
 
 `apps/tests/` holds tests for the UI core, the editor's helpers (including a check that
 the editor leaves DAGitty code to the package's reader), the editor on a page, the
-Markdown renderer, the link,
-the colour contrast of both themes, the two runtimes and their reproducible code,
-`build.mjs` and the site's landing and 404 pages. They run under Node's built-in test
-runner with a small stand-in for the browser DOM (`tests/dom.mjs`), so they need no
-browser and no dependency. `tests/code.test.mjs` also runs every Python snippet the app
-writes under the Python on the path with PyYAML and checks that it prints its result. It
-skips when there is no such Python.
+Markdown renderer, the link, the colour contrast of both themes, the two runtimes and
+their reproducible code, `build.mjs` and the site's landing and 404 pages. They run
+under Node's built-in test runner with a small stand-in for the browser DOM
+(`tests/dom.mjs`), so they need no browser and no dependency. `tests/code.test.mjs` also
+runs every Python snippet the app writes under the Python on the path with PyYAML and
+checks that it prints its result. It skips when there is no such Python.
 
 ```bash
 node --test apps/tests/*.test.mjs   # from the repository root
 ```
 
-`tests/browser.e2e.mjs` drives both apps in Chromium with Playwright. It boots the
-two engines and runs every operation on every example and on a theory it builds in
-the editor. It checks that a link reproduces the view and that a link pasted into an
-open tab opens there, how a source the package cannot read is reported, that recording
-the current content hash leaves a theory valid and that the saved file keeps the hash,
-the layout at 390 and 768 px wide and the contrast of coloured text in both themes. Last, it
+`tests/browser.e2e.mjs` drives both apps in Chromium with Playwright. It boots the two
+engines and runs every operation on every example and on a theory it builds in the
+editor. It checks that a link reproduces the view and that a link pasted into an open
+tab opens there, how a source the package cannot read is reported, that recording the
+current content hash leaves a theory valid and that the saved file keeps the hash, the
+layout at 390 and 768 px wide and the contrast of coloured text in both themes. Last, it
 compares the displayed text of the two apps wherever the packages promise the same
-output. It needs Playwright with its Chromium and network access to the engines'
-hosts, so `node --test` leaves it out:
+output. It needs Playwright with its Chromium and network access to the engines' hosts,
+so `node --test` leaves it out:
 
 ```bash
 node apps/build.mjs
