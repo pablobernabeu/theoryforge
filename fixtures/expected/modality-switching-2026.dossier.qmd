@@ -3,12 +3,13 @@ title: "theoryforge report: Modality switching in grounded conceptual processing
 format: html
 engine: markdown
 ojs-engine: false
+html-math-method: plain
 from: markdown-raw_html-raw_attribute-raw_tex
 menu:
   title-selector: ""
 ---
 
-# theoryforge dossier\: Modality switching in grounded conceptual processing
+# theoryforge dossier\: Modality switching in grounded conceptual processing {#theoryforge-dossier}
 
 - Theory ID\: modality\-switching\-2026
 - Content hash\: sha256\:c8109f9b8b7ca5df9c28ea0b42d799a4e9e608cad9cb0641e6030f9cd7bbb630

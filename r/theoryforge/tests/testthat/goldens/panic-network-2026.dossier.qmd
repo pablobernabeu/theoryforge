@@ -3,12 +3,13 @@ title: "theoryforge report: Network theory of panic disorder"
 format: html
 engine: markdown
 ojs-engine: false
+html-math-method: plain
 from: markdown-raw_html-raw_attribute-raw_tex
 menu:
   title-selector: ""
 ---
 
-# theoryforge dossier\: Network theory of panic disorder
+# theoryforge dossier\: Network theory of panic disorder {#theoryforge-dossier}
 
 - Theory ID\: panic\-network\-2026
 - Content hash\: sha256\:4687e71fc5b8e34114d1266d204d8911b6641d152d94b0fa8bcff62cf0755e42

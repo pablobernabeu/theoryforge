@@ -28,10 +28,15 @@ NULL
 #'
 #' The report is written so that the theory's text, which may come from
 #' someone else, reaches Quarto as text. The measures are these, and they were
-#' checked against Quarto 1.11 in the html, revealjs and dashboard formats. The
-#' header gives \code{title} and \code{format}, then \code{engine: markdown},
-#' so that Quarto runs no code chunk, \code{ojs-engine: false}, so that it
-#' compiles no OJS, \code{from: markdown-raw_html-raw_attribute-raw_tex}, so
+#' checked against Quarto 1.11 in the html, revealjs and dashboard formats, with
+#' the reports opened in a browser that loaded their scripts and clicked their
+#' links. The header gives \code{title} and \code{format}, then
+#' \code{engine: markdown}, so that Quarto runs no code chunk,
+#' \code{ojs-engine: false}, so that it compiles no OJS,
+#' \code{html-math-method: plain}, so that it loads no MathJax, which revealjs
+#' otherwise runs over the text of every slide, where \verb{\\href} makes a link
+#' of any address and \verb{\\style} sets any CSS,
+#' \code{from: markdown-raw_html-raw_attribute-raw_tex}, so
 #' that it passes on no raw HTML, raw attribute or raw TeX, and \code{menu}
 #' with an empty \code{title-selector}, so that the slide menu of revealjs
 #' takes each title from the text of the slide, which it escapes, rather than
@@ -39,9 +44,12 @@ NULL
 #' character of the dossier's text but the quotation marks gains a backslash
 #' and a backtick becomes \code{&#96;}, so that no code chunk, inline code,
 #' shortcode, link, span or tag opens from the theory's text. Typed \code{--}
-#' and \code{...} therefore show as typed, and a heading's anchor follows its
-#' typed text. The marker of each heading and list item, the underscores of a
-#' line in italics and the checklist table are kept. An implied conditional
+#' and \code{...} therefore show as typed. The marker of each heading and list
+#' item, the underscores of a line in italics and the checklist table are kept.
+#' The level-1 heading, the dossier's title, gains the fixed identifier
+#' \code{\{#theoryforge-dossier\}}, so that Quarto's scripts never read one
+#' made from the theory's title, and the anchor of every other heading follows
+#' its typed text. An implied conditional
 #' independence keeps its code span when it holds only letters, digits,
 #' \code{_}, \code{|}, \code{,}, \code{.} and spaces, does not begin with
 #' \code{r} and a space and does not hold \code{ojs_define}, and is written
@@ -66,8 +74,10 @@ NULL
 #'   double-quoted scalar with backslashes, double quotes and control
 #'   characters escaped, so a YAML parser reads back exactly the string passed.
 #'   A title passed by the caller is the caller's Markdown and is not escaped
-#'   otherwise, so raw TeX such as `\emph{}` is dropped from HTML output and
-#'   `$\alpha$` becomes mathematics.
+#'   otherwise, so raw TeX such as `\emph{}` is dropped from HTML output.
+#'   Mathematics such as `$\alpha$` is written by the plain method of Pandoc in
+#'   the HTML formats, as the Greek letter in italics, since the report loads no
+#'   MathJax.
 #' @param render When \code{TRUE}, run \code{quarto render} on the written file
 #'   and stop if it exits non-zero.
 #' @param to Quarto output format (default \code{"html"}). It must be a format
@@ -140,13 +150,20 @@ tf_render_report <- function(theory, path, title = NULL, render = FALSE, to = "h
 
 # The header after the title and the format, as the Python twin's _HEADER_TAIL
 # writes it. engine: markdown runs no code, ojs-engine: false compiles no OJS
-# whatever the text holds, from: reads no raw HTML, raw attribute or raw TeX,
-# and an empty title selector makes the slide menu of revealjs take each title
-# from the text of the slide, which it escapes, where it wrote a heading's text back
-# as HTML.
-.tf_HEADER_TAIL <- paste0("engine: markdown\nojs-engine: false\n",
+# whatever the text holds, html-math-method: plain loads no MathJax, which
+# revealjs otherwise runs over the text of every slide and which reads \href and
+# \style there, from: reads no raw HTML, raw attribute or raw TeX, and an empty
+# title selector makes the slide menu of revealjs take each title from the text
+# of the slide, which it escapes, where it wrote a heading's text back as HTML.
+.tf_HEADER_TAIL <- paste0("engine: markdown\nojs-engine: false\nhtml-math-method: plain\n",
                           "from: markdown-raw_html-raw_attribute-raw_tex\n",
                           "menu:\n  title-selector: \"\"\n---\n\n")
+
+# The identifier of the dossier's level-1 heading, fixed so that Quarto's
+# scripts never read one made from the theory's title. Quarto's html script
+# throws on an identifier with '..', a final '.' or '.' before a digit, which a
+# title can give. The Python twin's _HEADING_ID is the same.
+.tf_HEADING_ID <- " {#theoryforge-dossier}"
 
 # `s` written so that Quarto reads each of its characters as text, as the
 # Python twin's _md_text() writes it. Every ASCII punctuation character but the
@@ -181,8 +198,10 @@ tf_render_report <- function(theory, path, title = NULL, render = FALSE, to = "h
 # does not hold 'ojs_define', since Quarto turns on its OJS compiler when that
 # word is anywhere in the text it reads.
 # Otherwise it loses its backticks, since the escaped text needs no code span
-# to keep its underscores. The rest of the line is escaped. The dossier ends in
-# a newline, which strsplit() leaves out and paste0() puts back.
+# to keep its underscores. The rest of the line is escaped, and the level-1
+# heading, the dossier's title, gains the fixed identifier
+# {#theoryforge-dossier}. The dossier ends in a newline, which strsplit() leaves
+# out and paste0() puts back.
 .tf_qmd_body <- function(md) {
   lines <- strsplit(md, "\n", fixed = TRUE)[[1L]]
   out <- vapply(lines, function(line) {
@@ -201,6 +220,7 @@ tf_render_report <- function(theory, path, title = NULL, render = FALSE, to = "h
       rest <- paste0("_", .tf_md_text(substr(rest, 2L, n - 1L)), "_")
     } else {
       rest <- .tf_md_text(rest)
+      if (identical(marker, "# ")) rest <- paste0(rest, .tf_HEADING_ID)
     }
     paste0(marker, rest)
   }, character(1), USE.NAMES = FALSE)

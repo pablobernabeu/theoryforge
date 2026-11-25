@@ -45,13 +45,21 @@ _PUNCT = re.compile(r"[!#-&(-/:-@\[-_{-~]")
 _PLAIN_CODE = re.compile(r"[A-Za-z0-9_|,. ]+")
 
 # The header after the title and the format. engine: markdown runs no code,
-# ojs-engine: false compiles no OJS whatever the text holds, from: reads no raw
-# HTML, raw attribute or raw TeX, and an empty title selector makes the slide
-# menu of revealjs take each title from the text of the slide, which it escapes,
-# where it wrote a heading's text back as HTML.
-_HEADER_TAIL = ("engine: markdown\nojs-engine: false\n"
+# ojs-engine: false compiles no OJS whatever the text holds, html-math-method:
+# plain loads no MathJax, which revealjs otherwise runs over the text of every
+# slide and which reads \href and \style there, from: reads no raw HTML, raw
+# attribute or raw TeX, and an empty title selector makes the slide menu of
+# revealjs take each title from the text of the slide, which it escapes, where
+# it wrote a heading's text back as HTML.
+_HEADER_TAIL = ("engine: markdown\nojs-engine: false\nhtml-math-method: plain\n"
                 "from: markdown-raw_html-raw_attribute-raw_tex\n"
                 'menu:\n  title-selector: ""\n---\n\n')
+
+# The identifier of the dossier's level-1 heading, fixed so that Quarto's
+# scripts never read one made from the theory's title. Quarto's html script
+# throws on an identifier with '..', a final '.' or '.' before a digit, which a
+# title can give.
+_HEADING_ID = " {#theoryforge-dossier}"
 
 # Quarto's reader encodes each shortcode it finds in the text as a UUID
 # followed by ';<hex>;' and, once Pandoc has read the document and removed its
@@ -123,7 +131,8 @@ def _qmd_body(md: str) -> str:
     (``_PLAIN_CODE``), does not begin with 'r ' and does not hold
     'ojs_define', and otherwise loses its backticks, since the escaped text
     needs no code span to keep its underscores. The rest of the line is
-    escaped.
+    escaped, and the level-1 heading, the dossier's title, gains the fixed
+    identifier ``{#theoryforge-dossier}``.
     """
     out = []
     for line in md.split("\n"):
@@ -143,6 +152,8 @@ def _qmd_body(md: str) -> str:
             rest = "_" + _md_text(rest[1:-1]) + "_"
         else:
             rest = _md_text(rest)
+            if marker == "# ":
+                rest += _HEADING_ID
         out.append(marker + rest)
     return "\n".join(out)
 
@@ -170,21 +181,27 @@ def render_report(theory, path, title: str | None = None, render: bool = False, 
     The report is a YAML header followed by the ``dossier()`` body, written so that the
     theory's text, which may come from someone else, reaches Quarto as text. The
     measures are these, and they were checked against Quarto 1.11 in the html,
-    revealjs and dashboard formats. The header gives ``title`` and ``format``, then
+    revealjs and dashboard formats, with the reports opened in a browser that loaded
+    their scripts and clicked their links. The header gives ``title`` and ``format``, then
     ``engine: markdown``, so that Quarto runs no code chunk, ``ojs-engine: false``, so
-    that it compiles no OJS, ``from: markdown-raw_html-raw_attribute-raw_tex``, so that
-    it passes on no raw HTML, raw attribute or raw TeX, and ``menu`` with an empty
-    ``title-selector``, so that the slide menu of revealjs takes each title from the
-    text of the slide, which it escapes, rather than writing a heading's text back as HTML.
+    that it compiles no OJS, ``html-math-method: plain``, so that it loads no MathJax,
+    which revealjs otherwise runs over the text of every slide, where ``\\href`` makes a
+    link of any address and ``\\style`` sets any CSS,
+    ``from: markdown-raw_html-raw_attribute-raw_tex``, so that it passes on no raw HTML,
+    raw attribute or raw TeX, and ``menu`` with an empty ``title-selector``, so that the
+    slide menu of revealjs takes each title from the text of the slide, which it escapes,
+    rather than writing a heading's text back as HTML.
     In the body, every ASCII punctuation character of the dossier's text but the
     quotation marks gains a backslash and a backtick becomes ``&#96;``, so that no code
     chunk, inline code, shortcode, link, span or tag opens from the theory's text.
-    Typed ``--`` and ``...`` therefore show as typed, and a heading's anchor follows
-    its typed text. The marker of each heading and list item, the underscores of a line
-    in italics and the checklist table are kept. An implied conditional independence
-    keeps its code span when it holds only letters, digits, ``_``, ``|``, ``,``, ``.``
-    and spaces, does not begin with ``r`` and a space and does not hold
-    ``ojs_define``, and is written without it otherwise. Quarto encodes a shortcode as
+    Typed ``--`` and ``...`` therefore show as typed. The marker of each heading and
+    list item, the underscores of a line in italics and the checklist table are kept.
+    The level-1 heading, the dossier's title, gains the fixed identifier
+    ``{#theoryforge-dossier}``, so that Quarto's scripts never read one made from the
+    theory's title, and the anchor of every other heading follows its typed text. An
+    implied conditional independence keeps its code span when it holds only letters,
+    digits, ``_``, ``|``, ``,``, ``.`` and spaces, does not begin with ``r`` and a space
+    and does not hold ``ojs_define``, and is written without it otherwise. Quarto encodes a shortcode as
     a UUID followed by ``;<hex>;`` and, once the document is parsed and its escapes
     removed, decodes such a run in the body, so a dossier that holds one, a UUID
     followed by a semicolon, hexadecimal digits and a semicolon, is refused. The
@@ -205,8 +222,9 @@ def render_report(theory, path, title: str | None = None, render: bool = False, 
     title is written as a YAML double-quoted scalar with backslashes, double quotes and
     control characters escaped, so a YAML parser reads back exactly the string passed.
     A title passed by the caller is the caller's Markdown and is not escaped otherwise,
-    so raw TeX such as ``\\emph{}`` is dropped from HTML output and ``$\\alpha$``
-    becomes mathematics.
+    so raw TeX such as ``\\emph{}`` is dropped from HTML output. Mathematics such as
+    ``$\\alpha$`` is written by the plain method of Pandoc in the HTML formats, as the Greek
+    letter in italics, since the report loads no MathJax.
 
     When ``to`` is not a format name or a writer, when ``check()`` refuses the theory or
     when the dossier holds an encoded shortcode, ``ValueError`` is raised before anything

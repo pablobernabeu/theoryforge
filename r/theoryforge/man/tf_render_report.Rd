@@ -24,8 +24,10 @@ escaped forms \code{\{\{\{<} and \code{>\}\}\}}. It is written as a YAML
 double-quoted scalar with backslashes, double quotes and control
 characters escaped, so a YAML parser reads back exactly the string passed.
 A title passed by the caller is the caller's Markdown and is not escaped
-otherwise, so raw TeX such as \verb{\\emph\{\}} is dropped from HTML output and
-\verb{$\\alpha$} becomes mathematics.}
+otherwise, so raw TeX such as \verb{\\emph\{\}} is dropped from HTML output.
+Mathematics such as \verb{$\\alpha$} is written by the plain method of Pandoc in
+the HTML formats, as the Greek letter in italics, since the report loads no
+MathJax.}
 
 \item{render}{When \code{TRUE}, run \code{quarto render} on the written file
 and stop if it exits non-zero.}
@@ -53,10 +55,15 @@ holds an encoded shortcode.
 \details{
 The report is written so that the theory's text, which may come from
 someone else, reaches Quarto as text. The measures are these, and they were
-checked against Quarto 1.11 in the html, revealjs and dashboard formats. The
-header gives \code{title} and \code{format}, then \code{engine: markdown},
-so that Quarto runs no code chunk, \code{ojs-engine: false}, so that it
-compiles no OJS, \code{from: markdown-raw_html-raw_attribute-raw_tex}, so
+checked against Quarto 1.11 in the html, revealjs and dashboard formats, with
+the reports opened in a browser that loaded their scripts and clicked their
+links. The header gives \code{title} and \code{format}, then
+\code{engine: markdown}, so that Quarto runs no code chunk,
+\code{ojs-engine: false}, so that it compiles no OJS,
+\code{html-math-method: plain}, so that it loads no MathJax, which revealjs
+otherwise runs over the text of every slide, where \verb{\\href} makes a link
+of any address and \verb{\\style} sets any CSS,
+\code{from: markdown-raw_html-raw_attribute-raw_tex}, so
 that it passes on no raw HTML, raw attribute or raw TeX, and \code{menu}
 with an empty \code{title-selector}, so that the slide menu of revealjs
 takes each title from the text of the slide, which it escapes, rather than
@@ -64,9 +71,12 @@ writing a heading's text back as HTML. In the body, every ASCII punctuation
 character of the dossier's text but the quotation marks gains a backslash
 and a backtick becomes \code{&#96;}, so that no code chunk, inline code,
 shortcode, link, span or tag opens from the theory's text. Typed \code{--}
-and \code{...} therefore show as typed, and a heading's anchor follows its
-typed text. The marker of each heading and list item, the underscores of a
-line in italics and the checklist table are kept. An implied conditional
+and \code{...} therefore show as typed. The marker of each heading and list
+item, the underscores of a line in italics and the checklist table are kept.
+The level-1 heading, the dossier's title, gains the fixed identifier
+\code{\{#theoryforge-dossier\}}, so that Quarto's scripts never read one
+made from the theory's title, and the anchor of every other heading follows
+its typed text. An implied conditional
 independence keeps its code span when it holds only letters, digits,
 \code{_}, \code{|}, \code{,}, \code{.} and spaces, does not begin with
 \code{r} and a space and does not hold \code{ojs_define}, and is written

@@ -3,12 +3,13 @@ title: "theoryforge report: An underspecified motivation theory"
 format: html
 engine: markdown
 ojs-engine: false
+html-math-method: plain
 from: markdown-raw_html-raw_attribute-raw_tex
 menu:
   title-selector: ""
 ---
 
-# theoryforge dossier\: An underspecified motivation theory
+# theoryforge dossier\: An underspecified motivation theory {#theoryforge-dossier}
 
 - Theory ID\: weak\-demo
 - Content hash\: sha256\:efcf38ef21fc18fdcc50718943ff878fc53151ab45e744e7271abc31e643f86e

@@ -351,14 +351,18 @@ def test_render_report_writes_the_theory_text_as_text(tmp_path):
     t = _hostile(tmp_path)
     out = t.render_report(tmp_path / "r.qmd")
     lines = open(out, encoding="utf-8", newline="").read().split("\n")
-    assert lines[0] == "---" and lines[2:10] == [
-        "format: html", "engine: markdown", "ojs-engine: false",
+    assert lines[0] == "---" and lines[2:11] == [
+        "format: html", "engine: markdown", "ojs-engine: false", "html-math-method: plain",
         "from: markdown-raw_html-raw_attribute-raw_tex", "menu:", '  title-selector: ""', "---", ""]
     assert yaml.safe_load("\n".join(lines[1:2]))["title"] == (
         r"theoryforge report: Injection &#96;r writeLines\('ran'\, 'PWNED\.txt'\)&#96; "
         r"\{\{\{\< env HOME \>\}\}\} \<b\>bold\<\/b\>")
-    body = lines[10:]
+    body = lines[11:]
     assert len(body) == len(t.dossier().split("\n"))
+    # The dossier's title has a fixed identifier, so that no script reads one
+    # made from the theory's title.
+    assert body[0].startswith(r"# theoryforge dossier\: Injection ")
+    assert body[0].endswith(" {#theoryforge-dossier}")
     assert not [line for line in body if _FENCE.match(line) or line == "---"]
     assert not [line for line in body if "`" in line or "{{<" in line or "](" in line]
     theory_id = (r"- Theory ID\: edge\-markdown\-injection &#96;&#96;&#96;\{r\} "
@@ -429,11 +433,13 @@ def test_render_report_refuses_text_that_quarto_reads_as_an_encoded_shortcode(tm
 
 def _ojs_theory(modality_path, tmp_path):
     """modality-switching with a construct id that holds 'ojs_define', which turned on
-    Quarto's OJS compiler, and a title with an OJS expression and a tag, which the
-    slide menu of revealjs wrote back as HTML."""
+    Quarto's OJS compiler, a title with an OJS expression and a tag, which the slide
+    menu of revealjs wrote back as HTML, and a label with TeX that MathJax, which
+    revealjs ran over every slide, made a javascript: link of."""
     text = modality_path.read_text(encoding="utf-8").replace("c_lexical_familiarity", "c_ojs_define")
     text = re.sub(r"(?m)^title: .*$", 'title: "Modality ${alert(1)} <img src=x onerror=alert(2)>"',
                   text, count=1)
+    text = re.sub(r"(?m)^(    label: ).*$", r"\1'\\(\\href{javascript:alert(3)}{x}\\)'", text, count=1)
     path = tmp_path / "ojs.theory.yaml"
     path.write_bytes(text.encode("utf-8"))
     return tf.read(path)
@@ -446,16 +452,18 @@ def test_render_report_keeps_ojs_define_out_of_the_text_quarto_reads(modality_pa
     t = _ojs_theory(modality_path, tmp_path)
     text = open(t.render_report(tmp_path / "r.qmd"), encoding="utf-8").read()
     assert "ojs_define" not in text
-    assert "\nojs-engine: false\n" in text and '\nmenu:\n  title-selector: ""\n' in text
+    assert "\nojs-engine: false\nhtml-math-method: plain\n" in text
+    assert '\nmenu:\n  title-selector: ""\n' in text
     assert r"- c\_sensorimotor\_experience \_\|\|\_ c\_ojs\_define" in text.split("\n")
 
 
 @pytest.mark.skipif(shutil.which("quarto") is None, reason="Quarto is not installed")
 @pytest.mark.parametrize("to", ["html", "revealjs", "dashboard"])
 def test_quarto_renders_the_hostile_reports_as_text(tmp_path, monkeypatch, modality_path, to):
-    # Rendered through Quarto, the report runs no code, compiles no OJS, expands
-    # no shortcode and passes on no script, event handler or link of the
-    # theory's. revealjs is told to take its menu titles from the escaped text.
+    # Rendered through Quarto, the report runs no code, compiles no OJS, loads
+    # no MathJax, expands no shortcode and passes on no script, event handler or
+    # link of the theory's. revealjs is told to take its menu titles from the
+    # escaped text.
     monkeypatch.setenv("TF_SECRET_TOKEN", "s3cr3t-env-value")
     (tmp_path / "secret.txt").write_text("SECRET-FILE-CONTENTS", encoding="utf-8")
     monkeypatch.chdir(tmp_path)
@@ -466,8 +474,10 @@ def test_quarto_renders_the_hostile_reports_as_text(tmp_path, monkeypatch, modal
         for leaked in ("s3cr3t-env-value", "SECRET-FILE-CONTENTS", os.path.expanduser("~")):
             assert leaked not in html
         for live in ("ojs-element-id", "ojs-module-contents", "quarto-ojs-runtime", "<script>alert",
-                     '<img src="x"', "<b>"):
+                     '<img src="x"', "<b>", "RevealMath"):
             assert live not in html
+        assert "mathjax" not in html.lower()
+        assert 'id="theoryforge-dossier"' in html
         assert re.search(r"<[a-zA-Z][^>]*\son[a-z]+\s*=", html) is None
         assert re.search(r"""(?:href|src)\s*=\s*["']?\s*javascript:""", html) is None
         if to == "revealjs":
