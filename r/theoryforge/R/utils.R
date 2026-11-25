@@ -374,58 +374,97 @@ NULL
 }
 
 # What libyaml can read as an anchor: an ampersand at the start of the text or
-# after white space, a line break or one of [{,:?-, then the characters of an
-# anchor name, then white space, a line break, the end or one of ?:,]}%@` (it
-# refuses the text otherwise). The line breaks include U+0085, U+2028 and
-# U+2029. The pattern matches bytes, which writes them as their UTF-8 bytes,
-# since gregexpr() takes time quadratic in the length of a text that is not
-# ASCII when it matches characters.
+# after white space, a line break, a byte-order mark or one of [{,:?-, then the
+# characters of an anchor name, then white space, a line break, the end or one
+# of ?:,]}%@` (it refuses the text otherwise). An explicit tag beside it is
+# part of the match: one before it on its line, followed by blanks, one that
+# ends the line before it, with only blanks between, or one after it, so that
+# the probe can put its own tag in that one's place. The line breaks include
+# U+0085, U+2028 and U+2029. The patterns match bytes, which writes these and
+# the byte-order mark as their UTF-8 bytes, since gregexpr() takes time
+# quadratic in the length of a text that is not ASCII when it matches
+# characters.
 .tf_YAML_BREAK <- "[\\n\\r]|\\xC2\\x85|\\xE2\\x80[\\xA8\\xA9]"
+.tf_YAML_TAG <- "!<[^>\\t\\n\\r ]*>|![^\\t\\n\\r ,\\[\\]{}]*"
+# What a tag or an anchor can follow: the start of the text, white space, a
+# line break, a byte-order mark or [{, (and, for an anchor, also :?-).
+.tf_YAML_AFTER <- function(also = "") {
+  paste0("(?:^|(?<=[\\t\\n\\r \\[{,", also, "])|(?<=\\xC2\\x85)|(?<=\\xE2\\x80[\\xA8\\xA9])",
+         "|(?<=\\xEF\\xBB\\xBF))")
+}
+# The name in a match of the pattern below.
+.tf_ANCHOR_NAME <- paste0(
+  "(?s)^(?:(?:", .tf_YAML_TAG, ")(?:[\\t ]|", .tf_YAML_BREAK, ")+)?&([0-9A-Za-z_-]+).*$"
+)
 .tf_ANCHOR_PATTERN <- paste0(
-  "(?:^|(?<=[\\t\\n\\r \\[{,:?-])|(?<=\\xC2\\x85)|(?<=\\xE2\\x80[\\xA8\\xA9]))&[0-9A-Za-z_-]+",
+  "(?:", .tf_YAML_AFTER(), "(?:", .tf_YAML_TAG, ")",
+  "(?:[\\t ]+|[\\t ]*(?:\\r\\n?|\\n|\\xC2\\x85|\\xE2\\x80[\\xA8\\xA9])[\\t ]*))?",
+  .tf_YAML_AFTER(":?-"),
+  "&[0-9A-Za-z_-]+(?:[\\t ]+(?:", .tf_YAML_TAG, "))?",
   "(?=[\\t\\n\\r ?:,\\]}%@`]|\\xC2\\x85|\\xE2\\x80[\\xA8\\xA9]|$)"
 )
 
 # Refuse a YAML text that gives one anchor to two nodes, naming the first such
 # anchor by code point. yaml binds a later alias to the first of the nodes,
-# where YAML binds it to the last, and libyaml through PyYAML refuses the
-# text. What yaml returns does not show anchors, so only a name that the text
-# writes twice where libyaml could read it as an anchor is looked at. In a
-# probe copy, each such `&name` is preceded by a tag of the name's own, whose
-# handler yaml calls once for each node that takes it, so an `&name` in a
-# comment or in a scalar calls nothing. A node with an explicit tag cannot
-# take a second one, so an `&name` next to a tag is tried alone, and so is
-# each `&name` of a probe the parser refuses, after the probe is split in
-# halves. Tried alone, an `&name` whose tag the parser refuses is an anchor
-# when the copy with spaces in place of the tag reads, and text otherwise,
-# since the tag can also make a key longer than the 1024 characters libyaml
-# allows. An anchor that starts such a key is then missed. The parses are one,
-# plus about two for each anchor next to a tag.
+# where YAML binds it to the last, and libyaml through PyYAML refuses the text.
+# What yaml returns does not show anchors, so only a name that the text writes
+# twice where libyaml could read it as an anchor is looked at, and a probe copy
+# of the text puts a tag before each such `&name`, in place of the explicit tag
+# beside it if there is one. yaml calls the tag's handler once for each node
+# that takes the tag, so an `&name` in a comment or in a scalar calls nothing.
+# The names are numbered, and with up to 256 names one probe gives each name its
+# number as a tag. Beyond that, a probe gives each name the first digit of its
+# number in base ceiling(sqrt(names)), which keeps the handlers yaml looks
+# through for every node few, and when two nodes or more take a tag a second
+# probe gives the second digit, the handlers running in the same order of nodes
+# in both. When a probe is refused, as by a tag two lines above its anchor, it
+# is split in halves, at about two more parses for each occurrence that it
+# isolates. An occurrence alone whose tag is refused is an anchor when the copy
+# with as many spaces in place of the tag reads, and text otherwise, since the
+# tag can also make a key longer than the 1024 characters libyaml allows. An
+# anchor in a key that comes within the tag's length of that limit, three
+# characters and the digits of its number, is then missed.
 .tf_yaml_refuse_twice <- function(text, path, parse) {
   m <- gregexpr(.tf_ANCHOR_PATTERN, text, perl = TRUE, useBytes = TRUE)
   found <- regmatches(text, m)[[1L]]
-  probed <- which(found %in% found[duplicated(found)])
+  if (length(found) < 2L) return(invisible())
+  name <- sub(.tf_ANCHOR_NAME, "\\1", found, perl = TRUE, useBytes = TRUE)
+  probed <- which(name %in% name[duplicated(name)])
   if (length(probed) == 0L) return(invisible())
+  # Where a tag ends the line above the anchor, the line break and the
+  # indentation stay, and the tag gives way to spaces.
+  before <- sub("(?s)^(.*)&[0-9A-Za-z_-]+(?:[\\t ]+[^\\t ]*)?$", "\\1", found, perl = TRUE,
+                useBytes = TRUE)
+  lead <- ifelse(grepl(.tf_YAML_BREAK, before, perl = TRUE, useBytes = TRUE),
+                 gsub("[!-~]", " ", before, perl = TRUE, useBytes = TRUE), "")
   # A short tag that no tag of the text begins with, and that names no type
-  # yaml resolves by itself, none of which begins with z.
+  # yaml resolves by itself, none of which begins with z. Under a %TAG
+  # directive, which can redefine `!`, the tag is written verbatim.
   prefix <- "z"
   while (grepl(paste0("!", prefix), text, fixed = TRUE)) prefix <- paste0(prefix, "z")
-  tag <- paste0(prefix, substring(found, 2L))
-  # The names whose tag a node took, once for each node, in a copy where each
-  # occurrence in `ks` is preceded by its tag, or by as many spaces when
-  # `blank`, or NULL when the parser refuses the copy.
-  probe <- function(ks, blank = FALSE) {
-    took <- character(0)
-    handlers <- lapply(unique(tag[ks]), function(tg) {
+  verbatim <- grepl("%TAG", text, fixed = TRUE)
+  # The tags whose handler ran, once for each node in the order the nodes end,
+  # in a copy where each occurrence in `ks` takes the tag numbered `tg` in
+  # place of its own, or NULL when the parser refuses the copy. With `blank`,
+  # the copy keeps the occurrences and puts as many spaces before them as the
+  # tags would add.
+  probe <- function(ks, tg, blank = FALSE) {
+    took <- integer(0)
+    handlers <- lapply(unique(tg), function(t) {
       function(x) {
-        took <<- c(took, tg)
+        took <<- c(took, t)
         x
       }
     })
-    names(handlers) <- unique(tag[ks])
-    lead <- paste0("!", tag[ks], " ")
+    names(handlers) <- paste0(prefix, unique(tg))
+    new <- paste0(lead[ks], if (verbatim) "!<!" else "!", prefix, tg, if (verbatim) "> &" else " &",
+                  name[ks])
+    if (blank) {
+      grow <- pmax(0L, nchar(new, type = "bytes") - nchar(found[ks], type = "bytes"))
+      new <- paste0(strrep(" ", grow), found[ks])
+    }
     marked <- found
-    marked[ks] <- paste0(if (blank) strrep(" ", nchar(lead)) else lead, found[ks])
+    marked[ks] <- new
     copy <- text
     regmatches(copy, m) <- list(marked)
     Encoding(copy) <- "UTF-8"
@@ -435,31 +474,34 @@ NULL
     }, error = function(e) FALSE)
     if (ok) took
   }
-  anchors <- function(ks) {
-    if (length(ks) == 0L) return(character(0))
-    took <- probe(ks)
+  names_probed <- unique(name[probed])
+  id <- match(name, names_probed)
+  # The numbers of the names whose anchors the occurrences `ks` hold, once for
+  # each node, found by halves when a probe is refused.
+  halves <- function(ks) {
+    if (length(ks) == 0L) return(integer(0))
+    took <- probe(ks, id[ks])
     if (!is.null(took)) return(took)
-    if (length(ks) == 1L) return(if (is.null(probe(ks, blank = TRUE))) character(0) else tag[ks])
+    if (length(ks) == 1L) return(if (is.null(probe(ks, id[ks], TRUE))) integer(0) else id[ks])
     half <- seq_len(length(ks) %/% 2L)
-    c(anchors(ks[half]), anchors(ks[-half]))
+    c(halves(ks[half]), halves(ks[-half]))
   }
-  # An explicit tag on the same line, just before the occurrence or just after
-  # it, with only blanks between.
-  at <- as.integer(m[[1L]])[probed]
-  to <- at + attr(m[[1L]], "match.length")[probed] - 1L
-  b <- gregexpr(.tf_YAML_BREAK, text, perl = TRUE, useBytes = TRUE)[[1L]]
-  line <- c(1L, (as.integer(b) + attr(b, "match.length"))[b > 0L])
-  line <- line[findInterval(at, line)]
-  bytes <- text
-  Encoding(bytes) <- "bytes"
-  tagged <- grepl("(^|[\\t \\[{,])![^\\t ]*[\\t ]+$", substring(bytes, line, at - 1L),
-                  perl = TRUE, useBytes = TRUE) |
-    grepl("^[\\t ]+!", substring(bytes, to + 1L, to + 80L), perl = TRUE, useBytes = TRUE)
-  took <- c(anchors(probed[!tagged]), unlist(lapply(probed[tagged], anchors)))
-  twice <- sort(unique(took[duplicated(took)]), method = "radix")
+  n <- length(names_probed)
+  if (n <= 256L) {
+    held <- probe(probed, id[probed])
+  } else {
+    base <- as.integer(ceiling(sqrt(n)))
+    held <- probe(probed, (id[probed] - 1L) %% base + 1L)
+    if (!is.null(held) && length(held) <= 1L) return(invisible())
+    if (!is.null(held)) {
+      high <- probe(probed, (id[probed] - 1L) %/% base + 1L)
+      held <- if (is.null(high) || length(high) != length(held)) NULL else (high - 1L) * base + held
+    }
+  }
+  if (is.null(held)) held <- halves(probed)
+  twice <- sort(unique(names_probed[held[duplicated(held)]]), method = "radix")
   if (length(twice) > 0L) {
-    stop(sprintf("(%s) the anchor '%s' names two nodes", path,
-                 substring(twice[[1L]], nchar(prefix) + 1L)), call. = FALSE)
+    stop(sprintf("(%s) the anchor '%s' names two nodes", path, twice[[1L]]), call. = FALSE)
   }
   invisible()
 }

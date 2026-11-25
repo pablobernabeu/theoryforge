@@ -261,9 +261,23 @@ ALIAS_FAULTS = [
     ("id: x\na: !!str &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
     ("id: x\na: &x 1 # &x\nb: '&x'\nc: R &x\nd: |\n  &x\ne: *x\n", None),
     # The second &x is text beside a tagged anchor, and the first text in a key
-    # that a tag before it would make longer than libyaml allows.
+    # of 1024 characters, the most libyaml allows, which any tag lengthens.
     ("id: x\na: !!str &x 1\nb: c &x\nc: *x\n", None),
-    ("k" * 1012 + " &x: 1\nb: &x 2\n", None),
+    ("k" * 1021 + " &x: 1\nb: &x 2\n", None),
+    # A tag that ends the line above an anchor is that node's, and one in a
+    # comment is text.
+    ("c:\n  label: !!str\n    &l1 Alpha\n  def: &l1 x\n", "the anchor 'l1' names two nodes"),
+    ("id: x\n# note !x\n&a k: 1\nb: text &a\n", None),
+    # A %TAG directive that redefines !, and a byte-order mark at the start of
+    # a line, which libyaml skips.
+    ("%TAG ! tag:example.com,2000:\n---\nid: s\na: &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
+    ("%TAG ! tag:example.com,2000:\n---\n{id: s, a: &x 1, b: &x 2}\n", "the anchor 'x' names two nodes"),
+    ("id: s\na: [1,\n\ufeff&x 2]\nb: &x 3\n", "the anchor 'x' names two nodes"),
+    # More names than the R twin probes with one tag each.
+    ("".join(f"k{i}: &n{i} {i}\n" for i in range(300)) + "".join(f"t{i}: text &n{i}\n" for i in range(300))
+     + "z: &n257 x\n", "the anchor 'n257' names two nodes"),
+    ("".join(f"k{i}: &n{i} {i}\n" for i in range(300)) + "".join(f"t{i}: text &n{i}\n" for i in range(300)),
+     None),
     # A next-line character is a line break to libyaml, and with more than one
     # anchor given twice, the first by code point is named.
     ("id: x\na: 1\x85&x b: 2\x85&x c: 3\n", "the anchor 'x' names two nodes"),

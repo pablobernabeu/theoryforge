@@ -156,6 +156,8 @@ test_that("an alias that names no node and an anchor given twice are refused", {
   # or read a cycle (API_SPEC.md section 3). The Python suite reads the same
   # texts.
   bs <- "\\"
+  many <- paste0(c(sprintf("k%d: &n%d %d\n", 0:299, 0:299, 0:299), sprintf("t%d: text &n%d\n", 0:299, 0:299)),
+                 collapse = "")
   cases <- list(
     list("id: x\na: *u\n", "the alias 'u' names no node that ends before it"),
     list("id: x\na: &p [*p]\n", "the alias 'p' names no node that ends before it"),
@@ -165,9 +167,22 @@ test_that("an alias that names no node and an anchor given twice are refused", {
     list("id: x\na: !!str &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
     list("id: x\na: &x 1 # &x\nb: '&x'\nc: R &x\nd: |\n  &x\ne: *x\n", NULL),
     # The second &x is text beside a tagged anchor, and the first text in a key
-    # that a tag before it would make longer than libyaml allows.
+    # of 1024 characters, the most libyaml allows, which any tag lengthens.
     list("id: x\na: !!str &x 1\nb: c &x\nc: *x\n", NULL),
-    list(paste0(strrep("k", 1012L), " &x: 1\nb: &x 2\n"), NULL),
+    list(paste0(strrep("k", 1021L), " &x: 1\nb: &x 2\n"), NULL),
+    # A tag that ends the line above an anchor is that node's, and one in a
+    # comment is text.
+    list("c:\n  label: !!str\n    &l1 Alpha\n  def: &l1 x\n", "the anchor 'l1' names two nodes"),
+    list("id: x\n# note !x\n&a k: 1\nb: text &a\n", NULL),
+    # A %TAG directive that redefines !, and a byte-order mark at the start of
+    # a line, which libyaml skips.
+    list("%TAG ! tag:example.com,2000:\n---\nid: s\na: &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
+    list("%TAG ! tag:example.com,2000:\n---\n{id: s, a: &x 1, b: &x 2}\n",
+         "the anchor 'x' names two nodes"),
+    list("id: s\na: [1,\n\ufeff&x 2]\nb: &x 3\n", "the anchor 'x' names two nodes"),
+    # More names than one probe gives a tag each.
+    list(paste0(many, "z: &n257 x\n"), "the anchor 'n257' names two nodes"),
+    list(many, NULL),
     # A next-line character is a line break to libyaml, and with more than one
     # anchor given twice, the first by code point is named.
     list("id: x\na: 1\u0085&x b: 2\u0085&x c: 3\n", "the anchor 'x' names two nodes"),
