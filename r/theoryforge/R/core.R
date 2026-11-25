@@ -136,11 +136,14 @@ tf_validate <- function(theory, full = FALSE) {
 # split the joined text. Python's Theory._problems() returns the same messages.
 .tf_validation_problems <- function(theory, full = FALSE) {
   d <- theory
-  errors <- character(0)
+  # The messages are gathered as a list and joined once at the end, since c()
+  # would copy every earlier message at each check.
+  found <- list()
+  add <- function(...) found[[length(found) + 1L]] <<- c(...)
 
   for (req in c("schema_version", "id", "title", "maturity")) {
-    errors <- c(errors, .tf_required_text(.tf_get(d, req),
-                                          sprintf("missing/empty required field: %s", req), req))
+    add(.tf_required_text(.tf_get(d, req),
+                          sprintf("missing/empty required field: %s", req), req))
   }
   # Each enum test asks for a nonempty scalar string before asking about
   # membership. `%in%` coerces its left operand, so a one-element YAML sequence
@@ -149,14 +152,14 @@ tf_validate <- function(theory, full = FALSE) {
   # the two engines level on input that is mistyped rather than misspelt.
   mat <- .tf_get(d, "maturity")
   if (!(.tf_ne_str(mat) && mat %in% .tf_MATURITY)) {
-    errors <- c(errors, sprintf("maturity must be one of %s",
-                                paste(sort(.tf_MATURITY), collapse = ", ")))
+    add(sprintf("maturity must be one of %s",
+                paste(sort(.tf_MATURITY), collapse = ", ")))
   }
   if ("theory_form" %in% names(d)) {
     form <- .tf_get(d, "theory_form")
     if (!(.tf_ne_str(form) && form %in% .tf_FORM)) {
-      errors <- c(errors, sprintf("theory_form must be one of %s",
-                                  paste(sort(.tf_FORM), collapse = ", ")))
+      add(sprintf("theory_form must be one of %s",
+                  paste(sort(.tf_FORM), collapse = ", ")))
     }
   }
 
@@ -166,42 +169,42 @@ tf_validate <- function(theory, full = FALSE) {
   known <- names(.tf_get(tf_theory_schema(), "properties", list()))
   for (key in names(d)) {
     if (!(key %in% known)) {
-      errors <- c(errors, sprintf("unknown top-level field: %s", key))
+      add(sprintf("unknown top-level field: %s", key))
     }
   }
   # A collection that is not a list reads as empty (API_SPEC.md section 3), so
   # the theory would lose it without a word.
   for (key in .tf_COLLECTIONS) {
     if (.tf_not_a_list(.tf_get(d, key))) {
-      errors <- c(errors, sprintf("%s must be a list", key))
+      add(sprintf("%s must be a list", key))
     }
   }
 
   cons <- .tf_list(d, "constructs")
   for (i in seq_along(cons)) {
-    errors <- c(errors, .tf_required_fields(cons[[i]], sprintf("construct[%d]", i - 1L),
-                                            c("id", "label", "definition")))
+    add(.tf_required_fields(cons[[i]], sprintf("construct[%d]", i - 1L),
+                            c("id", "label", "definition")))
   }
 
   props <- .tf_list(d, "propositions")
   for (i in seq_along(props)) {
     p_i <- props[[i]]
-    errors <- c(errors, .tf_required_fields(p_i, sprintf("proposition[%d]", i - 1L),
-                                            c("id", "from", "to", "relation")))
+    add(.tf_required_fields(p_i, sprintf("proposition[%d]", i - 1L),
+                            c("id", "from", "to", "relation")))
     rel <- .tf_get(p_i, "relation")
     if (.tf_ne_str(rel) && !(rel %in% .tf_RELATION)) {
-      errors <- c(errors, sprintf("proposition[%d] relation '%s' not allowed", i - 1L, rel))
+      add(sprintf("proposition[%d] relation '%s' not allowed", i - 1L, rel))
     }
   }
 
   preds <- .tf_list(d, "predictions")
   for (i in seq_along(preds)) {
     p_i <- preds[[i]]
-    errors <- c(errors, .tf_required_fields(p_i, sprintf("prediction[%d]", i - 1L),
-                                            c("id", "statement", "type")))
+    add(.tf_required_fields(p_i, sprintf("prediction[%d]", i - 1L),
+                            c("id", "statement", "type")))
     ty <- .tf_get(p_i, "type")
     if (.tf_ne_str(ty) && !(ty %in% .tf_PRED_TYPE)) {
-      errors <- c(errors, sprintf("prediction[%d] type '%s' not allowed", i - 1L, ty))
+      add(sprintf("prediction[%d] type '%s' not allowed", i - 1L, ty))
     }
   }
 
@@ -214,66 +217,63 @@ tf_validate <- function(theory, full = FALSE) {
     evs <- .tf_list(d, "evidence")
     tos <- .tf_list(d, "test_outcomes")
     ids_of <- function(items) {
-      out <- character(0)
-      for (it in items) if (.tf_ne_str(.tf_get(it, "id"))) out <- c(out, .tf_str(it, "id"))
-      out
+      ids <- vapply(items, function(it) {
+        if (.tf_ne_str(.tf_get(it, "id"))) .tf_str(it, "id") else NA_character_
+      }, character(1))
+      ids[!is.na(ids)]
     }
-    construct_ids <- ids_of(cons)
-    proposition_ids <- ids_of(props)
-    prediction_ids <- ids_of(preds)
-    alternative_ids <- ids_of(alts)
+    # Each set of ids is asked about once for every reference to it
+    # (.tf_string_set()).
+    construct_ids <- .tf_string_set(ids_of(cons))
+    proposition_ids <- .tf_string_set(ids_of(props))
+    prediction_ids <- .tf_string_set(ids_of(preds))
+    alternative_ids <- .tf_string_set(ids_of(alts))
+    # Each repeat of an id, in order.
     dups <- function(items, kind) {
-      seen <- character(0)
-      for (it in items) {
-        if (.tf_ne_str(.tf_get(it, "id"))) {
-          i <- .tf_str(it, "id")
-          if (i %in% seen) errors <<- c(errors, sprintf("duplicate %s id: %s", kind, i))
-          seen <- c(seen, i)
-        }
-      }
+      ids <- ids_of(items)
+      for (i in ids[duplicated(ids)]) add(sprintf("duplicate %s id: %s", kind, i))
     }
     dups(cons, "construct"); dups(props, "proposition"); dups(preds, "prediction")
     dups(alts, "alternative"); dups(auxs, "assumption")
     for (i in seq_along(props)) {
       if (.tf_ne_str(.tf_get(props[[i]], "from"))) {
         frm <- .tf_str(props[[i]], "from")
-        if (!(frm %in% construct_ids))
-          errors <- c(errors, sprintf("proposition[%d] from '%s' is not a known construct", i - 1L, frm))
+        if (!.tf_in_set(frm, construct_ids))
+          add(sprintf("proposition[%d] from '%s' is not a known construct", i - 1L, frm))
       }
       if (.tf_ne_str(.tf_get(props[[i]], "to"))) {
         to <- .tf_str(props[[i]], "to")
-        if (!(to %in% construct_ids))
-          errors <- c(errors, sprintf("proposition[%d] to '%s' is not a known construct", i - 1L, to))
+        if (!.tf_in_set(to, construct_ids))
+          add(sprintf("proposition[%d] to '%s' is not a known construct", i - 1L, to))
       }
     }
     # Items 3 and 4: each entry of a referencing array is either a nonempty
     # string to look up or a problem in its own right (item 10).
     for (i in seq_along(preds)) {
-      errors <- c(errors,
-                  .tf_string_array(.tf_get(preds[[i]], "derives_from"),
-                                   sprintf("prediction[%d] derives_from", i - 1L),
-                                   proposition_ids, "proposition"),
-                  .tf_string_array(.tf_get(preds[[i]], "diagnostic_vs"),
-                                   sprintf("prediction[%d] diagnostic_vs", i - 1L),
-                                   alternative_ids, "alternative"))
+      add(.tf_string_array(.tf_get(preds[[i]], "derives_from"),
+                           sprintf("prediction[%d] derives_from", i - 1L),
+                           proposition_ids, "proposition"),
+          .tf_string_array(.tf_get(preds[[i]], "diagnostic_vs"),
+                           sprintf("prediction[%d] diagnostic_vs", i - 1L),
+                           alternative_ids, "alternative"))
     }
     for (i in seq_along(auxs)) {
-      errors <- c(errors, .tf_string_array(.tf_get(auxs[[i]], "protects"),
-                                           sprintf("assumption[%d] protects", i - 1L),
-                                           prediction_ids, "prediction"))
+      add(.tf_string_array(.tf_get(auxs[[i]], "protects"),
+                           sprintf("assumption[%d] protects", i - 1L),
+                           prediction_ids, "prediction"))
     }
     for (i in seq_along(tos)) {
       if (.tf_ne_str(.tf_get(tos[[i]], "prediction_id"))) {
         pid <- .tf_str(tos[[i]], "prediction_id")
-        if (!(pid %in% prediction_ids))
-          errors <- c(errors, sprintf("test_outcome[%d] prediction_id '%s' is not a known prediction", i - 1L, pid))
+        if (!.tf_in_set(pid, prediction_ids))
+          add(sprintf("test_outcome[%d] prediction_id '%s' is not a known prediction", i - 1L, pid))
       }
     }
     for (i in seq_along(evs)) {
       if (.tf_ne_str(.tf_get(evs[[i]], "supports"))) {
         s <- .tf_str(evs[[i]], "supports")
-        if (!(s %in% prediction_ids))
-          errors <- c(errors, sprintf("evidence[%d] supports '%s' is not a known prediction", i - 1L, s))
+        if (!.tf_in_set(s, prediction_ids))
+          add(sprintf("evidence[%d] supports '%s' is not a known prediction", i - 1L, s))
       }
     }
     # The schema types prediction severity as a number in [0, 1]; enforced here
@@ -283,8 +283,7 @@ tf_validate <- function(theory, full = FALSE) {
       s <- .tf_get(preds[[i]], "severity")
       if (.tf_absent(s)) next
       if (!.tf_is_unit_number(s)) {
-        errors <- c(errors,
-                    sprintf("prediction[%d] severity must be a number between 0 and 1", i - 1L))
+        add(sprintf("prediction[%d] severity must be a number between 0 and 1", i - 1L))
       }
     }
 
@@ -293,44 +292,43 @@ tf_validate <- function(theory, full = FALSE) {
     # pass, and tf_check() and tf_appraise_amendment() refuse a passed that is
     # present and not a logical (.tf_refuse_non_boolean_outcomes() in rigor.R).
     for (i in seq_along(auxs)) {
-      errors <- c(errors, .tf_required_fields(auxs[[i]], sprintf("assumption[%d]", i - 1L),
-                                              c("id", "statement")))
+      add(.tf_required_fields(auxs[[i]], sprintf("assumption[%d]", i - 1L),
+                              c("id", "statement")))
     }
     for (i in seq_along(alts)) {
-      errors <- c(errors, .tf_required_fields(alts[[i]], sprintf("alternative[%d]", i - 1L),
-                                              c("id", "label")))
+      add(.tf_required_fields(alts[[i]], sprintf("alternative[%d]", i - 1L),
+                              c("id", "label")))
     }
     for (i in seq_along(evs)) {
-      errors <- c(errors, .tf_required_fields(evs[[i]], sprintf("evidence[%d]", i - 1L),
-                                              c("supports", "direction")))
+      add(.tf_required_fields(evs[[i]], sprintf("evidence[%d]", i - 1L),
+                              c("supports", "direction")))
       direction <- .tf_get(evs[[i]], "direction")
       if (.tf_ne_str(direction) && !(direction %in% .tf_EVIDENCE_DIRECTION)) {
-        errors <- c(errors, sprintf("evidence[%d] direction '%s' not allowed", i - 1L, direction))
+        add(sprintf("evidence[%d] direction '%s' not allowed", i - 1L, direction))
       }
     }
     for (i in seq_along(tos)) {
-      errors <- c(errors, .tf_required_fields(tos[[i]], sprintf("test_outcome[%d]", i - 1L),
-                                              "prediction_id"))
+      add(.tf_required_fields(tos[[i]], sprintf("test_outcome[%d]", i - 1L),
+                              "prediction_id"))
       passed <- .tf_get(tos[[i]], "passed")
       if (!(is.logical(passed) && length(passed) == 1L && !is.na(passed))) {
-        errors <- c(errors, sprintf("test_outcome[%d] passed must be true or false", i - 1L))
+        add(sprintf("test_outcome[%d] passed must be true or false", i - 1L))
       }
     }
 
     # 9: typed optional fields of assumptions and test outcomes.
     for (i in seq_along(auxs)) {
-      errors <- c(errors, .tf_optional_text(.tf_get(auxs[[i]], "added_for"),
-                                            sprintf("assumption[%d] added_for", i - 1L),
-                                            nullable = TRUE))
+      add(.tf_optional_text(.tf_get(auxs[[i]], "added_for"),
+                            sprintf("assumption[%d] added_for", i - 1L),
+                            nullable = TRUE))
     }
     for (i in seq_along(tos)) {
       t_i <- tos[[i]]
       prefix <- sprintf("test_outcome[%d]", i - 1L)
-      errors <- c(errors,
-                  .tf_unit_number(.tf_get(t_i, "severity_at_test"), paste(prefix, "severity_at_test")),
-                  .tf_optional_text(.tf_get(t_i, "registered"), paste(prefix, "registered"),
-                                    nullable = TRUE),
-                  .tf_optional_text(.tf_get(t_i, "date"), paste(prefix, "date"), nullable = TRUE))
+      add(.tf_unit_number(.tf_get(t_i, "severity_at_test"), paste(prefix, "severity_at_test")),
+          .tf_optional_text(.tf_get(t_i, "registered"), paste(prefix, "registered"),
+                            nullable = TRUE),
+          .tf_optional_text(.tf_get(t_i, "date"), paste(prefix, "date"), nullable = TRUE))
     }
 
     # 11: the formal model. A type outside the enum reads as absent wherever
@@ -338,37 +336,36 @@ tf_validate <- function(theory, full = FALSE) {
     # point.
     fm <- .tf_get(d, "formal_model")
     if (!.tf_absent(fm) && .tf_not_a_mapping(fm)) {
-      errors <- c(errors, "formal_model must be a mapping")
+      add("formal_model must be a mapping")
     } else if (is.list(fm)) {
       ty <- .tf_get(fm, "type")
       if (!.tf_absent(ty) && !.tf_is_string(ty)) {
-        errors <- c(errors, .tf_not_string("formal_model type", ty))
+        add(.tf_not_string("formal_model type", ty))
       } else if (!.tf_absent(ty) && !(ty %in% .tf_FORMAL_MODEL_TYPE)) {
-        errors <- c(errors, sprintf("formal_model type '%s' not allowed", ty))
+        add(sprintf("formal_model type '%s' not allowed", ty))
       }
-      errors <- c(errors, .tf_optional_text(.tf_get(fm, "spec_ref"), "formal_model spec_ref",
-                                            nullable = TRUE))
+      add(.tf_optional_text(.tf_get(fm, "spec_ref"), "formal_model spec_ref",
+                            nullable = TRUE))
     }
 
     # 12: the version block, which the schema closes.
     ver <- .tf_get(d, "version")
     if (!.tf_absent(ver) && .tf_not_a_mapping(ver)) {
-      errors <- c(errors, "version must be a mapping")
+      add("version must be a mapping")
     } else if (is.list(ver)) {
       for (key in names(ver)) {
         if (!(key %in% .tf_VERSION_KEYS)) {
-          errors <- c(errors, sprintf("version has unknown field: %s", key))
+          add(sprintf("version has unknown field: %s", key))
         }
       }
-      errors <- c(errors,
-                  .tf_optional_text(.tf_get(ver, "id"), "version id"),
-                  .tf_optional_text(.tf_get(ver, "parent_id"), "version parent_id",
-                                    nullable = TRUE),
-                  .tf_optional_text(.tf_get(ver, "content_hash"), "version content_hash",
-                                    nullable = TRUE))
+      add(.tf_optional_text(.tf_get(ver, "id"), "version id"),
+          .tf_optional_text(.tf_get(ver, "parent_id"), "version parent_id",
+                            nullable = TRUE),
+          .tf_optional_text(.tf_get(ver, "content_hash"), "version content_hash",
+                            nullable = TRUE))
       recorded <- .tf_get(ver, "content_hash")
       if (.tf_ne_str(recorded) && !identical(recorded, tf_content_hash(d))) {
-        errors <- c(errors, "version content_hash does not match the theory's content")
+        add("version content_hash does not match the theory's content")
       }
     }
 
@@ -376,61 +373,56 @@ tf_validate <- function(theory, full = FALSE) {
     # only at the end of the string, as Python's fullmatch() does.
     sv <- .tf_get(d, "schema_version")
     if (.tf_ne_str(sv) && !grepl("^[0-9]+\\.[0-9]+$", sv)) {
-      errors <- c(errors, 'schema_version must match major.minor (for example "1.0")')
+      add('schema_version must match major.minor (for example "1.0")')
     }
 
     # 14: the schema's remaining types, collection by collection in the schema's
     # order.
     for (i in seq_along(cons)) {
       prefix <- sprintf("construct[%d]", i - 1L)
-      errors <- c(errors,
-                  .tf_string_array(.tf_get(cons[[i]], "measurement"), paste(prefix, "measurement")),
-                  .tf_string_array(.tf_get(cons[[i]], "boundary_conditions"),
-                                   paste(prefix, "boundary_conditions")))
+      add(.tf_string_array(.tf_get(cons[[i]], "measurement"), paste(prefix, "measurement")),
+          .tf_string_array(.tf_get(cons[[i]], "boundary_conditions"),
+                           paste(prefix, "boundary_conditions")))
     }
     for (i in seq_along(props)) {
       prefix <- sprintf("proposition[%d]", i - 1L)
-      errors <- c(errors,
-                  .tf_optional_text(.tf_get(props[[i]], "mechanism"), paste(prefix, "mechanism")),
-                  .tf_optional_text(.tf_get(props[[i]], "functional_form"),
-                                    paste(prefix, "functional_form")))
+      add(.tf_optional_text(.tf_get(props[[i]], "mechanism"), paste(prefix, "mechanism")),
+          .tf_optional_text(.tf_get(props[[i]], "functional_form"),
+                            paste(prefix, "functional_form")))
     }
-    errors <- c(errors, .tf_string_array(.tf_get(d, "boundary_conditions"), "boundary_conditions"))
+    add(.tf_string_array(.tf_get(d, "boundary_conditions"), "boundary_conditions"))
     for (i in seq_along(preds)) {
-      errors <- c(errors,
-                  .tf_unit_number(.tf_get(preds[[i]], "risk_score"),
-                                  sprintf("prediction[%d] risk_score", i - 1L)),
-                  .tf_bounds(.tf_get(preds[[i]], "bounds"), sprintf("prediction[%d] bounds", i - 1L)),
-                  .tf_test_plan(.tf_get(preds[[i]], "test"), sprintf("prediction[%d] test", i - 1L)))
+      add(.tf_unit_number(.tf_get(preds[[i]], "risk_score"),
+                          sprintf("prediction[%d] risk_score", i - 1L)),
+          .tf_bounds(.tf_get(preds[[i]], "bounds"), sprintf("prediction[%d] bounds", i - 1L)),
+          .tf_test_plan(.tf_get(preds[[i]], "test"), sprintf("prediction[%d] test", i - 1L)))
     }
     for (i in seq_along(evs)) {
-      errors <- c(errors, .tf_optional_text(.tf_get(evs[[i]], "source_doi"),
-                                            sprintf("evidence[%d] source_doi", i - 1L),
-                                            nullable = TRUE))
+      add(.tf_optional_text(.tf_get(evs[[i]], "source_doi"),
+                            sprintf("evidence[%d] source_doi", i - 1L),
+                            nullable = TRUE))
     }
     for (i in seq_along(tos)) {
       prefix <- sprintf("test_outcome[%d]", i - 1L)
-      errors <- c(errors,
-                  .tf_optional_text(.tf_get(tos[[i]], "observed"), paste(prefix, "observed")),
-                  .tf_estimate_and_se(tos[[i]], prefix))
+      add(.tf_optional_text(.tf_get(tos[[i]], "observed"), paste(prefix, "observed")),
+          .tf_estimate_and_se(tos[[i]], prefix))
     }
     for (i in seq_along(alts)) {
       prefix <- sprintf("alternative[%d]", i - 1L)
-      errors <- c(errors,
-                  .tf_string_array(.tf_get(alts[[i]], "key_constructs"),
-                                   paste(prefix, "key_constructs")),
-                  .tf_optional_text(.tf_get(alts[[i]], "source_doi"), paste(prefix, "source_doi"),
-                                    nullable = TRUE))
+      add(.tf_string_array(.tf_get(alts[[i]], "key_constructs"),
+                           paste(prefix, "key_constructs")),
+          .tf_optional_text(.tf_get(alts[[i]], "source_doi"), paste(prefix, "source_doi"),
+                            nullable = TRUE))
     }
     steps <- .tf_list(d, "provenance")
     for (i in seq_along(steps)) {
       prefix <- sprintf("provenance[%d]", i - 1L)
       if (.tf_not_a_mapping(steps[[i]])) {
-        errors <- c(errors, paste(prefix, "must be a mapping"))
+        add(paste(prefix, "must be a mapping"))
         next
       }
       for (name in c("step", "action", "detail")) {
-        errors <- c(errors, .tf_optional_text(.tf_get(steps[[i]], name), paste(prefix, name)))
+        add(.tf_optional_text(.tf_get(steps[[i]], name), paste(prefix, name)))
       }
     }
 
@@ -440,48 +432,49 @@ tf_validate <- function(theory, full = FALSE) {
     dups(phens, "phenomenon")
     for (i in seq_along(phens)) {
       prefix <- sprintf("phenomenon[%d]", i - 1L)
-      errors <- c(errors, .tf_required_fields(phens[[i]], prefix, c("id", "statement")),
-                  .tf_optional_text(.tf_get(phens[[i]], "source_doi"), paste(prefix, "source_doi"),
-                                    nullable = TRUE))
+      add(.tf_required_fields(phens[[i]], prefix, c("id", "statement")),
+  .tf_optional_text(.tf_get(phens[[i]], "source_doi"), paste(prefix, "source_doi"),
+                    nullable = TRUE))
     }
     for (i in seq_along(preds)) {
-      errors <- c(errors, .tf_claim(.tf_get(preds[[i]], "claim"),
-                                    sprintf("prediction[%d] claim", i - 1L), construct_ids))
+      add(.tf_claim(.tf_get(preds[[i]], "claim"),
+                    sprintf("prediction[%d] claim", i - 1L), construct_ids))
     }
     for (i in seq_along(phens)) {
-      errors <- c(errors, .tf_claim(.tf_get(phens[[i]], "claim"),
-                                    sprintf("phenomenon[%d] claim", i - 1L), construct_ids))
+      add(.tf_claim(.tf_get(phens[[i]], "claim"),
+                    sprintf("phenomenon[%d] claim", i - 1L), construct_ids))
     }
     for (i in seq_along(alts)) {
       rival <- .tf_get(alts[[i]], "propositions")
       if (.tf_not_a_list(rival)) {
-        errors <- c(errors, sprintf("alternative[%d] propositions must be a list", i - 1L))
+        add(sprintf("alternative[%d] propositions must be a list", i - 1L))
         next
       }
       if (!is.list(rival)) next
-      seen <- character(0)
+      pids <- vapply(rival, function(p) {
+        pid <- .tf_get(p, "id")
+        if (.tf_ne_str(pid)) pid else NA_character_
+      }, character(1))
+      repeated <- !is.na(pids)
+      repeated[repeated] <- duplicated(pids[repeated])
       for (j in seq_along(rival)) {
         p <- rival[[j]]
         name <- sprintf("alternative[%d] proposition[%d]", i - 1L, j - 1L)
-        errors <- c(errors, .tf_required_fields(p, name, c("id", "from", "to", "relation")))
+        add(.tf_required_fields(p, name, c("id", "from", "to", "relation")))
         rel <- .tf_get(p, "relation")
         if (.tf_ne_str(rel) && !(rel %in% .tf_RELATION)) {
-          errors <- c(errors, sprintf("%s relation '%s' not allowed", name, rel))
+          add(sprintf("%s relation '%s' not allowed", name, rel))
         }
-        pid <- .tf_get(p, "id")
-        if (.tf_ne_str(pid)) {
-          if (pid %in% seen) {
-            errors <- c(errors, sprintf("alternative[%d] duplicate proposition id: %s", i - 1L, pid))
-          }
-          seen <- c(seen, pid)
+        if (repeated[[j]]) {
+          add(sprintf("alternative[%d] duplicate proposition id: %s", i - 1L, pids[[j]]))
         }
         for (end in c("from", "to")) {
           val <- .tf_get(p, end)
-          if (.tf_ne_str(val) && !(val %in% construct_ids)) {
-            errors <- c(errors, sprintf("%s %s '%s' is not a known construct", name, end, val))
+          if (.tf_ne_str(val) && !.tf_in_set(val, construct_ids)) {
+            add(sprintf("%s %s '%s' is not a known construct", name, end, val))
           }
         }
-        errors <- c(errors, .tf_optional_text(.tf_get(p, "mechanism"), paste(name, "mechanism")))
+        add(.tf_optional_text(.tf_get(p, "mechanism"), paste(name, "mechanism")))
       }
     }
 
@@ -502,31 +495,31 @@ tf_validate <- function(theory, full = FALSE) {
       ty <- if (.tf_is_string(ty)) ty else ""
       if (ty %in% c("point", "interval") && !both) {
         article <- if (identical(ty, "interval")) "an" else "a"
-        errors <- c(errors, sprintf(paste0("prediction[%d] is %s %s claim, so its bounds need a ",
-                                           "finite lower and a finite upper"), i - 1L, article, ty))
+        add(sprintf(paste0("prediction[%d] is %s %s claim, so its bounds need a ",
+                           "finite lower and a finite upper"), i - 1L, article, ty))
       } else if (identical(ty, "directional") && both && lo != 0 && up != 0) {
-        errors <- c(errors, sprintf(paste0("prediction[%d] is a directional claim, so its bounds ",
-                                           "must leave one side open or end at 0"), i - 1L))
+        add(sprintf(paste0("prediction[%d] is a directional claim, so its bounds ",
+                           "must leave one side open or end at 0"), i - 1L))
       } else if (identical(ty, "existence")) {
-        errors <- c(errors, sprintf(paste0("prediction[%d] is an existence claim, so it takes no ",
-                                           "bounds: the region it allows, every value but 0, is ",
-                                           "not one interval"), i - 1L))
+        add(sprintf(paste0("prediction[%d] is an existence claim, so it takes no ",
+                           "bounds: the region it allows, every value but 0, is ",
+                           "not one interval"), i - 1L))
       }
       claim <- .tf_get(preds[[i]], "claim")
       sign <- if (.tf_is_mapping(claim)) .tf_get(claim, "sign") else NULL
       sign <- if (.tf_is_string(sign)) sign else ""
       if (sign == "positive" && !(!is.null(lo) && lo >= 0)) {
-        errors <- c(errors, sprintf(paste0("prediction[%d] claims a positive sign, so its lower ",
-                                           "bound must be 0 or above"), i - 1L))
+        add(sprintf(paste0("prediction[%d] claims a positive sign, so its lower ",
+                           "bound must be 0 or above"), i - 1L))
       } else if (sign == "negative" && !(!is.null(up) && up <= 0)) {
-        errors <- c(errors, sprintf(paste0("prediction[%d] claims a negative sign, so its upper ",
-                                           "bound must be 0 or below"), i - 1L))
+        add(sprintf(paste0("prediction[%d] claims a negative sign, so its upper ",
+                           "bound must be 0 or below"), i - 1L))
       } else if (sign == "zero" && !((is.null(lo) || lo <= 0) && (is.null(up) || up >= 0))) {
-        errors <- c(errors, sprintf("prediction[%d] claims a zero sign, so its bounds must include 0",
-                                    i - 1L))
+        add(sprintf("prediction[%d] claims a zero sign, so its bounds must include 0",
+                    i - 1L))
       } else if (sign == "nonzero" && !((!is.null(lo) && lo > 0) || (!is.null(up) && up < 0))) {
-        errors <- c(errors, sprintf(paste0("prediction[%d] claims a nonzero sign, so its bounds ",
-                                           "must exclude 0"), i - 1L))
+        add(sprintf(paste0("prediction[%d] claims a nonzero sign, so its bounds ",
+                           "must exclude 0"), i - 1L))
       }
     }
 
@@ -543,30 +536,54 @@ tf_validate <- function(theory, full = FALSE) {
       item <- props[[key]]$items
       coll <- .tf_list(d, key)
       for (i in seq_along(coll)) {
-        errors <- c(errors, .tf_unknown_fields(coll[[i]], sprintf("%s[%d]", entries[[key]], i - 1L),
-                                               keys(item)))
+        add(.tf_unknown_fields(coll[[i]], sprintf("%s[%d]", entries[[key]], i - 1L),
+                               keys(item)))
         rival <- if (key == "alternatives") .tf_get(coll[[i]], "propositions")
         if (is.list(rival) && !.tf_is_mapping(rival)) {
           for (j in seq_along(rival)) {
-            errors <- c(errors, .tf_unknown_fields(
-              rival[[j]], sprintf("alternative[%d] proposition[%d]", i - 1L, j - 1L),
-              keys(item$properties$propositions$items)))
+            add(.tf_unknown_fields(
+rival[[j]], sprintf("alternative[%d] proposition[%d]", i - 1L, j - 1L),
+keys(item$properties$propositions$items)))
           }
         }
       }
     }
-    errors <- c(errors, .tf_unknown_fields(.tf_get(d, "formal_model"), "formal_model",
-                                           keys(props$formal_model)))
+    add(.tf_unknown_fields(.tf_get(d, "formal_model"), "formal_model",
+                           keys(props$formal_model)))
     steps <- .tf_list(d, "provenance")
     for (i in seq_along(steps)) {
-      errors <- c(errors, .tf_unknown_fields(steps[[i]], sprintf("provenance[%d]", i - 1L),
-                                             keys(props$provenance$items)))
+      add(.tf_unknown_fields(steps[[i]], sprintf("provenance[%d]", i - 1L),
+                             keys(props$provenance$items)))
     }
   }
-  errors
+  as.character(unlist(found))
 }
 
 # -- validation helpers (API_SPEC.md section 2) ------------------------------
+
+# A set of strings that the validator asks about once for every reference to
+# it. %in% would hash the whole set at each question, so the set is an
+# environment whose variable names spell the strings' UTF-8 bytes, and a
+# string is a member when match() would find it. A string too long for a
+# variable name is kept aside and looked up with %in%.
+.tf_string_set <- function(x) {
+  key <- .tf_set_key(x)
+  env <- new.env(hash = TRUE, parent = emptyenv(), size = max(29L, length(x)))
+  for (k in key[!is.na(key)]) assign(k, TRUE, envir = env)
+  list(env = env, long = x[is.na(key)])
+}
+
+.tf_set_key <- function(x) {
+  vapply(enc2utf8(as.character(x)), function(s) {
+    if (nchar(s, type = "bytes") > 4000L) return(NA_character_)
+    paste(c("k", as.character(charToRaw(s))), collapse = "")
+  }, character(1), USE.NAMES = FALSE)
+}
+
+.tf_in_set <- function(x, set) {
+  key <- .tf_set_key(x)
+  if (is.na(key)) x %in% set$long else exists(key, envir = set$env, inherits = FALSE)
+}
 #
 # Each returns the messages for one value, so that tf_validate() lists them in
 # the contract's order. The Python twin's core.py holds the same helpers
@@ -803,7 +820,7 @@ tf_validate <- function(theory, full = FALSE) {
   y <- .tf_get(v, "y")
   for (end in c("x", "y")) {
     val <- .tf_get(v, end)
-    if (.tf_ne_str(val) && !(val %in% construct_ids)) {
+    if (.tf_ne_str(val) && !.tf_in_set(val, construct_ids)) {
       out <- c(out, sprintf("%s %s '%s' is not a known construct", name, end, val))
     }
   }
@@ -847,7 +864,7 @@ tf_validate <- function(theory, full = FALSE) {
     entry <- entries[[k]]
     if (!.tf_ne_str(entry)) {
       out <- c(out, sprintf("%s entry %d must be a nonempty string", name, k - 1L))
-    } else if (!is.null(known) && !(entry %in% known)) {
+    } else if (!is.null(known) && !.tf_in_set(entry, known)) {
       out <- c(out, sprintf("%s '%s' is not a known %s", name, entry, kind))
     }
   }
