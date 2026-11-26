@@ -62,7 +62,25 @@ reach them.
   need ggm. The vignettes were left out because this build has no cairo for
   their SVG figures. ggm, which imports graph from Bioconductor, was not
   installed, so the check ran with _R_CHECK_FORCE_SUGGESTS_=false.
-* GitHub Actions: (to be completed from the run on the submitted commit)
+* GitHub Actions, run 45727359560 on 2026-11-26, at commit 50f028d, which
+  holds the package as submitted. Each leg built the tarball and ran
+  `R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
+  which r-lib/actions turns off. Each leg ended with 'Status: OK':
+
+  * ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.6.2
+  * windows-latest (x86_64-w64-mingw32), R 4.6.2 ucrt
+  * macos-latest (macOS 26.7.2, aarch64-apple-darwin23), R 4.6.2
+  * ubuntu-latest (Ubuntu 26.04.1 LTS), R-devel (2026-11-24 r90980)
+  * windows-latest (x86_64-w64-mingw32), R-devel (2026-11-17 r90926 ucrt)
+  * ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.5.3 (oldrel-1)
+
+  The tests passed in every leg, with no failures and no warnings and with
+  7538 expectations met on Linux and macOS and 7533 on Windows, where one
+  more test skips. The same run tested the package on R 4.1.3, the last
+  release of R 4.1, the oldest series that DESCRIPTION's 'R (>= 4.1.0)'
+  allows. There the tests passed with 6549 expectations met, and the 20 tests
+  that need curl, dagitty, DiagrammeR, ggm or lavaan, which were not installed
+  there, skipped.
 
 ## Notes
 
