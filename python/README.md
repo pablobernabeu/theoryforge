@@ -19,25 +19,25 @@ accounts and its record of tests. From that file, the package computes what can 
 mechanically.
 
 It checks how completely the theory file states what a 12-item checklist asks for, and it
-reads the propositions as a causal graph, from which it derives the conditional independencies the graph implies and
-whether the graph entails each claim the theory states. It compares the theory with a rival
-account or with an earlier version of itself, grades how risky each prediction's claim is
-before data and how severely a recorded test probed it, and writes the theory and hypotheses
-sections of a preregistration and a dossier for reviewers. A literature layer maps a
-bibliographic corpus into keyword themes and shows which of them share words with the theory
-and its rivals.
+reads the propositions as a causal graph, from which it derives the conditional
+independencies the graph implies and whether the graph entails each claim the theory states.
+It compares the theory with a rival account or with an earlier version of itself, grades how
+risky each prediction's claim is before data and how severely a recorded test probed it, and
+writes the theory and hypotheses sections of a preregistration and a dossier for reviewers.
+A literature layer maps a bibliographic corpus into keyword themes and shows which of them
+share words with the theory and its rivals.
 
 These are checks of what the file states, and none of them shows that a theory is true. The
 checklist score describes how completely the file states what checklist 3.1 asks for. Most
 items read whether a field is filled in or how a prediction is labelled, and stated claims
 are checked against the causal graph. Test outcomes are read only by the parsimony item, the
 weights are conventions, and no study has established what difference between two scores is
-meaningful. The score does not show that the theory is true or well reasoned. The report
-therefore gives the lowest and highest score with equal weights or with one weight halved or
-doubled. The causal reading assumes that the propositions state every direct relation
-among the constructs, with an association for each common cause they leave unnamed. A word
-that a theory shares with a literature theme does not show that the theory accounts for what
-the theme's records report.
+meaningful. The score does not show that the theory is true or well reasoned. Since the
+weights are conventions, the report also gives the lowest and highest score with equal
+weights or with one weight halved or doubled. The causal reading assumes that the
+propositions state every direct relation among the constructs, with an association for each
+common cause they leave unnamed. A word that a theory shares with a literature theme does
+not show that the theory accounts for what the theme's records report.
 
 ## Installation
 
@@ -145,13 +145,13 @@ carry so that a reader can confirm which file they describe. `example_names()` a
 `full=True` also every type, reference, claim and unknown field. `check()` runs the
 checklist. Each of its 12 items has a status, a score and a weight, and the report adds the
 checklist score, a weighted mean of the item scores, its range with equal weights or one
-weight halved or doubled and a gate that blocks when a blocker item fails. `report()` gives the same as JSON or as an HTML fragment.
-`redundancy_check()` flags a pair of constructs when their definitions are near duplicates,
-when one definition is contained in the other, when the two carry the same label or when
-every measure of one is listed for the other. `embedding_redundancy()` compares definitions
-with an embedding model that you supply. The checklist reads what the file states. It cannot
-judge whether a definition is apt or a mechanism plausible, and a lexical screen misses a
-definition reworded into other words.
+weight halved or doubled and a gate that blocks when a blocker item fails. `report()` gives
+the same as JSON or as an HTML fragment. `redundancy_check()` flags a pair of constructs
+when their definitions are near duplicates, when one definition is contained in the other,
+when the two carry the same label or when every measure of one is listed for the other.
+`embedding_redundancy()` compares definitions with an embedding model that you supply. The
+checklist reads what the file states. It cannot judge whether a definition is apt or a
+mechanism plausible, and a lexical screen misses a definition reworded into other words.
 
 ### Derive and compare
 
@@ -162,8 +162,8 @@ the graph by sigma-separation. Those statements hold if each loop settles to a u
 equilibrium. The statements concern constructs. A conditional independence tested on
 fallible measures is rejected too often, so a latent-variable model is the better test.
 `entailments()` reads each claim of a prediction or phenomenon against the graph and says
-whether the graph entails it, contradicts it or leaves it open. For an effect in a graph
-without a feedback loop, it also says whether adjusting for some of the constructs
+whether the graph entails it, contradicts it or leaves it open. For an effect that no
+feedback loop reaches, it also says whether adjusting for some of the constructs
 identifies the effect in observational data and names a minimal such set.
 `equivalent_models()` lists the causal directions that no test of conditional independence
 can settle.
@@ -239,10 +239,10 @@ it has no `copy()`. Both packages follow one specification,
 [`API_SPEC.md`](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md), which
 sets out each algorithm and output format. Continuous integration compares the outputs of
 the two packages on every example and on a set of malformed and awkward theories, so the
-same file gives the same verdicts, the same numbers and byte-identical diagrams and
-documents in both. The functions that depend on something outside the package can differ:
-`fetch_corpus()` on OpenAlex, `osf_push()` on OSF, `embedding_redundancy()` on the embedding
-model and `render_diagram()` on the renderer.
+same file with the same settings gives the same verdicts, the same numbers and
+byte-identical diagrams and documents in both. The functions that depend on something
+outside the package can differ: `fetch_corpus()` on OpenAlex, `osf_push()` on OSF,
+`embedding_redundancy()` on the embedding model and `render_diagram()` on the renderer.
 
 ## Citation
 

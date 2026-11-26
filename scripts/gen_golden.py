@@ -180,11 +180,13 @@ def edge_outcome(path: Path) -> dict:
         "implications": _attempt(t.implications),
         "entailments": _attempt(t.entailments),
     }
-    # The default leaves every claim on a graph with a feedback loop unread, so
-    # such a graph's claims are read by sigma-separation as well.
+    # The default leaves a claim unread when a construct it names is behind a
+    # feedback loop, so a graph with a loop is also read by sigma-separation,
+    # its claims and then the checklist.
     sigma = _attempt(lambda: t.entailments(cycles="sigma"))
     if sigma.get("acyclic") is False:
         record["entailments_sigma"] = sigma
+        record["check_sigma"] = _attempt(lambda: _check_summary(t.check(cycles="sigma")))
     record.update({
         "equivalent_models": _attempt(t.equivalent_models),
         "compile_sem": _attempt(t.compile_sem),

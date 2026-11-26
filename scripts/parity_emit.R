@@ -140,10 +140,14 @@ suppressWarnings(suppressMessages({
       implications = attempt(tf_implications(t)),
       entailments = attempt(tf_entailments(t))
     )
-    # The default leaves every claim on a graph with a feedback loop unread, so
-    # such a graph's claims are read by sigma-separation as well.
+    # The default leaves a claim unread when a construct it names is behind a
+    # feedback loop, so a graph with a loop is also read by sigma-separation,
+    # its claims and then the checklist.
     sigma <- attempt(tf_entailments(t, cycles = "sigma"))
-    if (identical(sigma$acyclic, FALSE)) record$entailments_sigma <- sigma
+    if (identical(sigma$acyclic, FALSE)) {
+      record$entailments_sigma <- sigma
+      record$check_sigma <- attempt(check_summary(tf_check(t, cycles = "sigma")))
+    }
     c(record, list(
       equivalent_models = attempt(tf_equivalent_models(t)),
       compile_sem = attempt(tf_compile_sem(t)),

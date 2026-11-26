@@ -856,10 +856,10 @@
       const ck = s.check;
       const refused = !!ck && "error" in ck;
       if (ck && !refused) {
-        // As the card shows it: the number unpadded, and the title saying
-        // what the score describes.
-        const n = host.num ? host.num(ck.score) : String(ck.score);
-        chips.append(el("span", { class: "chip score", id: "edScore", title: host.scoreTitle ? host.scoreTitle(ck) : "", html: "checklist <b>" + host.esc(n) + "</b> · gate " + host.esc(ck.gate) }));
+        // As the card shows it: the score with its one decimal, and the title
+        // saying what the score describes.
+        const n = host.oneDec ? host.oneDec(ck.score) : String(ck.score);
+        chips.append(el("span", { class: "chip score", id: "edScore", title: host.scoreTitle ? host.scoreTitle(ck) : "", text: "checklist " + n + " · gate " + (ck.gate == null ? "" : ck.gate) }));
         const failed = host.asArr(ck.failed), warned = host.asArr(ck.warned);
         if (failed.length) chips.append(el("span", { class: "chip", text: "fails: " + failed.join(", ") }));
         if (warned.length) chips.append(el("span", { class: "chip", text: "warns: " + warned.join(", ") }));

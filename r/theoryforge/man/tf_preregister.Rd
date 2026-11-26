@@ -12,9 +12,12 @@ tf_preregister(theory, path = NULL, cycles = "refuse")
 \item{path}{Optional destination path. When it is given, the Markdown is
 written with LF line endings.}
 
-\item{cycles}{\code{"refuse"} (the default) or \code{"sigma"}, as in
-\code{\link[=tf_implications]{tf_implications()}}, passed to \code{\link[=tf_check]{tf_check()}}, \code{\link[=tf_entailments]{tf_entailments()}} and
-\code{\link[=tf_implications]{tf_implications()}}.}
+\item{cycles}{How a causal graph with a feedback loop is read, passed to
+\code{\link[=tf_check]{tf_check()}}, \code{\link[=tf_entailments]{tf_entailments()}} and \code{\link[=tf_implications]{tf_implications()}}. \code{"refuse"}
+(the default) derives no independencies and leaves unread the claims that
+name a construct on a loop or downstream of one, and \code{"sigma"} reads
+the graph by sigma-separation, which assumes that each loop settles to a
+unique equilibrium.}
 }
 \value{
 The preregistration Markdown as a single string.
@@ -32,13 +35,19 @@ derivation_chain item, read with the document's \code{cycles}. That line
 states what the item checks, that the derivation references resolve and
 that the causal graph entails every claim a prediction states and
 contradicts no claim a phenomenon states, and answers \code{yes},
-\code{no}, \code{not checked (feedback loop; use cycles = "sigma")} when a
-feedback loop leaves a prediction's claim unread, or \code{not applicable
-(no predictions)}. A fixed line in italics then says that the document was
-generated from the theory file, that the study design, the analysis plan,
-the inference criteria and whatever the sampling plan leaves out must be
-added before registration, and that the content hash identifies the file
-and is not a time stamp.
+\code{no}, \code{not checked (feedback loop; use cycles = "sigma")} when the
+item warns because a feedback loop leaves claims unread, or
+\code{not applicable (no predictions)}. When the causal graph has a feedback
+loop, the header ends with a line saying how the document reads it:
+\code{Feedback loops: refused (a claim that names a construct on a loop or
+downstream of one is not read)} under the default, and
+\code{Feedback loops: read by sigma-separation (each loop is assumed to
+settle to a unique equilibrium)} with \code{cycles = "sigma"}. A graph
+without a loop gets no such line. A fixed line in italics then says that the
+document was generated from the theory file, that the study design, the
+analysis plan, the inference criteria and whatever the sampling plan leaves
+out must be added before registration, and that the content hash identifies
+the file and is not a time stamp.
 
 A theory section follows, so that the document can be read without the
 theory file: each construct with its label, definition, measures and
@@ -51,8 +60,8 @@ The hypotheses section opens, when the document states any claim, with one
 sentence naming the assumptions the verdicts on the claims rest on: the
 graph is the causal structure, with no omitted common cause of two of its
 constructs, each directed relation acts in its stated direction whatever
-the other inputs, paths do not cancel exactly where a claim line ends
-\code{unless paths cancel exactly} (faithfulness), and under
+the other inputs, effects do not cancel exactly where a claim line ends
+\code{unless effects cancel exactly} (faithfulness), and under
 \code{cycles = "sigma"} each feedback loop settles to a unique equilibrium,
 also once the intervened construct is held fixed. Each hypothesis is then
 listed in file order with its claim type, statement,
@@ -83,12 +92,12 @@ of constructs that no proposition joins as having no direct effect and no
 unexplained association, so they are the theory's commitments only if its
 authors meant those omissions, and a line in italics above them says so.
 \code{cycles} is passed to it, to \code{\link[=tf_check]{tf_check()}} and to \code{\link[=tf_entailments]{tf_entailments()}}:
-under the default, a graph with a feedback loop is not read, and with
-\code{"sigma"} it is read by sigma-separation. The claim-form severity
-rubric closes the document.
-Values are written on one line, ids and dates included, so a line break
-inside a statement cannot end the list item it belongs to or start a line of
-its own.
+under the default, a graph with a feedback loop gives no independencies and
+leaves unread the claims that name a construct on a loop or downstream of
+one, and with \code{"sigma"} it is read by sigma-separation. The claim-form
+severity rubric closes the document. Values are written on one line, ids and
+dates included, so a line break inside a statement cannot end the list item
+it belongs to or start a line of its own.
 
 The document is the part of a preregistration that the theory file holds. It
 is to be completed with the study design, the analysis plan, the inference

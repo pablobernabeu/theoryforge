@@ -1,8 +1,8 @@
-# A feedback loop between two constructs that no path joins to the claim still
-# leaves every claim unread under cycles = "refuse". The derivation chain then
-# reports h1 as not checked and warns, which does not block the gate, although
-# the path x -> m -> y gives the effect of x on y a negative sign. Under
-# cycles = "sigma" the claim is read and contradicted, and the item fails.
+# A feedback loop between two constructs that no path joins to the claim. The
+# loop reaches neither x nor y, so cycles = "refuse" reads the claim as
+# cycles = "sigma" does: the path x -> m -> y gives the effect of x on y a
+# negative sign, h1 is contradicted, and the derivation chain fails and blocks
+# the gate under either reading.
 schema_version: "1.1"
 id: "derivation-unrelated-loop"
 title: "An unrelated feedback loop and a contradicted claim"

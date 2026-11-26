@@ -2,5 +2,5 @@
   <text x="20" y="26" font-size="15">Pre-data riskiness</text>
   <text x="20" y="52">w1</text>
   <rect x="46" y="40" width="20" height="16" rx="2" fill="#4e79a7"/>
-  <text x="71" y="52">0.100</text>
+  <text x="71" y="52">0.1</text>
 </svg>

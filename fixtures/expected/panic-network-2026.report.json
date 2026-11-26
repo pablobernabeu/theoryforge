@@ -3,10 +3,10 @@
   "schema_version": "1.1",
   "checklist_version": "3.1",
   "maturity": "developing",
-  "aggregate_score": 85.9,
+  "aggregate_score": 88.0,
   "aggregate_range": [
-    82.1,
-    87.9
+    84.2,
+    90.2
   ],
   "coverage": 0.92,
   "gate": "pass",
@@ -103,13 +103,14 @@
     {
       "id": "derivation_chain",
       "status": "warn",
-      "score": 0.75,
+      "score": 1.0,
       "weight": 0.08,
       "severity_if_fail": "blocker",
       "citation": "Scheel et al. (2021); Szollosi et al. (2020)",
       "not_checked": [
         "pred_indep"
-      ]
+      ],
+      "phenomena_not_checked": []
     }
   ]
 }

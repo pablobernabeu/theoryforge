@@ -255,10 +255,12 @@ NULL
   }
   lines <- .tf_prelude("development_roadmap", "TB")
   # The hub names the theory and its standing, so the column beneath it reads
-  # as this theory's outstanding work rather than an anonymous list.
+  # as this theory's outstanding work rather than an anonymous list. The
+  # checklist's version says which criteria the score describes.
   lines <- c(lines, sprintf(
-    '  "roadmap" [shape=ellipse, label="%s\\nchecklist score %s, gate %s", fillcolor="%s", color="%s", fontcolor="#FFFFFF"];',
-    .tf_wrap(.tf_str(T, "title"), 20L), .tf_fmt(rep$aggregate_score), .tf_esc(rep$gate),
+    '  "roadmap" [shape=ellipse, label="%s\\nchecklist %s\\nchecklist score %s, gate %s", fillcolor="%s", color="%s", fontcolor="#FFFFFF"];',
+    .tf_wrap(.tf_str(T, "title"), 20L), .tf_esc(rep$checklist_version),
+    .tf_fmt(rep$aggregate_score), .tf_esc(rep$gate),
     .tf_INK, .tf_INK))
   if (length(todo) == 0L) {
     lines <- c(lines, sprintf('  "all_checks_pass" [label="all checks pass", %s];',
@@ -566,7 +568,8 @@ NULL
   items <- rep$items
   h <- 60L + length(items) * 24L + 12L
   out <- c(.tf_svg_open(460L, h),
-           '  <text x="20" y="28" font-size="15">Checklist</text>',
+           sprintf('  <text x="20" y="28" font-size="15">Checklist %s</text>',
+                   .tf_xml(rep$checklist_version)),
            sprintf('  <text x="20" y="46">checklist score %.1f, gate %s</text>',
                    rep$aggregate_score, .tf_xml(rep$gate)))
   for (i in seq_along(items)) {
@@ -605,10 +608,12 @@ NULL
       y <- 40L + (i - 1L) * 28L
       sev <- rows$computed_severity[i]
       w <- as.integer(sev * 200 + 0.5 + 1e-6)
+      # The rubric's values are tenths, written with one decimal as the dossier
+      # writes them.
       out <- c(out,
         sprintf('  <text x="20" y="%d">%s</text>', y + 12L, .tf_xml(labels[i])),
         sprintf('  <rect x="%d" y="%d" width="%d" height="16" rx="2" fill="#4e79a7"/>', bar_x, y, w),
-        sprintf('  <text x="%d" y="%d">%.3f</text>', bar_x + w + 5L, y + 12L, sev))
+        sprintf('  <text x="%d" y="%d">%.1f</text>', bar_x + w + 5L, y + 12L, sev))
     }
   }
   out <- c(out, "</svg>")

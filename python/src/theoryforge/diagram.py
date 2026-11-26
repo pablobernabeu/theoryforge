@@ -228,8 +228,10 @@ def _development_roadmap(T: dict) -> str:
     todo = [todo[i] for i in rank]
     lines = _prelude("development_roadmap", "TB")
     # The hub names the theory and its standing, so the column beneath it reads
-    # as this theory's outstanding work rather than an anonymous list.
+    # as this theory's outstanding work rather than an anonymous list. The
+    # checklist's version says which criteria the score describes.
     lines.append(f'  "roadmap" [shape=ellipse, label="{_wrap(text(T.get("title")), 20)}\\n'
+                 f'checklist {_esc(rep["checklist_version"])}\\n'
                  f'checklist score {_fmt(rep["aggregate_score"])}, gate {_esc(rep["gate"])}", '
                  f'fillcolor="{_INK}", color="{_INK}", fontcolor="#FFFFFF"];')
     if not todo:
@@ -504,7 +506,7 @@ def _rigor(T: dict) -> str:
     items = rep["items"]
     h = 60 + len(items) * 24 + 12
     out = [_svg_open(460, h),
-           '  <text x="20" y="28" font-size="15">Checklist</text>',
+           f'  <text x="20" y="28" font-size="15">Checklist {xml_escape(rep["checklist_version"])}</text>',
            f'  <text x="20" y="46">checklist score {rep["aggregate_score"]:.1f}, '
            f'gate {xml_escape(rep["gate"])}</text>']
     for i, it in enumerate(items):
@@ -540,7 +542,9 @@ def _severity_chart(T: dict) -> str:
         w = int(sev * 200 + 0.5 + 1e-6)
         out.append(f'  <text x="20" y="{y + 12}">{xml_escape(labels[i])}</text>')
         out.append(f'  <rect x="{bar_x}" y="{y}" width="{w}" height="16" rx="2" fill="#4e79a7"/>')
-        out.append(f'  <text x="{bar_x + w + 5}" y="{y + 12}">{sev:.3f}</text>')
+        # The rubric's values are tenths, written with one decimal as the
+        # dossier writes them.
+        out.append(f'  <text x="{bar_x + w + 5}" y="{y + 12}">{sev:.1f}</text>')
     out.append("</svg>")
     return "\n".join(out) + "\n"
 

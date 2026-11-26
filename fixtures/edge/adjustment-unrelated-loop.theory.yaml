@@ -1,0 +1,26 @@
+# t confounds the effect of x on y, and a feedback loop of u and w lies
+# downstream of y. The constructs that reach x or y form a graph without a
+# loop, so under either value of cycles the effect of x on y is identified by
+# adjusting for t, as it is without the loop, and the preregistration says so.
+# The loop reaches u, so the effect of x on u is left unread under
+# cycles = "refuse" and has no adjustment set under cycles = "sigma".
+schema_version: "1.1"
+id: "adjustment-unrelated-loop"
+title: "An adjustment set beside a feedback loop"
+maturity: "developing"
+constructs:
+  - {id: t, label: "T", definition: "A common cause."}
+  - {id: x, label: "X", definition: "The cause."}
+  - {id: y, label: "Y", definition: "The outcome."}
+  - {id: u, label: "U", definition: "The first member of the loop."}
+  - {id: w, label: "W", definition: "The second member of the loop."}
+propositions:
+  - {id: p1, from: t, to: x, relation: increases, mechanism: "It does."}
+  - {id: p2, from: t, to: y, relation: increases, mechanism: "It does."}
+  - {id: p3, from: x, to: y, relation: increases, mechanism: "It does."}
+  - {id: p4, from: y, to: u, relation: increases, mechanism: "It does."}
+  - {id: q1, from: u, to: w, relation: increases, mechanism: "It does."}
+  - {id: q2, from: w, to: u, relation: increases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "x raises y.", type: directional, derives_from: [p3], claim: {kind: effect, x: x, y: y, sign: positive}}
+  - {id: h2, statement: "x raises u.", type: directional, derives_from: [p3, p4], claim: {kind: effect, x: x, y: u, sign: positive}}

@@ -8,15 +8,15 @@ Description: Helps researchers state scientific theories as structured,
     and test records. Functions read and validate these files, check how
     completely a theory is specified against a versioned checklist, screen
     constructs for overlapping definitions, derive the conditional
-    independencies and the signs of effects that a theory's causal graph
-    implies, compare a theory with a rival or with an earlier version of
-    itself, compile 'lavaan' model syntax, simulate the construct network as
-    a linear system, write the theory and hypotheses sections of a
+    independence relations and the signs of effects that a theory's causal
+    graph implies, compare a theory with a rival or with an earlier version
+    of itself, compile 'lavaan' model syntax, simulate the construct network
+    as a linear system, write the theory and hypotheses sections of a
     preregistration and a dossier for reviewers, record the outcomes of
     tests, map a theory onto the themes of a literature corpus and draw
     diagrams of it. A 'Python' package of the same name offers the same
     functions. Both follow one specification, so they give the same results
-    and the same diagrams.
+    and the same diagrams for the same file and settings.
 License: MIT + file LICENSE
 URL: https://github.com/pablobernabeu/theoryforge, https://pablobernabeu.github.io/theoryforge/r/
 BugReports: https://github.com/pablobernabeu/theoryforge/issues

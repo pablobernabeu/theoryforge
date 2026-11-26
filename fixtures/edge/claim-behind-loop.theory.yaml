@@ -1,0 +1,31 @@
+# Under cycles = "refuse", a claim is left unread only when a construct it
+# names is on a feedback loop or downstream of one. The loop of u and w lies
+# downstream of d and upstream of a. h1 and h2 name c and d, which no loop
+# reaches, so they are read under either value of cycles, and the trek of h2,
+# c -> d, shares the edge t -> c with the walks from t, so the association is
+# positive although t causes c with no sign. h3 ends at a and h4 is given a, so
+# both are left unread under "refuse" and the derivation chain warns. Under
+# "sigma" all four are entailed.
+schema_version: "1.1"
+id: "claim-behind-loop"
+title: "Claims upstream and downstream of a feedback loop"
+maturity: "developing"
+constructs:
+  - {id: t, label: "T", definition: "A cause of unknown sign."}
+  - {id: c, label: "C", definition: "The cause."}
+  - {id: d, label: "D", definition: "The outcome upstream of the loop."}
+  - {id: u, label: "U", definition: "The first member of the loop."}
+  - {id: w, label: "W", definition: "The second member of the loop."}
+  - {id: a, label: "A", definition: "A construct downstream of the loop."}
+propositions:
+  - {id: p1, from: t, to: c, relation: causes, mechanism: "It does."}
+  - {id: p2, from: c, to: d, relation: increases, mechanism: "It does."}
+  - {id: p3, from: d, to: u, relation: increases, mechanism: "It does."}
+  - {id: q1, from: u, to: w, relation: increases, mechanism: "It does."}
+  - {id: q2, from: w, to: u, relation: increases, mechanism: "It does."}
+  - {id: p4, from: w, to: a, relation: increases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "c raises d.", type: directional, derives_from: [p2], claim: {kind: effect, x: c, y: d, sign: positive}}
+  - {id: h2, statement: "c and d rise together.", type: directional, derives_from: [p2], claim: {kind: association, x: c, y: d, sign: positive}}
+  - {id: h3, statement: "d raises a.", type: directional, derives_from: [p3, q1, p4], claim: {kind: effect, x: d, y: a, sign: positive}}
+  - {id: h4, statement: "c and t stay associated given a.", type: directional, derives_from: [p1], claim: {kind: association, x: c, y: t, given: [a], sign: nonzero}}

@@ -69,7 +69,8 @@ that an effect or relation exists, without a direction. A `directional` one asse
 or an order. An `interval` prediction asserts that a quantity lies in a stated range, and a
 `point` prediction asserts one value, with the tolerance that measurement requires.
 `bounds: {lower, upper}` states the region, and the full validation checks that it fits the
-type, so an existence prediction takes none. The type is declared by the author, and no function checks it against the statement.
+type, so an existence prediction takes none. The type is declared by the author, and no
+function checks it against the statement.
 
 How a theory is encoded decides what the package derives from it. A `moderates` proposition
 states that its `from` modifies the effect of other causes on its `to`, and the causal graph
@@ -100,6 +101,14 @@ formal model is declared.
 report = t.check()
 print(report["aggregate_score"], report["aggregate_range"], report["gate"])
 print([item["id"] for item in report["items"] if item["status"] == "warn"])
+```
+
+```python exec="1" session="workflow-modes"
+# What the checklist score describes, as the package words it, for the
+# checklist that scored the theory above.
+from theoryforge.rigor import SCOPE
+
+print(SCOPE.format(version=report["checklist_version"]))
 ```
 
 Because the builders change the theory in place, `v2 = v1.add_prediction(...)` leaves `v1`
@@ -233,19 +242,21 @@ in both versions would make it `progressive`.
 
 The verdict is `progressive` when a corroborated new prediction adds content, no content is
 lost, no ad hoc assumption is added, no corroborated prediction is dropped and no failed
-prediction is weakened. It is `degenerating` when an ad hoc assumption is added or a failed
-prediction is weakened and no corroborated new prediction adds content. Any other
-combination is `neutral`, theoryforge's label for an amendment that meets neither rule.
-A new prediction adds no content when it derives from no proposition or only articulates
-what the prior version already held, and a prediction under a new id with the same
-statement and type is reported as `renamed`. An assumption added for an anomaly is ad hoc
-when no new prediction it protects, other than that anomaly, is corroborated and some have
-been tested. While all of them are untested, it is `pending` and not ad hoc. An
-assumption rewritten under its id is appraised as a new one is, and one moved unchanged to
-another id is not appraised. Any change of wording counts, even one that keeps the
-meaning, so a core assumption reworded under its id is appraised and, when it protects a
-prediction that failed in the prior, is read as answering it. Each appraised assumption
-that answers an anomaly is listed in `assumptions` with its `change`, `new` or `revised`.
+prediction is weakened. It is never `progressive` when the causal graph of either version
+cannot be read, since the content of the two cannot then be compared. It is `degenerating`
+when an ad hoc assumption is added or a failed prediction is weakened and no corroborated
+new prediction adds content. Any other combination is `neutral`, theoryforge's label for an
+amendment that meets neither rule. A new prediction adds no content when it derives from no
+proposition or only articulates what the prior version already held, and a prediction
+under a new id with the same statement and type is reported as `renamed`. An assumption
+added for an anomaly is ad hoc when it protects no new prediction other than that anomaly,
+or when some of those predictions have been tested and none is corroborated. While all of
+them are untested, it is `pending`. An assumption rewritten under its id is appraised as a
+new one is, and one moved unchanged to another id is not appraised. Any change of wording
+counts, even one that keeps the meaning, so a core assumption reworded under its id is
+appraised and, when it protects a prediction that failed in the prior, is read as
+answering it. Each appraised assumption that answers an anomaly is listed in `assumptions`
+with its `change`, `new` or `revised`.
 
 The verdict holds only if what the two files declare is true, the test outcomes and the
 `added_for` and `protects` of each assumption above all. The appraisal reads no dates and
@@ -294,12 +305,12 @@ independencies that the theory does not state. `implications()` derives them. Ea
 relation is an arrow, and an association is a bidirected edge, covariance the theory leaves
 unexplained. The graph is read as complete: every pair of constructs in it that no
 proposition joins is read as having no direct effect on each other and no unexplained
-association. Every such pair yields one statement when some set of other constructs separates it, usually the
-parents of both. The statements are consequences of the graph as encoded, so they are the
-theory's commitments only if its authors meant those omissions. When every relation is
-directed, these statements are the basis set, from which every other independence the graph
-implies follows when the distribution has the composition property, as a multivariate normal
-one does.
+association. Every such pair yields one statement when some set of other constructs
+separates it, usually the parents of both. The statements are consequences of the graph as
+encoded, so they are the theory's commitments only if its authors meant those omissions.
+When every relation is directed, these statements are the basis set, from which every other
+independence the graph implies follows when the distribution has the composition property,
+as a multivariate normal one does.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 implied = switching.implications()
@@ -385,13 +396,13 @@ print(switching.data["predictions"][0]["claim"])
 
 `entailments()` reads each claim against the graph. The signs of the routes between the two
 constructs decide whether the graph entails the claim, contradicts it or leaves it
-undetermined, and `via` names the propositions the verdict rests on. For an effect claim on
-an acyclic graph, `adjustment` gives a smallest set of constructs whose adjustment would
-identify the effect in observational data, or a minimal set when more than 12 constructs
-are candidates. Here it is the empty set. `identified` reports identification by adjustment
-alone, so an effect without such a set may still be identified by other means, such as the
-front-door criterion, and a set for a cause or an outcome marked latent assumes a measure of
-it.
+undetermined, and `via` names the propositions the verdict rests on. For an effect claim
+that no feedback loop reaches, `adjustment` gives a smallest set of constructs whose
+adjustment would identify the effect in observational data, or a minimal set when more than
+12 constructs are candidates. Here it is the empty set. `identified` reports identification
+by adjustment alone, so an effect without such a set may still be identified by other
+means, such as the front-door criterion, and a set for a cause or an outcome marked latent
+assumes a measure of it.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 entailed = switching.entailments()
@@ -401,16 +412,16 @@ print(entailed["counts"])
 ```
 
 The derived signs hold when the graph is the causal structure, with no common cause of two
-constructs left out unless an association stands for it, and when each directed relation acts
-in its stated direction whatever the other inputs, as in a linear model or a uniformly
-monotone one. A verdict whose `faithfulness` is true also assumes that paths do not cancel
-exactly, and the preregistration and the dossier end its line with `unless paths cancel
-exactly`. Under `cycles="sigma"`, the sign of an effect further assumes that the system with
-the intervened construct held fixed settles, which the stability of the system as observed
-does not ensure. The function shows what the propositions commit the theory to and does not
-show whether a claim holds in data. The
-checklist's derivation-chain item counts a prediction whose claim the graph contradicts or
-leaves open as not derived from the propositions it cites.
+constructs left out unless an association stands for it, and when each directed relation
+acts in its stated direction whatever the other inputs, as in a linear model or a uniformly
+monotone one. A verdict whose `faithfulness` is true also assumes that effects do not cancel
+exactly, along a route of unknown sign or between routes of opposite signs, and the
+preregistration and the dossier end its line with `unless effects cancel exactly`. Under
+`cycles="sigma"`, the sign of an effect further assumes that the system with the intervened
+construct held fixed settles, which the stability of the system as observed does not ensure.
+The function shows what the propositions commit the theory to and does not show whether a
+claim holds in data. The checklist's derivation-chain item counts a prediction whose claim
+the graph contradicts or leaves open as not derived from the propositions it cites.
 
 ### Equivalent models
 
@@ -478,13 +489,14 @@ the rival's own graph does not give its claim the same verdict.
 
 `preregister()` writes the theory and hypotheses sections of a preregistration as Markdown.
 Its header gives the theory's version and content hash and the status of the checklist's
-derivation chain, read with the document's `cycles`, and a line in italics says what the
-document holds and what must be added before registration. The hypotheses section opens with
-the assumptions that the verdicts on the claims rest on. Each hypothesis is listed with its
-type, its derivation, its claim and what the graph says of it, the adjustment an
-observational test would need, the auxiliary assumptions that protect it, the rivals it is
-declared to discriminate and its test record. The hypotheses section of the
-modality-switching theory reads as follows.
+derivation chain, read with the document's `cycles`, and, when the causal graph has a
+feedback loop, a line that says whether the document refuses the loop or reads it by
+sigma-separation. A line in italics then says what the document holds and what must be added
+before registration. The hypotheses section opens with the assumptions that the verdicts on
+the claims rest on. Each hypothesis is listed with its type, its derivation, its claim and
+what the graph says of it, the adjustment an observational test would need, the auxiliary
+assumptions that protect it, the rivals it is declared to discriminate and its test record.
+The hypotheses section of the modality-switching theory reads as follows.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 text = switching.preregister()
@@ -547,14 +559,16 @@ does not read it.
 ### The dossier
 
 `dossier()` assembles one Markdown document for a reviewer or an editor. Its header gives the
-content hash, the checklist version, the checklist score with its range and the gate. A
-paragraph in italics then says what the score describes and what the dossier is: the test
+content hash, the checklist version, the checklist score with its range and the gate, and,
+when the causal graph has a feedback loop, how the dossier reads it. A paragraph in italics
+then says what the score describes, what the gate checks and what the dossier is: the test
 outcomes, evidence, registrations and declared severities are as the author recorded them,
 and the dossier checks none of them beyond the inconsistencies it flags, so it is not an
-independent audit. Sections on the checklist, the severities, the test record, the evidence,
-the claims and the causal graph, the equivalent models for observational data, the rivals and
-the provenance follow, and the preregistration closes it. The same theory file always gives
-the same dossier, so it can be committed or attached to a submission.
+independent audit. Sections on the checklist, where the two items that decide the gate are
+marked `(blocker)`, the severities, the test record, the evidence, the claims and the causal
+graph, the equivalent models for observational data, the rivals and the provenance follow,
+and the preregistration closes it. The same theory file gives the same dossier for the same
+`cycles`, so it can be committed or attached to a submission.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 dossier = switching.dossier()
@@ -734,11 +748,12 @@ starting value. The three constructs keep cycling, and at the default gain of 1 
 of 0.5 the swings neither grow nor fade.
 
 Whether a feedback loop grows or settles is set by the gain against the damping, neither of
-which the theory states. The loop of arousal and perceived threat in the panic-network theory,
-closed by a `causes` proposition coupled positively by assumption, grows at the defaults, a gain of 1 and a damping of 0.5, holds its level at a damping of 1 and
-settles above it. Time is in units of `1/k`, and the window that `steps` and `dt` choose
-decides what is seen. The last construct of a chain of five, which decays in the long run,
-shows only a rise in the default window of one time unit.
+which the theory states. The loop of arousal and perceived threat in the panic-network
+theory, closed by a `causes` proposition coupled positively by assumption, grows at the
+defaults, a gain of 1 and a damping of 0.5, holds its level at a damping of 1 and settles
+above it. Time is in units of `1/k`, and the window that `steps` and `dt` choose decides
+what is seen. The last construct of a chain of five, which decays in the long run, shows
+only a rise in the default window of one time unit.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 for damping in (0.5, 1.0, 1.5):

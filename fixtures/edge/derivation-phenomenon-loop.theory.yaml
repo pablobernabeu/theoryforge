@@ -1,0 +1,23 @@
+# A feedback loop between a and b, and a phenomenon ph1 whose claim is that a
+# lowers b. Under cycles = "refuse" the loop leaves the claim unread, so the
+# derivation chain lists ph1 in phenomena_not_checked and warns, which does not
+# block the gate. Under cycles = "sigma" the claim is read and contradicted,
+# and the item fails. ph2 names a construct outside the graph and is not
+# evaluated, which leaves the item as it is under either reading. The one
+# prediction states no claim and is derived.
+schema_version: "1.1"
+id: "derivation-phenomenon-loop"
+title: "A phenomenon behind a feedback loop"
+maturity: "developing"
+constructs:
+  - {id: a, label: "A", definition: "The first construct."}
+  - {id: b, label: "B", definition: "The second construct."}
+  - {id: z, label: "Z", definition: "A construct no proposition relates."}
+propositions:
+  - {id: p1, from: a, to: b, relation: increases, mechanism: "It does."}
+  - {id: p2, from: b, to: a, relation: increases, mechanism: "It does."}
+phenomena:
+  - {id: ph1, statement: "Raising a lowers b.", claim: {kind: effect, x: a, y: b, sign: negative}}
+  - {id: ph2, statement: "z tracks a.", claim: {kind: association, x: a, y: z, sign: positive}}
+predictions:
+  - {id: h1, statement: "b rises with a.", type: directional, derives_from: [p1]}

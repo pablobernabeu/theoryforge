@@ -51,14 +51,13 @@ NULL
 # support the assumption other than the anomaly it answers, each with its status
 # in `tos`. The class is "ad_hoc1" when there are none, "pending" when every one
 # is untested, "ad_hoc2" when some were tested and none is corroborated and
-# "independently_corroborated" otherwise. The names of the two ad hoc classes
-# follow the first two of the three senses in which Lakatos calls a hypothesis
-# ad hoc, as the package reads them. The appraisal passes the predictions that
-# are new in the amended version as `eligible`, so content the prior already
-# held cannot clear an assumption. It also passes the anomaly it inferred as
-# `added_for` when the assumption names none. The checklist's parsimony item
-# passes every prediction the assumption protects and fails any class other
-# than "independently_corroborated".
+# "independently_corroborated" otherwise. The labels of the two ad hoc classes
+# borrow Lakatos's terms and mean only what these checks find. The appraisal
+# passes the predictions that are new in the amended version as `eligible`, so
+# content the prior already held cannot clear an assumption. It also passes the
+# anomaly it inferred as `added_for` when the assumption names none. The
+# checklist's parsimony item passes every prediction the assumption protects
+# and fails any class other than "independently_corroborated".
 .tf_classify_auxiliary <- function(a, tos, eligible, added_for = .tf_str(a, "added_for")) {
   protects <- .tf_str_list(.tf_get(a, "protects"))
   ids <- unique(protects[protects != added_for & protects %in% eligible])
@@ -110,6 +109,14 @@ NULL
   c(side("lower", -Inf), side("upper", Inf))
 }
 
+# The type a prediction is compared by, given its declared type and its region
+# `r`. A point or interval label without a finite lower and a finite upper bound
+# states nothing a test could miss, so it reads as directional, as the
+# claim-form rubric reads it (API_SPEC.md section 9, step 0).
+.tf_form <- function(type, r) {
+  if (type %in% c("point", "interval") && !all(is.finite(r))) "directional" else type
+}
+
 # Whether region `a` is narrower than region `b`: it lies within `b` and differs
 # from it, or it has more finite sides, so that a two-sided region is narrower
 # than a one-sided one.
@@ -148,14 +155,15 @@ NULL
 
 # How prediction `new` revises `old`, or NULL when its content is unchanged.
 # When either states a region with a finite end, the regions and the claims
-# decide how the content changed, and the type labels are compared only for
+# decide how the content changed, and the types are compared only for
 # equality, so that relabelling cannot hide a wider region. The rank of the
-# types decides only when neither states a finite end.
+# types decides only when neither states a finite end. Either way, a point or
+# interval label without two finite bounds reads as directional.
 .tf_revision <- function(old, new) {
-  old_type <- .tf_enum_str(old, "type", .tf_PRED_TYPE)
-  new_type <- .tf_enum_str(new, "type", .tf_PRED_TYPE)
   old_region <- .tf_region(old)
   new_region <- .tf_region(new)
+  old_type <- .tf_form(.tf_enum_str(old, "type", .tf_PRED_TYPE), old_region)
+  new_type <- .tf_form(.tf_enum_str(new, "type", .tf_PRED_TYPE), new_region)
   type_change <- if (any(is.finite(old_region)) || any(is.finite(new_region))) {
     if (identical(old_type, new_type)) "same" else "different"
   } else {
@@ -325,12 +333,14 @@ NULL
 #' predictions it protects that are new in this version, other than the
 #' anomaly: \code{"ad_hoc1"} when there are none, \code{"pending"} when none
 #' of them is tested yet, \code{"ad_hoc2"} when some were tested and none is
-#' corroborated, and \code{"independently_corroborated"} otherwise. The first
-#' two names follow the first two of the three senses in which Lakatos calls a
-#' hypothesis ad hoc, as the package reads them, and the third sense is not
-#' assessed. Its \code{added_for} names the anomaly.
-#' When that is empty, the first prediction it protects that was refuted or
-#' mixed in the prior is taken as the anomaly.
+#' corroborated, and \code{"independently_corroborated"} otherwise. The labels
+#' \code{"ad_hoc1"} and \code{"ad_hoc2"} borrow Lakatos's terms, and each means
+#' only what its check finds: that the assumption protects no new prediction
+#' besides the anomaly, or that some of the new predictions it protects have
+#' been tested and none is corroborated. No other sense of ad hoc is assessed.
+#' Its \code{added_for} names the anomaly. When that is empty, the first
+#' prediction it protects that was refuted or mixed in the prior is taken as
+#' the anomaly.
 #'
 #' A prediction kept from the prior, under its id or renamed, is revised when
 #' its statement, type, bounds or claim changed. When either version states a
@@ -338,18 +348,20 @@ NULL
 #' wider region, when it drops its claim or when its claim gives up a sign of
 #' positive, negative or zero for nonzero, and a change of type alone neither
 #' weakens nor strengthens it. When neither states such a region, a type that
-#' ranks lower in existence < directional < interval < point is weaker too.
-#' The two causal graphs are read with \code{cycles = "sigma"}. They are
-#' compared through [tf_implications()]: a pair of constructs that the prior's
-#' graph separates and the new graph does not is an implication lost, refuted
-#' when a prediction of the prior that states the independence of the two is
-#' refuted or mixed there. A retained prediction untested or corroborated in
-#' the prior whose prior claim the prior's graph entails and the new graph
-#' does not is in \code{entailments_lost}. A total effect of one construct on
-#' another that the prior's graph signs positive or negative and the new graph
-#' does not sign the same way is in \code{signs_lost}, unless a prediction
-#' that failed in the prior states an effect claim on the pair with that sign
-#' or with nonzero.
+#' ranks lower in existence < directional < interval < point is weaker too. A
+#' point or interval label without a finite lower and a finite upper bound
+#' reads as directional in both comparisons, as [tf_severity()] reads it,
+#' since the label alone states nothing a test could miss. The two causal
+#' graphs are read with \code{cycles = "sigma"}. They are compared through
+#' [tf_implications()]: a pair of constructs that the prior's graph separates
+#' and the new graph does not is an implication lost, refuted when a
+#' prediction of the prior that states the independence of the two is refuted
+#' or mixed there. A retained prediction untested or corroborated in the prior
+#' whose prior claim the prior's graph entails and the new graph does not is in
+#' \code{entailments_lost}. A total effect of one construct on another that
+#' the prior's graph signs positive or negative and the new graph does not sign
+#' the same way is in \code{signs_lost}, unless a prediction that failed in the
+#' prior states an effect claim on the pair with that sign or with nonzero.
 #'
 #' The amendment is theoretically progressive when a new prediction adds
 #' content, being neither renamed, articulated, underived nor unresolved, and
@@ -360,11 +372,16 @@ NULL
 #' prediction is dropped, an untested or corroborated prediction is weakened or
 #' loses the entailment of its claim, an implication is lost without being
 #' refuted or a signed effect is lost without having been refuted. The verdict
-#' is \code{"degenerating"} when an assumption is ad hoc or a prediction
-#' refuted or mixed in the prior is weakened, and no prediction adds
-#' corroborated content. It is \code{"neutral"} otherwise. Lakatos has only the
-#' first two. \code{"neutral"} is theoryforge's label for an amendment that
-#' meets neither rule, and the vectors returned tell its cases apart. Only
+#' is never \code{"progressive"} when \code{implications_compared} is
+#' \code{FALSE}: a graph that [tf_implications()] refuses, for a repeated
+#' construct id or a proposition that names an undeclared construct, cannot be
+#' read, so the content of the two versions cannot be compared and what the
+#' amendment gives up is unknown. The verdict is \code{"degenerating"} when an
+#' assumption is ad hoc or a prediction refuted or mixed in the prior is
+#' weakened, and no prediction adds corroborated content. It is
+#' \code{"neutral"} otherwise. Lakatos has only the first two.
+#' \code{"neutral"} is theoryforge's label for an amendment that meets neither
+#' rule, and the vectors returned tell its cases apart. Only
 #' \code{corroborated_new_registered} reads a test outcome's
 #' \code{registered}, and only \code{corroborated_new_severity} its
 #' \code{estimate} and \code{se}, and neither decides the verdict. No date or
@@ -420,15 +437,19 @@ NULL
 #'   records, under the new id, with the verdicts of the two graphs, sorted by
 #'   id. \code{signs_lost} holds statements
 #'   \code{"effect of <x> on <y>: <sign>"} in the prior graph's vertex order,
-#'   \code{x} and then \code{y}. \code{corroborated_new_severity} is a list of
+#'   \code{x} and then \code{y}. It lists ordered pairs, so it can grow with
+#'   the square of the number of constructs: one changed relation in a large
+#'   feedback loop can give up the sign of nearly every pair the loop joins.
+#'   \code{corroborated_new_severity} is a list of
 #'   \code{list(id, severity)} records, one per corroborated new prediction
 #'   sorted by id, where \code{severity} is the smallest value of
 #'   [tf_post_data_severity()] over its passes that record an estimate and a
 #'   standard error for a prediction with bounds, and \code{NA} when none does.
 #'   \code{implications_compared} is \code{FALSE} when [tf_implications()]
 #'   refuses either version, and the three vectors of implications,
-#'   \code{entailments_lost} and \code{signs_lost} are then empty. The
-#'   elements come in the order \code{verdict}, \code{new_predictions},
+#'   \code{entailments_lost} and \code{signs_lost} are then empty and the
+#'   verdict is not \code{"progressive"}. The elements come in the order
+#'   \code{verdict}, \code{new_predictions},
 #'   \code{corroborated_new}, \code{ad_hoc_assumptions}, \code{articulated},
 #'   \code{underived}, \code{corroborated_new_registered}, \code{renamed},
 #'   \code{dropped}, \code{dropped_corroborated}, \code{content_lost},
@@ -696,7 +717,10 @@ tf_appraise_amendment <- function(new, prior) {
   theoretical <- length(adds_content) > 0L
   empirical <- any(adds_content %in% corroborated_new)
   loses_content <- length(content_lost) > 0L || length(unrefuted) > 0L || length(signs_lost) > 0L
-  if (empirical && length(ad_hoc) == 0L && length(dropped_corroborated) == 0L &&
+  # When either graph is refused, the content the amendment gives up cannot be
+  # read, so an empty list of losses shows nothing and the amendment is not
+  # appraised as progressive.
+  if (compared && empirical && length(ad_hoc) == 0L && length(dropped_corroborated) == 0L &&
       !loses_content && length(weakened_refuted) == 0L) {
     verdict <- "progressive"
   } else if ((length(ad_hoc) > 0L || length(weakened_refuted) > 0L) && !empirical) {

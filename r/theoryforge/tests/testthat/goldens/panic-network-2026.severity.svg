@@ -2,14 +2,14 @@
   <text x="20" y="26" font-size="15">Pre-data riskiness</text>
   <text x="20" y="52">pred1</text>
   <rect x="110" y="40" width="200" height="16" rx="2" fill="#4e79a7"/>
-  <text x="315" y="52">1.000</text>
+  <text x="315" y="52">1.0</text>
   <text x="20" y="80">pred2</text>
   <rect x="110" y="68" width="140" height="16" rx="2" fill="#4e79a7"/>
-  <text x="255" y="80">0.700</text>
+  <text x="255" y="80">0.7</text>
   <text x="20" y="108">pred3</text>
   <rect x="110" y="96" width="60" height="16" rx="2" fill="#4e79a7"/>
-  <text x="175" y="108">0.300</text>
+  <text x="175" y="108">0.3</text>
   <text x="20" y="136">pred_indep</text>
   <rect x="110" y="124" width="140" height="16" rx="2" fill="#4e79a7"/>
-  <text x="255" y="136">0.700</text>
+  <text x="255" y="136">0.7</text>
 </svg>

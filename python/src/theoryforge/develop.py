@@ -67,6 +67,18 @@ def _states_region(r: tuple[float, float]) -> bool:
     return math.isfinite(r[0]) or math.isfinite(r[1])
 
 
+def _form(ptype: str, r: tuple[float, float]) -> str:
+    """The type a prediction is compared by, given its declared type and region ``r``.
+
+    A point or interval label without a finite lower and a finite upper bound
+    states nothing a test could miss, so it reads as directional, as the
+    claim-form rubric reads it (API_SPEC.md section 9, step 0).
+    """
+    if ptype in ("point", "interval") and not (math.isfinite(r[0]) and math.isfinite(r[1])):
+        return "directional"
+    return ptype
+
+
 def _narrower(a: tuple[float, float], b: tuple[float, float]) -> bool:
     """Whether region ``a`` is narrower than region ``b``.
 
@@ -117,13 +129,14 @@ def _revision(old, new) -> str | None:
     """How prediction ``new`` revises ``old``, or None when its content is unchanged.
 
     When either states a region with a finite end, the regions and the claims
-    decide how the content changed, and the type labels are compared only for
+    decide how the content changed, and the types are compared only for
     equality, so that relabelling cannot hide a wider region. The rank of the
-    types decides only when neither states a finite end.
+    types decides only when neither states a finite end. Either way, a point
+    or interval label without two finite bounds reads as directional.
     """
-    old_type = enum(field(old, "type"), PRED_TYPE) or ""
-    new_type = enum(field(new, "type"), PRED_TYPE) or ""
     old_region, new_region = _region(old), _region(new)
+    old_type = _form(enum(field(old, "type"), PRED_TYPE) or "", old_region)
+    new_type = _form(enum(field(new, "type"), PRED_TYPE) or "", new_region)
     if _states_region(old_region) or _states_region(new_region):
         type_change = "same" if old_type == new_type else "different"
     else:
@@ -271,12 +284,14 @@ def appraise_amendment(new, prior) -> dict:
     predictions it protects that are new in this version, other than the
     anomaly: ``ad_hoc1`` when there are none, ``pending`` when none of them
     is tested yet, ``ad_hoc2`` when some were tested and none is
-    corroborated, and ``independently_corroborated`` otherwise. The first two
-    names follow the first two of the three senses in which Lakatos calls a
-    hypothesis ad hoc, as the package reads them, and the third sense is not
-    assessed. Its ``added_for`` names the anomaly. When
-    that is empty, the first prediction it protects that was refuted or mixed
-    in the prior is taken as the anomaly.
+    corroborated, and ``independently_corroborated`` otherwise. The labels
+    ``ad_hoc1`` and ``ad_hoc2`` borrow Lakatos's terms, and each means only
+    what its check finds: that the assumption protects no new prediction
+    besides the anomaly, or that some of the new predictions it protects have
+    been tested and none is corroborated. No other sense of ad hoc is
+    assessed. Its ``added_for`` names the anomaly. When that is empty, the
+    first prediction it protects that was refuted or mixed in the prior is
+    taken as the anomaly.
 
     A prediction kept from the prior, under its id or renamed, is revised when
     its statement, type, bounds or claim changed. When either version states a
@@ -285,6 +300,9 @@ def appraise_amendment(new, prior) -> dict:
     positive, negative or zero for nonzero, and a change of type alone neither
     weakens nor strengthens it. When neither states such a region, a type that
     ranks lower in existence < directional < interval < point is weaker too.
+    A point or interval label without a finite lower and a finite upper bound
+    reads as directional in both comparisons, as ``severity()`` reads it, since
+    the label alone states nothing a test could miss.
     The two causal graphs are read with ``cycles="sigma"``. They are compared
     through ``implications()``: a pair of constructs that the prior's graph
     separates and the new graph does not is an implication lost, refuted when
@@ -306,12 +324,16 @@ def appraise_amendment(new, prior) -> dict:
     prediction is dropped, an untested or corroborated prediction is weakened
     or loses the entailment of its claim, an implication is lost without being
     refuted or a signed effect is lost without having been refuted. The verdict
-    is ``degenerating`` when an assumption is ad hoc or a prediction refuted
-    or mixed in the prior is weakened, and no prediction adds corroborated
-    content. It is ``neutral`` otherwise. Lakatos has only the first two.
-    ``neutral`` is theoryforge's label for an amendment that meets neither
-    rule, and the lists returned tell its cases apart. API_SPEC.md section 10
-    states every rule in full.
+    is never ``progressive`` when ``implications_compared`` is False: a graph
+    that ``implications()`` refuses, for a repeated construct id or a
+    proposition that names an undeclared construct, cannot be read, so the
+    content of the two versions cannot be compared and what the amendment
+    gives up is unknown. The verdict is ``degenerating`` when an assumption is
+    ad hoc or a prediction refuted or mixed in the prior is weakened, and no
+    prediction adds corroborated content. It is ``neutral`` otherwise.
+    Lakatos has only the first two. ``neutral`` is theoryforge's label for an
+    amendment that meets neither rule, and the lists returned tell its cases
+    apart. API_SPEC.md section 10 states every rule in full.
 
     Returns:
         A dict whose keys come in the order
@@ -364,7 +386,10 @@ def appraise_amendment(new, prior) -> dict:
             ``entailments_lost`` holds one ``{id, prior, new}`` record, under
             the new id, with the verdicts of the two graphs, sorted by id.
             ``signs_lost`` holds statements ``effect of <x> on <y>: <sign>``
-            in the prior graph's vertex order, ``x`` and then ``y``.
+            in the prior graph's vertex order, ``x`` and then ``y``. It lists
+            ordered pairs, so it can grow with the square of the number of
+            constructs: one changed relation in a large feedback loop can give
+            up the sign of nearly every pair the loop joins.
             ``corroborated_new_severity`` holds one ``{id, severity}`` record
             per corroborated new prediction, sorted by id, where ``severity``
             is the smallest value of ``post_data_severity()`` over its passes
@@ -372,7 +397,8 @@ def appraise_amendment(new, prior) -> dict:
             bounds, and None when none does. ``implications_compared`` is
             False when ``implications()`` refuses either version, and the three
             lists of implications, ``entailments_lost`` and ``signs_lost`` are
-            then empty. ``corroborated_new_registered`` reads ``registered``,
+            then empty and the verdict is not ``progressive``.
+            ``corroborated_new_registered`` reads ``registered``,
             ``corroborated_new_severity`` reads ``estimate`` and ``se``, and
             neither decides the verdict. No date is read, so which version is
             the prior is the caller's responsibility.
@@ -596,7 +622,11 @@ def appraise_amendment(new, prior) -> dict:
     theoretical = bool(adds_content)
     empirical = any(pid in corroborated_new for pid in adds_content)
     loses_content = bool(content_lost) or bool(unrefuted) or bool(signs_lost)
-    if empirical and not ad_hoc and not dropped_corroborated and not loses_content and not weakened_refuted:
+    # When either graph is refused, the content the amendment gives up cannot be
+    # read, so an empty list of losses shows nothing and the amendment is not
+    # appraised as progressive.
+    if (compared and empirical and not ad_hoc and not dropped_corroborated
+            and not loses_content and not weakened_refuted):
         verdict = "progressive"
     elif (ad_hoc or weakened_refuted) and not empirical:
         verdict = "degenerating"

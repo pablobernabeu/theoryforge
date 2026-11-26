@@ -59,21 +59,24 @@ that threat increases arousal in both versions would make it `progressive`.
 
 The verdict is `progressive` when a corroborated new prediction adds content, no
 content is lost, no ad hoc assumption is added, no corroborated prediction is
-dropped and no failed prediction is weakened. It is `degenerating` when an ad hoc
-assumption is added or a failed prediction is weakened and no corroborated new
-prediction adds content. Any other combination is `neutral`, theoryforge's label
-for an amendment that meets neither rule. A new prediction adds no content when
-it derives from no proposition or only articulates what the prior version
-already held, and a prediction under a new id with the same statement and type
-is reported as `renamed`. An assumption added for an anomaly is ad hoc when no
-new prediction it protects, other than that anomaly, is corroborated and some
-have been tested. While all of them are untested, it is `pending` and not ad
-hoc. An assumption rewritten under its id is appraised as a new one is, and one
-moved unchanged to another id is not appraised. Any change of wording counts,
-even one that keeps the meaning, so a core assumption reworded under its id is
-appraised and, when it protects a prediction that failed in the prior, is read
-as answering it. Each appraised assumption that answers an anomaly is listed in
-`assumptions` with its `change`, `new` or `revised`.
+dropped and no failed prediction is weakened. It is never `progressive` when the
+causal graph of either version cannot be read, since the content of the two
+cannot then be compared. It is `degenerating` when an ad hoc assumption is added
+or a failed prediction is weakened and no corroborated new prediction adds
+content. Any other combination is `neutral`, theoryforge's label for an
+amendment that meets neither rule. A new prediction adds no content when it
+derives from no proposition or only articulates what the prior version already
+held, and a prediction under a new id with the same statement and type is
+reported as `renamed`. An assumption added for an anomaly is ad hoc when it
+protects no new prediction other than that anomaly, or when some of those
+predictions have been tested and none is corroborated. While all of them are
+untested, it is `pending`. An assumption rewritten under its id is appraised as
+a new one is, and one moved unchanged to another id is not appraised. Any change
+of wording counts, even one that keeps the meaning, so a core assumption
+reworded under its id is appraised and, when it protects a prediction that
+failed in the prior, is read as answering it. Each appraised assumption that
+answers an anomaly is listed in `assumptions` with its `change`, `new` or
+`revised`.
 
 The verdict holds only if what the two files declare is true, the test outcomes
 and the `added_for` and `protects` of each assumption above all. The appraisal
@@ -215,10 +218,10 @@ str(switching$predictions[[1]]$claim)
 `tf_entailments()` reads each claim against the graph. The signs of the routes
 between the two constructs decide whether the graph entails the claim,
 contradicts it or leaves it undetermined, and `via` names the propositions the
-verdict rests on. For an effect claim on an acyclic graph, `adjustment` gives a
-smallest set of constructs whose adjustment would identify the effect in
-observational data, or a minimal set when more than 12 constructs are
-candidates. Here it is the empty set. For other claims, it is `NA`.
+verdict rests on. For an effect claim that no feedback loop reaches,
+`adjustment` gives a smallest set of constructs whose adjustment would identify
+the effect in observational data, or a minimal set when more than 12 constructs
+are candidates. Here it is the empty set. For other claims, it is `NA`.
 `identified` reports identification by adjustment alone, so an effect without
 such a set may still be identified by other means, such as the front-door
 criterion, and a set for a cause or an outcome marked latent assumes a measure
@@ -240,16 +243,16 @@ data.frame(
 The derived signs hold when the graph is the causal structure, with no common
 cause of two constructs left out unless an association stands for it, and when
 each directed relation acts in its stated direction whatever the other inputs,
-as in a linear model or a uniformly monotone one. A verdict whose
-`faithfulness` is `TRUE` also assumes that paths do not cancel exactly, and the
-preregistration and the dossier end its line with `unless paths cancel
-exactly`. Under `cycles = "sigma"`, the sign of an effect further assumes that
-the system with the intervened construct held fixed settles, which the
-stability of the system as observed does not ensure. The function shows what
-the propositions commit the theory to and does not show whether a claim holds in
-data. The checklist's derivation-chain item counts a
-prediction whose claim the graph contradicts or leaves open as not derived from
-the propositions it cites.
+as in a linear model or a uniformly monotone one. A verdict whose `faithfulness`
+is `TRUE` also assumes that effects do not cancel exactly, along a route of
+unknown sign or between routes of opposite signs, and the preregistration and
+the dossier end its line with `unless effects cancel exactly`. Under
+`cycles = "sigma"`, the sign of an effect further assumes that the system with
+the intervened construct held fixed settles, which the stability of the system
+as observed does not ensure. The function shows what the propositions commit the
+theory to and does not show whether a claim holds in data. The checklist's
+derivation-chain item counts a prediction whose claim the graph contradicts or
+leaves open as not derived from the propositions it cites.
 
 ### Equivalent models
 
@@ -323,13 +326,15 @@ counts only when the rival's own graph does not give its claim the same verdict.
 `tf_preregister()` writes the theory and hypotheses sections of a
 preregistration as Markdown. Its header gives the theory's version and content
 hash and the status of the checklist's derivation chain, read with the
-document's `cycles`, and a line in italics says what the document holds and what
-must be added before registration. The hypotheses section opens with the
-assumptions that the verdicts on the claims rest on. Each hypothesis is listed
-with its type, its derivation, its claim and what the graph says of it, the
-adjustment an observational test would need, the auxiliary assumptions that
-protect it, the rivals it is declared to discriminate and its test record. The
-hypotheses section of the modality-switching theory reads as follows.
+document's `cycles`, and, when the causal graph has a feedback loop, a line that
+says whether the document refuses the loop or reads it by sigma-separation. A
+line in italics then says what the document holds and what must be added before
+registration. The hypotheses section opens with the assumptions that the
+verdicts on the claims rest on. Each hypothesis is listed with its type, its
+derivation, its claim and what the graph says of it, the adjustment an
+observational test would need, the auxiliary assumptions that protect it, the
+rivals it is declared to discriminate and its test record. The hypotheses
+section of the modality-switching theory reads as follows.
 
 ```{r prereg}
 prereg <- tf_preregister(switching)
@@ -397,16 +402,17 @@ does not read it.
 
 `tf_dossier()` assembles one Markdown document for a reviewer or an editor. Its
 header gives the content hash, the checklist version, the checklist score with
-its range and the gate. A paragraph in italics then says what the score
-describes and what the dossier is: the test outcomes, evidence, registrations
-and declared severities are as the author recorded them, and the dossier checks
-none of them beyond the inconsistencies it flags, so it is not an independent
-audit. Sections on the checklist, the severities, the test record, the
-evidence, the claims and the causal graph, the equivalent models for
-observational data, the rivals and the provenance follow, and the
-preregistration closes it. The same theory file always gives the same dossier,
-so it can be committed or attached to a submission. Its header and sections
-read as follows.
+its range and the gate, and, when the causal graph has a feedback loop, how the
+dossier reads it. A paragraph in italics then says what the score describes,
+what the gate checks and what the dossier is: the test outcomes, evidence,
+registrations and declared severities are as the author recorded them, and the
+dossier checks none of them beyond the inconsistencies it flags, so it is not an
+independent audit. Sections on the checklist, where the two items that decide
+the gate are marked `(blocker)`, the severities, the test record, the evidence,
+the claims and the causal graph, the equivalent models for observational data,
+the rivals and the provenance follow, and the preregistration closes it. The
+same theory file gives the same dossier for the same `cycles`, so it can be
+committed or attached to a submission. Its header and sections read as follows.
 
 ```{r dossier}
 dossier <- tf_dossier(switching)
@@ -419,11 +425,11 @@ grep("^## ", lines, value = TRUE)
 
 `tf_compile_sem()` writes lavaan model syntax for `lavaan::sem()` and does not
 need lavaan installed. Constructs with indicators become latent variables with
-`=~`, directed propositions labelled paths with `~` and associations
-covariances with `~~`. Comments say whether the paths are identified, or what
-identifying them would need, and list the sign each `increases` or `decreases` proposition states, and the effect each
-claim is about is defined with `:=`, so that lavaan estimates the quantity the
-claim concerns.
+`=~`, directed propositions labelled paths with `~` and associations covariances
+with `~~`. Comments say whether the paths are identified, or what identifying
+them would need, and list the sign each `increases` or `decreases` proposition
+states, and the effect each claim is about is defined with `:=`, so that lavaan
+estimates the quantity the claim concerns.
 
 ```{r sem}
 cat(tf_compile_sem(switching))

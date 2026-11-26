@@ -101,6 +101,58 @@ test_that("a claim that cannot be read is not evaluated", {
   expect_error(tf_entailments(t, cycles = "loops"), "requires cycles to be 'refuse' or 'sigma'")
 })
 
+test_that("under refuse only a claim behind a feedback loop is left unread", {
+  # c0 -> c1 -> c2 -> c3 <-> c4 -> c5: the loop of c3 and c4 reaches c3, c4 and
+  # c5. A claim naming one of them, as x, y or in given, is left unread under
+  # "refuse", and any other claim is read, with the record "sigma" gives it.
+  # The Python suite asserts the same records.
+  props <- list(c("c0", "c1", "causes"), c("c1", "c2", "increases"), c("c2", "c3", "increases"),
+                c("c3", "c4", "increases"), c("c4", "c3", "increases"), c("c4", "c5", "increases"))
+  claims <- list(claim("effect", "c1", "c2", "positive"),
+                 claim("association", "c1", "c2", "positive"),
+                 claim("association", "c0", "c1", "nonzero", given = "c2"),
+                 claim("effect", "c2", "c3", "positive"),
+                 claim("effect", "c4", "c5", "positive"),
+                 claim("association", "c0", "c2", "nonzero", given = "c5"),
+                 claim("effect", "c5", "c1", "zero"))
+  t <- small_theory(props, claims = claims, k = 6L)
+  refuse <- tf_entailments(t)$claims
+  sigma <- tf_entailments(t, cycles = "sigma")$claims
+  unread <- vapply(refuse, function(c) identical(c$basis, "feedback_loop"), logical(1))
+  expect_identical(unread, c(rep(FALSE, 3L), rep(TRUE, 4L)))
+  for (i in seq_along(refuse)) {
+    if (!unread[[i]]) {
+      expect_identical(refuse[[i]], sigma[[i]])
+    } else {
+      expect_identical(list(refuse[[i]]$verdict, refuse[[i]]$derived, refuse[[i]]$via),
+                       list("not_evaluated", "", list()))
+    }
+  }
+  # The trek of c1 and c2 shares the edge c0 -> c1 with the walks from c0, so
+  # the association is positive under both readings, as on a graph without the
+  # loop, though c0 causes c1 with no sign.
+  expect_identical(list(refuse[[2]]$derived, refuse[[2]]$verdict), list("positive", "entailed"))
+  acyclic <- tf_entailments(small_theory(props[c(1:3, 6L)], claims = claims, k = 6L))$claims
+  for (i in 1:3) {
+    expect_identical(list(acyclic[[i]]$derived, acyclic[[i]]$verdict),
+                     list(refuse[[i]]$derived, refuse[[i]]$verdict))
+  }
+  # The checklist then reads them alike.
+  expect_identical(tf_check(t)$items[[12L]]$not_checked, list("q3", "q4", "q5", "q6"))
+})
+
+test_that("a claim behind a loop reads in words why it is not evaluated", {
+  t <- small_theory(list(c("c0", "c1", "increases"), c("c1", "c0", "increases"),
+                         c("c2", "c3", "increases")),
+                    claims = list(claim("effect", "c0", "c1", "positive"),
+                                  claim("effect", "c2", "c3", "positive")))
+  lines <- vapply(tf_entailments(t)$claims, theoryforge:::.tf_claim_line, "")
+  expect_identical(lines, c(
+    paste0("the effect of c0 on c1 is positive; not evaluated, since a construct it names is on a ",
+           "feedback loop or downstream of one"),
+    "the effect of c2 on c3 is positive; entailed by the causal graph through p2"))
+})
+
 test_that("a reversed chain is Markov equivalent but differs in its effects", {
   t <- small_theory(list(c("c0", "c1", "increases"), c("c1", "c2", "increases")),
                     alternatives = list(list(id = "a", label = "r", propositions = list(
@@ -160,9 +212,38 @@ test_that("the preregistration and the dossier report the causal reading", {
                            "alt_grounding_by_interaction (its propositions contradict the claim)"),
                fixed = TRUE)
   dossier <- tf_dossier(t)
-  expect_match(dossier, "\n## Preregistration\n\n## Preregistration: Modality switching", fixed = TRUE)
+  expect_match(dossier, "\n## Preregistration\n\n### Preregistration: Modality switching",
+               fixed = TRUE)
   expect_match(dossier, paste0("- p2: c_modality_activation -> c_switch_cost ",
                                "(reversed in some equivalent model)"), fixed = TRUE)
+})
+
+test_that("the dossier lists the claims a rival discriminates when its graph is not compared", {
+  # Under refuse, a loop elsewhere leaves the independencies and the signs of
+  # the two graphs uncompared, but the claim that no loop reaches is read under
+  # both, and the dossier says that it discriminates, as its preregistration
+  # does. The Python suite asserts the same lines.
+  rival <- list(id = "alt1", label = "x lowers y",
+                propositions = list(list(id = "r0", from = "c0", to = "c1", relation = "decreases"),
+                                    list(id = "r1", from = "c2", to = "c3", relation = "increases"),
+                                    list(id = "r2", from = "c3", to = "c2", relation = "increases")))
+  t <- small_theory(list(c("c0", "c1", "increases"), c("c2", "c3", "increases"),
+                         c("c3", "c2", "increases")),
+                    claims = list(claim("effect", "c0", "c1", "positive")),
+                    alternatives = list(rival))
+  t$predictions[[1]]$diagnostic_vs <- list("alt1")
+  d <- tf_discriminate(t, "alt1")
+  expect_identical(list(d$evaluated, d$counts$discriminating_claims), list(FALSE, 1L))
+  doc <- tf_dossier(t)
+  expect_match(doc, paste0("- alt1: claims it discriminates: q0; independencies and signs not ",
+                           "compared, since a causal graph has a feedback loop\n"), fixed = TRUE)
+  expect_match(doc, paste0("   - Rivals it is declared to discriminate: alt1 (its propositions ",
+                           "contradict the claim)"), fixed = TRUE)
+  expect_false(grepl("alt1: not compared", doc, fixed = TRUE))
+  expect_match(tf_dossier(t, cycles = "sigma"),
+               paste0("- alt1: claims it discriminates: q0; independencies one implies and the ",
+                      "other does not: 0; decisive differences in sign: 1 effects, 1 associations\n"),
+               fixed = TRUE)
 })
 
 test_that("full validation reports each fault of a claim", {
@@ -218,6 +299,92 @@ test_that("an effect claim names a smallest adjustment set", {
   expect_false(tf_entailments(bow)$claims[[1]]$identified)
   expect_match(tf_preregister(confounded), "   - Adjustment for an observational test: c0\n",
                fixed = TRUE)
+})
+
+test_that("an effect that no loop reaches has its adjustment set", {
+  # c0 confounds c1 -> c2, and the loop of c3 and c4 lies downstream of c2. The
+  # effect of c1 on c2 keeps the adjustment set it has without the loop, under
+  # either value of cycles, and the effect of c1 on c3, which the loop reaches,
+  # has none. The Python suite asserts the same records.
+  props <- list(c("c0", "c1", "increases"), c("c0", "c2", "increases"), c("c1", "c2", "increases"),
+                c("c2", "c3", "increases"), c("c3", "c4", "increases"), c("c4", "c3", "increases"))
+  claims <- list(claim("effect", "c1", "c2", "positive"), claim("effect", "c1", "c3", "positive"))
+  t <- small_theory(props, claims = claims, k = 5L)
+  without <- tf_entailments(small_theory(props[1:5], claims = claims, k = 5L))$claims
+  for (cycles in c("refuse", "sigma")) {
+    e <- tf_entailments(t, cycles = cycles)$claims
+    expect_identical(e[[1]][c("identified", "adjustment")],
+                     list(identified = TRUE, adjustment = list("c0")))
+    expect_identical(e[[1]], without[[1]])
+    expect_identical(e[[2]][c("identified", "adjustment")], list(identified = NA, adjustment = NA))
+  }
+  expect_match(tf_preregister(t), "   - Adjustment for an observational test: c0\n", fixed = TRUE)
+})
+
+test_that("a claim that no loop reaches gets the record of the graph without its loops", {
+  # On random graphs whose loops lie late in the causal order, every claim
+  # whose constructs no loop reaches gets, field for field, the record it gets
+  # once the edges inside the loops are removed, under either value of cycles.
+  # The Python suite asserts the same of its own random graphs.
+  set.seed(80)
+  relations <- c("increases", "decreases", "causes", "associates")
+  checked <- 0L
+  identified <- 0L
+  for (rep in 1:80) {
+    k <- sample(5:8, 1)
+    order <- paste0("c", sample(k) - 1L)
+    props <- list()
+    for (i in seq_len(k - 1L)) {
+      for (j in (i + 1L):k) {
+        if (stats::runif(1) < 0.35) {
+          props[[length(props) + 1L]] <- c(order[[i]], order[[j]], sample(relations, 1))
+        }
+      }
+    }
+    # A loop among the last three constructs, and sometimes a second one.
+    ab <- sort(sample((k - 2L):k, 2))
+    props[[length(props) + 1L]] <- c(order[[ab[[1]]]], order[[ab[[2]]]], sample(relations[1:3], 1))
+    props[[length(props) + 1L]] <- c(order[[ab[[2]]]], order[[ab[[1]]]], sample(relations[1:3], 1))
+    if (stats::runif(1) < 0.3) {
+      c3 <- order[[sample((k - 2L):k, 1)]]
+      props[[length(props) + 1L]] <- c(c3, c3, sample(relations[1:3], 1))
+    }
+    claims <- lapply(1:10, function(i) {
+      xy <- sample(order, 2)
+      if (stats::runif(1) < 0.5) {
+        return(claim("effect", xy[[1]], xy[[2]], sample(c("positive", "negative", "zero"), 1)))
+      }
+      rest <- setdiff(order, xy)
+      given <- rest[sample(length(rest), sample(0:2, 1))]
+      if (length(given)) claim("association", xy[[1]], xy[[2]], "nonzero", given = given)
+      else claim("association", xy[[1]], xy[[2]], "positive")
+    })
+    t <- small_theory(props, claims = claims, k = k)
+    G <- .tf_prepare_graph(.tf_causal_graph(t, "test"), "refuse", t$propositions)
+    inside <- vapply(props, function(p) {
+      p[[3]] != "associates" && G$r[match(p[[1]], G$nodes), match(p[[2]], G$nodes)] &&
+        G$r[match(p[[2]], G$nodes), match(p[[1]], G$nodes)]
+    }, logical(1))
+    plain_t <- t
+    plain_t$propositions <- t$propositions[!inside]
+    plain <- tf_entailments(plain_t)$claims
+    for (cycles in c("refuse", "sigma")) {
+      e <- tf_entailments(t, cycles = cycles)$claims
+      for (i in seq_along(e)) {
+        c1 <- e[[i]]
+        if (c1$basis == "not_in_graph" || plain[[i]]$basis == "not_in_graph") next
+        if (any(G$behind[match(c(c1$x, c1$y, unlist(c1$given)), G$nodes)])) {
+          expect_identical(c1[c("identified", "adjustment")], list(identified = NA, adjustment = NA))
+          next
+        }
+        expect_identical(c1, plain[[i]])
+        checked <- checked + 1L
+        identified <- identified + !is.na(c1$identified)
+      }
+    }
+  }
+  expect_gt(checked, 250L)
+  expect_gt(identified, 120L)
 })
 
 test_that("each adjustment set is one dagitty accepts, of the smallest size", {

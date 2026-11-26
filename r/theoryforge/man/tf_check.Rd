@@ -10,9 +10,10 @@ tf_check(theory, cycles = "refuse")
 \item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
 \item{cycles}{How a causal graph with a feedback loop is read, as in
-\code{\link[=tf_entailments]{tf_entailments()}}. \code{"refuse"} (the default) leaves its claims
-unread, and \code{"sigma"} reads them by sigma-separation, which assumes
-that each loop settles to a unique equilibrium. The derivation chain and
+\code{\link[=tf_entailments]{tf_entailments()}}. \code{"refuse"} (the default) leaves unread the
+claims that name a construct on a loop or downstream of one, and
+\code{"sigma"} reads every claim by sigma-separation, which assumes that
+each loop settles to a unique equilibrium. The derivation chain and
 diagnosticity read the claims this way.}
 }
 \value{
@@ -32,9 +33,11 @@ choices made in coding the file and the rubric's constants. \code{gate} is
 \code{"pass"} when none does. \code{items} holds one list per checklist
 item, in checklist order, with \code{id}, \code{status}, \code{score},
 \code{weight}, \code{severity_if_fail} (\code{"blocker"} or
-\code{"warning"}) and \code{citation}. The derivation_chain item has a
-seventh element, \code{not_checked}, a list of the ids of the predictions
-whose claims were not checked.
+\code{"warning"}) and \code{citation}. The derivation_chain item has two
+more elements, \code{not_checked} and \code{phenomena_not_checked}, lists
+of the ids of the predictions and of the phenomena whose claims were not
+checked. A prediction and a phenomenon may share an id, so the two are
+listed apart.
 }
 \description{
 Runs the 12 items of the checklist over a theory object and returns a
@@ -64,9 +67,15 @@ entails. It fails when some prediction cites a proposition that is not
 declared, or none, or states a claim that the graph contradicts, leaves
 open, cannot read as written or cannot place because it names a construct
 no proposition relates, and when the graph contradicts the claim of a
-phenomenon. A claim that the graph leaves unread because it has a feedback
-loop is not checked: the prediction is not derived, and, failing anything
-else, the item warns, which does not block the gate.
+phenomenon. Under the default, a claim of a prediction or a phenomenon that
+names a construct on a feedback loop or downstream of one is left unread. It
+is not checked and, failing anything else, makes the item warn, which does
+not block the gate. A prediction whose claim is not checked counts as
+derived when the propositions it cites are declared, since nothing was found
+wrong with it. Such a claim therefore gets full credit and leaves the gate
+open whatever the graph would say of it read by sigma-separation, so a file
+whose claims a loop reaches is checked in full only with
+\code{cycles = "sigma"}. A loop that reaches no claim changes nothing.
 
 Three values are refused before anything is scored, since no score built
 on them would be defensible. One is a \code{cycles} other than

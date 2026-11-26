@@ -344,14 +344,14 @@ test("above the limits, Record the current hash computes it, and 'score it' keep
   const scoreIt = p.$("#edLint button");
   scoreIt.focus();
   await scoreIt.click();
-  await until(() => p.$("#liveStatus").textContent === "Checklist score 42, gate advisory", "the announcement of the score");
+  await until(() => p.$("#liveStatus").textContent === "Checklist score 42.0, gate advisory", "the announcement of the score");
   assert.equal(rt.scores, 1);
   assert.equal(p.ctx.document.activeElement, p.$("#edScore"));
-  assert.match(p.$("#edScore").textContent.replace(/<\/?b>/g, ""), /checklist 42 · gate advisory/);
+  assert.equal(p.$("#edScore").textContent, "checklist 42.0 · gate advisory");
   // The lint bar's score reads as the card's does, with the same title.
   assert.equal(p.$("#edScore").getAttribute("title"),
     "The checklist score describes how completely the file states what checklist 3.1 asks for. The score does not show that the theory is true or well reasoned.");
-  assert.equal(p.$("#liveStatus").textContent, "Checklist score 42, gate advisory");
+  assert.equal(p.$("#liveStatus").textContent, "Checklist score 42.0, gate advisory");
 });
 
 test("Record the current hash records nothing when the theory changes while its hash is computed", async () => {

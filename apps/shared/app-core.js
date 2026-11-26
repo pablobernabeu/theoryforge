@@ -43,7 +43,7 @@
     { id: "severity", group: "assess", label: "Claim-form rubric", desc: "Pre-data riskiness of each claim's form",
       help: "Applies the claim-form rubric, a pre-data ranking of the form of each prediction's claim, and returns its risk score and its rubric value, the risk score with the directional discount and the bonus for a declared rival. The package calls the rubric value computed_severity. It reads no data, so it is a different quantity from post-data severity." },
     { id: "post_severity", group: "assess", label: "Post-data severity", desc: "How severely each bounded claim passed",
-      help: "For each test outcome that records an estimate and its standard error, and whose prediction states in bounds the region its claim allows, computes the severity with which the claim passed: the probability that the test would have given a result less in accord with the claim, had the claim been false at the nearer bound. For a claim with one finite bound this is the post-data severity of Mayo and Spanos (2006). For a claim with two finite bounds the package takes the smaller of the two one-sided values, its own extension, which equals 1 minus the p value of the two one-sided z-tests of equivalence (Lakens, 2017). It uses a normal approximation to the sampling distribution of the estimate. Unlike the claim-form rubric, it depends on the design and the data. A high value does not show that the claim is true, and the checklist does not read it." },
+      help: "For each test outcome that records an estimate and its standard error, and whose prediction states in bounds the region its claim allows, computes the severity with which the claim passed: the probability that the test would have given a result less in accord with the claim, had the claim been false at the nearer bound. For a claim with one finite bound, this is the post-data severity of Mayo and Spanos (2006). For a claim with two finite bounds, the package takes the smaller of the two one-sided values, its own extension, which equals 1 minus the p value of the two one-sided z-tests of equivalence (Lakens, 2017). It uses a normal approximation to the sampling distribution of the estimate. Unlike the claim-form rubric, it depends on the design and the data. A high value does not show that the claim is true, and the checklist does not read it." },
     { id: "redundancy", group: "assess", label: "Redundancy screen", desc: "Lexical overlap of constructs",
       help: "Compares every pair of construct definitions by the Jaccard index and the overlap coefficient of their word sets. A pair is flagged for review when its Jaccard index reaches the checklist's similarity threshold, a near-duplicate, when both definitions hold at least three content words and their overlap coefficient reaches the overlap threshold, one definition contained in the other, when the two constructs carry the same label or when every measure of one is listed for the other." },
     {
@@ -72,15 +72,16 @@
     },
     {
       id: "diagram", group: "document", label: "Diagram", desc: "Nomological net, DAG, workflow…",
-      help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams. The venn, rigour and severity types are emitted directly as SVG.",
+      help: "Renders one of ten diagram types. Nomological net, context, workflow, causal DAG, provenance, development roadmap and pipeline are graph diagrams. The venn, checklist grid and severity types are emitted directly as SVG.",
       params: [{
         id: "type", label: "Diagram type", type: "select", default: "nomological_net",
         options: ["nomological_net", "context", "workflow", "causal_dag", "provenance",
           "development_roadmap", "pipeline", "venn", "rigour", "severity"],
+        labels: { rigour: "Checklist grid" },
       }],
     },
     { id: "preregister", group: "document", label: "Preregistration", desc: "Hypotheses for a preregistration",
-      help: "Generates the theory and hypotheses sections of a preregistration in Markdown. Each hypothesis is listed in file order with its derivation, its claim and what the causal graph says of it, the auxiliary assumptions that protect it, the rivals it is declared to discriminate and its test record. When some prediction records a sampling plan in its test block, a sampling plan section follows, with one line per prediction. The conditional independencies the causal graph implies and the claim-form rubric's value for each prediction come last. cycles decides how a graph with a feedback loop is read: refuse leaves it unread, and sigma reads it by sigma-separation.",
+      help: "Generates the theory and hypotheses sections of a preregistration in Markdown. Each hypothesis is listed in file order with its derivation, its claim and what the causal graph says of it, the auxiliary assumptions that protect it, the rivals it is declared to discriminate and its test record. When some prediction records a sampling plan in its test block, a sampling plan section follows, with one line per prediction. The conditional independencies the causal graph implies and the claim-form rubric's value for each prediction come last. cycles decides how a graph with a feedback loop is read: refuse derives no independencies and leaves unread the claims that name a construct on a loop or downstream of one, and sigma reads it by sigma-separation.",
       params: [CYCLES] },
     { id: "dossier", group: "document", label: "Dossier", desc: "The file and its checks, for reviewers",
       help: "Assembles in one Markdown document what the theory file records and what the package derives from it: the checklist report, the claim-form rubric, the test record with each outcome's post-data severity where it can be computed, evidence, claims, equivalent models, rivals, provenance and the preregistration. cycles is passed to the checklist and the derivations, as in the preregistration.",
@@ -118,6 +119,12 @@
   // Diagram types the package emits directly as SVG (vs Graphviz DOT / dagitty).
   // Shared so the two runtimes' code-snippet generators cannot drift.
   const DIAG_SVG = ["venn", "rigour", "severity"];
+  // The package's view "rigour" draws the checklist as a status grid. The app
+  // names it the checklist grid and saves it as <id>.checklist.svg, as do the
+  // code snippets, while the view keeps its name in the call.
+  const DIAG_TITLE = { rigour: "Checklist grid" };
+  const DIAG_FILE = { rigour: "checklist" };
+  const diagFile = (type) => DIAG_FILE[type] || type;
 
   // Figures render on a light "paper" canvas in both themes so the package's
   // black-text SVGs and the trajectory chart stay legible. Single source for
@@ -319,10 +326,20 @@
     const s = x.toFixed(3).replace(/\.?0+$/, "");
     return s === "-0" ? "0" : s;
   };
+  // The checklist score and the claim-form rubric's values carry one decimal,
+  // as the packages round them and the dossier writes them, so a whole number
+  // keeps its decimal (88.0, 1.0) and no value is padded beyond it.
+  const oneDec = (x) => {
+    const s = num(x);
+    return typeof x === "number" && /^-?\d+$/.test(s) ? s + ".0" : s;
+  };
+  // A count with its thousands marked, 9,799.
+  const count = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   // A pill takes its colour from its value, as the statuses of the checklist
   // do, unless a tone is given. The tone "plain" is a neutral fill for values
   // that report what a rule found rather than how well the theory fares: the
-  // verdicts of the causal readings and the statuses of the landscape.
+  // verdicts of the causal readings and of the amendment appraisal and the
+  // statuses of the landscape.
   function pill(s, tone) { return el("span", { class: "pill " + (tone || String(s).replace(/[^a-z_]/gi, "_")), text: s }); }
   const PLAIN = "plain";
   const NOT_FLAGGED = "not flagged";
@@ -339,20 +356,45 @@
   // A column's `pill` is true for a pill coloured by its value, a tone for a
   // pill of that tone, or a function that gives the tone of a value.
   const pillTone = (c, v) => (typeof c.pill === "function" ? c.pill(v) : typeof c.pill === "string" ? c.pill : undefined);
+  // A table whose `stack` option is set lays each row out as a block on a
+  // narrow screen (app.css), and a column with `tag` then names its value,
+  // since the header row is not shown there. A column's `fmt` writes its
+  // numbers.
   function tableSection(title, columns, rows, opts) {
+    const stack = !!(opts && opts.stack);
     const thead = el("thead", null, el("tr", null,
       columns.map((c) => el("th", { class: colClass(c), scope: "col", text: c.label || c }))));
     const tbody = el("tbody", null, rows.map((r) =>
       el("tr", null, columns.map((c) => {
         const key = c.key || c;
         const v = r[key];
-        if (c.pill) return el("td", { class: colClass(c) }, v === "" || v == null ? "—" : pill(v, pillTone(c, v)));
-        if (v && v.nodeType) return el("td", { class: colClass(c) }, v);
-        return el("td", { class: colClass(c) }, c.num ? (v == null ? "—" : num(v)) : (Array.isArray(v) ? (v.join(", ") || "—") : (v === "" || v == null ? "—" : String(v))));
+        const at = { class: colClass(c), "data-label": stack && c.tag ? c.label : null };
+        if (c.pill) return el("td", at, v === "" || v == null ? "—" : pill(v, pillTone(c, v)));
+        if (v && v.nodeType) return el("td", at, v);
+        return el("td", at, c.num ? (v == null ? "—" : (c.fmt || num)(v)) : (Array.isArray(v) ? (v.join(", ") || "—") : (v === "" || v == null ? "—" : String(v))));
       }))));
-    const table = el("div", { class: "tablewrap" }, el("table", { class: "grid" }, [thead, tbody]));
+    const table = el("div", { class: "tablewrap" }, el("table", { class: "grid" + (stack ? " stack" : "") }, [thead, tbody]));
     return { kind: "node", node: wrapSection(title, opts && opts.extra, table) };
   }
+  // A list in a table cell. A long one, such as the signs an amendment gives
+  // up in a graph with feedback loops, which can run to thousands, shows its
+  // count and its first ten entries, and the rest on request, so that the page
+  // stays usable. The full list is built only when it is asked for.
+  const LIST_SHOWN = 10;
+  function listCell(xs, sep) {
+    xs = asArr(xs).map(String);
+    if (xs.length <= LIST_SHOWN) return xs.join(sep) || "—";
+    const more = el("details", { class: "more" }, el("summary", null, "Show all " + count(xs.length)));
+    more.addEventListener("toggle", () => {
+      if (more.open && !more.querySelector(".morelist")) more.append(el("div", { class: "morelist", tabindex: "0", text: xs.join("\n") }));
+    });
+    return el("div", { class: "longlist" }, [
+      el("span", { text: count(xs.length) + " in all. The first ten: " + xs.slice(0, LIST_SHOWN).join(sep) + "." }), more]);
+  }
+  // The first few entries of a long list, for a reading: all of them up to
+  // three, and otherwise the first three and how many others there are.
+  const firstFew = (xs, sep) => (xs.length <= 3 ? (sep === ", " ? listAnd(xs) : xs.join(sep))
+    : xs.slice(0, 3).join(sep) + " and " + count(xs.length - 3) + " others");
   function kvSection(title, items) {
     const tbody = el("tbody", null, items.map(([k, v]) =>
       el("tr", null, [
@@ -427,6 +469,12 @@
     const btnPng = el("button", { class: "btn ghost sm", onclick: () => exportPng(svgEl, baseName) }, "PNG");
     return { kind: "node", node: wrapSection(title, [btnSvg, btnPng], fig) };
   }
+  // The claim-form rubric's chart as the package draws it, with each bar's
+  // value written with one decimal, as the table and the dossier write it.
+  // A value label is the text that follows a bar, and the download is the
+  // chart as shown.
+  const rubricChart = (svg) => String(svg == null ? "" : svg).replace(/(<rect\b[^>]*\/>\s*<text\b[^>]*>)\s*(-?\d+(?:\.\d+)?)\s*(<\/text>)/g,
+    (m, open, v, close) => open + oneDec(Number(v)) + close);
   // A Graphviz figure. When it cannot be drawn, because Graphviz did not load
   // or refused the DOT, the rest of the result stays and a note takes the
   // figure's place. Only a failed load is worth another run, since a DOT that
@@ -624,30 +672,30 @@
       "The score does not show that the theory is true or well reasoned.",
     ];
   }
-  const GATE_TEXT = "The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted. The labels are the author's.";
+  const GATE_TEXT = "The gate reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted. Under the default reading of feedback loops, a claim that names a construct on a loop or downstream of one is not read and blocks nothing. The labels are the author's and are not checked against the statements.";
 
   // General "how to read" guidance shown at the top of each operation's result.
   // It complements the sidebar help (what the operation does) by explaining how
   // to read the output that follows. The checklist's guide follows its scope
   // statement (aboutText).
   const RESULT_GUIDE = {
-    check: "Read the item statuses first, in the grid and the table below: each item passes, warns or fails on its own criterion. Some items check more than whether a field is filled in. The derivation chain reads each stated claim against the causal graph, diagnosticity sets a claim against a rival's propositions where both are stated, precision asks for two finite bounds and non-redundancy compares the words of the construct definitions. " + GATE_TEXT + " A claim that a feedback loop leaves unread under cycles refuse is not checked, and the derivation chain then warns without blocking. At draft maturity, the gate is advisory: the checklist reports but never blocks. An item with nothing to assess, such as redundancy in a theory with one construct, is marked n/a and left out of the score, which is the weighted mean of the applicable items. The coverage is their share of the checklist's weight. The range beside the score gives the lowest and the highest score with equal weights or with one weight halved or doubled in turn. It is not an interval, and how the file was coded and the rubric's constants lie outside it.",
+    check: "Read the item statuses first, in the grid and the table below: each item passes, warns or fails on its own criterion. Some items check more than whether a field is filled in. The derivation chain reads each stated claim against the causal graph, diagnosticity sets a claim against a rival's propositions where both are stated, precision asks for two finite bounds and non-redundancy compares the words of the construct definitions. " + GATE_TEXT + " A claim that is not read is not checked, and the derivation chain then warns without blocking. A prediction whose claim is not checked still counts as derived in the score when the propositions it cites are declared, whatever sigma-separation would make of the claim, so set cycles to sigma to check such a file in full. A loop that reaches no claim changes nothing. At draft maturity, the gate is advisory: the checklist reports but never blocks. An item with nothing to assess, such as redundancy in a theory with one construct, is marked n/a and left out of the score, which is the weighted mean of the applicable items. The coverage is their share of the checklist's weight. The range beside the score gives the lowest and the highest score with equal weights or with one weight halved or doubled in turn. It is not an interval, and how the file was coded and the rubric's constants lie outside it.",
     validate: "Validation reports structural and referential problems: missing required fields, values of the wrong type or outside the allowed set, duplicate identifiers and cross-references that point to nothing. Validate first: other operations run on an invalid file, but their results may not mean what they say.",
     diagram: "The diagram is rendered from the package's intermediate representation, shown below the figure. Export the figure as SVG or PNG, or copy the representation to render it elsewhere.",
     severity: "The rubric grades each prediction by the form of its claim alone, so it can be read before any data exist. The risk score reflects how much the form of the claim rules out, from an existence claim up to a point. The rubric value lowers it for a directional claim and raises it for predictions that name a registered rival they are declared to discriminate from (the declaration is not checked). A point or interval label without two finite bounds is rated as a directional claim. Longer bars mark riskier claim forms. The values are conventions of the package. How severely a claim is tested depends on the design and the data, which the rubric does not read and post-data severity does.",
-    post_severity: "Each row is a test outcome whose prediction states the region its claim allows. The severity is the probability that the test would have given an estimate less in accord with the claim, had the true value lain at the nearer bound, under a normal approximation with the recorded standard error. For a claim with one finite bound this is the post-data severity of Mayo and Spanos (2006). With two finite bounds the package takes the smaller of the two one-sided values, its own extension, which equals 1 minus the p value of the two one-sided z-tests of equivalence (Lakens, 2017). A value near 1 means the estimate would rarely have looked this good were the claim false at its edge. A value of 0.5 or below means the estimate lies at the edge of the region or outside it. It reads the recorded estimate and standard error as they stand, and does not check the design that produced them. It treats the standard error as known, so in small samples it overstates the severity of an estimate inside the region, and it does not account for a subgroup or analysis chosen after seeing the data. A high value does not show that the claim is true.",
+    post_severity: "Each row is a test outcome whose prediction states the region its claim allows. The severity is the probability that the test would have given an estimate less in accord with the claim, had the true value lain at the nearer bound, under a normal approximation with the recorded standard error. For a claim with one finite bound, this is the post-data severity of Mayo and Spanos (2006). With two finite bounds, the package takes the smaller of the two one-sided values, its own extension, which equals 1 minus the p value of the two one-sided z-tests of equivalence (Lakens, 2017). A value near 1 means the estimate would rarely have looked this good were the claim false at its edge. A value of 0.5 or below means the estimate lies at the edge of the region or outside it. It reads the recorded estimate and standard error as they stand, and does not check the design that produced them. It treats the standard error as known, so in small samples it overstates the severity of an estimate inside the region, and it does not account for a subgroup or analysis chosen after seeing the data. A high value does not show that the claim is true.",
     redundancy: "Each pair of constructs is compared by the words their definitions share. The Jaccard index divides the shared words by all the words of the two definitions, and the overlap coefficient divides them by the words of the shorter one, so both run from 0 to 1. A pair is flagged for review when its Jaccard index reaches 0.85, a near-duplicate, when both definitions hold at least three content words and the overlap reaches 0.85, one definition contained in the other, when the two carry the same label or when every measure of one is listed for the other. Near-duplicate constructs blur a theory and inflate its apparent scope. The screen compares words only, so it cannot tell whether two constructs are empirically redundant.",
-    appraise: "The verdict applies fixed rules that borrow Lakatos's terms to what the two files declare, and it holds only as far as the recorded outcomes, the registrations and the added_for and protects of each assumption are true. An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added, no corroborated prediction dropped, no unrefuted content lost and no refuted prediction weakened. Unrefuted content is lost when an untested prediction is dropped, when a prediction untested or corroborated in the prior is weakened or its claim is no longer entailed, or when an independence or a signed effect that the prior's graph implies is given up and no failed prediction stated it. An amendment is degenerating when it adds an ad hoc assumption or weakens a refuted prediction without corroborating new content, and neutral otherwise. A prediction is corroborated when some test passes it and none fails it. A new or revised assumption added for an anomaly is ad hoc unless new content it protects is corroborated, and pending while every such prediction is untested. A prediction that only changed its id is a rename, and one derived only from the prior's own propositions is an articulation, so neither counts as new content. The appraisal reads no dates, so it cannot tell a prediction from an accommodation of data already seen, and the prior must be the version before the new predictions were stated. Read the verdict with the refuted new predictions and the post-data severities of the corroborating passes, which are listed below and do not decide it.",
+    appraise: "The verdict applies fixed rules that borrow Lakatos's terms to what the two files declare, and it holds only as far as the recorded outcomes, the registrations and the added_for and protects of each assumption are true. An amendment is progressive when a new prediction derived from content the prior version lacked is corroborated, with no ad hoc assumption added, no corroborated prediction dropped, no unrefuted content lost and no refuted prediction weakened, and when the causal graphs of both versions can be built. Unrefuted content is lost when an untested prediction is dropped, when a prediction untested or corroborated in the prior is weakened or its claim is no longer entailed, or when an independence or a signed effect that the prior's graph implies is given up and no failed prediction stated it. An amendment is degenerating when it adds an ad hoc assumption or weakens a refuted prediction without corroborating new content, and neutral otherwise. A prediction is corroborated when some test passes it and none fails it. A new or revised assumption added for an anomaly is ad hoc when it protects no new prediction other than its anomaly, or when some of those predictions have been tested and none is corroborated, and pending while all of them are untested. A prediction that only changed its id is a rename. One derived only from the prior's own propositions is an articulation unless a new or revised assumption lists it in protects, and so is one whose claim the prior's graph entails. Neither a rename nor an articulation counts as new content. The appraisal reads no dates, so it cannot tell a prediction from an accommodation of data already seen, and the prior must be the version before the new predictions were stated. Read the verdict with the refuted new predictions and the post-data severities of the corroborating passes, which are listed below and do not decide it.",
     discriminate: "The two causal graphs are compared on the constructs that some proposition of each relates to another construct. An independence listed below is implied by one graph and not by the other, so a test of it bears on the choice between them. A sign difference is decisive when both graphs fix the sign, and a claim discriminates when one graph entails it and the other contradicts it. Both readings assume linear relations, or relations that act in one direction throughout, and no common cause left out. Markov-equivalent graphs imply the same independencies, and only an intervention or another assumption can separate them. The comparison shows which results would favour one account over the other. It does not say which account the data favour.",
     sem: "The constructs become a measurement model and the propositions a structural model, in lavaan syntax for lavaan::sem(). A closing block fixes at zero the covariances the theory rules out, which lavaan would otherwise free, and comments flag single indicators, moderations and feedback loops. The syntax is a starting point for an SEM fit: rename indicators to your columns and check identification.",
     implications: "Each statement says that two constructs are independent once the constructs after the bar are held fixed, a claim data can refute, for instance by a partial correlation in a linear model. The statements follow from the edges the theory leaves out, so each omission is read as a claim. A conditional statement tested on observed scores is rejected too often when the constructs held fixed are measured with error. A latent-variable model, such as one built on the SEM operation's measurement model, takes that error into account. A pair that no set of constructs separates is listed apart, since the theory implies no independence for it.",
-    entailments: "Each row is a claim a prediction or phenomenon states about two constructs. Entailed means the signs along every path or trek of the causal graph agree with the claim, contradicted means they rule it out, and undetermined means paths of unknown or opposite sign meet. Not evaluated marks a claim that names a construct no proposition relates to another, or one that meets a feedback loop under cycles refuse. For an effect claim on an acyclic graph, the 'adjust for' column gives a smallest set of constructs whose adjustment would identify the effect from observational data, or a minimal set when more than 12 constructs are candidates, and never a construct marked latent. Where it reads 'none suffices', no adjustment identifies the effect, though another method, such as the front-door criterion, may still do so. Under cycles sigma, a graph with feedback loops is read on the assumption that each loop settles to a unique equilibrium, also once the construct whose effect is read is held fixed. Entailed means the claim follows from the propositions as written, a check of the theory's internal consistency, not evidence that the claim is true. A claim that restates one proposition is entailed by that proposition alone.",
+    entailments: "Each row is a claim a prediction or phenomenon states about two constructs. Entailed means the signs along every path or trek of the causal graph agree with the claim, contradicted means they rule it out, and undetermined means paths of unknown or opposite sign meet. Not evaluated marks a claim that names a construct no proposition relates to another, or, under cycles refuse, one that names a construct on a feedback loop or downstream of one. For an effect claim whose constructs no feedback loop reaches, the 'adjust for' column gives a smallest set of constructs whose adjustment would identify the effect from observational data, or a minimal set when more than 12 constructs are candidates, and never a construct marked latent. Where it reads 'none suffices', no adjustment identifies the effect, though another method, such as the front-door criterion, may still do so. Under cycles sigma, a graph with feedback loops is read on the assumption that each loop settles to a unique equilibrium, also once the construct whose effect is read is held fixed. Entailed means the claim follows from the propositions as written, a check of the theory's internal consistency, not evidence that the claim is true. A claim that restates one proposition is entailed by that proposition alone.",
     equivalent: "A compelled edge points the same way in every graph that implies the same independencies as the theory's, so tests of conditional independence bear on its direction, provided the rest of the graph is right. A reversible edge can be turned round without changing any implied independence, so no test of conditional independence can tell its direction. Telling it needs an intervention, a temporal order or distributional assumptions such as non-Gaussian errors. The function does not know which constructs a study manipulates, so an edge out of a construct that an experiment sets may be listed as reversible although the experiment fixes its direction. An unshielded collider, two constructs that both affect a third and are not joined, fixes the direction of the edges into it.",
     preregister: "The document holds the theory and hypotheses sections of a preregistration. Each hypothesis is listed in file order with its derivation, its claim, the auxiliary assumptions that protect it, the rivals it is declared to discriminate and its test record. A hypothesis that has already been tested is marked as such. When some prediction records a sampling plan, the plans are listed after the hypotheses, one line per prediction. The implied independencies follow, then the claim-form rubric's value for each prediction. Before data collection, complete it with the design, sampling plan, analysis plan and inference criteria that a preregistration template such as PRP-QUANT asks for (Bosnjak et al., 2022), as far as the document leaves them out.",
-    dossier: "The dossier gathers what the theory file records and what the package derives from it. The score, gate and verdicts describe the file by fixed rules. Test outcomes, evidence, registrations and declared severities are as the author entered them, and the package checks only whether a recorded estimate agrees with its pass or failure and whether a declared severity exceeds the rubric. It is not an independent audit.",
+    dossier: "The dossier gathers what the theory file records and what the package derives from it. The score, gate and verdicts describe the file by fixed rules. Test outcomes, evidence, registrations and declared severities are as the author entered them, and the package checks only whether a recorded estimate agrees with its pass or failure and whether a declared severity is more than 0.2 above the rubric. It is not an independent audit.",
     simulate: "Each construct is read as a quantity that changes over time. A directed proposition pushes one construct up (increases, and causes and mediates, which state no sign and are taken as positive) or down (decreases) in proportion to another, with one gain k for every coupling, and every construct decays towards zero at the damping rate. Moderates and associates couple nothing. The chart traces the values from the initial state, and the table below holds the numbers. The theory states no parameter values. The gain k and the damping are free settings that together decide whether a feedback loop grows or settles, unsigned relations are taken as positive, the values have no unit and the trajectory is not fitted to data. A linear system cannot show bistability.",
     litmap: "The corpus is mapped three ways: which keywords co-occur, which keywords cluster into themes and which references are cited together. The min_link setting controls how many shared records a pair needs to count as linked. With components, a theme is a connected group of keywords, which separates the small designed corpus into four but joins nearly every keyword of a real corpus into one, and the package then warns. With simple_centres, each theme also has a centrality and a density, which place it in a quadrant of the strategic diagram (Cobo et al., 2011).",
-    landscape: "The theory and its rivals are matched against the corpus themes by the words a theme's keywords share with the theory's construct labels, or with a rival's label and key constructs. Words of the theory's title, words most records carry and words such as theory or model do not count. Each theme is shown with how many registered accounts share a word with it: none, one or several. The match is lexical. It shows that an account and a theme have a word in common, and does not show that the account explains what the theme's records report, nor that a theme without a match is unexplained. A theme that several accounts share a word with may call for predictions that discriminate between them, without showing that they compete. The JSON keeps the package's names for the three statuses, under_theorised, covered and crowded, and for the two lists, under_theorised_fronts and redundancy_risk.",
+    landscape: "The theory and its rivals are matched against the corpus themes by the words a theme's keywords share with the theory's construct labels, or with a rival's label and key constructs. Words of the theory's title, words most records carry and words such as theory or model do not count. Each theme is shown with how many registered accounts share a word with it: none, one or several. The match is lexical. It shows that an account and a theme have a word in common, and does not show that the account explains what the theme's records report, nor that a theme without a match is unexplained. A theme that several accounts share a word with may call for predictions that discriminate between them, without showing that they compete. The figure, like the JSON, keeps the package's names for the three statuses: under_theorised for a theme no account shares a word with, covered for one and crowded for several. The JSON also keeps the package's names for the two lists, under_theorised_fronts and redundancy_risk.",
   };
   // Every number in a reading or a table is written as the score on the card
   // is, with no padding: 87.1, not 87.10. fmtNum is kept as the editor's name
@@ -706,6 +754,15 @@
   // it read it, since a package whose check() takes no cycles reads the
   // default whatever was asked, or else as it was asked.
   const checkReading = (raw, params) => (raw && raw.cycles) || params.cycles || "refuse";
+  // The predictions and the phenomena whose claims the derivation chain left
+  // unread for a feedback loop. A prediction and a phenomenon may share an id,
+  // so the two are kept apart, and a package that reports no phenomena gives
+  // none.
+  function unreadClaims(rep) {
+    const chain = asArr(rep && rep.items).find((i) => i && i.id === "derivation_chain");
+    return { predictions: chain ? asArr(chain.not_checked).map(String) : [],
+      phenomena: chain ? asArr(chain.phenomena_not_checked).map(String) : [] };
+  }
 
   // A result-specific sentence that reads the actual output, to help interpret it.
   function interpret(opId, raw, params) {
@@ -720,7 +777,7 @@
       // The score first, then the statuses, and the gate as what the blocking
       // items' statuses give. At draft maturity the gate is advisory whatever
       // fails, so it says nothing and the sentence says why.
-      let txt = "The checklist score is " + num(r.aggregate_score) + ".";
+      let txt = "The checklist score is " + oneDec(r.aggregate_score) + ".";
       txt += " Of the " + (items.length - na) + " applicable items, " + by("pass") + " pass, " + by("warn") + " warn and " + by("fail") + " fail";
       if (r.gate === "advisory") {
         txt += failed.length
@@ -733,13 +790,17 @@
       } else {
         txt += ". No blocking item fails, so the gate " + (r.gate === "pass" ? "passes." : "is " + r.gate + ".");
       }
-      // A claim the derivation chain could not read is named, since its item
-      // warns rather than fails (checklist 3.1).
-      const chain = items.find((i) => i.id === "derivation_chain");
-      const unread = chain ? asArr(chain.not_checked) : [];
-      if (unread.length) {
-        txt += " " + plural(unread.length, "prediction") + " (" + unread.join(", ") + ") " + (unread.length === 1 ? "was" : "were") +
-          " not checked, since the causal graph has a feedback loop" + (checkReading(raw, params) !== "sigma" ? ". Set cycles to sigma to read the graph on the assumption that each loop settles to a unique equilibrium." : ".");
+      // A claim the derivation chain could not read is named, a prediction's
+      // or a phenomenon's, since its item warns rather than fails (checklist
+      // 3.1).
+      const unread = unreadClaims(r);
+      const nu = unread.predictions.length + unread.phenomena.length;
+      if (nu) {
+        const who = [];
+        if (unread.predictions.length) who.push(plural(unread.predictions.length, "prediction") + " (" + unread.predictions.join(", ") + ")");
+        if (unread.phenomena.length) who.push(plural(unread.phenomena.length, "phenomenon", "phenomena") + " (" + unread.phenomena.join(", ") + ")");
+        txt += " " + listAnd(who) + (nu === 1 ? " was" : " were") +
+          " not checked, since " + (nu === 1 ? "it names" : "each names") + " a construct on a feedback loop or downstream of one" + (checkReading(raw, params) !== "sigma" ? ". Set cycles to sigma to read the graph on the assumption that each loop settles to a unique equilibrium." : ".");
       }
       // Items with nothing to assess are left out of the score, which then
       // covers less than the whole checklist.
@@ -755,15 +816,15 @@
       const rows = asArr(raw.rows);
       if (!rows.length) return "This theory has no predictions to grade.";
       const sev = rows.map((r) => Number(r.computed_severity));
-      if (rows.length === 1) return "The one prediction, " + rows[0].prediction_id + ", has a rubric value of " + num(sev[0]) + ".";
+      if (rows.length === 1) return "The one prediction, " + rows[0].prediction_id + ", has a rubric value of " + oneDec(sev[0]) + ".";
       const max = Math.max(...sev), mean = sev.reduce((a, b) => a + b, 0) / sev.length;
       // Every prediction at the highest value is named, since the rubric
       // gives many claims the same value.
       const top = rows.filter((r, i) => num(sev[i]) === num(max)).map((r) => r.prediction_id);
-      let txt = "Across " + plural(rows.length, "prediction") + ", the rubric value runs from " + num(Math.min(...sev)) + " to " + num(max) + " (mean " + num(mean) + ").";
+      let txt = "Across " + plural(rows.length, "prediction") + ", the rubric value runs from " + oneDec(Math.min(...sev)) + " to " + oneDec(max) + " (mean " + oneDec(mean) + ").";
       if (top.length === rows.length) txt += " Every prediction's claim form has the same value.";
-      else txt += top.length === 1 ? " The riskiest claim form, at " + num(max) + ", is that of " + top[0] + "."
-        : " The riskiest claim forms, at " + num(max) + ", are those of " + listAnd(top) + ".";
+      else txt += top.length === 1 ? " The riskiest claim form, at " + oneDec(max) + ", is that of " + top[0] + "."
+        : " The riskiest claim forms, at " + oneDec(max) + ", are those of " + listAnd(top) + ".";
       return txt;
     }
     if (opId === "post_severity") {
@@ -787,6 +848,20 @@
       const ar = asArr(r.articulated).length, dr = asArr(r.dropped).length, dc = asArr(r.dropped_corroborated).length;
       let txt = "The amendment is " + r.verdict + " by fixed rules that borrow Lakatos's terms, applied to what the two files declare. It introduces " + plural(np, "new prediction") + ", of which " + cn + (cn === 1 ? " is" : " are") + " corroborated and " + ar + (ar === 1 ? " only articulates" : " only articulate") + " the prior's propositions, and " + plural(ah, "ad hoc assumption") + ".";
       if (dr) txt += " It drops " + plural(dr, "prediction") + " of the prior, " + dc + " of them corroborated.";
+      // Content the prior held that the amendment gives up keeps it from
+      // being progressive, so the reading names it, and says when the two
+      // graphs could not be compared, which has the same consequence. A
+      // package without these keys leaves them out.
+      if (r.implications_compared === false) {
+        txt += " The package cannot build the causal graph of at least one of the two versions, as happens when a construct id is repeated or a proposition names a construct the file does not declare. The two graphs could not be compared, so the amendment cannot be progressive, and the entailments, signs and implications it may give up are not listed.";
+      }
+      const lostPreds = [...new Set(asArr(r.content_lost).map(String).concat(asArr(r.entailments_lost).filter((x) => x && x.id != null).map((x) => String(x.id))))];
+      const lostSigns = asArr(r.signs_lost).map(String), lostImpl = asArr(r.implications_lost_unrefuted).map(String);
+      const lost = [];
+      if (lostPreds.length) lost.push(count(lostPreds.length) + (lostPreds.length === 1 ? " prediction" : " predictions") + " that it drops untested, weakens or whose claim its graph no longer entails (" + firstFew(lostPreds, ", ") + ")");
+      if (lostSigns.length) lost.push(count(lostSigns.length) + (lostSigns.length === 1 ? " signed effect" : " signed effects") + " of the prior's graph (" + firstFew(lostSigns, "; ") + ")");
+      if (lostImpl.length) lost.push(count(lostImpl.length) + (lostImpl.length === 1 ? " implied independence" : " implied independencies") + " that no failed prediction contradicts (" + firstFew(lostImpl, "; ") + ")");
+      if (lost.length) txt += " It gives up content the prior held, so it cannot be progressive: " + listAnd(lost) + ".";
       // What the verdict is to be read with. A package without these keys
       // leaves them out.
       const anomalies = asArr(r.new_anomalies), refuted = asArr(r.refuted_new);
@@ -809,7 +884,10 @@
     if (opId === "discriminate") {
       if (raw.ok === false) return cycleRefusal(raw, params);
       const r = raw.result, cn = r.counts || {};
-      if (!r.evaluated) return "The two graphs were not compared: " + words(r.reason || "a graph has a feedback loop") + ". Set cycles to sigma to read graphs with feedback loops.";
+      // Under refuse, the claims are read whatever evaluated is, and only the
+      // independencies and the signs are left out (API_SPEC.md section 32).
+      if (!r.evaluated) return "The independencies and signs of the two graphs were not compared, since a causal graph has a feedback loop. They read " +
+        plural(Number(cn.discriminating_claims || 0), "claim") + " of the theory in opposite ways. Set cycles to sigma to compare graphs with feedback loops.";
       const shared = asArr(r.shared).length;
       let txt = "Compared on the " + plural(shared, "construct") + " both accounts name, the graphs differ in " + plural(asArr(r.independencies).length, "implied independence", "implied independencies") +
         " and give " + plural(Number(cn.decisive_effects || 0), "effect") + " and " + plural(Number(cn.decisive_associations || 0), "association") + " decisively different signs. They read " +
@@ -846,16 +924,18 @@
         (parts.length ? "The causal graph " + listAnd(parts) + "." : "The causal graph gives none of them a verdict.");
       // The reasons are the package's own, as the preregistration words them.
       const why = { malformed_claim: "the claim is incomplete", not_in_graph: "it names a construct that no proposition relates to another",
-        feedback_loop: "the causal graph has a feedback loop", graph_refused: "the causal graph cannot be built" };
+        feedback_loop: "a construct it names is on a feedback loop or downstream of one", graph_refused: "the causal graph cannot be built" };
       const unread = claims.filter((x) => x.verdict === "not_evaluated");
       const bases = [...new Set(unread.map((x) => x.basis))];
       if (unread.length) {
         txt += " " + (unread.length === 1 ? "One claim was" : unread.length + " claims were") + " not evaluated" +
-          (bases.length === 1 && why[bases[0]] ? ", since " + (unread.length === 1 ? why[bases[0]] : why[bases[0]].replace(/^it names/, "each names").replace(/^the claim is/, "each claim is")) : "") + ".";
+          (bases.length === 1 && why[bases[0]] ? ", since " + (unread.length === 1 ? why[bases[0]] : why[bases[0]].replace(/^it names/, "each names").replace(/^a construct it names/, "a construct each names").replace(/^the claim is/, "each claim is")) : "") + ".";
         if (bases.includes("feedback_loop") && params.cycles !== "sigma") txt += " Set cycles to sigma to read a graph with feedback loops, on the assumption that each loop settles to a unique equilibrium.";
       }
       const faith = claims.filter((x) => x.faithfulness === true).length;
-      if (faith) txt += " For " + (faith === 1 ? "one verdict" : faith + " verdicts") + ", the reading assumes that routes of unknown or opposite sign do not cancel exactly.";
+      // The packages' claim lines say 'unless effects cancel exactly', which
+      // covers one route of unknown sign as well as routes that offset.
+      if (faith) txt += " For " + (faith === 1 ? "one verdict" : faith + " verdicts") + ", the reading assumes that effects do not cancel exactly.";
       return txt;
     }
     if (opId === "equivalent") {
@@ -983,28 +1063,36 @@
       // The package draws the grid with the default reading of a feedback
       // loop, so it is shown only for that reading, where it agrees with the
       // table.
-      if (raw.svg || read !== "sigma") sections.push(figureSection("Checklist grid", raw.svg, theoryId + ".rigour"));
+      if (raw.svg || read !== "sigma") sections.push(figureSection("Checklist grid", raw.svg, theoryId + "." + diagFile("rigour")));
       else sections.push(noteSection("Checklist grid", "The package draws the grid with cycles refuse, its default, so it is not drawn for cycles sigma. The table below gives each item's status under sigma."));
       // The range with other weights, where the checklist reports one.
       const range = Array.isArray(rep.aggregate_range) && rep.aggregate_range.length === 2
-        ? " (" + num(rep.aggregate_range[0]) + " to " + num(rep.aggregate_range[1]) + " with equal weights or one weight halved or doubled)" : "";
-      const chain = asArr(rep.items).find((i) => i.id === "derivation_chain");
-      const unread = chain ? asArr(chain.not_checked) : [];
+        ? " (" + oneDec(rep.aggregate_range[0]) + " to " + oneDec(rep.aggregate_range[1]) + " with equal weights or one weight halved or doubled)" : "";
+      const unread = unreadClaims(rep);
       sections.push(kvSection("Summary", [
-        ["Checklist score", num(rep.aggregate_score) + range],
+        ["Checklist score", oneDec(rep.aggregate_score) + range],
         ["Coverage", num(rep.coverage) + " of the checklist's weight"],
         ["Gate", pill(rep.gate)],
         ["Blockers failed", String(rep.n_blockers_failed)],
         ["Maturity", rep.maturity],
         ["Cycles", read],
-      ].concat(unread.length ? [["Not checked (feedback loop)", unread.join(", ")]] : [])));
-      // An item with nothing to assess has a null score, shown as n/a.
-      const checkRows = asArr(rep.items).map((it) => Object.assign({}, it, { score: it.score == null ? "n/a" : it.score }));
+      // The reading says why they were not checked, and the labels stay short,
+      // so that the values keep their room on a narrow screen.
+      ].concat(unread.predictions.length ? [["Predictions not checked", unread.predictions.join(", ")]] : [],
+        unread.phenomena.length ? [["Phenomena not checked", unread.phenomena.join(", ")]] : [])));
+      // Each item is shown with its criterion, as the package's checklist
+      // states it, below its id, so that the id is not read for more than the
+      // item checks. An item with nothing to assess has a null score, shown
+      // as n/a, and a whole score keeps its decimal (1.0), as in the dossier.
+      const crit = raw.criteria && typeof raw.criteria === "object" ? raw.criteria : {};
+      const checkRows = asArr(rep.items).map((it) => Object.assign({}, it, {
+        item: crit[it.id] ? el("span", null, [el("span", { class: "iid", text: it.id }), el("span", { class: "crit", text: String(crit[it.id]) })]) : it.id,
+        score: it.score == null ? "n/a" : it.score }));
       sections.push(tableSection("Checklist items",
-        [{ key: "id", label: "item" }, { key: "status", label: "status", pill: true },
-         { key: "score", label: "score", num: true }, { key: "weight", label: "weight", num: true },
-         { key: "severity_if_fail", label: "severity if fail", grow: true }],
-        checkRows, { extra: [jsonBtn(theoryId + ".report.json", rep)] }));
+        [{ key: "item", label: "item", grow: true }, { key: "status", label: "status", pill: true },
+         { key: "score", label: "score", num: true, tag: true, fmt: oneDec }, { key: "weight", label: "weight", num: true, tag: true },
+         { key: "severity_if_fail", label: "severity if fail", tag: true }],
+        checkRows, { stack: true, extra: [jsonBtn(theoryId + ".report.json", rep)] }));
     } else if (opId === "validate") {
       const v = raw;
       if (v.ok) {
@@ -1022,46 +1110,50 @@
       const r = raw;
       // The reading above the result carries the caution when this is "no".
       const parent = isDeclaredParent(STATE.summary, priorLineage(params.prior));
-      sections.push(kvSection("Appraisal", [["Verdict", pill(r.verdict)], ["Prior version", priorName(params.prior) || "—"],
+      sections.push(kvSection("Appraisal", [["Verdict", pill(r.verdict, PLAIN)], ["Prior version", priorName(params.prior) || "—"],
         ["Declared parent", parent ? "yes" : "no"]]));
       // The keys that newer versions of the package add are shown only when
       // the result holds them, so that an older package's result does not
       // read as having none.
       const has = (k) => Object.prototype.hasOwnProperty.call(r, k);
-      const ids = (v) => asArr(v).join(", ") || "—";
+      // Each list shows its count and its first entries when it is long.
+      const ids = (v) => listCell(v, ", ");
+      const stmts = (v) => listCell(v, "; ");
       const rows = [
         { k: "New predictions", v: ids(r.new_predictions) },
         { k: "Corroborated new", v: ids(r.corroborated_new) },
-        has("corroborated_new_severity") && { k: "Lowest post-data severity of their passes", v: asArr(r.corroborated_new_severity)
-          .map((x) => x.id + " (" + (typeof x.severity === "number" ? sevText(x.severity) : "not computed") + ")").join(", ") || "—" },
+        has("corroborated_new_severity") && { k: "Lowest post-data severity of their passes", v: ids(asArr(r.corroborated_new_severity)
+          .map((x) => x.id + " (" + (typeof x.severity === "number" ? sevText(x.severity) : "not computed") + ")")) },
         { k: "Corroborations with a registration recorded", v: ids(r.corroborated_new_registered) },
         has("refuted_new") && { k: "New predictions that failed a test", v: ids(r.refuted_new) },
         has("protected_only") && { k: "New only through protects", v: ids(r.protected_only) },
         { k: "Articulations of prior content", v: ids(r.articulated) },
         { k: "Derived from no proposition", v: ids(r.underived) },
-        { k: "Renamed", v: asArr(r.renamed).map((p) => p.prior + " → " + p.new).join(", ") || "—" },
-        { k: "Revised", v: asArr(r.revised).map((p) => p.id + " (" + p.change + ")").join(", ") || "—" },
+        { k: "Renamed", v: ids(asArr(r.renamed).map((p) => p.prior + " → " + p.new)) },
+        { k: "Revised", v: ids(asArr(r.revised).map((p) => p.id + " (" + p.change + ")")) },
         { k: "Dropped", v: ids(r.dropped) },
         { k: "Dropped corroborated", v: ids(r.dropped_corroborated) },
         { k: "Content lost", v: ids(r.content_lost) },
-        has("entailments_lost") && { k: "Entailments lost", v: asArr(r.entailments_lost)
-          .map((x) => x.id + " (" + words(x.prior) + " → " + words(x.new) + ")").join(", ") || "—" },
-        has("signs_lost") && { k: "Signs lost", v: asArr(r.signs_lost).join("; ") || "—" },
+        has("entailments_lost") && { k: "Entailments lost", v: ids(asArr(r.entailments_lost)
+          .map((x) => x.id + " (" + words(x.prior) + " → " + words(x.new) + ")")) },
+        has("signs_lost") && { k: "Signs lost", v: stmts(r.signs_lost) },
         { k: "New anomalies", v: ids(r.new_anomalies) },
         { k: "Ad hoc assumptions", v: ids(r.ad_hoc_assumptions) },
-        { k: "Appraised assumptions", v: asArr(r.assumptions).map((a) => a.id + ": " + (ASSUMPTION_CLASS[a.class] || words(a.class))).join("; ") || "—" },
-        { k: "Implications lost", v: asArr(r.implications_lost).join("; ") || "—" },
-        { k: "Implications gained", v: asArr(r.implications_gained).join("; ") || "—" },
+        { k: "Appraised assumptions", v: stmts(asArr(r.assumptions).map((a) => a.id + ": " + (ASSUMPTION_CLASS[a.class] || words(a.class)))) },
+        has("implications_compared") && { k: "Causal graphs compared", v: r.implications_compared === false ? "no" : "yes" },
+        { k: "Implications lost", v: stmts(r.implications_lost) },
+        has("implications_lost_unrefuted") && { k: "Implications lost, unrefuted", v: stmts(r.implications_lost_unrefuted) },
+        { k: "Implications gained", v: stmts(r.implications_gained) },
       ].filter(Boolean);
       sections.push(tableSection("Detail",
         [{ key: "k", label: "category" }, { key: "v", label: "ids", grow: true }],
         rows, { extra: [jsonBtn(theoryId + ".appraisal.json", r)] }));
     } else if (opId === "severity") {
       const rows = asArr(raw.rows);
-      sections.push(figureSection("Rubric chart", raw.svg, theoryId + ".severity"));
+      sections.push(figureSection("Rubric chart", rubricChart(raw.svg), theoryId + ".severity"));
       if (rows.length) sections.push(tableSection("Rubric value of each prediction",
         [{ key: "prediction_id", label: "prediction" }, { key: "type", label: "type" },
-         { key: "risk_score", label: "risk score", num: true }, { key: "computed_severity", label: "rubric value", num: true }],
+         { key: "risk_score", label: "risk score", num: true, fmt: oneDec }, { key: "computed_severity", label: "rubric value", num: true, fmt: oneDec }],
         rows, { extra: [jsonBtn(theoryId + ".severity.json", rows)] }));
       else sections.push(noteSection("Rubric value of each prediction", "This theory has no predictions."));
     } else if (opId === "post_severity") {
@@ -1094,8 +1186,9 @@
     } else if (opId === "diagram") {
       const ir = raw.ir, type = params.type;
       const isSvg = /^\s*<svg/.test(ir);
-      sections.push(isSvg ? figureSection(words(type) + " diagram", ir, theoryId + "." + type)
-        : await dotFigure(words(type) + " diagram", type === "causal_dag" ? dagToDigraph(ir) : ir, theoryId + "." + type));
+      const title = DIAG_TITLE[type] || words(type) + " diagram";
+      sections.push(isSvg ? figureSection(title, type === "severity" ? rubricChart(ir) : ir, theoryId + "." + diagFile(type))
+        : await dotFigure(title, type === "causal_dag" ? dagToDigraph(ir) : ir, theoryId + "." + diagFile(type)));
       if (!isSvg) sections.push(textSection(type === "causal_dag" ? "dagitty model code" : "Intermediate representation (Graphviz DOT)", ir, theoryId + "." + type + (type === "causal_dag" ? ".dag" : ".dot"), "text/plain"));
     } else if (opId === "sem") {
       sections.push(textSection("lavaan model syntax", raw.text, theoryId + ".sem.lavaan", "text/plain"));
@@ -1794,7 +1887,7 @@
     const ck = s && s.check;
     let node;
     if (ck && !("error" in ck)) {
-      node = el("span", { class: "chip score", title: scoreTitle(ck), html: "checklist <b>" + esc(num(ck.score)) + "</b> · gate " + esc(ck.gate) });
+      node = el("span", { class: "chip score", title: scoreTitle(ck), text: "checklist " + oneDec(ck.score) + " · gate " + (ck.gate == null ? "" : ck.gate) });
     } else if (ck) {
       node = el("span", { class: "chip", title: ck.error, text: "not scored" });
     } else if (s && s.scoreWait === "asked") {
@@ -1820,7 +1913,7 @@
       show: (s) => { const chip = $("#summaryScore"); if (chip) chip.replaceWith(scoreChip(s)); if (EDITOR && EDITOR.onSummary) EDITOR.onSummary(s); },
       focus: () => $("#summaryScore"),
       said: (s) => ("error" in s.check ? "The checklist could not score the theory: " + s.check.error
-        : "Checklist score " + num(s.check.score) + ", gate " + s.check.gate),
+        : "Checklist score " + oneDec(s.check.score) + ", gate " + s.check.gate),
     },
     hash: {
       call: () => RT.contentHash(), done: (x) => !!(x.hash || x.hashError), wait: "hashWait", by: "hashBy",
@@ -1958,7 +2051,7 @@
     const li = (t) => el("li", null, t);
     return el("div", { class: "welcome" }, [
       el("h3", null, "Develop a theory you can test"),
-      el("p", null, "theoryforge reads a theory written as structured data and checks what the file states: which fields are filled in, what its propositions imply as a causal graph, how it differs from a rival or an earlier version, and whether an amendment meets fixed rules that borrow Lakatos's terms. None of these checks shows that a theory is true or well reasoned, and the checklist's weights and thresholds have not been validated against expert judgement."),
+      el("p", null, "theoryforge reads a theory written as structured data and checks what the file states: which fields are filled in, what its propositions imply as a causal graph, how it differs from a rival or from an earlier version and whether an amendment meets fixed rules that borrow Lakatos's terms. None of these checks shows that a theory is true or well reasoned, and the checklist's weights and thresholds have not been validated against expert judgement."),
       el("ol", { class: "welcome-steps" }, [
         li("Pick an example theory on the left, upload your own YAML or JSON file, or press New theory to build one in the editor without writing YAML."),
         li("Choose an operation and adjust any parameters."),
@@ -2495,7 +2588,7 @@
   }
   function editorHost() {
     return {
-      el, esc, toast, openModal, closeModal, copyText, download, plural, problemList, errorBox, asArr, fmtNum, num,
+      el, esc, toast, openModal, closeModal, copyText, download, plural, problemList, errorBox, asArr, fmtNum, num, oneDec,
       scoreTitle, wellFormedTitle: WELL_FORMED_TITLE,
       summary: () => STATE.summary,
       sourceOf: () => (STATE.source ? STATE.source.text : null),
@@ -2882,7 +2975,7 @@
   const startCaught = (runtime) => start(runtime).catch(bootFailed);
 
   window.TF = {
-    start: startCaught, OPS, GROUPS, DIAG_SVG,
+    start: startCaught, OPS, GROUPS, DIAG_SVG, DIAG_FILE,
     util: {
       el, esc, download, copyText, toast, renderDot, dagToDigraph, fetchJson, fetchBytes, plural, problemList,
       headline, cleanMessage: (m) => cleanMessage(m), cssPx, sevText, severityReading, claimText,

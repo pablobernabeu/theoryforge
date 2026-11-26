@@ -186,7 +186,8 @@ def test_the_derivation_line_reads_the_graph_as_the_claim_lines_do(panic_path):
             "entailed by the causal graph\n") in sigma
     refuse = tf.read(panic_path).preregister()
     assert ("   - Claim: c_arousal and c_avoidance are independent given c_perceived_threat; "
-            "not evaluated, since the causal graph has a feedback loop\n") in refuse
+            "not evaluated, since a construct it names is on a feedback loop or downstream of "
+            "one\n") in refuse
     # A loop whose sigma reading contradicts the claim gives no under sigma.
     t = (tf.new_theory("loop", "A loop")
          .add_construct("x", "X", "The first quantity.").add_construct("y", "Y", "The second.")

@@ -213,6 +213,17 @@ class _Graph:
         self.simple = [inner[c] == len(members) for c, members in enumerate(self.comps)]
         self.feedback = [[self.nodes[v] for v in comp] for comp in self.comps
                          if len(comp) > 1 or self.directed[comp[0]][comp[0]]]
+        # A vertex is behind a feedback loop when a vertex of a loop reaches it,
+        # the members of a loop included. A vertex that is not has no ancestor
+        # on a loop, so what holds among such vertices is fixed by an acyclic
+        # part of the graph, whatever the loops do.
+        on_loop = [False] * k
+        for comp in self.comps:
+            if len(comp) > 1 or self.directed[comp[0]][comp[0]]:
+                for v in comp:
+                    on_loop[v] = True
+        loops = [u for u in range(k) if on_loop[u]]
+        self.behind = [any(self.r[u][v] for u in loops) for v in range(k)]
         self.evaluable = cycles == "sigma" or not self.feedback
         if self.feedback and cycles == "sigma":
             self.sep_d, self.sep_b = acyclify(self.directed, self.bidirected, self.comps)
@@ -258,13 +269,17 @@ class _Graph:
         order does not change the result. A trek whose two paths share a
         segment, such as u <- t -> u -> y, holds a coefficient squared, so
         reading its two copies as independent signs would leave a fixed sign
-        open.
+        open. On a graph with feedback loops, the sets are found for the pairs
+        of vertices that are not behind a loop. Every ancestor of such a vertex
+        is one too, and none lies on a loop, so the recursion over them reads
+        the acyclic graph that they and their edges form.
         """
         if self._cov is None:
             k, r = self.k, self.r
             S = [[POS if a == b else 0 for b in range(k)] for a in range(k)]
             n_ancestors = [sum(column) for column in zip(*r, strict=True)]
-            order = sorted(range(k), key=lambda v: (n_ancestors[v], v))
+            order = sorted((v for v in range(k) if not self.behind[v]),
+                           key=lambda v: (n_ancestors[v], v))
             for j, b in enumerate(order):
                 into = [(p, _EDGE_MASK[self.sign[p][b]]) for p in self.parents[b]]
                 joined = list(compress(range(k), self.bidirected[b]))
@@ -310,11 +325,13 @@ class _Graph:
         """The derived sign of the association of x and y, its basis and, with
         ``via``, the propositions on a trek between the two."""
         k, r = self.k, self.r
-        if not self.feedback:
+        if not (self.behind[x] or self.behind[y]):
+            # No loop reaches either, so every trek between them lies in the
+            # acyclic graph of their ancestors.
             mask = self.cov_signs()[x][y]
         else:
-            # With feedback loops, the treks are read as pairs of walks from a
-            # common source, which counts a trek whose two walks share a
+            # Behind a feedback loop, the treks are read as pairs of walks from
+            # a common source, which counts a trek whose two walks share a
             # segment as well. A source that does not reach both adds nothing.
             mask = 0
             for t in range(k):
@@ -360,11 +377,17 @@ class _Graph:
         in vertex order, and the first valid one, a smallest, is returned. A
         canonical set of more than ``ADJUSTMENT_SEARCH`` members is pruned
         instead: each member in turn, in vertex order, is dropped when the
-        others left still separate the two, which leaves a minimal valid set. A
-        graph with feedback loops gets None, since the criterion is not
-        established for it.
+        others left still separate the two, which leaves a minimal valid set.
+
+        When neither x nor y is behind a feedback loop, the vertices that reach
+        them are not behind one either, so the canonical set, the vertices on a
+        proper causal path and every vertex that separation by a set of them
+        involves lie in the acyclic graph that those vertices form, whose model
+        the loops do not change. The criterion is read in that graph. A pair of
+        which x or y is behind a loop gets None, since the criterion is not
+        established for a cyclic graph.
         """
-        if self.feedback:
+        if self.behind[x] or self.behind[y]:
             return None
         k, r = self.k, self.r
         on_path = [v for v in range(k) if v != x and r[x][v] and r[v][y]]
@@ -372,8 +395,9 @@ class _Graph:
         forbidden[x] = 1
         canonical = [v for v in range(k)
                      if (r[v][x] or r[v][y]) and not self.latent[v] and not forbidden[v] and v != y]
-        # The proper back-door graph. Without feedback loops, separation is read
-        # in the theory's own graph.
+        # The proper back-door graph, made from the graph that separation is read
+        # in. The acyclification leaves the edges among vertices that are not
+        # behind a loop as they are.
         d = self.sep.without_edges(x, on_path)
         if not m_separated(d, x, y, canonical):
             return None
@@ -399,7 +423,7 @@ class _Graph:
 
         Returns ``{derived, verdict, basis, faithfulness, via, identified,
         adjustment}``. The last two are None except for an evaluated effect
-        claim on an acyclic graph.
+        claim whose x and y are not behind a feedback loop.
         """
         def out(derived, verdict, basis, faithfulness=False, via=None, adjust=None):
             identified = None if adjust is None else adjust[0]
@@ -413,7 +437,11 @@ class _Graph:
         names = [c["x"], c["y"]] + c["given"]
         if any(n not in self.index for n in names):
             return out("", "not_evaluated", "not_in_graph")
-        if not self.evaluable:
+        # Under cycles="refuse", a claim is left unread when a construct it
+        # names is behind a feedback loop, since what the graph says of it then
+        # depends on how the loop settles. A claim no loop reaches is read as
+        # under "sigma", and its record is the one "sigma" gives.
+        if not self.evaluable and any(self.behind[self.index[n]] for n in names):
             return out("", "not_evaluated", "feedback_loop")
         x, y = self.index[c["x"]], self.index[c["y"]]
         if c["kind"] == "association" and c["given"]:
@@ -424,14 +452,15 @@ class _Graph:
         adjust = None
         if c["kind"] == "effect":
             derived, basis, via = self.effect(x, y)
-            if not self.feedback:
+            if not (self.behind[x] or self.behind[y]):
                 found = self.adjustment(x, y)
                 adjust = (found is not None, found)
         else:
             derived, basis, via = self.association(x, y)
         verdict = _verdict(c["sign"], derived)
         # A route of no fixed sign, or routes of opposite signs, make the quantity
-        # nonzero only if they do not cancel exactly, which is faithfulness.
+        # nonzero only if the effects they carry do not cancel exactly, which is
+        # faithfulness.
         faithful = derived == "undetermined" and verdict != "undetermined"
         return out(derived, verdict, basis, faithfulness=faithful, via=via, adjust=adjust)
 
@@ -480,11 +509,16 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     Each claim is then ``entailed`` when the derived sign implies it,
     ``contradicted`` when it rules it out, ``undetermined`` when the graph
     leaves the sign open, and ``not_evaluated`` when the claim is malformed,
-    names a construct that no proposition relates to another, or meets a feedback
-    loop under ``cycles="refuse"``. ``faithfulness`` is True when the verdict
-    relies on routes of unknown or opposite signs not cancelling exactly, and
-    the claim lines of the preregistration and the dossier then end with
-    ``unless paths cancel exactly``.
+    names a construct that no proposition relates to another, or, under
+    ``cycles="refuse"``, names a construct on a feedback loop or downstream of
+    one, since what the graph says of it then depends on how the loop settles.
+    A claim that no loop reaches gets the same record under both values of
+    ``cycles``, the record it would get without the loops, so a loop elsewhere
+    in the graph neither hides nor changes its verdict. ``faithfulness`` is
+    True when the verdict relies on the effects carried by a route of unknown
+    sign, or by routes of opposite signs, not cancelling exactly, and the claim
+    lines of the preregistration and the dossier then end with ``unless
+    effects cancel exactly``.
 
     The derivations assume that the graph is the causal structure, with no
     common cause of two constructs left out unless an association stands for
@@ -498,16 +532,20 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     construct fixed can leave a loop that does not settle. A loop that is one
     simple cycle then multiplies the effects through it by a positive factor,
     so the signs through it are those of the paths. The walks round a loop of
-    any other shape are read as they are, and a graph with feedback loops
-    reads each trek as a pair of walks from a common source, so a sign that
-    the graph fixes can be left open there.
+    any other shape are read as they are, and the association of two
+    constructs is read off pairs of walks from a common source when a loop
+    reaches either of them, so a sign that the graph fixes can be left open
+    there.
 
-    For an effect claim on an acyclic graph, ``identified`` says whether
+    For an effect claim whose two constructs no feedback loop reaches, which
+    is every effect claim on an acyclic graph, ``identified`` says whether
     adjusting for some set of the theory's constructs would identify the
     effect from observational data (van der Zander et al., 2019), and
-    ``adjustment`` gives a smallest such set. When more than 12 constructs are
-    candidates, it gives a minimal set instead, from which none can be
-    dropped, though a smaller one may exist. A construct marked
+    ``adjustment`` gives a smallest such set. On a graph with a loop, the
+    constructs that reach ``x`` or ``y`` form an acyclic graph, and what holds
+    among them does not depend on the loops, so the set is found there. When
+    more than 12 constructs are candidates, it gives a minimal set instead,
+    from which none can be dropped, though a smaller one may exist. A construct marked
     ``x_latent: true``, as ``read_dagitty()`` marks an unobserved variable, is
     never adjusted for. ``identified`` reports identification by adjustment
     alone, so an effect without an adjustment set may still be identified by
@@ -523,6 +561,13 @@ def entailments(theory, cycles: str = "refuse") -> dict:
     predictions first and then the phenomena, each in file order. ``via``
     lists, in file order, the propositions on some path or trek between the
     two constructs. ``counts`` tallies the verdicts.
+
+    Args:
+        cycles: how a causal graph with a feedback loop is read. ``"refuse"``
+            (the default) leaves unread the claims that name a construct on a
+            loop or downstream of one and reads every other claim, and
+            ``"sigma"`` reads every claim by sigma-separation, which assumes
+            that each loop settles to a unique equilibrium.
 
     Raises:
         ValueError: if ``cycles`` is not ``"refuse"`` or ``"sigma"``, if two
@@ -566,7 +611,7 @@ _UNDETERMINED = {"unsigned": "a route between them passes through a relation tha
                  "opposite_signs": "routes between them have opposite signs"}
 _NOT_EVALUATED = {"malformed_claim": "the claim is incomplete",
                   "not_in_graph": "it names a construct that no proposition relates to another",
-                  "feedback_loop": "the causal graph has a feedback loop",
+                  "feedback_loop": "a construct it names is on a feedback loop or downstream of one",
                   "graph_refused": "the causal graph cannot be built"}
 
 
@@ -577,8 +622,8 @@ CLAIM_ASSUMPTIONS = (
     "The verdicts on the claims assume that the graph of the propositions is the causal "
     "structure, with no omitted common cause of two of its constructs, that each directed "
     "relation acts in its stated direction whatever the other inputs (as in a linear model "
-    "or a uniformly monotone one), that paths do not cancel exactly where a verdict says "
-    "'unless paths cancel exactly' (faithfulness) and, for feedback loops read by "
+    "or a uniformly monotone one), that effects do not cancel exactly where a verdict says "
+    "'unless effects cancel exactly' (faithfulness) and, for feedback loops read by "
     "sigma-separation, that each loop settles to a unique equilibrium, also once the "
     "intervened construct is held fixed.")
 
@@ -590,8 +635,8 @@ def claim_line(rec: dict) -> str:
     11). ``rec`` is a claim record of ``entailments()``, or a claim read by
     ``read_claim()`` with the verdict ``not_evaluated`` and the basis
     ``graph_refused`` when the graph cannot be built. A verdict whose record
-    carries ``faithfulness`` true holds only if no paths cancel exactly, and
-    its line ends with ``, unless paths cancel exactly``.
+    carries ``faithfulness`` true holds only if no effects cancel exactly, and
+    its line ends with ``, unless effects cancel exactly``.
     """
     if rec["basis"] == "malformed_claim":
         return "incomplete, so not evaluated"
@@ -605,7 +650,7 @@ def claim_line(rec: dict) -> str:
             claim += f" given {', '.join(rec['given'])}"
     v = rec["verdict"]
     # A record built for a graph that cannot be read has no faithfulness key.
-    faith = ", unless paths cancel exactly" if rec.get("faithfulness") is True else ""
+    faith = ", unless effects cancel exactly" if rec.get("faithfulness") is True else ""
     if v == "entailed":
         said = ("entailed by the causal graph"
                 + (f" through {', '.join(rec['via'])}" if rec["via"] else "") + faith)
@@ -888,9 +933,10 @@ def discriminate(theory, rival, cycles: str = "refuse") -> dict:
     None when that rule does not apply.
 
     A graph with feedback loops is not compared under ``cycles="refuse"``
-    (``evaluated`` is False). Under ``cycles="sigma"``, it is read as in
-    ``entailments()``, and its independencies are compared only when the two
-    graphs name the same constructs.
+    (``evaluated`` is False), though the claims are read as ``entailments()``
+    reads them. Under ``cycles="sigma"``, it is read as in ``entailments()``,
+    and its independencies are compared only when the two graphs name the
+    same constructs.
 
     Returns ``{theory_id, rival_id, criterion, evaluated, reason, shared,
     only_theory, only_rival, markov_equivalent, independence_basis,

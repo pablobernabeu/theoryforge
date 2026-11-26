@@ -1,14 +1,25 @@
 """theoryforge: systematic theory development.
 
-A reproducible workflow for building, developing and testing scientific theories.
+Helps researchers state scientific theories as structured, versioned files of
+constructs, propositions, predictions, rival accounts and test records. Functions
+read and validate these files, check how completely a theory is specified against a
+versioned checklist, screen constructs for overlapping definitions, derive the
+conditional independence relations and the signs of effects that a theory's causal
+graph implies, compare a theory with a rival or with an earlier version of itself,
+compile lavaan model syntax, simulate the construct network as a linear system,
+write the theory and hypotheses sections of a preregistration and a dossier for
+reviewers, record the outcomes of tests, map a theory onto the themes of a
+literature corpus and draw diagrams of it.
+
 An R package of the same name (https://pablobernabeu.github.io/theoryforge/r/)
 offers a counterpart of every public function. Both follow one public specification
-(https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md), so they produce
-the same verdicts and the same diagram intermediate representations. The helpers
-that depend on a network service or a user-supplied embedder (``fetch_corpus``,
-``osf_push`` and ``embedding_redundancy``) and the diagram renderer
-(``render_diagram``) have counterparts there too, but their results can differ
-between the two packages. Their documentation describes what each depends on.
+(https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md), so they give
+the same results and the same diagram intermediate representations for the same
+file and settings. The helpers that depend on a network service or a user-supplied
+embedder (``fetch_corpus``, ``osf_push`` and ``embedding_redundancy``) and the
+diagram renderer (``render_diagram``) have counterparts there too, but their results
+can differ between the two packages. Their documentation describes what each depends
+on.
 """
 from __future__ import annotations
 

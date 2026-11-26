@@ -152,7 +152,9 @@ def test_venn_wraps_names_and_says_when_constructs_are_left_out(modality_path):
 def test_rigour(panic_path):
     svg = tf.read(panic_path).diagram("rigour")
     assert svg.startswith("<svg ") and svg.endswith("</svg>\n")
-    assert '<text x="20" y="28" font-size="15">Checklist</text>' in svg and "gate pass" in svg
+    # The title names the checklist's version, which says which criteria the
+    # score describes.
+    assert '<text x="20" y="28" font-size="15">Checklist 3.1</text>' in svg and "gate pass" in svg
     assert svg.count("<rect ") == 12          # one swatch per checklist item
     assert 'fill="#4caf50"' in svg            # at least one pass (green)
 
@@ -163,7 +165,7 @@ def test_rigour_escapes_the_gate(panic_path, monkeypatch):
     check = theoryforge.rigor.check
     monkeypatch.setattr(theoryforge.rigor, "check", lambda T: {**check(T), "gate": "<a & b>"})
     svg = tf.read(panic_path).diagram("rigour")
-    assert '<text x="20" y="46">checklist score 85.9, gate &lt;a &amp; b&gt;</text>' in svg
+    assert '<text x="20" y="46">checklist score 88.0, gate &lt;a &amp; b&gt;</text>' in svg
 
 
 def test_severity_chart(panic_path):

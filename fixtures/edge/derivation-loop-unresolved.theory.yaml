@@ -1,0 +1,18 @@
+# A feedback loop leaves both claims unread under cycles = "refuse", so both
+# predictions are listed in not_checked. h1 cites a declared proposition and
+# counts as derived, since nothing was found wrong with its claim. h2 cites p9,
+# which is not declared, so it is not derived and the item fails with a score
+# of 0.5.
+schema_version: "1.1"
+id: "derivation-loop-unresolved"
+title: "Claims behind a feedback loop, one with an unresolved reference"
+maturity: "developing"
+constructs:
+  - {id: c1, label: "First", definition: "The first construct."}
+  - {id: c2, label: "Second", definition: "The second construct."}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: "It does."}
+  - {id: p2, from: c2, to: c1, relation: increases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "c1 raises c2.", type: directional, derives_from: [p1], claim: {kind: effect, x: c1, y: c2, sign: positive}}
+  - {id: h2, statement: "c2 raises c1.", type: directional, derives_from: [p9], claim: {kind: effect, x: c2, y: c1, sign: positive}}

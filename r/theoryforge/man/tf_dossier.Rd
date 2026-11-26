@@ -24,19 +24,24 @@ records and what the package derives from it. Test outcomes, evidence,
 registrations and declared severities are as the author recorded them. The
 dossier flags a recorded pass whose estimate lies outside its claimed
 region, a recorded failure whose estimate lies inside it and a declared
-severity above the claim-form rubric, and checks nothing else that the
-author entered, so it is not an independent audit. The output is
-deterministic, so the same theory file always yields the same dossier.
+severity more than 0.2 above the claim-form rubric, and checks nothing else
+that the author entered, so it is not an independent audit. The output is
+deterministic, so the same theory file gives the same dossier for the same
+\code{cycles}.
 }
 \details{
 The header gives the content hash, the maturity, the checklist version, the
 checklist score with the lowest and highest score under equal weights or one
 weight halved or doubled, the checklist coverage, the gate and the blockers
-that failed. A fixed paragraph in italics follows, saying what the dossier
-is and what the checklist score describes. The checklist table prints
-\code{n/a} for an item with nothing to assess. The severity list gives each
-prediction's claim-form rubric values and, when the prediction declares a
-severity, that value too, with a note when it exceeds the rubric by more
+that failed. When the causal graph has a feedback loop, the header ends with
+a line saying how the dossier reads it, refused under the default and read
+by sigma-separation with \code{cycles = "sigma"}. A fixed paragraph in
+italics follows, saying what the checklist score describes, what the gate
+checks and what the dossier is. The checklist table marks the two items
+whose failure blocks the gate with \code{(blocker)} beside their ids and
+prints \code{n/a} for an item with nothing to assess. The severity list gives
+each prediction's claim-form rubric values and, when the prediction declares
+a severity, that value too, with a note when it exceeds the rubric by more
 than 0.2. The test record lists every test outcome in file order, with what
 it found and the observation, date and registration it records, and with
 the post-data severity of \code{\link[=tf_post_data_severity]{tf_post_data_severity()}} where it can be
@@ -45,7 +50,8 @@ evidence lists the prediction each entry supports, its direction and its
 DOI. The claims and the causal graph, with the assumptions their verdicts
 rest on, the equivalent models for observational data, the rivals and the
 provenance follow, and the preregistration (its theory and hypotheses
-sections, without the severity section) closes it. The implied
+sections, without the severity section) closes it, its title and headings
+two levels lower than in the preregistration itself. The implied
 independencies appear once, in the preregistration. Every value is written
 on one line, ids and dates included.
 

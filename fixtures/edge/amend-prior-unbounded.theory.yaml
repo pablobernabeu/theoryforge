@@ -1,0 +1,27 @@
+# Edge case: a third prior version, which amend-relabel-unbounded amends. h1 is
+# typed point but states no bounds, so the claim-form rubric rates it as a
+# directional claim, and a test refuted it. h2 is untested.
+schema_version: "1.1"
+id: edge-amend-prior-unbounded
+title: A prior version with a point label and no bounds
+maturity: testing
+constructs:
+  - {id: c1, label: First, definition: The first construct.}
+  - {id: c2, label: Second, definition: The second construct.}
+  - {id: c3, label: Third, definition: The third construct.}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: It does.}
+  - {id: p2, from: c2, to: c3, relation: increases, mechanism: It does.}
+predictions:
+  - id: h1
+    statement: c2 rises with c1.
+    type: point
+    derives_from: [p1]
+    claim: {kind: effect, x: c1, y: c2, sign: positive}
+  - id: h2
+    statement: c3 rises with c2.
+    type: directional
+    derives_from: [p2]
+test_outcomes:
+  - prediction_id: h1
+    passed: false

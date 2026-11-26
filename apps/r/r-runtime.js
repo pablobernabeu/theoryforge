@@ -104,10 +104,15 @@ invisible(lapply(.tf_app_files, source))
 
 # The checklist with the app's cycles setting. The result says which reading it
 # gives. The package draws the grid with the default, so the grid is drawn only
-# for that reading.
+# for that reading. Each item's criterion comes from the checklist the package
+# reads, so that the app shows it beside the item's id.
 .tf_app_check <- function(t, cycles = "refuse") {
+  spec <- .tf_list(tf_checklist(), "items")
+  criteria <- lapply(spec, function(it) .tf_str(it, "criterion"))
+  names(criteria) <- vapply(spec, function(it) .tf_str(it, "id"), character(1L))
   list(report = tf_check(t, cycles = cycles),
-       svg = if (identical(cycles, "refuse")) tf_diagram(t, "rigour"), cycles = cycles)
+       svg = if (identical(cycles, "refuse")) tf_diagram(t, "rigour"), cycles = cycles,
+       criteria = criteria)
 }
 
 # The checklist's score and gate, which the card and the editor show, or the
@@ -577,6 +582,12 @@ const RT = {
     return !!(e && e.shipped);
   },
 
+  // The name a diagram's file takes, as the app saves it: the view "rigour"
+  // is saved as checklist.svg.
+  _diagFile(type) {
+    return ((window.TF && window.TF.DIAG_FILE) || {})[type] || type;
+  },
+
   async run(opId, params) {
     // Pass the call as a JSON file rather than interpolating data into R source.
     const json = await this._call(".tf_run_call", { op: opId, params: this._mapParams(opId, params) || {} });
@@ -627,7 +638,7 @@ const RT = {
       case "check": {
         const c = p.cycles || "refuse";
         const call = `tf_check(theory, ${cycles})`;
-        const grid = c === "refuse" ? `\n\n# Visualise the checklist grid (SVG):\nwriteLines(tf_diagram(theory, "rigour"), "rigour.svg")` : "";
+        const grid = c === "refuse" ? `\n\n# Visualise the checklist grid (SVG):\nwriteLines(tf_diagram(theory, "rigour"), "${this._diagFile("rigour")}.svg")` : "";
         return `${head}\n\nreport <- ${call}\nreport$aggregate_score   # the checklist score, 0-100\nreport$gate              # pass / blocked / advisory${grid}`;
       }
       case "validate":
@@ -647,7 +658,7 @@ const RT = {
       case "diagram": {
         const t = p.type;
         if (window.TF.DIAG_SVG.includes(t)) {
-          return `${head}\n\nir <- tf_diagram(theory, "${t}")\n# '${t}' is emitted directly as SVG:\nwriteLines(ir, "${t}.svg")`;
+          return `${head}\n\nir <- tf_diagram(theory, "${t}")\n# '${t}' is emitted directly as SVG:\nwriteLines(ir, "${this._diagFile(t)}.svg")`;
         }
         if (t === "causal_dag") {
           return `${head}\n\nir <- tf_diagram(theory, "causal_dag")\ncat(ir)\n# This is dagitty model code, which Graphviz cannot read. The dagitty\n# package draws it:\nif (requireNamespace("dagitty", quietly = TRUE)) {\n  plot(dagitty::graphLayout(dagitty::dagitty(ir)))\n}`;

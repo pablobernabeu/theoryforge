@@ -149,6 +149,50 @@ def test_a_claim_that_cannot_be_read_is_not_evaluated():
     assert (sigma["derived"], sigma["verdict"]) == ("positive", "entailed")
 
 
+def test_under_refuse_only_a_claim_behind_a_feedback_loop_is_left_unread():
+    # c0 -> c1 -> c2 -> c3 <-> c4 -> c5: the loop of c3 and c4 reaches c3, c4
+    # and c5. A claim naming one of them, as x, y or in given, is left unread
+    # under "refuse", and any other claim is read, with the record "sigma"
+    # gives it. The R suite asserts the same records.
+    props = [("c0", "c1", "causes"), ("c1", "c2", "increases"), ("c2", "c3", "increases"),
+             ("c3", "c4", "increases"), ("c4", "c3", "increases"), ("c4", "c5", "increases")]
+    claims = [_claim("effect", "c1", "c2", "positive"),
+              _claim("association", "c1", "c2", "positive"),
+              _claim("association", "c0", "c1", "nonzero", given=["c2"]),
+              _claim("effect", "c2", "c3", "positive"),
+              _claim("effect", "c4", "c5", "positive"),
+              _claim("association", "c0", "c2", "nonzero", given=["c5"]),
+              _claim("effect", "c5", "c1", "zero")]
+    t = _theory(props, claims=claims, k=6)
+    refuse, sigma = t.entailments()["claims"], t.entailments(cycles="sigma")["claims"]
+    assert [c["basis"] == "feedback_loop" for c in refuse] == [False] * 3 + [True] * 4
+    for r, g in zip(refuse, sigma, strict=True):
+        if r["basis"] != "feedback_loop":
+            assert r == g
+        else:
+            assert (r["verdict"], r["derived"], r["via"]) == ("not_evaluated", "", [])
+    # The trek of c1 and c2 shares the edge c0 -> c1 with the walks from c0,
+    # so the association is positive under both readings, as on a graph
+    # without the loop, though c0 causes c1 with no sign.
+    assert (refuse[1]["derived"], refuse[1]["verdict"]) == ("positive", "entailed")
+    acyclic = _theory(props[:3] + props[5:], claims=claims, k=6).entailments()["claims"]
+    assert [(c["derived"], c["verdict"]) for c in acyclic[:3]] == \
+        [(c["derived"], c["verdict"]) for c in refuse[:3]]
+    # The checklist then reads them alike.
+    chain = next(i for i in t.check()["items"] if i["id"] == "derivation_chain")
+    assert chain["not_checked"] == ["q3", "q4", "q5", "q6"]
+
+
+def test_a_claim_behind_a_loop_reads_in_words_why_it_is_not_evaluated():
+    t = _theory([("c0", "c1", "increases"), ("c1", "c0", "increases"), ("c2", "c3", "increases")],
+                claims=[_claim("effect", "c0", "c1", "positive"), _claim("effect", "c2", "c3", "positive")])
+    lines = [tf.entailment.claim_line(c) for c in t.entailments()["claims"]]
+    assert lines == [
+        "the effect of c0 on c1 is positive; not evaluated, since a construct it names is on a "
+        "feedback loop or downstream of one",
+        "the effect of c2 on c3 is positive; entailed by the causal graph through p2"]
+
+
 def test_an_empty_claim_is_no_claim():
     t = _theory([("c0", "c1", "increases")], claims=[{}, []])
     assert t.entailments()["claims"] == []
@@ -339,9 +383,33 @@ def test_the_dossier_reports_claims_equivalent_models_and_rivals(modality):
             "(reversed in some equivalent model)") in doc
     assert ("- alt_symbol_interdependency: claims it discriminates: pred4; independencies one implies "
             "and the other does not: 1; decisive differences in sign: 0 effects, 0 associations") in doc
-    # The preregistration sits under its own level-two heading.
-    assert "\n## Preregistration\n\n## Preregistration: Modality switching" in doc
-    assert "\n# Preregistration" not in doc
+    # The preregistration sits under its own level-two heading, its title a
+    # level below it.
+    assert "\n## Preregistration\n\n### Preregistration: Modality switching" in doc
+    assert "\n# Preregistration" not in doc and "\n## Preregistration:" not in doc
+
+
+def test_the_dossier_lists_the_claims_a_rival_discriminates_when_its_graph_is_not_compared():
+    # Under refuse, a loop elsewhere leaves the independencies and the signs of
+    # the two graphs uncompared, but the claim that no loop reaches is read
+    # under both, and the dossier says that it discriminates, as its
+    # preregistration does. The R suite asserts the same lines.
+    rival = {"id": "alt1", "label": "x lowers y",
+             "propositions": [{"id": "r0", "from": "c0", "to": "c1", "relation": "decreases"},
+                              {"id": "r1", "from": "c2", "to": "c3", "relation": "increases"},
+                              {"id": "r2", "from": "c3", "to": "c2", "relation": "increases"}]}
+    t = _theory([("c0", "c1", "increases"), ("c2", "c3", "increases"), ("c3", "c2", "increases")],
+                claims=[_claim("effect", "c0", "c1", "positive")], alternatives=[rival])
+    t.data["predictions"][0]["diagnostic_vs"] = ["alt1"]
+    d = t.discriminate("alt1")
+    assert (d["evaluated"], d["counts"]["discriminating_claims"]) == (False, 1)
+    doc = t.dossier()
+    assert ("- alt1: claims it discriminates: q0; independencies and signs not compared, since a "
+            "causal graph has a feedback loop\n") in doc
+    assert "   - Rivals it is declared to discriminate: alt1 (its propositions contradict the claim)" in doc
+    assert "alt1: not compared" not in doc
+    assert ("- alt1: claims it discriminates: q0; independencies one implies and the other does "
+            "not: 0; decisive differences in sign: 1 effects, 1 associations\n") in t.dossier(cycles="sigma")
 
 
 def test_a_refused_graph_leaves_the_claims_unread():
@@ -434,6 +502,78 @@ def test_an_effect_claim_names_a_smallest_adjustment_set():
     loop = _theory([("c0", "c1", "increases"), ("c1", "c0", "increases")],
                    claims=[_claim("effect", "c0", "c1", "positive")])
     assert loop.entailments(cycles="sigma")["claims"][0]["identified"] is None
+
+
+def test_an_effect_that_no_loop_reaches_has_its_adjustment_set():
+    # c0 confounds c1 -> c2, and the loop of c3 and c4 lies downstream of c2.
+    # The effect of c1 on c2 keeps the adjustment set it has without the loop,
+    # under either value of cycles, and the effect of c1 on c3, which the loop
+    # reaches, has none. The R suite asserts the same records.
+    props = [("c0", "c1", "increases"), ("c0", "c2", "increases"), ("c1", "c2", "increases"),
+             ("c2", "c3", "increases"), ("c3", "c4", "increases"), ("c4", "c3", "increases")]
+    claims = [_claim("effect", "c1", "c2", "positive"), _claim("effect", "c1", "c3", "positive")]
+    t = _theory(props, claims=claims, k=5)
+    without = _theory(props[:5], claims=claims, k=5).entailments()["claims"]
+    for cycles in ("refuse", "sigma"):
+        near, far = t.entailments(cycles=cycles)["claims"]
+        assert (near["identified"], near["adjustment"]) == (True, ["c0"])
+        assert near == without[0]
+        assert (far["identified"], far["adjustment"]) == (None, None)
+    assert "   - Adjustment for an observational test: c0\n" in t.preregister()
+
+
+def test_a_claim_that_no_loop_reaches_gets_the_record_of_the_graph_without_its_loops():
+    # On random graphs whose loops lie late in the causal order, every claim
+    # whose constructs no loop reaches gets, field for field, the record it
+    # gets once the edges inside the loops are removed, under either value of
+    # cycles. The R suite asserts the same of its own random graphs.
+    rng = random.Random(80)
+    relations = ["increases", "decreases", "causes", "associates"]
+    checked = identified = 0
+    for _ in range(120):
+        k = rng.randint(5, 8)
+        order = [f"c{i}" for i in rng.sample(range(k), k)]
+        props = []
+        for i in range(k):
+            for j in range(i + 1, k):
+                if rng.random() < 0.35:
+                    props.append((order[i], order[j], rng.choice(relations)))
+        # A loop among the last three constructs, and sometimes a second one.
+        a, b = sorted(rng.sample(range(k - 3, k), 2))
+        props.append((order[a], order[b], rng.choice(relations[:3])))
+        props.append((order[b], order[a], rng.choice(relations[:3])))
+        if rng.random() < 0.3:
+            c = order[rng.randrange(k - 3, k)]
+            props.append((c, c, rng.choice(relations[:3])))
+        claims = []
+        for _ in range(10):
+            x, y = rng.sample(order, 2)
+            if rng.random() < 0.5:
+                claims.append(_claim("effect", x, y, rng.choice(["positive", "negative", "zero"])))
+            else:
+                rest = [n for n in order if n not in (x, y)]
+                given = rng.sample(rest, rng.randint(0, 2))
+                claims.append(_claim("association", x, y, "nonzero" if given else "positive",
+                                     given=given or None))
+        t = _theory(props, claims=claims, k=k)
+        g = _Graph(causal_graph(t.data, "test"), "refuse", t.data["propositions"])
+        inside = {(a, b) for a, b, rel in props if rel != "associates"
+                  and g.r[g.index[a]][g.index[b]] and g.r[g.index[b]][g.index[a]]}
+        data = copy.deepcopy(t.data)
+        data["propositions"] = [p for p in data["propositions"] if (p["from"], p["to"]) not in inside]
+        plain = tf.Theory(data).entailments()["claims"]
+        for cycles in ("refuse", "sigma"):
+            for c, d in zip(t.entailments(cycles=cycles)["claims"], plain, strict=True):
+                names = [c["x"], c["y"], *c["given"]]
+                if c["basis"] == "not_in_graph" or d["basis"] == "not_in_graph":
+                    continue
+                if any(g.behind[g.index[n]] for n in names):
+                    assert (c["identified"], c["adjustment"]) == (None, None)
+                    continue
+                assert c == d
+                checked += 1
+                identified += c["identified"] is not None
+    assert checked > 400 and identified > 200
 
 
 def test_the_preregistration_says_what_an_observational_test_adjusts_for():
