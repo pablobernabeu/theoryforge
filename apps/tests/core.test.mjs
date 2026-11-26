@@ -622,6 +622,8 @@ test("the preregistration is a hypotheses section to complete, and its reading c
     const { ctx, $ } = await boot({}, lineageRuntime({ preregister: { text: text(records) } }));
     await opButton(ctx, "preregister").click();
     assert.match($("#opHelp").textContent, /theory and hypotheses sections of a preregistration/);
+    // Under refuse, only the claims a loop reaches are left unread.
+    assert.match($("#opHelp").textContent, /cycles decides how a graph with a feedback loop is read: refuse derives no independencies and leaves unread the claims that name a construct on a loop or downstream of one, and sigma reads it by sigma-separation\./);
     await $("#runBtn").click();
     const about = $("#output .ri-about").textContent;
     assert.match(about, /design, sampling plan, analysis plan and inference criteria/);

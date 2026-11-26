@@ -29,7 +29,7 @@ NULL
 
 # How the document reads a causal graph with a feedback loop, the last line of
 # its header when the graph has one (API_SPEC.md sections 11 and 20). Under
-# cycles = "refuse" a claim that names a construct on a loop or downstream of
+# cycles = "refuse", a claim that names a construct on a loop or downstream of
 # one is left unread, and under "sigma" every claim is read on the assumption
 # stated.
 .tf_FEEDBACK <- c(
@@ -459,10 +459,9 @@ NULL
 #' under the default, a graph with a feedback loop gives no independencies and
 #' leaves unread the claims that name a construct on a loop or downstream of
 #' one, and with \code{"sigma"} it is read by sigma-separation. The claim-form
-#' severity rubric closes the document.
-#' Values are written on one line, ids and dates included, so a line break
-#' inside a statement cannot end the list item it belongs to or start a line of
-#' its own.
+#' severity rubric closes the document. Values are written on one line, ids and
+#' dates included, so a line break inside a statement cannot end the list item
+#' it belongs to or start a line of its own.
 #'
 #' The document is the part of a preregistration that the theory file holds. It
 #' is to be completed with the study design, the analysis plan, the inference
@@ -476,9 +475,12 @@ NULL
 #' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param path Optional destination path. When it is given, the Markdown is
 #'   written with LF line endings.
-#' @param cycles \code{"refuse"} (the default) or \code{"sigma"}, as in
-#'   [tf_implications()], passed to [tf_check()], [tf_entailments()] and
-#'   [tf_implications()].
+#' @param cycles How a causal graph with a feedback loop is read, passed to
+#'   [tf_check()], [tf_entailments()] and [tf_implications()]. \code{"refuse"}
+#'   (the default) derives no independencies and leaves unread the claims that
+#'   name a construct on a loop or downstream of one, and \code{"sigma"} reads
+#'   the graph by sigma-separation, which assumes that each loop settles to a
+#'   unique equilibrium.
 #' @return The preregistration Markdown as a single string.
 #' @references
 #' Bosnjak, M., Fiebach, C. J., Mellor, D., Mueller, S., O'Connor, D. B.,

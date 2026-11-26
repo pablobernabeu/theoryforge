@@ -12,9 +12,12 @@ tf_preregister(theory, path = NULL, cycles = "refuse")
 \item{path}{Optional destination path. When it is given, the Markdown is
 written with LF line endings.}
 
-\item{cycles}{\code{"refuse"} (the default) or \code{"sigma"}, as in
-\code{\link[=tf_implications]{tf_implications()}}, passed to \code{\link[=tf_check]{tf_check()}}, \code{\link[=tf_entailments]{tf_entailments()}} and
-\code{\link[=tf_implications]{tf_implications()}}.}
+\item{cycles}{How a causal graph with a feedback loop is read, passed to
+\code{\link[=tf_check]{tf_check()}}, \code{\link[=tf_entailments]{tf_entailments()}} and \code{\link[=tf_implications]{tf_implications()}}. \code{"refuse"}
+(the default) derives no independencies and leaves unread the claims that
+name a construct on a loop or downstream of one, and \code{"sigma"} reads
+the graph by sigma-separation, which assumes that each loop settles to a
+unique equilibrium.}
 }
 \value{
 The preregistration Markdown as a single string.
@@ -92,10 +95,9 @@ authors meant those omissions, and a line in italics above them says so.
 under the default, a graph with a feedback loop gives no independencies and
 leaves unread the claims that name a construct on a loop or downstream of
 one, and with \code{"sigma"} it is read by sigma-separation. The claim-form
-severity rubric closes the document.
-Values are written on one line, ids and dates included, so a line break
-inside a statement cannot end the list item it belongs to or start a line of
-its own.
+severity rubric closes the document. Values are written on one line, ids and
+dates included, so a line break inside a statement cannot end the list item
+it belongs to or start a line of its own.
 
 The document is the part of a preregistration that the theory file holds. It
 is to be completed with the study design, the analysis plan, the inference

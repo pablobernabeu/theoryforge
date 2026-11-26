@@ -43,7 +43,7 @@ _RESOLVE = {"pass": "yes", "fail": "no",
 
 # How the document reads a causal graph with a feedback loop, the last line of
 # its header when the graph has one (API_SPEC.md sections 11 and 20). Under
-# cycles = "refuse" a claim that names a construct on a loop or downstream of
+# cycles = "refuse", a claim that names a construct on a loop or downstream of
 # one is left unread, and under "sigma" every claim is read on the assumption
 # stated.
 _FEEDBACK = {"refuse": ("- Feedback loops: refused (a claim that names a construct on a loop "
@@ -477,24 +477,23 @@ def preregister(theory, path=None, cycles: str = "refuse") -> str:
     the causal graph says of their claims, the auxiliary assumptions, the rival
     accounts and the scope.
 
-    The hypotheses section opens, when the document states any claim, with
-    one sentence naming the assumptions the verdicts on the claims rest on:
-    the graph is the causal structure, with no omitted common cause of two of
-    its constructs, each directed relation acts in its stated direction
-    whatever the other inputs, effects do not cancel exactly where a claim
-    line ends ``unless effects cancel exactly`` (faithfulness), and under
-    ``cycles="sigma"`` each feedback loop settles to a unique equilibrium,
-    also once the intervened construct is held fixed. Each hypothesis is then
-    listed in file order with its claim type,
-    statement, prediction id and derivation, followed by the region its bounds
-    allow, its claim and what the causal graph says of it, what an
-    observational test of an effect claim must adjust for, the auxiliary
-    assumptions that protect it (``core`` or ``added for <id>``), the
-    registered rivals it is declared to discriminate, with how each rival's own
-    propositions read the claim, and its test record. A hypothesis that a
-    recorded outcome has already tested reads ``already tested: passed (<date>,
-    registered <where>)``, one entry per outcome, and any other reads
-    ``untested``.
+    The hypotheses section opens, when the document states any claim, with one
+    sentence naming the assumptions the verdicts on the claims rest on: the
+    graph is the causal structure, with no omitted common cause of two of its
+    constructs, each directed relation acts in its stated direction whatever
+    the other inputs, effects do not cancel exactly where a claim line ends
+    ``unless effects cancel exactly`` (faithfulness), and under
+    ``cycles="sigma"`` each feedback loop settles to a unique equilibrium, also
+    once the intervened construct is held fixed. Each hypothesis is then listed
+    in file order with its claim type, statement, prediction id and derivation,
+    followed by the region its bounds allow, its claim and what the causal
+    graph says of it, what an observational test of an effect claim must adjust
+    for, the auxiliary assumptions that protect it (``core`` or ``added for
+    <id>``), the registered rivals it is declared to discriminate, with how
+    each rival's own propositions read the claim, and its test record. A
+    hypothesis that a recorded outcome has already tested reads ``already
+    tested: passed (<date>, registered <where>)``, one entry per outcome, and
+    any other reads ``untested``.
 
     When at least one prediction states a sampling plan in its ``test`` block,
     a section headed ``Sampling plan (author-recorded; not scored)`` follows,
@@ -507,26 +506,34 @@ def preregister(theory, path=None, cycles: str = "refuse") -> str:
     though it decides how informative a failed test is (Lakens, 2022). A
     theory without a plan has no such section.
 
-    A section then lists the conditional independencies that
-    ``implications()`` derives from the causal graph, or says why there are
-    none. They are consequences of the graph as encoded, which reads every
-    pair of constructs that no proposition joins as having no direct effect
-    and no unexplained association, so they are the theory's commitments only
-    if its authors meant those omissions, and a line in italics above them
-    says so. ``cycles`` is passed to it, to ``check()`` and to
-    ``entailments()``: under the default, a graph with a feedback loop gives
-    no independencies and leaves unread the claims that name a construct on a
-    loop or downstream of one, and with ``"sigma"`` it is read by
-    sigma-separation. The claim-form
-    severity rubric closes the document.
-    Values are written on one line, ids and dates included, so a line break
-    inside a statement cannot end the list item it belongs to or start a line
-    of its own.
+    A section then lists the conditional independencies that ``implications()``
+    derives from the causal graph, or says why there are none. They are
+    consequences of the graph as encoded, which reads every pair of constructs
+    that no proposition joins as having no direct effect and no unexplained
+    association, so they are the theory's commitments only if its authors meant
+    those omissions, and a line in italics above them says so. ``cycles`` is
+    passed to it, to ``check()`` and to ``entailments()``: under the default, a
+    graph with a feedback loop gives no independencies and leaves unread the
+    claims that name a construct on a loop or downstream of one, and with
+    ``"sigma"`` it is read by sigma-separation. The claim-form severity rubric
+    closes the document. Values are written on one line, ids and dates
+    included, so a line break inside a statement cannot end the list item it
+    belongs to or start a line of its own.
 
     The document is the part of a preregistration that the theory file holds.
     It is to be completed with the study design, the analysis plan, the
     inference criteria and whatever the sampling plan leaves out, the sections
     that a template such as PRP-QUANT asks for (Bosnjak et al., 2022).
+
+    Args:
+        path: the file the document is written to, with LF line endings, or
+            None to return it only.
+        cycles: how a causal graph with a feedback loop is read, passed to
+            ``check()``, ``entailments()`` and ``implications()``. ``"refuse"``
+            (the default) derives no independencies and leaves unread the
+            claims that name a construct on a loop or downstream of one, and
+            ``"sigma"`` reads the graph by sigma-separation, which assumes that
+            each loop settles to a unique equilibrium.
 
     Raises:
         ValueError: when ``cycles`` is not ``"refuse"`` or ``"sigma"``, and
