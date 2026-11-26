@@ -396,13 +396,13 @@ print(switching.data["predictions"][0]["claim"])
 
 `entailments()` reads each claim against the graph. The signs of the routes between the two
 constructs decide whether the graph entails the claim, contradicts it or leaves it
-undetermined, and `via` names the propositions the verdict rests on. For an effect claim on
-an acyclic graph, `adjustment` gives a smallest set of constructs whose adjustment would
-identify the effect in observational data, or a minimal set when more than 12 constructs
-are candidates. Here it is the empty set. `identified` reports identification by adjustment
-alone, so an effect without such a set may still be identified by other means, such as the
-front-door criterion, and a set for a cause or an outcome marked latent assumes a measure of
-it.
+undetermined, and `via` names the propositions the verdict rests on. For an effect claim
+that no feedback loop reaches, `adjustment` gives a smallest set of constructs whose
+adjustment would identify the effect in observational data, or a minimal set when more than
+12 constructs are candidates. Here it is the empty set. `identified` reports identification
+by adjustment alone, so an effect without such a set may still be identified by other
+means, such as the front-door criterion, and a set for a cause or an outcome marked latent
+assumes a measure of it.
 
 ```python exec="1" source="block" result="text" session="workflow-modes"
 entailed = switching.entailments()

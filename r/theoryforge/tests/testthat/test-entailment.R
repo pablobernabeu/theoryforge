@@ -273,6 +273,92 @@ test_that("an effect claim names a smallest adjustment set", {
                fixed = TRUE)
 })
 
+test_that("an effect that no loop reaches has its adjustment set", {
+  # c0 confounds c1 -> c2, and the loop of c3 and c4 lies downstream of c2. The
+  # effect of c1 on c2 keeps the adjustment set it has without the loop, under
+  # either value of cycles, and the effect of c1 on c3, which the loop reaches,
+  # has none. The Python suite asserts the same records.
+  props <- list(c("c0", "c1", "increases"), c("c0", "c2", "increases"), c("c1", "c2", "increases"),
+                c("c2", "c3", "increases"), c("c3", "c4", "increases"), c("c4", "c3", "increases"))
+  claims <- list(claim("effect", "c1", "c2", "positive"), claim("effect", "c1", "c3", "positive"))
+  t <- small_theory(props, claims = claims, k = 5L)
+  without <- tf_entailments(small_theory(props[1:5], claims = claims, k = 5L))$claims
+  for (cycles in c("refuse", "sigma")) {
+    e <- tf_entailments(t, cycles = cycles)$claims
+    expect_identical(e[[1]][c("identified", "adjustment")],
+                     list(identified = TRUE, adjustment = list("c0")))
+    expect_identical(e[[1]], without[[1]])
+    expect_identical(e[[2]][c("identified", "adjustment")], list(identified = NA, adjustment = NA))
+  }
+  expect_match(tf_preregister(t), "   - Adjustment for an observational test: c0\n", fixed = TRUE)
+})
+
+test_that("a claim that no loop reaches gets the record of the graph without its loops", {
+  # On random graphs whose loops lie late in the causal order, every claim
+  # whose constructs no loop reaches gets, field for field, the record it gets
+  # once the edges inside the loops are removed, under either value of cycles.
+  # The Python suite asserts the same of its own random graphs.
+  set.seed(80)
+  relations <- c("increases", "decreases", "causes", "associates")
+  checked <- 0L
+  identified <- 0L
+  for (rep in 1:80) {
+    k <- sample(5:8, 1)
+    order <- paste0("c", sample(k) - 1L)
+    props <- list()
+    for (i in seq_len(k - 1L)) {
+      for (j in (i + 1L):k) {
+        if (stats::runif(1) < 0.35) {
+          props[[length(props) + 1L]] <- c(order[[i]], order[[j]], sample(relations, 1))
+        }
+      }
+    }
+    # A loop among the last three constructs, and sometimes a second one.
+    ab <- sort(sample((k - 2L):k, 2))
+    props[[length(props) + 1L]] <- c(order[[ab[[1]]]], order[[ab[[2]]]], sample(relations[1:3], 1))
+    props[[length(props) + 1L]] <- c(order[[ab[[2]]]], order[[ab[[1]]]], sample(relations[1:3], 1))
+    if (stats::runif(1) < 0.3) {
+      c3 <- order[[sample((k - 2L):k, 1)]]
+      props[[length(props) + 1L]] <- c(c3, c3, sample(relations[1:3], 1))
+    }
+    claims <- lapply(1:10, function(i) {
+      xy <- sample(order, 2)
+      if (stats::runif(1) < 0.5) {
+        return(claim("effect", xy[[1]], xy[[2]], sample(c("positive", "negative", "zero"), 1)))
+      }
+      rest <- setdiff(order, xy)
+      given <- rest[sample(length(rest), sample(0:2, 1))]
+      if (length(given)) claim("association", xy[[1]], xy[[2]], "nonzero", given = given)
+      else claim("association", xy[[1]], xy[[2]], "positive")
+    })
+    t <- small_theory(props, claims = claims, k = k)
+    G <- .tf_prepare_graph(.tf_causal_graph(t, "test"), "refuse", t$propositions)
+    inside <- vapply(props, function(p) {
+      p[[3]] != "associates" && G$r[match(p[[1]], G$nodes), match(p[[2]], G$nodes)] &&
+        G$r[match(p[[2]], G$nodes), match(p[[1]], G$nodes)]
+    }, logical(1))
+    plain_t <- t
+    plain_t$propositions <- t$propositions[!inside]
+    plain <- tf_entailments(plain_t)$claims
+    for (cycles in c("refuse", "sigma")) {
+      e <- tf_entailments(t, cycles = cycles)$claims
+      for (i in seq_along(e)) {
+        c1 <- e[[i]]
+        if (c1$basis == "not_in_graph" || plain[[i]]$basis == "not_in_graph") next
+        if (any(G$behind[match(c(c1$x, c1$y, unlist(c1$given)), G$nodes)])) {
+          expect_identical(c1[c("identified", "adjustment")], list(identified = NA, adjustment = NA))
+          next
+        }
+        expect_identical(c1, plain[[i]])
+        checked <- checked + 1L
+        identified <- identified + !is.na(c1$identified)
+      }
+    }
+  }
+  expect_gt(checked, 250L)
+  expect_gt(identified, 120L)
+})
+
 test_that("each adjustment set is one dagitty accepts, of the smallest size", {
   # Some constructs are marked latent, which dagitty reads from the same mark
   # and neither adjusts for.

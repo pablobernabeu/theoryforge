@@ -162,8 +162,8 @@ reads the graph by sigma-separation. Those statements hold if each loop settles 
 equilibrium. The statements concern constructs. A conditional independence tested on
 fallible measures is rejected too often, so a latent-variable model is the better test.
 `tf_entailments()` reads each claim of a prediction or phenomenon against the graph and says
-whether the graph entails it, contradicts it or leaves it open. For an effect in a graph
-without a feedback loop, it also says whether adjusting for some of the constructs
+whether the graph entails it, contradicts it or leaves it open. For an effect that no
+feedback loop reaches, it also says whether adjusting for some of the constructs
 identifies the effect in observational data and names a minimal such set.
 `tf_equivalent_models()` lists the causal directions that no test of conditional
 independence can settle.

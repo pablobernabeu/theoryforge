@@ -369,17 +369,24 @@
 # vertex order, and the first valid one, a smallest, is returned. A canonical
 # set of more than .tf_ADJUSTMENT_SEARCH members is pruned instead: each
 # member in turn, in vertex order, is dropped when the others left still
-# separate the two, which leaves a minimal valid set. A graph with feedback
-# loops gets NULL, since the criterion is not established for it.
+# separate the two, which leaves a minimal valid set.
+#
+# When neither x nor y is behind a feedback loop, the vertices that reach them
+# are not behind one either, so the canonical set, the vertices on a proper
+# causal path and every vertex that separation by a set of them involves lie in
+# the acyclic graph that those vertices form, whose model the loops do not
+# change. The criterion is read in that graph. A pair of which x or y is behind
+# a loop gets NULL, since the criterion is not established for a cyclic graph.
 .tf_adjustment <- function(G, x, y) {
-  if (length(G$feedback) > 0L) return(NULL)
+  if (G$behind[[x]] || G$behind[[y]]) return(NULL)
   k <- G$k
   r <- G$r
   on_path <- which(seq_len(k) != x & r[x, ] & r[, y])
   forbidden <- unique(c(x, which(colSums(r[on_path, , drop = FALSE]) > 0)))
   canonical <- setdiff(which((r[, x] | r[, y]) & !G$latent), c(forbidden, y))
-  # The proper back-door graph. Without feedback loops, separation is read in
-  # the theory's own graph.
+  # The proper back-door graph, made from the graph that separation is read in.
+  # The acyclification leaves the edges among vertices that are not behind a
+  # loop as they are.
   d <- .tf_without_edges(.tf_sep_graph(G), x, on_path)
   if (!.tf_m_separated(d, x, y, canonical)) return(NULL)
   if (length(canonical) > .tf_ADJUSTMENT_SEARCH) {
@@ -412,7 +419,8 @@
 
 # The derivation of one claim: list(derived, verdict, basis, faithfulness, via,
 # identified, adjustment). The last two are NA except for an evaluated effect
-# claim on an acyclic graph, and adjustment is NA too when identified is FALSE.
+# claim whose x and y are not behind a feedback loop, and adjustment is NA too
+# when identified is FALSE.
 .tf_read_with <- function(G, cl) {
   out <- function(derived, verdict, basis, faithfulness = FALSE, via = character(0),
                   adjust = NULL) {
@@ -442,7 +450,7 @@
   adjust <- NULL
   if (cl$kind == "effect") {
     d <- .tf_effect(G, x, y)
-    if (length(G$feedback) == 0L) {
+    if (!(G$behind[[x]] || G$behind[[y]])) {
       z <- .tf_adjustment(G, x, y)
       adjust <- list(identified = !is.null(z), set = z)
     }
@@ -504,11 +512,12 @@
 #' proposition relates to another, or, under \code{cycles = "refuse"}, names a
 #' construct on a feedback loop or downstream of one, since what the graph says
 #' of it then depends on how the loop settles. A claim that no loop reaches
-#' gets the same record under both values of \code{cycles}, so a loop elsewhere
-#' in the graph neither hides nor changes its verdict. \code{faithfulness} is
-#' \code{TRUE} when the verdict relies on the effects carried by a route of
-#' unknown sign, or by routes of opposite signs, not cancelling exactly, and the
-#' claim lines of the preregistration and the dossier then end with
+#' gets the same record under both values of \code{cycles}, the record it would
+#' get without the loops, so a loop elsewhere in the graph neither hides nor
+#' changes its verdict. \code{faithfulness} is \code{TRUE} when the verdict
+#' relies on the effects carried by a route of unknown sign, or by routes of
+#' opposite signs, not cancelling exactly, and the claim lines of the
+#' preregistration and the dossier then end with
 #' \code{unless effects cancel exactly}.
 #'
 #' The derivations assume that the graph is the causal structure, with no
@@ -523,16 +532,19 @@
 #' can leave a loop that does not settle. A loop that is one simple cycle then
 #' multiplies the effects through it by a positive factor, so the signs through
 #' it are those of the paths. The walks round a loop of any other shape are
-#' read as they are, and the association of two constructs that a loop reaches
-#' is read off pairs of walks from a common source, so a sign that the graph
-#' fixes can be left open there.
+#' read as they are, and the association of two constructs is read off pairs
+#' of walks from a common source when a loop reaches either of them, so a sign
+#' that the graph fixes can be left open there.
 #'
-#' For an effect claim on an acyclic graph, \code{identified} says whether
+#' For an effect claim whose two constructs no feedback loop reaches, which is
+#' every effect claim on an acyclic graph, \code{identified} says whether
 #' adjusting for some set of the theory's constructs would identify the effect
 #' from observational data (van der Zander et al., 2019), and
-#' \code{adjustment} gives a smallest such set. When more than 12 constructs
-#' are candidates, it gives a minimal set instead, from which none can be
-#' dropped, though a smaller one may exist. A construct marked
+#' \code{adjustment} gives a smallest such set. On a graph with a loop, the
+#' constructs that reach \code{x} or \code{y} form an acyclic graph, and what
+#' holds among them does not depend on the loops, so the set is found there.
+#' When more than 12 constructs are candidates, it gives a minimal set instead,
+#' from which none can be dropped, though a smaller one may exist. A construct marked
 #' \code{x_latent: true}, as [tf_read_dagitty()] marks an unobserved variable,
 #' is never adjusted for. \code{identified} reports identification by
 #' adjustment alone, so an effect without an adjustment set may still be
@@ -542,8 +554,11 @@
 #' same, and using it assumes a measure of that construct.
 #'
 #' @param theory A theory object.
-#' @param cycles \code{"refuse"} (the default) or \code{"sigma"}, as in
-#'   [tf_implications()].
+#' @param cycles How a causal graph with a feedback loop is read.
+#'   \code{"refuse"} (the default) leaves unread the claims that name a
+#'   construct on a loop or downstream of one and reads every other claim, and
+#'   \code{"sigma"} reads every claim by sigma-separation, which assumes that
+#'   each loop settles to a unique equilibrium.
 #' @return A list with \code{theory_id}, \code{criterion}, \code{acyclic},
 #'   \code{feedback}, \code{claims} and \code{counts}. Each claim is a list of
 #'   \code{source}, \code{id}, \code{kind}, \code{x}, \code{y}, \code{given},
@@ -551,10 +566,10 @@
 #'   \code{faithfulness}, \code{via}, \code{identified} and \code{adjustment}.
 #'   \code{via} lists the propositions on some path or trek between the two
 #'   constructs. \code{identified} is \code{TRUE} or \code{FALSE} for an
-#'   evaluated effect claim on an acyclic graph and \code{NA} for any other
-#'   claim, and \code{adjustment} lists the ids of the set when
-#'   \code{identified} is \code{TRUE} and is \code{NA} otherwise. The
-#'   predictions come first and then the phenomena, each in file order.
+#'   evaluated effect claim whose constructs no feedback loop reaches and
+#'   \code{NA} for any other claim, and \code{adjustment} lists the ids of the
+#'   set when \code{identified} is \code{TRUE} and is \code{NA} otherwise.
+#'   The predictions come first and then the phenomena, each in file order.
 #'   \code{counts} tallies the verdicts.
 #' @references
 #' van der Zander, B., Liśkiewicz, M., & Textor, J. (2019). Separators and

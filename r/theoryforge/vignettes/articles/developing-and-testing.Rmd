@@ -218,10 +218,10 @@ str(switching$predictions[[1]]$claim)
 `tf_entailments()` reads each claim against the graph. The signs of the routes
 between the two constructs decide whether the graph entails the claim,
 contradicts it or leaves it undetermined, and `via` names the propositions the
-verdict rests on. For an effect claim on an acyclic graph, `adjustment` gives a
-smallest set of constructs whose adjustment would identify the effect in
-observational data, or a minimal set when more than 12 constructs are
-candidates. Here it is the empty set. For other claims, it is `NA`.
+verdict rests on. For an effect claim that no feedback loop reaches,
+`adjustment` gives a smallest set of constructs whose adjustment would identify
+the effect in observational data, or a minimal set when more than 12 constructs
+are candidates. Here it is the empty set. For other claims, it is `NA`.
 `identified` reports identification by adjustment alone, so an effect without
 such a set may still be identified by other means, such as the front-door
 criterion, and a set for a cause or an outcome marked latent assumes a measure

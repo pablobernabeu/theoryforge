@@ -481,6 +481,78 @@ def test_an_effect_claim_names_a_smallest_adjustment_set():
     assert loop.entailments(cycles="sigma")["claims"][0]["identified"] is None
 
 
+def test_an_effect_that_no_loop_reaches_has_its_adjustment_set():
+    # c0 confounds c1 -> c2, and the loop of c3 and c4 lies downstream of c2.
+    # The effect of c1 on c2 keeps the adjustment set it has without the loop,
+    # under either value of cycles, and the effect of c1 on c3, which the loop
+    # reaches, has none. The R suite asserts the same records.
+    props = [("c0", "c1", "increases"), ("c0", "c2", "increases"), ("c1", "c2", "increases"),
+             ("c2", "c3", "increases"), ("c3", "c4", "increases"), ("c4", "c3", "increases")]
+    claims = [_claim("effect", "c1", "c2", "positive"), _claim("effect", "c1", "c3", "positive")]
+    t = _theory(props, claims=claims, k=5)
+    without = _theory(props[:5], claims=claims, k=5).entailments()["claims"]
+    for cycles in ("refuse", "sigma"):
+        near, far = t.entailments(cycles=cycles)["claims"]
+        assert (near["identified"], near["adjustment"]) == (True, ["c0"])
+        assert near == without[0]
+        assert (far["identified"], far["adjustment"]) == (None, None)
+    assert "   - Adjustment for an observational test: c0\n" in t.preregister()
+
+
+def test_a_claim_that_no_loop_reaches_gets_the_record_of_the_graph_without_its_loops():
+    # On random graphs whose loops lie late in the causal order, every claim
+    # whose constructs no loop reaches gets, field for field, the record it
+    # gets once the edges inside the loops are removed, under either value of
+    # cycles. The R suite asserts the same of its own random graphs.
+    rng = random.Random(80)
+    relations = ["increases", "decreases", "causes", "associates"]
+    checked = identified = 0
+    for _ in range(120):
+        k = rng.randint(5, 8)
+        order = [f"c{i}" for i in rng.sample(range(k), k)]
+        props = []
+        for i in range(k):
+            for j in range(i + 1, k):
+                if rng.random() < 0.35:
+                    props.append((order[i], order[j], rng.choice(relations)))
+        # A loop among the last three constructs, and sometimes a second one.
+        a, b = sorted(rng.sample(range(k - 3, k), 2))
+        props.append((order[a], order[b], rng.choice(relations[:3])))
+        props.append((order[b], order[a], rng.choice(relations[:3])))
+        if rng.random() < 0.3:
+            c = order[rng.randrange(k - 3, k)]
+            props.append((c, c, rng.choice(relations[:3])))
+        claims = []
+        for _ in range(10):
+            x, y = rng.sample(order, 2)
+            if rng.random() < 0.5:
+                claims.append(_claim("effect", x, y, rng.choice(["positive", "negative", "zero"])))
+            else:
+                rest = [n for n in order if n not in (x, y)]
+                given = rng.sample(rest, rng.randint(0, 2))
+                claims.append(_claim("association", x, y, "nonzero" if given else "positive",
+                                     given=given or None))
+        t = _theory(props, claims=claims, k=k)
+        g = _Graph(causal_graph(t.data, "test"), "refuse", t.data["propositions"])
+        inside = {(a, b) for a, b, rel in props if rel != "associates"
+                  and g.r[g.index[a]][g.index[b]] and g.r[g.index[b]][g.index[a]]}
+        data = copy.deepcopy(t.data)
+        data["propositions"] = [p for p in data["propositions"] if (p["from"], p["to"]) not in inside]
+        plain = tf.Theory(data).entailments()["claims"]
+        for cycles in ("refuse", "sigma"):
+            for c, d in zip(t.entailments(cycles=cycles)["claims"], plain, strict=True):
+                names = [c["x"], c["y"], *c["given"]]
+                if c["basis"] == "not_in_graph" or d["basis"] == "not_in_graph":
+                    continue
+                if any(g.behind[g.index[n]] for n in names):
+                    assert (c["identified"], c["adjustment"]) == (None, None)
+                    continue
+                assert c == d
+                checked += 1
+                identified += c["identified"] is not None
+    assert checked > 400 and identified > 200
+
+
 def test_the_preregistration_says_what_an_observational_test_adjusts_for():
     t = _theory([("c0", "c1", "increases"), ("c0", "c2", "increases"), ("c1", "c2", "increases")],
                 claims=[_claim("effect", "c1", "c2", "positive"), _claim("effect", "c0", "c2", "positive")])

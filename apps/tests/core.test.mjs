@@ -1610,6 +1610,28 @@ test("the verdicts of the causal readings and the landscape's statuses are neutr
   assert.match($("#output .ri-about").textContent, /when the two carry the same label or when every measure of one is listed for the other/);
 });
 
+test("an effect claim that no loop reaches has its adjustment set, and the guide says which claims a loop leaves unread", async () => {
+  // An effect claim that no loop reaches is read, with its adjustment set,
+  // and one behind the loop is not.
+  const rt = lineageRuntime({ entailments: { result: { theory_id: "t", criterion: "m", acyclic: false, feedback: [["u", "w"]],
+    counts: { entailed: 1, contradicted: 0, undetermined: 0, not_evaluated: 1 },
+    claims: [{ source: "prediction", id: "h1", kind: "effect", x: "x", y: "y", given: [], sign: "positive", derived: "positive", verdict: "entailed",
+      basis: "paths_agree", faithfulness: false, via: ["p3"], identified: true, adjustment: ["t"] },
+    { source: "prediction", id: "h2", kind: "effect", x: "x", y: "w", given: [], sign: "positive", derived: "", verdict: "not_evaluated",
+      basis: "feedback_loop", faithfulness: false, via: [], identified: null, adjustment: null }] } } });
+  const { ctx, $ } = await boot({}, rt);
+  await opButton(ctx, "entailments").click();
+  await $("#runBtn").click();
+  const about = $("#output .ri-about").textContent;
+  assert.match(about, /Not evaluated marks a claim that names a construct no proposition relates to another, or, under cycles refuse, one that names a construct on a feedback loop or downstream of one\./);
+  assert.match(about, /For an effect claim whose constructs no feedback loop reaches, the 'adjust for' column gives a smallest set/);
+  assert.doesNotMatch(about, /meets a feedback loop|on an acyclic graph/);
+  const rows = ctx.document.querySelectorAll("#output table.grid tbody tr").map((tr) => tr.querySelectorAll("td").map((td) => td.textContent));
+  assert.equal(rows.find((r) => r[0] === "prediction h1")[5], "t");
+  assert.equal(rows.find((r) => r[0] === "prediction h2")[5], "—");
+  assert.match($("#output .ri-interp").textContent, /One claim was not evaluated, since a construct it names is on a feedback loop or downstream of one\./);
+});
+
 test("the claim-form rubric names every claim at the highest value", async () => {
   const rows = (vals) => ({ rows: vals.map((v, i) => ({ prediction_id: "p" + (i + 1), type: "directional", risk_score: v, computed_severity: v })), svg: "<svg></svg>" });
   const cases = [
