@@ -2109,13 +2109,12 @@ AI agents who tested the new rules with random, malformed and constructed
 inputs, read the documents and apps and checked the packages against the
 requirements of CRAN and PyPI. A second round of corrections, also written by AI
 agents, addressed the problems of the rules, documents and apps that the logic
-and communication reviews reported. It left two of the release review's
-problems open: the results of continuous
-integration that `cran-comments.md` should report, which need a run on the
-pushed branch, and a local tag of an earlier history that would be published if
-all tags were pushed. AI agents compared the second round's reading of loops
-with implementations that do not use theoryforge and with the package's other
-settings (@sec-loops). `r rv_text`
+and communication reviews reported. The release review's two problems were
+settled after that round: `cran-comments.md` now reports the continuous
+integration run on the pushed branch, in which every job passed, and the local
+tag of an earlier history was deleted. AI agents compared the second round's
+reading of loops with implementations that do not use theoryforge and with the
+package's other settings (@sec-loops). `r rv_text`
 
 ```{r}
 #| label: tbl-review
