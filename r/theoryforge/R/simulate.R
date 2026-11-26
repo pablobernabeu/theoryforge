@@ -2,16 +2,21 @@
 #'
 #' Each construct is a state variable, and each proposition whose relation is
 #' \code{increases}, \code{decreases}, \code{causes} or \code{mediates}
-#' contributes a signed linear coupling term. The system is propagated either
-#' with fixed-step (Euler) updates or exactly, with the matrix exponential of
-#' the coupling matrix, so the trajectory is deterministic.
+#' contributes a linear coupling term with the sign the relation table gives
+#' it. \code{causes} and \code{mediates} state no sign and are coupled
+#' positively, an assumption the result records. The system is propagated
+#' exactly, with the matrix exponential of the coupling matrix, or with
+#' fixed-step (Euler) updates, so the trajectory is deterministic.
 #' @name simulate
+#' @noRd
 #' @keywords internal
 NULL
 
-.tf_SIM_POS <- c("increases", "causes", "mediates")
-.tf_SIM_NEG <- c("decreases")
 .tf_SIM_METHODS <- c("euler", "exact")
+# Below this many states, the matrix products and the steps loop over single
+# entries, which is quicker there than adding whole columns. Both give the same
+# bits.
+.tf_SIM_SMALL <- 10L
 # Degree of the Taylor polynomial of the propagator, after scaling the matrix
 # to an infinity norm of at most 0.5 (API_SPEC section 22).
 .tf_SIM_TAYLOR_DEGREE <- 18L
@@ -21,45 +26,78 @@ NULL
 .tf_SIM_EULER_WARNING <- paste0(
   "simulate: the Euler steps depart from the exact solution by more than ",
   "5 per cent; use method 'exact' or a smaller dt")
+.tf_SIM_INIT_FORM <- paste0("simulate requires init to be a finite number or a mapping from ",
+                            "construct ids to finite numbers")
+.tf_SIM_INIT_UNKNOWN <- "simulate requires init to name declared constructs; unknown construct id: "
 
 #' Simulate a theory's construct network as a linear dynamical system
 #'
 #' Treats each construct (in file order) as a state variable and each
-#' proposition whose relation is \code{increases}, \code{decreases},
-#' \code{causes} or \code{mediates} as a signed linear coupling term. It then
-#' propagates \code{dX/dt = A X - damping * X} either with fixed-step (Euler)
-#' updates or exactly, with the matrix exponential of
-#' \code{(A - damping * I) * dt}. The result is deterministic. Construct ids
+#' proposition between two declared constructs whose relation is
+#' \code{increases}, \code{decreases}, \code{causes} or \code{mediates} as a
+#' linear coupling term. It then propagates \code{dX/dt = A X - damping * X}
+#' exactly, with the matrix exponential of \code{(A - damping * I) * dt}, or
+#' with fixed-step (Euler) updates. The result is deterministic. Construct ids
 #' must be unique, and duplicates are refused rather than assigned to an
-#' arbitrary state. A construct without an id is a state with no couplings, and
-#' two of them do not count as duplicates.
+#' arbitrary state. A construct without an id is a state with no couplings,
+#' and two of them do not count as duplicates.
 #'
-#' With \code{method = "exact"}, each step multiplies the state by the matrix
-#' exponential, computed by scaling and squaring a degree-18 Taylor polynomial
-#' (Moler and Van Loan, 2003, method 3), so the trajectory is the solution of
-#' the linear system at times \code{0, dt, 2 * dt, ...} whatever \code{dt} is.
+#' A theory states no parameter values, so the trajectory is that of one
+#' linear model consistent with the signs the propositions state, with one
+#' gain \code{k} for every coupling and unsigned relations taken as positive.
+#' It is not fitted to data and does not show what the propositions imply.
+#' Every state decays at rate \code{damping} in the absence of couplings, and
+#' whether a feedback loop grows or settles is set by \code{k} against
+#' \code{damping}. Time is in units of \code{1/k}, and the window that
+#' \code{steps} and \code{dt} choose decides what is seen: the last construct
+#' of a chain that decays in the long run can show only a rise in a short
+#' window. A linear system has one equilibrium, or a continuum of them when its
+#' matrix is singular, and never two separate ones, so it cannot show
+#' bistability.
 #'
-#' With \code{method = "euler"}, the default for this release, the explicit
-#' step is stable only when \eqn{|1 + dt \lambda| < 1} for every eigenvalue
-#' \eqn{\lambda} of \code{A - damping * I}. A theory that decays at rate
-#' \code{damping} therefore grows without bound, alternating in sign, once
-#' \code{dt * damping} exceeds 2, and the steps turn a sustained oscillation
-#' into growth. Raising \code{damping} can cause a divergence as well as fail
-#' to stop one. The function warns when the Euler trajectory departs from the
-#' exact one by more than 5 per cent of \code{max(1, |exact|)} at any step. The
-#' default will change to \code{"exact"} in the next minor release.
+#' @section Couplings:
+#' Each such proposition adds \code{k} times the sign of its relation to the
+#' coupling from \code{from} to \code{to}. The signs are those of the relation
+#' table (API_SPEC.md section 28): +1 for \code{increases} and -1 for
+#' \code{decreases}. \code{causes} and \code{mediates} state no sign, and they
+#' are coupled at \code{+k} by assumption. \code{assumed_positive} lists their
+#' ids, in file order, since that choice alone can decide whether a feedback
+#' loop grows or settles. \code{moderates} and \code{associates} couple
+#' nothing, and \code{ignored} lists them.
+#'
+#' @section Initial state:
+#' \code{init} is either one finite number, the value every state starts from,
+#' or a mapping from construct ids to finite numbers, given as a named numeric
+#' vector or a named list, in which case each state it does not name starts
+#' from 0. A mapping with one entry gives the response to an impulse in that
+#' construct. A name that is not a declared construct id is refused.
+#'
+#' @section Methods:
+#' With \code{method = "exact"}, the default, each step multiplies the state by
+#' the matrix exponential, computed by scaling and squaring a degree-18 Taylor
+#' polynomial (Moler and Van Loan, 2003, method 3), so the trajectory is the
+#' solution of the linear system at times \code{0, dt, 2 * dt, ...} whatever
+#' \code{dt} is.
+#'
+#' With \code{method = "euler"}, the explicit step is stable only when
+#' \eqn{|1 + dt \lambda| < 1} for every eigenvalue \eqn{\lambda} of
+#' \code{A - damping * I}. A theory that decays at rate \code{damping}
+#' therefore grows without bound, alternating in sign, once \code{dt * damping}
+#' exceeds 2, and the steps turn a sustained oscillation into growth. Raising
+#' \code{damping} can cause a divergence as well as fail to stop one. The
+#' function warns when the Euler trajectory departs from the exact one, at any
+#' step, by more than 5 per cent of the larger of \code{|exact|} and the
+#' largest absolute starting value (1 when every starting value is 0), so that
+#' the warning does not depend on the unit of \code{init}.
 #'
 #' When a state grows so large that a million times it is not a finite number,
 #' the function stops with a message naming the step and the state. The initial
-#' state is tested as step 0, so an \code{init} beyond about 1.8e302 in absolute
-#' value stops there.
+#' state is tested as step 0, so a starting value beyond about 1.8e302 in
+#' absolute value stops there.
 #'
 #' The model is deliberately simple: one gain \code{k} for every coupling,
 #' \code{causes} and \code{mediates} taken as positive, \code{moderates} and
-#' \code{associates} coupling nothing, \code{functional_form} not read and a
-#' common initial value for every state. A linear system has one equilibrium,
-#' or a continuum of them when its matrix is singular, and never two separate
-#' ones, so it cannot show bistability.
+#' \code{associates} coupling nothing and \code{functional_form} not read.
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param steps Number of steps, a whole number of at least 0 (default
@@ -70,21 +108,25 @@ NULL
 #'   \code{1.0}).
 #' @param damping Per-state linear decay, a finite number (default
 #'   \code{0.5}).
-#' @param init Initial value for every state, a single finite number (default
-#'   \code{1.0}).
-#' @param method \code{"euler"} (the default for this release) or
-#'   \code{"exact"}.
+#' @param init Initial value of every state, a single finite number (default
+#'   \code{1.0}), or a named numeric vector or named list giving the initial
+#'   value of the constructs it names, the others starting from 0.
+#' @param method \code{"exact"} (the default) or \code{"euler"}.
 #' @return A named list
-#'   \code{list(states, dt, steps, k, damping, init, method, ignored, opposed,
-#'   trajectory)}, where \code{states} are the construct ids in file order and
-#'   \code{trajectory} is a list of \code{steps + 1} numeric vectors (row 0 is
-#'   the initial state), every value rounded to 6 decimals. The settings and
-#'   the method are returned as given, because the trajectory cannot be
-#'   reproduced without them. \code{ignored} lists the ids of the propositions
-#'   that couple nothing (moderates, associates, a relation outside the schema's
-#'   set or an endpoint that is not a declared construct), and \code{opposed}
-#'   the \code{c(from, to)} pairs that carry couplings of both signs, which
-#'   offset each other. An invalid setting is refused with an error.
+#'   \code{list(states, dt, steps, k, damping, init, initial_state, method,
+#'   ignored, assumed_positive, opposed, trajectory)}, where \code{states} are
+#'   the construct ids in file order and \code{trajectory} is a list of
+#'   \code{steps + 1} numeric vectors (row 0 is the initial state), every value
+#'   rounded to 6 decimals. The settings and the method are returned as given
+#'   (a mapping \code{init} as a named list), because the trajectory cannot be
+#'   reproduced without them, and \code{initial_state} gives the value each
+#'   state starts from, in the order of \code{states}. \code{ignored} lists the
+#'   ids of the propositions that couple nothing (moderates, associates, a
+#'   relation outside the schema's set or an endpoint that is not a declared
+#'   construct), \code{assumed_positive} the ids of the \code{causes} and
+#'   \code{mediates} propositions coupled at \code{+k}, and \code{opposed} the
+#'   \code{c(from, to)} pairs that carry couplings of both signs, which offset
+#'   each other. An invalid setting is refused with an error.
 #' @references Moler, C., & Van Loan, C. (2003). Nineteen dubious ways to
 #'   compute the exponential of a matrix, twenty-five years later. \emph{SIAM
 #'   Review, 45}(1), 3-49. \doi{10.1137/S00361445024180}
@@ -93,13 +135,16 @@ NULL
 #'   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
 #'   tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
 #'   tf_add_proposition("p1", "c_arousal", "c_threat", "increases")
-#' sim <- tf_simulate(theory, steps = 5, method = "exact")
+#' sim <- tf_simulate(theory, steps = 5)
 #' sim$states
 #' sim$trajectory[[1]] # the common initial state
 #' sim$trajectory[[length(sim$trajectory)]] # at time 5 * dt
+#' # The response to an impulse in arousal, threat starting from 0
+#' impulse <- tf_simulate(theory, steps = 5, init = c(c_arousal = 1))
+#' impulse$initial_state
 #' @export
 tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
-                        damping = 0.5, init = 1.0, method = "euler") {
+                        damping = 0.5, init = 1.0, method = "exact") {
   .tf_sim_check_knobs(steps, dt, k, damping, init, method)
   T <- theory
   cons <- .tf_list(T, "constructs")
@@ -120,43 +165,65 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
     seen <- c(seen, s)
   }
   idx <- stats::setNames(seq_along(states), states)
+  mapping <- .tf_sim_init_is_mapping(init)
+  if (mapping) {
+    for (key in names(init)) {
+      if (!(key %in% states)) stop(.tf_SIM_INIT_UNKNOWN, key, call. = FALSE)
+    }
+    X <- numeric(n)
+    for (i in seq_len(n)) {
+      if (nzchar(states[[i]]) && states[[i]] %in% names(init)) {
+        X[i] <- as.numeric(init[[states[[i]]]])
+      }
+    }
+    init <- as.list(init)
+  } else {
+    X <- rep(as.numeric(init), n)
+  }
 
   # n x n coupling matrix (zeros). Explicit loops mirror the Python reference
   # exactly to guarantee identical floating-point results.
   A <- matrix(0.0, nrow = n, ncol = n)
   ignored <- character(0)
-  # The signs each ordered pair carries, in the order the pairs first couple.
-  pair_from <- character(0)
-  pair_to <- character(0)
-  pair_pos <- logical(0)
-  pair_neg <- logical(0)
+  assumed <- character(0)
   props <- .tf_list(T, "propositions")
+  # The ordered pair and the sign of each coupling, in file order.
+  pair_from <- character(length(props))
+  pair_to <- character(length(props))
+  pair_sign <- numeric(length(props))
+  n_pairs <- 0L
   for (p in props) {
     f <- .tf_str(p, "from")
     t <- .tf_str(p, "to")
     rel <- .tf_enum_str(p, "relation", .tf_RELATION)
-    sign <- if (rel %in% .tf_SIM_POS) 1.0 else if (rel %in% .tf_SIM_NEG) -1.0 else 0.0
-    coupled <- nzchar(f) && nzchar(t) && f %in% states && t %in% states
-    if (coupled) {
-      ti <- idx[[t]]
-      fi <- idx[[f]]
-      A[ti, fi] <- A[ti, fi] + sign * k
-    }
-    if (coupled && sign != 0) {
-      at <- which(pair_from == f & pair_to == t)
-      if (length(at) == 0L) {
-        pair_from <- c(pair_from, f)
-        pair_to <- c(pair_to, t)
-        pair_pos <- c(pair_pos, FALSE)
-        pair_neg <- c(pair_neg, FALSE)
-        at <- length(pair_from)
-      }
-      if (sign > 0) pair_pos[at] <- TRUE else pair_neg[at] <- TRUE
-    } else {
+    coupled <- rel %in% .tf_PATHS && nzchar(f) && nzchar(t) && f %in% states &&
+      t %in% states
+    if (!coupled) {
       ignored <- c(ignored, .tf_str(p, "id"))
+      next
     }
+    stated <- .tf_RELATIONS[[rel]]$sign
+    sign <- if (is.na(stated)) 1.0 else as.numeric(stated)
+    if (is.na(stated)) assumed <- c(assumed, .tf_str(p, "id"))
+    ti <- idx[[t]]
+    fi <- idx[[f]]
+    A[ti, fi] <- A[ti, fi] + sign * k
+    n_pairs <- n_pairs + 1L
+    pair_from[[n_pairs]] <- f
+    pair_to[[n_pairs]] <- t
+    pair_sign[[n_pairs]] <- sign
   }
-  both <- which(pair_pos & pair_neg)
+  # The pairs that carry couplings of both signs, in the order the pairs first
+  # couple. The ids are compared in UTF-8, as == compares them, and the length
+  # of `from` in bytes keeps two pairs' keys apart.
+  pair_from <- pair_from[seq_len(n_pairs)]
+  pair_to <- pair_to[seq_len(n_pairs)]
+  utf8_from <- enc2utf8(pair_from)
+  key <- paste0(nchar(utf8_from, type = "bytes"), ":", utf8_from, enc2utf8(pair_to))
+  first <- which(!duplicated(key))
+  at <- match(key, key[first])
+  signs <- pair_sign[seq_len(n_pairs)]
+  both <- first[tabulate(at[signs > 0], length(first)) > 0 & tabulate(at[signs < 0], length(first)) > 0]
   opposed <- lapply(both, function(i) c(pair_from[[i]], pair_to[[i]]))
 
   # The exact propagator, which method "exact" steps with and the Euler run is
@@ -166,7 +233,9 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
     J <- A
     for (i in seq_len(n)) J[i, i] <- A[i, i] - damping
     E <- .tf_sim_propagator(J, dt)
+    E_cols <- if (n >= .tf_SIM_SMALL) .tf_sim_columns(E)
   }
+  A_cols <- if (n >= .tf_SIM_SMALL) .tf_sim_columns(A)
   # A smaller dt cures an Euler divergence that the step causes, but it does
   # not change the exact solution, which grows only when the system does.
   # Raising damping shifts every eigenvalue of J to the left, so it tames the
@@ -177,39 +246,37 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
     "reduce dt or k"
   }
 
-  X <- rep(as.numeric(init), n)
+  initial <- X
   # Row 0 is tested as every update is. A finite init can be too large to
   # round (about 1.8e302 or more), and only init shapes this row.
   .tf_sim_check_finite(X, states, 0L, "reduce init")
   Y <- X # the exact state the Euler run is compared with
+  # The departure is measured against the larger of |exact| and the largest
+  # absolute starting value, so that it does not depend on the unit of init. A
+  # run that starts at 0 everywhere takes 1. Python computes the same scale.
+  dep_scale <- if (n > 0L) max(abs(X)) else 0
+  if (dep_scale == 0) dep_scale <- 1
   departed <- FALSE
   traj <- vector("list", steps + 1L)
   traj[[1L]] <- if (n == 0L) numeric(0) else .tf_rnd(X, 6)
   for (s in seq_len(steps)) {
     if (n > 0L) {
       if (method == "exact") {
-        X <- .tf_sim_apply(E, X)
+        X <- .tf_sim_apply(E, X, E_cols)
       } else {
-        dX <- numeric(n)
-        for (i in seq_len(n)) {
-          acc <- 0.0
-          for (j in seq_len(n)) {
-            acc <- acc + A[i, j] * X[j]
-          }
-          dX[i] <- acc - damping * X[i]
-        }
-        for (i in seq_len(n)) {
-          X[i] <- X[i] + dt * dX[i]
-        }
+        # Each dX[i] is A[i, 1] * X[1] + ... + A[i, n] * X[n], added left to
+        # right, less damping * X[i], as the Python twin computes it.
+        dX <- .tf_sim_apply(A, X, A_cols) - damping * X
+        X <- X + dt * dX
       }
       .tf_sim_check_finite(X, states, s, remedy)
       if (method == "euler" && !departed) {
-        Y <- .tf_sim_apply(E, Y)
+        Y <- .tf_sim_apply(E, Y, E_cols)
         for (i in seq_len(n)) {
           # An exact state beyond the double range is a departure too, since
           # the Euler state is still finite here.
           if (!is.finite(Y[i]) ||
-              abs(X[i] - Y[i]) > .tf_SIM_DEPARTURE * max(1, abs(Y[i]))) {
+              abs(X[i] - Y[i]) > .tf_SIM_DEPARTURE * max(dep_scale, abs(Y[i]))) {
             departed <- TRUE
             break
           }
@@ -221,24 +288,47 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
 
   if (departed) warning(.tf_SIM_EULER_WARNING, call. = FALSE)
   list(states = as.list(states), dt = dt, steps = steps, k = k,
-       damping = damping, init = init, method = method,
-       ignored = as.list(ignored), opposed = opposed, trajectory = traj)
+       damping = damping, init = init, initial_state = initial, method = method,
+       ignored = as.list(ignored), assumed_positive = as.list(assumed),
+       opposed = opposed, trajectory = traj)
 }
 
-# A times B by explicit loops, the inner index last, each sum a left fold, as
-# the Python twin's _matmul(). %*% would hand the sums to BLAS, whose order
-# and fused operations differ between builds.
+# A times B, each element a left fold over the inner index m, as the Python
+# twin's _matmul() computes it. %*% would hand the sums to BLAS, whose order
+# and fused operations differ between builds. Column j of the product is built
+# by adding column m of A times B[m, j] for each m in turn, so that every
+# element adds its terms in the order of m. A term with one factor 0 and the
+# other finite is 0 or -0, and adding it leaves a sum unchanged, since a sum
+# that starts at +0 never holds -0, so the columns of A that a 0 in B
+# multiplies are skipped when they are finite. Below .tf_SIM_SMALL states, the
+# triple loop over i, j and m is quicker and gives the same bits.
 .tf_sim_matmul <- function(A, B) {
   n <- nrow(A)
   out <- matrix(0.0, n, n)
-  for (i in seq_len(n)) {
-    for (j in seq_len(n)) {
-      acc <- 0.0
-      for (m in seq_len(n)) acc <- acc + A[i, m] * B[m, j]
-      out[i, j] <- acc
+  if (n < .tf_SIM_SMALL) {
+    for (i in seq_len(n)) {
+      for (j in seq_len(n)) {
+        acc <- 0.0
+        for (m in seq_len(n)) acc <- acc + A[i, m] * B[m, j]
+        out[i, j] <- acc
+      }
     }
+    return(out)
+  }
+  finite <- colSums(!is.finite(A)) == 0
+  for (j in seq_len(n)) {
+    b <- B[, j]
+    acc <- numeric(n)
+    for (m in which(is.na(b) | b != 0 | !finite)) acc <- acc + A[, m] * b[[m]]
+    out[, j] <- acc
   }
   out
+}
+
+# Which columns of a matrix hold an entry other than 0, NaN included, and which
+# hold only finite entries, for .tf_sim_apply().
+.tf_sim_columns <- function(M) {
+  list(nonzero = which(colSums(is.na(M) | M != 0) > 0), finite = colSums(!is.finite(M)) == 0)
 }
 
 # Stops the run at the first state, in file order, that cannot be rounded, as
@@ -255,16 +345,29 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
   invisible(NULL)
 }
 
-# E times X, each sum a left-to-right loop, as the Python twin's _apply().
-.tf_sim_apply <- function(E, X) {
+# M times X, each sum a left-to-right loop over the columns, as the Python
+# twin's _apply(). Every state in X is finite, since each update is tested
+# before the next, so a column of M that holds only 0 adds nothing. A term with
+# X[j] = 0 is 0 or -0 too when column j is finite. `cols` is
+# .tf_sim_columns(M), or NULL below .tf_SIM_SMALL states, where the loop over
+# each row is quicker.
+.tf_sim_apply <- function(M, X, cols = NULL) {
   n <- length(X)
-  out <- numeric(n)
-  for (i in seq_len(n)) {
-    acc <- 0.0
-    for (j in seq_len(n)) acc <- acc + E[i, j] * X[j]
-    out[i] <- acc
+  if (n < .tf_SIM_SMALL) {
+    out <- numeric(n)
+    for (i in seq_len(n)) {
+      acc <- 0.0
+      for (j in seq_len(n)) acc <- acc + M[i, j] * X[j]
+      out[i] <- acc
+    }
+    return(out)
   }
-  out
+  if (is.null(cols)) cols <- .tf_sim_columns(M)
+  acc <- numeric(n)
+  for (j in cols$nonzero) {
+    if (X[[j]] != 0 || !cols$finite[[j]]) acc <- acc + M[, j] * X[[j]]
+  }
+  acc
 }
 
 # expm(dt * J) by scaling and squaring a degree-18 Taylor polynomial (Moler
@@ -272,19 +375,18 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
 # the same bits. The matrix is halved s times until its infinity norm (the
 # largest absolute row sum) is at most 0.5, the series is summed as
 # term = term * A / k for k = 1..18, and the sum is squared s times. The
-# element-wise steps are vectorised, which changes no bits, and every sum is
-# an explicit loop. A matrix with a row sum that is not finite has no computable
-# propagator, and the result is NaN throughout, so the first step diverges.
+# steps are vectorised over rows or columns, which changes no bits, and every
+# sum is a left fold. A matrix with a row sum that is not finite has no
+# computable propagator, and the result is NaN throughout, so the first step
+# diverges.
 .tf_sim_propagator <- function(J, dt) {
   n <- nrow(J)
   M <- dt * J
-  norm <- 0.0
-  for (i in seq_len(n)) {
-    r <- 0.0
-    for (j in seq_len(n)) r <- r + abs(M[i, j])
-    if (!is.finite(r)) return(matrix(NaN, n, n))
-    if (r > norm) norm <- r
-  }
+  # Each row sum a left fold over the columns.
+  r <- numeric(n)
+  for (j in seq_len(n)) r <- r + abs(M[, j])
+  if (!all(is.finite(r))) return(matrix(NaN, n, n))
+  norm <- max(0.0, r)
   s <- 0L
   while (norm > 0.5) {
     norm <- norm / 2.0
@@ -306,7 +408,7 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
 # Refuses invalid knobs with the Python twin's messages (API_SPEC section 22).
 # Logicals are refused, as Python refuses bool. A whole double such as 3 counts
 # as a number of steps, as an integral float does in Python.
-.tf_sim_check_knobs <- function(steps, dt, k, damping, init, method = "euler") {
+.tf_sim_check_knobs <- function(steps, dt, k, damping, init, method = "exact") {
   finite1 <- function(x) is.numeric(x) && length(x) == 1L && is.finite(x)
   if (!(finite1(steps) && steps >= 0 && steps == floor(steps))) {
     stop("simulate requires steps to be a whole number of at least 0", call. = FALSE)
@@ -318,12 +420,28 @@ tf_simulate <- function(theory, steps = 10, dt = 0.1, k = 1.0,
   if (!finite1(damping)) {
     stop("simulate requires damping to be a finite number", call. = FALSE)
   }
-  if (!finite1(init)) {
-    stop("simulate requires init to be a single finite number", call. = FALSE)
+  if (!(finite1(init) && is.null(names(init))) && !.tf_sim_init_is_mapping(init)) {
+    stop(.tf_SIM_INIT_FORM, call. = FALSE)
   }
   if (!(is.character(method) && length(method) == 1L && !is.na(method) &&
         method %in% .tf_SIM_METHODS)) {
     stop("simulate requires method to be one of: euler, exact", call. = FALSE)
   }
   invisible(NULL)
+}
+
+# Whether `init` is a mapping from construct ids to finite numbers: a named
+# numeric vector, or a list whose elements are each one finite number, with
+# names that are not NA, empty or repeated. An empty list is the empty mapping,
+# since R holds an empty mapping and an empty sequence alike. Logicals are
+# refused, as Python refuses bool.
+.tf_sim_init_is_mapping <- function(init) {
+  if (is.list(init) && length(init) == 0L) return(TRUE)
+  nm <- names(init)
+  if (is.null(nm) || anyNA(nm) || any(!nzchar(nm)) || anyDuplicated(nm) > 0L) return(FALSE)
+  if (is.list(init)) {
+    return(all(vapply(init, function(v) is.numeric(v) && length(v) == 1L && is.finite(v),
+                      logical(1))))
+  }
+  is.numeric(init) && all(is.finite(init))
 }

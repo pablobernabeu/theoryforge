@@ -2,7 +2,7 @@
 """Generate golden outputs from the Python reference implementation.
 
 Writes every parity artefact named in API_SPEC.md sections 7, 13, 17, 18, 21,
-22, 27 and 29 into ``fixtures/expected/``. Listing the artefact types here as well would only
+22, 27, 29 and 31 to 33 into ``fixtures/expected/``. Listing the artefact types here as well would only
 give them a second place to drift from; the spec is the list.
 
 Also mirrors the fixture inputs, the golden tree and the files of ``schema/``
@@ -35,11 +35,11 @@ import theoryforge as tf  # noqa: E402
 
 FIXTURES = ROOT / "fixtures"
 EXPECTED = FIXTURES / "expected"
-# The R package ships its own copy of the golden tree, and the two harnesses
-# read different ones: testthat prefers the installed copy, scripts/parity_check
-# reads the root copy. A desync would silently split the two gates onto
-# different reference data, so this script owns both.
-R_EXPECTED = ROOT / "r" / "theoryforge" / "inst" / "fixtures" / "expected"
+# The R package's tests read their own copy of the golden tree, which R CMD
+# check carries with the tests, while scripts/parity_check reads the root copy.
+# A desync would silently split the two gates onto different reference data,
+# so this script owns both.
+R_EXPECTED = ROOT / "r" / "theoryforge" / "tests" / "testthat" / "goldens"
 # Both packages ship the example theories and corpora so that a reader who
 # installed only the package still has something to run: R reaches them with
 # system.file(), Python with theoryforge.example_path(). Neither copy is edited
@@ -47,7 +47,7 @@ R_EXPECTED = ROOT / "r" / "theoryforge" / "inst" / "fixtures" / "expected"
 EXAMPLE_INPUTS = ("panic-network.theory.yaml", "panic-network-2026-v2.theory.yaml",
                   "modality-switching.theory.yaml", "weak-theory.theory.yaml",
                   "panic-corpus.yaml", "openalex-panic-2026.corpus.yaml")
-R_INPUTS = ROOT / "r" / "theoryforge" / "inst" / "fixtures"
+R_INPUTS = ROOT / "r" / "theoryforge" / "inst" / "extdata"
 PY_INPUTS = ROOT / "python" / "src" / "theoryforge" / "fixtures"
 # Each package reads its own copy of the schema and checklist, because neither
 # the CRAN tarball nor the sdist can reach the repository root. The webR app
@@ -99,18 +99,31 @@ def emit_theory(t: tf.Theory, out_dir: Path) -> list[str]:
     written.append(f"{tid}.sem.lavaan")
     (out_dir / f"{tid}.dossier.md").write_bytes(t.dossier().encode("utf-8"))
     written.append(f"{tid}.dossier.md")
+    # The Quarto report, whose body is the dossier escaped (API_SPEC.md section 23).
+    t.render_report(out_dir / f"{tid}.dossier.qmd")
+    written.append(f"{tid}.dossier.qmd")
+    # The defaults, whose method is "exact", and the Euler steps beside them.
     (out_dir / f"{tid}.simulate.json").write_bytes(
         (json.dumps(t.simulate(), indent=2) + "\n").encode("utf-8"))
     written.append(f"{tid}.simulate.json")
-    (out_dir / f"{tid}.simulate_exact.json").write_bytes(
-        (json.dumps(t.simulate(method="exact"), indent=2) + "\n").encode("utf-8"))
-    written.append(f"{tid}.simulate_exact.json")
+    (out_dir / f"{tid}.simulate_euler.json").write_bytes(
+        (json.dumps(t.simulate(method="euler"), indent=2) + "\n").encode("utf-8"))
+    written.append(f"{tid}.simulate_euler.json")
     # Sigma-separation, so that a theory with a feedback loop has a record too
     # (API_SPEC.md section 27). On an acyclic theory, it gives the statements of
     # the default.
     (out_dir / f"{tid}.implications.json").write_bytes(
         (json.dumps(t.implications(cycles="sigma"), indent=2) + "\n").encode("utf-8"))
     written.append(f"{tid}.implications.json")
+    # The causal reading of Part J, also under sigma-separation, and one
+    # comparison per alternative that states propositions.
+    rivals = [a["id"] for a in t.data.get("alternatives") or []
+              if isinstance(a, dict) and isinstance(a.get("id"), str) and a["id"] and a.get("propositions")]
+    for name, obj in (("entailments", t.entailments(cycles="sigma")),
+                      ("equivalent_models", t.equivalent_models()),
+                      ("discriminate", [t.discriminate(r, cycles="sigma") for r in rivals])):
+        (out_dir / f"{tid}.{name}.json").write_bytes((json.dumps(obj, indent=2) + "\n").encode("utf-8"))
+        written.append(f"{tid}.{name}.json")
     return written
 
 
@@ -158,17 +171,29 @@ def edge_outcome(path: Path) -> dict:
         t = tf.read(path)
     except Exception as err:
         return {"read": {"error": error_text(err)}}
-    return {
+    record = {
         "read": "ok",
         "validate": _attempt(t.validate),
         "validate_full": _attempt(lambda: t.validate(full=True)),
         "check": _attempt(lambda: _check_summary(t.check())),
         "severity": _attempt(t.severity),
         "implications": _attempt(t.implications),
+        "entailments": _attempt(t.entailments),
+    }
+    # The default leaves a claim unread when a construct it names is behind a
+    # feedback loop, so a graph with a loop is also read by sigma-separation,
+    # its claims and then the checklist.
+    sigma = _attempt(lambda: t.entailments(cycles="sigma"))
+    if sigma.get("acyclic") is False:
+        record["entailments_sigma"] = sigma
+        record["check_sigma"] = _attempt(lambda: _check_summary(t.check(cycles="sigma")))
+    record.update({
+        "equivalent_models": _attempt(t.equivalent_models),
         "compile_sem": _attempt(t.compile_sem),
         "simulate": _attempt(lambda: t.simulate(steps=3)),
         "preregister": _attempt(t.preregister),
-    }
+    })
+    return record
 
 
 def corpus_edge_outcome(path: Path) -> dict:
@@ -178,10 +203,10 @@ def corpus_edge_outcome(path: Path) -> dict:
     ``{"error": <message>}``, and a failed read leaves ``read`` alone.
     ``scripts/parity_emit.R edge`` builds the same record in R.
 
-    The warning litmap gives when one theme holds most of the linked keywords
-    (API_SPEC.md section 14) is not printed, since a corpus of a few keywords
-    gives it and the R emitter runs under ``suppressWarnings()``. Both test
-    suites pin its text.
+    The warning litmap gives when one theme holds most of ten or more linked
+    keywords (API_SPEC.md section 14) is not printed should an edge corpus give
+    it, since the R emitter runs under ``suppressWarnings()``. Both test suites
+    pin its text.
     """
     try:
         corpus = tf.read_corpus(path)
@@ -214,6 +239,31 @@ def edge_inputs(edge_dir: Path = EDGE) -> dict[str, Path]:
 def edge_corpus_inputs(edge_dir: Path = EDGE) -> dict[str, Path]:
     """The edge-case corpus files (``<name>.corpus.yaml|json``) keyed by name."""
     return _edge_files(edge_dir, "corpus")
+
+
+def emit_edge_diagrams(edge_dir: Path, out_dir: Path) -> int:
+    """Write every diagram view of each readable edge-case theory into ``out_dir``.
+
+    A view goes to ``<name>.<type>.<ext>``, or, when ``diagram()`` refuses the
+    theory, the message goes to ``<name>.<type>.error``. Returns the number of
+    theories read. ``scripts/parity_check.py`` compares the files with those
+    that ``parity_emit.R edge-diagrams`` writes for the same inputs. They are
+    written live and not kept, as for the app examples.
+    """
+    n = 0
+    for name, path in edge_inputs(edge_dir).items():
+        try:
+            t = tf.read(path)
+        except Exception:
+            continue
+        n += 1
+        for dtype, ext in DIAGRAMS.items():
+            try:
+                out, ir = f"{name}.{dtype}.{ext}", t.diagram(dtype)
+            except Exception as err:
+                out, ir = f"{name}.{dtype}.error", error_text(err) + "\n"
+            (out_dir / out).write_bytes(ir.encode("utf-8"))
+    return n
 
 
 def write_edge_outcomes() -> list[str]:
@@ -279,10 +329,10 @@ def main() -> int:
         "modality-switching-2026.post_data_severity.json",
         tf.read(FIXTURES / "modality-switching.theory.yaml").post_data_severity()))
 
-    # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
+    # new_evidence_dois: candidate DOIs against the panic-network theory's
     # existing evidence and alternatives (three already cited, two new, one duplicate)
     new_evidence_candidates = [
-        "10.1016/j.brat.2015.10.002",
+        "10.1176/ajp.155.5.610",
         "https://doi.org/10.1016/0005-7967(86)90011-2",
         "10.1176/AJP.146.2.148",
         "10.1037/0033-2909.99.1.20",
@@ -290,16 +340,24 @@ def main() -> int:
         "10.1016/j.cpr.2011.09.005",
         # Spellings of the cited DOIs that the normaliser of API_SPEC.md
         # section 18 recognises, so the output is the same as without them.
-        "doi: 10.1016/j.brat.2015.10.002",
-        "DOI 10.1016/j.brat.2015.10.002",
-        "doi.org/10.1016/j.brat.2015.10.002",
-        "dx.doi.org/10.1016/j.brat.2015.10.002",
-        "https://www.doi.org/10.1016/j.brat.2015.10.002",
-        "info:doi/10.1016/j.brat.2015.10.002",
-        "urn:doi:10.1016/j.brat.2015.10.002",
+        "doi: 10.1176/ajp.155.5.610",
+        "DOI 10.1176/ajp.155.5.610",
+        "doi.org/10.1176/ajp.155.5.610",
+        "dx.doi.org/10.1176/ajp.155.5.610",
+        "https://www.doi.org/10.1176/ajp.155.5.610",
+        "info:doi/10.1176/ajp.155.5.610",
+        "urn:doi:10.1176/ajp.155.5.610",
         "https://doi.org/10.1016/0005-7967%2886%2990011-2",
-        "10.1016/j.brat.2015.10.002.",
-        "10.1016/J.BRAT.2015.10.002\u00a0",
+        "10.1176/ajp.155.5.610.",
+        "10.1176/AJP.155.5.610\u00a0",
+        # A double slash after the prefix, which doi.org redirects to the new
+        # DOI above with one slash, and blank or missing candidates. None of
+        # them changes the output.
+        "10.1037//0033-2909.99.1.20",
+        "",
+        " ",
+        None,
+        float("nan"),
     ]
     new_dois = v1.new_evidence_dois(new_evidence_candidates)
     (EXPECTED / "panic-network-2026.new_evidence_dois.json").write_bytes(
@@ -307,7 +365,22 @@ def main() -> int:
     )
     written.append("panic-network-2026.new_evidence_dois.json")
 
-    # bibliometric layer (P2): litmap + landscape + lit diagrams
+    # read_dagitty (API_SPEC.md section 35): each model text of the case list
+    # gives the constructs, propositions and provenance it reads as, or the
+    # message it is refused with.
+    outcomes = []
+    for text in json.loads((FIXTURES / "edge" / "dagitty.cases.json").read_text(encoding="utf-8")):
+        try:
+            data = tf.read_dagitty(text).data
+            outcomes.append({"ok": {k: data[k] for k in ("constructs", "propositions", "provenance")}})
+        except ValueError as err:
+            outcomes.append({"error": str(err)})
+    written.append(_write_json("dagitty-import.json", outcomes))
+
+    # bibliometric layer: litmap + landscape + lit diagrams. The demo
+    # corpus has artefacts of its own, and it keeps the name it was released
+    # under, which example_names() lists, so the *.corpus.yaml loop below
+    # leaves it out.
     corpus = tf.read_corpus(FIXTURES / "panic-corpus.yaml")
     cid = corpus["id"]
     lm = tf.litmap(corpus)

@@ -23,7 +23,7 @@ const PY_SRC = path.join(repo, "python", "src", "theoryforge");
 // The examples the R package ships, which tf_example_path() resolves. buildPy
 // reads the Python package's own fixtures/, which tf.example_path() resolves.
 // scripts/gen_golden.py mirrors the root fixtures/ into both.
-const R_SHIPPED = path.join(repo, "r", "theoryforge", "inst", "fixtures");
+const R_SHIPPED = path.join(repo, "r", "theoryforge", "inst", "extdata");
 // The copy the R package ships, so the webR app scores with exactly the
 // checklist R reads. scripts/gen_golden.py writes it from the root schema/.
 const SCHEMA = path.join(repo, "r", "theoryforge", "inst", "schema");
@@ -39,31 +39,38 @@ const LOGO = path.join(repo, "r", "theoryforge", "man", "figures", "logo.svg");
 // parenthetical in each name is that theory's own `maturity` field.
 const EXAMPLES = [
   { name: "Panic disorder network (developing)", file: "panic-network.theory.yaml", src: FIXTURES,
-    desc: "A well-developed network theory of panic: arousal and perceived threat form a feedback loop that drives avoidance. Every applicable rigour checklist item passes." },
+    desc: "A network theory of panic in which arousal and perceived threat form a feedback loop that drives avoidance. It was invented to show every operation, and its test outcomes and registrations are illustrative." },
   { name: "Panic network, amended v2 (testing)", file: "panic-network-2026-v2.theory.yaml", src: FIXTURES,
-    desc: "An amended version of the panic theory at the testing stage, with a fourth prediction and test outcomes." },
+    desc: "An amended version of the invented panic network, with a fourth prediction derived from a new proposition. Its test outcomes and registrations are illustrative." },
   { name: "Self-determination theory (developing)", file: "self-determination.theory.yaml", src: APP_EXAMPLES,
-    desc: "Three basic needs driving intrinsic motivation. A solid theory with one precision warning." },
+    desc: "Three basic needs driving intrinsic motivation, a simplified encoding of Ryan & Deci (2000). Each prediction states a machine-readable claim about two constructs." },
   { name: "Effort-recovery regulation (developing)", file: "effort-recovery.theory.yaml", src: APP_EXAMPLES,
     desc: "A negative feedback loop: fatigue overshoots its resting level of zero while recovery peaks, a damped oscillation that keeps the curves distinct. Lower damping to 0.1 and raise steps to 150 to see it cycle." },
   { name: "Happy vowel, Manchester English (testing)", file: "happy-vowel-manchester.theory.yaml", src: APP_EXAMPLES,
     desc: "Turton & Baranowski (2026), a real sociolinguistic study: a stable vocalic variable, socially stratified yet with linguistic constraints that hold independently of social class and ethnicity." },
   { name: "Cognitive dissonance (testing)", file: "cognitive-dissonance.theory.yaml", src: APP_EXAMPLES,
-    desc: "Festinger & Carlsmith (1959): a smaller incentive for a counter-attitudinal act produces more attitude change, the reverse of what reinforcement theory predicts." },
+    desc: "Festinger & Carlsmith (1959): a smaller incentive for a counter-attitudinal act produces more attitude change, the reverse of what reinforcement theory predicts. Both rivals state propositions, so Compare with a rival can set each against the theory." },
   { name: "Stereotype threat (testing)", file: "stereotype-threat.theory.yaml", src: APP_EXAMPLES,
     desc: "Steele & Aronson (1995): framing a test as diagnostic of ability depresses performance for a negatively stereotyped group, but not under a non-diagnostic frame." },
   { name: "Theory of planned behaviour (developing)", file: "planned-behaviour.theory.yaml", src: APP_EXAMPLES,
-    desc: "Ajzen (1991): attitude, subjective norm and perceived behavioural control predict intention, which predicts behaviour, extending the theory of reasoned action." },
+    desc: "Ajzen (1991): attitude, subjective norm and perceived behavioural control predict intention, which predicts behaviour, extending the theory of reasoned action, which is registered as a rival with its own propositions." },
   // The fixture's maturity field reads "building", not "draft": at draft
   // maturity the checklist runs in advisory mode and the gate can never be
   // blocked, and a blocked gate is the one thing this example exists to show.
   { name: "Deliberately weak theory (building)", file: "weak-theory.theory.yaml", src: FIXTURES,
-    desc: "An underspecified theory kept as a worked example of what the checklist catches. Its gate is blocked." },
+    desc: "A theory that states few of the fields the checklist reads, kept as a worked example of how the checklist reports what is missing." },
   // Appended, so the examples before it keep their places in the list.
   { name: "Modality switching (developing)", file: "modality-switching.theory.yaml", src: FIXTURES,
     desc: "An acyclic theory of grounded conceptual processing. Implied independencies derives six statements from it, among them the independence its fourth prediction tests." },
 ];
-const CORPUS = [{ name: "Panic literature corpus (demo)", file: "panic-corpus.yaml", src: FIXTURES }];
+// Each corpus has a key, which the literature operations' corpus choice and
+// the smoke cases name.
+const CORPUS = [
+  { key: "demo", name: "Panic literature corpus (demo)", file: "panic-corpus.yaml", src: FIXTURES,
+    desc: "Eight designed records whose keywords fall into four clean themes, a worked example of the method." },
+  { key: "openalex", name: "OpenAlex: panic disorder, 150 works (frozen)", file: "openalex-panic-2026.corpus.yaml", src: FIXTURES,
+    desc: "The first 150 works OpenAlex returned for the search 'panic disorder' on 1 October 2026, with OpenAlex's model-generated keywords and without references, so it has no co-citation." },
+];
 
 async function rmrf(p) {
   await fs.rm(p, { recursive: true, force: true });
@@ -115,7 +122,7 @@ export async function manifestExamples(shippedDir) {
 }
 export async function manifestCorpora(shippedDir) {
   return Promise.all(CORPUS.map(async (c) => ({
-    name: c.name, path: `fixtures/${c.file}`, desc: c.desc || "",
+    key: c.key, name: c.name, path: `fixtures/${c.file}`, desc: c.desc || "",
     shipped: await isFile(path.join(shippedDir, c.file)),
   })));
 }
@@ -124,22 +131,37 @@ async function writeJson(p, obj) {
 }
 
 // The package version is declared in two places, r/theoryforge/DESCRIPTION and
-// python/pyproject.toml, and the apps show it in their footers. Read both at
-// build time rather than hard-coding a copy here that would drift on release,
-// and fail the build outright if the two halves disagree: a mismatch means the
-// release process went wrong, and stamping either number into the apps would
-// ship a lie about the other half.
-async function readPackageVersion() {
+// python/pyproject.toml, and each app shows its own package's version in its
+// footer. Read both at build time rather than hard-coding a copy here that
+// would drift on release, and fail the build outright if the two halves
+// disagree: a mismatch means the release process went wrong. A release gives
+// both the same version. Between releases, DESCRIPTION gives the newest release
+// followed by .9000 and pyproject.toml a .devN version of a later release.
+function compareRelease(a, b) {
+  const x = a.split(".").map(Number), y = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    const d = (x[i] || 0) - (y[i] || 0);
+    if (d) return Math.sign(d);
+  }
+  return 0;
+}
+export function versionsAgree(rV, pyV) {
+  if (rV === pyV) return !/\.9000$/.test(rV);
+  const r = rV.match(/^(\d+(?:\.\d+)*)\.9000$/);
+  const py = pyV.match(/^(\d+(?:\.\d+)*)\.dev\d+$/);
+  return Boolean(r && py) && compareRelease(py[1], r[1]) > 0;
+}
+async function readPackageVersions() {
   const desc = await fs.readFile(path.join(repo, "r", "theoryforge", "DESCRIPTION"), "utf8");
   const toml = await fs.readFile(path.join(repo, "python", "pyproject.toml"), "utf8");
   const rV = (desc.match(/^Version:\s*(\S+)\s*$/m) || [])[1];
   const pyV = (toml.match(/^version\s*=\s*"([^"]+)"/m) || [])[1];
   if (!rV) throw new Error("could not read Version from r/theoryforge/DESCRIPTION");
   if (!pyV) throw new Error("could not read version from python/pyproject.toml");
-  if (rV !== pyV) {
+  if (!versionsAgree(rV, pyV)) {
     throw new Error(`package version mismatch: DESCRIPTION says ${rV} but pyproject.toml says ${pyV}; align the two halves before building the apps`);
   }
-  return rV;
+  return { r: rV, py: pyV };
 }
 
 async function buildR(vendor = path.join(here, "r", "vendor"), pkgVersion = "") {
@@ -184,10 +206,10 @@ export async function buildPy(vendor = path.join(here, "py", "vendor"), src = PY
 
 // Build only when run as a script, so the tests can import buildPy.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const PKG_VERSION = await readPackageVersion();
-  const nR = await buildR(undefined, PKG_VERSION);
-  const nPy = await buildPy(undefined, undefined, PKG_VERSION);
-  console.log(`package version: ${PKG_VERSION} (DESCRIPTION and pyproject.toml agree)`);
+  const versions = await readPackageVersions();
+  const nR = await buildR(undefined, versions.r);
+  const nPy = await buildPy(undefined, undefined, versions.py);
+  console.log(`package versions: R ${versions.r}, Python ${versions.py} (DESCRIPTION and pyproject.toml agree)`);
   console.log(`vendored R: ${nR} source files -> apps/r/vendor`);
   console.log(`vendored Python: ${nPy} package files -> apps/py/vendor`);
 }

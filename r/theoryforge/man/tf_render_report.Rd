@@ -9,31 +9,105 @@ tf_render_report(theory, path, title = NULL, render = FALSE, to = "html")
 \arguments{
 \item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
-\item{path}{Destination path. Any extension is replaced with \code{.qmd}.}
+\item{path}{Destination path. A file name that does not end in
+\code{.qmd} (in any letter case) loses everything from its last dot,
+unless the name begins with that dot, and gains \code{.qmd}. So
+\code{report.md} is written as \code{report.qmd}, \code{report} and
+\code{.hidden} gain the suffix and \code{a.tar.gz} becomes
+\code{a.tar.qmd}.}
 
 \item{title}{Optional report title. It defaults to
-\code{"theoryforge report: <title-or-id>"}, also when \code{NULL},
-\code{NA} or empty. It is written as a YAML double-quoted scalar with
-backslashes, double quotes and control characters escaped, so a YAML
-parser reads back exactly the string passed. Quarto then reads the title as Markdown, so
-raw TeX such as \verb{\\emph\{\}} is dropped from HTML output and \verb{$\\alpha$}
-becomes mathematics.}
+\code{"theoryforge dossier: <title-or-id>"}, also when \code{NULL},
+\code{NA} or empty, with the theory's title or id written on one line and
+escaped as the body is, and with Quarto's shortcode delimiters in their
+escaped forms \code{\{\{\{<} and \code{>\}\}\}}. It is written as a YAML
+double-quoted scalar with backslashes, double quotes and control
+characters escaped, so a YAML parser reads back exactly the string passed.
+A title passed by the caller is the caller's Markdown and is not escaped
+otherwise, so raw TeX such as \verb{\\emph\{\}} is dropped from HTML output.
+Mathematics such as \verb{$\\alpha$} is written by the plain method of Pandoc in
+the HTML formats, as the Greek letter in italics, since the report loads no
+MathJax. \code{hugo-md} and \code{docusaurus-md} copy the title into the
+front matter of the page as written, so the default title shows its
+escaping backslashes there. Pass \code{title} for those formats.}
 
 \item{render}{When \code{TRUE}, run \code{quarto render} on the written file
 and stop if it exits non-zero.}
 
-\item{to}{Quarto output format (default \code{"html"}).}
+\item{to}{Quarto output format (default \code{"html"}). It must be a format
+name or the path of a custom writer: a letter or digit followed by
+letters, digits, \code{_}, \code{.}, \code{+}, \code{/} and \code{-},
+as in \code{"pdf"}, \code{"gfm+tex_math_dollars"} or
+\code{"writers/plain.lua"}. Render a theory from someone else to
+\code{html}, \code{revealjs}, \code{dashboard}, \code{pdf},
+\code{typst}, \code{docx}, \code{odt}, \code{pptx} or \code{epub}: the
+writers of other markup languages write its text back with few escapes
+or none (see Details).}
 }
 \value{
 The path of the written \code{.qmd} file.
 }
 \description{
 Writes a standalone Quarto report to \code{path} (forced to a \code{.qmd}
-suffix): a YAML header (\code{title}, \code{format}) followed by the
-deterministic \code{tf_dossier(theory)} body. Returns the written path. When
+suffix): a YAML header followed by the deterministic
+\code{tf_dossier(theory)} body. Returns the written path. When
 \code{render = TRUE}, invokes \code{quarto render}, which requires a Quarto
-installation, and stops if that render fails. It stops before writing
-anything when \code{\link[=tf_check]{tf_check()}} refuses the theory.
+installation, and stops if that render fails. Quarto is given the absolute
+path of the report, so that a path beginning with \code{-} is not read as
+an option. It stops before writing anything when \code{to} is not a format
+name or a writer, when \code{\link[=tf_check]{tf_check()}} refuses the theory or when the dossier
+holds an encoded shortcode.
+}
+\details{
+The report is written so that the theory's text, which may come from
+someone else, reaches Quarto as text. The measures are these, and they were
+checked against Quarto 1.11 in the html, revealjs and dashboard formats, with
+the reports opened in a browser that loaded their scripts and clicked their
+links. The header gives \code{title} and \code{format}, then
+\code{engine: markdown}, so that Quarto runs no code chunk,
+\code{ojs-engine: false}, so that it compiles no OJS,
+\code{html-math-method: plain}, so that it loads no MathJax, which revealjs
+otherwise runs over the text of every slide, where \verb{\\href} makes a link
+of any address and \verb{\\style} sets any CSS,
+\code{from: markdown-raw_html-raw_attribute-raw_tex}, so
+that it passes on no raw HTML, raw attribute or raw TeX, and \code{menu}
+with an empty \code{title-selector}, so that the slide menu of revealjs
+takes each title from the text of the slide, which it escapes, rather than
+writing a heading's text back as HTML. In the body, every ASCII punctuation
+character of the dossier's text but the quotation marks gains a backslash
+and a backtick becomes \code{&#96;}, so that no code chunk, inline code,
+shortcode, link, span or tag opens from the theory's text. Typed \code{--}
+and \code{...} therefore show as typed in the HTML formats, while the
+\code{typst} writer of Pandoc still sets \code{...} as an ellipsis and
+\code{-?} as a soft hyphen. The marker of each heading and list
+item, the underscores of a line in italics and the checklist table are kept.
+The level-1 heading, the dossier's title, gains the fixed identifier
+\code{\{#theoryforge-dossier\}}, so that Quarto's scripts never read one
+made from the theory's title, and the anchor of every other heading follows
+its typed text. An implied conditional
+independence keeps its code span when it holds only letters, digits,
+\code{_}, \code{|}, \code{,}, \code{.} and spaces, does not begin with
+\code{r} and a space and does not hold \code{ojs_define}, and is written
+without it otherwise. Quarto encodes a shortcode as a UUID followed by
+\code{;<hex>;} and, once the document is parsed and its escapes removed,
+decodes such a run in the body, so a dossier that holds one, a UUID followed
+by a semicolon, hexadecimal digits and a semicolon, is refused. The
+theory's title and id are both in the dossier.
+
+These measures make Quarto and Pandoc read the theory's text as text, and
+they stop there. The writers of other markup languages
+(\code{docusaurus-md}, \code{hugo-md}, \code{org}, \code{rst},
+\code{textile}, \code{mediawiki}, \code{dokuwiki}, \code{zimwiki},
+\code{xwiki}, \code{jira} and \code{markua}) write the text back with few
+escapes or none, so the program that reads such a report can run what the
+theory holds. Render a theory from
+someone else to \code{html}, \code{revealjs}, \code{dashboard},
+\code{pdf}, \code{typst}, \code{docx}, \code{odt}, \code{pptx} or
+\code{epub}. Quarto also reads \code{_quarto.yml}, \code{_metadata.yml},
+\code{_brand.yml} and \code{_extensions} in the report's folder and in
+every folder above it, and runs the scripts and filters they name, which
+the header cannot turn off. Write the report of someone else's theory into
+a folder of your own.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>

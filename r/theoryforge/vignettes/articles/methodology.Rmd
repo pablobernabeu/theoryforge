@@ -1,33 +1,99 @@
 ---
 title: "Methodological foundations"
-output: rmarkdown::html_vignette
 ---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = FALSE, comment = "")
+# Console colour carries no meaning on a rendered page, and the fixed width keeps
+# printed output inside the documentation column.
+options(cli.num_colors = 1, cli.hyperlink = FALSE, crayon.enabled = FALSE,
+        width = 80)
+library(theoryforge)
+
+# Every value the prose quotes is computed here when the article is built, from
+# the checklist file and the example theories the package ships, so the text
+# cannot drift from the code. The Python page computes the same values.
+g <- function(x) sprintf("%g", x)
+f1 <- function(x) sprintf("%.1f", x)
+f2 <- function(x) sprintf("%.2f", x)
+f3 <- function(x) sprintf("%.3f", x)
+# A value with at most three decimals and at least one, as 1.0 or 0.25.
+d <- function(x) sub("\\.$", ".0", sub("0+$", "", sprintf("%.3f", x)))
+
+spec <- theoryforge:::tf_checklist()
+thr <- spec$thresholds
+item_ids <- vapply(spec$items, `[[`, character(1), "id")
+item_weights <- vapply(spec$items, `[[`, numeric(1), "weight")
+# The three items that can have nothing to assess. The others always apply.
+min_coverage <- sum(item_weights[!item_ids %in%
+                                   c("non_redundancy", "derivation_chain", "parsimony")])
+panic_report <- tf_check(tf_read(tf_example_path("panic-network.theory.yaml")))
+
+weak_pair <- tf_redundancy_check(tf_read(tf_example_path("weak-theory.theory.yaml")))[1, ]
+
+# A one-sided claim with an estimate two standard errors inside its bound.
+one_sided <- tf_theory(id = "one-sided", title = "A one-sided claim")
+one_sided <- tf_add_prediction(one_sided, id = "h", statement = "The effect is above zero.",
+                               type = "directional", bounds = list(lower = 0))
+one_sided <- tf_add_test_outcome(one_sided, prediction_id = "h", passed = TRUE,
+                                 estimate = 2, se = 1)
+severity_normal <- tf_post_data_severity(one_sided)$severity
+severity_t10 <- stats::pt(2, df = 10)
+
+# The last construct of a five-construct chain at the default gain and damping.
+chain <- tf_theory(id = "chain", title = "A causal chain")
+chain_ids <- paste0("c", 1:5)
+for (cid in chain_ids) {
+  chain <- tf_add_construct(chain, id = cid, label = cid, definition = paste("Construct", cid))
+}
+for (i in 1:4) {
+  chain <- tf_add_proposition(chain, id = paste0("p", i), from = chain_ids[i],
+                              to = chain_ids[i + 1], relation = "increases")
+}
+chain_run <- tf_simulate(chain, steps = 100, method = "exact")
+chain_peak <- max(vapply(chain_run$trajectory, function(row) row[[5]], numeric(1)))
+
+# The panic network at the default gain and damping, propagated by the exact
+# method. The prose says that every state reaches one value, so the build stops
+# if the states part at one decimal.
+panic_run <- tf_simulate(tf_read(tf_example_path("panic-network.theory.yaml")),
+                         steps = 100, method = "exact")
+panic_last <- unlist(panic_run$trajectory[[length(panic_run$trajectory)]])
+panic_end <- max(panic_last)
+if (f1(min(panic_last)) != f1(panic_end)) {
+  stop("the states of the panic network no longer end at one value", call. = FALSE)
+}
+panic_time <- panic_run$steps * panic_run$dt
+```
 
 ## Why theoryforge
 
-Psychology and the social sciences accumulate findings far faster than they build theories that explain them. Constructs proliferate and overlap (the jingle-jangle problem), and predictions stay vague and directional where they ought to commit. Auxiliary assumptions accrete to protect a theory from the tests it should face, and a revision is rarely judged by whether it adds testable content or only deflects refutation. This state of affairs has been called psychology's theory crisis (Eronen & Bringmann, 2021).
+Psychology and the social sciences accumulate findings far faster than they build theories that explain them. Constructs proliferate and overlap (the jingle-jangle problem), and predictions stay vague and directional where they ought to commit. Auxiliary assumptions accrete to protect a theory from the tests it should face, and a revision is rarely judged by whether it adds testable content or only deflects refutation. These problems have been described as psychology's theory crisis (Eronen & Bringmann, 2021). Eronen and Bringmann trace that crisis to three difficulties: the lack of robust phenomena that constrain theories, problems with the validity of psychological constructs and obstacles to discovering causal relations between psychological variables, and they add that formalising a theory solves none of them. theoryforge addresses how a theory is specified. It does not show that the phenomena a theory explains are robust, that its constructs are valid or that the causal effects it posits can be identified.
 
-theoryforge treats a theory as a structured, versioned object and makes the specification of its constructs, predictions, assumptions and revisions checkable. It scores the theory against twelve structural criteria drawn from the methodology literature, screens its constructs for redundancy, grades how risky each prediction's claim is, distinguishes progressive from degenerating amendments in Lakatos's sense and renders the structure for reading and testing. Every value it reports is produced by a fixed, documented rule, with no model and no randomness. The R and Python implementations return identical verdicts and byte-identical diagram intermediate representations. A verdict is therefore reproducible and can be audited against the specification. See [Scope and limits](#scope-and-limits) below for what this checking does and does not establish.
+theoryforge holds a theory as a structured, versioned object: its constructs, the propositions that relate them, the predictions derived from those propositions, the auxiliary assumptions that protect them, the rival accounts it is tested against and the record of each revision. It checks how completely the file states what a checklist of criteria asks for, reads the causal claims of its propositions, grades the form of each prediction's claim before any data and the severity of a test after it, screens its constructs for redundancy, appraises amendments by fixed rules that borrow Lakatos's terms and maps the theory against a literature corpus.
 
-## Grounding for each rigour check
+Each of these analyses applies a fixed rule, set out in the [specification](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md), so the same theory file always gives the same result and a reader can check each value against the rule. None of them fits a model to data or draws a random number. The one analysis that depends on a model is the opt-in embedding screen of construct definitions, whose similarities depend on the embedding model the user supplies. The R and Python packages implement the same specification and are tested against the same expected outputs, apart from the functions that call a network service, an embedding model or a renderer. [Scope and limits](#scope-and-limits), near the end of the page, says what this checking does and does not establish.
 
-Each rigour check follows from a result in the methodology literature, and the package
-records the supporting work next to the check, in the `citation` field of the report.
-The table below gives the criterion each check applies and the methodological work that
-motivates it. The name in brackets is the identifier the check carries in the report.
-The criteria are quoted from the package's checklist file, which is read when this
-article is built. The supporting works are listed in APA style in the references at
-the foot of the page.
+## Grounding for each check
+
+```{r scope, echo = FALSE, results = "asis"}
+# The statement of what the checklist score describes, as the package words it
+# in the help of tf_check() and in the HTML report, for the checklist it ships.
+cat(sprintf(theoryforge:::.tf_SCOPE, spec$schema_version), "\n")
+```
+
+Each check of the checklist addresses a concern raised in the methodology literature. The table gives the criterion each check applies, its weight in the checklist score and works that discuss the concern, and the name in brackets is the identifier the check carries in the report. When this page is built, the criteria and weights are read from the checklist file that the package ships. The rule that turns the concern into a score, described in the sections below, is the package's own. The report names works for each check in its `citation` field, and the works cited on this page are listed in APA style in the references at the foot of the page.
 
 ```{r criteria, echo = FALSE, results = "asis"}
-# The criterion column comes from the shipped checklist, so the table changes
-# with it. The names and the supporting works are kept here, keyed by the
-# identifier of each check, and a check that the checklist gains or drops stops
-# the build until this table is brought up to date.
+# The criterion and weight columns come from the shipped checklist, so the table
+# changes with it. The names and the supporting works are kept here, keyed by
+# the identifier of each check, and a check that the checklist gains or drops
+# stops the build until this table is brought up to date.
 checks <- list(
   falsifiability = c(
     "Falsifiability",
-    "Popper (1959), [Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374)"
+    paste("[Popper (1959/2005)](https://doi.org/10.4324/9780203994627),",
+          "[Bacharach (1989)](https://doi.org/10.5465/amr.1989.4308374)")
   ),
   precision = c(
     "Predictive precision",
@@ -36,7 +102,8 @@ checks <- list(
   ),
   risk_severity = c(
     "Prediction severity",
-    paste("Popper (1959), [Meehl (1967)](https://doi.org/10.1086/288135),",
+    paste("[Popper (1959/2005)](https://doi.org/10.4324/9780203994627),",
+          "[Meehl (1967)](https://doi.org/10.1086/288135),",
           "[Meehl (1990b)](https://doi.org/10.2466/pr0.1990.66.1.195)")
   ),
   parsimony = c(
@@ -46,7 +113,8 @@ checks <- list(
   ),
   non_redundancy = c(
     "Construct non-redundancy",
-    paste("Kelley (1927), [Le et al. (2010)](https://doi.org/10.1016/j.obhdp.2010.02.003),",
+    paste("Kelley (1927),",
+          "[Le et al. (2010)](https://doi.org/10.1016/j.obhdp.2010.02.003),",
           "[Lawson & Robins (2021)](https://doi.org/10.1177/10888683211047101)")
   ),
   construct_clarity = c(
@@ -67,7 +135,7 @@ checks <- list(
   ),
   causal_testability = c(
     "Causal testability",
-    paste("[Textor et al. (2016)](https://doi.org/10.1093/ije/dyw341),",
+    paste("[Rohrer (2018)](https://doi.org/10.1177/2515245917745629),",
           "[Eronen & Bringmann (2021)](https://doi.org/10.1177/1745691620970586)")
   ),
   diagnosticity = c(
@@ -92,87 +160,282 @@ ids <- vapply(items, `[[`, character(1), "id")
 unnamed <- setdiff(ids, names(checks))
 dropped <- setdiff(names(checks), ids)
 if (length(unnamed) > 0L || length(dropped) > 0L) {
-  stop("the table of rigour checks does not match the checklist: no name for [",
+  stop("the table of checks does not match the checklist: no name for [",
        toString(unnamed), "], no check for [", toString(dropped), "]",
        call. = FALSE)
 }
 rows <- vapply(items, function(item) {
-  sprintf("| %s (`%s`) | %s | %s |", checks[[item$id]][[1L]], item$id,
-          item$criterion, checks[[item$id]][[2L]])
+  weight <- sprintf("%g", item$weight)
+  if (identical(item$severity_if_fail, "blocker")) weight <- paste0(weight, ", blocker")
+  sprintf("| %s (`%s`) | %s | %s | %s |", checks[[item$id]][[1L]], item$id,
+          item$criterion, weight, checks[[item$id]][[2L]])
 }, character(1))
-cat("| Rigour check | Criterion | Supporting work |", "|---|---|---|", rows,
+cat("| Check | Criterion | Weight | Supporting work |", "|---|---|---|---|", rows,
     sep = "\n")
 cat("\n")
 ```
 
-## How the rigour score is computed
+## How the checklist score is computed
 
-Each of the twelve items returns a status (`pass`, `warn` or `fail`) and a score between 0 and 1. Present-or-absent items score 1 or 0. Items that measure a proportion, such as the share of constructs that carry a definition, a measurement and boundary conditions, score that proportion. An item can therefore pass with a score below 1: predictive precision passes from a share of 0.5, and diagnosticity once a single prediction qualifies. An item with nothing to assess has the status `n/a` and no score. That is the case for construct non-redundancy when the theory has fewer than two constructs, for the derivation chain when it has no predictions and for parsimony when no auxiliary assumption answers an anomaly.
+Each item returns a status, `pass`, `warn` or `fail`, and a score between 0 and 1. An item that checks whether something is present scores 1 or 0, and one that measures a share, such as the share of constructs with a definition, a measurement and boundary conditions, scores that share. Some items pass with a score below 1: predictive precision and prediction severity at the thresholds given below, and diagnosticity once a single prediction qualifies. An item with nothing to assess has the status `n/a` and no score. That is the case for construct non-redundancy when the theory has fewer than two constructs, for the derivation chain when it has no predictions and for parsimony when no auxiliary assumption is declared as added for an anomaly.
 
-Five default thresholds come from the checklist file. Predictive precision passes at a share of 0.5 and prediction severity at a mean of 0.5. The redundancy screen flags a pair of definitions at a Jaccard similarity of 0.85, or at an overlap coefficient of 0.85 when both hold at least three tokens. The optional embedding screen flags a pair at a cosine of 0.85.
+This page describes version `r spec$schema_version` of the checklist, the version every report records as `checklist_version`. The checklist file fixes the thresholds. Predictive precision passes when the share of bounded point and interval predictions reaches `r g(thr$min_precision_share)`, and prediction severity when the mean riskiness of the predictions reaches `r g(thr$min_severity)`. The redundancy screen flags a pair of definitions at a Jaccard similarity of `r g(thr$redundancy_similarity_max)` or an overlap coefficient of `r g(thr$redundancy_overlap_max)`, and the optional embedding screen flags a pair at a cosine of `r g(thr$embedding_similarity_max)`.
 
-The aggregate score is the weighted mean of the applicable items' scores, scaled to a 0 to 100 range. The weights are fixed in the checklist file. Falsifiability carries the most weight (0.15) and formalisation the least (0.05). The report also gives the coverage, the share of the checklist's weight that was applicable: 0.92 when parsimony alone has nothing to assess. Leaving such an item out keeps a theory from scoring for what it lacks, so an empty theory scores 0. The aggregate is compensatory: a high score on one item offsets a low score on another.
+The checklist score, `aggregate_score` in the report, is the weighted mean of the applicable items' scores, multiplied by 100, with the weights of the table above. The report also gives the coverage, the share of the checklist's weight that was applicable. The items other than the three that can have nothing to assess always apply, so the coverage is at least `r g(min_coverage)`, and the panic-network example, in which parsimony alone has nothing to assess, has a coverage of `r g(panic_report$coverage)`. Leaving such an item out keeps a theory from scoring for what it lacks, so a theory with no content scores 0. The checklist score is compensatory, in that a high score on one item offsets a low score on another.
 
-The gate is the one-word verdict. Two items are blockers: falsifiability and the derivation chain. If either blocker fails, the gate is `blocked`. A theory at the `draft` maturity stage is always `advisory`, so the blockers inform without gating early work. Otherwise, the gate is `pass`. A failed blocker counts in the aggregate like any other item, so a blocked theory can outscore one whose gate passes.
+The weights are a convention, so the report also gives `aggregate_range`, the lowest and highest score over the checklist's weights, equal weights and each applicable item's weight halved and then doubled with the others unchanged. The panic-network example has a checklist score of `r f1(panic_report$aggregate_score)`, with a range of `r f1(panic_report$aggregate_range[[1]])` to `r f1(panic_report$aggregate_range[[2]])`. The range is the extremes of these weightings and not an interval for the score: changing several weights at once can move the score beyond it, and the choices made in coding the file and the constants of the claim-form rubric lie outside it. A wider range shows that the score depends more on the choice of weights.
 
-Each item is scored as follows.
+The gate is not compensatory. The two items marked as blockers in the table, falsifiability and the derivation chain, decide it: the gate is `blocked` when either fails and `pass` otherwise, so it reports whether either blocking item failed. A derivation chain that warns, because a feedback loop left claims unread, does not block it. A theory at the `draft` maturity stage is always `advisory`, so the blockers inform without gating early work. A failed blocker counts in the checklist score like any other item, so a blocked theory can outscore one whose gate passes.
 
-- Falsifiability passes if at least one prediction is point, interval or directional and so forbids some observation.
-- Predictive precision is the share of predictions that are point or interval, and passes at 0.5 or above.
-- Prediction severity averages one value per prediction, its declared `severity` where it has one and otherwise the computed severity of the `tf_severity()` rubric, and passes at 0.5 or above. With no predictions, it warns with a score of 0. A declared value counts as given, and the dossier prints it beside the rubric's value, with a note when it exceeds that value by more than 0.2. The rubric reads the same type label as predictive precision and the same named rival as diagnosticity, so a prediction that declares no severity is credited for those features twice. The item grades claims before any data: the severity of a test in Mayo's (2018) sense depends on the design and the data, which no item reads.
-- Parsimony assesses only the auxiliary assumptions added in response to an anomaly, those whose `added_for` names the prediction they answer. Such an assumption is ad hoc if no prediction it protects, other than that anomaly, is corroborated (Lakatos, 1970). The item fails if any of these assumptions is ad hoc and passes otherwise. With no such assumption, it is `n/a`. Core assumptions do not count against a theory, since every derivation relies on auxiliaries (Meehl, 1990a) and declaring them makes the theory's protective belt visible. The item has no prior version to compare with, so every prediction an assumption protects counts as support. The amendment appraisal is the stricter check, since it counts only the content an amended version adds.
-- Construct non-redundancy passes when the redundancy screen flags no pair of construct definitions, and warns with a score of 0 otherwise. The screen flags near-duplicate definitions and a definition contained in another, as described below. With fewer than two constructs, it is `n/a`.
-- Construct clarity is the share of constructs that carry a definition, a measurement and boundary conditions, and passes only at 1.
-- Scope passes when boundary conditions are stated, either for the theory or on every construct.
-- Mechanism is the share of propositions that fill in their `mechanism` field, the logical why behind the relation, and passes only at 1. With no propositions, it warns with a score of 0.
-- Causal testability passes if at least one proposition states a causal relation. The five directed relations count as causal: increases, decreases, causes, mediates and moderates. The item checks only that such a relation is present. The `causal_dag` export takes the five directed relations as arrows and an association between two of their constructs as a bidirected edge. It is not checked for acyclicity, so a theory whose causal relations form a feedback loop, as in the panic-network example, is exported as written. dagitty accepts such a graph but reads it by d-separation, which a model with feedback is guaranteed to satisfy only in special cases, a linear model among them (Bongers et al., 2021). The conditional independencies the graph implies are derived by `tf_implications()`, which checks for acyclicity and by default stops with an error on a cyclic graph. With the sigma option, it reads a cyclic graph by sigma-separation, whose statements hold when each feedback loop has a unique equilibrium (Bongers et al., 2021), and it then derives one statement for the panic-network example. The modality-switching example is acyclic and gets the same statements either way.
-- Diagnosticity is the share of predictions that name a registered alternative they are declared to discriminate from, and passes once at least one does. The declaration is not verified. The theory records nothing the rival predicts, so no function checks that the prediction would tell the two apart. The 0.1 bonus that the severity rubric gives such a prediction rests on the same declaration.
-- Formalisation passes if the theory declares a formal model of a recognised type, `ode`, `abm`, `network` or `sem`. Any other type, `none` included, does not count.
-- Derivation chain is the share of predictions that cite at least one proposition and cite only declared propositions, and passes only at 1. Otherwise, it fails. It checks references only, so it does not show that a prediction follows from what it cites. With no predictions, it is `n/a`.
+Predictive precision, prediction severity and diagnosticity are shares or means over the predictions, so they describe the profile of a theory's claims and not their total content. Adding a vague prediction to a set of precise ones lowers them, although the theory then forbids at least as much as it did. Comparing the content of two versions of a theory is the work of the amendment appraisal, which reads what an amendment adds and what it gives up.
+
+## What each item checks
+
+### The form of the predictions
+
+Falsifiability passes when at least one prediction is typed point, interval or directional. The item reads the label, which is the author's: full validation compares it only with the prediction's bounds and, for a directional prediction, with the sign of its claim, which cannot be `nonzero`. Predictive precision is the share of predictions typed point or interval whose `bounds` state a finite lower and a finite upper value. A point or interval label without the region it claims does not count, since a label alone states nothing that a test could miss. The width of the region is not read.
+
+Prediction severity averages one value per prediction, its declared `severity` where it has one and otherwise the value of the claim-form rubric described below. With no predictions, it warns with a score of 0. A declared value is taken as given, and the dossier prints it beside the rubric's value. The rubric reads the same type label as predictive precision and the same named rival as diagnosticity, so a prediction without a declared severity is credited for those features twice. Like predictive precision, the rubric credits a point or interval label only with the region it claims, and rates such a label without two finite bounds as a directional claim. The item grades claims before any data. How severely a claim has been tested depends on the design and the data, which `tf_post_data_severity()` reads and no item does.
+
+### Derivation and rivals
+
+The derivation chain is the share of predictions that are derived: they cite at least one proposition in `derives_from`, cite only declared propositions and either state no claim or state one that the causal graph entails. It fails when some prediction cites no proposition or one that is not declared, or states a claim that the graph contradicts, leaves undetermined, cannot read as written or cannot place, since it names a construct that no proposition relates to another. It also fails when the graph contradicts the claim of a phenomenon, one of the regularities the theory sets out to explain, while a phenomenon whose claim the graph leaves open, or does not evaluate for a reason other than a feedback loop, changes nothing. With no predictions, the item is `n/a`. A prediction without a machine-readable claim is judged on its references alone, so for such a prediction the item shows that its citations resolve and not that it follows from them. A verdict of contradiction that rests on faithfulness counts like any other.
+
+The claims are read with the `cycles` argument of `tf_check()`. Under the default, `"refuse"`, a claim that names a construct on a feedback loop or downstream of one is left unread, since what the graph says of it then depends on how the loop settles. A claim that no loop reaches gets the record it would get on the graph without the loop, its adjustment set included, so a loop elsewhere in the file neither hides nor changes its verdict. An unread claim is not checked, whether a prediction or a phenomenon states it, and, failing anything else, the item warns. A warning does not block the gate. The item's record lists, in file order, the identifiers of the predictions whose claims were not checked in `not_checked` and those of the phenomena in `phenomena_not_checked`, since a prediction and a phenomenon may share an identifier. Nothing was found wrong with an unread claim, so a prediction whose claim was not checked counts as derived in the score when the propositions it cites are declared, and stating a claim that a loop leaves unread costs nothing. Such a claim therefore gets full credit and leaves the gate open whatever sigma-separation would make of it, so a file whose claims a loop reaches is checked in full only with `cycles = "sigma"`. With `cycles = "sigma"`, the claims are read by sigma-separation, which assumes that each feedback loop settles to a unique equilibrium, and then entailed, contradicted or left open as on any other graph. The panic-network example has one claim and a feedback loop that reaches it, so its derivation chain warns under the default and passes under sigma-separation, with the same score under both.
+
+Diagnosticity is the share of predictions that name, in `diagnostic_vs`, a registered alternative they discriminate from, and it passes once one prediction does. Where the prediction states a claim and the alternative states propositions of its own, the declaration is checked, and it is shown false when the claim gets the same verdict under the rival's causal graph as under the theory's. Where either is missing, or the theory's graph cannot evaluate the claim, the declaration counts as given. The claims are read with the same `cycles` as the derivation chain's. The rubric's bonus for a named rival rests on the declaration alone.
+
+### Constructs
+
+Construct non-redundancy passes when every construct's definition holds at least one content word and the redundancy screen flags no pair, and it warns with a score of 0 otherwise. A construct without a definition cannot be screened, so deleting the definitions of a redundant pair cannot raise the score. The screen, described below, flags near-duplicate definitions, a definition contained in another, two constructs with one label and a construct with no measure of its own.
+
+Construct clarity is the share of constructs that carry a definition, a measurement and boundary conditions, and passes only at 1. Scope passes when boundary conditions are stated, either for the theory or on every construct.
+
+### Propositions and the formal model
+
+Mechanism is the share of propositions that fill in their `mechanism` field, the reason the relation holds, and passes only at 1. The text of the field is not judged. With no propositions, it warns with a score of 0. Causal testability passes when at least one proposition states one of the five directed relations, `increases`, `decreases`, `causes`, `mediates` or `moderates`. It checks only that such a relation is present, and the causal reading described below says what the relations imply and which of their directions data could test. Formalisation passes when the theory declares a formal model of a recognised type, `ode`, `abm`, `network` or `sem`.
+
+### Auxiliary assumptions
+
+Parsimony assesses only the auxiliary assumptions declared as added in response to an anomaly, those whose `added_for` names the prediction they answer. Despite its name, the item tests whether these assumptions are ad hoc and does not count assumptions. The item fails when, for any of them, no prediction the assumption protects, other than that anomaly, is corroborated, passes otherwise and is `n/a` with no such assumption. The amendment appraisal below calls such an assumption ad hoc, after Lakatos (1970), when it protects no other prediction or some of them have been tested, and pending while all of them are untested. Reading a single version, the checklist fails it in both cases. Core assumptions do not count against a theory, since every derivation relies on auxiliaries (Meehl, 1990a) and declaring them makes the protective belt visible.
+
+The checklist has no prior version to compare with, so it cannot tell an assumption made before a test from one made after it. It therefore leaves an assumption without `added_for` unassessed, and every prediction an assessed assumption protects counts as support. The amendment appraisal is the stricter check, since it infers the anomaly that an undeclared addition answers and counts only predictions that are new in the amended version.
+
+## Validation of claims and fields
+
+Full validation, `tf_validate(theory, full = TRUE)`, adds checks to the structural pass, and two of them concern how a theory is written down. The first compares each prediction's type and stated sign with its bounds, a comparison the schema cannot express. A point or interval prediction needs a finite lower and a finite upper bound. A directional prediction with two finite bounds needs one of them at 0, so that the region states a sign, as `[0, 1]` does for a correlation. An existence prediction takes no bounds, since the region it allows, every value but 0, is not one interval, and a one-sided region would make `tf_post_data_severity()` test a directional claim. A claimed positive sign needs a lower bound of 0 or above, a negative sign an upper bound of 0 or below, a zero sign a region that includes 0 and a nonzero sign a region that excludes it. With or without bounds, a directional prediction whose claim has the sign `nonzero` is reported, since that sign states no direction and the label alone would pass the falsifiability item. A claim with a `given` can only be zero or nonzero, so a directional prediction about a conditional association keeps its direction in its statement and is not reported. Without this check, the rubric, the precision item and the causal reading could describe a different claim from the one whose test `tf_post_data_severity()` reads. A recorded pass whose estimate lies outside the bounds is not refused, and the dossier notes it beside the outcome.
+
+The second reports every field of an entry that the schema does not list, as the schema's closed entries require, with the nearest known field when one lies within two edits, so that a misspelt `derives_form` is reported where it would otherwise be ignored. A field whose name begins with `x_` carries extension metadata and is allowed, which is how `tf_read_dagitty()` marks a latent variable.
+
+## The causal graph and its implications
+
+Every function that reads the causal structure builds one graph from the propositions. Each directed relation is an arrow from its `from` construct to its `to` construct, and an association is a bidirected edge, a covariance the theory leaves unexplained, such as a latent common cause of the two would produce. A construct that no proposition relates to another is left out, since silence about a construct is no claim that it is independent of anything. Among the constructs it holds, the graph is read as complete: every pair that no proposition joins is read as having no direct effect on each other and no unexplained association. The implied independencies are therefore consequences of the graph as encoded, and they are the theory's commitments only if its authors meant those omissions.
+
+`tf_implications()` lists the conditional independencies the graph implies by m-separation, the reading of d-separation for graphs with bidirected edges (Richardson, 2003). For each pair of constructs that no edge joins, it tries two conditioning sets in turn, the parents of both and then all their other ancestors, and records the first that separates the pair. In a graph of directed edges alone, the first always succeeds. With bidirected edges, holding a parent fixed can open a path on which that parent is a collider. When neither set separates a pair, no set does, since the two are joined by an inducing path (Richardson & Spirtes, 2002), and the pair is listed under `inseparable`.
+
+In a graph of directed edges alone, the statements form the basis set of Shipley (2000). When the model holds, their tests are independent of each other, so that Shipley's C statistic combines them into one test of the whole model. When the distribution has the property called composition, as a multivariate normal distribution does, the basis set implies every other independence the graph entails. Under composition, a construct that is independent of each of two others, given the same set, is independent of the two together.
+
+With `given = "minimal"`, each conditioning set is then pruned: a member is dropped when the set without it still separates the pair. The result is minimal, in that none of its members can be dropped, though other minimal sets may exist and the order of the constructs decides which is returned. A minimal set holds fewer constructs, and so fewer constructs measured with error. Error in a conditioning construct leaves part of the dependence that holding it fixed should remove, so a conditional statement tested on observed scores is rejected too often (Westfall & Yarkoni, 2016). Minimal sets suit tests of single pairs, but they no longer form a basis set: their tests need not be independent of each other, so they are not combined into one test of the model as the basis set's are.
+
+```{r implications}
+M <- tf_read(tf_example_path("modality-switching.theory.yaml"))
+for (given in c("basis", "minimal")) {
+  cat(given, "\n")
+  for (s in tf_implications(M, given = given)$implications) cat(" ", s$statement, "\n")
+}
+```
+
+A theory whose directed relations form a feedback loop is refused by default, since a model with feedback is guaranteed to satisfy d-separation only in special cases, linear models among them (Bongers et al., 2021). With `cycles = "sigma"`, the graph is read by sigma-separation instead. Each feedback loop is replaced by its acyclification, in which every member of the loop takes the loop's outside causes and the members are joined to each other, and m-separation in the acyclification is sigma-separation in the theory's graph (Bongers et al., 2021). The statements then hold in every model with that graph whose feedback loops each settle to a unique equilibrium. A theory that posits alternative stable states, such as a bistable symptom network, does not meet that condition, and its statements are not guaranteed. DAGitty accepts a cyclic graph and reads it by d-separation without a warning. For the graph x → y ⇄ z ← w, it treats x and w as independent given y and z, a statement that sigma-separation does not support.
+
+## The causal reading of claims
+
+A prediction, or a phenomenon the theory sets out to explain, may state its claim in machine-readable form, as a `claim` with a `kind`, two constructs `x` and `y`, an optional `given` and a `sign`. An `effect` claim concerns the total effect of `x` on `y`, how `y` responds when `x` is set by intervention. The derivation reads the intervention as one that changes `x` alone, so a study that tests an effect claim needs an intervention that does, whereas interventions on psychological variables are often fat-handed, changing other variables besides the one targeted (Eronen & Bringmann, 2021). An `association` claim concerns the dependence between the two, given the constructs in `given` when there are any. The sign is `positive`, `negative`, `zero` or `nonzero`. `tf_entailments()` reads each claim against the causal graph and says whether the graph entails it, contradicts it or leaves it undetermined.
+
+The derivation follows the path-tracing rules of a linear structural model (Wright, 1934). An effect is the sum, over the directed paths from cause to outcome, of the products of the coefficients along them, and a covariance is the sum, over the simple treks between the two constructs, of the products of their coefficients and the variance of the trek's source. A simple trek is a pair of directed paths from a common source to the two constructs that share no other construct, or a directed path from each end of an association to the two constructs that share no construct, and the covariance the association stands for then takes the place of the variance. When every term has the same sign, so does the sum, whatever the sizes of the coefficients, and with no term the quantity is zero. The sign of an edge comes from its relation: `increases` is positive and `decreases` negative, while `causes`, `mediates` and `moderates` state no sign. A path or simple trek through an edge without a sign leaves the sign of the quantity undetermined, and so do paths or simple treks of opposite signs. A trek whose two paths share a construct adds no term of its own, since the product of the coefficients that lead to the construct they share is part of that construct's variance. So when `t` causes `u` and `u` increases `y`, `u` and `y` are positively associated, whatever the sign of the effect of `t` on `u`.
+
+An intervention on `x` replaces the equation of `x` and so cuts every edge into it. On a graph with feedback loops, read by sigma-separation, a walk that returns to `x` round a loop therefore carries nothing to `y`, and the effect takes the sign of the walks that avoid `x`. When `x` lowers `y` and `y` raises `x`, for instance, the effect of `x` on `y` is negative. A loop that is one simple cycle multiplies the effects that pass through it by a positive factor when the effects round it die out, so the signs through it are those of the paths. The walks round a loop of any other shape are read as they are, which can leave open a sign that the graph fixes. For an association with no `given`, the derived sign combines the signs of the simple treks between the two constructs, read as pairs of walks from a common source when a feedback loop reaches either construct. An association adds a route of unknown sign when it tops a simple trek, a directed path from each of its ends to the two constructs that share no construct, since it stands for a common cause whose effects the theory leaves unsigned. When a loop reaches either construct, any association between an ancestor of each adds one. For an association with a `given`, the derived value is zero when the constructs in `given` separate the two in the graph and nonzero otherwise.
+
+A derived zero entails a claimed zero and contradicts any other sign, and any other derived value contradicts a claimed zero. A claimed `nonzero` is entailed by a derivation other than zero, a claimed sign is entailed by the same derived sign and contradicted by the opposite one, and an undetermined derivation leaves a signed claim undetermined. A claim that names a construct outside the graph is not evaluated, and so, while cycles are refused, is one that names a construct on a feedback loop or downstream of one. Some verdicts rest on faithfulness, the assumption that contributions do not cancel exactly. A route of no fixed sign, routes of opposite signs and a connecting path make two constructs dependent only when their contributions do not sum to zero, and the record marks such verdicts with `faithfulness`.
+
+For an effect claim whose constructs no feedback loop reaches, the record also says whether adjusting for some set of the theory's constructs identifies the effect from observational data, and gives a smallest such set, by the criterion of van der Zander et al. (2019). When the candidates number more than 12, it gives a minimal set instead, from which no construct can be dropped, though a smaller one may exist. A construct marked latent, as `x_latent: true`, is never adjusted for, since it is not observed. An association between `x` and `y` leaves no adjustment set. The record concerns adjustment only, so an effect without one may still be identified by other means, by the front-door criterion for instance, and when `x` is not an ancestor of `y` the effect is zero. When `x` or `y` is itself marked latent, the set is reported all the same, and using it assumes a measure of that construct. On a graph with a feedback loop, the constructs that reach `x` or `y` form a graph without a loop, and what holds among them does not depend on the loop, so the set is found in that graph. No set is given for an effect claim that names a construct on a loop or downstream of one, since the criterion is not established for cyclic graphs.
+
+A derived sign holds when the graph is the causal structure, with no common cause of two constructs left out unless an association stands for it, and when each directed relation acts in its stated direction whatever the other inputs, as in a linear model or a uniformly monotone one (VanderWeele & Robins, 2010). A verdict marked with `faithfulness` assumes in addition that effects do not cancel exactly, along a route of unknown sign or between routes of opposite signs. On a graph with feedback loops, each loop is also assumed to settle to a unique equilibrium, and the sign of an effect assumes that the system with the intervened construct held fixed is stable, so that the effects round each loop that remains die out. Stability of the system as observed is not enough, since holding a construct fixed can leave a loop that does not settle. The derivation chain of the checklist reads these verdicts, and the preregistration and the dossier write each claim and its verdict in words, with one sentence naming these assumptions and the words 'unless effects cancel exactly' after a verdict that rests on faithfulness.
+
+```{r entailments}
+for (cl in tf_entailments(M)$claims) {
+  cat(cl$id, cl$kind, cl$x, cl$y, cl$sign, "->", cl$verdict, cl$basis, "\n")
+}
+```
+
+## Equivalent models and rivals
+
+Two causal graphs that imply the same conditional independencies are Markov equivalent, and no test of conditional independence can tell them apart (Verma & Pearl, 1990/2022). Two acyclic graphs of directed edges are Markov equivalent exactly when they have the same skeleton, the edges without their directions, and the same unshielded colliders, the triples `a -> c <- b` in which no edge joins `a` and `b`. `tf_equivalent_models()` marks each edge of the theory as compelled, when it points the same way in every equivalent graph, or reversible, when some equivalent graph reverses it. The compelled edges are those of the essential graph (Andersson et al., 1997), found by orienting edges outwards from the unshielded colliders until no rule applies. Telling the direction of a reversible edge needs an intervention, a temporal order or distributional assumptions such as non-Gaussian errors. The function does not know which constructs a study manipulates, so an edge out of a construct that an experiment sets is listed as reversible all the same. In structural equation modelling, this is the problem of equivalent models (MacCallum et al., 1993). The rule holds for graphs of directed edges alone, so the function reports that it does not apply to a graph with a feedback loop or an association.
+
+```{r equivalent-models}
+for (e in tf_equivalent_models(M)$edges) {
+  cat(unlist(e$propositions), e$from, "->", e$to, e$status, "\n")
+}
+```
+
+A rival account can be stated as propositions of its own over the theory's constructs, in an alternative's `propositions`, or as a separate theory. `tf_discriminate()` reads the two graphs side by side. It lists the conditional independencies that hold in one graph and fail in the other, the effects and marginal associations whose derived signs differ, marked as decisive when both signs are fixed, and the claims that one graph entails and the other contradicts. Each of these is a test that could tell the two accounts apart. When the two graphs hold different constructs and are acyclic, each is first projected onto the constructs they share, with the others treated as latent, which keeps the separations among the shared constructs (Verma & Pearl, 1990/2022). When both graphs are acyclic, hold the same constructs and state no association, the record also says whether they are Markov equivalent, in which case no test of conditional independence separates them. The diagnosticity item reads the same verdict pairs for the claims of the predictions but asks less: it keeps a named rival unless the rival's graph gives the claim the same verdict as the theory's, so a rival whose graph leaves the claim open still counts, although `tf_discriminate()` lists the claim as discriminating only when one graph entails it and the other contradicts it.
+
+```{r discriminate}
+for (rival in c("alt_grounding_by_interaction", "alt_symbol_interdependency")) {
+  counts <- tf_discriminate(M, rival)$counts
+  cat(rival, paste(names(counts), unlist(counts), sep = " = "), "\n")
+}
+```
+
+## Riskiness before the data and severity after it
+
+Every prediction declares one of four types, and the checklist and the claim-form rubric read that label. An existence prediction asserts that an effect or relation exists, without a direction. A directional prediction asserts a sign or an order, which covers comparisons, interactions, the invariance of a direction across groups and claims that an effect occurs only when a condition holds. An interval prediction asserts that a quantity lies in a stated range, the range the theory permits. A point prediction asserts one value, with the tolerance that measurement requires, and that width is measurement tolerance rather than latitude the theory allows, which separates it from an interval. The labels are self-declared, and full validation checks them only against the bounds and, for a directional prediction, the sign of its claim.
+
+`tf_severity()` grades the form of each prediction's claim before any data. Each type has a base value, reported as `risk_score`. A directional prediction is then discounted, following Meehl's (1967, 1990b) argument that a sign alone risks little where almost everything correlates a little, and a prediction that names a registered alternative in `diagnostic_vs` gains a bonus, with the result capped at 1. A point or interval prediction counts as such only when its `bounds` give a finite lower and a finite upper value, as for predictive precision. Without them it states no region a test could miss, and the rubric rates it as a directional claim. The table gives the values the rubric computes for each type, with the point and interval claims bounded.
+
+```{r rubric, echo = FALSE, results = "asis"}
+rubric <- tf_theory(id = "rubric", title = "Claim forms")
+rubric <- tf_add_alternative(rubric, id = "rival", label = "A rival account")
+claim_types <- c("existence", "directional", "interval", "point")
+for (t in claim_types) {
+  # A point or interval claim is graded at its type's value only with two bounds.
+  region <- if (t %in% c("point", "interval")) list(lower = 0.2, upper = 0.4) else NULL
+  rubric <- tf_add_prediction(rubric, id = t, statement = "A claim.", type = t, bounds = region)
+  rubric <- tf_add_prediction(rubric, id = paste0(t, "_rival"), statement = "A claim.",
+                              type = t, bounds = region, diagnostic_vs = "rival")
+}
+graded <- tf_severity(rubric)
+value <- function(id, column) d(graded[[column]][graded$prediction_id == id])
+rows <- vapply(claim_types, function(t) {
+  sprintf("| %s | %s | %s | %s |", t, value(t, "risk_score"),
+          value(t, "computed_severity"), value(paste0(t, "_rival"), "computed_severity"))
+}, character(1))
+cat("| Type | Base value (`risk_score`) | Computed severity | With a named rival |",
+    "|---|---|---|---|", rows, sep = "\n")
+cat("\n")
+```
+
+The order of the four types follows Popper's (1959/2005, sections 31–33) comparison of falsifiability, by which, of two nested claims about one quantity, the one that forbids more is the more falsifiable. The base values, the discount and the bonus are the package's conventions, and neither Popper nor Meehl gives them. The sizes of ambient correlation that Meehl (1990b) mentions, .25 and .30, are a different quantity from the discount. The rubric also applies one scale to predictions about different quantities, where Popper's comparison ranks only nested claims about one. Despite the name `computed_severity`, the rubric reads only the declared type and the named alternatives, so it says nothing about how severely a claim has been tested.
+
+`tf_post_data_severity()` reads what the rubric leaves out. A prediction may state, in `bounds`, the region its claim allows, a `lower` and an `upper` value, either of which may be left open. A test outcome may record the `estimate` the test observed and its standard error `se`. For a claim with one finite bound, such as an effect above a smallest effect of interest, the function gives the severity with which the claim passed, SEV in the sense of Mayo and Spanos (2006, 2011). It is the probability that the test would have produced a result less in accord with the claim had the quantity been at the bound, computed as `Φ((estimate − lower) / se)` for a lower bound and `Φ((upper − estimate) / se)` for an upper one, where Φ is the standard normal distribution function.
+
+Mayo and Spanos give no rule for a claim with two finite bounds. For such a claim, the function returns the smaller of the two one-sided values, which is the package's own extension to the conjunction of the two one-sided claims. It equals 1 minus the p value of the two one-sided z-tests of equivalence (Lakens, 2017), since that p value is the larger of the two one-sided p values. A point claim, whose two bounds coincide, can therefore pass with a severity of at most one half, so it needs a tolerance around its value. The table gives the severity of a claim that a correlation lies between −0.10 and 0.10, tested with an estimate of 0 at three standard errors. The rubric gives the claim the same value whatever the test.
+
+```{r severity-table, echo = FALSE, results = "asis"}
+bounded <- tf_theory(id = "bounded", title = "A bounded claim")
+bounded <- tf_add_prediction(bounded, id = "h",
+                             statement = "The correlation lies between -0.10 and 0.10.",
+                             type = "interval", bounds = list(lower = -0.1, upper = 0.1))
+for (se in c(0.01, 0.1, 0.2)) {
+  bounded <- tf_add_test_outcome(bounded, prediction_id = "h", passed = TRUE,
+                                 estimate = 0, se = se)
+}
+rows <- tf_post_data_severity(bounded)
+cat("| Standard error | Severity |", "|---|---|",
+    sprintf("| %s | %s |", f2(rows$se), f3(rows$severity)), sep = "\n")
+cat("\n")
+```
+
+The computation treats the standard error as known and the sampling distribution of the estimate as normal. When the standard error is estimated from a small sample, the estimate follows a t distribution, whose tails are heavier, and for an estimate inside the region the normal value is the higher of the two. An estimate two standard errors inside a one-sided bound gets a severity of `r f3(severity_normal)`, where a t distribution with 10 degrees of freedom gives `r f3(severity_t10)`, so the function overstates the severity in small samples. The standard error must also describe the sampling distribution of the estimate at the bound, which differs from its value at the estimate when it depends on the parameter, as for a proportion. The value is nominal: it does not account for selection, such as a subgroup chosen after seeing the data, and it does not check the statistical adequacy of the model behind the estimate. The checklist does not read the value, and the dossier gives it in the test record. In the modality-switching example, an illustrative outcome tests the interval claim of `pred2`, and the value equals 1 minus the larger of the two one-sided p values.
+
+```{r post-data-severity}
+row <- tf_post_data_severity(M)
+p_lower <- pnorm((row$estimate - row$lower) / row$se, lower.tail = FALSE)
+p_upper <- pnorm((row$estimate - row$upper) / row$se)
+cat(row$prediction_id, row$severity, round(1 - max(p_lower, p_upper), 3), "\n")
+```
+
+A prediction may also record the sampling plan of its test in a `test` block. The block holds the planned sample size and what it counts, alpha and whether the test is one- or two-sided, and the smallest effect of interest and its scale. It also holds the planned power or decision probability, with an interval and the method that gave it, a reference to the design analysis and a justification. A Stage 1 Registered Report asks for such a plan for each hypothesis. The preregistration lists the plans after the hypotheses, and no function scores them or recomputes the stated power. The stated power therefore raises no value the package computes. `tf_post_data_severity()` reads the observed estimate and standard error, not the plan. More precision does not help every claim form alike. For a directional prediction tested against a nil null, or a claim whose bound is 0, the probability of a significant difference in the predicted direction approaches one half as precision grows, even when the theory is false (Meehl, 1967). A pass of such a test corroborates the theory little, however high its post-data severity. For a claim whose bound lies away from zero, as for the point predictions of physics that Meehl contrasts, a more precise test is a harder hurdle, and the post-data severity rises with precision only when the estimate falls inside the claimed region. Power does decide how informative a failed prediction is, since a test unlikely to detect the smallest effect of interest says little when it misses that effect (Lakens, 2022).
+
+## The redundancy screen
+
+The lexical screen, `tf_redundancy_check()`, reduces each construct definition to a set of content words. The text is first folded by a table that the R and Python packages share. Accented Latin letters go to their ASCII base (`é` to `e`, `ß` to `ss`), Greek and Cyrillic letters to unaccented lower case, and ASCII letters are lowercased. The text is then split on anything that is not a letter, mark or digit in any script, and words shorter than three characters or in a short English stop-word list are dropped. Other scripts are compared as written, so case, accents and the Unicode normalisation form count there, and text written without spaces, such as Chinese, forms one token per run.
+
+For each pair of constructs, the screen gives the Jaccard index of their word sets, the size of the intersection over the size of the union, and the overlap coefficient, the size of the intersection over the size of the smaller set. It flags a pair for review for any of four reasons. A Jaccard index at the threshold marks a near-duplicate, and an overlap coefficient at its threshold marks a definition contained in another, when both definitions hold at least three words. Two constructs with the same label, compared after folding, are a jingle. When every measure of one construct is listed for the other, the two cannot be told apart by data from those measures. Constructs that share a method or an inventory and keep measures of their own, as in a multitrait-multimethod design (Campbell & Fiske, 1959), are not flagged. The two motivation constructs of the weak example are flagged as contained: one definition adds 'towards goals' to the other, so their similarity is `r g(weak_pair$similarity)` and their overlap `r g(weak_pair$overlap)`.
+
+The screen compares words, so it cannot detect empirical redundancy. Two constructs that correlate almost perfectly once measurement error is corrected for may be defined in different words (Le et al., 2010), and assessing that needs data (Rönkkö & Cho, 2022). Sibling constructs may share vocabulary without being redundant (Lawson & Robins, 2021), and the screen can flag them. `tf_embedding_redundancy()` compares definitions by the cosine of embedding vectors from a function the user supplies. It is the one step of the package that depends on a model, so its values change with the embedding model and its version, and its `threshold` argument is best set for the model in use. No checklist item reads it.
+
+## The amendment appraisal
+
+`tf_appraise_amendment()` compares an amended theory with a prior version by what the two claim, not by the identifiers of their predictions, and applies fixed rules that borrow the terms of Lakatos (1970). Lakatos calls a problemshift theoretically progressive when each new theory predicts some novel fact that its predecessor did not, empirically progressive when some of this excess content is corroborated, progressive when it is both and degenerating otherwise. The appraisal turns these terms into rules over what the two files declare, and a new prediction counts as novel when the prior file does not hold it and the prior's causal graph does not entail its claim. A prediction that changed only its identifier is reported as renamed and is not new. A new prediction derived only from propositions the prior already held, with the same endpoints and relation, articulates old content, and so does a new prediction whose claim the prior's causal graph already entails, however it is derived. Assumptions are compared by their statements as well. An assumption whose statement changed under its identifier is revised and is appraised as a new one is, while one moved unchanged to another identifier is renamed and is not appraised. Any change of wording revises an assumption, even one that keeps its meaning, so a core assumption reworded under its identifier is appraised and, when it protects a prediction that failed in the prior, is read as answering that prediction, as the next paragraph describes. Each appraised assumption that answers an anomaly is listed in `assumptions` with its `change`, `new` or `revised`. A new or revised auxiliary assumption is new content, so a prediction it protects is not an articulation. Such a prediction is listed in `protected_only` when it would otherwise articulate old content, since its novelty then rests on the author's declaration that the assumption is needed to derive it. A new prediction that cites no proposition, or one its version lacks, adds no content. A prediction is corroborated when at least one test outcome passes it and none fails it, so a failed replication leaves it mixed.
+
+An assumption added in response to an anomaly names the prediction it answers in `added_for`. An assumption that leaves `added_for` empty but protects a prediction that failed in the prior is taken to answer that prediction, so leaving the field out does not exempt it. Such an assumption is classed by the new predictions it protects other than the anomaly. With none, it is `ad_hoc1`, since accommodating the anomaly is no independent support. When every one of them is untested, it is `pending`: it adds content that has not yet been tested, and it is not counted as ad hoc. When some were tested and none is corroborated, it is `ad_hoc2`, and when one is corroborated, it is `independently_corroborated`. The labels `ad_hoc1` and `ad_hoc2` borrow Lakatos's terms, and each means only what its check finds from `protects` and the recorded outcomes. No other sense of ad hoc is assessed.
+
+A prediction kept from the prior is reported as revised when its statement, type, bounds or claim changed. When either version states a region with a finite end, it is weakened when its bounds allow a wider region, or its claim is dropped or gives up a fixed sign for `nonzero`, and nothing in it is stronger. Its type label then decides nothing, so relabelling a prediction cannot hide a wider region. When neither version states such a region, a type that ranks lower weakens it too. In both comparisons, a point or interval label without a finite lower and a finite upper bound counts as directional, as it does in the claim-form rubric, so relabelling such a prediction directional changes nothing. The appraisal also reads the two causal graphs by sigma-separation. It reports the conditional independencies the amendment gives up and those it adds, the retained predictions whose claim the prior's graph entails and the new graph does not (`entailments_lost`), and the total effects that the prior's graph signs positive or negative and the new graph does not sign the same way (`signs_lost`). That list holds one entry per ordered pair of constructs, so it can grow with the square of their number. Lakatos (1970) considers series of theories in which no theory has less content than the unrefuted content of the one before it. Content is therefore lost when the amendment drops an untested prediction, weakens an untested or corroborated one or no longer entails its claim, or gives up an implication or a signed effect that no failed prediction of the prior contradicts.
+
+The verdict is progressive when a corroborated new prediction adds content, no content is lost, no assumption is ad hoc, no corroborated prediction was dropped and no failed prediction was weakened. It is never progressive when the causal graph of either version cannot be read, as when a proposition names a construct the version does not declare, since the content of the two versions then cannot be compared (`implications_compared` is false). It is degenerating when an assumption is ad hoc or a failed prediction was weakened, and no corroborated prediction adds content. Lakatos's scheme is a dichotomy, and 'neutral' is the package's label for an amendment that meets neither rule. The lists returned tell the neutral cases apart, and two flags report whether some new prediction adds content (`theoretically_progressive`) and whether one of these is corroborated (`empirically_progressive`). New failures of retained predictions (`new_anomalies`), new predictions that failed (`refuted_new`), the corroborations with a registration recorded (`corroborated_new_registered`) and the smallest post-data severity of the passes of each corroborated new prediction (`corroborated_new_severity`) are reported without changing the verdict. They are to be read with it, since one corroborated new prediction among many that failed, or a pass whose own estimate lies outside the claimed region, is enough for a progressive verdict.
+
+The verdict applies fixed rules to what the two files declare, and it holds only if the declarations are true: the test outcomes, the registrations and the `added_for` and `protects` of each assumption. The appraisal cannot tell a prediction from an accommodation of data already seen, since it reads no dates and nothing about where the data came from. The prior must therefore be the version before the new predictions were stated. A prediction made in one version and corroborated in the next is appraised against the version before it was made, since the version that stated it already holds it. The appraisal does not distinguish a programme's hard core from its protective belt, so a change to a theory's central proposition is appraised as any other amendment is.
+
+## The literature layer
+
+`tf_landscape()` sets the theory against a literature corpus and labels each theme by how many of the theory's accounts match it, counting the focal theory and each registered alternative once. An account matches a theme when a word of its construct labels, or of an alternative's label and key constructs, appears among the theme's keywords, and the result lists the words that matched. Three kinds of word never match. Words carried by more than the share `max_token_share` of the records belong to the whole field. Words of the theory's title name the phenomenon that every account explains, so a construct word that also appears in the title does not match. Words such as 'theory', 'model' and 'account' name a kind of account.
+
+A theme that no account matches is 'under-theorised', one that a single account matches is 'covered', and one that two or more match is 'crowded'. The match is lexical, so it shows a word in common and not that the account explains what the theme's records report. An under-theorised theme may therefore be addressed by an account the theory does not register, or by one that names the same idea in other words. A crowded theme may call for predictions that discriminate between its accounts, and does not show that they compete or that any of them is redundant.
+
+By default, `tf_litmap()` takes the themes to be the connected components of the keyword co-occurrence graph. On a real corpus, one or a few keywords carried by most records join nearly every keyword into one component, and the function warns when one theme holds more than half of ten or more linked keywords. The simple-centres method of co-word analysis (Coulter et al., 1998; Cobo et al., 2011) bounds each theme instead. It weights each pair of keywords by its equivalence index, the square of their co-occurrence count over the product of their frequencies, and grows each theme from its strongest remaining link up to `max_theme_size` keywords. Each theme is then placed in the strategic diagram by its centrality, the strength of its links to other themes, and its density, the strength of the links within it (Callon et al., 1991).
+
+The strategic diagram splits each measure at its median over the themes. A theme is high on a measure when its value lies above the median, or equals it when the median is also the highest value, so that when more than half the themes share the highest value, those themes are high and the rest low. A theme is `motor` when it is high on both, `basic` when high on centrality alone, `niche` when high on density alone and `emerging_or_declining` when low on both. A theme with no links to other themes has a centrality of 0 and is never central. When every theme has the same value of either measure, that measure cannot be split, and no theme is given a quadrant. The quadrants place a theme relative to the other themes of the same corpus, so they change with the corpus and say nothing of a theme's standing in the field at large.
+
+## The simulation
+
+`tf_simulate()` makes each construct a state variable. Each proposition whose relation is `increases`, `decreases`, `causes` or `mediates` contributes a coupling between two states, scaled by the gain `k`, with the sign the relation table gives. `causes` and `mediates` state no sign, so the simulation takes them as positive and lists them under `assumed_positive`, since that choice alone can decide whether a feedback loop grows or settles. `moderates` and `associates` couple nothing, and the `functional_form` field is not read. Every state also decays towards zero at the damping rate. All states start from a common value unless `init` gives the starting values of some constructs, the others starting from zero, so that one construct can be perturbed and the response of the rest traced. From a common value, constructs with the same incoming couplings follow the same trajectory.
+
+A theory states no parameter values, so the trajectory is that of one linear model consistent with the signs the propositions state, and it is not fitted to data. A linear system has one equilibrium, or a continuum of them, and never two separate ones, so it cannot show alternative stable states, such as a calm state and a panic state that each sustain themselves. A network without directed cycles decays at the damping rate in the long run, though not in its transients. Propagated by the exact method at the default gain and damping, the last construct of a five-construct chain rises to `r f2(chain_peak)` times its starting value before it decays, so a short window shows only the rise. The regime of a theory with feedback loops is set by the gain against the damping, and time is in units of one over the gain. In the panic-network example, propagated in the same way, the loop between arousal and perceived threat grows, and every state reaches `r f1(panic_end)` by time `r g(panic_time)`. With a damping above the gain, the same loop settles.
+
+Two methods propagate the system. The exact method multiplies the state at every step by the matrix exponential of the system matrix times the step size, computed by scaling and squaring a Taylor polynomial (Moler & Van Loan, 2003), so each row is the solution at its time whatever the step size. It is the default. The Euler method takes fixed explicit steps. Its step is stable only when `|1 + dt·λ| < 1` for every eigenvalue `λ` of the coupling matrix minus the damping. In a network without directed cycles, the states therefore diverge with alternating sign once the step size times the damping exceeds 2, although the system they approximate decays, and raising the damping can cause a divergence rather than remove it. Euler steps also turn a sustained oscillation into growth, so a run warns when its trajectory departs from the exact one by more than 5 per cent of the larger of the exact value and the largest absolute starting value, a test that does not depend on the unit of the starting values. The exact method avoids both problems.
+
+## The content hash
+
+`tf_content_hash()` identifies a theory by the SHA-256 digest of its canonical form, written as `sha256:` followed by 64 hexadecimal digits. The canonical form is the JSON Canonicalization Scheme (Rundgren et al., 2020), with three conventions that make it the same in R and Python: an empty mapping is written as an empty sequence, a number that is not finite is written as a word and a single value in a field that the schema types as an array of strings is written as a one-element array, since `derives_from: p1` reads as `[p1]`. Two files with the same content therefore have the same hash whatever their layout, comments, key order or format, and any change to a value changes it. The key `content_hash` of `version` is left out, so that a file can record the hash of its own content, and full validation checks a recorded hash against the content. The preregistration and the dossier give the hash, so that a reader can check that the theory file in hand is the one they describe. The hash shows that two files hold the same theory and says nothing about when either was written, which a time-stamped registration records.
+
+```{r content-hash}
+path <- tempfile(fileext = ".json")
+tf_write(M, path)
+tf_content_hash(M)
+identical(tf_content_hash(tf_read(path)), tf_content_hash(M))
+```
+
+## Reading DAGitty diagrams
+
+`tf_read_dagitty()` reads model code as DAGitty writes it (Textor et al., 2016) and returns a theory whose constructs are the diagram's variables and whose propositions are its edges. A directed edge becomes a proposition with the relation `causes`, or `increases` or `decreases` when the `relation` argument gives that sign to every edge, and a bidirected edge becomes an association. A variable marked `latent` keeps the mark as `x_latent`, and the `causal_dag` view of `tf_diagram()` writes it back, so a diagram read and written again keeps its variables' marks, its directed edges and its associations. Positions and other attributes are dropped.
+
+The reader refuses what a theory cannot hold. An ancestral graph (`mag` or `pag`) has edge marks with no counterpart among the relations, an undirected edge states no direction, and a selected variable is held fixed by selection, which opens paths that the theory's implications would not show. A diagram states no definitions, so the theory it gives is a draft that does not pass validation until each construct is defined. A latent construct remains a construct whose relations the theory states. The adjustment sets of the causal reading never include it, while a statement of the implied independencies may hold it fixed, and then needs a measure of it before data can test it.
+
+```{r read-dagitty}
+G <- tf_read_dagitty("
+dag {
+  stress [latent]
+  sleep -> stress -> mood
+  exercise -> stress
+  sleep <-> mood
+}
+", id = "sleep-mood", title = "Sleep, stress and mood")
+for (p in G$propositions) cat(p$id, p$from, p$relation, p$to, "\n")
+for (s in tf_implications(G)$implications) cat(s$statement, "\n")
+cat(tf_diagram(G, "causal_dag"))
+```
 
 ## Scope and limits
 
-The checklist is a structural and lexical screen. Each item asks whether a required property is present in the theory object, such as a boundary-conditions field or a mechanism string, or what share of a collection exhibits it. The redundancy screen additionally measures the lexical overlap between construct definitions. Being lexical, it cannot detect empirical redundancy. Two constructs that correlate almost perfectly once measurement error is corrected for may be defined in different words (Le et al., 2010), and telling them apart needs data, as in Rönkkö and Cho's (2022) guideline for assessing discriminant validity. No item reads or judges the content of a definition, a mechanism or a boundary condition. A theory can score highly by being completely and precisely specified while resting on a false premise, and can score poorly for being under-specified while resting on a sound one. The aggregate score indexes how completely a theory is specified against the checklist. It says nothing about whether the theory is true or well-reasoned.
+The checklist is mostly a structural and lexical screen. Most items ask whether a required property is present in the theory file, such as a boundary-conditions field or a mechanism string, what share of a collection has it or how a prediction is labelled, and the redundancy screen measures the overlap of words between definitions. The derivation chain and diagnosticity also read the claims the file states against its causal graph. No item judges the content of a definition, a mechanism or a boundary condition, and no item checks a label against the statement it labels. A theory can score highly by being completely and precisely specified while resting on a false premise, and poorly for being under-specified while resting on a sound one. The checklist score indexes how completely a theory file is specified against the checklist, and says nothing about whether the theory is true or well reasoned.
 
-The five numeric thresholds and the weights that combine the twelve items into the aggregate score are the package's own defaults. They are not derived from an external validation study. They are fixed in the checklist file, and every report records that file's version as `checklist_version`, so scores stay comparable across theories. The package offers no option to substitute other weights or thresholds, with one exception that no checklist item reads: `tf_embedding_redundancy()` takes a `threshold` argument, which replaces the embedding threshold for that screen alone. A field with different norms can recombine the per-item scores the report lists, but the result is not comparable with the default aggregate.
+The thresholds and weights are the package's defaults, fixed in the checklist file and not derived from an external validation study. Two scores with the same `checklist_version` were computed by the same rule, and a difference between them reflects how the two theory files are specified. Much of that specification is self-declared, such as the type of each prediction and its named rivals, and no study has yet measured how far two coders would agree on it, or established what difference between two scores is meaningful. The checklist reads test outcomes only in the parsimony item, which asks whether an assumption added for an anomaly protects a prediction recorded as passed. A failed test leaves every other item as it was. The package offers no option to substitute other weights or thresholds, apart from the `threshold` of the embedding screen, which no item reads. A field with different norms can recombine the per-item scores the report lists, and the result is then not comparable with the default aggregate.
 
-Because the gate reflects only the two blockers among the twelve items, a theory can show `gate: pass` while several other items are `warn` or `fail`. The gate reports a minimal precondition for testing, and the item table gives the rest. Read the two together with the aggregate score.
+The gate reflects only the blockers, so a theory can show `gate: pass` while several other items are `warn` or `fail`. It reports whether either blocking item failed: at least one prediction is typed point, interval or directional, and every prediction cites declared propositions whose graph entails any claim it states, with no stated phenomenon contradicted. The labels are the author's and are not checked against the statements. A passing gate does not show that the theory is true or well reasoned, and the items, the checklist score and its range are best read together.
 
-## How the other outputs are computed
-
-Every prediction declares one of four types, and the rigour checklist and the severity rubric read that label. An existence prediction asserts that an effect or relation exists, without a direction. A directional prediction asserts a sign or an order, which covers comparisons, interactions, the invariance of a direction across groups and claims that an effect occurs only when a condition holds. An interval prediction asserts that a quantity lies in a stated range, the range the theory permits. A point prediction asserts one value, with the tolerance that measurement requires. Its width is measurement tolerance, not latitude the theory allows, and that is what separates it from an interval. The labels are self-declared, and no function checks a statement against its type.
-
-The severity rubric ranks the form of each prediction's claim before any data. It gives each prediction a base risk fixed by its type: existence 0.1, directional 0.4, interval 0.7 and point 0.9. The order follows Popper's (1959, sections 31–33) comparison of falsifiability: of two nested claims about one quantity, the one that forbids more is the more falsifiable. The reported risk score is this base. The computed severity then adjusts it. A directional prediction is discounted by 25 per cent, following Meehl's (1967, 1990b) argument that a bare sign risks little because almost everything in psychology correlates a little. A prediction that names a registered alternative in its `diagnostic_vs` field, declaring that it would discriminate between the theories, earns a bonus of 0.1. The computed severity is the discounted base plus the bonus, capped at 1. The four base values, the discount and the bonus are the package's conventions, and neither Popper nor Meehl gives them. The .25 and .30 that Meehl (1990b) mentions are sizes of those ambient correlations, a different quantity from the discount. Because the rubric reads only the declared type and the named alternatives, it says nothing about how severely a claim has been tested, which depends on the design and the data.
-
-Post-data severity reads what the rubric leaves out. A prediction may state the region its claim allows in `bounds`, a `lower` and an `upper` value, either of which may be left open. A test outcome may record the `estimate` the test observed and its standard error `se`. For each such outcome, `tf_post_data_severity()` gives the severity with which the claim passed, in Mayo and Spanos's (2006, 2011) sense. It is the probability that the test would have produced a result less in accord with the claim, had the claim been false at its nearer bound. Under a normal approximation to the sampling distribution of the estimate, it is the smaller of `Φ((estimate − lower) / se)` and `Φ((upper − estimate) / se)` over the finite bounds. A one-sided claim, such as an effect above a smallest effect of interest, leaves the upper bound open. With two finite bounds, the value equals 1 minus the p value of the two one-sided tests of equivalence. Take a claim that a correlation is at most .10 in absolute value, tested with an estimate of 0. It passes with a severity of 1.0, .841 and .691 at standard errors of .01, .10 and .20. The rubric gives the claim the same value for every test. A point claim, whose two bounds coincide, can pass with a severity of at most .5, so it needs a tolerance around its value. The rigour checklist does not read the value, and the dossier gives it in the test record. The modality-switching example records one outcome, with values labelled as illustrative, to show the computation.
-
-A prediction may also record the sampling plan of its test in a `test` block. The block holds the planned sample size and what it counts, alpha and whether the test is one- or two-sided, and the smallest effect of interest and its scale. It also holds the planned power or decision probability, with an interval and the method that gave it, a reference to the design analysis and a justification. A Stage 1 Registered Report asks for such a plan for each hypothesis. The preregistration lists the plans after the hypotheses, and no function scores them. As the precision of the test grows, the probability of a significant difference in the predicted direction approaches one half even when the theory is false (Meehl, 1967). The corroboration a directional prediction earns therefore weakens as power grows, and power must not raise a claim's severity. Power does decide how informative a failed prediction is. A test unlikely to detect the smallest effect of interest says little when it misses that effect (Lakens, 2022), and the reader of the preregistration judges this from the plan. The modality-switching example records a plan for its interval prediction, with values labelled as illustrative.
-
-The construct redundancy screen reduces each construct definition to a set of content tokens. The text is first folded by a fixed table that the R and Python packages share. Accented Latin letters go to their ASCII base (`é` to `e`, `ß` to `ss`), Greek and Cyrillic letters to lowercase unaccented ones, and ASCII letters are lowercased. The text is then split on anything that is not a letter, mark or digit in any script, and tokens shorter than three characters or in a small English stop-word list are dropped. Other scripts are compared as written, so case, accents and the Unicode normalisation form count there, and text written without spaces, such as Chinese, forms one token per run.
-
-The similarity of two constructs is the Jaccard index of their token sets, the size of the intersection divided by the size of the union. Their overlap is the overlap coefficient, the size of the intersection divided by the size of the smaller set. The screen reports every construct pair with both values. It flags a pair for review when the similarity reaches 0.85, which marks a near-duplicate, or when both definitions hold at least three tokens and the overlap reaches 0.85, which marks one definition contained in the other. The two motivation constructs of the weak example are such a pair: one definition adds 'towards goals' to the other, so their similarity is 0.8 and their overlap 1. This is a simple lexical screen, and its two thresholds are default working values. An optional embedding screen is available for a semantic comparison. It has a cosine threshold of its own, 0.85 by default, which its `threshold` argument sets for the model in use, since how high a cosine runs depends on the embedding model.
-
-The amendment appraisal compares an amended theory with a prior version by what the two claim, not by the identifiers of their predictions. Lakatos (1970, p. 118) calls a problemshift progressive when the new theory predicts a fact its predecessor did not and some of that excess content is corroborated, and degenerating when it is not. The appraisal turns this into rules. A prediction that changed only its identifier, with the same statement and type, is reported as renamed and is not new. A new prediction derived only from propositions the prior already held, with the same endpoints and relation, articulates old content and is reported as such. A new auxiliary assumption is new content, so a prediction it protects is not an articulation. A prediction is corroborated when at least one test outcome passes it and none fails it, so a failed replication leaves it mixed. An assumption added in response to an anomaly names the prediction it answers in its `added_for`. It is ad hoc unless a prediction it protects that is new in this version, other than the anomaly, is corroborated, since accommodating the anomaly is no independent support.
-
-The verdict is progressive when a corroborated new prediction adds content, no assumption is ad hoc and no corroborated prediction was dropped. It is degenerating when an assumption is ad hoc and no corroborated prediction adds content. Lakatos's scheme is a dichotomy, and 'neutral' is theoryforge's label for an amendment that meets neither of these two rules. The lists returned tell the neutral cases apart. An amendment may add no predictions, only ones not yet tested (in `new_predictions` but not `corroborated_new`) or only articulations of old content (`articulated`). It may also set a corroborated advance against an ad hoc assumption or a dropped corroboration (`ad_hoc_assumptions`, `dropped_corroborated`). Dropped predictions that were never tested (`content_lost`) and new failures of retained ones (`new_anomalies`) are reported without changing the verdict. The appraisal reads a test outcome's `registered` only to report which corroborations were preregistered (`corroborated_new_registered`). It reads no date, no `severity_at_test` and no `version` field, so which version is the prior is the caller's responsibility.
-
-The theory landscape sets the theory against a literature corpus and labels each theme by how many of the theory's accounts address it, counting the focal theory and its registered alternatives. An account addresses a theme when a word of its construct labels, or of an alternative's label and key constructs, appears among the theme's keywords, and the result lists the words that matched. Three kinds of word never match. Words carried by more than a set share of the records, half by default, belong to the whole field. Words of the theory's title name the phenomenon that every account explains, so a construct word that also appears in the title does not match. Words such as 'theory', 'model' and 'account' name a kind of account. A theme that no account addresses is 'under-theorised', one that a single account addresses is 'covered', and one that two or more address is 'crowded'. The labels count the registered accounts only, so an under-theorised theme may be addressed by an account the theory does not register. A crowded theme calls for predictions that discriminate between its accounts, and does not show that any of them is redundant.
-
-By default, the themes are the connected components of the keyword co-occurrence graph. On a real corpus, one or a few keywords carried by most records join nearly every keyword into one component, and the package warns when one theme holds more than half the linked keywords. The simple-centres method of co-word analysis (Coulter et al., 1998; Cobo et al., 2011) bounds each theme instead. It weights each pair of keywords by its equivalence index and grows each theme from its strongest link to at most ten keywords. Each theme is then placed in the strategic diagram by its centrality and density (Callon et al., 1991), split at their medians.
-
-The simulation makes each construct a state variable. Each proposition whose relation is increases, decreases, causes or mediates contributes a signed coupling between two states, scaled by the coupling gain. The coupling is positive for increases, causes and mediates, and negative for decreases. Moderates and associates couple nothing, and the `functional_form` field is not read. Every state also decays towards zero at the damping rate, and all states start from a common initial value, so constructs with the same incoming couplings follow the same trajectory. The trajectory is the sequence of state vectors. The record lists the propositions that couple nothing and any pair of constructs carrying couplings of both signs, which offset each other.
-
-The simulation is a transparent linear system, meant to expose the qualitative dynamics a network of propositions implies and not to fit data. A linear system has one equilibrium, or a continuum of them when its matrix is singular. It never has two separate ones, so it cannot show the bistability that formal models of panic disorder rely on (Robinaugh et al., 2024). In a network without directed cycles, every eigenvalue of the system equals minus the damping rate. Such a theory decays at that rate in the long run, but not in its transients. At the default gain and damping, the last construct of a five-construct chain rises to 5.77 times its initial value before it decays. The regime of a theory with feedback loops is set by the coupling gain against the damping.
-
-Two methods propagate the system. The exact method multiplies the state at every step by the matrix exponential of the system matrix times the step size, which it computes by scaling and squaring a Taylor polynomial (Moler & Van Loan, 2003). Each row is then the solution of the linear system at its time, whatever the step size. The Euler method, the default for this release, takes fixed explicit steps. Its step is stable only when `|1 + dt·λ| < 1` for every eigenvalue `λ` of the coupling matrix minus the damping. In a network without directed cycles, once the step size times the damping exceeds 2, the states diverge with alternating sign although the system they approximate decays. Raising the damping therefore does not remove a divergence and can cause one. A smaller step size removes it, as does a smaller coupling gain when the network's own feedback exceeds the damping. Euler steps also turn a sustained oscillation into growth, so a run warns when its trajectory departs from the exact one by more than 5 per cent. A run whose values grow beyond what can be rounded stops with a message naming the step and the construct. The default will change to the exact method in the next minor release.
+The causal reading takes the propositions as stated. Its verdicts say what the stated graph implies under the assumptions given above, and the implied independencies, signs and equivalences are hypotheses for data to test. The package does not test them. That needs an estimate from data, which `tf_post_data_severity()` can then read, or a test of the implied independencies, which other tools provide (see [Related tools](related-tools.html)).
 
 ## References
+
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Andersson, S. A., Madigan, D., &amp; Perlman, M. D. (1997). A characterization of Markov equivalence classes for acyclic digraphs. <em>The Annals of Statistics</em>, <em>25</em>(2), 505–541. <a href="https://doi.org/10.1214/aos/1031833662">https://doi.org/10.1214/aos/1031833662</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bacharach, S. B. (1989). Organizational theories: Some criteria for evaluation. <em>The Academy of Management Review</em>, <em>14</em>(4), 496–515. <a href="https://doi.org/10.5465/amr.1989.4308374">https://doi.org/10.5465/amr.1989.4308374</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bongers, S., Forré, P., Peters, J., &amp; Mooij, J. M. (2021). Foundations of structural causal models with cycles and latent variables. <em>The Annals of Statistics</em>, <em>49</em>(5), 2885–2915. <a href="https://doi.org/10.1214/21-AOS2064">https://doi.org/10.1214/21-AOS2064</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Callon, M., Courtial, J. P., &amp; Laville, F. (1991). Co-word analysis as a tool for describing the network of interactions between basic and technological research: The case of polymer chemistry. <em>Scientometrics</em>, <em>22</em>(1), 155–205. <a href="https://doi.org/10.1007/BF02019280">https://doi.org/10.1007/BF02019280</a></p>
+
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Campbell, D. T., &amp; Fiske, D. W. (1959). Convergent and discriminant validation by the multitrait-multimethod matrix. <em>Psychological Bulletin</em>, <em>56</em>(2), 81–105. <a href="https://doi.org/10.1037/h0046016">https://doi.org/10.1037/h0046016</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Cobo, M. J., López-Herrera, A. G., Herrera-Viedma, E., &amp; Herrera, F. (2011). An approach for detecting, quantifying, and visualizing the evolution of a research field: A practical application to the Fuzzy Sets Theory field. <em>Journal of Informetrics</em>, <em>5</em>(1), 146–166. <a href="https://doi.org/10.1016/j.joi.2010.10.002">https://doi.org/10.1016/j.joi.2010.10.002</a></p>
 
@@ -192,13 +455,15 @@ Two methods propagate the system. The exact method multiplies the state at every
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Lakatos, I. (1970). Falsification and the methodology of scientific research programmes. In I. Lakatos &amp; A. Musgrave (Eds.), <em>Criticism and the growth of knowledge</em> (pp. 91–196). Cambridge University Press. <a href="https://doi.org/10.1017/cbo9781139171434.009">https://doi.org/10.1017/cbo9781139171434.009</a></p>
 
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Lakens, D. (2017). Equivalence tests: A practical primer for <em>t</em> tests, correlations, and meta-analyses. <em>Social Psychological and Personality Science</em>, <em>8</em>(4), 355–362. <a href="https://doi.org/10.1177/1948550617697177">https://doi.org/10.1177/1948550617697177</a></p>
+
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Lakens, D. (2022). Sample size justification. <em>Collabra: Psychology</em>, <em>8</em>(1), Article 33267. <a href="https://doi.org/10.1525/collabra.33267">https://doi.org/10.1525/collabra.33267</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Lawson, K. M., &amp; Robins, R. W. (2021). Sibling constructs: What are they, why do they matter, and how should you handle them? <em>Personality and Social Psychology Review</em>, <em>25</em>(4), 344–366. <a href="https://doi.org/10.1177/10888683211047101">https://doi.org/10.1177/10888683211047101</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Le, H., Schmidt, F. L., Harter, J. K., &amp; Lauver, K. J. (2010). The problem of empirical redundancy of constructs in organizational research: An empirical investigation. <em>Organizational Behavior and Human Decision Processes</em>, <em>112</em>(2), 112–125. <a href="https://doi.org/10.1016/j.obhdp.2010.02.003">https://doi.org/10.1016/j.obhdp.2010.02.003</a></p>
 
-<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Mayo, D. G. (2018). <em>Statistical inference as severe testing: How to get beyond the statistics wars</em>. Cambridge University Press. <a href="https://doi.org/10.1017/9781107286184">https://doi.org/10.1017/9781107286184</a></p>
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">MacCallum, R. C., Wegener, D. T., Uchino, B. N., &amp; Fabrigar, L. R. (1993). The problem of equivalent models in applications of covariance structure analysis. <em>Psychological Bulletin</em>, <em>114</em>(1), 185–199. <a href="https://doi.org/10.1037/0033-2909.114.1.185">https://doi.org/10.1037/0033-2909.114.1.185</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Mayo, D. G., &amp; Spanos, A. (2006). Severe testing as a basic concept in a Neyman–Pearson philosophy of induction. <em>The British Journal for the Philosophy of Science</em>, <em>57</em>(2), 323–357. <a href="https://doi.org/10.1093/bjps/axl003">https://doi.org/10.1093/bjps/axl003</a></p>
 
@@ -214,15 +479,26 @@ Two methods propagate the system. The exact method multiplies the state at every
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Platt, J. R. (1964). Strong inference. <em>Science</em>, <em>146</em>(3642), 347–353. <a href="https://doi.org/10.1126/science.146.3642.347">https://doi.org/10.1126/science.146.3642.347</a></p>
 
-<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Popper, K. R. (1959). <em>The logic of scientific discovery</em>. Hutchinson.</p>
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Popper, K. (2005). <em>The logic of scientific discovery</em>. Routledge. <a href="https://doi.org/10.4324/9780203994627">https://doi.org/10.4324/9780203994627</a> (Original work published 1959)</p>
+
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Richardson, T. (2003). Markov properties for acyclic directed mixed graphs. <em>Scandinavian Journal of Statistics</em>, <em>30</em>(1), 145–157. <a href="https://doi.org/10.1111/1467-9469.00323">https://doi.org/10.1111/1467-9469.00323</a></p>
+
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Richardson, T., &amp; Spirtes, P. (2002). Ancestral graph Markov models. <em>The Annals of Statistics</em>, <em>30</em>(4), 962–1030. <a href="https://doi.org/10.1214/aos/1031689015">https://doi.org/10.1214/aos/1031689015</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Robinaugh, D. J., Haslbeck, J. M. B., Ryan, O., Fried, E. I., &amp; Waldorp, L. J. (2021). Invisible hands and fine calipers: A call to use formal theory as a toolkit for theory construction. <em>Perspectives on Psychological Science</em>, <em>16</em>(4), 725–743. <a href="https://doi.org/10.1177/1745691620974697">https://doi.org/10.1177/1745691620974697</a></p>
 
-<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Robinaugh, D. J., Haslbeck, J. M. B., Waldorp, L. J., Kossakowski, J. J., Fried, E. I., Millner, A. J., McNally, R. J., Ryan, O., de Ron, J., van der Maas, H. L. J., van Nes, E. H., Scheffer, M., Kendler, K. S., &amp; Borsboom, D. (2024). Advancing the network theory of mental disorders: A computational model of panic disorder. <em>Psychological Review</em>, <em>131</em>(6), 1482–1508. <a href="https://doi.org/10.1037/rev0000515">https://doi.org/10.1037/rev0000515</a></p>
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Rohrer, J. M. (2018). Thinking clearly about correlations and causation: Graphical causal models for observational data. <em>Advances in Methods and Practices in Psychological Science</em>, <em>1</em>(1), 27–42. <a href="https://doi.org/10.1177/2515245917745629">https://doi.org/10.1177/2515245917745629</a></p>
+
+<!-- Crossref gives the pages of Rönkkö and Cho (2022) as 6-14, but the article runs to
+page 47: the next article in the issue starts on page 48. -->
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Rönkkö, M., &amp; Cho, E. (2022). An updated guideline for assessing discriminant validity. <em>Organizational Research Methods</em>, <em>25</em>(1), 6–47. <a href="https://doi.org/10.1177/1094428120968614">https://doi.org/10.1177/1094428120968614</a></p>
 
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Rundgren, A., Jordan, B., &amp; Erdtman, S. (2020). <em>JSON Canonicalization Scheme (JCS)</em> (RFC 8785). RFC Editor. <a href="https://doi.org/10.17487/RFC8785">https://doi.org/10.17487/RFC8785</a></p>
+
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Scheel, A. M., Tiokhin, L., Isager, P. M., &amp; Lakens, D. (2021). Why hypothesis testers should spend less time testing hypotheses. <em>Perspectives on Psychological Science</em>, <em>16</em>(4), 744–755. <a href="https://doi.org/10.1177/1745691620966795">https://doi.org/10.1177/1745691620966795</a></p>
+
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Shipley, B. (2000). A new inferential test for path models based on directed acyclic graphs. <em>Structural Equation Modeling: A Multidisciplinary Journal</em>, <em>7</em>(2), 206–218. <a href="https://doi.org/10.1207/S15328007SEM0702_4">https://doi.org/10.1207/S15328007SEM0702_4</a></p>
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Suddaby, R. (2010). Editor's comments: Construct clarity in theories of management and organization. <em>Academy of Management Review</em>, <em>35</em>(3), 346–357. <a href="https://doi.org/10.5465/amr.35.3.zok346">https://doi.org/10.5465/amr.35.3.zok346</a></p>
 
@@ -232,4 +508,14 @@ Two methods propagate the system. The exact method multiplies the state at every
 
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Textor, J., van der Zander, B., Gilthorpe, M. S., Liśkiewicz, M., &amp; Ellison, G. T. H. (2016). Robust causal inference using directed acyclic graphs: The R package ‘dagitty’. <em>International Journal of Epidemiology</em>, <em>45</em>(6), 1887–1894. <a href="https://doi.org/10.1093/ije/dyw341">https://doi.org/10.1093/ije/dyw341</a></p>
 
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">van der Zander, B., Liśkiewicz, M., &amp; Textor, J. (2019). Separators and adjustment sets in causal graphs: Complete criteria and an algorithmic framework. <em>Artificial Intelligence</em>, <em>270</em>, 1–40. <a href="https://doi.org/10.1016/j.artint.2018.12.006">https://doi.org/10.1016/j.artint.2018.12.006</a></p>
+
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">VanderWeele, T. J., &amp; Robins, J. M. (2010). Signed directed acyclic graphs for causal inference. <em>Journal of the Royal Statistical Society Series B: Statistical Methodology</em>, <em>72</em>(1), 111–127. <a href="https://doi.org/10.1111/j.1467-9868.2009.00728.x">https://doi.org/10.1111/j.1467-9868.2009.00728.x</a></p>
+
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Verma, T. S., &amp; Pearl, J. (2022). Equivalence and synthesis of causal models. In H. Geffner, R. Dechter, &amp; J. Y. Halpern (Eds.), <em>Probabilistic and causal inference: The works of Judea Pearl</em> (pp. 221–236). Association for Computing Machinery. <a href="https://doi.org/10.1145/3501714.3501732">https://doi.org/10.1145/3501714.3501732</a> (Original work published 1990)</p>
+
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Westfall, J., &amp; Yarkoni, T. (2016). Statistically controlling for confounding constructs is harder than you think. <em>PLOS ONE</em>, <em>11</em>(3), Article e0152719. <a href="https://doi.org/10.1371/journal.pone.0152719">https://doi.org/10.1371/journal.pone.0152719</a></p>
+
 <p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Whetten, D. A. (1989). What constitutes a theoretical contribution? <em>The Academy of Management Review</em>, <em>14</em>(4), 490–495. <a href="https://doi.org/10.5465/amr.1989.4308371">https://doi.org/10.5465/amr.1989.4308371</a></p>
+
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Wright, S. (1934). The method of path coefficients. <em>The Annals of Mathematical Statistics</em>, <em>5</em>(3), 161–215. <a href="https://doi.org/10.1214/aoms/1177732676">https://doi.org/10.1214/aoms/1177732676</a></p>

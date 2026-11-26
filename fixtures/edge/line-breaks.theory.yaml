@@ -1,0 +1,22 @@
+# Edge case: text that holds the line breaks U+0085, U+2028 and U+2029, here
+# as the escapes \N, \L and \P of a double-quoted scalar. Python wrote such a
+# string in single quotes with the break as it is, which libyaml reads as a
+# line feed and folds into a space, so "Panic\Ndisorder" read back from
+# Python's YAML as "Panic disorder" in both twins. Both writers now use the
+# escapes, and the round-trip phase reads each written file back in both.
+schema_version: "1.1"
+id: edge-line-breaks
+title: "Panic\Ndisorder"
+maturity: building
+constructs:
+  - id: c1
+    label: "Line\Lseparator"
+    definition: "A definition that ends a paragraph\Pand starts another."
+  - id: c2
+    label: Beta
+    definition: "The second construct\N"
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases

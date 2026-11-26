@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{tf_add_construct}
 \alias{tf_add_construct}
-\title{Add a construct to a theory (BUILDING mode)}
+\title{Add a construct to a theory}
 \usage{
 tf_add_construct(
   theory,
@@ -18,13 +18,15 @@ tf_add_construct(
 
 \item{id, label, definition}{Construct fields.}
 
-\item{measurement, boundary_conditions}{Optional character vectors.}
+\item{measurement, boundary_conditions}{Optional character vectors, stored
+without names.}
 }
 \value{
-The (mutated) theory object.
+The theory with the construct added.
 }
 \description{
-Appends a construct and a provenance entry, returning the mutated theory.
+Appends a construct and a provenance entry. R does not change the theory in
+place, so assign the result.
 }
 \examples{
 tf_theory("demo-1", "A demonstration theory") |>

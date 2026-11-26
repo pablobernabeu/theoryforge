@@ -21,6 +21,8 @@ smoke_root <- function() {
 # v1 is v2's declared parent, so the appraisal runs against it for v2 and
 # against an uploaded prior for v1.
 smoke_examples <- c("panic-network.theory.yaml", "panic-network-2026-v2.theory.yaml")
+# The corpora by the keys the literature operations' cases name.
+smoke_corpora <- c(demo = "panic-corpus.yaml", openalex = "openalex-panic-2026.corpus.yaml")
 
 smoke_apps <- function(root) {
   apps <- file.path(tempfile("tf-smoke-"), "apps")
@@ -33,13 +35,15 @@ smoke_apps <- function(root) {
   file.copy(file.path(pkg, "R", r_files), file.path(vendor, "R"))
   schema <- c(theory = "theory.schema.json", checklist = "rigor_checklist.yaml", fold = "fold.json")
   file.copy(file.path(pkg, "inst", "schema", schema), file.path(vendor, "schema"))
-  file.copy(file.path(root, "fixtures", c(smoke_examples, "panic-corpus.yaml")),
+  file.copy(file.path(root, "fixtures", c(smoke_examples, smoke_corpora)),
             file.path(vendor, "fixtures"))
   manifest <- list(
     rFiles = paste0("R/", r_files),
     schema = as.list(stats::setNames(paste0("schema/", schema), names(schema))),
     examples = lapply(smoke_examples, function(n) list(name = n, path = paste0("fixtures/", n))),
-    corpora = list(list(name = "corpus", path = "fixtures/panic-corpus.yaml")))
+    corpora = lapply(names(smoke_corpora), function(k) {
+      list(key = k, name = k, path = paste0("fixtures/", smoke_corpora[[k]]))
+    }))
   jsonlite::write_json(manifest, file.path(vendor, "manifest.json"), auto_unbox = TRUE)
   file.copy(file.path(root, "apps", "r", "r-runtime.js"), file.path(apps, "r"))
   apps

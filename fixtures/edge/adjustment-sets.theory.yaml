@@ -1,0 +1,58 @@
+# Adjustment sets never hold a construct marked latent, so the effect of x1 on
+# y1, confounded by the latent u1 alone, has none, and that of x2 on y2 is
+# identified by w2, as dagitty finds. The effect of x3 on y3 has thirteen
+# candidates, more than the subset search takes, and the one pass that prunes
+# them leaves the empty set.
+schema_version: "1.1"
+id: "adjustment-sets"
+title: "Adjustment sets with latent and many candidate constructs"
+maturity: "developing"
+constructs:
+  - {id: u1, label: "U1", definition: "An unobserved construct.", x_latent: true}
+  - {id: x1, label: "X1", definition: "A construct."}
+  - {id: y1, label: "Y1", definition: "A construct."}
+  - {id: u2, label: "U2", definition: "An unobserved construct.", x_latent: true}
+  - {id: w2, label: "W2", definition: "A construct."}
+  - {id: x2, label: "X2", definition: "A construct."}
+  - {id: y2, label: "Y2", definition: "A construct."}
+  - {id: a1, label: "A1", definition: "A construct."}
+  - {id: a2, label: "A2", definition: "A construct."}
+  - {id: a3, label: "A3", definition: "A construct."}
+  - {id: a4, label: "A4", definition: "A construct."}
+  - {id: a5, label: "A5", definition: "A construct."}
+  - {id: a6, label: "A6", definition: "A construct."}
+  - {id: a7, label: "A7", definition: "A construct."}
+  - {id: a8, label: "A8", definition: "A construct."}
+  - {id: a9, label: "A9", definition: "A construct."}
+  - {id: a10, label: "A10", definition: "A construct."}
+  - {id: a11, label: "A11", definition: "A construct."}
+  - {id: a12, label: "A12", definition: "A construct."}
+  - {id: a13, label: "A13", definition: "A construct."}
+  - {id: x3, label: "X3", definition: "A construct."}
+  - {id: y3, label: "Y3", definition: "A construct."}
+propositions:
+  - {id: p1, from: u1, to: x1, relation: increases, mechanism: "It does."}
+  - {id: p2, from: u1, to: y1, relation: increases, mechanism: "It does."}
+  - {id: p3, from: x1, to: y1, relation: increases, mechanism: "It does."}
+  - {id: p4, from: u2, to: w2, relation: increases, mechanism: "It does."}
+  - {id: p5, from: w2, to: x2, relation: increases, mechanism: "It does."}
+  - {id: p6, from: u2, to: y2, relation: increases, mechanism: "It does."}
+  - {id: p7, from: x2, to: y2, relation: increases, mechanism: "It does."}
+  - {id: p8, from: a1, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p9, from: a2, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p10, from: a3, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p11, from: a4, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p12, from: a5, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p13, from: a6, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p14, from: a7, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p15, from: a8, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p16, from: a9, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p17, from: a10, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p18, from: a11, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p19, from: a12, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p20, from: a13, to: x3, relation: increases, mechanism: "It does."}
+  - {id: p21, from: x3, to: y3, relation: increases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "x1 raises y1.", type: directional, derives_from: [p3], claim: {kind: effect, x: x1, y: y1, sign: positive}}
+  - {id: h2, statement: "x2 raises y2.", type: directional, derives_from: [p7], claim: {kind: effect, x: x2, y: y2, sign: positive}}
+  - {id: h3, statement: "x3 raises y3.", type: directional, derives_from: [p21], claim: {kind: effect, x: x3, y: y3, sign: positive}}

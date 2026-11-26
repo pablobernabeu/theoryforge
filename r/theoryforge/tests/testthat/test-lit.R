@@ -74,11 +74,11 @@ test_that("tf_landscape assigns the expected theme statuses", {
 })
 
 test_that("tf_new_evidence_dois excludes DOIs already cited by the theory", {
-  # The fixture already cites 10.1016/j.brat.2015.10.002 (evidence) and
+  # The fixture already cites 10.1176/ajp.155.5.610 (evidence) and
   # 10.1016/0005-7967(86)90011-2 / 10.1176/ajp.146.2.148 (alternatives).
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   candidates <- c(
-    "10.1016/j.brat.2015.10.002",                     # already cited (evidence), exact
+    "10.1176/ajp.155.5.610",                          # already cited (evidence), exact
     "https://doi.org/10.1016/0005-7967(86)90011-2",   # already cited (alternative), URL form
     "10.1176/AJP.146.2.148",                          # already cited (alternative), different case
     "10.1037/0033-2909.99.1.20",                      # new
@@ -96,11 +96,37 @@ test_that("tf_new_evidence_dois handles a theory with no evidence or alternative
   expect_equal(tf_new_evidence_dois(theory, c(NA, "")), character(0))
 })
 
+test_that("a candidate that is not a string is skipped", {
+  # The Python suite skips the float NaN that pandas gives a missing DOI alike.
+  theory <- tf_theory("demo", "Demo")
+  expect_identical(tf_new_evidence_dois(theory, c(NA, "", " \u00a0", "10.1/y")), "10.1/y")
+  expect_identical(tf_new_evidence_dois(theory, list(NaN, NULL, "", 10, list("10.1/x"), "10.1/y")),
+                   "10.1/y")
+  expect_identical(tf_new_evidence_dois(theory, c(1, 2)), character(0))
+  expect_identical(tf_new_evidence_dois(theory, NULL), character(0))
+  expect_identical(tf_new_evidence_dois(theory, factor(c("10.1/b", "10.1/a"))),
+                   c("10.1/a", "10.1/b"))
+})
+
+test_that("a double slash after the prefix is the same DOI", {
+  # doi.org redirects 10.1037//0033-2909.99.1.20 to 10.1037/0033-2909.99.1.20.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  expect_identical(tf_new_evidence_dois(theory, c("10.1037/0033-2909.99.1.20",
+                                                  "10.1037//0033-2909.99.1.20",
+                                                  "https://doi.org/10.1037//0033-2909.99.1.20")),
+                   "10.1037/0033-2909.99.1.20")
+  theory$evidence[[1]]$source_doi <- "10.1037//0022-3514.54.6.1063"
+  expect_identical(tf_new_evidence_dois(theory, "10.1037/0022-3514.54.6.1063"), character(0))
+  # Only the slash that ends the prefix is read so.
+  expect_identical(tf_new_evidence_dois(theory, c("10.1037/a//b", "10.1037/a/b")),
+                   c("10.1037/a//b", "10.1037/a/b"))
+})
+
 test_that("tf_new_evidence_dois matches the golden JSON semantically", {
   # Same theory and candidate list as scripts/gen_golden.py.
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   candidates <- c(
-    "10.1016/j.brat.2015.10.002",
+    "10.1176/ajp.155.5.610",
     "https://doi.org/10.1016/0005-7967(86)90011-2",
     "10.1176/AJP.146.2.148",
     "10.1037/0033-2909.99.1.20",
@@ -125,7 +151,7 @@ test_that("keyword sorting is codepoint-ordered regardless of locale", {
       list(id = "w2", keywords = list("Zeta", "alpha"))
     )
   )
-  lm <- one_theme(tf_litmap(corpus))
+  lm <- tf_litmap(corpus)
   expect_equal(unlist(lm$keywords), c("Zeta", "alpha"))
   expect_equal(lm$keyword_cooccurrence[[1]]$a, "Zeta")
   expect_equal(lm$keyword_cooccurrence[[1]]$b, "alpha")
@@ -168,7 +194,18 @@ test_that("literature diagrams are byte-identical to the golden files", {
 test_that("tf_lit_diagram rejects unknown types", {
   corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
   lm <- tf_litmap(corpus)
-  expect_error(tf_lit_diagram(lm, "mindmap"), "unknown lit diagram type")
+  expect_error(tf_lit_diagram(lm, "mindmap"), paste0(
+    "unknown lit diagram type 'mindmap'; expected one of ",
+    "keyword_cooccurrence, co_citation, theme_landscape"), fixed = TRUE)
+  # A value that is not one string is written as deparse() writes it. NULL and
+  # character(0) stopped with 'argument is of length zero', and two strings
+  # with 'the condition has length > 1'. Python writes None alike.
+  for (case in list(list(NULL, "NULL"), list(character(0), "character(0)"),
+                    list(c("co_citation", "x"), 'c("co_citation", "x")'))) {
+    expect_error(tf_lit_diagram(lm, case[[1]]), paste0(
+      "unknown lit diagram type ", case[[2]], "; expected one of ",
+      "keyword_cooccurrence, co_citation, theme_landscape"), fixed = TRUE)
+  }
 })
 
 # -- validated arguments and corpora (API_SPEC.md section 14) -----------------
@@ -304,12 +341,12 @@ test_that("integer references become decimal strings beside DOIs", {
   # as.character() would have written 1e+05.
   lm <- tf_litmap(two_records("references", list(100000, "a")))
   expect_identical(edge_strings(lm$co_citation), "100000|a|2")
-  kw <- one_theme(tf_litmap(two_records("keywords", list(7L, "seven"))))
+  kw <- tf_litmap(two_records("keywords", list(7L, "seven")))
   expect_identical(unlist(kw$keywords), c("7", "seven"))
 })
 
 test_that("null, missing and empty entries are dropped", {
-  lm <- one_theme(tf_litmap(two_records("keywords", list("a", NULL, NA, "", "b"))))
+  lm <- tf_litmap(two_records("keywords", list("a", NULL, NA, "", "b")))
   expect_identical(unlist(lm$keywords), c("a", "b"))
   expect_identical(edge_strings(lm$keyword_cooccurrence), "a|b|2")
 })
@@ -386,6 +423,12 @@ test_that("every spelling the DOI normaliser reads keys one work", {
   }
 })
 
+test_that("a double slash after the prefix keys the same work", {
+  lm <- tf_litmap(cited(c("10.1037//0033-2909.99.1.20", "x"),
+                        c("https://doi.org/10.1037/0033-2909.99.1.20", "x")))
+  expect_identical(edge_strings(lm$co_citation), "10.1037/0033-2909.99.1.20|x|2")
+})
+
 test_that("a reference without a DOI is kept as written", {
   refs <- c(
     "scopus:85012345678",
@@ -404,8 +447,8 @@ test_that("a reference without a DOI is kept as written", {
 })
 
 test_that("keywords are not keyed by DOI", {
-  lm <- one_theme(tf_litmap(two_records("keywords",
-                                        list("10.1016/J.BRAT.2015.10.002", "Panic"))))
+  lm <- tf_litmap(two_records("keywords",
+                                        list("10.1016/J.BRAT.2015.10.002", "Panic")))
   expect_identical(unlist(lm$keywords), c("10.1016/J.BRAT.2015.10.002", "Panic"))
 })
 
@@ -622,6 +665,21 @@ test_that("alternative terms follow the alternative id order", {
   expect_identical(th1$status, "crowded")
 })
 
+test_that("a repeated alternative id is one account", {
+  # Two entries with one id made a theme crowded on their own.
+  theory <- account("A theory of panic", character(0), list(
+    list("alt_a", "Arousal account", character(0)),
+    list("alt_a", "Interoceptive accuracy", "interoception")
+  ))
+  corpus <- paired(c("arousal", "interoception"), c("genetics", "heritability"))
+  ls <- tf_landscape(theory, corpus)
+  th1 <- ls$themes[[1]]
+  expect_identical(th1$alternatives, list("alt_a", "alt_a"))
+  expect_identical(th1$alternative_terms, list(list(id = "alt_a", terms = list("arousal")),
+                                               list(id = "alt_a", terms = list("interoception"))))
+  expect_identical(list(th1$status, ls$redundancy_risk), list("covered", list()))
+})
+
 test_that("tf_landscape refuses a max_token_share outside 0 to 1", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   corpus <- tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))
@@ -658,23 +716,37 @@ warnings_of <- function(expr) {
   got
 }
 
+keywords_of <- function(stem, n) paste0(stem, seq_len(n))
+
 test_that("tf_litmap warns when one theme holds most linked keywords", {
-  corpus <- paired(c("k1", "k2", "k3", "k4"), c("m1", "m2"))
-  expect_identical(warnings_of(lm <- tf_litmap(corpus)), giant_theme("66.7", 6L))
-  expect_identical(vapply(lm$themes, function(th) th$size, integer(1)), c(4L, 2L))
+  corpus <- paired(keywords_of("k", 7), keywords_of("m", 3))
+  expect_identical(warnings_of(lm <- tf_litmap(corpus)), giant_theme("70.0", 10L))
+  expect_identical(vapply(lm$themes, function(th) th$size, integer(1)), c(7L, 3L))
   # tf_landscape() is built on the same themes and warns alike.
   expect_identical(warnings_of(tf_landscape(account("A theory of panic"), corpus)),
-                   giant_theme("66.7", 6L))
-  expect_identical(warnings_of(tf_litmap(paired(c("alpha", "Zeta")))), giant_theme("100.0", 2L))
+                   giant_theme("70.0", 10L))
+  expect_identical(warnings_of(tf_litmap(paired(keywords_of("k", 10)))),
+                   giant_theme("100.0", 10L))
   # The text is the whole message, with no call before it, as in Python.
   w <- tryCatch(tf_litmap(corpus), warning = function(w) w)
   expect_null(conditionCall(w))
 })
 
 test_that("tf_litmap is silent when no theme holds more than half", {
-  expect_silent(tf_litmap(paired(c("a1", "hub"), c("b1", "b2"))))  # two of four keywords: half
+  # Five of ten keywords: half.
+  expect_silent(tf_litmap(paired(keywords_of("k", 5), keywords_of("m", 5))))
   expect_silent(tf_litmap(tf_read_corpus(tf_fixture_path("panic-corpus.yaml"))))
   expect_silent(tf_litmap(paired()))
+})
+
+test_that("tf_litmap is silent on a map of fewer than ten linked keywords", {
+  # A single pair, or any map this small, can be one theme legitimately.
+  lm <- expect_silent(tf_litmap(paired(c("alpha", "Zeta"))))
+  expect_identical(vapply(lm$themes, function(th) th$size, integer(1)), 2L)
+  lm <- expect_silent(tf_litmap(paired(keywords_of("k", 9))))
+  expect_identical(vapply(lm$themes, function(th) th$size, integer(1)), 9L)
+  expect_silent(tf_landscape(account("A theory of panic"),
+                             paired(keywords_of("k", 7), c("m1", "m2"))))
 })
 
 # -- simple centres (API_SPEC.md section 14) ----------------------------------
@@ -722,7 +794,11 @@ test_that("bad theme settings are refused in either method", {
     list(list(max_df = 1.5), "max_df must be a number between 0 and 1"),
     list(list(max_df = "1"), "max_df must be a number between 0 and 1"),
     list(list(max_df = TRUE), "max_df must be a number between 0 and 1"),
-    list(list(max_df = NaN), "max_df must be a number between 0 and 1")
+    list(list(max_df = NaN), "max_df must be a number between 0 and 1"),
+    list(list(min_df = 0), "min_df must be a positive integer"),
+    list(list(min_df = 1.5), "min_df must be a positive integer"),
+    list(list(min_df = "2"), "min_df must be a positive integer"),
+    list(list(min_df = TRUE), "min_df must be a positive integer")
   )
   for (method in c("components", "simple_centres")) {
     for (cs in cases) {
@@ -742,7 +818,8 @@ test_that("tf_litmap checks its arguments in signature order", {
     list(list(max_theme_size = 1, max_df = 2), "max_theme_size must be an integer of at least 2"),
     list(list(min_theme_size = 5, max_theme_size = 4, max_df = 2),
          "min_theme_size must not exceed max_theme_size"),
-    list(list(max_df = 2), "max_df must be a number between 0 and 1"),
+    list(list(max_df = 2, min_df = 0), "max_df must be a number between 0 and 1"),
+    list(list(min_df = 0), "min_df must be a positive integer"),
     list(list(), "invalid corpus: missing records list")
   )
   for (cs in calls) {
@@ -756,7 +833,7 @@ test_that("the components record is unchanged by the new arguments", {
   expect_identical(names(lm), c("n_records", "keywords", "keyword_cooccurrence", "themes",
                                 "co_citation"))
   expect_identical(tf_litmap(corpus, method = "components", min_theme_size = 3,
-                             max_theme_size = 4, max_df = 0.1), lm)
+                             max_theme_size = 4, max_df = 0.1, min_df = 5), lm)
 })
 
 test_that("simple centres reproduce the four designed themes", {
@@ -767,16 +844,19 @@ test_that("simple centres reproduce the four designed themes", {
                                 "co_citation", "method", "parameters", "field_terms"))
   expect_identical(lm$method, "simple_centres")
   expect_identical(lm$parameters, list(min_link = 2L, min_cocitation = 2L, min_theme_size = 2L,
-                                       max_theme_size = 10L, max_df = 1))
+                                       max_theme_size = 10L, max_df = 1, min_df = 1L))
   expect_identical(lm$field_terms, list())
   expect_identical(theme_keywords(lm), theme_keywords(components))
   for (key in c("n_records", "keywords", "keyword_cooccurrence", "co_citation")) {
     expect_identical(lm[[key]], components[[key]], info = key)
   }
   # Four isolated pairs that always occur together: no external links, and an
-  # equivalence index of 1 inside each, so 100 * 1 / 2 = 50.
+  # equivalence index of 1 inside each, so 100 * 1 / 2 = 50. Neither measure
+  # varies, so no theme has a quadrant.
   got <- lapply(lm$themes, function(th) list(th$id, th$size, th$centrality, th$density, th$quadrant))
-  expect_identical(got, lapply(1:4, function(i) list(paste0("theme_", i), 2L, 0, 50, "motor")))
+  expect_identical(got, lapply(1:4, function(i) {
+    list(paste0("theme_", i), 2L, 0, 50, NA_character_)
+  }))
 })
 
 test_that("simple centres seed themes by the strongest link in code point order", {
@@ -820,29 +900,69 @@ test_that("simple centres score centrality and density", {
                    c("s", "t", "z"))
   themes <- sc(do.call(records_of, keywords), max_theme_size = 3)$themes
   expect_identical(themes, list(list(id = "theme_1", keywords = list("s", "t", "z"), size = 3L,
-                                     centrality = 0, density = 73.333333, quadrant = "motor")))
+                                     centrality = 0, density = 73.333333,
+                                     quadrant = NA_character_)))
   # Once a forms the theme {a, q}, s-a and t-a (4 / 20 = 0.2 each) link two
   # themes and count for both.
   corpus <- do.call(records_of, c(keywords, list(c("a", "q"), c("a", "q"))))
   themes <- sc(corpus, max_theme_size = 3)$themes
   expect_identical(themes, list(
     list(id = "theme_1", keywords = list("a", "q"), size = 2L,
-         centrality = 4, density = 25, quadrant = "basic"),
+         centrality = 4, density = 25, quadrant = NA_character_),
     list(id = "theme_2", keywords = list("s", "t", "z"), size = 3L,
-         centrality = 4, density = 73.333333, quadrant = "motor")
+         centrality = 4, density = 73.333333, quadrant = NA_character_)
   ))
 })
 
-test_that("simple centres split the strategic diagram at the medians", {
-  # Two themes of two: {a, b} (internal 1) and {x, y} (internal 0.5), both with
-  # external links a-x and b-x of 0.5. Centrality is 10 for both, and the
-  # density median of an even count is the mean of the middle two, 37.5.
-  corpus <- records_of(c("a", "b", "x"), c("a", "b", "x"), c("x", "y"), c("x", "y"))
-  got <- lapply(sc(corpus, max_theme_size = 2)$themes, function(th) {
+# The centrality, density and quadrant of each theme, with its keywords.
+placed <- function(lm) {
+  lapply(lm$themes, function(th) {
     list(unlist(th$keywords), th$centrality, th$density, th$quadrant)
   })
-  expect_identical(got, list(list(c("a", "b"), 10, 50, "motor"),
-                             list(c("x", "y"), 10, 25, "basic")))
+}
+
+test_that("simple centres split the strategic diagram above the medians", {
+  # Five pairs, each in two or three records, and four links between them, each
+  # in two records. {m, n} has no link to another pair.
+  pairs <- list(c("a", "b"), c("c", "d"), c("e", "f"), c("g", "h"), c("m", "n"),
+                c("d", "g"), c("a", "f"), c("f", "h"), c("a", "h"))
+  corpus <- do.call(records_of, rep(pairs, c(2, 2, 3, 2, 3, 2, 2, 2, 2)))
+  # The median centrality is that of {a, b}, 2.063492, and the median density
+  # that of {e, f}, 21.428571. A value at the median is low, and {m, n}, with
+  # centrality 0, is not central however dense it is.
+  expect_identical(placed(sc(corpus, max_theme_size = 2)), list(
+    list(c("a", "b"), 2.063492, 16.666667, "emerging_or_declining"),
+    list(c("c", "d"), 2.5, 25, "motor"),
+    list(c("e", "f"), 1.904762, 21.428571, "emerging_or_declining"),
+    list(c("g", "h"), 4.563492, 8.333333, "basic"),
+    list(c("m", "n"), 0, 50, "niche")
+  ))
+})
+
+test_that("a measure without spread leaves every quadrant undetermined", {
+  # A lone theme has nothing to be compared with.
+  expect_identical(sc(records_of(c("s", "t"), c("s", "t")))$themes[[1]]$quadrant, NA_character_)
+  # Two themes of two: {a, b} (internal 1) and {x, y} (internal 0.5), both with
+  # external links a-x and b-x of 0.5. Centrality is 10 for both, so the
+  # densities alone vary, and the median would put both themes on one side of
+  # it.
+  corpus <- records_of(c("a", "b", "x"), c("a", "b", "x"), c("x", "y"), c("x", "y"))
+  expect_identical(placed(sc(corpus, max_theme_size = 2)),
+                   list(list(c("a", "b"), 10, 50, NA_character_),
+                        list(c("x", "y"), 10, 25, NA_character_)))
+})
+
+test_that("min_df leaves rare keywords out of the map", {
+  # u and v occur once, together, so their equivalence index is 1, the highest
+  # there is. At min_link 1 they seed a theme, which then takes a and b.
+  corpus <- records_of(c("a", "b"), c("a", "b"), c("a", "b"), c("a", "u", "v"))
+  expect_identical(theme_keywords(sc(corpus, min_link = 1)), list(c("a", "b", "u", "v")))
+  lm <- sc(corpus, min_link = 1, min_df = 2)
+  expect_identical(theme_keywords(lm), list(c("a", "b")))
+  expect_identical(edge_strings(lm$keyword_cooccurrence), "a|b|3")
+  expect_identical(unlist(lm$keywords), c("a", "b", "u", "v"))
+  expect_identical(list(lm$parameters$min_df, lm$field_terms), list(2L, list()))
+  expect_identical(sc(corpus, min_link = 1, min_df = 2L), lm)
 })
 
 test_that("max_df excludes field terms", {
@@ -860,8 +980,8 @@ test_that("max_df excludes field terms", {
 })
 
 test_that("simple centres give no giant-theme warning", {
-  lm <- expect_silent(sc(paired(c("k1", "k2", "k3", "k4"), c("m1", "m2"))))
-  expect_identical(vapply(lm$themes, function(th) th$size, integer(1)), c(4L, 2L))
+  lm <- expect_silent(sc(paired(keywords_of("k", 7), keywords_of("m", 3))))
+  expect_identical(vapply(lm$themes, function(th) th$size, integer(1)), c(7L, 3L))
 })
 
 test_that("simple centres on an empty corpus", {
@@ -984,8 +1104,21 @@ test_that("max_edges keeps the strongest edges in list order", {
 
 test_that("tf_fetch_corpus rejects an out-of-range per_page", {
   # The guard runs before any request, so this needs no network.
-  for (bad in list(0, 201, -1, "25", NA_integer_)) {
+  for (bad in list(0, 201, -1, 2.5, NaN, Inf, "25", TRUE, NA_integer_, c(2, 3))) {
     expect_error(tf_fetch_corpus("panic", per_page = bad),
                  "per_page must be between 1 and 200", fixed = TRUE)
   }
+})
+
+test_that("a theme with no links is peripheral however many share its centrality", {
+  # The Python suite asserts the same quadrants.
+  kws <- c(rep(list(c("a", "b")), 4), rep(list(c("c", "d")), 4), rep(list(c("b", "c")), 2),
+           rep(list(c("e", "f")), 3))
+  corpus <- list(schema_version = "1.0", id = "c",
+                 records = lapply(seq_along(kws), function(i) list(id = paste0("w", i - 1L),
+                                                                   keywords = as.list(kws[[i]]))))
+  lm <- tf_litmap(corpus, method = "simple_centres", max_theme_size = 2)
+  expect_identical(vapply(lm$themes, function(t) paste(paste(unlist(t$keywords), collapse = " "),
+                                                       t$quadrant), ""),
+                   c("a b basic", "c d basic", "e f niche"))
 })

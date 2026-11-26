@@ -1,0 +1,86 @@
+# Source: red-team-score/inputs/redteam/rt2-vague.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Red-team input 2: vague constructs with formally tidy propositions.
+# The constructs name no observable attribute ('subtle life force', 'harmony
+# of energies'), their measures are a practitioner's impression, and their
+# boundary conditions are escape clauses ('when the person is receptive').
+# The predictions carry interval labels and bounds on scales that the
+# practitioner sets. The rival states no propositions, so nothing can show the
+# declared discrimination false. Every field the checklist reads is filled.
+schema_version: "1.1"
+id: "rt2-vague"
+title: "Vital energy theory of flourishing"
+maturity: "testing"
+theory_form: "network"
+version: {id: "v1", parent_id: null, content_hash: null}
+
+constructs:
+  - id: c_vital
+    label: "Vital energy"
+    definition: "The subtle life force that animates a person and flows through every aspect of their being."
+    measurement: ["practitioner's intuitive reading of the client's energy on a 0-10 scale"]
+    boundary_conditions: ["when the person is receptive", "when the practitioner is attuned"]
+  - id: c_harmony
+    label: "Inner harmony"
+    definition: "The balanced alignment of mental, emotional and spiritual currents within the self."
+    measurement: ["practitioner's sense of the client's balance on a 0-10 scale"]
+    boundary_conditions: ["when the person is receptive", "in a supportive setting"]
+  - id: c_flourishing
+    label: "Flourishing"
+    definition: "Wholeness of life, felt as meaning, ease and openness to growth."
+    measurement: ["client's sense of wholeness on a 0-10 scale"]
+    boundary_conditions: ["when the person is receptive", "over an appropriate period"]
+
+propositions:
+  - id: p1
+    from: c_vital
+    to: c_harmony
+    relation: "increases"
+    mechanism: "As vital energy flows freely, blockages dissolve and the currents of the self come into alignment."
+  - id: p2
+    from: c_harmony
+    to: c_flourishing
+    relation: "increases"
+    mechanism: "An aligned self no longer spends its energy on inner conflict, which frees it for growth and meaning."
+  - id: p3
+    from: c_vital
+    to: c_flourishing
+    relation: "increases"
+    mechanism: "Vital energy also nourishes flourishing directly, as light nourishes a plant."
+
+boundary_conditions: ["when the person is receptive", "when the practitioner is attuned"]
+
+predictions:
+  - id: pred1
+    derives_from: [p1]
+    statement: "After a session, practitioner-rated harmony lies between 4 and 10 on the 0-10 scale."
+    type: "interval"
+    bounds: {lower: 4, upper: 10}
+    diagnostic_vs: [alt_materialist]
+  - id: pred2
+    derives_from: [p1, p2, p3]
+    statement: "Clients whose energy the practitioner reads as higher report more wholeness."
+    type: "directional"
+    diagnostic_vs: [alt_materialist]
+    claim: {kind: effect, x: c_vital, y: c_flourishing, sign: positive}
+  - id: pred3
+    derives_from: [p2]
+    statement: "Self-rated wholeness after a course of sessions lies between 5 and 10 on the 0-10 scale."
+    type: "interval"
+    bounds: {lower: 5, upper: 10}
+    diagnostic_vs: [alt_materialist]
+
+auxiliary_assumptions:
+  - id: aux1
+    statement: "Energy readings are valid only when the client is receptive."
+    added_for: null
+    protects: [pred1, pred2, pred3]
+
+alternatives:
+  - id: alt_materialist
+    label: "Materialist reductionism"
+    key_constructs: ["wellbeing is only chemistry"]
+    source_doi: null
+
+formal_model:
+  type: "network"
+  spec_ref: null

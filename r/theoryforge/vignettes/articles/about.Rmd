@@ -1,35 +1,29 @@
 ---
 title: "About"
-output: rmarkdown::html_vignette
 ---
+
+```{r citation-data, include = FALSE}
+# The reference and the BibTeX entry below are both built from the package's
+# own citation (inst/CITATION, which takes the version from the installed
+# package), so this page and citation("theoryforge") cannot disagree, and no
+# year or version is written by hand here.
+cit <- utils::citation("theoryforge")
+ver <- as.character(utils::packageVersion("theoryforge"))
+```
 
 ## Citing theoryforge
 
 If you use the R package in your work, please cite it:
 
-<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (2026). <em>theoryforge: Systematic theory development</em> (R package version `r utils::packageVersion("theoryforge")`). Comprehensive R Archive Network (CRAN). <a href="https://doi.org/10.32614/CRAN.package.theoryforge">https://doi.org/10.32614/CRAN.package.theoryforge</a></p>
+<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">Bernabeu, P. (`r cit$year`). <em>theoryforge: Systematic theory development</em> (R package version `r ver`). Comprehensive R Archive Network (CRAN). <a href="https://doi.org/10.32614/CRAN.package.theoryforge">https://doi.org/10.32614/CRAN.package.theoryforge</a></p>
 
 ```{r bibtex-entry, echo = FALSE, results = "asis"}
-# Build the BibTeX entry from the installed version so it never drifts, then
-# render it with a copy button and a download link. The entry type and fields
-# match inst/CITATION, so the page and citation("theoryforge") give the same
-# reference. The page adds the key theoryforge, which citation() leaves
-# empty. The button uses the browser clipboard API; the link is a
-# self-contained data URI, so neither depends on a static file being shipped
-# alongside the site.
-ver <- as.character(utils::packageVersion("theoryforge"))
-bib <- paste(
-  "@Manual{theoryforge,",
-  "  title  = {{theoryforge}: Systematic theory development},",
-  "  author = {Pablo Bernabeu},",
-  "  year   = {2026},",
-  "  publisher = {Comprehensive R Archive Network (CRAN)},",
-  sprintf("  note   = {R package version %s},", ver),
-  "  doi    = {10.32614/CRAN.package.theoryforge},",
-  "  url    = {https://CRAN.R-project.org/package=theoryforge},",
-  "}",
-  sep = "\n"
-)
+# The entry is citation()'s, with the key theoryforge, which citation() leaves
+# empty. It is shown with a copy button and a download link. The button uses
+# the browser clipboard API, and the link is a self-contained data URI, so
+# neither depends on a static file being shipped alongside the site.
+bib <- paste(utils::toBibtex(cit), collapse = "\n")
+bib <- sub("@Manual{,", "@Manual{theoryforge,", bib, fixed = TRUE)
 esc <- function(x) {
   x <- gsub("&", "&amp;", x, fixed = TRUE)
   x <- gsub("<", "&lt;", x, fixed = TRUE)
@@ -60,8 +54,8 @@ function theoryforgeCopyBibtex(btn) {
 ', esc(bib), uri))
 ```
 
-In R, `citation("theoryforge")` gives the same entry with its key left empty. The package installs from
-CRAN with `install.packages("theoryforge")`, and the development version with
+In R, `citation("theoryforge")` gives the same entry with its key left empty. The package
+installs from CRAN with `install.packages("theoryforge")`, and the development version with
 `remotes::install_github("pablobernabeu/theoryforge", subdir = "r/theoryforge")`.
 
 ## The developer
@@ -75,20 +69,24 @@ computational modelling and statistics. He develops open, reproducible research 
 and Python, and is a Fellow of the Software Sustainability Institute. His
 [ORCID record](https://orcid.org/0000-0003-1083-2460) lists his other work.
 
-This R package has a feature-parity twin written in Python, which is documented on the
-[theoryforge (Python) site](https://pablobernabeu.github.io/theoryforge/python/).
+This R package has a twin written in Python, documented on the
+[theoryforge (Python) site](https://pablobernabeu.github.io/theoryforge/python/). Both
+implement one
+[specification](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md) and are
+tested against the same expected outputs, apart from the functions that call a network service,
+an embedding model or a renderer.
 
 ## Licence
 
-theoryforge is released under the MIT licence, a permissive licence that allows use,
-modification and redistribution provided the copyright and licence notices are kept. The full
-text is reproduced on this site's [licence page](../LICENSE.html).
+theoryforge is released under the MIT licence, which allows use, modification and
+redistribution provided that the copyright and licence notices are kept. The full text is on
+this site's [licence page](../LICENSE.html).
 
-## Versioning and archival
+## Versions and archiving
 
 CRAN assigned the package the DOI <https://doi.org/10.32614/CRAN.package.theoryforge> on
 publication. It names the R package across all its versions, so the version in the citation
-identifies the release used. Releases of the repository, which also include the Python twin,
+identifies the release used. Releases of the repository, which also holds the Python twin,
 are tagged on [GitHub](https://github.com/pablobernabeu/theoryforge/releases) and archived on
 Zenodo, which gives each release a DOI of its own. The concept DOI,
 <https://doi.org/10.5281/zenodo.21229964>, resolves to the latest archived release. The
@@ -96,8 +94,8 @@ Zenodo, which gives each release a DOI of its own. The concept DOI,
 
 ## Contributing and support
 
-Bugs and feature requests are best reported on the
+Bugs and feature requests can be reported on the
 [GitHub issues page](https://github.com/pablobernabeu/theoryforge/issues), and the
 [contributing guide](../CONTRIBUTING.html) explains how to set up a development environment
-and propose a change. Because the OSF deposit adapter takes a personal access token, never
-paste that token, or any other secret, into an issue. Replace it with a placeholder.
+and propose a change. The OSF deposit adapter takes a personal access token, so never paste
+that token, or any other secret, into an issue. Replace it with a placeholder.

@@ -1,0 +1,31 @@
+theory,encoder,computed,reason,n_compelled,n_reversible,v_structures
+bilingual-rhm,enc-1,True,,8,0,5
+bilingual-rhm,enc-2,True,,3,3,3
+bilingual-rhm,enc-3,True,,2,4,1
+bilingual-rhm,edge L2M -> REL,,compelled / reversible / reversible,,,
+bilingual-rhm,edge ML2 -> ASYM,,compelled / compelled / compelled,,,
+bilingual-rhm,edge PROF -> L2M,,compelled / reversible / reversible,,,
+bilingual-rhm,edge PROF -> ML2,,compelled / reversible / reversible,,,
+collaborative-cognitive-load,enc-1,True,,24,1,55
+collaborative-cognitive-load,enc-2,True,,24,1,56
+collaborative-cognitive-load,enc-3,True,,20,1,54
+collaborative-cognitive-load,edge CHAN -> TL,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge CL -> LRN,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge COL -> CWM,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge COORD -> TL,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge EXP -> EI,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge EXP -> LRN,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge EXP -> TL,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge FAM -> TL,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge GUID -> TL,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge ROLE -> TL,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge SIZE -> CWM,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge SIZE -> TL,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge SKILL -> TL,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge UNEV -> TL,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge WE -> EI,,compelled / compelled / compelled,,,
+collaborative-cognitive-load,edge WE -> XL,,compelled / compelled / reversible,,,
+collaborative-cognitive-load,edge XL -> CL,,compelled / compelled / compelled,,,
+health-habit,enc-1,False,feedback_loop,0,0,0
+health-habit,enc-2,False,feedback_loop,0,0,0
+health-habit,enc-3,False,feedback_loop,0,0,0

@@ -12,6 +12,8 @@ therefore round alike in the twins only because both compute the same double.
 from __future__ import annotations
 
 import math
+import numbers
+from typing import cast
 
 
 def rnd(x: float, n: int) -> float:
@@ -38,15 +40,34 @@ def rnd(x: float, n: int) -> float:
 def number(v) -> float | None:
     """``v`` as a float when it is a number other than NaN, and None otherwise.
 
-    A boolean is not a number, as R's ``is.numeric()`` agrees. An integer too
-    large for a float reads as the infinity of its sign, because R's reader
-    holds an unquoted integer of 400 digits as ``Inf`` (API_SPEC.md section 3),
-    and ``float()`` would raise OverflowError on it.
+    A boolean is not a number, as R's ``is.numeric()`` agrees. Any real number
+    counts, a NumPy scalar included. An integer too large for a float reads as
+    the infinity of its sign, because R's reader holds an unquoted integer of
+    400 digits as ``Inf`` (API_SPEC.md section 3), and ``float()`` would raise
+    OverflowError on it.
     """
-    if isinstance(v, bool) or not isinstance(v, (int, float)):
+    if isinstance(v, bool) or not isinstance(v, numbers.Real):
         return None
     try:
         x = float(v)
     except OverflowError:
-        x = math.inf if v > 0 else -math.inf
+        # Only an integer can overflow a float.
+        x = math.inf if int(cast(numbers.Integral, v)) > 0 else -math.inf
     return None if math.isnan(x) else x
+
+
+def plain(v):
+    """``v`` with every NumPy scalar in it replaced by the Python value it holds.
+
+    NumPy, SciPy and statsmodels return their own scalar types, which YAML and
+    JSON writers cannot represent and which are not Python ints or bools. A
+    tuple becomes a list, as YAML and JSON hold sequences. Anything else is
+    returned as it is.
+    """
+    if type(v).__module__ == "numpy" and getattr(v, "ndim", None) == 0:
+        return v.item()
+    if isinstance(v, dict):
+        return {k: plain(x) for k, x in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [plain(x) for x in v]
+    return v

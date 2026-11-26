@@ -1,0 +1,43 @@
+# Edge case: amends amend-prior-corroborated as amend-sign-flip does, reversing
+# p1 and adding the corroborated h3, and adds p4 from c3 to c5, a construct it
+# does not declare. implications() refuses the new version, so neither the
+# entailment of h1 nor the signs the prior's graph entails can be compared, and
+# implications_compared is false. The amendment, which would otherwise be
+# appraised as progressive although it reverses a corroborated claim, is
+# neutral.
+schema_version: "1.1"
+id: edge-amend-refused-graph
+title: An amendment whose causal graph is refused
+maturity: testing
+constructs:
+  - {id: c1, label: First, definition: The first construct.}
+  - {id: c2, label: Second, definition: The second construct.}
+  - {id: c3, label: Third, definition: The third construct.}
+  - {id: c4, label: Fourth, definition: The fourth construct.}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: decreases, mechanism: It does.}
+  - {id: p2, from: c2, to: c3, relation: increases, mechanism: It does.}
+  - {id: p3, from: c3, to: c4, relation: increases, mechanism: It does.}
+  - {id: p4, from: c3, to: c5, relation: increases, mechanism: It does.}
+predictions:
+  - id: h1
+    statement: c2 rises with c1.
+    type: directional
+    derives_from: [p1]
+    bounds: {lower: 0}
+    claim: {kind: effect, x: c1, y: c2, sign: positive}
+  - id: h2
+    statement: c3 rises with c2.
+    type: directional
+    derives_from: [p2]
+  - id: h3
+    statement: c4 rises with c3.
+    type: directional
+    derives_from: [p3]
+    bounds: {lower: 0}
+    claim: {kind: effect, x: c3, y: c4, sign: positive}
+test_outcomes:
+  - prediction_id: h1
+    passed: true
+  - prediction_id: h3
+    passed: true

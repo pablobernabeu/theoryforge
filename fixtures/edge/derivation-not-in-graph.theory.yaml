@@ -1,0 +1,16 @@
+# A claim that names a construct no proposition relates to another cannot be
+# placed in the causal graph, so the derivation chain counts h2 as not derived
+# and fails, whatever h2 cites.
+schema_version: "1.1"
+id: "derivation-not-in-graph"
+title: "A claim about a construct outside the causal graph"
+maturity: "developing"
+constructs:
+  - {id: x, label: "X", definition: "The cause."}
+  - {id: y, label: "Y", definition: "The outcome."}
+  - {id: z, label: "Z", definition: "A construct no proposition relates."}
+propositions:
+  - {id: p1, from: x, to: y, relation: increases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "x raises y.", type: directional, derives_from: [p1], claim: {kind: effect, x: x, y: y, sign: positive}}
+  - {id: h2, statement: "x raises z.", type: directional, derives_from: [p1], claim: {kind: effect, x: x, y: z, sign: positive}}

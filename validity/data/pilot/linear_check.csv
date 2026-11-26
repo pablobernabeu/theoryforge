@@ -1,0 +1,10 @@
+theory,encoder,criterion,draws,kept_stable,pairs,agree,package_open_sampling_one_sign,package_fixed_sampling_both,zero_mismatch
+bilingual-rhm,enc-1,refuse,40000,40000,84,84,0,0,0
+bilingual-rhm,enc-2,refuse,40000,40000,63,63,0,0,0
+bilingual-rhm,enc-3,refuse,40000,40000,84,84,0,0,0
+collaborative-cognitive-load,enc-1,refuse,40000,40000,513,513,0,0,0
+collaborative-cognitive-load,enc-2,refuse,40000,40000,513,513,0,0,0
+collaborative-cognitive-load,enc-3,refuse,40000,40000,408,408,0,0,0
+health-habit,enc-1,sigma,40000,23062,165,159,6,0,0
+health-habit,enc-2,sigma,40000,16218,165,135,30,0,0
+health-habit,enc-3,sigma,40000,16192,135,100,35,0,0

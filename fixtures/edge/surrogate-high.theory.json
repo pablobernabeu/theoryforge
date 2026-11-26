@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.1",
+  "id": "edge-surrogate-high",
+  "title": "A title cut through an emoji \ud83d",
+  "maturity": "building",
+  "constructs": [
+    {"id": "c1", "label": "Alpha", "definition": "The first construct."},
+    {"id": "c2", "label": "Beta", "definition": "The second construct, with a whole emoji \ud83d\ude00."}
+  ],
+  "propositions": [
+    {"id": "p1", "from": "c1", "to": "c2", "relation": "increases"}
+  ]
+}

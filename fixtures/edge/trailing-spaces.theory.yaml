@@ -1,0 +1,33 @@
+# Edge case: text that ends in spaces, in a construct label, the title, a scope
+# condition and a provenance detail. Wrapping a label split it at each space.
+# R's strsplit() drops the empty field after a final space, which Python's
+# str.split(" ") keeps, so the DOT labels of the two twins differed by a space.
+# They now keep every space.
+schema_version: "1.0"
+id: edge-trailing-spaces
+title: "Text that ends in spaces   "
+maturity: building
+boundary_conditions:
+  - "adults  "
+constructs:
+  - id: c1
+    label: "Physiological arousal  "
+    definition: The first construct.
+  - id: c2
+    label: Beta
+    definition: The second construct.
+propositions:
+  - id: p1
+    from: c1
+    to: c2
+    relation: increases
+    mechanism: Alpha drives Beta.
+predictions:
+  - id: h1
+    statement: Beta rises with arousal.
+    type: directional
+    derives_from: [p1]
+provenance:
+  - step: "1"
+    action: tf_construct
+    detail: "Two constructs added.  "

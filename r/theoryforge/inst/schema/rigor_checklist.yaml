@@ -1,9 +1,9 @@
-# theoryforge rigour checklist. Shared, versioned specification.
+# theoryforge checklist. Shared, versioned specification.
 # Both the R and Python packages read this file. The scoring algorithm is pinned
 # in API_SPEC.md so that the two implementations produce identical verdicts.
 # Every report records schema_version as checklist_version, since the weights and
 # thresholds below produce every number in it.
-schema_version: "2.0"
+schema_version: "3.1"
 
 # The package's defaults, fixed for reproducibility and not derived from a
 # validation study.
@@ -11,32 +11,32 @@ thresholds:
   redundancy_similarity_max: 0.85   # Jaccard similarity at which the lexical screen flags a pair
   redundancy_overlap_max: 0.85      # overlap coefficient at which it flags a pair whose definitions both have 3+ tokens
   embedding_similarity_max: 0.85    # cosine at which the opt-in embedding screen flags a pair (model-specific)
-  min_precision_share: 0.5          # share of point/interval predictions for item 'precision' to pass
+  min_precision_share: 0.5          # share of bounded point/interval predictions for item 'precision' to pass
   min_severity: 0.5                 # mean severity for item 'risk_severity' to pass
 
 items:
   - id: falsifiability
-    criterion: "At least one prediction forbids an observation"
+    criterion: "At least one prediction is typed point, interval or directional; the label is the author's"
     weight: 0.15
     severity_if_fail: blocker
     citation: "Popper (1959); Bacharach (1989)"
   - id: precision
-    criterion: "Predictions are point/interval, not merely directional"
+    criterion: "Share of predictions typed point or interval with a finite lower and upper bound, at or above threshold; the width of the region is not read"
     weight: 0.10
     severity_if_fail: warning
     citation: "Meehl (1967, 1990a)"
   - id: risk_severity
-    criterion: "Mean prediction severity (declared, else the claim-form rubric) at or above threshold"
+    criterion: "Mean prediction riskiness (declared severity, else the claim-form rubric) at or above threshold"
     weight: 0.10
     severity_if_fail: warning
     citation: "Popper (1959); Meehl (1967, 1990b)"
   - id: parsimony
-    criterion: "No auxiliary assumption added in response to an anomaly lacks independent corroboration"
+    criterion: "No auxiliary assumption added for an anomaly (named in added_for) lacks independent corroboration"
     weight: 0.08
     severity_if_fail: warning
     citation: "Lakatos (1970); Meehl (1990a)"
   - id: non_redundancy
-    criterion: "No pair of construct definitions is a near-duplicate or contained in the other (lexical screen)"
+    criterion: "Every construct is defined, and no two have near-duplicate or contained definitions or one label, and no construct's measures are all listed for another (lexical screen)"
     weight: 0.10
     severity_if_fail: warning
     citation: "Kelley (1927); Le et al. (2010); Lawson & Robins (2021)"
@@ -51,7 +51,7 @@ items:
     severity_if_fail: warning
     citation: "Whetten (1989); Bacharach (1989)"
   - id: logical_why
-    criterion: "Each proposition states a mechanism, not just a correlation"
+    criterion: "Every proposition's mechanism field is filled in; its text is not judged"
     weight: 0.08
     severity_if_fail: warning
     citation: "Sutton & Staw (1995); Whetten (1989)"
@@ -59,9 +59,9 @@ items:
     criterion: "At least one proposition states a causal relation"
     weight: 0.06
     severity_if_fail: warning
-    citation: "Textor et al. (2016); Eronen & Bringmann (2021)"
+    citation: "Rohrer (2018); Eronen & Bringmann (2021)"
   - id: diagnosticity
-    criterion: "At least one prediction names a registered alternative it is declared to discriminate from (declared, not verified)"
+    criterion: "At least one prediction names a registered alternative it discriminates from (declared, and not shown false where the claim and the rival's propositions are stated)"
     weight: 0.06
     severity_if_fail: warning
     citation: "Platt (1964); Fiedler (2017)"
@@ -71,7 +71,7 @@ items:
     severity_if_fail: warning
     citation: "Robinaugh et al. (2021); Guest & Martin (2021)"
   - id: derivation_chain
-    criterion: "Every prediction cites at least one proposition, and every cited id is a declared proposition (reference check only)"
+    criterion: "Every prediction cites declared propositions, the causal graph entails any claim it states and contradicts no phenomenon's claim (a claim left unread because of a feedback loop warns)"
     weight: 0.08
     severity_if_fail: blocker
     citation: "Scheel et al. (2021); Szollosi et al. (2020)"

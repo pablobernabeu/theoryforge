@@ -7,7 +7,8 @@
 tf_tokens(s)
 }
 \arguments{
-\item{s}{A single string (or \code{NULL}, treated as \code{""}).}
+\item{s}{A single string. \code{NULL} and \code{NA} read as \code{""}, and
+anything else is refused.}
 }
 \value{
 A character vector of unique tokens (possibly empty).

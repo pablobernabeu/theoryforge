@@ -71,7 +71,7 @@ RETYPED = [
     ("effort-recovery.theory.yaml", "pred3", 0.7),
     ("happy-vowel-manchester.theory.yaml", "pred_independence", 0.8),
     ("cognitive-dissonance.theory.yaml", "pred_rating_point", 0.7),
-    ("cognitive-dissonance.theory.yaml", "pred_dissonance_mediates", 0.6),
+    ("cognitive-dissonance.theory.yaml", "pred_one_dollar_above_control", 0.6),
     ("stereotype-threat.theory.yaml", "pred_salience_activation", 0.6),
 ]
 

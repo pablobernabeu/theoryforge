@@ -1,8 +1,8 @@
-# Builder (BUILDING mode): provenance actions/order, and the result validates.
+# Builders: provenance actions/order, and the result validates.
 
 test_that("tf_theory seeds schema_version and the first provenance entry", {
   t <- tf_theory("demo-1", "A demo theory")
-  expect_identical(t$schema_version, "1.0")
+  expect_identical(t$schema_version, "1.1")
   expect_identical(t$id, "demo-1")
   expect_identical(t$title, "A demo theory")
   expect_identical(t$maturity, "building")

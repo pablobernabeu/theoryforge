@@ -7,12 +7,6 @@ def _corpus(fixtures_dir):
     return tf.read_corpus(fixtures_dir / "panic-corpus.yaml")
 
 
-# A corpus whose keywords form a single theme warns that the theme holds every
-# linked keyword (API_SPEC.md section 14). Tests that use one for another
-# purpose ignore that warning.
-one_theme = pytest.mark.filterwarnings("ignore:litmap:UserWarning")
-
-
 def test_litmap_themes(fixtures_dir):
     lm = tf.litmap(_corpus(fixtures_dir))
     assert lm["n_records"] == 8
@@ -44,10 +38,10 @@ def test_landscape_statuses(fixtures_dir, panic_path):
 
 
 def test_new_evidence_dois(panic_path):
-    # The fixture already cites 10.1016/j.brat.2015.10.002 (evidence) and
+    # The fixture already cites 10.1176/ajp.155.5.610 (evidence) and
     # 10.1016/0005-7967(86)90011-2 / 10.1176/ajp.146.2.148 (alternatives).
     candidates = [
-        "10.1016/j.brat.2015.10.002",              # already cited (evidence), exact
+        "10.1176/ajp.155.5.610",                   # already cited (evidence), exact
         "https://doi.org/10.1016/0005-7967(86)90011-2",  # already cited (alternative), URL form
         "10.1176/AJP.146.2.148",                   # already cited (alternative), different case
         "10.1037/0033-2909.99.1.20",               # new
@@ -65,7 +59,30 @@ def test_new_evidence_dois_empty_theory():
     assert t.new_evidence_dois([None, ""]) == []
 
 
-@one_theme
+def test_a_candidate_that_is_not_a_string_is_skipped():
+    # pandas gives a missing DOI as the float NaN, which was returned as a new
+    # DOI. The R suite skips NA alike.
+    t = tf.new_theory("demo", "Demo")
+    assert t.new_evidence_dois([float("nan"), None, "", " \u00a0", 10, ["10.1/x"], "10.1/y"]) == [
+        "10.1/y"]
+    # A single string is one candidate, as in R, and not a list of characters.
+    assert t.new_evidence_dois("10.1/z") == ["10.1/z"]
+    pd = pytest.importorskip("pandas")
+    assert t.new_evidence_dois(pd.Series(["10.1/b", None, "10.1/a"])) == ["10.1/a", "10.1/b"]
+
+
+def test_a_double_slash_after_the_prefix_is_the_same_doi(panic_path):
+    # doi.org redirects 10.1037//0033-2909.99.1.20 to 10.1037/0033-2909.99.1.20.
+    t = tf.read(panic_path)
+    assert t.new_evidence_dois(["10.1037/0033-2909.99.1.20", "10.1037//0033-2909.99.1.20",
+                                "https://doi.org/10.1037//0033-2909.99.1.20"]) == [
+        "10.1037/0033-2909.99.1.20"]
+    t.data["evidence"][0]["source_doi"] = "10.1037//0022-3514.54.6.1063"
+    assert t.new_evidence_dois(["10.1037/0022-3514.54.6.1063"]) == []
+    # Only the slash that ends the prefix is read so.
+    assert t.new_evidence_dois(["10.1037/a//b", "10.1037/a/b"]) == ["10.1037/a//b", "10.1037/a/b"]
+
+
 def test_litmap_mixed_case_keywords_sort_by_codepoint():
     # Uppercase sorts before lowercase (Z < a). The R suite runs the same
     # corpus and asserts the same order, locking the locale-independent sort.
@@ -103,6 +120,17 @@ def test_lit_diagrams(fixtures_dir, panic_path):
     assert tl.startswith("digraph theme_landscape {\n")
     assert '"focal" -> "theme_2";' in tl
     assert '"alt_biological" -> "theme_2";' in tl
+    # The message R gives too (API_SPEC section 2).
+    with pytest.raises(ValueError) as err:
+        tf.lit_diagram(lm, "mindmap")
+    assert str(err.value) == ("unknown lit diagram type 'mindmap'; expected one of "
+                              "keyword_cooccurrence, co_citation, theme_landscape")
+    # A value that is not a string is written as repr() writes it, as R writes
+    # NULL with deparse().
+    with pytest.raises(ValueError) as err:
+        tf.lit_diagram(lm, None)
+    assert str(err.value) == ("unknown lit diagram type None; expected one of "
+                              "keyword_cooccurrence, co_citation, theme_landscape")
 
 
 # -- validated arguments and corpora (API_SPEC.md section 14) -----------------
@@ -218,7 +246,6 @@ def test_a_mapping_in_place_of_a_list_is_refused():
         tf.litmap(corpus)
 
 
-@one_theme
 def test_integer_references_become_decimal_strings_beside_dois():
     # Python raised TypeError sorting an int against a str, and R kept the
     # integers as strings. Both now read them as decimal strings.
@@ -232,7 +259,6 @@ def test_integer_references_become_decimal_strings_beside_dois():
     assert kw["keywords"] == ["7", "seven"]
 
 
-@one_theme
 def test_null_and_empty_entries_are_dropped():
     lm = tf.litmap(_two("keywords", ["a", None, "", "b"]))
     assert lm["keywords"] == ["a", "b"]
@@ -304,6 +330,12 @@ def test_every_spelling_the_doi_normaliser_reads_keys_one_work(spelling):
     assert lm["co_citation"] == [{"a": "10.1016/j.brat.2015.10.002", "b": "x", "count": 2}]
 
 
+def test_a_double_slash_after_the_prefix_keys_the_same_work():
+    lm = tf.litmap(_cited(["10.1037//0033-2909.99.1.20", "x"],
+                          ["https://doi.org/10.1037/0033-2909.99.1.20", "x"]))
+    assert lm["co_citation"] == [{"a": "10.1037/0033-2909.99.1.20", "b": "x", "count": 2}]
+
+
 @pytest.mark.parametrize("ref", [
     "scopus:85012345678",
     "https://openalex.org/W2045435533",
@@ -319,7 +351,6 @@ def test_a_reference_without_a_doi_is_kept_as_written(ref):
     assert lm["co_citation"] == [{"a": ref, "b": "~", "count": 2}]
 
 
-@one_theme
 def test_keywords_are_not_keyed_by_doi():
     lm = tf.litmap(_two("keywords", ["10.1016/J.BRAT.2015.10.002", "Panic"]))
     assert lm["keywords"] == ["10.1016/J.BRAT.2015.10.002", "Panic"]
@@ -492,6 +523,21 @@ def test_alternative_terms_follow_the_alternative_id_order():
     assert th1["status"] == "crowded"
 
 
+def test_a_repeated_alternative_id_is_one_account():
+    # Two entries with one id made a theme crowded on their own.
+    theory = _account("A theory of panic", (), [
+        ("alt_a", "Arousal account", []),
+        ("alt_a", "Interoceptive accuracy", ["interoception"]),
+    ])
+    corpus = _paired(["arousal", "interoception"], ["genetics", "heritability"])
+    ls = tf.landscape(theory, corpus)
+    th1 = ls["themes"][0]
+    assert th1["alternatives"] == ["alt_a", "alt_a"]
+    assert th1["alternative_terms"] == [{"id": "alt_a", "terms": ["arousal"]},
+                                        {"id": "alt_a", "terms": ["interoception"]}]
+    assert (th1["status"], ls["redundancy_risk"]) == ("covered", [])
+
+
 @pytest.mark.parametrize("bad", [-0.1, 1.5, "0.5", True, None, float("nan"), float("inf"), [0.5]])
 def test_landscape_refuses_a_max_token_share_outside_0_to_1(fixtures_dir, panic_path, bad):
     with pytest.raises(ValueError) as exc:
@@ -516,19 +562,23 @@ GIANT_THEME = ("litmap: one theme holds {p} per cent of the {n} linked keywords;
                "bounded themes)")
 
 
+def _keywords(stem, n):
+    return [f"{stem}{i}" for i in range(1, n + 1)]
+
+
 def test_litmap_warns_when_one_theme_holds_most_linked_keywords():
-    corpus = _paired(["k1", "k2", "k3", "k4"], ["m1", "m2"])
+    corpus = _paired(_keywords("k", 7), _keywords("m", 3))
     with pytest.warns(UserWarning) as caught:
         lm = tf.litmap(corpus)
-    assert [str(w.message) for w in caught] == [GIANT_THEME.format(p="66.7", n=6)]
-    assert [t["size"] for t in lm["themes"]] == [4, 2]
+    assert [str(w.message) for w in caught] == [GIANT_THEME.format(p="70.0", n=10)]
+    assert [t["size"] for t in lm["themes"]] == [7, 3]
     # landscape is built on the same themes and warns alike.
     with pytest.warns(UserWarning) as caught:
         tf.landscape(_account("A theory of panic"), corpus)
-    assert [str(w.message) for w in caught] == [GIANT_THEME.format(p="66.7", n=6)]
+    assert [str(w.message) for w in caught] == [GIANT_THEME.format(p="70.0", n=10)]
     with pytest.warns(UserWarning) as caught:
-        tf.litmap(_paired(["alpha", "Zeta"]))
-    assert [str(w.message) for w in caught] == [GIANT_THEME.format(p="100.0", n=2)]
+        tf.litmap(_paired(_keywords("k", 10)))
+    assert [str(w.message) for w in caught] == [GIANT_THEME.format(p="100.0", n=10)]
 
 
 def test_litmap_is_silent_when_no_theme_holds_more_than_half(fixtures_dir):
@@ -536,9 +586,20 @@ def test_litmap_is_silent_when_no_theme_holds_more_than_half(fixtures_dir):
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        tf.litmap(_paired(["a1", "hub"], ["b1", "b2"]))  # two of four keywords: half
+        tf.litmap(_paired(_keywords("k", 5), _keywords("m", 5)))  # five of ten keywords: half
         tf.litmap(_corpus(fixtures_dir))
         tf.litmap(_paired())
+
+
+def test_litmap_is_silent_on_a_map_of_fewer_than_ten_linked_keywords():
+    # A single pair, or any map this small, can be one theme legitimately.
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert [t["size"] for t in tf.litmap(_paired(["alpha", "Zeta"]))["themes"]] == [2]
+        assert [t["size"] for t in tf.litmap(_paired(_keywords("k", 9)))["themes"]] == [9]
+        tf.landscape(_account("A theory of panic"), _paired(_keywords("k", 7), ["m1", "m2"]))
 
 
 # -- simple centres (API_SPEC.md section 14) ----------------------------------
@@ -584,6 +645,10 @@ def test_litmap_refuses_an_unknown_method(fixtures_dir, panic_path, bad):
     ({"max_df": "1"}, "max_df must be a number between 0 and 1"),
     ({"max_df": True}, "max_df must be a number between 0 and 1"),
     ({"max_df": float("nan")}, "max_df must be a number between 0 and 1"),
+    ({"min_df": 0}, "min_df must be a positive integer"),
+    ({"min_df": 1.5}, "min_df must be a positive integer"),
+    ({"min_df": "2"}, "min_df must be a positive integer"),
+    ({"min_df": True}, "min_df must be a positive integer"),
 ])
 @pytest.mark.parametrize("method", ["components", "simple_centres"])
 def test_litmap_refuses_bad_theme_settings_in_either_method(fixtures_dir, kw, message, method):
@@ -602,7 +667,8 @@ def test_litmap_checks_its_arguments_in_signature_order():
         ({"max_theme_size": 1, "max_df": 2}, "max_theme_size must be an integer of at least 2"),
         ({"min_theme_size": 5, "max_theme_size": 4, "max_df": 2},
          "min_theme_size must not exceed max_theme_size"),
-        ({"max_df": 2}, "max_df must be a number between 0 and 1"),
+        ({"max_df": 2, "min_df": 0}, "max_df must be a number between 0 and 1"),
+        ({"min_df": 0}, "min_df must be a positive integer"),
         ({}, "invalid corpus: missing records list"),
     ]
     for kw, message in calls:
@@ -616,7 +682,7 @@ def test_the_components_record_is_unchanged_by_the_new_arguments(fixtures_dir):
     lm = tf.litmap(corpus)
     assert list(lm) == ["n_records", "keywords", "keyword_cooccurrence", "themes", "co_citation"]
     assert tf.litmap(corpus, method="components", min_theme_size=3, max_theme_size=4,
-                     max_df=0.1) == lm
+                     max_df=0.1, min_df=5) == lm
 
 
 def test_simple_centres_reproduces_the_four_designed_themes(fixtures_dir):
@@ -627,15 +693,16 @@ def test_simple_centres_reproduces_the_four_designed_themes(fixtures_dir):
                         "method", "parameters", "field_terms"]
     assert lm["method"] == "simple_centres"
     assert lm["parameters"] == {"min_link": 2, "min_cocitation": 2, "min_theme_size": 2,
-                                "max_theme_size": 10, "max_df": 1.0}
+                                "max_theme_size": 10, "max_df": 1.0, "min_df": 1}
     assert lm["field_terms"] == []
     assert _theme_keywords(lm) == _theme_keywords(components)
     for key in ("n_records", "keywords", "keyword_cooccurrence", "co_citation"):
         assert lm[key] == components[key], key
     # Four isolated pairs that always occur together: no external links, and
-    # an equivalence index of 1 inside each, so 100 * 1 / 2 = 50.
+    # an equivalence index of 1 inside each, so 100 * 1 / 2 = 50. Neither
+    # measure varies, so no theme has a quadrant.
     assert [(t["id"], t["size"], t["centrality"], t["density"], t["quadrant"])
-            for t in lm["themes"]] == [(f"theme_{i}", 2, 0.0, 50.0, "motor") for i in range(1, 5)]
+            for t in lm["themes"]] == [(f"theme_{i}", 2, 0.0, 50.0, None) for i in range(1, 5)]
 
 
 def test_simple_centres_seeds_themes_by_the_strongest_link_in_code_point_order():
@@ -678,28 +745,68 @@ def test_simple_centres_scores_centrality_and_density():
                 ["s", "t", "z"]]
     (theme,) = _sc(_records(*keywords), max_theme_size=3)["themes"]
     assert theme == {"id": "theme_1", "keywords": ["s", "t", "z"], "size": 3,
-                     "centrality": 0.0, "density": 73.333333, "quadrant": "motor"}
+                     "centrality": 0.0, "density": 73.333333, "quadrant": None}
     # Once a forms the theme {a, q}, s-a and t-a (4 / 20 = 0.2 each) link two
     # themes and count for both.
     lm = _sc(_records(*keywords, ["a", "q"], ["a", "q"]), max_theme_size=3)
     assert lm["themes"] == [
         {"id": "theme_1", "keywords": ["a", "q"], "size": 2,
-         "centrality": 4.0, "density": 25.0, "quadrant": "basic"},
+         "centrality": 4.0, "density": 25.0, "quadrant": None},
         {"id": "theme_2", "keywords": ["s", "t", "z"], "size": 3,
-         "centrality": 4.0, "density": 73.333333, "quadrant": "motor"},
+         "centrality": 4.0, "density": 73.333333, "quadrant": None},
     ]
 
 
-def test_simple_centres_splits_the_strategic_diagram_at_the_medians():
+# Five pairs, each in two or three records, and four links between them, each
+# in two records. {m, n} has no link to another pair.
+SPLIT_PAIRS = [(["a", "b"], 2), (["c", "d"], 2), (["e", "f"], 3), (["g", "h"], 2), (["m", "n"], 3),
+               (["d", "g"], 2), (["a", "f"], 2), (["f", "h"], 2), (["a", "h"], 2)]
+
+
+def test_simple_centres_split_the_strategic_diagram_above_the_medians():
+    corpus = _records(*[kws for kws, times in SPLIT_PAIRS for _ in range(times)])
+    lm = _sc(corpus, max_theme_size=2)
+    # The median centrality is that of {a, b}, 2.063492, and the median density
+    # that of {e, f}, 21.428571. A value at the median is low, and {m, n}, with
+    # centrality 0, is not central however dense it is.
+    assert [(t["keywords"], t["centrality"], t["density"], t["quadrant"]) for t in lm["themes"]] == [
+        (["a", "b"], 2.063492, 16.666667, "emerging_or_declining"),
+        (["c", "d"], 2.5, 25.0, "motor"),
+        (["e", "f"], 1.904762, 21.428571, "emerging_or_declining"),
+        (["g", "h"], 4.563492, 8.333333, "basic"),
+        (["m", "n"], 0.0, 50.0, "niche"),
+    ]
+
+
+def test_a_measure_without_spread_leaves_every_quadrant_undetermined():
+    # A lone theme has nothing to be compared with.
+    (theme,) = _sc(_records(["s", "t"], ["s", "t"]))["themes"]
+    assert theme["quadrant"] is None
     # Two themes of two: {a, b} (internal 1) and {x, y} (internal 0.5), both
-    # with external links a-x and b-x of 0.5. Centrality is 10 for both, and the
-    # density median of an even count is the mean of the middle two, 37.5.
+    # with external links a-x and b-x of 0.5. Centrality is 10 for both, so
+    # the densities alone vary, and the median would put both themes on one
+    # side of it.
     corpus = _records(["a", "b", "x"], ["a", "b", "x"], ["x", "y"], ["x", "y"])
     lm = _sc(corpus, max_theme_size=2)
     assert [(t["keywords"], t["centrality"], t["density"], t["quadrant"]) for t in lm["themes"]] == [
-        (["a", "b"], 10.0, 50.0, "motor"),
-        (["x", "y"], 10.0, 25.0, "basic"),
+        (["a", "b"], 10.0, 50.0, None),
+        (["x", "y"], 10.0, 25.0, None),
     ]
+
+
+def test_min_df_leaves_rare_keywords_out_of_the_map():
+    # u and v occur once, together, so their equivalence index is 1, the
+    # highest there is. At min_link 1 they seed a theme, which then takes a
+    # and b.
+    corpus = _records(["a", "b"], ["a", "b"], ["a", "b"], ["a", "u", "v"])
+    assert _theme_keywords(_sc(corpus, min_link=1)) == [["a", "b", "u", "v"]]
+    lm = _sc(corpus, min_link=1, min_df=2)
+    assert _theme_keywords(lm) == [["a", "b"]]
+    assert lm["keyword_cooccurrence"] == [{"a": "a", "b": "b", "count": 3}]
+    assert lm["keywords"] == ["a", "b", "u", "v"]
+    assert (lm["parameters"]["min_df"], lm["field_terms"]) == (2, [])
+    # An integral float is read as its integer, as min_link is.
+    assert _sc(corpus, min_link=1, min_df=2.0) == lm
 
 
 def test_max_df_excludes_field_terms():
@@ -721,8 +828,8 @@ def test_simple_centres_gives_no_giant_theme_warning():
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        lm = _sc(_paired(["k1", "k2", "k3", "k4"], ["m1", "m2"]))
-    assert [t["size"] for t in lm["themes"]] == [4, 2]
+        lm = _sc(_paired(_keywords("k", 7), _keywords("m", 3)))
+    assert [t["size"] for t in lm["themes"]] == [7, 3]
 
 
 def test_simple_centres_on_an_empty_corpus():
@@ -844,7 +951,7 @@ def test_lit_diagram_refuses_a_bad_max_edges(bad):
     assert str(exc.value) == "max_edges must be a positive integer"
 
 
-@pytest.mark.parametrize("bad", [0, 201, -1, 25.0, True])
+@pytest.mark.parametrize("bad", [0, 201, -1, 2.5, float("nan"), float("inf"), "25", True])
 def test_fetch_corpus_rejects_out_of_range_per_page(bad):
     # The guard runs before any request, so this needs no network.
     with pytest.raises(ValueError) as exc:
@@ -880,3 +987,14 @@ def test_fetch_corpus_falls_back_to_concepts_when_keyword_names_are_null(monkeyp
     monkeypatch.setattr("urllib.request.urlopen", lambda url, timeout: _Resp())
     corpus = tf.fetch_corpus("panic")
     assert corpus["records"][0]["keywords"] == ["panic", "arousal"]
+
+
+def test_a_theme_with_no_links_is_peripheral_however_many_share_its_centrality():
+    # Two linked themes and one isolated: the isolated theme's centrality, 0,
+    # is the lowest, so it is peripheral, and the two linked themes, whose
+    # centrality is both the median and the highest value, are central. The R
+    # suite asserts the same quadrants.
+    lm = _sc(_records(*([["a", "b"]] * 4 + [["c", "d"]] * 4 + [["b", "c"]] * 2
+                        + [["e", "f"]] * 3)), max_theme_size=2)
+    assert [(t["keywords"], t["quadrant"]) for t in lm["themes"]] == [
+        (["a", "b"], "basic"), (["c", "d"], "basic"), (["e", "f"], "niche")]

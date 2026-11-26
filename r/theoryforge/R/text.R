@@ -5,8 +5,10 @@
 #' Python's str.lower() turns the Turkish dotted capital I into two code points
 #' where tolower() gives one, while ?tolower calls tolower() platform-dependent.
 #' These helpers pin one reading (API_SPEC.md sections 3, 6, 10, 14, 18 and 19),
-#' and the Python twin's _text.py mirrors each of them. The file is ASCII, as
-#' CRAN asks, so every other character is written as an escape.
+#' and the Python twin's _text.py mirrors each of them. The file also holds the
+#' XML escaper that the chart views of tf_diagram() and the HTML rigour report
+#' share. The file is ASCII, as CRAN asks, so every other character is written
+#' as an escape.
 #'
 #' @keywords internal
 #' @noRd
@@ -32,20 +34,51 @@ NULL
   .tf_trim(gsub(paste0(.tf_WS_CLASS, "+"), " ", enc2utf8(x), perl = TRUE))
 }
 
-# `x` with A-Z lowercased and every other character kept.
-.tf_ascii_lower <- function(x) {
-  chartr("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz", x)
+# `s` as XML text content: the ampersand escaped first, then the angle
+# brackets. NULL, an empty vector and NA give the empty string, and any other
+# value its first element as a string. Mirrors Python's _text.xml_escape.
+.tf_xml <- function(s) {
+  if (is.null(s) || length(s) == 0L) {
+    s <- ""
+  } else {
+    s <- s[[1L]]
+    if (is.na(s)) s <- ""
+  }
+  s <- as.character(s)
+  s <- gsub("&", "&amp;", s, fixed = TRUE)
+  s <- gsub("<", "&lt;", s, fixed = TRUE)
+  s <- gsub(">", "&gt;", s, fixed = TRUE)
+  s
 }
 
-# `x` folded through schema/fold.json: the one-character entries with chartr,
+# `x` with A-Z lowercased and every other character kept. PCRE's \L lowercases
+# only the ASCII letters the pattern matched. chartr() and tolower() convert the
+# text to wide characters first, which refuses the noncharacters U+FFFE and
+# U+FFFF ("invalid input ... in 'utf8towcs'"), valid code points that JSON and
+# YAML can carry.
+.tf_ascii_lower <- function(x) {
+  gsub("([A-Z]+)", "\\L\\1", x, perl = TRUE)
+}
+
+# `x` folded through schema/fold.json: the one-character entries by code point,
 # the longer ones (such as the sharp s to "ss") with a fixed gsub, then the
 # combining marks deleted. No entry's output is folded again, so applying them
-# in turn gives what Python's single str.translate gives. iconv()'s
-# transliteration is avoided because its output differs between platforms.
+# in turn gives what Python's single str.translate gives. The code points are
+# mapped through utf8ToInt() and intToUtf8(), which accept U+FFFE and U+FFFF
+# where chartr() refuses them, and `x[] <-` keeps the names of `x`, as chartr()
+# did. iconv()'s transliteration is avoided because its output differs between
+# platforms.
 .tf_fold <- function(x) {
   f <- tf_fold_table()
   x <- enc2utf8(x)
-  x <- chartr(f$old, f$new, x)
+  x[] <- vapply(x, function(s) {
+    cp <- utf8ToInt(s)
+    i <- match(cp, f$old_cp)
+    hit <- !is.na(i)
+    if (!any(hit)) return(s)
+    cp[hit] <- f$new_cp[i[hit]]
+    intToUtf8(cp)
+  }, character(1), USE.NAMES = FALSE)
   for (k in names(f$multi)) x <- gsub(k, f$multi[[k]], x, fixed = TRUE)
   gsub(f$delete, "", x, perl = TRUE)
 }
@@ -58,6 +91,10 @@ NULL
 # A DOI as Crossref matches one, with explicit ASCII classes: PCRE and Python's
 # re give \d, \S and \v different meanings.
 .tf_DOI_PATTERN <- "10\\.[0-9]{4,9}/[^\\x{09}-\\x{0D}\\x{20}]+"
+
+# Some APA DOIs are also registered with a double slash after the prefix
+# (10.1037//0033-2909.99.1.20), and doi.org redirects each to the DOI with one.
+.tf_DOI_DOUBLE_SLASH <- "^(10\\.[0-9]{4,9})//"
 
 .tf_DOI_PREFIXES <- c("https://doi.org/", "http://doi.org/", "https://dx.doi.org/",
                       "http://dx.doi.org/", "doi:")
@@ -84,35 +121,38 @@ NULL
 
 # The DOI in each element of `x`, a character vector without NA, in the form
 # .tf_normalize_doi() gives it. That is the first run of the prepared text that
-# looks like a DOI, less any trailing full stops, commas or semicolons.
-# tf_litmap() keys a reference by it (API_SPEC.md section 14). The prefix rule
-# of .tf_normalize_doi() is left out, so text without such a run gives NA. The
-# function is vectorised, as a corpus holds thousands of references. Mirrors
-# Python's _text.find_doi.
+# looks like a DOI, less any trailing full stops, commas or semicolons, with a
+# double slash after the prefix made single. tf_litmap() keys a reference by it
+# (API_SPEC.md section 14). The prefix rule of .tf_normalize_doi() is left out,
+# so text without such a run gives NA. The function is vectorised, as a corpus
+# holds thousands of references. Mirrors Python's _text.find_doi.
 .tf_find_doi <- function(x) {
   out <- rep(NA_character_, length(x))
   if (length(x) == 0L) return(out)
   d <- .tf_doi_prepared(x)
   pos <- regexpr(.tf_DOI_PATTERN, d, perl = TRUE)
   hit <- pos > 0L
-  out[hit] <- sub("[.,;]+$", "", regmatches(d, pos), perl = TRUE)
+  found <- sub("[.,;]+$", "", regmatches(d, pos), perl = TRUE)
+  out[hit] <- sub(.tf_DOI_DOUBLE_SLASH, "\\1/", found, perl = TRUE)
   out
 }
 
-# The form two DOIs are compared in (API_SPEC.md section 18): the DOI that
-# .tf_find_doi() finds in the text. Text with no such run is trimmed,
-# lowercased and percent-decoded, loses a known prefix, if it has one, and is
-# trimmed again. Mirrors Python's _text.normalise_doi.
-.tf_normalize_doi <- function(doi) {
-  if (is.null(doi) || length(doi) == 0L || is.na(doi)) doi <- ""
-  doi <- as.character(doi)
-  found <- .tf_find_doi(doi)
-  if (!is.na(found)) return(found)
-  d <- .tf_doi_prepared(doi)
+# The form two DOIs are compared in (API_SPEC.md section 18), for each element
+# of `x`, a character vector without NA: the DOI that .tf_find_doi() finds in
+# the text. Text with no such run is trimmed, lowercased and percent-decoded,
+# loses the first known prefix it starts with, if any, and is trimmed again.
+# Mirrors Python's _text.normalise_doi.
+.tf_normalize_doi <- function(x) {
+  out <- .tf_find_doi(x)
+  rest <- which(is.na(out))
+  if (length(rest) == 0L) return(out)
+  d <- .tf_doi_prepared(x[rest])
+  open <- rep(TRUE, length(d))
   for (prefix in .tf_DOI_PREFIXES) {
-    if (startsWith(d, prefix)) {
-      return(.tf_trim(substr(d, nchar(prefix) + 1L, nchar(d))))
-    }
+    hit <- open & startsWith(d, prefix)
+    d[hit] <- .tf_trim(substring(d[hit], nchar(prefix) + 1L))
+    open <- open & !hit
   }
-  d
+  out[rest] <- d
+  out
 }

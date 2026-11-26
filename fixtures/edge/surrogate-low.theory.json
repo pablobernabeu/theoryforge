@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.1",
+  "id": "edge-surrogate-low",
+  "title": "A title that keeps the second half of an emoji \ude00",
+  "maturity": "building",
+  "constructs": [
+    {"id": "c1", "label": "Alpha", "definition": "The first construct."},
+    {"id": "c2", "label": "Beta", "definition": "The second construct."}
+  ],
+  "propositions": [
+    {"id": "p1", "from": "c1", "to": "c2", "relation": "increases"}
+  ]
+}

@@ -1,0 +1,278 @@
+[
+  {
+    "theory_id": "modality-switching-2026",
+    "rival_id": "alt_grounding_by_interaction",
+    "criterion": "sigma",
+    "evaluated": true,
+    "reason": null,
+    "shared": [
+      "c_sensorimotor_experience",
+      "c_modality_activation",
+      "c_switch_cost",
+      "c_conceptual_access",
+      "c_lexical_familiarity"
+    ],
+    "only_theory": [],
+    "only_rival": [],
+    "markov_equivalent": false,
+    "independence_basis": "same_constructs",
+    "independencies": [
+      {
+        "a": "c_sensorimotor_experience",
+        "b": "c_conceptual_access",
+        "given": [
+          "c_modality_activation",
+          "c_lexical_familiarity"
+        ],
+        "statement": "c_sensorimotor_experience _||_ c_conceptual_access | c_modality_activation, c_lexical_familiarity",
+        "implied_by": "theory"
+      },
+      {
+        "a": "c_sensorimotor_experience",
+        "b": "c_conceptual_access",
+        "given": [
+          "c_lexical_familiarity"
+        ],
+        "statement": "c_sensorimotor_experience _||_ c_conceptual_access | c_lexical_familiarity",
+        "implied_by": "rival"
+      },
+      {
+        "a": "c_modality_activation",
+        "b": "c_lexical_familiarity",
+        "given": [
+          "c_sensorimotor_experience"
+        ],
+        "statement": "c_modality_activation _||_ c_lexical_familiarity | c_sensorimotor_experience",
+        "implied_by": "theory"
+      },
+      {
+        "a": "c_modality_activation",
+        "b": "c_lexical_familiarity",
+        "given": [
+          "c_sensorimotor_experience",
+          "c_conceptual_access"
+        ],
+        "statement": "c_modality_activation _||_ c_lexical_familiarity | c_sensorimotor_experience, c_conceptual_access",
+        "implied_by": "rival"
+      }
+    ],
+    "effects": [
+      {
+        "x": "c_sensorimotor_experience",
+        "y": "c_conceptual_access",
+        "theory": "positive",
+        "rival": "zero",
+        "decisive": true
+      },
+      {
+        "x": "c_modality_activation",
+        "y": "c_conceptual_access",
+        "theory": "positive",
+        "rival": "zero",
+        "decisive": true
+      },
+      {
+        "x": "c_conceptual_access",
+        "y": "c_modality_activation",
+        "theory": "zero",
+        "rival": "positive",
+        "decisive": true
+      },
+      {
+        "x": "c_conceptual_access",
+        "y": "c_switch_cost",
+        "theory": "zero",
+        "rival": "positive",
+        "decisive": true
+      },
+      {
+        "x": "c_lexical_familiarity",
+        "y": "c_modality_activation",
+        "theory": "zero",
+        "rival": "positive",
+        "decisive": true
+      },
+      {
+        "x": "c_lexical_familiarity",
+        "y": "c_switch_cost",
+        "theory": "zero",
+        "rival": "positive",
+        "decisive": true
+      }
+    ],
+    "associations": [
+      {
+        "a": "c_sensorimotor_experience",
+        "b": "c_conceptual_access",
+        "theory": "positive",
+        "rival": "zero",
+        "decisive": true
+      },
+      {
+        "a": "c_modality_activation",
+        "b": "c_lexical_familiarity",
+        "theory": "zero",
+        "rival": "positive",
+        "decisive": true
+      },
+      {
+        "a": "c_switch_cost",
+        "b": "c_lexical_familiarity",
+        "theory": "zero",
+        "rival": "positive",
+        "decisive": true
+      }
+    ],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "pred1",
+        "theory": "entailed",
+        "rival": "entailed",
+        "discriminates": false
+      },
+      {
+        "source": "prediction",
+        "id": "pred3",
+        "theory": "entailed",
+        "rival": "contradicted",
+        "discriminates": true
+      },
+      {
+        "source": "prediction",
+        "id": "pred4",
+        "theory": "entailed",
+        "rival": "entailed",
+        "discriminates": false
+      },
+      {
+        "source": "phenomenon",
+        "id": "ph1",
+        "theory": "entailed",
+        "rival": "contradicted",
+        "discriminates": true
+      }
+    ],
+    "counts": {
+      "discriminating_claims": 2,
+      "independencies": 4,
+      "decisive_effects": 6,
+      "decisive_associations": 3
+    }
+  },
+  {
+    "theory_id": "modality-switching-2026",
+    "rival_id": "alt_symbol_interdependency",
+    "criterion": "sigma",
+    "evaluated": true,
+    "reason": null,
+    "shared": [
+      "c_sensorimotor_experience",
+      "c_modality_activation",
+      "c_switch_cost",
+      "c_conceptual_access",
+      "c_lexical_familiarity"
+    ],
+    "only_theory": [],
+    "only_rival": [],
+    "markov_equivalent": null,
+    "independence_basis": "same_constructs",
+    "independencies": [
+      {
+        "a": "c_sensorimotor_experience",
+        "b": "c_lexical_familiarity",
+        "given": [],
+        "statement": "c_sensorimotor_experience _||_ c_lexical_familiarity",
+        "implied_by": "theory"
+      }
+    ],
+    "effects": [],
+    "associations": [
+      {
+        "a": "c_sensorimotor_experience",
+        "b": "c_conceptual_access",
+        "theory": "positive",
+        "rival": "undetermined",
+        "decisive": false
+      },
+      {
+        "a": "c_sensorimotor_experience",
+        "b": "c_lexical_familiarity",
+        "theory": "zero",
+        "rival": "undetermined",
+        "decisive": false
+      },
+      {
+        "a": "c_modality_activation",
+        "b": "c_conceptual_access",
+        "theory": "positive",
+        "rival": "undetermined",
+        "decisive": false
+      },
+      {
+        "a": "c_modality_activation",
+        "b": "c_lexical_familiarity",
+        "theory": "zero",
+        "rival": "undetermined",
+        "decisive": false
+      },
+      {
+        "a": "c_switch_cost",
+        "b": "c_conceptual_access",
+        "theory": "positive",
+        "rival": "undetermined",
+        "decisive": false
+      },
+      {
+        "a": "c_switch_cost",
+        "b": "c_lexical_familiarity",
+        "theory": "zero",
+        "rival": "undetermined",
+        "decisive": false
+      },
+      {
+        "a": "c_conceptual_access",
+        "b": "c_lexical_familiarity",
+        "theory": "positive",
+        "rival": "undetermined",
+        "decisive": false
+      }
+    ],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "pred1",
+        "theory": "entailed",
+        "rival": "entailed",
+        "discriminates": false
+      },
+      {
+        "source": "prediction",
+        "id": "pred3",
+        "theory": "entailed",
+        "rival": "entailed",
+        "discriminates": false
+      },
+      {
+        "source": "prediction",
+        "id": "pred4",
+        "theory": "entailed",
+        "rival": "contradicted",
+        "discriminates": true
+      },
+      {
+        "source": "phenomenon",
+        "id": "ph1",
+        "theory": "entailed",
+        "rival": "undetermined",
+        "discriminates": false
+      }
+    ],
+    "counts": {
+      "discriminating_claims": 1,
+      "independencies": 1,
+      "decisive_effects": 0,
+      "decisive_associations": 0
+    }
+  }
+]

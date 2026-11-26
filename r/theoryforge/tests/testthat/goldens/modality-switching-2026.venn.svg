@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="380" height="382" viewBox="0 0 380 382" font-family="sans-serif" font-size="13">
+  <text x="190" y="24" text-anchor="middle" font-size="15">Construct scope overlap<tspan x="190" y="42" font-size="13">first three of 5 constructs</tspan></text>
+  <circle cx="150" cy="185" r="78" fill="#4e79a7" fill-opacity="0.35" stroke="#1e7b7b"/>
+  <circle cx="230" cy="185" r="78" fill="#4e79a7" fill-opacity="0.35" stroke="#1e7b7b"/>
+  <circle cx="190" cy="245" r="78" fill="#4e79a7" fill-opacity="0.35" stroke="#1e7b7b"/>
+  <text x="110" y="63" text-anchor="middle"><tspan x="110" y="63">Sensorimotor</tspan><tspan x="110" y="79">experience with a</tspan><tspan x="110" y="95">concept</tspan></text>
+  <text x="270" y="63" text-anchor="middle"><tspan x="270" y="63">Modality-specific</tspan><tspan x="270" y="79">perceptual</tspan><tspan x="270" y="95">activation</tspan></text>
+  <text x="190" y="340" text-anchor="middle"><tspan x="190" y="340">Cost of switching</tspan><tspan x="190" y="356">modality between</tspan><tspan x="190" y="372">consecutive trials</tspan></text>
+  <text x="120" y="165" text-anchor="middle" font-weight="bold">1</text>
+  <text x="260" y="165" text-anchor="middle" font-weight="bold">1</text>
+  <text x="190" y="280" text-anchor="middle" font-weight="bold">2</text>
+  <text x="190" y="155" text-anchor="middle" font-weight="bold">1</text>
+  <text x="145" y="230" text-anchor="middle" font-weight="bold">0</text>
+  <text x="235" y="230" text-anchor="middle" font-weight="bold">0</text>
+  <text x="190" y="210" text-anchor="middle" font-weight="bold">1</text>
+</svg>

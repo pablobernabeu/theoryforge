@@ -1,0 +1,7 @@
+# Edge case: a value tagged !expr. R's yaml package evaluates such a value as R
+# code when the option yaml.eval.expr is TRUE, so reading a theory file from
+# someone else could run code. Both twins refuse the file whatever the option
+# says (API_SPEC.md section 3), as Python's safe loader refused the tag.
+schema_version: "1.1"
+id: !expr stop("the tag ran")
+title: A theory whose id is R code

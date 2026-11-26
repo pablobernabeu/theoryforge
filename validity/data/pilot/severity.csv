@@ -1,0 +1,10 @@
+theory,encoder,n,mean_computed_severity,values
+bilingual-rhm,enc-1,8,0.3,0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
+bilingual-rhm,enc-2,6,0.3,0.3 0.3 0.3 0.3 0.3 0.3
+bilingual-rhm,enc-3,6,0.3,0.3 0.3 0.3 0.3 0.3 0.3
+collaborative-cognitive-load,enc-1,15,0.3,0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
+collaborative-cognitive-load,enc-2,6,0.3,0.3 0.3 0.3 0.3 0.3 0.3
+collaborative-cognitive-load,enc-3,12,0.3,0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
+health-habit,enc-1,14,0.286,0.3 0.3 0.3 0.3 0.1 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
+health-habit,enc-2,9,0.3,0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3 0.3
+health-habit,enc-3,11,0.282,0.3 0.3 0.3 0.1 0.3 0.3 0.3 0.3 0.3 0.3 0.3

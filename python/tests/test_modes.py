@@ -34,16 +34,27 @@ def test_severity_rubric(panic_path):
     assert sev["pred3"]["computed_severity"] == 0.3
 
 
-def test_appraisal_progressive(fixtures_dir):
-    # v2 adds proposition p4 and derives pred4 from it, and a registered test
-    # corroborates pred4: new content that survived a test.
+def test_appraisal_of_the_shipped_amendment(fixtures_dir):
+    # v2 drops pred_indep, which a test refuted, adds proposition p4 and derives
+    # pred4 from it, and a registered test corroborates pred4: new content that
+    # survived a test. The one implication p4 withdraws is the refuted one. But
+    # p4 and the unsigned p3 open a route from threat to avoidance through
+    # arousal whose sign is open, so v2 gives up the positive effect of threat
+    # on avoidance that v1 entails, and the amendment is neutral.
     v1 = tf.read(fixtures_dir / "panic-network.theory.yaml")
     v2 = tf.read(fixtures_dir / "panic-network-2026-v2.theory.yaml")
     assert v2.appraise_amendment(v1) == {
-        "verdict": "progressive", "new_predictions": ["pred4"], "corroborated_new": ["pred4"],
+        "verdict": "neutral", "new_predictions": ["pred4"], "corroborated_new": ["pred4"],
         "ad_hoc_assumptions": [], "articulated": [], "underived": [],
-        "corroborated_new_registered": ["pred4"], "renamed": [], "dropped": [],
+        "corroborated_new_registered": ["pred4"], "renamed": [], "dropped": ["pred_indep"],
         "dropped_corroborated": [], "content_lost": [], "new_anomalies": [], "assumptions": [],
+        "theoretically_progressive": True, "empirically_progressive": True, "revised": [],
+        "weakened_refuted": [], "unresolved": [], "implications_compared": True,
+        "implications_lost": ["c_arousal _||_ c_avoidance | c_perceived_threat"],
+        "implications_lost_unrefuted": [], "implications_gained": [], "entailments_lost": [],
+        "signs_lost": ["effect of c_perceived_threat on c_avoidance: positive"],
+        "protected_only": [], "refuted_new": [],
+        "corroborated_new_severity": [{"id": "pred4", "severity": None}],
     }
 
 
@@ -59,7 +70,10 @@ def test_appraisal_degenerating(fixtures_dir):
 def test_preregister_doc(panic_path):
     md = tf.read(panic_path).preregister()
     assert md.startswith("# Preregistration: Network theory of panic disorder\n")
-    assert "- Derivation references resolve: yes" in md
+    # The causal graph has feedback loops, so the checklist leaves the claim of
+    # pred_indep unread under the default cycles = "refuse".
+    assert ('states and contradicts no claim a phenomenon states: not checked (feedback loop; '
+            'use cycles = "sigma")\n') in md
     assert "1. [point]" in md
     assert "- pred1: severity 1.0, risk 0.9" in md
     assert md.endswith("\n")
@@ -74,13 +88,20 @@ def test_preregister_names_the_rubric_for_what_it_is(panic_path):
 
 
 def test_new_diagrams(panic_path, weak_path):
-    rm_ok = tf.read(panic_path).diagram("development_roadmap")
+    rm_ok = tf.read(panic_path.with_name("panic-network-2026-v2.theory.yaml")).diagram(
+        "development_roadmap")
     assert '"all_checks_pass"' in rm_ok
-    assert 'label="Network theory of\\npanic disorder\\nscore 87.3, gate pass"' in rm_ok
+    assert ('label="Network theory of\\npanic disorder\\nchecklist 3.1\\nchecklist score 89.8, '
+            'gate pass"') in rm_ok
+    # A blocker that warns does not block the gate, so it is advisory.
+    rm_loop = tf.read(panic_path).diagram("development_roadmap")
+    assert "\\nloop warns)\\nadvisory\", fillcolor=\"#FBF1DC\"" in rm_loop
+    assert "blocks the gate" not in rm_loop
     rm_weak = tf.read(weak_path).diagram("development_roadmap")
     # The failed blocker leads, numbered first and stating what it costs.
-    assert ('"falsifiability" [label="1. falsifiability\\nAt least one\\nprediction forbids an'
-            '\\nobservation\\nblocks the gate", fillcolor="#F9E5E4"') in rm_weak
+    assert ('"falsifiability" [label="1. falsifiability\\nAt least one\\nprediction is typed'
+            '\\npoint, interval or\\ndirectional; the label\\nis the author\'s\\nblocks the gate", '
+            'fillcolor="#F9E5E4"') in rm_weak
     assert '"roadmap" -> "falsifiability";' in rm_weak
     # The advisories trail the blockers, laid out several to a row. parsimony
     # has nothing to assess and is left out.

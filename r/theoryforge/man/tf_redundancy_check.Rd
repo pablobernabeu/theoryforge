@@ -11,7 +11,7 @@ tf_redundancy_check(theory)
 }
 \value{
 A data frame with columns \code{a}, \code{b}, \code{similarity},
-\code{overlap} and \code{flag}.
+\code{overlap}, \code{flag} and \code{reason}.
 }
 \description{
 Compares the definitions of every unordered pair of constructs and returns
@@ -19,10 +19,15 @@ a data frame with one row per pair, sorted by descending similarity then
 \code{(a, b)} ascending. \code{similarity} is the Jaccard index of the two
 definitions' token sets and \code{overlap} their overlap coefficient, the
 shared tokens over the tokens of the shorter definition. \code{flag} is
-\code{"review"} for a near-duplicate, a similarity at or above the
-checklist's \code{redundancy_similarity_max}, and for a definition contained
-in the other, an overlap at or above \code{redundancy_overlap_max} when both
-definitions hold at least three tokens. It is \code{"ok"} otherwise.
+\code{"review"}, and \code{reason} names why, in this order and separated
+by commas, for a \code{"near duplicate"} (a similarity at or above the
+checklist's \code{redundancy_similarity_max}), a definition
+\code{"contained"} in the other (an overlap at or above
+\code{redundancy_overlap_max} when both definitions hold at least three
+tokens), two constructs with the \code{"same label"} and two of which one
+has no measure that the other does not list (\code{"shared measurement"}). Labels and measures are
+compared after folding case, accents and whitespace. \code{flag} is
+\code{"ok"}, and \code{reason} empty, otherwise.
 }
 \details{
 The screen compares words, so it cannot detect empirical redundancy, two

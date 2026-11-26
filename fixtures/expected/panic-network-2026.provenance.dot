@@ -5,6 +5,8 @@ digraph provenance {
   "n1" [label="tf_add_construct\nRegistered three\nconstructs."];
   "n2" [label="tf_add_proposition\nLinked constructs into a\nfeedback network."];
   "n3" [label="tf_add_prediction\nDerived three predictions\nfrom the propositions."];
+  "n4" [label="tf_add_prediction\nStated the independence of\narousal and avoidance\ngiven perceived threat\nthat the causal graph\nimplies."];
   "n1" -> "n2";
   "n2" -> "n3";
+  "n3" -> "n4";
 }

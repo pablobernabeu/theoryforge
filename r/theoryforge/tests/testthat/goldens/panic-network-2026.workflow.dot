@@ -1,0 +1,56 @@
+digraph workflow {
+  graph [rankdir=LR, bgcolor="transparent", fontname="Helvetica", fontsize=11, pad="0.2", nodesep="0.3", ranksep="0.45"];
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", color="#33567A", fillcolor="#F2F6F9", fontcolor="#12283A", penwidth=1.1, margin="0.16,0.1"];
+  edge [fontname="Helvetica", fontsize=10, color="#7B909F", fontcolor="#0F6E6E", arrowsize=0.7];
+  subgraph cluster_build {
+    label="building";
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "c_arousal" [label="Physiological\narousal", fillcolor="#E4F1F1", color="#1E7B7B"];
+    "c_perceived_threat" [label="Perceived threat", fillcolor="#E4F1F1", color="#1E7B7B"];
+    "c_avoidance" [label="Avoidance\nbehaviour", fillcolor="#E4F1F1", color="#1E7B7B"];
+  }
+  subgraph cluster_relate {
+    label="propositions";
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "prop_p1" [label="p1\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
+    "prop_p2" [label="p2\nincreases", fillcolor="#FBF1DC", color="#9C6B14"];
+    "prop_p3" [label="p3\ncauses", fillcolor="#FBF1DC", color="#9C6B14"];
+  }
+  subgraph cluster_predict {
+    label="predictions";
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "pred_pred1" [label="pred1\npoint", fillcolor="#E7EDF5", color="#33567A"];
+    "pred_pred2" [label="pred2\ninterval", fillcolor="#E7EDF5", color="#33567A"];
+    "pred_pred3" [label="pred3\ndirectional", fillcolor="#E7EDF5", color="#33567A"];
+    "pred_pred_indep" [label="pred_indep\ninterval", fillcolor="#E7EDF5", color="#33567A"];
+  }
+  subgraph cluster_test {
+    label="testing";
+    style="rounded";
+    color="#C4D1D9";
+    fontcolor="#5B7285";
+    "outcome_pred1" [label="pred1\npassed", fillcolor="#E5F2E7", color="#3E7A46"];
+    "outcome_pred_indep" [label="pred_indep\nfailed", fillcolor="#F9E5E4", color="#B2453C"];
+  }
+  "c_arousal" -> "prop_p1";
+  "prop_p1" -> "c_perceived_threat" [style=dashed, constraint=false];
+  "c_perceived_threat" -> "prop_p2";
+  "prop_p2" -> "c_avoidance" [style=dashed, constraint=false];
+  "c_perceived_threat" -> "prop_p3";
+  "prop_p3" -> "c_arousal" [style=dashed, constraint=false];
+  "prop_p1" -> "pred_pred1";
+  "prop_p3" -> "pred_pred1";
+  "prop_p2" -> "pred_pred2";
+  "prop_p2" -> "pred_pred3";
+  "prop_p1" -> "pred_pred_indep";
+  "prop_p2" -> "pred_pred_indep";
+  "prop_p3" -> "pred_pred_indep";
+  "pred_pred1" -> "outcome_pred1";
+  "pred_pred_indep" -> "outcome_pred_indep";
+}

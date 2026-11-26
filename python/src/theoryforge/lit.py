@@ -6,6 +6,7 @@ service.
 """
 from __future__ import annotations
 
+import http.client
 import io
 import itertools
 import json
@@ -19,7 +20,7 @@ from urllib.parse import urlencode
 from ._access import field, items, ne_str, str_list, text
 from ._load import load_document
 from ._num import rnd
-from ._text import find_doi, normalise_doi
+from ._text import find_doi, normalise_doi, quoted
 from .redundancy import tokens
 
 DEFAULT_MIN_LINK = 2
@@ -39,12 +40,16 @@ def _esc(s) -> str:
 
 
 def read_corpus(path) -> dict:
-    """Read a literature corpus from YAML or JSON (JSON when the suffix is ``.json``).
+    """Read a literature corpus from YAML or JSON (JSON when the extension is ``.json``).
 
-    The file is read by the rules that ``read`` follows, so an unquoted keyword such
-    as ``y`` or ``n`` stays a string and a repeated key is refused. A document that is not a mapping raises
-    ``ValueError("Corpus data must be a mapping")``. The records themselves are checked
-    by ``litmap()`` and ``landscape()``.
+    The file is read by the rules that ``read`` follows, so an unquoted keyword
+    such as ``y`` or ``n`` stays a string, and a repeated key, a YAML alias that
+    names no node, an anchor given twice, a value tagged ``!expr``, a YAML
+    document whose aliases expand it past 1,000,000 values and a document nested
+    more than 64 levels deep are refused, the first in the order ``read`` gives.
+    A document that is not a mapping raises ``ValueError("Corpus data must be a
+    mapping")``. The records themselves are checked by ``litmap()`` and
+    ``landscape()``.
     """
     data = load_document(path)
     if not isinstance(data, dict):
@@ -218,11 +223,12 @@ def _method(value) -> str:
     return value
 
 
-def _settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, max_df) -> dict:
+def _settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, max_df,
+              min_df) -> dict:
     """litmap's arguments checked in signature order (API_SPEC.md section 14).
 
-    The theme sizes and ``max_df`` are checked whichever method is asked for,
-    although only simple centres reads them.
+    The theme sizes, ``max_df`` and ``min_df`` are checked whichever method is
+    asked for, although only simple centres reads them.
     """
     min_link = _positive_int(min_link, "min_link")
     method = _method(method)
@@ -238,15 +244,24 @@ def _settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, 
     if min_theme_size > max_theme_size:
         raise ValueError("min_theme_size must not exceed max_theme_size")
     max_df = _share(max_df, "max_df")
+    min_df = _positive_int(min_df, "min_df")
     return {"method": method, "min_link": min_link, "min_cocitation": min_cocitation,
-            "min_theme_size": min_theme_size, "max_theme_size": max_theme_size, "max_df": max_df}
+            "min_theme_size": min_theme_size, "max_theme_size": max_theme_size, "max_df": max_df,
+            "min_df": min_df}
+
+
+# The settings a simple-centres record gives in ``parameters``, in this order.
+_PARAMETERS = ("min_link", "min_cocitation", "min_theme_size", "max_theme_size", "max_df", "min_df")
 
 
 def _quadrants(themes: list[dict]) -> None:
     """Place each theme in the strategic diagram of Cobo et al. (2011).
 
-    Both axes are split at their median, and a value at the median counts as
-    high. The median of an even count is the mean of the middle two values.
+    Both axes are split at their median, the mean of the middle two values for
+    an even count, and a value is high when it lies above the median, or at it
+    when the median is the highest value of the axis. A theme with centrality
+    0 is therefore low. When every theme has the same value on an axis, a lone
+    theme included, the axis cannot be split and every quadrant is None.
     """
     def median(values: list[float]) -> float:
         v = sorted(values)
@@ -255,10 +270,18 @@ def _quadrants(themes: list[dict]) -> None:
 
     if not themes:
         return
-    c_med = median([t["centrality"] for t in themes])
-    d_med = median([t["density"] for t in themes])
+    cs = [t["centrality"] for t in themes]
+    ds = [t["density"] for t in themes]
+    if min(cs) == max(cs) or min(ds) == max(ds):
+        for t in themes:
+            t["quadrant"] = None
+        return
+    def high(v: float, values: list[float]) -> bool:
+        m = median(values)
+        return v > m or (v == m and m == max(values))
+
     for t in themes:
-        high_c, high_d = t["centrality"] >= c_med, t["density"] >= d_med
+        high_c, high_d = high(t["centrality"], cs), high(t["density"], ds)
         t["quadrant"] = ("motor" if high_d else "basic") if high_c else (
             "niche" if high_d else "emerging_or_declining")
 
@@ -278,8 +301,9 @@ def _simple_centres(keyword_lists: list[list[str]], s: dict) -> tuple[list[str],
         for k in kws:
             df[k] = df.get(k, 0) + 1
     field_terms = sorted(k for k, v in df.items() if v / n > s["max_df"])
-    field = set(field_terms)
-    counts = _pair_counts([[k for k in kws if k not in field] for kws in sets])
+    # The field terms and the keywords of fewer than min_df records are left out.
+    left_out = set(field_terms) | {k for k, v in df.items() if v < s["min_df"]}
+    counts = _pair_counts([[k for k in kws if k not in left_out] for kws in sets])
     kw_edges = _edges(counts, s["min_link"])
 
     # The equivalence index from the integer counts, in one division.
@@ -362,14 +386,19 @@ def _litmap(corpus, s: dict, co_citation: bool = True, records: list | None = No
         out["co_citation"] = _edges(_pair_counts(keyed), s["min_cocitation"])
     if s["method"] == "simple_centres":
         out["method"] = s["method"]
-        out["parameters"] = {k: s[k] for k in ("min_link", "min_cocitation", "min_theme_size",
-                                               "max_theme_size", "max_df")}
+        out["parameters"] = {k: s[k] for k in _PARAMETERS}
         out["field_terms"] = field_terms
     return out
 
 
+# litmap warns of a giant theme only in a map of at least this many linked
+# keywords, since a smaller map, such as a single pair, can be one theme
+# legitimately.
+_GIANT_MIN_KEYWORDS = 10
+
+
 def _warn_if_one_theme_dominates(themes: list[dict]) -> None:
-    """Warn when the largest theme holds more than half the linked keywords.
+    """Warn when the largest theme holds more than half of ten or more linked keywords.
 
     Connected components merge every theme that shares a keyword, so the hub
     keywords of a real corpus join it into one theme (API_SPEC.md section 14).
@@ -378,7 +407,7 @@ def _warn_if_one_theme_dominates(themes: list[dict]) -> None:
         return
     n = sum(t["size"] for t in themes)
     largest = max(t["size"] for t in themes)
-    if 2 * largest <= n:
+    if n < _GIANT_MIN_KEYWORDS or 2 * largest <= n:
         return
     p = rnd(100 * (largest / n), 1)
     # stacklevel 3 names the caller of litmap or landscape.
@@ -392,7 +421,7 @@ def _warn_if_one_theme_dominates(themes: list[dict]) -> None:
 
 def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
            min_cocitation: int | None = None, min_theme_size: int = 2,
-           max_theme_size: int = 10, max_df: float = 1.0) -> dict:
+           max_theme_size: int = 10, max_df: float = 1.0, min_df: int = 1) -> dict:
     """Keyword co-occurrence, themes and co-citation, all deterministic.
 
     ``min_link``, 2 by default, is the smallest count a keyword pair needs to be
@@ -414,10 +443,10 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
     ``method`` chooses how keywords are grouped into themes. With
     ``"components"``, the default, a theme is a connected component of the
     keyword map, and on a real corpus one or a few keywords shared by most
-    records join nearly every keyword into one. When the largest theme holds
-    more than half the linked keywords, a UserWarning says so: such themes, and
-    any landscape built on them, do not describe the field. The result is
-    returned unchanged.
+    records join nearly every keyword into one. When the map links at least ten
+    keywords and the largest theme holds more than half of them, a UserWarning
+    says so: such themes, and any landscape built on them, do not describe the
+    field. The result is returned unchanged.
 
     ``"simple_centres"`` is the co-word clustering of Coulter et al. (1998) and
     Cobo et al. (2011). Each link is weighted by the equivalence index
@@ -429,21 +458,27 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
     keywords already in themes joins none. Themes smaller than
     ``min_theme_size`` are dropped. Keywords in more than ``max_df`` of the
     records are field terms, left out of the map and reported as
-    ``field_terms``. Each theme gains its centrality (ten times the summed
+    ``field_terms``. Keywords in fewer than ``min_df`` records are left out of
+    the map too, so that a rare keyword cannot seed a theme. The default of 1
+    leaves out none. Each theme gains its centrality (ten times the summed
     index of its links to the keywords of other themes) and its density (100
     times the summed index of its internal links, over its size), the measures
     of Callon et al. (1991) as Cobo et al. (2011) scale them. It also gains its
-    quadrant in the strategic diagram, split here at the median of each:
-    ``motor`` (both high),
-    ``basic`` (central but not dense), ``niche`` (dense but not central) or
-    ``emerging_or_declining`` (both low). The record gains ``method``,
-    ``parameters`` (the five settings used) and ``field_terms``. Components
-    remain the default for this release.
+    quadrant in the strategic diagram, split here at the median of each
+    measure, a value counting as high when it lies above the median, or at it
+    when the median is the measure's highest value:
+    ``motor`` (both high), ``basic`` (central but not dense), ``niche`` (dense
+    but not central) or ``emerging_or_declining`` (both low). A theme with
+    centrality 0 is therefore never central. When all themes share one value
+    of either measure, as a lone theme does, that measure cannot be split and
+    the quadrant is None. The record gains ``method``, ``parameters`` (the six
+    settings used) and ``field_terms``. Components remain the default for this
+    release.
 
     ``min_theme_size`` must be a positive integer, ``max_theme_size`` an
-    integer of at least 2 no smaller than it and ``max_df`` a number from 0 to
-    1. They are checked with either method, although only simple centres reads
-    them.
+    integer of at least 2 no smaller than it, ``max_df`` a number from 0 to 1
+    and ``min_df`` a positive integer. They are checked with either method,
+    although only simple centres reads them.
 
     Returns:
         A dict with ``n_records``, ``keywords`` (every keyword, sorted),
@@ -460,7 +495,8 @@ def litmap(corpus, min_link: int = DEFAULT_MIN_LINK, method: str = "components",
     Cobo, López-Herrera, Herrera-Viedma and Herrera (2011), Journal of
     Informetrics 5, 146-166, https://doi.org/10.1016/j.joi.2010.10.002.
     """
-    s = _settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, max_df)
+    s = _settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, max_df,
+                  min_df)
     out = _litmap(corpus, s)
     if s["method"] == "components":
         _warn_if_one_theme_dominates(out["themes"])
@@ -484,7 +520,7 @@ def _field_tokens(keyword_lists: list[list[str]], max_token_share: float) -> set
 def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
               max_token_share: float = DEFAULT_MAX_TOKEN_SHARE,
               method: str = "components") -> dict:
-    """Map a theory and its registered alternatives onto the literature's themes.
+    """Match the words of a theory and its registered alternatives against a corpus's themes.
 
     A theme is matched by the words its keywords share with the focal theory's
     construct labels, or with an alternative's label and key constructs, and
@@ -499,13 +535,20 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
     framework and approach, with their plurals. One shared word is enough for
     a match.
 
+    The match is lexical. It shows that an account and a theme have a word in
+    common, and does not show that the account explains what the theme's
+    records report, nor that a theme without a match is unexplained.
+
     A theme is ``under_theorised`` when none of the registered accounts (the
-    focal theory and its registered alternatives) addresses it, ``covered``
-    when one does and ``crowded`` when two or more do. A crowded theme calls for
-    predictions that discriminate between the accounts, and is not a finding of
-    redundancy. ``under_theorised_fronts`` lists the ids of the under-theorised
-    themes, and ``redundancy_risk``, despite its name, the ids of the crowded
-    ones.
+    focal theory and its registered alternatives) matches it, ``covered`` when
+    one does and ``crowded`` when two or more do. An alternative id that is
+    repeated counts once. The statuses count matching accounts only. An account
+    the theory does not register, or one that names the same idea in other
+    words, may address an under-theorised theme. A crowded theme may call for
+    predictions that discriminate between its accounts, and is not a finding
+    that they compete or are redundant. ``under_theorised_fronts`` lists the
+    ids of the under-theorised themes, and ``redundancy_risk``, despite its
+    name, the ids of the crowded ones.
 
     ``min_link`` (2 by default) must be a positive integer, ``max_token_share``
     (0.5 by default) a number from 0 to 1 and ``method`` one of litmap's,
@@ -521,14 +564,14 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
             ``field_tokens``, ``phenomenon_tokens``, ``themes``,
             ``under_theorised_fronts`` and ``redundancy_risk``. Each theme holds
             ``id``, ``keywords``, ``alternatives`` (the ids of the alternatives that
-            address it), ``focal``, ``status``, ``focal_terms`` and
+            match it), ``focal``, ``status``, ``focal_terms`` and
             ``alternative_terms``, the last a list of ``{id, terms}`` in the order
             of ``alternatives``.
     """
     T = theory.data if hasattr(theory, "data") else theory
     min_link = _positive_int(min_link, "min_link")
     max_token_share = _share(max_token_share, "max_token_share")
-    s = _settings(min_link, method, None, 2, 10, 1.0)
+    s = _settings(min_link, method, None, 2, 10, 1.0, 1)
     records = _records(corpus)
     lm = _litmap(corpus, s, co_citation=False, records=records)
     if s["method"] == "components":
@@ -555,7 +598,8 @@ def landscape(theory, corpus, min_link: int = DEFAULT_MIN_LINK,
                      for aid, a_tokens in alts if a_tokens & th_tokens]
         on = [a["id"] for a in alt_terms]
         focal_on = bool(focal_terms)
-        n = len(on) + (1 if focal_on else 0)
+        # A repeated alternative id is one account, so it counts once.
+        n = len(set(on)) + (1 if focal_on else 0)
         status = "under_theorised" if n == 0 else ("crowded" if n >= 2 else "covered")
         theme = {
             "id": th["id"], "keywords": th["keywords"],
@@ -598,9 +642,9 @@ def _undirected(name: str, edges: list[dict]) -> str:
     return "\n".join(lines) + "\n"
 
 
-# Theme colours track the landscape statuses: a theme no registered account
-# addresses is teal, one that two or more address is amber and a covered one
-# grey.
+# Theme colours track the landscape statuses: a theme that no registered
+# account matches is teal, one that two or more match is amber and a covered
+# one grey.
 _THEME_ROLE = {"under_theorised": "construct", "crowded": "proposition", "covered": "covered"}
 
 
@@ -666,8 +710,8 @@ def lit_diagram(obj: dict, type: str = "keyword_cooccurrence", max_edges: int | 
     if type == "theme_landscape":
         return _theme_landscape(obj)
     raise ValueError(
-        f"unknown lit diagram type {type!r}; expected one of "
-        "('keyword_cooccurrence', 'co_citation', 'theme_landscape')"
+        f"unknown lit diagram type {quoted(type)}; expected one of "
+        "keyword_cooccurrence, co_citation, theme_landscape"
     )
 
 
@@ -680,9 +724,14 @@ def new_evidence_dois(theory, candidate_dois: list) -> list:
     only) and percent-decoded, wherever it sits in the text, so ``doi: 10...``,
     ``DOI 10...``, ``doi.org/10...``, ``https://www.doi.org/10...`` and a URL with
     ``%2F`` all match the bare DOI, and trailing full stops, commas and semicolons are
-    dropped. Returns the qualifying DOIs in their original form, deduplicated and sorted
-    by normalised form. The function is deterministic and makes no network call. The
-    search itself is left to whichever literature tool the caller prefers.
+    dropped. A double slash after the prefix, as in ``10.1037//0033-2909.99.1.20``, is
+    made single, since doi.org redirects such a DOI to the one with a single slash. A
+    candidate that is not a string, or holds only whitespace, is skipped: None, the
+    float NaN that pandas gives a missing value, an empty string and a number among
+    them. A single string is one candidate. Returns the qualifying DOIs in their
+    original form, deduplicated and sorted by normalised form. The function is
+    deterministic and makes no network call. The search itself is left to whichever
+    literature tool the caller prefers.
     """
     T = theory.data if hasattr(theory, "data") else theory
     known = set()
@@ -692,9 +741,14 @@ def new_evidence_dois(theory, candidate_dois: list) -> list:
             if doi:
                 known.add(normalise_doi(doi))
 
+    # A single string is one candidate, as in R, where iterating over it would
+    # give its characters. None is tested for directly, so that a pandas Series,
+    # which has no truth value, is read too.
+    if isinstance(candidate_dois, str):
+        candidate_dois = [candidate_dois]
     seen, out = set(), []
-    for doi in candidate_dois or []:
-        if not doi:
+    for doi in [] if candidate_dois is None else candidate_dois:
+        if not ne_str(doi):
             continue
         norm = normalise_doi(doi)
         if norm in known or norm in seen:
@@ -706,8 +760,9 @@ def new_evidence_dois(theory, candidate_dois: list) -> list:
 
 _OPENALEX_WORKS = "https://api.openalex.org/works"
 
-# Seconds every outbound request is allowed before it is abandoned, the timeout
-# the R twin gives curl and url(). Without one, a stalled service hangs an
+# Seconds an outbound request may go without progress before it is abandoned:
+# urlopen applies it to the connection and to each read, as the R twin's curl
+# callback does to the transfer. Without one, a stalled service hangs an
 # interactive session indefinitely.
 _NET_TIMEOUT = 30
 
@@ -794,7 +849,13 @@ def _openalex_page(params: dict, headers: dict, key: str) -> dict:
         with _urlopen(request, timeout=_NET_TIMEOUT) as resp:
             body = resp.read()
     except urllib.error.HTTPError as err:
-        body = err.read() if err.fp is not None else b""
+        try:
+            body = err.read() if err.fp is not None else b""
+        except TimeoutError:
+            raise
+        except (OSError, http.client.HTTPException) as read_err:
+            # The error reply was cut short or its connection reset.
+            raise urllib.error.URLError(read_err) from read_err
         # A server that repeats the key in an error must not carry it into the message.
         if key:
             body = body.replace(key.encode("ascii"), b"<api_key>")
@@ -803,12 +864,21 @@ def _openalex_page(params: dict, headers: dict, key: str) -> dict:
         if detail:
             message += f": {detail}"
         raise OpenAlexHTTPError(url, err.code, message, err.hdrs, body) from err
+    except (urllib.error.URLError, TimeoutError):
+        raise
+    except (OSError, http.client.HTTPException) as err:
+        # A connection reset, or a reply cut short, while the response is read.
+        # urllib raises these as they are, and a failure of the connection is
+        # reported as a URLError.
+        raise urllib.error.URLError(err) from err
     try:
         data = json.loads(body)
     except ValueError:
         data = None
     if not isinstance(data, dict) or not isinstance(data.get("results"), list):
         raise ValueError("OpenAlex response has no results list")
+    if not all(isinstance(w, dict) for w in data["results"]):
+        raise ValueError("OpenAlex response has a work that is not an object")
     return data
 
 
@@ -826,25 +896,65 @@ def _whole_number(x) -> int | None:
     return int(x)
 
 
+def _later_page(params: dict, headers: dict, key: str, n: int) -> dict:
+    """A page after the first, whose failure says how many records came before it.
+
+    The message gains `` (after <n> records were fetched)``. The error keeps its
+    class, and an OpenAlexHTTPError keeps its status and body (R:
+    ``.tf_later_page``).
+    """
+    note = f" (after {n} record was fetched)" if n == 1 else f" (after {n} records were fetched)"
+    try:
+        return _openalex_page(params, headers, key)
+    except OpenAlexHTTPError as err:
+        raise OpenAlexHTTPError(err.url, err.code, err.msg + note, err.hdrs, err.read()) from err
+    except urllib.error.URLError as err:
+        raise urllib.error.URLError(f"{err.reason}{note}") from err
+    except ValueError as err:
+        raise ValueError(f"{err}{note}") from err
+    except TimeoutError as err:
+        raise TimeoutError(f"{err}{note}") from err
+
+
+# The fields of a work that _openalex_record maps, the only ones requested.
+_SELECT = "id,doi,title,publication_year,keywords,concepts,referenced_works"
+
+# OpenAlex serves the first 10,000 results of a search by page number, without
+# a key, and later ones only through a cursor.
+_PAGE_NUMBER_LIMIT = 10_000
+
+
+def _entries(w: dict, key: str) -> list:
+    """The entries of a field OpenAlex gives as an array, or none when it is anything else."""
+    v = w.get(key)
+    return v if isinstance(v, list) else []
+
+
+def _names(entries: list) -> list:
+    """The ``display_name`` of each entry that gives one as nonempty text."""
+    names = [e.get("display_name") for e in entries if isinstance(e, dict)]
+    return [n for n in names if isinstance(n, str) and n]
+
+
 def _openalex_record(w: dict) -> dict:
     """One OpenAlex work as a corpus record."""
-    # Null display_name entries must be dropped before the emptiness test:
-    # a keywords list made only of nulls is non-empty as returned, which
-    # would suppress the concepts fallback and leave the record with no
-    # keywords at all. The R twin filters first for the same reason.
-    kws = [k.get("display_name") for k in (w.get("keywords") or [])]
-    kws = [k for k in kws if k]
+    # Entries without a name must be dropped before the emptiness test: a
+    # keywords list made only of nulls is non-empty as returned, which would
+    # suppress the concepts fallback and leave the record with no keywords at
+    # all. The R twin filters first for the same reason.
+    kws = _names(_entries(w, "keywords"))
     if not kws:
-        kws = [c.get("display_name") for c in (w.get("concepts") or [])[:5]]
-        kws = [k for k in kws if k]
-    return {
-        "id": w.get("id"),
-        "doi": w.get("doi"),
-        "title": w.get("title"),
+        kws = _names(_entries(w, "concepts")[:5])
+    record: dict = {"id": w.get("id"), "doi": w.get("doi")}
+    # The corpus schema types a title as a string, so a null one is left out.
+    if isinstance(w.get("title"), str):
+        record["title"] = w["title"]
+    record.update({
         "year": w.get("publication_year"),
         "keywords": kws,
-        "references": w.get("referenced_works") or [],
-    }
+        "references": [r for r in _entries(w, "referenced_works") if isinstance(r, str)],
+    })
+    return record
 
 
 def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None,
@@ -856,43 +966,53 @@ def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None,
     ``{schema_version: "1.0", id: "openalex:<query>", source, records}``. Each
     work is mapped to ``{id, doi, title, year, keywords, references}``, with the
     DOI as OpenAlex gives it and the top five concepts standing in for keywords
-    when a work has none.
+    when a work has none. A work whose title is null has no ``title``, since the
+    corpus schema types a title as a string. Only the fields the record uses are
+    requested.
 
     OpenAlex returns the works that match a search in pages of ``per_page``,
     ranked by relevance, and a search usually matches far more works than one
     page holds. ``per_page`` may be 1 to 200, but OpenAlex supports pages of up
     to 100 and has deprecated larger ones. A ``max_records`` above ``per_page``
-    pages on through OpenAlex's cursor until that many works are collected or
-    the results run out. Paging needs an API key: without one, OpenAlex serves
-    the first page and refuses the next with HTTP 401, so the call raises and
-    keeps none of the works already fetched. By default, ``max_records``
-    equals ``per_page``, so one request is made, which works without a key.
-    Each page is one request and costs USD 0.001. OpenAlex allows USD 0.10 a
-    day without a key, about 100 one-page searches, and USD 1 with a free key.
+    pages on until that many works are collected or the results run out. By
+    default, ``max_records`` equals ``per_page``, so one request is made. When
+    the pages needed lie within the first 10,000 results, they are requested by
+    number, which OpenAlex serves without a key. A larger ``max_records`` pages
+    through OpenAlex's cursor instead, and OpenAlex serves a cursor past the
+    first page only with an API key: without one, it refuses the second page
+    with HTTP 401. Each page is one request and costs USD 0.001. OpenAlex allows
+    USD 0.10 a day without a key, about 100 pages, and USD 1 with a free key.
 
     ``api_key`` defaults to the ``OPENALEX_API_KEY`` environment variable, and
     ``""`` sends no key. The key is sent only in an ``Authorization: Bearer``
-    header, never in the URL, the corpus or an error message. ``mailto`` is
-    still sent, but OpenAlex now ignores it, since API keys replaced the polite
-    pool it once selected.
+    header, never in the URL, the corpus or an error message. ``mailto``, when
+    it is a non-empty string, is still sent, but OpenAlex now ignores it, since
+    API keys replaced the polite pool it once selected.
 
     The arguments are checked before any request. ValueError is raised when
-    ``per_page`` is not an int from 1 to 200 (``per_page must be between 1 and
-    200``) and when ``max_records`` is not a positive whole number
-    (``max_records must be a positive integer``). The key is trimmed of the
-    spaces, tabs and line breaks around it, and ValueError is also raised when
-    ``api_key``, or the ``OPENALEX_API_KEY`` value, is not a string or, once
-    trimmed, holds a character outside visible ASCII.
+    ``query`` is not a string with at least one character left after trimming
+    (``query must be a non-empty string``), when ``per_page`` is not a whole
+    number from 1 to 200 (``per_page must be between 1 and 200``) and when
+    ``max_records`` is not a positive whole number (``max_records must be a
+    positive integer``). The key is trimmed of the spaces, tabs and line breaks
+    around it, and ValueError is also raised when ``api_key``, or the
+    ``OPENALEX_API_KEY`` value, is not a string or, once trimmed, holds a
+    character outside visible ASCII.
 
     When OpenAlex refuses a request, as it does with HTTP 429 once the budget is
-    spent and with HTTP 401 when a later page is asked for without a key,
-    ``theoryforge.lit.OpenAlexHTTPError`` (a ``urllib.error.HTTPError``)
-    is raised with the status and OpenAlex's own message, and the request is not
-    retried. A response without a ``results`` list raises ValueError. A request
-    is abandoned after 30 seconds without progress. A failure to connect,
-    including a connection that times out, raises ``urllib.error.URLError``, and
-    a reply that stalls raises ``TimeoutError``. Neither is an
-    ``OpenAlexHTTPError``.
+    spent and with HTTP 401 when a later cursor page is asked for without a key,
+    ``theoryforge.lit.OpenAlexHTTPError`` (a ``urllib.error.HTTPError``) is
+    raised with the status and OpenAlex's own message, and the request is not
+    retried. A response without a ``results`` list, or with a work that is not
+    an object, raises ValueError. Keyword and concept entries without a name
+    given as text, and references that are not text, are left out. A request is
+    abandoned after 30 seconds without progress. A failure to connect, including
+    a connection that times out, raises ``urllib.error.URLError``, as does a
+    connection reset or closed, or a reply cut short, while a reply or an error
+    reply is read, and a reply that stalls raises ``TimeoutError``. Neither is
+    an ``OpenAlexHTTPError``. When a page after the first fails, the works
+    fetched before it are not returned, and the message ends with the number of
+    them, as in ``(after 200 records were fetched)``.
 
     The corpus records where, when and how it was fetched in ``source``. It
     gives the service, endpoint and query and the UTC time of retrieval
@@ -902,34 +1022,52 @@ def fetch_corpus(query: str, per_page: int = 25, mailto: str | None = None,
     OpenAlex has written each work's keywords with a language model that reads
     its title, abstract and venue. It merges and splits that vocabulary over
     time. Works without keywords fall back to their concepts, a deprecated
-    vocabulary with capitalised names that do not match the lower-case keywords
-    in ``litmap``. Save a fetched corpus and work from the saved file.
+    vocabulary of its own. ``litmap`` compares keywords as exact strings, so a
+    concept matches a keyword only where the two vocabularies write a term
+    alike, which the concept 'Panic disorder' and the keyword 'panic disorder'
+    do not. Save a fetched corpus and work from the saved file.
     """
+    if not ne_str(query):
+        raise ValueError("query must be a non-empty string")
     # Reject out-of-range page sizes here rather than passing them through for
-    # OpenAlex to reject, and with the same message the R twin uses.
-    if isinstance(per_page, bool) or not isinstance(per_page, int) or not 1 <= per_page <= 200:
+    # OpenAlex to reject, and with the same message the R twin uses. An
+    # integral float passes, as max_records does.
+    ok = (not isinstance(per_page, bool) and isinstance(per_page, (int, float))
+          and math.isfinite(per_page) and per_page == int(per_page) and 1 <= per_page <= 200)
+    if not ok:
         raise ValueError("per_page must be between 1 and 200")
+    per_page = int(per_page)
     max_records = per_page if max_records is None else _positive_int(max_records, "max_records")
     key = _api_key(os.environ.get("OPENALEX_API_KEY", "") if api_key is None else api_key)
     headers = {"Authorization": f"Bearer {key}"} if key else {}
-    params = {"search": query, "per-page": str(per_page)}
-    if mailto:
+    params = {"search": query, "per-page": str(per_page), "select": _SELECT}
+    if isinstance(mailto, str) and mailto:
         params["mailto"] = mailto
 
-    # Cursor paging, which OpenAlex serves for a search with no cap on the
-    # number of results, and past the first page only to a request with an API
-    # key (HTTP 401 without one): "*" asks for the first page, and each page
-    # names the cursor of the next. The run ends with enough works, an empty
-    # page or no cursor (API_SPEC.md section 17).
+    # Page numbers when the pages needed lie within the first 10,000 results,
+    # since OpenAlex serves those without a key. Otherwise a cursor, which
+    # OpenAlex serves past the first page only to a request with an API key
+    # (HTTP 401 without one): "*" asks for the first page, and each page names
+    # the cursor of the next. The run ends with enough works or an empty page,
+    # and a cursor run also when no cursor follows (API_SPEC.md section 17).
+    by_number = -(-max_records // per_page) * per_page <= _PAGE_NUMBER_LIMIT
     retrieved = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    page = _openalex_page({**params, "cursor": "*"}, headers, key)
+    page = _openalex_page({**params, **({"page": "1"} if by_number else {"cursor": "*"})},
+                          headers, key)
     total_count = _whole_number(_meta(page).get("count"))
     records = [_openalex_record(w) for w in page["results"]]
-    cursor = _meta(page).get("next_cursor")
-    while len(records) < max_records and page["results"] and ne_str(cursor):
-        page = _openalex_page({**params, "cursor": cursor}, headers, key)
+    number = 1
+    while len(records) < max_records and page["results"]:
+        if by_number:
+            number += 1
+            where: dict = {"page": str(number)}
+        else:
+            cursor = _meta(page).get("next_cursor")
+            if not ne_str(cursor):
+                break
+            where = {"cursor": cursor}
+        page = _later_page({**params, **where}, headers, key, len(records))
         records += [_openalex_record(w) for w in page["results"]]
-        cursor = _meta(page).get("next_cursor")
     records = records[:max_records]
 
     return {

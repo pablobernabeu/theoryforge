@@ -6,27 +6,35 @@ If you use the Python package in your work, please cite it:
 
 ````python exec="1"
 # The reference, the BibTeX entry and the download link are all written from
-# one string at build time, so the version cannot drift between them. It comes
-# from theoryforge.__version__, which reads the installed distribution's
-# metadata. The download link is a self-contained data URI carrying exactly the
-# string the fenced block shows, so no file has to be shipped beside the site.
-#
-# Two further copies of the version are out of reach here, because neither file
-# can execute code, and both have to be bumped by hand on release: the
-# extra.version chip in mkdocs.yml, and the version field of CITATION.cff.
+# one string at build time. The version is the installed distribution's
+# (theoryforge.__version__), or pyproject.toml's when the package runs from an
+# uninstalled source tree, and the year is that of the release date recorded in
+# the repository's CITATION.cff, so neither is written by hand here. The
+# download link is a self-contained data URI carrying exactly the string the
+# fenced block shows, so no file has to be shipped beside the site. The
+# extra.version chip in mkdocs.yml cannot run code and is updated on release.
+import re
+from pathlib import Path
 from urllib.parse import quote
 
 import theoryforge
 
+# src/theoryforge/__init__.py, three levels below the repository root.
+root = Path(theoryforge.__file__).resolve().parents[3]
 version = theoryforge.__version__
-doi = "10.5281/zenodo.21229964"
+if version == "0+unknown":
+    pyproject = (root / "python" / "pyproject.toml").read_text(encoding="utf-8")
+    version = re.search(r'^version\s*=\s*"([^"]+)"', pyproject, re.M).group(1)
+cff = (root / "CITATION.cff").read_text(encoding="utf-8")
+year = re.search(r'^date-released:\s*"?(\d{4})-', cff, re.M).group(1)
+doi = re.search(r'^doi:\s*"?([^"\s]+)', cff, re.M).group(1)
 
 bibtex = "\n".join(
     [
         "@Manual{theoryforge,",
         "  title  = {theoryforge: Systematic theory development},",
         "  author = {Pablo Bernabeu},",
-        "  year   = {2026},",
+        f"  year   = {{{year}}},",
         f"  note   = {{Python package version {version}}},",
         f"  doi    = {{{doi}}},",
         "  url    = {https://pypi.org/project/theoryforge/},",
@@ -36,7 +44,7 @@ bibtex = "\n".join(
 
 print(
     '<p style="margin: 0 0 0.6em 0; padding-left: 1.8em; text-indent: -1.8em;">'
-    "Bernabeu, P. (2026). <em>theoryforge: Systematic theory development</em> "
+    f"Bernabeu, P. ({year}). <em>theoryforge: Systematic theory development</em> "
     f"(Python package version {version}). "
     f'<a href="https://doi.org/{doi}">https://doi.org/{doi}</a></p>'
 )
@@ -67,27 +75,31 @@ computational modelling and statistics. He develops open, reproducible research 
 and Python, and is a Fellow of the Software Sustainability Institute. His
 [ORCID record](https://orcid.org/0000-0003-1083-2460) lists his other work.
 
-This Python package has a feature-parity twin written in R, which is documented on the
-[theoryforge (R) site](https://pablobernabeu.github.io/theoryforge/r/).
+This Python package has a twin written in R, documented on the
+[theoryforge (R) site](https://pablobernabeu.github.io/theoryforge/r/). Both implement one
+[specification](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md) and are
+tested against the same expected outputs, apart from the functions that call a network service,
+an embedding model or a renderer.
 
 ## Licence
 
-theoryforge is released under the MIT licence, a permissive licence that allows use,
-modification and redistribution provided the copyright and licence notices are kept. The full
-text is reproduced on this site's [licence page](licence.md).
+theoryforge is released under the MIT licence, which allows use, modification and
+redistribution provided that the copyright and licence notices are kept. The full text is on
+this site's [licence page](licence.md).
 
-## Versioning and archival
+## Versions and archiving
 
 Releases are tagged on [GitHub](https://github.com/pablobernabeu/theoryforge/releases) and
-archived on Zenodo. The concept DOI, <https://doi.org/10.5281/zenodo.21229964>, resolves to
-the latest archived release, so a citation stays current without naming a version. The
-[changelog](changelog.md) records what changed in each release.
+archived on Zenodo, which gives each release a DOI of its own. The concept DOI given in the
+citation above resolves to the latest archived release, and the version in the citation
+identifies the release used. The [changelog](changelog.md)
+records what changed in each release.
 
 ## Contributing and support
 
-Bugs and feature requests are best reported on the
+Bugs and feature requests can be reported on the
 [GitHub issues page](https://github.com/pablobernabeu/theoryforge/issues), and the
 [contributing guide](https://github.com/pablobernabeu/theoryforge/blob/main/.github/CONTRIBUTING.md)
-explains how to set up a development environment and propose a change. Because the OSF deposit
-adapter takes a personal access token, never paste that token, or any other secret, into an
+explains how to set up a development environment and propose a change. The OSF deposit
+adapter takes a personal access token, so never paste that token, or any other secret, into an
 issue. Replace it with a placeholder.

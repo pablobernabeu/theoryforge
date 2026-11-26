@@ -16,51 +16,165 @@ A named list whose first element, \code{verdict}, is one of
 \code{"progressive"}, \code{"degenerating"} and \code{"neutral"}.
 \code{new_predictions}, \code{corroborated_new}, \code{ad_hoc_assumptions},
 \code{articulated}, \code{underived}, \code{corroborated_new_registered},
-\code{dropped}, \code{dropped_corroborated}, \code{content_lost} and
-\code{new_anomalies} are ascending-sorted character vectors.
-\code{renamed} is a list of \code{list(prior, new)} pairs sorted by
-\code{new}, and \code{assumptions} holds one
-\code{list(id, added_for, class, independent)} per new assumption added
-for an anomaly, in file order. \code{independent} lists, each as
+\code{dropped}, \code{dropped_corroborated}, \code{content_lost},
+\code{new_anomalies}, \code{weakened_refuted}, \code{unresolved},
+\code{protected_only} and \code{refuted_new} are ascending-sorted
+character vectors. \code{content_lost} holds the untested predictions the
+amendment drops, under their prior ids, and, under their new ids, the
+untested or corroborated predictions it weakens or whose claim it no
+longer entails. \code{weakened_refuted} holds the predictions refuted or
+mixed in the prior that it weakens. \code{refuted_new} holds the new
+predictions refuted or mixed in \code{new}. \code{renamed} is a list of
+\code{list(prior, new)} pairs sorted by \code{new}, and \code{revised} a
+list of \code{list(id, change)} records, one per revised prediction sorted
+by its new id, where \code{change} is \code{"weakened"},
+\code{"strengthened"}, \code{"reworded"} or \code{"changed"}.
+\code{assumptions} holds one
+\code{list(id, added_for, class, independent, added_for_inferred, change)}
+per new or revised assumption added for an anomaly, in file order.
+\code{added_for_inferred} is \code{TRUE} when \code{added_for} was taken
+from \code{protects}. \code{change} is \code{"new"} for an assumption
+under an id the prior lacks and \code{"revised"} for one kept under its id
+whose statement changed, by any change of wording, even one that keeps its
+meaning. \code{independent} lists, each as
 \code{list(id, status)} and in the order of \code{protects}, the distinct
 predictions the assumption protects that are new in this version and
 differ from \code{added_for}, with their status in \code{new}
 (\code{"corroborated"}, \code{"refuted"}, \code{"mixed"} or
-\code{"untested"}). \code{class} is \code{"ad_hoc1"} when there are none,
-\code{"ad_hoc2"} when none is corroborated and
-\code{"independently_corroborated"} otherwise, and
-\code{ad_hoc_assumptions} holds the ids of the first two classes. The
-elements come in the order \code{verdict}, \code{new_predictions},
+\code{"untested"}). \code{class} is \code{"ad_hoc1"}, \code{"pending"},
+\code{"ad_hoc2"} or \code{"independently_corroborated"}, and
+\code{ad_hoc_assumptions} holds the ids of those classed \code{"ad_hoc1"}
+or \code{"ad_hoc2"}. \code{theoretically_progressive} and
+\code{empirically_progressive} are logical. \code{implications_lost} and
+\code{implications_lost_unrefuted} hold the statements of the lost
+implications, all of them and the unrefuted ones, in the order of the
+prior's record, and \code{implications_gained} the statements of the pairs
+the new graph separates and the prior's does not, in the order of the new
+record. \code{entailments_lost} is a list of \code{list(id, prior, new)}
+records, under the new id, with the verdicts of the two graphs, sorted by
+id. \code{signs_lost} holds statements
+\code{"effect of <x> on <y>: <sign>"} in the prior graph's vertex order,
+\code{x} and then \code{y}. It lists ordered pairs, so it can grow with
+the square of the number of constructs: one changed relation in a large
+feedback loop can give up the sign of nearly every pair the loop joins.
+\code{corroborated_new_severity} is a list of
+\code{list(id, severity)} records, one per corroborated new prediction
+sorted by id, where \code{severity} is the smallest value of
+\code{\link[=tf_post_data_severity]{tf_post_data_severity()}} over its passes that record an estimate and a
+standard error for a prediction with bounds, and \code{NA} when none does.
+\code{implications_compared} is \code{FALSE} when \code{\link[=tf_implications]{tf_implications()}}
+refuses either version, and the three vectors of implications,
+\code{entailments_lost} and \code{signs_lost} are then empty and the
+verdict is not \code{"progressive"}. The elements come in the order
+\code{verdict}, \code{new_predictions},
 \code{corroborated_new}, \code{ad_hoc_assumptions}, \code{articulated},
 \code{underived}, \code{corroborated_new_registered}, \code{renamed},
 \code{dropped}, \code{dropped_corroborated}, \code{content_lost},
-\code{new_anomalies} and \code{assumptions}.
+\code{new_anomalies}, \code{assumptions},
+\code{theoretically_progressive}, \code{empirically_progressive},
+\code{revised}, \code{weakened_refuted}, \code{unresolved},
+\code{implications_compared}, \code{implications_lost},
+\code{implications_lost_unrefuted}, \code{implications_gained},
+\code{entailments_lost}, \code{signs_lost}, \code{protected_only},
+\code{refuted_new} and \code{corroborated_new_severity}.
 }
 \description{
 Compares an amended theory \code{new} with its \code{prior} version by
-content, not by prediction ids, and returns a Lakatosian verdict with the
-evidence behind it.
+content, not by prediction ids, and returns a verdict by fixed rules that
+borrow the terms of Lakatos (1970), with the evidence behind it.
 }
 \details{
-A new prediction whose statement and type match a prediction the amendment
-dropped is that prediction renamed. A new prediction derived only from
-propositions the prior already held, and needing no new assumption,
-articulates old content. A prediction is corroborated when at least one test
-outcome passes it and none fails it. An assumption added for an anomaly (its
-\code{added_for} names the prediction it answers) is ad hoc unless a
-prediction it protects that is new in this version, other than the anomaly,
-is corroborated.
+Lakatos calls a problemshift theoretically progressive when each new theory
+predicts some novel fact that its predecessor did not, empirically
+progressive when some of this excess content is corroborated, progressive
+when it is both and degenerating otherwise. The verdict applies the rules
+below to what the two files declare, and it holds only if the declarations
+are true: the test outcomes, the registrations and the \code{added_for} and
+\code{protects} of each assumption. A new prediction counts as novel when
+the prior file does not hold it and the prior's causal graph does not
+entail its claim. The appraisal cannot tell a prediction from an
+accommodation of data already seen, since it reads no dates and nothing
+about where the data came from, so the prior must be the version before the
+new predictions were stated. A prediction made in one version and
+corroborated in the next is appraised against the version before it was
+made. The appraisal does not distinguish a programme's hard core from its
+protective belt. Read \code{refuted_new} and
+\code{corroborated_new_severity} with the verdict: one corroborated new
+prediction among many that failed, or a pass whose own estimate gives a low
+post-data severity, is enough for \code{"progressive"}.
 
-The verdict is \code{"progressive"} when a corroborated new prediction is
-neither an articulation nor underived, no assumption is ad hoc and no
-corroborated prediction is dropped. It is \code{"degenerating"} when an
-assumption is ad hoc and no such prediction exists, and \code{"neutral"}
-otherwise. Lakatos has only the first two. \code{"neutral"} is
-theoryforge's label for an amendment that meets neither rule, and the
-vectors returned tell its cases apart. Only
+A new prediction whose statement and type match a prediction the amendment
+dropped is that prediction renamed. Assumptions are compared by statement
+too. An assumption kept under its id is revised when its statement changed,
+and one under a new id whose statement matches that of an assumption the
+amendment dropped is that assumption renamed, so only a new or revised
+assumption is appraised. A new prediction articulates old content when it
+derives only from propositions the prior already held and needs no new or
+revised assumption, or when the prior's causal graph already entails its
+claim. One that would articulate old content but for an appraised
+assumption that lists it in \code{protects} is new content whose novelty
+rests on that declaration, and is reported in \code{protected_only}. A new
+prediction is underived when it cites no proposition and unresolved when it
+cites an id that names no proposition of the new version. A prediction is
+corroborated when at least one test outcome passes it and none fails it. A
+new or revised assumption added for an anomaly is classed by the
+predictions it protects that are new in this version, other than the
+anomaly: \code{"ad_hoc1"} when there are none, \code{"pending"} when none
+of them is tested yet, \code{"ad_hoc2"} when some were tested and none is
+corroborated, and \code{"independently_corroborated"} otherwise. The labels
+\code{"ad_hoc1"} and \code{"ad_hoc2"} borrow Lakatos's terms, and each means
+only what its check finds: that the assumption protects no new prediction
+besides the anomaly, or that some of the new predictions it protects have
+been tested and none is corroborated. No other sense of ad hoc is assessed.
+Its \code{added_for} names the anomaly. When that is empty, the first
+prediction it protects that was refuted or mixed in the prior is taken as
+the anomaly.
+
+A prediction kept from the prior, under its id or renamed, is revised when
+its statement, type, bounds or claim changed. When either version states a
+region with a finite end, its content is weaker when its bounds allow a
+wider region, when it drops its claim or when its claim gives up a sign of
+positive, negative or zero for nonzero, and a change of type alone neither
+weakens nor strengthens it. When neither states such a region, a type that
+ranks lower in existence < directional < interval < point is weaker too. A
+point or interval label without a finite lower and a finite upper bound
+reads as directional in both comparisons, as \code{\link[=tf_severity]{tf_severity()}} reads it,
+since the label alone states nothing a test could miss. The two causal
+graphs are read with \code{cycles = "sigma"}. They are compared through
+\code{\link[=tf_implications]{tf_implications()}}: a pair of constructs that the prior's graph separates
+and the new graph does not is an implication lost, refuted when a
+prediction of the prior that states the independence of the two is refuted
+or mixed there. A retained prediction untested or corroborated in the prior
+whose prior claim the prior's graph entails and the new graph does not is in
+\code{entailments_lost}. A total effect of one construct on another that
+the prior's graph signs positive or negative and the new graph does not sign
+the same way is in \code{signs_lost}, unless a prediction that failed in the
+prior states an effect claim on the pair with that sign or with nonzero.
+
+The amendment is theoretically progressive when a new prediction adds
+content, being neither renamed, articulated, underived nor unresolved, and
+empirically progressive when one of these is corroborated. The verdict is
+\code{"progressive"} when it is both, no assumption is ad hoc, no
+corroborated prediction is dropped, no content is lost and no prediction
+refuted or mixed in the prior is weakened. Content is lost when an untested
+prediction is dropped, an untested or corroborated prediction is weakened or
+loses the entailment of its claim, an implication is lost without being
+refuted or a signed effect is lost without having been refuted. The verdict
+is never \code{"progressive"} when \code{implications_compared} is
+\code{FALSE}: a graph that \code{\link[=tf_implications]{tf_implications()}} refuses, for a repeated
+construct id or a proposition that names an undeclared construct, cannot be
+read, so the content of the two versions cannot be compared and what the
+amendment gives up is unknown. The verdict is \code{"degenerating"} when an
+assumption is ad hoc or a prediction refuted or mixed in the prior is
+weakened, and no prediction adds corroborated content. It is
+\code{"neutral"} otherwise. Lakatos has only the first two.
+\code{"neutral"} is theoryforge's label for an amendment that meets neither
+rule, and the vectors returned tell its cases apart. Only
 \code{corroborated_new_registered} reads a test outcome's
-\code{registered}, and no date or \code{version} field is read, so which
-version is the prior is the caller's responsibility.
+\code{registered}, and only \code{corroborated_new_severity} its
+\code{estimate} and \code{se}, and neither decides the verdict. No date or
+\code{version} field is read, so which version is the prior is the caller's
+responsibility. API_SPEC.md section 10 states every rule in full.
 
 A test outcome whose \code{passed} is present and not \code{TRUE} or
 \code{FALSE}, in \code{new} (checked first) or in \code{prior}, is

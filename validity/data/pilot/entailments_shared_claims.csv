@@ -1,0 +1,27 @@
+theory,cycles,claim,enc-1,enc-2,enc-3,n_encoders,verdicts_agree
+bilingual-rhm,refuse,effect DIFF->ASYM positive,entailed,,entailed,2,True
+bilingual-rhm,refuse,effect DOM->ASYM positive,entailed,,,1,True
+bilingual-rhm,refuse,effect PROF->ASYM negative,entailed,entailed,entailed,3,True
+bilingual-rhm,refuse,effect PROF->REL negative,entailed,entailed,entailed,3,True
+bilingual-rhm,refuse,effect SEM->ASYM nonzero,entailed,entailed,,2,True
+collaborative-cognitive-load,refuse,effect CHAN->TL negative,entailed,,entailed,2,True
+collaborative-cognitive-load,refuse,effect COL->IL negative,entailed,,,1,True
+collaborative-cognitive-load,refuse,effect COORD->TL negative,entailed,,entailed,2,True
+collaborative-cognitive-load,refuse,effect EXP->TL negative,entailed,,entailed,2,True
+collaborative-cognitive-load,refuse,effect FAM->TL negative,entailed,,entailed,2,True
+collaborative-cognitive-load,refuse,effect GUID->TL negative,entailed,,entailed,2,True
+collaborative-cognitive-load,refuse,effect ROLE->TL negative,entailed,,entailed,2,True
+collaborative-cognitive-load,refuse,effect SIZE->TL positive,entailed,,entailed,2,True
+collaborative-cognitive-load,refuse,effect SKILL->TL negative,entailed,,entailed,2,True
+collaborative-cognitive-load,refuse,effect TA->CL positive,entailed,entailed,,2,True
+collaborative-cognitive-load,refuse,effect TL->LRN negative,entailed,entailed,entailed,3,True
+collaborative-cognitive-load,refuse,effect UNEV->TL positive,entailed,,entailed,2,True
+collaborative-cognitive-load,refuse,effect WE->LRN positive,undetermined,undetermined,entailed,3,False
+health-habit,sigma,effect CTX->BEH negative,entailed,undetermined,,2,False
+health-habit,sigma,effect CUE->BEH positive,,,undetermined,1,True
+health-habit,sigma,effect CUE->IMP positive,,undetermined,undetermined,2,True
+health-habit,sigma,effect HAB->BEH positive,undetermined,undetermined,undetermined,3,True
+health-habit,sigma,effect HAB->REP positive,entailed,,undetermined,2,False
+health-habit,sigma,effect INT->HAB positive,,,undetermined,1,True
+health-habit,sigma,effect MOT->REP positive,entailed,,,1,True
+health-habit,sigma,effect REP->HAB positive,entailed,entailed,entailed,3,True

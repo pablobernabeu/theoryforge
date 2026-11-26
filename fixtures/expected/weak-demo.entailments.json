@@ -1,0 +1,13 @@
+{
+  "theory_id": "weak-demo",
+  "criterion": "sigma",
+  "acyclic": true,
+  "feedback": [],
+  "claims": [],
+  "counts": {
+    "entailed": 0,
+    "contradicted": 0,
+    "undetermined": 0,
+    "not_evaluated": 0
+  }
+}

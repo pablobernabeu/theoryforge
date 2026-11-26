@@ -9,7 +9,8 @@ tf_new_evidence_dois(theory, candidate_dois)
 \arguments{
 \item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
 
-\item{candidate_dois}{Character vector of DOIs to check.}
+\item{candidate_dois}{Character vector of DOIs to check. A list of strings
+and a factor are read too.}
 }
 \value{
 A character vector of the candidate DOIs not already cited,
@@ -24,19 +25,21 @@ engages with. The normalised form is the DOI itself, trimmed, lower-cased
 (ASCII letters only) and percent-decoded, wherever it sits in the text, so
 \code{doi: 10...}, \code{DOI 10...}, \code{doi.org/10...},
 \code{https://www.doi.org/10...} and a URL with \code{\%2F} all match the
-bare DOI, and trailing full stops, commas and semicolons are dropped.
-Returns the qualifying DOIs in their original form, deduplicated and sorted
-by normalised form. The function is deterministic and makes no network
-call. The search itself is left to whichever literature tool the caller
-prefers.
+bare DOI, and trailing full stops, commas and semicolons are dropped. A
+double slash after the prefix, as in \code{10.1037//0033-2909.99.1.20}, is
+made single, since doi.org redirects such a DOI to the one with a single
+slash. A candidate that is not a string, or holds only whitespace, is
+skipped, \code{NA} included. Returns the qualifying DOIs in their original
+form, deduplicated and sorted by normalised form. The function is
+deterministic and makes no network call. The search itself is left to
+whichever literature tool the caller prefers.
 }
 \examples{
 # The bundled panic theory cites one DOI as evidence and one for each of its
 # two registered alternatives. All three count as already cited.
-theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
-                              package = "theoryforge"))
+theory <- tf_read(tf_example_path("panic-network.theory.yaml"))
 tf_new_evidence_dois(theory, c(
-  "10.1016/j.brat.2015.10.002",                   # cited as evidence
+  "10.1176/ajp.155.5.610",                        # cited as evidence
   "https://doi.org/10.1016/0005-7967(86)90011-2", # an alternative, in URL form
   "https://doi.org/10.1037/0033-2909.99.1.20"     # not yet cited
 ))

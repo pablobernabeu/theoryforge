@@ -2,25 +2,43 @@
 % Please edit documentation in R/core.R
 \name{tf_add_alternative}
 \alias{tf_add_alternative}
-\title{Add an alternative theory (BUILDING mode)}
+\title{Add an alternative theory}
 \usage{
-tf_add_alternative(theory, id, label, key_constructs = NULL)
+tf_add_alternative(
+  theory,
+  id,
+  label,
+  key_constructs = NULL,
+  source_doi = NULL,
+  propositions = NULL
+)
 }
 \arguments{
 \item{theory}{A theory object (named list).}
 
 \item{id, label}{Alternative fields.}
 
-\item{key_constructs}{Optional character vector.}
+\item{key_constructs}{Optional character vector of the rival's key
+constructs, which \code{\link[=tf_landscape]{tf_landscape()}} matches against the literature.}
+
+\item{source_doi}{Optional DOI of the work that states the rival.}
+
+\item{propositions}{Optional list of the rival's own propositions over the
+theory's constructs, each a named list with \code{id}, \code{from},
+\code{to} and \code{relation}, which \code{\link[=tf_discriminate]{tf_discriminate()}} sets against the
+theory's.}
 }
 \value{
-The (mutated) theory object.
+The theory with the alternative added.
 }
 \description{
-Add an alternative theory (BUILDING mode)
+Appends a registered alternative account and a provenance entry. R does not
+change the theory in place, so assign the result.
 }
 \examples{
 tf_theory("demo-1", "A demonstration theory") |>
   tf_add_alternative("alt1", "Cognitive appraisal account",
-                     key_constructs = c("c_threat"))
+                     key_constructs = "appraisal",
+                     propositions = list(list(id = "r1", from = "c_threat",
+                                              to = "c_arousal", relation = "increases")))
 }

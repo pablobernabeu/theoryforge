@@ -25,8 +25,9 @@ const EXAMPLES = [
 // Evaluate a runtime without its CDN import and without starting the app.
 function loadRuntime(file) {
   let src = readFileSync(path.join(here, "..", file), "utf8");
-  src = src.replace(/^import .*$/m, "").replace("window.TF.start(RT);", "globalThis.__RT = RT;");
-  const ctx = { window: { TF: { DIAG_SVG: ["venn", "rigour", "severity"] } }, TextEncoder, TextDecoder, JSON, console };
+  src = src.replace(/^import .* from ".*";$/m, "").replace("window.TF.start(RT);", "globalThis.__RT = RT;");
+  // As app-core.js gives them (checked in core.test.mjs).
+  const ctx = { window: { TF: { DIAG_SVG: ["venn", "rigour", "severity"], DIAG_FILE: { rigour: "checklist" } } }, TextEncoder, TextDecoder, JSON, console };
   ctx.globalThis = ctx;
   vm.createContext(ctx);
   vm.runInContext(src, ctx);
@@ -221,11 +222,17 @@ test("both runtimes load a pinned engine release, which the apps' README names",
   for (const f of ["r/r-runtime.js", "py/py-runtime.js", "shared/app-core.js"]) {
     assert.doesNotMatch(src(f), /\/latest\//, `${f} loads a moving "latest" address`);
   }
-  const webr = r.match(/^import \{ WebR \} from "https:\/\/webr\.r-wasm\.org\/v(\d+\.\d+\.\d+)\/webr\.mjs";$/m);
+  const webr = r.match(/^const WEBR_URL = "https:\/\/webr\.r-wasm\.org\/v(\d+\.\d+\.\d+)\/webr\.mjs";$/m);
   assert.ok(webr, "r-runtime.js imports webR from a versioned address");
-  assert.equal(webr[1], "0.6.0");
+  assert.equal(webr[1], "0.6.1");
   const pyodide = [...py.matchAll(/cdn\.jsdelivr\.net\/pyodide\/v(\d+\.\d+\.\d+)\/full\//g)].map((m) => m[1]);
-  assert.deepEqual(pyodide, ["0.27.7", "0.27.7"], "the module and its index URL name one Pyodide release");
+  assert.deepEqual(pyodide, ["314.0.8"], "the index URL, from which the module is imported, names one Pyodide release");
+  // Each engine is imported inside init, so that a failed download reaches the
+  // boot panel rather than leave a blank page.
+  for (const [f, text] of [["r/r-runtime.js", r], ["py/py-runtime.js", py]]) {
+    assert.doesNotMatch(text, /^import .* from "/m, `${f} has a static import`);
+    assert.match(text, /const engine = loadEngine\(/, `${f} imports its engine in init`);
+  }
   // A line break may fall anywhere a space does.
   const readme = readFileSync(path.join(here, "..", "README.md"), "utf8").replace(/\s+/g, " ");
   assert.match(readme, new RegExp(`webR ${webr[1].replace(/\./g, "\\.")} \\(R \\d`));
@@ -235,5 +242,27 @@ test("both runtimes load a pinned engine release, which the apps' README names",
 test("r/r-runtime.js: the simulate comment lists every element of the record", () => {
   const { RT } = withStubEngine("r/r-runtime.js", []);
   const code = RT.code("simulate", { steps: 30, dt: 0.1, k: 1, damping: 0.5, init: 1, method: "exact" });
-  assert.match(code, /# list\(states, dt, steps, k, damping, init, method, ignored, opposed, trajectory\)$/m);
+  assert.match(code, /# list\(states, dt, steps, k, damping, init, initial_state, method, ignored, assumed_positive, opposed, trajectory\)$/m);
+});
+
+// The checklist's code passes the cycles setting and draws the grid only
+// under the default reading, as the app does.
+test("the checklist's code passes cycles and draws the grid only under refuse", async () => {
+  for (const [file, refuse, sigma] of [
+    ["r/r-runtime.js", 'tf_check(theory, cycles = "refuse")', 'tf_check(theory, cycles = "sigma")'],
+    ["py/py-runtime.js", 'theory.check(cycles="refuse")', 'theory.check(cycles="sigma")'],
+  ]) {
+    const { RT } = withStubEngine(file, []);
+    await RT.loadExample(GOOD);
+    const r = RT.code("check", { cycles: "refuse" }), s = RT.code("check", { cycles: "sigma" });
+    assert.ok(r.includes(refuse) && /"checklist\.svg"/.test(r), file + "\n" + r);
+    assert.ok(s.includes(sigma) && !/\.svg/.test(s), file + "\n" + s);
+    assert.doesNotMatch(r + s, /Aggregate score|rigour grid|rigour\.svg/i, file);
+    // The view keeps its name in the call, and the diagram's code saves it
+    // under the name the app gives the download.
+    const d = RT.code("diagram", { type: "rigour" });
+    assert.match(d, /"rigour"\)/, file + "\n" + d);
+    assert.match(d, /"checklist\.svg"/, file + "\n" + d);
+    assert.doesNotMatch(d, /rigour\.svg/, file + "\n" + d);
+  }
 });

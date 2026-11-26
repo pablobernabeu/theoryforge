@@ -14,13 +14,19 @@
 #             <src_dir>/*.corpus.yaml|json, mirroring edge_outcome() and
 #             corpus_edge_outcome() in scripts/gen_golden.py (src_dir is
 #             fixtures/edge/)
+#   edge-diagrams
+#             every diagram view of each readable <src_dir>/*.theory.yaml|json,
+#             a refusal as its message, mirroring emit_edge_diagrams() in
+#             scripts/gen_golden.py (src_dir is fixtures/edge/)
 #   roundtrip tf_read() then tf_write() for every <src_dir>/*.theory.yaml|json,
 #             each written to <out_dir> under its own name and format
 #             (parity_check.py runs it on the files the Python twin wrote)
 suppressWarnings(suppressMessages({
-  usage <- "usage: Rscript scripts/parity_emit.R <golden|theories|edge|roundtrip> <src_dir> <out_dir> [<pkg_dir>]"
+  usage <- paste("usage: Rscript scripts/parity_emit.R <golden|theories|edge|edge-diagrams|roundtrip>",
+                 "<src_dir> <out_dir> [<pkg_dir>]")
   args <- commandArgs(trailingOnly = TRUE)
-  if (length(args) < 3L || !(args[[1]] %in% c("golden", "theories", "edge", "roundtrip"))) {
+  if (length(args) < 3L ||
+      !(args[[1]] %in% c("golden", "theories", "edge", "edge-diagrams", "roundtrip"))) {
     stop(usage, call. = FALSE)
   }
   mode <- args[[1]]
@@ -75,14 +81,31 @@ suppressWarnings(suppressMessages({
     write_raw(tf_preregister(t), file.path(out_dir, paste0(id, ".prereg.md")))
     write_raw(tf_compile_sem(t), file.path(out_dir, paste0(id, ".sem.lavaan")))
     write_raw(tf_dossier(t), file.path(out_dir, paste0(id, ".dossier.md")))
+    tf_render_report(t, file.path(out_dir, paste0(id, ".dossier.qmd")))
     write_raw(paste0(jsonlite::toJSON(tf_simulate(t), auto_unbox = TRUE, digits = 10, pretty = TRUE), "\n"),
               file.path(out_dir, paste0(id, ".simulate.json")))
-    write_raw(paste0(jsonlite::toJSON(tf_simulate(t, method = "exact"), auto_unbox = TRUE,
+    write_raw(paste0(jsonlite::toJSON(tf_simulate(t, method = "euler"), auto_unbox = TRUE,
                                       digits = 10, pretty = TRUE), "\n"),
-              file.path(out_dir, paste0(id, ".simulate_exact.json")))
+              file.path(out_dir, paste0(id, ".simulate_euler.json")))
     write_raw(paste0(jsonlite::toJSON(tf_implications(t, cycles = "sigma"), auto_unbox = TRUE,
                                       pretty = TRUE), "\n"),
               file.path(out_dir, paste0(id, ".implications.json")))
+    rivals <- character(0)
+    for (a in t$alternatives) {
+      if (is.list(a) && length(a$propositions) > 0L && is.character(a$id) && nzchar(a$id)) {
+        rivals <- c(rivals, a$id)
+      }
+    }
+    causal <- list(
+      entailments = tf_entailments(t, cycles = "sigma"),
+      equivalent_models = tf_equivalent_models(t),
+      discriminate = lapply(rivals, function(r) tf_discriminate(t, r, cycles = "sigma"))
+    )
+    for (name in names(causal)) {
+      write_raw(paste0(jsonlite::toJSON(causal[[name]], auto_unbox = TRUE, null = "null",
+                                        na = "null", pretty = TRUE), "\n"),
+                file.path(out_dir, paste0(id, ".", name, ".json")))
+    }
   }
 
   # The message of a condition as an edge outcome records it: a leading
@@ -108,17 +131,29 @@ suppressWarnings(suppressMessages({
   edge_outcome <- function(path) {
     t <- tryCatch(tf_read(path), error = function(e) e)
     if (inherits(t, "error")) return(list(read = list(error = error_text(t))))
-    list(
+    record <- list(
       read = "ok",
       validate = attempt(isTRUE(tf_validate(t))),
       validate_full = attempt(isTRUE(tf_validate(t, full = TRUE))),
       check = attempt(check_summary(tf_check(t))),
       severity = attempt(tf_severity(t)),
       implications = attempt(tf_implications(t)),
+      entailments = attempt(tf_entailments(t))
+    )
+    # The default leaves a claim unread when a construct it names is behind a
+    # feedback loop, so a graph with a loop is also read by sigma-separation,
+    # its claims and then the checklist.
+    sigma <- attempt(tf_entailments(t, cycles = "sigma"))
+    if (identical(sigma$acyclic, FALSE)) {
+      record$entailments_sigma <- sigma
+      record$check_sigma <- attempt(check_summary(tf_check(t, cycles = "sigma")))
+    }
+    c(record, list(
+      equivalent_models = attempt(tf_equivalent_models(t)),
       compile_sem = attempt(tf_compile_sem(t)),
       simulate = attempt(tf_simulate(t, steps = 3)),
       preregister = attempt(tf_preregister(t))
-    )
+    ))
   }
 
   # The record of an edge-case corpus, as corpus_edge_outcome() in
@@ -150,6 +185,29 @@ suppressWarnings(suppressMessages({
     }
     cat(sprintf("emitted R edge outcomes for %d theory and %d corpus file(s) to %s [R engine from %s]\n",
                 length(inputs), length(corpora), out_dir, loaded_from))
+  } else if (mode == "edge-diagrams") {
+    # A view goes to <name>.<type>.<ext>, or a refusal's message to
+    # <name>.<type>.error, as emit_edge_diagrams() in scripts/gen_golden.py
+    # writes them. A file that cannot be read has no views.
+    inputs <- sort(list.files(src_dir, pattern = "\\.theory\\.(yaml|json)$", full.names = TRUE))
+    n <- 0L
+    for (path in inputs) {
+      t <- tryCatch(tf_read(path), error = function(e) e)
+      if (inherits(t, "error")) next
+      n <- n + 1L
+      name <- sub("\\.theory\\.(yaml|json)$", "", basename(path))
+      for (type in names(diagram_ext)) {
+        ir <- tryCatch(tf_diagram(t, type = type), error = function(e) e)
+        if (inherits(ir, "error")) {
+          write_raw(paste0(error_text(ir), "\n"),
+                    file.path(out_dir, paste0(name, ".", type, ".error")))
+        } else {
+          write_raw(ir, file.path(out_dir, paste0(name, ".", type, ".", diagram_ext[[type]])))
+        }
+      }
+    }
+    cat(sprintf("emitted R diagrams for %d edge theory file(s) to %s [R engine from %s]\n",
+                n, out_dir, loaded_from))
   } else if (mode == "roundtrip") {
     inputs <- sort(list.files(src_dir, pattern = "\\.theory\\.(yaml|json)$", full.names = TRUE))
     for (path in inputs) tf_write(tf_read(path), file.path(out_dir, basename(path)))
@@ -175,10 +233,10 @@ suppressWarnings(suppressMessages({
                                         digits = NA, pretty = TRUE), "\n"),
                 file.path(out_dir, "modality-switching-2026.post_data_severity.json"))
 
-      # new_evidence_dois (P2): candidate DOIs against the panic-network theory's
+      # new_evidence_dois: candidate DOIs against the panic-network theory's
       # existing evidence and alternatives (three already cited, two new, one duplicate)
       new_evidence_candidates <- c(
-        "10.1016/j.brat.2015.10.002",
+        "10.1176/ajp.155.5.610",
         "https://doi.org/10.1016/0005-7967(86)90011-2",
         "10.1176/AJP.146.2.148",
         "10.1037/0033-2909.99.1.20",
@@ -186,22 +244,45 @@ suppressWarnings(suppressMessages({
         "10.1016/j.cpr.2011.09.005",
         # Spellings of the cited DOIs that the normaliser of API_SPEC.md
         # section 18 recognises, so the output is the same as without them.
-        "doi: 10.1016/j.brat.2015.10.002",
-        "DOI 10.1016/j.brat.2015.10.002",
-        "doi.org/10.1016/j.brat.2015.10.002",
-        "dx.doi.org/10.1016/j.brat.2015.10.002",
-        "https://www.doi.org/10.1016/j.brat.2015.10.002",
-        "info:doi/10.1016/j.brat.2015.10.002",
-        "urn:doi:10.1016/j.brat.2015.10.002",
+        "doi: 10.1176/ajp.155.5.610",
+        "DOI 10.1176/ajp.155.5.610",
+        "doi.org/10.1176/ajp.155.5.610",
+        "dx.doi.org/10.1176/ajp.155.5.610",
+        "https://www.doi.org/10.1176/ajp.155.5.610",
+        "info:doi/10.1176/ajp.155.5.610",
+        "urn:doi:10.1176/ajp.155.5.610",
         "https://doi.org/10.1016/0005-7967%2886%2990011-2",
-        "10.1016/j.brat.2015.10.002.",
-        "10.1016/J.BRAT.2015.10.002\u00a0"
+        "10.1176/ajp.155.5.610.",
+        "10.1176/AJP.155.5.610\u00a0",
+        # A double slash after the prefix, which doi.org redirects to the new
+        # DOI above with one slash, and blank or missing candidates. None of
+        # them changes the output.
+        "10.1037//0033-2909.99.1.20",
+        "",
+        " ",
+        NA,
+        NA
       )
       new_dois <- tf_new_evidence_dois(v1, new_evidence_candidates)
       write_raw(paste0(jsonlite::toJSON(new_dois, auto_unbox = FALSE, pretty = TRUE), "\n"),
                 file.path(out_dir, "panic-network-2026.new_evidence_dois.json"))
 
-      # bibliometric layer (P2)
+      # tf_read_dagitty: each model text of the case list gives the
+      # constructs, propositions and provenance it reads as, or the message it
+      # is refused with.
+      cases <- jsonlite::fromJSON(file.path(fixtures_dir, "edge", "dagitty.cases.json"))
+      outcomes <- lapply(cases, function(text) {
+        tryCatch({
+          t <- tf_read_dagitty(text)
+          list(ok = t[c("constructs", "propositions", "provenance")])
+        }, error = function(e) list(error = conditionMessage(e)))
+      })
+      write_raw(paste0(jsonlite::toJSON(outcomes, auto_unbox = TRUE, pretty = TRUE), "\n"),
+                file.path(out_dir, "dagitty-import.json"))
+
+      # bibliometric layer. The demo corpus keeps the name it was released
+      # under, which tf_example_names() lists, so the *.corpus.yaml loop below
+      # leaves it out, as in scripts/gen_golden.py.
       corpus <- tf_read_corpus(file.path(fixtures_dir, "panic-corpus.yaml"))
       cid <- corpus$id
       lm <- tf_litmap(corpus)

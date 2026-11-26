@@ -14,8 +14,8 @@
   {
     "prediction_id": "pred3",
     "type": "point",
-    "risk_score": 0.9,
-    "computed_severity": 1.0
+    "risk_score": 0.4,
+    "computed_severity": 0.4
   },
   {
     "prediction_id": "pred4",

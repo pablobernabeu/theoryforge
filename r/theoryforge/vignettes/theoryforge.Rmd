@@ -1,8 +1,8 @@
 ---
-title: "Building, checking and diagramming a theory"
+title: "Get started with theoryforge"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Building, checking and diagramming a theory}
+  %\VignetteIndexEntry{Get started with theoryforge}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -16,28 +16,213 @@ knitr::opts_chunk$set(collapse = FALSE, comment = "")
 options(cli.num_colors = 1, cli.hyperlink = FALSE, crayon.enabled = FALSE,
         width = 80)
 # Both optional packages are needed to turn the DOT source into an inline
-# SVG, so the rendering chunks below are skipped when either is absent.
+# SVG, so the rendering chunk below is skipped when either is absent.
 has_diagram <- requireNamespace("DiagrammeR", quietly = TRUE) &&
   requireNamespace("DiagrammeRsvg", quietly = TRUE)
 ```
 
-`theoryforge` treats a scientific theory as a versioned, machine-checkable
-object. This vignette shows how to build a theory, check its rigour and
-diagram it. The [package overview](https://pablobernabeu.github.io/theoryforge/r/)
-describes the R/Python parity guarantee.
+Theories in the behavioural sciences often define their constructs too loosely
+to measure, state claims that no result could contradict and survive a failed
+test by adding an assumption that protects them. `theoryforge` holds a theory
+as a structured file of constructs, propositions, predictions, rival accounts
+and test outcomes, and computes what that file commits the theory to. It checks
+how completely the file states what a checklist of criteria drawn from the
+methodology literature asks for, derives the independencies and signed effects
+its causal graph implies, grades how risky each prediction is and how severely
+it has been tested, and appraises, by fixed rules that borrow Lakatos's terms,
+whether an amendment adds content or only shields the theory from an anomaly.
 
 ```{r setup}
 library(theoryforge)
 ```
 
+## A worked result
+
+The package includes a deliberately underspecified theory of motivation.
+`tf_example_path()` gives the path of each example, and `tf_example_names()`
+lists them. Running the checklist on the theory gives its checklist score, the
+range of scores that equal weights or one weight halved or doubled would give,
+its gate and the items it does not pass.
+
+```{r worked-result}
+weak <- tf_read(tf_example_path("weak-theory.theory.yaml"))
+report <- tf_check(weak)
+
+report$aggregate_score
+report$aggregate_range
+report$gate
+
+open_items <- Filter(function(item) item$status != "pass", report$items)
+data.frame(
+  item = vapply(open_items, function(item) item$id, character(1)),
+  status = vapply(open_items, function(item) item$status, character(1)),
+  if_failed = vapply(open_items, function(item) item$severity_if_fail, character(1))
+)
+```
+
+The gate is blocked because two items that the checklist treats as blockers
+failed. The theory's one prediction, 'Motivated people exist', is typed as an
+existence claim, and the falsifiability item reads that label: no prediction is
+typed point, interval or directional. The prediction also cites no proposition
+from which it would follow. To unblock the gate, the author would state a
+prediction that rules out some result, such as a direction or a bounded range of
+an effect, type it accordingly and derive it from a proposition. The warnings name the
+remaining work. Motivation and Drive are defined in nearly the same words and
+would have to be merged or defined apart. Neither construct has a measure or a
+stated scope, and the one proposition is an association without a mechanism.
+The `development_roadmap` view of `tf_diagram()` draws the same list as an
+ordered worklist.
+
+The checklist score describes how completely the file states what checklist
+`r report$checklist_version` asks for. Most items read whether a field is filled
+in or how a prediction is labelled, and stated claims are checked against the
+causal graph. Test outcomes are read only by the parsimony item, the weights are
+conventions, and no study has established what difference between two scores is
+meaningful. The score does not show that the theory is true or well reasoned.
+
+The checklist score is a mean of the item scores under conventional weights. The
+gate reports whether either blocking item failed: at least one prediction is
+typed point, interval or directional, and every prediction cites declared
+propositions whose graph entails any claim it states, with no stated phenomenon
+contradicted. The labels are the author's and are not checked against the
+statements. A passing gate does not show that the theory is true or well
+reasoned. A claim that names a construct on a feedback loop or downstream of one
+is left unread by default and not checked, and the derivation chain then warns
+without blocking the gate.
+
+## Reading and validating a theory
+
+The rest of this vignette reads a theory of modality switching in grounded
+conceptual processing. Five constructs are linked by four causal propositions.
+Sensorimotor experience with a concept drives the activation of a
+modality-specific perceptual system, and that activation both raises the cost of
+switching modality between consecutive trials and eases conceptual access, which
+familiarity with the word form eases as well.
+
+```{r read}
+theory <- tf_read(tf_example_path("modality-switching.theory.yaml"))
+```
+
+`tf_validate()` returns `TRUE` invisibly when the theory is valid and otherwise
+stops with a message that lists every problem. With the default `full = FALSE`,
+it checks the structure: the required fields, the allowed values of each
+enumerated field, that every top-level field is one the schema defines and that
+each collection is a list. `full = TRUE` adds the referential checks, that ids
+are unique and that every reference between constructs, propositions,
+predictions, alternatives, assumptions, evidence and test outcomes names a
+declared id, and then checks the type of every other field, the form of each
+claim and whether the bounds of each prediction fit its type. The calls below
+wrap it in `isTRUE()` to show the result.
+
+```{r validate}
+isTRUE(tf_validate(theory))
+isTRUE(tf_validate(theory, full = TRUE))
+```
+
+A prediction that cites a proposition the theory never declares passes the
+structural check, since every required field is present, and only the full pass
+reports it. The message counts entries from 0, so `prediction[0]` is the first
+prediction.
+
+```{r validate-failure, error = TRUE}
+broken <- theory
+broken$predictions[[1]]$derives_from <- list("p_missing")
+isTRUE(tf_validate(broken))
+tf_validate(broken, full = TRUE)
+```
+
+## Identifying a theory by its content
+
+`tf_content_hash()` returns the SHA-256 digest of the theory's content written
+in a canonical form. Two files that hold the same theory have the same hash,
+whatever their layout, comments, key order or format, and any change to a value
+changes it. The preregistration and the dossier both print it, so a reader
+can check that the theory file in hand is the one a document describes. The
+Python package's `content_hash()` gives the same digest.
+
+```{r hash}
+tf_content_hash(theory)
+```
+
+A theory can record its own hash under `version$content_hash`, which the hash
+leaves out of the content it digests. The full validation then compares the
+recorded hash with the content, so an edit made after the hash was recorded is
+reported.
+
+```{r hash-recorded, error = TRUE}
+recorded <- theory
+recorded$version$content_hash <- tf_content_hash(recorded)
+isTRUE(tf_validate(recorded, full = TRUE))
+
+recorded$constructs[[1]]$definition <- paste(
+  recorded$constructs[[1]]$definition, "Edited after registration."
+)
+tf_validate(recorded, full = TRUE)
+```
+
+## The checklist
+
+`tf_check()` scores the theory against the checklist the package ships, version
+`r tf_check(theory)$checklist_version`, whose twelve items each test one
+criterion drawn from the methodology literature. Each item has the status
+`"pass"`, `"warn"`, `"fail"` or `"n/a"`, the last for an item with nothing to
+assess, such as the parsimony of a theory that adds no assumption to answer an
+anomaly. An `"n/a"` item has a `NULL` score.
+
+```{r check}
+report <- tf_check(theory)
+
+report$checklist_version
+report$aggregate_score
+report$aggregate_range
+report$coverage
+report$gate
+
+data.frame(
+  item = vapply(report$items, function(item) item$id, character(1)),
+  status = vapply(report$items, function(item) item$status, character(1)),
+  score = vapply(report$items, function(item) {
+    if (is.null(item$score)) NA_real_ else item$score
+  }, numeric(1))
+)
+```
+
+The checklist score, `aggregate_score`, is the weighted mean of the applicable
+items' scores, on a scale of 0 to 100, and the coverage is the share of the
+checklist's weight that applied. The weights are a convention, so
+`aggregate_range` gives the lowest and the highest score over the checklist's
+weights, equal weights and each applicable item's weight halved and then
+doubled with the others unchanged. The range is the extremes of these weightings
+and not an interval for the score, and the choices made in coding the file and
+the constants of the claim-form rubric lie outside it. A score whose range is
+wide depends on the convention more than one whose range is narrow. The score is
+compensatory, since a high score on one item offsets a low score on another. The
+gate is not. It is `"blocked"` when an item marked as a blocker fails, `"pass"`
+otherwise, and `"advisory"` for a theory whose maturity is `draft`. The
+derivation chain warns, without blocking the gate, when a prediction's or a
+phenomenon's claim names a construct on a feedback loop or downstream of one,
+which `tf_check()` leaves unread by default, and
+`tf_check(theory, cycles = "sigma")` reads such claims by sigma-separation.
+The article
+[Methodological foundations](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html)
+sets out each item, its supporting literature and how its score is computed.
+
+`tf_report()` returns the same result as a string, in JSON by default or as an
+HTML fragment for a web page with `format = "html"`.
+
 ## Building a theory
 
-A theory is built incrementally with the BUILDING-mode verbs. Each verb appends
-to the theory, records a provenance entry and returns the theory, so the steps
-compose with the native pipe.
+A theory's `maturity` field records its stage as `building`, `developing` or
+`testing`, or as `draft`, which makes the checklist's gate advisory.
+`tf_theory()` starts an empty theory, and the builders `tf_add_construct()`,
+`tf_add_proposition()`, `tf_add_prediction()`, `tf_add_phenomenon()`,
+`tf_add_alternative()`, `tf_add_assumption()`, `tf_add_evidence()`,
+`tf_add_test_outcome()` and `tf_set_formal_model()` add to it. Each returns a
+modified copy and records a step in the theory's provenance log, so the steps
+compose with the native pipe and the original object stays as it was.
 
 ```{r build}
-theory <- tf_theory("panic-network", "A network theory of panic") |>
+built <- tf_theory("panic-demo", "A demonstration theory of panic") |>
   tf_add_construct("c_arousal", "Physiological arousal",
                    "Bodily activation in response to a stressor.",
                    measurement = "heart rate variability",
@@ -46,148 +231,198 @@ theory <- tf_theory("panic-network", "A network theory of panic") |>
                    "Appraised danger of bodily sensations.",
                    measurement = "self-report appraisal scale",
                    boundary_conditions = "awake adults") |>
-  tf_add_proposition(
-    "p1", "c_arousal", "c_threat", "causes",
-    mechanism = "Activation raises the salience of threat cues."
-  ) |>
-  tf_add_prediction("h1", "Arousal raises threat appraisal by a fixed amount.",
-                    "point", derives_from = "p1")
+  tf_add_proposition("p1", "c_arousal", "c_threat", "increases",
+                     mechanism = "Activation raises the salience of threat cues.") |>
+  tf_add_prediction("h1", "Arousal raises threat appraisal.", "directional",
+                    derives_from = "p1",
+                    claim = list(kind = "effect", x = "c_arousal",
+                                 y = "c_threat", sign = "positive"))
 
-isTRUE(tf_validate(theory)) # structural checks: required fields and enums
-# also ids, cross-references and the rest of the schema
-isTRUE(tf_validate(theory, full = TRUE))
+isTRUE(tf_validate(built, full = TRUE))
+do.call(rbind, lapply(built$provenance, as.data.frame))
 ```
 
-`tf_validate()` returns `TRUE` invisibly on success and otherwise stops with a
-message listing every problem. The calls above wrap it in `isTRUE()` to show the
-result. With `full = TRUE`, it additionally checks referential integrity: that
-ids are unique and that every cross-reference points to a declared id. It then
-checks the rest of the schema, such as the evidence directions, a logical
-`passed` on each test outcome and the type of every other field. It does not
-require any optional dependency.
+The type of a prediction names the form of its claim. An `existence` prediction
+asserts that an effect or relation exists, without a direction, and a
+`directional` one asserts a sign or an order. An `interval` prediction asserts
+that a quantity lies in a stated range, and a `point` prediction asserts one
+value, with the tolerance that measurement requires. `bounds` states the region,
+and the full validation checks that it fits the type, so an existence prediction
+takes none. A `claim` states the prediction in a form the causal reading can
+check against the propositions, as the article
+[Developing and testing a theory](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
+shows.
 
-A failed validation shows what the full pass adds. A prediction pointing at a
-proposition that was never declared still passes the structural checks, since
-every required field is present and well formed. Only `full = TRUE` reports the
-problem.
+How a theory is encoded decides what the package derives from it. A `moderates`
+proposition states that its `from` modifies the effect of other causes on its
+`to`, and the causal graph reads it as an edge without a sign from the
+moderator to the outcome. The relation it modifies keeps its sign, but every
+effect of the moderator on that outcome is left open, including a main effect
+the theory also states, even when that main effect is encoded as a signed
+proposition of its own, since an edge has a sign only when every proposition
+that states it gives it one. A theory whose main effect matters can record the
+interaction in the `functional_form` of the proposition it modifies, or in a
+prediction's statement, at the cost of a graph that does not show it. Whether a
+relation that a proposition states is also entered as a prediction is the
+encoder's choice too, and it changes the hypotheses that the preregistration
+lists.
 
-```{r validate-failure, error = TRUE}
-broken <- theory
-broken$predictions[[1]]$derives_from <- "p_missing"
-tf_validate(broken, full = TRUE)
+`tf_add_alternative()` registers a rival account, which can state propositions
+of its own over the theory's constructs. A prediction that names the rival in
+`diagnostic_vs` declares that it discriminates between the two, and the
+checklist checks that declaration against the rival's propositions.
+
+```{r build-rival}
+built <- built |>
+  tf_add_alternative(
+    "alt_reverse", "Threat drives arousal",
+    propositions = list(list(id = "r1", from = "c_threat", to = "c_arousal",
+                             relation = "increases"))
+  )
+length(built$alternatives[[1]]$propositions)
 ```
 
-BUILDING mode has three further verbs. `tf_add_alternative()` registers a rival
-account, which a prediction can name in its `diagnostic_vs` to declare that it
-discriminates between the two. `tf_add_assumption()` records an auxiliary
-assumption, and `tf_set_formal_model()` attaches a formal-model reference.
-Because each verb returns a modified copy, assigning the result to a new object
-leaves the original theory untouched.
-
-```{r build-more}
-extended <- theory |>
-  tf_add_alternative("alt_cognitive", "Cognitive model of panic",
-                     key_constructs = "catastrophic misinterpretation") |>
-  tf_add_assumption("a1", "Arousal is measured at rest.", protects = "h1") |>
-  tf_set_formal_model("sem", spec_ref = "panic-sem.lavaan")
-```
-
-The provenance entries are stored in the theory object and make up the record
-of how it was built. Each entry records the step, the action and its detail.
-
-```{r provenance-entries}
-do.call(rbind, lapply(extended$provenance, as.data.frame))
-```
-
-A theory can be written to and read back from disk. The format follows the file
-extension, `.json` for JSON and otherwise YAML.
+`tf_write()` saves a theory as JSON when the path ends in `.json` and as YAML
+otherwise. The file reads back as the same theory, with the same content hash,
+in R and in Python.
 
 ```{r io}
-path <- tempfile(fileext = ".yaml")
-tf_write(theory, path)
-roundtrip <- tf_read(path)
-identical(roundtrip$id, theory$id)
+path <- tempfile(fileext = ".json")
+tf_write(built, path)
+identical(tf_content_hash(tf_read(path)), tf_content_hash(built))
 ```
 
-## Checking rigour
+## Starting from a DAGitty diagram
 
-`tf_check()` runs the 12-item rigour checklist defined in the copy of
-`rigor_checklist.yaml` included in the package.
+Many causal theories are first drawn as a diagram in
+[DAGitty](https://dagitty.net)
+([Textor et al., 2016](https://doi.org/10.1093/ije/dyw341)).
+`tf_read_dagitty()` reads its model code and returns a theory with one construct
+for each variable and one proposition for each edge. An arrow becomes `causes`,
+or `increases` or `decreases` when `relation` says so, and `<->` becomes
+`associates`. The theory has the maturity `draft`, and it is not valid until
+every construct has a definition, which a diagram cannot supply.
 
-```{r check}
-report <- tf_check(theory)
+FAIR theory specifies a theory as a findable, accessible, interoperable and
+reusable digital object in a public archive
+([Van Lissa et al., 2026](https://doi.org/10.1177/17456916251401850)). Its
+worked example of self-determination theory, in the theorytools package
+([Van Lissa, 2025](https://doi.org/10.32614/CRAN.package.theorytools)), keeps
+the diagram in a DAGitty file and the construct definitions in a CSV table
+beside it. The example below imports the modality-switching graph in that
+form. The two files
+are written out as text so that the code runs as shown, and in practice each
+would be read from its file.
 
-report$aggregate_score   # weighted score, 0-100, rounded to 1 dp
-report$gate              # "pass", "blocked", or "advisory" (draft maturity)
-report$n_blockers_failed # count of failed blocker items
+```{r dagitty}
+dagitty_file <- "dag {
+  sensorimotor_experience -> modality_activation
+  modality_activation -> switch_cost
+  modality_activation -> conceptual_access
+  lexical_familiarity -> conceptual_access
+}"
+definitions <- read.csv(text = "Concept,Synonym,Definition,Operationalization
+Sensorimotor experience,,Perceptual and motor engagement with the referent of a concept.,Perceptual strength ratings
+Modality activation,,Recruitment of one modality's perceptual system while a word is understood.,Interference from a concurrent load
+Switch cost,,The extra time taken when consecutive trials address different modalities.,Switch-minus-repeat response time
+Conceptual access,,The speed with which the meaning of a word becomes available.,Semantic categorisation latency",
+  stringsAsFactors = FALSE)
 
-# Per-item detail (checklist order preserved):
-report$items[[1]]$id      # "falsifiability"
-report$items[[1]]$status  # "pass" / "warn" / "fail"
-report$items[[1]]$score   # numeric in [0, 1]
+imported <- tf_read_dagitty(
+  dagitty_file,
+  id = "modality-switching-fair",
+  title = "Modality switching in grounded conceptual processing",
+  relation = "increases"
+)
+key <- gsub(" ", "_", tolower(trimws(definitions$Concept)))
+for (i in seq_along(imported$constructs)) {
+  row <- match(imported$constructs[[i]]$id, key)
+  if (!is.na(row)) {
+    imported$constructs[[i]]$label <- trimws(definitions$Concept[row])
+    imported$constructs[[i]]$definition <- trimws(definitions$Definition[row])
+  }
+}
+
+ids <- vapply(imported$constructs, function(c) c$id, character(1))
+defined <- vapply(imported$constructs, function(c) nzchar(c$definition), logical(1))
+ids[!defined]
 ```
 
-An item with nothing to assess, such as the redundancy screen of a theory with
-a single construct, has the status `"n/a"` and a `NULL` score. It is left out
-of the aggregate score, which is the weighted mean of the applicable items.
-`report$coverage` gives the applicable items' share of the checklist's weight.
+The table names its concepts in words, and the diagram in identifiers, so each
+concept is matched to a construct by its name lower-cased with spaces replaced
+by underscores. One construct, lexical familiarity, has no row in the table and
+is listed above. The operationalisation column is left out, because it describes
+measures in prose, whereas a construct's `measurement` lists indicator names
+that the lavaan syntax uses as columns of the data. The merge edits the theory's
+fields directly, so the provenance log records the import and not the
+definitions.
 
-`tf_report()` renders the report as valid, pretty-printed JSON or as an HTML
-fragment. The JSON string is shown here verbatim.
+With the missing definition added, the theory validates in full. Its gate is
+advisory, since its maturity is `draft`, and the checklist reports what the
+diagram could not supply: a prediction that forbids some result, measures, scope
+conditions and mechanisms.
 
-```{r report-json}
-cat(tf_report(theory, format = "json"))
+```{r dagitty-check}
+imported$constructs[[match("lexical_familiarity", ids)]]$definition <-
+  "How well established the form of a word is for a reader."
+isTRUE(tf_validate(imported, full = TRUE))
+
+imported_report <- tf_check(imported)
+imported_report$gate
+Filter(function(item) item$status != "pass", imported_report$items) |>
+  vapply(function(item) paste(item$id, item$status), character(1))
 ```
 
-The HTML fragment can be inserted directly into a page, where it renders as a
-table.
+The graph alone already commits the imported theory to the conditional
+independencies and the untestable causal directions that the article
+[Developing and testing a theory](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
+derives for the full modality-switching theory, since the two share a graph. The
+`causal_dag` view of `tf_diagram()` writes a theory back in DAGitty's syntax,
+keeping its directed edges, its associations and any variable marked as latent.
 
-```{r report-html, results = "asis"}
-cat(tf_report(theory, format = "html"))
-```
+## Screening constructs for redundancy
 
-### Screening for redundant constructs
-
-The lexical redundancy screen reports the Jaccard similarity and the overlap
-coefficient of every pair of construct definitions, sorted by descending
-similarity. A pair is flagged for review when the definitions are near
-duplicates or one is contained in the other.
+`tf_redundancy_check()` compares the definitions of every pair of constructs by
+the words they share, through the Jaccard similarity and the overlap
+coefficient, and returns the pairs sorted by descending similarity. A pair is
+flagged `"review"` when its definitions are near duplicates or one is contained
+in the other, which suggests that two names cover one construct. It also flags
+two constructs that carry one label, and a pair in which every measure listed
+for one construct is also listed for the other, since data from those measures
+cannot tell the two apart. The `reason` column names the grounds of each flag.
+The comparison of definitions is lexical, so a definition reworded into other
+words passes it.
 
 ```{r redundancy}
-tf_redundancy_check(theory)
+head(tf_redundancy_check(theory), 3)
 ```
 
-The lexical screen is deterministic but shallow. When a semantic comparison is
-wanted, `tf_embedding_redundancy()` takes any embedder that maps a definition to
-a numeric vector and reports the cosine similarity of each construct pair. It
-needs no optional dependency, since the embedder is supplied by the caller.
-Here, a toy bag-of-words embedder stands in for a language model.
+`tf_embedding_redundancy()` compares the definitions by the cosine similarity of
+vectors from an embedder that the caller supplies, such as a language model.
+Here, a toy bag-of-words embedder stands in for one.
 
 ```{r embedding-redundancy}
 vocab <- c("bodily", "activation", "appraised", "danger", "salience")
-embedder <- function(def) {
-  words <- strsplit(tolower(def), "[^a-z]+")[[1]]
+embedder <- function(definition) {
+  words <- strsplit(tolower(definition), "[^a-z]+")[[1]]
   vapply(vocab, function(w) sum(words == w), numeric(1))
 }
-tf_embedding_redundancy(theory, embedder)
+tf_embedding_redundancy(built, embedder)
 ```
 
-## Diagramming
+## Drawing the theory
 
-`tf_diagram()` emits deterministic intermediate representations for several
-diagram types. The digraphs are Graphviz DOT, and the causal DAG uses dagitty
-syntax.
+`tf_diagram()` returns one of ten views of the theory. The graph views are
+Graphviz DOT, which any Graphviz tool renders. The nomological network draws
+each proposition as an edge labelled with its id and relation.
 
 ```{r diagram}
 cat(tf_diagram(theory, type = "nomological_net"))
-cat(tf_diagram(theory, type = "causal_dag"))
 ```
 
-The DOT strings render with any Graphviz tool. In R, `tf_render_diagram()`
-returns them as a DiagrammeR widget for the viewer and for R Markdown, or as a
-standalone SVG string with `as = "svg"`. The packages it uses are optional and
-listed in Suggests, so the rest of the package works without them. The figure
-below is drawn from the nomological-net DOT printed above.
+`tf_render_diagram()` returns the DOT as a DiagrammeR widget for the viewer and
+for R Markdown, or as an SVG string with `as = "svg"`. The packages it uses are
+optional and listed in Suggests. The figure below is drawn from the DOT above.
 
 ```{r diagram-render, results = "asis", eval = has_diagram}
 cat(
@@ -198,37 +433,34 @@ cat(
 )
 ```
 
-The causal DAG is the one view that `tf_render_diagram()` does not render, since
-it is written in dagitty syntax. Paste it into a dagitty tool such as
-[dagitty.net](https://dagitty.net) instead. Within R, `tf_implications()` checks
-the causal DAG for acyclicity and returns the conditional independencies it
-entails, which the article 'Developing and testing a theory' works through.
+The `causal_dag` view writes the directed relations and the associations in
+DAGitty's syntax, for [dagitty.net](https://dagitty.net) and the dagitty
+package, and `tf_render_diagram()` does not draw it.
 
-## Simulation
-
-`tf_simulate()` treats each construct as a state variable and integrates the
-signed proposition network as a linear dynamical system. The trajectory is
-deterministic.
-
-```{r simulate}
-sim <- tf_simulate(theory, steps = 5)
-unlist(sim$states)
-unlist(sim$trajectory[[1]]) # the common initial state
-unlist(sim$trajectory[[6]]) # after five Euler steps
+```{r causal-dag}
+cat(tf_diagram(theory, type = "causal_dag"))
 ```
 
-The two states separate immediately. Arousal, which receives no incoming
-coupling, decays under the damping term. Perceived threat is pushed up by the
-positive coupling from arousal before the decay eventually takes over.
+## Next steps
 
-The default `method = "euler"` takes fixed explicit steps, which stay close to
-the solution only while `dt` is small against the network's rates. The function
-warns when the Euler trajectory departs from the exact solution by more than 5
-per cent. `method = "exact"` propagates the system with its matrix exponential,
-so each row is the solution at its time for any `dt`. It will become the default
-in the next minor release.
+The article
+[Developing and testing a theory](https://pablobernabeu.github.io/theoryforge/r/articles/developing-and-testing.html)
+appraises an amendment and derives what a theory's causal graph commits it to,
+from its implied independencies to the results that would tell it from a rival,
+and then preregisters it, grades its tests and assembles the dossier.
+[Mapping the literature](https://pablobernabeu.github.io/theoryforge/r/articles/literature.html)
+maps a corpus of publications against a theory, and
+[Browser apps](https://pablobernabeu.github.io/theoryforge/r/articles/app.html)
+describes the two apps that run the packages without an installation.
 
-```{r simulate-exact}
-exact <- tf_simulate(theory, steps = 5, method = "exact")
-unlist(exact$trajectory[[6]]) # the exact solution at time 0.5
-```
+## Two languages, one specification
+
+A Python package of the same name implements the same
+[specification](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md),
+with the same function names without the `tf_` prefix, apart from `new_theory()`
+for `tf_theory()`. The deterministic
+functions, from validation and the checklist to the causal reading, the
+preregistration and the dossier, are checked against shared expected outputs, so
+the two languages give the same results. The helpers that depend on a network
+service, an embedder or a renderer (`tf_fetch_corpus()`, `tf_osf_push()`,
+`tf_embedding_redundancy()` and `tf_render_diagram()`) can differ between them.

@@ -8,7 +8,10 @@
 # Participants paid a small incentive ($1) rated a dull task as more enjoyable
 # than those paid a large incentive ($20), the reverse of what reinforcement
 # theory predicts.
-schema_version: "1.0"
+# Dissonance itself was not measured in the study, so no prediction here
+# claims that it mediates the effect, and the claims name only the incentive
+# and the rated attitude.
+schema_version: "1.1"
 id: "cognitive-dissonance-1959"
 title: "Cognitive dissonance and attitude change under forced compliance"
 maturity: "testing"
@@ -56,7 +59,7 @@ propositions:
   - id: p_dissonance_attitude
     from: c_dissonance
     to: c_attitude_change
-    relation: "causes"
+    relation: "increases"
     mechanism: "Because the aversive state is unpleasant, the person is motivated to reduce it. The overt behaviour cannot be undone, so the person changes the more pliable private attitude to bring it into line with the statement, thereby restoring consistency."
     functional_form: "monotonic"
 
@@ -70,7 +73,8 @@ predictions:
     risk_score: 0.8
     severity: 0.8
     diagnostic_vs: [alt_reinforcement]
-  - id: pred_dissonance_mediates
+    claim: {kind: effect, x: c_external_justification, y: c_attitude_change, sign: negative}
+  - id: pred_one_dollar_above_control
     derives_from: [p_inconsistency_dissonance, p_dissonance_attitude]
     statement: "Attitude change occurs only when the counter-attitudinal statement is actually made under insufficient justification, so the one-dollar group shifts above the control group that made no such statement, whereas the twenty-dollar group does not."
     type: "directional"
@@ -99,7 +103,7 @@ evidence:
   - supports: pred_incentive_inverse
     source_doi: "10.1037/h0041593"
     direction: "corroborates"
-  - supports: pred_dissonance_mediates
+  - supports: pred_one_dollar_above_control
     source_doi: "10.1037/h0041593"
     direction: "corroborates"
   - supports: pred_rating_point
@@ -113,7 +117,7 @@ test_outcomes:
     severity_at_test: 0.8
     registered: null
     date: "1959"
-  - prediction_id: pred_dissonance_mediates
+  - prediction_id: pred_one_dollar_above_control
     observed: "The one-dollar group shifted above the control group (mean minus 0.45), while the twenty-dollar group did not differ from control, consistent with attitude change being driven by insufficient justification rather than by the payment itself."
     passed: true
     severity_at_test: 0.6
@@ -126,15 +130,26 @@ test_outcomes:
     registered: null
     date: "1959"
 
+# Each rival's propositions are a simplified reading of it, written over this
+# theory's constructs to show discriminate(). The incentive account that
+# Festinger and Carlsmith set their result against expects a larger reward to
+# produce more attitude change. Self-perception theory (Bem, 1967) expects the
+# same inverse effect of the incentive as dissonance theory, through the
+# person's inference from their own behaviour rather than through an aversive
+# state, so the two accounts read the incentive claim alike.
 alternatives:
   - id: alt_reinforcement
     label: "Incentive or reinforcement theory"
     key_constructs: ["magnitude of reward", "reinforcement of the rewarded response", "positive relation between incentive and attitude change"]
     source_doi: null
+    propositions:
+      - {id: r1, from: c_external_justification, to: c_attitude_change, relation: increases}
   - id: alt_self_perception
     label: "Self-perception account"
     key_constructs: ["inference of attitude from observed behaviour", "attribution to external incentive when salient"]
-    source_doi: null
+    source_doi: "10.1037/h0024835"
+    propositions:
+      - {id: s1, from: c_external_justification, to: c_attitude_change, relation: decreases}
 
 formal_model:
   type: "none"
@@ -149,7 +164,7 @@ provenance:
     detail: "Linked inconsistency and low external justification to dissonance, and dissonance to attitude change."
   - step: "3"
     action: "tf_add_prediction"
-    detail: "Derived the inverse incentive effect, the mediating role of insufficient justification and the point ordering of the enjoyment ratings, each pointed at the reinforcement alternative."
+    detail: "Derived the inverse incentive effect, the shift of the one-dollar group above control and the ordering of the enjoyment ratings, each pointed at the reinforcement alternative."
   - step: "4"
     action: "tf_test"
     detail: "Recorded the one-dollar versus twenty-dollar rating means from the original study as corroborating outcomes."

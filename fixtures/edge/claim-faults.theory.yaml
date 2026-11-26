@@ -1,0 +1,44 @@
+# Each fault full validation reports in a claim, a phenomenon and a rival's
+# propositions, and the lenient reading of each by entailments() and check().
+schema_version: "1.1"
+id: "claim-faults"
+title: "Faulty claims"
+maturity: "developing"
+constructs:
+  - {id: c1, label: "First", definition: "The first construct."}
+  - {id: c2, label: "Second", definition: "The second construct."}
+  - {id: c3, label: "Third", definition: "The third construct."}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases}
+  - {id: p2, from: c2, to: c3, relation: causes}
+phenomena:
+  - {id: ph1, statement: "c1 and c3 covary.", claim: {kind: association, x: c1, y: c3, sign: positive, given: [c2]}}
+  - {id: ph1}
+predictions:
+  - id: h1
+    statement: "c1 raises c3."
+    type: directional
+    derives_from: [p1, p2]
+    diagnostic_vs: [r]
+    claim: {kind: effect, x: c1, y: c3, sign: positive}
+  - id: h2
+    statement: "c1 raises itself."
+    type: directional
+    derives_from: [p1]
+    claim: {kind: effect, x: c1, y: c1, sign: upward, note: "an unknown field"}
+  - id: h3
+    statement: "c1 and c9 covary."
+    type: existence
+    derives_from: [p1]
+    claim: {kind: association, x: c1, y: c9, sign: nonzero, given: c2}
+  - id: h4
+    statement: "A claim written as text."
+    type: existence
+    derives_from: [p1]
+    claim: "c1 raises c2"
+alternatives:
+  - id: r
+    label: "Rival"
+    propositions:
+      - {id: r1, from: c1, to: c3, relation: decreases}
+      - {id: r1, from: c2, to: c9, relation: boosts}

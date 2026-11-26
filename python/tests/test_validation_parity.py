@@ -179,8 +179,9 @@ def test_osf_push_base_url_override():
 
 
 def test_render_report_falls_back_to_id_on_empty_title(tmp_path):
+    # The id is escaped as Markdown text, and the backslash then for YAML.
     out = tf.new_theory("the-id", "").render_report(tmp_path / "r.qmd")
-    assert "theoryforge report: the-id" in open(out, encoding="utf-8").read()
+    assert 'title: "theoryforge dossier: the\\\\-id"' in open(out, encoding="utf-8").read()
 
 
 def test_mistyped_enum_values_are_refused_not_crashed_on():
@@ -387,9 +388,20 @@ def test_full_validation_checks_the_formal_model(value, expected):
         assert _full_error(t) == "invalid theory object: " + expected
 
 
+def test_a_recorded_content_hash_must_match_the_content():
+    t = _consistent()
+    t.data["version"] = {"id": "v2", "parent_id": "v1", "content_hash": None}
+    t.data["version"]["content_hash"] = t.content_hash()
+    assert t.validate(full=True) is True
+    t.data["title"] += " revised"
+    assert _full_error(t) == ("invalid theory object: version content_hash does not match the "
+                              "theory's content")
+
+
 @pytest.mark.parametrize(("value", "expected"), [
     ({"id": "v1", "parent_id": None, "content_hash": None}, None),
-    ({"id": "v2", "parent_id": "v1", "content_hash": "sha256:00"}, None),
+    ({"id": "v2", "parent_id": "v1", "content_hash": "sha256:00"},
+     "version content_hash does not match the theory's content"),
     ({}, None),
     ([], None),
     (None, None),
@@ -592,3 +604,18 @@ def test_appraise_amendment_refuses_a_non_boolean_passed_in_either_theory():
     result = new.appraise_amendment(prior)
     assert result["corroborated_new"] == ["h2"]
     assert (result["articulated"], result["verdict"]) == (["h2"], "neutral")
+
+
+def test_full_validation_of_many_constructs_lists_every_repeat_in_order():
+    # 5000 constructs that share one id, as YAML aliases of one mapping would
+    # give, and 5000 propositions between constructs with ids of their own. The
+    # R suite checks the same messages.
+    same = [{"id": "a", "label": "A", "definition": "D"}] * 5000
+    own = [{"id": f"c{i}", "label": "C", "definition": "D"} for i in range(5000)]
+    props = [{"id": f"p{i}", "from": f"c{i}", "to": f"c{(i + 1) % 5001}", "relation": "causes"}
+             for i in range(5000)]
+    t = Theory({"schema_version": "1.1", "id": "v", "title": "V", "maturity": "draft",
+                "constructs": same + own, "propositions": props})
+    problems = t._problems(full=True)
+    assert problems == ["duplicate construct id: a"] * 4999 + [
+        "proposition[4999] to 'c5000' is not a known construct"]

@@ -1,7 +1,14 @@
-# Amended version of panic-network-2026. It adds a direct path from arousal to
+# Amended version of panic-network-2026. A test refuted the independence of
+# arousal and avoidance given perceived threat that v1 implied and stated as
+# pred_indep. This version drops pred_indep, adds a direct path from arousal to
 # avoidance (proposition p4) and derives a new prediction from it (pred4). A
-# registered test corroborates pred4 and no ad hoc assumption is added, so the
-# amendment is a progressive problemshift in Lakatos's sense.
+# registered test corroborates pred4, no ad hoc assumption is added and the only
+# implication v1 held and v2 gives up is the refuted one. Both versions state p3,
+# from perceived threat to arousal, without a sign, so p4 also opens a route
+# from perceived threat to avoidance through arousal whose sign is open. v2
+# therefore no longer entails the positive effect of perceived threat on
+# avoidance that v1 entails, and appraise_amendment() calls the amendment
+# neutral.
 schema_version: "1.0"
 id: "panic-network-2026-v2"
 title: "Network theory of panic disorder"
@@ -59,12 +66,14 @@ predictions:
     derives_from: [p1, p3]
     statement: "An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds."
     type: "point"
+    bounds: {lower: 15, upper: 25}
     severity: 0.7
     diagnostic_vs: [alt_cognitive]
   - id: pred2
     derives_from: [p2]
     statement: "Avoidance frequency falls within a 20-35% band after exposure therapy."
     type: "interval"
+    bounds: {lower: 20, upper: 35}
     severity: 0.6
     diagnostic_vs: []
   - id: pred3
@@ -77,6 +86,7 @@ predictions:
     derives_from: [p4]
     statement: "Blocking interoceptive feedback lowers avoidance-task scores by 30 per cent, within a tolerance of 5 percentage points, within two weeks."
     type: "point"
+    bounds: {lower: 25, upper: 35}
     severity: 0.75
     diagnostic_vs: [alt_cognitive]
 
@@ -86,20 +96,24 @@ auxiliary_assumptions:
     added_for: null
     protects: [pred1]
 
+# The evidence entry for pred4 is illustrative and cites no published work.
 evidence:
   - supports: pred4
-    source_doi: "10.1000/example.v2"
+    source_doi: null
     direction: "corroborates"
 
+# The test outcomes are made up for the example, as their observed text says,
+# and osf.io/abcde and osf.io/fghij are placeholders, not registrations of these
+# tests.
 test_outcomes:
   - prediction_id: pred1
-    observed: "Arousal reached the predicted band in 78% of trials."
+    observed: "Illustrative values, not a reported result: arousal reached the predicted band in 78% of trials."
     passed: true
     severity_at_test: 0.7
     registered: "osf.io/abcde"
     date: "2026-05-01"
   - prediction_id: pred4
-    observed: "Avoidance dropped into the predicted band in 71% of cases."
+    observed: "Illustrative values, not a reported result: avoidance dropped into the predicted band in 71% of cases."
     passed: true
     severity_at_test: 0.75
     registered: "osf.io/fghij"

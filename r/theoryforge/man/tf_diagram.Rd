@@ -4,7 +4,7 @@
 \alias{tf_diagram}
 \title{Render a diagram intermediate representation}
 \usage{
-tf_diagram(theory, type = "nomological_net", engine = "graphviz")
+tf_diagram(theory, type = "nomological_net", engine = NULL)
 }
 \arguments{
 \item{theory}{A theory object (named list).}
@@ -19,8 +19,9 @@ taken as the set of its boundary conditions, as an SVG), \code{"rigour"}
 claim-form riskiness of each prediction, the \code{computed_severity} of
 \code{\link[=tf_severity]{tf_severity()}}, as bars in an SVG).}
 
-\item{engine}{Rendering engine label, accepted but unused (default
-\code{"graphviz"}).}
+\item{engine}{Deprecated. It has no effect, because the IR does not depend
+on a rendering engine. Passing it gives a warning, and it will be removed
+in the next minor release.}
 }
 \value{
 A single string ending in a newline: Graphviz DOT for the digraphs,
@@ -28,13 +29,15 @@ dagitty syntax for the causal DAG and SVG for the \code{venn},
 \code{rigour} and \code{severity} views.
 }
 \description{
-Produces a deterministic diagram IR string for the requested type. The
-\code{engine} argument is accepted but has no effect, because the IR is
-engine independent (Graphviz DOT for the six digraph views, dagitty syntax
-for the causal DAG and SVG for the \code{venn}, \code{rigour} and
-\code{severity} views).
+Produces a deterministic diagram IR string for the requested type: Graphviz
+DOT for the six digraph views, dagitty syntax for the causal DAG and SVG for
+the \code{venn}, \code{rigour} and \code{severity} views.
 }
 \details{
+The nomological net labels each edge with the proposition's id and relation,
+as in \code{p1: increases}, so that the propositions a hypothesis derives
+from can be found on the figure.
+
 The causal DAG is read by \pkg{dagitty} and drawn by the apps with Graphviz.
 It writes a construct id bare only when the id is made of ASCII letters,
 digits and underscores, does not begin with a digit and is not a DOT keyword.
@@ -50,7 +53,16 @@ The first outcome of a prediction is \verb{result_<id>} (\verb{outcome_<id>} in 
 workflow) and each later one \verb{result_<id>#<k>} (\verb{outcome_<id>#<k>}), where
 \verb{<k>} counts the prediction's outcomes in file order, so a failed
 replication is not merged into an earlier pass. When a prediction has
-several outcomes, each label also carries the outcome's date.
+several outcomes, each label also carries the outcome's date. An outcome
+reads \code{passed} (green) when its \code{passed} is \code{TRUE},
+\code{failed} (red) when it is \code{FALSE} and \code{no result recorded}
+(grey) otherwise. The pipeline lists the predictions from the top down in
+file order. The workflow joins each proposition to the construct it acts on
+by a dashed edge, so a feedback loop shows.
+
+The Venn view wraps each construct name onto lines of at most 18
+characters, and when the theory has more than three constructs, its title
+says that only the first three are drawn.
 
 The \code{development_roadmap} and \code{rigour} views score the checklist,
 so they stop, as \code{\link[=tf_check]{tf_check()}} does, when a test outcome's \code{passed} is

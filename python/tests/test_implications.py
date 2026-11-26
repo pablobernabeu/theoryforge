@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 import theoryforge as tf
+from theoryforge._graph import MixedGraph, m_separated
 from theoryforge._relations import DIRECTED
 
 APP_EXAMPLES = Path(__file__).resolve().parents[2] / "apps" / "examples"
@@ -67,7 +68,8 @@ def app_example(name):
 
 def test_implications_of_a_mediated_chain():
     res = chain_theory().implications()
-    assert list(res) == ["theory_id", "criterion", "acyclic", "constructs", "n_edges",
+    assert list(res) == ["theory_id", "criterion", "conditioning", "acyclic", "constructs",
+                         "n_edges",
                          "n_bidirected", "feedback", "implications", "n_implications",
                          "inseparable"]
     assert res["theory_id"] == "mediation"
@@ -228,17 +230,17 @@ def test_the_ancestors_separate_a_pair_that_the_parents_do_not():
     assert res["inseparable"] == [{"a": "m", "b": "y"}]
 
 
-def test_a_construct_touched_only_by_associations_is_left_out():
-    # Every path through k arrives and leaves by an arrowhead, so k is a collider
-    # on each and, being no ancestor of anything, closes it. Leaving k out drops
-    # no statement about the other constructs, and silence about k is no claim
-    # that it is independent of anything (API_SPEC.md section 27).
-    res = relation_theory("silence", ["k", "x", "y"], [
-        ("x", "causes", "y"), ("k", "associates", "x"), ("k", "associates", "y"),
+def test_a_construct_touched_only_by_associations_is_a_vertex():
+    # Read as a latent common cause, an association makes claims about k too:
+    # k and w are independent given x, since the path k <-> x -> w is open only
+    # through x. A construct that no proposition names stays out
+    # (API_SPEC.md section 27).
+    res = relation_theory("touched", ["k", "x", "w", "silent"], [
+        ("x", "causes", "w"), ("k", "associates", "x"),
     ]).implications()
-    assert res["constructs"] == ["x", "y"]
-    assert res["n_bidirected"] == 0
-    assert res["implications"] == []
+    assert res["constructs"] == ["k", "x", "w"]
+    assert res["n_bidirected"] == 1
+    assert statements(res) == ["k _||_ w | x"]
     assert res["inseparable"] == []
 
 
@@ -251,27 +253,26 @@ def test_a_repeated_association_counts_once_and_a_self_association_not_at_all():
     assert res["implications"] == []
 
 
-def test_an_association_with_an_undeclared_endpoint_adds_nothing():
-    # An association names no vertex unless a directed relation names both its
-    # constructs, so one with an undeclared endpoint is not an edge, as one with
-    # a construct touched only by associations is not. validate() reports the
-    # reference.
-    res = relation_theory("loose", ["a", "b"], [
-        ("a", "causes", "b"), ("a", "associates", "ghost"),
-    ]).implications()
-    assert res["constructs"] == ["a", "b"]
-    assert res["n_bidirected"] == 0
+def test_an_association_with_an_undeclared_endpoint_is_refused():
+    # Dropping it would state an independence the theory denies, as dropping a
+    # directed relation would.
+    with pytest.raises(ValueError) as err:
+        relation_theory("loose", ["a", "b"], [
+            ("a", "causes", "b"), ("a", "associates", "ghost"),
+        ]).implications()
+    assert "implications requires associations between declared constructs; proposition " \
+        "'p2' refers to unknown construct 'ghost'" == str(err.value)
 
 
-def test_theory_without_causal_relations_has_an_empty_basis_set(weak_path):
-    # The weak example's one proposition is an association between two
-    # constructs that no directed relation names, so there is no vertex.
+def test_a_theory_of_one_association_implies_nothing(weak_path):
+    # The weak example's one proposition is an association, which makes its two
+    # constructs vertices joined by an edge, so no pair is left unjoined.
     res = tf.read(weak_path).implications()
     assert res["theory_id"] == "weak-demo"
     assert res["acyclic"] is True
-    assert res["constructs"] == []
+    assert res["constructs"] == ["k_motivation", "k_drive"]
     assert res["n_edges"] == 0
-    assert res["n_bidirected"] == 0
+    assert res["n_bidirected"] == 1
     assert res["implications"] == []
     assert res["n_implications"] == 0
     assert res["inseparable"] == []
@@ -510,9 +511,9 @@ def test_every_statement_and_inseparable_pair_agrees_with_a_brute_force_oracle()
         rng.shuffle(props)
         res = relation_theory("random", order, props).implications()
 
-        vertices = [n for n in order if any(n in e for e in directed)]
+        vertices = [n for n in order if any(n in e for e in directed + bidirected)]
         assert res["constructs"] == vertices
-        assert res["n_bidirected"] == sum(set(e) <= set(vertices) for e in bidirected)
+        assert res["n_bidirected"] == len(bidirected)
         joined = {frozenset(e) for e in directed + bidirected}
         want_stated, want_inseparable = [], []
         for a, b in itertools.combinations(vertices, 2):
@@ -533,6 +534,41 @@ def test_every_statement_and_inseparable_pair_agrees_with_a_brute_force_oracle()
         inseparable += len(want_inseparable)
     assert stated > 200
     assert inseparable > 20
+
+
+def test_the_separation_search_agrees_with_the_oracle_for_every_conditioning_set():
+    # The search keeps to the ancestors of the pair and of the conditioning
+    # set, and implications() takes the parents of a pair without it when the
+    # graph has no associations. Every set of the other vertices is tried here,
+    # on random acyclic mixed graphs whose vertex order is not a causal order.
+    rng = random.Random(1125)
+    tried = dags = 0
+    for _ in range(80):
+        k = rng.randint(3, 6)
+        perm = list(range(k))
+        rng.shuffle(perm)
+        p_assoc = 0.2 if rng.random() < 0.6 else 0
+        directed = [(perm[i], perm[j]) for i in range(k) for j in range(i + 1, k) if rng.random() < 0.4]
+        bidirected = [(perm[i], perm[j]) for i in range(k) for j in range(i + 1, k)
+                      if rng.random() < p_assoc]
+        d = [[(u, v) in directed for v in range(k)] for u in range(k)]
+        b = [[(u, v) in bidirected or (v, u) in bidirected for v in range(k)] for u in range(k)]
+        g = MixedGraph(d, b)
+        got, want = [], []
+        for x, y in itertools.combinations(range(k), 2):
+            others = [v for v in range(k) if v not in (x, y)]
+            for r in range(len(others) + 1):
+                for z in itertools.combinations(others, r):
+                    got.append(m_separated(g, x, y, list(z)))
+                    want.append(not _m_connected(directed, bidirected, x, y, z))
+            if not bidirected and not d[x][y] and not d[y][x]:
+                parents = [v for v in range(k) if d[v][x] or d[v][y]]
+                assert not _m_connected(directed, bidirected, x, y, parents)
+        assert got == want
+        tried += len(got)
+        dags += not bidirected
+    assert tried > 2000
+    assert dags > 20
 
 
 def _corr(x, y):
@@ -605,12 +641,14 @@ def test_sigma_derives_the_panic_network_statement(panic_path):
     # avoidance are independent given perceived threat (Bongers et al., 2021,
     # Theorem 6.3(2) and Proposition A.19).
     res = tf.read(panic_path).implications(cycles="sigma")
-    assert list(res) == ["theory_id", "criterion", "acyclic", "constructs", "n_edges",
+    assert list(res) == ["theory_id", "criterion", "conditioning", "acyclic", "constructs",
+                         "n_edges",
                          "n_bidirected", "feedback", "implications", "n_implications",
                          "inseparable"]
     assert res == {
         "theory_id": "panic-network-2026",
         "criterion": "sigma",
+        "conditioning": "basis",
         "acyclic": False,
         "constructs": ["c_arousal", "c_perceived_threat", "c_avoidance"],
         "n_edges": 3,
@@ -807,7 +845,7 @@ def test_every_sigma_statement_and_inseparable_pair_agrees_with_a_brute_force_or
                  + [(a, "associates", b) for a, b in bidirected])
         rng.shuffle(props)
         res = relation_theory("random", order, props).implications(cycles="sigma")
-        vertices = [n for n in order if any(n in e for e in directed)]
+        vertices = [n for n in order if any(n in e for e in directed + bidirected)]
         assert res["constructs"] == vertices
         cyclic += not res["acyclic"]
         separable = []
@@ -861,4 +899,43 @@ def test_implications_goldens_hold_the_planned_statements():
         "c_arousal _||_ c_avoidance | c_perceived_threat"]
     assert statements(golden("panic-network-2026-v2")) == []
     assert len(golden("modality-switching-2026")["implications"]) == 6
-    assert golden("weak-demo")["constructs"] == []
+    assert golden("weak-demo")["constructs"] == ["k_motivation", "k_drive"]
+
+
+def test_minimal_conditioning_drops_every_construct_the_separation_does_not_need():
+    # a -> m -> y with a second path a -> b -> y and b -> m: the basis set
+    # conditions a _||_ y on the parents of both, {m, b}, which is also minimal.
+    # Adding c -> y gives y a third parent that the pair does not need.
+    t = tf.new_theory("min", "Minimal sets")
+    for c in ("a", "b", "m", "c", "y"):
+        t.add_construct(c, c.upper(), "A construct.")
+    for i, (frm, to) in enumerate((("a", "m"), ("m", "y"), ("a", "b"), ("b", "y"),
+                                    ("b", "m"), ("c", "y"))):
+        t.add_proposition(f"p{i}", frm, to, "causes")
+    basis = {(r["a"], r["b"]): r["given"] for r in t.implications()["implications"]}
+    minimal = t.implications(given="minimal")
+    assert minimal["conditioning"] == "minimal"
+    pruned = {(r["a"], r["b"]): r["given"] for r in minimal["implications"]}
+    assert basis[("a", "y")] == ["b", "m", "c"]
+    assert pruned[("a", "y")] == ["b", "m"]
+    # Each pruned set is a subset of its basis set, and the pairs are the same.
+    assert pruned.keys() == basis.keys()
+    assert all(set(pruned[k]) <= set(basis[k]) for k in basis)
+    with pytest.raises(ValueError, match="^implications requires given to be 'basis' or 'minimal'$"):
+        t.implications(given="smallest")
+
+
+
+def test_the_file_order_decides_which_minimal_set_is_returned():
+    # a <- z <- w -> b: {z} and {w} each separate a and b. The pass tries the
+    # constructs in file order, so whichever comes first is dropped.
+    def theory(order):
+        t = tf.new_theory("o", "Order")
+        for c in order:
+            t.add_construct(c, c.upper(), "A construct.")
+        t.add_proposition("p1", "z", "a", "causes").add_proposition("p2", "w", "z", "causes")
+        t.add_proposition("p3", "w", "b", "causes")
+        return {(r["a"], r["b"]): r["given"] for r in t.implications(given="minimal")["implications"]}
+
+    assert theory(["a", "z", "w", "b"])[("a", "b")] == ["w"]
+    assert theory(["a", "w", "z", "b"])[("a", "b")] == ["z"]

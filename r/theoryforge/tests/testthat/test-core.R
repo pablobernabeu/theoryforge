@@ -121,3 +121,10 @@ test_that("the shipped schemas, checklist and fold table match the repository co
 test_that("tf_example_path rejects an unknown name", {
   expect_error(tf_example_path("no-such-theory.yaml"), "no packaged example")
 })
+
+test_that("tf_example_path reaches only the listed examples", {
+  # Python's example_path() refuses the same names.
+  for (name in c("expected", "../schema/theory.schema.json", "", "../R")) {
+    expect_error(tf_example_path(name), "no packaged example named", fixed = TRUE)
+  }
+})

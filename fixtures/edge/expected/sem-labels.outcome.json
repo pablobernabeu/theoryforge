@@ -1,0 +1,501 @@
+{
+  "read": "ok",
+  "validate": true,
+  "validate_full": {
+    "error": "invalid theory object: prediction[3] claim x and y must differ; prediction[2] is a directional claim, so its claim's sign cannot be nonzero, which states no direction"
+  },
+  "check": {
+    "aggregate_score": 26.1,
+    "coverage": 0.92,
+    "gate": "blocked",
+    "n_blockers_failed": 1,
+    "items": [
+      {
+        "id": "falsifiability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "precision",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "risk_severity",
+        "status": "warn",
+        "score": 0.3
+      },
+      {
+        "id": "parsimony",
+        "status": "n/a",
+        "score": null
+      },
+      {
+        "id": "non_redundancy",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "construct_clarity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "scope",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "logical_why",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "causal_testability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "diagnosticity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "formalisation",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "derivation_chain",
+        "status": "fail",
+        "score": 0.0
+      }
+    ]
+  },
+  "severity": [
+    {
+      "prediction_id": "pred1",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "pred2",
+      "type": "point",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "pred3",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    },
+    {
+      "prediction_id": "pred4",
+      "type": "directional",
+      "risk_score": 0.4,
+      "computed_severity": 0.3
+    }
+  ],
+  "implications": {
+    "error": "implications requires an acyclic causal graph; cycle found: s -> s; set cycles to 'sigma' to derive sigma-separation statements"
+  },
+  "entailments": {
+    "theory_id": "edge-sem-labels",
+    "criterion": "m",
+    "acyclic": false,
+    "feedback": [
+      [
+        "s"
+      ]
+    ],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "pred1",
+        "kind": "effect",
+        "x": "a",
+        "y": "y",
+        "given": [],
+        "sign": "positive",
+        "derived": "undetermined",
+        "verdict": "undetermined",
+        "basis": "unsigned",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ],
+        "identified": true,
+        "adjustment": []
+      },
+      {
+        "source": "prediction",
+        "id": "pred2",
+        "kind": "effect",
+        "x": "y",
+        "y": "a",
+        "given": [],
+        "sign": "zero",
+        "derived": "zero",
+        "verdict": "entailed",
+        "basis": "no_path",
+        "faithfulness": false,
+        "via": [],
+        "identified": false,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "pred3",
+        "kind": "effect",
+        "x": "a",
+        "y": "y",
+        "given": [],
+        "sign": "nonzero",
+        "derived": "undetermined",
+        "verdict": "entailed",
+        "basis": "unsigned",
+        "faithfulness": true,
+        "via": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ],
+        "identified": true,
+        "adjustment": []
+      },
+      {
+        "source": "prediction",
+        "id": "pred4",
+        "kind": "effect",
+        "x": "a",
+        "y": "a",
+        "given": [],
+        "sign": "positive",
+        "derived": "",
+        "verdict": "not_evaluated",
+        "basis": "malformed_claim",
+        "faithfulness": false,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "phenomenon",
+        "id": "ph1",
+        "kind": "effect",
+        "x": "m",
+        "y": "y",
+        "given": [],
+        "sign": "negative",
+        "derived": "negative",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p2"
+        ],
+        "identified": true,
+        "adjustment": [
+          "a"
+        ]
+      }
+    ],
+    "counts": {
+      "entailed": 3,
+      "contradicted": 0,
+      "undetermined": 1,
+      "not_evaluated": 1
+    }
+  },
+  "entailments_sigma": {
+    "theory_id": "edge-sem-labels",
+    "criterion": "sigma",
+    "acyclic": false,
+    "feedback": [
+      [
+        "s"
+      ]
+    ],
+    "claims": [
+      {
+        "source": "prediction",
+        "id": "pred1",
+        "kind": "effect",
+        "x": "a",
+        "y": "y",
+        "given": [],
+        "sign": "positive",
+        "derived": "undetermined",
+        "verdict": "undetermined",
+        "basis": "unsigned",
+        "faithfulness": false,
+        "via": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ],
+        "identified": true,
+        "adjustment": []
+      },
+      {
+        "source": "prediction",
+        "id": "pred2",
+        "kind": "effect",
+        "x": "y",
+        "y": "a",
+        "given": [],
+        "sign": "zero",
+        "derived": "zero",
+        "verdict": "entailed",
+        "basis": "no_path",
+        "faithfulness": false,
+        "via": [],
+        "identified": false,
+        "adjustment": null
+      },
+      {
+        "source": "prediction",
+        "id": "pred3",
+        "kind": "effect",
+        "x": "a",
+        "y": "y",
+        "given": [],
+        "sign": "nonzero",
+        "derived": "undetermined",
+        "verdict": "entailed",
+        "basis": "unsigned",
+        "faithfulness": true,
+        "via": [
+          "p1",
+          "p2",
+          "p3",
+          "p4"
+        ],
+        "identified": true,
+        "adjustment": []
+      },
+      {
+        "source": "prediction",
+        "id": "pred4",
+        "kind": "effect",
+        "x": "a",
+        "y": "a",
+        "given": [],
+        "sign": "positive",
+        "derived": "",
+        "verdict": "not_evaluated",
+        "basis": "malformed_claim",
+        "faithfulness": false,
+        "via": [],
+        "identified": null,
+        "adjustment": null
+      },
+      {
+        "source": "phenomenon",
+        "id": "ph1",
+        "kind": "effect",
+        "x": "m",
+        "y": "y",
+        "given": [],
+        "sign": "negative",
+        "derived": "negative",
+        "verdict": "entailed",
+        "basis": "paths_agree",
+        "faithfulness": false,
+        "via": [
+          "p2"
+        ],
+        "identified": true,
+        "adjustment": [
+          "a"
+        ]
+      }
+    ],
+    "counts": {
+      "entailed": 3,
+      "contradicted": 0,
+      "undetermined": 1,
+      "not_evaluated": 1
+    }
+  },
+  "check_sigma": {
+    "aggregate_score": 26.1,
+    "coverage": 0.92,
+    "gate": "blocked",
+    "n_blockers_failed": 1,
+    "items": [
+      {
+        "id": "falsifiability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "precision",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "risk_severity",
+        "status": "warn",
+        "score": 0.3
+      },
+      {
+        "id": "parsimony",
+        "status": "n/a",
+        "score": null
+      },
+      {
+        "id": "non_redundancy",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "construct_clarity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "scope",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "logical_why",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "causal_testability",
+        "status": "pass",
+        "score": 1.0
+      },
+      {
+        "id": "diagnosticity",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "formalisation",
+        "status": "warn",
+        "score": 0.0
+      },
+      {
+        "id": "derivation_chain",
+        "status": "fail",
+        "score": 0.0
+      }
+    ]
+  },
+  "equivalent_models": {
+    "theory_id": "edge-sem-labels",
+    "computed": false,
+    "reason": "feedback_loop",
+    "constructs": [
+      "a",
+      "m",
+      "y",
+      "s",
+      "x",
+      "y_z",
+      "x_y",
+      "z",
+      "effect_a_y"
+    ],
+    "v_structures": [],
+    "edges": [],
+    "n_compelled": 0,
+    "n_reversible": 0
+  },
+  "compile_sem": "# lavaan model generated by theoryforge for edge-sem-labels\n# Written for lavaan::sem(); indicator names are the sanitised measurement entries and must match columns of the data.\n# Measurement model\n# Structural model\nm ~ b_a_m*a\ny ~ b_m_y*m\ny ~ b_a_y*a\n# Proposition 'p4' repeats the path from a to y, which is written once, as b_a_y, since lavaan refuses a repeated line.\n# Proposition 'p5' relates s to itself and is left out: a regression of a variable on itself only rescales its disturbance, so a linear SEM cannot estimate it.\ny_z ~ b_x_y_z*x\nz ~ b_x_y_z_2*x_y\nz ~ b_effect_a_y_z*effect_a_y\n# Identification: the paths among the constructs form no loop, and no two constructs are joined by both a path and a covariance (a bow). The path coefficients are therefore generically identified if the measurement model identifies the constructs (Brito & Pearl, 2002). Whether it does has to be checked separately.\n# Signs the theory states, which the fit does not impose\n# b_a_m > 0 (p1, increases)\n# b_m_y < 0 (p2, decreases)\n# b_a_y > 0 (p4, increases)\n# b_x_y_z > 0 (p6, increases)\n# b_x_y_z_2 < 0 (p7, decreases)\n# Effects the claims are about, each the sum over the directed paths from cause to outcome of the product of the labels along the path\n# pred1 claims that the effect of a on y is positive.\n# pred3 claims that the effect of a on y is not zero.\neffect_a_y_2 := b_a_m*b_m_y + b_a_y\n# pred2 claims that the effect of y on a is zero.\n# No directed path leads from y to a, so the model fixes this effect at zero.\n# ph1 claims that the effect of m on y is negative.\neffect_m_y := b_m_y\n# Covariances the theory fixes at zero (lavaan::sem() frees them by default; delete this block to restore its defaults)\na ~~ 0*s\na ~~ 0*x\na ~~ 0*x_y\na ~~ 0*effect_a_y\ny ~~ 0*s\ny ~~ 0*y_z\ny ~~ 0*z\ns ~~ 0*x\ns ~~ 0*y_z\ns ~~ 0*x_y\ns ~~ 0*z\ns ~~ 0*effect_a_y\nx ~~ 0*x_y\nx ~~ 0*effect_a_y\ny_z ~~ 0*z\nx_y ~~ 0*effect_a_y\n",
+  "simulate": {
+    "states": [
+      "a",
+      "m",
+      "y",
+      "s",
+      "x",
+      "y_z",
+      "x_y",
+      "z",
+      "effect_a_y"
+    ],
+    "dt": 0.1,
+    "steps": 3,
+    "k": 1.0,
+    "damping": 0.5,
+    "init": 1.0,
+    "initial_state": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "method": "exact",
+    "ignored": [],
+    "assumed_positive": [
+      "p3",
+      "p5",
+      "p8"
+    ],
+    "opposed": [],
+    "trajectory": [
+      [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      [
+        0.951229,
+        1.046352,
+        1.041596,
+        1.051271,
+        0.951229,
+        1.046352,
+        0.951229,
+        0.951229,
+        0.951229
+      ],
+      [
+        0.904837,
+        1.085805,
+        1.067708,
+        1.105171,
+        0.904837,
+        1.085805,
+        0.904837,
+        0.904837,
+        0.904837
+      ],
+      [
+        0.860708,
+        1.11892,
+        1.080189,
+        1.161834,
+        0.860708,
+        1.11892,
+        0.860708,
+        0.860708,
+        0.860708
+      ]
+    ]
+  },
+  "preregister": "# Preregistration: Labelled paths, a repeated pair, a self loop and defined effects\n\n- Theory ID: edge-sem-labels\n- Schema version: 1.1\n- Content hash: sha256:fb5e2a6cc3ba5680fa35d6c60dd474a1d5a6084a4e533550a2ae41d330bcbfdc\n- Maturity: building\n- Derivation references resolve, the causal graph entails every claim a prediction states and contradicts no claim a phenomenon states: no\n- Feedback loops: refused (a claim that names a construct on a loop or downstream of one is not read)\n\n_Generated by theoryforge from the theory file. It holds the theory and hypotheses sections of a preregistration, with any sampling plan the file records. The study design, the analysis plan, the inference criteria and whatever the sampling plan leaves out must be added before registration. The content hash identifies the file and is not a time stamp._\n\n## Theory\n\n### Constructs\n- a (Activation): The first construct.\n- m (Mediator): The construct between activation and the outcome.\n- y (Outcome): The construct the claims are about.\n- s (Strain): A construct that sustains itself.\n- x (Ex): A construct whose path shares a label.\n- y_z (Wye zed): A construct whose name holds an underscore.\n- x_y (Ex wye): Another construct whose name holds an underscore.\n- z (Zed): The outcome of the second labelled path.\n- effect_a_y (Effect name): A construct named like a defined effect.\n\n### Propositions\n- p1: a increases m.\n- p2: m decreases y.\n- p3: a causes y.\n- p4: a increases y.\n- p5: s causes s.\n- p6: x increases y_z.\n- p7: x_y decreases z.\n- p8: effect_a_y mediates z.\n\n### Phenomena to explain\n- ph1: The mediator lowers the outcome.\n  - Claim: the effect of m on y is negative; entailed by the causal graph through p2\n\n## Hypotheses\n_The verdicts on the claims assume that the graph of the propositions is the causal structure, with no omitted common cause of two of its constructs, that each directed relation acts in its stated direction whatever the other inputs (as in a linear model or a uniformly monotone one), that effects do not cancel exactly where a verdict says 'unless effects cancel exactly' (faithfulness) and, for feedback loops read by sigma-separation, that each loop settles to a unique equilibrium, also once the intervened construct is held fixed._\n\n1. [directional] Activation raises the outcome. (pred1; derives from: \u2014)\n   - Claim: the effect of a on y is positive; left open by the causal graph, since a route between them passes through a relation that states no sign\n   - Adjustment for an observational test: none needed\n   - Test record: untested\n2. [point] The outcome leaves activation unchanged. (pred2; derives from: \u2014)\n   - Claim: the effect of y on a is zero; entailed by the causal graph\n   - Adjustment for an observational test: none suffices\n   - Test record: untested\n3. [directional] Activation changes the outcome. (pred3; derives from: \u2014)\n   - Claim: the effect of a on y is not zero; entailed by the causal graph through p1, p2, p3, p4, unless effects cancel exactly\n   - Adjustment for an observational test: none needed\n   - Test record: untested\n4. [directional] A claim about one construct alone, which cannot be evaluated. (pred4; derives from: \u2014)\n   - Claim: incomplete, so not evaluated\n   - Test record: untested\n\n## Implied conditional independencies (derived from the causal graph, not predictions)\n_Not derived: the causal graph has a feedback loop, s -> s. With cycles = 'sigma', the statements are read by sigma-separation and hold if each loop settles to a unique equilibrium._\n\n## Severity (pre-data rubric of claim form)\n- pred1: severity 0.3, risk 0.4\n- pred2: severity 0.3, risk 0.4\n- pred3: severity 0.3, risk 0.4\n- pred4: severity 0.3, risk 0.4\n"
+}

@@ -1,9 +1,13 @@
 {
   "theory_id": "panic-network-2026-v2",
   "schema_version": "1.0",
-  "checklist_version": "2.0",
+  "checklist_version": "3.1",
   "maturity": "testing",
   "aggregate_score": 89.8,
+  "aggregate_range": [
+    87.0,
+    91.5
+  ],
   "coverage": 0.92,
   "gate": "pass",
   "n_blockers_failed": 0,
@@ -78,7 +82,7 @@
       "score": 1.0,
       "weight": 0.06,
       "severity_if_fail": "warning",
-      "citation": "Textor et al. (2016); Eronen & Bringmann (2021)"
+      "citation": "Rohrer (2018); Eronen & Bringmann (2021)"
     },
     {
       "id": "diagnosticity",
@@ -102,7 +106,9 @@
       "score": 1.0,
       "weight": 0.08,
       "severity_if_fail": "blocker",
-      "citation": "Scheel et al. (2021); Szollosi et al. (2020)"
+      "citation": "Scheel et al. (2021); Szollosi et al. (2020)",
+      "not_checked": [],
+      "phenomena_not_checked": []
     }
   ]
 }

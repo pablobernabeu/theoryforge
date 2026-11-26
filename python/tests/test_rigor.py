@@ -11,17 +11,26 @@ def _items(report):
 
 
 def test_panic_passes(panic_path):
+    # The panic network's graph has feedback loops, so under the default
+    # cycles="refuse" its one claim is not checked and the derivation chain
+    # warns without blocking the gate, with the score of sigma-separation,
+    # under which it passes.
     r = tf.read(panic_path).check()
     assert len(r["items"]) == 12
     assert r["gate"] == "pass"
     assert r["n_blockers_failed"] == 0
     it = _items(r)
     assert it["falsifiability"]["status"] == "pass"
-    assert it["derivation_chain"]["status"] == "pass"
+    assert it["derivation_chain"]["status"] == "warn"
+    assert it["derivation_chain"]["not_checked"] == ["pred_indep"]
+    assert it["derivation_chain"]["phenomena_not_checked"] == []
+    assert it["derivation_chain"]["score"] == 1.0
     assert it["causal_testability"]["status"] == "pass"
     assert it["diagnosticity"]["status"] == "pass"
     # aggregate is a sane bounded number
     assert 0.0 <= r["aggregate_score"] <= 100.0
+    sigma = _items(tf.read(panic_path).check(cycles="sigma"))["derivation_chain"]
+    assert (sigma["status"], sigma["score"], sigma["not_checked"]) == ("pass", 1.0, [])
 
 
 def test_report_records_the_checklist_version(panic_path):
@@ -57,15 +66,18 @@ def _statuses(report):
 def test_panic_network_matches_exact_targets(panic_path):
     r = tf.read(panic_path).check()
     assert (r["aggregate_score"], r["coverage"], r["gate"], r["n_blockers_failed"]) == (
-        87.3, 0.92, "pass", 0)
+        88.0, 0.92, "pass", 0)
     assert _statuses(r) == {
-        "falsifiability": ("pass", 1.0), "precision": ("pass", 0.667),
-        "risk_severity": ("pass", 0.567), "parsimony": ("n/a", None),
+        "falsifiability": ("pass", 1.0), "precision": ("pass", 0.75),
+        "risk_severity": ("pass", 0.6), "parsimony": ("n/a", None),
         "non_redundancy": ("pass", 1.0), "construct_clarity": ("pass", 1.0),
         "scope": ("pass", 1.0), "logical_why": ("pass", 1.0),
-        "causal_testability": ("pass", 1.0), "diagnosticity": ("pass", 0.333),
-        "formalisation": ("pass", 1.0), "derivation_chain": ("pass", 1.0),
+        "causal_testability": ("pass", 1.0), "diagnosticity": ("pass", 0.25),
+        "formalisation": ("pass", 1.0), "derivation_chain": ("warn", 1.0),
     }
+    r = tf.read(panic_path).check(cycles="sigma")
+    assert (r["aggregate_score"], r["gate"]) == (88.0, "pass")
+    assert _statuses(r)["derivation_chain"] == ("pass", 1.0)
 
 
 def test_weak_demo_matches_exact_targets(weak_path):
@@ -111,10 +123,11 @@ def _with_severities(*sevs):
 
 
 def test_severity_mean_is_a_left_fold():
-    # CPython 3.12+ sum() compensates and R's sum() uses an extended accumulator
-    # on x86_64, so either gives 0.5 here where a plain left-to-right sum, as on
-    # Apple Silicon R or Python 3.11, gives 0.49999999999999994. The twins agree
-    # only if both fold left in file order (API_SPEC section 4).
+    # CPython 3.12+ sum() compensates and R's sum() accumulates in long double
+    # where R has it, as on x86_64 by default, so either gives 0.5 here where a
+    # plain left-to-right sum, as R's on Apple Silicon or without long double, or
+    # Python 3.11's, gives 0.49999999999999994. The twins agree only if both
+    # fold left in file order (API_SPEC section 4).
     from theoryforge.rigor import _mean
 
     assert _mean([0.6, 0.7, 0.2]) == 0.49999999999999994
@@ -190,4 +203,4 @@ def test_report_json_roundtrips(panic_path):
 
 def test_report_html(panic_path):
     html = tf.read(panic_path).report(format="html")
-    assert "<table>" in html and "Rigour report" in html
+    assert "<table>" in html and "<h2>Checklist report: panic-network-2026</h2>" in html

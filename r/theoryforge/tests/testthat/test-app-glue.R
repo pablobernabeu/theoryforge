@@ -60,6 +60,43 @@ test_that("the app's load keeps an invalid theory and names its problems", {
     expect_match(summary$validation$message, cs$problem, fixed = TRUE, info = cs$problem)
     expect_identical(jsonlite::fromJSON(app$.tf_run("validate", list()), simplifyVector = FALSE),
                      summary$validation, info = cs$problem)
+    # The problems also come as a list, which joined gives the message.
+    problems <- unlist(summary$validation$problems)
+    expect_identical(summary$validation$message,
+                     paste0("invalid theory object: ", paste(problems, collapse = "; ")), info = cs$problem)
+  }
+})
+
+test_that("a problem that quotes a semicolon stays one problem", {
+  # A message quotes the value it concerns, and a value can hold "; ", so the
+  # app reads the list rather than split the joined message. A single problem
+  # stays a list in the JSON. The Python glue gives the same list.
+  app <- app_glue()
+  text <- paste0("schema_version: '1.0'\nid: x\ntitle: X\nmaturity: draft\n",
+                 "constructs:\n  - {id: a, label: A, definition: D}\n",
+                 "propositions:\n  - {id: p1, from: a, to: 'avoidance; escape', relation: increases}")
+  v <- jsonlite::fromJSON(app$.tf_load(write_theory(text)), simplifyVector = FALSE)$validation
+  expect_identical(v$problems, list("proposition[0] to 'avoidance; escape' is not a known construct"))
+  ok <- jsonlite::fromJSON(app$.tf_load(write_theory(sub("avoidance; escape", "a", text, fixed = TRUE))),
+                           simplifyVector = FALSE)$validation
+  expect_identical(ok, list(ok = TRUE))
+})
+
+test_that(".tf_validation_problems() lists what tf_validate() joins on every edge case", {
+  edge <- testthat::test_path("..", "..", "..", "..", "fixtures", "edge")
+  paths <- sort(Sys.glob(file.path(edge, "*.theory.*")))
+  if (!length(paths)) testthat::skip("fixtures/edge is not reachable from this test run")
+  for (path in paths) {
+    t <- tryCatch(tf_read(path), error = function(e) NULL)
+    if (is.null(t)) next
+    problems <- .tf_validation_problems(t, TRUE)
+    msg <- tryCatch({ tf_validate(t, full = TRUE); NULL }, error = conditionMessage)
+    if (is.null(msg)) {
+      expect_identical(problems, character(0), info = basename(path))
+    } else {
+      expect_identical(msg, paste0("invalid theory object: ", paste(problems, collapse = "; ")),
+                       info = basename(path))
+    }
   }
 })
 
@@ -143,4 +180,183 @@ test_that("the acyclic example implies its basis set", {
   marginal <- Filter(function(s) length(s$given) == 0L, res$implications)
   expect_identical(vapply(marginal, function(s) s$statement, ""),
                    "c_sensorimotor_experience _||_ c_lexical_familiarity")
+})
+
+# -- the editor, the new operations and the uploads ---------------------------
+
+app_run <- function(app, op, ...) {
+  jsonlite::fromJSON(app$.tf_run(op, list(...)), simplifyVector = FALSE)
+}
+as_app_json <- function(x) {
+  jsonlite::fromJSON(as.character(jsonlite::toJSON(x, auto_unbox = TRUE, digits = NA, null = "null")),
+                     simplifyVector = FALSE)
+}
+
+test_that("the summary lists constructs, rivals, the score and the hash", {
+  app <- app_glue()
+  path <- tf_fixture_path("modality-switching.theory.yaml")
+  s <- jsonlite::fromJSON(app$.tf_load(path), simplifyVector = FALSE)
+  t <- tf_read(path)
+  expect_identical(vapply(s$constructs, function(c) c$id, ""),
+                   vapply(t$constructs, function(c) c$id, ""))
+  expect_identical(s$alternatives, list(
+    list(id = "alt_grounding_by_interaction", label = "Grounding by interaction", propositions = 4L),
+    list(id = "alt_symbol_interdependency", label = "Symbol interdependency", propositions = 5L)))
+  # The score and the hash are calls of their own, so neither can hold up a
+  # load.
+  expect_null(s$check)
+  expect_null(s$hash)
+  report <- tf_check(t)
+  score <- jsonlite::fromJSON(app$.tf_score_call(), simplifyVector = FALSE)
+  expect_identical(score$score, report$aggregate_score)
+  expect_identical(score$gate, report$gate)
+  failed <- unlist(lapply(report$items, function(i) if (identical(i$status, "fail")) i$id))
+  expect_identical(unlist(score$failed), failed)
+  expect_identical(jsonlite::fromJSON(app$.tf_hash_call(), simplifyVector = FALSE),
+                   list(hash = tf_content_hash(t)))
+  expect_identical(s$counts$phenomena, 1L)
+  # The length of the theory as jsonlite writes it, which the app compares
+  # with the length it hashes as it loads. On this theory, which holds no
+  # decimal number, Python's glue gives the same length.
+  expect_identical(s$chars, 8815L)
+})
+
+test_that("a large theory loads without the checklist", {
+  # Aliases let a link of a few hundred characters hold thousands of
+  # constructs, and the checklist's time grows faster than the theory. The
+  # load reads, validates and summarises such a theory without running the
+  # checklist, which the app asks for in a call of its own.
+  app <- app_glue()
+  n <- 7000L
+  text <- paste0("schema_version: \"1.1\"\nid: big\ntitle: Big\nmaturity: draft\n",
+                 "_c: &c {id: a, label: A, definition: D}\nconstructs: [",
+                 paste(rep("*c", n), collapse = ", "), "]")
+  app$tf_check <- function(...) stop("the load ran the checklist", call. = FALSE)
+  s <- jsonlite::fromJSON(app$.tf_load(write_theory(text)), simplifyVector = FALSE)
+  expect_identical(s$counts$constructs, n)
+  expect_null(s$check)
+  # Its 21,000 or so values are more than the glue measures.
+  expect_true("chars" %in% names(s))
+  expect_null(s$chars)
+  expect_false(isTRUE(s$validation$ok))
+  expect_true("duplicate construct id: a" %in% unlist(s$validation$problems))
+  # An error without a message is named by its class.
+  app$tf_check <- function(...) stop(structure(class = c("memoryError", "error", "condition"),
+                                               list(message = "", call = NULL)))
+  expect_identical(jsonlite::fromJSON(app$.tf_score_call(), simplifyVector = FALSE),
+                   list(error = "memoryError"))
+})
+
+test_that("the editor reads back what the writer writes", {
+  app <- app_glue()
+  app$.tf_load(tf_fixture_path("panic-network.theory.yaml"))
+  loaded <- jsonlite::fromJSON(app$.tf_hash_call(), simplifyVector = FALSE)
+  written <- tempfile(fileext = ".json")
+  writeBin(charToRaw(enc2utf8(app$.tf_write_text("json"))), written)
+  out <- jsonlite::fromJSON(app$.tf_edit(written, c("yaml", "json")), simplifyVector = FALSE)
+  expect_identical(jsonlite::fromJSON(app$.tf_hash_call(), simplifyVector = FALSE)$hash, loaded$hash)
+  expect_setequal(names(out$texts), c("yaml", "json"))
+  back <- tempfile(fileext = ".yaml")
+  writeBin(charToRaw(enc2utf8(out$texts$yaml)), back)
+  expect_identical(tf_content_hash(tf_read(back)), loaded$hash)
+  # A source that cannot be read leaves the theory as it was.
+  bad <- write_theory("id: x\nfoo: bar: baz")
+  expect_error(app$.tf_edit(bad, character(0)))
+  expect_identical(tf_content_hash(app$.tf_app$theory), loaded$hash)
+})
+
+test_that("the new operations give what the package gives", {
+  app <- app_glue()
+  path <- tf_fixture_path("modality-switching.theory.yaml")
+  app$.tf_load(path)
+  t <- tf_read(path)
+  expect_identical(app_run(app, "entailments", cycles = "refuse"), as_app_json(list(result = tf_entailments(t))))
+  expect_identical(app_run(app, "equivalent"), as_app_json(list(result = tf_equivalent_models(t))))
+  expect_identical(app_run(app, "post_severity"), as_app_json(list(result = tf_post_data_severity(t))))
+  rival <- "alt_symbol_interdependency"
+  expect_identical(app_run(app, "discriminate", rival = rival, cycles = "sigma"),
+                   as_app_json(list(result = tf_discriminate(t, rival, cycles = "sigma"))))
+  expect_identical(app_run(app, "preregister", cycles = "sigma")$text, tf_preregister(t, cycles = "sigma"))
+  expect_identical(app_run(app, "dossier", cycles = "refuse")$hash, tf_content_hash(t))
+})
+
+test_that("a rival is an alternative or an uploaded theory", {
+  app <- app_glue()
+  modality <- tf_fixture_path("modality-switching.theory.yaml")
+  app$.tf_load(modality)
+  expect_error(app_run(app, "discriminate", rival = "upload"), "No rival theory uploaded")
+  expect_error(app_run(app, "discriminate", rival = ""), "No rival chosen")
+  rival <- jsonlite::fromJSON(app$.tf_load_rival(modality), simplifyVector = FALSE)
+  expect_identical(rival$constructs, 5L)
+  expect_false(app_run(app, "discriminate", rival = "alt_none")$ok)
+  app$.tf_load(tf_fixture_path("panic-network.theory.yaml"))
+  out <- app_run(app, "discriminate", rival = "upload")$result
+  expect_identical(list(out$evaluated, out$reason), list(FALSE, "feedback_loop"))
+})
+
+test_that("an impulse starts one construct at 1", {
+  app <- app_glue()
+  app$.tf_load(tf_fixture_path("panic-network.theory.yaml"))
+  res <- app_run(app, "simulate", method = "exact", start = "impulse", impulse = "c_perceived_threat",
+                 steps = 2, dt = 0.1, k = 1, damping = 0.5, init = 1)$result
+  expect_equal(unlist(res$initial_state), c(0, 1, 0))
+  expect_identical(unlist(res$assumed_positive), "p3")
+  expect_false(app_run(app, "simulate", method = "exact", start = "impulse", impulse = "c_none",
+                       steps = 2, dt = 0.1, k = 1, damping = 0.5, init = 1)$ok)
+})
+
+test_that("the literature map takes its method and an uploaded corpus", {
+  app <- app_glue()
+  app$.tf_load(tf_fixture_path("panic-network.theory.yaml"))
+  corpus <- tf_fixture_path("openalex-panic-2026.corpus.yaml")
+  res <- app_run(app, "litmap", corpus = corpus, method = "simple_centres", min_link = 2, min_df = 2, max_df = 0.5)
+  direct <- tf_litmap(tf_read_corpus(corpus), min_link = 2, method = "simple_centres", min_df = 2, max_df = 0.5)
+  expect_identical(res$result, as_app_json(direct))
+  expect_null(res$warning)
+  warned <- app_run(app, "litmap", corpus = corpus, method = "components", min_link = 2, min_df = 1, max_df = 1)
+  expect_match(warned$warning, "^litmap: one theme holds")
+  expect_error(app_run(app, "landscape", corpus = "upload", method = "components", min_link = 2), "No corpus uploaded")
+  up <- jsonlite::fromJSON(app$.tf_load_corpus(tf_fixture_path("panic-corpus.yaml"), "upload"), simplifyVector = FALSE)
+  expect_identical(up, list(id = "panic-corpus-demo", n_records = 8L))
+  expect_identical(app_run(app, "landscape", corpus = "upload", method = "simple_centres", min_link = 2)$result$method,
+                   "simple_centres")
+  expect_false(app_run(app, "litmap", corpus = "upload", method = "simple_centres", min_link = 2, min_df = 0, max_df = 1)$ok)
+})
+
+test_that("the DAGitty import passes on the settings the user gives", {
+  # The reader stands in for tf_read_dagitty(text, id, title, relation), so
+  # the test reads the glue alone.
+  app <- app_glue()
+  seen <- NULL
+  app$tf_read_dagitty <- function(text, ...) {
+    seen <<- list(text = text, args = list(...))
+    a <- list(...)
+    rel <- if (is.null(a$relation)) "causes" else a$relation
+    tf_theory(if (is.null(a$id)) "dagitty-import" else a$id, "T", maturity = "draft") |>
+      tf_add_construct("a", "a", "") |> tf_add_construct("b", "b", "") |>
+      tf_add_proposition("p1", "a", "b", rel)
+  }
+  model <- tempfile(fileext = ".txt")
+  writeBin(charToRaw("dag { a -> b }\n"), model)
+  out <- jsonlite::fromJSON(app$.tf_import_dagitty(model, list(id = "mine", title = "", relation = "increases",
+                                                               formats = "yaml")), simplifyVector = FALSE)
+  expect_identical(seen, list(text = "dag { a -> b }\n", args = list(id = "mine", relation = "increases")))
+  expect_identical(out$id, "mine")
+  expect_match(out$texts$yaml, "relation: increases", fixed = TRUE)
+  expect_identical(app$.tf_app$theory$id, "mine")
+})
+
+test_that("the DAGitty import runs the package reader", {
+  if (!exists("tf_read_dagitty", mode = "function")) {
+    testthat::skip("this version of the package has no tf_read_dagitty()")
+  }
+  app <- app_glue()
+  model <- tempfile(fileext = ".txt")
+  writeBin(charToRaw("dag {\n  a -> b -> c\n  a <-> c [latent]\n}\n"), model)
+  out <- jsonlite::fromJSON(app$.tf_import_dagitty(model, list(relation = "increases", formats = "json")),
+                            simplifyVector = FALSE)
+  data <- jsonlite::fromJSON(out$texts$json, simplifyVector = FALSE)
+  expect_identical(vapply(data$constructs, function(c) c$id, ""), c("a", "b", "c"))
+  expect_identical(vapply(data$propositions, function(p) paste(p$from, p$relation, p$to), ""),
+                   c("a increases b", "b increases c", "a associates c"))
 })

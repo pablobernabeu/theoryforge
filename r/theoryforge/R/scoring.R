@@ -4,6 +4,7 @@
 #' prediction's declared \code{type} and its \code{diagnostic_vs} ids, and
 #' neither the statement nor any test, outcome or data.
 #' @name scoring
+#' @noRd
 #' @keywords internal
 NULL
 
@@ -21,17 +22,32 @@ NULL
 # discount.
 .tf_SEV_CRUD <- 0.25
 
+# Whether a prediction's bounds state two finite numbers, a region a test can
+# miss. The precision item of the checklist and the rubric below read a point or
+# interval label only together with such bounds (API_SPEC.md sections 4 and 9).
+.tf_bounded <- function(p) {
+  b <- .tf_get(p, "bounds")
+  if (!.tf_is_mapping(b)) return(FALSE)
+  lo <- .tf_number(.tf_get(b, "lower"))
+  up <- .tf_number(.tf_get(b, "upper"))
+  !is.null(lo) && !is.null(up) && is.finite(lo) && is.finite(up)
+}
+
 #' Per-prediction claim-form riskiness
 #'
 #' A pre-data rubric of the form of each prediction's claim. \code{risk_score}
 #' is the base riskiness of the declared type: existence 0.1, directional 0.4,
 #' interval 0.7 and point 0.9. \code{computed_severity} discounts a directional
 #' prediction by 25 per cent, adds 0.1 when \code{diagnostic_vs} names a
-#' registered alternative and is capped at 1. The order of the types follows
-#' Popper (1959, sections 31-33) for nested claims about one quantity, and the
-#' directional penalty follows Meehl's (1967, 1990b) argument that a sign alone
-#' risks little. The base values, the discount and the bonus are the package's
-#' conventions, and neither source gives them.
+#' registered alternative and is capped at 1. A point or interval prediction
+#' whose \code{bounds} do not give a finite lower and a finite upper value
+#' states no region a test could miss, so it is rated as a directional one, with
+#' the base 0.4 and the discount, as the precision item of [tf_check()] gives it
+#' no credit. \code{type} still reports the declared label. The order of the
+#' types follows Popper (1959, sections 31-33) for nested claims about one
+#' quantity, and the directional penalty follows Meehl's (1967, 1990b) argument
+#' that a sign alone risks little. The base values, the discount and the bonus
+#' are the package's conventions, and neither source gives them.
 #'
 #' How severely a claim is tested depends on the design and the data, which the
 #' rubric does not read. A prediction scores the same however it is tested, and
@@ -53,8 +69,10 @@ NULL
 #' Popper, K. R. (1959). \emph{The logic of scientific discovery}. Hutchinson.
 #' @examples
 #' theory <- tf_theory("demo-1", "A demonstration theory") |>
-#'   tf_add_prediction("h1", "Effect is exactly 0.30.", "point") |>
-#'   tf_add_prediction("h2", "Effect is positive.", "directional")
+#'   tf_add_prediction("h1", "The effect is 0.30, within 0.05.", "point",
+#'                     bounds = list(lower = 0.25, upper = 0.35)) |>
+#'   tf_add_prediction("h2", "The effect is positive.", "directional",
+#'                     bounds = list(lower = 0))
 #' tf_severity(theory)
 #' @export
 tf_severity <- function(theory) {
@@ -72,8 +90,12 @@ tf_severity <- function(theory) {
   for (i in seq_len(n)) {
     p <- preds[[i]]
     typ <- .tf_enum_str(p, "type", .tf_PRED_TYPE)
-    base <- if (typ %in% names(.tf_SEV_BASE)) .tf_SEV_BASE[[typ]] else 0.0
-    discounted <- if (identical(typ, "directional")) base * (1 - .tf_SEV_CRUD) else base
+    # A point or interval label without the region it claims is rated as a
+    # directional claim, so that the rubric credits the label no more than the
+    # precision item does (API_SPEC.md section 9).
+    form <- if (typ %in% c("point", "interval") && !.tf_bounded(p)) "directional" else typ
+    base <- if (form %in% names(.tf_SEV_BASE)) .tf_SEV_BASE[[form]] else 0.0
+    discounted <- if (identical(form, "directional")) base * (1 - .tf_SEV_CRUD) else base
     dv <- .tf_str_list(.tf_get(p, "diagnostic_vs"))
     # A package convention: naming a registered alternative the prediction
     # would discriminate from adds 0.1. The alternative is declared, not
@@ -95,13 +117,6 @@ tf_severity <- function(theory) {
 }
 
 .tf_PDS_REFUSAL <- "post_data_severity requires "
-
-# `v` as a double when it is a single number other than NaN, and NULL
-# otherwise. A logical is not a number. The Python twin's _num.number() reads an
-# integer too large for a float as an infinity, as R's reader holds it.
-.tf_number <- function(v) {
-  if (is.numeric(v) && length(v) == 1L && !is.na(v)) as.numeric(v) else NULL
-}
 
 .tf_finite <- function(x) {
   if (!is.null(x) && is.finite(x)) x else NULL
@@ -201,20 +216,28 @@ tf_severity <- function(theory) {
 #' declares bounds, the severity with which the claim passed is the smallest of
 #' \eqn{\Phi((estimate - lower) / se)}{Phi((estimate - lower) / se)} and
 #' \eqn{\Phi((upper - estimate) / se)}{Phi((upper - estimate) / se)} over the
-#' finite bounds, rounded to three decimals (Mayo & Spanos, 2006, 2011). It is
-#' the probability that the test would have given a result less in accord with
-#' the claim, had the claim been false at the bound. A one-sided claim, such as
-#' an effect above a smallest effect of interest, is a lower bound with the
-#' upper one open.
-#'
-#' The computation is a normal approximation to the sampling distribution of
-#' the estimate. With two finite bounds, the value equals 1 minus the p value of
-#' the two one-sided tests (TOST) of equivalence. A point claim with lower equal
+#' finite bounds, rounded to three decimals. For a claim with one finite bound,
+#' this is the post-data severity of Mayo and Spanos (2006, 2011): the
+#' probability that the test would have given a result less in accord with the
+#' claim, had the quantity been at the bound. A one-sided claim, such as an
+#' effect above a smallest effect of interest, is a lower bound with the upper
+#' one open. With two finite bounds, the value is the minimum over the two
+#' bounds, which is the package's own extension to the conjunction of the two
+#' one-sided claims. It equals 1 minus the p value of the z-based two one-sided
+#' tests (TOST) of equivalence (Lakens, 2017). A point claim with lower equal
 #' to upper can pass with a severity of at most 0.5, so it needs a tolerance
-#' around its value. Unlike [tf_severity()], which grades the form of a claim
-#' before any data, this value depends on the design and the data. The rigour
-#' checklist does not read it. [tf_dossier()] gives each value in its test
-#' record.
+#' around its value.
+#'
+#' The computation is a normal approximation that treats the standard error as
+#' known, so in small samples it overstates the severity of an estimate inside
+#' the region. The standard error must describe the sampling distribution of
+#' the estimate at the bound, which differs from its value at the estimate when
+#' it depends on the parameter, as for a proportion. The value is nominal: it
+#' does not account for selection, such as a subgroup chosen after seeing the
+#' data, and it does not check the statistical adequacy of the model behind the
+#' estimate. Unlike [tf_severity()], which grades the form of a claim before
+#' any data, this value depends on the design and the data. The checklist does
+#' not read it. [tf_dossier()] gives each value in its test record.
 #'
 #' The function stops at the first outcome, in file order, that cannot be
 #' read, with one of these messages:
@@ -234,6 +257,10 @@ tf_severity <- function(theory) {
 #'   \code{upper} (\code{NA} for an open bound), \code{estimate}, \code{se} and
 #'   \code{severity}.
 #' @references
+#' Lakens, D. (2017). Equivalence tests: A practical primer for t tests,
+#'   correlations, and meta-analyses. \emph{Social Psychological and
+#'   Personality Science}, 8(4), 355-362. \doi{10.1177/1948550617697177}
+#'
 #' Mayo, D. G., & Spanos, A. (2006). Severe testing as a basic concept in a
 #'   Neyman-Pearson philosophy of induction. \emph{The British Journal for the
 #'   Philosophy of Science}, 57(2), 323-357. \doi{10.1093/bjps/axl003}

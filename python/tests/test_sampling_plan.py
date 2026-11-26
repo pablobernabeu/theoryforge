@@ -8,6 +8,7 @@ same theories and asserts the same messages and lines.
 """
 import copy
 import math
+import re
 
 import pytest
 
@@ -210,11 +211,16 @@ def test_the_preregistration_lists_the_sampling_plan_after_the_hypotheses():
     assert _section(text) + "\n\n## Implied conditional independencies" in text
 
 
+def _unhashed(text: str) -> str:
+    """A preregistration without its content-hash line, which differs whenever the theory does."""
+    return re.sub(r"\n- Content hash: sha256:[0-9a-f]{64}", "", text)
+
+
 def test_a_theory_without_a_stated_plan_has_no_section():
-    bare = _theory(_ABSENT, _ABSENT).preregister()
+    bare = _unhashed(_theory(_ABSENT, _ABSENT).preregister())
     assert SECTION not in bare
     for blocks in ((None, {}), ([], "n = 48"), ({"unit": "participants"}, {"alpha": 2})):
-        assert _theory(*blocks).preregister() == bare
+        assert _unhashed(_theory(*blocks).preregister()) == bare
 
 
 def test_the_modality_example_states_its_plan_and_matches_its_golden(modality_path, fixtures_dir):
@@ -232,7 +238,7 @@ def test_the_modality_example_states_its_plan_and_matches_its_golden(modality_pa
     ])
     # Without the block the document is the earlier format, the section left out.
     del t.data["predictions"][1]["test"]
-    assert t.preregister() == text.replace(_section(text) + "\n\n", "")
+    assert _unhashed(t.preregister()) == _unhashed(text.replace(_section(text) + "\n\n", ""))
 
 
 @pytest.mark.parametrize(("fixture", "golden"), [
@@ -248,9 +254,13 @@ def test_every_other_fixture_keeps_its_preregistration(fixtures_dir, fixture, go
 
 def test_the_dossier_carries_the_plan_in_its_preregistration(modality_path):
     d = tf.read(modality_path).dossier()
-    assert "\n## Preregistration\n\n# Preregistration: " in d
-    assert d.count(SECTION) == 1
-    assert d.endswith(tf.read(modality_path).preregister())
+    assert "\n## Preregistration\n\n### Preregistration: " in d
+    assert d.count("##" + SECTION) == 1
+    # The embedded preregistration ends with the implied independencies, its
+    # severity list being given earlier in the dossier.
+    prereg = tf.read(modality_path).preregister()
+    body = prereg[:prereg.index("\n## Severity (pre-data rubric of claim form)")]
+    assert d.endswith(body.replace("\n#", "\n###").replace("# ", "### ", 1))
 
 
 def test_a_written_theory_reads_back_with_its_plan(tmp_path, modality_path):
@@ -265,8 +275,8 @@ def test_a_written_theory_reads_back_with_its_plan(tmp_path, modality_path):
 # -- recorded, not scored -------------------------------------------------------------
 
 def test_the_block_moves_no_score(modality_path):
-    # Power must not raise a prediction's severity (Meehl, 1967), so nothing
-    # reads the block but validation and the preregistration.
+    # The stated power raises no score (Meehl, 1967, for directional claims),
+    # so nothing reads the block but validation and the preregistration.
     with_plan = tf.read(modality_path)
     without = copy.deepcopy(with_plan)
     del without.data["predictions"][1]["test"]

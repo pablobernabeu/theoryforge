@@ -8,7 +8,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildPy, manifestCorpora, manifestExamples } from "../build.mjs";
+import { buildPy, manifestCorpora, manifestExamples, versionsAgree } from "../build.mjs";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -54,9 +54,9 @@ test("the Python vendor tree leaves out __pycache__ and every file the manifest 
   }
 });
 
-test("the manifest marks the examples each package ships and lists modality switching last", async () => {
+test("the manifest marks the examples and corpora each package ships and lists modality switching last", async () => {
   for (const dir of [path.join(repo, "python", "src", "theoryforge", "fixtures"),
-    path.join(repo, "r", "theoryforge", "inst", "fixtures")]) {
+    path.join(repo, "r", "theoryforge", "inst", "extdata")]) {
     const examples = await manifestExamples(dir);
     assert.equal(examples.length, 10);
     assert.equal(examples[examples.length - 1].path, "fixtures/modality-switching.theory.yaml");
@@ -64,7 +64,8 @@ test("the manifest marks the examples each package ships and lists modality swit
       "fixtures/panic-network.theory.yaml", "fixtures/panic-network-2026-v2.theory.yaml",
       "fixtures/weak-theory.theory.yaml", "fixtures/modality-switching.theory.yaml",
     ]);
-    assert.deepEqual((await manifestCorpora(dir)).map((c) => [c.path, c.shipped]), [["fixtures/panic-corpus.yaml", true]]);
+    assert.deepEqual((await manifestCorpora(dir)).map((c) => [c.key, c.path, c.shipped]), [
+      ["demo", "fixtures/panic-corpus.yaml", true], ["openalex", "fixtures/openalex-panic-2026.corpus.yaml", true]]);
   }
 });
 
@@ -84,4 +85,17 @@ test("the effort-recovery example promises what its default run shows", async ()
   assert.doesNotMatch(header, /oscillating trajectories/);
   assert.match(header, /fatigue overshoots its resting level of zero/);
   assert.match(header, /damping to 0\.1 and raise steps to 150/);
+});
+
+test("the build accepts a release or a development line of the two package versions", () => {
+  assert.ok(versionsAgree("0.7.1", "0.7.1"));
+  assert.ok(versionsAgree("0.7.1.9000", "0.8.0.dev0"));
+  assert.ok(versionsAgree("0.7.1.9000", "0.7.2.dev3"));
+  assert.ok(versionsAgree("0.7.1.9000", "1.0.dev0"));
+  assert.ok(!versionsAgree("0.7.1", "0.8.0"));
+  assert.ok(!versionsAgree("0.7.1.9000", "0.7.1"));
+  assert.ok(!versionsAgree("0.7.1.9000", "0.7.1.dev0"));
+  assert.ok(!versionsAgree("0.7.1", "0.8.0.dev0"));
+  assert.ok(!versionsAgree("0.7.1.9000", "0.7.1.9000"));
+  assert.ok(!versionsAgree("0.7.1.9000", "0.7.1.0.dev0"));
 });

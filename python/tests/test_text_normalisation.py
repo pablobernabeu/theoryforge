@@ -110,16 +110,33 @@ def test_tokens_keep_every_script():
     assert tf.tokens("惊恐障碍 恐惧") == {"惊恐障碍"}
 
 
+def test_the_noncharacters_fffe_and_ffff_are_text_like_any_other():
+    # R's chartr() and tolower() refused both, so a label, definition, id or DOI
+    # holding one stopped tf_check() and the functions that read text there.
+    # The R suite asserts the same values.
+    from theoryforge._text import normalise_words
+    assert normalise_words("\u00c5B\ufffe\uffff") == "ab\ufffe\uffff"
+    assert tf.tokens("Arousal \uffff level.") == {"arousal", "level"}
+    t = _theory([{"id": "a\uffff", "label": "Pa\ufffeic", "definition": "Arousal \uffff level."},
+                 {"id": "b", "label": "B", "definition": "Threat appraisal."}],
+                [{"id": "p1", "from": "a\uffff", "to": "b", "relation": "increases"}])
+    assert t.check()["aggregate_score"] == 19.0
+    assert [r["flag"] for r in t.redundancy_check()] == ["ok"]
+    sem = t.compile_sem()
+    assert "# renamed for lavaan: 'a\uffff' -> a\n" in sem and "\nb ~ b_a_b*a\n" in sem
+    assert t.diagram("rigour") and t.diagram("venn") and t.preregister() and t.dossier()
+    dois = ["10.1234/abc", "10.1234/X\uffff"]
+    assert tf.new_evidence_dois(t, dois) == dois
+
+
 def test_identical_cyrillic_definitions_are_flagged():
     d = "Страх перед телесными ощущениями."
     t = _theory([{"id": "a", "label": "A", "definition": d},
                  {"id": "b", "label": "B", "definition": d}])
     assert t.redundancy_check() == [{"a": "a", "b": "b", "similarity": 1.0, "overlap": 1.0,
-                                     "flag": "review"}]
+                                     "flag": "review", "reason": "near duplicate, contained"}]
 
 
-# The corpus forms one theme, so landscape warns that it holds every linked keyword.
-@pytest.mark.filterwarnings("ignore:litmap:UserWarning")
 def test_an_accented_word_no_longer_matches_its_tail():
     corpus = {"schema_version": "1.0", "id": "c", "records": [
         {"id": "r1", "keywords": ["motion perception", "visual motion"]},
@@ -176,19 +193,19 @@ def test_compile_sem_folds_measurement_labels():
 # -- new_evidence_dois ------------------------------------------------------------
 
 DOI_VARIANTS = [
-    "doi: 10.1016/j.brat.2015.10.002",
-    "DOI: 10.1016/j.brat.2015.10.002",
-    "DOI 10.1016/j.brat.2015.10.002",
-    "doi.org/10.1016/j.brat.2015.10.002",
-    "dx.doi.org/10.1016/j.brat.2015.10.002",
-    "https://www.doi.org/10.1016/j.brat.2015.10.002",
-    "info:doi/10.1016/j.brat.2015.10.002",
-    "urn:doi:10.1016/j.brat.2015.10.002",
-    "https://doi.org/10.1016%2Fj.brat.2015.10.002",
+    "doi: 10.1176/ajp.155.5.610",
+    "DOI: 10.1176/ajp.155.5.610",
+    "DOI 10.1176/ajp.155.5.610",
+    "doi.org/10.1176/ajp.155.5.610",
+    "dx.doi.org/10.1176/ajp.155.5.610",
+    "https://www.doi.org/10.1176/ajp.155.5.610",
+    "info:doi/10.1176/ajp.155.5.610",
+    "urn:doi:10.1176/ajp.155.5.610",
+    "https://doi.org/10.1176%2Fajp.155.5.610",
     "https://doi.org/10.1016/0005-7967%2886%2990011-2",
-    "10.1016/j.brat.2015.10.002.",
-    "10.1016/J.BRAT.2015.10.002\u00a0",
-    "\u200910.1016/j.brat.2015.10.002\u3000",
+    "10.1176/ajp.155.5.610.",
+    "10.1176/AJP.155.5.610\u00a0",
+    "\u200910.1176/ajp.155.5.610\u3000",
 ]
 
 
@@ -213,7 +230,7 @@ def test_doi_normaliser_keeps_what_is_not_a_doi_pattern():
 def test_the_doi_golden_is_unchanged_by_the_longer_candidate_list(panic_path, fixtures_dir):
     golden = json.loads((fixtures_dir / "expected" / "panic-network-2026.new_evidence_dois.json")
                         .read_text(encoding="utf-8"))
-    base = ["10.1016/j.brat.2015.10.002", "https://doi.org/10.1016/0005-7967(86)90011-2",
+    base = ["10.1176/ajp.155.5.610", "https://doi.org/10.1016/0005-7967(86)90011-2",
             "10.1176/AJP.146.2.148", "10.1037/0033-2909.99.1.20", "10.1037/0033-2909.99.1.20",
             "10.1016/j.cpr.2011.09.005"]
     assert tf.read(panic_path).new_evidence_dois(base + copy.copy(DOI_VARIANTS)) == golden

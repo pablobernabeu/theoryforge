@@ -1,0 +1,35 @@
+# Edge case: numbers that a reader or a writer could change in the last place,
+# held in x_ fields, which the content hash covers. 41.123456789012344 needs 17
+# significant digits and 4.242640687119285 16, which a writer keeping 15
+# changed. 2^-24 is 5.960464477539063e-08, a power of two beside which the
+# nearest 16-digit decimal does not read back. -527.867953 is a decimal that
+# R's own parser reads one unit in the last place away. 0x200000000000011 and
+# its octal twin are 2^57 + 17, whose nearest double is 2^57 + 32, where a sum
+# digit by digit gave 2^57. The three subnormal values are misread by R's own
+# parser on a build without long double. The interval's upper bound needs 17
+# digits too.
+schema_version: "1.1"
+id: edge-number-fidelity
+title: Numbers that must keep every digit
+maturity: building
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+    x_long: [4.242640687119285, 41.123456789012344]
+    x_power: 5.960464477539063e-08
+    x_decimal: -527.867953
+  - id: c2
+    label: Beta
+    definition: The second construct.
+    x_hex: 0x200000000000011
+    x_octal: 010000000000000000021
+    x_subnormal: [2.2250738585072011e-308, 2.1e-322, 2.5e-324]
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: Alpha raises Beta.}
+predictions:
+  - id: h1
+    statement: Beta lies between 0.1 and 0.3.
+    type: interval
+    derives_from: [p1]
+    bounds: {lower: 0.1, upper: 0.30000000000000004}

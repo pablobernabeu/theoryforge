@@ -1,4 +1,10 @@
-schema_version: "1.0"
+# Version 1 of a network theory of panic disorder. Its causal graph, a loop
+# between arousal and perceived threat that feeds avoidance, implies that
+# arousal and avoidance are independent given perceived threat, and pred_indep
+# states that independence. A test refuted it, and the amended version
+# (panic-network-2026-v2.theory.yaml) answers with a direct path from arousal to
+# avoidance.
+schema_version: "1.1"
 id: "panic-network-2026"
 title: "Network theory of panic disorder"
 maturity: "developing"
@@ -50,6 +56,7 @@ predictions:
     derives_from: [p1, p3]
     statement: "An interoceptive challenge raises heart rate 20 beats per minute above baseline, within a measurement tolerance of 5, within 90 seconds."
     type: "point"
+    bounds: {lower: 15, upper: 25}
     risk_score: 0.8
     severity: 0.7
     diagnostic_vs: [alt_cognitive]
@@ -57,6 +64,7 @@ predictions:
     derives_from: [p2]
     statement: "Avoidance frequency falls within a 20-35% band after exposure therapy."
     type: "interval"
+    bounds: {lower: 20, upper: 35}
     risk_score: 0.6
     severity: 0.6
     diagnostic_vs: []
@@ -67,6 +75,13 @@ predictions:
     risk_score: 0.3
     severity: 0.4
     diagnostic_vs: []
+  - id: pred_indep
+    derives_from: [p1, p2, p3]
+    statement: "Holding perceived threat constant, physiological arousal and avoidance correlate no more strongly than 0.10 in absolute value."
+    type: "interval"
+    bounds: {lower: -0.10, upper: 0.10}
+    diagnostic_vs: []
+    claim: {kind: association, x: c_arousal, y: c_avoidance, given: [c_perceived_threat], sign: zero}
 
 auxiliary_assumptions:
   - id: aux1
@@ -74,18 +89,28 @@ auxiliary_assumptions:
     added_for: null
     protects: [pred1]
 
+# Ströhle et al. (1998) report that an infusion of sodium lactate, an
+# interoceptive challenge, raised heart rate in patients with panic disorder.
+# The study supports the direction of pred1, not the size it predicts.
 evidence:
   - supports: pred1
-    source_doi: "10.1016/j.brat.2015.10.002"
+    source_doi: "10.1176/ajp.155.5.610"
     direction: "corroborates"
 
+# The test outcomes are made up for the example, as their observed text says,
+# and osf.io/abcde is a placeholder, not a registration of these tests.
 test_outcomes:
   - prediction_id: pred1
-    observed: "Arousal reached the predicted band in 78% of trials."
+    observed: "Illustrative values, not a reported result: arousal reached the predicted band in 78% of trials."
     passed: true
     severity_at_test: 0.7
     registered: "osf.io/abcde"
     date: "2026-05-01"
+  - prediction_id: pred_indep
+    observed: "Illustrative values, not a reported result: the partial correlation of arousal and avoidance given perceived threat was 0.24."
+    passed: false
+    registered: null
+    date: "2026-05-20"
 
 alternatives:
   - id: alt_cognitive
@@ -111,3 +136,6 @@ provenance:
   - step: "3"
     action: "tf_add_prediction"
     detail: "Derived three predictions from the propositions."
+  - step: "4"
+    action: "tf_add_prediction"
+    detail: "Stated the independence of arousal and avoidance given perceived threat that the causal graph implies."

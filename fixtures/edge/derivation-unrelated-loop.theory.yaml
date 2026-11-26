@@ -1,0 +1,22 @@
+# A feedback loop between two constructs that no path joins to the claim. The
+# loop reaches neither x nor y, so cycles = "refuse" reads the claim as
+# cycles = "sigma" does: the path x -> m -> y gives the effect of x on y a
+# negative sign, h1 is contradicted, and the derivation chain fails and blocks
+# the gate under either reading.
+schema_version: "1.1"
+id: "derivation-unrelated-loop"
+title: "An unrelated feedback loop and a contradicted claim"
+maturity: "developing"
+constructs:
+  - {id: x, label: "X", definition: "The cause."}
+  - {id: m, label: "M", definition: "The mediator."}
+  - {id: y, label: "Y", definition: "The outcome."}
+  - {id: u, label: "U", definition: "An unrelated quantity."}
+  - {id: w, label: "W", definition: "Another unrelated quantity."}
+propositions:
+  - {id: p1, from: x, to: m, relation: increases, mechanism: "It does."}
+  - {id: p2, from: m, to: y, relation: decreases, mechanism: "It does."}
+  - {id: q1, from: u, to: w, relation: increases, mechanism: "It does."}
+  - {id: q2, from: w, to: u, relation: increases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "x raises y.", type: directional, derives_from: [p1, p2], claim: {kind: effect, x: x, y: y, sign: positive}}

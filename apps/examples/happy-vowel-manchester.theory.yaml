@@ -1,11 +1,12 @@
 # Encodes Turton & Baranowski (2026), "The sociolinguistics of sounding happy:
-# A stable vocalic variable in Manchester English", Language Variation and Change.
+# A stable vocalic variable in Manchester English", Language Variation and
+# Change, 38(1), 115-142.
 # https://doi.org/10.1017/S0954394526100702
 # The happy vowel (final unstressed vowel in happy, baby) is a rare case of a
 # stable vocalic sociolinguistic variable: socially stratified by class and
 # ethnicity, yet its internal linguistic constraints operate independently of
 # social factors, with no change in apparent time.
-schema_version: "1.0"
+schema_version: "1.1"
 id: "happy-vowel-manchester-2026"
 title: "Stable sociolinguistic variation in the Manchester happy vowel"
 maturity: "testing"
@@ -91,6 +92,7 @@ predictions:
     risk_score: 0.4
     severity: 0.6
     diagnostic_vs: [alt_change_in_progress]
+    claim: {kind: effect, x: c_social_class, y: c_happy_realisation, sign: positive}
   - id: pred_ethnicity
     derives_from: [p_ethnicity]
     statement: "Pakistani-heritage speakers realise tenser happy vowels than White and Black Caribbean speakers."
@@ -105,6 +107,7 @@ predictions:
     risk_score: 0.3
     severity: 0.4
     diagnostic_vs: []
+    claim: {kind: effect, x: c_preceding_vowel_tenseness, y: c_happy_realisation, sign: positive}
   - id: pred_prepausal
     derives_from: [p_prepausal]
     statement: "Pre-pausal happy is significantly laxer than non-pre-pausal happy."
@@ -112,6 +115,7 @@ predictions:
     risk_score: 0.3
     severity: 0.4
     diagnostic_vs: []
+    claim: {kind: effect, x: c_prepausal_position, y: c_happy_realisation, sign: negative}
   - id: pred_independence
     derives_from: [p_harmony, p_prepausal]
     statement: "The direction and ordering of the internal linguistic constraints hold across every social class and ethnic group, differing at most in magnitude rather than in direction."

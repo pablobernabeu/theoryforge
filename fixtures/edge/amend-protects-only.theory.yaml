@@ -1,0 +1,46 @@
+# Edge case: amends amend-prior with h4, a replication of h2 in a second
+# laboratory derived from the unchanged p2, which a test corroborates, and a
+# core assumption a2 that lists h4 in protects. Without a2, h4 would articulate
+# old content and the amendment would be neutral. Because an appraised
+# assumption protects it, h4 counts as new content, and the amendment is
+# progressive with protected_only = [h4]: its novelty rests on the declaration.
+schema_version: "1.1"
+id: edge-amend-protects-only
+title: A replication made new content by an assumption that protects it
+maturity: testing
+constructs:
+  - {id: c1, label: First, definition: The first construct.}
+  - {id: c2, label: Second, definition: The second construct.}
+  - {id: c3, label: Third, definition: The third construct.}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: It does.}
+  - {id: p2, from: c2, to: c3, relation: increases, mechanism: It does.}
+predictions:
+  - id: h1
+    statement: c2 rises 0.5 SD per SD of c1, within 0.1.
+    type: point
+    derives_from: [p1]
+    bounds: {lower: 0.4, upper: 0.6}
+    claim: {kind: effect, x: c1, y: c2, sign: positive}
+  - id: h2
+    statement: c3 rises with c2.
+    type: directional
+    derives_from: [p2]
+  - id: h4
+    statement: c3 rises with c2 in a second laboratory.
+    type: directional
+    derives_from: [p2]
+auxiliary_assumptions:
+  - id: a1
+    statement: The c2 scale measures c2 in every sample.
+    added_for: ~
+    protects: [h1]
+  - id: a2
+    statement: The second laboratory follows the procedure of the first.
+    added_for: ~
+    protects: [h4]
+test_outcomes:
+  - prediction_id: h1
+    passed: false
+  - prediction_id: h4
+    passed: true

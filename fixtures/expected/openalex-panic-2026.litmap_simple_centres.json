@@ -2799,7 +2799,7 @@
       "size": 5,
       "centrality": 2.672471,
       "density": 16.527778,
-      "quadrant": "basic"
+      "quadrant": "emerging_or_declining"
     },
     {
       "id": "theme_2",
@@ -2856,7 +2856,7 @@
       "size": 10,
       "centrality": 8.99724,
       "density": 32.592593,
-      "quadrant": "motor"
+      "quadrant": "basic"
     },
     {
       "id": "theme_5",
@@ -3049,7 +3049,8 @@
     "min_cocitation": 2,
     "min_theme_size": 2,
     "max_theme_size": 10,
-    "max_df": 1.0
+    "max_df": 1.0,
+    "min_df": 1
   },
   "field_terms": []
 }

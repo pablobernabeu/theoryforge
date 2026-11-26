@@ -53,8 +53,13 @@ def test_causal_dag_and_unknown_types_are_refused_with_guidance():
         render_diagram(t, "causal_dag")
     with pytest.raises(ValueError, match="dagitty"):
         render_diagram(t.diagram("causal_dag"))
-    with pytest.raises(ValueError):
-        render_diagram(t, "no_such_view")
+    for value in ("no_such_view", None):
+        with pytest.raises(ValueError) as err:
+            render_diagram(t, value)
+        with pytest.raises(ValueError) as direct:
+            t.diagram(value)
+        assert str(err.value) == str(direct.value)
+        assert str(err.value).startswith("unknown diagram type ")
 
 
 def test_missing_graphviz_is_reported_with_install_guidance(monkeypatch):

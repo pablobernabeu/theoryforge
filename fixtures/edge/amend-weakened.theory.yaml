@@ -1,0 +1,29 @@
+# Edge case: amends amend-prior by rewriting the refuted h1 under its id as an
+# existence claim with no bounds and the sign nonzero. Every part of its
+# content is weaker, so h1 is revised as weakened. A weakened prediction that
+# was refuted, with no corroborated new content, makes the amendment
+# degenerating.
+schema_version: "1.1"
+id: edge-amend-weakened
+title: A refuted prediction weakened after its test
+maturity: testing
+constructs:
+  - {id: c1, label: First, definition: The first construct.}
+  - {id: c2, label: Second, definition: The second construct.}
+  - {id: c3, label: Third, definition: The third construct.}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: It does.}
+  - {id: p2, from: c2, to: c3, relation: increases, mechanism: It does.}
+predictions:
+  - id: h1
+    statement: c1 changes c2.
+    type: existence
+    derives_from: [p1]
+    claim: {kind: effect, x: c1, y: c2, sign: nonzero}
+  - id: h2
+    statement: c3 rises with c2.
+    type: directional
+    derives_from: [p2]
+test_outcomes:
+  - prediction_id: h1
+    passed: false

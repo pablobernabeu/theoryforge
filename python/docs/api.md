@@ -1,26 +1,16 @@
 # API reference
 
-This page lists every public function and the `Theory` class in the groups the
-[R package's reference index](https://pablobernabeu.github.io/theoryforge/r/reference/)
-uses and in the same order, so a name is found in the same place on either site.
-The entries below cite sections of
-[API_SPEC.md](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md),
-the specification both packages implement.
-
-The R package prefixes each function's name with `tf_`, so `check()` here is
-`tf_check()` there. The exception is `new_theory()`, which is `tf_theory()` in
-R. `validate()`, `set_formal_model()` and the `add_*()` builders, which are
-methods of `Theory` here, are functions in R: `tf_validate()`,
-`tf_set_formal_model()` and `tf_add_*()`.
-
-The four functions whose name matches their module (`diagram`, `dossier`,
-`implications`, `simulate`) are documented by their canonical path, so that the
-function rather than the module is shown.
+This page documents every public function of the package and the `Theory` class, grouped by
+the stage of the workflow they serve. Every function that takes a theory is also a method
+of `Theory`, which takes the other arguments, so `tf.check(t)` and `t.check()` are the same
+call. The entries cite sections of
+[API_SPEC.md](https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md), the
+specification that the Python and R packages implement.
 
 ## Core IO
 
-Read, validate and write theory objects. `Theory` is also the builder, and its
-builder methods are documented with the class.
+Read, validate, write and identify theory objects. `Theory` is also the builder, and its
+builder and validation methods are documented with the class.
 
 ::: theoryforge.Theory
 
@@ -28,31 +18,33 @@ builder methods are documented with the class.
 
 ::: theoryforge.write
 
+::: theoryforge.content_hash
+
 ## Packaged examples
 
-Example theories and literature corpora included in the package, so that
-nothing has to be downloaded to follow the documentation. The R twin provides
-the same files through `tf_example_names()` and `tf_example_path()`.
+Example theories and literature corpora included in the package, so that nothing has to be
+downloaded to follow the documentation.
 
 ::: theoryforge.example_names
 
 ::: theoryforge.example_path
 
-## Builder (BUILDING mode)
+## Building
 
-Construct a theory incrementally with provenance tracking. `new_theory()` starts
-a theory. The `Theory` methods `add_construct()`, `add_proposition()`,
-`add_prediction()`, `add_alternative()`, `add_assumption()` and
-`set_formal_model()` are documented with the class under Core IO. Each adds to
-the theory in place, logs the step in the provenance and returns the theory, so
-that calls chain. The R builders return a modified copy instead.
+Start a theory and build it step by step, with each step recorded in its provenance, or
+start it from a causal diagram drawn in DAGitty. The `Theory` methods `add_construct()`,
+`add_proposition()`, `add_prediction()`, `add_phenomenon()`, `add_alternative()`,
+`add_assumption()`, `add_evidence()`, `add_test_outcome()` and `set_formal_model()` are
+documented with the class under Core IO.
 
 ::: theoryforge.new_theory
 
-## Rigour
+::: theoryforge.read_dagitty
 
-Score a theory against the versioned rigour checklist, and report what the score
-was made of and how severely each bounded prediction passed its test.
+## Checklist and severity
+
+Run the versioned checklist on a theory file, grade the form of each prediction's
+claim before any data, and report how severely each bounded prediction passed its test.
 
 ::: theoryforge.check
 
@@ -64,8 +56,8 @@ was made of and how severely each bounded prediction passed its test.
 
 ## Redundancy
 
-Screen the definitions of a theory's constructs for redundancy, with a
-deterministic lexical method or an opt-in embedding variant.
+Screen the definitions of a theory's constructs for redundancy, with a deterministic lexical
+method or an embedding method that takes the caller's embedder.
 
 ::: theoryforge.tokens
 
@@ -75,10 +67,9 @@ deterministic lexical method or an opt-in embedding variant.
 
 ::: theoryforge.embedding_redundancy
 
-## Diagram
+## Diagrams
 
-Byte-identical diagram intermediate representations, and native rendering of
-them.
+Diagram intermediate representations, and rendering of them with Graphviz.
 
 ::: theoryforge.diagram.diagram
 
@@ -86,19 +77,29 @@ them.
 
 ::: theoryforge.render_diagram
 
-## Develop
+## Developing
 
-Appraise an amendment to a theory as progressive or degenerating, in Lakatos's
-sense.
+Appraise an amendment to a theory as progressive, degenerating or neutral, by fixed rules that borrow Lakatos's terms.
 
 ::: theoryforge.appraise_amendment
 
-## Testing and review
+## The causal reading
 
-The conditional independencies a causal theory commits to, preregistration, SEM
-compilation and the reviewer-facing audit dossier.
+What the causal graph of the propositions implies and entails, which of its directions no
+test of conditional independence can settle, and what would tell the theory from a rival.
 
 ::: theoryforge.implications.implications
+
+::: theoryforge.entailments
+
+::: theoryforge.equivalent_models
+
+::: theoryforge.discriminate
+
+## Testing and review
+
+The theory and hypotheses sections of a preregistration, lavaan syntax and the dossier
+for a reviewer.
 
 ::: theoryforge.preregister
 
@@ -108,13 +109,13 @@ compilation and the reviewer-facing audit dossier.
 
 ## Simulation
 
-Integrate the construct network as a deterministic dynamical system.
+Propagate the construct network as a deterministic linear dynamical system.
 
 ::: theoryforge.simulate.simulate
 
 ## Reporting and deposit
 
-Render a report from a theory, and deposit the result.
+Render a report from a theory, and deposit the dossier on the Open Science Framework.
 
 ::: theoryforge.render_report
 
@@ -124,8 +125,8 @@ Render a report from a theory, and deposit the result.
 
 ## Literature layer
 
-Map the literature around a theory, and identify the works in it that the
-theory does not yet cite.
+Map the literature around a theory, and identify the works in it that the theory does not
+yet cite.
 
 ::: theoryforge.read_corpus
 
@@ -138,3 +139,14 @@ theory does not yet cite.
 ::: theoryforge.lit.OpenAlexHTTPError
 
 ::: theoryforge.new_evidence_dois
+
+## Names in the R package
+
+The R package prefixes each function's name with `tf_`, so `check()` here is `tf_check()`
+there. The exception is `new_theory()`, which is `tf_theory()` in R. `validate()` and the
+builder methods of `Theory` are functions in R, such as `tf_validate()` and
+`tf_add_construct()`. R has no `copy()`, since its builders return a modified copy.
+Python's `add_proposition()` names its `from` argument `frm`, since `from` is a reserved word
+in Python. The four functions whose name matches their module (`diagram`, `dossier`,
+`implications` and `simulate`) are documented above by their full path, so that the function
+rather than the module is shown.

@@ -1,0 +1,46 @@
+{
+  "verdict": "neutral",
+  "new_predictions": [
+    "pred4"
+  ],
+  "corroborated_new": [
+    "pred4"
+  ],
+  "ad_hoc_assumptions": [],
+  "articulated": [],
+  "underived": [],
+  "corroborated_new_registered": [
+    "pred4"
+  ],
+  "renamed": [],
+  "dropped": [
+    "pred_indep"
+  ],
+  "dropped_corroborated": [],
+  "content_lost": [],
+  "new_anomalies": [],
+  "assumptions": [],
+  "theoretically_progressive": true,
+  "empirically_progressive": true,
+  "revised": [],
+  "weakened_refuted": [],
+  "unresolved": [],
+  "implications_compared": true,
+  "implications_lost": [
+    "c_arousal _||_ c_avoidance | c_perceived_threat"
+  ],
+  "implications_lost_unrefuted": [],
+  "implications_gained": [],
+  "entailments_lost": [],
+  "signs_lost": [
+    "effect of c_perceived_threat on c_avoidance: positive"
+  ],
+  "protected_only": [],
+  "refuted_new": [],
+  "corroborated_new_severity": [
+    {
+      "id": "pred4",
+      "severity": null
+    }
+  ]
+}

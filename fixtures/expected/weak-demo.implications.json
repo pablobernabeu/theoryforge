@@ -1,10 +1,14 @@
 {
   "theory_id": "weak-demo",
   "criterion": "sigma",
+  "conditioning": "basis",
   "acyclic": true,
-  "constructs": [],
+  "constructs": [
+    "k_motivation",
+    "k_drive"
+  ],
   "n_edges": 0,
-  "n_bidirected": 0,
+  "n_bidirected": 1,
   "feedback": [],
   "implications": [],
   "n_implications": 0,

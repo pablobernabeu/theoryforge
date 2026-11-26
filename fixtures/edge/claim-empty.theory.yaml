@@ -1,0 +1,16 @@
+# An empty claim, written as a mapping or as a sequence, is no claim: R reads
+# the two alike, so neither twin lists the prediction among the entailments.
+schema_version: "1.1"
+id: "claim-empty"
+title: "Empty claims"
+maturity: "developing"
+constructs:
+  - {id: c1, label: "First", definition: "The first construct."}
+  - {id: c2, label: "Second", definition: "The second construct."}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: "It does."}
+predictions:
+  - {id: h1, statement: "c1 raises c2.", type: directional, derives_from: [p1], claim: {}}
+  - {id: h2, statement: "c1 raises c2 again.", type: directional, derives_from: [p1], claim: []}
+phenomena:
+  - {id: ph1, statement: "c1 and c2 covary.", claim: {}}

@@ -26,6 +26,8 @@ EXTS = {".py", ".json", ".yaml", ".typed"}
 # v1 is v2's declared parent, so the appraisal runs against it for v2 and
 # against an uploaded prior for v1.
 EXAMPLES = ["panic-network.theory.yaml", "panic-network-2026-v2.theory.yaml"]
+# The corpora by the keys the literature operations' cases name.
+CORPORA = {"demo": "panic-corpus.yaml", "openalex": "openalex-panic-2026.corpus.yaml"}
 
 
 @pytest.fixture
@@ -42,12 +44,12 @@ def apps(tmp_path: Path) -> Path:
             shutil.copyfile(f, vendor / "theoryforge" / rel)
             files.append("theoryforge/" + rel)
     (vendor / "fixtures").mkdir()
-    for name in [*EXAMPLES, "panic-corpus.yaml"]:
+    for name in [*EXAMPLES, *CORPORA.values()]:
         shutil.copyfile(ROOT / "fixtures" / name, vendor / "fixtures" / name)
     manifest = {
         "pyFiles": files,
         "examples": [{"name": n, "path": "fixtures/" + n} for n in EXAMPLES],
-        "corpora": [{"name": "corpus", "path": "fixtures/panic-corpus.yaml"}],
+        "corpora": [{"key": k, "name": k, "path": "fixtures/" + v} for k, v in CORPORA.items()],
     }
     (vendor / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
     shutil.copyfile(ROOT / "apps" / "py" / "py-runtime.js", apps / "py" / "py-runtime.js")

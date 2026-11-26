@@ -7,7 +7,14 @@
 tf_read(path)
 }
 \arguments{
-\item{path}{Path to a \code{.yaml}, \code{.yml} or \code{.json} file.}
+\item{path}{Path to a \code{.yaml}, \code{.yml} or \code{.json} file. The
+file is read as JSON when its extension is \code{.json}, in any letter
+case, and as YAML otherwise. A name that begins with its only dot, such
+as \code{.json}, has no extension. A leading \code{~} is expanded as
+\code{\link[=path.expand]{path.expand()}} expands it: \code{~} alone or before a separator is the
+home directory, and \code{~user} is that user's home directory on Unix,
+an unknown user being left as written, and is left as written on
+Windows. The Python package follows the same rule.}
 }
 \value{
 A named list holding the parsed theory object.
@@ -18,7 +25,10 @@ into a named list.
 }
 \details{
 The file is read as the Python package's \code{theoryforge.read()} reads
-it. The text is UTF-8, and a byte-order mark is ignored. A YAML or JSON
+it. The text is UTF-8, and a byte-order mark is ignored. A file that is not
+valid UTF-8 stops with \code{(<path>) the file is not valid UTF-8}, and one
+that holds a NUL byte with \code{(<path>) the file holds a NUL byte, which
+theoryforge cannot read}. A YAML or JSON
 sequence is always a list, even with one element, so \code{\link[=tf_validate]{tf_validate()}} refuses
 \code{maturity: [draft]}.
 Unquoted \code{y}, \code{Y}, \code{n} and \code{N} stay strings, as do
@@ -26,10 +36,38 @@ dates, while \code{yes}, \code{no}, \code{true}, \code{false}, \code{on} and
 \code{off} are logicals. Integers are decimal, octal or hexadecimal only, so
 \code{1:30} and \code{1_000} are strings, and so is a number written with a
 comma (\code{1,000}). An integer too large for an R integer is read as a
-double. A merge key (\code{<<}) lets the mapping's own keys win. A key
-repeated in any mapping, in YAML or JSON, stops with
-\code{(<path>) Duplicate map key: '<key>'}. A document that is not a
-mapping, such as a sequence or an empty YAML file, stops with
+double. A tab is read as YAML allows it: as white space after a value, before
+a comment and in a flow collection, and as text inside an unquoted value. A
+merge key (\code{<<}) lets the mapping's own keys win. A key repeated in any
+mapping, in YAML or JSON, stops with \code{(<path>) Duplicate map key:
+'<key>'}. A YAML document that holds more than 1000000 values once its
+aliases (\code{*a}) are expanded stops with \code{(<path>) the document holds
+more than 1000000 values once its aliases are expanded}, before anything
+walks it, and a document nested more than 64 levels deep, the document being
+the first, stops with \code{(<path>) the document is nested more than 64
+levels deep}. An alias whose anchor is undefined, or that lies inside the
+node its anchor names, stops with \code{(<path>) the alias '<name>' names no
+node that ends before it}, and an anchor given to two nodes with
+\code{(<path>) the anchor '<name>' names two nodes}, where yaml would read a
+placeholder or the first of the two nodes. A value tagged \code{!expr}, which
+the yaml package evaluates as R code when the option \code{yaml.eval.expr} is
+\code{TRUE}, stops with \code{(<path>) a value is tagged !expr, which
+theoryforge does not read}, whatever the option says, and no code is run. A
+comment in a JSON file stops with the message of the JSON parser, since JSON
+has no comments. A string or key that holds U+0000 or a lone surrogate, which
+R would cut short or misread, stops with \code{(<path>) a string holds
+U+0000, which theoryforge cannot read}, or the same message naming \code{a
+lone surrogate}. A file with more than one of these faults is refused for
+the first in this order. A JSON text is measured for depth before it is
+parsed, a file that is not valid UTF-8 or holds a NUL byte is refused next,
+or first in YAML, and a syntax error anywhere in a JSON text comes before a
+repeated key. In
+YAML, a syntax error, a repeated key and an alias that names no node come in
+the order the parser meets them, a repeated key where its mapping ends, and
+a value tagged \code{!expr} once the whole text has been parsed, after any
+alias that names no node. The depth and the count of values come next, then
+U+0000 or a lone surrogate and last an anchor given twice. A document that
+is not a mapping, such as a sequence or an empty YAML file, stops with
 \code{Theory data must be a mapping}.
 }
 \examples{

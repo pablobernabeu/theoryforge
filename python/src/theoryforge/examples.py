@@ -25,13 +25,18 @@ def example_names() -> list[str]:
 def example_path(name: str) -> Path:
     """Filesystem path of a packaged example, such as ``panic-network.theory.yaml``.
 
+    The path exists for a package installed on disk, as pip installs it.
     Raises ``FileNotFoundError`` naming the available files when ``name`` is not
     one of them.
     """
-    resource = files("theoryforge") / "fixtures" / name
-    if not resource.is_file():
+    # Only a listed name is looked up, so that no other file of the installed
+    # package can be reached through this function.
+    resource = files("theoryforge") / "fixtures" / str(name)
+    if name not in example_names() or not resource.is_file():
         raise FileNotFoundError(f"no packaged example named {name!r}; available: {example_names()}")
-    # A wheel is a directory on disk once installed, so this resolves to a real
-    # path; as_file() keeps the call correct for a zipped install too.
+    # An installed wheel is a directory on disk, so as_file() yields the file
+    # itself and the path stays valid. From a zipped installation it would
+    # yield a temporary copy that is deleted when the block exits, so the path
+    # is guaranteed only for a package installed on disk.
     with as_file(resource) as path:
         return Path(path)

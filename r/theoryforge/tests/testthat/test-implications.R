@@ -49,8 +49,8 @@ tf_app_example <- function(name) {
 
 test_that("tf_implications returns the basis set of a mediated chain", {
   res <- tf_implications(tf_chain_theory())
-  expect_named(res, c("theory_id", "criterion", "acyclic", "constructs", "n_edges",
-                      "n_bidirected", "feedback", "implications", "n_implications",
+  expect_named(res, c("theory_id", "criterion", "conditioning", "acyclic", "constructs",
+                      "n_edges", "n_bidirected", "feedback", "implications", "n_implications",
                       "inseparable"))
   expect_equal(res$theory_id, "mediation")
   expect_identical(res$criterion, "m")
@@ -211,16 +211,16 @@ test_that("the ancestors separate a pair that the parents do not", {
   expect_identical(res$inseparable, list(list(a = "m", b = "y")))
 })
 
-test_that("a construct touched only by associations is left out", {
-  # Every path through k arrives and leaves by an arrowhead, so k is a collider
-  # on each and, being no ancestor of anything, closes it. Leaving k out drops
-  # no statement about the other constructs, and silence about k is no claim
-  # that it is independent of anything (API_SPEC.md section 27).
-  res <- tf_implications(tf_relation_theory("silence", c("k", "x", "y"), list(
-    c("x", "causes", "y"), c("k", "associates", "x"), c("k", "associates", "y"))))
-  expect_equal(unlist(res$constructs), c("x", "y"))
-  expect_equal(res$n_bidirected, 0L)
-  expect_identical(res$implications, list())
+test_that("a construct touched only by associations is a vertex", {
+  # Read as a latent common cause, an association makes claims about k too:
+  # k and w are independent given x, since the path k <-> x -> w is open only
+  # through x. A construct that no proposition names stays out
+  # (API_SPEC.md section 27).
+  res <- tf_implications(tf_relation_theory("touched", c("k", "x", "w", "silent"), list(
+    c("x", "causes", "w"), c("k", "associates", "x"))))
+  expect_equal(unlist(res$constructs), c("k", "x", "w"))
+  expect_equal(res$n_bidirected, 1L)
+  expect_equal(vapply(res$implications, function(i) i$statement, ""), "k _||_ w | x")
   expect_identical(res$inseparable, list())
 })
 
@@ -232,26 +232,26 @@ test_that("a repeated association counts once and a self association not at all"
   expect_identical(res$implications, list())
 })
 
-test_that("an association with an undeclared endpoint adds nothing", {
-  # An association names no vertex unless a directed relation names both its
-  # constructs, so one with an undeclared endpoint is not an edge, as one with
-  # a construct touched only by associations is not. tf_validate() reports the
-  # reference.
-  res <- tf_implications(tf_relation_theory("loose", c("a", "b"), list(
-    c("a", "causes", "b"), c("a", "associates", "ghost"))))
-  expect_equal(unlist(res$constructs), c("a", "b"))
-  expect_equal(res$n_bidirected, 0L)
+test_that("an association with an undeclared endpoint is refused", {
+  # Dropping it would state an independence the theory denies, as dropping a
+  # directed relation would.
+  expect_error(
+    tf_implications(tf_relation_theory("loose", c("a", "b"), list(
+      c("a", "causes", "b"), c("a", "associates", "ghost")))),
+    paste0("implications requires associations between declared constructs; ",
+           "proposition 'p2' refers to unknown construct 'ghost'"),
+    fixed = TRUE)
 })
 
-test_that("tf_implications reports an empty basis set for a theory with no causal relations", {
-  # The weak example's one proposition is an association between two
-  # constructs that no directed relation names, so there is no vertex.
+test_that("a theory of one association implies nothing", {
+  # The weak example's one proposition is an association, which makes its two
+  # constructs vertices joined by an edge, so no pair is left unjoined.
   res <- tf_implications(tf_read(tf_fixture_path("weak-theory.theory.yaml")))
   expect_equal(res$theory_id, "weak-demo")
   expect_true(res$acyclic)
-  expect_equal(length(res$constructs), 0L)
+  expect_equal(unlist(res$constructs), c("k_motivation", "k_drive"))
   expect_equal(res$n_edges, 0L)
-  expect_equal(res$n_bidirected, 0L)
+  expect_equal(res$n_bidirected, 1L)
   expect_equal(res$implications, list())
   expect_equal(res$n_implications, 0L)
   expect_identical(res$inseparable, list())
@@ -765,6 +765,7 @@ test_that("sigma derives the panic network statement", {
   expect_identical(res, list(
     theory_id = "panic-network-2026",
     criterion = "sigma",
+    conditioning = "basis",
     acyclic = FALSE,
     constructs = list("c_arousal", "c_perceived_threat", "c_avoidance"),
     n_edges = 3L,
@@ -912,7 +913,7 @@ test_that("every sigma statement and inseparable pair agrees with a brute-force 
     order <- sample(nodes)
     res <- tf_implications(tf_relation_theory("random", order, props[sample(length(props))]),
                            cycles = "sigma")
-    vertices <- order[order %in% as.vector(directed)]
+    vertices <- order[order %in% c(as.vector(directed), as.vector(bidirected))]
     expect_identical(unlist(res$constructs), vertices)
     if (!res$acyclic) cyclic <- cyclic + 1L
     separable <- character(0)
@@ -973,6 +974,67 @@ test_that("sigma and refuse agree on random acyclic graphs", {
   }
 })
 
+test_that("the separation search agrees with the oracle for every conditioning set", {
+  # The search keeps to the ancestors of the pair and of the conditioning set,
+  # and tf_implications() takes the parents of a pair without it when the graph
+  # has no associations. Every set of the other vertices is tried here, on
+  # random acyclic mixed graphs whose vertex order is not a causal order, with
+  # the ancestors found edge by edge and read from the reachability matrix.
+  set.seed(1125)
+  tried <- 0L
+  dags <- 0L
+  for (rep in 1:60) {
+    k <- sample(3:6, 1)
+    perm <- sample(k)
+    p_assoc <- if (stats::runif(1) < 0.6) 0.2 else 0
+    directed <- matrix(FALSE, k, k)
+    bidirected <- matrix(FALSE, k, k)
+    for (i in seq_len(k - 1L)) {
+      for (j in (i + 1L):k) {
+        if (stats::runif(1) < 0.4) directed[perm[[i]], perm[[j]]] <- TRUE
+        if (stats::runif(1) < p_assoc) {
+          bidirected[perm[[i]], perm[[j]]] <- TRUE
+          bidirected[perm[[j]], perm[[i]]] <- TRUE
+        }
+      }
+    }
+    names <- paste0("v", seq_len(k))
+    d_names <- matrix(names[which(directed, arr.ind = TRUE)], ncol = 2L)
+    b_names <- matrix(names[which(bidirected & upper.tri(bidirected), arr.ind = TRUE)], ncol = 2L)
+    by_edges <- theoryforge:::.tf_mixed_graph(directed, bidirected)
+    by_reach <- theoryforge:::.tf_mixed_graph(directed, bidirected,
+                                             theoryforge:::.tf_reach(directed, k))
+    got <- logical(0)
+    got_reach <- logical(0)
+    want <- logical(0)
+    for (pair in utils::combn(k, 2L, simplify = FALSE)) {
+      x <- pair[[1L]]
+      y <- pair[[2L]]
+      others <- setdiff(seq_len(k), pair)
+      sets <- c(list(integer(0)), unlist(lapply(seq_along(others), function(r) {
+        lapply(utils::combn(length(others), r, simplify = FALSE), function(ix) others[ix])
+      }), recursive = FALSE))
+      for (z in sets) {
+        got <- c(got, theoryforge:::.tf_m_separated(by_edges, x, y, z))
+        got_reach <- c(got_reach, theoryforge:::.tf_m_separated(by_reach, x, y, z))
+        want <- c(want, !tf_sigma_connected(d_names, b_names, names[[x]], names[[y]], names[z],
+                                            sigma = FALSE))
+      }
+      if (!any(bidirected) && !directed[x, y] && !directed[y, x]) {
+        parents <- which(directed[, x] | directed[, y])
+        expect_false(tf_sigma_connected(d_names, b_names, names[[x]], names[[y]], names[parents],
+                                        sigma = FALSE))
+      }
+    }
+    expect_identical(got, want)
+    expect_identical(got_reach, want)
+    tried <- tried + length(want)
+    dags <- dags + !any(bidirected)
+  }
+  expect_gt(tried, 1500L)
+  expect_gt(dags, 15L)
+})
+
 test_that("tf_implications reproduces the implications goldens", {
   # scripts/gen_golden.py writes <id>.implications.json with cycles = "sigma"
   # for every fixture from the Python twin.
@@ -994,5 +1056,49 @@ test_that("tf_implications reproduces the implications goldens", {
                    "c_arousal _||_ c_avoidance | c_perceived_threat")
   expect_identical(golden("panic-network-2026-v2")$implications, list())
   expect_length(golden("modality-switching-2026")$implications, 6L)
-  expect_identical(golden("weak-demo")$constructs, list())
+  expect_identical(unlist(golden("weak-demo")$constructs), c("k_motivation", "k_drive"))
+})
+
+test_that("minimal conditioning drops every construct the separation does not need", {
+  # a -> m -> y with a second path a -> b -> y and b -> m, and c -> y giving y
+  # a third parent that the pair a, y does not need. The Python suite asserts
+  # the same sets.
+  t <- tf_theory("min", "Minimal sets")
+  for (cid in c("a", "b", "m", "c", "y")) t <- tf_add_construct(t, cid, toupper(cid), "A construct.")
+  edges <- list(c("a", "m"), c("m", "y"), c("a", "b"), c("b", "y"), c("b", "m"), c("c", "y"))
+  for (i in seq_along(edges)) {
+    t <- tf_add_proposition(t, paste0("p", i - 1L), edges[[i]][[1]], edges[[i]][[2]], "causes")
+  }
+  given_of <- function(res) {
+    stats::setNames(lapply(res$implications, function(r) unlist(r$given)),
+                    vapply(res$implications, function(r) paste(r$a, r$b), ""))
+  }
+  basis <- given_of(tf_implications(t))
+  res <- tf_implications(t, given = "minimal")
+  expect_identical(res$conditioning, "minimal")
+  pruned <- given_of(res)
+  expect_identical(basis[["a y"]], c("b", "m", "c"))
+  expect_identical(pruned[["a y"]], c("b", "m"))
+  expect_identical(names(pruned), names(basis))
+  expect_true(all(mapply(function(p, b) all(p %in% b), pruned, basis)))
+  expect_error(tf_implications(t, given = "smallest"),
+               "implications requires given to be 'basis' or 'minimal'", fixed = TRUE)
+})
+
+test_that("the file order decides which minimal set is returned", {
+  # a <- z <- w -> b: {z} and {w} each separate a and b. The pass tries the
+  # constructs in file order, so whichever comes first is dropped.
+  given_ab <- function(order) {
+    t <- tf_theory("o", "Order")
+    for (cid in order) t <- tf_add_construct(t, cid, toupper(cid), "A construct.")
+    t <- t |>
+      tf_add_proposition("p1", "z", "a", "causes") |>
+      tf_add_proposition("p2", "w", "z", "causes") |>
+      tf_add_proposition("p3", "w", "b", "causes")
+    imp <- tf_implications(t, given = "minimal")$implications
+    hit <- Filter(function(r) r$a == "a" && r$b == "b", imp)[[1]]
+    unlist(hit$given)
+  }
+  expect_identical(given_ab(c("a", "z", "w", "b")), "w")
+  expect_identical(given_ab(c("a", "w", "z", "b")), "z")
 })

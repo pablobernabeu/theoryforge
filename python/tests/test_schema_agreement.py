@@ -79,7 +79,10 @@ BASE = {
                               "sided": "two", "sesoi": 0.1, "sesoi_scale": "r", "power": 0.9,
                               "decision_probability": 0.85, "power_lo": 0.88, "power_hi": 0.92,
                               "method": "simulation", "design_ref": "https://osf.io/abcde",
-                              "justification": "The smallest correlation of interest."}}],
+                              "justification": "The smallest correlation of interest."},
+                     "claim": {"kind": "effect", "x": "c1", "y": "c2", "sign": "positive"}}],
+    "phenomena": [{"id": "ph1", "statement": "C1 and C2 covary.", "source_doi": None,
+                   "claim": {"kind": "association", "x": "c1", "y": "c2", "sign": "nonzero"}}],
     "auxiliary_assumptions": [{"id": "x1", "statement": "C1 is measured at rest.",
                                "added_for": None, "protects": ["h1"]}],
     "evidence": [{"supports": "h1", "direction": "corroborates", "source_doi": None}],
@@ -87,7 +90,9 @@ BASE = {
                        "severity_at_test": 0.8, "registered": None, "date": "2026-05-01",
                        "estimate": 0.31, "se": 0.05}],
     "alternatives": [{"id": "a1", "label": "A1", "key_constructs": ["c1"],
-                      "source_doi": "10.1000/example"}],
+                      "source_doi": "10.1000/example",
+                      "propositions": [{"id": "r1", "from": "c2", "to": "c1",
+                                        "relation": "increases"}]}],
     "formal_model": {"type": "ode", "spec_ref": None},
     "provenance": [{"step": "1", "action": "tf_theory", "detail": "t"}],
 }
@@ -123,6 +128,18 @@ VIOLATIONS = [
     ("an unknown top-level field", ("predicitions",), []),
     ("version a string", ("version",), "v2"),
     ("version with an unknown field", ("version", "author"), "x"),
+    ("a construct with an unknown field", ("constructs", 0, "defintion"), "x"),
+    ("a proposition with an unknown field", ("propositions", 0, "mechansim"), "x"),
+    ("a phenomenon with an unknown field", ("phenomena", 0, "note"), "x"),
+    ("a prediction with an unknown field", ("predictions", 0, "severty"), 0.5),
+    ("an assumption with an unknown field", ("auxiliary_assumptions", 0, "addedfor"), None),
+    ("an evidence entry with an unknown field", ("evidence", 0, "doi"), "10.1/x"),
+    ("a test outcome with an unknown field", ("test_outcomes", 0, "pass"), True),
+    ("an alternative with an unknown field", ("alternatives", 0, "keyconstructs"), []),
+    ("a rival proposition with an unknown field", ("alternatives", 0, "propositions", 0, "sign"),
+     "+"),
+    ("a formal model with an unknown field", ("formal_model", "specref"), "x"),
+    ("a provenance step with an unknown field", ("provenance", 0, "who"), "me"),
     ("version id a number", ("version", "id"), 2),
     ("version parent_id a number", ("version", "parent_id"), 1),
     ("version content_hash a sequence", ("version", "content_hash"), ["x"]),
@@ -255,3 +272,32 @@ def test_each_documented_convenience_passes_full_validation(path, value):
     data = _variant(path, value)
     assert _schema_errors(data), "the variant should break the schema"
     assert Theory(data).validate(full=True) is True
+
+
+def test_an_extension_field_passes_both():
+    # A key that begins with x_ carries metadata the schema does not define.
+    data = _variant(("constructs", 0, "x_source"), "Item bank 3")
+    data["predictions"][0]["x_registered_by"] = "the lab"
+    assert _schema_errors(data) == []
+    assert Theory(data).validate(full=True) is True
+
+
+def test_an_unknown_field_names_the_field_it_resembles():
+    data = _variant(("predictions", 0, "severty"), 0.5)
+    data["predictions"][0]["derives_form"] = ["p1"]
+    data["constructs"][1]["note"] = "x"
+    with pytest.raises(ValueError) as exc:
+        Theory(data).validate(full=True)
+    assert str(exc.value) == (
+        "invalid theory object: construct[1] has unknown field: note; "
+        "prediction[0] has unknown field: severty (did you mean severity?); "
+        "prediction[0] has unknown field: derives_form (did you mean derives_from?)")
+
+
+
+def test_a_rivals_propositions_have_the_schema_of_the_theorys():
+    # The schema writes the proposition object out twice, since the R writer and
+    # the parity tools do not follow $ref, so the two copies must not drift.
+    props = VALIDATOR.schema["properties"]
+    assert (props["alternatives"]["items"]["properties"]["propositions"]["items"]
+            == props["propositions"]["items"])

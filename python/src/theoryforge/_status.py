@@ -47,7 +47,7 @@ def content_key(p) -> tuple[str, str]:
     return squish(text(field(p, "statement"))), enum(field(p, "type"), PRED_TYPE) or ""
 
 
-def classify_auxiliary(a, tos, eligible) -> tuple[str, list[dict]]:
+def classify_auxiliary(a, tos, eligible, added_for: str | None = None) -> tuple[str, list[dict]]:
     """The ad hoc class of an assumption added for an anomaly, with the evidence for it.
 
     The independent predictions are the distinct entries of the assumption's
@@ -55,12 +55,19 @@ def classify_auxiliary(a, tos, eligible) -> tuple[str, list[dict]]:
     ``added_for``: what could support the assumption other than the anomaly it
     answers. Each is returned with its status in ``tos``. The class is
     ``ad_hoc1`` when there are none, so the assumption adds nothing that could
-    be tested apart from the anomaly, ``ad_hoc2`` when none is corroborated and
-    ``independently_corroborated`` otherwise. The amendment appraisal passes the
-    predictions that are new in the amended version as ``eligible``, so content
-    the prior already held cannot clear an assumption.
+    be tested apart from the anomaly, ``pending`` when every one is untested,
+    ``ad_hoc2`` when some were tested and none is corroborated and
+    ``independently_corroborated`` otherwise. The labels of the two ad hoc
+    classes borrow Lakatos's terms and mean only what these checks find. The
+    amendment appraisal passes the predictions that are new in the amended
+    version as ``eligible``, so content the prior already held cannot clear an
+    assumption. It also passes the anomaly it inferred as ``added_for`` when
+    the assumption names none. The checklist's parsimony item passes every
+    prediction the assumption protects and fails any class other than
+    ``independently_corroborated``.
     """
-    added_for = text(field(a, "added_for"))
+    if added_for is None:
+        added_for = text(field(a, "added_for"))
     independent: list[str] = []
     for q in str_list(field(a, "protects")):
         if q != added_for and q in eligible and q not in independent:
@@ -68,6 +75,8 @@ def classify_auxiliary(a, tos, eligible) -> tuple[str, list[dict]]:
     records = [{"id": q, "status": prediction_status(q, tos)} for q in independent]
     if not records:
         return "ad_hoc1", records
+    if all(r["status"] == "untested" for r in records):
+        return "pending", records
     if all(r["status"] != CORROBORATED for r in records):
         return "ad_hoc2", records
     return "independently_corroborated", records

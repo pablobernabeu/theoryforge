@@ -1,0 +1,62 @@
+# Source: red-team-score/inputs/derived/s3-hick-conscientious.theory.yaml, validity audit of theoryforge at f72ce4c.
+schema_version: '1.1'
+id: s3-hick
+title: On the rate of gain of information (Hick's law)
+maturity: testing
+theory_form: process
+version:
+  id: v1
+  parent_id: null
+  content_hash: null
+constructs:
+- id: c_uncertainty
+  label: Stimulus-response uncertainty
+  definition: The information, in bits, conveyed by which of the alternative responses is given to a stimulus.
+  measurement:
+  - number of alternatives in a choice-reaction experiment
+  - proportion of errors subjects allow themselves
+  boundary_conditions:
+  - up to ten alternatives
+- id: c_reaction_time
+  label: Choice reaction time
+  definition: The time from the stimulus to the response in a choice-reaction experiment.
+  measurement:
+  - choice reaction time with up to ten alternatives
+  boundary_conditions:
+  - one perceptual-motor act
+propositions:
+- id: p_info_rt
+  from: c_uncertainty
+  to: c_reaction_time
+  relation: increases
+  functional_form: 'linear in bits: a constant rate of gain of information'
+boundary_conditions:
+- one perceptual-motor act
+- choice-reaction experiments with up to ten alternatives
+predictions:
+- id: pred_constant_rate
+  derives_from:
+  - p_info_rt
+  statement: The rate of gain of information is, on average, constant with respect to time within one perceptual-motor act.
+  type: directional
+- id: pred_rate_value
+  derives_from:
+  - p_info_rt
+  statement: The rate of gain of information is of the order of five bits per second.
+  type: point
+  bounds:
+    lower: 4
+    upper: 6
+- id: pred_rt_uncertainty
+  derives_from:
+  - p_info_rt
+  statement: Reaction time increases with the uncertainty as to which response will be given to a stimulus.
+  type: directional
+  claim:
+    kind: effect
+    x: c_uncertainty
+    y: c_reaction_time
+    sign: positive
+formal_model:
+  type: none
+  spec_ref: null

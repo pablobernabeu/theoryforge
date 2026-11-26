@@ -6,20 +6,128 @@
 \alias{theoryforge-package}
 \title{theoryforge: systematic theory development}
 \description{
-A \href{https://pablobernabeu.github.io/theoryforge/python/}{Python package} of
-the same name offers a counterpart of every exported function. Both follow
-one public specification
-(\href{https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md}{API_SPEC.md}),
-so they produce the same verdicts and the same diagram intermediate
-representations. The helpers that depend on a network service or a
-user-supplied embedder (\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}, \code{\link[=tf_osf_push]{tf_osf_push()}} and
-\code{\link[=tf_embedding_redundancy]{tf_embedding_redundancy()}}) and the diagram renderer
-(\code{\link[=tf_render_diagram]{tf_render_diagram()}}) have counterparts there too, but their results can
-differ between the two packages. Their pages describe what each depends on.
+Psychological theories are mostly stated in words, and a verbal theory often
+leaves unclear what it asserts. Its constructs are loosely defined, its
+predictions seldom say which result would count against them, and a failed
+test can be absorbed by an assumption added after the fact (Meehl, 1990;
+Scheel et al., 2021). theoryforge holds a theory as a YAML or JSON file with
+a fixed schema: its constructs and their measures, the propositions that
+relate them, the predictions derived from those propositions, its auxiliary
+assumptions, its rival accounts and its record of tests. From that file, the
+package computes what can be checked mechanically. These are checks of what
+the file states, and none of them shows that a theory is true.
+
+The sections below follow a theory from building to testing and to the
+literature. \href{https://pablobernabeu.github.io/theoryforge/r/articles/theoryforge.html}{Get started}
+works through them on an example, and the
+\href{https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html}{methodology article}
+gives the reasoning and sources behind every check.
 }
-\details{
-The main functions are \code{\link[=tf_read]{tf_read()}}, \code{\link[=tf_validate]{tf_validate()}}, \code{\link[=tf_write]{tf_write()}},
-\code{\link[=tf_check]{tf_check()}}, \code{\link[=tf_report]{tf_report()}}, \code{\link[=tf_redundancy_check]{tf_redundancy_check()}} and \code{\link[=tf_diagram]{tf_diagram()}}.
+\section{Building a theory}{
+
+\code{\link[=tf_theory]{tf_theory()}} starts a theory, and the builders \code{\link[=tf_add_construct]{tf_add_construct()}},
+\code{\link[=tf_add_proposition]{tf_add_proposition()}}, \code{\link[=tf_add_prediction]{tf_add_prediction()}}, \code{\link[=tf_add_phenomenon]{tf_add_phenomenon()}},
+\code{\link[=tf_add_assumption]{tf_add_assumption()}}, \code{\link[=tf_add_alternative]{tf_add_alternative()}}, \code{\link[=tf_add_evidence]{tf_add_evidence()}} and
+\code{\link[=tf_add_test_outcome]{tf_add_test_outcome()}} add to it, each recording its step in the theory's
+provenance. \code{\link[=tf_set_formal_model]{tf_set_formal_model()}} records a formal model. Each builder
+returns a modified copy. \code{\link[=tf_read]{tf_read()}} and \code{\link[=tf_write]{tf_write()}} read and write YAML or
+JSON, and \code{\link[=tf_read_dagitty]{tf_read_dagitty()}} makes a theory of a causal diagram drawn in
+DAGitty, whose constructs then need definitions. \code{\link[=tf_content_hash]{tf_content_hash()}} gives
+the SHA-256 digest of the theory's content, which identifies the file that a
+preregistration or a dossier describes. \code{\link[=tf_example_names]{tf_example_names()}} and
+\code{\link[=tf_example_path]{tf_example_path()}} list and locate the bundled examples.
+}
+
+\section{Checking a theory}{
+
+\code{\link[=tf_validate]{tf_validate()}} checks the fields the schema requires and their allowed
+values, and with \code{full = TRUE} also every type, reference, claim and unknown
+field. \code{\link[=tf_check]{tf_check()}} runs a 12-item checklist of how completely the file is
+specified, with the checklist score, its range with equal weights or one
+weight halved or doubled and a gate that blocks when an item marked as a
+blocker fails, and \code{\link[=tf_report]{tf_report()}} writes the
+result as JSON or HTML. \code{\link[=tf_redundancy_check]{tf_redundancy_check()}} flags a pair of constructs
+when their definitions are near duplicates, when one definition is contained
+in the other, when the two carry the same label or when every measure of one
+is listed for the other. \code{\link[=tf_embedding_redundancy]{tf_embedding_redundancy()}} compares definitions
+with an embedding model that you supply. The checklist reads what the file
+states. It cannot judge whether a definition is apt or a mechanism plausible.
+}
+
+\section{Deriving and comparing}{
+
+\code{\link[=tf_implications]{tf_implications()}} reads the propositions as a causal graph, with directed
+relations as arrows and associations as unexplained covariance, and lists
+the conditional independencies the graph implies. A graph with a feedback
+loop is read by sigma-separation when \code{cycles = "sigma"}. \code{\link[=tf_entailments]{tf_entailments()}}
+reads each claim of a prediction or phenomenon against the graph and says
+whether the graph entails it, contradicts it or leaves it open.
+\code{\link[=tf_equivalent_models]{tf_equivalent_models()}} lists the causal directions that no test of
+conditional independence can settle. \code{\link[=tf_discriminate]{tf_discriminate()}} sets the theory
+against a rival and lists the claims, independencies and signs that would
+tell the two apart. \code{\link[=tf_appraise_amendment]{tf_appraise_amendment()}} calls an amendment
+progressive, degenerating or neutral by fixed rules that borrow Lakatos's
+terms, and the verdict holds only if what the two versions declare is true.
+\code{\link[=tf_simulate]{tf_simulate()}} runs the construct network as one linear dynamical system
+consistent with the signs the propositions state. The causal reading assumes
+that the propositions state every direct relation among the constructs, with
+an association for each common cause they leave unnamed.
+}
+
+\section{Testing}{
+
+\code{\link[=tf_severity]{tf_severity()}} grades each prediction by the form of its claim before data.
+\code{\link[=tf_compile_sem]{tf_compile_sem()}} writes lavaan model syntax with labelled paths, the signs
+the theory states and a definition of each effect a claim concerns.
+\code{\link[=tf_preregister]{tf_preregister()}} writes the theory and hypotheses sections of a
+preregistration, and the study design, analysis plan and inference criteria
+remain the author's. Once a test outcome records an estimate and its standard
+error, \code{\link[=tf_post_data_severity]{tf_post_data_severity()}} computes how severely a bounded prediction
+passed.
+}
+
+\section{Diagrams and reports}{
+
+\code{\link[=tf_diagram]{tf_diagram()}} writes ten views of a theory as Graphviz DOT, DAGitty code or
+SVG, and \code{\link[=tf_render_diagram]{tf_render_diagram()}} draws its DOT and SVG views. \code{\link[=tf_dossier]{tf_dossier()}}
+gathers the results in one Markdown document for reviewers,
+\code{\link[=tf_render_report]{tf_render_report()}} wraps it in a Quarto report and \code{\link[=tf_osf_push]{tf_osf_push()}} deposits
+it in an OSF project.
+}
+
+\section{The literature layer}{
+
+\code{\link[=tf_read_corpus]{tf_read_corpus()}} reads a corpus of bibliographic records, and
+\code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}} assembles one from OpenAlex, the only step of the
+literature layer that needs a network connection. \code{\link[=tf_litmap]{tf_litmap()}} maps its
+keyword co-occurrence, themes and co-citation. \code{\link[=tf_landscape]{tf_landscape()}} marks each
+theme under-theorised, covered or crowded by how many of the theory and its
+rivals share a word with it. A shared word does not show that an account
+explains what the theme's records report. \code{\link[=tf_lit_diagram]{tf_lit_diagram()}} draws these
+maps, and \code{\link[=tf_new_evidence_dois]{tf_new_evidence_dois()}} lists the candidate DOIs that the theory
+does not yet cite.
+}
+
+\section{The Python package}{
+
+A \href{https://pablobernabeu.github.io/theoryforge/python/}{Python package} of
+the same name offers each function without the prefix \code{tf_}, except that
+\code{\link[=tf_theory]{tf_theory()}} is \code{new_theory()}. Both follow one specification
+(\href{https://github.com/pablobernabeu/theoryforge/blob/main/API_SPEC.md}{API_SPEC.md}),
+and continuous integration checks that they give the same results for the
+same file. \code{\link[=tf_fetch_corpus]{tf_fetch_corpus()}}, \code{\link[=tf_osf_push]{tf_osf_push()}}, \code{\link[=tf_embedding_redundancy]{tf_embedding_redundancy()}}
+and \code{\link[=tf_render_diagram]{tf_render_diagram()}} depend on a service, an embedding model or a
+renderer outside the package, so their results can differ between the two.
+}
+
+\references{
+Meehl, P. E. (1990). Appraising and amending theories: The strategy of
+Lakatosian defense and two principles that warrant it. \emph{Psychological
+Inquiry}, \emph{1}(2), 108--141. \doi{10.1207/s15327965pli0102_1}
+
+Scheel, A. M., Tiokhin, L., Isager, P. M., & Lakens, D. (2021). Why
+hypothesis testers should spend less time testing hypotheses. \emph{Perspectives
+on Psychological Science}, \emph{16}(4), 744--755. \doi{10.1177/1745691620966795}
 }
 \seealso{
 Useful links:

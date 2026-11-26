@@ -39,7 +39,7 @@
       ],
       "centrality": 2.672471,
       "density": 16.527778,
-      "quadrant": "basic"
+      "quadrant": "emerging_or_declining"
     },
     {
       "id": "theme_2",
@@ -117,7 +117,7 @@
       "alternative_terms": [],
       "centrality": 8.99724,
       "density": 32.592593,
-      "quadrant": "motor"
+      "quadrant": "basic"
     },
     {
       "id": "theme_5",

@@ -8,7 +8,7 @@ ones out, so a name that only a hidden block defines fails here as it would for 
 reader. The home page's first look is checked the same way. The diagrams are rendered
 when the site is built, so no page holds a pasted figure, and a second test runs every
 block in page order, the hidden figure blocks included, with a stand-in for Graphviz. The
-methodology page's table of rigour checks quotes the checklist the package ships. The
+methodology page's table of checks quotes the checklist the package ships. The
 pages sit in python/docs, beside the package, so the tests skip where they are absent.
 """
 
@@ -139,7 +139,10 @@ def test_figures_are_rendered_when_the_site_is_built(page):
 
 def _criteria_block() -> tuple[str, str]:
     text = _text(DOCS / "methodology.md")
-    found = [code for options, code in _blocks(text) if options.get("exec") == "1" and "checklist()" in code]
+    # The block that prints the table, which another block that reads the
+    # checklist, for its version, does not.
+    found = [code for options, code in _blocks(text)
+             if options.get("exec") == "1" and "checklist()" in code and "| Check |" in code]
     assert len(found) == 1, "one block on the methodology page builds the table of checks from checklist()"
     return text, found[0]
 

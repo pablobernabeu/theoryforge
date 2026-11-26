@@ -1,8 +1,13 @@
 import json
 import math
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 import pytest
+import yaml
 
 import theoryforge as tf
 
@@ -214,6 +219,454 @@ test_outcomes:
 """
 
 
+def _aliased(repeats: int, tail: int) -> str:
+    """A theory whose aliases repeat a 1000-item sequence ``repeats`` times.
+
+    The document holds 1008 + 1001 * repeats + tail values once its aliases are
+    expanded: the mapping, its four header scalars, the three keyed sequences,
+    1000 scalars in the first, its repeats in the second and ``tail`` scalars
+    in the third.
+    """
+    return ("schema_version: '1.1'\nid: b\ntitle: B\nmaturity: draft\n"
+            "a: &a [" + ", ".join(["s"] * 1000) + "]\n"
+            "b: [" + ", ".join(["*a"] * repeats) + "]\n"
+            "c: [" + ", ".join(["s"] * tail) + "]\n")
+
+
+def test_aliases_that_expand_past_the_limit_refuse_the_file(tmp_path):
+    # 1008 + 1001 * 997 + 995 is the limit itself, and one more value passes
+    # it. The R twin counts the same values and gives the same message.
+    assert tf.read(_file(tmp_path, "at.theory.yaml", _aliased(997, 995))).data["id"] == "b"
+    path = _file(tmp_path, "over.theory.yaml", _aliased(997, 996))
+    with pytest.raises(ValueError) as exc:
+        tf.read(path)
+    assert str(exc.value) == (
+        f"({path}) the document holds more than 1000000 values once its aliases are expanded")
+    # A file of about a kilobyte that stands for ten billion values is refused
+    # at once, as a theory and as a corpus, and merge keys still read.
+    bomb = "x0: &a0 [" + ", ".join(["ha"] * 10) + "]\n" + "".join(
+        f"x{i}: &a{i} [" + ", ".join([f"*a{i - 1}"] * 10) + "]\n" for i in range(1, 10))
+    with pytest.raises(ValueError, match="once its aliases are expanded"):
+        tf.read(_file(tmp_path, "bomb.theory.yaml", bomb))
+    with pytest.raises(ValueError, match="once its aliases are expanded"):
+        tf.read_corpus(_file(tmp_path, "bomb.corpus.yaml", bomb))
+    t = tf.read(_file(tmp_path, "merge.theory.yaml", MERGE_THEORY))
+    assert [c["id"] for c in t.data["constructs"]] == ["c1", "c2"]
+
+
+# Aliases R's yaml package and PyYAML read apart (API_SPEC.md section 3). Each
+# entry is (text, the message without its path, or None when the file reads).
+# The R suite reads the same texts.
+ALIAS_FAULTS = [
+    ("id: x\na: *u\n", "the alias 'u' names no node that ends before it"),
+    ("id: x\na: &p [*p]\n", "the alias 'p' names no node that ends before it"),
+    ("id: x\na: &p {b: *p}\n", "the alias 'p' names no node that ends before it"),
+    ("id: x\na: &x 1\nb: &x 2\nc: *x\n", "the anchor 'x' names two nodes"),
+    ("id: x\na: &x [&x 1]\n", "the anchor 'x' names two nodes"),
+    ("id: x\na: !!str &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
+    ("id: x\na: &x 1 # &x\nb: '&x'\nc: R &x\nd: |\n  &x\ne: *x\n", None),
+    # The second &x is text beside a tagged anchor, and the first text in a key
+    # of 1024 characters, the most libyaml allows, which any tag lengthens.
+    ("id: x\na: !!str &x 1\nb: c &x\nc: *x\n", None),
+    ("k" * 1021 + " &x: 1\nb: &x 2\n", None),
+    # A tag that ends the line above an anchor is that node's, and one in a
+    # comment is text.
+    ("c:\n  label: !!str\n    &l1 Alpha\n  def: &l1 x\n", "the anchor 'l1' names two nodes"),
+    ("id: x\n# note !x\n&a k: 1\nb: text &a\n", None),
+    # A %TAG directive that redefines !, and a byte-order mark at the start of
+    # a line, which libyaml skips.
+    ("%TAG ! tag:example.com,2000:\n---\nid: s\na: &x 1\nb: &x 2\n", "the anchor 'x' names two nodes"),
+    ("%TAG ! tag:example.com,2000:\n---\n{id: s, a: &x 1, b: &x 2}\n", "the anchor 'x' names two nodes"),
+    # PyYAML's pure-Python scanner skips a byte-order mark only at the start of
+    # the text.
+    pytest.param("id: s\na: [1,\n\ufeff&x 2]\nb: &x 3\n", "the anchor 'x' names two nodes",
+                 marks=pytest.mark.skipif(not yaml.__with_libyaml__,
+                                          reason="PyYAML was built without libyaml")),
+    # More names than the R twin probes with one tag each.
+    ("".join(f"k{i}: &n{i} {i}\n" for i in range(300)) + "".join(f"t{i}: text &n{i}\n" for i in range(300))
+     + "z: &n257 x\n", "the anchor 'n257' names two nodes"),
+    ("".join(f"k{i}: &n{i} {i}\n" for i in range(300)) + "".join(f"t{i}: text &n{i}\n" for i in range(300)),
+     None),
+    # A next-line character is a line break to libyaml, and with more than one
+    # anchor given twice, the first by code point is named.
+    ("id: x\na: 1\x85&x b: 2\x85&x c: 3\n", "the anchor 'x' names two nodes"),
+    ("id: x\np: &y 1\nq: &y 2\nr: &b 3\ns: &b 4\n", "the anchor 'b' names two nodes"),
+    # As both readers meet them: a repeated key, as its mapping ends, or an alias
+    # that names no node, whichever comes first, then U+0000, then an anchor
+    # given twice.
+    ("id: x\nk: {a: 1, a: 2}\nz: *u\n", "Duplicate map key: 'a'"),
+    # A block mapping ends where the alias after it begins.
+    ("m:\n  a: 1\n  a: 2\n*u : 3\n", "Duplicate map key: 'a'"),
+    ("id: x\nz: *u\nk: {a: 1, a: 2}\n", "the alias 'u' names no node that ends before it"),
+    ("id: x\nz: *u\nt: \"a" + "\\" + "0b\"\n", "the alias 'u' names no node that ends before it"),
+    ("id: x\nt: \"a" + "\\" + "0b\"\na: &x 1\nb: &x 2\n",
+     "a string holds U+0000, which theoryforge cannot read"),
+    ("id: x\na: &x 1\nb: &x 2\nc: *u\n", "the alias 'u' names no node that ends before it"),
+]
+
+
+@pytest.mark.parametrize(("text", "message"), ALIAS_FAULTS)
+def test_an_alias_that_names_no_node_and_an_anchor_given_twice_are_refused(tmp_path, text, message):
+    path = _file(tmp_path, "aliases.theory.yaml", text)
+    if message is None:
+        assert isinstance(tf.read(path).data, dict)
+        return
+    with pytest.raises(ValueError) as err:
+        tf.read(path)
+    assert str(err.value) == f"({path}) {message}"
+
+
+def _nested(levels: int, json: bool = False) -> str:
+    """A theory whose ``x`` holds ``levels`` sequences, one inside the next,
+    with a string in the innermost, so that the string lies levels + 2 levels
+    deep."""
+    inner = "[" * levels + ('"s"' if json else "s") + "]" * levels
+    if json:
+        return ('{"schema_version": "1.1", "id": "d", "title": "D", "maturity": "draft", "x": '
+                + inner + "}\n")
+    return "schema_version: '1.1'\nid: d\ntitle: D\nmaturity: draft\nx: " + inner + "\n"
+
+
+@pytest.mark.parametrize("suffix", [".yaml", ".json"])
+def test_a_document_nested_more_than_64_levels_deep_refuses_the_file(tmp_path, suffix):
+    # The document is the first level, so 62 sequences reach the limit with
+    # their string. The R twin measures the same levels.
+    json = suffix == ".json"
+    assert tf.read(_file(tmp_path, "at.theory" + suffix, _nested(62, json))).data["id"] == "d"
+    path = _file(tmp_path, "over.theory" + suffix, _nested(63, json))
+    with pytest.raises(ValueError) as exc:
+        tf.read(path)
+    assert str(exc.value) == f"({path}) the document is nested more than 64 levels deep"
+    # Text far deeper than that is refused too, where json would raise
+    # RecursionError and PyYAML's composers would exhaust the stack.
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read(_file(tmp_path, "deeper.theory" + suffix, _nested(100000 if json else 2000, json)))
+
+
+def test_a_long_chain_of_merges_reads(tmp_path):
+    # Each of 1000 mappings merges the one before, in both forms of the merge
+    # key, so the document is three levels deep however long the chain. The R
+    # suite reads the same text.
+    for form in ("*m{}", "[*m{}]"):
+        chain = "".join(f"  - &m{i} {{<<: {form.format(i - 1)}}}\n" for i in range(1, 1000))
+        text = ("schema_version: '1.1'\nid: m\ntitle: M\nmaturity: draft\n"
+                "s:\n  - &m0 {k0: 0}\n" + chain + "last: {<<: *m999}\n")
+        t = tf.read(_file(tmp_path, "merge.theory.yaml", text))
+        assert t.data["last"] == {"k0": 0}
+        assert len(t.data["s"]) == 1000
+
+
+def test_a_chain_of_merges_too_large_is_refused_before_it_is_built(tmp_path):
+    # Mapping i merges mapping i - 1 and adds a key, so 5000 links, 175 kB of
+    # text, stand for some 12.5 million values. The count resolves the merges
+    # without building them (API_SPEC.md section 3). The R suite reads the
+    # same text.
+    chain = "".join(f"  - &m{i} {{<<: *m{i - 1}, k{i}: {i}}}\n" for i in range(1, 5000))
+    path = _file(tmp_path, "chain.theory.yaml", "s:\n  - &m0 {k0: 0}\n" + chain)
+    start = time.perf_counter()
+    with pytest.raises(ValueError) as err:
+        tf.read(path)
+    assert time.perf_counter() - start < 10
+    assert str(err.value) == (
+        f"({path}) the document holds more than 1000000 values once its aliases are expanded")
+
+
+@pytest.mark.parametrize(("max_values", "max_depth"), [(30, 4), (200, 8), (5000, 64)])
+def test_the_count_on_the_nodes_agrees_with_the_count_on_the_document(monkeypatch, max_values, max_depth):
+    # The reader counts the values and measures the depth on the composed
+    # nodes, merges resolved but not built (_check_nodes). The rule is that of
+    # _check_size on the document read, and the two give one result on every
+    # fixture and on texts with aliases and merges, at limits low enough to
+    # refuse many of them.
+    from theoryforge import _load
+    root = Path(__file__).resolve().parents[2] / "fixtures"
+    texts = [p.read_bytes().decode("utf-8-sig") for p in sorted(root.rglob("*.yaml"))]
+    texts = [t for t in texts if "\t" not in t and "\ufeff" not in t]
+    texts += [
+        "a: &a {x: [1, 2], y: {z: 3}}\nb: {<<: *a, x: 0}\nc: [*a, *a, {<<: [*a, *a]}]\n",
+        "a: &a {1: x}\nb: &b {yes: y, <<: *a}\nc: {<<: [*b, *a], 1: z}\nd: [*b, *b, *b]\n",
+        "s:\n  - &m0 {k0: [0]}\n"
+        + "".join(f"  - &m{i} {{<<: *m{i - 1}, k{i}: [{i}]}}\n" for i in range(1, 40)),
+    ]
+    results = []
+    for text in texts:
+        try:
+            data, _ = _load._load_yaml(text)
+        except Exception:
+            continue
+        monkeypatch.setattr(_load, "MAX_VALUES", max_values)
+        monkeypatch.setattr(_load, "MAX_DEPTH", max_depth)
+        try:
+            _load._check_size(data, Path("x"))
+            want = "fits"
+        except ValueError as err:
+            want = "deep" if "nested" in str(err) else "many"
+        loader = _load._TolerantLoader(text)
+        try:
+            root_node = loader.get_single_node()
+            _load._check_nodes(loader, root_node)
+            got = "fits"
+        except _load._Limit as limit:
+            got = "deep" if limit.what == "depth" else "many"
+        finally:
+            loader.dispose()
+        monkeypatch.undo()
+        results.append(got)
+        assert got == want, text[:200]
+    assert len(results) > 50
+
+
+def test_a_merged_key_is_compared_with_the_mapping_s_own_by_its_text(tmp_path):
+    # A merged "1" gives way to the mapping's own 1, and a merged 1 neither
+    # replaces the mapping's own yes nor is dropped beside it, since R names
+    # the keys 1 and TRUE (API_SPEC.md section 3). The R suite reads the same
+    # texts.
+    cases = [('a: &a {"1": x}\nb: {1: y, <<: *a}\n', {"1": "y"}),
+             ("a: &a {1: x}\nb: {yes: y, <<: *a}\n", {"TRUE": "y", "1": "x"}),
+             ("a: &a {0: x}\nb: {no: y, <<: *a}\n", {"FALSE": "y", "0": "x"}),
+             ('a: &a {"": x}\nb: {~: y, <<: *a}\n', {"": "y"}),
+             ("b: {<<: [{1: x}, {true: y}]}\n", {"1": "x", "TRUE": "y"})]
+    for text, b in cases:
+        assert tf.read(_file(tmp_path, "merge.theory.yaml", text)).data["b"] == b, text
+
+
+def test_bytes_that_are_not_utf8_or_a_nul_byte_refuse_the_file_after_a_json_depth(tmp_path):
+    # A JSON text is measured for depth on its bytes first, then the bytes
+    # must be UTF-8 without NUL (API_SPEC.md section 3). The R suite reads
+    # the same bytes.
+    deep = b'"b": ' + b"[" * 70 + b"]" * 70
+    cases = [(b'{"a": "x\xffy", ' + deep + b"}", ".json", "the document is nested more than 64 levels deep"),
+             (b'{"a": "x\x00y", ' + deep + b"}", ".json", "the document is nested more than 64 levels deep"),
+             (b'{"a": "x\xffy\x00"}', ".json", "the file is not valid UTF-8"),
+             (b'{"a": "x\x00y"}', ".json", "the file holds a NUL byte, which theoryforge cannot read"),
+             (b"a: x\xffy\n", ".yaml", "the file is not valid UTF-8"),
+             (b"a: x\x00y\nb: [\n", ".yaml", "the file holds a NUL byte, which theoryforge cannot read")]
+    for raw, suffix, message in cases:
+        path = tmp_path / ("bytes.theory" + suffix)
+        path.write_bytes(raw)
+        with pytest.raises(ValueError) as err:
+            tf.read(path)
+        assert str(err.value) == f"({path}) {message}", raw
+
+
+def test_a_text_too_deep_for_pyyaml_s_composers_is_refused_in_a_fresh_interpreter(tmp_path):
+    # PyYAML's C composer recurses once for each level and, without the
+    # reader's guard (_load._text_too_deep), would exhaust the C stack on this
+    # block sequence 100,000 levels deep and kill the interpreter. So the
+    # reading runs in a subprocess, whose crash fails the test rather than the
+    # run. The R suite reads a text 2000 levels deep, since R takes some 13
+    # seconds on this one.
+    path = _file(tmp_path, "deep.theory.yaml", "x:\n  " + "- " * 100000 + "s\n")
+    code = ("import sys\nimport theoryforge as tf\ntry:\n    tf.read(sys.argv[1])\n"
+            "except ValueError as err:\n    print(err)\n")
+    src = str(Path(tf.__file__).resolve().parents[1])
+    res = subprocess.run([sys.executable, "-c", code, str(path)], capture_output=True, text=True,
+                         timeout=600, env={**os.environ, "PYTHONPATH": src})
+    assert res.returncode == 0, res.stderr
+    assert res.stdout.strip() == f"({path}) the document is nested more than 64 levels deep"
+
+
+@pytest.mark.parametrize("text", ["a: !!bool maybe\n", "a: !!timestamp xyz\n", "a: !!map [1, 2]\n",
+                                  "a: !!int abc\n", "a: !!float abc\n"])
+def test_an_explicit_tag_python_cannot_read_raises_a_constructor_error(tmp_path, text):
+    # Explicit tags are outside the contract, and R reads these as NA or text.
+    # Python refuses them as YAML errors, not with KeyError, AttributeError,
+    # TypeError or a bare ValueError.
+    with pytest.raises(yaml.constructor.ConstructorError):
+        tf.read(_file(tmp_path, "tag.theory.yaml", text))
+
+
+def test_a_deep_text_is_refused_after_a_syntax_error_and_beside_a_later_document(tmp_path):
+    # Python composes a text nested more than 1000 levels deep without
+    # PyYAML's composers, which recurse, so a syntax error later in it is
+    # reported as R reports it, before the depth (API_SPEC.md section 3). Only
+    # the first document is measured, and more than one document is outside
+    # the contract.
+    head = "schema_version: '1.1'\nid: d\ntitle: D\nmaturity: draft\n"
+    deep = "[" * 1200 + "]" * 1200
+    with pytest.raises(yaml.YAMLError, match="while parsing a flow sequence"):
+        tf.read(_file(tmp_path, "late.theory.yaml", head + "x: " + deep + "\ny: [unclosed\n"))
+    with pytest.raises(yaml.YAMLError, match="while parsing a flow sequence"):
+        tf.read(_file(tmp_path, "early.theory.yaml", head + "y: [unclosed\nx: " + deep + "\n"))
+    with pytest.raises(yaml.YAMLError, match="expected a single document"):
+        tf.read(_file(tmp_path, "second.theory.yaml", head + "---\nx: " + deep + "\n"))
+
+
+def _deep(levels: int, json: bool = False) -> str:
+    """``levels`` sequences, one inside the next, around one string."""
+    return "[" * levels + ('"s"' if json else "s") + "]" * levels
+
+
+def _bomb(sep: str = "\n") -> str:
+    """Seven keys whose aliases expand past 1000000 values below the fifth
+    level of the mapping that holds them, joined by ``sep``."""
+    return sep.join(["b0: &a0 [" + ", ".join(["ha"] * 10) + "]"] + [
+        f"b{i}: &a{i} [" + ", ".join([f"*a{i - 1}"] * 10) + "]" for i in range(1, 7)])
+
+
+_DEPTH = "the document is nested more than 64 levels deep"
+_COUNT = "the document holds more than 1000000 values once its aliases are expanded"
+_DUP = "Duplicate map key: 'a'"
+_ALIAS = "the alias 'u' names no node that ends before it"
+_SYNTAX = "syntax"
+_EXPR = "a value is tagged !expr, which theoryforge does not read"
+_MERGE_FAULT = "merge"
+_NUL = "a string holds U+0000, which theoryforge cannot read"
+
+# Files with two faults, and the one both readers report (API_SPEC.md section
+# 3, "Order of refusals"). _SYNTAX stands for the parser's own error. The R
+# suite reads the same texts.
+ORDER_FAULTS = [
+    ("yaml", "k: {a: 1, a: 2}\nx: " + _deep(70) + "\n", _DUP),
+    ("yaml", "x: " + _deep(70) + "\nk: {a: 1, a: 2}\n", _DUP),
+    ("yaml", "x: " + _deep(70) + "\ny: *u\n", _ALIAS),
+    ("yaml", "a: &x 1\nb: &x 2\nx: " + _deep(70) + "\n", _DEPTH),
+    ("yaml", "t: \"a\\0b\"\nx: " + _deep(70) + "\n", _DEPTH),
+    # The walk of the levels reports the limit it passes first.
+    ("yaml", _bomb() + "\nx: " + _deep(70) + "\n", _COUNT),
+    ("yaml", "x: " + "[" * 66 + "{" + _bomb(", ") + "}" + "]" * 66 + "\n", _DEPTH),
+    ("yaml", "k: {a: 1, a: 2}\n" + _bomb() + "\n", _DUP),
+    ("yaml", "y: *u\n" + _bomb() + "\n", _ALIAS),
+    ("yaml", "a: &x 1\nb: &x 2\n" + _bomb() + "\n", _COUNT),
+    ("yaml", "t: \"a\\0b\"\n" + _bomb() + "\n", _COUNT),
+    ("yaml", "p: &x 1\nq: &x 2\nk: {a: 1, a: 2}\n", _DUP),
+    # A syntax error, a repeated key and an alias that names no node, in the
+    # order the parser meets them.
+    ("yaml", "k: {a: 1, a: 2}\ny: [unclosed\n", _DUP),
+    ("yaml", "y: [unclosed\nk: {a: 1, a: 2}\n", _SYNTAX),
+    ("yaml", "k: {a: 1, a: 2}\nz: *u\ny: [unclosed\n", _DUP),
+    ("yaml", "z: *u\ny: [unclosed\n", _ALIAS),
+    # An alias inside the node its anchor names, which PyYAML composes as a
+    # cycle, beside a repeated key.
+    ("yaml", "k: {a: 1, a: 2}\nz: &u [*u]\n", _DUP),
+    ("yaml", "z: &u [*u]\nk: {a: 1, a: 2}\n", _ALIAS),
+    ("yaml", "z: &u {a: 1, a: 2, b: *u}\n", _ALIAS),
+    # A value tagged !expr, refused once the whole text has been parsed, and a
+    # key so tagged, which counts by its text as a repeated key.
+    ("yaml", "a: !expr 1\nk: {a: 1, a: 2}\n", _DUP),
+    ("yaml", "k: {a: 1, a: 2}\na: !expr 1\n", _DUP),
+    ("yaml", "a: !expr 1\ny: [unclosed\n", _SYNTAX),
+    ("yaml", "a: !expr 1\nz: *u\n", _ALIAS),
+    ("yaml", "z: *u\na: !expr 1\n", _ALIAS),
+    ("yaml", "!expr k: 1\nk: 2\n", "Duplicate map key: 'k'"),
+    ("yaml", "a: !expr 1\nx: " + _deep(70) + "\n", _EXPR),
+    ("yaml", "a: !expr 1\n" + _bomb() + "\n", _EXPR),
+    ("yaml", "a: !expr 1\nt: \"a\\0b\"\n", _EXPR),
+    ("yaml", "a: !expr 1\np: &x 1\nq: &x 2\n", _EXPR),
+    # A text nested more than 1000 levels deep, which Python composes without
+    # recursion, and one just under that, which it may compose twice.
+    ("yaml", "x: " + _deep(1100) + "\ny: [unclosed\n", _SYNTAX),
+    ("yaml", "x: " + _deep(1100) + "\nk: {a: 1, a: 2}\n", _DUP),
+    ("yaml", "x: " + _deep(1100) + "\ny: *u\n", _ALIAS),
+    ("yaml", "x: &u " + "[" * 1100 + "*u" + "]" * 1100 + "\n", _ALIAS),
+    ("yaml", "x: " + "[" * 990 + "*u" + "]" * 990 + "\n", _ALIAS),
+    ("yaml", "x: &u " + "[" * 990 + "*u" + "]" * 990 + "\n", _ALIAS),
+    # JSON is measured for depth before it is parsed, and R validates it whole
+    # before it looks for a repeated key.
+    ("json", '{"x": ' + _deep(70, True) + ",}", _DEPTH),
+    ("json", '{"k": {"a": 1, "a": 2}, "x": ' + _deep(70, True) + "}", _DEPTH),
+    ("json", '{"t": "a\\u0000b", "x": ' + _deep(70, True) + "}", _DEPTH),
+    ("json", '{"t": "\\ud800", "x": ' + _deep(70, True) + "}", _DEPTH),
+    ("json", '{"k": {"a": 1, "a": 2},}', _SYNTAX),
+    # A form feed or a vertical tab between tokens, which jsonlite reads.
+    ("json", '{"a":\f1}', _SYNTAX),
+    ("json", '{"a":\v1}', _SYNTAX),
+    ("json", '{"k": {"a": 1, "a": 2},\f"b": 1}', _SYNTAX),
+    # A merge key with a value that is not a mapping is refused as its mapping
+    # ends, after a repeated key in it and after an alias inside it.
+    ("yaml", "b: {<<: 1, x: *u}\n", _ALIAS),
+    ("yaml", "b:\n  <<: 1\n  x: *u\n", _ALIAS),
+    ("yaml", "b: {<<: [1], x: *u}\n", _ALIAS),
+    ("yaml", "b: {<<: 1}\nk: {a: 1, a: 2}\n", _MERGE_FAULT),
+    ("yaml", "b: {<<: 1, a: 1, a: 2}\n", _DUP),
+    # A key of 1021 characters with a NUL escape, which R's probe keeps within
+    # the 1024 characters libyaml allows a key.
+    ("yaml", '"' + "k" * 1017 + '\\0": 1\n', _NUL),
+]
+
+
+@pytest.mark.parametrize(("suffix", "text", "message"), ORDER_FAULTS)
+def test_a_file_with_two_faults_is_refused_for_the_one_that_comes_first(tmp_path, suffix, text, message):
+    path = _file(tmp_path, "two.theory." + suffix, text)
+    if message == _SYNTAX:
+        # The parser's own error, which R gives as a 'Parser error', and not
+        # the refusal of a text nested deeper than libyaml allows.
+        with pytest.raises(json.JSONDecodeError if suffix == "json" else yaml.parser.ParserError):
+            tf.read(path)
+        return
+    if message == _MERGE_FAULT:
+        # R gives yaml's 'Illegal merge'.
+        with pytest.raises(yaml.constructor.ConstructorError, match="for merging"):
+            tf.read(path)
+        return
+    with pytest.raises(ValueError) as err:
+        tf.read(path)
+    assert str(err.value) == f"({path}) {message}"
+
+
+@pytest.mark.parametrize(("suffix", "text", "message"),
+                         [c for c in ORDER_FAULTS if c[0] == "yaml" and ("[" * 990) in c[1]])
+def test_a_text_beyond_libyaml_reads_alike_through_the_pure_python_parser(
+        tmp_path, monkeypatch, suffix, text, message):
+    # libyaml 0.2.6, which PyYAML 6.0.4 and later bundle, refuses a text nested
+    # about 1000 levels deep, and Python then reads it again with PyYAML's
+    # pure-Python parser (API_SPEC.md section 3). Taking that path for every
+    # text gives the same refusals, without recursion at 2000 levels.
+    from theoryforge import _load
+    monkeypatch.setattr(_load, "_TolerantLoader", _load._PythonTolerantLoader)
+    test_a_file_with_two_faults_is_refused_for_the_one_that_comes_first(tmp_path, suffix, text, message)
+    path = _file(tmp_path, "deep.theory.yaml", "x: " + _deep(2000) + "\ny: {a: " * 1 + _deep(2000) + "}\n")
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read(path)
+
+
+def test_the_pure_python_parser_reads_every_fixture_as_libyaml_does():
+    # The reading that Python falls back on beyond libyaml's limit gives the
+    # document libyaml gives, for every theory and corpus in fixtures/ whose
+    # text holds no tab and no byte-order mark, which that parser treats apart.
+    from theoryforge import _load
+    root = Path(__file__).resolve().parents[2] / "fixtures"
+    paths = sorted(root.rglob("*.yaml"))
+    assert len(paths) > 50
+    for path in paths:
+        text = path.read_bytes().decode("utf-8-sig")
+        if "\t" in text or "\ufeff" in text:
+            continue
+        try:
+            want = _load._read_as_r(text, _load._TolerantLoader)
+        except Exception as err:
+            with pytest.raises(type(err)):
+                _load._read_as_r(text, _load._PythonTolerantLoader)
+            continue
+        try:
+            # A document whose aliases expand past the limit is not compared
+            # value by value.
+            _load._check_size(want[0], path)
+        except ValueError:
+            continue
+        assert _load._read_as_r(text, _load._PythonTolerantLoader) == want, path.name
+
+
+def test_a_json_string_of_millions_of_characters_is_measured(tmp_path):
+    # Its brackets and escaped quotation marks are text. The R twin measures
+    # the same string without a regular expression, which PCRE would give up on.
+    note = '\\"[' * 1700000
+    text = ('{"schema_version": "1.1", "id": "j", "title": "J", "maturity": "draft", '
+            f'"x_note": "{note}"}}\n')
+    assert tf.read(_file(tmp_path, "long.theory.json", text)).data["x_note"] == '"[' * 1700000
+
+
+def test_an_alias_counts_at_the_depth_where_it_stands(tmp_path):
+    # An empty sequence is a value of its own, 41 levels deep here, and the
+    # alias puts it 24 levels deeper still.
+    text = "a: &a " + "[" * 40 + "]" * 40 + "\nb: " + "[" * 24 + "*a" + "]" * 24 + "\n"
+    path = _file(tmp_path, "alias.theory.yaml", text)
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read(path)
+    with pytest.raises(ValueError, match="nested more than 64 levels deep"):
+        tf.read_corpus(path)
+
+
 def test_an_unquoted_date_stays_a_string_and_writes_to_json(tmp_path):
     t = tf.read(_file(tmp_path, "date.theory.yaml", DATE_THEORY))
     outcome = t.data["test_outcomes"][0]
@@ -293,8 +746,182 @@ def test_a_duplicate_key_is_refused_with_the_r_message(tmp_path, name, text, key
     assert str(err.value) == f"({path}) Duplicate map key: '{key}'"
 
 
-# The corpus forms one theme, so litmap warns that it holds every linked keyword.
-@pytest.mark.filterwarnings("ignore:litmap:UserWarning")
+# Strings R cannot hold (API_SPEC.md section 3). Each entry is (file name, text,
+# what the reader names, or None when the file reads). The R suite reads the
+# same texts.
+BS = "\\"
+UNREADABLE = [
+    ("nul.theory.json", '{"id": "x", "title": "a' + BS + 'u0000b"}', "U+0000"),
+    ("high.theory.json", '{"id": "x", "title": "a' + BS + 'ud800b"}', "a lone surrogate"),
+    ("low.theory.json", '{"id": "x", "title": "a' + BS + 'udc00b"}', "a lone surrogate"),
+    ("twice.theory.json", '{"id": "x", "title": "' + BS + 'ud800' + BS + 'ud800' + BS + 'udc00"}',
+     "a lone surrogate"),
+    ("order.theory.json", '{"t": "' + BS + 'udbff", "u": "' + BS + 'u0000"}', "a lone surrogate"),
+    ("keys.theory.json", '{"a' + BS + 'u0000b": 1, "a' + BS + 'u0000c": 2}', "U+0000"),
+    ("dupkey.theory.json", '{"a' + BS + 'u0000b": 1, "a' + BS + 'u0000b": 2}', "U+0000"),
+    ("nul.theory.yaml", 'id: x\ntitle: "before' + BS + '0after"\n', "U+0000"),
+    ("nulx.theory.yaml", 'id: x\ntitle: "before' + BS + 'x00after"\n', "U+0000"),
+    ("nulu.theory.yaml", 'id: x\ntitle: "before' + BS + 'u0000after"\n', "U+0000"),
+    ("keys.theory.yaml", '"a' + BS + '0b": 1\n"a' + BS + '0c": 2\n', "U+0000"),
+    ("dupkey.theory.yaml", '"a' + BS + '0b": 1\n"a' + BS + '0b": 2\n', "U+0000"),
+    # A key whose value is null or an empty collection, which R's unlist()
+    # would drop, is searched too.
+    ("nullkey.theory.yaml", 'id: x\nextra:\n  "a' + BS + '0b": ~\n', "U+0000"),
+    ("seqkey.theory.yaml", 'id: x\nextra:\n  "a' + BS + '0b": []\n', "U+0000"),
+    ("mapkey.theory.yaml", 'id: x\nextra:\n  "a' + BS + '0b": {}\n', "U+0000"),
+    # A paired surrogate escape is one character, an escaped backslash is no
+    # escape, and only a double-quoted YAML scalar has escapes.
+    ("pair.theory.json", '{"id": "x", "title": "a' + BS + 'uD83D' + BS + 'uDE00b"}', None),
+    ("escaped.theory.json", '{"id": "x", "title": "a' + BS + BS + 'u0000b"}', None),
+    ("escaped.theory.yaml", 'id: x\ntitle: "a' + BS + BS + '0b"\n', None),
+    ("plain.theory.yaml", "id: x\ntitle: a" + BS + "0b\n", None),
+    ("single.theory.yaml", "id: x\ntitle: 'a" + BS + "0b'\n", None),
+    ("block.theory.yaml", "id: x\ntitle: |\n  a" + BS + "0b\n", None),
+]
+
+
+@pytest.mark.parametrize(("name", "text", "what"), UNREADABLE, ids=[c[0] for c in UNREADABLE])
+def test_a_string_r_cannot_hold_is_refused(tmp_path, name, text, what):
+    path = _file(tmp_path, name, text)
+    if what is None:
+        assert "x" in json.dumps(tf.read(path).data)
+        return
+    with pytest.raises(ValueError) as err:
+        tf.read(path)
+    assert str(err.value) == f"({path}) a string holds {what}, which theoryforge cannot read"
+
+
+def test_a_repeated_key_is_reported_before_a_string_r_cannot_hold(tmp_path):
+    # As both readers meet them: the repeated key while parsing, the string after.
+    for name, text in [("dup.theory.json", '{"k": {"a": 1, "a": 2}, "t": "' + BS + 'u0000"}'),
+                       ("dup.theory.yaml", 'k: {a: 1, a: 2}\nt: "' + BS + '0"\n')]:
+        with pytest.raises(ValueError, match="Duplicate map key: 'a'"):
+            tf.read(_file(tmp_path, name, text))
+    # Two keys that differ only in which lone surrogate they hold are two keys,
+    # so the repeat reported is the one after them.
+    text = ('{"id": "x", "a": {"' + BS + 'ud800": 1, "' + BS + 'udbff": 2}, '
+            '"b": {"q": 1, "q": 2}}')
+    with pytest.raises(ValueError, match="Duplicate map key: 'q'"):
+        tf.read(_file(tmp_path, "surrogate-keys.theory.json", text))
+
+
+def test_json_comments_are_refused(tmp_path):
+    # JSON has no comments. R's jsonlite parser accepts them, so R validates the
+    # text first and gives jsonlite's message, and json refuses them here.
+    path = _file(tmp_path, "commented.theory.json", '{\n  // exported by hand\n  "id": "x"\n}\n')
+    with pytest.raises(json.JSONDecodeError):
+        tf.read(path)
+    with pytest.raises(json.JSONDecodeError):
+        tf.read(_file(tmp_path, "block.theory.json", '{"id": "x" /* end */}'))
+
+
+def test_a_json_file_whose_text_names_a_file_or_a_url_is_refused(tmp_path):
+    # jsonlite's fromJSON() read the file or downloaded the URL that a short
+    # text named, so R read another theory, or sent a request, where Python
+    # refused the file. test-io.R reads the same two files.
+    other = _file(tmp_path, "other.theory.json", '{"schema_version": "1.1", "id": "other"}')
+    pointer = _file(tmp_path, "pointer.theory.json", str(other))
+    url = _file(tmp_path, "url.theory.json", "http://127.0.0.1:9/x.theory.json")
+    for path in (pointer, url):
+        with pytest.raises(json.JSONDecodeError):
+            tf.read(path)
+        with pytest.raises(json.JSONDecodeError):
+            tf.read_corpus(path)
+
+
+def test_a_value_tagged_expr_is_refused_with_the_r_message(tmp_path):
+    # R's yaml package evaluates !expr as R code when the option yaml.eval.expr
+    # is TRUE. Both twins refuse the tag, on a value or a key and in each of its
+    # spellings, with one message.
+    for name, text in (("value.theory.yaml", 'id: !expr stop("ran")\ntitle: T\n'),
+                       ("key.theory.yaml", 'id: t\n!expr cat("ran"): v\n'),
+                       ("secondary.theory.yaml", 'id: !!expr stop("ran")\n'),
+                       ("verbatim.theory.yaml", 'id: !<tag:yaml.org,2002:expr> stop("ran")\n'),
+                       ("local.theory.yaml", 'id: !<!expr> stop("ran")\n'),
+                       ("handle.theory.yaml",
+                        '%TAG !e! tag:yaml.org,2002:\n---\nid: !e!expr stop("ran")\n')):
+        path = _file(tmp_path, name, text)
+        with pytest.raises(ValueError) as err:
+            tf.read(path)
+        assert str(err.value) == f"({path}) a value is tagged !expr, which theoryforge does not read"
+        with pytest.raises(ValueError, match="a value is tagged !expr"):
+            tf.read_corpus(path)
+
+
+def test_the_format_follows_the_extension_of_the_file_name(panic_path, tmp_path):
+    # A name that begins with its only dot has no extension, as for pathlib.
+    # R read and wrote '.json' as JSON or as YAML by the version of R, through
+    # tools::file_ext(). test-io.R writes the same names.
+    t = tf.read(panic_path)
+    for name, as_json in ((".json", False), ("upper.JSON", True), ("..json", True),
+                          ("x.json.yaml", False)):
+        out = tmp_path / name
+        t.write(out)
+        text = out.read_text(encoding="utf-8")
+        assert text.startswith("{") is as_json
+        assert tf.read(out).data == t.data
+
+
+def test_a_leading_tilde_is_the_home_directory(panic_path, tmp_path, monkeypatch):
+    # R's file connections expand ~, and the Python readers and writers now do
+    # too.
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    t = tf.read(panic_path)
+    t.write("~/home.theory.yaml")
+    assert (tmp_path / "home.theory.yaml").exists()
+    assert tf.read("~/home.theory.yaml").data == t.data
+    assert tf.read_corpus("~/home.theory.yaml")["id"] == t.id
+    t.preregister("~/home.prereg.md")
+    assert (tmp_path / "home.prereg.md").exists()
+    assert t.render_report("~/home-report") == "~/home-report.qmd"
+    assert (tmp_path / "home-report.qmd").exists()
+
+
+def test_a_tilde_before_an_unknown_user_names_a_relative_folder(panic_path, tmp_path, monkeypatch):
+    # R's path.expand() leaves '~nosuchuser' as it is, on POSIX systems because
+    # there is no such user and on Windows because it never expands '~user',
+    # and so does the Python package, where Path.expanduser raised
+    # RuntimeError (API_SPEC.md section 3).
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "~nosuchuser").mkdir()
+    t = tf.read(panic_path)
+    t.write("~nosuchuser/x.theory.yaml")
+    assert (tmp_path / "~nosuchuser" / "x.theory.yaml").exists()
+    assert tf.read("~nosuchuser/x.theory.yaml").data == t.data
+    assert t.render_report("~nosuchuser/r.qmd") == "~nosuchuser/r.qmd"
+    assert (tmp_path / "~nosuchuser" / "r.qmd").exists()
+
+
+def test_a_tilde_is_expanded_as_r_expands_it_on_each_platform(tmp_path, monkeypatch):
+    # '~' alone or before a separator is the home directory everywhere, and
+    # '~user' is expanded on POSIX systems only, as R's path.expand() does it.
+    from theoryforge._io import expand_home
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    assert expand_home("~") == str(tmp_path)
+    assert Path(expand_home("~/a.yaml")) == tmp_path / "a.yaml"
+    assert expand_home("a/~/b") == "a/~/b"
+    assert expand_home("~nosuchuser/x") == "~nosuchuser/x"
+    if os.name == "nt":
+        assert Path(expand_home("~\\a.yaml")) == tmp_path / "a.yaml"
+        assert expand_home("~" + os.environ.get("USERNAME", "u") + "/x").startswith("~")
+    else:
+        import pwd
+
+        user = pwd.getpwuid(os.getuid())
+        assert expand_home(f"~{user.pw_name}/x") == os.path.join(user.pw_dir, "x")
+        # A backslash is no separator here, so '~\\a' names a user.
+        assert expand_home("~\\a") == "~\\a"
+    # The Windows rule, taken with this platform's expanduser. Path() is not
+    # used while os.name is changed, since pathlib reads it.
+    home = expand_home("~")
+    monkeypatch.setattr(os, "name", "nt")
+    assert expand_home("~nosuchuser/x") == "~nosuchuser/x"
+    assert expand_home("~root/x") == "~root/x"
+    assert expand_home("~") == home
+
+
 def test_a_corpus_reads_through_the_same_reader(tmp_path):
     corpus = """\
 schema_version: "1.0"
@@ -354,6 +981,11 @@ SCALARS = [
     ("1,000", "1,000"), ("0,5", "0,5"), ("1,000.5", "1,000.5"), (".", "."),
     ("2147483648", 2147483648), ("-2147483649", -2147483649), ("0x80000000", 2147483648),
     ("0777777777777", 68719476735), ("1.0e+400", math.inf),
+    # an integer beyond 2^53 in any base, which R holds as the nearest double
+    ("0x200000000000011", 0x200000000000011), ("-0x200000000000011", -0x200000000000011),
+    ("010000000000000000021", 0o10000000000000000021),
+    # subnormal and underflowing floats
+    ("2.5e-324", 2.0 ** -1074), ("2.1e-322", 43 * 2.0 ** -1074), ("1.0e-400", 0.0),
     ("-527.867953", float.fromhex("-0x1.07ef19157abb9p+9")),
 ]
 
@@ -381,6 +1013,23 @@ def test_a_written_string_reads_back_as_the_same_string(tmp_path, value):
     assert tf.read(out).data["title"] == value
 
 
+def test_written_yaml_escapes_a_next_line_character(tmp_path):
+    # YAML counts U+0085, U+2028 and U+2029 as line breaks. libyaml read U+0085
+    # written in single quotes as a line feed and folded it into a space, so
+    # it is written in double quotes as \N, as the R twin writes it. The
+    # escapes of the other two follow in such a string. Alone, those two are
+    # written as they are, and read back.
+    t = tf.new_theory("w", "Panic\x85disorder")
+    t.data["constructs"] = [{"id": "c1", "label": "a\u2028b", "definition": "c\u2029d\x85"}]
+    out = tmp_path / "w.theory.yaml"
+    t.write(out)
+    text = out.read_text(encoding="utf-8")
+    assert 'title: "Panic\\Ndisorder"' in text and 'definition: "c\\Pd\\N"' in text
+    back = tf.read(out).data
+    assert back["title"] == "Panic\x85disorder"
+    assert back["constructs"] == t.data["constructs"]
+
+
 def test_written_yaml_quotes_what_r_takes_for_a_number(tmp_path):
     # R's yaml package takes 1,000 and a bare dot for numbers it cannot convert,
     # and theoryforge 0.6.0 in R reads NA for them, so the writer quotes them.
@@ -397,3 +1046,72 @@ def test_written_json_ends_with_a_newline(panic_path, tmp_path):
     out = tmp_path / "p.theory.json"
     tf.read(panic_path).write(out)
     assert out.read_bytes().endswith(b"}\n")
+
+
+def test_example_path_reaches_only_the_listed_examples():
+    # A name that is not listed, a path into the package among them, is
+    # refused, as R's tf_example_path() refuses it.
+    for name in ("expected", "../schema/theory.schema.json", "", "../core.py"):
+        with pytest.raises(FileNotFoundError, match="no packaged example named"):
+            tf.example_path(name)
+
+
+TABS = """\
+schema_version: "1.1"{T}
+id: tabs
+title: A title{T}
+maturity: building
+constructs:
+  - {{id: c1,{T}label: Alpha, definition: Bodily{T}activation.}}{T}# a comment
+  - {{{T}id: c2, label:{T}Beta, definition: Appraised danger.}}
+predictions:
+  - id: h1
+    statement: Beta rises.
+    type: directional
+    derives_from: [{T}p1,{T}p2]
+""".format(T="\t")
+
+
+def test_yaml_is_parsed_with_libyaml_as_r_parses_it():
+    # R's yaml package bundles libyaml. PyYAML's pure-Python scanner refused a
+    # tab that YAML allows as separating white space.
+    import yaml
+
+    from theoryforge import _load
+    if yaml.__with_libyaml__:
+        assert _load._StrictLoader.__mro__[1] is yaml.CSafeLoader
+
+
+def test_a_tab_reads_as_r_reads_it(tmp_path):
+    import yaml
+
+    if not yaml.__with_libyaml__:
+        pytest.skip("PyYAML was built without libyaml")
+    t = tf.read(_file(tmp_path, "tabs.theory.yaml", TABS))
+    assert t.data["schema_version"] == "1.1" and t.data["title"] == "A title"
+    assert t.data["constructs"] == [
+        {"id": "c1", "label": "Alpha", "definition": "Bodily\tactivation."},
+        {"id": "c2", "label": "Beta", "definition": "Appraised danger."}]
+    assert t.data["predictions"][0]["derives_from"] == ["p1", "p2"]
+    # A tab that YAML does not allow is refused by both twins: one that indents
+    # a line, and one between the dash of a sequence entry and its content.
+    for i, text in enumerate(["id: a\nconstructs:\n\t- id: c1\n", "id: a\nconstructs:\n  -\t{id: c1}\n",
+                              "id: a\nconstructs:\n  - \tc1\n"]):
+        with pytest.raises(yaml.YAMLError, match="found character that cannot start any token"):
+            tf.read(_file(tmp_path, f"bad{i}.theory.yaml", text))
+
+
+def test_numpy_scalars_build_validate_write_and_hash_like_python_numbers(tmp_path):
+    np = pytest.importorskip("numpy")
+    t = tf.read(tf.example_path("panic-network.theory.yaml"))
+    t.add_construct("c_np", np.str_("NumPy"), "A construct built from NumPy values.",
+                    measurement=[np.str_("A scale")])
+    t.add_prediction("h_np", "A raises B.", "directional", derives_from="p1",
+                     severity=np.float32(0.75), bounds={"lower": np.int64(0)},
+                     test={"n_planned": np.int64(48), "power": np.float64(0.9)})
+    t.add_test_outcome("h_np", np.bool_(True), estimate=np.float64(0.3), se=np.float64(0.1))
+    assert t.validate(full=True)
+    for name in ("np.yaml", "np.json"):
+        t.write(tmp_path / name)
+        assert tf.read(tmp_path / name).content_hash() == t.content_hash()
+

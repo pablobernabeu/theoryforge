@@ -6,6 +6,7 @@
 #' set m-separates the pair. A graph with feedback loops is refused by default,
 #' or read by sigma-separation on request.
 #' @name implications
+#' @noRd
 #' @keywords internal
 NULL
 
@@ -24,9 +25,9 @@ NULL
 #' \code{"causes"}, \code{"mediates"} or \code{"moderates"}) is an edge from
 #' \code{from} to \code{to}, and \code{"associates"} is a bidirected edge,
 #' covariance the theory leaves unexplained, as a latent common cause of the two
-#' constructs would. The constructs that a directed relation names are the
-#' vertices, and an association is an edge only between two of them. The
-#' function then takes every pair of vertices that no edge joins. The pair is
+#' constructs would. The constructs that some proposition relates to another
+#' are the vertices. The function then takes every pair of vertices that no
+#' edge joins. The pair is
 #' stated independent given the parents of both when those m-separate it
 #' (Richardson, 2003), and otherwise given all the other ancestors of the two
 #' when those do. A pair that neither set separates is separated by no set of
@@ -34,15 +35,39 @@ NULL
 #' no independence for it, and it is listed under \code{inseparable}. These are
 #' the conditional independencies the causal graph implies, each one a claim
 #' that data could refute. When every relation is directed and the graph is
-#' acyclic, they are the basis set of Pearl (1988) and Shipley (2000), from
-#' which every other independence the graph implies follows.
+#' acyclic, they are the basis set of Pearl (1988) and Shipley (2000). When the
+#' model holds, their tests are independent of each other, and when the
+#' distribution has the property called composition, as a multivariate normal
+#' one does, they imply every other independence the graph implies.
 #'
-#' Constructs that no directed relation names are left out, because silence
-#' about a construct is not a claim that it is independent of anything, and so
-#' are constructs without an id, which no proposition can name. A construct
-#' named only by associations would be a collider on every path through it, so
-#' leaving it out loses no statement about the others. A theory with no
-#' directed relations therefore comes back with no vertices and no error.
+#' The statements are consequences of the graph as encoded. The graph reads
+#' every pair of its constructs that no proposition joins as having no direct
+#' effect on each other and no unexplained association, so the statements are
+#' the theory's commitments only if its authors meant those omissions. A
+#' construct marked \code{x_latent: true} is read like any other, so a
+#' statement can hold fixed a construct that a test would need a measure of,
+#' and no other set of observed constructs is sought for it.
+#'
+#' \code{given = "minimal"} then drops each construct from the conditioning
+#' set, in file order, whenever the rest still separate the pair, which leaves
+#' a minimal separating set: no construct in it can be dropped. Every set tried
+#' lies among the ancestors of the pair, where m-separation is separation in an
+#' undirected graph that holding more constructs fixed cannot reopen
+#' (Richardson, 2003), so one pass suffices. Fewer conditioning constructs mean
+#' fewer measured with error, which matters for the reason given below. The
+#' minimal set returned is one of possibly several, and the file order of the
+#' constructs decides which. Minimal statements suit tests of single pairs.
+#' They are no longer a basis set: unless the distribution satisfies
+#' composition, they do not jointly imply the graph's other independencies,
+#' and their tests are not independent, so they should not be combined into
+#' one test of the whole model, as Shipley's (2000) C statistic combines the
+#' basis set's.
+#'
+#' A construct that no proposition relates to another is left out, because
+#' silence about a construct is not a claim that it is independent of anything,
+#' and so is a construct without an id, which no proposition can name. A theory
+#' whose propositions relate no two constructs therefore comes back with no
+#' vertices and no error.
 #'
 #' @section Measurement:
 #' The statements concern constructs, and a study measures them with error.
@@ -82,24 +107,32 @@ NULL
 #'
 #' @section Refusals:
 #' The function stops in four cases. A value of \code{cycles} other than
-#' \code{"refuse"} or \code{"sigma"} is refused before the theory is read. Two
+#' \code{"refuse"} or \code{"sigma"}, or of \code{given} other than
+#' \code{"basis"} or \code{"minimal"}, is refused before the theory is read. Two
 #' constructs sharing an id would give one node two sets of parents, and a
-#' directed relation naming an undeclared construct would shrink the graph and
-#' so imply independencies the theory never claimed. With
-#' \code{cycles = "refuse"}, the default, a cycle among the directed edges is
-#' refused too, and the message names a cycle that was found and the
-#' \code{"sigma"} option.
+#' proposition, directed or an association, that names an undeclared construct
+#' would shrink the graph and so imply independencies the theory never claimed.
+#' With \code{cycles = "refuse"}, the default, a cycle among the directed edges
+#' is refused too, and the message names a cycle that was found and the
+#' \code{"sigma"} option. Each refusal is an error of class \code{tf_refusal},
+#' as are those of [tf_entailments()], [tf_equivalent_models()] and
+#' [tf_discriminate()], so that a caller can catch a refusal and nothing else.
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param cycles What to do with a graph whose directed edges form a cycle:
 #'   \code{"refuse"} (the default) stops with an error, and \code{"sigma"}
 #'   derives the statements by sigma-separation (see the section on feedback
 #'   loops).
+#' @param given The conditioning sets: \code{"basis"} (the default), the
+#'   parents of the pair or else its other ancestors, or \code{"minimal"},
+#'   that set pruned to a minimal one.
 #' @return A named list
-#'   \code{list(theory_id, criterion, acyclic, constructs, n_edges,
-#'   n_bidirected, feedback, implications, n_implications, inseparable)}.
-#'   \code{criterion} names the separation criterion, \code{"m"} under
-#'   \code{cycles = "refuse"} and \code{"sigma"} under \code{cycles = "sigma"}.
+#'   \code{list(theory_id, criterion, conditioning, acyclic, constructs,
+#'   n_edges, n_bidirected, feedback, implications, n_implications,
+#'   inseparable)}. \code{criterion} names the separation criterion, \code{"m"}
+#'   under \code{cycles = "refuse"} and \code{"sigma"} under
+#'   \code{cycles = "sigma"}, and \code{conditioning} the value of
+#'   \code{given}.
 #'   \code{constructs} holds the vertices in file order. \code{n_edges} counts
 #'   the directed edges the theory states and \code{n_bidirected} the
 #'   bidirected ones, a pair stated twice counting once, before any
@@ -142,9 +175,9 @@ NULL
 #'   confounding constructs is harder than you think. \emph{PLOS ONE}, 11(3),
 #'   e0152719. \doi{10.1371/journal.pone.0152719}
 #' @seealso [tf_diagram()] with \code{type = "causal_dag"}, which exports the
-#'   same graph as dagitty syntax without reading it, and the methodological
-#'   foundations article for the literature behind the causal-testability
-#'   criterion.
+#'   same graph as dagitty syntax without reading it, and the
+#'   [methodological foundations article](https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html)
+#'   for the literature behind the causal-testability criterion.
 #' @examples
 #' # A mediated chain commits the theory to one thing it does not state
 #' # directly: arousal and avoidance are independent once threat is held fixed.
@@ -173,85 +206,23 @@ NULL
 #' lapply(implied$feedback, unlist)
 #' implied$implications[[1]]$statement
 #' @export
-tf_implications <- function(theory, cycles = "refuse") {
+tf_implications <- function(theory, cycles = "refuse", given = "basis") {
   # Checked before the theory is read, so that a mistyped option is reported as
   # such whatever the theory holds.
   if (!is.character(cycles) || length(cycles) != 1L || is.na(cycles) ||
       !(cycles %in% c("refuse", "sigma"))) {
-    stop("implications requires cycles to be 'refuse' or 'sigma'", call. = FALSE)
+    .tf_refuse("implications requires cycles to be 'refuse' or 'sigma'")
+  }
+  if (!is.character(given) || length(given) != 1L || is.na(given) ||
+      !(given %in% c("basis", "minimal"))) {
+    .tf_refuse("implications requires given to be 'basis' or 'minimal'")
   }
   T <- theory
-
-  declared <- character(0)
-  for (c in .tf_list(T, "constructs")) {
-    cid <- .tf_str(c, "id")
-    # A construct without an id cannot be the endpoint of a proposition, so it
-    # takes no part in the graph, and two of them do not share an id.
-    if (!nzchar(cid)) next
-    # Two constructs sharing an id give the same node two sets of parents, and
-    # nothing in the maths says which one a proposition meant.
-    if (cid %in% declared) {
-      stop("implications requires unique construct ids; duplicate construct id: ", cid,
-           call. = FALSE)
-    }
-    declared <- c(declared, cid)
-  }
-
-  edge_from <- integer(0)
-  edge_to <- integer(0)
-  assoc_from <- character(0)
-  assoc_to <- character(0)
-  for (p in .tf_list(T, "propositions")) {
-    rel <- .tf_enum_str(p, "relation", .tf_RELATION)
-    frm <- .tf_str(p, "from")
-    to <- .tf_str(p, "to")
-    if (rel %in% .tf_BIDIRECTED) {
-      assoc_from <- c(assoc_from, frm)
-      assoc_to <- c(assoc_to, to)
-      next
-    }
-    if (!(rel %in% .tf_DIRECTED)) next
-    pid <- .tf_str(p, "id")
-    # Dropping an edge whose endpoint was never declared would shrink the graph
-    # and so add independencies the theory does not imply, which is a
-    # confidently wrong answer rather than a missing one.
-    for (endpoint in c(frm, to)) {
-      if (is.na(match(endpoint, declared))) {
-        stop("implications requires causal propositions between declared constructs; ",
-             "proposition '", pid, "' refers to unknown construct '", endpoint, "'",
-             call. = FALSE)
-      }
-    }
-    u <- match(frm, declared)
-    v <- match(to, declared)
-    if (!any(edge_from == u & edge_to == v)) {
-      edge_from <- c(edge_from, u)
-      edge_to <- c(edge_to, v)
-    }
-  }
-
-  used <- sort(unique(c(edge_from, edge_to)))
-  nodes <- declared[used]
+  g <- .tf_causal_graph(T, "implications")
+  nodes <- g$nodes
+  directed <- g$directed
+  bidirected <- g$bidirected
   k <- length(nodes)
-  rank_of <- integer(length(declared))
-  rank_of[used] <- seq_along(used)
-  directed <- matrix(FALSE, nrow = k, ncol = k)
-  for (e in seq_along(edge_from)) {
-    directed[rank_of[[edge_from[[e]]]], rank_of[[edge_to[[e]]]]] <- TRUE
-  }
-  # An association is an edge only between two vertices. A construct that only
-  # associations name is a collider on every path through it, so it closes them
-  # all and leaving it out changes no statement about the others.
-  bidirected <- matrix(FALSE, nrow = k, ncol = k)
-  n_bidirected <- 0L
-  for (e in seq_along(assoc_from)) {
-    a <- match(assoc_from[[e]], nodes)
-    b <- match(assoc_to[[e]], nodes)
-    if (is.na(a) || is.na(b) || a == b || bidirected[a, b]) next
-    bidirected[a, b] <- TRUE
-    bidirected[b, a] <- TRUE
-    n_bidirected <- n_bidirected + 1L
-  }
 
   # The pairs are those the theory leaves unjoined. Under "sigma", the
   # acyclification below can join more of them, and those are then separated by
@@ -262,9 +233,9 @@ tf_implications <- function(theory, cycles = "refuse") {
   if (cycles == "refuse") {
     cycle <- .tf_first_cycle(directed, k)
     if (!is.null(cycle)) {
-      stop("implications requires an acyclic causal graph; cycle found: ",
-           paste(nodes[cycle], collapse = " -> "),
-           "; set cycles to 'sigma' to derive sigma-separation statements", call. = FALSE)
+      .tf_refuse("implications requires an acyclic causal graph; cycle found: ",
+                 paste(nodes[cycle], collapse = " -> "),
+                 "; set cycles to 'sigma' to derive sigma-separation statements")
     }
   } else {
     # A feedback loop is a component of two or more vertices, or one with a self
@@ -285,6 +256,9 @@ tf_implications <- function(theory, cycles = "refuse") {
   }
 
   reach <- .tf_reach(directed, k)
+  graph <- .tf_mixed_graph(directed, bidirected, reach)
+  # The graph is acyclic here, and without bidirected edges it is a DAG.
+  dag <- !any(bidirected)
   impl <- list()
   inseparable <- list()
   if (k >= 2L) {
@@ -298,20 +272,21 @@ tf_implications <- function(theory, cycles = "refuse") {
         # path that connects the two is a collider and an ancestor of one of
         # them, an inducing path, so no set separates the pair (API_SPEC.md
         # section 27).
-        parents <- which(directed[, i] | directed[, j])
-        ancestors <- setdiff(which(reach[, i] | reach[, j]), c(i, j))
-        given <- NULL
-        for (s in list(parents, ancestors)) {
-          if (.tf_m_separated(directed, bidirected, reach, i, j, s)) {
-            given <- s
-            break
+        sep <- which(directed[, i] | directed[, j])
+        if (!dag && !.tf_m_separated(graph, i, j, sep)) {
+          sep <- setdiff(which(reach[, i] | reach[, j]), c(i, j))
+          if (!.tf_m_separated(graph, i, j, sep)) {
+            inseparable[[length(inseparable) + 1L]] <- list(a = nodes[[i]], b = nodes[[j]])
+            next
           }
         }
-        if (is.null(given)) {
-          inseparable[[length(inseparable) + 1L]] <- list(a = nodes[[i]], b = nodes[[j]])
-          next
+        if (given == "minimal") {
+          for (v in sep) {
+            rest <- sep[sep != v]
+            if (.tf_m_separated(graph, i, j, rest)) sep <- rest
+          }
         }
-        names_given <- nodes[given]
+        names_given <- nodes[sep]
         impl[[length(impl) + 1L]] <- list(
           a = nodes[[i]],
           b = nodes[[j]],
@@ -325,10 +300,11 @@ tf_implications <- function(theory, cycles = "refuse") {
   list(
     theory_id = .tf_str(T, "id"),
     criterion = criterion,
+    conditioning = given,
     acyclic = length(feedback) == 0L,
     constructs = as.list(nodes),
-    n_edges = length(edge_from),
-    n_bidirected = n_bidirected,
+    n_edges = g$n_edges,
+    n_bidirected = g$n_bidirected,
     feedback = feedback,
     implications = impl,
     n_implications = length(impl),

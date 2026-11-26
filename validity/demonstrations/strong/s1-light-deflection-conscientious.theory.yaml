@@ -1,0 +1,109 @@
+# Source: red-team-score/inputs/derived/s1-light-deflection-conscientious.theory.yaml, validity audit of theoryforge at f72ce4c.
+schema_version: '1.1'
+id: s1-light-deflection
+title: Gravitational deflection of light (general relativity, 1919 eclipse test)
+maturity: testing
+theory_form: process
+version:
+  id: v1
+  parent_id: null
+  content_hash: null
+constructs:
+- id: c_solar_field
+  label: Sun's gravitational field
+  definition: The gravitational field of the Sun traversed by a ray of light passing close to its limb.
+  boundary_conditions:
+  - the Sun
+  - rays passing close to the limb
+  measurement:
+  - solar mass from planetary orbits
+- id: c_star_distance
+  label: Angular distance from the Sun's centre
+  definition: The distance of the star's image from the centre of the Sun.
+  boundary_conditions:
+  - stars near the limb during a total eclipse
+  measurement:
+  - angular separation measured on the eclipse plates
+- id: c_displacement
+  label: Apparent displacement of a star
+  definition: The outward displacement of a star's apparent position close to the Sun's limb.
+  measurement:
+  - star positions on photographs taken at the total eclipse of 29 May 1919
+  boundary_conditions:
+  - stars near the limb during a total eclipse
+propositions:
+- id: p_field
+  from: c_solar_field
+  to: c_displacement
+  relation: increases
+  mechanism: The course of a ray of light is in accordance with Einstein's generalised relativity theory.
+- id: p_distance
+  from: c_star_distance
+  to: c_displacement
+  relation: decreases
+  functional_form: inverse proportion
+  mechanism: The deflection a ray suffers falls with the distance at which it passes the Sun, so stars further out are displaced less.
+boundary_conditions:
+- stars close to the Sun's limb, observed during a total eclipse
+predictions:
+- id: pred_limb
+  derives_from:
+  - p_field
+  statement: A star at the Sun's limb is displaced outwards by 1.75 seconds of arc.
+  type: point
+  diagnostic_vs:
+  - alt_no_deflection
+  - alt_newtonian
+  claim:
+    kind: effect
+    x: c_solar_field
+    y: c_displacement
+    sign: positive
+  bounds:
+    lower: 1.5
+    upper: 2.0
+- id: pred_inverse
+  derives_from:
+  - p_distance
+  statement: The displacement is inversely proportional to the distance of the star from the Sun's centre.
+  type: directional
+  claim:
+    kind: effect
+    x: c_star_distance
+    y: c_displacement
+    sign: negative
+  diagnostic_vs:
+  - alt_no_deflection
+- id: pred_double
+  derives_from:
+  - p_field
+  statement: The displacement is double the 0.87 seconds of arc that Newtonian gravitation acting on the mass of light gives.
+  type: point
+  diagnostic_vs:
+  - alt_newtonian
+  bounds:
+    lower: 1.5
+    upper: 2.0
+alternatives:
+- id: alt_no_deflection
+  label: The path of light is uninfluenced by gravitation
+  key_constructs:
+  - no displacement
+  source_doi: 10.1098/rsta.1920.0009
+- id: alt_newtonian
+  label: Light is subject to Newtonian gravitation (0.87 seconds of arc at the limb)
+  key_constructs:
+  - Newtonian gravitation acting on the mass of light
+  source_doi: 10.1098/rsta.1920.0009
+  propositions:
+  - id: rn1
+    from: c_solar_field
+    to: c_displacement
+    relation: increases
+  - id: rn2
+    from: c_star_distance
+    to: c_displacement
+    relation: decreases
+formal_model:
+  type: none
+  spec_ref: null

@@ -241,7 +241,7 @@ test_outcomes:
 # -- validation (API_SPEC.md section 2, item 14) ----------------------------
 
 test_that("full validation checks bounds, estimate and se", {
-  pred <- function(id, ...) list(id = id, statement = "s", type = "interval", ...)
+  pred <- function(id, type = "interval", ...) list(id = id, statement = "s", type = type, ...)
   outcome <- function(...) list(prediction_id = "h1", passed = TRUE, ...)
   t <- list(
     schema_version = "1.0", id = "t", title = "T", maturity = "testing",
@@ -253,9 +253,9 @@ test_that("full validation checks bounds, estimate and se", {
       pred("h5", bounds = list(lower = 60, upper = 20)),
       pred("h6", bounds = list(lower = Inf, upper = -Inf)),
       pred("h7", bounds = list(lower = NaN)),
-      pred("h8", bounds = list(lower = 0.1)),
-      pred("h9", bounds = NULL),
-      pred("h10", bounds = setNames(list(), character(0)))
+      pred("h8", "directional", bounds = list(lower = 0.1)),
+      pred("h9", "directional", bounds = NULL),
+      pred("h10", "directional", bounds = setNames(list(), character(0)))
     ),
     test_outcomes = list(
       outcome(estimate = 41, se = 6),
@@ -336,7 +336,7 @@ test_that("the dossier gives each computable severity in the test record", {
   expect_true(grepl(paste0(
     "\n## Test record\n\n",
     "- pred2: passed; observed: Illustrative values, not a reported result: switch cost ",
-    "41 ms (SE 6 ms).; post-data severity 0.999 for [20.0, 60.0]\n",
+    "41 ms (SE 6 ms).; post-data severity 0.999 for [20, 60]\n",
     "\n## Evidence\n"
   ), d, fixed = TRUE))
 })
@@ -353,7 +353,7 @@ test_that("the dossier writes an open bound as an infinity and skips what it can
   expect_true(grepl(paste0(
     "\n## Test record\n\n",
     "- h3: passed; date: 2026-05-01; post-data severity 0.933 for [0.1, inf]\n",
-    "- h4: failed; post-data severity 0.023 for [-inf, 0.0]\n",
+    "- h4: failed; post-data severity 0.023 for [-inf, 0]\n",
     "- h2: passed\n",
     "- h1: passed\n",
     "\n## Evidence\n"

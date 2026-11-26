@@ -20,7 +20,10 @@ JSON for \code{.json} and YAML otherwise. Files are UTF-8 with LF line
 endings.
 }
 \details{
-Numbers keep 15 significant digits in both formats, logicals are written as
+Each number is written with the fewest significant digits, up to 17, that
+read back as the same double in both formats, so the file holds the theory's
+numbers exactly. A date or a date-time is written as text, such as
+\code{"2026-11-23"}. Logicals are written as
 \code{true} and \code{false}, and a missing value (\code{NA}) is written as
 null, which reads back as \code{NULL} in R and \code{None} in Python. Every
 field the schema types as an array of strings (\code{derives_from},
@@ -28,7 +31,10 @@ field the schema types as an array of strings (\code{derives_from},
 \code{boundary_conditions}, \code{key_constructs}) is written as an array,
 even when the theory holds it as a single string. A theory that validates
 against the package's own schema therefore still validates once written, and
-it reads back the same in R and in Python.
+it reads back the same in R and in Python. A single string held in such a
+field reads back as a one-element array, which \code{\link[=tf_content_hash]{tf_content_hash()}} reads as
+it reads the string, so a hash recorded in \code{version$content_hash} still
+matches the theory.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory")

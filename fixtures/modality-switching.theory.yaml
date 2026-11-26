@@ -1,8 +1,11 @@
 # Acyclic companion to the two panic-network examples. Its causal propositions
 # form a directed acyclic graph with a fork at modality-specific activation and
 # a collider at ease of conceptual access, so implications() derives a basis set
-# from it where the panic examples are refused for their feedback loop.
-schema_version: "1.0"
+# from it where the panic examples are refused for their feedback loop. Three
+# predictions and the phenomenon state machine-readable claims, which
+# entailments() reads against that graph, and each rival states propositions of
+# its own, which discriminate() sets against the theory's.
+schema_version: "1.1"
 id: "modality-switching-2026"
 title: "Modality switching in grounded conceptual processing"
 maturity: "developing"
@@ -64,6 +67,12 @@ propositions:
 
 boundary_conditions: ["adult native speakers", "concrete nouns and their properties", "no sensory impairment in the modalities tested", "visual word presentation", "consecutive trials within one block", "no interpolated task between trials", "single words without sentence context"]
 
+phenomena:
+  - id: ph1
+    statement: "Words whose referents are experienced more strongly through the senses are recognised and named faster, beyond what concreteness and imageability predict."
+    claim: {kind: association, x: c_sensorimotor_experience, y: c_conceptual_access, sign: positive}
+    source_doi: "10.1016/j.cognition.2012.07.010"
+
 predictions:
   - id: pred1
     derives_from: [p1, p2]
@@ -72,6 +81,7 @@ predictions:
     risk_score: 0.4
     severity: 0.45
     diagnostic_vs: []
+    claim: {kind: effect, x: c_modality_activation, y: c_switch_cost, sign: positive}
   - id: pred2
     derives_from: [p1, p2]
     statement: "In that design the switch cost lies between 20 and 60 ms, averaged over items and participants."
@@ -99,13 +109,16 @@ predictions:
     risk_score: 0.9
     severity: 0.75
     diagnostic_vs: [alt_grounding_by_interaction]
+    claim: {kind: effect, x: c_modality_activation, y: c_conceptual_access, sign: positive}
   - id: pred4
     derives_from: [p1, p4]
     statement: "Across a corpus of concrete nouns matched for length, modality-specific perceptual strength and lexical familiarity correlate no more strongly than 0.10 in absolute value."
     type: "interval"
+    bounds: {lower: -0.10, upper: 0.10}
     risk_score: 0.7
     severity: 0.65
     diagnostic_vs: [alt_symbol_interdependency]
+    claim: {kind: association, x: c_sensorimotor_experience, y: c_lexical_familiarity, sign: zero}
 
 auxiliary_assumptions:
   - id: aux1
@@ -132,15 +145,32 @@ test_outcomes:
     se: 6
     registered: null
 
+# Each rival's propositions are a simplified reading of its source, written
+# over this theory's constructs to show discriminate(). In grounding by
+# interaction, perceptual activation follows access to an abstract concept
+# rather than feeding it. In symbol interdependency, the statistics of language
+# mirror perceptual experience, which this encoding states as an association
+# between that experience and familiarity with the word form.
 alternatives:
   - id: alt_grounding_by_interaction
     label: "Grounding by interaction"
     key_constructs: ["abstract conceptual representation", "sensorimotor activation as a downstream consequence"]
     source_doi: "10.1016/j.jphysparis.2008.03.004"
+    propositions:
+      - {id: g1, from: c_sensorimotor_experience, to: c_modality_activation, relation: increases}
+      - {id: g2, from: c_conceptual_access, to: c_modality_activation, relation: increases}
+      - {id: g3, from: c_modality_activation, to: c_switch_cost, relation: increases}
+      - {id: g4, from: c_lexical_familiarity, to: c_conceptual_access, relation: increases}
   - id: alt_symbol_interdependency
     label: "Symbol interdependency"
     key_constructs: ["linguistic distributional statistics", "perceptual simulation as a slower second route"]
     source_doi: "10.1111/j.1756-8765.2010.01106.x"
+    propositions:
+      - {id: s1, from: c_sensorimotor_experience, to: c_modality_activation, relation: increases}
+      - {id: s2, from: c_modality_activation, to: c_switch_cost, relation: increases}
+      - {id: s3, from: c_modality_activation, to: c_conceptual_access, relation: increases}
+      - {id: s4, from: c_lexical_familiarity, to: c_conceptual_access, relation: increases}
+      - {id: s5, from: c_sensorimotor_experience, to: c_lexical_familiarity, relation: associates}
 
 formal_model:
   type: "sem"

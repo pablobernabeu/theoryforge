@@ -1,6 +1,5 @@
 ---
 title: "Developing and testing a theory"
-output: rmarkdown::html_vignette
 ---
 
 ```{r setup, include = FALSE}
@@ -18,439 +17,611 @@ has_diagram <- requireNamespace("DiagrammeR", quietly = TRUE) &&
 library(theoryforge)
 ```
 
-The companion vignette covers building a theory and checking its rigour. This
-article continues the workflow into development and testing. It shows how to
-grade the riskiness of each prediction's claim, derive what the causal graph
-forbids in data, export a preregistration, appraise an amendment in Lakatosian
-terms, compile a measurement model for `lavaan` and assemble a reviewer-facing
-audit bundle. The worked example reads the panic-network fixture, and later
-sections also read the modality-switching fixture, the 2026 revision of the
-panic network and the weak-theory fixture. All four are included with the
-package, so every chunk that the page runs needs only `theoryforge`, apart from
-the five that render a diagram with `tf_render_diagram()`. Those also need the
-optional DiagrammeR and DiagrammeRsvg packages, and the page skips them when
-either is missing.
+The Get started vignette reads, validates, scores and builds a theory. This
+article continues with the stages of developing and testing it. It appraises an
+amendment, derives what the theory's causal graph commits it to, compares the
+theory with a rival, writes the theory and hypotheses sections of a
+preregistration, grades a test after the data and assembles the dossier.
+The examples read the theories that ship with the package through
+`tf_example_path()`, so every chunk needs only `theoryforge`, apart from those
+that draw a diagram with `tf_render_diagram()`, which also need the optional
+DiagrammeR and DiagrammeRsvg packages and are skipped without them.
 
-```{r read}
-theory <- tf_read(
-  system.file("fixtures/panic-network.theory.yaml", package = "theoryforge")
-)
-theory$id
-```
+## Developing: appraising an amendment
 
-## The severity rubric
-
-A prediction earns evidential weight in proportion to the risk it takes. A
-point prediction stakes more on the data than a directional one, and that
-asymmetry should be made explicit before any test is run. `tf_severity()` is a
-pre-data rubric of claim form. It reports, for each prediction in file order,
-the riskiness of its declared type and the resulting computed severity.
-
-```{r severity}
-tf_severity(theory)
-```
-
-The `risk_score` reflects the prediction type, while `computed_severity`
-applies the directional discount and the diagnostic bonus defined in the
-specification, both of them the package's conventions. The rubric reads only
-the declared type and the named rivals, never the statement or the data. It
-therefore says nothing about how severely a claim has been tested, which
-depends on the design and the data. Reading these values before data
-collection guards against treating a hard-to-fail prediction as though it were
-a risky one.
-
-## What the causal graph commits you to
-
-Severity scores the predictions a theory states. A causal theory also commits
-itself to claims it never states, because the propositions taken together are a
-graph, and the graph implies a set of conditional independencies.
-`tf_implications()` derives them. Each directed relation (increases, decreases,
-causes, mediates and moderates) is an arrow, and an association is a
-bidirected edge, covariance the theory leaves unexplained. Every pair of
-constructs with no edge between them yields one claim when some set of other
-constructs separates them, usually the parents of both. When every relation is
-directed, those claims are the basis set, from which every other independence
-the graph implies follows. Each claim is something a study can be designed to
-look for and fail to find. An association can leave a pair that no set
-separates, and `tf_implications()` lists such a pair under `inseparable`, since
-the theory then implies no independence for it.
-
-By default, `tf_implications()` derives no statements from the panic-network
-fixture. Its third proposition returns from perceived threat to arousal,
-closing the feedback loop the theory is about, and the function stops with an
-error on a graph with a cycle unless the call specifies how to read it.
-
-```{r implications-cycle, error = TRUE}
-tf_implications(theory)
-```
-
-The error message names the cycle and the option for reading such a graph. A
-cyclic graph does imply conditional independencies, and dagitty accepts the
-`causal_dag` export of one. dagitty reads it by d-separation, though, which a
-model with feedback is guaranteed to satisfy only in special cases, a linear
-model among them. The criterion that holds whenever each feedback loop has a
-unique equilibrium is sigma-separation
-([Bongers et al., 2021](https://doi.org/10.1214/21-AOS2064)), and
-`cycles = "sigma"` applies it.
-
-```{r implications-sigma}
-implied <- tf_implications(theory, cycles = "sigma")
-lapply(implied$feedback, unlist)
-implied$implications[[1]]$statement
-```
-
-The loop between arousal and perceived threat is the one feedback loop.
-Holding perceived threat fixed cuts the only way out of the loop towards
-avoidance. The theory therefore implies that arousal and avoidance are
-independent given perceived threat, a claim it never states and a study could
-refute. The claim rests on an assumption the graph cannot check, that for given
-inputs the loop settles into a single equilibrium. A network theory that posits
-alternative stable states, such as a calm state and a panic state that each
-sustain themselves, violates the assumption, and the claim is then not
-guaranteed. `tf_simulate()` runs the loop over time.
-
-A second fixture is a theory of modality switching in grounded conceptual
-processing, and its causal graph is acyclic. Sensorimotor experience with a
-concept drives activation of the modality-specific perceptual system. That
-activation both raises the cost of switching modality between consecutive
-trials and eases conceptual access, which lexical familiarity with the word
-form eases as well.
-
-```{r implications}
-switching <- tf_read(
-  system.file("fixtures/modality-switching.theory.yaml", package = "theoryforge")
-)
-
-implied <- tf_implications(switching)
-implied$n_edges
-implied$n_implications
-writeLines(vapply(implied$implications, function(i) i$statement, character(1)))
-```
-
-Five constructs and four causal propositions leave six non-adjacent pairs, and
-so six claims, each written in the notation dagitty prints. Switch cost and ease
-of conceptual access are the two children of a fork at modality activation, so
-the theory says the correlation between them is entirely due to that shared
-cause and vanishes once it is held fixed. Sensorimotor experience and lexical
-familiarity meet only at the collider at conceptual access, and the theory says
-they are unrelated to each other with nothing held fixed. An account deriving
-perceptual knowledge from distributional word statistics would deny this claim.
-Neither claim appears among the theory's own predictions, and evidence against
-either could refute the theory. A version of the theory that granted
-sensorimotor experience and lexical familiarity some covariance would state it
-with `associates`, and the claim that the two are unrelated would then be
-withdrawn.
-
-The claims concern constructs, and a study observes them through fallible
-measures. Error in a conditioning construct leaves part of the dependence that
-holding it fixed should remove. A conditional claim tested on observed scores is
-therefore rejected too often, and more often the larger the sample
-([Westfall & Yarkoni, 2016](https://doi.org/10.1371/journal.pone.0152719)). Take
-a chain whose two paths have standardised coefficients of .5, with the middle
-construct measured at a reliability of .8. A partial-correlation test at the 5
-per cent level then rejects the true claim in about 14, 29 and 51 per cent of
-studies of 200, 500 and 1,000 observations. Five of the six claims above are
-conditional. They are better tested in a latent-variable model, which takes the
-measurement error into account
-([Westfall & Yarkoni, 2016](https://doi.org/10.1371/journal.pone.0152719)). The
-measurement model that `tf_compile_sem()` writes is one starting point, and each
-implied independence can be tested in it separately
-([Thoemmes et al., 2018](https://doi.org/10.1037/met0000147)).
-
-## Preregistration
-
-`tf_preregister()` renders the hypotheses section of a preregistration as a
-single Markdown string. Each prediction is listed with its claim type and
-derivation, the auxiliary assumptions that protect it, the registered rivals it
-discriminates and its test record. The header gives the theory's version, when
-it has one, and says whether every prediction cites declared propositions, a
-check of references that does not show that a prediction follows from them. A
-section lists the conditional independencies that the causal graph implies, or
-says why there are none, and a severity line for each prediction closes the
-document. The output is the same on every run, and because it is Markdown, it
-renders below.
-
-```{r prereg, results = "asis"}
-prereg <- tf_preregister(theory)
-cat(prereg)
-```
-
-The document marks the first prediction as tested and gives the date and
-registration of the test it passed. It also states that the feedback loop
-leaves the implied independencies underived by default.
-
-A prediction can record the sampling plan of its test, the planned sample,
-alpha, smallest effect of interest and power, in a `test` block. The document
-then lists the plans in a section of their own after the hypotheses, and this
-theory records none. The theory file holds no study design, analysis plan or
-inference criteria, so a registry needs more than this section. A template such
-as PRP-QUANT sets out the rest
-([Bosnjak et al., 2022](https://doi.org/10.1037/amp0000879)).
-
-Passing a `path` writes the same Markdown to disk with LF line endings.
-
-```{r prereg-write}
-prereg_path <- tempfile(fileext = ".md")
-invisible(tf_preregister(theory, path = prereg_path))
-file.exists(prereg_path)
-```
-
-## Appraising an amendment
-
-When a theory changes, the question is whether the change is progressive, in
-that it predicts and then corroborates something new, or degenerating, in that
-it only adds assumptions to absorb anomalies. `tf_appraise_amendment()`
-compares an amended theory against its prior version and returns a verdict in
-those terms.
-
-Here, the prior is the panic-network fixture and the amended version is its 2026
-revision. The revision adds a proposition, a direct path from arousal to
-avoidance, and derives from it a new prediction that a registered test later
-corroborates. It introduces no ad hoc assumption.
+A theory changes as it meets data, and the question is whether a change
+strengthens it. `tf_appraise_amendment()` compares an amended version with its
+prior version, the version before the new predictions were stated, and
+classifies the change as progressive, degenerating or neutral, by fixed rules
+that borrow the terms of Lakatos's methodology of research programmes.
 
 ```{r appraise}
-v2 <- tf_read(
-  system.file(
-    "fixtures/panic-network-2026-v2.theory.yaml",
-    package = "theoryforge"
-  )
-)
+v1 <- tf_read(tf_example_path("panic-network.theory.yaml"))
+v2 <- tf_read(tf_example_path("panic-network-2026-v2.theory.yaml"))
 
-appraisal <- tf_appraise_amendment(v2, theory)
-appraisal$verdict
-appraisal$new_predictions
-appraisal$corroborated_new
-appraisal$articulated
-appraisal$ad_hoc_assumptions
+appraisal <- tf_appraise_amendment(v2, v1)
+str(appraisal[c("verdict", "new_predictions", "corroborated_new", "dropped",
+                "ad_hoc_assumptions", "content_lost", "implications_lost",
+                "implications_lost_unrefuted", "signs_lost")])
 ```
 
-A `progressive` verdict reflects new content that survived a test. Because the
-appraisal compares what the two versions claim, a prediction that only changed
-its identifier is reported under `renamed`. One derived only from propositions
-the prior already held is reported under `articulated` and does not make the
-amendment progressive. Had the amendment instead added assumptions tied to
-specific anomalies without generating corroborated predictions, the verdict
-would be `degenerating`.
+The first version implies that arousal and avoidance are independent given
+perceived threat and states that independence as `pred_indep`, which a test
+refuted. The second drops `pred_indep`, adds a direct path from arousal to
+avoidance and derives from it a new prediction that a registered test
+corroborates. It gives up one implied independence, the refuted one. It also
+gives up a sign. Both versions say that perceived threat causes arousal without
+saying in which direction, so in the second version the new path opens a route
+from threat to avoidance through arousal whose sign is not stated. The first
+version entails that raising perceived threat raises avoidance, and the second
+does not, so the amendment loses unrefuted content and is `neutral`. Stating
+that threat increases arousal in both versions would make it `progressive`.
 
-## Compiling a measurement model
+The verdict is `progressive` when a corroborated new prediction adds content, no
+content is lost, no ad hoc assumption is added, no corroborated prediction is
+dropped and no failed prediction is weakened. It is never `progressive` when the
+causal graph of either version cannot be read, since the content of the two
+cannot then be compared. It is `degenerating` when an ad hoc assumption is added
+or a failed prediction is weakened and no corroborated new prediction adds
+content. Any other combination is `neutral`, theoryforge's label for an
+amendment that meets neither rule. A new prediction adds no content when it
+derives from no proposition or only articulates what the prior version already
+held, and a prediction under a new id with the same statement and type is
+reported as `renamed`. An assumption added for an anomaly is ad hoc when it
+protects no new prediction other than that anomaly, or when some of those
+predictions have been tested and none is corroborated. While all of them are
+untested, it is `pending`. An assumption rewritten under its id is appraised as
+a new one is, and one moved unchanged to another id is not appraised. Any change
+of wording counts, even one that keeps the meaning, so a core assumption
+reworded under its id is appraised and, when it protects a prediction that
+failed in the prior, is read as answering it. Each appraised assumption that
+answers an anomaly is listed in `assumptions` with its `change`, `new` or
+`revised`.
 
-When constructs carry measurement indicators, `tf_compile_sem()` compiles the
-theory into `lavaan` model syntax written for `lavaan::sem()`. It returns a
-plain string and does not require `lavaan` to be installed. Constructs with
-indicators become latent variables with `=~`, and propositions become
-structural paths with `~` and covariances with `~~`. The modality-switching
-theory shows what else the syntax contains.
+The verdict holds only if what the two files declare is true, the test outcomes
+and the `added_for` and `protects` of each assumption above all. The appraisal
+reads no dates and nothing about where the data came from, so it cannot tell a
+prediction from an accommodation of data already seen, and deciding which
+version is the prior is the caller's responsibility. Read `refuted_new` and
+`corroborated_new_severity` with the verdict: one corroborated new prediction
+among many that failed, or a pass whose own estimate lies outside the claimed
+region, is enough for `progressive`. `?tf_appraise_amendment` lists the other
+fields of the result, and the article 'Methodological foundations' gives the
+full rule.
+
+## Testing
+
+Testing starts from what the theory commits itself to. The testing sections
+read the modality-switching theory, whose causal graph is acyclic. Three of its
+four predictions and its one phenomenon state machine-readable claims, and its
+two rivals state propositions of their own. Where a feedback loop matters, the
+sections read the panic-network theory instead.
+
+```{r switching}
+switching <- tf_read(tf_example_path("modality-switching.theory.yaml"))
+```
+
+### The claim-form rubric
+
+`tf_severity()` grades each prediction before any data, by the form of its
+claim. The base risk rises with the strength of the claim, from `existence` to
+`point`. A directional prediction is discounted for the correlations a field
+shows anyway, and a prediction that names a registered rival in `diagnostic_vs`
+gains a small bonus.
+
+```{r severity}
+tf_severity(switching)
+```
+
+The values, the discount and the bonus are the package's conventions. The
+rubric reads only the declared type and the named rivals, so it ranks claims by
+their form and says nothing about how severely a claim has been tested, which
+depends on the design and the data. Post-data severity, further below, reads
+the data.
+
+### What the causal graph implies
+
+A theory's propositions together form a graph, and the graph implies
+conditional independencies that the theory does not state. `tf_implications()`
+derives them. Each directed relation is an arrow, and an association is a
+bidirected edge, covariance the theory leaves unexplained. The graph is read as
+complete: every pair of constructs in it that no proposition joins is read as
+having no direct effect on each other and no unexplained association. Every
+such pair yields one statement when some set of other constructs separates it,
+usually the parents of both. The statements are consequences of the graph as
+encoded, so they are the theory's commitments only if its authors meant those
+omissions. When every relation is directed, these statements are the basis set,
+from which every other independence the graph implies follows when the
+distribution has the composition property, as a multivariate normal one does.
+
+```{r implications}
+statements <- function(implied) {
+  writeLines(vapply(implied$implications, function(i) i$statement, character(1)))
+}
+statements(tf_implications(switching))
+```
+
+Switch cost and conceptual access are the two children of a fork at modality
+activation, so the theory says that their correlation is due to that shared
+cause and vanishes once it is held fixed. Sensorimotor experience and lexical
+familiarity meet only at the collider at conceptual access, so the theory says
+they are unrelated with nothing held fixed. The first statement is not among
+the theory's predictions, whereas the second is stated as `pred4`. Evidence
+against either would count against the theory as encoded, including the
+omissions the statement rests on.
+
+The basis set conditions on the parents of both constructs, which can be more
+than a single test needs. `given = "minimal"` prunes each conditioning set until
+none of its members can be dropped.
+
+```{r implications-minimal}
+statements(tf_implications(switching, given = "minimal"))
+```
+
+A minimal set holds fewer constructs, and that matters because the constructs
+are measured with error. Error in a conditioning construct leaves part of the
+dependence that holding it fixed should remove, so a conditional statement
+tested on observed scores is rejected too often, and more often the larger the
+sample ([Westfall & Yarkoni, 2016](https://doi.org/10.1371/journal.pone.0152719)).
+Take a chain whose two paths have standardised coefficients of .5, with the
+middle construct measured at a reliability of .8. The chunk below computes the
+partial correlation of the two ends given the observed middle and the rate at
+which a test at the 5 per cent level rejects the true statement.
+
+```{r measurement-error}
+r_observed <- 0.5 * sqrt(0.8)            # each end with the observed middle
+partial <- (0.5 * 0.5 - r_observed^2) / (1 - r_observed^2)
+n <- c(200, 500, 1000)
+z <- atanh(partial) * sqrt(n - 4)
+data.frame(n = n, partial = round(partial, 4),
+           rejected = round(pnorm(z - 1.96) + pnorm(-z - 1.96), 2))
+```
+
+The minimal statements suit tests of single pairs. They are no longer a basis
+set, so their tests are not to be combined into one test of the model, as the
+tests of a basis set can be. A conditional statement is better tested in a
+latent-variable model, which takes the measurement error into account, and each
+statement can be tested in such a model separately
+([Thoemmes et al., 2018](https://doi.org/10.1037/met0000147)).
+
+A graph with a feedback loop is refused by default. The panic-network theory has
+a loop between arousal and perceived threat.
+
+```{r implications-cycle, error = TRUE}
+tf_implications(v1)
+```
+
+```{r implications-sigma}
+looped <- tf_implications(v1, cycles = "sigma")
+lapply(looped$feedback, unlist)
+statements(looped)
+```
+
+The d-separation criterion, which dagitty applies to any graph, is guaranteed to
+hold in a model with feedback only in special cases, a linear model among them.
+Sigma-separation holds whenever each feedback loop settles into a unique
+equilibrium ([Bongers et al., 2021](https://doi.org/10.1214/21-AOS2064)), and
+`cycles = "sigma"` applies it. A theory that posits alternative stable states,
+such as a calm state and a panic state that each sustain themselves, violates
+that assumption, and its statements are then not guaranteed.
+
+### What the causal graph entails
+
+A prediction or a phenomenon can state its claim in machine-readable form, as
+the effect of one construct on another or the association between two, with a
+sign.
+
+```{r claim}
+str(switching$predictions[[1]]$claim)
+```
+
+`tf_entailments()` reads each claim against the graph. The signs of the routes
+between the two constructs decide whether the graph entails the claim,
+contradicts it or leaves it undetermined, and `via` names the propositions the
+verdict rests on. For an effect claim that no feedback loop reaches,
+`adjustment` gives a smallest set of constructs whose adjustment would identify
+the effect in observational data, or a minimal set when more than 12 constructs
+are candidates. Here it is the empty set. For other claims, it is `NA`.
+`identified` reports identification by adjustment alone, so an effect without
+such a set may still be identified by other means, such as the front-door
+criterion, and a set for a cause or an outcome marked latent assumes a measure
+of it.
+
+```{r entailments}
+entailed <- tf_entailments(switching)
+listed <- function(x) if (identical(x, NA)) NA_character_ else paste(unlist(x), collapse = ", ")
+data.frame(
+  id = vapply(entailed$claims, function(c) c$id, character(1)),
+  kind = vapply(entailed$claims, function(c) c$kind, character(1)),
+  sign = vapply(entailed$claims, function(c) c$sign, character(1)),
+  verdict = vapply(entailed$claims, function(c) c$verdict, character(1)),
+  via = vapply(entailed$claims, function(c) listed(c$via), character(1)),
+  adjustment = vapply(entailed$claims, function(c) listed(c$adjustment), character(1))
+)
+```
+
+The derived signs hold when the graph is the causal structure, with no common
+cause of two constructs left out unless an association stands for it, and when
+each directed relation acts in its stated direction whatever the other inputs,
+as in a linear model or a uniformly monotone one. A verdict whose `faithfulness`
+is `TRUE` also assumes that effects do not cancel exactly, along a route of
+unknown sign or between routes of opposite signs, and the preregistration and
+the dossier end its line with `unless effects cancel exactly`. Under
+`cycles = "sigma"`, the sign of an effect further assumes that the system with
+the intervened construct held fixed settles, which the stability of the system
+as observed does not ensure. The function shows what the propositions commit the
+theory to and does not show whether a claim holds in data. The checklist's
+derivation-chain item counts a prediction whose claim the graph contradicts or
+leaves open as not derived from the propositions it cites.
+
+### Equivalent models
+
+Graphs that imply the same conditional independencies are Markov equivalent, and
+no test of conditional independence can tell them apart
+([Andersson et al., 1997](https://doi.org/10.1214/aos/1031833662)). In
+structural equation modelling, this is the problem of equivalent models
+([MacCallum et al., 1993](https://doi.org/10.1037/0033-2909.114.1.185)).
+`tf_equivalent_models()` marks each directed edge as compelled, pointing the same
+way in every equivalent graph, or reversible.
+
+```{r equivalent}
+equivalent <- tf_equivalent_models(switching)
+str(equivalent$v_structures)
+data.frame(
+  proposition = vapply(equivalent$edges, function(e) listed(e$propositions), character(1)),
+  from = vapply(equivalent$edges, function(e) e$from, character(1)),
+  to = vapply(equivalent$edges, function(e) e$to, character(1)),
+  status = vapply(equivalent$edges, function(e) e$status, character(1))
+)
+```
+
+The collider at conceptual access compels the two edges into it. The other two
+edges are reversible, so no test of conditional independence can tell whether
+sensorimotor experience drives modality activation or the reverse. Telling the
+direction apart needs an intervention, a temporal order or distributional
+assumptions such as non-Gaussian errors. The function does not know which
+constructs a study manipulates, so an edge out of a construct that an
+experiment sets is listed as reversible all the same. The rule covers acyclic
+graphs of directed relations, so for a theory with a feedback loop or an
+association the record says why it was not computed.
+
+```{r equivalent-loop}
+tf_equivalent_models(v1)$reason
+```
+
+### Comparing the theory with a rival
+
+A registered alternative can state its own propositions over the theory's
+constructs, under `alternatives[].propositions`. In grounding by interaction,
+perceptual activation follows access to the concept instead of feeding it.
+
+```{r rival}
+rival <- switching$alternatives[[1]]
+do.call(rbind, lapply(rival$propositions, as.data.frame))
+```
+
+`tf_discriminate()` sets the two graphs side by side. It lists the claims of the
+theory on which the two graphs give opposite verdicts, the independencies one
+graph implies and the other does not, and the effects and associations whose
+sign differs between them. Each of these is a result that could tell the two
+accounts apart.
+
+```{r discriminate}
+compared <- tf_discriminate(switching, "alt_grounding_by_interaction")
+compared$markov_equivalent
+unlist(compared$counts)
+do.call(rbind, lapply(compared$claims, as.data.frame))
+writeLines(vapply(compared$independencies,
+                  function(i) paste(i$implied_by, i$statement), character(1)))
+```
+
+The rival can also be a theory of its own, whose constructs are matched to the
+theory's by id. The comparison reads only the propositions each account states
+and does not say which account the data favour. The checklist's diagnosticity
+item reads the same verdicts: a prediction that names a rival in `diagnostic_vs`
+counts only when the rival's own graph does not give its claim the same verdict.
+
+### Preregistration
+
+`tf_preregister()` writes the theory and hypotheses sections of a
+preregistration as Markdown. Its header gives the theory's version and content
+hash and the status of the checklist's derivation chain, read with the
+document's `cycles`, and, when the causal graph has a feedback loop, a line that
+says whether the document refuses the loop or reads it by sigma-separation. A
+line in italics then says what the document holds and what must be added before
+registration. The hypotheses section opens with the assumptions that the
+verdicts on the claims rest on. Each hypothesis is listed with its type, its
+derivation, its claim and what the graph says of it, the adjustment an
+observational test would need, the auxiliary assumptions that protect it, the
+rivals it is declared to discriminate and its test record. The hypotheses
+section of the modality-switching theory reads as follows.
+
+```{r prereg}
+prereg <- tf_preregister(switching)
+start <- regexpr("## Hypotheses", prereg, fixed = TRUE)
+end <- regexpr("## Sampling plan", prereg, fixed = TRUE)
+cat(substr(prereg, start, end - 1))
+```
+
+A sampling plan section, the implied conditional independencies, with a line
+that says they rest on the omissions of the graph, and a severity line for each
+prediction follow. A registry also needs the study design, the
+analysis plan and the inference criteria, which a theory file does not hold, and
+a template such as PRP-QUANT sets them out
+([Bosnjak et al., 2022](https://doi.org/10.1037/amp0000879)). Passing a `path`
+also writes the document to disk, with LF line endings.
+
+### Post-data severity
+
+A prediction with `bounds` states the region of a quantity its claim allows,
+and a test outcome can record the estimate the test observed and its standard
+error. `tf_post_data_severity()` computes, for each such outcome, how severely
+the claim passed. For a claim with one bound, it is the post-data severity of
+[Mayo and Spanos (2006)](https://doi.org/10.1093/bjps/axl003): the probability
+that the test would have given a result less in accord with the claim, had the
+quantity been at the bound. For a claim with two bounds, it takes the smaller of
+the two one-sided values, the package's own extension, which equals 1 minus the
+p value of the z-based two one-sided tests of equivalence
+([Lakens, 2017](https://doi.org/10.1177/1948550617697177)).
+
+The theory's interval prediction for the switch cost records one outcome, with
+illustrative values. A second outcome is added below, as a replication whose
+estimate falls above the region.
+
+```{r post-data-severity}
+replicated <- tf_add_test_outcome(
+  switching, "pred2", TRUE, estimate = 63, se = 6,
+  observed = "Illustrative values: switch cost 63 ms (SE 6 ms)."
+)
+tf_post_data_severity(replicated)
+```
+
+The dossier writes each value beside its outcome in its test record. It writes
+a value that rounds to 1 as `> 0.999` and one that rounds to 0 as `< 0.001`,
+since a test cannot give certainty, and it marks an outcome recorded as passed
+whose estimate lies outside the region and one recorded as failed whose
+estimate lies inside it.
+
+```{r dossier-test-record}
+dossier <- tf_dossier(replicated)
+start <- regexpr("## Test record", dossier, fixed = TRUE)
+end <- regexpr("## Evidence", dossier, fixed = TRUE)
+cat(substr(dossier, start, end - 1))
+```
+
+The computation uses a normal approximation and treats the standard error as
+known, so it overstates the severity of an estimate inside the region when the
+standard error comes from a small sample. The standard error must describe the
+sampling distribution of the estimate at the bound. The value is nominal, so it
+does not account for selection, such as a subgroup chosen after seeing the data,
+and it does not check the statistical adequacy of the model behind the
+estimate. A high value does not show that the claim is true, and the checklist
+does not read it.
+
+### The dossier
+
+`tf_dossier()` assembles one Markdown document for a reviewer or an editor. Its
+header gives the content hash, the checklist version, the checklist score with
+its range and the gate, and, when the causal graph has a feedback loop, how the
+dossier reads it. A paragraph in italics then says what the score describes,
+what the gate checks and what the dossier is: the test outcomes, evidence,
+registrations and declared severities are as the author recorded them, and the
+dossier checks none of them beyond the inconsistencies it flags, so it is not an
+independent audit. Sections on the checklist, where the two items that decide
+the gate are marked `(blocker)`, the severities, the test record, the evidence,
+the claims and the causal graph, the equivalent models for observational data,
+the rivals and the provenance follow, and the preregistration closes it. The
+same theory file gives the same dossier for the same `cycles`, so it can be
+committed or attached to a submission. Its header and sections read as follows.
+
+```{r dossier}
+dossier <- tf_dossier(switching)
+lines <- strsplit(dossier, "\n", fixed = TRUE)[[1]]
+writeLines(lines[seq_len(grep("^## Checklist", lines) - 1)])
+grep("^## ", lines, value = TRUE)
+```
+
+### Compiling a measurement model
+
+`tf_compile_sem()` writes lavaan model syntax for `lavaan::sem()` and does not
+need lavaan installed. Constructs with indicators become latent variables with
+`=~`, directed propositions labelled paths with `~` and associations covariances
+with `~~`. Comments say whether the paths are identified, or what identifying
+them would need, and list the sign each `increases` or `decreases` proposition
+states, and the effect each claim is about is defined with `:=`, so that lavaan
+estimates the quantity the claim concerns.
 
 ```{r sem}
 cat(tf_compile_sem(switching))
 ```
 
-The last block fixes two covariances at zero, those behind the two claims
-singled out above. Sensorimotor experience and lexical familiarity are
-exogenous, and switch cost and conceptual access are terminal.
-`lavaan::sem()` frees the covariance of each such pair by default, so a fit with
-its defaults could not refute either claim. With the block, the structural
-model tests all six. Deleting the block restores lavaan's defaults.
-
-The syntax is a starting point for a fit. The indicator names are the sanitised
-measurement entries and must match columns of the data, so entries written as
-column names give syntax that can be fitted as it stands. `lavaan::sem()`
-treats a construct with a single indicator as measured without error, and a
-comment in the syntax notes this. A manipulation or a categorical predictor with
-more than two levels has to be re-specified by hand. A feedback loop makes the
-model non-recursive, and such a model may not be identified
-([Bollen, 1989](https://doi.org/10.1002/9781118619179)). The syntax flags each
-loop in a comment. The panic network's loop between arousal and perceived threat
-leaves its model unidentified as it stands, and the model needs an instrument or
-a further restriction before it can be fitted.
-
-## The reviewer audit bundle
-
-`tf_dossier()` assembles a single Markdown document for a reviewer or editor,
-and the same theory always produces the same dossier. It opens with the header
-and the rigour-checklist table, followed by the severity list, the test record,
-the evidence, the provenance log and the preregistration. A reader can follow
-the theory from its claims through to the tests it has met and those it still
-faces. The header and the rigour-checklist table render below.
-
-```{r dossier, results = "asis"}
-dossier <- tf_dossier(theory)
-cat(strsplit(dossier, "\n## Severity", fixed = TRUE)[[1]][1])
-```
+The comment after the structural model says that its paths form no loop and that
+no pair of constructs is joined by both a path and a covariance, so the path
+coefficients are generically identified if the measurement model identifies the
+constructs ([Brito & Pearl, 2002](https://doi.org/10.1207/s15328007sem0904_1)).
+The last block fixes at zero the covariance of the two exogenous constructs and
+the residual covariance of the two terminal ones, which two of the implied
+independencies require. `lavaan::sem()` frees them by default, so a fit with its
+defaults could not refute either statement, and deleting the block restores the
+defaults. The indicator names are the measurement entries made safe for lavaan
+and must match columns of the data. A construct with a single indicator is
+treated as measured without error. A feedback loop makes the model
+non-recursive, and such a model may not be identified
+([Bollen, 1989](https://doi.org/10.1002/9781118619179)), so the syntax flags
+each loop in a comment and is a starting point for a fit.
 
 ## Rendering and depositing
 
 `tf_render_report()` writes the dossier as a Quarto source document, ready to
-render to HTML or PDF. With `render = FALSE`, which is the default, it writes the
-`.qmd` without calling Quarto. It returns the path of the file it wrote.
+render to HTML or PDF. A theory file may come from someone else, so the header
+tells Quarto to run no code, compile no OJS and load no MathJax, the theory's
+text is escaped so that Quarto reads it as text, and a theory whose text Quarto
+would decode as a shortcode is refused. With Quarto 1.11, reports of hostile
+theory files rendered this way to html, revealjs and dashboard, and opened in a
+browser that loaded their scripts and clicked their links, ran none of the
+code, shortcodes or scripts the files held. The escaping holds for Quarto and
+Pandoc alone: writers of other markup languages, such as `hugo-md`,
+`docusaurus-md`, `org` or `mediawiki`, write the text back for programs that
+can run it, so render such a file to `html`, `revealjs`, `dashboard`, `pdf`,
+`typst`, `docx`, `odt`, `pptx` or `epub`. Quarto also runs the scripts and
+filters that `_quarto.yml`, `_metadata.yml`, `_brand.yml` and `_extensions`
+name in the report's folder or any folder above it, so write the report into a
+folder of your own. With `render = FALSE`, the default, it writes the `.qmd`
+without calling Quarto, and it returns the path of the file it wrote.
 
 ```{r render-report}
-report_path <- tf_render_report(theory, tempfile(fileext = ".qmd"))
-basename(report_path)
+report_path <- tf_render_report(switching, tempfile(fileext = ".qmd"))
+file.exists(report_path)
 ```
 
-`tf_osf_push()` deposits the audit dossier on an Open Science Framework node, as
+`tf_osf_push()` deposits the dossier on an Open Science Framework node, as
 `<id>.dossier.md`. It defaults to `dry_run = TRUE`, which assembles the request
 and returns it without sending anything, so the planned deposit can be inspected
-offline and without a token. Only the dossier, the machine-checkable bundle a
-reviewer needs, is uploaded. The report written above stays on your own
-computer.
+offline and without a token.
 
 ```{r osf}
-str(tf_osf_push(theory, node = "ab12c"))
+str(tf_osf_push(switching, node = "ab12c"))
 ```
 
-The returned request records the method, the destination URL, the filename the
-deposit would create and the size of the dossier in bytes. Only a live deposit
-uses the network. It needs `dry_run = FALSE` together with a token, the node id
-and the curl package.
+A live deposit needs `dry_run = FALSE`, a personal access token, the node id and
+the curl package. OSF refuses a second file with the same name, which
+`tf_osf_push()` reports as an error with HTTP 409. Pass a filename that names the
+version, or `overwrite = TRUE` to send the dossier to the existing file as a new
+OSF version.
 
 ```{r osf-live, eval = FALSE}
-tf_osf_push(
-  theory,
-  node = "ab12c",
-  token = Sys.getenv("OSF_PAT"),
-  dry_run = FALSE
-)
+tf_osf_push(switching, node = "ab12c", token = Sys.getenv("OSF_PAT"),
+            dry_run = FALSE)
 ```
-
-OSF does not create a file whose name already exists in the project, so
-depositing the same theory a second time stops with HTTP 409. Either pass a
-filename that names the version, or add `overwrite = TRUE`, which lists the
-project folder first and sends the dossier to the existing file as a new OSF
-version. For any other HTTP status outside the range 200–299, `tf_osf_push()`
-also stops and reports that status, so a returned value always describes an
-upload that OSF accepted.
 
 ## Visualising the theory
 
-`tf_diagram()` exports several views of the same object. The `workflow` view
-traces the lifecycle from constructs, through propositions and predictions, to
-the recorded test outcomes.
-
-```{r workflow}
-cat(tf_diagram(theory, "workflow"))
-```
-
-Rendered with `tf_render_diagram()`, which passes the DOT to the DiagrammeR
-engine, the same view reads as a figure.
+`tf_diagram()` returns ten views of a theory. Seven are graphs written in
+Graphviz DOT, or for the `causal_dag` view in DAGitty's syntax, and three are SVG
+images. The Get started vignette shows the nomological network and the causal
+graph. The views below draw the panic-network theory, which records test
+outcomes and scope conditions, and each is drawn with `tf_render_diagram()`. The
+`workflow` view traces the theory from its constructs through its propositions
+and predictions to the recorded test outcomes.
 
 ```{r workflow-render, results = "asis", eval = has_diagram}
-cat(
-  '<div class="tf-figure tf-diagram">',
-  tf_render_diagram(theory, "workflow", as = "svg"),
-  '</div>',
-  sep = ""
-)
+cat('<div class="tf-figure tf-diagram">',
+    tf_render_diagram(v1, "workflow", as = "svg"), '</div>', sep = "")
 ```
 
-The `context` view places the theory among the scope conditions under which it
-is claimed to hold and the registered rivals it is meant to outpredict.
-
-```{r context}
-cat(tf_diagram(theory, "context"))
-```
+The `context` view places the theory among its scope conditions and the rivals
+it is meant to outpredict.
 
 ```{r context-render, results = "asis", eval = has_diagram}
-cat(
-  '<div class="tf-figure tf-diagram">',
-  tf_render_diagram(theory, "context", as = "svg"),
-  '</div>',
-  sep = ""
-)
+cat('<div class="tf-figure tf-diagram">',
+    tf_render_diagram(v1, "context", as = "svg"), '</div>', sep = "")
 ```
 
-The `pipeline` view links each prediction to its recorded test outcomes, one
-node for each. A prediction still awaiting a test has no outcome node, and a
-failed replication appears beside the pass it followed.
-
-```{r pipeline}
-cat(tf_diagram(theory, "pipeline"))
-```
+The `pipeline` view links each prediction to its test outcomes, one node for
+each, so a failed replication appears beside the pass it followed. The
+`provenance` view draws the provenance log.
 
 ```{r pipeline-render, results = "asis", eval = has_diagram}
-cat(
-  '<div class="tf-figure tf-diagram">',
-  tf_render_diagram(theory, "pipeline", as = "svg"),
-  '</div>',
-  sep = ""
-)
+cat('<div class="tf-figure tf-diagram">',
+    tf_render_diagram(v1, "pipeline", as = "svg"), '</div>', sep = "")
 ```
 
-The `provenance` view draws the theory's provenance log as a digraph. The log is
-held in the theory object and records how the theory reached its current state.
-
-```{r provenance}
-cat(tf_diagram(theory, "provenance"))
-```
-
-```{r provenance-render, results = "asis", eval = has_diagram}
-cat(
-  '<div class="tf-figure tf-diagram">',
-  tf_render_diagram(theory, "provenance", as = "svg"),
-  '</div>',
-  sep = ""
-)
-```
-
-The `venn` view takes the boundary conditions of each of the first three
-constructs, in file order, as a set. It returns an SVG showing where those
-scopes coincide and where they differ, with each region labelled by the number
-of conditions in it. The SVG renders inline because it is a self-contained
-image.
-
-```{r venn, results = "asis"}
-cat('<div class="tf-figure">', tf_diagram(theory, "venn"), '</div>', sep = "")
-```
-
-Two further views summarise the scoring. The `rigour` view draws the checklist
-as a status grid, colouring each item by its result and reporting the aggregate
-score and the gate.
+The `venn`, `rigour` and `severity` views are returned as SVG. The `venn` view
+draws the boundary conditions of the first three constructs as overlapping sets,
+the `rigour` view the checklist as a grid of statuses and the `severity` view
+one bar per prediction.
 
 ```{r rigour-view, results = "asis"}
-cat('<div class="tf-figure">', tf_diagram(theory, "rigour"), '</div>', sep = "")
+cat('<div class="tf-figure">', tf_diagram(v1, "rigour"), '</div>', sep = "")
 ```
 
-The `severity` view draws one bar per prediction, scaled by its computed
-severity.
-
-```{r severity-view, results = "asis"}
-cat(
-  '<div class="tf-figure">',
-  tf_diagram(theory, "severity"),
-  '</div>',
-  sep = ""
-)
-```
-
-The `development_roadmap` view turns the same checklist into a worklist by
-keeping only the items that still fail or warn, and it orders that worklist the
-way the work should be done. Items that block the gate come first, heaviest
-check first, and the advisory items follow. Each step shows its number, the
-criterion it is measured against and whether missing it blocks the gate or is
-advisory. The hub names the theory and its current standing. The panic network
-passes every check, so its roadmap reduces to that hub and an `all checks pass`
-node. The weak-theory fixture shows the worklist in full.
+The `development_roadmap` view turns the checklist into a worklist. It keeps the
+items that fail or warn and orders them as the work should be done: the items
+that block the gate first, heaviest first, then the advisory ones. The weak
+theory of the Get started vignette gives the full list, one numbered node for
+each item.
 
 ```{r roadmap}
-weak <- tf_read(
-  system.file("fixtures/weak-theory.theory.yaml", package = "theoryforge")
-)
-cat(tf_diagram(theory, "development_roadmap"))
+weak <- tf_read(tf_example_path("weak-theory.theory.yaml"))
 cat(tf_diagram(weak, "development_roadmap"))
 ```
 
-```{r roadmap-render, results = "asis", eval = has_diagram}
-cat(
-  '<div class="tf-figure tf-diagram">',
-  tf_render_diagram(weak, "development_roadmap", as = "svg"),
-  '</div>',
-  sep = ""
-)
+`?tf_diagram` documents each view.
+
+## Simulation
+
+`tf_simulate()` treats each construct as a state variable and propagates the
+signed network of propositions as a linear dynamical system. `increases` couples
+positively and `decreases` negatively. `causes` and `mediates` state no sign, so
+they are coupled positively by an assumption the record lists under
+`assumed_positive`, and `moderates` and `associates` are not coupled. A theory
+states no parameter values, so the trajectory is that of one linear model
+consistent with the signs the propositions state, with one gain `k` for every
+coupling and a decay at the rate `damping` for every state. Each row is the
+solution of the system at its time, computed with the matrix exponential,
+whatever the step size.
+
+The example closes a loop in which avoidance lowers arousal. The run covers 20
+time units in steps of 0.5 and prints the state every two time units.
+
+```{r simulate}
+regulation <- tf_theory("regulation-demo", "Arousal regulated by avoidance") |>
+  tf_add_construct("arousal", "Physiological arousal", "bodily activation") |>
+  tf_add_construct("threat", "Perceived threat", "appraised danger") |>
+  tf_add_construct("avoidance", "Avoidance behaviour", "protective withdrawal") |>
+  tf_add_proposition("p1", "arousal", "threat", "increases") |>
+  tf_add_proposition("p2", "threat", "avoidance", "increases") |>
+  tf_add_proposition("p3", "avoidance", "arousal", "decreases")
+
+sim <- tf_simulate(regulation, steps = 40, dt = 0.5)
+every_two <- seq(1, 41, by = 4)
+trajectory <- do.call(rbind, lapply(sim$trajectory[every_two], unlist))
+colnames(trajectory) <- unlist(sim$states)
+data.frame(time = (every_two - 1) * sim$dt, trajectory)
 ```
 
-All of these views are deterministic. The DOT strings render with any Graphviz
-engine, and the SVG views open in any browser. Together with the
-`nomological_net` and `causal_dag` views introduced in the Get started
-vignette, they complete the set of diagram types that `tf_diagram()` exports,
-each documented in `?tf_diagram`.
+Arousal falls first, pushed down by avoidance. Threat and avoidance rise briefly
+and then follow it down, each later than the one before, and arousal later
+climbs back above its starting value. The three constructs keep cycling, and at
+the default gain of 1 and damping of 0.5 the swings neither grow nor fade.
+
+Whether a feedback loop grows or settles is set by the gain against the
+damping, neither of which the theory states. The loop of arousal and perceived
+threat in the panic-network theory, closed by a `causes` proposition coupled
+positively by assumption, grows at the defaults, a gain of 1 and a damping of
+0.5, holds its level at a damping of 1 and settles above it. Time is in units
+of `1/k`, and the window that `steps` and `dt` choose decides what is seen. The
+last construct of a chain of five, which decays in the long run, shows only a
+rise in the default window of one time unit.
+
+```{r simulate-regime}
+ends <- lapply(c(0.5, 1, 1.5), function(damping) {
+  sim <- tf_simulate(v1, steps = 30, damping = damping)
+  stats::setNames(sim$trajectory[[31]], unlist(sim$states))
+})
+data.frame(damping = c(0.5, 1, 1.5), do.call(rbind, ends))
+
+chain <- tf_theory("chain", "A chain of five constructs")
+for (i in 0:4) chain <- tf_add_construct(chain, paste0("c", i), paste0("C", i), "A state.")
+for (i in 0:3) {
+  chain <- tf_add_proposition(chain, paste0("p", i), paste0("c", i), paste0("c", i + 1),
+                              "increases")
+}
+window <- function(steps) {
+  last <- vapply(tf_simulate(chain, steps = steps)$trajectory, `[[`, numeric(1), 5L)
+  c(time = steps * 0.1, end = last[[length(last)]], peak = max(last))
+}
+rbind(window(10), window(400))
+```
+
+A linear system has one equilibrium, or a continuum of them, and never two
+separate ones, so it cannot show the alternative stable states that some
+theories posit. `method = "euler"` takes fixed explicit steps, which stay close
+to the solution only while `dt` is small against the network's rates. On the
+regulation loop above, they inflate the oscillation, and `tf_simulate()` warns
+when an Euler trajectory departs from the exact one by more than 5 per cent of
+the larger of the exact value and the largest absolute starting value. `init`
+sets the starting values, one number for every construct or a named list such
+as `list(arousal = 1)`, which starts the constructs it leaves out at 0 and so
+traces the response to an impulse. No data enter the trajectory, and it does
+not show what the propositions imply beyond the signs it was built from.

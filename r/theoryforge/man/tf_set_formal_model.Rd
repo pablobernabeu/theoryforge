@@ -2,7 +2,7 @@
 % Please edit documentation in R/core.R
 \name{tf_set_formal_model}
 \alias{tf_set_formal_model}
-\title{Set the formal model (BUILDING mode)}
+\title{Set the formal model}
 \usage{
 tf_set_formal_model(theory, type, spec_ref = NULL)
 }
@@ -16,10 +16,12 @@ passes the checklist's formalisation item.}
 \item{spec_ref}{Optional reference to the model specification.}
 }
 \value{
-The (mutated) theory object.
+The theory with the formal model set.
 }
 \description{
-Set the formal model (BUILDING mode)
+Declares the theory's formal model and adds a provenance entry. A formal
+model declared earlier is replaced. R does not change the theory in place,
+so assign the result.
 }
 \examples{
 tf_theory("demo-1", "A demonstration theory") |>

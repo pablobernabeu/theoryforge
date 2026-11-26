@@ -2,7 +2,7 @@
 
 The table is defined once here and read wherever a relation's meaning matters.
 R's ``relations.R`` holds the same table (``.tf_RELATIONS``, ``.tf_DIRECTED``,
-``.tf_BIDIRECTED``).
+``.tf_BIDIRECTED``, ``.tf_PATHS``).
 """
 from __future__ import annotations
 
@@ -31,3 +31,9 @@ DIRECTED = frozenset(r for r, (kind, _) in RELATIONS.items() if kind == "directe
 # The relations that state unexplained covariance: the bidirected edges of that
 # graph, and the edges the nomological_net view draws without arrowheads.
 BIDIRECTED = frozenset(r for r, (kind, _) in RELATIONS.items() if kind == "bidirected")
+
+# The directed relations whose claim is the effect of `from` on `to` itself:
+# every directed relation but `moderates`, whose claim is that `from` modifies
+# the effects of other causes on `to`. compile_sem() writes each as a labelled
+# regression and simulate() couples each, both with the sign of the table.
+PATHS = frozenset(r for r in DIRECTED if r != "moderates")

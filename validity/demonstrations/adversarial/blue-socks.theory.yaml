@@ -1,0 +1,75 @@
+# Source: communication-and-apps/inputs/blue-socks.theory.yaml, validity audit of theoryforge at f72ce4c.
+# An implausible theory written with every field the checklist reads filled in,
+# to see what the score, the gate, the dossier and the appraisal say of it.
+# Its content is invented and false by design; the values are illustrative.
+schema_version: "1.1"
+id: "blue-socks"
+title: "Chromatic resonance theory of exam performance"
+maturity: "testing"
+theory_form: "process"
+version: {id: "v1", parent_id: null, content_hash: null}
+constructs:
+  - id: c_blue_socks
+    label: "Blue sock wearing"
+    definition: "Whether a student wears socks dyed blue on the day of an examination."
+    measurement: ["experimenter-issued sock colour", "photograph of the feet"]
+    boundary_conditions: ["undergraduates", "written examinations"]
+  - id: c_resonance
+    label: "Chromatic resonance"
+    definition: "A vibration of the ankle bones tuned by the wavelength of the sock dye."
+    measurement: ["ankle resonance meter reading"]
+    boundary_conditions: ["undergraduates", "indoor lighting"]
+  - id: c_exam_score
+    label: "Examination score"
+    definition: "The percentage of marks obtained in a timed written examination."
+    measurement: ["official transcript mark"]
+    boundary_conditions: ["undergraduates", "written examinations"]
+propositions:
+  - id: p1
+    from: c_blue_socks
+    to: c_resonance
+    relation: "increases"
+    mechanism: "Blue dye reflects light at a wavelength that sets the ankle bones vibrating at their natural frequency."
+  - id: p2
+    from: c_resonance
+    to: c_exam_score
+    relation: "increases"
+    mechanism: "Ankle resonance travels up the spine and synchronises the neurons that retrieve memorised material."
+boundary_conditions: ["undergraduates", "written examinations", "indoor lighting"]
+predictions:
+  - id: pred1
+    derives_from: [p1, p2]
+    statement: "Students randomly issued blue socks score between 4 and 8 percentage points higher than students issued grey socks."
+    type: "interval"
+    bounds: {lower: 4, upper: 8}
+    diagnostic_vs: [alt_placebo]
+    claim: {kind: effect, x: c_blue_socks, y: c_exam_score, sign: positive}
+  - id: pred2
+    derives_from: [p1]
+    statement: "Blue socks raise ankle resonance by between 10 and 20 units."
+    type: "interval"
+    bounds: {lower: 10, upper: 20}
+    diagnostic_vs: [alt_placebo]
+    claim: {kind: effect, x: c_blue_socks, y: c_resonance, sign: positive}
+auxiliary_assumptions:
+  - id: aux1
+    statement: "The ankle resonance meter measures chromatic resonance."
+    added_for: null
+    protects: [pred2]
+evidence:
+  - supports: pred1
+    direction: "corroborates"
+test_outcomes:
+  - prediction_id: pred1
+    observed: "Illustrative values for this audit, not a reported result."
+    passed: true
+    estimate: 6.1
+    se: 0.6
+    registered: "an invented registration"
+alternatives:
+  - id: alt_placebo
+    label: "Expectancy account"
+    key_constructs: ["expectancy"]
+    propositions:
+      - {id: a1, from: c_blue_socks, to: c_exam_score, relation: decreases}
+formal_model: {type: "ode", spec_ref: "models/resonance.py"}

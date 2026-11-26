@@ -21,6 +21,11 @@ NOTHING_NEW = {
     "ad_hoc_assumptions": [], "articulated": [], "underived": [],
     "corroborated_new_registered": [], "renamed": [], "dropped": [],
     "dropped_corroborated": [], "content_lost": [], "new_anomalies": [], "assumptions": [],
+    "theoretically_progressive": False, "empirically_progressive": False, "revised": [],
+    "weakened_refuted": [], "unresolved": [], "implications_compared": True,
+    "implications_lost": [], "implications_lost_unrefuted": [], "implications_gained": [],
+    "entailments_lost": [], "signs_lost": [], "protected_only": [], "refuted_new": [],
+    "corroborated_new_severity": [],
 }
 
 
@@ -130,20 +135,20 @@ def test_a_collection_that_is_not_a_list_is_refused_and_left_alone():
     t = tf.Theory(dict(base, constructs="arousal"))
     with pytest.raises(TypeError) as err:
         t.add_construct("c1", "C", "d")
-    assert str(err.value) == "cannot add to 'constructs': the theory holds a str there, not a list"
+    assert str(err.value) == "cannot add to 'constructs': the theory holds a string there, not a list"
     assert t.data["constructs"] == "arousal"
     assert "provenance" not in t.data
 
     t = tf.Theory(dict(base, propositions={"p1": "c1 -> c2"}))
-    with pytest.raises(TypeError, match="the theory holds a dict there, not a list"):
+    with pytest.raises(TypeError, match="the theory holds a mapping there, not a list"):
         t.add_proposition("p2", "c1", "c2", "causes")
 
     t = tf.Theory(dict(base, predictions=3))
-    with pytest.raises(TypeError, match="the theory holds an int there, not a list"):
+    with pytest.raises(TypeError, match="the theory holds a number there, not a list"):
         t.add_prediction("h1", "A claim.", "point")
 
-    t = tf.Theory(dict(base, alternatives=OrderedDict()))
-    with pytest.raises(TypeError, match="the theory holds an OrderedDict there, not a list"):
+    t = tf.Theory(dict(base, alternatives=OrderedDict(a1={"id": "a1"})))
+    with pytest.raises(TypeError, match="the theory holds a mapping there, not a list"):
         t.add_alternative("alt1", "A rival")
 
     # A malformed provenance log refuses the call before the item is stored.
@@ -212,5 +217,16 @@ def test_the_develop_help_example_started_from_a_copy_is_progressive():
     assert [p["id"] for p in prior.data["predictions"]] == ["h1"]
     assert new.appraise_amendment(prior) == {
         **NOTHING_NEW, "verdict": "progressive", "new_predictions": ["h2"],
-        "corroborated_new": ["h2"],
+        "corroborated_new": ["h2"], "theoretically_progressive": True,
+        "empirically_progressive": True,
+        "implications_gained": ["c_arousal _||_ c_avoid | c_threat"],
+        "corroborated_new_severity": [{"id": "h2", "severity": None}],
     }
+
+
+def test_a_builder_adds_to_an_empty_mapping_as_r_does():
+    # R builds an empty mapping and an empty sequence alike as list().
+    t = tf.Theory({"schema_version": "1.1", "id": "t", "title": "T", "maturity": "draft",
+                   "constructs": {}})
+    t.add_construct("a", "A", "The first construct.")
+    assert t.data["constructs"] == [{"id": "a", "label": "A", "definition": "The first construct."}]

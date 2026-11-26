@@ -191,12 +191,16 @@ test_that("the preregistration lists the sampling plan after the hypotheses", {
                     fixed = TRUE))
 })
 
+# A preregistration without its content-hash line, which differs whenever the
+# theory does.
+sp_unhashed <- function(text) gsub("\n- Content hash: sha256:[0-9a-f]{64}", "", text)
+
 test_that("a theory without a stated plan has no section", {
-  bare <- tf_preregister(sp_theory("<absent>", "<absent>"))
+  bare <- sp_unhashed(tf_preregister(sp_theory("<absent>", "<absent>")))
   expect_false(grepl(sp_section_heading, bare, fixed = TRUE))
   for (blocks in list(list(NULL, setNames(list(), character(0))), list(list(), "n = 48"),
                       list(list(unit = "participants"), list(alpha = 2)))) {
-    expect_identical(tf_preregister(do.call(sp_theory, blocks)), bare)
+    expect_identical(sp_unhashed(tf_preregister(do.call(sp_theory, blocks))), bare)
   }
 })
 
@@ -214,8 +218,8 @@ test_that("the modality example states its plan and matches its golden", {
   ), collapse = "\n"))
   # Without the block the document is the earlier format, the section left out.
   t$predictions[[2]]$test <- NULL
-  expect_identical(tf_preregister(t),
-                   sub(paste0(sp_section(text), "\n\n"), "", text, fixed = TRUE))
+  expect_identical(sp_unhashed(tf_preregister(t)),
+                   sp_unhashed(sub(paste0(sp_section(text), "\n\n"), "", text, fixed = TRUE)))
 })
 
 test_that("every other fixture keeps its preregistration", {
@@ -234,9 +238,14 @@ test_that("every other fixture keeps its preregistration", {
 test_that("the dossier carries the plan in its preregistration", {
   t <- tf_read(tf_fixture_path("modality-switching.theory.yaml"))
   d <- tf_dossier(t)
-  expect_true(grepl("\n## Preregistration\n\n# Preregistration: ", d, fixed = TRUE))
-  expect_identical(lengths(regmatches(d, gregexpr(sp_section_heading, d, fixed = TRUE))), 1L)
-  expect_true(endsWith(d, tf_preregister(t)))
+  expect_true(grepl("\n## Preregistration\n\n### Preregistration: ", d, fixed = TRUE))
+  expect_identical(lengths(regmatches(d, gregexpr(paste0("##", sp_section_heading), d, fixed = TRUE))), 1L)
+  # The embedded preregistration ends with the implied independencies, its
+  # severity list being given earlier in the dossier.
+  prereg <- tf_preregister(t)
+  body <- substring(prereg, 1L, regexpr("\n## Severity (pre-data rubric of claim form)", prereg,
+                                        fixed = TRUE) - 1L)
+  expect_true(endsWith(d, sub("^# ", "### ", gsub("\n#", "\n###", body, fixed = TRUE))))
 })
 
 test_that("a written theory reads back with its plan", {
@@ -254,8 +263,8 @@ test_that("a written theory reads back with its plan", {
 # -- recorded, not scored -----------------------------------------------------
 
 test_that("the block moves no score", {
-  # Power must not raise a prediction's severity (Meehl, 1967), so nothing
-  # reads the block but validation and the preregistration.
+  # The stated power raises no score (Meehl, 1967, for directional claims), so
+  # nothing reads the block but validation and the preregistration.
   with_plan <- tf_read(tf_fixture_path("modality-switching.theory.yaml"))
   without <- with_plan
   without$predictions[[2]]$test <- NULL

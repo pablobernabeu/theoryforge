@@ -1,26 +1,26 @@
 #' Open Science Framework deposit adapter (assistive).
 #'
-#' Builds the request to upload a theory's audit dossier to OSF. Defaults to
+#' Builds the request to upload a theory's dossier to OSF. Defaults to
 #' \code{dry_run = TRUE}, which constructs the request without sending it. A live
 #' push requires the user's OSF token and network access and is never performed
 #' automatically.
 #' @name osf
+#' @noRd
 #' @keywords internal
 NULL
 
 .tf_OSF_BASE <- "https://files.osf.io/v1/resources/"
 
-#' Deposit a theory's audit dossier to OSF storage
+#' Deposit a theory's dossier to OSF storage
 #'
 #' Builds (and optionally sends) a request to upload \code{tf_dossier(theory)} to
 #' OSF storage. With \code{dry_run = TRUE} (the default), the planned request
 #' is returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 #' both \code{token} and \code{node} (the OSF project id) and performs an
 #' authenticated \code{PUT} through the suggested \pkg{curl} package, which must
-#' be installed. Each request is abandoned after 30 seconds. The dossier is
-#' built first, so the
-#' function stops when [tf_check()] refuses the theory, with
-#' \code{dry_run = TRUE} as well.
+#' be installed. Each request is abandoned after 30 seconds without progress.
+#' The dossier is built first, so the function stops when [tf_check()] refuses
+#' the theory, with \code{dry_run = TRUE} as well.
 #'
 #' OSF storage refuses to create a file whose name already exists in the
 #' project folder (HTTP 409), so depositing the same theory twice under the
@@ -28,7 +28,12 @@ NULL
 #' \code{overwrite = TRUE} to add a new version of the existing file: the
 #' folder is listed first and the dossier is sent to that file's upload link,
 #' the WaterButler route that records a new OSF version. When the folder holds
-#' no file of that name, \code{overwrite = TRUE} creates it as usual.
+#' no file of that name, \code{overwrite = TRUE} creates it as usual. The
+#' token goes with that \code{PUT}, so the link must be an https address on the
+#' host of \code{base_url} or on a host ending in \code{.osf.io}, where
+#' WaterButler keeps its regional storage. Any other link stops with
+#' \code{OSF lists <filename> with an upload link outside OSF storage: <link>}
+#' before anything is sent.
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
 #' @param token OSF personal access token (required when \code{dry_run = FALSE}).
@@ -114,7 +119,10 @@ tf_osf_push <- function(theory, token = NULL, node = NULL,
            call. = FALSE)
     }
     link <- .tf_osf_upload_link(listing$body, fname)
-    if (!is.null(link)) put_url <- .tf_osf_update_url(link)
+    if (!is.null(link)) {
+      .tf_osf_check_link(link, fname, base_url)
+      put_url <- .tf_osf_update_url(link)
+    }
   }
   resp <- .tf_http("PUT", put_url, c(auth, `Content-Type` = "text/markdown"), content)
   if (!.tf_osf_ok(resp$status)) {
@@ -166,8 +174,36 @@ tf_osf_push <- function(theory, token = NULL, node = NULL,
   NULL
 }
 
-# WaterButler updates a file with PUT <upload link>?kind=file. The link OSF
-# returns carries no query, but one that already names `kind` is kept as is.
+# The host of an https address, in lower case, or NULL. The host is what
+# follows https:// up to the first /, ? or #, without the user information
+# before its last @ or a port. An address that is not https, or whose host is
+# not a name of letters, digits, dots and hyphens, has none. The Python twin's
+# _https_host() reads it alike.
+.tf_https_host <- function(url) {
+  m <- regmatches(url, regexec("^[Hh][Tt][Tt][Pp][Ss]://([^/?#]*)", url, perl = TRUE))[[1L]]
+  if (length(m) < 2L) return(NULL)
+  host <- sub(":[0-9]*\\z", "", sub("(?s)^.*@", "", m[[2L]], perl = TRUE), perl = TRUE)
+  host <- chartr("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz", host)
+  if (grepl("^[a-z0-9.-]+\\z", host, perl = TRUE)) host else NULL
+}
+
+# Stop unless an upload link is https on the storage host or on osf.io. The
+# token goes with the PUT, so a listing that named another server, or an
+# address in clear text, would hand it over. WaterButler's regional storage
+# hosts end in .osf.io.
+.tf_osf_check_link <- function(link, fname, base_url) {
+  host <- .tf_https_host(link)
+  ok <- !is.null(host) && (identical(host, .tf_https_host(base_url)) || endsWith(host, ".osf.io"))
+  if (!ok) {
+    stop(sprintf("OSF lists %s with an upload link outside OSF storage: %s", fname, link),
+         call. = FALSE)
+  }
+  invisible(NULL)
+}
+
+# WaterButler updates a file with PUT <upload link>?kind=file. Its upload link
+# already ends in ?kind=file, and is then kept as it is. The query is added only
+# to a link that lacks it.
 .tf_osf_update_url <- function(link) {
   if (grepl("[?&]kind=", link)) return(link)
   paste0(link, if (grepl("?", link, fixed = TRUE)) "&" else "?", "kind=file")

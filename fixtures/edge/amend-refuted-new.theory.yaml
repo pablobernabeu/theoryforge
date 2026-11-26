@@ -1,0 +1,48 @@
+# Edge case: amends amend-prior with c4, a proposition p3 from c3 to c4 and two
+# predictions derived from it. A test corroborates h3 and another refutes h4.
+# One corroborated new prediction is enough for a progressive verdict, and the
+# failure is reported in refuted_new without changing it.
+schema_version: "1.1"
+id: edge-amend-refuted-new
+title: An amendment with a refuted new prediction
+maturity: testing
+constructs:
+  - {id: c1, label: First, definition: The first construct.}
+  - {id: c2, label: Second, definition: The second construct.}
+  - {id: c3, label: Third, definition: The third construct.}
+  - {id: c4, label: Fourth, definition: The fourth construct.}
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: It does.}
+  - {id: p2, from: c2, to: c3, relation: increases, mechanism: It does.}
+  - {id: p3, from: c3, to: c4, relation: increases, mechanism: It does.}
+predictions:
+  - id: h1
+    statement: c2 rises 0.5 SD per SD of c1, within 0.1.
+    type: point
+    derives_from: [p1]
+    bounds: {lower: 0.4, upper: 0.6}
+    claim: {kind: effect, x: c1, y: c2, sign: positive}
+  - id: h2
+    statement: c3 rises with c2.
+    type: directional
+    derives_from: [p2]
+  - id: h3
+    statement: c4 rises 0.3 SD per SD of c3, within 0.1.
+    type: point
+    derives_from: [p3]
+  - id: h4
+    statement: c4 rises with c3 in older adults.
+    type: directional
+    derives_from: [p3]
+auxiliary_assumptions:
+  - id: a1
+    statement: The c2 scale measures c2 in every sample.
+    added_for: ~
+    protects: [h1]
+test_outcomes:
+  - prediction_id: h1
+    passed: false
+  - prediction_id: h3
+    passed: true
+  - prediction_id: h4
+    passed: false

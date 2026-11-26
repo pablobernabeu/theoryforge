@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 
 from ._access import PRED_TYPE, enum, field, items, str_list, text
+from ._compat import theory_keyword
 from ._num import number, rnd
 
 # The base riskiness of each claim form. The order follows Popper's (1959,
@@ -28,18 +29,36 @@ BASE = {"existence": 0.1, "directional": 0.4, "interval": 0.7, "point": 0.9}
 CRUD = 0.25
 
 
-def severity(T) -> list[dict]:
+def _bounded(p) -> bool:
+    """Whether a prediction's ``bounds`` state two finite numbers, a region a test can miss.
+
+    The precision item of the checklist and the rubric below read a point or
+    interval label only together with such bounds (API_SPEC.md sections 4 and 9).
+    """
+    b = field(p, "bounds")
+    if not isinstance(b, dict):
+        return False
+    lo, up = number(b.get("lower")), number(b.get("upper"))
+    return lo is not None and up is not None and math.isfinite(lo) and math.isfinite(up)
+
+
+@theory_keyword
+def severity(theory) -> list[dict]:
     """Per-prediction claim-form riskiness, in file order.
 
     A pre-data rubric of the form of each prediction's claim. ``risk_score`` is
     the base riskiness of the declared type: existence 0.1, directional 0.4,
     interval 0.7 and point 0.9. ``computed_severity`` discounts a directional
     prediction by 25 per cent, adds 0.1 when ``diagnostic_vs`` names a registered
-    alternative and is capped at 1. The order of the types follows Popper (1959,
-    sections 31-33) for nested claims about one quantity, and the directional
-    penalty follows Meehl's (1967, 1990b) argument that a sign alone risks little.
-    The base values, the discount and the bonus are the package's conventions,
-    and neither source gives them.
+    alternative and is capped at 1. A point or interval prediction whose
+    ``bounds`` do not give a finite lower and a finite upper value states no
+    region a test could miss, so it is rated as a directional one, with the base
+    0.4 and the discount, as the precision item of ``check()`` gives it no
+    credit. ``type`` still reports the declared label. The order of the types
+    follows Popper (1959, sections 31-33) for nested claims about one quantity,
+    and the directional penalty follows Meehl's (1967, 1990b) argument that a
+    sign alone risks little. The base values, the discount and the bonus are the
+    package's conventions, and neither source gives them.
 
     How severely a claim is tested depends on the design and the data, which the
     rubric does not read. A prediction scores the same however it is tested, and
@@ -54,14 +73,18 @@ def severity(T) -> list[dict]:
         https://doi.org/10.2466/pr0.1990.66.1.195
         Popper, K. R. (1959). The logic of scientific discovery. Hutchinson.
     """
-    T = T.data if hasattr(T, "data") else T
-    preds = items(T, "predictions")
-    alt_ids = {text(field(a, "id")) for a in items(T, "alternatives")}
+    theory = theory.data if hasattr(theory, "data") else theory
+    preds = items(theory, "predictions")
+    alt_ids = {text(field(a, "id")) for a in items(theory, "alternatives")}
     out = []
     for p in preds:
         typ = enum(field(p, "type"), PRED_TYPE) or ""
-        base = BASE.get(typ, 0.0)
-        discounted = base * (1 - CRUD) if typ == "directional" else base
+        # A point or interval label without the region it claims is rated as a
+        # directional claim, so that the rubric credits the label no more than
+        # the precision item does (API_SPEC.md section 9).
+        form = "directional" if typ in ("point", "interval") and not _bounded(p) else typ
+        base = BASE.get(form, 0.0)
+        discounted = base * (1 - CRUD) if form == "directional" else base
         dv = str_list(field(p, "diagnostic_vs"))
         # A package convention: naming a registered alternative the prediction
         # would discriminate from adds 0.1. The alternative is declared, not
@@ -163,7 +186,8 @@ def outcome_rows(T) -> list[tuple[dict | None, str | None]]:
     return [_outcome_row(t, i, preds) for i, t in enumerate(items(data, "test_outcomes"))]
 
 
-def post_data_severity(T) -> list[dict]:
+@theory_keyword
+def post_data_severity(theory) -> list[dict]:
     """How severely each bounded claim passed its test, from the outcome's estimate and SE.
 
     A prediction states the region its claim allows in ``bounds``, a mapping of
@@ -172,19 +196,28 @@ def post_data_severity(T) -> list[dict]:
     standard error ``se``. For an outcome with both, whose prediction declares
     bounds, the severity with which the claim passed is the smallest of
     ``Phi((estimate - lower) / se)`` and ``Phi((upper - estimate) / se)`` over
-    the finite bounds, rounded to three decimals (Mayo & Spanos, 2006, 2011).
-    It is the probability that the test would have given a result less in
-    accord with the claim, had the claim been false at the bound. A one-sided
-    claim, such as an effect above a smallest effect of interest, is a lower
-    bound with the upper one open.
+    the finite bounds, rounded to three decimals. For a claim with one finite
+    bound, this is the post-data severity of Mayo and Spanos (2006, 2011): the
+    probability that the test would have given a result less in accord with
+    the claim, had the quantity been at the bound. A one-sided claim, such as
+    an effect above a smallest effect of interest, is a lower bound with the
+    upper one open. With two finite bounds, the value is the minimum over the
+    two bounds, which is the package's own extension to the conjunction of
+    the two one-sided claims. It equals 1 minus the p value of the z-based
+    two one-sided tests (TOST) of equivalence (Lakens, 2017). A point claim
+    with lower equal to upper can pass with a severity of at most 0.5, so it
+    needs a tolerance around its value.
 
-    The computation is a normal approximation to the sampling distribution of
-    the estimate. With two finite bounds, the value equals 1 minus the p value of
-    the two one-sided tests (TOST) of equivalence. A point claim with lower
-    equal to upper can pass with a severity of at most 0.5, so it needs a
-    tolerance around its value. Unlike ``severity()``, which grades the form of
-    a claim before any data, this value depends on the design and the data. The
-    rigour checklist does not read it.
+    The computation is a normal approximation that treats the standard error
+    as known, so in small samples it overstates the severity of an estimate
+    inside the region. The standard error must describe the sampling
+    distribution of the estimate at the bound, which differs from its value
+    at the estimate when it depends on the parameter, as for a proportion.
+    The value is nominal: it does not account for selection, such as a
+    subgroup chosen after seeing the data, and it does not check the
+    statistical adequacy of the model behind the estimate. Unlike
+    ``severity()``, which grades the form of a claim before any data, this
+    value depends on the design and the data. The checklist does not read it.
 
     Returns:
         One record per test outcome, in file order, that carries both an
@@ -204,6 +237,9 @@ def post_data_severity(T) -> list[dict]:
             ``validate(full=True)`` reports each of these.
 
     References:
+        Lakens, D. (2017). Equivalence tests: A practical primer for t tests,
+        correlations, and meta-analyses. Social Psychological and Personality
+        Science, 8(4), 355-362. https://doi.org/10.1177/1948550617697177
         Mayo, D. G., & Spanos, A. (2006). Severe testing as a basic concept in a
         Neyman-Pearson philosophy of induction. The British Journal for the
         Philosophy of Science, 57(2), 323-357. https://doi.org/10.1093/bjps/axl003
@@ -212,7 +248,7 @@ def post_data_severity(T) -> list[dict]:
         153-198). Elsevier. https://doi.org/10.1016/B978-0-444-51862-0.50005-8
     """
     rows = []
-    for row, refusal in outcome_rows(T):
+    for row, refusal in outcome_rows(theory):
         if refusal is not None:
             raise ValueError(refusal)
         if row is not None:

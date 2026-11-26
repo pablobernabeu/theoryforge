@@ -2,35 +2,58 @@
 % Please edit documentation in R/dossier.R
 \name{tf_dossier}
 \alias{tf_dossier}
-\title{Render a theory audit dossier (Markdown)}
+\title{Render the dossier of a theory file (Markdown)}
 \usage{
-tf_dossier(theory)
+tf_dossier(theory, cycles = "refuse")
 }
 \arguments{
 \item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
+
+\item{cycles}{\code{"refuse"} (the default) or \code{"sigma"}, passed to
+\code{\link[=tf_check]{tf_check()}}, \code{\link[=tf_entailments]{tf_entailments()}}, \code{\link[=tf_discriminate]{tf_discriminate()}} and
+\code{\link[=tf_preregister]{tf_preregister()}}, so that the header and the body read a graph with
+feedback loops in the same way.}
 }
 \value{
 The dossier Markdown as a single string (LF line endings, single
 trailing newline).
 }
 \description{
-Assembles a reviewer-facing audit bundle: the header, the rigour-checklist
-table, the severity list, the test record, the evidence, the provenance list
-and, appended, the hypotheses section of a preregistration. The output is
-deterministic, so the same theory always yields the same dossier.
+Assembles a reviewer-facing document that gathers what the theory file
+records and what the package derives from it. Test outcomes, evidence,
+registrations and declared severities are as the author recorded them. The
+dossier flags a recorded pass whose estimate lies outside its claimed
+region, a recorded failure whose estimate lies inside it and a declared
+severity more than 0.2 above the claim-form rubric, and checks nothing else
+that the author entered, so it is not an independent audit. The output is
+deterministic, so the same theory file gives the same dossier for the same
+\code{cycles}.
 }
 \details{
-The header gives the checklist version, the aggregate score, the checklist
-coverage, the gate and the blockers that failed. The rigour table prints
-\code{n/a} for an item with nothing to assess. The severity list gives each
-prediction's claim-form rubric values and, when the prediction declares a
-severity, that value too, with a note when it exceeds the rubric by more
+The header gives the content hash, the maturity, the checklist version, the
+checklist score with the lowest and highest score under equal weights or one
+weight halved or doubled, the checklist coverage, the gate and the blockers
+that failed. When the causal graph has a feedback loop, the header ends with
+a line saying how the dossier reads it, refused under the default and read
+by sigma-separation with \code{cycles = "sigma"}. A fixed paragraph in
+italics follows, saying what the checklist score describes, what the gate
+checks and what the dossier is. The checklist table marks the two items
+whose failure blocks the gate with \code{(blocker)} beside their ids and
+prints \code{n/a} for an item with nothing to assess. The severity list gives
+each prediction's claim-form rubric values and, when the prediction declares
+a severity, that value too, with a note when it exceeds the rubric by more
 than 0.2. The test record lists every test outcome in file order, with what
 it found and the observation, date and registration it records, and with
 the post-data severity of \code{\link[=tf_post_data_severity]{tf_post_data_severity()}} where it can be
 computed, an open bound written as \code{-inf} or \code{inf}. The
 evidence lists the prediction each entry supports, its direction and its
-DOI. The implied independencies appear once, in the preregistration.
+DOI. The claims and the causal graph, with the assumptions their verdicts
+rest on, the equivalent models for observational data, the rivals and the
+provenance follow, and the preregistration (its theory and hypotheses
+sections, without the severity section) closes it, its title and headings
+two levels lower than in the preregistration itself. The implied
+independencies appear once, in the preregistration. Every value is written
+on one line, ids and dates included.
 
 It stops, as \code{\link[=tf_check]{tf_check()}} does, when a test outcome's \code{passed} is
 present and not \code{TRUE} or \code{FALSE}, or when a prediction's
@@ -42,6 +65,7 @@ theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
   tf_add_proposition("p1", "c_arousal", "c_threat", "causes",
                      mechanism = "Activation raises salience of threat cues.") |>
-  tf_add_prediction("h1", "Effect is exactly 0.30.", "point")
+  tf_add_prediction("h1", "The effect is 0.30, within 0.05.", "point",
+                    derives_from = "p1", bounds = list(lower = 0.25, upper = 0.35))
 cat(tf_dossier(theory))
 }

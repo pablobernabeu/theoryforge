@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import json
 import math
+import numbers
 import re
 from collections.abc import Mapping
 from copy import deepcopy
-from pathlib import Path
 
 from . import _resources
 from ._access import EVIDENCE_DIRECTION as _DIRECTION
@@ -15,18 +15,28 @@ from ._access import FORMAL_MODEL_TYPE as _FORMAL_MODEL_TYPE
 from ._access import MATURITY as _MATURITY
 from ._access import PRED_TYPE as _PRED_TYPE
 from ._access import RELATION as _RELATION
+from ._access import enum as _enum
 from ._access import field as _field
 from ._access import items as _items
 from ._access import ne_str as _nonempty_str
+from ._access import str_list as _str_list
+from ._access import text as _text
 from ._io import write_lf as _write_lf
 from ._load import dump_yaml as _dump_yaml
+from ._load import is_json as _is_json
 from ._load import load_document as _load_document
 from ._num import number as _number
+from ._num import plain as _plain
 from ._text import trim as _trim
 from .develop import appraise_amendment as _appraise_amendment
+from .diagram import _warn_engine
 from .diagram import diagram as _diagram
 from .dossier import dossier as _dossier
 from .embedding import embedding_redundancy as _embedding_redundancy
+from .entailment import discriminate as _discriminate
+from .entailment import entailments as _entailments
+from .entailment import equivalent_models as _equivalent_models
+from .hashing import content_hash as _content_hash
 from .implications import implications as _implications
 from .lit import landscape as _landscape
 from .lit import new_evidence_dois as _new_evidence_dois
@@ -54,6 +64,9 @@ def _as_str_list(v) -> list:
     """
     if isinstance(v, str):
         return [v]
+    # A mapping gives its values, as R stores the values of a named vector.
+    if isinstance(v, Mapping):
+        return list(v.values())
     # Only iter() is guarded. A TypeError raised while a generator runs is the
     # caller's error and propagates. Catching it too would store the generator
     # itself as the one element.
@@ -72,7 +85,10 @@ def _as_str_list(v) -> list:
 # The collections of the schema, in the order validate() reports one that is
 # not a list.
 _COLLECTIONS = ("constructs", "propositions", "predictions", "auxiliary_assumptions",
-                "alternatives", "evidence", "test_outcomes", "provenance")
+                "alternatives", "evidence", "test_outcomes", "provenance", "phenomena")
+_CLAIM_KEYS = ("kind", "x", "y", "given", "sign")
+_CLAIM_KIND = frozenset({"effect", "association"})
+_CLAIM_SIGN = frozenset({"positive", "negative", "zero", "nonzero"})
 _VERSION_KEYS = ("id", "parent_id", "content_hash")
 _SCHEMA_VERSION = re.compile(r"[0-9]+\.[0-9]+")
 
@@ -116,13 +132,13 @@ def _optional_text(v, name: str, *, nullable: bool = False) -> list[str]:
 
 
 def _is_unit_number(v) -> bool:
-    """Whether ``v`` is a number within [0, 1]. A boolean is not a number.
+    """Whether ``v`` is a number within [0, 1]. A boolean and NaN are not numbers.
 
-    A comparison with NaN is false, so NaN needs no test of its own. A test with
-    ``math.isnan()`` would convert an integer to a float, which overflows beyond
-    about 1.8e308, as an unquoted integer of 400 digits in YAML does.
+    An integer too large for a float, as an unquoted integer of 400 digits in
+    YAML is, reads as an infinity and so lies outside the range.
     """
-    return isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= v <= 1
+    x = _number(v)
+    return x is not None and 0 <= x <= 1
 
 
 def _unit_number(v, name: str) -> list[str]:
@@ -175,6 +191,19 @@ def _bounds(v, name: str) -> list[str]:
     if lo is not None and up is not None and lo > up:
         msgs.append(f"{name} lower exceeds upper")
     return msgs
+
+
+def _bounds_region(v) -> tuple[float | None, float | None] | None:
+    """The finite ends of a valid ``bounds`` mapping, None for an open side.
+
+    Returns None when the bounds are absent or invalid.
+    """
+    if v is None or _bounds(v, "bounds"):
+        return None
+    v = v if isinstance(v, dict) else {}
+    ends = [_number(v.get(key)) for key in _BOUND_KEYS]
+    lo, up = (x if x is not None and math.isfinite(x) else None for x in ends)
+    return lo, up
 
 
 _TEST_KEYS = ("n_planned", "unit", "alpha", "sided", "sesoi", "sesoi_scale", "power",
@@ -276,6 +305,76 @@ def _string_array(v, name: str, known=None, kind: str = "") -> list[str]:
     return msgs
 
 
+def _claim(v, name: str, construct_ids: set) -> list[str]:
+    """The problems of a prediction's or a phenomenon's ``claim`` (API_SPEC.md section 2, item 15).
+
+    An absent claim, or an empty one, is no claim.
+    """
+    if v is None or (isinstance(v, (dict, list)) and not v):
+        return []
+    if _not_a_mapping(v):
+        return [f"{name} must be a mapping"]
+    if not isinstance(v, dict):
+        return []
+    errors = [f"{name} has unknown field: {key}" for key in v if key not in _CLAIM_KEYS]
+    errors += _required_fields(v, name, ("kind", "x", "y", "sign"))
+    kind, sign = v.get("kind"), v.get("sign")
+    if _nonempty_str(kind) and kind not in _CLAIM_KIND:
+        errors.append(f"{name} kind '{kind}' not allowed")
+    if _nonempty_str(sign) and sign not in _CLAIM_SIGN:
+        errors.append(f"{name} sign '{sign}' not allowed")
+    x, y = v.get("x"), v.get("y")
+    for end, val in (("x", x), ("y", y)):
+        if _nonempty_str(val) and val not in construct_ids:
+            errors.append(f"{name} {end} '{val}' is not a known construct")
+    if _nonempty_str(x) and x == y:
+        errors.append(f"{name} x and y must differ")
+    errors += _string_array(v.get("given"), f"{name} given", construct_ids, "construct")
+    given = _str_list(v.get("given"))
+    if given:
+        if (_nonempty_str(x) and x in given) or (_nonempty_str(y) and y in given):
+            errors.append(f"{name} given must not include x or y")
+        if kind == "effect":
+            errors.append(f"{name} given applies only to an association")
+        elif sign in ("positive", "negative"):
+            errors.append(f"{name} sign must be zero or nonzero when given is not empty")
+    return errors
+
+
+def _edit_distance(a: str, b: str) -> int:
+    """The Levenshtein distance between ``a`` and ``b``, as R's ``utils::adist()`` computes it."""
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, start=1):
+        cur = [i]
+        for j, cb in enumerate(b, start=1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def _unknown_fields(entry, name: str, known: list[str]) -> list[str]:
+    """``<name> has unknown field: <key>`` for each key of ``entry`` the schema does not list.
+
+    A key that begins with ``x_`` carries extension metadata and is allowed. The
+    message names the closest known field, within two edits, the first in
+    schema order on a tie.
+    """
+    if not isinstance(entry, dict):
+        return []
+    msgs = []
+    for key in entry:
+        key = str(key)
+        if key in known or key.startswith("x_"):
+            continue
+        msg = f"{name} has unknown field: {key}"
+        dist = [(_edit_distance(key, k), i) for i, k in enumerate(known)]
+        best = min(dist) if dist else None
+        if best is not None and best[0] <= 2:
+            msg += f" (did you mean {known[best[1]]}?)"
+        msgs.append(msg)
+    return msgs
+
+
 class Theory:
     """A theory as a versioned, machine-checkable object.
 
@@ -300,13 +399,13 @@ class Theory:
     # -- convenience accessors -------------------------------------------------
     @property
     def id(self) -> str:
-        """The theory's ``id`` as stored, or ``""`` when the field is absent."""
-        return self.data.get("id", "")
+        """The theory's ``id`` as every function reads it, ``""`` when absent or not text."""
+        return _text(self.data.get("id"))
 
     @property
     def maturity(self) -> str:
-        """The theory's ``maturity`` as stored, or ``""`` when the field is absent."""
-        return self.data.get("maturity", "")
+        """The theory's ``maturity`` as every function reads it, ``""`` when absent or not in its enum."""
+        return _enum(self.data.get("maturity"), _MATURITY) or ""
 
     def _list(self, key: str) -> list:
         return _items(self.data, key)
@@ -332,8 +431,11 @@ class Theory:
         formal-model type enums, the version block and the ``schema_version``
         pattern. It also covers numbers within [0, 1] where the schema asks for
         them, a prediction's ``bounds`` and ``test`` block and a test outcome's
-        ``estimate`` and ``se``. Last, it checks the type of every other field
-        and of every entry of a string array.
+        ``estimate`` and ``se``. It compares each prediction's type and its
+        claim's sign with its bounds, and reports a directional prediction
+        whose claim, with no ``given``, has the sign ``nonzero``, which states
+        no direction. Last, it checks the type of every other field and of
+        every entry of a string array.
 
         Besides the ids and references, which the schema cannot express, the
         full check is stricter than a JSON Schema 2020-12 validator in three
@@ -355,6 +457,19 @@ class Theory:
             ValueError: ``"invalid theory object: "`` followed by every problem
                 found, joined by ``"; "``, in a fixed order. The R package's
                 ``tf_validate()`` gives the same message.
+        """
+        errors = self._problems(full=full)
+        if errors:
+            raise ValueError("invalid theory object: " + "; ".join(errors))
+        return True
+
+    def _problems(self, *, full: bool = False) -> list[str]:
+        """The problems ``validate`` reports, one message each, in its order.
+
+        ``validate`` joins them with ``"; "``. A message may quote a value of
+        the theory, which can hold ``"; "`` itself, so the apps read this list
+        rather than split the joined text. The R twin's
+        ``.tf_validation_problems()`` returns the same messages.
         """
         errors: list[str] = []
         d = self.data
@@ -402,15 +517,12 @@ class Theory:
 
         if full:
             self._full_errors(errors)
-
-        if errors:
-            raise ValueError("invalid theory object: " + "; ".join(errors))
-        return True
+        return errors
 
     def _full_errors(self, errors: list[str]) -> None:
         """Append the problems only ``validate(full=True)`` looks for.
 
-        Items 1 to 14 of API_SPEC.md section 2, in that order. The R twin's
+        Items 1 to 16 of API_SPEC.md section 2, in that order. The R twin's
         ``tf_validate()`` makes the same checks in the same order with the same
         message text.
         """
@@ -529,6 +641,9 @@ class Theory:
             errors += _optional_text(ver.get("id"), "version id")
             errors += _optional_text(ver.get("parent_id"), "version parent_id", nullable=True)
             errors += _optional_text(ver.get("content_hash"), "version content_hash", nullable=True)
+            recorded = ver.get("content_hash")
+            if _nonempty_str(recorded) and recorded != _content_hash(d):
+                errors.append("version content_hash does not match the theory's content")
 
         # 13: the schema_version pattern. fullmatch, because "$" in a Python
         # pattern also matches before a final newline.
@@ -566,21 +681,130 @@ class Theory:
             for name in ("step", "action", "detail"):
                 errors += _optional_text(_field(step, name), f"provenance[{i}] {name}")
 
+        # 15: the claims of predictions and phenomena, and the propositions of
+        # rival accounts, which entailments() and discriminate() read.
+        phens = self._list("phenomena")
+        dups(phens, "phenomenon")
+        for i, ph in enumerate(phens):
+            errors += _required_fields(ph, f"phenomenon[{i}]", ("id", "statement"))
+            errors += _optional_text(_field(ph, "source_doi"), f"phenomenon[{i}] source_doi",
+                                     nullable=True)
+        for i, p in enumerate(preds):
+            errors += _claim(_field(p, "claim"), f"prediction[{i}] claim", construct_ids)
+        for i, ph in enumerate(phens):
+            errors += _claim(_field(ph, "claim"), f"phenomenon[{i}] claim", construct_ids)
+        for i, a in enumerate(alts):
+            rival = _field(a, "propositions")
+            if _not_a_list(rival):
+                errors.append(f"alternative[{i}] propositions must be a list")
+                continue
+            if not isinstance(rival, list):
+                continue
+            seen: set = set()
+            for j, p in enumerate(rival):
+                name = f"alternative[{i}] proposition[{j}]"
+                errors += _required_fields(p, name, ("id", "from", "to", "relation"))
+                rel = _field(p, "relation")
+                if _nonempty_str(rel) and rel not in _RELATION:
+                    errors.append(f"{name} relation '{rel}' not allowed")
+                pid = _field(p, "id")
+                if _nonempty_str(pid):
+                    if pid in seen:
+                        errors.append(f"alternative[{i}] duplicate proposition id: {pid}")
+                    seen.add(pid)
+                for end in ("from", "to"):
+                    val = _field(p, end)
+                    if _nonempty_str(val) and val not in construct_ids:
+                        errors.append(f"{name} {end} '{val}' is not a known construct")
+                errors += _optional_text(_field(p, "mechanism"), f"{name} mechanism")
+
+        # 16: a claim's form and sign against its bounds, where both are
+        # themselves valid. A type or a sign the bounds contradict makes the
+        # riskiness rubric, the precision item and the causal reading describe
+        # a different claim from the one post_data_severity() tests. An
+        # existence claim allows every value but 0, which no bounds can state,
+        # and a one-sided region would make post_data_severity() test a
+        # directional claim. Last, with or without bounds, a directional
+        # prediction whose claim has the sign nonzero states no direction, so
+        # the label would pass the falsifiability item for a claim that forbids
+        # only zero. A claim with a given can only be zero or nonzero (item
+        # 15), so it is left to the statement.
+        for i, p in enumerate(preds):
+            ty = _field(p, "type")
+            claim = _field(p, "claim")
+            sign = claim.get("sign") if isinstance(claim, dict) else None
+            region = _bounds_region(_field(p, "bounds"))
+            if region is not None:
+                lo, up = region
+                both = lo is not None and up is not None
+                if ty in ("point", "interval") and not both:
+                    article = "an" if ty == "interval" else "a"
+                    errors.append(f"prediction[{i}] is {article} {ty} claim, so its bounds need a "
+                                  "finite lower and a finite upper")
+                elif ty == "directional" and both and lo != 0 and up != 0:
+                    errors.append(f"prediction[{i}] is a directional claim, so its bounds must leave "
+                                  "one side open or end at 0")
+                elif ty == "existence":
+                    errors.append(f"prediction[{i}] is an existence claim, so it takes no bounds: the "
+                                  "region it allows, every value but 0, is not one interval")
+                if sign == "positive" and not (lo is not None and lo >= 0):
+                    errors.append(f"prediction[{i}] claims a positive sign, so its lower bound must "
+                                  "be 0 or above")
+                elif sign == "negative" and not (up is not None and up <= 0):
+                    errors.append(f"prediction[{i}] claims a negative sign, so its upper bound must "
+                                  "be 0 or below")
+                elif sign == "zero" and not ((lo is None or lo <= 0) and (up is None or up >= 0)):
+                    errors.append(f"prediction[{i}] claims a zero sign, so its bounds must include 0")
+                elif sign == "nonzero" and not ((lo is not None and lo > 0)
+                                                or (up is not None and up < 0)):
+                    errors.append(f"prediction[{i}] claims a nonzero sign, so its bounds must "
+                                  "exclude 0")
+            if ty == "directional" and sign == "nonzero" and not _str_list(claim.get("given")):
+                errors.append(f"prediction[{i}] is a directional claim, so its claim's sign cannot "
+                              "be nonzero, which states no direction")
+
+        # 17: the fields of each entry, which the schema closes as it closes the
+        # top level, since a misspelt severty or derives_form would drop what
+        # it holds without a word. Collections come in the schema's order.
+        props = _resources.theory_schema()["properties"]
+
+        def keys(node) -> list[str]:
+            return list(node.get("properties", {}))
+
+        entries = (("constructs", "construct"), ("propositions", "proposition"),
+                   ("phenomena", "phenomenon"), ("predictions", "prediction"),
+                   ("auxiliary_assumptions", "assumption"), ("evidence", "evidence"),
+                   ("test_outcomes", "test_outcome"), ("alternatives", "alternative"))
+        for key, kind in entries:
+            item = props[key]["items"]
+            for i, entry in enumerate(self._list(key)):
+                errors += _unknown_fields(entry, f"{kind}[{i}]", keys(item))
+                if key == "alternatives" and isinstance(_field(entry, "propositions"), list):
+                    rival = item["properties"]["propositions"]["items"]
+                    for j, p in enumerate(_field(entry, "propositions")):
+                        errors += _unknown_fields(p, f"alternative[{i}] proposition[{j}]",
+                                                  keys(rival))
+        errors += _unknown_fields(d.get("formal_model"), "formal_model", keys(props["formal_model"]))
+        for i, step in enumerate(self._list("provenance")):
+            errors += _unknown_fields(step, f"provenance[{i}]", keys(props["provenance"]["items"]))
+
     # -- serialisation ---------------------------------------------------------
     def write(self, path) -> None:
-        """Write the theory to ``path`` as JSON (a ``.json`` suffix) or YAML (anything else).
+        """Write the theory to ``path`` as JSON (a ``.json`` extension) or YAML (anything else).
 
-        The file is UTF-8 with LF line endings and ends with a newline. YAML keeps
-        the theory's key order and quotes every string a reader could take for
-        something else, ``y``, ``Y``, ``n`` and ``N`` included, which theoryforge
-        0.6.0 for R reads as logicals. The file therefore reads back as the same
-        theory in R and in Python.
+        The letter case of ``.json`` does not matter, and a file named ``.json``
+        alone has no extension and is YAML, as in R. A leading ``~`` is expanded
+        as in ``read``. The file is UTF-8 with LF line endings and ends with a
+        newline. YAML keeps the theory's key order and quotes every string a
+        reader could take for something else, ``y``, ``Y``, ``n`` and ``N``
+        included, which theoryforge 0.6.0 for R reads as logicals. The file
+        therefore reads back as the same theory in R and in Python.
         """
-        path = Path(path)
-        if path.suffix.lower() == ".json":
-            text = json.dumps(self.data, indent=2, ensure_ascii=False) + "\n"
+        data = _plain(self.data)
+        if _is_json(path):
+            text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
         else:
-            text = _dump_yaml(self.data)
+            text = _dump_yaml(data)
         _write_lf(path, text)
 
     # -- builder (BUILDING mode) ----------------------------------------------
@@ -605,27 +829,28 @@ class Theory:
     def _coll(self, key: str) -> list:
         """The list a builder appends to under ``key``.
 
-        A missing key gives a new empty list, and so does a null one. A template
-        that leaves ``constructs:`` blank reads as null, and ``setdefault`` would
-        hand that None back. The caller stores the list once it has appended to
+        A missing key gives a new empty list, and so does a null one or an empty
+        mapping. A template that leaves ``constructs:`` blank reads as null, and
+        ``setdefault`` would hand that None back. The caller stores the list once it has appended to
         it. Any other value that is not a list is refused with a message that
         names the key.
         """
         v = self.data.get(key)
-        if v is None:
+        # An empty mapping holds nothing, and R builds it as list(), as it builds
+        # an empty sequence.
+        if v is None or (isinstance(v, Mapping) and not v):
             return []
         if not isinstance(v, list):
-            kind = type(v).__name__
-            # "an int" and "an OrderedDict", but "a UUID": a type name that
-            # opens with a u is read with a consonant sound.
-            article = "an" if kind[:1].lower() in "aeio" else "a"
-            raise TypeError(
-                f"cannot add to '{key}': the theory holds {article} {kind} there, not a list")
+            # Described in words both languages can give (API_SPEC.md section 8).
+            what = ("a mapping" if isinstance(v, Mapping) else "a string" if isinstance(v, str)
+                    else "a boolean" if isinstance(v, bool)
+                    else "a number" if isinstance(v, numbers.Real) else "a value that is not a list")
+            raise TypeError(f"cannot add to '{key}': the theory holds {what} there, not a list")
         return v
 
     def _provenance(self, action: str, detail: str) -> None:
         prov = self._coll("provenance")
-        prov.append({"step": str(len(prov) + 1), "action": action, "detail": detail})
+        prov.append({"step": str(len(prov) + 1), "action": action, "detail": _plain(detail)})
         self.data["provenance"] = prov
 
     def _add(self, key: str, item: dict, action: str, detail: str) -> Theory:
@@ -636,7 +861,9 @@ class Theory:
         """
         coll = self._coll(key)
         self._coll("provenance")
-        coll.append(item)
+        # A NumPy scalar from an analysis would otherwise be stored as it is,
+        # and validation and writing would refuse it later.
+        coll.append(_plain(item))
         self.data[key] = coll
         self._provenance(action, detail)
         return self
@@ -662,15 +889,16 @@ class Theory:
             c["boundary_conditions"] = _as_str_list(boundary_conditions)
         return self._add("constructs", c, "tf_add_construct", id)
 
-    def add_proposition(self, id, frm, to, relation, mechanism=None):
+    def add_proposition(self, id, frm, to, relation, mechanism=None, functional_form=None):
         """Append a proposition and log the step in the provenance.
 
         ``frm`` and ``to`` are the ids of the constructs it relates. ``frm`` is
         stored as the schema's ``from`` field, since ``from`` is a reserved word
         in Python. ``relation`` is one of ``increases``, ``decreases``,
         ``causes``, ``mediates``, ``moderates`` or ``associates``. ``mechanism``
-        states why the relation holds and is stored only when given. The theory
-        is changed in place and returned, so that builder calls chain.
+        states why the relation holds, and ``functional_form`` describes its
+        shape. Each is stored only when given. The theory is changed in place
+        and returned, so that builder calls chain.
 
         Raises:
             TypeError: when the theory holds a value other than a list or null
@@ -679,10 +907,12 @@ class Theory:
         p = {"id": id, "from": frm, "to": to, "relation": relation}
         if mechanism is not None:
             p["mechanism"] = mechanism
+        if functional_form is not None:
+            p["functional_form"] = functional_form
         return self._add("propositions", p, "tf_add_proposition", id)
 
     def add_prediction(self, id, statement, type, derives_from=None, diagnostic_vs=None,
-                       severity=None, test=None):
+                       severity=None, test=None, bounds=None, claim=None):
         """Append a prediction and log the step in the provenance.
 
         ``id`` identifies the prediction and ``statement`` gives the claim in
@@ -711,7 +941,16 @@ class Theory:
         optional ``power_lo`` and ``power_hi``, ``method``, ``design_ref`` and
         ``justification``. It is stored, as a copy, only when given.
         ``preregister()`` lists it after the hypotheses, and nothing scores it.
-        The theory is returned, so that builder calls chain.
+
+        ``bounds`` is the region of the quantity the claim allows, a mapping of
+        ``lower`` and ``upper``, either of which may be None for an open side.
+        ``post_data_severity()`` reads it with each test outcome. ``claim`` is
+        the claim in machine-readable form, a mapping of ``kind``
+        (``"effect"`` or ``"association"``), the construct ids ``x`` and ``y``,
+        an optional ``given`` and ``sign`` (``"positive"``, ``"negative"``,
+        ``"zero"`` or ``"nonzero"``), which ``entailments()`` reads against the
+        causal graph. Each is stored, as a copy, only when given. The theory is
+        returned, so that builder calls chain.
         """
         p = {"id": id, "statement": statement, "type": type}
         if derives_from is not None:
@@ -724,17 +963,25 @@ class Theory:
             # A copy, so that a later change to the caller's mapping leaves the
             # theory as it was, as R's builder leaves it.
             p["test"] = dict(test) if isinstance(test, Mapping) else test
+        if bounds is not None:
+            p["bounds"] = dict(bounds) if isinstance(bounds, Mapping) else bounds
+        if claim is not None:
+            p["claim"] = deepcopy(dict(claim)) if isinstance(claim, Mapping) else claim
         return self._add("predictions", p, "tf_add_prediction", id)
 
-    def add_alternative(self, id, label, key_constructs=None):
+    def add_alternative(self, id, label, key_constructs=None, source_doi=None, propositions=None):
         """Append a registered alternative account and log the step in the provenance.
 
         ``label`` names the rival account. ``key_constructs`` names its key
-        constructs, as a list of strings or a single string, and is stored only
-        when given. A prediction names the alternative's ``id`` in its
-        ``diagnostic_vs``, and ``landscape()`` matches the label and key
-        constructs against the literature's themes. The theory is changed in
-        place and returned, so that builder calls chain.
+        constructs, as a list of strings or a single string, and ``source_doi``
+        the work that states it. ``propositions`` lists the rival's own
+        propositions over the theory's constructs, each a mapping with ``id``,
+        ``from``, ``to`` and ``relation``, which ``discriminate()`` sets against
+        the theory's. Each is stored only when given. A prediction names the
+        alternative's ``id`` in its ``diagnostic_vs``, and ``landscape()``
+        matches the label and key constructs against the literature's themes.
+        The theory is changed in place and returned, so that builder calls
+        chain.
 
         Raises:
             TypeError: when the theory holds a value other than a list or null
@@ -743,7 +990,70 @@ class Theory:
         a = {"id": id, "label": label}
         if key_constructs is not None:
             a["key_constructs"] = _as_str_list(key_constructs)
+        if source_doi is not None:
+            a["source_doi"] = source_doi
+        if propositions is not None:
+            a["propositions"] = deepcopy(list(propositions))
         return self._add("alternatives", a, "tf_add_alternative", id)
+
+    def add_phenomenon(self, id, statement, claim=None, source_doi=None):
+        """Append a phenomenon the theory sets out to explain and log the step in the provenance.
+
+        A phenomenon is a robust empirical regularity, stated in words in
+        ``statement``. ``claim`` states it in machine-readable form, as for a
+        prediction, and ``entailments()`` reports whether the causal graph
+        entails it. ``source_doi`` names the work that establishes it. Each is
+        stored only when given. The theory is changed in place and returned, so
+        that builder calls chain.
+
+        Raises:
+            TypeError: when the theory holds a value other than a list or null
+                under ``phenomena`` or ``provenance``. Nothing is added then.
+        """
+        ph = {"id": id, "statement": statement}
+        if claim is not None:
+            ph["claim"] = deepcopy(dict(claim)) if isinstance(claim, Mapping) else claim
+        if source_doi is not None:
+            ph["source_doi"] = source_doi
+        return self._add("phenomena", ph, "tf_add_phenomenon", id)
+
+    def add_evidence(self, supports, direction, source_doi=None):
+        """Record published evidence on a prediction and log the step in the provenance.
+
+        ``supports`` is the prediction's id and ``direction`` one of
+        ``corroborates``, ``refutes`` or ``mixed``. ``source_doi`` names the
+        work and is stored as null when not given. The theory is changed in
+        place and returned, so that builder calls chain.
+
+        Raises:
+            TypeError: when the theory holds a value other than a list or null
+                under ``evidence`` or ``provenance``. Nothing is added then.
+        """
+        e = {"supports": supports, "source_doi": source_doi, "direction": direction}
+        return self._add("evidence", e, "tf_add_evidence", supports)
+
+    def add_test_outcome(self, prediction_id, passed, observed=None, estimate=None, se=None,
+                         registered=None, date=None):
+        """Record the outcome of a test of a prediction and log the step in the provenance.
+
+        ``passed`` is True or False. ``observed`` describes the result in
+        words. ``estimate`` and ``se`` are the estimate the test gave and its
+        standard error, which ``post_data_severity()`` reads with the
+        prediction's ``bounds``, and they are given together. ``registered``
+        names the preregistration of the test and ``date`` its date. Each
+        optional field is stored only when given. The theory is changed in place
+        and returned, so that builder calls chain.
+
+        Raises:
+            TypeError: when the theory holds a value other than a list or null
+                under ``test_outcomes`` or ``provenance``. Nothing is added then.
+        """
+        t = {"prediction_id": prediction_id, "passed": passed}
+        for key, val in (("observed", observed), ("estimate", estimate), ("se", se),
+                         ("registered", registered), ("date", date)):
+            if val is not None:
+                t[key] = val
+        return self._add("test_outcomes", t, "tf_add_test_outcome", prediction_id)
 
     def add_assumption(self, id, statement, added_for=None, protects=None):
         """Append an auxiliary assumption and log the step in the provenance.
@@ -782,12 +1092,13 @@ class Theory:
         return self
 
     # -- mirrored public API --------------------------------------------------
-    def check(self) -> dict:
-        """The rigour report as a dict (see ``theoryforge.check``)."""
-        return _check(self.data)
+    def check(self, cycles: str = "refuse") -> dict:
+        """The checklist report as a dict (see ``theoryforge.check``). ``cycles="sigma"``
+        reads the claims of a causal graph with feedback loops by sigma-separation."""
+        return _check(self.data, cycles=cycles)
 
     def report(self, format: str = "json") -> str:
-        """The rigour report as a ``"json"`` or ``"html"`` string (see ``theoryforge.report``)."""
+        """The checklist report as a ``"json"`` or ``"html"`` string (see ``theoryforge.report``)."""
         return _report(self.data, format=format)
 
     def redundancy_check(self) -> list[dict]:
@@ -795,14 +1106,17 @@ class Theory:
         ``theoryforge.redundancy_check``)."""
         return _redundancy_check(self.data)
 
-    def diagram(self, type: str = "nomological_net", engine: str = "graphviz") -> str:
+    def diagram(self, type: str = "nomological_net", engine: str | None = None) -> str:
         """Return the diagram IR for ``type``.
 
         ``type`` is one of nomological_net, provenance, causal_dag,
         development_roadmap, pipeline, context, workflow, venn, rigour or
-        severity. See ``theoryforge.diagram.diagram``.
+        severity. ``engine`` is deprecated and has no effect. Passing it gives a
+        ``FutureWarning``. See ``theoryforge.diagram.diagram``.
         """
-        return _diagram(self.data, type=type, engine=engine)
+        if engine is not None:
+            _warn_engine(stacklevel=2)
+        return _diagram(self.data, type=type)
 
     def render_diagram(self, type: str = "nomological_net"):
         """Render a digraph view through the optional ``graphviz`` library, or return a
@@ -831,23 +1145,43 @@ class Theory:
         """
         return _appraise_amendment(self.data, prior)
 
-    def implications(self, cycles: str = "refuse") -> dict:
+    def implications(self, cycles: str = "refuse", given: str = "basis") -> dict:
         """The conditional independencies the theory's causal graph implies.
 
         ``cycles="sigma"`` reads a graph with feedback loops by
-        sigma-separation, which the default refuses. See
+        sigma-separation, which the default refuses, and ``given="minimal"``
+        prunes each conditioning set to a minimal one. See
         ``theoryforge.implications``.
         """
-        return _implications(self.data, cycles=cycles)
+        return _implications(self.data, cycles=cycles, given=given)
 
-    def preregister(self, path=None) -> str:
-        """Render the hypotheses section of a preregistration, writing it to ``path``
-        when one is given (see ``theoryforge.preregister``)."""
-        return _preregister(self.data, path)
+    def content_hash(self) -> str:
+        """The SHA-256 digest of the theory's canonical form (see ``theoryforge.content_hash``)."""
+        return _content_hash(self.data)
+
+    def entailments(self, cycles: str = "refuse") -> dict:
+        """Whether the causal graph entails each claim of the predictions and phenomena
+        (see ``theoryforge.entailments``)."""
+        return _entailments(self.data, cycles=cycles)
+
+    def equivalent_models(self) -> dict:
+        """Which causal directions no test of conditional independence can settle (see
+        ``theoryforge.equivalent_models``)."""
+        return _equivalent_models(self.data)
+
+    def discriminate(self, rival, cycles: str = "refuse") -> dict:
+        """What would tell this theory apart from a rival (see ``theoryforge.discriminate``)."""
+        return _discriminate(self.data, rival, cycles=cycles)
+
+    def preregister(self, path=None, cycles: str = "refuse") -> str:
+        """Render the theory and hypotheses sections of a preregistration, writing them
+        to ``path`` when one is given (see ``theoryforge.preregister``). ``cycles="sigma"``
+        reads a causal graph with feedback loops by sigma-separation."""
+        return _preregister(self.data, path, cycles=cycles)
 
     def landscape(self, corpus, min_link: int = 2, max_token_share: float = 0.5,
                   method: str = "components") -> dict:
-        """Map this theory and its alternatives onto a literature corpus's themes.
+        """Match the words of this theory and its alternatives against a corpus's themes.
 
         See ``theoryforge.landscape`` for the matching rules, statuses and methods.
         """
@@ -866,14 +1200,22 @@ class Theory:
         """
         return _compile_sem(self.data)
 
-    def dossier(self) -> str:
-        """A reviewer-facing audit bundle of the rigour report, severity, test record, evidence,
-        provenance and preregistration (see ``theoryforge.dossier.dossier``)."""
-        return _dossier(self.data)
+    def dossier(self, cycles: str = "refuse") -> str:
+        """The dossier: the checklist report, severity, test record, evidence, claims and
+        causal graph, equivalent models, rivals, provenance and preregistration of the file
+        (see ``theoryforge.dossier.dossier``).
+        ``cycles="sigma"`` reads a causal graph with feedback loops by sigma-separation."""
+        return _dossier(self.data, cycles=cycles)
 
     def simulate(self, steps: int = 10, dt: float = 0.1, k: float = 1.0,
-                 damping: float = 0.5, init: float = 1.0, method: str = "euler") -> dict:
-        """Propagate the construct network as a linear dynamical system (see ``theoryforge.simulate``)."""
+                 damping: float = 0.5, init: float | Mapping[str, float] = 1.0,
+                 method: str = "exact") -> dict:
+        """Propagate the construct network as a linear dynamical system (see ``theoryforge.simulate``).
+
+        The trajectory is that of one linear model consistent with the stated
+        signs. ``causes`` and ``mediates`` state no sign and are coupled
+        positively, and the result lists them under ``assumed_positive``.
+        """
         return _simulate(self.data, steps=steps, dt=dt, k=k, damping=damping, init=init,
                          method=method)
 
@@ -882,7 +1224,7 @@ class Theory:
         return _embedding_redundancy(self.data, embedder, threshold=threshold)
 
     def render_report(self, path, title=None, render: bool = False, to: str = "html") -> str:
-        """Write (and optionally render) a Quarto report of the audit dossier (see
+        """Write (and optionally render) a Quarto report of the dossier (see
         ``theoryforge.render_report``)."""
         return _render_report(self.data, path, title=title, render=render, to=to)
 
@@ -901,15 +1243,49 @@ class Theory:
 
 
 def read(path) -> Theory:
-    """Read a theory object from a YAML or JSON file (JSON when the suffix is ``.json``).
+    """Read a theory object from a YAML or JSON file (JSON when the extension is ``.json``).
 
-    The file is read as the R package's ``tf_read()`` reads it. A byte-order
-    mark is ignored. Dates and ``y``, ``Y``, ``n`` and ``N`` stay strings, and
-    integers are decimal, octal or hexadecimal only, so ``1:30`` and ``1_000``
-    are strings too. A merge key
-    lets the mapping's own keys win. A repeated key anywhere raises
-    ``ValueError("(<path>) Duplicate map key: '<key>'")``, and a document that is
-    not a mapping raises ``ValueError("Theory data must be a mapping")``.
+    The file is read as the R package's ``tf_read()`` reads it. The letter case
+    of ``.json`` does not matter. A leading ``~`` is expanded as R's
+    ``path.expand()`` expands it: ``~`` alone or before a separator (``/``, or
+    ``\\`` on Windows) is the home directory, and ``~user`` is that user's home
+    directory on POSIX systems, an unknown user being left as written, and is
+    left as written on Windows. A byte-order mark is ignored. A file that is not valid UTF-8
+    raises ``ValueError("(<path>) the file is not valid UTF-8")``, and one that
+    holds a NUL byte ``ValueError("(<path>) the file holds a NUL byte, which
+    theoryforge cannot read")``. Dates and ``y``, ``Y``, ``n`` and
+    ``N`` stay strings, and integers are decimal, octal or hexadecimal only, so
+    ``1:30`` and ``1_000`` are strings too. YAML is parsed with libyaml, as in
+    R, so a tab is read as YAML allows it: as white space after a value, before
+    a comment and in a flow collection, and as text inside an unquoted value. A
+    merge key lets the mapping's own keys win. A repeated key anywhere raises
+    ``ValueError("(<path>) Duplicate map key: '<key>'")``. A YAML document that
+    holds more than 1000000 values once its aliases (``*a``) are expanded raises
+    ``ValueError("(<path>) the document holds more than 1000000 values once its
+    aliases are expanded")`` before anything walks it, and a document nested
+    more than 64 levels deep, the document being the first, raises
+    ``ValueError("(<path>) the document is nested more than 64 levels deep")``.
+    An alias whose anchor is undefined, or that lies inside the node its anchor
+    names, raises ``ValueError("(<path>) the alias '<name>' names no node that
+    ends before it")``, and an anchor given to two nodes raises
+    ``ValueError("(<path>) the anchor '<name>' names two nodes")``, which R's
+    yaml package would read as a placeholder or as the first of the two nodes.
+    A value tagged ``!expr``, which R's yaml package can evaluate as R code,
+    raises ``ValueError("(<path>) a value is tagged !expr, which theoryforge
+    does not read")``. A string or key that holds U+0000 or a lone surrogate,
+    which R cannot hold, raises ``ValueError("(<path>) a string holds U+0000,
+    which theoryforge cannot read")``, or the same message naming ``a lone
+    surrogate``. JSON has no comments, and ``json`` refuses them. A file with
+    more than one of these faults is refused for the first in this order. A
+    JSON text is measured for depth before it is parsed, a file that is not
+    valid UTF-8 or holds a NUL byte is refused next, or first in YAML, and a
+    syntax error anywhere in a JSON text comes before a repeated key. In YAML, a syntax error, a
+    repeated key and an alias that names no node come in the order the parser
+    meets them, a repeated key where its mapping ends, and a value tagged
+    ``!expr`` once the whole text has been parsed, after any alias that names
+    no node. The depth and the count of values come next, then U+0000 or a lone
+    surrogate and last an anchor given twice. A document that is not a mapping
+    raises ``ValueError("Theory data must be a mapping")``.
     """
     data = _load_document(path)
     if not isinstance(data, dict):
@@ -918,7 +1294,7 @@ def read(path) -> Theory:
 
 
 def write(theory: Theory, path) -> None:
-    """Write a ``Theory`` to ``path``, as JSON when the suffix is ``.json`` and as YAML otherwise.
+    """Write a ``Theory`` to ``path``, as JSON when the extension is ``.json`` and as YAML otherwise.
 
     See ``Theory.write()`` for the encoding and quoting rules.
     """
@@ -926,9 +1302,9 @@ def write(theory: Theory, path) -> None:
 
 
 def new_theory(id: str, title: str, maturity: str = "building", theory_form: str = "network") -> Theory:
-    """Start a new theory object (BUILDING mode entry point).
+    """Start a new theory object.
 
-    The theory holds ``schema_version`` ``"1.0"``, ``id``, ``title``,
+    The theory holds ``schema_version`` ``"1.1"``, ``id``, ``title``,
     ``maturity`` and ``theory_form``, with no constructs yet, and its provenance
     log records the step as ``tf_theory``. ``maturity`` is one of ``draft``,
     ``building``, ``developing`` or ``testing``, and at ``draft`` the
@@ -938,7 +1314,7 @@ def new_theory(id: str, title: str, maturity: str = "building", theory_form: str
     one outside the schema.
     """
     t = Theory({
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "id": id,
         "title": title,
         "maturity": maturity,

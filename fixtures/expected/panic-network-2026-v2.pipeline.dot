@@ -6,6 +6,7 @@ digraph pipeline {
   "pred2" [label="pred2\ninterval", fillcolor="#E7EDF5", color="#33567A"];
   "pred3" [label="pred3\ndirectional", fillcolor="#E7EDF5", color="#33567A"];
   "pred4" [label="pred4\npoint", fillcolor="#E7EDF5", color="#33567A"];
+  { rank=same; "pred1" -> "pred2" -> "pred3" -> "pred4" [style=invis]; }
   "result_pred1" [label="passed", fillcolor="#E5F2E7", color="#3E7A46"];
   "pred1" -> "result_pred1";
   "result_pred4" [label="passed", fillcolor="#E5F2E7", color="#3E7A46"];

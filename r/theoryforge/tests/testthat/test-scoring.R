@@ -6,8 +6,8 @@ test_that("tf_severity returns the documented panic values in file order", {
   expect_s3_class(sev, "data.frame")
   expect_identical(names(sev),
                    c("prediction_id", "type", "risk_score", "computed_severity"))
-  expect_identical(sev$prediction_id, c("pred1", "pred2", "pred3"))
-  expect_identical(sev$type, c("point", "interval", "directional"))
+  expect_identical(sev$prediction_id, c("pred1", "pred2", "pred3", "pred_indep"))
+  expect_identical(sev$type, c("point", "interval", "directional", "interval"))
 
   # pred1: point, diagnostic_vs hits a registered alternative -> 0.9 + 0.1 = 1.0
   expect_equal(sev$risk_score[1], 0.9)
@@ -18,6 +18,9 @@ test_that("tf_severity returns the documented panic values in file order", {
   # pred3: directional, CRUD discount -> 0.4 * 0.75 = 0.3
   expect_equal(sev$risk_score[3], 0.4)
   expect_equal(sev$computed_severity[3], 0.3)
+  # pred_indep: interval, no diagnostic -> 0.7 / 0.7
+  expect_equal(sev$risk_score[4], 0.7)
+  expect_equal(sev$computed_severity[4], 0.7)
 })
 
 test_that("existence predictions and missing diagnostics score the base", {
@@ -31,7 +34,8 @@ test_that("existence predictions and missing diagnostics score the base", {
 test_that("diagnostic bonus only fires against a registered alternative", {
   t <- tf_theory("sev-1", "Severity coverage")
   # diagnostic_vs points at an unregistered alternative -> no bonus.
-  t <- tf_add_prediction(t, "p1", "stmt", "point", diagnostic_vs = c("not_registered"))
+  t <- tf_add_prediction(t, "p1", "stmt", "point", diagnostic_vs = c("not_registered"),
+                         bounds = list(lower = 0.2, upper = 0.3))
   sev <- tf_severity(t)
   expect_equal(sev$computed_severity[1], 0.9)
 })

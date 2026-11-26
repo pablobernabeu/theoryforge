@@ -1,6 +1,7 @@
 {
   "theory_id": "modality-switching-2026",
   "criterion": "sigma",
+  "conditioning": "basis",
   "acyclic": true,
   "constructs": [
     "c_sensorimotor_experience",

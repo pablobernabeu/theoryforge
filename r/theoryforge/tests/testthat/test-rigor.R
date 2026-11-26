@@ -28,7 +28,7 @@ test_that("the dossier header names the checklist version", {
 
 test_that("panic-network rigor matches exact targets", {
   rep <- tf_check(tf_read(tf_fixture_path("panic-network.theory.yaml")))
-  expect_equal(rep$aggregate_score, 87.3)
+  expect_equal(rep$aggregate_score, 88.0)
   expect_equal(rep$coverage, 0.92)
   expect_identical(rep$gate, "pass")
   expect_identical(rep$n_blockers_failed, 0L)
@@ -36,17 +36,17 @@ test_that("panic-network rigor matches exact targets", {
   # An item with nothing to assess has the status "n/a" and a NULL score.
   expected <- list(
     falsifiability     = list("pass", 1.0),
-    precision          = list("pass", 0.667),
-    risk_severity      = list("pass", 0.567),
+    precision          = list("pass", 0.75),
+    risk_severity      = list("pass", 0.6),
     parsimony          = list("n/a", NULL),
     non_redundancy     = list("pass", 1.0),
     construct_clarity  = list("pass", 1.0),
     scope              = list("pass", 1.0),
     logical_why        = list("pass", 1.0),
     causal_testability = list("pass", 1.0),
-    diagnosticity      = list("pass", 0.333),
+    diagnosticity      = list("pass", 0.25),
     formalisation      = list("pass", 1.0),
-    derivation_chain   = list("pass", 1.0)
+    derivation_chain   = list("warn", 1.0)
   )
   for (id in names(expected)) {
     expect_identical(item_status(rep, id), expected[[id]][[1]], info = id)
@@ -133,10 +133,11 @@ with_severities <- function(...) {
 }
 
 test_that("the severity mean is a left fold", {
-  # R's sum() uses an extended accumulator on x86_64 and CPython 3.12+ sum()
-  # compensates, so either gives 0.5 here where a plain left-to-right sum, as
-  # on Apple Silicon R or Python 3.11, gives the double just below 0.5. The
-  # twins agree only if both fold left in file order (API_SPEC section 4).
+  # R's sum() accumulates in long double where R has it, as on x86_64 by
+  # default, and CPython 3.12+ sum() compensates, so either gives 0.5 here
+  # where a plain left-to-right sum, as R's on Apple Silicon or without long
+  # double, or Python 3.11's, gives the double just below 0.5. The twins agree
+  # only if both fold left in file order (API_SPEC section 4).
   # That double is written as 0.5 - 2^-54, which R computes exactly on every
   # build. R built without long double reads the literal 0.49999999999999994
   # as 0.5, since it accumulates the digits in a double.
@@ -213,7 +214,11 @@ test_that("tf_report returns valid JSON", {
   out <- tf_report(tf_read(tf_fixture_path("panic-network.theory.yaml")), "json")
   expect_true(jsonlite::validate(out))
   parsed <- jsonlite::fromJSON(out, simplifyVector = FALSE)
-  expect_equal(parsed$aggregate_score, 87.3, tolerance = 1e-9)
+  expect_equal(parsed$aggregate_score, 88.0, tolerance = 1e-9)
+  # One id is still written as an array, and none as an empty one, as Python
+  # writes them.
+  expect_true(grepl('"not_checked": [\n        "pred_indep"\n      ]', out, fixed = TRUE))
+  expect_true(grepl('"phenomena_not_checked": []', out, fixed = TRUE))
   # A NULL score is written as null, the value Python's None gives.
   expect_null(parsed$items[[4]]$score)
   expect_true(grepl('"score": null', out, fixed = TRUE))
@@ -231,7 +236,7 @@ test_that("tf_report html escapes the id and every cell it interpolates", {
   # The schema allows any non-empty id, and the checklist citations hold a
   # bare '&', so both reached the HTML unescaped.
   html <- tf_report(tf_theory("a<b&c", "T"), "html")
-  expect_match(html, "<h2>Rigour report: a&lt;b&amp;c</h2>", fixed = TRUE)
+  expect_match(html, "<h2>Checklist report: a&lt;b&amp;c</h2>", fixed = TRUE)
   expect_false(grepl("a<b&c", html, fixed = TRUE))
   expect_false(grepl("&(?!amp;|lt;|gt;|middot;)", html, perl = TRUE))
 })

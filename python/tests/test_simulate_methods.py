@@ -49,10 +49,65 @@ def test_simulate_refuses_an_unknown_method(panic_path, method):
 def test_simulate_records_the_method_and_what_it_leaves_out(panic_path):
     t = tf.read(panic_path)
     r = t.simulate(steps=2)
-    assert list(r) == ["states", "dt", "steps", "k", "damping", "init", "method", "ignored",
-                       "opposed", "trajectory"]
-    assert (r["method"], r["ignored"], r["opposed"]) == ("euler", [], [])
-    assert t.simulate(steps=2, method="exact")["method"] == "exact"
+    assert list(r) == ["states", "dt", "steps", "k", "damping", "init", "initial_state", "method",
+                       "ignored", "assumed_positive", "opposed", "trajectory"]
+    # The default method is the exact solution.
+    assert (r["method"], r["ignored"], r["opposed"]) == ("exact", [], [])
+    # p3 states that perceived threat causes arousal, without a sign. The
+    # coupling is positive by assumption, and that alone makes the loop grow.
+    assert r["assumed_positive"] == ["p3"]
+    assert t.simulate(steps=2, method="euler")["method"] == "euler"
+
+
+def _fan():
+    # a reaches each of b to e by one relation, and three propositions couple
+    # nothing.
+    t = tf.new_theory("signs", "Signs")
+    for c in "abcde":
+        t.add_construct(c, c.upper(), "d")
+    for pid, to, rel in [("p1", "b", "increases"), ("p2", "c", "decreases"), ("p3", "d", "causes"),
+                         ("p4", "e", "mediates"), ("p5", "zz", "causes"), ("p6", "b", "moderates")]:
+        t.add_proposition(pid, "a", to, rel)
+    return t.add_proposition("p7", "b", "c", "associates")
+
+
+def test_simulate_reads_the_signs_from_the_relation_table():
+    # increases and decreases carry the table's signs. causes and mediates
+    # carry none and are coupled at +k, and the record lists them in file
+    # order. A coupling to an undeclared construct is ignored and assumes
+    # nothing.
+    from theoryforge._relations import PATHS
+
+    assert PATHS == frozenset({"increases", "decreases", "causes", "mediates"})
+    r = _fan().simulate(steps=1, dt=1, damping=0, init={"a": 1})
+    assert r["trajectory"][1] == [1.0, 1.0, -1.0, 1.0, 1.0]
+    assert r["assumed_positive"] == ["p3", "p4"]
+    assert r["ignored"] == ["p5", "p6", "p7"]
+
+
+def test_simulate_starts_from_a_mapping_for_an_impulse_response(panic_path):
+    # A construct the mapping leaves out starts from 0, so one entry gives the
+    # response to an impulse in that construct. The mapping is echoed as given
+    # and initial_state holds every starting value, in the order of states.
+    t = tf.read(panic_path)
+    r = t.simulate(steps=2, init={"c_avoidance": 2, "c_arousal": 0.5}, method="exact")
+    assert r["init"] == {"c_avoidance": 2, "c_arousal": 0.5}
+    assert r["initial_state"] == [0.5, 0.0, 2.0]
+    assert r["trajectory"][0] == [0.5, 0.0, 2.0]
+    # Constructs with the same incoming couplings now part: arousal and
+    # threat no longer follow one path.
+    impulse = t.simulate(steps=5, init={"c_arousal": 1}, method="exact")["trajectory"]
+    assert impulse[5][0] != impulse[5][1]
+    assert t.simulate(steps=1, init={})["trajectory"] == [[0.0, 0.0, 0.0]] * 2
+
+
+def test_simulate_refuses_a_mapping_that_names_an_unknown_construct(panic_path):
+    # Checked once the theory is read, after the duplicate ids, in the order
+    # of the mapping. The R suite asserts the same message.
+    with pytest.raises(ValueError) as exc:
+        tf.read(panic_path).simulate(init={"c_arousal": 1, "arousal": 1, "zz": 2})
+    assert str(exc.value) == ("simulate requires init to name declared constructs; unknown "
+                              "construct id: arousal")
 
 
 def test_exact_decays_where_euler_explodes(weak_path):
@@ -63,7 +118,7 @@ def test_exact_decays_where_euler_explodes(weak_path):
     exact = t.simulate(steps=3, dt=1, damping=2.5, method="exact")["trajectory"]
     assert [row[0] for row in exact] == [1.0, 0.082085, 0.006738, 0.000553]
     with pytest.warns(UserWarning) as rec:
-        euler = t.simulate(steps=3, dt=1, damping=2.5)["trajectory"]
+        euler = t.simulate(steps=3, dt=1, damping=2.5, method="euler")["trajectory"]
     assert [str(w.message) for w in rec] == [EULER_WARNING]
     assert [row[0] for row in euler] == [1.0, -1.5, 2.25, -3.375]
 
@@ -76,15 +131,43 @@ def test_exact_keeps_the_oscillation_that_euler_inflates():
     exact = t.simulate(steps=500, method="exact")["trajectory"]
     assert max(abs(x) for row in exact[-73:] for x in row) < 1.4
     with pytest.warns(UserWarning, match="depart from the exact solution"):
-        euler = t.simulate(steps=500)["trajectory"]
+        euler = t.simulate(steps=500, method="euler")["trajectory"]
     assert max(abs(x) for row in euler[-73:] for x in row) > 8
 
 
 def test_euler_does_not_warn_when_it_tracks_the_exact_solution(panic_path):
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        tf.read(panic_path).simulate()
-        _regulation().simulate(steps=5)
+        tf.read(panic_path).simulate(method="euler")
+        _regulation().simulate(steps=5, method="euler")
+
+
+def test_the_euler_warning_does_not_depend_on_the_unit_of_init(weak_path, panic_path):
+    # With dt = 1, the Euler run of weak-demo is 18 per cent off the exact one
+    # at the first step and a factor of 7 off at the tenth, whatever init is.
+    # The departure is measured against the largest absolute starting value
+    # as well as the exact state, so a start at 0.2 warns as a start at 1 does.
+    t = tf.read(weak_path)
+    for init in (1.0, 0.2, -0.01):
+        with pytest.warns(UserWarning) as rec:
+            t.simulate(steps=10, dt=1, init=init, method="euler")
+        assert [str(w.message) for w in rec] == [EULER_WARNING]
+    # A run that tracks the exact solution stays silent at any scale.
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        for init in (100.0, 0.01):
+            tf.read(panic_path).simulate(init=init, method="euler")
+    # The scale is the largest absolute starting value, here that of the one
+    # construct init names. A run that starts at 0 everywhere stays at 0 and
+    # gives no warning.
+    chain = tf.new_theory("chain", "Chain").add_construct("a", "A", "d").add_construct("b", "B", "d")
+    chain.add_proposition("p1", "a", "b", "increases")
+    with pytest.warns(UserWarning) as rec:
+        chain.simulate(steps=4, dt=3, init={"a": 0.01}, method="euler")
+    assert [str(w.message) for w in rec] == [EULER_WARNING]
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        chain.simulate(steps=4, dt=3, init=0, method="euler")
 
 
 def test_exact_ignores_the_step_size_for_stability(weak_path):
@@ -165,3 +248,79 @@ EXACT_FB_ROW_7_D = 3.837653
 # itself grows by exp(20) per step and leaves the double range at step 35.
 EXACT_DIVERGENCE = ("simulate diverged at step 35: state 'c_arousal' is not finite; "
                     "raise damping, reduce k or take fewer steps")
+
+
+def _triple_loop(A, B):
+    """A times B by the loop over i, j and m that API_SPEC section 22 states."""
+    n = len(A)
+    out = [[0.0] * n for _ in range(n)]
+    for i in range(n):
+        for j in range(n):
+            acc = 0.0
+            for m in range(n):
+                acc = acc + A[i][m] * B[m][j]
+            out[i][j] = acc
+    return out
+
+
+def test_the_matrix_product_gives_the_triple_loops_bits():
+    # The product skips a term only when one factor is 0 and the other finite,
+    # which leaves a sum unchanged. Zeros of both signs, infinities and NaN
+    # check that nothing else is skipped. The R suite makes the same check.
+    import random
+    import struct
+
+    from theoryforge.simulate import _matmul
+
+    rng = random.Random(5)
+    special = [0.0, -0.0, math.inf, -math.inf, math.nan, 5e-324, 1e308]
+    for _ in range(300):
+        n = rng.randint(1, 7)
+        A, B = ([[rng.choice(special) if rng.random() < 0.15 else
+                  (rng.uniform(-2, 2) if rng.random() < 0.4 else 0.0) for _ in range(n)]
+                 for _ in range(n)] for _ in range(2))
+        got, want = _matmul(A, B), _triple_loop(A, B)
+        assert [[struct.pack("<d", x) for x in row] for row in got] == \
+            [[struct.pack("<d", x) for x in row] for row in want]
+
+
+def test_a_theory_of_400_constructs_simulates():
+    # A chain: the first state has no couplings into it, so it decays at the
+    # damping rate, exactly with method "exact" and by 1 - dt * damping per step
+    # with Euler.
+    t = tf.new_theory("chain", "Chain")
+    for i in range(400):
+        t = t.add_construct(f"c{i}", f"C{i}", "A state.")
+    for i in range(399):
+        t = t.add_proposition(f"p{i}", f"c{i}", f"c{i + 1}", "increases")
+    exact = t.simulate()["trajectory"]
+    assert [row[0] for row in exact] == pytest.approx([math.exp(-0.05 * s) for s in range(11)],
+                                                      abs=1e-6)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        euler = t.simulate(method="euler")["trajectory"]
+    assert [row[0] for row in euler] == pytest.approx([0.95 ** s for s in range(11)], abs=1e-6)
+    assert len(euler) == 11 and len(euler[10]) == 400
+
+
+def test_numpy_float32_knobs_give_the_trajectory_of_the_equal_floats():
+    # The knobs are computed with as doubles, as R holds them, so a float32
+    # gives the bits of the double it equals, with either method. They are
+    # echoed as given.
+    np = pytest.importorskip("numpy")
+    import struct
+
+    t = (tf.new_theory("f32", "Float32").add_construct("a", "A", "d").add_construct("b", "B", "d")
+         .add_construct("c", "C", "d").add_proposition("p1", "a", "b", "increases")
+         .add_proposition("p2", "b", "c", "decreases"))
+    for method in ("euler", "exact"):
+        for knobs in ({"dt": 0.3, "k": 1.7, "damping": 0.0}, {"dt": 0.5, "k": 1.0, "damping": 0.2}):
+            given = {name: np.float32(value) for name, value in knobs.items()}
+            equal = {name: float(value) for name, value in given.items()}
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                a = tf.simulate(t, steps=8, init=1234.56789, method=method, **given)
+                b = tf.simulate(t, steps=8, init=1234.56789, method=method, **equal)
+            assert [[struct.pack("<d", x) for x in row] for row in a["trajectory"]] == \
+                [[struct.pack("<d", x) for x in row] for row in b["trajectory"]]
+            assert a["dt"] is given["dt"]

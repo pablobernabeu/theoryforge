@@ -1,0 +1,97 @@
+# Source: red-team-score/inputs/redteam/rt3-astrology.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Red-team input 3: a sun-sign theory of temperament, written with care for
+# every field, whose every prediction has failed its test. The test outcomes
+# are invented for this audit and say so. The file asks whether the score or
+# the gate responds to a record of refutation.
+schema_version: "1.1"
+id: "rt3-astrology"
+title: "Elemental sun-sign theory of temperament"
+maturity: "testing"
+theory_form: "process"
+version: {id: "v1", parent_id: null, content_hash: null}
+
+constructs:
+  - id: c_fire_sign
+    label: "Fire-sign birth"
+    definition: "Birth while the Sun lies in Aries, Leo or Sagittarius, coded from the date of birth."
+    measurement: ["date of birth from a civil register, coded to the tropical zodiac"]
+    boundary_conditions: ["births with a registered date", "tropical zodiac"]
+  - id: c_solar_imprint
+    label: "Solar elemental imprint"
+    definition: "The temperamental disposition that the solar element at birth confers on a newborn."
+    measurement: ["astrologer's rating of elemental dominance from the natal chart"]
+    boundary_conditions: ["natal charts cast for a known time and place"]
+  - id: c_extraversion
+    label: "Extraversion"
+    definition: "The tendency to seek stimulation and the company of others, scored on a standard inventory."
+    measurement: ["Extraversion scale of a published five-factor inventory, T scores"]
+    boundary_conditions: ["adults", "inventories in the respondent's first language"]
+
+propositions:
+  - id: p1
+    from: c_fire_sign
+    to: c_solar_imprint
+    relation: "increases"
+    mechanism: "The Sun's position in a fire sign at birth imprints the qualities of the fire element on the newborn's temperament."
+  - id: p2
+    from: c_solar_imprint
+    to: c_extraversion
+    relation: "increases"
+    mechanism: "A fiery imprint expresses itself as the outgoing, stimulation-seeking style that inventories score as extraversion."
+
+boundary_conditions: ["adults", "births with a registered date"]
+
+predictions:
+  - id: pred_mean
+    derives_from: [p1, p2]
+    statement: "Adults born under fire signs score 3 T-score points higher in extraversion than others, within a tolerance of 1 point."
+    type: "point"
+    bounds: {lower: 2, upper: 4}
+    diagnostic_vs: [alt_chance]
+    claim: {kind: effect, x: c_fire_sign, y: c_extraversion, sign: positive}
+  - id: pred_share
+    derives_from: [p1, p2]
+    statement: "Between 55 and 65 per cent of fire-sign adults score above the population median of extraversion."
+    type: "interval"
+    bounds: {lower: 55, upper: 65}
+    diagnostic_vs: [alt_chance]
+  - id: pred_match
+    derives_from: [p1]
+    statement: "Astrologers shown a natal chart pick the matching inventory profile from three in 50 to 70 per cent of cases."
+    type: "interval"
+    bounds: {lower: 50, upper: 70}
+    diagnostic_vs: [alt_chance]
+
+auxiliary_assumptions:
+  - id: aux_time
+    statement: "Birth times in civil registers are accurate enough to cast the chart."
+    added_for: null
+    protects: [pred_match]
+
+# Invented for this audit: every prediction failed.
+test_outcomes:
+  - prediction_id: pred_mean
+    observed: "Invented: the difference was 0.1 T-score points."
+    passed: false
+    registered: null
+    date: "2026-01-01"
+  - prediction_id: pred_share
+    observed: "Invented: 50.2 per cent scored above the median."
+    passed: false
+    registered: null
+    date: "2026-01-01"
+  - prediction_id: pred_match
+    observed: "Invented: astrologers matched 33 per cent of charts, the chance rate."
+    passed: false
+    registered: null
+    date: "2026-01-01"
+
+alternatives:
+  - id: alt_chance
+    label: "Chance (no astrological influence)"
+    key_constructs: ["no relation between sun sign and temperament"]
+    source_doi: null
+
+formal_model:
+  type: "sem"
+  spec_ref: null

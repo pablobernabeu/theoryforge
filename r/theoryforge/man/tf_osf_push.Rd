@@ -2,7 +2,7 @@
 % Please edit documentation in R/osf.R
 \name{tf_osf_push}
 \alias{tf_osf_push}
-\title{Deposit a theory's audit dossier to OSF storage}
+\title{Deposit a theory's dossier to OSF storage}
 \usage{
 tf_osf_push(
   theory,
@@ -50,10 +50,9 @@ OSF storage. With \code{dry_run = TRUE} (the default), the planned request
 is returned and nothing is sent. A live upload (\code{dry_run = FALSE}) requires
 both \code{token} and \code{node} (the OSF project id) and performs an
 authenticated \code{PUT} through the suggested \pkg{curl} package, which must
-be installed. Each request is abandoned after 30 seconds. The dossier is
-built first, so the
-function stops when \code{\link[=tf_check]{tf_check()}} refuses the theory, with
-\code{dry_run = TRUE} as well.
+be installed. Each request is abandoned after 30 seconds without progress.
+The dossier is built first, so the function stops when \code{\link[=tf_check]{tf_check()}} refuses
+the theory, with \code{dry_run = TRUE} as well.
 }
 \details{
 OSF storage refuses to create a file whose name already exists in the
@@ -62,7 +61,12 @@ default filename fails. Pass a version-specific \code{filename}, or
 \code{overwrite = TRUE} to add a new version of the existing file: the
 folder is listed first and the dossier is sent to that file's upload link,
 the WaterButler route that records a new OSF version. When the folder holds
-no file of that name, \code{overwrite = TRUE} creates it as usual.
+no file of that name, \code{overwrite = TRUE} creates it as usual. The
+token goes with that \code{PUT}, so the link must be an https address on the
+host of \code{base_url} or on a host ending in \code{.osf.io}, where
+WaterButler keeps its regional storage. Any other link stops with
+\code{OSF lists <filename> with an upload link outside OSF storage: <link>}
+before anything is sent.
 }
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory")

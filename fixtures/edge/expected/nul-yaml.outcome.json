@@ -1,0 +1,5 @@
+{
+  "read": {
+    "error": "a string holds U+0000, which theoryforge cannot read"
+  }
+}

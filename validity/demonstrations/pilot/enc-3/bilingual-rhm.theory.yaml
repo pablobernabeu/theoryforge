@@ -1,0 +1,162 @@
+# Source: pilot/enc-3/bilingual-rhm.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Encoding-reliability pilot, encoder 3. Encoded by hand from
+# source-bilingual-rhm.md only (Kroll & Stewart, 1994, as reviewed and revised
+# by Kroll, van Hell, Tokowicz & Green, 2010). The judgement calls are listed in
+# notes.md. Measures and mechanisms are given only where the source text states
+# or directly implies them.
+schema_version: "1.1"
+id: "revised-hierarchical-model"
+title: "Revised Hierarchical Model of translation asymmetry in late bilinguals"
+maturity: "testing"
+theory_form: "variance"
+version:
+  id: "kroll-et-al-2010"
+  parent_id: "kroll-stewart-1994"
+  content_hash: null
+
+constructs:
+  - id: c_l2_proficiency
+    label: "L2 proficiency"
+    definition: "The skill in the second language (L2) that a late bilingual has gained through experience with it."
+  - id: c_l1_meaning_link
+    label: "Connection between L1 words and meaning"
+    definition: "The strength of the connection between the word forms of the first language (L1) and the system of meanings (concepts) that the two languages share, which is strong for the dominant L1."
+  - id: c_l2_meaning_access
+    label: "Connection from L2 words to meaning"
+    definition: "The strength of the direct connection by which an L2 word form reaches its meaning in the shared conceptual system without passing through its L1 translation, as in understanding an L2 word."
+  - id: c_meaning_l2_access
+    label: "Connection from meaning to L2 words"
+    definition: "The strength of the connection by which a concept reaches the L2 word form that expresses it, as in speaking, naming a picture in the L2 or translating into the L2."
+  - id: c_l1_equivalent_reliance
+    label: "Reliance on the L1 translation equivalent"
+    definition: "The degree to which a bilingual activates the L1 translation equivalent of an L2 word when processing the L2 word and uses it to reach the word's meaning."
+  - id: c_translation_asymmetry
+    label: "Translation asymmetry"
+    definition: "The amount by which translating a word from L1 to L2 (forward translation) takes longer than translating a word from L2 to L1 (backward translation)."
+    measurement: ["forward translation latency minus backward translation latency for comparable words"]
+  - id: c_forward_conceptual_mediation
+    label: "Conceptual mediation of forward over backward translation"
+    definition: "The extent to which forward translation passes through meaning more than backward translation does, backward translation being able to proceed at the level of word forms by retrieving the L1 equivalent without access to meaning."
+    measurement: ["the effect of a variable that acts on meaning, such as a preceding semantically driven picture-naming task, on forward translation minus its effect on backward translation"]
+  - id: c_item_difficulty
+    label: "Item difficulty"
+    definition: "How hard a word is to translate, as for infrequent words and for abstract words whose translations share no form with them."
+    measurement: ["word frequency", "concreteness of the word", "whether the word and its translation share form"]
+
+propositions:
+  - id: p1
+    from: c_l2_proficiency
+    to: c_l2_meaning_access
+    relation: "increases"
+    mechanism: "As L2 proficiency grows with experience, the direct connection between L2 words and meaning strengthens."
+  - id: p2
+    from: c_l2_proficiency
+    to: c_meaning_l2_access
+    relation: "increases"
+    mechanism: "As L2 proficiency grows with experience, the direct connection between meaning and L2 words strengthens."
+  - id: p3
+    from: c_l2_meaning_access
+    to: c_l1_equivalent_reliance
+    relation: "decreases"
+    mechanism: "A learner whose L2 words are weakly connected to meaning reaches the meaning of an L2 word through its L1 translation equivalent, which is strongly connected to meaning; as the direct connection strengthens, reliance on the L1 translation declines."
+  - id: p4
+    from: c_meaning_l2_access
+    to: c_translation_asymmetry
+    relation: "decreases"
+    mechanism: "Forward translation passes from the L1 word through its concept to the L2 word, and going from a concept to the L2 word is effortful while that connection is weak, whereas backward translation can be completed at the level of word forms."
+  - id: p5
+    from: c_l1_meaning_link
+    to: c_forward_conceptual_mediation
+    relation: "increases"
+    mechanism: "The L1 word is strongly connected to its concept, so translating from the L1 engages meaning, whereas an L2 word can be translated into the L1 by retrieving its L1 equivalent without access to meaning."
+  - id: p6
+    from: c_item_difficulty
+    to: c_translation_asymmetry
+    relation: "increases"
+    mechanism: "Difficult items, such as infrequent words or abstract words whose translations share no form with them, make a skilled bilingual behave like a less skilled one."
+
+boundary_conditions:
+  - "late bilinguals, who learned the L2 after early childhood"
+  - "the L1 remains the dominant language"
+  - "word production and translation, not word recognition"
+  - "ordinary L2 learning, which small, heavily practised vocabularies taught in laboratory training studies may not represent"
+
+phenomena:
+  - id: ph1
+    statement: "Late bilinguals translate words at different speeds in the two directions."
+    source_doi: null
+  - id: ph2
+    statement: "Where the L2 has become a bilingual's dominant language, translation follows the same pattern with the roles of the two languages exchanged."
+    source_doi: "10.1017/S136672891000009X"
+  - id: ph3
+    statement: "Even learners with little L2 experience can understand some L2 words directly."
+    source_doi: "10.1017/S136672891000009X"
+  - id: ph4
+    statement: "Both languages are active in parallel when a bilingual processes words, a finding the original model did not include and that the authors argue can be added to it."
+    source_doi: "10.1017/S136672891000009X"
+
+predictions:
+  - id: pr1
+    derives_from: [p4]
+    statement: "Translation from L1 to L2 (forward translation) takes longer than translation from L2 to L1 (backward translation)."
+    type: "directional"
+    bounds: {lower: 0, upper: null}
+    diagnostic_vs: []
+  - id: pr2
+    derives_from: [p5]
+    statement: "Variables that act on meaning affect forward translation more than backward translation."
+    type: "directional"
+    bounds: {lower: 0, upper: null}
+    diagnostic_vs: []
+  - id: pr3
+    derives_from: [p2, p4]
+    statement: "The difference between forward and backward translation shrinks as the bilingual becomes more skilled in the L2."
+    type: "directional"
+    diagnostic_vs: []
+    claim: {kind: effect, x: c_l2_proficiency, y: c_translation_asymmetry, sign: negative}
+  - id: pr4
+    derives_from: [p1, p3]
+    statement: "Learners at early stages activate the L1 translation equivalent when they process L2 words, whereas more proficient bilinguals do not use it to retrieve meaning."
+    type: "directional"
+    diagnostic_vs: []
+    claim: {kind: effect, x: c_l2_proficiency, y: c_l1_equivalent_reliance, sign: negative}
+  - id: pr5
+    derives_from: [p3]
+    statement: "In less proficient learners, the L1 translation equivalent becomes active before the meaning of the L2 word is available."
+    type: "directional"
+    diagnostic_vs: []
+    x_status: "described by the authors as not yet tested"
+  - id: pr6
+    derives_from: [p6]
+    statement: "When the items are hard, such as infrequent words or abstract words whose translations share no form with them, the translation asymmetry appears even in proficient bilinguals."
+    type: "directional"
+    diagnostic_vs: []
+    claim: {kind: effect, x: c_item_difficulty, y: c_translation_asymmetry, sign: positive}
+
+auxiliary_assumptions:
+  - id: aux1
+    statement: "The weak connection between L2 words and meaning is asymmetric: going from an L2 word to its meaning is relatively easy, whereas going from a concept to the L2 word, as in speaking or picture naming, is effortful."
+    added_for: null
+    protects: [pr1, pr3]
+
+evidence:
+  - supports: pr2
+    source_doi: null
+    direction: "corroborates"
+    x_finding: "A semantically driven picture-naming task primed forward but not backward translation."
+    x_cited_in: "10.1017/S136672891000009X"
+
+alternatives:
+  - id: alt_inhibitory_control
+    label: "Inhibitory control model (Green)"
+    key_constructs: ["difficulty of suppressing the more dominant L1 word when producing an L2 word"]
+    source_doi: null
+
+formal_model:
+  type: "none"
+  spec_ref: null
+
+provenance:
+  - step: "1"
+    action: "hand_encoding"
+    detail: "Encoded by encoder 3 from source-bilingual-rhm.md, which follows Kroll et al. (2010), doi:10.1017/S136672891000009X, and Kroll and Stewart (1994), doi:10.1006/jmla.1994.1008."

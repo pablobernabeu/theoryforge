@@ -10,7 +10,7 @@
 # the same test as non-diagnostic removes the threat and closes the gap. The
 # effect is specific to the stereotyped group and moderated by domain
 # identification.
-schema_version: "1.0"
+schema_version: "1.1"
 id: "stereotype-threat-1995"
 title: "Stereotype threat and the intellectual test performance of African Americans"
 maturity: "testing"
@@ -83,6 +83,7 @@ predictions:
     risk_score: 0.6
     severity: 0.7
     diagnostic_vs: [alt_ability_deficit]
+    claim: {kind: effect, x: c_diagnostic_framing, y: c_test_performance, sign: negative}
   - id: pred_group_by_framing
     derives_from: [p_framing_salience, p_salience_threat, p_threat_performance]
     statement: "There is a group by framing interaction: the diagnostic framing depresses performance for African American test-takers but not for White test-takers, so under non-diagnostic framing the racial performance gap disappears."
@@ -97,6 +98,7 @@ predictions:
     risk_score: 0.6
     severity: 0.6
     diagnostic_vs: [alt_test_anxiety]
+    claim: {kind: effect, x: c_diagnostic_framing, y: c_stereotype_salience, sign: positive}
   - id: pred_identification
     derives_from: [p_identification_moderates]
     statement: "The performance-depressing effect of diagnostic framing on African American test-takers is confined to those identified with the verbal domain and is absent for the unidentified."

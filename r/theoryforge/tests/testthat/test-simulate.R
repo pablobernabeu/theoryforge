@@ -1,8 +1,8 @@
 test_that("tf_simulate returns states, dt, steps, and trajectory of the right shape", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   sim <- tf_simulate(theory)
-  expect_named(sim, c("states", "dt", "steps", "k", "damping", "init", "method",
-                      "ignored", "opposed", "trajectory"))
+  expect_named(sim, c("states", "dt", "steps", "k", "damping", "init", "initial_state",
+                      "method", "ignored", "assumed_positive", "opposed", "trajectory"))
   expect_equal(unlist(sim$states),
                c("c_arousal", "c_perceived_threat", "c_avoidance"))
   expect_equal(sim$dt, 0.1)
@@ -23,10 +23,12 @@ test_that("tf_simulate echoes back every knob that shapes the trajectory", {
   expect_equal(sim$k, 0.75)
   expect_equal(sim$damping, 0.25)
   expect_equal(sim$init, 2.0)
+  expect_identical(sim$initial_state, c(2, 2, 2))
+  expect_identical(sim$method, "exact")
   # At k = 1.5 the feedback loop grows fast enough for three Euler steps of
   # 0.2 to fall short of the exact solution by more than 5 per cent.
   expect_warning(other <- tf_simulate(theory, steps = 3L, dt = 0.2, k = 1.5,
-                                      damping = 0.25, init = 2.0),
+                                      damping = 0.25, init = 2.0, method = "euler"),
                  "depart from the exact solution", fixed = TRUE)
   expect_false(isTRUE(all.equal(sim$trajectory, other$trajectory)))
 })
@@ -49,6 +51,8 @@ test_that("tf_simulate refuses invalid knobs with the Python twin's messages", {
   # the same messages for the same knobs.
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   steps_msg <- "simulate requires steps to be a whole number of at least 0"
+  init_msg <- paste0("simulate requires init to be a finite number or a mapping from ",
+                     "construct ids to finite numbers")
   dt_msg <- "simulate requires dt to be a finite number greater than 0"
   cases <- list(
     list(list(steps = 2.5), steps_msg),
@@ -69,9 +73,19 @@ test_that("tf_simulate refuses invalid knobs with the Python twin's messages", {
     list(list(k = "1"), "simulate requires k to be a finite number"),
     list(list(damping = NaN), "simulate requires damping to be a finite number"),
     list(list(damping = NULL), "simulate requires damping to be a finite number"),
-    list(list(init = c(1, 2, 3)), "simulate requires init to be a single finite number"),
-    list(list(init = NaN), "simulate requires init to be a single finite number"),
-    list(list(init = FALSE), "simulate requires init to be a single finite number")
+    list(list(init = c(1, 2, 3)), init_msg),
+    list(list(init = NaN), init_msg),
+    list(list(init = FALSE), init_msg),
+    list(list(init = "1"), init_msg),
+    # A mapping needs finite numbers under names that are not empty or
+    # repeated, which is all a Python key can be.
+    list(list(init = c(c_arousal = Inf)), init_msg),
+    list(list(init = c(c_arousal = TRUE)), init_msg),
+    list(list(init = list(c_arousal = "1")), init_msg),
+    list(list(init = list(c_arousal = c(1, 2))), init_msg),
+    list(list(init = c(1, c_arousal = 2)), init_msg),
+    list(list(init = c(c_arousal = 1, c_arousal = 2)), init_msg),
+    list(list(init = list(1, 2)), init_msg)
   )
   for (case in cases) {
     expect_error(do.call(tf_simulate, c(list(theory), case[[1]])), case[[2]],
@@ -95,13 +109,14 @@ test_that("tf_simulate stops with the step and state where it diverges", {
   # double range. Both twins now stop at that step.
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   expect_error(
-    tf_simulate(theory, steps = 240, dt = 2, k = 10, damping = 0, init = 10),
+    tf_simulate(theory, steps = 240, dt = 2, k = 10, damping = 0, init = 10, method = "euler"),
     "simulate diverged at step 228: state 'c_arousal' is not finite; reduce dt or k",
     fixed = TRUE)
   # One step fewer runs to completion, and warns that the Euler steps have
   # left the exact solution.
   expect_warning(
-    sim <- tf_simulate(theory, steps = 227, dt = 2, k = 10, damping = 0, init = 10),
+    sim <- tf_simulate(theory, steps = 227, dt = 2, k = 10, damping = 0, init = 10,
+                       method = "euler"),
     "depart from the exact solution", fixed = TRUE)
   expect_length(sim$trajectory, 228L)
   expect_true(all(is.finite(unlist(sim$trajectory))))
@@ -178,7 +193,7 @@ test_that("tf_simulate matches the Python golden semantically (tol 1e-9)", {
     theory <- tf_read(tf_fixture_path(fixture))
     sim <- tf_simulate(theory, method = method)
 
-    golden_file <- paste0(id, if (method == "exact") ".simulate_exact.json" else ".simulate.json")
+    golden_file <- paste0(id, if (method == "euler") ".simulate_euler.json" else ".simulate.json")
     golden <- jsonlite::fromJSON(tf_expected_path(golden_file), simplifyVector = TRUE)
     id <- paste(id, method)
 
@@ -200,9 +215,12 @@ test_that("tf_simulate matches the Python golden semantically (tol 1e-9)", {
   }
 })
 
-test_that("tf_simulate panic trajectory reproduces the documented first rows", {
+test_that("tf_simulate panic trajectory reproduces the first Euler rows", {
+  # With every state at 1, each grows by dt * (k - damping) = 0.05 per Euler
+  # step, and by exp(0.05) per step of the exact solution, the default.
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
-  sim <- tf_simulate(theory)
+  expect_equal(tf_simulate(theory, steps = 1)$trajectory[[2L]], rep(round(exp(0.05), 6), 3))
+  sim <- tf_simulate(theory, method = "euler")
   expect_equal(sim$trajectory[[1L]], c(1, 1, 1))
   expect_equal(sim$trajectory[[2L]], c(1.05, 1.05, 1.05))
   expect_equal(sim$trajectory[[3L]], c(1.1025, 1.1025, 1.1025))
@@ -266,10 +284,67 @@ test_that("tf_simulate refuses an unknown method with the Python twin's message"
 test_that("tf_simulate records the method and what the coupling leaves out", {
   theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
   sim <- tf_simulate(theory, steps = 2)
-  expect_identical(sim$method, "euler")
+  # The default method is the exact solution.
+  expect_identical(sim$method, "exact")
   expect_identical(sim$ignored, list())
   expect_identical(sim$opposed, list())
-  expect_identical(tf_simulate(theory, steps = 2, method = "exact")$method, "exact")
+  # p3 states that perceived threat causes arousal, without a sign. The
+  # coupling is positive by assumption, and that alone makes the loop grow.
+  expect_identical(sim$assumed_positive, list("p3"))
+  expect_identical(tf_simulate(theory, steps = 2, method = "euler")$method, "euler")
+})
+
+# a reaches each of b to e by one relation, and three propositions couple
+# nothing.
+.fan_theory <- function() {
+  theory <- tf_theory("signs", "Signs")
+  for (c in c("a", "b", "c", "d", "e")) theory <- tf_add_construct(theory, c, toupper(c), "d")
+  props <- list(c("p1", "b", "increases"), c("p2", "c", "decreases"), c("p3", "d", "causes"),
+                c("p4", "e", "mediates"), c("p5", "zz", "causes"), c("p6", "b", "moderates"))
+  for (p in props) theory <- tf_add_proposition(theory, p[[1]], "a", p[[2]], p[[3]])
+  tf_add_proposition(theory, "p7", "b", "c", "associates")
+}
+
+test_that("tf_simulate reads the signs from the relation table", {
+  # increases and decreases carry the table's signs. causes and mediates carry
+  # none and are coupled at +k, and the record lists them in file order. A
+  # coupling to an undeclared construct is ignored and assumes nothing.
+  expect_setequal(.tf_PATHS, c("increases", "decreases", "causes", "mediates"))
+  sim <- tf_simulate(.fan_theory(), steps = 1, dt = 1, damping = 0, init = c(a = 1))
+  expect_identical(sim$trajectory[[2L]], c(1, 1, -1, 1, 1))
+  expect_identical(sim$assumed_positive, list("p3", "p4"))
+  expect_identical(sim$ignored, list("p5", "p6", "p7"))
+})
+
+test_that("tf_simulate starts from a mapping for an impulse response", {
+  # A construct the mapping leaves out starts from 0, so one entry gives the
+  # response to an impulse in that construct. The mapping is echoed as a named
+  # list and initial_state holds every starting value, in the order of states.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  sim <- tf_simulate(theory, steps = 2, init = c(c_avoidance = 2, c_arousal = 0.5),
+                     method = "exact")
+  expect_identical(sim$init, list(c_avoidance = 2, c_arousal = 0.5))
+  expect_identical(sim$initial_state, c(0.5, 0, 2))
+  expect_identical(sim$trajectory[[1L]], c(0.5, 0, 2))
+  expect_identical(tf_simulate(theory, steps = 2, init = list(c_avoidance = 2, c_arousal = 0.5),
+                               method = "exact")$trajectory,
+                   sim$trajectory)
+  # Constructs with the same incoming couplings now part: arousal and threat no
+  # longer follow one path.
+  impulse <- tf_simulate(theory, steps = 5, init = c(c_arousal = 1), method = "exact")
+  expect_false(identical(impulse$trajectory[[6L]][[1L]], impulse$trajectory[[6L]][[2L]]))
+  expect_identical(tf_simulate(theory, steps = 1, init = list())$trajectory,
+                   list(c(0, 0, 0), c(0, 0, 0)))
+})
+
+test_that("tf_simulate refuses a mapping that names an unknown construct", {
+  # Checked once the theory is read, after the duplicate ids, in the order of
+  # the mapping. The Python suite asserts the same message.
+  theory <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  expect_error(tf_simulate(theory, init = c(c_arousal = 1, arousal = 1, zz = 2)),
+               paste0("simulate requires init to name declared constructs; unknown ",
+                      "construct id: arousal"),
+               fixed = TRUE)
 })
 
 test_that("tf_simulate's exact method decays where Euler explodes", {
@@ -279,7 +354,8 @@ test_that("tf_simulate's exact method decays where Euler explodes", {
   exact <- tf_simulate(theory, steps = 3, dt = 1, damping = 2.5, method = "exact")
   expect_identical(vapply(exact$trajectory, `[[`, numeric(1), 1L),
                    c(1, 0.082085, 0.006738, 0.000553))
-  expect_warning(euler <- tf_simulate(theory, steps = 3, dt = 1, damping = 2.5),
+  expect_warning(euler <- tf_simulate(theory, steps = 3, dt = 1, damping = 2.5,
+                                      method = "euler"),
                  euler_warning, fixed = TRUE)
   expect_identical(vapply(euler$trajectory, `[[`, numeric(1), 1L),
                    c(1, -1.5, 2.25, -3.375))
@@ -291,13 +367,40 @@ test_that("tf_simulate's exact method keeps the oscillation that Euler inflates"
   theory <- regulation_theory()
   exact <- tf_simulate(theory, steps = 500, method = "exact")
   expect_lt(max(abs(unlist(utils::tail(exact$trajectory, 73L)))), 1.4)
-  expect_warning(euler <- tf_simulate(theory, steps = 500), euler_warning, fixed = TRUE)
+  expect_warning(euler <- tf_simulate(theory, steps = 500, method = "euler"), euler_warning,
+                 fixed = TRUE)
   expect_gt(max(abs(unlist(utils::tail(euler$trajectory, 73L)))), 8)
 })
 
 test_that("tf_simulate's Euler steps do not warn while they track the exact solution", {
-  expect_no_warning(tf_simulate(tf_read(tf_fixture_path("panic-network.theory.yaml"))))
-  expect_no_warning(tf_simulate(regulation_theory(), steps = 5))
+  expect_no_warning(tf_simulate(tf_read(tf_fixture_path("panic-network.theory.yaml")),
+                                method = "euler"))
+  expect_no_warning(tf_simulate(regulation_theory(), steps = 5, method = "euler"))
+})
+
+test_that("tf_simulate's Euler warning does not depend on the unit of init", {
+  # With dt = 1, the Euler run of weak-demo is 18 per cent off the exact one at
+  # the first step and a factor of 7 off at the tenth, whatever init is. The
+  # departure is measured against the largest absolute starting value as well
+  # as the exact state, so a start at 0.2 warns as a start at 1 does.
+  theory <- tf_read(tf_fixture_path("weak-theory.theory.yaml"))
+  for (init in c(1, 0.2, -0.01)) {
+    expect_warning(tf_simulate(theory, steps = 10, dt = 1, init = init, method = "euler"),
+                   euler_warning, fixed = TRUE)
+  }
+  # A run that tracks the exact solution stays silent at any scale.
+  panic <- tf_read(tf_fixture_path("panic-network.theory.yaml"))
+  for (init in c(100, 0.01)) expect_no_warning(tf_simulate(panic, init = init, method = "euler"))
+  # The scale is the largest absolute starting value, here that of the one
+  # construct init names. A run that starts at 0 everywhere stays at 0 and
+  # gives no warning.
+  chain <- tf_theory("chain", "Chain") |>
+    tf_add_construct("a", "A", "d") |>
+    tf_add_construct("b", "B", "d") |>
+    tf_add_proposition("p1", "a", "b", "increases")
+  expect_warning(tf_simulate(chain, steps = 4, dt = 3, init = list(a = 0.01), method = "euler"),
+                 euler_warning, fixed = TRUE)
+  expect_no_warning(tf_simulate(chain, steps = 4, dt = 3, init = 0, method = "euler"))
 })
 
 test_that("tf_simulate's exact method has no step-size limit", {
@@ -369,4 +472,59 @@ test_that("tf_simulate's propagator of a non-finite matrix is NaN", {
   # propagator is NaN and the first step diverges.
   E <- .tf_sim_propagator(matrix(c(0, 1e308, 1e308, 0), nrow = 2), 10)
   expect_true(all(is.nan(E)))
+})
+
+test_that("the matrix product gives the triple loop's bits", {
+  # The product skips a term only when one factor is 0 and the other finite,
+  # which leaves a sum unchanged. Zeros of both signs, infinities and NaN
+  # check that nothing else is skipped. The Python suite makes the same check.
+  triple <- function(A, B) {
+    n <- nrow(A)
+    out <- matrix(0.0, n, n)
+    for (i in seq_len(n)) for (j in seq_len(n)) {
+      acc <- 0.0
+      for (m in seq_len(n)) acc <- acc + A[i, m] * B[m, j]
+      out[i, j] <- acc
+    }
+    out
+  }
+  special <- c(0, -0, Inf, -Inf, NaN, 5e-324, 1e308)
+  set.seed(5)
+  for (r in 1:300) {
+    n <- sample(1:7, 1)
+    draw <- function() {
+      x <- ifelse(runif(n * n) < 0.4, runif(n * n, -2, 2), 0)
+      pick <- runif(n * n) < 0.15
+      x[pick] <- sample(special, sum(pick), TRUE)
+      matrix(x, n, n)
+    }
+    A <- draw()
+    B <- draw()
+    expect_identical(theoryforge:::.tf_sim_matmul(A, B), triple(A, B))
+  }
+})
+
+test_that("a theory of 400 constructs simulates", {
+  # A chain: the first state has no couplings into it, so it decays at the
+  # damping rate, exactly with method "exact" and by 1 - dt * damping per step
+  # with Euler.
+  t <- tf_theory("chain", "Chain")
+  for (i in 0:399) t <- tf_add_construct(t, paste0("c", i), paste0("C", i), "A state.")
+  for (i in 0:398) t <- tf_add_proposition(t, paste0("p", i), paste0("c", i), paste0("c", i + 1L), "increases")
+  exact <- tf_simulate(t)$trajectory
+  expect_equal(vapply(exact, `[[`, 0, 1L), exp(-0.05 * 0:10), tolerance = 1e-6)
+  euler <- suppressWarnings(tf_simulate(t, method = "euler"))$trajectory
+  expect_equal(vapply(euler, `[[`, 0, 1L), 0.95^(0:10), tolerance = 1e-6)
+  expect_length(euler, 11L)
+  expect_length(euler[[11L]], 400L)
+})
+
+test_that("tf_simulate finds an opposed pair whose ids differ only in encoding", {
+  # The two spellings of one id compare equal, as they do with ==.
+  u <- "\u00e9"
+  l <- iconv(u, "UTF-8", "latin1")
+  t <- list(constructs = list(list(id = u), list(id = "b")),
+            propositions = list(list(id = "p1", from = l, to = "b", relation = "increases"),
+                                list(id = "p2", from = u, to = "b", relation = "decreases")))
+  expect_identical(tf_simulate(t, steps = 1)$opposed, list(c(l, "b")))
 })

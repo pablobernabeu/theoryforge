@@ -11,7 +11,7 @@ tf_simulate(
   k = 1,
   damping = 0.5,
   init = 1,
-  method = "euler"
+  method = "exact"
 )
 }
 \arguments{
@@ -29,73 +29,116 @@ tf_simulate(
 \item{damping}{Per-state linear decay, a finite number (default
 \code{0.5}).}
 
-\item{init}{Initial value for every state, a single finite number (default
-\code{1.0}).}
+\item{init}{Initial value of every state, a single finite number (default
+\code{1.0}), or a named numeric vector or named list giving the initial
+value of the constructs it names, the others starting from 0.}
 
-\item{method}{\code{"euler"} (the default for this release) or
-\code{"exact"}.}
+\item{method}{\code{"exact"} (the default) or \code{"euler"}.}
 }
 \value{
 A named list
-\code{list(states, dt, steps, k, damping, init, method, ignored, opposed,
-  trajectory)}, where \code{states} are the construct ids in file order and
-\code{trajectory} is a list of \code{steps + 1} numeric vectors (row 0 is
-the initial state), every value rounded to 6 decimals. The settings and
-the method are returned as given, because the trajectory cannot be
-reproduced without them. \code{ignored} lists the ids of the propositions
-that couple nothing (moderates, associates, a relation outside the schema's
-set or an endpoint that is not a declared construct), and \code{opposed}
-the \code{c(from, to)} pairs that carry couplings of both signs, which
-offset each other. An invalid setting is refused with an error.
+\code{list(states, dt, steps, k, damping, init, initial_state, method,
+  ignored, assumed_positive, opposed, trajectory)}, where \code{states} are
+the construct ids in file order and \code{trajectory} is a list of
+\code{steps + 1} numeric vectors (row 0 is the initial state), every value
+rounded to 6 decimals. The settings and the method are returned as given
+(a mapping \code{init} as a named list), because the trajectory cannot be
+reproduced without them, and \code{initial_state} gives the value each
+state starts from, in the order of \code{states}. \code{ignored} lists the
+ids of the propositions that couple nothing (moderates, associates, a
+relation outside the schema's set or an endpoint that is not a declared
+construct), \code{assumed_positive} the ids of the \code{causes} and
+\code{mediates} propositions coupled at \code{+k}, and \code{opposed} the
+\code{c(from, to)} pairs that carry couplings of both signs, which offset
+each other. An invalid setting is refused with an error.
 }
 \description{
 Treats each construct (in file order) as a state variable and each
-proposition whose relation is \code{increases}, \code{decreases},
-\code{causes} or \code{mediates} as a signed linear coupling term. It then
-propagates \code{dX/dt = A X - damping * X} either with fixed-step (Euler)
-updates or exactly, with the matrix exponential of
-\code{(A - damping * I) * dt}. The result is deterministic. Construct ids
+proposition between two declared constructs whose relation is
+\code{increases}, \code{decreases}, \code{causes} or \code{mediates} as a
+linear coupling term. It then propagates \code{dX/dt = A X - damping * X}
+exactly, with the matrix exponential of \code{(A - damping * I) * dt}, or
+with fixed-step (Euler) updates. The result is deterministic. Construct ids
 must be unique, and duplicates are refused rather than assigned to an
-arbitrary state. A construct without an id is a state with no couplings, and
-two of them do not count as duplicates.
+arbitrary state. A construct without an id is a state with no couplings,
+and two of them do not count as duplicates.
 }
 \details{
-With \code{method = "exact"}, each step multiplies the state by the matrix
-exponential, computed by scaling and squaring a degree-18 Taylor polynomial
-(Moler and Van Loan, 2003, method 3), so the trajectory is the solution of
-the linear system at times \code{0, dt, 2 * dt, ...} whatever \code{dt} is.
+A theory states no parameter values, so the trajectory is that of one
+linear model consistent with the signs the propositions state, with one
+gain \code{k} for every coupling and unsigned relations taken as positive.
+It is not fitted to data and does not show what the propositions imply.
+Every state decays at rate \code{damping} in the absence of couplings, and
+whether a feedback loop grows or settles is set by \code{k} against
+\code{damping}. Time is in units of \code{1/k}, and the window that
+\code{steps} and \code{dt} choose decides what is seen: the last construct
+of a chain that decays in the long run can show only a rise in a short
+window. A linear system has one equilibrium, or a continuum of them when its
+matrix is singular, and never two separate ones, so it cannot show
+bistability.
+}
+\section{Couplings}{
 
-With \code{method = "euler"}, the default for this release, the explicit
-step is stable only when \eqn{|1 + dt \lambda| < 1} for every eigenvalue
-\eqn{\lambda} of \code{A - damping * I}. A theory that decays at rate
-\code{damping} therefore grows without bound, alternating in sign, once
-\code{dt * damping} exceeds 2, and the steps turn a sustained oscillation
-into growth. Raising \code{damping} can cause a divergence as well as fail
-to stop one. The function warns when the Euler trajectory departs from the
-exact one by more than 5 per cent of \code{max(1, |exact|)} at any step. The
-default will change to \code{"exact"} in the next minor release.
+Each such proposition adds \code{k} times the sign of its relation to the
+coupling from \code{from} to \code{to}. The signs are those of the relation
+table (API_SPEC.md section 28): +1 for \code{increases} and -1 for
+\code{decreases}. \code{causes} and \code{mediates} state no sign, and they
+are coupled at \code{+k} by assumption. \code{assumed_positive} lists their
+ids, in file order, since that choice alone can decide whether a feedback
+loop grows or settles. \code{moderates} and \code{associates} couple
+nothing, and \code{ignored} lists them.
+}
+
+\section{Initial state}{
+
+\code{init} is either one finite number, the value every state starts from,
+or a mapping from construct ids to finite numbers, given as a named numeric
+vector or a named list, in which case each state it does not name starts
+from 0. A mapping with one entry gives the response to an impulse in that
+construct. A name that is not a declared construct id is refused.
+}
+
+\section{Methods}{
+
+With \code{method = "exact"}, the default, each step multiplies the state by
+the matrix exponential, computed by scaling and squaring a degree-18 Taylor
+polynomial (Moler and Van Loan, 2003, method 3), so the trajectory is the
+solution of the linear system at times \code{0, dt, 2 * dt, ...} whatever
+\code{dt} is.
+
+With \code{method = "euler"}, the explicit step is stable only when
+\eqn{|1 + dt \lambda| < 1} for every eigenvalue \eqn{\lambda} of
+\code{A - damping * I}. A theory that decays at rate \code{damping}
+therefore grows without bound, alternating in sign, once \code{dt * damping}
+exceeds 2, and the steps turn a sustained oscillation into growth. Raising
+\code{damping} can cause a divergence as well as fail to stop one. The
+function warns when the Euler trajectory departs from the exact one, at any
+step, by more than 5 per cent of the larger of \code{|exact|} and the
+largest absolute starting value (1 when every starting value is 0), so that
+the warning does not depend on the unit of \code{init}.
 
 When a state grows so large that a million times it is not a finite number,
 the function stops with a message naming the step and the state. The initial
-state is tested as step 0, so an \code{init} beyond about 1.8e302 in absolute
-value stops there.
+state is tested as step 0, so a starting value beyond about 1.8e302 in
+absolute value stops there.
 
 The model is deliberately simple: one gain \code{k} for every coupling,
 \code{causes} and \code{mediates} taken as positive, \code{moderates} and
-\code{associates} coupling nothing, \code{functional_form} not read and a
-common initial value for every state. A linear system has one equilibrium,
-or a continuum of them when its matrix is singular, and never two separate
-ones, so it cannot show bistability.
+\code{associates} coupling nothing and \code{functional_form} not read.
 }
+
 \examples{
 theory <- tf_theory("demo-1", "A demonstration theory") |>
   tf_add_construct("c_arousal", "Arousal", "Bodily activation.") |>
   tf_add_construct("c_threat", "Perceived threat", "Appraised danger.") |>
   tf_add_proposition("p1", "c_arousal", "c_threat", "increases")
-sim <- tf_simulate(theory, steps = 5, method = "exact")
+sim <- tf_simulate(theory, steps = 5)
 sim$states
 sim$trajectory[[1]] # the common initial state
 sim$trajectory[[length(sim$trajectory)]] # at time 5 * dt
+# The response to an impulse in arousal, threat starting from 0
+impulse <- tf_simulate(theory, steps = 5, init = c(c_arousal = 1))
+impulse$initial_state
 }
 \references{
 Moler, C., & Van Loan, C. (2003). Nineteen dubious ways to

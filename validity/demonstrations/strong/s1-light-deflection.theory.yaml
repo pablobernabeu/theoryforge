@@ -1,0 +1,88 @@
+# Source: red-team-score/inputs/strong/s1-light-deflection.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Strong theory 1: the deflection of starlight by the Sun's gravitational field,
+# encoded only from what the opening section of Dyson, Eddington and Davidson
+# (1920) states (verified via Crossref and the OpenAlex abstract, saved under
+# abstracts/10.1098_rsta.1920.0009.openalex.json):
+#   Dyson, F. W., Eddington, A. S., & Davidson, C. (1920). A determination of the
+#   deflection of light by the sun's gravitational field, from observations made
+#   at the total eclipse of May 29, 1919. Philosophical Transactions of the Royal
+#   Society of London. Series A, 220(571-581), 291-333.
+#   https://doi.org/10.1098/rsta.1920.0009
+# The source states three alternatives, the predicted displacement at the limb
+# under each (0, 0.87 and 1.75 seconds of arc) and that, under the last two, the
+# displacement is inversely proportional to the star's distance from the Sun's
+# centre. It states no tolerance, no construct-level boundary condition and no
+# formal model in the schema's sense. A field the source does not state is
+# left out. The encoding choices are the auditor's, as recorded in the comments.
+schema_version: "1.1"
+id: "s1-light-deflection"
+title: "Gravitational deflection of light (general relativity, 1919 eclipse test)"
+maturity: "testing"
+theory_form: "process"
+version: {id: "v1", parent_id: null, content_hash: null}
+
+constructs:
+  - id: c_solar_field
+    label: "Sun's gravitational field"
+    definition: "The gravitational field of the Sun traversed by a ray of light passing close to its limb."
+  - id: c_star_distance
+    label: "Angular distance from the Sun's centre"
+    definition: "The distance of the star's image from the centre of the Sun."
+  - id: c_displacement
+    label: "Apparent displacement of a star"
+    definition: "The outward displacement of a star's apparent position close to the Sun's limb."
+    measurement: ["star positions on photographs taken at the total eclipse of 29 May 1919"]
+
+propositions:
+  - id: p_field
+    from: c_solar_field
+    to: c_displacement
+    relation: "increases"
+    # The source gives no mechanism beyond naming the theory.
+    mechanism: "The course of a ray of light is in accordance with Einstein's generalised relativity theory."
+  - id: p_distance
+    from: c_star_distance
+    to: c_displacement
+    relation: "decreases"
+    functional_form: "inverse proportion"
+
+boundary_conditions: ["stars close to the Sun's limb, observed during a total eclipse"]
+
+predictions:
+  - id: pred_limb
+    derives_from: [p_field]
+    statement: "A star at the Sun's limb is displaced outwards by 1.75 seconds of arc."
+    # A point value; the source states no tolerance, so no bounds are given.
+    type: "point"
+    diagnostic_vs: [alt_no_deflection, alt_newtonian]
+    claim: {kind: effect, x: c_solar_field, y: c_displacement, sign: positive}
+  - id: pred_inverse
+    derives_from: [p_distance]
+    statement: "The displacement is inversely proportional to the distance of the star from the Sun's centre."
+    # A functional form; 'directional' is the nearest type the schema offers.
+    type: "directional"
+    claim: {kind: effect, x: c_star_distance, y: c_displacement, sign: negative}
+  - id: pred_double
+    derives_from: [p_field]
+    statement: "The displacement is double the 0.87 seconds of arc that Newtonian gravitation acting on the mass of light gives."
+    type: "point"
+    diagnostic_vs: [alt_newtonian]
+
+alternatives:
+  - id: alt_no_deflection
+    label: "The path of light is uninfluenced by gravitation"
+    key_constructs: ["no displacement"]
+    source_doi: "10.1098/rsta.1920.0009"
+  - id: alt_newtonian
+    label: "Light is subject to Newtonian gravitation (0.87 seconds of arc at the limb)"
+    key_constructs: ["Newtonian gravitation acting on the mass of light"]
+    source_doi: "10.1098/rsta.1920.0009"
+    propositions:
+      - {id: rn1, from: c_solar_field, to: c_displacement, relation: "increases"}
+      - {id: rn2, from: c_star_distance, to: c_displacement, relation: "decreases"}
+
+# The field equations of general relativity are not of a type the schema lists
+# (ode, abm, network, sem).
+formal_model:
+  type: "none"
+  spec_ref: null

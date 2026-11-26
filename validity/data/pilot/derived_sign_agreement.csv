@@ -1,0 +1,7 @@
+theory,criterion,kind,pairs,all_three_agree,fleiss_kappa,dist_enc-1,dist_enc-2,dist_enc-3,match_enc-1/enc-2,match_enc-1/enc-3,match_enc-2/enc-3,sign_reversals,zero_vs_nonzero
+bilingual-rhm,refuse,effect,30,0.867,0.792,negative=6 positive=4 zero=20,negative=4 positive=2 undetermined=1 zero=23,negative=4 positive=3 zero=23,0.867,0.9,0.967,0,3
+bilingual-rhm,refuse,association,15,0.733,0.727,negative=8 positive=6 zero=1,negative=6 positive=4 undetermined=1 zero=4,negative=6 positive=5 zero=4,0.733,0.8,0.933,0,3
+collaborative-cognitive-load,refuse,effect,272,0.952,0.906,negative=30 positive=20 undetermined=7 zero=215,negative=30 positive=20 undetermined=7 zero=215,negative=24 positive=17 undetermined=5 zero=226,1.0,0.952,0.952,0,11
+collaborative-cognitive-load,refuse,association,136,0.89,0.878,negative=26 positive=21 undetermined=14 zero=75,negative=26 positive=21 undetermined=14 zero=75,negative=20 positive=18 undetermined=11 zero=87,1.0,0.89,0.89,0,12
+health-habit,sigma,effect,72,0.653,0.567,positive=12 undetermined=8 zero=52,positive=10 undetermined=20 zero=42,positive=13 undetermined=23 zero=36,0.667,0.708,0.903,0,21
+health-habit,sigma,association,36,0.583,0.361,positive=4 undetermined=16 zero=16,positive=1 undetermined=27 zero=8,undetermined=30 zero=6,0.583,0.611,0.917,0,12

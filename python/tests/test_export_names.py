@@ -65,13 +65,31 @@ def test_causal_dag_refuses_the_two_ids_dagitty_reserves():
     with pytest.raises(ValueError) as exc:
         t.diagram("causal_dag")
     assert str(exc.value) == "causal_dag cannot export construct id 'graph': dagitty reserves it"
-    # Only an id the view writes is refused: this association joins two
-    # constructs that no directed relation names, so it is not exported.
+    # An association is written too, so its reserved id is refused as well.
     t = _theory([(c, None) for c in ("a", "b", "node", "k")], [
         ("p1", "a", "b", "causes"),
         ("p2", "node", "k", "associates"),
     ])
-    assert t.diagram("causal_dag") == "dag {\n  a -> b\n}\n"
+    with pytest.raises(ValueError, match="construct id 'node': dagitty reserves it"):
+        t.diagram("causal_dag")
+
+
+def test_causal_dag_refuses_an_id_that_ends_with_a_backslash():
+    # Quoted, `a\` would be written "a\", whose backslash escapes the closing
+    # quote. dagitty cannot read the line, and Graphviz, which the apps draw the
+    # view with, would read the next id as DOT, attributes included. A
+    # backslash elsewhere in an id is kept, as the quoting test shows.
+    t = _theory([(c, None) for c in ("a\\", "b")], [("p1", "b", "a\\", "causes")])
+    with pytest.raises(ValueError) as exc:
+        t.diagram("causal_dag")
+    assert str(exc.value) == (
+        "causal_dag cannot export construct id 'a\\': dagitty cannot read an id that ends with a backslash")
+    # The id an association names is refused as well, and the nomological
+    # net, whose DOT strings double every backslash, still draws the theory.
+    t = _theory([(c, None) for c in ("x", "y\\")], [("p1", "x", "y\\", "associates")])
+    with pytest.raises(ValueError, match="dagitty cannot read an id that ends with a backslash"):
+        t.diagram("causal_dag")
+    assert '"y\\\\"' in t.diagram("nomological_net")
 
 
 def test_causal_dag_quotes_an_empty_endpoint():
@@ -89,8 +107,10 @@ def test_compile_sem_renames_ids_and_indicators_that_lavaan_cannot_read_as_writt
     # an indicator such as `7_point_likert_rating`. A construct id is renamed
     # with a comment that records the renaming, an unsafe indicator name gains
     # `i_`, and safe names are written as they are, `node` among them, since
-    # only dagitty reserves it. The comments and the zero block use the new
-    # names.
+    # only dagitty reserves it. The comments, the path labels and the zero
+    # block use the new names. .hidden and .1a, which only associations name,
+    # are in the zero block, since lavaan would otherwise free their
+    # covariances with the other exogenous constructs.
     t = _theory([
         ("self-efficacy", ["7-point Likert rating", "Self report"]),
         ("task persistence", ["Time on task"]),
@@ -129,27 +149,47 @@ def test_compile_sem_renames_ids_and_indicators_that_lavaan_cannot_read_as_writt
         "# Single-indicator constructs (lavaan fixes the indicator's residual variance at zero, "
         "so each is treated as measured without error): task_persistence, c_NA\n"
         "# Structural model\n"
-        "task_persistence ~ self_efficacy\n"
-        "c_NA ~ c_1arousal\n"
-        "c_arger ~ c_if\n"
+        "task_persistence ~ b_self_efficacy_task_persistence*self_efficacy\n"
+        "c_NA ~ b_c_1arousal_c_NA*c_1arousal\n"
+        "c_arger ~ b_c_if_c_arger*c_if\n"
         ".hidden ~~ a.b\n"
-        "task_persistence ~ c_NA\n"
+        "task_persistence ~ b_c_NA_task_persistence*c_NA\n"
         "# moderation: c_NA moderates the paths into task_persistence; add the product term "
         "by hand (task_persistence ~ <x>:c_NA for an observed predictor <x>; lavaan::sam() or "
         "the modsem package for latent variables)\n"
         "c_.1a ~~ c_if\n"
-        "a.b ~ node\n"
+        "a.b ~ b_node_a.b*node\n"
+        "# Identification: the paths among the constructs form no loop, and no two constructs "
+        "are joined by both a path and a covariance (a bow). The path coefficients are "
+        "therefore generically identified if the measurement model identifies the constructs "
+        "(Brito & Pearl, 2002). Whether it does has to be checked separately.\n"
+        "# Signs the theory states, which the fit does not impose\n"
+        "# b_self_efficacy_task_persistence > 0 (p1, increases)\n"
+        "# b_c_if_c_arger < 0 (p3, decreases)\n"
         "# Covariances the theory fixes at zero (lavaan::sem() frees them by default; "
         "delete this block to restore its defaults)\n"
         "self_efficacy ~~ 0*c_1arousal\n"
         "self_efficacy ~~ 0*c_if\n"
+        "self_efficacy ~~ 0*c_.1a\n"
+        "self_efficacy ~~ 0*.hidden\n"
         "self_efficacy ~~ 0*node\n"
         "task_persistence ~~ 0*c_arger\n"
+        "task_persistence ~~ 0*c_.1a\n"
+        "task_persistence ~~ 0*.hidden\n"
         "task_persistence ~~ 0*a.b\n"
         "c_1arousal ~~ 0*c_if\n"
+        "c_1arousal ~~ 0*c_.1a\n"
+        "c_1arousal ~~ 0*.hidden\n"
         "c_1arousal ~~ 0*node\n"
+        "c_if ~~ 0*.hidden\n"
         "c_if ~~ 0*node\n"
+        "c_arger ~~ 0*c_.1a\n"
+        "c_arger ~~ 0*.hidden\n"
         "c_arger ~~ 0*a.b\n"
+        "c_.1a ~~ 0*.hidden\n"
+        "c_.1a ~~ 0*a.b\n"
+        "c_.1a ~~ 0*node\n"
+        ".hidden ~~ 0*node\n"
     )
 
 
@@ -168,7 +208,11 @@ def test_compile_sem_renames_lavaans_own_keyword_efa():
         "c_efa =~ q1 + q2\n"
         "traits =~ openness + i_efa\n"
         "# Structural model\n"
-        "traits ~ c_efa\n"
+        "traits ~ b_c_efa_traits*c_efa\n"
+        "# Identification: the paths among the constructs form no loop, and no two constructs "
+        "are joined by both a path and a covariance (a bow). The path coefficients are "
+        "therefore generically identified if the measurement model identifies the constructs "
+        "(Brito & Pearl, 2002). Whether it does has to be checked separately.\n"
     )
 
 
@@ -178,11 +222,12 @@ def test_compile_sem_keeps_each_comment_on_one_line():
     # Windows, two characters outside the Basic Multilingual Plane in a
     # comment made lavaan read `outcome ~ mood` as `utcome ~ mood`. A comment
     # writes control characters and such characters as <U+XXXX>, in the
-    # header's theory id as well.
+    # header's theory id and in a proposition id as well.
     t = _theory([("outcome", None), ("mood\U0001f600\U0001f600", None),
                  ("x\nf ~~ 0*g", None)],
                 [("p1", "mood\U0001f600\U0001f600", "outcome", "causes"),
-                 ("p2", "x\nf ~~ 0*g", "outcome", "causes")],
+                 ("p2", "x\nf ~~ 0*g", "outcome", "causes"),
+                 ("p3\noutcome ~ mood", "outcome", "outcome", "increases")],
                 theory_id="t\r1")
     assert t.compile_sem() == (
         "# lavaan model generated by theoryforge for t<U+000D>1\n"
@@ -192,8 +237,15 @@ def test_compile_sem_keeps_each_comment_on_one_line():
         "# renamed for lavaan: 'x<U+000A>f ~~ 0*g' -> x_f_0_g\n"
         "# Measurement model\n"
         "# Structural model\n"
-        "outcome ~ mood\n"
-        "outcome ~ x_f_0_g\n"
+        "outcome ~ b_mood_outcome*mood\n"
+        "outcome ~ b_x_f_0_g_outcome*x_f_0_g\n"
+        "# Proposition 'p3<U+000A>outcome ~ mood' relates outcome to itself and is left out: "
+        "a regression of a variable on itself only rescales its disturbance, so a linear SEM "
+        "cannot estimate it.\n"
+        "# Identification: the paths among the constructs form no loop, and no two constructs "
+        "are joined by both a path and a covariance (a bow). The path coefficients are "
+        "therefore generically identified if the measurement model identifies the constructs "
+        "(Brito & Pearl, 2002). Whether it does has to be checked separately.\n"
         "# Covariances the theory fixes at zero (lavaan::sem() frees them by default; "
         "delete this block to restore its defaults)\n"
         "mood ~~ 0*x_f_0_g\n"
@@ -245,7 +297,7 @@ def test_compile_sem_names_an_undeclared_endpoint_by_the_same_rule():
     t = _theory([("y", None)], [("p1", "my-x", "y", "causes")])
     sem = t.compile_sem()
     assert "# renamed for lavaan: 'my-x' -> my_x\n# Measurement model\n" in sem
-    assert sem.endswith("# Structural model\ny ~ my_x\n")
+    assert "# Structural model\ny ~ b_my_x_y*my_x\n" in sem
     t = _theory([("x_1", None), ("y", None)], [("p1", "x-1", "y", "causes")])
     assert _collision(t) == ("compile_sem found a name collision: constructs 'x_1' and 'x-1' "
                              "both become x_1")

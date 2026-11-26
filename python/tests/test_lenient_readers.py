@@ -68,8 +68,6 @@ CORPUS = {"schema_version": "1.0", "id": "c", "records": [
 ]}
 
 
-# CORPUS forms one theme, so landscape warns that it holds every linked keyword.
-@pytest.mark.filterwarnings("ignore:litmap:UserWarning")
 def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
     # Python raised "'str' object has no attribute 'get'" in nearly every one.
     t = _read(tmp_path, SCALAR_ENTRIES)
@@ -82,7 +80,9 @@ def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
     assert "1. []  (derives from: —)" in t.preregister()
     assert t.dossier().startswith("# theoryforge dossier: T\n")
     assert t.compile_sem().endswith("# Structural model\narousal ~~ threat\n")
-    assert t.implications()["n_implications"] == 0
+    # The association names constructs without ids, which no relation can name.
+    with pytest.raises(ValueError, match="requires associations between declared constructs"):
+        t.implications()
     sim = t.simulate(steps=2)
     assert sim["states"] == ["", ""]
     assert len(sim["trajectory"]) == 3
@@ -91,7 +91,7 @@ def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
         assert t.diagram(kind).endswith("\n")
     assert '"result_"' in t.diagram("pipeline")
     assert t.redundancy_check() == [{"a": "", "b": "", "similarity": 0.0, "overlap": 0.0,
-                                     "flag": "ok"}]
+                                     "flag": "ok", "reason": ""}]
     assert t.landscape(CORPUS)["theory_id"] == "t"
     assert t.new_evidence_dois(["10.1/x"]) == ["10.1/x"]
     assert t.osf_push()["request"]["filename"] == "t.dossier.md"
@@ -103,6 +103,11 @@ def test_every_consumer_reads_entries_that_are_not_mappings(tmp_path):
         "ad_hoc_assumptions": [], "articulated": [], "underived": [""],
         "corroborated_new_registered": [], "renamed": [], "dropped": [],
         "dropped_corroborated": [], "content_lost": [], "new_anomalies": [], "assumptions": [],
+        "theoretically_progressive": False, "empirically_progressive": False, "revised": [],
+        "weakened_refuted": [], "unresolved": [], "implications_compared": False,
+        "implications_lost": [], "implications_lost_unrefuted": [], "implications_gained": [],
+        "entailments_lost": [], "signs_lost": [], "protected_only": [], "refuted_new": [],
+        "corroborated_new_severity": [],
     }
 
 
@@ -185,7 +190,7 @@ def test_an_enum_written_as_a_sequence_reads_as_absent_everywhere(tmp_path):
     sem = t.compile_sem()
     assert "b ~ a" not in sem and "c ~ b" in sem
     assert "a -> b" not in t.diagram("causal_dag")
-    assert '"a" -> "b" [label=""];' in t.diagram("nomological_net")
+    assert '"a" -> "b" [label="p1"];' in t.diagram("nomological_net")
     assert '"pred_h1" [label="h1\\n"' in t.diagram("workflow")
     assert "1. [] Gamma rises with Alpha." in t.preregister()
     # Alpha has no coupling to Beta, so Beta decays exactly as Alpha does.
@@ -243,8 +248,8 @@ def test_null_entries_of_a_string_array_are_ignored(tmp_path):
     deriv = _item(t.check(), "derivation_chain")
     assert (deriv["status"], deriv["score"]) == ("fail", 0.333)
     text = t.preregister()  # raised "expected str instance, NoneType found"
-    assert "1. [directional] Beta rises with Alpha. (derives from: —)" in text
-    assert "3. [point] Beta is exactly one. (derives from: p1)" in text
+    assert "1. [directional] Beta rises with Alpha. (h1; derives from: —)" in text
+    assert "3. [point] Beta is exactly one. (h3; derives from: p1)" in text
     t.dossier()
     t.diagram("workflow")
 
@@ -307,7 +312,7 @@ predictions:
     # is the one place it may appear.
     assert "None" not in prereg.replace("\n_None: ", "\n")
     assert prereg.startswith("# Preregistration: \n")
-    assert "1. []  (derives from: p1)" in prereg
+    assert "1. []  (h1; derives from: p1)" in prereg
     assert "None" not in t.dossier().replace("\n_None: ", "\n")
     assert t.severity()[0]["type"] == ""
     assert "None" not in t.diagram("context")
@@ -335,15 +340,30 @@ def test_entries_without_ids_read_as_empty_ids(tmp_path):
     assert _item(t.check(), "parsimony")["status"] == "fail"
     prior = _read(tmp_path, HEAD + TWO_CONSTRUCTS, "prior.theory.yaml")
     # Python compared None with a string while sorting and raised TypeError.
-    # h1 needs the new assumption, so it is not an articulation of p1.
-    assert t.appraise_amendment(prior) == {
-        "verdict": "degenerating", "new_predictions": ["h1"], "corroborated_new": [],
-        "ad_hoc_assumptions": [""], "articulated": [], "underived": [],
+    # h1 needs the new assumption, so it is not an articulation of p1, which
+    # the prior holds: its novelty rests on protects. h1 is untested, so the
+    # assumption is pending.
+    record = {
+        "verdict": "neutral", "new_predictions": ["h1"], "corroborated_new": [],
+        "ad_hoc_assumptions": [], "articulated": [], "underived": [],
         "corroborated_new_registered": [], "renamed": [], "dropped": [],
         "dropped_corroborated": [], "content_lost": [], "new_anomalies": [],
-        "assumptions": [{"id": "", "added_for": "h1 failed at the first test", "class": "ad_hoc2",
-                         "independent": [{"id": "h1", "status": "untested"}]}],
+        "assumptions": [{"id": "", "added_for": "h1 failed at the first test", "class": "pending",
+                         "independent": [{"id": "h1", "status": "untested"}],
+                         "added_for_inferred": False, "change": "new"}],
+        "theoretically_progressive": True, "empirically_progressive": False, "revised": [],
+        "weakened_refuted": [], "unresolved": [], "implications_compared": True,
+        "implications_lost": [], "implications_lost_unrefuted": [], "implications_gained": [],
+        "entailments_lost": [], "signs_lost": [], "protected_only": ["h1"], "refuted_new": [],
+        "corroborated_new_severity": [],
     }
+    assert t.appraise_amendment(prior) == record
+    # Failed, h1 leaves the assumption, whose id reads as "", ad hoc.
+    failed = _read(tmp_path, IDLESS.replace("  - passed: false", "  - prediction_id: h1\n    passed: false"),
+                   "failed.theory.yaml")
+    result = failed.appraise_amendment(prior)
+    assert (result["verdict"], result["ad_hoc_assumptions"], result["refuted_new"]) == (
+        "degenerating", [""], ["h1"])
     two_new = IDLESS.replace("auxiliary_assumptions:", """\
   - statement: A prediction without an id.
     type: directional

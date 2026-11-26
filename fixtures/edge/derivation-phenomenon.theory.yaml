@@ -1,0 +1,19 @@
+# The causal graph entails the claim of the one prediction and contradicts the
+# claim of ph1, a phenomenon the theory sets out to explain, so the derivation
+# chain fails with every prediction derived. ph2 names a construct outside the
+# graph and is not evaluated, which leaves the item as it is.
+schema_version: "1.1"
+id: "derivation-phenomenon"
+title: "A phenomenon the causal graph contradicts"
+maturity: "developing"
+constructs:
+  - {id: x, label: "X", definition: "The cause."}
+  - {id: y, label: "Y", definition: "The outcome."}
+  - {id: z, label: "Z", definition: "A construct no proposition relates."}
+propositions:
+  - {id: p1, from: x, to: y, relation: increases, mechanism: "It does."}
+phenomena:
+  - {id: ph1, statement: "Where x is high, y is low.", claim: {kind: association, x: x, y: y, sign: negative}}
+  - {id: ph2, statement: "z tracks x.", claim: {kind: association, x: x, y: z, sign: positive}}
+predictions:
+  - {id: h1, statement: "x raises y.", type: directional, derives_from: [p1], claim: {kind: effect, x: x, y: y, sign: positive}}

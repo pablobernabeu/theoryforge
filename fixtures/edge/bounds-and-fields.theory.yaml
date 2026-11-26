@@ -1,0 +1,59 @@
+# Edge case: full validation items 16 and 17. Claim forms and signs that their
+# bounds contradict, a pass recorded with the estimate outside the bounds (not
+# refused), and entry fields the schema does not define in every kind of entry:
+# keys one, two and three edits from a field, a key equally close to two
+# fields, and x_ extensions beside a bare x.
+schema_version: "1.1"
+id: edge-bounds-and-fields
+title: Bounds that contradict claim forms, and unknown entry fields
+maturity: testing
+constructs:
+  - id: c1
+    label: Alpha
+    definition: The first construct.
+    x_source: Item bank 3
+    x: not an extension
+    xnote: nor this
+  - id: c2
+    label: Beta
+    definition: The second construct.
+    measurment: [Questionnaire]
+    defn: three edits from definition
+    lable: two edits from label
+propositions:
+  - {id: p1, from: c1, to: c2, relation: increases, mechanism: Alpha raises Beta.}
+predictions:
+  - id: h1
+    statement: Beta lies near 5.
+    type: point
+    derives_from: [p1]
+    bounds: {lower: 4}
+  - id: h2
+    statement: Beta rises with Alpha.
+    type: directional
+    derives_from: [p1]
+    bounds: {lower: 0, upper: 1}
+  - id: h3
+    statement: Beta lies between 20 and 60.
+    type: interval
+    derives_from: [p1]
+    bounds: {lower: 20, upper: 60}
+    severty: 0.7
+    tyst: equally close to type and test
+    claim: {kind: effect, x: c1, y: c2, sign: negative}
+test_outcomes:
+  - {prediction_id: h3, passed: true, estimate: 61, se: 5, pased: true}
+phenomena:
+  - {id: ph1, statement: Beta follows Alpha., sorce_doi: null}
+auxiliary_assumptions:
+  - {id: a1, statement: A calm room., added_for: null, protect: [h1]}
+evidence:
+  - {supports: h1, direction: corroborates, doi: "10.1000/x"}
+alternatives:
+  - id: r1
+    label: A rival
+    propositions:
+      - {id: q1, from: c2, to: c1, relation: causes, mechanizm: Beta raises Alpha.}
+formal_model: {type: sem, specref: model.lavaan}
+provenance:
+  - {step: "1", action: built, detail: by hand, stp: "1"}

@@ -1,0 +1,55 @@
+{
+  "theory_id": "modality-switching-2026",
+  "computed": true,
+  "reason": null,
+  "constructs": [
+    "c_sensorimotor_experience",
+    "c_modality_activation",
+    "c_switch_cost",
+    "c_conceptual_access",
+    "c_lexical_familiarity"
+  ],
+  "v_structures": [
+    {
+      "a": "c_modality_activation",
+      "collider": "c_conceptual_access",
+      "b": "c_lexical_familiarity"
+    }
+  ],
+  "edges": [
+    {
+      "from": "c_sensorimotor_experience",
+      "to": "c_modality_activation",
+      "propositions": [
+        "p1"
+      ],
+      "status": "reversible"
+    },
+    {
+      "from": "c_modality_activation",
+      "to": "c_switch_cost",
+      "propositions": [
+        "p2"
+      ],
+      "status": "reversible"
+    },
+    {
+      "from": "c_modality_activation",
+      "to": "c_conceptual_access",
+      "propositions": [
+        "p3"
+      ],
+      "status": "compelled"
+    },
+    {
+      "from": "c_lexical_familiarity",
+      "to": "c_conceptual_access",
+      "propositions": [
+        "p4"
+      ],
+      "status": "compelled"
+    }
+  ],
+  "n_compelled": 2,
+  "n_reversible": 2
+}

@@ -5,7 +5,7 @@
   "description": "Language-agnostic source of truth for a theory as a versioned, machine-checkable object. Authored as YAML, validated against this JSON Schema, read/written identically by the R and Python packages.",
   "type": "object",
   "required": ["schema_version", "id", "title", "maturity"],
-  "$comment": "Closed at the top level: a misspelt collection key (predicitions) would otherwise be accepted while silently dropping the collection and changing every downstream verdict. Item objects stay open so individual entries can carry extra metadata.",
+  "$comment": "Closed at the top level and in every entry: a misspelt key (predicitions, severty, derives_form) would otherwise be accepted while silently dropping what it holds and changing every downstream verdict. An entry may carry extra metadata under keys that begin with x_.",
   "additionalProperties": false,
   "properties": {
     "schema_version": {
@@ -40,7 +40,8 @@
       "items": {
         "type": "object",
         "required": ["id", "label", "definition"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "label": { "type": "string" },
@@ -55,7 +56,8 @@
       "items": {
         "type": "object",
         "required": ["id", "from", "to", "relation"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "from": { "type": "string" },
@@ -70,12 +72,41 @@
       }
     },
     "boundary_conditions": { "type": "array", "items": { "type": "string" } },
+    "phenomena": {
+      "type": "array",
+      "description": "The robust empirical regularities the theory sets out to explain. entailments() reads each claim against the causal graph of the propositions.",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement"],
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
+        "properties": {
+          "id": { "type": "string" },
+          "statement": { "type": "string" },
+          "claim": {
+            "type": "object",
+            "required": ["kind", "x", "y", "sign"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "type": "string", "enum": ["effect", "association"], "description": "effect: the total effect of x on y, how y responds when x is set by intervention. association: the dependence between x and y, given the constructs in given." },
+              "x": { "type": "string" },
+              "y": { "type": "string" },
+              "given": { "type": "array", "items": { "type": "string" }, "description": "Constructs held fixed, for an association only." },
+              "sign": { "type": "string", "enum": ["positive", "negative", "zero", "nonzero"], "description": "A conditional association is zero or nonzero." }
+            },
+            "description": "The claim in machine-readable form, about two constructs, which entailments() reads against the causal graph of the propositions. Full validation also requires x and y to be two distinct declared constructs, and given to hold declared constructs other than those two."
+          },
+          "source_doi": { "type": ["string", "null"] }
+        }
+      }
+    },
     "predictions": {
       "type": "array",
       "items": {
         "type": "object",
         "required": ["id", "statement", "type"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "derives_from": { "type": "array", "items": { "type": "string" } },
@@ -105,7 +136,20 @@
               "lower": { "type": ["number", "null"] },
               "upper": { "type": ["number", "null"] }
             },
-            "description": "The region of the quantity the claim allows. A null or infinite bound is open, so a one-sided claim leaves one side null. post_data_severity() reads it with each test outcome's estimate and se. Full validation also requires at least one finite bound and lower not above upper."
+            "description": "The region of the quantity the claim allows. A null or infinite bound is open, so a one-sided claim leaves one side null. post_data_severity() reads it with each test outcome's estimate and se. Full validation also requires at least one finite bound, lower not above upper and a region that fits the prediction's type and the sign of its claim, so an existence prediction takes no bounds."
+          },
+          "claim": {
+            "type": "object",
+            "required": ["kind", "x", "y", "sign"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": { "type": "string", "enum": ["effect", "association"], "description": "effect: the total effect of x on y, how y responds when x is set by intervention. association: the dependence between x and y, given the constructs in given." },
+              "x": { "type": "string" },
+              "y": { "type": "string" },
+              "given": { "type": "array", "items": { "type": "string" }, "description": "Constructs held fixed, for an association only." },
+              "sign": { "type": "string", "enum": ["positive", "negative", "zero", "nonzero"], "description": "A conditional association is zero or nonzero." }
+            },
+            "description": "The claim in machine-readable form, about two constructs, which entailments() reads against the causal graph of the propositions. Full validation also requires x and y to be two distinct declared constructs, and given to hold declared constructs other than those two."
           },
           "test": {
             "type": "object",
@@ -126,7 +170,7 @@
               "justification": { "type": "string" }
             },
             "dependentRequired": { "power_lo": ["power_hi"], "power_hi": ["power_lo"] },
-            "description": "The sampling plan for testing the prediction, which a Stage 1 Registered Report states for each hypothesis. It is recorded, not scored: power does not raise the severity of a claim (Meehl, 1967), though it decides how informative a failed test is (Lakens, 2022). preregister() lists it after the hypotheses, and so does the preregistration that dossier() appends. Full validation checks its fields, and no checklist item, threshold or severity reads it. The interval a claim allows belongs in bounds."
+            "description": "The sampling plan for testing the prediction, which a Stage 1 Registered Report states for each hypothesis. It is recorded, not scored: the stated power raises no score, since more power weakens the corroboration a directional prediction earns (Meehl, 1967), though it decides how informative a failed test is (Lakens, 2022). preregister() lists it after the hypotheses, and so does the preregistration that dossier() appends. Full validation checks its fields, and no checklist item, threshold or severity reads it. The interval a claim allows belongs in bounds."
           }
         }
       }
@@ -137,7 +181,8 @@
       "items": {
         "type": "object",
         "required": ["id", "statement"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "statement": { "type": "string" },
@@ -158,7 +203,8 @@
       "items": {
         "type": "object",
         "required": ["supports", "direction"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "supports": { "type": "string" },
           "source_doi": { "type": ["string", "null"] },
@@ -172,7 +218,8 @@
       "items": {
         "type": "object",
         "required": ["prediction_id", "passed"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "prediction_id": { "type": "string" },
           "observed": { "type": "string" },
@@ -206,18 +253,41 @@
       "items": {
         "type": "object",
         "required": ["id", "label"],
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "id": { "type": "string" },
           "label": { "type": "string" },
           "key_constructs": { "type": "array", "items": { "type": "string" } },
-          "source_doi": { "type": ["string", "null"] }
+          "source_doi": { "type": ["string", "null"] },
+          "propositions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "from", "to", "relation"],
+              "additionalProperties": false,
+              "patternProperties": { "^x_": {} },
+              "properties": {
+                "id": { "type": "string" },
+                "from": { "type": "string" },
+                "to": { "type": "string" },
+                "relation": {
+                  "type": "string",
+                  "enum": ["increases", "decreases", "moderates", "mediates", "causes", "associates"]
+                },
+                "mechanism": { "type": "string", "description": "the logical 'why' (Sutton & Staw, 1995)" },
+                "functional_form": { "type": "string" }
+              }
+            },
+            "description": "The rival's own propositions over the theory's constructs, which discriminate() sets against the theory's. Full validation also requires each endpoint to be a declared construct."
+          }
         }
       }
     },
     "formal_model": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
+      "patternProperties": { "^x_": {} },
       "properties": {
         "type": { "type": "string", "enum": ["ode", "abm", "network", "sem", "none"] },
         "spec_ref": { "type": ["string", "null"] }
@@ -228,7 +298,8 @@
       "description": "Auto-logged build steps.",
       "items": {
         "type": "object",
-        "additionalProperties": true,
+        "additionalProperties": false,
+        "patternProperties": { "^x_": {} },
         "properties": {
           "step": { "type": "string" },
           "action": { "type": "string" },

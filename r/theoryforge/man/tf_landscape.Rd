@@ -2,7 +2,7 @@
 % Please edit documentation in R/lit.R
 \name{tf_landscape}
 \alias{tf_landscape}
-\title{Map a theory and its alternatives onto a literature landscape (deterministic)}
+\title{Match a theory and its alternatives against a literature's themes (deterministic)}
 \usage{
 tf_landscape(
   theory,
@@ -39,9 +39,11 @@ Each theme holds \code{id}, \code{keywords}, \code{alternatives},
 order of \code{alternatives}.
 }
 \description{
-Maps a theory's focal constructs and its registered alternatives onto the
-thematic structure of a corpus (computed by \code{\link[=tf_litmap]{tf_litmap()}}). Each theme is
-tagged \code{"under_theorised"}, \code{"covered"} or \code{"crowded"}.
+Matches the words of a theory's construct labels and of its registered
+alternatives against the keywords of a corpus's themes (computed by
+\code{\link[=tf_litmap]{tf_litmap()}}). Each theme is tagged \code{"under_theorised"},
+\code{"covered"} or \code{"crowded"} by the number of accounts that share a
+word with it.
 }
 \details{
 A theme is matched by the words its keywords share with the focal theory's
@@ -56,14 +58,21 @@ match either. The third kind is a fixed list of words that name a kind of
 account: theory, model, account, hypothesis, framework and approach, with
 their plurals. One shared word is enough for a match.
 
+The match is lexical. It shows that an account and a theme have a word in
+common, and does not show that the account explains what the theme's
+records report, nor that a theme without a match is unexplained.
+
 The statuses count the registered accounts, the focal theory and its
-registered alternatives, that address a theme. A theme is
-\code{"under_theorised"} when none of them addresses it, which says nothing
-of accounts the theory does not register, \code{"covered"} when one does and
-\code{"crowded"} when two or more do. A crowded theme calls for predictions
-that discriminate between the accounts, and is not a finding of redundancy.
-\code{under_theorised_fronts} lists the ids of the under-theorised themes,
-and \code{redundancy_risk}, despite its name, the ids of the crowded ones.
+registered alternatives, that match a theme. A theme is
+\code{"under_theorised"} when none of them matches it, \code{"covered"}
+when one does and \code{"crowded"} when two or more do. An alternative id
+that is repeated counts once. An account the theory does not register, or
+one that names the same idea in other words, may address an
+under-theorised theme. A crowded theme may call for predictions that
+discriminate between its accounts, and is not a finding that they compete or
+are redundant. \code{under_theorised_fronts} lists the ids of the
+under-theorised themes, and \code{redundancy_risk}, despite its name, the
+ids of the crowded ones.
 
 The arguments are checked in the order \code{min_link},
 \code{max_token_share}, \code{method}, then the corpus. The themes are

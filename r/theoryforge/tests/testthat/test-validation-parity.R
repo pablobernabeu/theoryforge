@@ -368,10 +368,21 @@ test_that("full validation checks the formal model", {
   ))
 })
 
+test_that("a recorded content hash must match the content", {
+  t <- consistent_theory()
+  t$version <- list(id = "v2", parent_id = "v1", content_hash = NULL)
+  t$version$content_hash <- tf_content_hash(t)
+  expect_true(tf_validate(t, full = TRUE))
+  t$title <- paste(t$title, "revised")
+  expect_identical(full_error(t), paste0("invalid theory object: version content_hash does not ",
+                                         "match the theory's content"))
+})
+
 test_that("full validation checks the version block", {
   vp_cases("version", list(
     list(value = list(id = "v1", parent_id = NULL, content_hash = NULL), expected = NA),
-    list(value = list(id = "v2", parent_id = "v1", content_hash = "sha256:00"), expected = NA),
+    list(value = list(id = "v2", parent_id = "v1", content_hash = "sha256:00"),
+         expected = "version content_hash does not match the theory's content"),
     list(value = setNames(list(), character(0)), expected = NA),
     list(value = list(), expected = NA),
     list(value = NULL, expected = NA),
@@ -557,4 +568,54 @@ test_that("tf_appraise_amendment() refuses a non-logical passed in either theory
   expect_identical(ap$corroborated_new, "h2")
   expect_identical(ap$articulated, "h2")
   expect_identical(ap$verdict, "neutral")
+})
+
+test_that("full validation names unknown entry fields and the field they resemble", {
+  # test_schema_agreement.py asserts the same message for the same theory.
+  t <- tf_read(tf_fixture_path("modality-switching.theory.yaml"))
+  t$predictions[[1]]$severty <- 0.5
+  t$predictions[[1]]$derives_form <- list("p1")
+  t$constructs[[2]]$note <- "x"
+  t$constructs[[1]]$x_source <- "Item bank 3"
+  msg <- tryCatch({
+    tf_validate(t, full = TRUE)
+    ""
+  }, error = conditionMessage)
+  expect_identical(msg, paste0(
+    "invalid theory object: construct[1] has unknown field: note; ",
+    "prediction[0] has unknown field: severty (did you mean severity?); ",
+    "prediction[0] has unknown field: derives_form (did you mean derives_from?)"))
+})
+
+test_that("full validation of many constructs lists every repeat in order", {
+  # 5000 constructs that share one id, as YAML aliases of one mapping would
+  # give, and 5000 propositions between constructs with ids of their own. The
+  # Python suite checks the same messages.
+  same <- rep(list(list(id = "a", label = "A", definition = "D")), 5000L)
+  own <- lapply(0:4999, function(i) list(id = paste0("c", i), label = "C", definition = "D"))
+  props <- lapply(0:4999, function(i) {
+    list(id = paste0("p", i), from = paste0("c", i), to = paste0("c", (i + 1L) %% 5001L),
+         relation = "causes")
+  })
+  t <- list(schema_version = "1.1", id = "v", title = "V", maturity = "draft",
+            constructs = c(same, own), propositions = props)
+  expect_identical(theoryforge:::.tf_validation_problems(t, full = TRUE),
+                   c(rep("duplicate construct id: a", 4999L),
+                     "proposition[4999] to 'c5000' is not a known construct"))
+})
+
+test_that("full validation compares an id marked as bytes as match() does", {
+  # match() compares a string marked as bytes only with other such strings, so
+  # the UTF-8 spelling of the same bytes is not a known construct. With more
+  # than 200 constructs, the ids are kept in an environment, which sets such
+  # an id aside for %in%.
+  b <- "\u00e9"
+  Encoding(b) <- "bytes"
+  pad <- lapply(1:300, function(i) list(id = paste0("c", i), label = "C", definition = "D"))
+  t <- list(schema_version = "1.1", id = "v", title = "V", maturity = "draft",
+            constructs = c(list(list(id = b, label = "A", definition = "D")), pad),
+            propositions = list(list(id = "p1", from = "\u00e9", to = "c1", relation = "causes"),
+                                list(id = "p2", from = b, to = "c1", relation = "causes")))
+  expect_identical(theoryforge:::.tf_validation_problems(t, full = TRUE),
+                   "proposition[0] from '\u00e9' is not a known construct")
 })

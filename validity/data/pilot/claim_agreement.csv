@@ -1,0 +1,4 @@
+theory,union,in_all_three,J_enc-1/enc-2,J_enc-1/enc-3,J_enc-2/enc-3,J_pairs_enc-1/enc-2,J_pairs_enc-1/enc-3,J_pairs_enc-2/enc-3
+bilingual-rhm,5,2,0.6,0.6,0.5,0.6,0.6,0.5
+collaborative-cognitive-load,13,2,0.231,0.846,0.167,0.231,0.846,0.167
+health-habit,8,2,0.5,0.375,0.429,0.5,0.375,0.429

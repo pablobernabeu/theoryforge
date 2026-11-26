@@ -1,41 +1,86 @@
 ## Submission
 
-This is a patch release of theoryforge 0.7.0, which CRAN published on
-2026-11-22. It corrects the test that failed in the noLD additional check of
-0.7.0.
+This is an update from theoryforge 0.7.0, which CRAN published on 2026-11-22,
+to 0.8.0.
 
-The test compared the mean of three severities with the constant
-0.49999999999999994. R built without long double reads that literal as 0.5,
-because its parser accumulates the digits in a double, so the test failed
-although the mean had the expected value. The test now writes the constant as
-0.5 - 2^-54, which every build computes exactly. The package's code is
-unchanged. The release also carries two corrections of the documentation,
-listed in NEWS.md.
+It fixes the test failure in the noLD additional check that CRAN reported on
+2026-11-23. The test compared the mean of three severities with the literal
+0.49999999999999994, which R built without long double reads as 0.5, so the
+test failed although the mean had the expected value. The test now writes the
+constant as 0.5 - 2^-54, which every build computes exactly. The package's
+tests now pass on a local build of R-devel configured with
+--disable-long-double (below).
+
+The submission also brings the changes of 0.8.0 that NEWS.md lists. Among
+them are new functions that read a theory's claims against its causal graph,
+set the theory against a rival, list its equivalent models, hash its content
+and read DAGitty model code. Some results change, and NEWS.md lists those
+changes under 'Changed results'. In particular, tf_check() uses version 3.1 of
+the package's checklist, so the same theory file can get a different score.
+NEWS.md also keeps the section of 0.7.1, a patch with the fix alone that was
+prepared but not submitted, and whose changes are part of 0.8.0.
 
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note
 
 * checking CRAN incoming feasibility ... NOTE
-  Possibly misspelled words in DESCRIPTION: checkable, independencies
+  Days since last update: 3
 
-  Both are words, used in their ordinary sense, and DESCRIPTION is the same
-  as in 0.7.0. A submission within a week of 0.7.0 will also show 'Days since
-  last update', since this release is the correction CRAN asked for.
+  0.7.0 was published on 2026-11-22, and this release carries the fix that
+  CRAN asked for.
+
+  With the incoming spelling check on, the note lists no possibly misspelled
+  word. The Description field was revised in this version, and it now writes
+  'conditional independence relations' where 0.7.0 wrote 'conditional
+  independencies'.
 
 ## Test environments
 
-* R-devel (2026-11-23 r90966) configured with --disable-long-double, as for
-  the noLD check, on x86_64 Linux: `R CMD check --as-cran --no-manual
-  --ignore-vignettes`, Status: OK, with 3586 expectations met and none
-  failed. The vignettes were left out because this build has no cairo for
-  their SVG figures, and ggm, which needs Bioconductor, was not installed, so
-  its tests skipped. The same build reproduces the failure of 0.7.0 exactly.
-* R 4.3.3 on x86_64 Linux (Ubuntu 24.04): `R CMD check --as-cran
-  --no-manual`, with the incoming spelling check on, 1 note (above).
+Each local check below ran on the tarball that `R CMD build` made from the
+submitted sources, with the vignettes built. The remote parts of the incoming
+check, which query CRAN and the package's URLs, were turned off with
+_R_CHECK_CRAN_INCOMING_REMOTE_=false, since this machine's network does not
+reach them.
 
-The test suite of 0.7.0 passed on every CRAN flavour that has checked it,
-including macOS arm64, where long double is the same as double.
+* R 4.3.3 on x86_64 Linux (Ubuntu 24.04): `R CMD check --as-cran`. Status:
+  1 NOTE, 'checking for future file timestamps ... unable to verify current
+  time', which came from this machine's network. The tests passed, with 6935
+  expectations met, none failed, no warnings and 58 tests skipped: 7 that skip
+  on CRAN and 51 that read repository files outside the built package. The
+  vignettes were rebuilt, and the PDF and HTML manuals were built.
+* R 4.3.3 on the same machine, with the incoming checks and their spelling
+  check on (_R_CHECK_CRAN_INCOMING_=true and
+  _R_CHECK_CRAN_INCOMING_USE_ASPELL_=true): `R CMD check --as-cran --no-tests
+  --no-manual --ignore-vignettes`. The incoming feasibility check named only
+  the maintainer, and the status was 1 NOTE, the same note on the time.
+* R-devel (2026-11-23 r90966) configured with --disable-long-double, as for
+  the noLD check, on x86_64 Linux (Ubuntu 24.04): `R CMD check --as-cran
+  --ignore-vignettes --no-manual`. Status: OK. The tests passed, with 6888
+  expectations met, none failed, no warnings and 60 tests skipped: 7 that skip
+  on CRAN, 51 that read repository files outside the built package and 2 that
+  need ggm. The vignettes were left out because this build has no cairo for
+  their SVG figures. ggm, which imports graph from Bioconductor, was not
+  installed, so the check ran with _R_CHECK_FORCE_SUGGESTS_=false.
+* GitHub Actions, run 45764638633 on 2026-11-26, at commit 900b9ea, which
+  holds the package as submitted. Each leg built the tarball and ran
+  `R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
+  which r-lib/actions turns off. Each leg ended with 'Status: OK':
+
+  * ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.6.2
+  * windows-latest (x86_64-w64-mingw32), R 4.6.2 ucrt
+  * macos-latest (macOS 26.7.2, aarch64-apple-darwin23), R 4.6.2
+  * ubuntu-latest (Ubuntu 26.04.1 LTS), R-devel (2026-11-24 r90980)
+  * windows-latest (x86_64-w64-mingw32), R-devel (2026-11-17 r90926 ucrt)
+  * ubuntu-latest (Ubuntu 26.04.1 LTS), R 4.5.3 (oldrel-1)
+
+  The tests passed in every leg, with no failures and no warnings and with
+  7538 expectations met on Linux and macOS and 7533 on Windows, where one
+  more test skips. The same run tested the package on R 4.1.3, the last
+  release of R 4.1, the oldest series that DESCRIPTION's 'R (>= 4.1.0)'
+  allows. There the tests passed with 6549 expectations met, and the 20 tests
+  that need curl, dagitty, DiagrammeR, ggm or lavaan, which were not installed
+  there, skipped.
 
 ## Notes
 
@@ -54,6 +99,9 @@ including macOS arm64, where long double is the same as double.
   exponential against which tf_simulate() is checked. ggm imports graph from
   Bioconductor, so it may be unavailable where no Bioconductor repository is
   set.
+* tools moved from Imports to Suggests. tf_content_hash() uses
+  tools::sha256sum() where that function takes bytes, in R 4.5 and later, and
+  computes the digest in R otherwise. The tests also use tools.
 * testthat runs the tests and spelling the spell check in tests/spelling.R,
   which skips on CRAN. knitr and rmarkdown build the vignettes.
 

@@ -1,0 +1,188 @@
+# Source: pilot/enc-2/health-habit.theory.yaml, validity audit of theoryforge at f72ce4c.
+# Encoder 2, encoding-reliability pilot. Encoded only from
+# audit/pilot/source-health-habit.md, which describes the account of habit in
+# health behaviour set out by Gardner (2015). Every judgement call is listed in
+# enc-2/notes.md. The propositions close a loop (behaviour, repetition, habit,
+# impulse, behaviour), which the source states, so the causal functions need
+# cycles = "sigma".
+schema_version: "1.1"
+id: "habit-health-behaviour-2015"
+title: "Habit and health behaviour"
+maturity: "developing"
+theory_form: "variance"
+
+constructs:
+  - id: c_cue
+    label: "Cue encounter"
+    definition: "Encountering a cue, such as a place, a time, the presence of other people or a mood, that has become associated with a behaviour."
+  - id: c_context_change
+    label: "Removal from the cueing context"
+    definition: "Moving a person away from the contexts that cue a habit, as when the person moves house."
+  - id: c_repetition
+    label: "Context-consistent repetition"
+    definition: "Repetition of a behaviour in a consistent context."
+  - id: c_reward
+    label: "Reward of the behaviour"
+    definition: "Whether performing the behaviour is rewarded."
+  - id: c_habit
+    label: "Habit strength"
+    definition: "The strength of the learned association between a cue and a response, by which encountering the cue automatically generates an impulse to perform a behaviour; habit is the process linking cue to impulse and is distinct from the behaviour it may produce."
+  - id: c_impulse
+    label: "Habitual impulse"
+    definition: "The impulse to perform a behaviour that a cue generates automatically, without awareness, deliberation or effort."
+  - id: c_intention
+    label: "Intention"
+    definition: "A conscious decision or motivation to perform a behaviour, belonging to the slower, deliberate system."
+  - id: c_self_regulatory_capacity
+    label: "Cognitive capacity and self-regulatory resources"
+    definition: "The cognitive capacity and self-regulatory resources a person has available for inhibiting impulses."
+  - id: c_inhibition
+    label: "Inhibition of the habitual impulse"
+    definition: "Deliberate suppression of a habitual impulse, so that it does not produce the behaviour."
+  - id: c_urge
+    label: "Urge"
+    definition: "The conscious experience of a habitual impulse that is blocked."
+  - id: c_behaviour
+    label: "Behaviour"
+    definition: "Performance of the health-related behaviour on an occasion."
+
+propositions:
+  - id: hp1
+    from: c_repetition
+    to: c_habit
+    relation: "increases"
+    mechanism: "Each repetition in a consistent context strengthens the cue-response association in memory, alternative responses become less accessible and the context comes to trigger the behaviour without awareness, deliberation or effort."
+    functional_form: "rises with repetition and levels off once habit strength has peaked; the rate of growth and the level reached differ between people at equal repetition"
+  - id: hp2
+    from: c_reward
+    to: c_habit
+    relation: "moderates"
+  - id: hp3
+    from: c_cue
+    to: c_impulse
+    relation: "increases"
+    mechanism: "Encountering the cue automatically generates an impulse to perform the behaviour, as a result of the learned association between the cue and the response."
+    functional_form: "no impulse without the cue; the impulse grows with habit strength"
+  - id: hp4
+    from: c_habit
+    to: c_impulse
+    relation: "increases"
+    mechanism: "The stronger the learned cue-response association, the stronger the impulse that encountering the cue generates."
+    functional_form: "acts only when the cue is encountered"
+  - id: hp5
+    from: c_impulse
+    to: c_behaviour
+    relation: "increases"
+    mechanism: "A habitual impulse is one of several momentary influences on what a person does, and when it is not inhibited it governs behaviour by default."
+  - id: hp6
+    from: c_intention
+    to: c_behaviour
+    relation: "increases"
+    mechanism: "Intentions belong to a deliberate system that runs in parallel with habit, and conscious decisions combine with, or compete against, habitual impulses in what a person does."
+  - id: hp7
+    from: c_habit
+    to: c_behaviour
+    relation: "moderates"
+    mechanism: "As habit strength increases, the relationship between intention and behaviour weakens, so that where intention is weak and habit strong, behaviour follows habit and not intention."
+  - id: hp8
+    from: c_self_regulatory_capacity
+    to: c_inhibition
+    relation: "increases"
+    mechanism: "People can inhibit habitual impulses when they have enough cognitive capacity and self-regulatory resources; when these are depleted, impulses govern behaviour by default."
+  - id: hp9
+    from: c_intention
+    to: c_inhibition
+    relation: "causes"
+    mechanism: "Forming a strong intention to act against a habit may mobilise self-regulatory resources and so suppress the habitual response."
+  - id: hp10
+    from: c_inhibition
+    to: c_behaviour
+    relation: "decreases"
+    mechanism: "An inhibited habitual impulse does not produce the habitual behaviour."
+  - id: hp11
+    from: c_inhibition
+    to: c_urge
+    relation: "increases"
+    mechanism: "An impulse that is blocked may be experienced consciously as an urge."
+    functional_form: "only when a habitual impulse is present"
+  - id: hp12
+    from: c_behaviour
+    to: c_repetition
+    relation: "increases"
+    mechanism: "Performing the behaviour in its usual context adds a repetition: while a habit is forming, motivation prompts repetition, and once the habit is established, it prompts further repetition."
+    functional_form: "when the behaviour is performed in a consistent context"
+  - id: hp13
+    from: c_context_change
+    to: c_cue
+    relation: "decreases"
+    mechanism: "Moving away from the contexts that cue a habit removes the cues that activate it."
+
+boundary_conditions:
+  - "health-related behaviours such as eating, physical activity, drinking alcohol and taking medication"
+  - "habit as a process within the individual, built on cues personal to that individual"
+  - "complex behaviours may be habitual in how they are started, in how they are carried out or in both"
+
+phenomena:
+  - id: hph1
+    statement: "People differ in how quickly habit grows and in the level it reaches even when they repeat the behaviour equally often."
+
+predictions:
+  - id: hpred1
+    derives_from: [hp4, hp5]
+    statement: "The stronger the habit, the more likely the behaviour is to be performed."
+    type: "directional"
+    claim: {kind: effect, x: c_habit, y: c_behaviour, sign: positive}
+  - id: hpred2
+    derives_from: [hp6, hp7]
+    statement: "As habit strength increases, the relationship between intention and behaviour weakens, so that where intention is weak and habit strong, behaviour follows habit and not intention."
+    type: "directional"
+  - id: hpred3
+    derives_from: [hp1]
+    statement: "Repetition of the behaviour in the same context strengthens habit, and the growth levels off: once habit strength has peaked, further repetition has little effect."
+    type: "directional"
+    claim: {kind: effect, x: c_repetition, y: c_habit, sign: positive}
+  - id: hpred4
+    derives_from: [hp3]
+    statement: "A habit is not activated when its cue is absent, so a habit can be automatic yet rarely expressed."
+    type: "directional"
+    claim: {kind: effect, x: c_cue, y: c_impulse, sign: positive}
+  - id: hpred5
+    derives_from: [hp3, hp4, hp5, hp7]
+    statement: "In unchanging contexts, habits remain stable and the habitual behaviour persists when conscious motivation wanes."
+    type: "directional"
+  - id: hpred6
+    derives_from: [hp1, hp5, hp12]
+    statement: "Interventions that form new habits keep their effects after they end."
+    type: "directional"
+  - id: hpred7
+    derives_from: [hp7]
+    statement: "Unwanted habitual behaviours resist change through deliberation, such as changing intentions."
+    type: "directional"
+  - id: hpred8
+    derives_from: [hp5, hp7, hp8, hp10]
+    statement: "Habits override counter-habitual intentions, unless the person inhibits the habitual impulse."
+    type: "directional"
+  - id: hpred9
+    derives_from: [hp13, hp3, hp5]
+    statement: "Moving people away from the contexts that cue a habit, as when they move house, disrupts the habitual behaviour; if the change is temporary, the learned association may survive and the behaviour may return with the old context."
+    type: "directional"
+    claim: {kind: effect, x: c_context_change, y: c_behaviour, sign: negative}
+
+auxiliary_assumptions:
+  - id: ha1
+    statement: "Habit belongs to a fast, automatic system that runs in parallel with a slower, deliberate system to which intentions belong."
+    added_for: null
+    protects: [hpred2, hpred7, hpred8]
+  - id: ha2
+    statement: "Habit, the process linking cue to impulse, is distinct from the behaviour it may produce, so habit need not produce behaviour."
+    added_for: null
+    protects: [hpred4, hpred8]
+  - id: ha3
+    statement: "Habits and intentions usually agree, because habits form by repeating intended actions, so the claim that habit overrides intention matters chiefly where the two conflict."
+    added_for: null
+    protects: [hpred8]
+
+provenance:
+  - step: "1"
+    action: "encode"
+    detail: "Encoded by hand from the pilot source text on habit in health behaviour (Gardner, 2015, doi:10.1080/17437199.2013.876238)."

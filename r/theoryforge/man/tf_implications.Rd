@@ -4,7 +4,7 @@
 \alias{tf_implications}
 \title{Derive a theory's implied conditional independencies}
 \usage{
-tf_implications(theory, cycles = "refuse")
+tf_implications(theory, cycles = "refuse", given = "basis")
 }
 \arguments{
 \item{theory}{A theory object (named list), such as one from \code{\link[=tf_read]{tf_read()}}.}
@@ -13,13 +13,19 @@ tf_implications(theory, cycles = "refuse")
 \code{"refuse"} (the default) stops with an error, and \code{"sigma"}
 derives the statements by sigma-separation (see the section on feedback
 loops).}
+
+\item{given}{The conditioning sets: \code{"basis"} (the default), the
+parents of the pair or else its other ancestors, or \code{"minimal"},
+that set pruned to a minimal one.}
 }
 \value{
 A named list
-\code{list(theory_id, criterion, acyclic, constructs, n_edges,
-  n_bidirected, feedback, implications, n_implications, inseparable)}.
-\code{criterion} names the separation criterion, \code{"m"} under
-\code{cycles = "refuse"} and \code{"sigma"} under \code{cycles = "sigma"}.
+\code{list(theory_id, criterion, conditioning, acyclic, constructs,
+  n_edges, n_bidirected, feedback, implications, n_implications,
+  inseparable)}. \code{criterion} names the separation criterion, \code{"m"}
+under \code{cycles = "refuse"} and \code{"sigma"} under
+\code{cycles = "sigma"}, and \code{conditioning} the value of
+\code{given}.
 \code{constructs} holds the vertices in file order. \code{n_edges} counts
 the directed edges the theory states and \code{n_bidirected} the
 bidirected ones, a pair stated twice counting once, before any
@@ -41,9 +47,9 @@ relation (\code{"increases"}, \code{"decreases"},
 \code{"causes"}, \code{"mediates"} or \code{"moderates"}) is an edge from
 \code{from} to \code{to}, and \code{"associates"} is a bidirected edge,
 covariance the theory leaves unexplained, as a latent common cause of the two
-constructs would. The constructs that a directed relation names are the
-vertices, and an association is an edge only between two of them. The
-function then takes every pair of vertices that no edge joins. The pair is
+constructs would. The constructs that some proposition relates to another
+are the vertices. The function then takes every pair of vertices that no
+edge joins. The pair is
 stated independent given the parents of both when those m-separate it
 (Richardson, 2003), and otherwise given all the other ancestors of the two
 when those do. A pair that neither set separates is separated by no set of
@@ -51,16 +57,40 @@ constructs (Richardson & Spirtes, 2002, Theorem 4.2), so the theory implies
 no independence for it, and it is listed under \code{inseparable}. These are
 the conditional independencies the causal graph implies, each one a claim
 that data could refute. When every relation is directed and the graph is
-acyclic, they are the basis set of Pearl (1988) and Shipley (2000), from
-which every other independence the graph implies follows.
+acyclic, they are the basis set of Pearl (1988) and Shipley (2000). When the
+model holds, their tests are independent of each other, and when the
+distribution has the property called composition, as a multivariate normal
+one does, they imply every other independence the graph implies.
 }
 \details{
-Constructs that no directed relation names are left out, because silence
-about a construct is not a claim that it is independent of anything, and so
-are constructs without an id, which no proposition can name. A construct
-named only by associations would be a collider on every path through it, so
-leaving it out loses no statement about the others. A theory with no
-directed relations therefore comes back with no vertices and no error.
+The statements are consequences of the graph as encoded. The graph reads
+every pair of its constructs that no proposition joins as having no direct
+effect on each other and no unexplained association, so the statements are
+the theory's commitments only if its authors meant those omissions. A
+construct marked \code{x_latent: true} is read like any other, so a
+statement can hold fixed a construct that a test would need a measure of,
+and no other set of observed constructs is sought for it.
+
+\code{given = "minimal"} then drops each construct from the conditioning
+set, in file order, whenever the rest still separate the pair, which leaves
+a minimal separating set: no construct in it can be dropped. Every set tried
+lies among the ancestors of the pair, where m-separation is separation in an
+undirected graph that holding more constructs fixed cannot reopen
+(Richardson, 2003), so one pass suffices. Fewer conditioning constructs mean
+fewer measured with error, which matters for the reason given below. The
+minimal set returned is one of possibly several, and the file order of the
+constructs decides which. Minimal statements suit tests of single pairs.
+They are no longer a basis set: unless the distribution satisfies
+composition, they do not jointly imply the graph's other independencies,
+and their tests are not independent, so they should not be combined into
+one test of the whole model, as Shipley's (2000) C statistic combines the
+basis set's.
+
+A construct that no proposition relates to another is left out, because
+silence about a construct is not a claim that it is independent of anything,
+and so is a construct without an id, which no proposition can name. A theory
+whose propositions relate no two constructs therefore comes back with no
+vertices and no error.
 }
 \section{Measurement}{
 
@@ -105,13 +135,16 @@ model.
 \section{Refusals}{
 
 The function stops in four cases. A value of \code{cycles} other than
-\code{"refuse"} or \code{"sigma"} is refused before the theory is read. Two
+\code{"refuse"} or \code{"sigma"}, or of \code{given} other than
+\code{"basis"} or \code{"minimal"}, is refused before the theory is read. Two
 constructs sharing an id would give one node two sets of parents, and a
-directed relation naming an undeclared construct would shrink the graph and
-so imply independencies the theory never claimed. With
-\code{cycles = "refuse"}, the default, a cycle among the directed edges is
-refused too, and the message names a cycle that was found and the
-\code{"sigma"} option.
+proposition, directed or an association, that names an undeclared construct
+would shrink the graph and so imply independencies the theory never claimed.
+With \code{cycles = "refuse"}, the default, a cycle among the directed edges
+is refused too, and the message names a cycle that was found and the
+\code{"sigma"} option. Each refusal is an error of class \code{tf_refusal},
+as are those of \code{\link[=tf_entailments]{tf_entailments()}}, \code{\link[=tf_equivalent_models]{tf_equivalent_models()}} and
+\code{\link[=tf_discriminate]{tf_discriminate()}}, so that a caller can catch a refusal and nothing else.
 }
 
 \examples{
@@ -172,7 +205,7 @@ e0152719. \doi{10.1371/journal.pone.0152719}
 }
 \seealso{
 \code{\link[=tf_diagram]{tf_diagram()}} with \code{type = "causal_dag"}, which exports the
-same graph as dagitty syntax without reading it, and the methodological
-foundations article for the literature behind the causal-testability
-criterion.
+same graph as dagitty syntax without reading it, and the
+\href{https://pablobernabeu.github.io/theoryforge/r/articles/methodology.html}{methodological foundations article}
+for the literature behind the causal-testability criterion.
 }

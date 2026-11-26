@@ -14,6 +14,8 @@ References:
 """
 from __future__ import annotations
 
+from itertools import compress
+
 
 def first_cycle(directed: list[list[bool]], k: int) -> list[int] | None:
     """Indices of the first cycle found, or None when the graph is acyclic.
@@ -55,15 +57,16 @@ def reach(directed: list[list[bool]], k: int) -> list[list[bool]]:
     A path may have no edges, so every vertex reaches itself, and ``r[u][v]``
     then reads "u is v or an ancestor of v".
     """
+    succ = [list(compress(range(k), row)) for row in directed]
     r = [[False] * k for _ in range(k)]
     for s in range(k):
-        r[s][s] = True
+        row = r[s]
+        row[s] = True
         stack = [s]
         while stack:
-            u = stack.pop()
-            for v in range(k):
-                if directed[u][v] and not r[s][v]:
-                    r[s][v] = True
+            for v in succ[stack.pop()]:
+                if not row[v]:
+                    row[v] = True
                     stack.append(v)
     return r
 
@@ -123,59 +126,108 @@ def acyclify(directed: list[list[bool]], bidirected: list[list[bool]],
     return d_acy, b_acy
 
 
-def _ends(directed: list[list[bool]], bidirected: list[list[bool]],
-          v: int) -> list[tuple[int, bool, bool]]:
-    """The edges at v as (w, arrowhead at v, arrowhead at w)."""
-    out = []
-    for w in range(len(directed)):
-        if directed[v][w]:
-            out.append((w, False, True))
-        if directed[w][v]:
-            out.append((w, True, False))
-        if bidirected[v][w]:
-            out.append((w, True, True))
-    return out
+class MixedGraph:
+    """A directed mixed graph prepared for m-separation queries.
+
+    ``parents[v]`` lists the parents of v in vertex order, and ``ends[v]`` the
+    edges at v as (w, arrowhead at v, arrowhead at w). Both are built once, so
+    that a query reads the edges at a vertex without scanning every vertex.
+    """
+
+    __slots__ = ("k", "parents", "ends")
+
+    def __init__(self, directed: list[list[bool]], bidirected: list[list[bool]]) -> None:
+        k = len(directed)
+        self.k = k
+        children = [list(compress(range(k), row)) for row in directed]
+        self.parents: list[list[int]] = [[] for _ in range(k)]
+        for u in range(k):
+            for v in children[u]:
+                self.parents[v].append(u)
+        self.ends: list[list[tuple[int, bool, bool]]] = [
+            [(w, False, True) for w in children[v]]
+            + [(w, True, False) for w in self.parents[v]]
+            + [(w, True, True) for w in compress(range(k), bidirected[v])]
+            for v in range(k)]
+
+    def without_edges(self, u: int, targets: list[int]) -> MixedGraph:
+        """The same graph without the directed edges from u to the vertices in ``targets``."""
+        out = MixedGraph.__new__(MixedGraph)
+        out.k = self.k
+        out.parents = list(self.parents)
+        out.ends = list(self.ends)
+        drop = set(targets)
+        out.ends[u] = [e for e in self.ends[u] if not (e[0] in drop and not e[1] and e[2])]
+        for v in drop:
+            out.parents[v] = [p for p in self.parents[v] if p != u]
+            out.ends[v] = [e for e in self.ends[v] if not (e[0] == u and e[1] and not e[2])]
+        return out
 
 
-def m_separated(directed: list[list[bool]], bidirected: list[list[bool]],
-                r: list[list[bool]], x: int, y: int, given: list[int]) -> bool:
-    """Whether x and y are m-separated given the vertices in ``given``.
+def reached(adjacent: list[list[int]], seeds, k: int, base: bytearray | None = None) -> bytearray:
+    """Marks the seeds and every vertex the lists in ``adjacent`` lead to from one.
+
+    With each vertex's parents in ``adjacent``, the marks are the seeds and
+    their ancestors, and with its children, the seeds and their descendants.
+    The marks in ``base`` are kept, and every vertex they lead to must be
+    marked there too, as in a result of this function.
+    """
+    mark = bytearray(k) if base is None else bytearray(base)
+    stack = [s for s in seeds if not mark[s]]
+    for s in stack:
+        mark[s] = 1
+    while stack:
+        for u in adjacent[stack.pop()]:
+            if not mark[u]:
+                mark[u] = 1
+                stack.append(u)
+    return mark
+
+
+def m_separated(g: MixedGraph, x: int, y: int, given: list[int]) -> bool:
+    """Whether x and y are m-separated in ``g`` given the vertices in ``given``.
 
     A path between x and y connects them given Z when every collider on it, a
     vertex into which both of its edges on the path point, is in Z or an
     ancestor of a member of Z, and no other vertex on it is in Z (Richardson,
-    2003). Without bidirected edges, this is d-separation. ``r`` is ``reach()``
-    of the directed edges, and ``given`` holds neither x nor y.
+    2003). Without bidirected edges, this is d-separation. ``given`` holds
+    neither x nor y.
 
     The search walks the graph over the states (vertex, whether the walk
     arrived through an arrowhead), so each state is visited once and no path
     is enumerated. A walk that passes the tests at every step can be shortened,
     and detoured through Z at each collider outside Z, into a path that passes
-    them, so the walk reaches y exactly when a connecting path exists.
+    them, so the walk reaches y exactly when a connecting path exists. Every
+    vertex of a connecting path is an ancestor of x, y or a member of Z. From
+    a vertex that is not a collider, the path leads along the directions of
+    its edges to x, y or a collider, and every collider on it is in Z or an
+    ancestor of a member of Z. The walk therefore keeps to those ancestors,
+    which leaves its result unchanged.
     """
-    k = len(directed)
-    in_z = [False] * k
-    for g in given:
-        in_z[g] = True
-    ancestor_of_z = [any(r[u][g] for g in given) for u in range(k)]
-    seen = [[False, False] for _ in range(k)]  # [arrived by a tail, by an arrowhead]
-    stack = [(w, head_w) for w, _, head_w in _ends(directed, bidirected, x)]
+    k, ends = g.k, g.ends
+    in_z = bytearray(k)
+    for z in given:
+        in_z[z] = 1
+    ancestor_of_z = reached(g.parents, given, k)
+    region = reached(g.parents, (x, y), k, ancestor_of_z)
+    seen = (bytearray(k), bytearray(k))  # arrived by a tail, by an arrowhead
+    stack = [(w, head_w) for w, _, head_w in ends[x] if region[w]]
     while stack:
         v, head_in = stack.pop()
-        if seen[v][head_in]:
+        if seen[head_in][v]:
             continue
-        seen[v][head_in] = True
+        seen[head_in][v] = 1
         if v == y:
             return False
-        for w, head_v, head_w in _ends(directed, bidirected, v):
+        collider_open = head_in and ancestor_of_z[v]
+        passes = not in_z[v]
+        if not (collider_open or passes):
+            continue
+        for w, head_v, head_w in ends[v]:
             # A walk that returns to x can start from x afresh, and those starts
             # are already on the stack.
-            if w == x:
+            if w == x or not region[w] or seen[head_w][w]:
                 continue
-            if head_in and head_v:
-                if not ancestor_of_z[v]:
-                    continue
-            elif in_z[v]:
-                continue
-            stack.append((w, head_w))
+            if collider_open if head_in and head_v else passes:
+                stack.append((w, head_w))
     return True

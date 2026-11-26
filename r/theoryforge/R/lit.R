@@ -4,6 +4,7 @@
 #' deterministic for a given corpus. Only the OpenAlex fetch,
 #' [tf_fetch_corpus()], depends on a live network service.
 #' @name lit
+#' @noRd
 #' @keywords internal
 NULL
 
@@ -42,10 +43,13 @@ NULL
 #' Reads a corpus object (\code{{schema_version, id, records}}) into a named
 #' list. The file extension sets the format: JSON for \code{.json} and YAML
 #' otherwise. The file is read by the rules that [tf_read()] follows, so an
-#' unquoted keyword such as \code{y} or \code{n} stays a string and a repeated
-#' key is refused. A document that is not a
-#' mapping stops with \code{Corpus data must be a mapping}. The records
-#' themselves are checked by [tf_litmap()] and [tf_landscape()].
+#' unquoted keyword such as \code{y} or \code{n} stays a string, and a repeated
+#' key, a YAML alias that names no node, an anchor given twice, a value tagged
+#' \code{!expr}, which runs no code, a YAML document whose aliases expand it past
+#' 1,000,000 values and a document nested more than 64 levels deep are refused,
+#' the first in the order [tf_read()] gives. A document that is not a mapping
+#' stops with \code{Corpus data must be a mapping}. The records themselves are
+#' checked by [tf_litmap()] and [tf_landscape()].
 #'
 #' @param path Path to a \code{.yaml}, \code{.yml} or \code{.json} corpus file.
 #' @return A named list holding the parsed corpus object.
@@ -285,10 +289,10 @@ tf_read_corpus <- function(path) {
 }
 
 # tf_litmap()'s arguments checked in signature order, as Python lit._settings
-# (API_SPEC.md section 14). The theme sizes and max_df are checked whichever
-# method is asked for, although only simple centres reads them.
+# (API_SPEC.md section 14). The theme sizes, max_df and min_df are checked
+# whichever method is asked for, although only simple centres reads them.
 .tf_settings <- function(min_link, method, min_cocitation, min_theme_size, max_theme_size,
-                         max_df) {
+                         max_df, min_df) {
   min_link <- .tf_positive_int(min_link, "min_link")
   method <- .tf_method(method)
   min_cocitation <- if (is.null(min_cocitation)) min_link else
@@ -303,15 +307,47 @@ tf_read_corpus <- function(path) {
     stop("min_theme_size must not exceed max_theme_size", call. = FALSE)
   }
   max_df <- .tf_share(max_df, "max_df")
+  min_df <- .tf_positive_int(min_df, "min_df")
   list(method = method, min_link = min_link, min_cocitation = min_cocitation,
-       min_theme_size = min_theme_size, max_theme_size = max_theme_size, max_df = max_df)
+       min_theme_size = min_theme_size, max_theme_size = max_theme_size, max_df = max_df,
+       min_df = min_df)
 }
+
+# The settings a simple-centres record gives in `parameters`, in this order.
+.tf_PARAMETERS <- c("min_link", "min_cocitation", "min_theme_size", "max_theme_size", "max_df",
+                    "min_df")
 
 # The median of `values`, the mean of the middle two for an even count.
 .tf_median <- function(values) {
   v <- sort(values)
   mid <- length(v) %/% 2L
   if (length(v) %% 2L == 1L) v[[mid + 1L]] else (v[[mid]] + v[[mid + 1L]]) / 2
+}
+
+# Each theme placed in the strategic diagram of Cobo et al. (2011), as Python
+# lit._quadrants. Both axes are split at their median, and a value is high when
+# it lies above the median, or at it when the median is the highest value of the
+# axis, so a theme with centrality 0 is low. When every theme has the same value
+# on an axis, a lone theme included, the axis cannot be split and every
+# quadrant is NA.
+.tf_quadrants <- function(themes) {
+  if (length(themes) == 0L) return(themes)
+  cs <- vapply(themes, function(th) th$centrality, numeric(1))
+  ds <- vapply(themes, function(th) th$density, numeric(1))
+  quadrant <- if (min(cs) == max(cs) || min(ds) == max(ds)) {
+    rep(NA_character_, length(themes))
+  } else {
+    high <- function(values) {
+      m <- .tf_median(values)
+      values > m | (values == m & m == max(values))
+    }
+    high_c <- high(cs)
+    high_d <- high(ds)
+    ifelse(high_c, ifelse(high_d, "motor", "basic"),
+           ifelse(high_d, "niche", "emerging_or_declining"))
+  }
+  for (i in seq_along(themes)) themes[[i]]$quadrant <- quadrant[[i]]
+  themes
 }
 
 # Co-word themes by simple centres (Coulter et al., 1998; Cobo et al., 2011),
@@ -328,7 +364,9 @@ tf_read_corpus <- function(path) {
   kws <- unique(all_kw)
   df <- tabulate(match(all_kw, kws), nbins = length(kws))
   field <- sort(kws[df / n > s$max_df], method = "radix")
-  rest <- lapply(sets, function(k) k[!(k %in% field)])
+  # The field terms and the keywords of fewer than min_df records are left out.
+  left_out <- c(field, kws[df < s$min_df])
+  rest <- lapply(sets, function(k) k[!(k %in% left_out)])
   edges <- .tf_edges(.tf_pair_counts(rest), s$min_link)
   themes <- list()
   if (length(edges) > 0L) {
@@ -401,21 +439,7 @@ tf_read_corpus <- function(path) {
            centrality = .tf_rnd(10 * external, 6),
            density = .tf_rnd(100 * internal / length(g), 6))
     })
-    # The strategic diagram of Cobo et al. (2011), each axis split here at its
-    # median, a value at the median counting as high.
-    if (length(themes) > 0L) {
-      c_med <- .tf_median(vapply(themes, function(th) th$centrality, numeric(1)))
-      d_med <- .tf_median(vapply(themes, function(th) th$density, numeric(1)))
-      for (i in seq_along(themes)) {
-        high_c <- themes[[i]]$centrality >= c_med
-        high_d <- themes[[i]]$density >= d_med
-        themes[[i]]$quadrant <- if (high_c) {
-          if (high_d) "motor" else "basic"
-        } else {
-          if (high_d) "niche" else "emerging_or_declining"
-        }
-      }
-    }
+    themes <- .tf_quadrants(themes)
   }
   list(field_terms = as.list(field), edges = edges, themes = themes)
 }
@@ -449,24 +473,28 @@ tf_read_corpus <- function(path) {
   }
   if (simple) {
     out$method <- s$method
-    out$parameters <- s[c("min_link", "min_cocitation", "min_theme_size", "max_theme_size",
-                          "max_df")]
+    out$parameters <- s[.tf_PARAMETERS]
     out$field_terms <- sc$field_terms
   }
   out
 }
 
-# Warn when the largest theme holds more than half the linked keywords, as
-# Python lit._warn_if_one_theme_dominates. Connected components merge every
-# theme that shares a keyword, so the hub keywords of a real corpus join it
-# into one theme (API_SPEC.md section 14). The call is left out, so that the
-# text is the Python twin's.
+# tf_litmap() warns of a giant theme only in a map of at least this many linked
+# keywords, since a smaller map, such as a single pair, can be one theme
+# legitimately.
+.tf_GIANT_MIN_KEYWORDS <- 10L
+
+# Warn when the largest theme holds more than half of ten or more linked
+# keywords, as Python lit._warn_if_one_theme_dominates. Connected components
+# merge every theme that shares a keyword, so the hub keywords of a real corpus
+# join it into one theme (API_SPEC.md section 14). The call is left out, so
+# that the text is the Python twin's.
 .tf_warn_if_one_theme_dominates <- function(themes) {
   if (length(themes) == 0L) return(invisible(NULL))
   sizes <- vapply(themes, function(th) as.integer(th$size), integer(1))
   n <- sum(sizes)
   largest <- max(sizes)
-  if (2L * largest <= n) return(invisible(NULL))
+  if (n < .tf_GIANT_MIN_KEYWORDS || 2L * largest <= n) return(invisible(NULL))
   p <- .tf_rnd(100 * (largest / n), 1)
   warning(sprintf(paste("litmap: one theme holds %.1f per cent of the %d linked keywords;",
                         "connected components cannot separate themes in a corpus this",
@@ -505,10 +533,10 @@ tf_read_corpus <- function(path) {
 #' \code{method} chooses how keywords are grouped into themes. With
 #' \code{"components"}, the default, a theme is a connected component of the
 #' keyword map, and on a real corpus one or a few keywords shared by most
-#' records join nearly every keyword into one. When the largest theme holds more
-#' than half the linked keywords, a warning says so: such themes, and any
-#' landscape built on them, do not describe the field. The result is returned
-#' unchanged.
+#' records join nearly every keyword into one. When the map links at least ten
+#' keywords and the largest theme holds more than half of them, a warning says
+#' so: such themes, and any landscape built on them, do not describe the field.
+#' The result is returned unchanged.
 #'
 #' \code{"simple_centres"} is the co-word clustering of Coulter et al. (1998)
 #' and Cobo et al. (2011). Each link is weighted by the equivalence index
@@ -522,11 +550,16 @@ tf_read_corpus <- function(path) {
 #' links to the keywords of other themes) and its density (100 times the
 #' summed index of its internal links, over its size), the measures
 #' of Callon et al. (1991) as Cobo et al. (2011) scale them. It also gains its
-#' quadrant in the strategic diagram, split here at the median of each:
+#' quadrant in the strategic diagram, split here at the median of each
+#' measure, a value counting as high when it lies above the median, or at it
+#' when the median is the measure's highest value:
 #' \code{"motor"} (both high), \code{"basic"} (central but not dense),
 #' \code{"niche"} (dense but not central) or \code{"emerging_or_declining"}
-#' (both low). On real corpora, this gives bounded themes where components give
-#' one. Components remain the default for this release.
+#' (both low). A theme with centrality 0 is therefore never central. When all
+#' themes share one value of either measure, as a lone theme does, that measure
+#' cannot be split and the quadrant is \code{NA}. On real corpora, this method
+#' gives bounded themes where components give one. Components remain the
+#' default for this release.
 #'
 #' @param corpus A corpus object (named list), such as one from
 #'   [tf_read_corpus()].
@@ -543,8 +576,11 @@ tf_read_corpus <- function(path) {
 #' @param max_df A number from 0 to 1 (default \code{1}). With
 #'   \code{"simple_centres"}, a keyword in more than this share of the records
 #'   is a field term, left out of the map and listed in \code{field_terms}.
-#'   The three theme settings are checked with either method, although only
-#'   \code{"simple_centres"} reads them.
+#' @param min_df A positive integer (default \code{1}). With
+#'   \code{"simple_centres"}, a keyword in fewer than this many records is left
+#'   out of the map, so that a rare keyword cannot seed a theme. The default
+#'   leaves out none. The four theme settings are checked with either method,
+#'   although only \code{"simple_centres"} reads them.
 #' @return A named list with elements \code{n_records}, \code{keywords} (the
 #'   distinct keywords, sorted), \code{keyword_cooccurrence} (one
 #'   \code{list(a, b, count)} per kept pair, \code{a} sorting before \code{b},
@@ -554,7 +590,7 @@ tf_read_corpus <- function(path) {
 #'   \code{keyword_cooccurrence}, over the reference keys). With
 #'   \code{"simple_centres"}, each theme also holds \code{centrality},
 #'   \code{density} and \code{quadrant}, and the list ends with
-#'   \code{method}, \code{parameters} (the five settings used) and
+#'   \code{method}, \code{parameters} (the six settings used) and
 #'   \code{field_terms}.
 #' @references
 #' Callon, M., Courtial, J. P., & Laville, F. (1991). Co-word analysis as a
@@ -591,8 +627,9 @@ tf_read_corpus <- function(path) {
 #' table(vapply(lm$themes, function(th) th$quadrant, character(1)))
 #' @export
 tf_litmap <- function(corpus, min_link = 2, method = "components", min_cocitation = NULL,
-                      min_theme_size = 2, max_theme_size = 10, max_df = 1) {
-  s <- .tf_settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, max_df)
+                      min_theme_size = 2, max_theme_size = 10, max_df = 1, min_df = 1) {
+  s <- .tf_settings(min_link, method, min_cocitation, min_theme_size, max_theme_size, max_df,
+                    min_df)
   out <- .tf_litmap(corpus, s)
   if (identical(s$method, "components")) .tf_warn_if_one_theme_dominates(out$themes)
   out
@@ -613,11 +650,13 @@ tf_litmap <- function(corpus, min_link = 2, method = "components", min_cocitatio
   u[counts / n > max_token_share]
 }
 
-#' Map a theory and its alternatives onto a literature landscape (deterministic)
+#' Match a theory and its alternatives against a literature's themes (deterministic)
 #'
-#' Maps a theory's focal constructs and its registered alternatives onto the
-#' thematic structure of a corpus (computed by [tf_litmap()]). Each theme is
-#' tagged \code{"under_theorised"}, \code{"covered"} or \code{"crowded"}.
+#' Matches the words of a theory's construct labels and of its registered
+#' alternatives against the keywords of a corpus's themes (computed by
+#' [tf_litmap()]). Each theme is tagged \code{"under_theorised"},
+#' \code{"covered"} or \code{"crowded"} by the number of accounts that share a
+#' word with it.
 #'
 #' A theme is matched by the words its keywords share with the focal theory's
 #' construct labels, or with an alternative's label and key constructs, and
@@ -631,14 +670,21 @@ tf_litmap <- function(corpus, min_link = 2, method = "components", min_cocitatio
 #' account: theory, model, account, hypothesis, framework and approach, with
 #' their plurals. One shared word is enough for a match.
 #'
+#' The match is lexical. It shows that an account and a theme have a word in
+#' common, and does not show that the account explains what the theme's
+#' records report, nor that a theme without a match is unexplained.
+#'
 #' The statuses count the registered accounts, the focal theory and its
-#' registered alternatives, that address a theme. A theme is
-#' \code{"under_theorised"} when none of them addresses it, which says nothing
-#' of accounts the theory does not register, \code{"covered"} when one does and
-#' \code{"crowded"} when two or more do. A crowded theme calls for predictions
-#' that discriminate between the accounts, and is not a finding of redundancy.
-#' \code{under_theorised_fronts} lists the ids of the under-theorised themes,
-#' and \code{redundancy_risk}, despite its name, the ids of the crowded ones.
+#' registered alternatives, that match a theme. A theme is
+#' \code{"under_theorised"} when none of them matches it, \code{"covered"}
+#' when one does and \code{"crowded"} when two or more do. An alternative id
+#' that is repeated counts once. An account the theory does not register, or
+#' one that names the same idea in other words, may address an
+#' under-theorised theme. A crowded theme may call for predictions that
+#' discriminate between its accounts, and is not a finding that they compete or
+#' are redundant. \code{under_theorised_fronts} lists the ids of the
+#' under-theorised themes, and \code{redundancy_risk}, despite its name, the
+#' ids of the crowded ones.
 #'
 #' The arguments are checked in the order \code{min_link},
 #' \code{max_token_share}, \code{method}, then the corpus. The themes are
@@ -685,7 +731,7 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5,
   T <- theory
   min_link <- .tf_positive_int(min_link, "min_link")
   max_token_share <- .tf_share(max_token_share, "max_token_share")
-  s <- .tf_settings(min_link, method, NULL, 2, 10, 1)
+  s <- .tf_settings(min_link, method, NULL, 2, 10, 1, 1)
   simple <- identical(s$method, "simple_centres")
   records <- .tf_records(corpus)
   lm <- .tf_litmap(corpus, s, co_citation = FALSE, records = records)
@@ -723,7 +769,8 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5,
     }
     on <- vapply(alt_terms, function(a) a$id, character(1))
     focal_on <- length(focal_terms) > 0L
-    n <- length(on) + (if (focal_on) 1L else 0L)
+    # A repeated alternative id is one account, so it counts once.
+    n <- length(unique(on)) + (if (focal_on) 1L else 0L)
     status <- if (n == 0L) "under_theorised" else if (n >= 2L) "crowded" else "covered"
     theme <- list(
       id = th$id,
@@ -793,9 +840,9 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5,
   edges[kept[order(a[kept], b[kept], method = "radix")]]
 }
 
-# Theme colours track the landscape statuses: a theme no registered account
-# addresses is teal, one that two or more address is amber and a covered one
-# grey.
+# Theme colours track the landscape statuses: a theme that no registered
+# account matches is teal, one that two or more match is amber and a covered
+# one grey.
 .tf_THEME_ROLE <- c(under_theorised = "construct", crowded = "proposition",
                     covered = "covered")
 
@@ -869,13 +916,15 @@ tf_landscape <- function(theory, corpus, min_link = 2, max_token_share = 0.5,
 #' cat(tf_lit_diagram(tf_litmap(corpus), "keyword_cooccurrence"))
 #'
 #' # On a large map, draw only the strongest edges.
-#' fixture <- tf_read_corpus(system.file("fixtures", "panic-corpus.yaml",
-#'                                       package = "theoryforge"))
+#' fixture <- tf_read_corpus(tf_example_path("panic-corpus.yaml"))
 #' cat(tf_lit_diagram(tf_litmap(fixture), "co_citation", max_edges = 1))
 #' @export
 tf_lit_diagram <- function(obj, type = "keyword_cooccurrence", max_edges = NULL) {
   if (!is.null(max_edges)) max_edges <- .tf_positive_int(max_edges, "max_edges")
-  if (type %in% c("keyword_cooccurrence", "co_citation")) {
+  # A type that is not one string falls through to the refusal below, so
+  # that NULL and a vector give its message.
+  if (is.character(type) && length(type) == 1L &&
+      type %in% c("keyword_cooccurrence", "co_citation")) {
     edges <- obj[[type]]
     if (is.null(edges)) edges <- list()
     if (!is.null(max_edges) && length(edges) > max_edges) {
@@ -886,8 +935,8 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence", max_edges = NULL)
   if (identical(type, "theme_landscape")) {
     return(.tf_lit_theme_landscape(obj))
   }
-  stop(sprintf("unknown lit diagram type '%s'; expected one of %s",
-               type,
+  stop(sprintf("unknown lit diagram type %s; expected one of %s",
+               .tf_quote_arg(type),
                "keyword_cooccurrence, co_citation, theme_landscape"),
        call. = FALSE)
 }
@@ -902,48 +951,51 @@ tf_lit_diagram <- function(obj, type = "keyword_cooccurrence", max_edges = NULL)
 #' (ASCII letters only) and percent-decoded, wherever it sits in the text, so
 #' \code{doi: 10...}, \code{DOI 10...}, \code{doi.org/10...},
 #' \code{https://www.doi.org/10...} and a URL with \code{\%2F} all match the
-#' bare DOI, and trailing full stops, commas and semicolons are dropped.
-#' Returns the qualifying DOIs in their original form, deduplicated and sorted
-#' by normalised form. The function is deterministic and makes no network
-#' call. The search itself is left to whichever literature tool the caller
-#' prefers.
+#' bare DOI, and trailing full stops, commas and semicolons are dropped. A
+#' double slash after the prefix, as in \code{10.1037//0033-2909.99.1.20}, is
+#' made single, since doi.org redirects such a DOI to the one with a single
+#' slash. A candidate that is not a string, or holds only whitespace, is
+#' skipped, \code{NA} included. Returns the qualifying DOIs in their original
+#' form, deduplicated and sorted by normalised form. The function is
+#' deterministic and makes no network call. The search itself is left to
+#' whichever literature tool the caller prefers.
 #'
 #' @param theory A theory object (named list), such as one from [tf_read()].
-#' @param candidate_dois Character vector of DOIs to check.
+#' @param candidate_dois Character vector of DOIs to check. A list of strings
+#'   and a factor are read too.
 #' @return A character vector of the candidate DOIs not already cited,
 #'   deduplicated and sorted.
 #' @examples
 #' # The bundled panic theory cites one DOI as evidence and one for each of its
 #' # two registered alternatives. All three count as already cited.
-#' theory <- tf_read(system.file("fixtures", "panic-network.theory.yaml",
-#'                               package = "theoryforge"))
+#' theory <- tf_read(tf_example_path("panic-network.theory.yaml"))
 #' tf_new_evidence_dois(theory, c(
-#'   "10.1016/j.brat.2015.10.002",                   # cited as evidence
+#'   "10.1176/ajp.155.5.610",                        # cited as evidence
 #'   "https://doi.org/10.1016/0005-7967(86)90011-2", # an alternative, in URL form
 #'   "https://doi.org/10.1037/0033-2909.99.1.20"     # not yet cited
 #' ))
 #' @export
 tf_new_evidence_dois <- function(theory, candidate_dois) {
-  known <- character(0)
-  for (key in c("evidence", "alternatives")) {
-    for (entry in .tf_list(theory, key)) {
-      doi <- .tf_str(entry, "source_doi")
-      if (nzchar(doi)) known <- c(known, .tf_normalize_doi(doi))
-    }
-  }
-  known <- unique(known)
+  cited <- unlist(lapply(c("evidence", "alternatives"), function(key) {
+    vapply(.tf_list(theory, key), function(entry) .tf_str(entry, "source_doi"), character(1))
+  }), use.names = FALSE)
+  known <- .tf_normalize_doi(cited[nzchar(cited)])
 
-  seen <- character(0)
-  out <- character(0)
-  for (doi in candidate_dois) {
-    if (is.null(doi) || is.na(doi) || !nzchar(as.character(doi))) next
-    norm <- .tf_normalize_doi(doi)
-    if (norm %in% known || norm %in% seen) next
-    seen <- c(seen, norm)
-    out <- c(out, as.character(doi))
+  # Only strings with a character left after trimming are candidates, as in
+  # Python, so NA, NULL and a number are skipped.
+  x <- if (is.factor(candidate_dois)) as.character(candidate_dois) else candidate_dois
+  x <- if (is.list(x)) {
+    as.character(unlist(x[vapply(x, .tf_ne_str, logical(1))], use.names = FALSE))
+  } else if (is.character(x)) {
+    unname(x[!is.na(x) & nzchar(.tf_trim(x))])
+  } else {
+    character(0)
   }
-  if (length(out) == 0L) return(character(0))
-  out[order(vapply(out, .tf_normalize_doi, character(1)), method = "radix")]
+  # Each normalised form once, at its first candidate, unless already cited.
+  norm <- .tf_normalize_doi(x)
+  keep <- !duplicated(norm) & !(norm %in% known)
+  x <- x[keep]
+  x[order(norm[keep], method = "radix")]
 }
 
 #' Build a corpus from the OpenAlex API (network call)
@@ -954,25 +1006,36 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #' package's deterministic core. Each work is mapped to
 #' \code{{id, doi, title, year, keywords, references}}, with the DOI as OpenAlex
 #' gives it (keywords falls back to the first five concepts when no keywords
-#' are present).
+#' are present). A work whose title is null has no \code{title}, since the
+#' corpus schema types a title as a string. Only the fields the record uses are
+#' requested.
 #'
 #' OpenAlex returns the works that match a search in pages of \code{per_page},
 #' ranked by relevance, and a search usually matches far more works than one
-#' page holds. A \code{max_records} above \code{per_page} pages on through
-#' OpenAlex's cursor until that many works are collected or the results run
-#' out. Paging needs an API key: without one, OpenAlex serves the first page
-#' and refuses the next with HTTP 401, so the function stops and keeps none of
-#' the works already fetched. By default, \code{max_records} equals
-#' \code{per_page}, so one request is made, which works without a key. Each
-#' page is one request and costs USD 0.001. OpenAlex allows USD 0.10 a day
-#' without a key, about 100 one-page searches, and USD 1 with a free key. When
-#' OpenAlex refuses a request, as it does with HTTP 429 once the budget is
-#' spent and with HTTP 401 when a later page is asked for without a key, the
-#' function stops with the status and, when the suggested \pkg{curl} package
-#' is installed, OpenAlex's own message. The request is not retried. Every
-#' request is abandoned after 30 seconds.
+#' page holds. A \code{max_records} above \code{per_page} pages on until that
+#' many works are collected or the results run out. By default,
+#' \code{max_records} equals \code{per_page}, so one request is made. When the
+#' pages needed lie within the first 10,000 results, they are requested by
+#' number, which OpenAlex serves without a key. A larger \code{max_records}
+#' pages through OpenAlex's cursor instead, and OpenAlex serves a cursor past
+#' the first page only with an API key: without one, it refuses the second page
+#' with HTTP 401. Each page is one request and costs USD 0.001. OpenAlex allows
+#' USD 0.10 a day without a key, about 100 pages, and USD 1 with a free key.
+#' When OpenAlex refuses a request, as it does with HTTP 429 once the budget is
+#' spent and with HTTP 401 when a later cursor page is asked for without a key,
+#' the function stops with the status and, when the suggested \pkg{curl}
+#' package is installed, OpenAlex's own message. The request is not retried.
+#' A response without a \code{results} list, or with a work that is not an
+#' object, stops. Keyword and concept entries without a name given as text,
+#' and references that are not text, are left out.
+#' When a page after the first fails, the works fetched before it are not
+#' returned, and the message ends with the number of them, as in
+#' \code{(after 200 records were fetched)}. Every request is abandoned after
+#' 30 seconds without progress, or, without the suggested \pkg{curl} package,
+#' after 30 seconds in all.
 #'
-#' The arguments are checked before any request. \code{per_page} must be a
+#' The arguments are checked before any request. \code{query} must be a single
+#' string with at least one character left after trimming, \code{per_page} a
 #' whole number from 1 to 200 and \code{max_records} a positive whole number,
 #' and \code{api_key}, unless \code{NULL}, must be a single string that holds
 #' only visible ASCII characters once the spaces, tabs and line breaks around it
@@ -986,16 +1049,19 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #' Since late September 2026, OpenAlex has written each work's keywords with a
 #' language model that reads its title, abstract and venue. It merges and
 #' splits that vocabulary over time. Works without keywords fall back to their
-#' concepts, a deprecated vocabulary with capitalised names that do not match
-#' the lower-case keywords in [tf_litmap()]. Save a fetched corpus and work
-#' from the saved file.
+#' concepts, a deprecated vocabulary of its own. [tf_litmap()] compares
+#' keywords as exact strings, so a concept matches a keyword only where the two
+#' vocabularies write a term alike, which the concept 'Panic disorder' and the
+#' keyword 'panic disorder' do not. Save a fetched corpus and work from the
+#' saved file.
 #'
-#' @param query Free-text search query.
+#' @param query Free-text search query, a single non-empty string.
 #' @param per_page Number of works to request in each page (default \code{25}).
 #'   It may be 1 to 200, but OpenAlex supports pages of up to 100 and has
 #'   deprecated larger ones.
-#' @param mailto Optional contact email. It is still sent, but OpenAlex now
-#'   ignores it, since API keys replaced the polite pool it once selected.
+#' @param mailto Optional contact email, sent when it is a non-empty string.
+#'   OpenAlex now ignores it, since API keys replaced the polite pool it once
+#'   selected.
 #' @param api_key An OpenAlex API key, by default the \code{OPENALEX_API_KEY}
 #'   environment variable. It is sent only in an \code{Authorization: Bearer}
 #'   header, never in the URL, the corpus or an error message. \code{""} or
@@ -1006,8 +1072,9 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 #'   \code{source} and \code{records}.
 #' @examples
 #' \dontrun{
-#' # With OPENALEX_API_KEY set, for example in .Renviron, the key is sent in a
-#' # request header.
+#' # Four pages of 100 lie within the first 10,000 results, so no key is
+#' # needed. With OPENALEX_API_KEY set, for example in .Renviron, the key is
+#' # sent in a request header.
 #' corpus <- tf_fetch_corpus("panic disorder interoception",
 #'                           per_page = 100, max_records = 400)
 #' corpus$source
@@ -1021,6 +1088,7 @@ tf_new_evidence_dois <- function(theory, candidate_dois) {
 tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL,
                             api_key = Sys.getenv("OPENALEX_API_KEY", ""),
                             max_records = NULL) {
+  if (!.tf_ne_str(query)) stop("query must be a non-empty string", call. = FALSE)
   # Reject out-of-range page sizes here rather than passing them through for
   # OpenAlex to reject, and with the same message the Python twin uses.
   if (!is.numeric(per_page) || length(per_page) != 1L || is.na(per_page) ||
@@ -1031,23 +1099,34 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL,
   max_records <- if (is.null(max_records)) per_page else .tf_positive_int(max_records, "max_records")
   key <- .tf_api_key(api_key)
   headers <- if (nzchar(key)) c(Authorization = paste("Bearer", key)) else NULL
-  params <- list(search = query, "per-page" = as.character(per_page))
-  if (!is.null(mailto)) params[["mailto"]] <- mailto
+  params <- list(search = query, "per-page" = as.character(per_page),
+                 select = .tf_OPENALEX_SELECT)
+  if (.tf_is_string(mailto) && nzchar(mailto)) params[["mailto"]] <- mailto
 
-  # Cursor paging, which OpenAlex serves for a search with no cap on the
-  # number of results, and past the first page only to a request with an API
-  # key (HTTP 401 without one): "*" asks for the first page, and each page
-  # names the cursor of the next. The run ends with enough works, an empty page
-  # or no cursor (API_SPEC.md section 17).
+  # Page numbers when the pages needed lie within the first 10,000 results,
+  # since OpenAlex serves those without a key. Otherwise a cursor, which
+  # OpenAlex serves past the first page only to a request with an API key
+  # (HTTP 401 without one): "*" asks for the first page, and each page names
+  # the cursor of the next. The run ends with enough works or an empty page,
+  # and a cursor run also when no cursor follows (API_SPEC.md section 17).
+  by_number <- ceiling(max_records / per_page) * per_page <= .tf_PAGE_NUMBER_LIMIT
   retrieved <- format(Sys.time(), "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
-  page <- .tf_openalex_page(c(params, cursor = "*"), headers, key)
+  first <- if (by_number) list(page = "1") else list(cursor = "*")
+  page <- .tf_openalex_page(c(params, first), headers, key)
   total_count <- .tf_whole_number(.tf_get(page$meta, "count"))
   records <- lapply(page$results, .tf_openalex_record)
-  cursor <- .tf_get(page$meta, "next_cursor")
-  while (length(records) < max_records && length(page$results) > 0L && .tf_ne_str(cursor)) {
-    page <- .tf_openalex_page(c(params, cursor = cursor), headers, key)
+  number <- 1L
+  while (length(records) < max_records && length(page$results) > 0L) {
+    if (by_number) {
+      number <- number + 1L
+      where <- list(page = as.character(number))
+    } else {
+      cursor <- .tf_get(page$meta, "next_cursor")
+      if (!.tf_ne_str(cursor)) break
+      where <- list(cursor = cursor)
+    }
+    page <- .tf_later_page(c(params, where), headers, key, length(records))
     records <- c(records, lapply(page$results, .tf_openalex_record))
-    cursor <- .tf_get(page$meta, "next_cursor")
   }
   records <- utils::head(records, max_records)
 
@@ -1071,6 +1150,13 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL,
 }
 
 .tf_OPENALEX_WORKS <- "https://api.openalex.org/works"
+
+# The fields of a work that .tf_openalex_record() maps, the only ones requested.
+.tf_OPENALEX_SELECT <- "id,doi,title,publication_year,keywords,concepts,referenced_works"
+
+# OpenAlex serves the first 10,000 results of a search by page number, without
+# a key, and later ones only through a cursor.
+.tf_PAGE_NUMBER_LIMIT <- 10000
 
 # The key to send, or "" for none. It travels in a header, so spaces, tabs and
 # line breaks around it (a key pasted into .Renviron, say) are trimmed. Any
@@ -1116,7 +1202,20 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL,
   if (!is.list(results) || .tf_is_mapping(results)) {
     stop("OpenAlex response has no results list", call. = FALSE)
   }
+  if (!all(vapply(results, .tf_is_mapping, logical(1L)))) {
+    stop("OpenAlex response has a work that is not an object", call. = FALSE)
+  }
   list(meta = data[["meta"]], results = results)
+}
+
+# A page after the first, whose failure says how many records came before it:
+# the message gains " (after <n> records were fetched)", as in Python
+# lit._later_page.
+.tf_later_page <- function(params, headers, key, n) {
+  note <- if (n == 1) " (after 1 record was fetched)" else
+    sprintf(" (after %d records were fetched)", as.integer(n))
+  tryCatch(.tf_openalex_page(params, headers, key),
+           error = function(e) stop(paste0(conditionMessage(e), note), call. = FALSE))
 }
 
 # Stop when OpenAlex answered with an HTTP error: "OpenAlex request failed with
@@ -1148,29 +1247,37 @@ tf_fetch_corpus <- function(query, per_page = 25, mailto = NULL,
   if (is.numeric(x) && length(x) == 1L && is.finite(x) && x == trunc(x)) x else NULL
 }
 
-# One OpenAlex work as a corpus record.
+# The entries of a field OpenAlex gives as an array, or none when it is
+# anything else, an object included.
+.tf_openalex_entries <- function(w, key) {
+  v <- w[[key]]
+  if (is.list(v) && !.tf_is_mapping(v)) v else list()
+}
+
+# The display_name of each entry that gives one as nonempty text.
+.tf_openalex_names <- function(entries) {
+  names <- lapply(entries, function(e) if (.tf_is_mapping(e)) e[["display_name"]])
+  unlist(Filter(function(n) .tf_is_string(n) && nzchar(n), names), use.names = FALSE)
+}
+
+# One OpenAlex work as a corpus record. Entries without a name are dropped
+# before the emptiness test, so a keywords list made only of nulls still falls
+# back to the concepts, as in the Python twin.
 .tf_openalex_record <- function(w) {
-  kws <- character(0)
-  for (k in .tf_as_list(w, "keywords")) {
-    dn <- .tf_get(k, "display_name")
-    if (!is.null(dn) && nzchar(as.character(dn))) kws <- c(kws, as.character(dn))
-  }
+  kws <- .tf_openalex_names(.tf_openalex_entries(w, "keywords"))
   if (length(kws) == 0L) {
-    concepts <- .tf_as_list(w, "concepts")
-    concepts <- utils::head(concepts, 5L)
-    for (cc in concepts) {
-      dn <- .tf_get(cc, "display_name")
-      if (!is.null(dn) && nzchar(as.character(dn))) kws <- c(kws, as.character(dn))
-    }
+    kws <- .tf_openalex_names(utils::head(.tf_openalex_entries(w, "concepts"), 5L))
   }
-  refs <- vapply(.tf_as_list(w, "referenced_works"),
-                 function(x) as.character(x[[1L]]), character(1))
-  list(
-    id = .tf_get(w, "id"),
-    doi = .tf_get(w, "doi"),
-    title = .tf_get(w, "title"),
-    year = .tf_get(w, "publication_year"),
-    keywords = as.list(kws),
-    references = as.list(refs)
+  refs <- Filter(.tf_is_string, .tf_openalex_entries(w, "referenced_works"))
+  title <- .tf_get(w, "title")
+  c(
+    list(id = .tf_get(w, "id"), doi = .tf_get(w, "doi")),
+    # The corpus schema types a title as a string, so a null one is left out.
+    if (.tf_is_string(title)) list(title = title),
+    list(
+      year = .tf_get(w, "publication_year"),
+      keywords = as.list(kws),
+      references = refs
+    )
   )
 }
