@@ -91,11 +91,14 @@ checked the row again after the agent that classified it: `drafter` (the
 agents that drafted and revised the report), `reviewer` (a reviewer of the
 draft), `both` or `none`. `revised` is `status` where the status differs from
 the classifying agent's, `basis` where the status was kept and the basis
-qualified after a check, and `none` otherwise. `basis` names the file or the
-rerun on 0.8.0 that shows the status and, after 'Remaining:', what is left of a
-finding classed as fixed. For a verdict of sound with caveats kept unchanged,
-it says whether the documentation already stated the caveat, the caveat
-concerns the auditors' own reading of a source or it is not documented.
+qualified after a check, and `none` otherwise. `second_round` is `status` or
+`basis` where the second round of corrections, made to 0.8.0 after a review of
+the release, changed the row's status or only its basis, and `none` otherwise.
+The evidence of those rows was rerun on the final code. `basis` names the file
+or the rerun on 0.8.0 that shows the status and, after 'Remaining:', what is
+left of a finding classed as fixed. For a verdict of sound with caveats kept
+unchanged, it says whether the documentation already stated the caveat, the
+caveat concerns the auditors' own reading of a source or it is not documented.
 
 `data/verification.csv` has one row per independent check of the deductive
 and numerical core by the causal-verification and statistics-and-simulation
@@ -108,6 +111,13 @@ implementation of a definition or an analytic or published value, `parity`
 where the R twin is compared with the Python twin, and `other` where the check
 concerns a sentence of the documentation, a design argument, a reference
 implementation or the package against itself.
+
+`data/loop-verification.csv` has one row per independent check of how 0.8.0
+reads claims beside feedback loops, which changed after the audit: `check`,
+`comparator`, `code` (the commit checked), `claims`, `agreements`,
+`disagreements`, `note` and `evidence_path`. Its paths are relative to the
+folder of the release's working files, kept outside the repository like the
+audit's.
 
 `scripts/build_register.py` writes `findings.csv`, `verdicts.csv` and
 `references.csv` from the two results of the audit (the formal and the
