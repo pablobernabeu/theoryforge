@@ -45,7 +45,7 @@ reach them.
 
 * R 4.3.3 on x86_64 Linux (Ubuntu 24.04): `R CMD check --as-cran`. Status:
   1 NOTE, 'checking for future file timestamps ... unable to verify current
-  time', which came from this machine's network. The tests passed, with 5651
+  time', which came from this machine's network. The tests passed, with 6935
   expectations met, none failed, no warnings and 58 tests skipped: 7 that skip
   on CRAN and 51 that read repository files outside the built package. The
   vignettes were rebuilt, and the PDF and HTML manuals were built.
@@ -56,7 +56,7 @@ reach them.
   the maintainer, and the status was 1 NOTE, the same note on the time.
 * R-devel (2026-11-23 r90966) configured with --disable-long-double, as for
   the noLD check, on x86_64 Linux (Ubuntu 24.04): `R CMD check --as-cran
-  --ignore-vignettes --no-manual`. Status: OK. The tests passed, with 5604
+  --ignore-vignettes --no-manual`. Status: OK. The tests passed, with 6888
   expectations met, none failed, no warnings and 60 tests skipped: 7 that skip
   on CRAN, 51 that read repository files outside the built package and 2 that
   need ggm. The vignettes were left out because this build has no cairo for
