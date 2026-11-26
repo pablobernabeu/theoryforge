@@ -67,11 +67,8 @@ and_list <- function(x) {
   if (length(x) <= 1) return(x)
   paste(paste(x[-length(x)], collapse = ", "), "and", x[length(x)])
 }
-# A score as the package prints it: one decimal, whole numbers unpadded.
-sc <- function(x) {
-  ifelse(x == round(x), formatC(x, format = "d"),
-         formatC(x, format = "f", digits = 1))
-}
+# A score as the package's documents and apps print it, with one decimal.
+sc <- function(x) formatC(x, format = "f", digits = 1)
 # Wilson interval for a proportion.
 wilson <- function(k, n, z = qnorm(0.975)) {
   p <- k / n
@@ -283,11 +280,22 @@ stopifnot(all(cav_doc + cav_src + cav_undoc == 1))
 n_caveat_unch <- length(caveat_unch)
 undoc_ids <- caveat_unch[cav_undoc]
 n_basis_rerun <- sum(grepl("rerun|reran", st$basis, ignore.case = TRUE))
-# Reported findings on feedback loops, whose bases say that the gate still
-# passes: there the derivation chain warns and the score falls.
+# Reported findings on feedback loops, whose bases name the list of claims
+# the derivation chain could not read: there the item warns and names them,
+# while the score counts them as derived and the gate passes.
 n_rep_loop <- sum(fd$status == "reported" &
-                    grepl("gate still passes|still passes the gate",
-                          st$basis[match(paste("finding", fd$id), key)]))
+                    grepl("not_checked", st$basis[match(paste("finding", fd$id), key)],
+                          fixed = TRUE))
+# Rows whose status or basis the second round of corrections changed.
+stopifnot(all(st$second_round %in% c("status", "basis", "none")))
+n_r2 <- sum(st$second_round != "none")
+n_r2_status <- sum(st$second_round == "status")
+n_r2_basis <- sum(st$second_round == "basis")
+n_r2_unchk <- sum(st$second_round != "none" & st$checked == "none")
+r2_moves <- st[st$second_round == "status", ]
+r2_status_phrase <- if (n_r2_status == 0) "none changed status" else paste0(
+  nw(n_r2_status), " changed status, ",
+  and_list(paste0(r2_moves$id, " (now ", r2_moves$status_080, ")")), ",")
 # Which rows were checked again after the classifying agent, and what changed.
 stopifnot(all(st$checked %in% c("drafter", "reviewer", "both", "none")),
           all(st$revised %in% c("status", "basis", "none")))
@@ -320,6 +328,28 @@ vk <- function(kind, what = c("all", "clean", "disc", "size")) {
          size = sum(is.na(r$discrepancies)))
 }
 n_rerun <- sum(grepl("Rerun on 0.8.0: same result.", ver$note, fixed = TRUE))
+
+# Independent checks of how the final code reads claims beside feedback loops.
+lv <- rd("loop-verification.csv")
+lvrow <- function(pattern) {
+  r <- lv[grepl(pattern, lv$check, fixed = TRUE), ]
+  stopifnot(nrow(r) == 1)
+  r
+}
+lv_gate <- lvrow("Claims left unread under refuse")
+lv_sigma <- lvrow("gets the record that sigma gives")
+lv_sub <- lvrow("gets the record of the graph without its loops")
+lv_lin <- lvrow("Signs and verdicts of the claims read under refuse")
+lv_und <- lvrow("An undetermined claim read under refuse")
+lv_corpus <- lvrow("Claims of the audit's theories")
+lv_twin <- lvrow("R and Python records")
+lv_theories <- as.numeric(gsub(",", "", sub(" random theories.*", "", lv_gate$note)))
+lv_kmax <- as.numeric(sub(".* to ([0-9]+) constructs\\.$", "\\1", lv_gate$note))
+lv_flagged <- as.numeric(sub(" claims of one theory.*", "", lv_lin$note))
+lv_disagree <- sum(lv$disagreements)
+lv_old <- setdiff(unique(lv$code), "50f028d")
+lv_text <- if (lv_disagree == 0) "No check found a disagreement" else
+  paste(Nw(lv_disagree), "disagreements remained")
 ```
 
 ```{r}
@@ -489,7 +519,6 @@ undoc_text <- if (length(undoc_ids) == 0) "" else paste0(
     " of the ", int(r_lisrel$cases), " compiled models with a feedback loop ",
     "that the auditors fitted, and no document says so") else "",
   ".")
-loop_thru <- "loops/loop-through-claim.theory.yaml"
 ```
 
 # Summary {.unnumbered}
@@ -559,9 +588,9 @@ Its verdicts have not been compared with any expert's.
 Of the `r int(n_find)` findings in the register, version `r pkg_version` fixed
 `r int(nf("fixed"))` and now reports `r int(nf("reported"))` beside a verdict or
 gate that it leaves unchanged. For the `r nw(n_rep_loop)` reported findings on
-feedback loops, the derivation chain now warns and the score falls, from
-`r sc(dm(loop_thru, "score", "old"))` to `r sc(dm(loop_thru, "score"))` in the
-loops demonstrations, while the gate still passes. The release answered
+feedback loops, the derivation chain now warns about a claim that a loop
+leaves unread and names it, while the score counts the claim as derived and
+the gate still passes. The release answered
 `r int(nf("reworded"))` findings by rewording what the outputs and documents
 say, with the behaviour unchanged, and left `r int(nf(not_changed))` unchanged,
 `r int(nf("deferred"))` of them for expansions the maintainer plans for version
@@ -576,13 +605,19 @@ caveat concerns the auditors' own reading of a source.`r undoc_text`
 
 The main behavioural corrections concern two rules. The amendment appraisal now
 reads the signs the two graphs entail, so an amendment that reverses a
-corroborated prediction is no longer called progressive, provided the new
-version's graph can be built. And the checklist no longer counts a claim it
-could not read as derived. The score still rates empty, circular and refuted
-files highly. Apart from the derivation chain and a few narrower rules, the
-release changed what the score is called and what is said about it, not what it
-computes. A separate review of the release found problems in the corrected
-rules that the register does not list (@sec-changes).
+corroborated prediction is no longer called progressive, and it withholds
+that verdict when the graph of either version cannot be built. The checklist's
+derivation chain now reads, under the default, every claim that no feedback
+loop reaches, so a loop elsewhere in the graph no longer lets a contradicted
+claim through the gate. A claim that names a construct on a loop or downstream
+of one is still not read: the item warns and names it but counts it as derived,
+and the claim cannot block the gate. The score still rates empty, circular and
+refuted files highly. Apart from the derivation chain and a few narrower rules,
+the release changed what the score is called and what is said about it, not
+what it computes. A review of the release found problems in the corrected rules, and a
+second round of corrections addressed them before this report (@sec-changes).
+That round changed how the deductive core reads a graph with a loop, and the
+change was checked against independent oracles (@sec-loops).
 
 This evidence answers in part whether automated appraisal of theories is
 feasible. Deduction from a stated graph can be automated soundly, and a fixed
@@ -749,8 +784,9 @@ For each finding and verdict, `data/status-0.8.0.csv` records what version
 that the behaviour or rule was corrected. Reported means that the package now
 reports the problem beside its result without changing the verdict or the gate
 that the finding concerns. For the `r nw(n_rep_loop)` reported findings on
-feedback loops, the derivation chain now warns and the score falls, while the
-gate still passes. Reworded means that the outputs and documentation now say
+feedback loops, the derivation chain now warns and names the claims it could
+not read, while the score counts them as derived and the gate still passes.
+Reworded means that the outputs and documentation now say
 what is computed while the behaviour is unchanged. Unchanged means that nothing
 was done. Deferred marks a
 finding left unchanged whose remedy is one of the expansions the maintainer
@@ -784,8 +820,15 @@ misclassified or because the definitions of the statuses were narrowed, and
 `revised` records. The other `r int(n_unchk)` rows rest on the classifying
 agent's reading alone, though `r int(n_unchk_status)` of them changed status
 when the definitions were narrowed. The classifying agents did not record which
-rows they were unsure of. A further round of corrections may follow before
-release. The counts in this report are read from the file, so they follow it.
+rows they were unsure of.
+
+After a review of the release, a second round of corrections changed the code
+again. The evidence of the `r int(n_r2)` rows whose status or basis that round
+changed was rerun on the final code, as the column `second_round` records:
+`r r2_status_phrase` and `r int(n_r2_basis)` kept their status with a new basis.
+Of these rows, `r int(n_r2_unchk)` are among those that no one had checked
+before, so their bases now rest on that rerun. The counts in this report are
+read from the file, so they follow it.
 
 # The deductive core {#sec-core}
 
@@ -861,7 +904,10 @@ discrepancy. The `r int(n_rerun)` checks whose notes end 'Rerun on 0.8.0: same
 result.' were rerun on version `r pkg_version` and gave the audit's numbers. The
 R and Python engines gave identical causal records on the
 `r int(r_parity$cases)` random theories of the causal verification, and the
-status register records the same for a rerun at `r pkg_version`.
+status register records the same for a rerun at `r pkg_version`. These checks
+describe the audited code. The final `r pkg_version` reads a graph with a
+feedback loop differently, and that change was checked separately
+(@sec-loops).
 
 ```{r}
 #| label: tbl-verification
@@ -951,7 +997,7 @@ association called 'nonzero' under sigma-separation can be zero in every linear
 cyclic model with the graph, as `r int(r_sig_nz$discrepancies)` of
 `r int(r_sig_nz$cases)` such claims were. And a claimed zero effect through two
 paths of opposite sign is reported as contradicted, although the graph leaves
-its value open. The claim line now adds 'unless paths cancel exactly', and the
+its value open. The claim line now adds 'unless effects cancel exactly', and the
 derivation check still fails it.
 
 ## Adjustment sets and what 'identified' means
@@ -971,6 +1017,28 @@ adjustment set for an exposure marked latent, as it did for
 unmeasured exposure cannot be adjusted for in a test. The help and the
 specification now say what 'identified' means and what a latent exposure
 assumes. The preregistration still prints the set without that caveat.
+
+## Claims beside feedback loops {#sec-loops}
+
+After the audit, version `r pkg_version` changed how the core reads a graph
+with a feedback loop. Under the default, `cycles = "refuse"`, a claim that names
+a construct on a loop or downstream of one is left unread, and any other claim
+gets the record it would get on the graph without the loop, its adjustment set
+included. AI agents checked the change against oracles that do not use
+theoryforge (`data/loop-verification.csv`). In `r int(lv_theories)` random
+theories with loops, the package left unread exactly those of the
+`r int(lv_gate$claims)` claims that the verifiers' own reachability placed
+behind a loop. Each of the `r int(lv_sigma$claims)` claims it read got, in every
+field, the record that sigma-separation gives and the record that the code
+before the change gives on the acyclic graph of the claim's ancestors, and
+their signs and verdicts held in sampled linear models of the full graph with
+stable loops. The R and Python twins gave the same `r int(lv_twin$claims)` claim
+records. `r lv_text`
+once `r nw(lv_flagged)` claims with a draw near zero were redrawn with
+well-conditioned coefficients. The linear-model checks ran on commit
+`r and_list(lv_old)`, which gives the same verdicts as the final code. The
+oracles implement the definitions as their authors, also AI agents, read them,
+on random graphs of up to `r int(lv_kmax)` constructs.
 
 ## Equivalence classes
 
@@ -1170,61 +1238,105 @@ theories as first encoded. `r bound_text`
 lp <- function(n) paste0("loops/", n, ".theory.yaml")
 acyc <- lp("contradicted-acyclic"); thru <- lp("loop-through-claim")
 unrel <- lp("unrelated-loop")
-loop_now <- if (dm(thru, "score") == dm(unrel, "score")) {
-  paste(sc(dm(thru, "score")), "in both cases")
-} else and_list(sc(c(dm(thru, "score"), dm(unrel, "score"))))
-gate_now <- if (dm(unrel, "gate") == "pass") "still passes" else
-  paste("is", dm(unrel, "gate"))
+gate_phrase <- function(g) ifelse(g == "pass", "passes", paste("is", g))
+gate_past <- function(g) ifelse(g == "pass", "passed", paste("was", g))
+chain_phrase <- function(s) c(pass = "passes", fail = "fails", warn = "warns")[[s]]
+thru_sigma_gate <- tf_check(tf_read(file.path("demonstrations", thru)), cycles = "sigma")$gate
+thru_same <- dm(thru, "score") == dm(thru, "score", "old")
+
+# A phenomenon behind a feedback loop, beside a prediction that states no
+# claim: what check() and the preregistration say under each reading.
+k_list <- function(ids) lapply(ids, function(i) {
+  list(id = i, label = i, definition = paste("Construct", i, "as defined here."),
+       measurement = list(paste0("m_", i)), boundary_conditions = list("adults"))
+})
+ph_th <- list(
+  schema_version = "1.1", id = "phenomenon-loop", title = "Phenomenon behind a loop",
+  maturity = "testing", constructs = k_list(c("a", "b")),
+  propositions = list(
+    list(id = "p1", from = "a", to = "b", relation = "increases", mechanism = "m."),
+    list(id = "p2", from = "b", to = "a", relation = "increases", mechanism = "m.")),
+  predictions = list(list(id = "h1", statement = "a raises b", type = "directional",
+                          derives_from = list("p1"))),
+  phenomena = list(list(id = "ph1", statement = "a lowers b",
+                        claim = list(kind = "effect", x = "a", y = "b",
+                                     sign = "negative"))))
+ph_rep <- function(cy) {
+  r <- tf_check(ph_th, cycles = cy)
+  dc <- Filter(function(i) i$id == "derivation_chain", r$items)[[1]]
+  pr <- strsplit(tf_preregister(ph_th, cycles = cy), "\n")[[1]]
+  # The header line on phenomena.
+  l <- grep("phenomenon states", pr, value = TRUE)
+  stopifnot(length(l) == 1)
+  list(gate = r$gate, chain = dc$status,
+       named = "ph1" %in% unlist(dc$phenomena_not_checked),
+       line = sub(".*: ", "", l))
+}
+ph_refuse <- ph_rep("refuse")
+ph_sigma <- ph_rep("sigma")
+phen <- "phenomena/contradicted-phenomenon.theory.yaml"
+pred <- "phenomena/contradicted-prediction.theory.yaml"
 ```
 
 The gate passes unless one of the `r nw(n_blockers)` blocking items fails:
 falsifiability, which asks that some prediction be typed as a claim that rules a
 result out, and the derivation chain, which asks that every prediction cite
-declared propositions whose graph entails any claim it states. A file marked as
-a draft makes the gate advisory. The gate's labels are the author's, so a file
-can pass on a label. The philosophy lens showed that a prediction saying that x
-'may raise or lower y, depending on context' passes the falsifiability item and
-the gate once it is labelled directional, and a rerun on version `r pkg_version`
-gives the same.
+declared propositions whose graph entails any claim it states and that no stated
+phenomenon be contradicted. A file marked as a draft makes the gate advisory.
+The gate's labels are the author's, so a file can pass on a label. The
+philosophy lens showed that a prediction saying that x 'may raise or lower y,
+depending on context' passes the falsifiability item and the gate once it is
+labelled directional, and a rerun on version `r pkg_version` gives the same.
 
 At f72ce4c, the derivation chain read claims as if the graph had no loops and
 counted a claim it could not read as derived. Any feedback loop anywhere in the
 propositions therefore made every claim check pass, so that a loop could let a
 file through a gate that its claims would block. The loops demonstrations show
-the change. A contradicted claim in an acyclic graph scores
-`r sc(dm(acyc, "score"))` with the gate `r dm(acyc, "gate")`. Adding a loop
-through the claim, or a loop between two constructs unrelated to it, gave
-`r sc(dm(thru, "score", "old"))` and a passing derivation chain at f72ce4c, and
-now gives `r loop_now`, with the item at `r dm(unrel, "derivation_chain")`. An
-unread claim now earns no credit, but a warning does not block, so under the
-default reading, the gate `r gate_now`. Reading the graph by sigma-separation
-(`check(cycles = "sigma")`) reads such claims and blocks the gate when the graph
-contradicts them or leaves them open, on the assumption that each loop settles
-to a unique equilibrium.
+what version `r pkg_version` does instead. A contradicted claim in an acyclic
+graph scores `r sc(dm(acyc, "score"))`, and the gate `r gate_phrase(dm(acyc, "gate"))`.
+With a loop between two constructs unrelated to the claim, the file scored
+`r sc(dm(unrel, "score", "old"))` at f72ce4c, and its gate
+`r gate_past(dm(unrel, "gate", "old"))`. It now scores `r sc(dm(unrel, "score"))`, and the gate
+`r gate_phrase(dm(unrel, "gate"))`, because a claim that names no construct on a
+loop or downstream of one is read as on the graph without the loop
+(@sec-loops). A claim whose two constructs lie on a loop is still not read
+under the default. For the file with such a loop, the derivation chain
+`r chain_phrase(dm(thru, "derivation_chain"))` and names the claim but counts it
+as derived, so the file scores `r sc(dm(thru, "score"))``r if (thru_same) ", as at f72ce4c," else ""`
+and the gate `r gate_phrase(dm(thru, "gate"))`. Reading the graph by
+sigma-separation (`check(cycles = "sigma")`) reads such claims, on the
+assumption that each loop settles to a unique equilibrium, and the same file's
+gate is then `r thru_sigma_gate`. The documents and the apps now say, with the
+gate, that under the default a claim behind a loop blocks nothing.
 
 The derivation chain checks agreement with the graph. It does not ask how far a
 prediction goes beyond the propositions: a prediction that restates its one
 proposition is entailed, and in the communication lens's count, most of the
 entailed verdicts in the shipped examples rest on a single proposition. Stating
 a checkable claim can only expose an error and cost points, while leaving claims
-out costs nothing, and a claim the graph cannot read now costs as much as a
-contradicted one. The incentive the measurement lens described, to disclose
-less, remains.
+out costs nothing. A claim behind a loop costs nothing either, since it counts
+as derived, so the score does not show whether such a claim was checked. Only
+the item's status and its list of unread claims do. The incentive the
+measurement lens described, to disclose less, remains.
 
 ## Phenomena
 
 At f72ce4c, a phenomenon whose claim the theory's own graph contradicts left
 score and gate unchanged, while the same claim stated as a prediction blocked
 the gate. Version `r pkg_version` fails the derivation chain for such a
-phenomenon in an acyclic graph, or in any graph read by sigma-separation, so the
-gate is now `r dm("phenomena/contradicted-phenomenon.theory.yaml", "gate")` in
-both cases. Behind a feedback loop under the default reading, neither claim is
-read (@sec-changes).
-The score still counts only predictions:
-`r sc(dm("phenomena/contradicted-phenomenon.theory.yaml", "score"))` with the
-contradicted phenomenon and
-`r sc(dm("phenomena/contradicted-prediction.theory.yaml", "score"))` with the
-contradicted prediction.
+phenomenon whenever its claim is read, so the gate is now
+`r dm(phen, "gate")` in both cases. The score still counts only predictions:
+`r sc(dm(phen, "score"))` with the contradicted phenomenon and
+`r sc(dm(pred, "score"))` with the contradicted prediction. Under the default
+reading, the claim of a phenomenon that names a construct on a loop or
+downstream of one is not read, like a prediction's. In a constructed theory of
+two constructs that raise each other, with a phenomenon claiming that one lowers
+the other beside a prediction that states no claim, the derivation chain
+`r chain_phrase(ph_refuse$chain)``r if (ph_refuse$named) " and names the phenomenon" else ""`,
+the gate `r gate_phrase(ph_refuse$gate)` and the preregistration answers
+'`r ph_refuse$line`' to whether the graph contradicts no claim a phenomenon
+states. Read by sigma-separation, the item `r chain_phrase(ph_sigma$chain)`, the
+gate `r gate_phrase(ph_sigma$gate)` and the answer is '`r ph_sigma$line`'.
 
 # The amendment appraisal {#sec-appraisal}
 
@@ -1243,8 +1355,33 @@ undeclared$propositions <- c(undeclared$propositions, list(list(
   id = "p_undeclared", from = flip_th$constructs[[1]]$id,
   to = "undeclared_construct", relation = "increases", mechanism = "m.")))
 ap_undeclared <- tf_appraise_amendment(undeclared, flip_prior)
-undeclared_lost <- if (length(ap_undeclared$content_lost) == 0) "no content lost" else
+undeclared_lost <- if (length(ap_undeclared$content_lost) == 0) "no content listed as lost" else
   paste("content lost", and_list(unlist(ap_undeclared$content_lost)))
+undeclared_text <- if (identical(ap_undeclared$verdict, "progressive")) paste0(
+  "And when the new version's graph cannot be built, the new rules are skipped. ",
+  "Adding to the sign reversal above one proposition to a construct the file ",
+  "does not declare turns ", dm(flip, "verdict"), " into progressive, with ",
+  undeclared_lost, ".") else paste0(
+  "When the graph of either version cannot be built, the two graphs are not ",
+  "compared, and the verdict is then never progressive. Adding to the sign ",
+  "reversal above one proposition to a construct the file does not declare ",
+  "gives ", ap_undeclared$verdict, ", with ", undeclared_lost, ", since the ",
+  "comparison that would find the loss is not made.")
+# A refuted point prediction without bounds, relabelled directional: whether
+# the appraisal counts the relabelling as a weakening.
+relabel <- function(type) list(
+  schema_version = "1.1", id = "relabel", title = "Relabel", maturity = "testing",
+  constructs = k_list(c("c1", "c2")),
+  propositions = list(list(id = "p1", from = "c1", to = "c2", relation = "increases",
+                           mechanism = "m.")),
+  predictions = list(list(id = "h1", statement = "c2 rises with c1.", type = type,
+                          derives_from = list("p1"),
+                          claim = list(kind = "effect", x = "c1", y = "c2",
+                                       sign = "positive"))),
+  test_outcomes = list(list(prediction_id = "h1", passed = FALSE)))
+ap_relabel <- tf_appraise_amendment(relabel("directional"), relabel("point"))
+relabel_weakened <- any(vapply(ap_relabel$revised, function(r) identical(r$change, "weakened"),
+                               logical(1)))
 ```
 
 `appraise_amendment()` compares two versions of a file and calls the amendment
@@ -1260,7 +1397,12 @@ listed as lost. An amendment that only weakens that sign to unsigned is
 `r dm(weak, "verdict")` where it was `r dm(weak, "verdict", "old")`. An
 assumption whose independent predictions are all untested is now classed as
 pending rather than ad hoc, so a bold amendment is no longer called degenerating
-before its prediction has been tested.
+before its prediction has been tested. When the appraisal asks whether a
+retained prediction was weakened, a point or interval label without two finite
+bounds now ranks as directional, as the claim-form rubric reads it. Relabelling
+a refuted point prediction without bounds as directional
+`r if (relabel_weakened) "still counts" else "therefore no longer counts"` as
+weakening it, and the amendment is `r ap_relabel$verdict`.
 
 Most limits remain. The appraisal reads what the two files declare and cannot
 check it. It cannot tell a prediction from an accommodation:
@@ -1276,11 +1418,7 @@ beside it. Appraised one version at a time, a prediction made in one version and
 corroborated in the next is never credited. The appraisal has no field that
 marks which propositions are central to a theory, so it cannot tell a change to
 them from a change at the periphery, which in the auditors' reading is the
-distinction Lakatos's term 'hard core' draws. And when the new version's graph
-cannot be built, the new rules are skipped. Adding to the sign reversal above
-one proposition to a construct the file does not declare turns
-`r dm(flip, "verdict")` into `r ap_undeclared$verdict`, with
-`r undeclared_lost`.
+distinction Lakatos's term 'hard core' draws. `r undeclared_text`
 
 Version `r pkg_version` reports several of these beside the verdict without
 letting them decide it: the new predictions that count as new only through
@@ -1304,23 +1442,44 @@ doc_rows <- vd$group == "Documents and framing"
 app_vrows <- vd$group == "Apps"
 comm_f <- fd$lens == "communication-and-apps"
 # What the dossier's preamble says it flags, against the margin it applies,
-# and whether the dossier says anything about the gate beyond its result.
+# whether the dossier says what the gate checks and marks the blocking items,
+# and whether the header of a dossier names how feedback loops were read.
 tf_ns <- asNamespace("theoryforge")
 margin <- get(".tf_DECLARED_MARGIN", envir = tf_ns)
-preamble_says_above <- grepl("a declared severity above the rubric",
-                             get(".tf_PREAMBLE", envir = tf_ns), fixed = TRUE)
 dossier_lines <- strsplit(tf_dossier(tf_read(file.path("demonstrations", hollow))),
                           "\n")[[1]]
+# The preamble is the italic paragraph after the header.
+preamble <- paste(grep("^_Generated by theoryforge", dossier_lines, value = TRUE),
+                  collapse = " ")
+stopifnot(nzchar(preamble))
+preamble_says_above <- grepl("a declared severity above the rubric", preamble, fixed = TRUE)
+preamble_margin <- grepl(paste("more than", num(margin, 1), "above the rubric"), preamble,
+                         fixed = TRUE)
 gate_lines <- grep("gate|blocker", dossier_lines, ignore.case = TRUE, value = TRUE)
 gate_unexplained <- all(grepl("^- (Gate|Blockers failed):", gate_lines))
-flaw_text <- c(
-  if (preamble_says_above) paste0(
-    "The dossier's preamble says that it flags a declared severity above the ",
-    "rubric, but it flags only one more than ", num(margin, 1), " above it."),
+n_blocker_marks <- sum(grepl("^\\| [a-z_]+ \\(blocker\\) \\|", dossier_lines))
+panic_th <- tf_read(tf_example_path("panic-network.theory.yaml"))
+panic_doss <- strsplit(tf_dossier(panic_th), "\n")[[1]]
+# The dossier's header and that of the preregistration it holds.
+loop_line <- unique(sub("^- Feedback loops: ", "",
+                        grep("^- Feedback loops:", panic_doss, value = TRUE)))
+doc_text <- c(
   if (gate_unexplained) paste0(
     "The dossier prints the gate's result and the number of blockers that ",
-    "failed without saying what the gate checks."))
-flaw_text <- paste(flaw_text, collapse = " ")
+    "failed without saying what the gate checks.") else paste0(
+    "The dossier's preamble and the HTML report state what the gate checks, and the ",
+    "dossier's checklist table marks the ", nw(n_blocker_marks), " blocking items."),
+  if (preamble_says_above) paste0(
+    "The dossier's preamble says that it flags a declared severity above the ",
+    "rubric, but it flags only one more than ", num(margin, 1), " above it.")
+  else if (preamble_margin) paste0(
+    "The preamble says that the dossier flags a declared severity more than ",
+    num(margin, 1), " above the rubric, the margin it applies."),
+  if (length(loop_line) >= 1) paste0(
+    "The header of the dossier and of the preregistration names the reading of ",
+    "feedback loops, for the panic network under the default '", loop_line[1], "'.")
+  else "The header of the dossier does not say how feedback loops were read.")
+doc_text <- paste(doc_text, collapse = " ")
 ```
 
 The preregistration, the dossier, the HTML report and the apps present the
@@ -1342,9 +1501,14 @@ first and last sentences, as a hover title that a phone does not show. It opens
 the dossier with what is author-entered and what is derived and the
 preregistration with what it holds and what must be added before registration,
 takes the derivation line from the derivation chain read with the document's own
-setting for loops, and uses neutral colours for the causal readings and the
-rival comparison. `r flaw_text` Of the `r int(sum(comm_f))` findings
-of the communication lens and its second reader, the status register counts
+setting for loops, and uses neutral colours for the causal readings, the
+rival comparison and the amendment verdict.
+
+`r doc_text` The apps show each
+checklist item's criterion below its id, write the score with its one decimal,
+say what content an amendment gives up and show a long list as its first
+entries with a way to see the rest. Of the `r int(sum(comm_f))` findings of the
+communication lens and its second reader, the status register counts
 `r status_phrase(fd$status[comm_f])`. The two apps agree with each other and
 with the packages. The lens's comparison of their displayed results found a
 difference only in the help, which names the language.
@@ -1421,6 +1585,13 @@ spread_old_text <- and_list(paste(num(spread_old), "points for",
                                   th_lab[names(spread_old)]))
 spread_new_text <- and_list(paste(num(spread_new), "points for",
                                   th_lab[names(spread_new)]))
+spread_now_text <- if (identical(spread_old_text, spread_new_text)) {
+  paste(", as they do at", pkg_version)
+} else paste0(", and within ", spread_new_text, " at ", pkg_version)
+icc_new_text <- if (identical(num(icc_new, 2), num(icc_old, 2))) {
+  paste("and the same at", pkg_version)
+} else paste0("and is ", num(icc_new["icc"], 2), " (", num(icc_new["lower"], 2), " to ",
+              num(icc_new["upper"], 2), ") at ", pkg_version)
 # Sources of the disagreements over the kind of element, as the analyst
 # attributed them.
 src_tab <- strsplit(strsplit(u_all$disagreements_by_source, "; ")[[1]], "=")
@@ -1468,7 +1639,11 @@ fill_form <- function(th) {
 fill_now <- vapply(pl$file, function(f) {
   tf_check(fill_form(tf_read(file.path("demonstrations", f))))$aggregate_score
 }, numeric(1))
-fill_low <- unique(pl$theory[fill_now < max(fill_now)])
+fill_same <- isTRUE(all.equal(range(fill_now), range(fill_after)))
+fill_text <- if (fill_same) {
+  paste0(", and the final ", pkg_version, " gives the same range.")
+} else paste0(". At ", pkg_version, ", the same filling moves the files to between ",
+              sc(min(fill_now)), " and ", sc(max(fill_now)), ".")
 ```
 
 Every output of the package describes a file, and a verbal theory can be written
@@ -1528,22 +1703,17 @@ conservative reading of signs in loops of more than one cycle, which left open
 files that every sampled stable linear model fixed.
 
 The checklist scores of the encoders of one theory lay within
-`r spread_old_text` at f72ce4c, and within `r spread_new_text` at
-`r pkg_version`. That closeness says little about reliability. Most items were
+`r spread_old_text` at f72ce4c`r spread_now_text`.
+That closeness says little about reliability. Most items were
 the same in every file because the texts lack what they ask for, numbers,
 measures, rivals and formal models, and the spread came almost entirely from
 whether an encoder filled in the mechanism field. At f72ce4c, filling the form
 without changing any statement of a theory moved every file to between
-`r sc(min(fill_after))` and `r sc(max(fill_after))`. At `r pkg_version`, the
-same filling moves the files to between `r sc(min(fill_now))` and
-`r sc(max(fill_now))`, the `r and_list(th_lab[fill_low])` files staying lower
-because the derivation chain no longer credits their unread claims. The share
+`r sc(min(fill_after))` and `r sc(max(fill_after))``r fill_text` The share
 of the variance of the score that lay between theories, ICC(1), was
 `r num(icc_old["icc"], 2)` at f72ce4c, with a `r pct(ci_level)` interval from
-`r num(icc_old["lower"], 2)` to `r num(icc_old["upper"], 2)`, and is
-`r num(icc_new["icc"], 2)` (`r num(icc_new["lower"], 2)` to
-`r num(icc_new["upper"], 2)`) at `r pkg_version`. With `r nw(n_th)` theories,
-the interval spans almost every possible value, so
+`r num(icc_old["lower"], 2)` to `r num(icc_old["upper"], 2)`, `r icc_new_text`.
+With `r nw(n_th)` theories, the interval spans almost every possible value, so
 the pilot cannot say whether the score separates theories at all. At
 `r pkg_version`, `r nw(n_invalid_pilot)` of the files that passed full
 validation at f72ce4c no longer do, because their encoders labelled a prediction
@@ -1573,7 +1743,13 @@ crit_fixed <- st[st$kind == "finding" & st$id %in% fd$id[crit_f] &
                    st$status_080 == "fixed" & grepl("Remaining: ", st$basis), ]
 remain_items <- sub(" \\(report, section [0-9]+\\)", "",
                     sub("\\.$", "", sub(".*Remaining: ", "", crit_fixed$basis)))
-remain_items <- paste0("- ", crit_fixed$id, ": ", remain_items, ".")
+remain_items <- if (nrow(crit_fixed) == 0) character(0) else
+  paste0("- ", crit_fixed$id, ": ", remain_items, ".")
+remain_lead <- if (length(remain_items) == 0) {
+  "No part of a critical finding classed as fixed remains, as the status file records."
+} else if (length(remain_items) == 1) {
+  "Where part of a critical finding classed as fixed remains, the status file says what, for one finding:"
+} else "Where part of a critical finding classed as fixed remains, the status file says what:"
 
 # The habit files read by sigma-separation: the claims of predictions that the
 # graph does not entail, those of them to which the pilot's sampled stable
@@ -1622,8 +1798,6 @@ moderates_text <- if (both_signs_all) paste(
   "as 'habit moderates behaviour', which the package reads as an unsigned edge",
   "(finding pilot-4). That verdict is correct for the files as encoded.") else ""
 n_files_one <- sum(hab$one_sign > 0)
-gate_phrase <- function(g) ifelse(g == "pass", "passes", paste("is", g))
-chain_phrase <- function(s) c(pass = "passes", fail = "fails", warn = "warns")[[s]]
 inc_text <- if (all(hab$n_mod == 1) && all(hab$open_inc == 0) &&
                 length(unique(hab$gate_inc)) == 1) {
   paste0("Stating that one relation as 'increases' makes every claim entailed, ",
@@ -1631,96 +1805,71 @@ inc_text <- if (all(hab$n_mod == 1) && all(hab$open_inc == 0) &&
          nw(nrow(hab)), " files.")
 } else ""
 
-# Problems of the corrected rules that the register does not list, rerun
-# here. A phenomenon behind a feedback loop, beside a prediction that states
-# no claim.
-k_list <- function(ids) lapply(ids, function(i) {
-  list(id = i, label = i, definition = paste("Construct", i, "as defined here."),
-       measurement = list(paste0("m_", i)), boundary_conditions = list("adults"))
-})
-ph_th <- list(
-  schema_version = "1.1", id = "phenomenon-loop", title = "Phenomenon behind a loop",
-  maturity = "testing", constructs = k_list(c("a", "b")),
-  propositions = list(
-    list(id = "p1", from = "a", to = "b", relation = "increases", mechanism = "m."),
-    list(id = "p2", from = "b", to = "a", relation = "increases", mechanism = "m.")),
-  predictions = list(list(id = "h1", statement = "a raises b", type = "directional",
-                          derives_from = list("p1"))),
-  phenomena = list(list(id = "ph1", statement = "a lowers b",
-                        claim = list(kind = "effect", x = "a", y = "b",
-                                     sign = "negative"))))
-ph_rep <- function(cy) {
-  r <- tf_check(ph_th, cycles = cy)
-  dc <- Filter(function(i) i$id == "derivation_chain", r$items)[[1]]
-  pr <- strsplit(tf_preregister(ph_th, cycles = cy), "\n")[[1]]
-  # The header line on phenomena, and whether the claim lines under 'Phenomena
-  # to explain' mark the phenomenon's claim as not evaluated.
-  l <- grep("phenomenon states", pr, value = TRUE)
-  stopifnot(length(l) == 1)
-  s <- grep("^### Phenomena to explain", pr)
-  stopifnot(length(s) == 1)
-  e <- grep("^#{1,3} ", pr)
-  e <- c(e[e > s], length(pr) + 1)[1]
-  list(gate = r$gate, chain = dc$status, not_checked = length(dc$not_checked),
-       line = sub(".*: ", "", l),
-       listed = any(grepl("^ *- Claim: .*not evaluated", pr[s:(e - 1)])))
-}
 # Table captions that name the version.
 cap_status <- paste0("Status in version ", pkg_version, " of every finding and verdict in the register.")
 cap_critical <- paste0("The critical findings and their status in version ", pkg_version, ".")
 cap_demos <- paste0("Demonstrations at f72ce4c and in the live run of version ", pkg_version, ": score, gate and derivation chain, with 'a → b' where the value changed.")
 cap_demos_other <- paste0("Other results of the demonstrations that changed between f72ce4c and the live run of version ", pkg_version, ". An empty list is written 'none'.")
-ph_refuse <- ph_rep("refuse")
-ph_sigma <- ph_rep("sigma")
-# Each problem is reported only while it holds.
-rv_holds <- c(
-  phenomenon = ph_refuse$chain == "pass" && ph_refuse$line == "yes" &&
-    ph_refuse$not_checked == 0,
-  appraisal = ap_undeclared$verdict == "progressive",
-  dossier = preamble_says_above)
-rv_say <- c(
-  phenomenon = paste0(
-    "Under the default reading, a phenomenon whose claim the graph contradicts ",
-    "is not read when the graph has a feedback loop, and `check()` neither warns ",
-    "nor lists it among the claims it could not read",
-    if (ph_refuse$listed) paste0(", although the preregistration's list of ",
-                                 "phenomena marks it not evaluated") else "",
-    ". In a constructed theory of two constructs that raise each other, beside a ",
-    "prediction that states no claim, the derivation chain ",
-    chain_phrase(ph_refuse$chain), ", the gate ", gate_phrase(ph_refuse$gate),
-    " and the preregistration's header answers '", ph_refuse$line, "' to ",
-    "whether the graph contradicts no claim a phenomenon states. Read by ",
-    "sigma-separation, the same file's derivation chain ",
-    chain_phrase(ph_sigma$chain), ", its gate ", gate_phrase(ph_sigma$gate),
-    " and the answer is '", ph_sigma$line, "'."),
-  appraisal = paste0(
-    "An amendment whose new graph cannot be built skips the new rules of the ",
-    "appraisal, as @sec-appraisal shows with one proposition to an undeclared ",
-    "construct."),
-  dossier = "The dossier's preamble overstates what it flags (@sec-outputs).")
-rv <- rv_say[rv_holds]
-n_rv_checked <- length(rv_holds)
-rv_text <- if (length(rv) == 0) {
-  paste0("When it is rendered, this report checks ", nw(n_rv_checked), " of the ",
-         "problems that review reported, and none of them holds at this commit.")
-} else paste0("When it is rendered, this report checks ", nw(n_rv_checked),
-              " of the problems that review reported. ",
-              if (length(rv) == n_rv_checked) paste("All", nw(length(rv)), "hold") else
-                paste(Nw(length(rv)), if (length(rv) == 1) "holds" else "hold"),
-              " at this commit, and the register, built from the audit of ",
-              "f72ce4c, does not list ", if (length(rv) == 1) "it" else "them",
-              ". ", paste(rv, collapse = " "))
-# What Section 10 says of that review: the problems checked here, those that
-# earlier sections describe, and the minor ones this report does not check.
-rv_elsewhere <- c(
-  "that a claim a loop leaves unread lowers the score (@sec-checklist)",
-  if (gate_unexplained) "that the dossier does not say what the gate checks (@sec-outputs)")
-review_text <- paste0(
-  Nw(n_rv_checked), " problems from that review are checked when this report is ",
-  "rendered, and those that hold are reported in @sec-changes. The review also ",
-  "showed ", and_list(rv_elsewhere), ", and it lists further minor problems, ",
-  "among them passages of the documentation that misdescribe a rule, which this ",
-  "report does not check.")
+cap_review <- paste0("Problems of the corrected rules and documents that reviews of the release reported, rerun when this report was rendered on version ", pkg_version, ".")
+
+# Problems that the review of the release reported, rerun here. Each row
+# says what the code does now, whether or not the problem still holds.
+p_ref <- tf_check(panic_th)
+p_sig <- tf_check(panic_th, cycles = "sigma")
+p_dc <- Filter(function(i) i$id == "derivation_chain", p_ref$items)[[1]]
+holds_word <- function(h) if (h) "Still holds. " else ""
+rv <- data.frame(
+  Problem = c(
+    "A contradicted claim beside a loop that does not reach it was left unread, and the gate passed",
+    "A phenomenon's claim behind a loop was skipped without a warning, and the preregistration said no phenomenon was contradicted",
+    "A prediction left unread by a loop lowered the score",
+    "An amendment whose new graph cannot be built was called progressive",
+    "Relabelling an unbounded point prediction as directional counted as weakening it",
+    "The dossier did not say what the gate checks",
+    "The dossier said it flags a declared severity above the rubric",
+    "Documents did not say how feedback loops were read"),
+  holds = c(
+    dm(unrel, "gate") == "pass",
+    ph_refuse$chain == "pass" && ph_refuse$line == "yes",
+    p_ref$aggregate_score < p_sig$aggregate_score,
+    identical(ap_undeclared$verdict, "progressive"),
+    relabel_weakened,
+    gate_unexplained,
+    preamble_says_above,
+    length(loop_line) == 0),
+  stringsAsFactors = FALSE)
+rv$State <- paste0(vapply(rv$holds, holds_word, character(1)), c(
+  paste0("The unrelated-loop file scores ", sc(dm(unrel, "score")), " and its gate is ",
+         dm(unrel, "gate"), "."),
+  paste0("The derivation chain ", chain_phrase(ph_refuse$chain),
+         if (ph_refuse$named) " and names the phenomenon" else "",
+         ", the line reads '", ph_refuse$line, "' and the gate ",
+         gate_phrase(ph_refuse$gate), "."),
+  paste0("The panic network scores ", sc(p_ref$aggregate_score), " under the default and ",
+         sc(p_sig$aggregate_score), " by sigma-separation, its derivation chain ",
+         c(pass = "passing", warn = "warning", fail = "failing")[[p_dc$status]], " at ",
+         num(p_dc$score, 1), " under the default."),
+  paste0("The sign reversal with a proposition to an undeclared construct is ",
+         ap_undeclared$verdict, "."),
+  paste0("The refuted prediction relabelled is ",
+         if (relabel_weakened) "weakened" else "not weakened", ", and the amendment is ",
+         ap_relabel$verdict, "."),
+  if (gate_unexplained) "The dossier prints only the gate's result." else paste0(
+    "The preamble states what the gate checks, and the table marks the ",
+    nw(n_blocker_marks), " blocking items."),
+  if (preamble_margin) paste0("The preamble says more than ", num(margin, 1),
+                              " above the rubric, the margin applied.") else
+    paste0("The dossier flags only a margin of more than ", num(margin, 1), "."),
+  if (length(loop_line) >= 1) paste0("The header reads 'Feedback loops: ", loop_line[1], "'.")
+  else "No header line names the reading."))
+n_rv_hold <- sum(rv$holds)
+rv_text <- paste0(
+  "@tbl-review lists the main problems of the corrected rules and documents that ",
+  "the reviews reported and that this report reruns when it is rendered. ",
+  if (n_rv_hold == 0) paste0("None of the ", nw(nrow(rv)), " holds at this commit.")
+  else paste0(Nw(n_rv_hold), " of the ", nw(nrow(rv)), if (n_rv_hold == 1) " holds" else
+                " hold", " at this commit, and the register, built from the audit of ",
+              "f72ce4c, does not list ", if (n_rv_hold == 1) "it." else "them."))
 ```
 
 @tbl-status counts the status of every finding and verdict. Of the
@@ -1754,13 +1903,12 @@ kab(data.frame(Finding = ct$title, Status = cap(ct$status)))
 ```
 
 Fixed and reported refer to the part of a finding that its second reader
-stated. Where part of a critical finding classed as fixed remains, the status
-file says what:
+stated. `r remain_lead`
 
 ```{r}
 #| label: critical-remaining
 #| results: asis
-cat(remain_items, sep = "\n")
+if (length(remain_items) > 0) cat(remain_items, sep = "\n")
 ```
 
 @tbl-demos sets the demonstrations at f72ce4c beside the live run. Where a value
@@ -1807,21 +1955,24 @@ keep <- nzchar(change_text)
 kab(data.frame(File = short(live$file)[keep], Change = change_text[keep]))
 ```
 
-Some rules were corrected: the amendment appraisal reads signs and lost
-entailments and has the pending class, a weakening is judged by the regions
-rather than the labels, the derivation chain no longer counts unread claims and
-reads phenomena, the preregistration and dossier take their derivation line from
+Some rules were corrected. The amendment appraisal reads signs and lost
+entailments, has the pending class and gives no progressive verdict when a
+graph cannot be built. A weakening is judged by the regions rather than the
+labels, with a point or interval label without bounds ranked as directional.
+The derivation chain reads phenomena and, under the default, every claim that
+no loop reaches, the preregistration and dossier take their derivation line from
 the same reading of loops as their body, the rubric no longer rates a point
-label without bounds as precise, and the simulation defaults to the exact
+label without bounds as precise and the simulation defaults to the exact
 method. Some problems are now reported beside the result: the appraisal lists
 novelty that rests on 'protects' alone, refuted new predictions and the
 severities of the passes behind a progressive verdict, the derivation chain
-lists the claims a loop leaves unread, and the dossier flags a recorded failure
-whose estimate lies inside its region. Most of the rest was rewording: every
-display now calls the number a checklist score and says what it describes, the
-help and the apps describe the gate by what its blocking items check, and the
-documents state the assumptions of the signs, what 'identified' means and what
-the simulation does not show.
+names the predictions and phenomena whose claims a loop leaves unread, and the
+dossier flags a recorded failure whose estimate lies inside its region. Most of
+the rest was rewording: every display now calls the number a checklist score
+and says what it describes, the help, the documents and the apps describe the
+gate by what its blocking items check, and the documents state the assumptions
+of the signs, how loops were read, what 'identified' means and what the
+simulation does not show.
 
 The score still rates empty, circular and refuted files highly and passes their
 gate, as @tbl-demos shows. Apart from the derivation chain and the narrower
@@ -1834,8 +1985,8 @@ The appraisal still cannot tell a prediction from an accommodation.
 Two of the pilot's findings bear on the new option `check(cycles = "sigma")`,
 under which a claim that the graph leaves open fails the derivation chain. When
 this report was rendered, the gate under sigma-separation was `r sigma_text`,
-while under the default reading, their claims are not read and the gate
-`r refuse_text`. `r moderates_text`
+while under the default reading, the claims behind their loops are not read and
+the gate `r refuse_text`. `r moderates_text`
 In `r nw(n_files_one)` of the files, `r nw(sum(hab$one_sign))` further claims
 fail although the pilot's sampled stable linear models gave each of them one
 sign, because of the conservative reading of signs in loops of more than one
@@ -1845,7 +1996,16 @@ for a choice of encoding that the register already records.
 
 The changes made in the release were themselves reviewed before this report, by
 AI agents who tested the new rules with random, malformed and constructed
-inputs. `r rv_text`
+inputs, read the documents and apps and checked the packages against the
+requirements of CRAN and PyPI. A second round of corrections addressed the
+problems they reported, and its change to the reading of loops was checked
+against independent oracles (@sec-loops). `r rv_text`
+
+```{r}
+#| label: tbl-review
+#| tbl-cap: !expr cap_review
+kab(rv[, c("Problem", "State")], col.names = c("Problem", "At this commit"))
+```
 
 # Is automated appraisal of theories feasible? {#sec-feasibility}
 
@@ -1946,13 +2106,22 @@ may reflect shared training rather than independent confirmation, and defects
 that all of them would miss are not in the register. Where they judged how a
 reader would understand a display, they judged without readers. Only
 `r int(n_chk)` of the `r int(nrow(st))` rows of the status register were checked
-again after their classification, so some rows may still be misclassified.
+again after their classification, and the `r int(n_r2)` rows that the second
+round of corrections changed rest on reruns by the agent that updated this
+report, without a further check, so some rows may still be misclassified.
 
 The audit examined one commit, and the status of `r pkg_version` was
 established by rerunning the audit's evidence and reading the files, not by a
-new audit. The changes made in the release were reviewed separately by AI
-agents before this report. `r review_text` Neither the review nor this report is
-a full audit of the new code.
+new audit. The changes made for the release were reviewed by AI agents in three
+parts, the logic of the corrected rules, their communication and the readiness
+of the packages for release, and a second round of corrections followed. This
+report reruns only the main problems the review reported (@tbl-review). The
+minor ones, most of which concern the wording of documents and displays, are
+not checked here. The change of that round to how loops are read was checked against
+oracles written by AI agents of the same family, on random graphs and on the
+audit's theories, and part of those checks ran on a commit before the last
+change, which gives the same verdicts (@sec-loops). Neither the review, the
+verification nor this report is a full audit of the final code.
 
 The lenses were chosen in advance. Others, such as an audit of security, of
 accessibility or of the performance of the apps on large theories, were not part
