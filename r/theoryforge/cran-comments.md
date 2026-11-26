@@ -62,7 +62,7 @@ reach them.
   need ggm. The vignettes were left out because this build has no cairo for
   their SVG figures. ggm, which imports graph from Bioconductor, was not
   installed, so the check ran with _R_CHECK_FORCE_SUGGESTS_=false.
-* GitHub Actions, run 45727359560 on 2026-11-26, at commit 50f028d, which
+* GitHub Actions, run 45764638633 on 2026-11-26, at commit 900b9ea, which
   holds the package as submitted. Each leg built the tarball and ran
   `R CMD check --as-cran --no-manual` on it, without the CRAN incoming checks,
   which r-lib/actions turns off. Each leg ended with 'Status: OK':
