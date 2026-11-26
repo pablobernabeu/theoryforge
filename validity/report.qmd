@@ -69,6 +69,9 @@ and_list <- function(x) {
 }
 # A score as the package's documents and apps print it, with one decimal.
 sc <- function(x) formatC(x, format = "f", digits = 1)
+# Text that the package prints, set as code so that its quotation marks stay
+# as printed.
+code <- function(x) paste0("`", x, "`")
 # Wilson interval for a proportion.
 wilson <- function(k, n, z = qnorm(0.975)) {
   p <- k / n
@@ -286,8 +289,11 @@ n_basis_rerun <- sum(grepl("rerun|reran", st$basis, ignore.case = TRUE))
 n_rep_loop <- sum(fd$status == "reported" &
                     grepl("not_checked", st$basis[match(paste("finding", fd$id), key)],
                           fixed = TRUE))
-# Rows whose status or basis the second round of corrections changed.
-stopifnot(all(st$second_round %in% c("status", "basis", "none")))
+# Rows whose status or basis the second round of corrections changed, and the
+# status before that round of those whose status it changed.
+st$status_before[is.na(st$status_before)] <- ""
+stopifnot(all(st$second_round %in% c("status", "basis", "none")),
+          all((st$status_before != "") == (st$second_round == "status")))
 n_r2 <- sum(st$second_round != "none")
 n_r2_status <- sum(st$second_round == "status")
 n_r2_basis <- sum(st$second_round == "basis")
@@ -295,7 +301,15 @@ n_r2_unchk <- sum(st$second_round != "none" & st$checked == "none")
 r2_moves <- st[st$second_round == "status", ]
 r2_status_phrase <- if (n_r2_status == 0) "none changed status" else paste0(
   nw(n_r2_status), " changed status, ",
-  and_list(paste0(r2_moves$id, " (now ", r2_moves$status_080, ")")), ",")
+  and_list(paste0(r2_moves$id, " (", r2_moves$status_before,
+                  " before the second round, now ", r2_moves$status_080, ")")), ",")
+# Why those two rows moved, as their bases record.
+r2_reason <- if (identical(r2_moves$id, c("causal-verification-9", "measurement-13")) &&
+                 r2_moves$status_080[r2_moves$id == "causal-verification-9"] == "reported") paste(
+  "The first moved because a claim that names a construct on a feedback loop or",
+  "downstream of one, which earned no credit after the first round, again counts as",
+  "derived, as at f72ce4c. The second moved because a loop that reaches none of the",
+  "constructs a claim names no longer leaves the claim unread.") else ""
 # Which rows were checked again after the classifying agent, and what changed.
 stopifnot(all(st$checked %in% c("drafter", "reviewer", "both", "none")),
           all(st$revised %in% c("status", "basis", "none")))
@@ -304,9 +318,33 @@ n_chk_drafter <- sum(st$checked %in% c("drafter", "both"))
 n_chk_reviewer <- sum(st$checked %in% c("reviewer", "both"))
 n_chk_both <- sum(st$checked == "both")
 n_chk_status <- sum(st$checked != "none" & st$revised == "status")
+# Checked rows whose status differs from the classifying agent's because the
+# second round changed the code, not because a check found them misclassified.
+n_chk_status_code <- sum(st$checked != "none" & st$revised == "status" &
+                           st$second_round == "status")
 n_chk_basis <- sum(st$checked != "none" & st$revised == "basis")
+# Checked rows that the second round rewrote after their check.
+n_chk_r2 <- sum(st$checked != "none" & st$second_round != "none")
 n_unchk <- sum(st$checked == "none")
-n_unchk_status <- sum(st$checked == "none" & st$revised == "status")
+n_unchk_status <- sum(st$checked == "none" & st$revised == "status" &
+                        st$second_round != "status")
+n_unchk_status_code <- sum(st$checked == "none" & st$revised == "status" &
+                             st$second_round == "status")
+chk_status_why <- if (n_chk_status_code == 0) {
+  paste("because a check found them misclassified or because the definitions of",
+        "the statuses were narrowed")
+} else if (n_chk_status_code == n_chk_status) {
+  "because the second round of corrections described below changed the code"
+} else paste0(
+  nw(n_chk_status_code), " of them because the second round of corrections ",
+  "described below changed the code and the others because a check found them ",
+  "misclassified or because the definitions of the statuses were narrowed")
+unchk_status_text <- paste0(
+  if (n_unchk_status > 0) paste0(", though ", int(n_unchk_status), " of them changed ",
+                                 "status when the definitions were narrowed") else "",
+  if (n_unchk_status_code > 0) paste0(
+    if (n_unchk_status > 0) " and " else ", though ", int(n_unchk_status_code),
+    " changed status because the second round changed the code") else "")
 
 # Checks of the deductive and numerical core. 'package' compares an output of
 # the package with independent software, the auditors' own implementation of
@@ -329,7 +367,7 @@ vk <- function(kind, what = c("all", "clean", "disc", "size")) {
 }
 n_rerun <- sum(grepl("Rerun on 0.8.0: same result.", ver$note, fixed = TRUE))
 
-# Independent checks of how the final code reads claims beside feedback loops.
+# Checks of how the code of the release reads claims beside feedback loops.
 lv <- rd("loop-verification.csv")
 lvrow <- function(pattern) {
   r <- lv[grepl(pattern, lv$check, fixed = TRUE), ]
@@ -346,6 +384,12 @@ lv_twin <- lvrow("R and Python records")
 lv_theories <- as.numeric(gsub(",", "", sub(" random theories.*", "", lv_gate$note)))
 lv_kmax <- as.numeric(sub(".* to ([0-9]+) constructs\\.$", "\\1", lv_gate$note))
 lv_flagged <- as.numeric(sub(" claims of one theory.*", "", lv_lin$note))
+# The audit's theories: claims newly read under refuse, association signs newly
+# fixed under sigma and association claims whose basis alone changed.
+lv_c_read <- note_num(lv_corpus, "^([0-9,]+) newly read claims")
+lv_c_fixed <- note_num(lv_corpus, "([0-9,]+) association signs newly fixed")
+lv_c_basis <- note_num(lv_corpus, "([0-9,]+) association claims under sigma whose sign stays open")
+stopifnot(lv_c_read + lv_c_fixed + lv_c_basis == lv_corpus$claims)
 lv_disagree <- sum(lv$disagreements)
 lv_old <- setdiff(unique(lv$code), "50f028d")
 lv_text <- if (lv_disagree == 0) "No check found a disagreement" else
@@ -530,10 +574,10 @@ decades, can be done automatically. This report draws on an audit of the code at
 commit f72ce4c by `r nw(n_lens)` auditors, each examining the package from one
 point of view (a lens) and each rechecked by an independent second reader, on an
 encoding pilot and on reruns of the same evidence on version `r pkg_version`.
-Every auditor, second reader and encoder was an AI agent, as was the drafter of
-this report and of its status register, written for the maintainer. No human
-expert took part. That limits what the evidence can show, and the limits are set
-out in @sec-limits.
+Every auditor, second reader and encoder was an AI agent, and so were the agents
+that wrote the corrections of version `r pkg_version` and the drafter of this
+report and of its status register. No human expert took part. That limits what
+the evidence can show, and the limits are set out in @sec-limits.
 
 The answer differs by component. The package's deductions from a stated causal
 graph, its implied conditional independencies, the signs of effects and
@@ -586,12 +630,12 @@ tell a prediction from an accommodation and does not weigh how good a test was.
 Its verdicts have not been compared with any expert's.
 
 Of the `r int(n_find)` findings in the register, version `r pkg_version` fixed
-`r int(nf("fixed"))` and now reports `r int(nf("reported"))` beside a verdict or
-gate that it leaves unchanged. For the `r nw(n_rep_loop)` reported findings on
-feedback loops, the derivation chain now warns about a claim that a loop
-leaves unread and names it, while the score counts the claim as derived and
-the gate still passes. The release answered
-`r int(nf("reworded"))` findings by rewording what the outputs and documents
+`r int(nf("fixed"))`, and for `r int(nf("reported"))` it now reports the problem
+beside a verdict or gate that it leaves unchanged. For the `r nw(n_rep_loop)` of
+these on feedback loops, the verdict and the gate stay unchanged only for a
+claim that names a construct on a loop or downstream of one, as the next
+paragraph describes. The release answered `r int(nf("reworded"))` findings by
+rewording what the outputs and documents
 say, with the behaviour unchanged, and left `r int(nf(not_changed))` unchanged,
 `r int(nf("deferred"))` of them for expansions the maintainer plans for version
 0.9.0 but has not published. Of the `r int(n_verd)` verdicts on components and
@@ -606,18 +650,24 @@ caveat concerns the auditors' own reading of a source.`r undoc_text`
 The main behavioural corrections concern two rules. The amendment appraisal now
 reads the signs the two graphs entail, so an amendment that reverses a
 corroborated prediction is no longer called progressive, and it withholds
-that verdict when the graph of either version cannot be built. The checklist's
-derivation chain now reads, under the default, every claim that no feedback
-loop reaches, so a loop elsewhere in the graph no longer lets a contradicted
-claim through the gate. A claim that names a construct on a loop or downstream
-of one is still not read: the item warns and names it but counts it as derived,
-and the claim cannot block the gate. The score still rates empty, circular and
+that verdict when the graph of either version cannot be built. Under the
+default, the checklist's derivation chain now reads every claim that no
+feedback loop reaches, so a loop that reaches none of the constructs a
+contradicted claim names no longer allows it to pass the gate. A claim that
+names a construct on a loop or downstream of one is still not read: the item
+warns and names it, a prediction with such a claim still counts as derived, and
+the claim cannot block the gate. The score still rates empty, circular and
 refuted files highly. Apart from the derivation chain and a few narrower rules,
 the release changed what the score is called and what is said about it, not
-what it computes. A review of the release found problems in the corrected rules, and a
-second round of corrections addressed them before this report (@sec-changes).
-That round changed how the deductive core reads a graph with a loop, and the
-change was checked against independent oracles (@sec-loops).
+what it computes. A review of the release found problems in the corrected
+rules, and a second round of corrections changed the code again before this
+report (@sec-changes). That round changed how the deductive core reads a graph
+with a loop, and the change was checked against implementations that do not use
+theoryforge and against the package's other settings (@sec-loops). The review,
+the second round of corrections, those checks and the update of this report and
+of `r int(n_r2)` rows of its status register were also the work of AI agents of
+the same family. No human examined the changed rules or compared any output with
+human judgement.
 
 This evidence answers in part whether automated appraisal of theories is
 feasible. Deduction from a stated graph can be automated soundly, and a fixed
@@ -688,16 +738,20 @@ conclusions), major or minor.
 Every lens, every second reader and every pilot encoder was an AI agent, an
 instance of a Claude model working from written instructions, and so were the
 writer of the pilot's source summaries and its analyst. No human expert took
-part. The maintainer commissioned the work and reads this report. An AI agent of
-the same family drafted the report and the status register of @sec-status. This
-bounds what the audit can show. The agents share training and are likely to
-share blind spots, so a second reader is independent of a lens in the sense that
-it reran the evidence, not in the sense that a second human expert would be. The
-pilot's encoders are not researchers in the domains they encoded, read the same
-documentation and may have made the same choices for the same reasons. And no
-human judgement of theory quality was available to compare the package's outputs
-with, so every statement in this report about misreading or about agreement with
-experts is a judgement of the auditors and has not been measured.
+part. The maintainer commissioned the work and reads this report. AI agents of
+the same family wrote the corrections of version `r pkg_version`, reviewed the
+release, wrote a second round of corrections, checked that round's reading of
+feedback loops and drafted and updated this report and the status register of
+@sec-status. No human examined the changed rules or compared any output with
+human judgement. This bounds what the audit can show. The agents share
+training and are likely to share blind spots, so a second reader is independent
+of a lens in the sense that it reran the evidence, not in the sense that a
+second human expert would be. The pilot's encoders are not researchers in the
+domains they encoded, read the same documentation and may have made the same
+choices for the same reasons. And no human judgement of theory quality was
+available to compare the package's outputs with, so every statement in this
+report about misreading or about agreement with experts is a judgement of the
+auditors and has not been measured.
 
 ## What the audit found
 
@@ -784,11 +838,12 @@ For each finding and verdict, `data/status-0.8.0.csv` records what version
 that the behaviour or rule was corrected. Reported means that the package now
 reports the problem beside its result without changing the verdict or the gate
 that the finding concerns. For the `r nw(n_rep_loop)` reported findings on
-feedback loops, the derivation chain now warns and names the claims it could
-not read, while the score counts them as derived and the gate still passes.
-Reworded means that the outputs and documentation now say
-what is computed while the behaviour is unchanged. Unchanged means that nothing
-was done. Deferred marks a
+feedback loops, this holds only for a claim that names a construct on a loop or
+downstream of one: the derivation chain now warns and names it, a prediction
+with such a claim still counts as derived, and the gate does not change. A
+claim that no loop reaches is now read and can block the gate. Reworded means
+that the outputs and documentation now say what is computed while the behaviour
+is unchanged. Unchanged means that nothing was done. Deferred marks a
 finding left unchanged whose remedy is one of the expansions the maintainer
 plans for version 0.9.0, data tests of implications, ensemble simulation,
 interoperability and a teaching mode. The register records that plan in its
@@ -807,28 +862,29 @@ A finding is classed by the part of it that the second reader stated, and where
 part of what its title names remains, the basis says so. The status was
 established by rerunning the audit's evidence against the code of this
 repository where a script exists, as `r int(n_basis_rerun)` of the
-`r int(nrow(st))` bases record, and otherwise by reading the files at this
-commit, never from commit messages alone. AI agents assigned the status of each
+`r int(nrow(st))` bases record, and otherwise by reading the files of the
+release, never from commit messages alone. AI agents assigned the status of each
 row, and the column `checked` records which rows were checked again. The agents
 that drafted and revised this report rechecked `r int(n_chk_drafter)` rows, and
-reviewers of the draft, also AI agents, reran the evidence or reread the files
+reviewers of the drafts, also AI agents, reran the evidence or reread the files
 for `r int(n_chk_reviewer)`, `r int(n_chk_both)` of them in both checks. Of the
 `r int(n_chk)` rows checked, `r int(n_chk_status)` now carry a different status
-from the one the classifying agent gave them, because a check found them
-misclassified or because the definitions of the statuses were narrowed, and
+from the one the classifying agent gave them, `r chk_status_why`, and
 `r int(n_chk_basis)` kept their status with a qualified basis, as the column
 `revised` records. The other `r int(n_unchk)` rows rest on the classifying
-agent's reading alone, though `r int(n_unchk_status)` of them changed status
-when the definitions were narrowed. The classifying agents did not record which
-rows they were unsure of.
+agent's reading alone`r unchk_status_text`. The classifying agents did not
+record which rows they were unsure of.
 
 After a review of the release, a second round of corrections changed the code
 again. The evidence of the `r int(n_r2)` rows whose status or basis that round
-changed was rerun on the final code, as the column `second_round` records:
-`r r2_status_phrase` and `r int(n_r2_basis)` kept their status with a new basis.
-Of these rows, `r int(n_r2_unchk)` are among those that no one had checked
-before, so their bases now rest on that rerun. The counts in this report are
-read from the file, so they follow it.
+changed was rerun, or for documents and displays reread, on the code after that
+round, as the column `second_round` records: `r r2_status_phrase` and
+`r int(n_r2_basis)` kept their status with a new basis. `r r2_reason` Of these
+rows, `r int(n_chk_r2)` had been checked before that round rewrote them, so
+`r int(n_chk - n_chk_r2)` of the `r int(n_chk)` checked rows were checked in the
+form they now have, and `r int(n_r2_unchk)` had not been checked before. An AI
+agent of the same family made these reruns and rereadings, and a review of this
+report repeated some of them, which the column `checked` does not record.
 
 # The deductive core {#sec-core}
 
@@ -901,13 +957,18 @@ the `r int(vk("other"))` checks of sentences of the documentation, of design
 arguments, of a reference implementation and of the package against itself are
 counted apart. @tbl-discrepancies in the appendix lists every check that found a
 discrepancy. The `r int(n_rerun)` checks whose notes end 'Rerun on 0.8.0: same
-result.' were rerun on version `r pkg_version` and gave the audit's numbers. The
-R and Python engines gave identical causal records on the
+result.' were rerun on version `r pkg_version` before its second round of
+corrections, which left the functions they check unchanged, and gave the audit's
+numbers. The R and Python engines gave identical causal records on the
 `r int(r_parity$cases)` random theories of the causal verification, and the
-status register records the same for a rerun at `r pkg_version`. These checks
-describe the audited code. The final `r pkg_version` reads a graph with a
-feedback loop differently, and that change was checked separately
-(@sec-loops).
+status register records the same for a rerun at `r pkg_version`. The other
+checks describe the audited code. Version `r pkg_version` reads a graph with a
+feedback loop differently. Under the default, it now reads every claim that no
+loop reaches, and under either setting, it names an adjustment set for an effect
+that no loop reaches and takes the sign of a marginal association between two
+constructs that no loop reaches from the treks between them. That change was
+checked separately (@sec-loops). The checks under sigma-separation in
+@sec-signs, which concern effects and conditional associations, predate it.
 
 ```{r}
 #| label: tbl-verification
@@ -961,7 +1022,7 @@ proposition joins becomes an implied independence. The statements are
 commitments of the theory only if its authors meant those omissions, which the
 help and the preregistration now say.
 
-## Sign entailments and their assumptions
+## Sign entailments and their assumptions {#sec-signs}
 
 On acyclic graphs in linear models, the derived verdicts held for all
 `r int(r_eff$cases)` effect claims, `r int(r_ass$cases)` marginal associations
@@ -1022,23 +1083,38 @@ assumes. The preregistration still prints the set without that caveat.
 
 After the audit, version `r pkg_version` changed how the core reads a graph
 with a feedback loop. Under the default, `cycles = "refuse"`, a claim that names
-a construct on a loop or downstream of one is left unread, and any other claim
-gets the record it would get on the graph without the loop, its adjustment set
-included. AI agents checked the change against oracles that do not use
-theoryforge (`data/loop-verification.csv`). In `r int(lv_theories)` random
-theories with loops, the package left unread exactly those of the
-`r int(lv_gate$claims)` claims that the verifiers' own reachability placed
-behind a loop. Each of the `r int(lv_sigma$claims)` claims it read got, in every
-field, the record that sigma-separation gives and the record that the code
-before the change gives on the acyclic graph of the claim's ancestors, and
-their signs and verdicts held in sampled linear models of the full graph with
-stable loops. The R and Python twins gave the same `r int(lv_twin$claims)` claim
-records. `r lv_text`
-once `r nw(lv_flagged)` claims with a draw near zero were redrawn with
-well-conditioned coefficients. The linear-model checks ran on commit
-`r and_list(lv_old)`, which gives the same verdicts as the final code. The
-oracles implement the definitions as their authors, also AI agents, read them,
-on random graphs of up to `r int(lv_kmax)` constructs.
+a construct on a loop or downstream of one, which this report calls a claim
+behind a loop, is left unread, and any other claim gets the record it would get
+on the graph without the loop, its adjustment set included. Under either
+setting, the marginal association of two constructs that no loop reaches now
+takes the signs of the treks between them, so a loop elsewhere no longer leaves
+its sign open.
+
+AI agents compared the new reading with implementations that do not use
+theoryforge (reachability from the loops, sampled linear models, networkx
+d-separation and an enumeration of paths and treks) and with the package's own
+sigma reading, its code before the change and its other twin
+(`data/loop-verification.csv`). In `r int(lv_theories)` random theories with
+loops, the package left unread exactly those of the `r int(lv_gate$claims)`
+claims that the verifiers' own reachability placed behind a loop. Each of the
+`r int(lv_sigma$claims)` claims it read got, in every field, the record that
+sigma-separation gives and the record that the code before the change gives on
+the acyclic graph of the claim's ancestors. Their signs and verdicts held in
+sampled linear models of the full graph with stable loops once
+`r nw(lv_flagged)` claims with a draw near zero were redrawn with
+well-conditioned coefficients, and each of the `r int(lv_und$claims)` claims
+left undetermined took both signs in linear models in which one path or trek
+dominates. On the audit's theories and their variants, the
+`r int(lv_c_read)` claims newly read under the default and the
+`r int(lv_c_fixed)` association signs newly fixed under sigma-separation held in
+sampled linear models of each graph, and `r nw(lv_c_basis)` association claims
+under sigma-separation changed only the reason given for an open sign, with the
+same verdict. The R and Python twins gave the same `r int(lv_twin$claims)` claim
+records. `r lv_text`. The linear-model checks ran on commit
+`r and_list(lv_old)`, which gives the same derived values, verdicts and bases as
+the code of the release. The implementations written for these checks follow
+the definitions as their authors, also AI agents, read them, and the random
+graphs had up to `r int(lv_kmax)` constructs.
 
 ## Equivalence classes
 
@@ -1243,6 +1319,12 @@ gate_past <- function(g) ifelse(g == "pass", "passed", paste("was", g))
 chain_phrase <- function(s) c(pass = "passes", fail = "fails", warn = "warns")[[s]]
 thru_sigma_gate <- tf_check(tf_read(file.path("demonstrations", thru)), cycles = "sigma")$gate
 thru_same <- dm(thru, "score") == dm(thru, "score", "old")
+# After the first round of corrections, a claim behind a loop earned no credit;
+# the second round restored the rule of f72ce4c for the score.
+thru_restored <- if (thru_same && dm(thru, "derivation_chain") == "warn") paste(
+  " After the first round of corrections, such a claim earned no credit, and the",
+  "second round restored the rule of f72ce4c for the score, which is the behaviour",
+  "that findings claims-register-19 and causal-verification-9 describe.") else ""
 
 # A phenomenon behind a feedback loop, beside a prediction that states no
 # claim: what check() and the preregistration say under each reading.
@@ -1288,26 +1370,30 @@ philosophy lens showed that a prediction saying that x 'may raise or lower y,
 depending on context' passes the falsifiability item and the gate once it is
 labelled directional, and a rerun on version `r pkg_version` gives the same.
 
-At f72ce4c, the derivation chain read claims as if the graph had no loops and
-counted a claim it could not read as derived. Any feedback loop anywhere in the
-propositions therefore made every claim check pass, so that a loop could let a
-file through a gate that its claims would block. The loops demonstrations show
-what version `r pkg_version` does instead. A contradicted claim in an acyclic
-graph scores `r sc(dm(acyc, "score"))`, and the gate `r gate_phrase(dm(acyc, "gate"))`.
+At f72ce4c, the derivation chain read claims only with the reading for graphs
+without loops, which leaves every claim of a graph with a loop unread, and
+counted such a claim as derived. Any feedback loop anywhere in the propositions
+therefore made every claim check pass, so that a file whose claims would block
+the gate passed it once a loop was added. The loops demonstrations show what
+version `r pkg_version` does instead. A contradicted claim in an acyclic graph
+scores `r sc(dm(acyc, "score"))`, and the gate
+`r gate_phrase(dm(acyc, "gate"))`.
 With a loop between two constructs unrelated to the claim, the file scored
 `r sc(dm(unrel, "score", "old"))` at f72ce4c, and its gate
-`r gate_past(dm(unrel, "gate", "old"))`. It now scores `r sc(dm(unrel, "score"))`, and the gate
-`r gate_phrase(dm(unrel, "gate"))`, because a claim that names no construct on a
-loop or downstream of one is read as on the graph without the loop
-(@sec-loops). A claim whose two constructs lie on a loop is still not read
-under the default. For the file with such a loop, the derivation chain
-`r chain_phrase(dm(thru, "derivation_chain"))` and names the claim but counts it
-as derived, so the file scores `r sc(dm(thru, "score"))``r if (thru_same) ", as at f72ce4c," else ""`
-and the gate `r gate_phrase(dm(thru, "gate"))`. Reading the graph by
+`r gate_past(dm(unrel, "gate", "old"))`. It now scores
+`r sc(dm(unrel, "score"))`, and the gate `r gate_phrase(dm(unrel, "gate"))`,
+because a claim that names no construct on a loop or downstream of one is read
+as it would be on the graph without the loop (@sec-loops). A claim behind a
+loop, one that names a construct on a loop or downstream of one, is still not
+read under the default, as in the file whose loop runs through the claim. For
+that file, the derivation chain `r chain_phrase(dm(thru, "derivation_chain"))`
+and names the claim but counts it as derived, so the file scores
+`r sc(dm(thru, "score"))``r if (thru_same) ", as at f72ce4c," else ""` and the
+gate `r gate_phrase(dm(thru, "gate"))`.`r thru_restored` Reading the graph by
 sigma-separation (`check(cycles = "sigma")`) reads such claims, on the
 assumption that each loop settles to a unique equilibrium, and the same file's
 gate is then `r thru_sigma_gate`. The documents and the apps now say, with the
-gate, that under the default a claim behind a loop blocks nothing.
+gate, that under the default, a claim behind a loop blocks nothing.
 
 The derivation chain checks agreement with the graph. It does not ask how far a
 prediction goes beyond the propositions: a prediction that restates its one
@@ -1324,19 +1410,20 @@ measurement lens described, to disclose less, remains.
 At f72ce4c, a phenomenon whose claim the theory's own graph contradicts left
 score and gate unchanged, while the same claim stated as a prediction blocked
 the gate. Version `r pkg_version` fails the derivation chain for such a
-phenomenon whenever its claim is read, so the gate is now
-`r dm(phen, "gate")` in both cases. The score still counts only predictions:
-`r sc(dm(phen, "score"))` with the contradicted phenomenon and
-`r sc(dm(pred, "score"))` with the contradicted prediction. Under the default
-reading, the claim of a phenomenon that names a construct on a loop or
-downstream of one is not read, like a prediction's. In a constructed theory of
-two constructs that raise each other, with a phenomenon claiming that one lowers
-the other beside a prediction that states no claim, the derivation chain
+phenomenon whenever its claim is read and the file states at least one
+prediction, so the gate is now `r dm(phen, "gate")` in both cases. The score
+still counts only predictions: `r sc(dm(phen, "score"))` with the contradicted
+phenomenon and `r sc(dm(pred, "score"))` with the contradicted prediction. Under
+the default reading, the claim of a phenomenon behind a loop is not read, like a
+prediction's. In a constructed theory of two constructs that raise each other,
+with a phenomenon claiming that one lowers the other beside a prediction that
+states no claim, the derivation chain
 `r chain_phrase(ph_refuse$chain)``r if (ph_refuse$named) " and names the phenomenon" else ""`,
-the gate `r gate_phrase(ph_refuse$gate)` and the preregistration answers
-'`r ph_refuse$line`' to whether the graph contradicts no claim a phenomenon
-states. Read by sigma-separation, the item `r chain_phrase(ph_sigma$chain)`, the
-gate `r gate_phrase(ph_sigma$gate)` and the answer is '`r ph_sigma$line`'.
+the gate `r gate_phrase(ph_refuse$gate)` and the derivation line of the
+preregistration, which covers the phenomena's claims, reads
+`r code(ph_refuse$line)`. Read by sigma-separation, the item
+`r chain_phrase(ph_sigma$chain)`, the gate `r gate_phrase(ph_sigma$gate)` and
+the line reads `r code(ph_sigma$line)`.
 
 # The amendment appraisal {#sec-appraisal}
 
@@ -1355,18 +1442,21 @@ undeclared$propositions <- c(undeclared$propositions, list(list(
   id = "p_undeclared", from = flip_th$constructs[[1]]$id,
   to = "undeclared_construct", relation = "increases", mechanism = "m.")))
 ap_undeclared <- tf_appraise_amendment(undeclared, flip_prior)
-undeclared_lost <- if (length(ap_undeclared$content_lost) == 0) "no content listed as lost" else
-  paste("content lost", and_list(unlist(ap_undeclared$content_lost)))
-undeclared_text <- if (identical(ap_undeclared$verdict, "progressive")) paste0(
-  "And when the new version's graph cannot be built, the new rules are skipped. ",
-  "Adding to the sign reversal above one proposition to a construct the file ",
-  "does not declare turns ", dm(flip, "verdict"), " into progressive, with ",
-  undeclared_lost, ".") else paste0(
-  "When the graph of either version cannot be built, the two graphs are not ",
-  "compared, and the verdict is then never progressive. Adding to the sign ",
-  "reversal above one proposition to a construct the file does not declare ",
-  "gives ", ap_undeclared$verdict, ", with ", undeclared_lost, ", since the ",
-  "comparison that would find the loss is not made.")
+undeclared_lost <- if (length(ap_undeclared$content_lost) == 0) "no content is listed as lost" else
+  paste("the content listed as lost is", and_list(unlist(ap_undeclared$content_lost)))
+undeclared_progressive <- identical(ap_undeclared$verdict, "progressive")
+# The rule, where it holds, among the corrections; its failure among the limits.
+undeclared_rule <- if (undeclared_progressive) "" else paste0(
+  " When the graph of either version cannot be built, the two graphs are not ",
+  "compared, and the verdict is then never progressive. If the new version of the ",
+  "sign reversal above also adds one proposition to a construct the file does not ",
+  "declare, the verdict is ", ap_undeclared$verdict, " and ", undeclared_lost,
+  ", since the comparison that would find the loss is not made.")
+undeclared_limit <- if (!undeclared_progressive) "" else paste0(
+  " And when the new version's graph cannot be built, the new rules are skipped. ",
+  "If the new version of the sign reversal above also adds one proposition to a ",
+  "construct the file does not declare, the verdict turns from ", dm(flip, "verdict"),
+  " to progressive, and ", undeclared_lost, ".")
 # A refuted point prediction without bounds, relabelled directional: whether
 # the appraisal counts the relabelling as a weakening.
 relabel <- function(type) list(
@@ -1402,7 +1492,7 @@ retained prediction was weakened, a point or interval label without two finite
 bounds now ranks as directional, as the claim-form rubric reads it. Relabelling
 a refuted point prediction without bounds as directional
 `r if (relabel_weakened) "still counts" else "therefore no longer counts"` as
-weakening it, and the amendment is `r ap_relabel$verdict`.
+weakening it, and the amendment is `r ap_relabel$verdict`.`r undeclared_rule`
 
 Most limits remain. The appraisal reads what the two files declare and cannot
 check it. It cannot tell a prediction from an accommodation:
@@ -1418,7 +1508,7 @@ beside it. Appraised one version at a time, a prediction made in one version and
 corroborated in the next is never credited. The appraisal has no field that
 marks which propositions are central to a theory, so it cannot tell a change to
 them from a change at the periphery, which in the auditors' reading is the
-distinction Lakatos's term 'hard core' draws. `r undeclared_text`
+distinction Lakatos's term 'hard core' draws.`r undeclared_limit`
 
 Version `r pkg_version` reports several of these beside the verdict without
 letting them decide it: the new predictions that count as new only through
@@ -1476,8 +1566,9 @@ doc_text <- c(
     "The preamble says that the dossier flags a declared severity more than ",
     num(margin, 1), " above the rubric, the margin it applies."),
   if (length(loop_line) >= 1) paste0(
-    "The header of the dossier and of the preregistration names the reading of ",
-    "feedback loops, for the panic network under the default '", loop_line[1], "'.")
+    "The headers of the dossier and of the preregistration name the reading of ",
+    "feedback loops, which for the panic network under the default reads ",
+    code(paste("Feedback loops:", loop_line[1])), ".")
   else "The header of the dossier does not say how feedback loops were read.")
 doc_text <- paste(doc_text, collapse = " ")
 ```
@@ -1641,7 +1732,7 @@ fill_now <- vapply(pl$file, function(f) {
 }, numeric(1))
 fill_same <- isTRUE(all.equal(range(fill_now), range(fill_after)))
 fill_text <- if (fill_same) {
-  paste0(", and the final ", pkg_version, " gives the same range.")
+  paste0(", and version ", pkg_version, " gives the same range.")
 } else paste0(". At ", pkg_version, ", the same filling moves the files to between ",
               sc(min(fill_now)), " and ", sc(max(fill_now)), ".")
 ```
@@ -1812,17 +1903,20 @@ cap_demos <- paste0("Demonstrations at f72ce4c and in the live run of version ",
 cap_demos_other <- paste0("Other results of the demonstrations that changed between f72ce4c and the live run of version ", pkg_version, ". An empty list is written 'none'.")
 cap_review <- paste0("Problems of the corrected rules and documents that reviews of the release reported, rerun when this report was rendered on version ", pkg_version, ".")
 
-# Problems that the review of the release reported, rerun here. Each row
+# Problems that the reviews of the release reported, rerun here. Each row
 # says what the code does now, whether or not the problem still holds.
 p_ref <- tf_check(panic_th)
 p_sig <- tf_check(panic_th, cycles = "sigma")
 p_dc <- Filter(function(i) i$id == "derivation_chain", p_ref$items)[[1]]
+# Whether the panic network's unread claim earns full credit, as at f72ce4c.
+p_full <- p_dc$status == "warn" && isTRUE(all.equal(p_dc$score, 1)) &&
+  length(p_dc$not_checked) > 0
 holds_word <- function(h) if (h) "Still holds. " else ""
 rv <- data.frame(
   Problem = c(
     "A contradicted claim beside a loop that does not reach it was left unread, and the gate passed",
     "A phenomenon's claim behind a loop was skipped without a warning, and the preregistration said no phenomenon was contradicted",
-    "A prediction left unread by a loop lowered the score",
+    "A prediction the package did not read because of a loop lowered the score",
     "An amendment whose new graph cannot be built was called progressive",
     "Relabelling an unbounded point prediction as directional counted as weakening it",
     "The dossier did not say what the gate checks",
@@ -1843,12 +1937,18 @@ rv$State <- paste0(vapply(rv$holds, holds_word, character(1)), c(
          dm(unrel, "gate"), "."),
   paste0("The derivation chain ", chain_phrase(ph_refuse$chain),
          if (ph_refuse$named) " and names the phenomenon" else "",
-         ", the line reads '", ph_refuse$line, "' and the gate ",
+         ", the derivation line reads ", code(ph_refuse$line), " and the gate ",
          gate_phrase(ph_refuse$gate), "."),
-  paste0("The panic network scores ", sc(p_ref$aggregate_score), " under the default and ",
-         sc(p_sig$aggregate_score), " by sigma-separation, its derivation chain ",
-         c(pass = "passing", warn = "warning", fail = "failing")[[p_dc$status]], " at ",
-         num(p_dc$score, 1), " under the default."),
+  paste0(if (p_full) paste0(
+    "The score no longer falls, because the unread claim again counts as derived, as ",
+    "at f72ce4c, which is the behaviour that findings claims-register-19 and ",
+    "causal-verification-9 describe. ") else "",
+    "The panic network scores ", sc(p_ref$aggregate_score),
+    if (sc(p_ref$aggregate_score) == sc(p_sig$aggregate_score)) " under either reading" else
+      paste0(" under the default and ", sc(p_sig$aggregate_score), " by sigma-separation"),
+    ", and under the default its ",
+    "derivation chain ", chain_phrase(p_dc$status),
+    if (p_full) ", with full credit for the item." else paste0(" at ", num(p_dc$score, 1), ".")),
   paste0("The sign reversal with a proposition to an undeclared construct is ",
          ap_undeclared$verdict, "."),
   paste0("The refuted prediction relabelled is ",
@@ -1860,16 +1960,25 @@ rv$State <- paste0(vapply(rv$holds, holds_word, character(1)), c(
   if (preamble_margin) paste0("The preamble says more than ", num(margin, 1),
                               " above the rubric, the margin applied.") else
     paste0("The dossier flags only a margin of more than ", num(margin, 1), "."),
-  if (length(loop_line) >= 1) paste0("The header reads 'Feedback loops: ", loop_line[1], "'.")
+  if (length(loop_line) >= 1) paste0("The header reads ",
+                                     code(paste("Feedback loops:", loop_line[1])), ".")
   else "No header line names the reading."))
 n_rv_hold <- sum(rv$holds)
+# The third problem resolved by restoring the rule of f72ce4c for the score.
+rv_restored <- !rv$holds[3] && p_full
 rv_text <- paste0(
-  "@tbl-review lists the main problems of the corrected rules and documents that ",
-  "the reviews reported and that this report reruns when it is rendered. ",
-  if (n_rv_hold == 0) paste0("None of the ", nw(nrow(rv)), " holds at this commit.")
+  "@tbl-review lists the problems that the logic review reported in what the ",
+  "corrected rules decide and those that the communication review reported in how ",
+  "the documents state the gate, the severity margin and the reading of loops, each ",
+  "rerun when this report was rendered. ",
+  if (n_rv_hold == 0) paste0(
+    "None of the ", nw(nrow(rv)), " holds as stated in the live run",
+    if (rv_restored) ", though the third was resolved by restoring the rule of f72ce4c for the score" else "",
+    ".")
   else paste0(Nw(n_rv_hold), " of the ", nw(nrow(rv)), if (n_rv_hold == 1) " holds" else
-                " hold", " at this commit, and the register, built from the audit of ",
-              "f72ce4c, does not list ", if (n_rv_hold == 1) "it." else "them."))
+                " hold", " in the live run, and the register, built from the audit of ",
+              "f72ce4c, does not list ", if (n_rv_hold == 1) "it." else "them.",
+              if (rv_restored) " The third was resolved by restoring the rule of f72ce4c for the score." else ""))
 ```
 
 @tbl-status counts the status of every finding and verdict. Of the
@@ -1957,22 +2066,23 @@ kab(data.frame(File = short(live$file)[keep], Change = change_text[keep]))
 
 Some rules were corrected. The amendment appraisal reads signs and lost
 entailments, has the pending class and gives no progressive verdict when a
-graph cannot be built. A weakening is judged by the regions rather than the
-labels, with a point or interval label without bounds ranked as directional.
-The derivation chain reads phenomena and, under the default, every claim that
-no loop reaches, the preregistration and dossier take their derivation line from
-the same reading of loops as their body, the rubric no longer rates a point
-label without bounds as precise and the simulation defaults to the exact
-method. Some problems are now reported beside the result: the appraisal lists
-novelty that rests on 'protects' alone, refuted new predictions and the
-severities of the passes behind a progressive verdict, the derivation chain
-names the predictions and phenomena whose claims a loop leaves unread, and the
-dossier flags a recorded failure whose estimate lies inside its region. Most of
-the rest was rewording: every display now calls the number a checklist score
-and says what it describes, the help, the documents and the apps describe the
-gate by what its blocking items check, and the documents state the assumptions
-of the signs, how loops were read, what 'identified' means and what the
-simulation does not show.
+graph cannot be built. A weakening is judged by the regions where either version
+states a finite bound, and otherwise by the labels, with a point or interval
+label without bounds ranked as directional. The derivation chain reads
+phenomena and, under the default, every claim that no loop reaches. The
+preregistration and the dossier take their derivation line from the same
+reading of loops as their body. The rubric no longer rates a point label
+without bounds as precise, and the simulation defaults to the exact method.
+Some problems are now reported beside the result: the appraisal lists novelty
+that rests on 'protects' alone, refuted new predictions and the severities of
+the passes behind a progressive verdict, the derivation chain names the
+predictions and phenomena whose claims it does not read because of a loop, and
+the dossier flags a recorded failure whose estimate lies inside its region.
+Most of the rest was rewording: every display now calls the number a checklist
+score and says what it describes, the help, the documents and the apps describe
+the gate by what its blocking items check, and the documents state the
+assumptions of the signs, how loops were read, what 'identified' means and what
+the simulation does not show.
 
 The score still rates empty, circular and refuted files highly and passes their
 gate, as @tbl-demos shows. Apart from the derivation chain and the narrower
@@ -1997,14 +2107,20 @@ for a choice of encoding that the register already records.
 The changes made in the release were themselves reviewed before this report, by
 AI agents who tested the new rules with random, malformed and constructed
 inputs, read the documents and apps and checked the packages against the
-requirements of CRAN and PyPI. A second round of corrections addressed the
-problems they reported, and its change to the reading of loops was checked
-against independent oracles (@sec-loops). `r rv_text`
+requirements of CRAN and PyPI. A second round of corrections, also written by AI
+agents, addressed the problems of the rules, documents and apps that the logic
+and communication reviews reported. It left two of the release review's
+problems open: the results of continuous
+integration that `cran-comments.md` should report, which need a run on the
+pushed branch, and a local tag of an earlier history that would be published if
+all tags were pushed. AI agents compared the second round's reading of loops
+with implementations that do not use theoryforge and with the package's other
+settings (@sec-loops). `r rv_text`
 
 ```{r}
 #| label: tbl-review
 #| tbl-cap: !expr cap_review
-kab(rv[, c("Problem", "State")], col.names = c("Problem", "At this commit"))
+kab(rv[, c("Problem", "State")], col.names = c("Problem", "In the live run"))
 ```
 
 # Is automated appraisal of theories feasible? {#sec-feasibility}
@@ -2100,28 +2216,36 @@ The audit has limits of its own, and they bear on its findings in both
 directions.
 
 All auditors, second readers and encoders were AI agents of one model family,
-and so were the drafter of this report and the agents that classified the
-status of each finding and verdict in version `r pkg_version`. Their agreement
-may reflect shared training rather than independent confirmation, and defects
-that all of them would miss are not in the register. Where they judged how a
-reader would understand a display, they judged without readers. Only
-`r int(n_chk)` of the `r int(nrow(st))` rows of the status register were checked
-again after their classification, and the `r int(n_r2)` rows that the second
-round of corrections changed rest on reruns by the agent that updated this
-report, without a further check, so some rows may still be misclassified.
+and so were the agents that wrote and reviewed the corrections of version
+`r pkg_version`, the drafter of this report and the agents that classified the
+status of each finding and verdict. Their agreement may reflect shared training
+rather than independent confirmation, and defects that all of them would miss
+are not in the register. Where they judged how a reader would understand a
+display, they judged without readers. Only `r int(n_chk)` of the
+`r int(nrow(st))` rows of the status register were checked again after their
+classification, `r int(n_chk_r2)` of them before the second round of corrections
+rewrote them. The `r int(n_r2)` rows that round changed rest on reruns and
+rereadings by an AI agent of the same family, which a review of this report
+repeated only in part, so some rows may still be misclassified.
 
 The audit examined one commit, and the status of `r pkg_version` was
 established by rerunning the audit's evidence and reading the files, not by a
-new audit. The changes made for the release were reviewed by AI agents in three
-parts, the logic of the corrected rules, their communication and the readiness
-of the packages for release, and a second round of corrections followed. This
-report reruns only the main problems the review reported (@tbl-review). The
-minor ones, most of which concern the wording of documents and displays, are
-not checked here. The change of that round to how loops are read was checked against
-oracles written by AI agents of the same family, on random graphs and on the
-audit's theories, and part of those checks ran on a commit before the last
-change, which gives the same verdicts (@sec-loops). Neither the review, the
-verification nor this report is a full audit of the final code.
+new audit. AI agents reviewed the changes made for the release for the logic
+of the corrected rules, their communication and the readiness of the packages
+for release, and a second round of corrections followed. This report reruns
+only the problems that the logic review reported in what the corrected rules
+decide and those that the communication review reported in how the documents
+state the gate, the severity margin and the reading of loops (@tbl-review). The
+other problems of those two reviews, which concern the wording of documents,
+outputs, help pages and app displays and the run time of one function, and
+those of the release review, which concern the submission to CRAN and the
+repository's tags, are not rerun here. The second round's reading of loops was
+checked against implementations written by AI agents of the same family and
+against the package's other settings, on random graphs and on the audit's
+theories, and part of those checks ran on a commit before the last change,
+which gives the same derived values, verdicts and bases (@sec-loops). Neither
+the reviews, the checks of that reading nor this report is a full audit of the
+code of the release.
 
 The lenses were chosen in advance. Others, such as an audit of security, of
 accessibility or of the performance of the apps on large theories, were not part
