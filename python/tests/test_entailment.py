@@ -389,6 +389,29 @@ def test_the_dossier_reports_claims_equivalent_models_and_rivals(modality):
     assert "\n# Preregistration" not in doc and "\n## Preregistration:" not in doc
 
 
+def test_the_dossier_lists_the_claims_a_rival_discriminates_when_its_graph_is_not_compared():
+    # Under refuse, a loop elsewhere leaves the independencies and the signs of
+    # the two graphs uncompared, but the claim that no loop reaches is read
+    # under both, and the dossier says that it discriminates, as its
+    # preregistration does. The R suite asserts the same lines.
+    rival = {"id": "alt1", "label": "x lowers y",
+             "propositions": [{"id": "r0", "from": "c0", "to": "c1", "relation": "decreases"},
+                              {"id": "r1", "from": "c2", "to": "c3", "relation": "increases"},
+                              {"id": "r2", "from": "c3", "to": "c2", "relation": "increases"}]}
+    t = _theory([("c0", "c1", "increases"), ("c2", "c3", "increases"), ("c3", "c2", "increases")],
+                claims=[_claim("effect", "c0", "c1", "positive")], alternatives=[rival])
+    t.data["predictions"][0]["diagnostic_vs"] = ["alt1"]
+    d = t.discriminate("alt1")
+    assert (d["evaluated"], d["counts"]["discriminating_claims"]) == (False, 1)
+    doc = t.dossier()
+    assert ("- alt1: claims it discriminates: q0; independencies and signs not compared, since a "
+            "causal graph has a feedback loop\n") in doc
+    assert "   - Rivals it is declared to discriminate: alt1 (its propositions contradict the claim)" in doc
+    assert "alt1: not compared" not in doc
+    assert ("- alt1: claims it discriminates: q0; independencies one implies and the other does "
+            "not: 0; decisive differences in sign: 1 effects, 1 associations\n") in t.dossier(cycles="sigma")
+
+
 def test_a_refused_graph_leaves_the_claims_unread():
     t = _theory([("c0", "c9", "increases")], claims=[_claim("effect", "c0", "c1", "positive")])
     doc = t.preregister()

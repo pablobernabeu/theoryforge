@@ -304,15 +304,18 @@ tf_dossier <- function(theory, cycles = "refuse") {
       out <- c(out, paste0("- ", aid, ": not compared: ", conditionMessage(d)))
       next
     }
+    found <- vapply(Filter(function(c) isTRUE(c$discriminates), d$claims), function(c) c$id, "")
+    line <- paste0("- ", aid, ": claims it discriminates: ",
+                   if (length(found)) paste(found, collapse = ", ") else "none", "; ")
     if (!d$evaluated) {
-      out <- c(out, paste0("- ", aid, ": not compared, since a causal graph has a feedback loop"))
+      # The claims are read whatever evaluated is, as tf_entailments() reads
+      # them, and only the independencies and the signs are left out.
+      out <- c(out, paste0(line, "independencies and signs not compared, since a causal graph ",
+                           "has a feedback loop"))
       next
     }
-    found <- vapply(Filter(function(c) isTRUE(c$discriminates), d$claims), function(c) c$id, "")
     n <- d$counts
-    line <- paste0("- ", aid, ": claims it discriminates: ",
-                   if (length(found)) paste(found, collapse = ", ") else "none",
-                   "; independencies one implies and the other does not: ", n$independencies,
+    line <- paste0(line, "independencies one implies and the other does not: ", n$independencies,
                    "; decisive differences in sign: ", n$decisive_effects, " effects, ",
                    n$decisive_associations, " associations")
     if (isTRUE(d$markov_equivalent)) line <- paste0(line, "; Markov equivalent to the theory")

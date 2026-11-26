@@ -218,6 +218,34 @@ test_that("the preregistration and the dossier report the causal reading", {
                                "(reversed in some equivalent model)"), fixed = TRUE)
 })
 
+test_that("the dossier lists the claims a rival discriminates when its graph is not compared", {
+  # Under refuse, a loop elsewhere leaves the independencies and the signs of
+  # the two graphs uncompared, but the claim that no loop reaches is read under
+  # both, and the dossier says that it discriminates, as its preregistration
+  # does. The Python suite asserts the same lines.
+  rival <- list(id = "alt1", label = "x lowers y",
+                propositions = list(list(id = "r0", from = "c0", to = "c1", relation = "decreases"),
+                                    list(id = "r1", from = "c2", to = "c3", relation = "increases"),
+                                    list(id = "r2", from = "c3", to = "c2", relation = "increases")))
+  t <- small_theory(list(c("c0", "c1", "increases"), c("c2", "c3", "increases"),
+                         c("c3", "c2", "increases")),
+                    claims = list(claim("effect", "c0", "c1", "positive")),
+                    alternatives = list(rival))
+  t$predictions[[1]]$diagnostic_vs <- list("alt1")
+  d <- tf_discriminate(t, "alt1")
+  expect_identical(list(d$evaluated, d$counts$discriminating_claims), list(FALSE, 1L))
+  doc <- tf_dossier(t)
+  expect_match(doc, paste0("- alt1: claims it discriminates: q0; independencies and signs not ",
+                           "compared, since a causal graph has a feedback loop\n"), fixed = TRUE)
+  expect_match(doc, paste0("   - Rivals it is declared to discriminate: alt1 (its propositions ",
+                           "contradict the claim)"), fixed = TRUE)
+  expect_false(grepl("alt1: not compared", doc, fixed = TRUE))
+  expect_match(tf_dossier(t, cycles = "sigma"),
+               paste0("- alt1: claims it discriminates: q0; independencies one implies and the ",
+                      "other does not: 0; decisive differences in sign: 1 effects, 1 associations\n"),
+               fixed = TRUE)
+})
+
 test_that("full validation reports each fault of a claim", {
   t <- small_theory(list(c("c0", "c1", "increases")),
                     claims = list(list(kind = "effect", x = "c0", y = "c0", sign = "up",

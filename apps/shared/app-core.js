@@ -884,7 +884,10 @@
     if (opId === "discriminate") {
       if (raw.ok === false) return cycleRefusal(raw, params);
       const r = raw.result, cn = r.counts || {};
-      if (!r.evaluated) return "The two graphs were not compared: " + words(r.reason || "a graph has a feedback loop") + ". Set cycles to sigma to read graphs with feedback loops.";
+      // Under refuse, the claims are read whatever evaluated is, and only the
+      // independencies and the signs are left out (API_SPEC.md section 32).
+      if (!r.evaluated) return "The independencies and signs of the two graphs were not compared, since a causal graph has a feedback loop. They read " +
+        plural(Number(cn.discriminating_claims || 0), "claim") + " of the theory in opposite ways. Set cycles to sigma to compare graphs with feedback loops.";
       const shared = asArr(r.shared).length;
       let txt = "Compared on the " + plural(shared, "construct") + " both accounts name, the graphs differ in " + plural(asArr(r.independencies).length, "implied independence", "implied independencies") +
         " and give " + plural(Number(cn.decisive_effects || 0), "effect") + " and " + plural(Number(cn.decisive_associations || 0), "association") + " decisively different signs. They read " +

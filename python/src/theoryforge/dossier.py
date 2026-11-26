@@ -118,13 +118,16 @@ def _rivals_section(data: dict, cycles: str) -> list[str]:
         except ValueError as err:
             out.append(f"- {aid}: not compared: {err}")
             continue
-        if not d["evaluated"]:
-            out.append(f"- {aid}: not compared, since a causal graph has a feedback loop")
-            continue
         found = [c["id"] for c in d["claims"] if c["discriminates"]]
+        line = f"- {aid}: claims it discriminates: {', '.join(found) if found else 'none'}; "
+        if not d["evaluated"]:
+            # The claims are read whatever evaluated is, as entailments() reads
+            # them, and only the independencies and the signs are left out.
+            out.append(line + "independencies and signs not compared, since a causal graph "
+                       "has a feedback loop")
+            continue
         n = d["counts"]
-        line = (f"- {aid}: claims it discriminates: {', '.join(found) if found else 'none'}; "
-                f"independencies one implies and the other does not: {n['independencies']}; "
+        line += (f"independencies one implies and the other does not: {n['independencies']}; "
                 f"decisive differences in sign: {n['decisive_effects']} effects, "
                 f"{n['decisive_associations']} associations")
         if d["markov_equivalent"]:

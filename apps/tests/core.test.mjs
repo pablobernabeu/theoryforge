@@ -859,6 +859,23 @@ test("Compare with a rival offers the alternatives that state propositions, and 
   assert.match($(".toast").textContent, /Upload a rival theory/);
 });
 
+test("under refuse, a rival whose graphs are not compared still has the theory's claims read", async () => {
+  // The independencies and signs of graphs with a loop are not compared under
+  // refuse, but the claims are read, and the reading says how many discriminate.
+  const rt = lineageRuntime({ discriminate: { result: { rival_id: "alt_b", criterion: "m", evaluated: false, reason: "feedback_loop", shared: ["a", "b"], only_theory: [], only_rival: [],
+    markov_equivalent: null, independence_basis: "not_compared", independencies: [], effects: [], associations: [],
+    claims: [{ source: "prediction", id: "pred1", theory: "entailed", rival: "contradicted", discriminates: true }],
+    counts: { discriminating_claims: 1, independencies: 0, decisive_effects: 0, decisive_associations: 0 } } } });
+  const base = rt.loadExample;
+  rt.loadExample = async function (p) { const s = await base.call(this, p); s.alternatives = [{ id: "alt_b", label: "B", propositions: 2 }]; return s; };
+  const { ctx, $ } = await boot({}, rt);
+  await opButton(ctx, "discriminate").click();
+  await $("#runBtn").click();
+  assert.equal($("#output .ri-interp").textContent, "The independencies and signs of the two graphs were not compared, since a causal graph has a feedback loop. " +
+    "They read 1 claim of the theory in opposite ways. Set cycles to sigma to compare graphs with feedback loops.");
+  assert.match($("#output").textContent, /The theory's claims under each graph/);
+});
+
 test("an impulse starts in a construct of the theory, and the uniform start's value is hidden for it", async () => {
   const rt = lineageRuntime({ simulate: { result: { states: ["a", "b"], steps: 2, dt: 0.1, method: "exact", initial_state: [1, 0],
     assumed_positive: ["p2"], ignored: [], opposed: [], trajectory: [[1, 0], [0.9, 0.1], [0.8, 0.2]] } } });
