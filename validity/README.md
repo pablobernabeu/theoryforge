@@ -10,9 +10,11 @@ register, causal verification, statistics and simulation, a red team of the
 checklist score, philosophy of science, measurement, metascience and related
 tools, and communication and apps. An independent second reader rechecked each
 lens, and three encoders encoded three verbal theories in a pilot. Every
-auditor, second reader and encoder was an AI agent, and so was the drafter of
-the report and of the status register. The folder lies outside both packages:
-no R build, Python distribution or CI job reads it.
+auditor, second reader and encoder was an AI agent. So were the agents that
+wrote the corrections of version 0.8.0, reviewed them, made a second round of
+corrections and checked it, and the drafter of the report and of the status
+register. The folder lies outside both packages: no R build, Python
+distribution or CI job reads it.
 
 The audit's own files, the scripts, inputs and outputs of each lens, of each
 second reader and of the pilot, are kept outside the repository. Every path
@@ -94,7 +96,9 @@ the classifying agent's, `basis` where the status was kept and the basis
 qualified after a check, and `none` otherwise. `second_round` is `status` or
 `basis` where the second round of corrections, made to 0.8.0 after a review of
 the release, changed the row's status or only its basis, and `none` otherwise.
-The evidence of those rows was rerun on the final code. `basis` names the file
+The evidence of those rows was rerun, or for documents and displays reread, on
+the code after that round. `status_before` is the status a row had before that
+round where the round changed it, and blank otherwise. `basis` names the file
 or the rerun on 0.8.0 that shows the status and, after 'Remaining:', what is
 left of a finding classed as fixed. For a verdict of sound with caveats kept
 unchanged, it says whether the documentation already stated the caveat, the
@@ -112,12 +116,13 @@ where the R twin is compared with the Python twin, and `other` where the check
 concerns a sentence of the documentation, a design argument, a reference
 implementation or the package against itself.
 
-`data/loop-verification.csv` has one row per independent check of how 0.8.0
-reads claims beside feedback loops, which changed after the audit: `check`,
-`comparator`, `code` (the commit checked), `claims`, `agreements`,
-`disagreements`, `note` and `evidence_path`. Its paths are relative to the
-folder of the release's working files, kept outside the repository like the
-audit's.
+`data/loop-verification.csv` has one row per check of how 0.8.0 reads claims
+beside feedback loops, which changed after the audit, against implementations
+that do not use theoryforge or against the package's own sigma reading, its
+code before the change and its other twin: `check`, `comparator`, `code` (the
+commit checked), `claims`, `agreements`, `disagreements`, `note` and
+`evidence_path`. Its paths are relative to the folder of the release's working
+files, kept outside the repository like the audit's.
 
 `scripts/build_register.py` writes `findings.csv`, `verdicts.csv` and
 `references.csv` from the two results of the audit (the formal and the
