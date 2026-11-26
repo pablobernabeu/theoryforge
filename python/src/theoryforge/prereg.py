@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+import os
 import re
 
 from ._access import (
@@ -447,7 +448,8 @@ def _claim_lines(data: dict, cycles: str) -> tuple[list[tuple[str, str | None] |
 
 
 @theory_keyword
-def preregister(theory, path=None, cycles: str = "refuse") -> str:
+def preregister(theory, path: str | os.PathLike[str] | None = None,
+                cycles: str = "refuse") -> str:
     """Render the theory and hypotheses sections of a preregistration, written to ``path`` if given.
 
     The header gives the theory id, the version when it has an id (with its
