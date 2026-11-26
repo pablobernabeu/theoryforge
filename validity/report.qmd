@@ -2090,7 +2090,11 @@ rules above, version `r pkg_version` changed what the score is called and what
 is said about it, not what it computes. Declared severities still override the
 rubric, a rival named without propositions still earns diagnosticity, labels
 still decide the falsifiability blocker and disclosing more still costs points.
-The appraisal still cannot tell a prediction from an accommodation.
+The appraisal still cannot tell a prediction from an accommodation. The notes
+of version `r pkg_version` announce that from version 0.9.0 no display will
+show the score: the displays will show each item's status and what it rests on,
+and the rules of checklist 3.1 will remain available to reproduce earlier
+records.
 
 Two of the pilot's findings bear on the new option `check(cycles = "sigma")`,
 under which a claim that the graph leaves open fails the derivation chain. When
