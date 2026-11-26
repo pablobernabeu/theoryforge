@@ -608,6 +608,11 @@ that concern it alone.
   run starts, and words no longer break inside the cells of the rendered dossier's tables.
 
 ### Deprecated
+- From 0.9.0, no display will show the checklist score. The apps, the dossier, the HTML
+  report and the other generated documents will show each item's status and what it rests
+  on, and `check()` will by default return the items without an aggregate score. The rules
+  of checklist 3.1, score included, will remain available, so that earlier records can be
+  reproduced.
 - Naming the theory argument `T`, as in `check(T=theory)`, gives a `FutureWarning` and will
   stop working in the next minor release. Name it `theory` or pass the theory by position.
 - The `engine` argument of `diagram()` has no effect and will be removed in the next minor
@@ -783,6 +788,11 @@ that concern it alone.
   taken as positive, that whether a feedback loop grows or settles is set by `k` against
   the damping, that time is in units of `1/k` and the window decides what is seen, and that
   a linear system cannot show bistability.
+- The docstring of `compile_sem()` says that a construct without measurement entries is
+  written as an observed variable, and that lavaan's default representation can refuse a
+  model in which one association joins such a construct to a construct with indicators and
+  another joins it to a second construct without entries. The same syntax fits with
+  `representation = "RAM"`.
 - The docstring of `equivalent_models()` and the pages that describe it say that no test of
   conditional independence can tell the members of an equivalence class apart, where they
   said that no observational study could, and that telling a reversible direction apart

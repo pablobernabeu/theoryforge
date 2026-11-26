@@ -677,6 +677,14 @@ NULL
 #' covariance line names. lavaan fixes each one left unwritten at zero, and
 #' each takes a line of its own (\verb{x:m ~~ x}).
 #'
+#' A construct without measurement entries is written as an observed variable
+#' under its own name. When one association joins such a construct to a
+#' construct with indicators and another joins it to a second construct
+#' without entries, lavaan's default representation, LISREL, can refuse the
+#' model: lavaan 0.6.17 and 0.7.3 stop with an error that names the second
+#' association. The same syntax fits with
+#' \code{lavaan::sem(..., representation = "RAM")}.
+#'
 #' @section Names:
 #' Every name is one lavaan reads as written. Construct ids that lavaan would
 #' refuse or misread, such as \code{self-efficacy}, \code{1arousal}, \code{NA}

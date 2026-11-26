@@ -756,6 +756,12 @@ add the changes that concern the R package alone.
 
 ## Deprecated
 
+* From 0.9.0, no display will show the checklist score. The apps, the dossier,
+  the HTML report and the other generated documents will show each item's status
+  and what it rests on, and `tf_check()` will by default return the items without
+  an aggregate score. The rules of checklist 3.1, score included, will remain
+  available, so that earlier records can be reproduced.
+
 * The `engine` argument of `tf_diagram()` has no effect and will be removed in the
   next minor release. Passing it gives a warning.
 
@@ -1017,6 +1023,12 @@ add the changes that concern the R package alone.
   taken as positive, that whether a feedback loop grows or settles is set by `k`
   against the damping, that time is in units of `1/k` and the window decides what
   is seen, and that a linear system cannot show bistability.
+
+* `?tf_compile_sem` says that a construct without measurement entries is written
+  as an observed variable, and that lavaan's default representation can refuse a
+  model in which one association joins such a construct to a construct with
+  indicators and another joins it to a second construct without entries. The
+  same syntax fits with `representation = "RAM"`.
 
 * `?tf_equivalent_models` and the pages that describe it say that no test of
   conditional independence can tell the members of an equivalence class apart,
