@@ -21,18 +21,24 @@ that concern it alone.
 - Added `entailments()`, which reads each claim of a prediction or phenomenon (an effect or
   an association between two constructs, with its sign) against the causal graph of the
   propositions. It says whether the graph entails the claim, contradicts it or leaves it
-  open, and it names the propositions the verdict rests on. For an effect in a graph without
-  a feedback loop, it says whether adjusting for some of the theory's constructs identifies
-  the effect from observational data and names a minimal such set, which never holds a
-  construct marked `x_latent: true`. Under the default `cycles="refuse"`, it leaves unread a
-  claim that names a construct on a feedback loop or downstream of one, and it reads every
-  other claim as `cycles="sigma"` does, so a loop that reaches none of a claim's constructs
-  neither hides nor changes its verdict. The marginal association of two constructs that no
-  loop reaches takes the signs of the simple treks between them under either setting.
+  open, and it names the propositions the verdict rests on. For an effect that no feedback
+  loop reaches, it says whether adjusting for some of the theory's constructs identifies the
+  effect from observational data and names a minimal such set, which never holds a construct
+  marked `x_latent: true`. On a graph with a loop, the set is found among the constructs
+  that reach the cause or the outcome, which form a graph without one. Under the default
+  `cycles="refuse"`, it leaves unread a claim that names a construct on a feedback loop or
+  downstream of one, and it reads every other claim as `cycles="sigma"` does, so a loop that
+  reaches none of a claim's constructs neither hides nor changes its record. The marginal
+  association of two constructs that no loop reaches takes the signs of the simple treks
+  between them under either setting, so a loop elsewhere changes neither a fixed sign nor
+  the reason given for an open one, `unsigned` or `opposite_signs`. The edge case
+  `adjustment-unrelated-loop` pins the adjustment set of an effect beside a loop.
 - Added `discriminate()`, which sets the theory against a rival, either an alternative that
   states its own propositions or another theory, and lists the claims, conditional
   independencies and signs of effects and associations on which the two causal graphs
-  differ.
+  differ. Under the default `cycles="refuse"`, the independencies and signs are not compared
+  when either graph has a feedback loop, but the claims are read under both graphs as
+  `entailments()` reads them.
 - Added `equivalent_models()`, which lists the directed relations that point the same way in
   every Markov-equivalent graph and those that some equivalent graph reverses. No test of
   conditional independence can tell the direction of the second kind, which needs an
@@ -102,7 +108,11 @@ that concern it alone.
   the redundancy screen's two new reasons (below).
 - Diagnosticity stopped counting a rival named in `diagnostic_vs` when the rival states
   propositions and its graph gives the prediction's claim the same verdict as the theory's.
-  It reads the claims with the `cycles` of `check()`.
+  It reads the claims with the `cycles` of `check()`, under which a loop in the rival's
+  graph leaves unread only the claims it reaches. The declaration of a theory whose own
+  graph has no loop is therefore checked on every claim that a loop in the rival's graph
+  does not reach, and the rival's verdicts on those claims enter the theory's diagnosticity,
+  its checklist score and `discriminate()`.
 - The derivation chain began reading the claims of predictions and phenomena. A prediction
   counts as derived only when the propositions it cites are declared and it states no claim
   or one that the causal graph entails. A claim that the graph contradicts or leaves open,
@@ -335,9 +345,12 @@ that concern it alone.
   is headed `Rivals it is declared to discriminate`, where it read `Rivals it
   discriminates`, since a rival's own propositions can contradict the declaration.
 - `dossier()` gained the content hash, the range of the checklist score, each checklist
-  item's criterion and sections on the claims, the equivalent models and the rivals. It
-  embeds the preregistration without that document's severity section and writes a post-data
-  severity that rounds to 1 or 0 as `> 0.999` or `< 0.001`.
+  item's criterion and sections on the claims, the equivalent models and the rivals. A
+  rival's line lists the claims that discriminate, also when the independencies and signs of
+  the two graphs are not compared, as under `cycles="refuse"` when either has a feedback
+  loop, and then says so, as the apps' comparison with a rival does. It embeds the
+  preregistration without that document's severity section and writes a post-data severity
+  that rounds to 1 or 0 as `> 0.999` or `< 0.001`.
 - `embedding_redundancy()` began refusing a threshold outside -1 to 1 and an embedding
   vector that holds a value that is not a finite number or holds only zeros. A zero vector,
   which has no direction to compare, gave a cosine of 0.
@@ -517,9 +530,13 @@ that concern it alone.
   is not read and blocks nothing, and that the labels are the author's and are not checked
   against the statements, as the dossier and the HTML report do. A claim the checklist or
   the entailments leave unread is said to name a construct on a feedback loop or downstream
-  of one, where the apps said that the causal graph has a feedback loop. The checklist's
-  reading says that the gate passes because no blocking item fails, or is blocked because
-  the named items fail.
+  of one, where the apps said that the causal graph has a feedback loop. The help of the
+  Preregistration operation says that `refuse` gives no independencies and leaves unread
+  only such claims, where it said that `refuse` leaves the graph unread, and the
+  entailments' guide says that such a claim names a construct on a loop or downstream of
+  one, where it said that the claim meets a feedback loop. The checklist's reading says that
+  the gate passes because no blocking item fails, or is blocked because the named items
+  fail.
 - The apps' start panel says what the package checks and that none of the checks shows that
   a theory is true or well reasoned, and the description of every operation that spoke of
   rigour or of an audit was reworded. Severity rubric is now Claim-form rubric, with its
